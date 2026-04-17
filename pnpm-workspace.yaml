@@ -10,7 +10,7 @@ catalog:
   eslint: ^9.39.4
   prettier: ^3.8.3
   publint: ^0.3.18
-  typescript: ^5.9.3
+  typescript: ^6.0.3
 
 publicHoistPattern:
   - "@ianvs/prettier-plugin-sort-imports"
