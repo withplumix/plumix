@@ -19,14 +19,19 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
+    "@oslojs/crypto": "^1.0.1",
+    "@oslojs/encoding": "^1.1.0",
+    "@oslojs/webauthn": "^1.0.0",
     "drizzle-orm": "catalog:",
     "drizzle-valibot": "catalog:",
     "valibot": "catalog:"
   },
   "devDependencies": {
+    "@libsql/client": "^0.17.2",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
     "drizzle-kit": "catalog:",
     "eslint": "catalog:",
     "prettier": "catalog:",
