@@ -1,9 +1,7 @@
-export interface PluginContext {
-  readonly id: string;
-}
+import type { PluginSetupContext } from "./context.js";
 
 export type PluginSetup<TConfig> = (
-  ctx: PluginContext,
+  ctx: PluginSetupContext,
   config: TConfig,
 ) => void | Promise<void>;
 
