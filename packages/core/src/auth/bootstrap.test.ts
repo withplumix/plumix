@@ -24,4 +24,17 @@ describe("first-user-admin bootstrap", () => {
     expect(result.bootstrapped).toBe(false);
     expect(result.user.role).toBe("author");
   });
+
+  test("concurrent first-user provisions with different emails elect exactly one admin", async () => {
+    const db = await createTestDb();
+    const results = await Promise.all([
+      provisionUser(db, { email: "a@example.com" }),
+      provisionUser(db, { email: "b@example.com" }),
+      provisionUser(db, { email: "c@example.com" }),
+    ]);
+    const admins = results.filter((r) => r.user.role === "admin");
+    expect(admins).toHaveLength(1);
+    const bootstrapped = results.filter((r) => r.bootstrapped);
+    expect(bootstrapped).toHaveLength(1);
+  });
 });

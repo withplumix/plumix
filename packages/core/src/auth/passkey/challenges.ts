@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import type { Db } from "../../context/app.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
@@ -52,9 +52,11 @@ export async function consumeChallenge(
   const hash = await hashToken(rawChallenge);
   const [row] = await db
     .delete(authTokens)
-    .where(eq(authTokens.hash, hash))
+    .where(
+      and(eq(authTokens.hash, hash), eq(authTokens.type, CHALLENGE_TYPE)),
+    )
     .returning();
-  if (row?.type !== CHALLENGE_TYPE) return null;
+  if (!row) return null;
   if (row.expiresAt.getTime() < Date.now()) return null;
   return { userId: row.userId, expiresAt: row.expiresAt };
 }

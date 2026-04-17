@@ -78,6 +78,8 @@ export interface VerifiedRegistration {
   readonly publicKey: Uint8Array;
   readonly signatureCounter: number;
   readonly transports: readonly CredentialTransport[];
+  /** User the original challenge was issued for. Null for discoverable-cred flows. */
+  readonly userId: number | null;
 }
 
 /**
@@ -111,23 +113,14 @@ export async function finishRegistration(
     throw new PasskeyError("invalid_client_data", "Expected webauthn.create");
   }
 
-  const challengeString = encodeBase64urlNoPadding(clientData.challenge);
-  const challenge = await consumeChallenge(db, challengeString);
-  if (!challenge) throw new PasskeyError("challenge_not_found");
-
   if (clientData.origin !== config.origin) {
-    throw new PasskeyError(
-      "invalid_origin",
-      `Expected origin ${config.origin}, got ${clientData.origin}`,
-    );
+    throw new PasskeyError("invalid_origin");
   }
 
   const attestation = parseAttestationObject(attestationBytes);
   if (
     attestation.attestationStatement.format !== AttestationStatementFormat.None
   ) {
-    // We advertised attestation: "none" — anything else means the authenticator
-    // ignored us; we don't verify other formats so we refuse rather than trust.
     throw new PasskeyError("unsupported_attestation_format");
   }
 
@@ -135,6 +128,10 @@ export async function finishRegistration(
   if (!authenticatorData.verifyRelyingPartyIdHash(config.rpId)) {
     throw new PasskeyError("invalid_rp_id");
   }
+
+  const challengeString = encodeBase64urlNoPadding(clientData.challenge);
+  const challenge = await consumeChallenge(db, challengeString);
+  if (!challenge) throw new PasskeyError("challenge_not_found");
   if (!authenticatorData.userPresent)
     throw new PasskeyError("user_presence_missing");
 
@@ -169,10 +166,11 @@ export async function finishRegistration(
   ).encodeSEC1Uncompressed();
 
   return {
-    credentialId: response.id,
+    credentialId: encodeBase64urlNoPadding(credential.id),
     publicKey,
     signatureCounter: authenticatorData.signatureCounter,
     transports: response.response.transports ?? [],
+    userId: challenge.userId,
   };
 }
 

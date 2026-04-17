@@ -92,16 +92,19 @@ export async function finishAuthentication(
     throw new PasskeyError("invalid_client_data", "Expected webauthn.get");
   }
 
+  if (clientData.origin !== config.origin) {
+    throw new PasskeyError("invalid_origin");
+  }
+
+  const authenticatorData = parseAuthenticatorData(authenticatorDataBytes);
+  if (!authenticatorData.verifyRelyingPartyIdHash(config.rpId)) {
+    throw new PasskeyError("invalid_rp_id");
+  }
+
   const challengeString = encodeBase64urlNoPadding(clientData.challenge);
   const challenge = await consumeChallenge(db, challengeString);
   if (!challenge) throw new PasskeyError("challenge_not_found");
-
-  if (clientData.origin !== config.origin) {
-    throw new PasskeyError(
-      "invalid_origin",
-      `Expected origin ${config.origin}, got ${clientData.origin}`,
-    );
-  }
+  void challenge;
 
   const credential = await db
     .select()
@@ -109,11 +112,6 @@ export async function finishAuthentication(
     .where(eq(credentials.id, response.id))
     .get();
   if (!credential) throw new PasskeyError("credential_not_found");
-
-  const authenticatorData = parseAuthenticatorData(authenticatorDataBytes);
-  if (!authenticatorData.verifyRelyingPartyIdHash(config.rpId)) {
-    throw new PasskeyError("invalid_rp_id");
-  }
   if (!authenticatorData.userPresent)
     throw new PasskeyError("user_presence_missing");
 

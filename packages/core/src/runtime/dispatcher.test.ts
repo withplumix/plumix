@@ -1,0 +1,133 @@
+import { describe, expect, test } from "vitest";
+
+import { createDispatcherHarness, plumixRequest } from "../test/dispatcher.js";
+
+describe("dispatcher — routing", () => {
+  test("public / returns the SSR placeholder", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(new Request("https://cms.example/"));
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("<h1>Plumix</h1>");
+  });
+
+  test("/_plumix/admin returns 404 with the admin-not-available hint", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/admin", { method: "GET" }),
+    );
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-plumix-hint")).toBe("admin-not-available");
+  });
+
+  test("unknown /_plumix/* path returns 404", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/unknown", { method: "GET" }),
+    );
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-plumix-hint")).toBe("unknown-plumix-route");
+  });
+});
+
+describe("dispatcher — CSRF", () => {
+  test("POST /_plumix/rpc/post.list without the X-Plumix-Request header is forbidden", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      new Request("https://cms.example/_plumix/rpc/post.list", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      }),
+    );
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { reason?: string };
+    expect(body.reason).toBe("csrf_header_missing");
+  });
+
+  test("GET /_plumix/admin is allowed without the CSRF header (safe method)", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      new Request("https://cms.example/_plumix/admin", { method: "GET" }),
+    );
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-plumix-hint")).toBe("admin-not-available");
+  });
+});
+
+describe("dispatcher — RPC", () => {
+  test("POST /_plumix/rpc/post/list with CSRF header dispatches to oRPC (UNAUTHORIZED without session)", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/rpc/post/list", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ json: {} }),
+      }),
+    );
+    expect(response.status).toBe(401);
+  });
+
+  test("POST /_plumix/rpc/unknown/procedure with CSRF header returns 404", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/rpc/unknown/procedure", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ json: {} }),
+      }),
+    );
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-plumix-hint")).toBe(
+      "rpc-procedure-not-found",
+    );
+  });
+});
+
+describe("dispatcher — auth routes", () => {
+  test("POST signout without session still returns 200 and clears cookie", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/auth/signout", { method: "POST" }),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toMatch(/Max-Age=0/);
+  });
+
+  test("GET /_plumix/auth/signout is 405 (POST-only)", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/auth/signout", { method: "GET" }),
+    );
+    expect(response.status).toBe(405);
+    expect(response.headers.get("allow")).toBe("POST");
+  });
+
+  test("unknown auth path returns 404", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/auth/nonexistent", { method: "POST" }),
+    );
+    expect(response.status).toBe(404);
+  });
+});
+
+describe("dispatcher — error boundary", () => {
+  test("unhandled handler exceptions return 500 JSON (no raw throw)", async () => {
+    const h = await createDispatcherHarness();
+    h.app.hooks.addFilter("rpc:post.list:input", () => {
+      throw new Error("boom");
+    });
+
+    const user = await h.seedUser("admin");
+    const authed = await h.authenticateRequest(
+      plumixRequest("/_plumix/rpc/post/list", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ json: {} }),
+      }),
+      user.id,
+    );
+    const response = await h.dispatch(authed);
+    expect(response.status).toBe(500);
+  });
+});

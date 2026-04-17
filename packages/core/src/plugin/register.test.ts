@@ -7,20 +7,29 @@ import { installPlugins } from "./register.js";
 
 declare module "../hooks/types.js" {
   interface FilterRegistry {
-    "post:before_save": (post: { readonly title: string }) => {
-      readonly title: string;
-    };
     "seo:meta_tags": (tags: { readonly title: string }) => {
       readonly title: string;
     };
-    "landing_page:before_save": (post: { readonly title: string }) => {
-      readonly title: string;
-    };
-  }
-  interface ActionRegistry {
-    "post:published": (postId: number) => void;
   }
 }
+
+import "../rpc/hooks.js";
+
+import type { NewPost } from "../db/schema/posts.js";
+
+const examplePost = (overrides: Partial<NewPost> = {}): NewPost => ({
+  type: "post",
+  title: "example",
+  slug: "example",
+  content: null,
+  excerpt: null,
+  status: "draft",
+  parentId: null,
+  menuOrder: 0,
+  authorId: 1,
+  publishedAt: null,
+  ...overrides,
+});
 
 describe("installPlugins", () => {
   test("auto-prefixes plugin-registered filters with the plugin id", async () => {
@@ -40,13 +49,17 @@ describe("installPlugins", () => {
     const hooks = new HookRegistry();
     const stamp = definePlugin("stamp", (ctx) => {
       ctx.addFilter("post:before_save", (post) => ({
+        ...post,
         title: `[stamped] ${post.title}`,
       }));
     });
 
     await installPlugins({ hooks, plugins: [stamp] });
-    const out = await hooks.applyFilter("post:before_save", { title: "hi" });
-    expect(out).toEqual({ title: "[stamped] hi" });
+    const out = await hooks.applyFilter(
+      "post:before_save",
+      examplePost({ title: "hi" }),
+    );
+    expect(out.title).toBe("[stamped] hi");
   });
 
   test("registers post types into the manifest with plugin attribution", async () => {
