@@ -1,0 +1,3 @@
+# Repo-wide formatting changes
+# Add commit hashes here when doing large-scale reformats
+# Then run: git config --local blame.ignoreRevsFile .git-blame-ignore-revs
