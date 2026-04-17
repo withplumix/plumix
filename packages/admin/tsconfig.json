@@ -1,0 +1,6 @@
+{
+  "extends": "@plumix/typescript-config/internal-package.json",
+  "include": [
+    "src"
+  ]
+}

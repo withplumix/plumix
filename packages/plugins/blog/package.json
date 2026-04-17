@@ -1,0 +1,53 @@
+{
+  "name": "@plumix/plugin-blog",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Blog plugin for Plumix — posts, categories, tags",
+  "license": "MIT",
+  "author": "Plumix Contributors",
+  "homepage": "https://github.com/withplumix/plumix#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/withplumix/plumix.git",
+    "directory": "packages/plugins/blog"
+  },
+  "bugs": {
+    "url": "https://github.com/withplumix/plumix/issues"
+  },
+  "keywords": ["plumix", "plugin", "blog", "posts"],
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "attw": "attw --pack .",
+    "build": "tsc",
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "format": "prettier --check . --ignore-path ../../../.gitignore",
+    "lint": "eslint",
+    "publint": "publint",
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+  },
+  "dependencies": {
+    "@plumix/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "catalog:",
+    "@plumix/eslint-config": "workspace:*",
+    "@plumix/prettier-config": "workspace:*",
+    "@plumix/typescript-config": "workspace:*",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "publint": "catalog:",
+    "typescript": "catalog:"
+  },
+  "prettier": "@plumix/prettier-config"
+}

@@ -1,0 +1,31 @@
+version: 2
+
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    groups:
+      dev-tooling:
+        patterns:
+          - "eslint*"
+          - "@eslint/*"
+          - "prettier"
+          - "typescript-eslint"
+          - "turbo"
+          - "publint"
+          - "@arethetypeswrong/*"
+          - "@commitlint/*"
+          - "eslint-plugin-*"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5

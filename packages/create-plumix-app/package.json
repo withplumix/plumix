@@ -1,0 +1,46 @@
+{
+  "name": "create-plumix-app",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Scaffold a new Plumix project",
+  "license": "MIT",
+  "author": "Plumix Contributors",
+  "homepage": "https://github.com/withplumix/plumix#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/withplumix/plumix.git",
+    "directory": "packages/create-plumix-app"
+  },
+  "bugs": {
+    "url": "https://github.com/withplumix/plumix/issues"
+  },
+  "keywords": ["create", "scaffold", "plumix", "cms"],
+  "bin": {
+    "create-plumix-app": "./dist/index.js"
+  },
+  "files": ["dist", "templates", "README.md", "LICENSE"],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "attw": "attw --pack .",
+    "build": "tsc",
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "format": "prettier --check . --ignore-path ../../.gitignore",
+    "lint": "eslint",
+    "publint": "publint",
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "catalog:",
+    "@plumix/eslint-config": "workspace:*",
+    "@plumix/prettier-config": "workspace:*",
+    "@plumix/typescript-config": "workspace:*",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "publint": "catalog:",
+    "typescript": "catalog:"
+  },
+  "prettier": "@plumix/prettier-config"
+}

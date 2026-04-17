@@ -1,0 +1,51 @@
+# dependencies
+node_modules
+.pnp
+.pnp.js
+
+# testing
+coverage
+playwright-report
+test-results
+
+# production
+build
+dist/
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# local env files
+.env
+.env*.local
+!.env.example
+
+# turbo
+.turbo
+
+# caches (tsbuildinfo, eslint, prettier)
+.cache
+
+# cloudflare
+.wrangler/
+.output/
+
+# plumix generated
+.plumix/
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Internal planning and reference docs (not committed)
+PLAN.md
+docs/reference/

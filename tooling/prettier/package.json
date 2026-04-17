@@ -1,0 +1,19 @@
+{
+  "name": "@plumix/prettier-config",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.js"
+  },
+  "scripts": {
+    "clean": "git clean -xdf .cache .turbo node_modules",
+    "format": "prettier --check . --ignore-path ../../.gitignore"
+  },
+  "dependencies": {
+    "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
+    "prettier-plugin-tailwindcss": "^0.7.2"
+  },
+  "devDependencies": {
+    "prettier": "catalog:"
+  }
+}

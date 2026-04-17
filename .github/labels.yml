@@ -1,0 +1,46 @@
+# Package area (auto-applied by labeler)
+- name: "pkg: core"
+  color: "1d76db"
+  description: "packages/core"
+- name: "pkg: admin"
+  color: "1d76db"
+  description: "packages/admin"
+- name: "pkg: blocks"
+  color: "1d76db"
+  description: "packages/blocks"
+- name: "pkg: plumix"
+  color: "1d76db"
+  description: "packages/plumix"
+- name: "pkg: create-plumix-app"
+  color: "1d76db"
+  description: "packages/create-plumix-app"
+- name: "pkg: runtime-cloudflare"
+  color: "1d76db"
+  description: "packages/runtimes/cloudflare"
+- name: "pkg: plugin-blog"
+  color: "1d76db"
+  description: "packages/plugins/blog"
+- name: "pkg: plugin-pages"
+  color: "1d76db"
+  description: "packages/plugins/pages"
+
+# Type
+- name: bug
+  color: "d73a4a"
+  description: Something isn't working
+- name: dependencies
+  color: "0366d6"
+  description: Dependency updates
+
+# Status
+- name: needs-repro
+  color: "fbca04"
+  description: Needs a minimal reproduction
+- name: "good first issue"
+  color: "7057ff"
+  description: Good for newcomers
+
+# CI gate
+- name: run-e2e
+  color: "0e8a16"
+  description: Triggers E2E tests in CI
