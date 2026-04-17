@@ -16,6 +16,11 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
+  "dependencies": {
+    "drizzle-orm": "catalog:",
+    "drizzle-valibot": "catalog:",
+    "valibot": "catalog:"
+  },
   "devDependencies": {
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",

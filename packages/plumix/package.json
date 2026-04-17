@@ -85,6 +85,9 @@
     "@plumix/core": "workspace:*",
     "valibot": "catalog:"
   },
+  "peerDependencies": {
+    "drizzle-orm": "catalog:"
+  },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
     "@plumix/eslint-config": "workspace:*",

@@ -49,6 +49,9 @@
   "dependencies": {
     "@plumix/core": "workspace:*"
   },
+  "peerDependencies": {
+    "drizzle-orm": "catalog:"
+  },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
     "@cloudflare/workers-types": "catalog:",
