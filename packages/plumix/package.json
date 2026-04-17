@@ -31,9 +31,33 @@
       "types": "./dist/plugin.d.ts",
       "default": "./dist/plugin.js"
     },
+    "./theme": {
+      "types": "./dist/theme/index.d.ts",
+      "default": "./dist/theme/index.js"
+    },
     "./vite": {
       "types": "./dist/vite/index.d.ts",
       "default": "./dist/vite/index.js"
+    },
+    "./admin": {
+      "types": "./dist/admin/index.d.ts",
+      "default": "./dist/admin/index.js"
+    },
+    "./blocks": {
+      "types": "./dist/blocks/index.d.ts",
+      "default": "./dist/blocks/index.js"
+    },
+    "./i18n": {
+      "types": "./dist/i18n/index.d.ts",
+      "default": "./dist/i18n/index.js"
+    },
+    "./test": {
+      "types": "./dist/test/index.d.ts",
+      "default": "./dist/test/index.js"
+    },
+    "./test/e2e": {
+      "types": "./dist/test/e2e/index.d.ts",
+      "default": "./dist/test/e2e/index.js"
     }
   },
   "bin": {
@@ -58,7 +82,8 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@plumix/core": "workspace:*"
+    "@plumix/core": "workspace:*",
+    "valibot": "catalog:"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",

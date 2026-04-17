@@ -51,6 +51,7 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
+    "@cloudflare/workers-types": "catalog:",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
