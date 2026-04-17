@@ -1,0 +1,32 @@
+version: 2
+
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    groups:
+      dev-tooling:
+        patterns:
+          - "eslint*"
+          - "@eslint/*"
+          - "prettier"
+          - "typescript-eslint"
+          - "turbo"
+          - "publint"
+          - "@arethetypeswrong/*"
+          - "@commitlint/*"
+          - "eslint-plugin-*"
+    ignore:
+      # @types/node major version must match .nvmrc — bump manually with Node upgrades
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5

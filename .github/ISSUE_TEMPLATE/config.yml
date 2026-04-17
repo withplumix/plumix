@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Feature request
+    url: https://github.com/withplumix/plumix/discussions/categories/ideas
+    about: Propose a feature in Discussions. Feature PRs without a prior approved Discussion will be closed.
+  - name: Plugin request
+    url: https://github.com/withplumix/plumix/discussions/categories/plugin-requests
+    about: Request a new first-party or community plugin.
+  - name: Question / Help
+    url: https://github.com/withplumix/plumix/discussions/categories/q-a
+    about: Ask a question in Discussions. The issue tracker is not for support questions.
+  - name: Security vulnerability
+    url: https://github.com/withplumix/plumix/security/advisories/new
+    about: Report security issues privately via Security Advisories.

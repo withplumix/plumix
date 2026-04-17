@@ -1,0 +1,61 @@
+name: Bug Report
+description: Report a bug in Plumix
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for filing a bug report! Please fill out this form as completely as possible.
+
+        ✅ I am using the **latest version** of Plumix and all plugins.
+        ✅ I am using a supported version of Node.js (v24+).
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is and what you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: |
+        Minimal steps to trigger the bug. Include a link to a reproduction repo or StackBlitz if possible.
+        **Issues without a reproduction may be closed.**
+      placeholder: |
+        1. Create a config with ...
+        2. Run `pnpm plumix dev`
+        3. Navigate to ...
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: |
+        - Plumix version: x.x.x
+        - Node.js version: x.x.x
+        - pnpm version: x.x.x
+        - Wrangler version: x.x.x
+        - OS: macOS / Linux / Windows
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / error output
+      render: shell
+
+  - type: checkboxes
+    id: will-pr
+    attributes:
+      label: Participation
+      options:
+        - label: I am willing to submit a pull request for this issue.
+          required: false

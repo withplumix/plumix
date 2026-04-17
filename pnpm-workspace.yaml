@@ -1,0 +1,17 @@
+packages:
+  - "packages/*"
+  - "packages/runtimes/*"
+  - "packages/plugins/*"
+  - "tooling/*"
+
+catalog:
+  "@arethetypeswrong/cli": ^0.18.2
+  "@types/node": ^24.12.2
+  eslint: ^9.39.4
+  prettier: ^3.8.3
+  publint: ^0.3.18
+  typescript: ^6.0.3
+
+publicHoistPattern:
+  - "@ianvs/prettier-plugin-sort-imports"
+  - prettier-plugin-tailwindcss

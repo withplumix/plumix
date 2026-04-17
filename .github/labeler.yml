@@ -1,0 +1,31 @@
+"pkg: core":
+  - changed-files:
+      - any-glob-to-any-file: "packages/core/**"
+
+"pkg: admin":
+  - changed-files:
+      - any-glob-to-any-file: "packages/admin/**"
+
+"pkg: blocks":
+  - changed-files:
+      - any-glob-to-any-file: "packages/blocks/**"
+
+"pkg: plumix":
+  - changed-files:
+      - any-glob-to-any-file: "packages/plumix/**"
+
+"pkg: create-plumix-app":
+  - changed-files:
+      - any-glob-to-any-file: "packages/create-plumix-app/**"
+
+"pkg: runtime-cloudflare":
+  - changed-files:
+      - any-glob-to-any-file: "packages/runtimes/cloudflare/**"
+
+"pkg: plugin-blog":
+  - changed-files:
+      - any-glob-to-any-file: "packages/plugins/blog/**"
+
+"pkg: plugin-pages":
+  - changed-files:
+      - any-glob-to-any-file: "packages/plugins/pages/**"
