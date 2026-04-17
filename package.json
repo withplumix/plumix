@@ -8,6 +8,7 @@
     "pnpm": "^10.33.0"
   },
   "scripts": {
+    "attw": "turbo run attw",
     "build": "turbo run build",
     "clean": "git clean -xdf node_modules",
     "clean:workspaces": "turbo run clean",
@@ -19,6 +20,7 @@
     "lint": "turbo run lint --continue -- --cache --cache-location .cache/.eslintcache",
     "lint:fix": "turbo run lint --continue -- --fix --cache --cache-location .cache/.eslintcache",
     "postinstall": "pnpm dlx sherif@latest -r packages-without-package-json",
+    "publint": "turbo run publint",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck"
   },

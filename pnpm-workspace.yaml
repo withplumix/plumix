@@ -8,6 +8,7 @@ catalog:
   "@arethetypeswrong/cli": ^0.18.2
   "@cloudflare/workers-types": ^4.20260417.1
   "@types/node": ^24.12.2
+  "drizzle-kit": ^0.31.10
   "drizzle-orm": ^0.45.2
   "drizzle-valibot": ^0.4.2
   eslint: ^9.39.4

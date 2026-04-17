@@ -1,5 +1,6 @@
 {
   "name": "@plumix/core",
+  "version": "0.0.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -10,7 +11,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "clean": "git clean -xdf .cache .drizzle .turbo dist node_modules",
+    "db:generate": "drizzle-kit generate",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
     "test": "vitest run",
@@ -25,6 +27,7 @@
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
+    "drizzle-kit": "catalog:",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:",
