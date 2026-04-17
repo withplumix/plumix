@@ -35,6 +35,9 @@ yarn-error.log*
 
 # cloudflare
 .wrangler/
+
+# drizzle-kit generated migrations (committed under packages once a release flow is in place)
+.drizzle/
 .output/
 
 # plumix generated
