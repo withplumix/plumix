@@ -12,8 +12,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@eslint/compat": "^1",
-    "@eslint/js": "^9",
+    "@eslint/compat": "^2",
+    "@eslint/js": "^10",
     "eslint-plugin-import-x": "^4",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.0",
