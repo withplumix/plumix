@@ -5,6 +5,7 @@ import type { User } from "../db/schema/users.js";
 import type { OptionSetInput } from "./procedures/option/schemas.js";
 import type {
   PostCreateInput,
+  PostListInput,
   PostUpdateInput,
 } from "./procedures/post/schemas.js";
 import type {
@@ -20,12 +21,7 @@ import type {
 
 declare module "../hooks/types.js" {
   interface FilterRegistry {
-    "rpc:post.list:input": (input: {
-      type?: string;
-      status?: Post["status"];
-      limit: number;
-      offset: number;
-    }) => typeof input;
+    "rpc:post.list:input": (input: PostListInput) => PostListInput;
     "rpc:post.list:output": (output: readonly Post[]) => readonly Post[];
 
     "rpc:post.get:input": (input: { id: number }) => typeof input;

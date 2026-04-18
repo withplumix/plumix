@@ -69,6 +69,13 @@ export const postUpdateInputSchema = v.object({
 export const postListInputSchema = v.object({
   type: v.optional(trimmedText(100)),
   status: v.optional(userSuppliableFields.entries.status),
+  /**
+   * Filter by parent post id for hierarchical types (pages, etc.).
+   * - `null` → only top-level posts (parent_id IS NULL).
+   * - a number → only direct children of that post.
+   * - omitted → no filter, flat list across all depths.
+   */
+  parentId: v.optional(v.nullable(postIdSchema)),
   limit: v.optional(
     v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)),
     20,

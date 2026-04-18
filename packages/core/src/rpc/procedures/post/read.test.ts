@@ -51,6 +51,58 @@ describe("post.list", () => {
       data: { capability: "unknown_type:read" },
     });
   });
+
+  test("parentId=null returns only top-level posts", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const root = await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "root-page",
+    });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "child-page",
+      parentId: root.id,
+    });
+
+    const top = await h.client.post.list({ parentId: null });
+    expect(top.map((p) => p.slug)).toEqual(["root-page"]);
+  });
+
+  test("parentId=<id> returns only direct children of that post", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const root = await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "parent",
+    });
+    const child = await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "child",
+      parentId: root.id,
+    });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "unrelated",
+    });
+
+    const children = await h.client.post.list({ parentId: root.id });
+    expect(children.map((p) => p.id)).toEqual([child.id]);
+  });
+
+  test("omitted parentId returns a flat list across depths", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const root = await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "p-root",
+    });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "p-child",
+      parentId: root.id,
+    });
+
+    const all = await h.client.post.list({});
+    expect(all.map((p) => p.slug).sort()).toEqual(["p-child", "p-root"]);
+  });
 });
 
 describe("post.get", () => {
