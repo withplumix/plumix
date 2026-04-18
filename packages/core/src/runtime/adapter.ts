@@ -22,41 +22,28 @@ export type ScheduledHandler = (
 ) => void | Promise<void>;
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-export interface DevOpts {
-  readonly port?: number;
+export interface CommandContext {
+  readonly app: PlumixApp;
+  readonly cwd: string;
+  readonly configPath: string;
+  readonly argv: readonly string[];
 }
 
-export interface BuildOpts {
-  readonly outdir?: string;
+export interface CommandDefinition {
+  readonly describe: string;
+  run(ctx: CommandContext): Promise<void> | void;
 }
 
-export interface BuildResult {
-  readonly outputPath: string;
-}
-
-export interface DeployOpts {
-  readonly production?: boolean;
-}
-
-export interface DeployResult {
-  readonly url?: string;
-}
-
-export interface MigrateOpts {
-  readonly apply?: boolean;
-}
-
-export interface RuntimeCli {
-  dev(opts: DevOpts): Promise<void>;
-  build(opts: BuildOpts): Promise<BuildResult>;
-  deploy(opts: DeployOpts): Promise<DeployResult>;
-  types(): Promise<void>;
-  migrate(opts: MigrateOpts): Promise<void>;
-}
+export type CommandRegistry = Readonly<Record<string, CommandDefinition>>;
 
 export interface RuntimeAdapter {
   readonly name: string;
   buildFetchHandler(app: PlumixApp): FetchHandler;
   buildScheduledHandler?(app: PlumixApp): ScheduledHandler;
-  readonly cli: RuntimeCli;
+  /**
+   * Module specifier imported by the CLI to load runtime-contributed
+   * commands. Kept out of the worker-facing adapter so dev/build/deploy
+   * tooling never ends up in the worker bundle.
+   */
+  readonly commandsModule?: string;
 }

@@ -28,6 +28,15 @@
     "test": {
       "dependsOn": ["build"]
     },
+    "test:unit": {
+      "dependsOn": ["build"]
+    },
+    "test:integration": {
+      "dependsOn": ["build"]
+    },
+    "test:e2e": {
+      "dependsOn": ["build"]
+    },
     "clean": {
       "cache": false
     },
@@ -44,6 +53,9 @@
   "globalPassThroughEnv": [
     "NODE_ENV",
     "CI",
-    "npm_lifecycle_event"
+    "npm_lifecycle_event",
+    "NO_COLOR",
+    "FORCE_COLOR",
+    "PLUMIX_VERBOSE"
   ]
 }

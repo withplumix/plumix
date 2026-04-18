@@ -2,6 +2,7 @@ packages:
   - "packages/*"
   - "packages/runtimes/*"
   - "packages/plugins/*"
+  - "examples/*"
   - "tooling/*"
 
 catalog:
@@ -16,6 +17,7 @@ catalog:
   publint: ^0.3.18
   typescript: ^6.0.3
   valibot: ^1.3.1
+  vite: ^8.0.8
   vitest: ^4.1.4
 
 publicHoistPattern:

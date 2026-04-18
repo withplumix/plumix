@@ -47,6 +47,10 @@
       "types": "./dist/blocks/index.d.ts",
       "default": "./dist/blocks/index.js"
     },
+    "./schema": {
+      "types": "./dist/schema/index.d.ts",
+      "default": "./dist/schema/index.js"
+    },
     "./i18n": {
       "types": "./dist/i18n/index.d.ts",
       "default": "./dist/i18n/index.js"
@@ -61,9 +65,10 @@
     }
   },
   "bin": {
-    "plumix": "./dist/cli/index.js"
+    "plumix": "./bin/plumix.mjs"
   },
   "files": [
+    "bin",
     "dist",
     "README.md",
     "LICENSE"
@@ -74,29 +79,48 @@
   },
   "scripts": {
     "attw": "attw --pack . --profile esm-only",
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
     "publint": "publint",
+    "test": "vitest run",
+    "test:unit": "vitest run src --passWithNoTests",
+    "test:integration": "vitest run test --passWithNoTests",
+    "test:e2e": "vitest run src/test/e2e --passWithNoTests",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
     "@plumix/core": "workspace:*",
+    "jiti": "^2.6.1",
     "valibot": "catalog:"
   },
   "peerDependencies": {
-    "drizzle-orm": "catalog:"
+    "drizzle-kit": "catalog:",
+    "drizzle-orm": "catalog:",
+    "vite": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "drizzle-kit": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "drizzle-kit": "catalog:",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "publint": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
   },
   "prettier": "@plumix/prettier-config"
 }
