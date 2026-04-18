@@ -19,6 +19,7 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
+    "@orpc/server": "^1.13.14",
     "@oslojs/crypto": "^1.0.1",
     "@oslojs/encoding": "^1.1.0",
     "@oslojs/webauthn": "^1.0.0",
@@ -34,6 +35,7 @@
     "@types/node": "catalog:",
     "drizzle-kit": "catalog:",
     "eslint": "catalog:",
+    "fishery": "^2.4.0",
     "prettier": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

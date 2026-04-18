@@ -9,16 +9,23 @@ export interface PluginDescriptor<TConfig = undefined> {
   readonly id: string;
   readonly version?: string;
   readonly setup: PluginSetup<TConfig>;
+  readonly schema?: Record<string, unknown>;
+}
+
+export interface DefinePluginOptions {
+  readonly version?: string;
+  readonly schema?: Record<string, unknown>;
 }
 
 export function definePlugin<TConfig = undefined>(
   id: string,
   setup: PluginSetup<TConfig>,
-  options?: { version?: string },
+  options?: DefinePluginOptions,
 ): PluginDescriptor<TConfig> {
   return {
     id,
     version: options?.version,
     setup,
+    schema: options?.schema,
   };
 }

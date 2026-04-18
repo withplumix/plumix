@@ -122,6 +122,7 @@ describe("persistCredential", () => {
       publicKey: new Uint8Array([0x04, ...new Uint8Array(64)]),
       signatureCounter: 0,
       transports: [] as const,
+      userId: null,
     };
     await persistCredential(db, {
       userId,
@@ -147,6 +148,7 @@ describe("persistCredential", () => {
         publicKey: new Uint8Array([0x04, ...new Uint8Array(64)]),
         signatureCounter: 0,
         transports: [],
+        userId: null,
       },
       maxPerUser: 1,
     });
@@ -158,6 +160,7 @@ describe("persistCredential", () => {
           publicKey: new Uint8Array([0x04, ...new Uint8Array(64)]),
           signatureCounter: 0,
           transports: [],
+          userId: null,
         },
         maxPerUser: 1,
       }),

@@ -1,9 +1,11 @@
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 
 import type * as coreSchema from "../db/schema/index.js";
+import type { UserRole } from "../db/schema/users.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
+import { createCapabilityResolver } from "../auth/rbac.js";
 
 export type CoreSchema = typeof coreSchema;
 
@@ -13,7 +15,7 @@ export type Db<TSchema extends Record<string, unknown> = CoreSchema> =
 export interface AuthenticatedUser {
   readonly id: number;
   readonly email: string;
-  readonly role: string;
+  readonly role: UserRole;
 }
 
 export interface Logger {
@@ -22,6 +24,12 @@ export interface Logger {
   warn(message: string, meta?: Record<string, unknown>): void;
   error(message: string, meta?: Record<string, unknown>): void;
 }
+
+export interface AuthNamespace {
+  can(capability: string): boolean;
+}
+
+export type AfterResponse = (promise: Promise<unknown>) => void;
 
 export interface AppContext<
   TSchema extends Record<string, unknown> = CoreSchema,
@@ -33,7 +41,68 @@ export interface AppContext<
   readonly hooks: HookExecutor;
   readonly plugins: PluginRegistry;
   readonly logger: Logger;
-  can(capability: string): boolean;
+  readonly auth: AuthNamespace;
+  /**
+   * Extend work past the returned Response. Runtime adapters bind this
+   * to their platform primitive (CF Workers: `ExecutionContext.waitUntil`).
+   * Default: fire-and-forget — handlers must tolerate the promise being
+   * dropped on runtimes that opt out.
+   */
+  readonly after: AfterResponse;
+}
+
+export type AuthenticatedAppContext<
+  TSchema extends Record<string, unknown> = CoreSchema,
+> = Omit<AppContext<TSchema>, "user"> & {
+  readonly user: AuthenticatedUser;
+};
+
+export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
+  readonly db: Db<TSchema>;
+  readonly env: PlumixEnv;
+  readonly request: Request;
+  readonly hooks: HookExecutor;
+  readonly plugins: PluginRegistry;
+  readonly user?: AuthenticatedUser | null;
+  readonly logger?: Logger;
+  readonly after?: AfterResponse;
+}
+
+const dropPromise: AfterResponse = () => undefined;
+
+export function createAppContext<TSchema extends Record<string, unknown>>(
+  args: CreateAppContextArgs<TSchema>,
+): AppContext<TSchema> {
+  const resolver = createCapabilityResolver(args.plugins);
+  const user = args.user ?? null;
+  return {
+    db: args.db,
+    env: args.env,
+    request: args.request,
+    user,
+    hooks: args.hooks,
+    plugins: args.plugins,
+    logger: args.logger ?? consoleLogger,
+    auth: {
+      can: (capability) =>
+        user !== null && resolver.hasCapability(user.role, capability),
+    },
+    after: args.after ?? dropPromise,
+  };
+}
+
+export function withUser<TSchema extends Record<string, unknown>>(
+  ctx: AppContext<TSchema>,
+  user: AuthenticatedUser,
+): AuthenticatedAppContext<TSchema> {
+  const resolver = createCapabilityResolver(ctx.plugins);
+  return {
+    ...ctx,
+    user,
+    auth: {
+      can: (capability) => resolver.hasCapability(user.role, capability),
+    },
+  };
 }
 
 export const consoleLogger: Logger = {
