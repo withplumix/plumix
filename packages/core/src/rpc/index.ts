@@ -28,6 +28,22 @@ export type {
   PostTrashInput,
   PostUpdateInput,
 } from "./procedures/post/schemas.js";
+export { termRouter } from "./procedures/term/index.js";
+export type { TermRouter } from "./procedures/term/index.js";
+export {
+  termCreateInputSchema,
+  termDeleteInputSchema,
+  termGetInputSchema,
+  termListInputSchema,
+  termUpdateInputSchema,
+} from "./procedures/term/schemas.js";
+export type {
+  TermCreateInput,
+  TermDeleteInput,
+  TermGetInput,
+  TermListInput,
+  TermUpdateInput,
+} from "./procedures/term/schemas.js";
 export { userRouter } from "./procedures/user/index.js";
 export type { UserRouter } from "./procedures/user/index.js";
 export {

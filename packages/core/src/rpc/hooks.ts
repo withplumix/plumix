@@ -1,9 +1,15 @@
 import type { NewPost, Post, PostStatus } from "../db/schema/posts.js";
+import type { Term } from "../db/schema/terms.js";
 import type { User } from "../db/schema/users.js";
 import type {
   PostCreateInput,
   PostUpdateInput,
 } from "./procedures/post/schemas.js";
+import type {
+  TermCreateInput,
+  TermListInput,
+  TermUpdateInput,
+} from "./procedures/term/schemas.js";
 import type {
   UserInviteInput,
   UserListInput,
@@ -48,6 +54,19 @@ declare module "../hooks/types.js" {
 
     "rpc:user.disable:output": (output: User) => User;
     "rpc:user.delete:output": (output: User) => User;
+
+    "rpc:term.list:input": (input: TermListInput) => TermListInput;
+    "rpc:term.list:output": (output: readonly Term[]) => readonly Term[];
+
+    "rpc:term.get:output": (output: Term) => Term;
+
+    "rpc:term.create:input": (input: TermCreateInput) => TermCreateInput;
+    "rpc:term.create:output": (output: Term) => Term;
+
+    "rpc:term.update:input": (input: TermUpdateInput) => TermUpdateInput;
+    "rpc:term.update:output": (output: Term) => Term;
+
+    "rpc:term.delete:output": (output: Term) => Term;
 
     [K: `${string}:before_save`]: (post: NewPost) => NewPost;
   }
