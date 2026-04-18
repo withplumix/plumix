@@ -5,6 +5,9 @@ import { slugSchema } from "../../schemas.js";
 
 const MAX_CONTENT_BYTES = 1_000_000;
 const MAX_EXCERPT_LENGTH = 600;
+// 200 covers WordPress's practical ceiling many times over while still
+// bounding pathological payloads on the record-validate path.
+const MAX_TERMS_PER_TAXONOMY = 200;
 
 const trimmedText = (max: number) =>
   v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(max));
@@ -29,8 +32,7 @@ const serverControlledKeys = [
 const userSuppliableFields = v.omit(postInsertSchema, serverControlledKeys);
 
 // taxonomy → ordered term ids. Empty array clears all assignments for that
-// taxonomy. Taxonomy keys not in the map are untouched. Capped to prevent
-// pathological payloads; 200 covers WP's practical ceiling many times over.
+// taxonomy. Taxonomy keys not in the map are untouched.
 const termIdSchema = v.pipe(v.number(), v.integer(), v.minValue(1));
 const postTermsSchema = v.record(
   v.pipe(
@@ -40,7 +42,7 @@ const postTermsSchema = v.record(
     v.maxLength(100),
     v.regex(/^[a-zA-Z0-9_-]+$/, "taxonomy must be kebab/snake ASCII"),
   ),
-  v.pipe(v.array(termIdSchema), v.maxLength(200)),
+  v.pipe(v.array(termIdSchema), v.maxLength(MAX_TERMS_PER_TAXONOMY)),
 );
 
 export const postCreateInputSchema = v.object({
