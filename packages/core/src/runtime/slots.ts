@@ -6,7 +6,6 @@ export interface DatabaseAdapter<TSchema = Record<string, unknown>> {
     schema: TSchema,
   ): {
     db: unknown;
-    commit: () => Record<string, string> | null;
   };
 }
 

@@ -1,6 +1,6 @@
-import { sql } from "../db/index.js";
 import type { Db } from "../context/app.js";
 import type { User, UserRole } from "../db/schema/users.js";
+import { sql } from "../db/index.js";
 import { users } from "../db/schema/users.js";
 
 export interface BootstrappedUser {
@@ -36,5 +36,8 @@ export async function provisionUser(
     .returning();
 
   if (!user) throw new Error("provisionUser: insert returned no row");
-  return { user, bootstrapped: user.role === "admin" && defaultRole !== "admin" };
+  return {
+    user,
+    bootstrapped: user.role === "admin" && defaultRole !== "admin",
+  };
 }

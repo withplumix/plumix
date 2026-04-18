@@ -1,11 +1,11 @@
 import { describe, expect, test, vi } from "vitest";
 
+import { createRpcHarness } from "../../../test/rpc.js";
 import {
   applyPostBeforeSave,
   firePostPublished,
   firePostTransition,
 } from "./lifecycle.js";
-import { createRpcHarness } from "../../../test/rpc.js";
 
 describe("lifecycle — WordPress-style hook fan-out", () => {
   test("type-specific filter runs before the generic filter on save", async () => {
@@ -63,7 +63,11 @@ describe("lifecycle — WordPress-style hook fan-out", () => {
     await firePostTransition(h.context, draft, "draft");
     expect(onTransition).not.toHaveBeenCalled();
 
-    await firePostTransition(h.context, { ...draft, status: "published" }, "draft");
+    await firePostTransition(
+      h.context,
+      { ...draft, status: "published" },
+      "draft",
+    );
     expect(onTransition).toHaveBeenCalledTimes(1);
   });
 

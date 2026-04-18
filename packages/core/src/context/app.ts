@@ -29,6 +29,8 @@ export interface AuthNamespace {
   can(capability: string): boolean;
 }
 
+export type AfterResponse = (promise: Promise<unknown>) => void;
+
 export interface AppContext<
   TSchema extends Record<string, unknown> = CoreSchema,
 > {
@@ -40,6 +42,13 @@ export interface AppContext<
   readonly plugins: PluginRegistry;
   readonly logger: Logger;
   readonly auth: AuthNamespace;
+  /**
+   * Extend work past the returned Response. Runtime adapters bind this
+   * to their platform primitive (CF Workers: `ExecutionContext.waitUntil`).
+   * Default: fire-and-forget — handlers must tolerate the promise being
+   * dropped on runtimes that opt out.
+   */
+  readonly after: AfterResponse;
 }
 
 export type AuthenticatedAppContext<
@@ -56,7 +65,10 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly plugins: PluginRegistry;
   readonly user?: AuthenticatedUser | null;
   readonly logger?: Logger;
+  readonly after?: AfterResponse;
 }
+
+const dropPromise: AfterResponse = () => undefined;
 
 export function createAppContext<TSchema extends Record<string, unknown>>(
   args: CreateAppContextArgs<TSchema>,
@@ -75,6 +87,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
       can: (capability) =>
         user !== null && resolver.hasCapability(user.role, capability),
     },
+    after: args.after ?? dropPromise,
   };
 }
 

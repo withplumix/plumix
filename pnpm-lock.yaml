@@ -321,6 +321,9 @@ importers:
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../../../tooling/typescript
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.12.2
       eslint:
         specifier: 'catalog:'
         version: 9.39.4(jiti@2.6.1)
@@ -333,6 +336,9 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.4(@types/node@24.12.2)(vite@8.0.8(@types/node@24.12.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
 
   tooling/eslint:
     dependencies:

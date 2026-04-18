@@ -16,8 +16,12 @@ const slugSchema = v.pipe(
 
 const postIdSchema = v.pipe(v.number(), v.integer(), v.minValue(1));
 
-const contentSchema = v.nullable(v.pipe(v.string(), v.maxLength(MAX_CONTENT_BYTES)));
-const excerptSchema = v.nullable(v.pipe(v.string(), v.maxLength(MAX_EXCERPT_LENGTH)));
+const contentSchema = v.nullable(
+  v.pipe(v.string(), v.maxLength(MAX_CONTENT_BYTES)),
+);
+const excerptSchema = v.nullable(
+  v.pipe(v.string(), v.maxLength(MAX_EXCERPT_LENGTH)),
+);
 
 const serverControlledKeys = [
   "id",

@@ -1,8 +1,8 @@
 import * as v from "valibot";
 
 import type { AppContext } from "../../context/app.js";
-import type { PlumixApp } from "../../runtime/app.js";
 import type { User } from "../../db/schema/users.js";
+import type { PlumixApp } from "../../runtime/app.js";
 import type { AuthenticationResponse, RegistrationResponse } from "./types.js";
 import { eq, isUniqueConstraintError } from "../../db/index.js";
 import { credentials } from "../../db/schema/credentials.js";
@@ -20,10 +20,7 @@ import {
   invalidateSession,
   validateSession,
 } from "../sessions.js";
-import {
-  beginAuthentication,
-  finishAuthentication,
-} from "./authenticate.js";
+import { beginAuthentication, finishAuthentication } from "./authenticate.js";
 import { PasskeyError } from "./errors.js";
 import {
   beginRegistration,
@@ -81,7 +78,9 @@ const authenticationResponseSchema = v.object({
     clientDataJSON: base64urlField(MAX_WEBAUTHN_FIELD_LENGTH),
     authenticatorData: base64urlField(MAX_WEBAUTHN_FIELD_LENGTH),
     signature: base64urlField(MAX_WEBAUTHN_FIELD_LENGTH),
-    userHandle: v.optional(v.nullable(base64urlField(MAX_WEBAUTHN_FIELD_LENGTH))),
+    userHandle: v.optional(
+      v.nullable(base64urlField(MAX_WEBAUTHN_FIELD_LENGTH)),
+    ),
   }),
 });
 
@@ -161,9 +160,10 @@ export async function handlePasskeyRegisterOptions(
     return jsonResponse({ error: policy.reason }, { status: 403 });
   }
 
-  const user = policy.outcome === "bootstrap"
-    ? await findOrProvisionUser(ctx, input.email, input.name ?? null)
-    : policy.user;
+  const user =
+    policy.outcome === "bootstrap"
+      ? await findOrProvisionUser(ctx, input.email, input.name ?? null)
+      : policy.user;
 
   const excludeCredentials =
     policy.outcome === "add-device"

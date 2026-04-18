@@ -1,11 +1,11 @@
 import type { AppContext } from "../context/app.js";
 import type { User, UserRole } from "../db/schema/users.js";
+import type { PlumixApp } from "../runtime/app.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { createSession } from "../auth/sessions.js";
 import { plumix } from "../config.js";
 import { createAppContext } from "../context/app.js";
 import { buildApp } from "../runtime/app.js";
-import type { PlumixApp } from "../runtime/app.js";
 import { createPlumixDispatcher } from "../runtime/dispatcher.js";
 import { userFactory } from "./factories.js";
 import { createTestDb } from "./harness.js";
@@ -14,8 +14,7 @@ type TestDb = Awaited<ReturnType<typeof createTestDb>>;
 
 const stubAdapter = {
   name: "test",
-  buildFetchHandler: () => () =>
-    new Response("stub", { status: 500 }),
+  buildFetchHandler: () => () => new Response("stub", { status: 500 }),
   cli: {
     dev: () => Promise.resolve(),
     build: () => Promise.resolve({ outputPath: "" }),
@@ -33,7 +32,10 @@ const stubDatabase = {
 interface DispatcherHarness {
   readonly db: TestDb;
   readonly app: PlumixApp;
-  readonly dispatch: (request: Request, user?: User | null) => Promise<Response>;
+  readonly dispatch: (
+    request: Request,
+    user?: User | null,
+  ) => Promise<Response>;
   readonly authenticateRequest: (
     request: Request,
     userId: number,
@@ -98,10 +100,7 @@ export async function createDispatcherHarness(): Promise<DispatcherHarness> {
   };
 }
 
-export function plumixRequest(
-  path: string,
-  init: RequestInit = {},
-): Request {
+export function plumixRequest(path: string, init: RequestInit = {}): Request {
   const url = path.startsWith("http") ? path : `https://cms.example${path}`;
   const headers = new Headers(init.headers);
   if (!headers.has("x-plumix-request")) {

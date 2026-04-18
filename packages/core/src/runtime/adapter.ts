@@ -1,5 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface PlumixApp {}
+import type { PlumixApp } from "./app.js";
 
 // env/ctx are runtime-specific; `any` keeps adapter-returned handlers
 // bivariantly assignable to this core-level contract without losing

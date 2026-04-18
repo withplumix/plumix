@@ -52,9 +52,7 @@ export async function consumeChallenge(
   const hash = await hashToken(rawChallenge);
   const [row] = await db
     .delete(authTokens)
-    .where(
-      and(eq(authTokens.hash, hash), eq(authTokens.type, CHALLENGE_TYPE)),
-    )
+    .where(and(eq(authTokens.hash, hash), eq(authTokens.type, CHALLENGE_TYPE)))
     .returning();
   if (!row) return null;
   if (row.expiresAt.getTime() < Date.now()) return null;

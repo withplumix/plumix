@@ -36,10 +36,7 @@ export function createPlumixDispatcher(app: PlumixApp): PlumixDispatcher {
         url: ctx.request.url,
         method: ctx.request.method,
       });
-      return jsonResponse(
-        { error: "internal_error" },
-        { status: 500 },
-      );
+      return jsonResponse({ error: "internal_error" }, { status: 500 });
     }
   };
 }

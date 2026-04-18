@@ -44,6 +44,7 @@
     "format": "prettier --check . --ignore-path ../../../.gitignore",
     "lint": "eslint",
     "publint": "publint",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
@@ -58,10 +59,12 @@
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "publint": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   },
   "prettier": "@plumix/prettier-config"
 }

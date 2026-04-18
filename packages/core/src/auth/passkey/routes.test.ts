@@ -1,7 +1,10 @@
 import { describe, expect, test } from "vitest";
 
+import {
+  createDispatcherHarness,
+  plumixRequest,
+} from "../../test/dispatcher.js";
 import { SESSION_COOKIE_NAME } from "../cookies.js";
-import { createDispatcherHarness, plumixRequest } from "../../test/dispatcher.js";
 
 describe("passkey register — options", () => {
   test("bootstraps the first user and issues a challenge", async () => {
@@ -14,7 +17,10 @@ describe("passkey register — options", () => {
       }),
     );
     expect(response.status).toBe(200);
-    const body = (await response.json()) as { challenge: string; user: { name: string } };
+    const body = (await response.json()) as {
+      challenge: string;
+      user: { name: string };
+    };
     expect(body.user.name).toBe("admin@cms.example");
     expect(typeof body.challenge).toBe("string");
   });

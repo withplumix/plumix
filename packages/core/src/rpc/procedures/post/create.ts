@@ -46,7 +46,11 @@ export const create = base
       publishedAt: filtered.status === "published" ? new Date() : null,
     };
 
-    const prepared = await applyPostBeforeSave(context, filtered.type, candidate);
+    const prepared = await applyPostBeforeSave(
+      context,
+      filtered.type,
+      candidate,
+    );
     prepared.authorId = context.user.id;
     prepared.type = filtered.type;
 

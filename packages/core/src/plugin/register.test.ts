@@ -5,6 +5,10 @@ import { definePlugin } from "./define.js";
 import { DuplicateRegistrationError } from "./manifest.js";
 import { installPlugins } from "./register.js";
 
+import "../rpc/hooks.js";
+
+import type { NewPost } from "../db/schema/posts.js";
+
 declare module "../hooks/types.js" {
   interface FilterRegistry {
     "seo:meta_tags": (tags: { readonly title: string }) => {
@@ -12,10 +16,6 @@ declare module "../hooks/types.js" {
     };
   }
 }
-
-import "../rpc/hooks.js";
-
-import type { NewPost } from "../db/schema/posts.js";
 
 const examplePost = (overrides: Partial<NewPost> = {}): NewPost => ({
   type: "post",
