@@ -37,6 +37,15 @@ describe("auth()", () => {
     expect(config.sessions).toEqual(sessions);
   });
 
+  test("accepts absoluteMaxAgeSeconds equal to maxAgeSeconds (≥, not >)", () => {
+    const sessions = {
+      maxAgeSeconds: 120,
+      absoluteMaxAgeSeconds: 120,
+      refreshThreshold: 0.5,
+    };
+    expect(() => auth({ passkey: validPasskey, sessions })).not.toThrow();
+  });
+
   test("rejects empty passkey.rpName with a pathed issue", () => {
     const error = rejected({ passkey: { ...validPasskey, rpName: "" } });
     expect(error.issues).toEqual([
