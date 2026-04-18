@@ -1,6 +1,8 @@
+import type { Option } from "../db/schema/options.js";
 import type { NewPost, Post, PostStatus } from "../db/schema/posts.js";
 import type { Term } from "../db/schema/terms.js";
 import type { User } from "../db/schema/users.js";
+import type { OptionSetInput } from "./procedures/option/schemas.js";
 import type {
   PostCreateInput,
   PostUpdateInput,
@@ -67,6 +69,12 @@ declare module "../hooks/types.js" {
     "rpc:term.update:output": (output: Term) => Term;
 
     "rpc:term.delete:output": (output: Term) => Term;
+
+    "rpc:option.list:output": (output: readonly Option[]) => readonly Option[];
+    "rpc:option.get:output": (output: Option) => Option;
+    "rpc:option.set:input": (input: OptionSetInput) => OptionSetInput;
+    "rpc:option.set:output": (output: Option) => Option;
+    "rpc:option.delete:output": (output: Option) => Option;
 
     [K: `${string}:before_save`]: (post: NewPost) => NewPost;
   }

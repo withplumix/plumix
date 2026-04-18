@@ -28,6 +28,20 @@ export type {
   PostTrashInput,
   PostUpdateInput,
 } from "./procedures/post/schemas.js";
+export { optionRouter } from "./procedures/option/index.js";
+export type { OptionRouter } from "./procedures/option/index.js";
+export {
+  optionDeleteInputSchema,
+  optionGetInputSchema,
+  optionListInputSchema,
+  optionSetInputSchema,
+} from "./procedures/option/schemas.js";
+export type {
+  OptionDeleteInput,
+  OptionGetInput,
+  OptionListInput,
+  OptionSetInput,
+} from "./procedures/option/schemas.js";
 export { termRouter } from "./procedures/term/index.js";
 export type { TermRouter } from "./procedures/term/index.js";
 export {
