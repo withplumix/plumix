@@ -7,16 +7,26 @@ import { CliError, generateSchemaSource } from "@plumix/core";
 import { report } from "../report.js";
 
 export const migrateCommand: CommandDefinition = {
-  describe: "Generate a migration from the merged schema",
-  run(ctx) {
+  describe: "Generate or apply database migrations",
+  async run(ctx) {
     const sub = ctx.argv[0];
     if (sub === undefined || sub === "generate") {
       migrateGenerate(ctx.cwd, ctx.app.config);
       return;
     }
+    if (Object.hasOwn(ctx.runtimeMigrate, sub)) {
+      const runtimeSub = ctx.runtimeMigrate[sub];
+      if (runtimeSub) {
+        await runtimeSub.run({ ...ctx, argv: ctx.argv.slice(1) });
+        return;
+      }
+    }
+    const supported = ["generate", ...Object.keys(ctx.runtimeMigrate)]
+      .map((n) => `\`plumix migrate ${n}\``)
+      .join(", ");
     throw new CliError(`Unknown subcommand: migrate ${sub}`, {
       code: "UNKNOWN_SUBCOMMAND",
-      hint: "Supported: `plumix migrate generate`.",
+      hint: `Supported: ${supported}.`,
     });
   },
 };

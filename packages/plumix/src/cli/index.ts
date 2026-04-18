@@ -72,11 +72,11 @@ export async function run(argv: readonly string[]): Promise<void> {
   }
 
   const loaded = await loadConfig(args.cwd, args.config);
-  const runtimeCommands = await loadRuntimeCommands(
+  const runtimeModule = await loadRuntimeCommands(
     loaded.config.runtime,
     args.cwd,
   );
-  const command = resolveCommand(runtimeCommands, args.command);
+  const command = resolveCommand(runtimeModule.commands, args.command);
   if (!command) {
     throw new CliError(`Unknown command: ${args.command}`, {
       code: "UNKNOWN_COMMAND",
@@ -90,25 +90,23 @@ export async function run(argv: readonly string[]): Promise<void> {
     cwd: args.cwd,
     configPath: loaded.configPath,
     argv: args.rest,
+    runtimeMigrate: runtimeModule.migrate,
   });
 }
 
 async function printHelp(args: CliArgs): Promise<void> {
   let loaded: LoadedConfig | undefined;
-  let runtimeCommands: CommandRegistry = {};
+  let runtimeModule: RuntimeCommandsModule = { commands: {}, migrate: {} };
   try {
     loaded = await loadConfig(args.cwd, args.config);
-    runtimeCommands = await loadRuntimeCommands(
-      loaded.config.runtime,
-      args.cwd,
-    );
+    runtimeModule = await loadRuntimeCommands(loaded.config.runtime, args.cwd);
   } catch (error) {
     // Help is still useful with no config loaded; surface the reason in verbose.
     report.verbose(
       `help: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
-  report.info(formatHelp(buildGroups(loaded, runtimeCommands)));
+  report.info(formatHelp(buildGroups(loaded, runtimeModule.commands)));
 }
 
 function buildGroups(
@@ -132,11 +130,16 @@ function buildGroups(
   return groups;
 }
 
+interface RuntimeCommandsModule {
+  readonly commands: CommandRegistry;
+  readonly migrate: CommandRegistry;
+}
+
 async function loadRuntimeCommands(
   adapter: RuntimeAdapter,
   cwd: string,
-): Promise<CommandRegistry> {
-  if (!adapter.commandsModule) return {};
+): Promise<RuntimeCommandsModule> {
+  if (!adapter.commandsModule) return { commands: {}, migrate: {} };
   const require = createRequire(pathToFileURL(join(cwd, "noop.js")));
   let resolved: string;
   try {
@@ -155,8 +158,12 @@ async function loadRuntimeCommands(
     const mod = (await import(pathToFileURL(resolved).href)) as {
       default?: CommandRegistry;
       commands?: CommandRegistry;
+      migrate?: CommandRegistry;
     };
-    return mod.commands ?? mod.default ?? {};
+    return {
+      commands: mod.commands ?? mod.default ?? {},
+      migrate: mod.migrate ?? {},
+    };
   } catch (cause) {
     throw new CliError(
       `Failed to load runtime commands from "${adapter.commandsModule}"`,

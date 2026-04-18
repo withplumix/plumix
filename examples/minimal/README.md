@@ -25,7 +25,7 @@ pnpm exec plumix migrate generate
 pnpm exec drizzle-kit generate --schema .plumix/schema.ts --dialect sqlite --out drizzle
 pnpm exec wrangler d1 create plumix_minimal
 # paste the returned database_id into wrangler.jsonc
-pnpm exec wrangler d1 migrations apply plumix_minimal --remote
+pnpm exec plumix migrate apply plumix_minimal --remote
 pnpm exec plumix deploy
 ```
 
