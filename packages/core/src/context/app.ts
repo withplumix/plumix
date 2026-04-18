@@ -1,5 +1,6 @@
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 
+import type { KnownCapability } from "../auth/rbac.js";
 import type * as coreSchema from "../db/schema/index.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { HookExecutor } from "../hooks/registry.js";
@@ -26,7 +27,10 @@ export interface Logger {
 }
 
 export interface AuthNamespace {
-  can(capability: string): boolean;
+  // Literal union gives autocomplete for known capabilities (core + derived
+  // `${type}:${action}` shapes); `string & {}` keeps arbitrary plugin-defined
+  // capability strings accepted at runtime without a cast.
+  can(capability: KnownCapability | (string & {})): boolean;
 }
 
 export type AfterResponse = (promise: Promise<unknown>) => void;
