@@ -52,6 +52,52 @@ describe("dispatcher — CSRF", () => {
     expect(response.status).toBe(404);
     expect(response.headers.get("x-plumix-hint")).toBe("admin-not-available");
   });
+
+  test("POST with a mismatched Origin header is forbidden (origin fallback)", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/rpc/post/list", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "https://attacker.example",
+        },
+        body: JSON.stringify({ json: {} }),
+      }),
+    );
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { reason?: string };
+    expect(body.reason).toBe("csrf_origin_mismatch");
+  });
+
+  test("POST with a matching Origin header passes through to the RPC layer", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/rpc/post/list", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "https://cms.example",
+        },
+        body: JSON.stringify({ json: {} }),
+      }),
+    );
+    // 401 rather than 403 — CSRF passes, then the auth check rejects the
+    // unauthenticated request.
+    expect(response.status).toBe(401);
+  });
+
+  test("POST without an Origin header is unaffected by the origin fallback", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/rpc/post/list", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ json: {} }),
+      }),
+    );
+    expect(response.status).toBe(401);
+  });
 });
 
 describe("dispatcher — RPC", () => {
