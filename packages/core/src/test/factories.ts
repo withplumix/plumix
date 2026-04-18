@@ -1,19 +1,36 @@
 import { Factory } from "fishery";
 
 import type { Db } from "../context/app.js";
+import type {
+  AllowedDomain,
+  NewAllowedDomain,
+} from "../db/schema/allowed_domains.js";
 import type { AuthToken, NewAuthToken } from "../db/schema/auth_tokens.js";
 import type {
   Credential,
   CredentialTransport,
   NewCredential,
 } from "../db/schema/credentials.js";
+import type { NewOption, Option } from "../db/schema/options.js";
+import type { NewPostMeta, PostMeta } from "../db/schema/post_meta.js";
+import type { NewPostTerm, PostTerm } from "../db/schema/post_term.js";
 import type { NewPost, Post } from "../db/schema/posts.js";
+import type { NewSession, Session } from "../db/schema/sessions.js";
+import type { NewTermMeta, TermMeta } from "../db/schema/term_meta.js";
 import type { NewTerm, Term } from "../db/schema/terms.js";
+import type { NewUserMeta, UserMeta } from "../db/schema/user_meta.js";
 import type { NewUser, User } from "../db/schema/users.js";
+import { allowedDomains } from "../db/schema/allowed_domains.js";
 import { authTokens } from "../db/schema/auth_tokens.js";
 import { credentials } from "../db/schema/credentials.js";
+import { options } from "../db/schema/options.js";
+import { postMeta } from "../db/schema/post_meta.js";
+import { postTerm } from "../db/schema/post_term.js";
 import { posts } from "../db/schema/posts.js";
+import { sessions } from "../db/schema/sessions.js";
+import { termMeta } from "../db/schema/term_meta.js";
 import { terms } from "../db/schema/terms.js";
+import { userMeta } from "../db/schema/user_meta.js";
 import { users } from "../db/schema/users.js";
 
 interface DbTransient {
@@ -137,6 +154,166 @@ export const inviteFactory = Factory.define<
   };
 });
 
+// Session factory — seeds a row without running the WebAuthn dance. Useful
+// for admin-UI tests that want an authenticated context straight away.
+export const sessionFactory = Factory.define<NewSession, DbTransient, Session>(
+  ({ sequence, transientParams, onCreate, params }) => {
+    onCreate(async (attrs) => {
+      const db = requireDb(transientParams);
+      const [row] = await db.insert(sessions).values(attrs).returning();
+      if (!row) throw new Error("sessionFactory: insert returned no row");
+      return row;
+    });
+
+    const userId = params.userId;
+    if (userId === undefined) {
+      throw new Error("sessionFactory: userId is required");
+    }
+    return {
+      id: params.id ?? `session-${sequence}-${Date.now()}`,
+      userId,
+      expiresAt: params.expiresAt ?? new Date(Date.now() + 24 * 60 * 60 * 1000),
+      ipAddress: params.ipAddress ?? null,
+      userAgent: params.userAgent ?? null,
+    };
+  },
+);
+
+// Site options (key/value store). Autoloaded defaults to true — matches the
+// most common plugin usage.
+export const optionFactory = Factory.define<NewOption, DbTransient, Option>(
+  ({ sequence, transientParams, onCreate, params }) => {
+    onCreate(async (attrs) => {
+      const db = requireDb(transientParams);
+      const [row] = await db.insert(options).values(attrs).returning();
+      if (!row) throw new Error("optionFactory: insert returned no row");
+      return row;
+    });
+
+    return {
+      name: params.name ?? `option-${sequence}-${Date.now()}`,
+      value: params.value ?? "",
+      isAutoloaded: params.isAutoloaded ?? true,
+    };
+  },
+);
+
+// post_term join row. Caller passes postId + termId; sortOrder defaults to 0.
+export const postTermFactory = Factory.define<
+  NewPostTerm,
+  DbTransient,
+  PostTerm
+>(({ transientParams, onCreate, params }) => {
+  onCreate(async (attrs) => {
+    const db = requireDb(transientParams);
+    const [row] = await db.insert(postTerm).values(attrs).returning();
+    if (!row) throw new Error("postTermFactory: insert returned no row");
+    return row;
+  });
+
+  const postId = params.postId;
+  const termId = params.termId;
+  if (postId === undefined || termId === undefined) {
+    throw new Error("postTermFactory: postId and termId are required");
+  }
+  return {
+    postId,
+    termId,
+    sortOrder: params.sortOrder ?? 0,
+  };
+});
+
+// Generic meta-row factories. Caller supplies the owner id; key/value have
+// sequence-derived defaults.
+export const postMetaFactory = Factory.define<
+  NewPostMeta,
+  DbTransient,
+  PostMeta
+>(({ sequence, transientParams, onCreate, params }) => {
+  onCreate(async (attrs) => {
+    const db = requireDb(transientParams);
+    const [row] = await db.insert(postMeta).values(attrs).returning();
+    if (!row) throw new Error("postMetaFactory: insert returned no row");
+    return row;
+  });
+
+  const postId = params.postId;
+  if (postId === undefined) {
+    throw new Error("postMetaFactory: postId is required");
+  }
+  return {
+    postId,
+    key: params.key ?? `meta-key-${sequence}`,
+    value: params.value ?? "",
+  };
+});
+
+export const userMetaFactory = Factory.define<
+  NewUserMeta,
+  DbTransient,
+  UserMeta
+>(({ sequence, transientParams, onCreate, params }) => {
+  onCreate(async (attrs) => {
+    const db = requireDb(transientParams);
+    const [row] = await db.insert(userMeta).values(attrs).returning();
+    if (!row) throw new Error("userMetaFactory: insert returned no row");
+    return row;
+  });
+
+  const userId = params.userId;
+  if (userId === undefined) {
+    throw new Error("userMetaFactory: userId is required");
+  }
+  return {
+    userId,
+    key: params.key ?? `meta-key-${sequence}`,
+    value: params.value ?? "",
+  };
+});
+
+export const termMetaFactory = Factory.define<
+  NewTermMeta,
+  DbTransient,
+  TermMeta
+>(({ sequence, transientParams, onCreate, params }) => {
+  onCreate(async (attrs) => {
+    const db = requireDb(transientParams);
+    const [row] = await db.insert(termMeta).values(attrs).returning();
+    if (!row) throw new Error("termMetaFactory: insert returned no row");
+    return row;
+  });
+
+  const termId = params.termId;
+  if (termId === undefined) {
+    throw new Error("termMetaFactory: termId is required");
+  }
+  return {
+    termId,
+    key: params.key ?? `meta-key-${sequence}`,
+    value: params.value ?? "",
+  };
+});
+
+// Allowed-domain entry for tests that exercise domain-gated self-signup.
+export const allowedDomainFactory = Factory.define<
+  NewAllowedDomain,
+  DbTransient,
+  AllowedDomain
+>(({ sequence, transientParams, onCreate, params }) => {
+  onCreate(async (attrs) => {
+    const db = requireDb(transientParams);
+    const [row] = await db.insert(allowedDomains).values(attrs).returning();
+    if (!row) throw new Error("allowedDomainFactory: insert returned no row");
+    return row;
+  });
+
+  return {
+    domain: params.domain ?? `example-${sequence}.test`,
+    defaultRole: params.defaultRole ?? "subscriber",
+    isEnabled: params.isEnabled ?? true,
+  };
+});
+
 // Pre-seeded credential for tests that exercise "already registered" flows.
 // Callers must supply userId and publicKey; everything else has a sensible
 // default. Buffer cast mirrors the runtime pattern in register.ts.
@@ -190,6 +367,13 @@ export interface Factories {
   readonly tag: typeof tagTerm;
   readonly invite: typeof inviteFactory;
   readonly credential: typeof credentialFactory;
+  readonly session: typeof sessionFactory;
+  readonly option: typeof optionFactory;
+  readonly postTerm: typeof postTermFactory;
+  readonly postMeta: typeof postMetaFactory;
+  readonly userMeta: typeof userMetaFactory;
+  readonly termMeta: typeof termMetaFactory;
+  readonly allowedDomain: typeof allowedDomainFactory;
 }
 
 export function factoriesFor(db: Db): Factories {
@@ -209,5 +393,12 @@ export function factoriesFor(db: Db): Factories {
     tag: tagTerm.transient({ db }),
     invite: inviteFactory.transient({ db }),
     credential: credentialFactory.transient({ db }),
+    session: sessionFactory.transient({ db }),
+    option: optionFactory.transient({ db }),
+    postTerm: postTermFactory.transient({ db }),
+    postMeta: postMetaFactory.transient({ db }),
+    userMeta: userMetaFactory.transient({ db }),
+    termMeta: termMetaFactory.transient({ db }),
+    allowedDomain: allowedDomainFactory.transient({ db }),
   };
 }

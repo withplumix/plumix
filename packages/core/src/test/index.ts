@@ -18,6 +18,13 @@ export {
   tagTerm,
   inviteFactory,
   credentialFactory,
+  sessionFactory,
+  optionFactory,
+  postTermFactory,
+  postMetaFactory,
+  userMetaFactory,
+  termMetaFactory,
+  allowedDomainFactory,
   factoriesFor,
 } from "./factories.js";
 export type { Factories } from "./factories.js";
