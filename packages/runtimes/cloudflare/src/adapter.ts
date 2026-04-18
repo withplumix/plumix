@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+
 import type {
   Db,
   FetchHandler,
@@ -15,6 +17,21 @@ import {
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
+/**
+ * Build the Cloudflare runtime adapter.
+ *
+ * @remarks
+ * Requires the `nodejs_compat` compatibility flag in `wrangler.toml` — Plumix's
+ * request-scoped context is backed by `node:async_hooks.AsyncLocalStorage`.
+ * Without the flag the bundle fails to load with a cryptic
+ * `module not found: node:async_hooks` error at first request.
+ *
+ * @example
+ * ```toml
+ * # wrangler.toml
+ * compatibility_flags = ["nodejs_compat"]
+ * ```
+ */
 export function cloudflare(): RuntimeAdapter {
   return {
     name: "cloudflare",
@@ -24,6 +41,16 @@ export function cloudflare(): RuntimeAdapter {
 }
 
 function buildFetch(app: PlumixApp): FetchHandler {
+  // Defense in depth: the `node:async_hooks` import above already fails at
+  // module-load time without `nodejs_compat`, but if the runtime ships a
+  // stubbed symbol (some edge-runtime shims do) the cryptic error bubbles up
+  // from the first AsyncLocalStorage.run() call. Fail fast with a useful hint.
+  if (typeof AsyncLocalStorage !== "function") {
+    throw new Error(
+      '@plumix/runtime-cloudflare requires AsyncLocalStorage. Add `compatibility_flags = ["nodejs_compat"]` to wrangler.toml.',
+    );
+  }
+
   const dispatcher = createPlumixDispatcher(app);
 
   return async (request, env, executionCtx): Promise<Response> => {
