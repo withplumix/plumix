@@ -1,8 +1,14 @@
 import type { NewPost, Post, PostStatus } from "../db/schema/posts.js";
+import type { User } from "../db/schema/users.js";
 import type {
   PostCreateInput,
   PostUpdateInput,
 } from "./procedures/post/schemas.js";
+import type {
+  UserInviteInput,
+  UserListInput,
+  UserUpdateInput,
+} from "./procedures/user/schemas.js";
 
 declare module "../hooks/types.js" {
   interface FilterRegistry {
@@ -25,6 +31,23 @@ declare module "../hooks/types.js" {
 
     "rpc:post.trash:input": (input: { id: number }) => typeof input;
     "rpc:post.trash:output": (output: Post) => Post;
+
+    "rpc:user.list:input": (input: UserListInput) => UserListInput;
+    "rpc:user.list:output": (output: readonly User[]) => readonly User[];
+
+    "rpc:user.get:output": (output: User) => User;
+
+    "rpc:user.invite:input": (input: UserInviteInput) => UserInviteInput;
+    "rpc:user.invite:output": (output: {
+      user: User;
+      inviteToken: string;
+    }) => typeof output;
+
+    "rpc:user.update:input": (input: UserUpdateInput) => UserUpdateInput;
+    "rpc:user.update:output": (output: User) => User;
+
+    "rpc:user.disable:output": (output: User) => User;
+    "rpc:user.delete:output": (output: User) => User;
 
     [K: `${string}:before_save`]: (post: NewPost) => NewPost;
   }

@@ -26,6 +26,15 @@ export function roleLevel(role: UserRole): number {
 // `capabilityType: 'post'` (the default) just inherit `post:*` via the
 // dedupe rule in `registerPostType`. `user`/`plugin`/`option` aren't tied
 // to content entities so they only live here.
+//
+// `user:*` mirrors WordPress's split: list is editor+, profile self-edit is
+// any authenticated user, but creating / editing / promoting / deleting
+// other users is admin-only. `promote` is separate from `edit` because role
+// escalation is more sensitive than a name/avatar change.
+// `option:manage` is a single gate over both reads and writes, matching WP's
+// `manage_options`. Options can contain admin-only config; if a specific
+// option needs broader read access, expose it via a dedicated RPC procedure
+// that reads it server-side — don't widen `option.*`.
 export const CORE_CAPABILITIES: Readonly<Record<string, UserRole>> =
   Object.freeze({
     "post:read": "subscriber",
@@ -35,7 +44,12 @@ export const CORE_CAPABILITIES: Readonly<Record<string, UserRole>> =
     "post:edit_any": "editor",
     "post:delete": "editor",
     "taxonomy:manage": "editor",
-    "user:manage": "admin",
+    "user:list": "editor",
+    "user:edit_own": "subscriber",
+    "user:create": "admin",
+    "user:edit": "admin",
+    "user:promote": "admin",
+    "user:delete": "admin",
     "plugin:manage": "admin",
     "option:manage": "admin",
   });

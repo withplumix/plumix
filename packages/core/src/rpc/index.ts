@@ -28,5 +28,23 @@ export type {
   PostTrashInput,
   PostUpdateInput,
 } from "./procedures/post/schemas.js";
+export { userRouter } from "./procedures/user/index.js";
+export type { UserRouter } from "./procedures/user/index.js";
+export {
+  userDeleteInputSchema,
+  userDisableInputSchema,
+  userGetInputSchema,
+  userInviteInputSchema,
+  userListInputSchema,
+  userUpdateInputSchema,
+} from "./procedures/user/schemas.js";
+export type {
+  UserDeleteInput,
+  UserDisableInput,
+  UserGetInput,
+  UserInviteInput,
+  UserListInput,
+  UserUpdateInput,
+} from "./procedures/user/schemas.js";
 export { appRouter } from "./router.js";
 export type { AppRouter } from "./router.js";
