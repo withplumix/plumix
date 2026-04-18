@@ -502,7 +502,7 @@ function pickDisplayName(
   email: string,
 ): string {
   const trimmed = userInput?.trim();
-  if (trimmed && trimmed.length > 0) return trimmed;
-  if (existingName && existingName.length > 0) return existingName;
+  if (trimmed) return trimmed;
+  if (existingName) return existingName;
   return email;
 }
