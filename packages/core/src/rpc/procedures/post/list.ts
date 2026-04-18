@@ -1,5 +1,5 @@
 import type { Post, PostStatus } from "../../../db/schema/posts.js";
-import { and, desc, eq } from "../../../db/index.js";
+import { and, desc, eq, isNull } from "../../../db/index.js";
 import { posts } from "../../../db/schema/posts.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
@@ -37,6 +37,11 @@ export const list = base
 
     const conditions = [eq(posts.type, type)];
     if (effectiveStatus) conditions.push(eq(posts.status, effectiveStatus));
+    if (filtered.parentId === null) {
+      conditions.push(isNull(posts.parentId));
+    } else if (filtered.parentId !== undefined) {
+      conditions.push(eq(posts.parentId, filtered.parentId));
+    }
 
     const rows = await context.db
       .select()

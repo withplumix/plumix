@@ -1,10 +1,14 @@
 import { describe, expect, test } from "vitest";
 
+import { eq } from "../../db/index.js";
+import { authTokens } from "../../db/schema/auth_tokens.js";
+import { credentials } from "../../db/schema/credentials.js";
 import {
   createDispatcherHarness,
   plumixRequest,
 } from "../../test/dispatcher.js";
 import { SESSION_COOKIE_NAME } from "../cookies.js";
+import { generateToken, hashToken } from "../tokens.js";
 
 describe("passkey register — options", () => {
   test("bootstraps the first user and issues a challenge", async () => {
@@ -152,6 +156,235 @@ describe("passkey verify — input validation", () => {
             signature: "a",
           },
         }),
+      }),
+    );
+    expect(response.status).toBe(400);
+  });
+});
+
+describe("invite register — options", () => {
+  async function seedInvite(
+    h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+    opts: {
+      readonly role?: "author" | "editor" | "admin";
+      readonly expiresInMs?: number;
+    } = {},
+  ) {
+    const user = await h.seedUser(opts.role ?? "author");
+    const token = generateToken();
+    const tokenHash = await hashToken(token);
+    await h.db.insert(authTokens).values({
+      hash: tokenHash,
+      userId: user.id,
+      email: user.email,
+      role: opts.role ?? "author",
+      type: "invite",
+      expiresAt: new Date(Date.now() + (opts.expiresInMs ?? 60_000)),
+    });
+    return { user, token, tokenHash };
+  }
+
+  test("returns registration options + invitee metadata for a valid token", async () => {
+    const h = await createDispatcherHarness();
+    const { user, token } = await seedInvite(h, { role: "editor" });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/auth/invite/register/options", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      options: { challenge: string };
+      invitee: { email: string; role: string };
+    };
+    expect(typeof body.options.challenge).toBe("string");
+    expect(body.invitee.email).toBe(user.email);
+    expect(body.invitee.role).toBe("editor");
+  });
+
+  test("does NOT consume the token on options (allows retry after user abandons)", async () => {
+    const h = await createDispatcherHarness();
+    const { token, tokenHash } = await seedInvite(h);
+
+    await h.dispatch(
+      plumixRequest("/_plumix/auth/invite/register/options", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token }),
+      }),
+    );
+
+    const row = await h.db.query.authTokens.findFirst({
+      where: eq(authTokens.hash, tokenHash),
+    });
+    expect(row).toBeDefined();
+  });
+
+  test("404 for an unknown token", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/auth/invite/register/options", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: generateToken() }),
+      }),
+    );
+    expect(response.status).toBe(404);
+    const body = (await response.json()) as { error: string };
+    expect(body.error).toBe("invalid_token");
+  });
+
+  test("410 for an expired token", async () => {
+    const h = await createDispatcherHarness();
+    const { token } = await seedInvite(h, { expiresInMs: -60_000 });
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/auth/invite/register/options", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token }),
+      }),
+    );
+    expect(response.status).toBe(410);
+  });
+
+  test("409 when the invited user already has credentials", async () => {
+    const h = await createDispatcherHarness();
+    const { user, token } = await seedInvite(h);
+    // Seed a credential as if the user had already registered.
+    await h.db.insert(credentials).values({
+      id: "cred-id-1",
+      userId: user.id,
+      publicKey: new Uint8Array([1, 2, 3]) as unknown as Buffer,
+      counter: 0,
+      deviceType: "single_device",
+      isBackedUp: false,
+      transports: ["internal"],
+    });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/auth/invite/register/options", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token }),
+      }),
+    );
+    expect(response.status).toBe(409);
+    const body = (await response.json()) as { error: string };
+    expect(body.error).toBe("already_registered");
+  });
+
+  test("404 when the invited user was deleted after the invite", async () => {
+    const h = await createDispatcherHarness();
+    const { user, token } = await seedInvite(h);
+    // Remove the user; the token row cascades away via the FK. This mirrors
+    // the admin-deletes-invitee race — a prior invite URL is now invalid.
+    const { users } = await import("../../db/schema/users.js");
+    await h.db.delete(users).where(eq(users.id, user.id));
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/auth/invite/register/options", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token }),
+      }),
+    );
+    expect(response.status).toBe(404);
+  });
+
+  test("404 when the invited user is disabled", async () => {
+    const h = await createDispatcherHarness();
+    const { user, token } = await seedInvite(h);
+    const { users } = await import("../../db/schema/users.js");
+    await h.db
+      .update(users)
+      .set({ disabledAt: new Date() })
+      .where(eq(users.id, user.id));
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/auth/invite/register/options", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token }),
+      }),
+    );
+    expect(response.status).toBe(404);
+  });
+
+  test("rejects malformed input (missing token) with 400", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/auth/invite/register/options", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({}),
+      }),
+    );
+    expect(response.status).toBe(400);
+  });
+});
+
+describe("invite register — verify", () => {
+  test("404 for an unknown token before touching WebAuthn logic", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/auth/invite/register/verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          token: generateToken(),
+          response: {
+            id: "a",
+            rawId: "a",
+            type: "public-key",
+            response: { clientDataJSON: "a", attestationObject: "a" },
+          },
+        }),
+      }),
+    );
+    expect(response.status).toBe(404);
+  });
+
+  test("410 for an expired token (checked again at verify, not just options)", async () => {
+    const h = await createDispatcherHarness();
+    const user = await h.seedUser("editor");
+    const token = generateToken();
+    const tokenHash = await hashToken(token);
+    await h.db.insert(authTokens).values({
+      hash: tokenHash,
+      userId: user.id,
+      email: user.email,
+      role: "editor",
+      type: "invite",
+      expiresAt: new Date(Date.now() - 60_000),
+    });
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/auth/invite/register/verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          token,
+          response: {
+            id: "a",
+            rawId: "a",
+            type: "public-key",
+            response: { clientDataJSON: "a", attestationObject: "a" },
+          },
+        }),
+      }),
+    );
+    expect(response.status).toBe(410);
+  });
+
+  test("rejects malformed input (missing response) with 400", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/auth/invite/register/verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: generateToken() }),
       }),
     );
     expect(response.status).toBe(400);
