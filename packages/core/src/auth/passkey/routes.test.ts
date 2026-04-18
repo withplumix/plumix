@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { credentials } from "../../db/schema/credentials.js";
+import { users } from "../../db/schema/users.js";
 import {
   createDispatcherHarness,
   plumixRequest,
@@ -48,6 +49,13 @@ describe("passkey register — options", () => {
       ),
     ]);
     for (const response of two) expect(response.status).toBe(200);
+    // The race is decided by UNIQUE(email): exactly one row must exist after
+    // both options calls settle, regardless of which request won the insert.
+    const rows = await h.db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, "same@cms.example"));
+    expect(rows).toHaveLength(1);
   });
 
   test("rejects an invalid email with 400", async () => {

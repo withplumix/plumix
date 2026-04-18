@@ -93,7 +93,10 @@ export async function finishAuthentication(
   }
 
   if (clientData.origin !== config.origin) {
-    throw new PasskeyError("invalid_origin");
+    throw new PasskeyError("invalid_origin", undefined, {
+      expected: config.origin,
+      actual: clientData.origin,
+    });
   }
 
   const authenticatorData = parseAuthenticatorData(authenticatorDataBytes);
@@ -160,7 +163,7 @@ function ensureUint8Array(value: unknown): Uint8Array {
   if (value instanceof Uint8Array) return value;
   if (value instanceof ArrayBuffer) return new Uint8Array(value);
   throw new PasskeyError(
-    "invalid_response",
+    "credential_storage_corrupt",
     "Stored public key has unexpected type",
   );
 }

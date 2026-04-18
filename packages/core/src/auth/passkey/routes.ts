@@ -55,7 +55,15 @@ const loginOptionsInputSchema = v.object({
 // We cap generously to protect the hashToken path from pathological inputs.
 const inviteTokenSchema = v.pipe(v.string(), v.minLength(16), v.maxLength(256));
 
+// Defensive upper bound for credential IDs from untrusted WebAuthn responses.
+// Real credential IDs are typically tens to a few hundred bytes; 1 KiB
+// preserves compatibility while blocking pathological payloads from reaching
+// deeper parsing paths.
 const MAX_CREDENTIAL_ID_LENGTH = 1024;
+// Defensive cap for large binary WebAuthn fields that arrive base64url-encoded
+// in JSON — clientDataJSON, attestationObject, authenticatorData, signature.
+// 64 KiB is intentionally generous for interoperability while bounding memory
+// and CPU on oversized inputs so they can't reach the oslo parsers at all.
 const MAX_WEBAUTHN_FIELD_LENGTH = 65_536;
 
 const base64urlField = (max: number) =>
@@ -123,7 +131,10 @@ function sessionCookieHeader(
   });
 }
 
-function passkeyError(error: PasskeyError): Response {
+function passkeyError(ctx: AppContext, error: PasskeyError): Response {
+  if (error.code === "invalid_origin") {
+    ctx.logger.warn("passkey: invalid_origin", { ...error.detail });
+  }
   return jsonResponse(
     { error: error.code, message: error.message },
     { status: 400 },
@@ -260,7 +271,7 @@ export async function handlePasskeyRegisterVerify(
       },
     );
   } catch (error) {
-    if (error instanceof PasskeyError) return passkeyError(error);
+    if (error instanceof PasskeyError) return passkeyError(ctx, error);
     throw error;
   }
 }
@@ -322,7 +333,7 @@ export async function handlePasskeyLoginVerify(
       },
     );
   } catch (error) {
-    if (error instanceof PasskeyError) return passkeyError(error);
+    if (error instanceof PasskeyError) return passkeyError(ctx, error);
     throw error;
   }
 }
@@ -432,7 +443,7 @@ export async function handleInviteRegisterVerify(
       },
     );
   } catch (error) {
-    if (error instanceof PasskeyError) return passkeyError(error);
+    if (error instanceof PasskeyError) return passkeyError(ctx, error);
     throw error;
   }
 }
@@ -491,7 +502,7 @@ function pickDisplayName(
   email: string,
 ): string {
   const trimmed = userInput?.trim();
-  if (trimmed && trimmed.length > 0) return trimmed;
-  if (existingName && existingName.length > 0) return existingName;
+  if (trimmed) return trimmed;
+  if (existingName) return existingName;
   return email;
 }

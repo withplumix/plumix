@@ -1,10 +1,15 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, lt } from "drizzle-orm";
 
 import type { Db } from "../../context/app.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { generateToken, hashToken } from "../tokens.js";
 
 const CHALLENGE_TYPE = "webauthn_challenge" as const;
+
+// Run the opportunistic sweep on a fraction of issueChallenge calls so the
+// amortised cost is ~O(1) per request while still bounding table growth.
+// At 10% we expect the sweep to fire ~1 in 10 registrations/logins.
+const OPPORTUNISTIC_PRUNE_PROBABILITY = 0.1;
 
 export interface IssuedChallenge {
   /** Raw challenge (sent to the browser, base64url). */
@@ -36,7 +41,20 @@ export async function issueChallenge(
     userId,
     expiresAt,
   });
+  if (Math.random() < OPPORTUNISTIC_PRUNE_PROBABILITY) {
+    await pruneExpiredAuthTokens(db);
+  }
   return { challenge, expiresAt };
+}
+
+/**
+ * Delete every auth_tokens row whose expiresAt is in the past. Safe to call
+ * at any time — consumed rows are deleted by consumeChallenge, so expired
+ * rows are the only thing this ever removes. Called opportunistically from
+ * issueChallenge until a scheduled-task plugin can run it on a cron.
+ */
+export async function pruneExpiredAuthTokens(db: Db): Promise<void> {
+  await db.delete(authTokens).where(lt(authTokens.expiresAt, new Date()));
 }
 
 /**

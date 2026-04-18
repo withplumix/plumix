@@ -71,6 +71,21 @@ export const TAXONOMY_CAPABILITY_ACTIONS = {
   manage: "editor",
 } as const satisfies Record<string, UserRole>;
 
+export type PostCapabilityAction = keyof typeof POST_TYPE_CAPABILITY_ACTIONS;
+export type TaxonomyCapabilityAction = keyof typeof TAXONOMY_CAPABILITY_ACTIONS;
+export type CoreCapability = keyof typeof CORE_CAPABILITIES;
+
+/**
+ * Capabilities we know about statically — the built-in core caps. IDE
+ * autocomplete picks these up when a `KnownCapability | (string & {})`
+ * signature is used (the `string & {}` half preserves flexibility for
+ * plugin-defined caps without losing literal suggestions). Derived
+ * `{postType|taxonomy}:{action}` shapes deliberately aren't listed here:
+ * `${string}:${action}` collapses to `string` in TypeScript, which would
+ * erase the autocomplete benefit for the core strings.
+ */
+export type KnownCapability = CoreCapability;
+
 export interface DerivedCapability {
   readonly name: string;
   readonly minRole: UserRole;

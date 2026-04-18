@@ -18,7 +18,9 @@ import {
   firePostPublished,
   firePostTransition,
   firePostUpdated,
+  loadReadableParent,
   postCapability,
+  wouldCreateParentCycle,
 } from "./lifecycle.js";
 import { postUpdateInputSchema } from "./schemas.js";
 
@@ -54,6 +56,32 @@ export const update = base
       const publishCapability = postCapability(existing.type, "publish");
       if (!context.auth.can(publishCapability)) {
         throw errors.FORBIDDEN({ data: { capability: publishCapability } });
+      }
+    }
+
+    // Reparenting: caller may only point at posts they can see, and the
+    // parent must share the current post's type. Undistinguished 404 on
+    // any failure — don't leak whether the parent exists. Also walk the
+    // chain upward to reject cycles of any depth (self-parent, A→B→A, …) —
+    // admin UI tree renders will infinite-loop on any cycle in the DB.
+    if (filtered.parentId != null && filtered.parentId !== existing.parentId) {
+      const parent = await loadReadableParent(
+        context,
+        existing.type,
+        filtered.parentId,
+      );
+      if (!parent) {
+        throw errors.NOT_FOUND({
+          data: { kind: "post", id: filtered.parentId },
+        });
+      }
+      const cycle = await wouldCreateParentCycle(
+        context,
+        existing.id,
+        parent.id,
+      );
+      if (cycle) {
+        throw errors.CONFLICT({ data: { reason: "parent_cycle" } });
       }
     }
 

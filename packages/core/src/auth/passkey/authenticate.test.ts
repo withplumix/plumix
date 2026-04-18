@@ -151,7 +151,13 @@ describe("finishAuthentication", () => {
           signature: assertion.signature,
         },
       }),
-    ).rejects.toMatchObject({ code: "invalid_origin" });
+    ).rejects.toMatchObject({
+      code: "invalid_origin",
+      detail: {
+        expected: "https://cms.example.com",
+        actual: "https://attacker.example",
+      },
+    });
   });
 
   test("rejects an assertion signed by a different key", async () => {
