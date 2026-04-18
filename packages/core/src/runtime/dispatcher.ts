@@ -2,6 +2,8 @@ import type { AppContext } from "../context/app.js";
 import type { PlumixApp } from "./app.js";
 import { hasCsrfHeader } from "../auth/csrf.js";
 import {
+  handleInviteRegisterOptions,
+  handleInviteRegisterVerify,
   handlePasskeyLoginOptions,
   handlePasskeyLoginVerify,
   handlePasskeyRegisterOptions,
@@ -21,6 +23,8 @@ const POST_AUTH_ROUTES = new Map<string, RouteHandler>([
   ["/_plumix/auth/passkey/register/verify", handlePasskeyRegisterVerify],
   ["/_plumix/auth/passkey/login/options", handlePasskeyLoginOptions],
   ["/_plumix/auth/passkey/login/verify", handlePasskeyLoginVerify],
+  ["/_plumix/auth/invite/register/options", handleInviteRegisterOptions],
+  ["/_plumix/auth/invite/register/verify", handleInviteRegisterVerify],
   ["/_plumix/auth/signout", (ctx) => handleSignout(ctx)],
 ]);
 
