@@ -13,6 +13,7 @@ export type PasskeyErrorCode =
   | "credential_already_registered"
   | "credential_limit_reached"
   | "credential_not_found"
+  | "credential_storage_corrupt"
   | "invalid_signature"
   | "counter_replay"
   | "user_not_found"
