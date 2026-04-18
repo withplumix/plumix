@@ -30,4 +30,8 @@ pnpm exec plumix deploy
 
 `plumix migrate generate` chains `drizzle-kit generate` for you (requires `drizzle-kit` as a devDependency). `plumix migrate apply` auto-discovers the D1 database name from `wrangler.jsonc` / `wrangler.toml` — pass it explicitly (`plumix migrate apply <db-name>`) if you have more than one.
 
+## Read replicas
+
+This example opts into `d1({ session: "auto" })`. Writes always hit primary; anonymous reads go to the nearest replica; authenticated reads resume from a `__plumix_d1_bookmark` cookie for read-your-writes consistency. Set `session: "disabled"` (or omit) to stay on the primary-only path.
+
 Every `plumix` subcommand (`doctor`, `types`, `migrate generate`, `deploy`, …) is reachable via `pnpm exec plumix <cmd>` — only the conventional `dev`/`build` are wrapped as scripts.
