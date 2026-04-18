@@ -15,6 +15,10 @@
     "./schema": {
       "types": "./dist/db/schema/index.d.ts",
       "default": "./dist/db/schema/index.js"
+    },
+    "./test": {
+      "types": "./dist/test/index.d.ts",
+      "default": "./dist/test/index.js"
     }
   },
   "scripts": {
@@ -29,23 +33,23 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.2",
     "@orpc/server": "^1.13.14",
     "@oslojs/crypto": "^1.0.1",
     "@oslojs/encoding": "^1.1.0",
     "@oslojs/webauthn": "^1.0.0",
+    "drizzle-kit": "catalog:",
     "drizzle-orm": "catalog:",
     "drizzle-valibot": "catalog:",
+    "fishery": "^2.4.0",
     "valibot": "catalog:"
   },
   "devDependencies": {
-    "@libsql/client": "^0.17.2",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
     "@types/node": "catalog:",
-    "drizzle-kit": "catalog:",
     "eslint": "catalog:",
-    "fishery": "^2.4.0",
     "prettier": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
