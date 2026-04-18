@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+import { slugSchema } from "../../schemas.js";
 
 const termIdSchema = v.pipe(v.number(), v.integer(), v.minValue(1));
 
@@ -16,14 +16,6 @@ const nameSchema = v.pipe(
   v.trim(),
   v.minLength(1),
   v.maxLength(200),
-);
-
-const slugSchema = v.pipe(
-  v.string(),
-  v.trim(),
-  v.minLength(1),
-  v.maxLength(200),
-  v.regex(slugPattern, "slug must be kebab-case ASCII"),
 );
 
 const descriptionSchema = v.nullable(v.pipe(v.string(), v.maxLength(10_000)));
