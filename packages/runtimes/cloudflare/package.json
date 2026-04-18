@@ -56,7 +56,9 @@
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.32.3",
     "@plumix/core": "workspace:*",
+    "jsonc-parser": "^3.3.1",
     "plumix": "workspace:*",
+    "smol-toml": "^1.6.1",
     "vite": "catalog:"
   },
   "peerDependencies": {

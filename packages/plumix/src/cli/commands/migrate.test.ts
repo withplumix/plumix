@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -9,7 +9,7 @@ import type {
   PlumixApp,
 } from "@plumix/core";
 
-import { migrateCommand } from "./migrate.js";
+import { migrateCommand, migrateGenerateDeps } from "./migrate.js";
 
 function fakeApp(): PlumixApp {
   return {
@@ -46,6 +46,7 @@ describe("migrate dispatch", () => {
 
   afterEach(() => {
     rmSync(dir, { recursive: true, force: true });
+    vi.restoreAllMocks();
   });
 
   test("apply delegates to runtimeMigrate.apply with the remaining argv", async () => {
@@ -88,6 +89,102 @@ describe("migrate dispatch", () => {
       await expect(
         migrateCommand.run(ctx({ cwd: dir, argv: [sub] })),
       ).rejects.toMatchObject({ code: "UNKNOWN_SUBCOMMAND" });
+    }
+  });
+});
+
+describe("migrate generate", () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "plumix-migrate-gen-"));
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+    vi.restoreAllMocks();
+  });
+
+  test("writes .plumix/schema.ts, then spawns drizzle-kit generate", async () => {
+    vi.spyOn(migrateGenerateDeps, "resolveDrizzleKitBin").mockReturnValue(
+      "/fake/drizzle-kit/bin.cjs",
+    );
+    const spawn = vi
+      .spyOn(migrateGenerateDeps, "spawnInherit")
+      .mockResolvedValue();
+
+    await migrateCommand.run(ctx({ cwd: dir, argv: ["generate"] }));
+
+    const schema = readFileSync(join(dir, ".plumix/schema.ts"), "utf8");
+    expect(schema).toContain("export");
+
+    expect(spawn).toHaveBeenCalledOnce();
+    const [command, args, options] = spawn.mock.calls[0] ?? [];
+    expect(command).toBe(process.execPath);
+    expect(args).toEqual([
+      "/fake/drizzle-kit/bin.cjs",
+      "generate",
+      "--schema",
+      ".plumix/schema.ts",
+      "--dialect",
+      "sqlite",
+      "--out",
+      "drizzle",
+    ]);
+    expect(options).toEqual({ cwd: dir });
+  });
+
+  test("defaulting to the generate subcommand (no argv) behaves the same", async () => {
+    vi.spyOn(migrateGenerateDeps, "resolveDrizzleKitBin").mockReturnValue(
+      "/fake/drizzle-kit/bin.cjs",
+    );
+    const spawn = vi
+      .spyOn(migrateGenerateDeps, "spawnInherit")
+      .mockResolvedValue();
+
+    await migrateCommand.run(ctx({ cwd: dir, argv: [] }));
+    expect(spawn).toHaveBeenCalledOnce();
+  });
+
+  test("throws a structured CliError when drizzle-kit is not installed", async () => {
+    vi.spyOn(migrateGenerateDeps, "resolveDrizzleKitBin").mockReturnValue(null);
+    const spawn = vi
+      .spyOn(migrateGenerateDeps, "spawnInherit")
+      .mockResolvedValue();
+
+    await expect(
+      migrateCommand.run(ctx({ cwd: dir, argv: ["generate"] })),
+    ).rejects.toMatchObject({
+      code: "MIGRATE_GENERATE_NO_DRIZZLE_KIT",
+      hint: expect.stringContaining("pnpm add -D drizzle-kit") as unknown,
+    });
+    expect(spawn).not.toHaveBeenCalled();
+  });
+
+  test("propagates a non-zero exit from drizzle-kit", async () => {
+    vi.spyOn(migrateGenerateDeps, "resolveDrizzleKitBin").mockReturnValue(
+      "/fake/drizzle-kit/bin.cjs",
+    );
+    vi.spyOn(migrateGenerateDeps, "spawnInherit").mockRejectedValue(
+      Object.assign(new Error("drizzle-kit exited with code 1"), {
+        code: "SPAWN_NONZERO_EXIT",
+      }),
+    );
+
+    await expect(
+      migrateCommand.run(ctx({ cwd: dir, argv: ["generate"] })),
+    ).rejects.toMatchObject({ code: "SPAWN_NONZERO_EXIT" });
+  });
+});
+
+describe("resolveDrizzleKitBin", () => {
+  test("returns null when drizzle-kit cannot be resolved from cwd", () => {
+    const empty = mkdtempSync(join(tmpdir(), "plumix-empty-"));
+    try {
+      const bin = migrateGenerateDeps.resolveDrizzleKitBin(empty);
+      expect(bin).toBeNull();
+    } finally {
+      rmSync(empty, { recursive: true, force: true });
     }
   });
 });

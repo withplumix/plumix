@@ -7,8 +7,9 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { migrateGenerateDeps } from "../src/cli/commands/migrate.js";
 import { run } from "../src/cli/index.js";
 
 // Inline config object — avoids importing "plumix" from a tmp dir, which
@@ -53,15 +54,25 @@ describe("plumix CLI dispatch", () => {
   afterEach(() => {
     rmSync(dir, { recursive: true, force: true });
     process.exit = originalExit;
+    vi.restoreAllMocks();
   });
 
-  test("migrate generate writes .plumix/schema.ts", async () => {
+  test("migrate generate writes .plumix/schema.ts and invokes drizzle-kit", async () => {
+    vi.spyOn(migrateGenerateDeps, "resolveDrizzleKitBin").mockReturnValue(
+      "/fake/drizzle-kit/bin.cjs",
+    );
+    const spawn = vi
+      .spyOn(migrateGenerateDeps, "spawnInherit")
+      .mockResolvedValue();
+
     await run(["migrate", "generate", "--cwd", dir]);
+
     const emitted = join(dir, ".plumix/schema.ts");
     expect(existsSync(emitted)).toBe(true);
     expect(readFileSync(emitted, "utf8")).toContain(
       'export * from "plumix/schema";',
     );
+    expect(spawn).toHaveBeenCalledOnce();
     expect(exitCode).toBeUndefined();
   });
 
