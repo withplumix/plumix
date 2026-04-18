@@ -10,7 +10,13 @@ pnpm dev
 
 Opens a local Workers dev server (via `@cloudflare/vite-plugin`) on `http://localhost:8787`.
 
-> **Note:** `plumix build` is wired through the Cloudflare vite plugin but the full worker-bundle emission path is still settling (see the internal deferred list). Use `pnpm dev` and `plumix deploy` directly for now.
+## Build
+
+```bash
+pnpm exec plumix build
+```
+
+Emits the worker bundle to `dist/plumix_minimal/`.
 
 ## Deploy
 

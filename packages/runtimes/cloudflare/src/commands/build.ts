@@ -8,10 +8,11 @@ export const buildCommand: CommandDefinition = {
     const vite = await import("vite");
     const { plugins, root } = await createCloudflareVite(ctx);
 
-    await vite.build({
+    const builder = await vite.createBuilder({
       configFile: false,
       root,
       plugins,
     });
+    await builder.buildApp();
   },
 };
