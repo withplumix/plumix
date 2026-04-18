@@ -24,6 +24,7 @@ export default {
     connect: () => ({ db: {} }),
   },
   auth: {
+    kind: "plumix",
     passkey: {
       rpName: "Test",
       rpId: "localhost",

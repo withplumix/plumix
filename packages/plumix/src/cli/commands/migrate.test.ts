@@ -17,6 +17,7 @@ function fakeApp(): PlumixApp {
       runtime: { name: "test", buildFetchHandler: () => () => new Response() },
       database: { kind: "test", connect: () => ({ db: {} }) },
       auth: {
+        kind: "plumix",
         passkey: { rpName: "x", rpId: "localhost", origin: "http://x" },
       },
       themes: [],

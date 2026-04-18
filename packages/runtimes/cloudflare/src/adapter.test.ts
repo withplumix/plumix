@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import type { DatabaseAdapter } from "@plumix/core";
 import { buildApp, definePlugin, plumix, requestStore } from "@plumix/core";
+import { auth as authConfig } from "@plumix/core/auth";
 
 import { cloudflare } from "./adapter.js";
 import { d1 } from "./d1.js";
@@ -11,13 +12,13 @@ const stubDatabase: DatabaseAdapter = {
   connect: () => ({ db: {} }),
 };
 
-const auth = {
+const auth = authConfig({
   passkey: {
     rpName: "Plumix Test",
     rpId: "cms.example",
     origin: "https://cms.example",
   },
-};
+});
 
 const emptyExecutionContext = {} as ExecutionContext;
 

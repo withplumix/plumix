@@ -71,6 +71,9 @@ importers:
 
   examples/minimal:
     dependencies:
+      '@plumix/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@plumix/runtime-cloudflare':
         specifier: workspace:*
         version: link:../../packages/runtimes/cloudflare

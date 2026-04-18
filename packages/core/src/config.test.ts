@@ -2,6 +2,7 @@ import { expect, test } from "vitest";
 
 import type { RuntimeAdapter } from "./runtime/adapter.js";
 import type { DatabaseAdapter } from "./runtime/slots.js";
+import { auth } from "./auth/config.js";
 import { plumix } from "./config.js";
 
 const runtime: RuntimeAdapter = {
@@ -14,16 +15,16 @@ const database: DatabaseAdapter = {
   connect: () => ({ db: {} }),
 };
 
-const auth = {
+const authConfig = auth({
   passkey: {
     rpName: "mock",
     rpId: "cms.example",
     origin: "https://cms.example",
   },
-};
+});
 
 test("plumix() defaults missing plugins and themes to empty arrays", () => {
-  const config = plumix({ runtime, database, auth });
+  const config = plumix({ runtime, database, auth: authConfig });
   expect(config.plugins).toEqual([]);
   expect(config.themes).toEqual([]);
 });

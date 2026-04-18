@@ -8,6 +8,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./auth": {
+      "types": "./dist/auth/config.d.ts",
+      "default": "./dist/auth/config.js"
+    },
     "./schema": {
       "types": "./dist/db/schema/index.d.ts",
       "default": "./dist/db/schema/index.js"

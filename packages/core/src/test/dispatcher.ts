@@ -1,6 +1,7 @@
 import type { AppContext } from "../context/app.js";
 import type { User, UserRole } from "../db/schema/users.js";
 import type { PlumixApp } from "../runtime/app.js";
+import { auth } from "../auth/config.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { createSession } from "../auth/sessions.js";
 import { plumix } from "../config.js";
@@ -68,13 +69,13 @@ export async function createDispatcherHarness(): Promise<DispatcherHarness> {
   const config = plumix({
     runtime: stubAdapter,
     database: stubDatabase,
-    auth: {
+    auth: auth({
       passkey: {
         rpName: "Plumix Test",
         rpId: "cms.example",
         origin: "https://cms.example",
       },
-    },
+    }),
   });
   const app = await buildApp(config);
   const dispatcher = createPlumixDispatcher(app);
