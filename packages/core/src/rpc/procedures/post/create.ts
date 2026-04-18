@@ -6,6 +6,7 @@ import {
   applyPostBeforeSave,
   firePostPublished,
   firePostTransition,
+  loadReadableParent,
   postCapability,
 } from "./lifecycle.js";
 import { postCreateInputSchema } from "./schemas.js";
@@ -30,6 +31,19 @@ export const create = base
       const publishCapability = postCapability(filtered.type, "publish");
       if (!context.auth.can(publishCapability)) {
         throw errors.FORBIDDEN({ data: { capability: publishCapability } });
+      }
+    }
+
+    if (filtered.parentId != null) {
+      const parent = await loadReadableParent(
+        context,
+        filtered.type,
+        filtered.parentId,
+      );
+      if (!parent) {
+        throw errors.NOT_FOUND({
+          data: { kind: "post", id: filtered.parentId },
+        });
       }
     }
 

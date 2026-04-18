@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
+import { posts } from "../../../db/schema/posts.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 describe("post.update", () => {
@@ -173,5 +174,107 @@ describe("post.update", () => {
     expect(updated.authorId).toBe(h.user.id);
     expect(updated.type).toBe("post");
     expect(updated.title).toBe("renamed");
+  });
+
+  test("rejects reparenting under a post the caller cannot read", async () => {
+    const h = await createRpcHarness({ authAs: "contributor" });
+    const [own] = await h.db
+      .insert(posts)
+      .values({
+        type: "post",
+        title: "mine",
+        slug: "mine",
+        status: "draft",
+        authorId: h.user.id,
+      })
+      .returning();
+    if (!own) throw new Error("seed");
+
+    const other = await h.factory.admin.create({
+      email: "hidden@example.test",
+    });
+    const [secret] = await h.db
+      .insert(posts)
+      .values({
+        type: "post",
+        title: "secret",
+        slug: "secret",
+        status: "draft",
+        authorId: other.id,
+      })
+      .returning();
+    if (!secret) throw new Error("seed");
+
+    await expect(
+      h.client.post.update({ id: own.id, parentId: secret.id }),
+    ).rejects.toMatchObject({
+      code: "NOT_FOUND",
+      data: { kind: "post", id: secret.id },
+    });
+  });
+
+  test("rejects self-parenting as a CONFLICT (parent_cycle)", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const p = await h.client.post.create({
+      title: "self",
+      slug: "self",
+      status: "published",
+    });
+    await expect(
+      h.client.post.update({ id: p.id, parentId: p.id }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "parent_cycle" },
+    });
+  });
+
+  test("rejects a reparent that would form a depth-2 cycle (A→B→A)", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const a = await h.client.post.create({
+      title: "a",
+      slug: "a",
+      status: "published",
+    });
+    const b = await h.client.post.create({
+      title: "b",
+      slug: "b",
+      status: "published",
+      parentId: a.id,
+    });
+    // b→a already. Pointing a→b closes the cycle.
+    await expect(
+      h.client.post.update({ id: a.id, parentId: b.id }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "parent_cycle" },
+    });
+  });
+
+  test("rejects a reparent that would form a depth-3 cycle (A→B→C→A)", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const a = await h.client.post.create({
+      title: "a2",
+      slug: "a2",
+      status: "published",
+    });
+    const b = await h.client.post.create({
+      title: "b2",
+      slug: "b2",
+      status: "published",
+      parentId: a.id,
+    });
+    const c = await h.client.post.create({
+      title: "c2",
+      slug: "c2",
+      status: "published",
+      parentId: b.id,
+    });
+    // c→b→a already. Pointing a→c closes the cycle a→c→b→a.
+    await expect(
+      h.client.post.update({ id: a.id, parentId: c.id }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "parent_cycle" },
+    });
   });
 });

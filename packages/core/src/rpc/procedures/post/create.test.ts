@@ -164,4 +164,75 @@ describe("post.create", () => {
     });
     expect(row?.title).toBe("persist");
   });
+
+  test("rejects a parentId the caller cannot see (undistinguished 404)", async () => {
+    const h = await createRpcHarness({ authAs: "contributor" });
+    // Another author's draft — contributor lacks post:edit_any, doesn't own it.
+    const other = await h.factory.admin.create({ email: "a@example.test" });
+    const [secret] = await h.db
+      .insert(posts)
+      .values({
+        type: "post",
+        title: "hidden",
+        slug: "hidden",
+        status: "draft",
+        authorId: other.id,
+      })
+      .returning();
+    if (!secret) throw new Error("seed");
+
+    await expect(
+      h.client.post.create({
+        title: "child",
+        slug: "child",
+        parentId: secret.id,
+      }),
+    ).rejects.toMatchObject({
+      code: "NOT_FOUND",
+      data: { kind: "post", id: secret.id },
+    });
+  });
+
+  test("rejects a parentId of a different post type", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const [page] = await h.db
+      .insert(posts)
+      .values({
+        type: "page",
+        title: "p",
+        slug: "p",
+        status: "published",
+        authorId: h.user.id,
+        publishedAt: new Date(),
+      })
+      .returning();
+    if (!page) throw new Error("seed");
+
+    await expect(
+      h.client.post.create({
+        // implicit type "post" — mismatched with the "page" parent
+        title: "child",
+        slug: "child2",
+        parentId: page.id,
+      }),
+    ).rejects.toMatchObject({
+      code: "NOT_FOUND",
+      data: { kind: "post", id: page.id },
+    });
+  });
+
+  test("accepts a parentId the caller can read (same type, readable)", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const parent = await h.client.post.create({
+      title: "parent",
+      slug: "parent",
+      status: "published",
+    });
+    const child = await h.client.post.create({
+      title: "child",
+      slug: "child3",
+      parentId: parent.id,
+    });
+    expect(child.parentId).toBe(parent.id);
+  });
 });
