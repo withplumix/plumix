@@ -9,8 +9,11 @@ import {
   createAppContext,
   createPlumixDispatcher,
   jsonResponse,
+  readSessionCookie,
   requestStore,
 } from "@plumix/core";
+
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 export function cloudflare(): RuntimeAdapter {
   return {
@@ -31,7 +34,18 @@ function buildFetch(app: PlumixApp): FetchHandler {
         : undefined;
 
     try {
-      const { db } = app.config.database.connect(env, request, app.schema);
+      const { database } = app.config;
+      const scoped = database.connectRequest?.({
+        env,
+        request,
+        schema: app.schema,
+        isAuthenticated: readSessionCookie(request) !== null,
+        isWrite: !SAFE_METHODS.has(request.method.toUpperCase()),
+      });
+      const db = scoped
+        ? scoped.db
+        : database.connect(env, request, app.schema).db;
+
       const appCtx = createAppContext({
         db: db as Db,
         env: env as PlumixEnv,
@@ -40,7 +54,8 @@ function buildFetch(app: PlumixApp): FetchHandler {
         plugins: app.plugins,
         after,
       });
-      return await requestStore.run(appCtx, () => dispatcher(appCtx));
+      const response = await requestStore.run(appCtx, () => dispatcher(appCtx));
+      return scoped ? scoped.commit(response) : response;
     } catch (error) {
       return handleAdapterFailure(error);
     }

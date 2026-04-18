@@ -1,7 +1,17 @@
 import { describe, expect, test } from "vitest";
 
-import type { DatabaseAdapter } from "@plumix/core";
-import { buildApp, definePlugin, plumix, requestStore } from "@plumix/core";
+import type {
+  DatabaseAdapter,
+  RequestScopedDb,
+  RequestScopedDbArgs,
+} from "@plumix/core";
+import {
+  buildApp,
+  definePlugin,
+  plumix,
+  requestStore,
+  SESSION_COOKIE_NAME,
+} from "@plumix/core";
 import { auth as authConfig } from "@plumix/core/auth";
 
 import { cloudflare } from "./adapter.js";
@@ -120,6 +130,150 @@ describe("cloudflare adapter — buildFetchHandler", () => {
       }),
     );
     expect(response.status).toBe(403);
+  });
+});
+
+function captureAdapter(): {
+  adapter: DatabaseAdapter;
+  calls: RequestScopedDbArgs[];
+  connectCalls: { count: number };
+} {
+  const calls: RequestScopedDbArgs[] = [];
+  const connectCalls = { count: 0 };
+  const adapter: DatabaseAdapter = {
+    kind: "capture",
+    connect: () => {
+      connectCalls.count++;
+      return { db: {} };
+    },
+    connectRequest: (args) => {
+      calls.push(args);
+      return { db: {}, commit: (r) => r };
+    },
+  };
+  return { adapter, calls, connectCalls };
+}
+
+describe("cloudflare adapter — connectRequest", () => {
+  test("when connectRequest returns a scoped db, connect is not called", async () => {
+    const { adapter, connectCalls } = captureAdapter();
+    const response = await invoke(
+      new Request("https://cms.example/"),
+      {},
+      adapter,
+    );
+    expect(response.status).toBe(200);
+    expect(connectCalls.count).toBe(0);
+  });
+
+  test("passes env, request, schema, isAuthenticated, isWrite through to connectRequest", async () => {
+    const { adapter, calls } = captureAdapter();
+    const req = new Request("https://cms.example/", {
+      method: "POST",
+      headers: {
+        "x-plumix-request": "1",
+        cookie: `${SESSION_COOKIE_NAME}=abc`,
+      },
+    });
+    await invoke(req, { DB: "x" }, adapter);
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.request.url).toBe("https://cms.example/");
+    expect(calls[0]?.env).toEqual({ DB: "x" });
+    expect(calls[0]?.isAuthenticated).toBe(true);
+    expect(calls[0]?.isWrite).toBe(true);
+  });
+
+  test("isAuthenticated=false when no session cookie is present", async () => {
+    const { adapter, calls } = captureAdapter();
+    await invoke(new Request("https://cms.example/"), {}, adapter);
+    expect(calls[0]?.isAuthenticated).toBe(false);
+  });
+
+  test("isWrite=false for GET/HEAD/OPTIONS", async () => {
+    const { adapter, calls } = captureAdapter();
+    await invoke(
+      new Request("https://cms.example/", { method: "GET" }),
+      {},
+      adapter,
+    );
+    expect(calls[0]?.isWrite).toBe(false);
+  });
+
+  test("commit runs on the response and its return value is what the handler returns", async () => {
+    const adapter: DatabaseAdapter = {
+      kind: "commit",
+      connect: () => ({ db: {} }),
+      connectRequest: () => ({
+        db: {},
+        commit: (response) => {
+          const next = new Response(response.body, response);
+          next.headers.set("x-commit-ran", "1");
+          return next;
+        },
+      }),
+    };
+    const response = await invoke(
+      new Request("https://cms.example/"),
+      {},
+      adapter,
+    );
+    expect(response.headers.get("x-commit-ran")).toBe("1");
+  });
+
+  test("falls back to connect when connectRequest returns null", async () => {
+    const fallbackDb = { __fallback: true };
+    let connectCalled = 0;
+    const adapter: DatabaseAdapter = {
+      kind: "null-scoped",
+      connect: () => {
+        connectCalled++;
+        return { db: fallbackDb };
+      },
+      connectRequest: () => null,
+    };
+    const response = await invoke(
+      new Request("https://cms.example/"),
+      {},
+      adapter,
+    );
+    expect(response.status).toBe(200);
+    expect(connectCalled).toBe(1);
+  });
+
+  test("falls back to connect when connectRequest is not implemented", async () => {
+    let connectCalled = 0;
+    const adapter: DatabaseAdapter = {
+      kind: "no-scoped",
+      connect: () => {
+        connectCalled++;
+        return { db: {} };
+      },
+    };
+    await invoke(new Request("https://cms.example/"), {}, adapter);
+    expect(connectCalled).toBe(1);
+  });
+
+  test("connectRequest throwing surfaces as 500 like connect", async () => {
+    const adapter: DatabaseAdapter = {
+      kind: "throwing",
+      connect: () => ({ db: {} }),
+      connectRequest: () => {
+        throw new Error("scoped init failed");
+      },
+    };
+    const response = await invoke(
+      new Request("https://cms.example/"),
+      {},
+      adapter,
+    );
+    expect(response.status).toBe(500);
+  });
+
+  // Type-level sanity: the imported types are usable at runtime.
+  test("RequestScopedDb type is exported from core", () => {
+    const noop: RequestScopedDb = { db: {}, commit: (r) => r };
+    expect(noop.commit(new Response("x")).status).toBe(200);
   });
 });
 
