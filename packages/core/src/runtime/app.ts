@@ -17,6 +17,13 @@ export interface PlumixApp {
   readonly hooks: HookRegistry;
   readonly plugins: PluginRegistry;
   readonly rpcHandler: RPCHandler<AppContext>;
+  /**
+   * Canonical site origin (e.g. `https://cms.example.com`). Sourced from
+   * the passkey config for now since that's the only place it lives in
+   * user-facing config; exposed at the top level so CSRF / admin / future
+   * features don't have to reach into `passkey.*` to learn it.
+   */
+  readonly origin: string;
   readonly passkey: ResolvedPasskeyConfig;
   readonly sessionPolicy: SessionPolicy;
   readonly schema: Record<string, unknown>;
@@ -43,12 +50,14 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     }
   }
 
+  const passkey = resolvePasskeyConfig(config.auth.passkey);
   return {
     config,
     hooks,
     plugins: registry,
     rpcHandler: new RPCHandler(appRouter),
-    passkey: resolvePasskeyConfig(config.auth.passkey),
+    origin: passkey.origin,
+    passkey,
     sessionPolicy: config.auth.sessions ?? DEFAULT_SESSION_POLICY,
     schema,
   };

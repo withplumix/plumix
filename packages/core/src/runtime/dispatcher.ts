@@ -59,7 +59,7 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
     // layer or an intermediate that strips/forwards headers loosely.
     if (
       ctx.request.headers.has("origin") &&
-      !hasMatchingOrigin(ctx.request, { allowed: [app.passkey.origin] })
+      !hasMatchingOrigin(ctx.request, { allowed: [app.origin] })
     ) {
       return forbidden("csrf_origin_mismatch");
     }
