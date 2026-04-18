@@ -1,0 +1,250 @@
+import { describe, expect, test } from "vitest";
+
+import type { UserRole } from "../../../db/schema/users.js";
+import { and, asc, eq } from "../../../db/index.js";
+import { postTerm } from "../../../db/schema/post_term.js";
+import { terms } from "../../../db/schema/terms.js";
+import { createPluginRegistry } from "../../../plugin/manifest.js";
+import { createRpcHarness } from "../../../test/rpc.js";
+
+function taxonomyRegistry(
+  opts: {
+    readonly assignRole?: UserRole;
+    readonly taxonomies?: readonly string[];
+  } = {},
+) {
+  const registry = createPluginRegistry();
+  for (const name of opts.taxonomies ?? ["category", "post_tag"]) {
+    registry.taxonomies.set(name, {
+      name,
+      label: name,
+      registeredBy: "test",
+    });
+    registry.capabilities.set(`${name}:read`, {
+      name: `${name}:read`,
+      minRole: "subscriber",
+      registeredBy: "test",
+    });
+    registry.capabilities.set(`${name}:assign`, {
+      name: `${name}:assign`,
+      minRole: opts.assignRole ?? "contributor",
+      registeredBy: "test",
+    });
+    registry.capabilities.set(`${name}:edit`, {
+      name: `${name}:edit`,
+      minRole: "editor",
+      registeredBy: "test",
+    });
+  }
+  return registry;
+}
+
+async function seedTerm(
+  h: Awaited<ReturnType<typeof createRpcHarness>>,
+  taxonomy: string,
+  slug: string,
+): Promise<number> {
+  const [row] = await h.context.db
+    .insert(terms)
+    .values({ taxonomy, name: slug, slug })
+    .returning();
+  if (!row) throw new Error("seedTerm: insert returned no row");
+  return row.id;
+}
+
+async function readTermIds(
+  h: Awaited<ReturnType<typeof createRpcHarness>>,
+  postId: number,
+  taxonomy: string,
+): Promise<number[]> {
+  const rows = await h.context.db
+    .select({ termId: postTerm.termId, sortOrder: postTerm.sortOrder })
+    .from(postTerm)
+    .innerJoin(terms, eq(postTerm.termId, terms.id))
+    .where(and(eq(postTerm.postId, postId), eq(terms.taxonomy, taxonomy)))
+    .orderBy(asc(postTerm.sortOrder));
+  return rows.map((r) => r.termId);
+}
+
+describe("post.update — terms", () => {
+  test("author attaches categories to their own post", async () => {
+    const plugins = taxonomyRegistry();
+    const h = await createRpcHarness({ authAs: "author", plugins });
+    const post = await h.factory.draft.create({ authorId: h.user.id });
+    const catA = await seedTerm(h, "category", "news");
+    const catB = await seedTerm(h, "category", "reviews");
+
+    await h.client.post.update({
+      id: post.id,
+      terms: { category: [catA, catB] },
+    });
+
+    expect(await readTermIds(h, post.id, "category")).toEqual([catA, catB]);
+  });
+
+  test("replacement semantics — new list overwrites the old one entirely", async () => {
+    const plugins = taxonomyRegistry();
+    const h = await createRpcHarness({ authAs: "editor", plugins });
+    const post = await h.factory.draft.create({ authorId: h.user.id });
+    const a = await seedTerm(h, "category", "a");
+    const b = await seedTerm(h, "category", "b");
+    const c = await seedTerm(h, "category", "c");
+
+    await h.client.post.update({ id: post.id, terms: { category: [a, b] } });
+    await h.client.post.update({ id: post.id, terms: { category: [c] } });
+
+    expect(await readTermIds(h, post.id, "category")).toEqual([c]);
+  });
+
+  test("empty array clears assignments for that taxonomy", async () => {
+    const plugins = taxonomyRegistry();
+    const h = await createRpcHarness({ authAs: "editor", plugins });
+    const post = await h.factory.draft.create({ authorId: h.user.id });
+    const a = await seedTerm(h, "category", "a");
+
+    await h.client.post.update({ id: post.id, terms: { category: [a] } });
+    await h.client.post.update({ id: post.id, terms: { category: [] } });
+
+    expect(await readTermIds(h, post.id, "category")).toEqual([]);
+  });
+
+  test("omitted taxonomy is untouched", async () => {
+    const plugins = taxonomyRegistry();
+    const h = await createRpcHarness({ authAs: "editor", plugins });
+    const post = await h.factory.draft.create({ authorId: h.user.id });
+    const cat = await seedTerm(h, "category", "cat-1");
+    const tag = await seedTerm(h, "post_tag", "tag-1");
+
+    await h.client.post.update({
+      id: post.id,
+      terms: { category: [cat], post_tag: [tag] },
+    });
+    // Only update category — post_tag must stay put.
+    await h.client.post.update({
+      id: post.id,
+      terms: { category: [] },
+    });
+
+    expect(await readTermIds(h, post.id, "category")).toEqual([]);
+    expect(await readTermIds(h, post.id, "post_tag")).toEqual([tag]);
+  });
+
+  test("duplicate ids in the input are deduped", async () => {
+    const plugins = taxonomyRegistry();
+    const h = await createRpcHarness({ authAs: "editor", plugins });
+    const post = await h.factory.draft.create({ authorId: h.user.id });
+    const a = await seedTerm(h, "category", "a");
+
+    await h.client.post.update({
+      id: post.id,
+      terms: { category: [a, a, a] },
+    });
+    expect(await readTermIds(h, post.id, "category")).toEqual([a]);
+  });
+
+  test("unregistered taxonomy → NOT_FOUND (no partial writes)", async () => {
+    const plugins = taxonomyRegistry();
+    const h = await createRpcHarness({ authAs: "editor", plugins });
+    const post = await h.factory.draft.create({ authorId: h.user.id });
+    const cat = await seedTerm(h, "category", "cat");
+
+    await expect(
+      h.client.post.update({
+        id: post.id,
+        terms: { category: [cat], unknown_tax: [1] },
+      }),
+    ).rejects.toMatchObject({
+      code: "NOT_FOUND",
+      data: { kind: "taxonomy", id: "unknown_tax" },
+    });
+    // Partial-write guard: the first taxonomy wasn't applied because the
+    // second one failed capability/registration validation up front.
+    expect(await readTermIds(h, post.id, "category")).toEqual([]);
+  });
+
+  test("missing {taxonomy}:assign cap → FORBIDDEN (even for editor if cap elevated)", async () => {
+    const plugins = taxonomyRegistry({ assignRole: "admin" });
+    const h = await createRpcHarness({ authAs: "editor", plugins });
+    const post = await h.factory.draft.create({ authorId: h.user.id });
+    const cat = await seedTerm(h, "category", "cat");
+
+    await expect(
+      h.client.post.update({ id: post.id, terms: { category: [cat] } }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { capability: "category:assign" },
+    });
+  });
+
+  test("term from a different taxonomy → CONFLICT term_taxonomy_mismatch", async () => {
+    const plugins = taxonomyRegistry();
+    const h = await createRpcHarness({ authAs: "editor", plugins });
+    const post = await h.factory.draft.create({ authorId: h.user.id });
+    const tag = await seedTerm(h, "post_tag", "misplaced");
+
+    await expect(
+      h.client.post.update({
+        id: post.id,
+        terms: { category: [tag] },
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "term_taxonomy_mismatch" },
+    });
+  });
+
+  test("non-existent term id → CONFLICT term_taxonomy_mismatch", async () => {
+    const plugins = taxonomyRegistry();
+    const h = await createRpcHarness({ authAs: "editor", plugins });
+    const post = await h.factory.draft.create({ authorId: h.user.id });
+
+    await expect(
+      h.client.post.update({
+        id: post.id,
+        terms: { category: [99999] },
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "term_taxonomy_mismatch" },
+    });
+  });
+
+  test("terms-only update (no other fields) still applies assignments", async () => {
+    const plugins = taxonomyRegistry();
+    const h = await createRpcHarness({ authAs: "editor", plugins });
+    const post = await h.factory.draft.create({ authorId: h.user.id });
+    const originalTitle = post.title;
+    const cat = await seedTerm(h, "category", "only-terms");
+
+    const updated = await h.client.post.update({
+      id: post.id,
+      terms: { category: [cat] },
+    });
+    expect(updated.title).toBe(originalTitle);
+    expect(await readTermIds(h, post.id, "category")).toEqual([cat]);
+  });
+
+  test("sortOrder mirrors input array order", async () => {
+    const plugins = taxonomyRegistry();
+    const h = await createRpcHarness({ authAs: "editor", plugins });
+    const post = await h.factory.draft.create({ authorId: h.user.id });
+    const a = await seedTerm(h, "category", "a");
+    const b = await seedTerm(h, "category", "b");
+    const c = await seedTerm(h, "category", "c");
+
+    await h.client.post.update({
+      id: post.id,
+      terms: { category: [c, a, b] },
+    });
+    expect(await readTermIds(h, post.id, "category")).toEqual([c, a, b]);
+  });
+
+  test("empty terms object is a no-op", async () => {
+    const plugins = taxonomyRegistry();
+    const h = await createRpcHarness({ authAs: "editor", plugins });
+    const post = await h.factory.draft.create({ authorId: h.user.id });
+    await expect(
+      h.client.post.update({ id: post.id, terms: {} }),
+    ).resolves.toBeDefined();
+  });
+});

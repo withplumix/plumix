@@ -28,6 +28,21 @@ const serverControlledKeys = [
 
 const userSuppliableFields = v.omit(postInsertSchema, serverControlledKeys);
 
+// taxonomy → ordered term ids. Empty array clears all assignments for that
+// taxonomy. Taxonomy keys not in the map are untouched. Capped to prevent
+// pathological payloads; 200 covers WP's practical ceiling many times over.
+const termIdSchema = v.pipe(v.number(), v.integer(), v.minValue(1));
+const postTermsSchema = v.record(
+  v.pipe(
+    v.string(),
+    v.trim(),
+    v.minLength(1),
+    v.maxLength(100),
+    v.regex(/^[a-zA-Z0-9_-]+$/, "taxonomy must be kebab/snake ASCII"),
+  ),
+  v.pipe(v.array(termIdSchema), v.maxLength(200)),
+);
+
 export const postCreateInputSchema = v.object({
   ...userSuppliableFields.entries,
   type: v.optional(trimmedText(100), "post"),
@@ -48,6 +63,7 @@ export const postUpdateInputSchema = v.object({
   status: v.optional(userSuppliableFields.entries.status),
   parentId: v.optional(v.nullable(postIdSchema)),
   menuOrder: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
+  terms: v.optional(postTermsSchema),
 });
 
 export const postListInputSchema = v.object({

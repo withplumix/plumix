@@ -1,6 +1,15 @@
+import type { AppContext } from "../../../context/app.js";
 import type { NewPost } from "../../../db/schema/posts.js";
-import { and, eq, isUniqueConstraintError, ne } from "../../../db/index.js";
+import {
+  and,
+  eq,
+  inArray,
+  isUniqueConstraintError,
+  ne,
+} from "../../../db/index.js";
+import { postTerm } from "../../../db/schema/post_term.js";
 import { posts } from "../../../db/schema/posts.js";
+import { terms } from "../../../db/schema/terms.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { stripUndefined } from "./helpers.js";
@@ -48,59 +57,137 @@ export const update = base
       }
     }
 
-    const { id: _id, ...changes } = filtered;
+    // `terms` isn't a posts.* column — split it out and validate up front so
+    // a bad taxonomy or cap error fails fast, before any write happens.
+    const { id: _id, terms: termsPatch, ...changes } = filtered;
+    if (termsPatch !== undefined) {
+      for (const taxonomy of Object.keys(termsPatch)) {
+        if (!context.plugins.taxonomies.has(taxonomy)) {
+          throw errors.NOT_FOUND({ data: { kind: "taxonomy", id: taxonomy } });
+        }
+        const assignCap = `${taxonomy}:assign`;
+        if (!context.auth.can(assignCap)) {
+          throw errors.FORBIDDEN({ data: { capability: assignCap } });
+        }
+      }
+      for (const [taxonomy, termIds] of Object.entries(termsPatch)) {
+        const unique = Array.from(new Set(termIds));
+        if (unique.length === 0) continue;
+        const rows = await context.db
+          .select({ id: terms.id })
+          .from(terms)
+          .where(and(eq(terms.taxonomy, taxonomy), inArray(terms.id, unique)));
+        if (rows.length !== unique.length) {
+          throw errors.CONFLICT({ data: { reason: "term_taxonomy_mismatch" } });
+        }
+      }
+    }
+
     const patch: Partial<NewPost> = stripUndefined(changes);
     if (isPublishTransition && !existing.publishedAt) {
       patch.publishedAt = new Date();
     }
 
-    if (Object.keys(patch).length === 0) {
+    // Nothing to write anywhere? Short-circuit without firing hooks.
+    if (Object.keys(patch).length === 0 && termsPatch === undefined) {
       return context.hooks.applyFilter("rpc:post.update:output", existing);
     }
 
-    const preparedFull = await applyPostBeforeSave(context, existing.type, {
-      ...existing,
-      ...patch,
-    });
-    const toWrite: Partial<NewPost> = {};
-    for (const key of Object.keys(patch) as (keyof NewPost)[]) {
-      (toWrite as Record<string, unknown>)[key] = preparedFull[key];
-    }
-
-    const where = isPublishTransition
-      ? and(eq(posts.id, existing.id), ne(posts.status, "published"))
-      : eq(posts.id, existing.id);
-
-    let updated;
-    try {
-      [updated] = await context.db
-        .update(posts)
-        .set(toWrite)
-        .where(where)
-        .returning();
-    } catch (error) {
-      if (isUniqueConstraintError(error)) {
-        throw errors.CONFLICT({ data: { reason: "slug_taken" } });
+    let updated = existing;
+    let postColumnsWritten = false;
+    if (Object.keys(patch).length > 0) {
+      const preparedFull = await applyPostBeforeSave(context, existing.type, {
+        ...existing,
+        ...patch,
+      });
+      const toWrite: Partial<NewPost> = {};
+      for (const key of Object.keys(patch) as (keyof NewPost)[]) {
+        (toWrite as Record<string, unknown>)[key] = preparedFull[key];
       }
-      throw error;
-    }
-    if (!updated) {
-      if (isPublishTransition) {
+
+      // The ne(status, "published") guard on publish transitions can match
+      // zero rows if another request won the publish race.
+      const where = isPublishTransition
+        ? and(eq(posts.id, existing.id), ne(posts.status, "published"))
+        : eq(posts.id, existing.id);
+
+      let row;
+      try {
+        [row] = await context.db
+          .update(posts)
+          .set(toWrite)
+          .where(where)
+          .returning();
+      } catch (error) {
+        if (isUniqueConstraintError(error)) {
+          throw errors.CONFLICT({ data: { reason: "slug_taken" } });
+        }
+        throw error;
+      }
+      if (row) {
+        updated = row;
+        postColumnsWritten = true;
+      } else if (isPublishTransition) {
+        // Race-lost: someone published between our read and write. Return the
+        // current state as observed, do not fire the updated/published hooks.
         const current = await context.db.query.posts.findFirst({
           where: eq(posts.id, existing.id),
         });
-        if (current) {
-          return context.hooks.applyFilter("rpc:post.update:output", current);
+        if (!current) {
+          throw errors.CONFLICT({ data: { reason: "update_failed" } });
         }
+        updated = current;
+      } else {
+        throw errors.CONFLICT({ data: { reason: "update_failed" } });
       }
-      throw errors.CONFLICT({ data: { reason: "update_failed" } });
     }
 
-    await firePostUpdated(context, updated, existing);
-    await firePostTransition(context, updated, existing.status);
-    if (isPublishTransition) {
-      await firePostPublished(context, updated);
+    if (termsPatch !== undefined) {
+      await applyTermPatch(context, updated.id, termsPatch);
+    }
+
+    if (postColumnsWritten) {
+      await firePostUpdated(context, updated, existing);
+      await firePostTransition(context, updated, existing.status);
+      if (isPublishTransition) {
+        await firePostPublished(context, updated);
+      }
     }
 
     return context.hooks.applyFilter("rpc:post.update:output", updated);
   });
+
+/** Replace post_term rows for every (postId, taxonomy) pair in the patch. */
+async function applyTermPatch(
+  context: AppContext,
+  postId: number,
+  termsPatch: Record<string, readonly number[]>,
+): Promise<void> {
+  for (const [taxonomy, termIds] of Object.entries(termsPatch)) {
+    const unique = Array.from(new Set(termIds));
+    // Scope the delete to rows whose term belongs to this taxonomy — saves
+    // a per-term round-trip and avoids accidentally wiping another taxonomy's
+    // rows in the same post_term table.
+    const existingAssignments = await context.db
+      .select({ termId: postTerm.termId })
+      .from(postTerm)
+      .innerJoin(terms, eq(postTerm.termId, terms.id))
+      .where(and(eq(postTerm.postId, postId), eq(terms.taxonomy, taxonomy)));
+    if (existingAssignments.length > 0) {
+      const ids = existingAssignments.map((r) => r.termId);
+      await context.db
+        .delete(postTerm)
+        .where(and(eq(postTerm.postId, postId), inArray(postTerm.termId, ids)));
+    }
+
+    if (unique.length > 0) {
+      await context.db.insert(postTerm).values(
+        unique.map((termId, index) => ({
+          postId,
+          termId,
+          sortOrder: index,
+        })),
+      );
+    }
+  }
+}
