@@ -26,6 +26,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./commands": {
+      "types": "./dist/commands/index.d.ts",
+      "default": "./dist/commands/index.js"
     }
   },
   "files": [
@@ -45,13 +49,24 @@
     "lint": "eslint",
     "publint": "publint",
     "test": "vitest run",
+    "test:unit": "vitest run src --passWithNoTests",
+    "test:integration": "vitest run test --passWithNoTests",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@plumix/core": "workspace:*"
+    "@cloudflare/vite-plugin": "^1.32.3",
+    "@plumix/core": "workspace:*",
+    "plumix": "workspace:*",
+    "vite": "catalog:"
   },
   "peerDependencies": {
-    "drizzle-orm": "catalog:"
+    "drizzle-orm": "catalog:",
+    "wrangler": "^4"
+  },
+  "peerDependenciesMeta": {
+    "wrangler": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
@@ -64,7 +79,8 @@
     "prettier": "catalog:",
     "publint": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "wrangler": "^4.36.0"
   },
   "prettier": "@plumix/prettier-config"
 }
