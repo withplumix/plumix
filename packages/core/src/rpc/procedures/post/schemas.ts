@@ -1,18 +1,13 @@
 import * as v from "valibot";
 
 import { postInsertSchema } from "../../../db/schema/posts.js";
+import { slugSchema } from "../../schemas.js";
 
-const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const MAX_CONTENT_BYTES = 1_000_000;
 const MAX_EXCERPT_LENGTH = 600;
 
 const trimmedText = (max: number) =>
   v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(max));
-
-const slugSchema = v.pipe(
-  trimmedText(200),
-  v.regex(slugPattern, "slug must be kebab-case ASCII"),
-);
 
 const postIdSchema = v.pipe(v.number(), v.integer(), v.minValue(1));
 

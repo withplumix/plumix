@@ -107,7 +107,7 @@ describe("requireCapability", () => {
 
   test("passes silently for a satisfied capability", () => {
     expect(() =>
-      requireCapability(resolver, { role: "admin" }, "user:manage"),
+      requireCapability(resolver, { role: "admin" }, "user:edit"),
     ).not.toThrow();
   });
 });
@@ -122,7 +122,13 @@ describe("CORE_CAPABILITIES baseline", () => {
       "post:edit_any",
       "post:delete",
       "taxonomy:manage",
-      "user:manage",
+      "user:list",
+      "user:edit_own",
+      "user:create",
+      "user:edit",
+      "user:promote",
+      "user:delete",
+      "option:manage",
     ]) {
       expect(CORE_CAPABILITIES[name]).toBeDefined();
     }
