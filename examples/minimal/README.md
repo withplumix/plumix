@@ -10,7 +10,13 @@ pnpm dev
 
 Opens a local Workers dev server (via `@cloudflare/vite-plugin`) on `http://localhost:8787`.
 
-> **Note:** `plumix build` is wired through the Cloudflare vite plugin but the full worker-bundle emission path is still settling (see the internal deferred list). Use `pnpm dev` and `plumix deploy` directly for now.
+## Build
+
+```bash
+pnpm exec plumix build
+```
+
+Emits the worker bundle to `dist/plumix_minimal/`.
 
 ## Deploy
 
@@ -19,7 +25,7 @@ pnpm exec plumix migrate generate
 pnpm exec drizzle-kit generate --schema .plumix/schema.ts --dialect sqlite --out drizzle
 pnpm exec wrangler d1 create plumix_minimal
 # paste the returned database_id into wrangler.jsonc
-pnpm exec wrangler d1 migrations apply plumix_minimal --remote
+pnpm exec plumix migrate apply plumix_minimal --remote
 pnpm exec plumix deploy
 ```
 

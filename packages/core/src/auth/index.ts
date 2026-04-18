@@ -1,4 +1,5 @@
 export * from "./bootstrap.js";
+export * from "./config.js";
 export * from "./cookies.js";
 export * from "./csrf.js";
 export * from "./passkey/index.js";

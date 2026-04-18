@@ -2,14 +2,15 @@ import { describe, expect, test } from "vitest";
 
 import type { PlumixConfig } from "../config.js";
 import type { PluginDescriptor } from "../plugin/define.js";
+import { auth } from "../auth/config.js";
 import { generateSchemaSource } from "./schema-codegen.js";
 
 const baseConfig: PlumixConfig = {
   runtime: { name: "test", buildFetchHandler: () => () => new Response() },
   database: { kind: "test", connect: () => ({ db: {} }) },
-  auth: {
+  auth: auth({
     passkey: { rpName: "t", rpId: "t", origin: "https://t" },
-  },
+  }),
   themes: [],
   plugins: [],
 };

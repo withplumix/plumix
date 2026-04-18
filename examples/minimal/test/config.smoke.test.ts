@@ -8,7 +8,8 @@ describe("examples/minimal plumix.config", () => {
     expect(config.database.kind).toBe("d1");
   });
 
-  test("passkey origin matches the dev port", () => {
+  test("auth is a plumix-kind config with passkey origin matching the dev port", () => {
+    expect(config.auth.kind).toBe("plumix");
     expect(config.auth.passkey.origin).toBe("http://localhost:8787");
   });
 

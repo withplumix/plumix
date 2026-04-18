@@ -27,6 +27,14 @@ export interface CommandContext {
   readonly cwd: string;
   readonly configPath: string;
   readonly argv: readonly string[];
+  /**
+   * Subcommands the active runtime contributes to the built-in `migrate`
+   * verb. The CLI populates this from the runtime's commands module
+   * (`export const migrate: CommandRegistry`); `migrate apply` delegates
+   * here so D1-/Postgres-/etc.-specific apply logic lives with its
+   * runtime.
+   */
+  readonly runtimeMigrate: CommandRegistry;
 }
 
 export interface CommandDefinition {
