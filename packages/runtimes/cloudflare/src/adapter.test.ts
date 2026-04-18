@@ -11,17 +11,19 @@ const stubDatabase: DatabaseAdapter = {
   connect: () => ({ db: {} }),
 };
 
-const passkey = {
-  rpName: "Plumix Test",
-  rpId: "cms.example",
-  origin: "https://cms.example",
+const auth = {
+  passkey: {
+    rpName: "Plumix Test",
+    rpId: "cms.example",
+    origin: "https://cms.example",
+  },
 };
 
 const emptyExecutionContext = {} as ExecutionContext;
 
 async function createApp(database: DatabaseAdapter = stubDatabase) {
-  const config = plumix({ runtime: cloudflare(), database });
-  return buildApp(config, { passkey });
+  const config = plumix({ runtime: cloudflare(), database, auth });
+  return buildApp(config);
 }
 
 async function invoke(
@@ -137,10 +139,11 @@ describe("plugin schema collisions", () => {
     const config = plumix({
       runtime: cloudflare(),
       database: { kind: "stub", connect: () => ({ db: {} }) },
+      auth,
       plugins: [misbehaving],
     });
 
-    await expect(buildApp(config, { passkey })).rejects.toThrow(
+    await expect(buildApp(config)).rejects.toThrow(
       /redefines schema export "users"/,
     );
   });
@@ -155,10 +158,11 @@ describe("plugin schema collisions", () => {
     const config = plumix({
       runtime: cloudflare(),
       database: { kind: "stub", connect: () => ({ db: {} }) },
+      auth,
       plugins: [a, b],
     });
 
-    await expect(buildApp(config, { passkey })).rejects.toThrow(
+    await expect(buildApp(config)).rejects.toThrow(
       /Plugin "b" redefines schema export "landing_pages"/,
     );
   });

@@ -1,9 +1,6 @@
 import { RPCHandler } from "@orpc/server/fetch";
 
-import type {
-  PasskeyConfig,
-  ResolvedPasskeyConfig,
-} from "../auth/passkey/config.js";
+import type { ResolvedPasskeyConfig } from "../auth/passkey/config.js";
 import type { SessionPolicy } from "../auth/sessions.js";
 import type { PlumixConfig } from "../config.js";
 import type { AppContext } from "../context/app.js";
@@ -15,11 +12,6 @@ import { HookRegistry } from "../hooks/registry.js";
 import { installPlugins } from "../plugin/register.js";
 import { appRouter } from "../rpc/router.js";
 
-export interface PlumixAppOptions {
-  readonly passkey: PasskeyConfig;
-  readonly sessionPolicy?: SessionPolicy;
-}
-
 export interface PlumixApp {
   readonly config: PlumixConfig;
   readonly hooks: HookRegistry;
@@ -30,10 +22,7 @@ export interface PlumixApp {
   readonly schema: Record<string, unknown>;
 }
 
-export async function buildApp(
-  config: PlumixConfig,
-  options: PlumixAppOptions,
-): Promise<PlumixApp> {
+export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
   const hooks = new HookRegistry();
   const { registry } = await installPlugins({ hooks, plugins: config.plugins });
 
@@ -59,8 +48,8 @@ export async function buildApp(
     hooks,
     plugins: registry,
     rpcHandler: new RPCHandler(appRouter),
-    passkey: resolvePasskeyConfig(options.passkey),
-    sessionPolicy: options.sessionPolicy ?? DEFAULT_SESSION_POLICY,
+    passkey: resolvePasskeyConfig(config.auth.passkey),
+    sessionPolicy: config.auth.sessions ?? DEFAULT_SESSION_POLICY,
     schema,
   };
 }

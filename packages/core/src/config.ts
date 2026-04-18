@@ -1,9 +1,16 @@
+import type { PasskeyConfig } from "./auth/passkey/config.js";
+import type { SessionPolicy } from "./auth/sessions.js";
 import type { PluginDescriptor } from "./plugin/define.js";
 import type { RuntimeAdapter } from "./runtime/adapter.js";
 import type { DatabaseAdapter, KV, ObjectStorage } from "./runtime/slots.js";
 
 export interface Theme {
   readonly id: string;
+}
+
+export interface AuthConfig {
+  readonly passkey: PasskeyConfig;
+  readonly sessions?: SessionPolicy;
 }
 
 // Heterogeneous arrays of plugins/adapters need the framework-side slot typed
@@ -16,6 +23,7 @@ export type AnyDatabaseAdapter = DatabaseAdapter<any>;
 export interface PlumixConfigInput {
   readonly runtime: RuntimeAdapter;
   readonly database: AnyDatabaseAdapter;
+  readonly auth: AuthConfig;
   readonly storage?: ObjectStorage;
   readonly kv?: KV;
   readonly themes?: readonly Theme[];
@@ -25,6 +33,7 @@ export interface PlumixConfigInput {
 export interface PlumixConfig {
   readonly runtime: RuntimeAdapter;
   readonly database: AnyDatabaseAdapter;
+  readonly auth: AuthConfig;
   readonly storage?: ObjectStorage;
   readonly kv?: KV;
   readonly themes: readonly Theme[];
@@ -35,9 +44,12 @@ export function plumix(config: PlumixConfigInput): PlumixConfig {
   return {
     runtime: config.runtime,
     database: config.database,
+    auth: config.auth,
     storage: config.storage,
     kv: config.kv,
     themes: config.themes ?? [],
     plugins: config.plugins ?? [],
   };
 }
+
+export { plumix as defineConfig };

@@ -10,11 +10,13 @@ export interface PluginDescriptor<TConfig = undefined> {
   readonly version?: string;
   readonly setup: PluginSetup<TConfig>;
   readonly schema?: Record<string, unknown>;
+  readonly schemaModule?: string;
 }
 
 export interface DefinePluginOptions {
   readonly version?: string;
   readonly schema?: Record<string, unknown>;
+  readonly schemaModule?: string;
 }
 
 export function definePlugin<TConfig = undefined>(
@@ -27,5 +29,6 @@ export function definePlugin<TConfig = undefined>(
     version: options?.version,
     setup,
     schema: options?.schema,
+    schemaModule: options?.schemaModule,
   };
 }

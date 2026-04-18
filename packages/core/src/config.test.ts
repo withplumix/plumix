@@ -7,22 +7,28 @@ import { plumix } from "./config.js";
 const runtime: RuntimeAdapter = {
   name: "mock",
   buildFetchHandler: () => () => new Response("ok"),
-  cli: {
-    dev: () => Promise.resolve(),
-    build: () => Promise.resolve({ outputPath: "" }),
-    deploy: () => Promise.resolve({}),
-    types: () => Promise.resolve(),
-    migrate: () => Promise.resolve(),
-  },
 };
 
 const database: DatabaseAdapter = {
   kind: "mock",
-  connect: () => ({ db: {}, commit: () => null }),
+  connect: () => ({ db: {} }),
+};
+
+const auth = {
+  passkey: {
+    rpName: "mock",
+    rpId: "cms.example",
+    origin: "https://cms.example",
+  },
 };
 
 test("plumix() defaults missing plugins and themes to empty arrays", () => {
-  const config = plumix({ runtime, database });
+  const config = plumix({ runtime, database, auth });
   expect(config.plugins).toEqual([]);
   expect(config.themes).toEqual([]);
+});
+
+test("plumix() exposes defineConfig as an alias", async () => {
+  const { defineConfig } = await import("./config.js");
+  expect(defineConfig).toBe(plumix);
 });

@@ -15,18 +15,11 @@ type TestDb = Awaited<ReturnType<typeof createTestDb>>;
 const stubAdapter = {
   name: "test",
   buildFetchHandler: () => () => new Response("stub", { status: 500 }),
-  cli: {
-    dev: () => Promise.resolve(),
-    build: () => Promise.resolve({ outputPath: "" }),
-    deploy: () => Promise.resolve({}),
-    types: () => Promise.resolve(),
-    migrate: () => Promise.resolve(),
-  },
 };
 
 const stubDatabase = {
   kind: "test",
-  connect: () => ({ db: {}, commit: () => null }),
+  connect: () => ({ db: {} }),
 };
 
 interface DispatcherHarness {
@@ -72,14 +65,18 @@ function withRequest(
 
 export async function createDispatcherHarness(): Promise<DispatcherHarness> {
   const db = await createTestDb();
-  const config = plumix({ runtime: stubAdapter, database: stubDatabase });
-  const app = await buildApp(config, {
-    passkey: {
-      rpName: "Plumix Test",
-      rpId: "cms.example",
-      origin: "https://cms.example",
+  const config = plumix({
+    runtime: stubAdapter,
+    database: stubDatabase,
+    auth: {
+      passkey: {
+        rpName: "Plumix Test",
+        rpId: "cms.example",
+        origin: "https://cms.example",
+      },
     },
   });
+  const app = await buildApp(config);
   const dispatcher = createPlumixDispatcher(app);
 
   return {
