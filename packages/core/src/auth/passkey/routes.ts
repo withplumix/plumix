@@ -123,7 +123,10 @@ function sessionCookieHeader(
   });
 }
 
-function passkeyError(error: PasskeyError): Response {
+function passkeyError(ctx: AppContext, error: PasskeyError): Response {
+  if (error.code === "invalid_origin") {
+    ctx.logger.warn("passkey: invalid_origin", { ...error.detail });
+  }
   return jsonResponse(
     { error: error.code, message: error.message },
     { status: 400 },
@@ -260,7 +263,7 @@ export async function handlePasskeyRegisterVerify(
       },
     );
   } catch (error) {
-    if (error instanceof PasskeyError) return passkeyError(error);
+    if (error instanceof PasskeyError) return passkeyError(ctx, error);
     throw error;
   }
 }
@@ -322,7 +325,7 @@ export async function handlePasskeyLoginVerify(
       },
     );
   } catch (error) {
-    if (error instanceof PasskeyError) return passkeyError(error);
+    if (error instanceof PasskeyError) return passkeyError(ctx, error);
     throw error;
   }
 }
@@ -432,7 +435,7 @@ export async function handleInviteRegisterVerify(
       },
     );
   } catch (error) {
-    if (error instanceof PasskeyError) return passkeyError(error);
+    if (error instanceof PasskeyError) return passkeyError(ctx, error);
     throw error;
   }
 }

@@ -93,7 +93,10 @@ export async function finishAuthentication(
   }
 
   if (clientData.origin !== config.origin) {
-    throw new PasskeyError("invalid_origin");
+    throw new PasskeyError("invalid_origin", undefined, {
+      expected: config.origin,
+      actual: clientData.origin,
+    });
   }
 
   const authenticatorData = parseAuthenticatorData(authenticatorDataBytes);

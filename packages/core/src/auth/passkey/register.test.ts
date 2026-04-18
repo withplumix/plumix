@@ -85,7 +85,13 @@ describe("finishRegistration (security checks)", () => {
           attestationObject: att.attestationObject,
         },
       }),
-    ).rejects.toMatchObject({ code: "invalid_origin" });
+    ).rejects.toMatchObject({
+      code: "invalid_origin",
+      detail: {
+        expected: "https://cms.example.com",
+        actual: "https://attacker.example",
+      },
+    });
   });
 
   test("a missing/used challenge stops registration before any crypto runs", async () => {
