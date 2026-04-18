@@ -1,7 +1,12 @@
 import { describe, expect, test } from "vitest";
 
+import { authTokens } from "../../db/schema/auth_tokens.js";
 import { createTestDb } from "../../test/harness.js";
-import { consumeChallenge, issueChallenge } from "./challenges.js";
+import {
+  consumeChallenge,
+  issueChallenge,
+  pruneExpiredAuthTokens,
+} from "./challenges.js";
 
 describe("challenge store", () => {
   test("atomic single-use: a consumed challenge cannot be replayed", async () => {
@@ -17,5 +22,19 @@ describe("challenge store", () => {
     const db = await createTestDb();
     const { challenge } = await issueChallenge(db, -1_000);
     expect(await consumeChallenge(db, challenge)).toBeNull();
+  });
+
+  test("pruneExpiredAuthTokens removes only expired rows", async () => {
+    const db = await createTestDb();
+    await issueChallenge(db, -60_000); // expired
+    await issueChallenge(db, -60_000); // expired
+    const { challenge: fresh } = await issueChallenge(db, 60_000);
+
+    await pruneExpiredAuthTokens(db);
+
+    const remaining = await db.select().from(authTokens);
+    expect(remaining).toHaveLength(1);
+    // The fresh challenge is still consumable — prune didn't touch it.
+    expect(await consumeChallenge(db, fresh)).not.toBeNull();
   });
 });
