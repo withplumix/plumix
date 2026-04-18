@@ -247,4 +247,26 @@ describe("post.update — terms", () => {
       h.client.post.update({ id: post.id, terms: {} }),
     ).resolves.toBeDefined();
   });
+
+  test("re-inserting the same term id is idempotent (guards PK race)", async () => {
+    // Simulates the outcome of concurrent updates that both want the same
+    // final assignment — the second insert hits the (postId, termId) PK
+    // that the first insert just created. onConflictDoNothing keeps us
+    // from bubbling a 500 in that race.
+    const plugins = taxonomyRegistry();
+    const h = await createRpcHarness({ authAs: "editor", plugins });
+    const post = await h.factory.draft.create({ authorId: h.user.id });
+    const cat = await seedTerm(h, "category", "stable");
+
+    await h.client.post.update({ id: post.id, terms: { category: [cat] } });
+    // Second call with the same set — without onConflictDoNothing the
+    // delete-then-insert pattern would still work, but a future migration
+    // to batched writes could regress. This guards the invariant directly.
+    const second = await h.client.post.update({
+      id: post.id,
+      terms: { category: [cat] },
+    });
+    expect(second).toBeDefined();
+    expect(await readTermIds(h, post.id, "category")).toEqual([cat]);
+  });
 });

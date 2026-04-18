@@ -181,13 +181,23 @@ async function applyTermPatch(
     }
 
     if (unique.length > 0) {
-      await context.db.insert(postTerm).values(
-        unique.map((termId, index) => ({
-          postId,
-          termId,
-          sortOrder: index,
-        })),
-      );
+      // onConflictDoNothing handles the race where a concurrent update
+      // beat us to inserting the same (postId, termId) row — the desired
+      // end state (row exists) is reached regardless of which request
+      // inserted it. Without this, the second request would bubble a PK
+      // violation up as a 500.
+      await context.db
+        .insert(postTerm)
+        .values(
+          unique.map((termId, index) => ({
+            postId,
+            termId,
+            sortOrder: index,
+          })),
+        )
+        .onConflictDoNothing({
+          target: [postTerm.postId, postTerm.termId],
+        });
     }
   }
 }
