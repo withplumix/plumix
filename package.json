@@ -22,6 +22,7 @@
     "postinstall": "pnpm dlx sherif@latest -r packages-without-package-json",
     "publint": "turbo run publint",
     "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e",
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {

@@ -71,6 +71,50 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm test
 
+  test-e2e:
+    name: Test (e2e)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+
+      # Cache the Playwright browser binaries (~120 MB) keyed on the declared
+      # @playwright/test version. System deps (apt libs like libnss3) aren't
+      # cached cross-runner — they're reinstalled cheaply via install-deps.
+      - name: Resolve Playwright version
+        id: playwright-version
+        shell: bash
+        run: |
+          version=$(node -p "require('./packages/admin/package.json').devDependencies['@playwright/test']")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        working-directory: packages/admin
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Install Playwright system deps (cache hit — browsers already there)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        working-directory: packages/admin
+        run: pnpm exec playwright install-deps chromium
+
+      - run: pnpm test:e2e
+
+      - name: Upload Playwright reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-reports
+          path: "**/playwright-report/"
+          retention-days: 5
+
   publint:
     name: Publint
     runs-on: ubuntu-latest

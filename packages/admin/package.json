@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "clean": "git clean -xdf .cache .turbo dist node_modules playwright-report test-results",
     "dev": "vite",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -25,6 +26,8 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.2",
+    "@playwright/test": "^1.59.1",
     "@plumix/core": "workspace:*",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",

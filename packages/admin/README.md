@@ -62,6 +62,20 @@ cd examples/minimal
 pnpm plumix migrate apply
 ```
 
+### End-to-end tests (Playwright + axe-core)
+
+`pnpm test:e2e` launches a dedicated Vite server on `:5180` and runs the
+Playwright suite against it. First-time setup needs Chromium installed:
+
+```bash
+pnpm exec playwright install --with-deps chromium    # once
+pnpm test:e2e                                         # each run
+```
+
+The default suite is an accessibility baseline — axe-core with WCAG 2.1 AA
+tags run against the landing page. Every new route or feature should add a
+spec under `e2e/`.
+
 ### Workspace-local scripts
 
 From `packages/admin/`:
@@ -70,6 +84,7 @@ From `packages/admin/`:
 pnpm dev          # Vite dev server on http://localhost:5174/_plumix/admin/
 pnpm build        # emits static assets to dist/
 pnpm test         # vitest (jsdom + React Testing Library)
+pnpm test:e2e     # playwright + axe-core (needs chromium installed once)
 pnpm typecheck
 pnpm lint
 ```
@@ -82,6 +97,7 @@ pnpm lint
 - **Tailwind CSS v4** (`@tailwindcss/vite`) + **shadcn/ui** (new-york style, neutral base)
 - **Geist Variable** + **Geist Mono Variable** via `@fontsource-variable/*`
 - Vitest + React Testing Library for component tests
+- Playwright + @axe-core/playwright for e2e and accessibility baseline
 
 ## Directory layout
 
