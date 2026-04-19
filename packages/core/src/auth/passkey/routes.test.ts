@@ -7,8 +7,14 @@ import {
   createDispatcherHarness,
   plumixRequest,
 } from "../../test/dispatcher.js";
+import {
+  buildAttestation,
+  generatePasskeyKeyPair,
+  randomCredentialId,
+} from "../../test/fixtures/webauthn.js";
 import { SESSION_COOKIE_NAME } from "../cookies.js";
 import { generateToken, hashToken } from "../tokens.js";
+import { issueChallenge } from "./challenges.js";
 
 describe("passkey register — options", () => {
   test("bootstraps the first user and issues a challenge", async () => {
@@ -166,6 +172,40 @@ describe("passkey verify — input validation", () => {
       }),
     );
     expect(response.status).toBe(400);
+  });
+
+  test("register/verify returns challenge_not_bound_to_user when the challenge had no userId", async () => {
+    // The options route always binds a userId; bypass it by issuing a raw
+    // challenge directly so the userId === null branch is reachable.
+    const h = await createDispatcherHarness();
+    const { challenge } = await issueChallenge(h.db, 60_000);
+    const keyPair = generatePasskeyKeyPair();
+    const credentialId = randomCredentialId();
+    const att = buildAttestation({
+      keyPair,
+      rpId: "cms.example",
+      origin: "https://cms.example",
+      challenge,
+      credentialId,
+    });
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/auth/passkey/register/verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id: att.credentialIdBase64Url,
+          rawId: att.credentialIdBase64Url,
+          type: "public-key",
+          response: {
+            clientDataJSON: att.clientDataJSON,
+            attestationObject: att.attestationObject,
+          },
+        }),
+      }),
+    );
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { error: string };
+    expect(body.error).toBe("challenge_not_bound_to_user");
   });
 });
 
