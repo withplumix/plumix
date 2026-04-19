@@ -10,8 +10,10 @@ import type { Post } from "@plumix/core/schema";
 
 // One entry per procedure path we know how to mock. Typed against the
 // real server shapes so a schema change on the core side fails this file's
-// typecheck, forcing the spec author to update their fixture.
-export interface MockRpcHandlers {
+// typecheck, forcing the spec author to update their fixture. Not exported
+// — specs pass object literals that get structurally checked against this
+// shape on the `mockRpc` call.
+interface MockRpcHandlers {
   "/auth/session"?: AuthSessionOutput;
   "/post/list"?: readonly Post[];
 }
