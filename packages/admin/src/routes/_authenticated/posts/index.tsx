@@ -11,6 +11,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.js";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+} from "@/components/ui/pagination.js";
+import { toDate } from "@/lib/dates.js";
 import { orpc } from "@/lib/orpc.js";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -67,13 +73,6 @@ const dateFormatter = new Intl.DateTimeFormat(undefined, {
   dateStyle: "medium",
   timeStyle: "short",
 });
-
-// oRPC's default wire format re-hydrates Date fields, but in tests (and any
-// non-oRPC path) we see ISO strings. `toDate` accepts either shape so the
-// cell doesn't need to know which one is live.
-function toDate(value: Date | string): Date {
-  return value instanceof Date ? value : new Date(value);
-}
 
 const columns: ColumnDef<Post>[] = [
   {
@@ -186,35 +185,41 @@ function PostsListRoute(): ReactNode {
         />
       )}
 
-      <div className="flex items-center justify-between">
+      <Pagination className="justify-between">
         <span className="text-muted-foreground text-sm">
           Page {search.page}
         </span>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!canPrev || query.isPending}
-            onClick={() => {
-              setPage(search.page - 1);
-            }}
-          >
-            <ChevronLeft />
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!canNext || query.isPending}
-            onClick={() => {
-              setPage(search.page + 1);
-            }}
-          >
-            Next
-            <ChevronRight />
-          </Button>
-        </div>
-      </div>
+        <PaginationContent>
+          <PaginationItem>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={!canPrev || query.isPending}
+              onClick={() => {
+                setPage(search.page - 1);
+              }}
+              aria-label="Go to previous page"
+            >
+              <ChevronLeft />
+              <span className="hidden sm:inline">Previous</span>
+            </Button>
+          </PaginationItem>
+          <PaginationItem>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={!canNext || query.isPending}
+              onClick={() => {
+                setPage(search.page + 1);
+              }}
+              aria-label="Go to next page"
+            >
+              <span className="hidden sm:inline">Next</span>
+              <ChevronRight />
+            </Button>
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
     </div>
   );
 }

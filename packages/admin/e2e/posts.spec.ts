@@ -59,7 +59,7 @@ test.describe("/posts", () => {
   });
 
   test("renders rows with zero WCAG 2.1 AA violations", async ({ page }) => {
-    const now = new Date("2026-04-19T12:00:00Z").toISOString();
+    const now = new Date("2026-04-19T12:00:00Z");
     await mockRpc(page, {
       "/auth/session": AUTHED_ADMIN,
       "/post/list": [

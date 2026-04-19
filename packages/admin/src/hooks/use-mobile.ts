@@ -1,10 +1,6 @@
-/* Shadcn-generated hook — ships as part of `shadcn add sidebar`. Kept
- * verbatim so future `shadcn diff` upgrades don't merge-conflict. The
- * setState-in-effect pattern is idiomatic for media-query subscription and
- * functions correctly; we suppress the stricter React Compiler rule only
- * for this one file.
- */
-/* eslint-disable react-hooks/set-state-in-effect */
+// Shadcn-generated hook — ships as part of `shadcn add sidebar`. Kept
+// verbatim so future `shadcn diff` upgrades don't merge-conflict.
+// Rule suppressions for this file live in admin's eslint.config.ts.
 import * as React from "react";
 
 const MOBILE_BREAKPOINT = 768;

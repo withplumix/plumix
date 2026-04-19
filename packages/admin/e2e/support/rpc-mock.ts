@@ -1,11 +1,20 @@
 import type { Page, Route } from "@playwright/test";
 
 import type { AuthSessionOutput } from "@plumix/core";
+import type { Post } from "@plumix/core/schema";
 
 // The e2e webServer is just Vite — no real backend — so every /_plumix/rpc
 // call is intercepted here and answered with a deterministic fixture.
 // Individual specs declare the shape they want per procedure so route
 // `beforeLoad` + component queries resolve without hitting the network.
+
+// One entry per procedure path we know how to mock. Typed against the
+// real server shapes so a schema change on the core side fails this file's
+// typecheck, forcing the spec author to update their fixture.
+export interface MockRpcHandlers {
+  "/auth/session"?: AuthSessionOutput;
+  "/post/list"?: readonly Post[];
+}
 
 // oRPC's StandardRPCSerializer wire format — `meta` is always present,
 // empty array for payloads with no BigInt/Date/etc. transforms.
@@ -19,7 +28,7 @@ function rpcOk(route: Route, body: unknown): Promise<void> {
 
 export async function mockRpc(
   page: Page,
-  handlers: Record<string, unknown>,
+  handlers: MockRpcHandlers,
 ): Promise<void> {
   await page.route("**/_plumix/rpc/**", (route) => {
     const url = route.request().url();
