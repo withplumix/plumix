@@ -6,6 +6,10 @@ import { defineConfig } from "vite";
 
 import { ADMIN_BASE_PATH } from "./src/lib/constants.js";
 
+// In dev the admin runs on Vite (5173) while the worker runs on wrangler
+// (8787). Proxy /_plumix/* so RPC calls stay same-origin without CORS.
+const WORKER_DEV_URL = "http://localhost:8787" as const;
+
 export default defineConfig({
   base: `${ADMIN_BASE_PATH}/`,
   // tanstackRouter must run before @vitejs/plugin-react. quoteStyle +
@@ -20,6 +24,12 @@ export default defineConfig({
     tailwindcss(),
     react(),
   ],
+  server: {
+    proxy: {
+      "/_plumix/rpc": { target: WORKER_DEV_URL, changeOrigin: true },
+      "/_plumix/auth": { target: WORKER_DEV_URL, changeOrigin: true },
+    },
+  },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

@@ -21,6 +21,24 @@ pnpm lint
 From the repo root, all tasks run through turbo and integrate with the rest
 of the monorepo.
 
+### End-to-end dev loop (admin + worker)
+
+To exercise RPC, auth, or any `/_plumix/*` endpoint, run the admin alongside
+a worker in a second terminal:
+
+```bash
+# terminal 1 — worker
+cd examples/minimal && pnpm dev     # wrangler on :8787
+
+# terminal 2 — admin
+cd packages/admin && pnpm dev       # vite on :5173
+```
+
+Vite proxies `/_plumix/rpc` and `/_plumix/auth` to `http://localhost:8787`
+(see `vite.config.ts`), so requests from the admin stay same-origin from
+the browser's perspective — no CORS setup required. Open
+`http://localhost:5173/_plumix/admin/` and interact normally.
+
 ## Stack
 
 - **React 19** + TypeScript
