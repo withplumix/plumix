@@ -47,6 +47,21 @@ describe("dispatcher — routing", () => {
     );
   });
 
+  test("POST /_plumix/admin is rejected with 405 even when an assets binding is present", async () => {
+    const assets = {
+      fetch: (): Promise<Response> =>
+        Promise.resolve(new Response("should-not-be-called", { status: 200 })),
+    };
+    const h = await createDispatcherHarness({ assets });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/admin/posts", { method: "POST" }),
+    );
+
+    expect(response.status).toBe(405);
+    expect(response.headers.get("allow")).toBe("GET, HEAD");
+  });
+
   test("/_plumix/admin/<asset-like-miss>.js returns 404 without serving HTML", async () => {
     const assets = {
       fetch: (): Promise<Response> =>

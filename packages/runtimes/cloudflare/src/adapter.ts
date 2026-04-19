@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import type {
+  AssetsBinding,
   Db,
   FetchHandler,
   PlumixApp,
@@ -33,12 +34,11 @@ function isExecutionContext(value: unknown): value is ExecutionContext {
 }
 
 // Cloudflare Workers Assets exposes a Fetcher on env.ASSETS when the
-// wrangler config declares an `assets` binding. Missing when the deploy
-// doesn't configure one — in that case the core dispatcher falls back to
-// returning admin-not-available for /_plumix/admin/* requests.
-function readAssetsBinding(
-  env: unknown,
-): { fetch(request: Request): Promise<Response> } | undefined {
+// wrangler config declares `assets.binding: "ASSETS"`. Consumers using a
+// different binding name here get no admin serving — the core dispatcher
+// falls back to `admin-not-available` for /_plumix/admin/*. Convention
+// over config; `ASSETS` is what `examples/minimal/wrangler.jsonc` ships.
+function readAssetsBinding(env: unknown): AssetsBinding | undefined {
   if (typeof env !== "object" || env === null) return undefined;
   const candidate = (env as { readonly ASSETS?: unknown }).ASSETS;
   if (
@@ -47,7 +47,7 @@ function readAssetsBinding(
     "fetch" in candidate &&
     typeof (candidate as { fetch: unknown }).fetch === "function"
   ) {
-    return candidate as { fetch(request: Request): Promise<Response> };
+    return candidate as AssetsBinding;
   }
   return undefined;
 }

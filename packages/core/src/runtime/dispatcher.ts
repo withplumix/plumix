@@ -99,6 +99,12 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
 }
 
 async function serveAdmin(ctx: AppContext): Promise<Response> {
+  // Admin is a static SPA — only GET/HEAD are meaningful. Reject everything
+  // else here rather than forward to env.ASSETS, whose behavior on non-GET
+  // methods is unspecified and platform-dependent.
+  if (ctx.request.method !== "GET" && ctx.request.method !== "HEAD") {
+    return methodNotAllowed(["GET", "HEAD"]);
+  }
   if (ctx.assets === undefined) {
     return notFound("admin-not-available");
   }

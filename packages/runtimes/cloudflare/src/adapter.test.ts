@@ -160,6 +160,15 @@ describe("cloudflare adapter — buildFetchHandler", () => {
     expect(response.status).toBe(404);
     expect(response.headers.get("x-plumix-hint")).toBe("admin-not-available");
   });
+
+  test("a malformed env.ASSETS (no fetch function) falls back to admin-not-available", async () => {
+    const response = await invoke(
+      new Request("https://cms.example/_plumix/admin"),
+      { ASSETS: { fetch: "not-a-function" } },
+    );
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-plumix-hint")).toBe("admin-not-available");
+  });
 });
 
 function captureAdapter(): {
