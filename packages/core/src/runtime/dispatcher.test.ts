@@ -10,13 +10,56 @@ describe("dispatcher — routing", () => {
     expect(await response.text()).toBe("<h1>Plumix</h1>");
   });
 
-  test("/_plumix/admin returns 404 with the admin-not-available hint", async () => {
+  test("/_plumix/admin returns 404 with admin-not-available when no assets binding is configured", async () => {
     const h = await createDispatcherHarness();
     const response = await h.dispatch(
       plumixRequest("/_plumix/admin", { method: "GET" }),
     );
     expect(response.status).toBe(404);
     expect(response.headers.get("x-plumix-hint")).toBe("admin-not-available");
+  });
+
+  test("/_plumix/admin/<deep-link> serves admin index.html via the assets binding", async () => {
+    const indexBody = "<!doctype html><title>admin</title>";
+    const calls: Request[] = [];
+    const assets = {
+      fetch(request: Request): Promise<Response> {
+        calls.push(request);
+        return Promise.resolve(
+          new Response(indexBody, {
+            status: 200,
+            headers: { "content-type": "text/html" },
+          }),
+        );
+      },
+    };
+    const h = await createDispatcherHarness({ assets });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/admin/posts/new", { method: "GET" }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe(indexBody);
+    expect(calls).toHaveLength(1);
+    expect(new URL(calls[0]?.url ?? "").pathname).toBe(
+      "/_plumix/admin/index.html",
+    );
+  });
+
+  test("/_plumix/admin/<asset-like-miss>.js returns 404 without serving HTML", async () => {
+    const assets = {
+      fetch: (): Promise<Response> =>
+        Promise.resolve(new Response("should-not-be-called", { status: 200 })),
+    };
+    const h = await createDispatcherHarness({ assets });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/admin/chunks/missing-abc.js", { method: "GET" }),
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-plumix-hint")).toBe("admin-asset-not-found");
   });
 
   test("unknown /_plumix/* path returns 404", async () => {

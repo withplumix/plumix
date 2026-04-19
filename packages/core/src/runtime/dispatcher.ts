@@ -16,6 +16,10 @@ const RPC_PREFIX = "/_plumix/rpc";
 const ADMIN_PREFIX = "/_plumix/admin";
 const PLUMIX_PREFIX = "/_plumix/";
 
+// Filenames look like `index.html`, `chunk-abc.js`, `fonts/g.woff2` — paths
+// with a dot-suffix after the last slash. Deep-link SPA routes never match.
+const ASSET_LIKE = /\.[^/]+$/;
+
 type RouteHandler = (ctx: AppContext, app: PlumixApp) => Promise<Response>;
 
 const POST_AUTH_ROUTES = new Map<string, RouteHandler>([
@@ -82,7 +86,7 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   }
 
   if (pathname === ADMIN_PREFIX || pathname.startsWith(`${ADMIN_PREFIX}/`)) {
-    return notFound("admin-not-available");
+    return serveAdmin(ctx);
   }
 
   if (pathname.startsWith(PLUMIX_PREFIX)) {
@@ -92,4 +96,21 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   return new Response("<h1>Plumix</h1>", {
     headers: { "content-type": "text/html; charset=utf-8" },
   });
+}
+
+async function serveAdmin(ctx: AppContext): Promise<Response> {
+  if (ctx.assets === undefined) {
+    return notFound("admin-not-available");
+  }
+  const { pathname } = new URL(ctx.request.url);
+  // Asset-shaped paths (chunk-abc.js, missing.woff2) either hit the runtime's
+  // asset layer before the worker or represent a real 404. Don't mask a
+  // missing asset by returning HTML — the browser loader would choke.
+  if (ASSET_LIKE.test(pathname)) {
+    return notFound("admin-asset-not-found");
+  }
+  // SPA deep link: admin's client router owns routing past /_plumix/admin/.
+  // Hand the client its index.html so it can resolve the path.
+  const indexUrl = new URL(`${ADMIN_PREFIX}/index.html`, ctx.request.url);
+  return ctx.assets.fetch(new Request(indexUrl, ctx.request));
 }

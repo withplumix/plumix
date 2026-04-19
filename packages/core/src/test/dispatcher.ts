@@ -9,6 +9,7 @@ import type {
 } from "../hooks/types.js";
 import type { PlumixApp } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
+import type { AssetsBinding } from "../runtime/slots.js";
 import type { Factories } from "./factories.js";
 import type { FetchOptions } from "./request.js";
 import type { ActionSpy, FilterSpy } from "./spies.js";
@@ -43,6 +44,11 @@ export interface CreateDispatcherHarnessOptions {
    * the escape hatch for anything the harness doesn't abstract.
    */
   readonly env?: PlumixEnv;
+  /**
+   * Platform asset layer (e.g. Cloudflare's env.ASSETS). Provide a mock
+   * when exercising the dispatcher's /_plumix/admin/* SPA fallback.
+   */
+  readonly assets?: AssetsBinding;
 }
 
 export interface DispatcherHarness {
@@ -98,6 +104,7 @@ function withRequest(
   app: PlumixApp,
   db: TestDb,
   env: PlumixEnv,
+  assets: AssetsBinding | undefined,
   request: Request,
   user: User | null,
 ): AppContext {
@@ -111,6 +118,7 @@ function withRequest(
     user: user
       ? { id: user.id, email: user.email, role: user.role }
       : undefined,
+    assets,
   });
 }
 
@@ -132,18 +140,26 @@ export async function createDispatcherHarness(
   });
   const app = await buildApp(config);
   const dispatcher = createPlumixDispatcher(app);
+  const { assets } = options;
 
   const harness: DispatcherHarness = {
     db,
     app,
     env,
     dispatch: async (request, user = null) => {
-      const ctx = withRequest(app, db, env, request, user);
+      const ctx = withRequest(app, db, env, assets, request, user);
       return dispatcher(ctx);
     },
     fetch: async (path, fetchOptions = {}) => {
       const request = await buildRequest(db, path, fetchOptions);
-      const ctx = withRequest(app, db, env, request, fetchOptions.as ?? null);
+      const ctx = withRequest(
+        app,
+        db,
+        env,
+        assets,
+        request,
+        fetchOptions.as ?? null,
+      );
       const response = await dispatcher(ctx);
       return new TestResponse(response);
     },

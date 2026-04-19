@@ -66,3 +66,14 @@ export interface ObjectStorage {
 export interface KV {
   readonly kind: string;
 }
+
+/**
+ * Runtime-provided static asset serving. Exposed so the core dispatcher can
+ * serve admin SPA deep-links (`/_plumix/admin/<anything>`) by delegating
+ * back to the platform's asset layer — Cloudflare's `env.ASSETS` binding
+ * today, equivalents in future Node/Bun adapters. Omitted when the runtime
+ * has no asset layer, in which case deep-link requests 404 with a hint.
+ */
+export interface AssetsBinding {
+  fetch(request: Request): Promise<Response>;
+}
