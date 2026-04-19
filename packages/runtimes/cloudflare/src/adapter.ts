@@ -110,6 +110,12 @@ function buildFetch(app: PlumixApp): FetchHandler {
       // Memoised binding check — runs once per Worker isolate. Surfaces
       // misconfigured deploys as a readable error instead of an opaque 500
       // from the first query N frames deeper.
+      //
+      // Safe to memo on first env: on CF Workers env is immutable per
+      // isolate (bindings are set at deploy time, not per-request), so the
+      // flag can never be stale for a changed env. Tests that want to re-
+      // validate after a simulated env change should construct a fresh
+      // fetch handler per scenario — which is what `invoke()` does.
       if (!bindingsValidated) {
         validateBindings(app, env);
         bindingsValidated = true;
