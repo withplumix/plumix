@@ -2,22 +2,13 @@ import type { Page, Route } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
+import type { AuthSessionOutput } from "@plumix/core";
+
 // The e2e webServer is just Vite — no real backend — so every /_plumix/rpc
 // call is intercepted here and answered with a deterministic fixture.
 // Each test declares the shape it wants from `auth.session` (and any other
 // procedure) so route `beforeLoad` + component queries resolve without
 // hitting the network.
-
-interface SessionBody {
-  user: {
-    id: number;
-    email: string;
-    name: string | null;
-    avatarUrl: string | null;
-    role: string;
-  } | null;
-  needsBootstrap: boolean;
-}
 
 // oRPC's StandardRPCSerializer wire format — `meta` is always present,
 // empty array for payloads with no BigInt/Date/etc. transforms.
@@ -44,7 +35,7 @@ async function mockRpc(
   });
 }
 
-function mockSession(page: Page, body: SessionBody): Promise<void> {
+function mockSession(page: Page, body: AuthSessionOutput): Promise<void> {
   return mockRpc(page, { "/auth/session": body });
 }
 

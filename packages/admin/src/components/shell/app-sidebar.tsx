@@ -15,7 +15,7 @@ import {
 import { Link } from "@tanstack/react-router";
 import { FileText, LayoutDashboard } from "lucide-react";
 
-import type { UserMenuUser } from "./user-menu.js";
+import type { UserIdentity } from "./user-menu.js";
 import { UserMenu } from "./user-menu.js";
 
 interface NavItem {
@@ -51,7 +51,7 @@ const NAV: readonly NavGroup[] = [
   },
 ];
 
-export function AppSidebar({ user }: { user: UserMenuUser }): ReactNode {
+export function AppSidebar({ user }: { user: UserIdentity }): ReactNode {
   return (
     <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader>

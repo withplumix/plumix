@@ -15,12 +15,14 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { ChevronsUpDown, LogOut, Settings, User } from "lucide-react";
 
-export interface UserMenuUser {
-  readonly email: string;
-  readonly name: string | null;
-}
+import type { AuthSessionUser } from "@plumix/core";
 
-export function UserMenu({ user }: { user: UserMenuUser }): ReactNode {
+// Only the identity fields are rendered — a narrow slice of the session
+// user so this component stays decoupled from `role` / `avatarUrl` churn,
+// while still type-linked to the auth.session contract.
+export type UserIdentity = Pick<AuthSessionUser, "email" | "name">;
+
+export function UserMenu({ user }: { user: UserIdentity }): ReactNode {
   const { isMobile } = useSidebar();
   const router = useRouter();
 
