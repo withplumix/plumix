@@ -1,10 +1,10 @@
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
-import { expect } from "vitest";
 
 import type * as schema from "../db/schema/index.js";
 import type { User } from "../db/schema/users.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { createSession } from "../auth/sessions.js";
+import { deepEqual, partialMatch } from "./match.js";
 
 type TestDb = LibSQLDatabase<typeof schema>;
 
@@ -143,13 +143,21 @@ export class TestResponse {
 
   async assertJson(expected: unknown): Promise<this> {
     const body = await this.json();
-    expect(body).toEqual(expected);
+    if (!deepEqual(body, expected)) {
+      throw new Error(
+        `assertJson: body did not equal expected\n  expected: ${JSON.stringify(expected)}\n  actual:   ${JSON.stringify(body)}`,
+      );
+    }
     return this;
   }
 
   async assertJsonMatch(expected: unknown): Promise<this> {
     const body = await this.json();
-    expect(body).toMatchObject(expected as Record<string, unknown>);
+    if (!partialMatch(body, expected)) {
+      throw new Error(
+        `assertJsonMatch: body did not match expected shape\n  expected: ${JSON.stringify(expected)}\n  actual:   ${JSON.stringify(body)}`,
+      );
+    }
     return this;
   }
 

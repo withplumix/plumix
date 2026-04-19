@@ -52,6 +52,8 @@ export type { FetchOptions } from "./request.js";
 export { spyAction, spyFilter, expectError } from "./spies.js";
 export type { ActionSpy, ActionCall, FilterSpy, FilterCall } from "./spies.js";
 
+export { deepEqual, partialMatch } from "./match.js";
+
 // WebAuthn fixtures — build deterministic attestation / assertion payloads
 // without touching a real browser. Used by plumix's own passkey tests and
 // available for plugin authors extending the auth surface.
