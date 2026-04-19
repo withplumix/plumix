@@ -20,7 +20,9 @@ const config: KnipConfig = {
     "packages/plugins/pages": {
       ignoreDependencies: ["@plumix/core"],
     },
-    // drizzle-kit is invoked by consumers as a CLI hint, not imported.
+    // - drizzle-kit is invoked by consumers as a CLI hint, not imported.
+    // - @plumix/admin is consumed via filesystem copy (scripts/copy-admin.mjs)
+    //   at build time, not as a TypeScript import.
     "packages/plumix": {
       entry: [
         "src/index.ts",
@@ -34,7 +36,7 @@ const config: KnipConfig = {
         "src/theme/index.ts",
         "src/vite/index.ts",
       ],
-      ignoreDependencies: ["drizzle-kit"],
+      ignoreDependencies: ["drizzle-kit", "@plumix/admin"],
     },
   },
 };

@@ -423,6 +423,9 @@ importers:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
         version: 0.18.2
+      '@plumix/admin':
+        specifier: workspace:*
+        version: link:../admin
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint

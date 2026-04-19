@@ -1,55 +1,58 @@
 # @plumix/admin
 
-Pre-built React SPA that ships inside the [`plumix`](../plumix) package and is
-served at `/_plumix/admin/*` by the runtime dispatcher. The admin is compiled
-once, committed into `plumix/dist/admin/`, and copied verbatim into consumer
-builds — consumers running `plumix dev` or `plumix build` never rebuild it
-from source.
+Pre-built React SPA that ships inside the [`plumix`](../plumix) package.
+The admin compiles once into `dist/`, gets copied into `plumix/dist/admin-app/`
+at plumix build time, and the plumix Vite plugin stages it into the consumer's
+`.plumix/public/_plumix/admin/` directory so Cloudflare Workers Assets serves
+it at `/_plumix/admin/*` with no per-consumer rebuild.
 
-## Dev workflow
+## Dev workflows
 
-The admin is a client for the plumix backend — it speaks HTTP over
-`/_plumix/*` to whatever runtime the example app is using (Cloudflare,
-future Bun/Node adapters, etc.). `pnpm dev` in this workspace only starts
-Vite for the admin; it does not start the backend. You run both.
+Two supported loops, pick whichever matches what you're iterating on.
 
-### One-shot: `pnpm dev` from the repo root
+### Consumer-style: `plumix dev` only (single origin)
 
-Turbo watches every workspace that declares a `dev` script, so this starts
-both the admin and the backend in parallel:
+Once the consumer has the `assets` binding in their wrangler config (see
+[examples/minimal/wrangler.jsonc](../../examples/minimal/wrangler.jsonc)),
+running the backend serves admin too — no second process:
 
 ```bash
-pnpm dev    # from repo root
+cd examples/minimal
+pnpm dev                              # :5173
+# open http://localhost:5173/_plumix/admin/
 ```
 
-That runs the example app's `plumix dev` (on `:5173`) and the admin's
-Vite dev server (on `:5174`). Open `http://localhost:5174/_plumix/admin/`
-in the browser.
+This mode exercises the same serving path production uses (CF Assets in
+front of the worker). Best for "does my feature work end-to-end?" checks.
 
-### Two-terminal variant (clearer logs)
+### Admin-authoring: `pnpm dev` in both workspaces (two ports, HMR)
+
+When iterating on admin source, Vite's HMR against admin source files is
+faster than rebuilding + restaging. Two terminals:
 
 ```bash
 # terminal 1 — backend
 cd examples/minimal && pnpm dev       # :5173
 
-# terminal 2 — admin
+# terminal 2 — admin with HMR
 cd packages/admin && pnpm dev         # :5174
+# open http://localhost:5174/_plumix/admin/
 ```
 
-### How requests flow
+Admin's Vite dev server proxies `/_plumix/rpc` and `/_plumix/auth` to
+`:5173`, so RPC and auth still hit the real backend. Best for "I'm tweaking
+a component, want hot reload."
 
-The admin is served from `:5174`. When admin code makes a request to
-`/_plumix/rpc/...` or `/_plumix/auth/...`, Vite's proxy forwards it to
-`http://localhost:5173` (the backend). From the browser's view everything
-is same-origin on `:5174` — session cookies and CSRF headers just work,
-no CORS configuration needed.
-
-If you run the backend on a different host/port (remote dev instance,
-non-default port for a specific adapter), override the proxy target:
+Override the proxy target for a remote/non-default backend:
 
 ```bash
 PLUMIX_BACKEND_URL=http://192.168.1.10:5173 pnpm dev
 ```
+
+### Turbo shortcut: `pnpm dev` from repo root
+
+Runs both workspaces in parallel via `turbo watch dev --continue`. Same
+two-port layout as the two-terminal variant but in one shell.
 
 ### First-time setup
 
