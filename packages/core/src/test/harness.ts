@@ -20,15 +20,13 @@ async function compileSchemaSql(): Promise<string[]> {
   if (cachedStatements) return cachedStatements;
   // Empty ↔ current snapshot diff yields the full create-from-scratch SQL.
   // `casing: "snake_case"` matches drizzle.config.ts so column names line up.
-  /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
   const empty = await generateSQLiteDrizzleJson({}, undefined, "snake_case");
   const current = await generateSQLiteDrizzleJson(
     schemaImports,
-    empty.id as string,
+    empty.id,
     "snake_case",
   );
   cachedStatements = await generateSQLiteMigration(empty, current);
-  /* eslint-enable */
   return cachedStatements;
 }
 
