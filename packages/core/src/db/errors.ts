@@ -47,10 +47,14 @@ function hasUniqueCode(error: unknown): boolean {
   // Universal fallback: SQLite's core produces "UNIQUE constraint failed: …"
   // verbatim; every driver we've audited includes it in the message.
   // Cloudflare D1 relies entirely on this path (no structured codes at all).
+  //
+  // Colon-anchored to avoid matching a stray substring in an unrelated
+  // wrapper message ("... UNIQUE constraint failed would be bad ...");
+  // SQLite always emits the phrase followed by `": table.column"`.
   const message = err.message;
   if (
     typeof message === "string" &&
-    message.includes("UNIQUE constraint failed")
+    message.includes("UNIQUE constraint failed:")
   ) {
     return true;
   }

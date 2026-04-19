@@ -25,10 +25,28 @@ describe("isUniqueConstraintError — driver shape coverage", () => {
     expect(isUniqueConstraintError(err)).toBe(true);
   });
 
-  test("node:sqlite (Node 22+): numeric `errcode` 2067", () => {
-    const err = Object.assign(new Error("UNIQUE constraint failed"), {
+  test("node:sqlite (Node 22+): numeric extended `errcode` 2067", () => {
+    // Node's built-in sqlite exposes errcode = sqlite3_errcode(). Whether
+    // that's the primary or extended code depends on the Node build —
+    // both paths are covered: the numeric set has 2067, and the next
+    // test covers the primary-code-plus-message variant.
+    const err = Object.assign(new Error("UNIQUE constraint failed: t.x"), {
       code: "ERR_SQLITE_ERROR",
       errcode: 2067,
+    });
+    expect(isUniqueConstraintError(err)).toBe(true);
+  });
+
+  test("node:sqlite: primary `errcode` 19 falls through to message fallback", () => {
+    // Some Node builds (and Bun pre-1.0) emit only the primary result
+    // code (19 = SQLITE_CONSTRAINT, covering every constraint flavour).
+    // Classifying on 19 alone would mis-fire on CHECK / FOREIGN KEY /
+    // NOT NULL too, so we deliberately don't. The distinctive SQLite
+    // message "UNIQUE constraint failed:" is what actually separates
+    // UNIQUE from other constraints.
+    const err = Object.assign(new Error("UNIQUE constraint failed: t.x"), {
+      code: "ERR_SQLITE_ERROR",
+      errcode: 19,
     });
     expect(isUniqueConstraintError(err)).toBe(true);
   });
@@ -118,6 +136,16 @@ describe("isUniqueConstraintError — negatives", () => {
     expect(isUniqueConstraintError(new Error("something went wrong"))).toBe(
       false,
     );
+  });
+
+  test("message substring without the colon anchor is rejected", () => {
+    // The phrase appears mid-sentence without the SQLite "`UNIQUE
+    // constraint failed:` table.col" shape — a human-written log line,
+    // not a driver error.
+    const err = new Error(
+      "note: UNIQUE constraint failed would be a problem here",
+    );
+    expect(isUniqueConstraintError(err)).toBe(false);
   });
 
   test("non-error values", () => {
