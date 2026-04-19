@@ -8,27 +8,28 @@ from source.
 
 ## Dev workflow
 
-`pnpm dev` in this workspace **only starts Vite for the admin** — it does
-not start the Cloudflare worker that serves `/_plumix/rpc` and `/_plumix/auth`.
-The admin and the worker are two processes; you run both.
+The admin is a client for the plumix backend — it speaks HTTP over
+`/_plumix/*` to whatever runtime the example app is using (Cloudflare,
+future Bun/Node adapters, etc.). `pnpm dev` in this workspace only starts
+Vite for the admin; it does not start the backend. You run both.
 
 ### One-shot: `pnpm dev` from the repo root
 
 Turbo watches every workspace that declares a `dev` script, so this starts
-both the admin and the worker in parallel:
+both the admin and the backend in parallel:
 
 ```bash
 pnpm dev    # from repo root
 ```
 
-That runs `examples/minimal`'s worker (Vite + @cloudflare/vite-plugin on
-`:5173`) and the admin's Vite dev server (on `:5174`). Open
-`http://localhost:5174/_plumix/admin/` in the browser.
+That runs the example app's `plumix dev` (on `:5173`) and the admin's
+Vite dev server (on `:5174`). Open `http://localhost:5174/_plumix/admin/`
+in the browser.
 
 ### Two-terminal variant (clearer logs)
 
 ```bash
-# terminal 1 — worker
+# terminal 1 — backend
 cd examples/minimal && pnpm dev       # :5173
 
 # terminal 2 — admin
@@ -39,24 +40,26 @@ cd packages/admin && pnpm dev         # :5174
 
 The admin is served from `:5174`. When admin code makes a request to
 `/_plumix/rpc/...` or `/_plumix/auth/...`, Vite's proxy forwards it to
-`http://localhost:5173` (the worker). From the browser's view everything
+`http://localhost:5173` (the backend). From the browser's view everything
 is same-origin on `:5174` — session cookies and CSRF headers just work,
 no CORS configuration needed.
 
-If you run the worker on a different host/port (e.g. for a remote dev
-instance), override the proxy target:
+If you run the backend on a different host/port (remote dev instance,
+non-default port for a specific adapter), override the proxy target:
 
 ```bash
-PLUMIX_WORKER_URL=http://192.168.1.10:5173 pnpm dev
+PLUMIX_BACKEND_URL=http://192.168.1.10:5173 pnpm dev
 ```
 
 ### First-time setup
 
-Before RPC endpoints work, the dev database needs migrations applied.
-From `examples/minimal`:
+Before RPC endpoints work, the dev database needs migrations applied —
+the specifics depend on the database adapter the example app uses.
+For `examples/minimal` (Cloudflare D1):
 
 ```bash
-pnpm plumix migrate apply   # applies drizzle migrations to local D1
+cd examples/minimal
+pnpm plumix migrate apply
 ```
 
 ### Workspace-local scripts
@@ -75,7 +78,7 @@ pnpm lint
 
 - **React 19** + TypeScript
 - **TanStack Router** (file-based, with `@tanstack/router-plugin` in Vite)
-- **TanStack Query** + `@orpc/tanstack-query` for RPC against the worker
+- **TanStack Query** + `@orpc/tanstack-query` for RPC against the plumix backend
 - **Tailwind CSS v4** (`@tailwindcss/vite`) + **shadcn/ui** (new-york style, neutral base)
 - **Geist Variable** + **Geist Mono Variable** via `@fontsource-variable/*`
 - Vitest + React Testing Library for component tests

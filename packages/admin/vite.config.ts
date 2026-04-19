@@ -7,11 +7,12 @@ import { defineConfig } from "vite";
 import { ADMIN_BASE_PATH } from "./src/lib/constants.js";
 
 // `plumix dev` runs on Vite's default port 5173, so the admin moves to 5174
-// to avoid a conflict. Admin proxies /_plumix/{rpc,auth} back to the worker
-// so requests look same-origin from the browser. Override via
-// PLUMIX_WORKER_URL when running the worker on a non-default host/port.
+// to avoid a conflict. Admin proxies /_plumix/{rpc,auth} back to the plumix
+// backend so requests look same-origin from the browser. Runtime-agnostic:
+// whether the backend is a Cloudflare worker, a future Node/Bun adapter, or
+// a remote instance, only the URL matters. Override via PLUMIX_BACKEND_URL.
 const ADMIN_DEV_PORT = 5174;
-const WORKER_DEV_URL = process.env.PLUMIX_WORKER_URL ?? "http://localhost:5173";
+const BACKEND_URL = process.env.PLUMIX_BACKEND_URL ?? "http://localhost:5173";
 
 export default defineConfig({
   base: `${ADMIN_BASE_PATH}/`,
@@ -31,8 +32,8 @@ export default defineConfig({
     port: ADMIN_DEV_PORT,
     strictPort: true,
     proxy: {
-      "/_plumix/rpc": { target: WORKER_DEV_URL, changeOrigin: true },
-      "/_plumix/auth": { target: WORKER_DEV_URL, changeOrigin: true },
+      "/_plumix/rpc": { target: BACKEND_URL, changeOrigin: true },
+      "/_plumix/auth": { target: BACKEND_URL, changeOrigin: true },
     },
   },
   resolve: {

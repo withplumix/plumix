@@ -4,8 +4,8 @@ import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 
 import type { AppRouterClient } from "@plumix/core";
 
-// Admin and worker are same-origin in production; a relative URL works
-// everywhere without env-specific configuration.
+// Admin and the plumix backend are same-origin in production; a relative
+// URL works everywhere regardless of which runtime adapter is deployed.
 const link = new RPCLink({
   url: "/_plumix/rpc",
   headers: () => ({
