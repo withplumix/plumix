@@ -4,6 +4,14 @@ export { authenticated } from "./authenticated.js";
 export { base } from "./base.js";
 export type { Base } from "./base.js";
 export { RPC_ERRORS } from "./errors.js";
+export { authRouter } from "./procedures/auth/index.js";
+export type { AuthRouter } from "./procedures/auth/index.js";
+export { authSessionOutputSchema } from "./procedures/auth/schemas.js";
+export type {
+  AuthSessionOutput,
+  AuthSessionUser,
+} from "./procedures/auth/schemas.js";
+export { emailField, nameField } from "./validation.js";
 export {
   applyPostBeforeSave,
   firePostPublished,

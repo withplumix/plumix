@@ -18,12 +18,14 @@
     "@fontsource-variable/geist-mono": "^5.2.7",
     "@orpc/client": "^1.13.14",
     "@orpc/tanstack-query": "^1.13.14",
+    "@tanstack/react-form": "^1.29.0",
     "@tanstack/react-query": "^5.99.2",
     "@tanstack/react-router": "^1.168.23",
     "clsx": "^2.1.1",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "tailwind-merge": "^3.5.0"
+    "tailwind-merge": "^3.5.0",
+    "valibot": "catalog:"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.2",

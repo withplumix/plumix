@@ -19,6 +19,10 @@
     "./test": {
       "types": "./dist/test/index.d.ts",
       "default": "./dist/test/index.js"
+    },
+    "./validation": {
+      "types": "./dist/rpc/validation.d.ts",
+      "default": "./dist/rpc/validation.js"
     }
   },
   "scripts": {

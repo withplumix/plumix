@@ -5,10 +5,6 @@ const config: KnipConfig = {
     "tooling/typescript": {
       entry: ["*.json"],
     },
-    // Vendored shadcn primitives — full set is API surface, not all used yet.
-    "packages/admin": {
-      ignore: ["src/components/ui/**"],
-    },
     // @plumix/core is a dependency but has no real imports yet (empty skeleton).
     // Remove these once packages have actual code importing from core.
     "packages/blocks": {

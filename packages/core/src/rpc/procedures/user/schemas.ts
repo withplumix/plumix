@@ -1,18 +1,9 @@
 import * as v from "valibot";
 
 import { USER_ROLES } from "../../../db/schema/users.js";
+import { emailField, nameField } from "../../validation.js";
 
 const userIdSchema = v.pipe(v.number(), v.integer(), v.minValue(1));
-
-const emailSchema = v.pipe(
-  v.string(),
-  v.trim(),
-  v.minLength(1),
-  v.maxLength(254),
-  v.email("email must be a valid address"),
-);
-
-const nameSchema = v.pipe(v.string(), v.trim(), v.maxLength(200));
 
 const avatarUrlSchema = v.pipe(
   v.string(),
@@ -38,15 +29,15 @@ export const userListInputSchema = v.object({
 export const userGetInputSchema = v.object({ id: userIdSchema });
 
 export const userInviteInputSchema = v.object({
-  email: emailSchema,
+  email: emailField,
   role: v.optional(roleSchema, "subscriber"),
-  name: v.optional(v.nullable(nameSchema)),
+  name: v.optional(v.nullable(nameField)),
 });
 
 export const userUpdateInputSchema = v.object({
   id: userIdSchema,
-  email: v.optional(emailSchema),
-  name: v.optional(v.nullable(nameSchema)),
+  email: v.optional(emailField),
+  name: v.optional(v.nullable(nameField)),
   avatarUrl: v.optional(v.nullable(avatarUrlSchema)),
   role: v.optional(roleSchema),
 });
