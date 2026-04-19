@@ -17,36 +17,33 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import * as v from "valibot";
 
+import type { Post, PostStatus } from "@plumix/core/schema";
+
 const PAGE_SIZE = 20;
 
-const POST_STATUSES = ["draft", "published", "scheduled", "trash"] as const;
-
-type PostStatus = (typeof POST_STATUSES)[number];
-
-const statusFilterSchema = v.picklist([...POST_STATUSES, "all"] as const);
+// Mirrors `PostStatus` from core's schema; kept local as a runtime array so
+// the valibot picklist stays tree-shakeable (importing the core runtime
+// symbol would pull drizzle into the admin bundle). The type import above
+// keeps the two in lockstep — a drift would break compilation.
+const POST_STATUSES: readonly PostStatus[] = [
+  "draft",
+  "published",
+  "scheduled",
+  "trash",
+];
+const STATUS_FILTER_VALUES = [...POST_STATUSES, "all"] as const;
+type StatusFilter = (typeof STATUS_FILTER_VALUES)[number];
 
 const postsSearchSchema = v.object({
-  page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
-  status: v.optional(statusFilterSchema, "all"),
+  page: v.optional(
+    v.fallback(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
+    1,
+  ),
+  status: v.optional(
+    v.fallback(v.picklist(STATUS_FILTER_VALUES), "all"),
+    "all",
+  ),
 });
-
-type PostsSearch = v.InferOutput<typeof postsSearchSchema>;
-
-// Post row as returned by post.list — the server exposes the full row; we
-// type a narrow view of what the table renders. `updatedAt` is widened to
-// `Date | string` so ISO-string payloads from mocks / intermediate hops
-// render without crashing; we normalise at the cell level.
-interface PostRow {
-  readonly id: number;
-  readonly title: string;
-  readonly slug: string;
-  readonly status: PostStatus;
-  readonly updatedAt: Date | string;
-}
-
-function toDate(value: Date | string): Date {
-  return value instanceof Date ? value : new Date(value);
-}
 
 const STATUS_VARIANT: Record<
   PostStatus,
@@ -58,12 +55,27 @@ const STATUS_VARIANT: Record<
   trash: "destructive",
 };
 
+const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "published", label: "Published" },
+  { value: "draft", label: "Draft" },
+  { value: "scheduled", label: "Scheduled" },
+  { value: "trash", label: "Trash" },
+];
+
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
   dateStyle: "medium",
   timeStyle: "short",
 });
 
-const columns: ColumnDef<PostRow, unknown>[] = [
+// oRPC's default wire format re-hydrates Date fields, but in tests (and any
+// non-oRPC path) we see ISO strings. `toDate` accepts either shape so the
+// cell doesn't need to know which one is live.
+function toDate(value: Date | string): Date {
+  return value instanceof Date ? value : new Date(value);
+}
+
+const columns: ColumnDef<Post>[] = [
   {
     accessorKey: "title",
     header: "Title",
@@ -84,7 +96,10 @@ const columns: ColumnDef<PostRow, unknown>[] = [
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => (
-      <Badge variant={STATUS_VARIANT[row.original.status]}>
+      <Badge
+        variant={STATUS_VARIANT[row.original.status]}
+        className="capitalize"
+      >
         {row.original.status}
       </Badge>
     ),
@@ -119,15 +134,18 @@ function PostsListRoute(): ReactNode {
     }),
   );
 
-  const setStatus = (status: PostsSearch["status"]) => {
+  const setStatus = (status: StatusFilter): void => {
     void navigate({ search: { status, page: 1 } });
   };
-  const setPage = (page: number) => {
-    void navigate({ search: { ...search, page } });
+  const setPage = (page: number): void => {
+    void navigate({ search: (prev) => ({ ...prev, page }) });
   };
 
-  const rows: readonly PostRow[] = query.data ?? [];
+  const rows: readonly Post[] = query.data ?? [];
   const canPrev = search.page > 1;
+  // Heuristic "next exists": a full page came back. Imprecise when total is an
+  // exact multiple of PAGE_SIZE — the user sees an extra empty page. `post.list`
+  // doesn't expose a total count today; accept the edge case until it does.
   const canNext = rows.length === PAGE_SIZE;
 
   return (
@@ -159,7 +177,7 @@ function PostsListRoute(): ReactNode {
           </AlertDescription>
         </Alert>
       ) : (
-        <DataTable<PostRow>
+        <DataTable<Post>
           columns={columns}
           data={rows}
           isLoading={query.isPending}
@@ -176,7 +194,9 @@ function PostsListRoute(): ReactNode {
             variant="outline"
             size="sm"
             disabled={!canPrev || query.isPending}
-            onClick={() => setPage(search.page - 1)}
+            onClick={() => {
+              setPage(search.page - 1);
+            }}
           >
             <ChevronLeft />
             Previous
@@ -185,7 +205,9 @@ function PostsListRoute(): ReactNode {
             variant="outline"
             size="sm"
             disabled={!canNext || query.isPending}
-            onClick={() => setPage(search.page + 1)}
+            onClick={() => {
+              setPage(search.page + 1);
+            }}
           >
             Next
             <ChevronRight />
@@ -200,24 +222,19 @@ function StatusFilter({
   value,
   onChange,
 }: {
-  value: PostsSearch["status"];
-  onChange: (v: PostsSearch["status"]) => void;
+  value: StatusFilter;
+  onChange: (next: StatusFilter) => void;
 }): ReactNode {
-  const options: { value: PostsSearch["status"]; label: string }[] = [
-    { value: "all", label: "All" },
-    { value: "published", label: "Published" },
-    { value: "draft", label: "Draft" },
-    { value: "scheduled", label: "Scheduled" },
-    { value: "trash", label: "Trash" },
-  ];
   return (
     <div role="group" aria-label="Filter by status" className="flex gap-1">
-      {options.map((opt) => (
+      {STATUS_FILTER_OPTIONS.map((opt) => (
         <Button
           key={opt.value}
           variant={value === opt.value ? "default" : "outline"}
           size="sm"
-          onClick={() => onChange(opt.value)}
+          onClick={() => {
+            onChange(opt.value);
+          }}
           aria-pressed={value === opt.value}
         >
           {opt.label}
@@ -240,7 +257,7 @@ function PostsEmptyState(): ReactNode {
         <CardContent>
           <Button disabled className="w-full">
             <Plus />
-            New post (coming soon)
+            New post
           </Button>
         </CardContent>
       </Card>
