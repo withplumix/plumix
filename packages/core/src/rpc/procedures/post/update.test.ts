@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test } from "vitest";
 
 import { posts } from "../../../db/schema/posts.js";
 import { createRpcHarness } from "../../../test/rpc.js";
@@ -67,10 +67,8 @@ describe("post.update", () => {
       slug: "promote",
     });
 
-    const onPublish = vi.fn();
-    const onTransition = vi.fn();
-    h.hooks.addAction("post:published", onPublish);
-    h.hooks.addAction("post:transition", onTransition);
+    const onPublish = h.spyAction("post:published");
+    const onTransition = h.spyAction("post:transition");
 
     const updated = await h.client.post.update({
       id: own.id,
@@ -78,8 +76,8 @@ describe("post.update", () => {
     });
     expect(updated.status).toBe("published");
     expect(updated.publishedAt).toBeInstanceOf(Date);
-    expect(onPublish).toHaveBeenCalledTimes(1);
-    expect(onTransition).toHaveBeenCalledTimes(1);
+    onPublish.assertCalledOnce();
+    onTransition.assertCalledOnce();
   });
 
   test("contributor cannot promote their own draft to published", async () => {
@@ -117,12 +115,11 @@ describe("post.update", () => {
       authorId: h.user.id,
       slug: "noop",
     });
-    const onUpdate = vi.fn();
-    h.hooks.addAction("post:updated", onUpdate);
+    const onUpdate = h.spyAction("post:updated");
 
     const returned = await h.client.post.update({ id: own.id });
     expect(returned.id).toBe(own.id);
-    expect(onUpdate).not.toHaveBeenCalled();
+    onUpdate.assertNotCalled();
   });
 
   test("404 for a missing row", async () => {
@@ -139,8 +136,7 @@ describe("post.update", () => {
       slug: "race-to-publish",
     });
 
-    const onPublish = vi.fn();
-    h.hooks.addAction("post:published", onPublish);
+    const onPublish = h.spyAction("post:published");
 
     const outcomes = await Promise.all([
       h.client.post.update({ id: own.id, status: "published" }),
@@ -148,7 +144,7 @@ describe("post.update", () => {
       h.client.post.update({ id: own.id, status: "published" }),
     ]);
     for (const result of outcomes) expect(result.status).toBe("published");
-    expect(onPublish).toHaveBeenCalledTimes(1);
+    onPublish.assertCalledOnce();
   });
 
   test("post:before_save cannot overwrite immutable fields", async () => {

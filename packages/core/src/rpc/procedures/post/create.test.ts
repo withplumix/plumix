@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test } from "vitest";
 
 import { eq } from "../../../db/index.js";
 import { posts } from "../../../db/schema/posts.js";
@@ -122,18 +122,17 @@ describe("post.create", () => {
 
   test("post:published fires once when status is published, never on drafts", async () => {
     const h = await createRpcHarness({ authAs: "author" });
-    const onPublish = vi.fn();
-    h.hooks.addAction("post:published", onPublish);
+    const onPublish = h.spyAction("post:published");
 
     await h.client.post.create({ title: "d", slug: "d-1" });
-    expect(onPublish).not.toHaveBeenCalled();
+    onPublish.assertNotCalled();
 
     await h.client.post.create({
       title: "p",
       slug: "p-1",
       status: "published",
     });
-    expect(onPublish).toHaveBeenCalledTimes(1);
+    onPublish.assertCalledOnce();
   });
 
   test("concurrent creates with the same slug: exactly one wins, the other gets CONFLICT", async () => {
