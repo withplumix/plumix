@@ -34,9 +34,6 @@
     "test:integration": {
       "dependsOn": ["build"]
     },
-    "test:e2e": {
-      "dependsOn": ["build"]
-    },
     "clean": {
       "cache": false
     },

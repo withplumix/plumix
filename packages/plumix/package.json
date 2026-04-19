@@ -58,10 +58,6 @@
     "./test": {
       "types": "./dist/test/index.d.ts",
       "default": "./dist/test/index.js"
-    },
-    "./test/e2e": {
-      "types": "./dist/test/e2e/index.d.ts",
-      "default": "./dist/test/e2e/index.js"
     }
   },
   "bin": {
@@ -87,7 +83,6 @@
     "test": "vitest run",
     "test:unit": "vitest run src --passWithNoTests",
     "test:integration": "vitest run test --passWithNoTests",
-    "test:e2e": "vitest run src/test/e2e --passWithNoTests",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
