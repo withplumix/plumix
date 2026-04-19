@@ -181,6 +181,7 @@ function PostsListRoute(): ReactNode {
           columns={columns}
           data={rows}
           isLoading={query.isPending}
+          loadingLabel="Loading posts"
           emptyState={<PostsEmptyState />}
         />
       )}

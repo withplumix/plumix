@@ -23,10 +23,13 @@ import {
 } from "@tanstack/react-table";
 
 interface DataTableProps<TData> {
-  readonly columns: ColumnDef<TData, unknown>[];
+  readonly columns: ColumnDef<TData>[];
   readonly data: readonly TData[];
   readonly isLoading?: boolean;
   readonly emptyState?: ReactNode;
+  /** Screen-reader label for the loading state. Announced via a live region
+   *  when `isLoading` is true. Defaults to "Loading" if omitted. */
+  readonly loadingLabel?: string;
 }
 
 export function DataTable<TData>({
@@ -34,6 +37,7 @@ export function DataTable<TData>({
   data,
   isLoading = false,
   emptyState,
+  loadingLabel = "Loading",
 }: DataTableProps<TData>): ReactNode {
   const table = useReactTable({
     data: data as TData[],
@@ -44,7 +48,12 @@ export function DataTable<TData>({
   const rows = table.getRowModel().rows;
 
   return (
-    <div className="bg-card rounded-md border">
+    <div
+      className="bg-card rounded-md border"
+      aria-busy={isLoading || undefined}
+      role={isLoading ? "region" : undefined}
+      aria-label={isLoading ? loadingLabel : undefined}
+    >
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
