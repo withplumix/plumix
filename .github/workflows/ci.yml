@@ -64,16 +64,12 @@ jobs:
       - run: pnpm knip
 
   test:
-    name: Test (${{ matrix.suite }})
+    name: Test
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        suite: [unit, integration]
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
-      - run: pnpm test:${{ matrix.suite }}
+      - run: pnpm test
 
   publint:
     name: Publint

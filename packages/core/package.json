@@ -28,8 +28,6 @@
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
     "test": "vitest run",
-    "test:unit": "vitest run src --passWithNoTests",
-    "test:integration": "vitest run test --passWithNoTests",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {

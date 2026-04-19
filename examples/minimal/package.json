@@ -9,8 +9,6 @@
     "clean": "git clean -xdf .plumix .wrangler dist node_modules",
     "dev": "plumix dev",
     "test": "vitest run",
-    "test:unit": "vitest run src --passWithNoTests",
-    "test:integration": "vitest run test --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
