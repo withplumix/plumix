@@ -4,7 +4,7 @@ import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-import { ADMIN_BASE_PATH } from "./src/constants.js";
+import { ADMIN_BASE_PATH } from "./src/lib/constants.js";
 
 export default defineConfig({
   base: `${ADMIN_BASE_PATH}/`,

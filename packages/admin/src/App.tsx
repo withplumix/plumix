@@ -4,8 +4,11 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { RouterProvider } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
-import { createQueryClient } from "./query-client.js";
-import { createRouter } from "./router.js";
+import {
+  createQueryClient,
+  createRouter,
+  ThemeProvider,
+} from "./providers/index.js";
 
 const IS_DEV = process.env.NODE_ENV === "development";
 
@@ -16,14 +19,16 @@ export function App(): React.ReactNode {
   const [router] = useState(createRouter);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-      {IS_DEV ? (
-        <>
-          <TanStackRouterDevtools router={router} />
-          <ReactQueryDevtools initialIsOpen={false} />
-        </>
-      ) : null}
-    </QueryClientProvider>
+    <ThemeProvider defaultTheme="system">
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+        {IS_DEV ? (
+          <>
+            <TanStackRouterDevtools router={router} />
+            <ReactQueryDevtools initialIsOpen={false} />
+          </>
+        ) : null}
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
