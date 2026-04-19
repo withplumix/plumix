@@ -131,6 +131,44 @@ describe("cloudflare adapter — buildFetchHandler", () => {
     );
     expect(response.status).toBe(403);
   });
+
+  test("env.ASSETS is exposed through the assets slot so /_plumix/admin/ deep links resolve", async () => {
+    const indexBody = "<!doctype html><title>admin</title>";
+    const ASSETS = {
+      fetch: (_request: Request): Promise<Response> =>
+        Promise.resolve(
+          new Response(indexBody, {
+            status: 200,
+            headers: { "content-type": "text/html" },
+          }),
+        ),
+    };
+
+    const response = await invoke(
+      new Request("https://cms.example/_plumix/admin/posts/new"),
+      { ASSETS },
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe(indexBody);
+  });
+
+  test("/_plumix/admin/ without an ASSETS binding returns admin-not-available", async () => {
+    const response = await invoke(
+      new Request("https://cms.example/_plumix/admin"),
+    );
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-plumix-hint")).toBe("admin-not-available");
+  });
+
+  test("a malformed env.ASSETS (no fetch function) falls back to admin-not-available", async () => {
+    const response = await invoke(
+      new Request("https://cms.example/_plumix/admin"),
+      { ASSETS: { fetch: "not-a-function" } },
+    );
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-plumix-hint")).toBe("admin-not-available");
+  });
 });
 
 function captureAdapter(): {

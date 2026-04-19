@@ -6,6 +6,7 @@ import type { UserRole } from "../db/schema/users.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
+import type { AssetsBinding } from "../runtime/slots.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
 
 export type CoreSchema = typeof coreSchema;
@@ -53,6 +54,12 @@ export interface AppContext<
    * dropped on runtimes that opt out.
    */
   readonly after: AfterResponse;
+  /**
+   * Platform asset serving, when the runtime exposes one. Populated by
+   * the CF adapter from `env.ASSETS`; undefined on runtimes without an
+   * asset layer. Consumed by the dispatcher to serve admin SPA deep-links.
+   */
+  readonly assets?: AssetsBinding;
 }
 
 export type AuthenticatedAppContext<
@@ -70,6 +77,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly user?: AuthenticatedUser | null;
   readonly logger?: Logger;
   readonly after?: AfterResponse;
+  readonly assets?: AssetsBinding;
 }
 
 const dropPromise: AfterResponse = () => undefined;
@@ -92,6 +100,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
         user !== null && resolver.hasCapability(user.role, capability),
     },
     after: args.after ?? dropPromise,
+    assets: args.assets,
   };
 }
 
