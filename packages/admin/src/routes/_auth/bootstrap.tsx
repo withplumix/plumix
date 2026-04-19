@@ -41,8 +41,7 @@ function BootstrapRoute(): ReactNode {
   const [errorCode, setErrorCode] = useState<string | null>(null);
 
   const createAccount = useMutation({
-    mutationFn: (input: { email: string; name?: string }) =>
-      registerWithPasskey(input),
+    mutationFn: registerWithPasskey,
     onMutate: () => setErrorCode(null),
     onSuccess: async () => {
       await router.options.context.queryClient.invalidateQueries({

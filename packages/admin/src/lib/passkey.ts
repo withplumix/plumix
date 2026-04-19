@@ -83,22 +83,34 @@ async function postJsonVoid(path: string): Promise<void> {
   }
 }
 
-// navigator.credentials.get throws a DOMException on user cancellation or
-// missing authenticator — normalize those to our taxonomy so the UI only
-// ever deals in PasskeyError.
-function wrapCredentialsError(err: unknown): never {
-  if (err instanceof DOMException) {
-    if (err.name === "NotAllowedError" || err.name === "AbortError") {
-      throw new PasskeyError("user_cancelled");
-    }
-    if (err.name === "InvalidStateError") {
-      throw new PasskeyError("credential_already_registered");
-    }
-    if (err.name === "NotSupportedError") {
-      throw new PasskeyError("no_authenticator");
-    }
+// navigator.credentials.get/create throws a DOMException on user cancellation
+// or missing authenticator — normalize via lookup table so the UI only ever
+// deals in PasskeyError.
+const DOM_EXCEPTION_CODE: Record<string, PasskeyErrorCode> = {
+  NotAllowedError: "user_cancelled",
+  AbortError: "user_cancelled",
+  InvalidStateError: "credential_already_registered",
+  NotSupportedError: "no_authenticator",
+};
+
+// Wraps a `navigator.credentials.*` call: normalizes a null result (user
+// cancelled) and any DOMException into a `PasskeyError`. Returns the
+// non-null credential on success.
+async function callCredentialsApi(
+  call: () => Promise<Credential | null>,
+): Promise<PublicKeyCredential> {
+  let raw: Credential | null;
+  try {
+    raw = await call();
+  } catch (err) {
+    const code =
+      err instanceof DOMException
+        ? (DOM_EXCEPTION_CODE[err.name] ?? "unknown")
+        : "unknown";
+    throw new PasskeyError(code);
   }
-  throw new PasskeyError("unknown");
+  if (!raw) throw new PasskeyError("user_cancelled");
+  return raw as PublicKeyCredential;
 }
 
 function decodeRegistrationOptions(
@@ -172,17 +184,11 @@ export async function registerWithPasskey(input: {
     { email: input.email, ...(input.name ? { name: input.name } : {}) },
   );
 
-  let credential: PublicKeyCredential;
-  try {
-    const raw = await navigator.credentials.create({
+  const credential = await callCredentialsApi(() =>
+    navigator.credentials.create({
       publicKey: decodeRegistrationOptions(options),
-    });
-    if (!raw) throw new PasskeyError("user_cancelled");
-    credential = raw as PublicKeyCredential;
-  } catch (err) {
-    if (err instanceof PasskeyError) throw err;
-    wrapCredentialsError(err);
-  }
+    }),
+  );
 
   return postJson<VerifySuccess>(
     "/_plumix/auth/passkey/register/verify",
@@ -198,17 +204,11 @@ export async function signInWithPasskey(
     email ? { email } : {},
   );
 
-  let credential: PublicKeyCredential;
-  try {
-    const raw = await navigator.credentials.get({
+  const credential = await callCredentialsApi(() =>
+    navigator.credentials.get({
       publicKey: decodeAuthenticationOptions(options),
-    });
-    if (!raw) throw new PasskeyError("user_cancelled");
-    credential = raw as PublicKeyCredential;
-  } catch (err) {
-    if (err instanceof PasskeyError) throw err;
-    wrapCredentialsError(err);
-  }
+    }),
+  );
 
   return postJson<VerifySuccess>(
     "/_plumix/auth/passkey/login/verify",
