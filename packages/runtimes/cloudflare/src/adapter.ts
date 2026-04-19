@@ -53,8 +53,13 @@ function collectBindingsFrom(slot: unknown, into: string[]): void {
  * Dedicated class so the request handler can surface the actionable
  * message in the response body, rather than swallowing it as a generic
  * "internal_error" 500 (the operator may not have wrangler tail open).
+ *
+ * Internal: consumers interact via the HTTP response body
+ * (`{"error": "plumix_runtime_config_error", ...}`), not by catching the
+ * class directly. Keeping it non-exported avoids adding a stable API
+ * surface for something that's effectively implementation detail.
  */
-export class PlumixRuntimeConfigError extends Error {
+class PlumixRuntimeConfigError extends Error {
   readonly code = "plumix_runtime_config_error";
   readonly missing: readonly string[];
   constructor(missing: readonly string[]) {

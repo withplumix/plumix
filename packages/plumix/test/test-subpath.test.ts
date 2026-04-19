@@ -1,6 +1,16 @@
-// Import through the published subpath — fails if the barrel in
-// @plumix/core/test drifts from what plumix/test re-exports, or if a
-// future build config accidentally drops the test subpath from dist.
+// The only file in the workspace that imports plumix via its own
+// `exports` map (as an external consumer would). The map points at
+// `./dist/test/index.d.ts`, which only exists after a local build.
+// Turbo's typecheck deliberately doesn't depend on same-package build,
+// so tsc can't resolve the published types at typecheck time — see the
+// ambient shim at `plumix-test.shim.d.ts` in this folder which declares
+// the subpath as permissive for tsc. Runtime resolution uses the real
+// dist; vitest + test:integration (which DOES depend on build)
+// exercises the real surface and catches drift from the shim.
+//
+// The test guards the subpath against breakage — if the barrel in
+// @plumix/core/test drifts from what plumix/test re-exports, or a
+// future build config drops the test subpath from dist, this fails.
 import {
   categoryTerm,
   createDispatcherHarness,
