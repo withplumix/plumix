@@ -5,9 +5,7 @@ const config: KnipConfig = {
     "tooling/typescript": {
       entry: ["*.json"],
     },
-    // shadcn-generated UI primitives are a vendored component library:
-    // we ship the full set, only some are used today, the rest become API
-    // as features land. Skip analysis so unused primitives stay quiet.
+    // Vendored shadcn primitives — full set is API surface, not all used yet.
     "packages/admin": {
       ignore: ["src/components/ui/**"],
     },

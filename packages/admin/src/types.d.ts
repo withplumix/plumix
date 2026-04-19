@@ -1,4 +1,3 @@
-// Side-effect CSS imports from fontsource variable packages. The packages
-// ship only .css entries, so TypeScript can't infer a module shape.
+// fontsource packages ship only CSS — no module shape for TS to infer.
 declare module "@fontsource-variable/geist";
 declare module "@fontsource-variable/geist-mono";

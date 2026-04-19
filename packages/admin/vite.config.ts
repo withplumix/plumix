@@ -8,10 +8,8 @@ import { ADMIN_BASE_PATH } from "./src/constants.js";
 
 export default defineConfig({
   base: `${ADMIN_BASE_PATH}/`,
-  // tanstackRouter must come before @vitejs/plugin-react — the router plugin
-  // rewrites route files and its transform needs to run first.
-  // quoteStyle + semicolons match prettier so routeTree.gen.ts survives a
-  // build → format round-trip without churn.
+  // tanstackRouter must run before @vitejs/plugin-react. quoteStyle +
+  // semicolons keep routeTree.gen.ts prettier-clean across builds.
   plugins: [
     tanstackRouter({
       target: "react",

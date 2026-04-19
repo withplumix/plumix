@@ -3,17 +3,15 @@ import { RPCLink } from "@orpc/client/fetch";
 
 import type { AppRouterClient } from "@plumix/core";
 
-// The worker dispatcher mounts RPC under /_plumix/rpc (see
-// packages/core/src/runtime/dispatcher.ts). Admin and worker are same-origin
-// when deployed, so a relative URL is correct in every environment.
+// Admin and worker are same-origin in production, so a relative URL works
+// everywhere without env-specific configuration.
 const RPC_PREFIX = "/_plumix/rpc" as const;
 
 export function createRpcClient(): AppRouterClient {
   const link = new RPCLink({
     url: RPC_PREFIX,
     headers: () => ({
-      // CSRF header required by the dispatcher's pre-check on every /_plumix/*
-      // non-safe method. Keeping it on reads too is harmless.
+      // Dispatcher rejects any non-safe /_plumix/* method missing this header.
       "x-plumix-request": "1",
     }),
   });

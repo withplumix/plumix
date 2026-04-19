@@ -14,10 +14,8 @@ export const Route = createFileRoute("/")({
 });
 
 function IndexRoute(): React.ReactNode {
-  // Disabled query — proves the end-to-end type chain (server AppRouter →
-  // AppRouterClient → orpc.queryOptions → useQuery) compiles. No backend is
-  // connected to this scaffold yet, so we skip the actual fetch. Remove
-  // `enabled: false` once a route needs real data.
+  // Disabled query — a compile-time type probe from server AppRouter down to
+  // useQuery. Flip `enabled: true` when a real route needs post.list.
   useQuery({
     ...orpc.post.list.queryOptions({ input: {} }),
     enabled: false,

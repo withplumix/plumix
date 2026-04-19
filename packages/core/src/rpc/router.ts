@@ -14,7 +14,5 @@ export const appRouter = {
 
 export type AppRouter = typeof appRouter;
 
-// Pre-typed client shape for consumers (admin, plugins). Re-exporting the
-// applied RouterClient<AppRouter> keeps @orpc/server out of consumers'
-// dependency trees — they see this as a plain type from @plumix/core.
+// Pre-applied so consumers don't need @orpc/server in their dep tree.
 export type AppRouterClient = RouterClient<AppRouter>;
