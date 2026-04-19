@@ -10,6 +10,7 @@ const distDir = resolve(exampleDir, "dist");
 const plumixDir = resolve(exampleDir, ".plumix");
 const workerArtifact = resolve(distDir, "plumix_minimal/index.js");
 const workerWrangler = resolve(distDir, "plumix_minimal/wrangler.json");
+const adminIndexHtml = resolve(distDir, "client/_plumix/admin/index.html");
 
 async function runBuild(): Promise<{ code: number | null; stderr: string }> {
   return new Promise((resolvePromise, rejectPromise) => {
@@ -29,7 +30,7 @@ async function runBuild(): Promise<{ code: number | null; stderr: string }> {
 
 describe("examples/minimal — plumix build", () => {
   test(
-    "emits a worker bundle and rendered wrangler.json",
+    "emits a worker bundle, rendered wrangler.json, and staged admin assets",
     async () => {
       rmSync(distDir, { recursive: true, force: true });
       rmSync(plumixDir, { recursive: true, force: true });
@@ -41,6 +42,9 @@ describe("examples/minimal — plumix build", () => {
       expect(statSync(workerArtifact).size).toBeGreaterThan(1024);
 
       expect(existsSync(workerWrangler)).toBe(true);
+
+      // Admin SPA ends up in the Cloudflare assets bundle.
+      expect(existsSync(adminIndexHtml)).toBe(true);
     },
     60_000,
   );

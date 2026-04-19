@@ -10,5 +10,10 @@
       "database_name": "plumix_minimal",
       "database_id": "00000000-0000-0000-0000-000000000000"
     }
-  ]
+  ],
+  "assets": {
+    "directory": ".plumix/public",
+    "binding": "ASSETS",
+    "not_found_handling": "none"
+  }
 }
