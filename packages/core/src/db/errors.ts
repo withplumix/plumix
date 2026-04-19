@@ -20,49 +20,37 @@ const CONSTRAINT_CODE_NUMBERS = new Set([2067, 1555]);
 // letting a pathological cycle (bug in a driver) loop forever.
 const MAX_CAUSE_DEPTH = 6;
 
+// Every field name we've seen a SQLite driver put the result code on.
+// String fields hold extended-code strings ("SQLITE_CONSTRAINT_UNIQUE");
+// number fields hold numeric extended codes (2067 / 1555). Adding a new
+// driver is a one-row append to whichever list matches its shape.
+const STRING_CODE_FIELDS = ["code", "extendedCode"] as const;
+const NUMBER_CODE_FIELDS = ["errno", "errcode", "resultCode"] as const;
+
 function hasUniqueCode(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
-  const err = error as {
-    code?: unknown;
-    extendedCode?: unknown;
-    errno?: unknown;
-    errcode?: unknown;
-    resultCode?: unknown;
-    message?: unknown;
-  };
-  // String codes — better-sqlite3 uses `code`; some drivers use `extendedCode`.
-  if (typeof err.code === "string" && CONSTRAINT_CODE_STRINGS.has(err.code)) {
-    return true;
+  const err = error as Record<string, unknown>;
+
+  for (const field of STRING_CODE_FIELDS) {
+    const value = err[field];
+    if (typeof value === "string" && CONSTRAINT_CODE_STRINGS.has(value)) {
+      return true;
+    }
   }
-  if (
-    typeof err.extendedCode === "string" &&
-    CONSTRAINT_CODE_STRINGS.has(err.extendedCode)
-  ) {
-    return true;
+  for (const field of NUMBER_CODE_FIELDS) {
+    const value = err[field];
+    if (typeof value === "number" && CONSTRAINT_CODE_NUMBERS.has(value)) {
+      return true;
+    }
   }
-  // Numeric codes — node:sqlite exposes `errcode`, some drivers use `errno`
-  // or `resultCode`. Accept any of the three.
-  if (typeof err.errno === "number" && CONSTRAINT_CODE_NUMBERS.has(err.errno)) {
-    return true;
-  }
-  if (
-    typeof err.errcode === "number" &&
-    CONSTRAINT_CODE_NUMBERS.has(err.errcode)
-  ) {
-    return true;
-  }
-  if (
-    typeof err.resultCode === "number" &&
-    CONSTRAINT_CODE_NUMBERS.has(err.resultCode)
-  ) {
-    return true;
-  }
+
   // Universal fallback: SQLite's core produces "UNIQUE constraint failed: …"
   // verbatim; every driver we've audited includes it in the message.
   // Cloudflare D1 relies entirely on this path (no structured codes at all).
+  const message = err.message;
   if (
-    typeof err.message === "string" &&
-    err.message.includes("UNIQUE constraint failed")
+    typeof message === "string" &&
+    message.includes("UNIQUE constraint failed")
   ) {
     return true;
   }

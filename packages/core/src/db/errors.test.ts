@@ -34,6 +34,10 @@ describe("isUniqueConstraintError — driver shape coverage", () => {
   });
 
   test("bun:sqlite: numeric `errno` 2067 (extended)", () => {
+    // Bun ≥ 1.x emits extended SQLite result codes on `errno`; pre-1.0 GA
+    // returned base code 19 (SQLITE_CONSTRAINT) which alone is too generic
+    // to classify on (covers CHECK, FOREIGN KEY, NOT NULL too) and relies
+    // on the message fallback — still detected, just via a different path.
     const err = Object.assign(new Error("UNIQUE constraint failed"), {
       errno: 2067,
     });
@@ -77,6 +81,21 @@ describe("isUniqueConstraintError — driver shape coverage", () => {
       { code: "SQLITE_CONSTRAINT", cause: sqlite },
     );
     const drizzle = Object.assign(new Error("Failed query"), { cause: libsql });
+    expect(isUniqueConstraintError(drizzle)).toBe(true);
+  });
+
+  test("drizzle + D1 wrap: leaf is a plain Error with only a message", () => {
+    // D1 bindings throw bare Error instances with "D1_ERROR: …" messages —
+    // no structured code on the leaf. Drizzle wraps them in its own
+    // DrizzleError via .cause. Detector has to reach the leaf and match
+    // by message only.
+    const d1 = new Error(
+      "D1_ERROR: UNIQUE constraint failed: users.email: SQLITE_CONSTRAINT",
+    );
+    const drizzle = Object.assign(
+      new Error("Failed query: insert into users ..."),
+      { cause: d1 },
+    );
     expect(isUniqueConstraintError(drizzle)).toBe(true);
   });
 
