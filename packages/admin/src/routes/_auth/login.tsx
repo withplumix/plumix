@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { FormField } from "@/components/form/field.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Button } from "@/components/ui/button.js";
 import {
@@ -9,8 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.js";
-import { Input } from "@/components/ui/input.js";
-import { Label } from "@/components/ui/label.js";
 import { getPasskeyErrorMessage, PasskeyError } from "@/lib/passkey-errors.js";
 import { signInWithPasskey } from "@/lib/passkey.js";
 import { SESSION_QUERY_KEY, sessionQueryOptions } from "@/lib/session.js";
@@ -19,7 +18,7 @@ import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import * as v from "valibot";
 
-import { loginSchema } from "./-schemas.js";
+import { loginEmailFieldSchema, loginSchema } from "./-schemas.js";
 
 export const Route = createFileRoute("/_auth/login")({
   beforeLoad: async ({ context }) => {
@@ -89,42 +88,26 @@ function LoginRoute(): ReactNode {
             validators={{
               onChange: ({ value }) => {
                 if (!value) return undefined;
-                const result = v.safeParse(loginSchema, { email: value });
+                const result = v.safeParse(loginEmailFieldSchema, {
+                  email: value,
+                });
                 return result.success ? undefined : result.issues[0].message;
               },
             }}
           >
             {(field) => (
-              <div className="flex flex-col gap-2">
-                <Label htmlFor={field.name}>
-                  Email{" "}
-                  <span className="text-muted-foreground">(optional)</span>
-                </Label>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type="email"
-                  autoComplete="username webauthn"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  disabled={signIn.isPending}
-                  aria-invalid={field.state.meta.errors.length > 0 || undefined}
-                  aria-describedby={
-                    field.state.meta.errors.length > 0
-                      ? `${field.name}-error`
-                      : undefined
-                  }
-                />
-                {field.state.meta.errors.length > 0 ? (
-                  <p
-                    id={`${field.name}-error`}
-                    className="text-destructive text-xs"
-                  >
-                    {String(field.state.meta.errors[0])}
-                  </p>
-                ) : null}
-              </div>
+              <FormField
+                field={field}
+                label={
+                  <>
+                    Email{" "}
+                    <span className="text-muted-foreground">(optional)</span>
+                  </>
+                }
+                type="email"
+                autoComplete="username webauthn"
+                disabled={signIn.isPending}
+              />
             )}
           </form.Field>
 

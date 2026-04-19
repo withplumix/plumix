@@ -1,4 +1,4 @@
-import type { PasskeyServerErrorCode } from "./passkey-errors.js";
+import type { PasskeyErrorCode } from "./passkey-errors.js";
 import { base64urlToBuffer, bufferToBase64url } from "./base64url.js";
 import { PasskeyError } from "./passkey-errors.js";
 
@@ -57,11 +57,11 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
     throw new PasskeyError("network_error");
   }
   if (!response.ok) {
-    let code: PasskeyServerErrorCode = "unknown" as PasskeyServerErrorCode;
+    let code: PasskeyErrorCode = "unknown";
     try {
       const payload = (await response.json()) as { error?: string };
       if (typeof payload.error === "string") {
-        code = payload.error as PasskeyServerErrorCode;
+        code = payload.error as PasskeyErrorCode;
       }
     } catch {
       // body wasn't JSON; fall through with "unknown"
@@ -156,7 +156,7 @@ function encodeAuthenticationCredential(
       clientDataJSON: bufferToBase64url(response.clientDataJSON),
       authenticatorData: bufferToBase64url(response.authenticatorData),
       signature: bufferToBase64url(response.signature),
-      userHandle: response.userHandle
+      userHandle: response.userHandle?.byteLength
         ? bufferToBase64url(response.userHandle)
         : null,
     },

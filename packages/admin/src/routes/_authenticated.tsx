@@ -29,8 +29,12 @@ export const Route = createFileRoute("/_authenticated")({
 // plugin admin chunks land (Phase 11 follow-up) this becomes a registry fed
 // by the manifest. `exact` controls TanStack Router's active-link matching:
 // `/` must opt in or it'd match every route.
+//
+// `to` is typed as `string` rather than narrowed to the current set of paths
+// so new entries don't require widening the interface. TanStack Router's
+// `<Link to="…">` types each entry at render time via typed routing inference.
 interface NavItem {
-  readonly to: "/";
+  readonly to: string;
   readonly label: string;
   readonly exact: boolean;
 }

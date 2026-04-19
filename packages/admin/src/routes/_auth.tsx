@@ -15,7 +15,6 @@ export const Route = createFileRoute("/_auth")({
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router redirect pattern
       throw redirect({ to: "/" });
     }
-    return { session };
   },
   component: AuthLayout,
 });

@@ -2,7 +2,7 @@
 // packages/core/src/auth/passkey/errors.ts. We can't import the type — admin
 // is a SPA build and @plumix/core is devDep-only for type-probe purposes —
 // but the string literals are the wire contract.
-export type PasskeyServerErrorCode =
+type PasskeyServerErrorCode =
   | "challenge_not_found"
   | "invalid_client_data"
   | "invalid_origin"
@@ -30,7 +30,7 @@ type PasskeyClientErrorCode =
   | "network_error"
   | "unknown";
 
-type PasskeyErrorCode = PasskeyServerErrorCode | PasskeyClientErrorCode;
+export type PasskeyErrorCode = PasskeyServerErrorCode | PasskeyClientErrorCode;
 
 export class PasskeyError extends Error {
   readonly code: PasskeyErrorCode;
@@ -98,5 +98,7 @@ const MESSAGES: Record<PasskeyErrorCode, string> = {
 };
 
 export function getPasskeyErrorMessage(code: string): string {
-  return (MESSAGES as Record<string, string>)[code] ?? MESSAGES.unknown;
+  return code in MESSAGES
+    ? MESSAGES[code as PasskeyErrorCode]
+    : MESSAGES.unknown;
 }

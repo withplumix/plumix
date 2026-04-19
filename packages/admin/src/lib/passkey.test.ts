@@ -145,27 +145,25 @@ describe("registerWithPasskey", () => {
     expect(credentialsCreate).not.toHaveBeenCalled();
   });
 
-  test("user cancels the browser prompt → user_cancelled", async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse(fakeRegistrationOptions()));
-    credentialsCreate.mockRejectedValue(
-      new DOMException("cancelled", "NotAllowedError"),
-    );
+  // DOMException.name → PasskeyError.code mapping. Parametrised so the
+  // taxonomy is exhaustively covered by one run.
+  test.each([
+    ["NotAllowedError", "user_cancelled"],
+    ["AbortError", "user_cancelled"],
+    ["InvalidStateError", "credential_already_registered"],
+    ["NotSupportedError", "no_authenticator"],
+    ["SomeUnknownDomError", "unknown"],
+  ] as const)(
+    "navigator.credentials.create rejecting %s → %s",
+    async (domName, expectedCode) => {
+      fetchMock.mockResolvedValueOnce(jsonResponse(fakeRegistrationOptions()));
+      credentialsCreate.mockRejectedValue(new DOMException("x", domName));
 
-    await expect(
-      registerWithPasskey({ email: "a@example.test" }),
-    ).rejects.toMatchObject({ code: "user_cancelled" });
-  });
-
-  test("credential already registered (InvalidStateError) → credential_already_registered", async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse(fakeRegistrationOptions()));
-    credentialsCreate.mockRejectedValue(
-      new DOMException("already", "InvalidStateError"),
-    );
-
-    await expect(
-      registerWithPasskey({ email: "a@example.test" }),
-    ).rejects.toMatchObject({ code: "credential_already_registered" });
-  });
+      await expect(
+        registerWithPasskey({ email: "a@example.test" }),
+      ).rejects.toMatchObject({ code: expectedCode });
+    },
+  );
 });
 
 describe("signInWithPasskey", () => {
