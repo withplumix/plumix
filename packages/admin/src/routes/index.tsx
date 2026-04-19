@@ -26,8 +26,8 @@ function IndexRoute(): ReactNode {
     <main className="bg-background flex min-h-screen items-center justify-center p-8">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle role="heading" aria-level={1}>
-            Plumix Admin
+          <CardTitle>
+            <h1>Plumix Admin</h1>
           </CardTitle>
           <CardDescription>Shell scaffold — no features yet.</CardDescription>
         </CardHeader>

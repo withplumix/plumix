@@ -47,9 +47,16 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
     configureServer(server) {
       server.watcher.on("change", (path) => {
         if (!configPath || resolve(path) !== configPath) return;
-        void regenerate(root, options.configFile).then(() => {
-          server.ws.send({ type: "full-reload" });
-        });
+        void regenerate(root, options.configFile)
+          .then(() => {
+            server.ws.send({ type: "full-reload" });
+          })
+          .catch((error: unknown) => {
+            server.config.logger.error(
+              `[plumix] failed to regenerate config on change: ${String(error)}`,
+              { error: error instanceof Error ? error : undefined },
+            );
+          });
       });
     },
   };
@@ -100,8 +107,17 @@ async function stageAdminAssets(publicDir: string): Promise<void> {
 }
 
 async function destIsFresh(dest: string, src: string): Promise<boolean> {
+  // Dest-first: on the common cold-run case (dest doesn't exist) we skip the
+  // src stat entirely; on warm runs we pay both stats sequentially, which is
+  // dominated by filesystem cache anyway.
+  let destStat: Awaited<ReturnType<typeof stat>>;
   try {
-    const [srcStat, destStat] = await Promise.all([stat(src), stat(dest)]);
+    destStat = await stat(dest);
+  } catch {
+    return false;
+  }
+  try {
+    const srcStat = await stat(src);
     return destStat.mtimeMs >= srcStat.mtimeMs;
   } catch {
     return false;
