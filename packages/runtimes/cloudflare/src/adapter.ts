@@ -18,6 +18,88 @@ import {
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 /**
+ * Structural check for the Worker ExecutionContext — we only use
+ * `waitUntil`, so that's the only shape we verify. Prefer this to a
+ * `as ExecutionContext | undefined` cast: casts silently accept anything,
+ * the guard narrows safely and documents intent.
+ */
+function isExecutionContext(value: unknown): value is ExecutionContext {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "waitUntil" in value &&
+    typeof (value as { waitUntil: unknown }).waitUntil === "function"
+  );
+}
+
+/**
+ * Walk the configured slot adapters for their declared `requiredBindings`
+ * and assert every key is present on `env`. Called once per Worker isolate
+ * — the result is memoised — so the check is effectively free after the
+ * first request.
+ *
+ * Produces a single error listing every missing binding, which is far more
+ * actionable than a 500 surfacing from the first query several hops deeper.
+ */
+function collectBindingsFrom(slot: unknown, into: string[]): void {
+  if (slot === undefined || slot === null) return;
+  const bindings = (slot as { readonly requiredBindings?: readonly string[] })
+    .requiredBindings;
+  if (bindings) into.push(...bindings);
+}
+
+/**
+ * Thrown when the runtime adapter detects a missing env binding at boot.
+ * Dedicated class so the request handler can surface the actionable
+ * message in the response body, rather than swallowing it as a generic
+ * "internal_error" 500 (the operator may not have wrangler tail open).
+ *
+ * Internal: consumers interact via the HTTP response body
+ * (`{"error": "plumix_runtime_config_error", ...}`), not by catching the
+ * class directly. Keeping it non-exported avoids adding a stable API
+ * surface for something that's effectively implementation detail.
+ */
+class PlumixRuntimeConfigError extends Error {
+  readonly code = "plumix_runtime_config_error";
+  readonly missing: readonly string[];
+  constructor(missing: readonly string[]) {
+    super(
+      `@plumix/runtime-cloudflare: missing required env bindings: ${missing.join(", ")}. Declare them in wrangler.toml and ensure the names match the adapter config.`,
+    );
+    this.name = "PlumixRuntimeConfigError";
+    this.missing = missing;
+  }
+}
+
+function validateBindings(app: PlumixApp, env: unknown): void {
+  const required: string[] = [];
+  const { database, kv, storage } = app.config;
+  if (database.requiredBindings) required.push(...database.requiredBindings);
+  // kv and storage slots are structurally simple today but may grow
+  // requiredBindings later; walk them defensively. Cast is needed because
+  // the public slot types don't yet declare the field.
+  collectBindingsFrom(kv, required);
+  collectBindingsFrom(storage, required);
+
+  if (required.length === 0) return;
+  // Defensive: if env isn't an object, every binding is "missing". This
+  // only hits with malformed test inputs — the real CF runtime always
+  // hands us a plain object — but produces a useful error instead of a
+  // TypeError from property access on undefined.
+  if (env == null || typeof env !== "object") {
+    throw new PlumixRuntimeConfigError(required);
+  }
+  const envRecord = env as Record<string, unknown>;
+  // `== null` catches both undefined and null — a binding explicitly set
+  // to null (rare, but possible with a misconfigured wrangler.toml) is
+  // just as broken as an unset one.
+  const missing = required.filter((name) => envRecord[name] == null);
+  if (missing.length > 0) {
+    throw new PlumixRuntimeConfigError(missing);
+  }
+}
+
+/**
  * Build the Cloudflare runtime adapter.
  *
  * @remarks
@@ -52,15 +134,31 @@ function buildFetch(app: PlumixApp): FetchHandler {
   }
 
   const dispatcher = createPlumixDispatcher(app);
+  let bindingsValidated = false;
 
   return async (request, env, executionCtx): Promise<Response> => {
-    const workerCtx = executionCtx as ExecutionContext | undefined;
-    const after =
-      typeof workerCtx?.waitUntil === "function"
+    try {
+      // Memoised binding check — runs once per Worker isolate. Surfaces
+      // misconfigured deploys as a readable error instead of an opaque 500
+      // from the first query N frames deeper.
+      //
+      // Safe to memo on first env: on CF Workers env is immutable per
+      // isolate (bindings are set at deploy time, not per-request), so the
+      // flag can never be stale for a changed env. Tests that want to re-
+      // validate after a simulated env change should construct a fresh
+      // fetch handler per scenario — which is what `invoke()` does.
+      if (!bindingsValidated) {
+        validateBindings(app, env);
+        bindingsValidated = true;
+      }
+
+      const workerCtx = isExecutionContext(executionCtx)
+        ? executionCtx
+        : undefined;
+      const after = workerCtx
         ? (promise: Promise<unknown>) => workerCtx.waitUntil(promise)
         : undefined;
 
-    try {
       const { database } = app.config;
       const scoped = database.connectRequest?.({
         env,
@@ -72,6 +170,12 @@ function buildFetch(app: PlumixApp): FetchHandler {
       const db = scoped
         ? scoped.db
         : database.connect(env, request, app.schema).db;
+      // Unify the post-dispatch path so both scoped and non-scoped configs
+      // run the same finalize step. Keeps future response-shaping logic
+      // (e.g. request-id headers, timing) in one place.
+      const finalize = scoped
+        ? (response: Response) => scoped.commit(response)
+        : (response: Response) => response;
 
       const appCtx = createAppContext({
         db: db as Db,
@@ -82,7 +186,7 @@ function buildFetch(app: PlumixApp): FetchHandler {
         after,
       });
       const response = await requestStore.run(appCtx, () => dispatcher(appCtx));
-      return scoped ? scoped.commit(response) : response;
+      return finalize(response);
     } catch (error) {
       return handleAdapterFailure(error);
     }
@@ -92,6 +196,19 @@ function buildFetch(app: PlumixApp): FetchHandler {
 function handleAdapterFailure(error: unknown): Response {
   if (typeof console !== "undefined") {
     console.error("[plumix/runtime-cloudflare] adapter_failure", error);
+  }
+  // Config errors (missing bindings) are deploy metadata, not user input —
+  // surface them in the response body so an operator without wrangler tail
+  // can diagnose the misconfiguration from HTTP alone.
+  if (error instanceof PlumixRuntimeConfigError) {
+    return jsonResponse(
+      {
+        error: error.code,
+        message: error.message,
+        missing: error.missing,
+      },
+      { status: 500 },
+    );
   }
   return jsonResponse({ error: "internal_error" }, { status: 500 });
 }

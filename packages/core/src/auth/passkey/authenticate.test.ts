@@ -12,9 +12,10 @@ import {
   randomCredentialId,
 } from "../../test/fixtures/webauthn.js";
 import { createTestDb } from "../../test/harness.js";
-import { finishAuthentication } from "./authenticate.js";
+import { ensureUint8Array, finishAuthentication } from "./authenticate.js";
 import { issueChallenge } from "./challenges.js";
 import { resolvePasskeyConfig } from "./config.js";
+import { PasskeyError } from "./errors.js";
 import { finishRegistration } from "./register.js";
 
 const config = resolvePasskeyConfig({
@@ -182,5 +183,42 @@ describe("finishAuthentication", () => {
         },
       }),
     ).rejects.toMatchObject({ code: "invalid_signature" });
+  });
+});
+
+describe("ensureUint8Array", () => {
+  test("returns a Uint8Array unchanged", () => {
+    const input = new Uint8Array([1, 2, 3]);
+    expect(ensureUint8Array(input)).toBe(input);
+  });
+
+  test("accepts a Buffer (Uint8Array subclass) unchanged", () => {
+    const input = Buffer.from([1, 2, 3]);
+    expect(ensureUint8Array(input)).toBe(input);
+  });
+
+  test("converts an ArrayBuffer into a view Uint8Array", () => {
+    const ab = new ArrayBuffer(3);
+    new Uint8Array(ab).set([7, 8, 9]);
+    const out = ensureUint8Array(ab);
+    expect(out).toBeInstanceOf(Uint8Array);
+    expect(Array.from(out)).toEqual([7, 8, 9]);
+  });
+
+  test("rejects a string-typed public key with credential_storage_corrupt", () => {
+    expect(() => ensureUint8Array("not-a-buffer")).toThrow(PasskeyError);
+    try {
+      ensureUint8Array("not-a-buffer");
+    } catch (error) {
+      expect((error as PasskeyError).code).toBe("credential_storage_corrupt");
+    }
+  });
+
+  test("rejects null / undefined / number with credential_storage_corrupt", () => {
+    for (const value of [null, undefined, 42, {}]) {
+      expect(() => ensureUint8Array(value)).toThrow(
+        /credential_storage_corrupt|Stored public key/,
+      );
+    }
   });
 });

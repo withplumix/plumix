@@ -7,8 +7,15 @@ import {
   createDispatcherHarness,
   plumixRequest,
 } from "../../test/dispatcher.js";
+import {
+  buildAssertion,
+  buildAttestation,
+  generatePasskeyKeyPair,
+  randomCredentialId,
+} from "../../test/fixtures/webauthn.js";
 import { SESSION_COOKIE_NAME } from "../cookies.js";
 import { generateToken, hashToken } from "../tokens.js";
+import { issueChallenge } from "./challenges.js";
 
 describe("passkey register — options", () => {
   test("bootstraps the first user and issues a challenge", async () => {
@@ -166,6 +173,40 @@ describe("passkey verify — input validation", () => {
       }),
     );
     expect(response.status).toBe(400);
+  });
+
+  test("register/verify returns challenge_not_bound_to_user when the challenge had no userId", async () => {
+    // The options route always binds a userId; bypass it by issuing a raw
+    // challenge directly so the userId === null branch is reachable.
+    const h = await createDispatcherHarness();
+    const { challenge } = await issueChallenge(h.db, 60_000);
+    const keyPair = generatePasskeyKeyPair();
+    const credentialId = randomCredentialId();
+    const att = buildAttestation({
+      keyPair,
+      rpId: "cms.example",
+      origin: "https://cms.example",
+      challenge,
+      credentialId,
+    });
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/auth/passkey/register/verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id: att.credentialIdBase64Url,
+          rawId: att.credentialIdBase64Url,
+          type: "public-key",
+          response: {
+            clientDataJSON: att.clientDataJSON,
+            attestationObject: att.attestationObject,
+          },
+        }),
+      }),
+    );
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { error: string };
+    expect(body.error).toBe("challenge_not_bound_to_user");
   });
 });
 
@@ -412,5 +453,91 @@ describe("passkey signout", () => {
     );
     const response = await h.dispatch(authed);
     expect(response.status).toBe(200);
+  });
+});
+
+// Full end-to-end happy path exercising every /_plumix/auth/* POST: bootstrap
+// → register/options → register/verify → signout → login/options →
+// login/verify. Driven through the dispatcher (not direct fn calls) so any
+// regression in the wire-level schema, CSRF gate, or session plumbing shows
+// up here instead of only at deploy time.
+describe("passkey end-to-end happy path", () => {
+  test("register a new user, signout, then login with the same credential", async () => {
+    const h = await createDispatcherHarness();
+    const keyPair = generatePasskeyKeyPair();
+    const credentialId = randomCredentialId();
+    const email = "e2e@cms.example";
+    const rpId = "cms.example";
+    const origin = "https://cms.example";
+
+    // 1. register/options — bootstrap first user + obtain challenge
+    const optionsRes = await h.fetch("/_plumix/auth/passkey/register/options", {
+      json: { email },
+    });
+    optionsRes.assertStatus(200);
+    const { challenge: registerChallenge } = await optionsRes.json<{
+      challenge: string;
+    }>();
+
+    // 2. register/verify — complete ceremony with the fixture key pair
+    const attestation = buildAttestation({
+      keyPair,
+      rpId,
+      origin,
+      challenge: registerChallenge,
+      credentialId,
+    });
+    const verifyRes = await h.fetch("/_plumix/auth/passkey/register/verify", {
+      json: {
+        id: attestation.credentialIdBase64Url,
+        rawId: attestation.credentialIdBase64Url,
+        type: "public-key",
+        response: {
+          clientDataJSON: attestation.clientDataJSON,
+          attestationObject: attestation.attestationObject,
+        },
+      },
+    });
+    verifyRes.assertStatus(200).assertCookieSet(SESSION_COOKIE_NAME);
+
+    // 3. signout — clear the session we just created
+    const verifyCookie = verifyRes.headers.get("set-cookie") ?? "";
+    const signoutRes = await h.fetch("/_plumix/auth/signout", {
+      method: "POST",
+      headers: { cookie: verifyCookie },
+    });
+    signoutRes.assertStatus(200);
+
+    // 4. login/options — new authentication challenge
+    const loginOptionsRes = await h.fetch(
+      "/_plumix/auth/passkey/login/options",
+      { json: { email } },
+    );
+    loginOptionsRes.assertStatus(200);
+    const { challenge: loginChallenge } = await loginOptionsRes.json<{
+      challenge: string;
+    }>();
+
+    // 5. login/verify — sign the challenge with the registered key
+    const assertion = buildAssertion({
+      keyPair,
+      rpId,
+      origin,
+      challenge: loginChallenge,
+      counter: 1,
+    });
+    const loginVerifyRes = await h.fetch("/_plumix/auth/passkey/login/verify", {
+      json: {
+        id: attestation.credentialIdBase64Url,
+        rawId: attestation.credentialIdBase64Url,
+        type: "public-key",
+        response: {
+          clientDataJSON: assertion.clientDataJSON,
+          authenticatorData: assertion.authenticatorData,
+          signature: assertion.signature,
+        },
+      },
+    });
+    loginVerifyRes.assertStatus(200).assertCookieSet(SESSION_COOKIE_NAME);
   });
 });

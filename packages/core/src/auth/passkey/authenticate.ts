@@ -156,10 +156,21 @@ export async function finishAuthentication(
   };
 }
 
-// Drivers vary on BLOB representation: better-sqlite3 returns Buffer (a
-// Uint8Array subclass — handled by the first branch), libsql/D1 may return
-// ArrayBuffer. Normalise to a plain Uint8Array for oslo's SEC1 decoder.
-function ensureUint8Array(value: unknown): Uint8Array {
+/**
+ * @internal
+ *
+ * Normalise a driver-returned BLOB value into a plain `Uint8Array`.
+ *
+ * Drivers disagree on the shape: better-sqlite3 returns `Buffer` (a
+ * `Uint8Array` subclass — handled by the first branch), libsql/D1 may
+ * return `ArrayBuffer`. Anything else is a `credential_storage_corrupt`
+ * signal: the response on the wire is fine, but the stored key is
+ * unreadable and the caller needs to know that specifically.
+ *
+ * Exported for direct testing only. NOT part of the `@plumix/core`
+ * public surface — import path is the barrel-less relative one.
+ */
+export function ensureUint8Array(value: unknown): Uint8Array {
   if (value instanceof Uint8Array) return value;
   if (value instanceof ArrayBuffer) return new Uint8Array(value);
   throw new PasskeyError(

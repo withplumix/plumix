@@ -41,6 +41,7 @@ export function d1(config: D1Config): D1DatabaseAdapter {
   return {
     kind: "d1",
     config,
+    requiredBindings: [config.binding],
     connect: (env, _request, schema) => {
       const binding = getBinding(env, config.binding);
       const db = drizzle(binding, { schema, casing: "snake_case" });
