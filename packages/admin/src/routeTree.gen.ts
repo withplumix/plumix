@@ -9,50 +9,116 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from "./routes/__root";
-import { Route as IndexRouteImport } from "./routes/index";
+import { Route as LoginRouteImport } from "./routes/login";
+import { Route as BootstrapRouteImport } from "./routes/bootstrap";
+import { Route as AuthenticatedRouteImport } from "./routes/_authenticated";
+import { Route as AuthenticatedIndexRouteImport } from "./routes/_authenticated/index";
 
-const IndexRoute = IndexRouteImport.update({
+const LoginRoute = LoginRouteImport.update({
+  id: "/login",
+  path: "/login",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const BootstrapRoute = BootstrapRouteImport.update({
+  id: "/bootstrap",
+  path: "/bootstrap",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: "/_authenticated",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: "/",
   path: "/",
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any);
 
 export interface FileRoutesByFullPath {
-  "/": typeof IndexRoute;
+  "/": typeof AuthenticatedIndexRoute;
+  "/bootstrap": typeof BootstrapRoute;
+  "/login": typeof LoginRoute;
 }
 export interface FileRoutesByTo {
-  "/": typeof IndexRoute;
+  "/bootstrap": typeof BootstrapRoute;
+  "/login": typeof LoginRoute;
+  "/": typeof AuthenticatedIndexRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
-  "/": typeof IndexRoute;
+  "/_authenticated": typeof AuthenticatedRouteWithChildren;
+  "/bootstrap": typeof BootstrapRoute;
+  "/login": typeof LoginRoute;
+  "/_authenticated/": typeof AuthenticatedIndexRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: "/";
+  fullPaths: "/" | "/bootstrap" | "/login";
   fileRoutesByTo: FileRoutesByTo;
-  to: "/";
-  id: "__root__" | "/";
+  to: "/bootstrap" | "/login" | "/";
+  id:
+    | "__root__"
+    | "/_authenticated"
+    | "/bootstrap"
+    | "/login"
+    | "/_authenticated/";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute;
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren;
+  BootstrapRoute: typeof BootstrapRoute;
+  LoginRoute: typeof LoginRoute;
 }
 
 declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    "/": {
-      id: "/";
+    "/login": {
+      id: "/login";
+      path: "/login";
+      fullPath: "/login";
+      preLoaderRoute: typeof LoginRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/bootstrap": {
+      id: "/bootstrap";
+      path: "/bootstrap";
+      fullPath: "/bootstrap";
+      preLoaderRoute: typeof BootstrapRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/_authenticated": {
+      id: "/_authenticated";
+      path: "";
+      fullPath: "/";
+      preLoaderRoute: typeof AuthenticatedRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/_authenticated/": {
+      id: "/_authenticated/";
       path: "/";
       fullPath: "/";
-      preLoaderRoute: typeof IndexRouteImport;
-      parentRoute: typeof rootRouteImport;
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport;
+      parentRoute: typeof AuthenticatedRoute;
     };
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute;
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+};
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+);
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  BootstrapRoute: BootstrapRoute,
+  LoginRoute: LoginRoute,
 };
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

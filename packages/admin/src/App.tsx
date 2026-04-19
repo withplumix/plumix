@@ -17,7 +17,7 @@ export function App(): ReactNode {
   // Lazy init via useState keeps singletons stable without being module-level —
   // module-level creation breaks StrictMode double-invoke and test teardown.
   const [queryClient] = useState(createQueryClient);
-  const [router] = useState(createRouter);
+  const [router] = useState(() => createRouter(queryClient));
 
   return (
     <ThemeProvider defaultTheme="system">
