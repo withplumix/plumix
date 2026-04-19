@@ -28,15 +28,6 @@
     "test": {
       "dependsOn": ["build"]
     },
-    "test:unit": {
-      "dependsOn": ["build"]
-    },
-    "test:integration": {
-      "dependsOn": ["build"]
-    },
-    "test:e2e": {
-      "dependsOn": ["build"]
-    },
     "clean": {
       "cache": false
     },

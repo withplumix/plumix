@@ -39,14 +39,24 @@ export function generatePasskeyKeyPair(): PasskeyKeyPair {
   if (typeof jwk.x !== "string" || typeof jwk.y !== "string") {
     throw new Error("EC keypair export missing x/y");
   }
-  const x = base64urlToBytes(jwk.x);
-  const y = base64urlToBytes(jwk.y);
+  // JWK drops leading zero bytes from EC coordinates (~1/256 probability
+  // per coord for P-256). Left-pad back to 32 bytes so publicKeySec1 is
+  // always a well-formed 65-byte uncompressed point.
+  const x = padLeft(base64urlToBytes(jwk.x), 32);
+  const y = padLeft(base64urlToBytes(jwk.y), 32);
   return {
     privateKey,
     publicKeyX: x,
     publicKeyY: y,
     publicKeySec1: concatBytes(new Uint8Array([0x04]), x, y),
   };
+}
+
+function padLeft(bytes: Uint8Array, length: number): Uint8Array {
+  if (bytes.length >= length) return bytes;
+  const out = new Uint8Array(length);
+  out.set(bytes, length - bytes.length);
+  return out;
 }
 
 function base64urlToBytes(input: string): Uint8Array {

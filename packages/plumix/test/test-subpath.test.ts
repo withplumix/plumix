@@ -5,8 +5,8 @@
 // so tsc can't resolve the published types at typecheck time — see the
 // ambient shim at `plumix-test.shim.d.ts` in this folder which declares
 // the subpath as permissive for tsc. Runtime resolution uses the real
-// dist; vitest + test:integration (which DOES depend on build)
-// exercises the real surface and catches drift from the shim.
+// dist; the `test` task (which DOES depend on build) exercises the
+// real surface and catches drift from the shim.
 //
 // The test guards the subpath against breakage — if the barrel in
 // @plumix/core/test drifts from what plumix/test re-exports, or a

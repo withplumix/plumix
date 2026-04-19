@@ -30,7 +30,6 @@ const config: KnipConfig = {
         "src/i18n/index.ts",
         "src/schema/index.ts",
         "src/test/index.ts",
-        "src/test/e2e/index.ts",
         "src/theme/index.ts",
         "src/vite/index.ts",
       ],

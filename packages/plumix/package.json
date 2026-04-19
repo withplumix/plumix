@@ -58,10 +58,6 @@
     "./test": {
       "types": "./dist/test/index.d.ts",
       "default": "./dist/test/index.js"
-    },
-    "./test/e2e": {
-      "types": "./dist/test/e2e/index.d.ts",
-      "default": "./dist/test/e2e/index.js"
     }
   },
   "bin": {
@@ -85,9 +81,6 @@
     "lint": "eslint",
     "publint": "publint",
     "test": "vitest run",
-    "test:unit": "vitest run src --passWithNoTests",
-    "test:integration": "vitest run test --passWithNoTests",
-    "test:e2e": "vitest run src/test/e2e --passWithNoTests",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
@@ -113,7 +106,9 @@
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
+    "@plumix/vitest-config": "workspace:*",
     "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "drizzle-kit": "catalog:",
     "eslint": "catalog:",
     "prettier": "catalog:",

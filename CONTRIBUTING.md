@@ -42,7 +42,29 @@ pnpm typecheck    # Type-check all packages
 pnpm lint         # Lint all packages
 pnpm knip         # Check for unused exports/deps
 pnpm format       # Check formatting
+pnpm test         # Run vitest across every package that defines tests
 ```
+
+## Tests
+
+Plumix has one vitest suite per package. Where the file lives depends on
+what the test needs:
+
+- **Colocate next to the source you're testing** (`src/**/*.test.ts`). This
+  is the default — if you're testing a function, put the test alongside it.
+  Using an in-memory database or the test harnesses from `@plumix/core/test`
+  still counts as colocated: they run inside the vitest worker.
+- **Use the package-level `test/` directory** only when colocation doesn't
+  work — for example, tests that spawn a real binary, run against the
+  built `dist/`, or exercise the package as an external consumer would.
+
+End-to-end tests (Playwright) are not part of this taxonomy and will land
+later as a separate `test:e2e` script in the packages that need them
+(`packages/admin`, `examples/*`).
+
+Every test-having package ships a `vitest.config.ts` with coverage wired
+(`pnpm exec vitest run --coverage` inside the package). Thresholds are not
+enforced yet.
 
 ## Making changes
 
