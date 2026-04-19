@@ -48,6 +48,24 @@ function collectBindingsFrom(slot: unknown, into: string[]): void {
   if (bindings) into.push(...bindings);
 }
 
+/**
+ * Thrown when the runtime adapter detects a missing env binding at boot.
+ * Dedicated class so the request handler can surface the actionable
+ * message in the response body, rather than swallowing it as a generic
+ * "internal_error" 500 (the operator may not have wrangler tail open).
+ */
+export class PlumixRuntimeConfigError extends Error {
+  readonly code = "plumix_runtime_config_error";
+  readonly missing: readonly string[];
+  constructor(missing: readonly string[]) {
+    super(
+      `@plumix/runtime-cloudflare: missing required env bindings: ${missing.join(", ")}. Declare them in wrangler.toml and ensure the names match the adapter config.`,
+    );
+    this.name = "PlumixRuntimeConfigError";
+    this.missing = missing;
+  }
+}
+
 function validateBindings(app: PlumixApp, env: unknown): void {
   const required: string[] = [];
   const { database, kv, storage } = app.config;
@@ -59,12 +77,20 @@ function validateBindings(app: PlumixApp, env: unknown): void {
   collectBindingsFrom(storage, required);
 
   if (required.length === 0) return;
+  // Defensive: if env isn't an object, every binding is "missing". This
+  // only hits with malformed test inputs — the real CF runtime always
+  // hands us a plain object — but produces a useful error instead of a
+  // TypeError from property access on undefined.
+  if (env == null || typeof env !== "object") {
+    throw new PlumixRuntimeConfigError(required);
+  }
   const envRecord = env as Record<string, unknown>;
-  const missing = required.filter((name) => envRecord[name] === undefined);
+  // `== null` catches both undefined and null — a binding explicitly set
+  // to null (rare, but possible with a misconfigured wrangler.toml) is
+  // just as broken as an unset one.
+  const missing = required.filter((name) => envRecord[name] == null);
   if (missing.length > 0) {
-    throw new Error(
-      `@plumix/runtime-cloudflare: missing required env bindings: ${missing.join(", ")}. Declare them in wrangler.toml and ensure the names match the adapter config.`,
-    );
+    throw new PlumixRuntimeConfigError(missing);
   }
 }
 
@@ -165,6 +191,19 @@ function buildFetch(app: PlumixApp): FetchHandler {
 function handleAdapterFailure(error: unknown): Response {
   if (typeof console !== "undefined") {
     console.error("[plumix/runtime-cloudflare] adapter_failure", error);
+  }
+  // Config errors (missing bindings) are deploy metadata, not user input —
+  // surface them in the response body so an operator without wrangler tail
+  // can diagnose the misconfiguration from HTTP alone.
+  if (error instanceof PlumixRuntimeConfigError) {
+    return jsonResponse(
+      {
+        error: error.code,
+        message: error.message,
+        missing: error.missing,
+      },
+      { status: 500 },
+    );
   }
   return jsonResponse({ error: "internal_error" }, { status: 500 });
 }

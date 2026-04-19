@@ -305,11 +305,48 @@ describe("cloudflare adapter — binding validation", () => {
     );
     expect(response.status).toBe(500);
     const body: unknown = await response.json();
-    expect(body).toMatchObject({ error: "internal_error" });
-    // The descriptive message lives in the thrown Error, which
-    // handleAdapterFailure logs via console.error. We can't assert on the
-    // log cheaply; the behaviour under test is that validation happens at
-    // all — the next test verifies a satisfied env dispatches normally.
+    expect(body).toMatchObject({
+      error: "plumix_runtime_config_error",
+      missing: ["DB", "CACHE"],
+    });
+  });
+
+  test("treats a null-valued binding as missing", async () => {
+    const adapterWithBindings: DatabaseAdapter = {
+      kind: "stub-with-bindings",
+      requiredBindings: ["DB"],
+      connect: () => ({ db: {} }),
+    };
+    const response = await invoke(
+      new Request("https://cms.example/"),
+      { DB: null },
+      adapterWithBindings,
+    );
+    expect(response.status).toBe(500);
+    const body: unknown = await response.json();
+    expect(body).toMatchObject({
+      error: "plumix_runtime_config_error",
+      missing: ["DB"],
+    });
+  });
+
+  test("handles a non-object env without crashing with a TypeError", async () => {
+    const adapterWithBindings: DatabaseAdapter = {
+      kind: "stub-with-bindings",
+      requiredBindings: ["DB"],
+      connect: () => ({ db: {} }),
+    };
+    const response = await invoke(
+      new Request("https://cms.example/"),
+      undefined as unknown as Record<string, unknown>,
+      adapterWithBindings,
+    );
+    expect(response.status).toBe(500);
+    const body: unknown = await response.json();
+    expect(body).toMatchObject({
+      error: "plumix_runtime_config_error",
+      missing: ["DB"],
+    });
   });
 
   test("satisfied requiredBindings permit the request to dispatch", async () => {
