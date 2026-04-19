@@ -12,6 +12,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fontsource-variable/geist": "^5.2.8",
+    "@fontsource-variable/geist-mono": "^5.2.7",
     "@orpc/client": "^1.13.14",
     "@orpc/tanstack-query": "^1.13.14",
     "@tanstack/react-query": "^5.99.2",
