@@ -22,23 +22,20 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 
-interface DataTableProps<TData> {
-  readonly columns: ColumnDef<TData>[];
-  readonly data: readonly TData[];
-  readonly isLoading?: boolean;
-  readonly emptyState?: ReactNode;
-  /** Screen-reader label for the loading state. Announced via a live region
-   *  when `isLoading` is true. Defaults to "Loading" if omitted. */
-  readonly loadingLabel?: string;
-}
-
 export function DataTable<TData>({
   columns,
   data,
   isLoading = false,
   emptyState,
   loadingLabel = "Loading",
-}: DataTableProps<TData>): ReactNode {
+}: {
+  readonly columns: ColumnDef<TData>[];
+  readonly data: readonly TData[];
+  readonly isLoading?: boolean;
+  readonly emptyState?: ReactNode;
+  /** Screen-reader label for the loading region when `isLoading`. */
+  readonly loadingLabel?: string;
+}): ReactNode {
   const table = useReactTable({
     data: data as TData[],
     columns,
