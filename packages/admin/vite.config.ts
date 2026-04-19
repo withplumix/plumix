@@ -7,8 +7,9 @@ import { defineConfig } from "vite";
 import { ADMIN_BASE_PATH } from "./src/lib/constants.js";
 
 // In dev the admin runs on Vite (5173) while the worker runs on wrangler
-// (8787). Proxy /_plumix/* so RPC calls stay same-origin without CORS.
-const WORKER_DEV_URL = "http://localhost:8787" as const;
+// (8787 by default). Proxy /_plumix/* so RPC calls stay same-origin.
+// Override via PLUMIX_WORKER_URL when running wrangler on a non-default port.
+const WORKER_DEV_URL = process.env.PLUMIX_WORKER_URL ?? "http://localhost:8787";
 
 export default defineConfig({
   base: `${ADMIN_BASE_PATH}/`,

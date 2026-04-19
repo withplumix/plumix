@@ -1,9 +1,17 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 type Theme = "dark" | "light" | "system";
 
 interface ThemeProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
   defaultTheme?: Theme;
   storageKey?: string;
 }
@@ -15,34 +23,58 @@ interface ThemeProviderState {
 
 const ThemeProviderContext = createContext<ThemeProviderState | null>(null);
 
+function isTheme(value: unknown): value is Theme {
+  return value === "dark" || value === "light" || value === "system";
+}
+
+function readStoredTheme(key: string, fallback: Theme): Theme {
+  const stored = localStorage.getItem(key);
+  return isTheme(stored) ? stored : fallback;
+}
+
+function applyTheme(root: HTMLElement, theme: Theme): void {
+  root.classList.remove("light", "dark");
+  if (theme === "system") {
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
+    root.classList.add(prefersDark.matches ? "dark" : "light");
+    return;
+  }
+  root.classList.add(theme);
+}
+
 export function ThemeProvider({
   children,
   defaultTheme = "system",
   storageKey = "plumix-admin-theme",
-}: ThemeProviderProps): React.ReactNode {
-  const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme | null) ?? defaultTheme,
+}: ThemeProviderProps): ReactNode {
+  const [theme, setTheme] = useState<Theme>(() =>
+    readStoredTheme(storageKey, defaultTheme),
   );
 
   useEffect(() => {
     const root = window.document.documentElement;
-    root.classList.remove("light", "dark");
-    const resolved =
-      theme === "system"
-        ? window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light"
-        : theme;
-    root.classList.add(resolved);
+    applyTheme(root, theme);
+    // Only "system" needs to react to OS-level theme flips — explicit dark/light
+    // selections are already pinned by the class we just set.
+    if (theme !== "system") return;
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => applyTheme(root, "system");
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
   }, [theme]);
 
-  const value: ThemeProviderState = {
-    theme,
-    setTheme: (next) => {
+  const setAndPersist = useCallback(
+    (next: Theme) => {
       localStorage.setItem(storageKey, next);
       setTheme(next);
     },
-  };
+    [storageKey],
+  );
+
+  const value = useMemo<ThemeProviderState>(
+    () => ({ theme, setTheme: setAndPersist }),
+    [theme, setAndPersist],
+  );
 
   return (
     <ThemeProviderContext.Provider value={value}>

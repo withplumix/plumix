@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
@@ -12,7 +13,7 @@ import {
 
 const IS_DEV = process.env.NODE_ENV === "development";
 
-export function App(): React.ReactNode {
+export function App(): ReactNode {
   // Lazy init via useState keeps singletons stable without being module-level —
   // module-level creation breaks StrictMode double-invoke and test teardown.
   const [queryClient] = useState(createQueryClient);

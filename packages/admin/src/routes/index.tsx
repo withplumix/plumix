@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   Card,
   CardContent,
@@ -13,7 +14,7 @@ export const Route = createFileRoute("/")({
   component: IndexRoute,
 });
 
-function IndexRoute(): React.ReactNode {
+function IndexRoute(): ReactNode {
   // Disabled query — a compile-time type probe from server AppRouter down to
   // useQuery. Flip `enabled: true` when a real route needs post.list.
   useQuery({
