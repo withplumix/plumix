@@ -9,6 +9,7 @@ catalog:
   "@arethetypeswrong/cli": ^0.18.2
   "@cloudflare/workers-types": ^4.20260417.1
   "@types/node": ^24.12.2
+  "@vitest/coverage-v8": ^4.1.4
   "drizzle-kit": ^0.31.10
   "drizzle-orm": ^0.45.2
   "drizzle-valibot": ^0.4.2
