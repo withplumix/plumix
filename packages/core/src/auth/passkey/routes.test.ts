@@ -8,6 +8,7 @@ import {
   plumixRequest,
 } from "../../test/dispatcher.js";
 import {
+  buildAssertion,
   buildAttestation,
   generatePasskeyKeyPair,
   randomCredentialId,
@@ -452,5 +453,109 @@ describe("passkey signout", () => {
     );
     const response = await h.dispatch(authed);
     expect(response.status).toBe(200);
+  });
+});
+
+// Full end-to-end happy path exercising every /_plumix/auth/* POST: bootstrap
+// → register/options → register/verify → signout → login/options →
+// login/verify. Driven through the dispatcher (not direct fn calls) so any
+// regression in the wire-level schema, CSRF gate, or session plumbing shows
+// up here instead of only at deploy time.
+describe("passkey end-to-end happy path", () => {
+  test("register a new user, signout, then login with the same credential", async () => {
+    const h = await createDispatcherHarness();
+    const keyPair = generatePasskeyKeyPair();
+    const credentialId = randomCredentialId();
+    const email = "e2e@cms.example";
+    const rpId = "cms.example";
+    const origin = "https://cms.example";
+
+    // 1. register/options — bootstrap first user + obtain challenge
+    const optionsRes = await h.dispatch(
+      plumixRequest("/_plumix/auth/passkey/register/options", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email }),
+      }),
+    );
+    expect(optionsRes.status).toBe(200);
+    const optionsBody = (await optionsRes.json()) as { challenge: string };
+
+    // 2. register/verify — complete ceremony with the fixture key pair
+    const attestation = buildAttestation({
+      keyPair,
+      rpId,
+      origin,
+      challenge: optionsBody.challenge,
+      credentialId,
+    });
+    const verifyRes = await h.dispatch(
+      plumixRequest("/_plumix/auth/passkey/register/verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id: attestation.credentialIdBase64Url,
+          rawId: attestation.credentialIdBase64Url,
+          type: "public-key",
+          response: {
+            clientDataJSON: attestation.clientDataJSON,
+            attestationObject: attestation.attestationObject,
+          },
+        }),
+      }),
+    );
+    expect(verifyRes.status).toBe(200);
+    const verifyCookie = verifyRes.headers.get("set-cookie");
+    expect(verifyCookie).toContain(`${SESSION_COOKIE_NAME}=`);
+
+    // 3. signout — clear the session we just created
+    const signoutRes = await h.dispatch(
+      plumixRequest("/_plumix/auth/signout", {
+        method: "POST",
+        headers: { cookie: verifyCookie ?? "" },
+      }),
+    );
+    expect(signoutRes.status).toBe(200);
+
+    // 4. login/options — new authentication challenge
+    const loginOptionsRes = await h.dispatch(
+      plumixRequest("/_plumix/auth/passkey/login/options", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email }),
+      }),
+    );
+    expect(loginOptionsRes.status).toBe(200);
+    const loginOptionsBody = (await loginOptionsRes.json()) as {
+      challenge: string;
+    };
+
+    // 5. login/verify — sign the challenge with the registered key
+    const assertion = buildAssertion({
+      keyPair,
+      rpId,
+      origin,
+      challenge: loginOptionsBody.challenge,
+      counter: 1,
+    });
+    const loginVerifyRes = await h.dispatch(
+      plumixRequest("/_plumix/auth/passkey/login/verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id: attestation.credentialIdBase64Url,
+          rawId: attestation.credentialIdBase64Url,
+          type: "public-key",
+          response: {
+            clientDataJSON: assertion.clientDataJSON,
+            authenticatorData: assertion.authenticatorData,
+            signature: assertion.signature,
+          },
+        }),
+      }),
+    );
+    expect(loginVerifyRes.status).toBe(200);
+    const loginCookie = loginVerifyRes.headers.get("set-cookie");
+    expect(loginCookie).toContain(`${SESSION_COOKIE_NAME}=`);
   });
 });
