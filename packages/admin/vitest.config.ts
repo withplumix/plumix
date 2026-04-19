@@ -9,6 +9,9 @@ export default mergeConfig(
     test: {
       environment: "jsdom",
       setupFiles: ["./test/setup.ts"],
+      // Scaffolding has no tests yet; infra is wired so the first real
+      // feature component can add one without setup friction.
+      passWithNoTests: true,
     },
     resolve: {
       alias: {
