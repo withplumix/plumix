@@ -77,4 +77,4 @@ export type {
   UserUpdateInput,
 } from "./procedures/user/schemas.js";
 export { appRouter } from "./router.js";
-export type { AppRouter } from "./router.js";
+export type { AppRouter, AppRouterClient } from "./router.js";

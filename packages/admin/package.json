@@ -9,20 +9,25 @@
     "dev": "vite",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
-    "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@orpc/client": "^1.13.14",
+    "@orpc/tanstack-query": "^1.13.14",
+    "@tanstack/react-query": "^5.99.2",
+    "@tanstack/react-router": "^1.168.23",
     "clsx": "^2.1.1",
     "react": "catalog:",
     "react-dom": "catalog:",
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@plumix/core": "workspace:*",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
     "@tailwindcss/vite": "^4.2.2",
+    "@tanstack/router-plugin": "^1.167.22",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",

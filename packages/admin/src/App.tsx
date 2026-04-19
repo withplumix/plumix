@@ -1,26 +1,20 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useState } from "react";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { RouterProvider } from "@tanstack/react-router";
+
+import { createQueryClient } from "./query-client.js";
+import { createRouter } from "./router.js";
 
 export function App(): React.ReactNode {
+  // useState keeps both singletons stable across renders without being
+  // module-level (module-level creation breaks under React.StrictMode in
+  // dev and blocks clean teardown in tests).
+  const [queryClient] = useState(createQueryClient);
+  const [router] = useState(createRouter);
+
   return (
-    <main className="bg-background flex min-h-screen items-center justify-center p-8">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Plumix Admin</CardTitle>
-          <CardDescription>Shell scaffold — no features yet.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground text-sm">
-            Tailwind v4 + shadcn/ui are wired. Router, Query, and oRPC land in
-            the next commit.
-          </p>
-        </CardContent>
-      </Card>
-    </main>
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
   );
 }

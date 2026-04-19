@@ -5,10 +5,11 @@ const config: KnipConfig = {
     "tooling/typescript": {
       entry: ["*.json"],
     },
-    // Treat shadcn-generated UI primitives as a component library whose
-    // exports are external API — knip shouldn't flag unused ones.
+    // shadcn-generated UI primitives are a vendored component library:
+    // we ship the full set, only some are used today, the rest become API
+    // as features land. Skip analysis so unused primitives stay quiet.
     "packages/admin": {
-      entry: ["src/components/ui/**/*.tsx"],
+      ignore: ["src/components/ui/**"],
     },
     // @plumix/core is a dependency but has no real imports yet (empty skeleton).
     // Remove these once packages have actual code importing from core.
