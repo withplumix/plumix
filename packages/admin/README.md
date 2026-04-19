@@ -8,36 +8,68 @@ from source.
 
 ## Dev workflow
 
+`pnpm dev` in this workspace **only starts Vite for the admin** — it does
+not start the Cloudflare worker that serves `/_plumix/rpc` and `/_plumix/auth`.
+The admin and the worker are two processes; you run both.
+
+### One-shot: `pnpm dev` from the repo root
+
+Turbo watches every workspace that declares a `dev` script, so this starts
+both the admin and the worker in parallel:
+
+```bash
+pnpm dev    # from repo root
+```
+
+That runs `examples/minimal`'s worker (Vite + @cloudflare/vite-plugin on
+`:5173`) and the admin's Vite dev server (on `:5174`). Open
+`http://localhost:5174/_plumix/admin/` in the browser.
+
+### Two-terminal variant (clearer logs)
+
+```bash
+# terminal 1 — worker
+cd examples/minimal && pnpm dev       # :5173
+
+# terminal 2 — admin
+cd packages/admin && pnpm dev         # :5174
+```
+
+### How requests flow
+
+The admin is served from `:5174`. When admin code makes a request to
+`/_plumix/rpc/...` or `/_plumix/auth/...`, Vite's proxy forwards it to
+`http://localhost:5173` (the worker). From the browser's view everything
+is same-origin on `:5174` — session cookies and CSRF headers just work,
+no CORS configuration needed.
+
+If you run the worker on a different host/port (e.g. for a remote dev
+instance), override the proxy target:
+
+```bash
+PLUMIX_WORKER_URL=http://192.168.1.10:5173 pnpm dev
+```
+
+### First-time setup
+
+Before RPC endpoints work, the dev database needs migrations applied.
+From `examples/minimal`:
+
+```bash
+pnpm plumix migrate apply   # applies drizzle migrations to local D1
+```
+
+### Workspace-local scripts
+
 From `packages/admin/`:
 
 ```bash
-pnpm dev          # Vite dev server on http://localhost:5173/_plumix/admin/
+pnpm dev          # Vite dev server on http://localhost:5174/_plumix/admin/
 pnpm build        # emits static assets to dist/
 pnpm test         # vitest (jsdom + React Testing Library)
 pnpm typecheck
 pnpm lint
 ```
-
-From the repo root, all tasks run through turbo and integrate with the rest
-of the monorepo.
-
-### End-to-end dev loop (admin + worker)
-
-To exercise RPC, auth, or any `/_plumix/*` endpoint, run the admin alongside
-a worker in a second terminal:
-
-```bash
-# terminal 1 — worker
-cd examples/minimal && pnpm dev     # wrangler on :8787
-
-# terminal 2 — admin
-cd packages/admin && pnpm dev       # vite on :5173
-```
-
-Vite proxies `/_plumix/rpc` and `/_plumix/auth` to `http://localhost:8787`
-(see `vite.config.ts`), so requests from the admin stay same-origin from
-the browser's perspective — no CORS setup required. Open
-`http://localhost:5173/_plumix/admin/` and interact normally.
 
 ## Stack
 
