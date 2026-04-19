@@ -22,10 +22,12 @@ function mockSessionProbe(
   return page.route("**/_plumix/rpc/**", (route: Route) => {
     const url = route.request().url();
     if (url.endsWith("/auth/session")) {
+      // oRPC's StandardRPCSerializer wire format — `meta` is always present,
+      // empty array for payloads with no BigInt/Date/etc. transforms.
       return route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ json: body }),
+        body: JSON.stringify({ json: body, meta: [] }),
       });
     }
     return route.fulfill({ status: 404, body: "not-mocked" });
@@ -35,7 +37,7 @@ function mockSessionProbe(
 test.describe("admin accessibility", () => {
   test("bootstrap route has zero WCAG 2.1 AA violations", async ({ page }) => {
     await mockSessionProbe(page, { user: null, needsBootstrap: true });
-    await page.goto("/bootstrap");
+    await page.goto("bootstrap");
     await expect(
       page.getByRole("heading", { name: "Create admin account" }),
     ).toBeVisible();
@@ -48,7 +50,7 @@ test.describe("admin accessibility", () => {
 
   test("login route has zero WCAG 2.1 AA violations", async ({ page }) => {
     await mockSessionProbe(page, { user: null, needsBootstrap: false });
-    await page.goto("/login");
+    await page.goto("login");
     await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 
     const results = await new AxeBuilder({ page })
@@ -68,7 +70,7 @@ test.describe("admin accessibility", () => {
       },
       needsBootstrap: false,
     });
-    await page.goto("/");
+    await page.goto("");
     await expect(page.getByRole("heading", { name: /welcome/i })).toBeVisible();
 
     const results = await new AxeBuilder({ page })

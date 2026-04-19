@@ -18,7 +18,7 @@ const sizeClasses: Record<Size, string> = {
   sm: "h-8 px-3 text-xs",
 };
 
-export interface ButtonProps extends React.ComponentProps<"button"> {
+interface ButtonProps extends React.ComponentProps<"button"> {
   readonly variant?: Variant;
   readonly size?: Size;
 }

@@ -9,7 +9,7 @@ const variantClasses: Record<Variant, string> = {
     "border-destructive/50 text-destructive bg-destructive/5 [&>svg]:text-destructive",
 };
 
-export interface AlertProps extends React.ComponentProps<"div"> {
+interface AlertProps extends React.ComponentProps<"div"> {
   readonly variant?: Variant;
 }
 
@@ -28,19 +28,6 @@ export function Alert({
         variantClasses[variant],
         className,
       )}
-      {...props}
-    />
-  );
-}
-
-export function AlertTitle({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="alert-title"
-      className={cn("mb-1 leading-none font-medium", className)}
       {...props}
     />
   );
