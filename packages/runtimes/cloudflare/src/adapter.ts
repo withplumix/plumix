@@ -18,6 +18,21 @@ import {
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 /**
+ * Structural check for the Worker ExecutionContext — we only use
+ * `waitUntil`, so that's the only shape we verify. Prefer this to a
+ * `as ExecutionContext | undefined` cast: casts silently accept anything,
+ * the guard narrows safely and documents intent.
+ */
+function isExecutionContext(value: unknown): value is ExecutionContext {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "waitUntil" in value &&
+    typeof (value as { waitUntil: unknown }).waitUntil === "function"
+  );
+}
+
+/**
  * Walk the configured slot adapters for their declared `requiredBindings`
  * and assert every key is present on `env`. Called once per Worker isolate
  * — the result is memoised — so the check is effectively free after the
@@ -100,11 +115,12 @@ function buildFetch(app: PlumixApp): FetchHandler {
         bindingsValidated = true;
       }
 
-      const workerCtx = executionCtx as ExecutionContext | undefined;
-      const after =
-        typeof workerCtx?.waitUntil === "function"
-          ? (promise: Promise<unknown>) => workerCtx.waitUntil(promise)
-          : undefined;
+      const workerCtx = isExecutionContext(executionCtx)
+        ? executionCtx
+        : undefined;
+      const after = workerCtx
+        ? (promise: Promise<unknown>) => workerCtx.waitUntil(promise)
+        : undefined;
 
       const { database } = app.config;
       const scoped = database.connectRequest?.({
@@ -117,6 +133,12 @@ function buildFetch(app: PlumixApp): FetchHandler {
       const db = scoped
         ? scoped.db
         : database.connect(env, request, app.schema).db;
+      // Unify the post-dispatch path so both scoped and non-scoped configs
+      // run the same finalize step. Keeps future response-shaping logic
+      // (e.g. request-id headers, timing) in one place.
+      const finalize = scoped
+        ? (response: Response) => scoped.commit(response)
+        : (response: Response) => response;
 
       const appCtx = createAppContext({
         db: db as Db,
@@ -127,7 +149,7 @@ function buildFetch(app: PlumixApp): FetchHandler {
         after,
       });
       const response = await requestStore.run(appCtx, () => dispatcher(appCtx));
-      return scoped ? scoped.commit(response) : response;
+      return finalize(response);
     } catch (error) {
       return handleAdapterFailure(error);
     }
