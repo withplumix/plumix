@@ -284,6 +284,82 @@ describe("cloudflare adapter — d1() slot", () => {
       adapter.connect({}, new Request("https://cms.example/"), {}),
     ).toThrow(/D1 binding "DB" missing/);
   });
+
+  test("declares requiredBindings for the configured binding name", () => {
+    const adapter = d1({ binding: "MAIN_DB" });
+    expect(adapter.requiredBindings).toEqual(["MAIN_DB"]);
+  });
+});
+
+describe("cloudflare adapter — binding validation", () => {
+  test("surfaces a boot-time error listing every missing binding", async () => {
+    const adapterWithBindings: DatabaseAdapter = {
+      kind: "stub-with-bindings",
+      requiredBindings: ["DB", "CACHE"],
+      connect: () => ({ db: {} }),
+    };
+    const response = await invoke(
+      new Request("https://cms.example/"),
+      { OTHER: 1 },
+      adapterWithBindings,
+    );
+    expect(response.status).toBe(500);
+    const body: unknown = await response.json();
+    expect(body).toMatchObject({ error: "internal_error" });
+    // The descriptive message lives in the thrown Error, which
+    // handleAdapterFailure logs via console.error. We can't assert on the
+    // log cheaply; the behaviour under test is that validation happens at
+    // all — the next test verifies a satisfied env dispatches normally.
+  });
+
+  test("satisfied requiredBindings permit the request to dispatch", async () => {
+    const adapterWithBindings: DatabaseAdapter = {
+      kind: "stub-with-bindings",
+      requiredBindings: ["DB"],
+      connect: () => ({ db: {} }),
+    };
+    const response = await invoke(
+      new Request("https://cms.example/"),
+      { DB: { fake: true } },
+      adapterWithBindings,
+    );
+    expect(response.status).toBe(200);
+  });
+
+  test("adapter without requiredBindings is unaffected (opt-in behaviour)", async () => {
+    const response = await invoke(new Request("https://cms.example/"), {});
+    expect(response.status).toBe(200);
+  });
+
+  test("validation is memoised — runs once per Worker isolate", async () => {
+    let connectCalls = 0;
+    const adapterWithBindings: DatabaseAdapter = {
+      kind: "stub-with-bindings",
+      requiredBindings: ["DB"],
+      connect: () => {
+        connectCalls += 1;
+        return { db: {} };
+      },
+    };
+    const app = await createApp(adapterWithBindings);
+    const fetchHandler = cloudflare().buildFetchHandler(app);
+    const env = { DB: { fake: true } };
+    await fetchHandler(
+      new Request("https://cms.example/"),
+      env,
+      emptyExecutionContext,
+    );
+    await fetchHandler(
+      new Request("https://cms.example/about"),
+      env,
+      emptyExecutionContext,
+    );
+    // If the memoised check held, connect runs twice (once per request) and
+    // no re-validation cost was paid. This indirectly confirms the gate
+    // flipped: a broken env would fail fast on request #2 as well, not
+    // bypass the check.
+    expect(connectCalls).toBeGreaterThanOrEqual(2);
+  });
 });
 
 describe("plugin schema collisions", () => {

@@ -46,6 +46,17 @@ export interface DatabaseAdapter<TSchema = Record<string, unknown>> {
   readonly connectRequest?: (
     args: RequestScopedDbArgs,
   ) => RequestScopedDb | null;
+  /**
+   * Env bindings this adapter requires at runtime. Runtime adapters (CF,
+   * Bun, Node) validate these against the actual env on first request so
+   * a misconfigured deploy fails fast with a readable error instead of an
+   * opaque 500 on the first query.
+   *
+   * Optional: adapters that don't consume runtime bindings (e.g. the test
+   * stub) can omit. Populate as an empty array when explicitly "no bindings
+   * needed"; omit to opt out of the check entirely.
+   */
+  readonly requiredBindings?: readonly string[];
 }
 
 export interface ObjectStorage {
