@@ -44,6 +44,35 @@ describe("dispatcher — CSRF", () => {
     expect(body.reason).toBe("csrf_header_missing");
   });
 
+  // Parameterised: every /_plumix/auth/* POST must enforce the custom-header
+  // CSRF check. Loss-of-coverage here would silently re-open cross-origin
+  // attacks against register/login flows.
+  const authEndpoints = [
+    "/_plumix/auth/passkey/register/options",
+    "/_plumix/auth/passkey/register/verify",
+    "/_plumix/auth/passkey/login/options",
+    "/_plumix/auth/passkey/login/verify",
+    "/_plumix/auth/invite/register/options",
+    "/_plumix/auth/invite/register/verify",
+    "/_plumix/auth/signout",
+  ] as const;
+
+  for (const path of authEndpoints) {
+    test(`POST ${path} without the CSRF header is forbidden`, async () => {
+      const h = await createDispatcherHarness();
+      const response = await h.dispatch(
+        new Request(`https://cms.example${path}`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: "{}",
+        }),
+      );
+      expect(response.status).toBe(403);
+      const body = (await response.json()) as { reason?: string };
+      expect(body.reason).toBe("csrf_header_missing");
+    });
+  }
+
   test("GET /_plumix/admin is allowed without the CSRF header (safe method)", async () => {
     const h = await createDispatcherHarness();
     const response = await h.dispatch(
