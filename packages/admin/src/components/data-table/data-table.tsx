@@ -1,7 +1,9 @@
-// React Compiler escape hatch: TanStack Table's `useReactTable` returns
-// functions that cannot be memoized safely — the table instance is stateful
-// and its row-model / header-model getters must stay reference-unstable.
-"use no memo";
+// TanStack Table's `useReactTable` returns stateful getters that cannot be
+// memoized safely — React Compiler detects this automatically and skips
+// compilation for this file, emitting a `react-hooks/incompatible-library`
+// warning at the call site. No explicit `"use no memo"` directive: it's
+// redundant with the compiler's auto-detection and CodeQL flags it as
+// unknown. The warning is informational, not an error.
 
 import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
