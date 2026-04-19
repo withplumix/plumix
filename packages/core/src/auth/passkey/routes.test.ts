@@ -2,7 +2,6 @@ import { describe, expect, test } from "vitest";
 
 import { eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
-import { credentials } from "../../db/schema/credentials.js";
 import { users } from "../../db/schema/users.js";
 import {
   createDispatcherHarness,
@@ -181,12 +180,11 @@ describe("invite register — options", () => {
     const user = await h.seedUser(opts.role ?? "author");
     const token = generateToken();
     const tokenHash = await hashToken(token);
-    await h.db.insert(authTokens).values({
+    await h.factory.invite.create({
       hash: tokenHash,
       userId: user.id,
       email: user.email,
       role: opts.role ?? "author",
-      type: "invite",
       expiresAt: new Date(Date.now() + (opts.expiresInMs ?? 60_000)),
     });
     return { user, token, tokenHash };
@@ -262,14 +260,9 @@ describe("invite register — options", () => {
     const h = await createDispatcherHarness();
     const { user, token } = await seedInvite(h);
     // Seed a credential as if the user had already registered.
-    await h.db.insert(credentials).values({
-      id: "cred-id-1",
+    await h.factory.credential.create({
       userId: user.id,
-      publicKey: new Uint8Array([1, 2, 3]) as unknown as Buffer,
-      counter: 0,
-      deviceType: "single_device",
-      isBackedUp: false,
-      transports: ["internal"],
+      publicKey: Buffer.from([1, 2, 3]),
     });
 
     const response = await h.dispatch(
@@ -360,12 +353,11 @@ describe("invite register — verify", () => {
     const user = await h.seedUser("editor");
     const token = generateToken();
     const tokenHash = await hashToken(token);
-    await h.db.insert(authTokens).values({
+    await h.factory.invite.create({
       hash: tokenHash,
       userId: user.id,
       email: user.email,
       role: "editor",
-      type: "invite",
       expiresAt: new Date(Date.now() - 60_000),
     });
     const response = await h.dispatch(

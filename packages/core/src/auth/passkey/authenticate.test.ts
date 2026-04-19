@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import type { PasskeyKeyPair } from "../../test/fixtures/webauthn.js";
 import { credentials } from "../../db/schema/credentials.js";
 import { users } from "../../db/schema/users.js";
+import { credentialFactory } from "../../test/factories.js";
 import {
   buildAssertion,
   buildAttestation,
@@ -56,13 +57,11 @@ async function registerFixtureCredential(): Promise<RegisteredFixture> {
       attestationObject: att.attestationObject,
     },
   });
-  await db.insert(credentials).values({
+  await credentialFactory.transient({ db }).create({
     id: verified.credentialId,
     userId: user.id,
     publicKey: Buffer.from(verified.publicKey),
     counter: verified.signatureCounter,
-    deviceType: "single_device",
-    isBackedUp: false,
     transports: [...verified.transports],
   });
 

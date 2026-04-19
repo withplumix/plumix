@@ -150,10 +150,9 @@ describe("user.update", () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const target = await h.factory.editor.create();
     // Seed a session so we can verify invalidation happens.
-    await h.context.db.insert(sessions).values({
+    await h.factory.session.create({
       id: "seed-session-id",
       userId: target.id,
-      expiresAt: new Date(Date.now() + 60_000),
     });
 
     await h.client.user.update({ id: target.id, role: "author" });
@@ -202,10 +201,9 @@ describe("user.disable", () => {
   test("admin can disable a user; sessions get invalidated", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const target = await h.factory.editor.create();
-    await h.context.db.insert(sessions).values({
+    await h.factory.session.create({
       id: "disable-target-session",
       userId: target.id,
-      expiresAt: new Date(Date.now() + 60_000),
     });
 
     const updated = await h.client.user.disable({ id: target.id });

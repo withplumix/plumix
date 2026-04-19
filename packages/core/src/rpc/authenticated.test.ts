@@ -2,20 +2,12 @@ import { describe, expect, test } from "vitest";
 
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { createRpcHarness } from "../test/rpc.js";
-
-async function expectErrorCode(promise: Promise<unknown>, code: string) {
-  try {
-    await promise;
-    throw new Error(`expected error ${code}, call resolved`);
-  } catch (error) {
-    if ((error as { code?: string }).code !== code) throw error;
-  }
-}
+import { expectError } from "../test/spies.js";
 
 describe("authenticated middleware", () => {
   test("rejects when no session cookie is present", async () => {
     const { client } = await createRpcHarness();
-    await expectErrorCode(client.post.list({}), "UNAUTHORIZED");
+    await expectError(client.post.list({}), { code: "UNAUTHORIZED" });
   });
 
   test("rejects when the session cookie is a bogus token", async () => {
@@ -24,7 +16,7 @@ describe("authenticated middleware", () => {
         headers: { cookie: `${SESSION_COOKIE_NAME}=bogus-token` },
       }),
     });
-    await expectErrorCode(bogus.client.post.list({}), "UNAUTHORIZED");
+    await expectError(bogus.client.post.list({}), { code: "UNAUTHORIZED" });
   });
 
   test("accepts a valid session and reaches the handler", async () => {
