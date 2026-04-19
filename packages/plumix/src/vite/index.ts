@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { cp, rm } from "node:fs/promises";
+import { cp, rm, stat } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
@@ -22,24 +22,27 @@ export interface PlumixVitePluginOptions {
 
 export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
   let root = process.cwd();
+  let publicDir = "";
   let configPath: string | undefined;
 
   return {
     name: "plumix",
-    // Point Vite's static-asset root at the dir we populate (admin + anything
-    // else plumix stages). Consumers who want their own static files can still
-    // drop them into .plumix/public/ under their own namespace.
-    config() {
-      return {
-        publicDir: ".plumix/public",
-      };
+    // Default Vite's publicDir to .plumix/public so the admin staging path is
+    // served automatically in the common case. Consumers with an explicit
+    // publicDir in their vite.config keep theirs — plumix just namespaces
+    // admin under `<their-publicDir>/_plumix/admin/` instead.
+    config(userConfig) {
+      if (userConfig.publicDir !== undefined) return;
+      return { publicDir: ".plumix/public" };
     },
     configResolved(config) {
       root = config.root;
+      publicDir = config.publicDir;
     },
     async buildStart() {
       const emitted = await regenerate(root, options.configFile);
       configPath = emitted.configPath;
+      await stageAdminAssets(publicDir);
     },
     configureServer(server) {
       server.watcher.on("change", (path) => {
@@ -80,19 +83,29 @@ async function regenerate(
   });
   writeIfChanged(resolve(cwd, ".plumix/worker.ts"), workerSource);
 
-  await stageAdminAssets(cwd);
-
   return { configPath };
 }
 
-// Stages the compiled admin SPA from plumix/dist/admin-app into the consumer
-// project at .plumix/public/_plumix/admin/. The consumer's wrangler config
-// points its `assets.directory` at .plumix/public, so Cloudflare Workers
-// Assets serves these files at /_plumix/admin/* in both dev and production.
-async function stageAdminAssets(cwd: string): Promise<void> {
-  const dest = resolve(cwd, ".plumix/public/_plumix/admin");
+// Copies the compiled admin SPA from plumix/dist/admin-app into the effective
+// publicDir under _plumix/admin/. The runtime adapter's asset-serving layer
+// (Cloudflare Workers Assets today, equivalents in future adapters) picks the
+// files up from publicDir automatically. Skips the copy when the destination
+// is already at least as fresh as the source so repeated regenerate() calls
+// during dev don't bounce Vite's file watcher.
+async function stageAdminAssets(publicDir: string): Promise<void> {
+  const dest = resolve(publicDir, "_plumix/admin");
+  if (await destIsFresh(dest, ADMIN_SOURCE_DIR)) return;
   await rm(dest, { recursive: true, force: true });
   await cp(ADMIN_SOURCE_DIR, dest, { recursive: true });
+}
+
+async function destIsFresh(dest: string, src: string): Promise<boolean> {
+  try {
+    const [srcStat, destStat] = await Promise.all([stat(src), stat(dest)]);
+    return destStat.mtimeMs >= srcStat.mtimeMs;
+  } catch {
+    return false;
+  }
 }
 
 function writeIfChanged(path: string, content: string): void {
