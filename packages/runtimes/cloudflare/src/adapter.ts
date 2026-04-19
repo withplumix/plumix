@@ -32,6 +32,26 @@ function isExecutionContext(value: unknown): value is ExecutionContext {
   );
 }
 
+// Cloudflare Workers Assets exposes a Fetcher on env.ASSETS when the
+// wrangler config declares an `assets` binding. Missing when the deploy
+// doesn't configure one — in that case the core dispatcher falls back to
+// returning admin-not-available for /_plumix/admin/* requests.
+function readAssetsBinding(
+  env: unknown,
+): { fetch(request: Request): Promise<Response> } | undefined {
+  if (typeof env !== "object" || env === null) return undefined;
+  const candidate = (env as { readonly ASSETS?: unknown }).ASSETS;
+  if (
+    typeof candidate === "object" &&
+    candidate !== null &&
+    "fetch" in candidate &&
+    typeof (candidate as { fetch: unknown }).fetch === "function"
+  ) {
+    return candidate as { fetch(request: Request): Promise<Response> };
+  }
+  return undefined;
+}
+
 /**
  * Walk the configured slot adapters for their declared `requiredBindings`
  * and assert every key is present on `env`. Called once per Worker isolate
@@ -184,6 +204,7 @@ function buildFetch(app: PlumixApp): FetchHandler {
         hooks: app.hooks,
         plugins: app.plugins,
         after,
+        assets: readAssetsBinding(env),
       });
       const response = await requestStore.run(appCtx, () => dispatcher(appCtx));
       return finalize(response);
