@@ -79,6 +79,50 @@ test.describe("/content/$slug", () => {
     await expect(page.getByText(/not found/i).first()).toBeVisible();
   });
 
+  test("search box URL-syncs ?q= and triggers a refetch after debounce", async ({
+    page,
+  }) => {
+    // Capture every /post/list call so we can verify the second fetch
+    // carries the search param. The mock always returns `[]` — we're
+    // asserting on the RPC input, not the rendering.
+    const inputs: unknown[] = [];
+    await page.route("**/_plumix/rpc/**", async (route) => {
+      const url = route.request().url();
+      if (url.endsWith("/auth/session")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
+        });
+      }
+      if (url.endsWith("/post/list")) {
+        const body = route.request().postDataJSON() as { json?: unknown };
+        inputs.push(body.json);
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ json: [], meta: [] }),
+        });
+      }
+      return route.fulfill({ status: 404, body: "not-mocked" });
+    });
+
+    await page.goto("content/posts?status=all&page=1");
+    await page
+      .getByRole("searchbox", { name: /search posts/i })
+      .fill("quantum");
+    await expect(page).toHaveURL(/q=quantum/);
+    // The debounced commit + refetch should eventually ship `search` in
+    // the RPC input. Playwright's expect.poll waits up to 5s by default,
+    // which covers the 250ms debounce comfortably.
+    await expect
+      .poll(
+        () =>
+          (inputs.at(-1) as { search?: string } | undefined)?.search ?? null,
+      )
+      .toBe("quantum");
+  });
+
   test("renders rows with zero WCAG 2.1 AA violations", async ({ page }) => {
     const now = new Date("2026-04-19T12:00:00Z");
     await mockRpc(page, {
