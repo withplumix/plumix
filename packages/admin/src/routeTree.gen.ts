@@ -13,8 +13,8 @@ import { Route as AuthRouteImport } from "./routes/_auth";
 import { Route as AuthBootstrapRouteImport } from "./routes/_auth/bootstrap";
 import { Route as AuthLoginRouteImport } from "./routes/_auth/login";
 import { Route as AuthenticatedRouteImport } from "./routes/_authenticated";
+import { Route as AuthenticatedContentSlugRouteImport } from "./routes/_authenticated/content/$slug";
 import { Route as AuthenticatedIndexRouteImport } from "./routes/_authenticated/index";
-import { Route as AuthenticatedPostsIndexRouteImport } from "./routes/_authenticated/posts/index";
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: "/_authenticated",
@@ -39,23 +39,24 @@ const AuthBootstrapRoute = AuthBootstrapRouteImport.update({
   path: "/bootstrap",
   getParentRoute: () => AuthRoute,
 } as any);
-const AuthenticatedPostsIndexRoute = AuthenticatedPostsIndexRouteImport.update({
-  id: "/posts/",
-  path: "/posts/",
-  getParentRoute: () => AuthenticatedRoute,
-} as any);
+const AuthenticatedContentSlugRoute =
+  AuthenticatedContentSlugRouteImport.update({
+    id: "/content/$slug",
+    path: "/content/$slug",
+    getParentRoute: () => AuthenticatedRoute,
+  } as any);
 
 export interface FileRoutesByFullPath {
   "/": typeof AuthenticatedIndexRoute;
   "/bootstrap": typeof AuthBootstrapRoute;
   "/login": typeof AuthLoginRoute;
-  "/posts/": typeof AuthenticatedPostsIndexRoute;
+  "/content/$slug": typeof AuthenticatedContentSlugRoute;
 }
 export interface FileRoutesByTo {
   "/": typeof AuthenticatedIndexRoute;
   "/bootstrap": typeof AuthBootstrapRoute;
   "/login": typeof AuthLoginRoute;
-  "/posts": typeof AuthenticatedPostsIndexRoute;
+  "/content/$slug": typeof AuthenticatedContentSlugRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
@@ -64,13 +65,13 @@ export interface FileRoutesById {
   "/_auth/bootstrap": typeof AuthBootstrapRoute;
   "/_auth/login": typeof AuthLoginRoute;
   "/_authenticated/": typeof AuthenticatedIndexRoute;
-  "/_authenticated/posts/": typeof AuthenticatedPostsIndexRoute;
+  "/_authenticated/content/$slug": typeof AuthenticatedContentSlugRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: "/" | "/bootstrap" | "/login" | "/posts/";
+  fullPaths: "/" | "/bootstrap" | "/login" | "/content/$slug";
   fileRoutesByTo: FileRoutesByTo;
-  to: "/" | "/bootstrap" | "/login" | "/posts";
+  to: "/" | "/bootstrap" | "/login" | "/content/$slug";
   id:
     | "__root__"
     | "/_auth"
@@ -78,7 +79,7 @@ export interface FileRouteTypes {
     | "/_auth/bootstrap"
     | "/_auth/login"
     | "/_authenticated/"
-    | "/_authenticated/posts/";
+    | "/_authenticated/content/$slug";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
@@ -123,11 +124,11 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthBootstrapRouteImport;
       parentRoute: typeof AuthRoute;
     };
-    "/_authenticated/posts/": {
-      id: "/_authenticated/posts/";
-      path: "/posts";
-      fullPath: "/posts/";
-      preLoaderRoute: typeof AuthenticatedPostsIndexRouteImport;
+    "/_authenticated/content/$slug": {
+      id: "/_authenticated/content/$slug";
+      path: "/content/$slug";
+      fullPath: "/content/$slug";
+      preLoaderRoute: typeof AuthenticatedContentSlugRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
   }
@@ -147,12 +148,12 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren);
 
 interface AuthenticatedRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute;
-  AuthenticatedPostsIndexRoute: typeof AuthenticatedPostsIndexRoute;
+  AuthenticatedContentSlugRoute: typeof AuthenticatedContentSlugRoute;
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
-  AuthenticatedPostsIndexRoute: AuthenticatedPostsIndexRoute,
+  AuthenticatedContentSlugRoute: AuthenticatedContentSlugRoute,
 };
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

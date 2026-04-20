@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import { readManifest } from "./manifest.js";
+import type { PlumixManifest } from "@plumix/core/manifest";
+
+import {
+  findPostTypeBySlug,
+  readManifest,
+  visiblePostTypes,
+} from "./manifest.js";
 
 function withManifestScript(json: string): Document {
   const doc = document.implementation.createHTMLDocument("test");
@@ -50,5 +56,54 @@ describe("readManifest", () => {
   test("non-array postTypes coerces to empty array", () => {
     const doc = withManifestScript(JSON.stringify({ postTypes: "oops" }));
     expect(readManifest(doc)).toEqual({ postTypes: [] });
+  });
+});
+
+describe("findPostTypeBySlug", () => {
+  const source: PlumixManifest = {
+    postTypes: [
+      { name: "post", adminSlug: "posts", label: "Posts" },
+      { name: "product", adminSlug: "products", label: "Products" },
+    ],
+  };
+
+  test("returns the matching entry", () => {
+    expect(findPostTypeBySlug("products", source)?.name).toBe("product");
+  });
+
+  test("returns undefined when no entry matches", () => {
+    expect(findPostTypeBySlug("nope", source)).toBeUndefined();
+  });
+});
+
+describe("visiblePostTypes", () => {
+  const source: PlumixManifest = {
+    postTypes: [
+      { name: "post", adminSlug: "posts", label: "Posts" },
+      {
+        name: "product",
+        adminSlug: "products",
+        label: "Products",
+        capabilityType: "product",
+      },
+      {
+        name: "news",
+        adminSlug: "news",
+        label: "News",
+        capabilityType: "post",
+      },
+    ],
+  };
+
+  test("filters by `${capabilityType}:edit_own`; unset capabilityType uses name", () => {
+    const caps = ["post:edit_own", "post:read"];
+    const visible = visiblePostTypes(caps, source).map((pt) => pt.name);
+    // `post` → "post:edit_own" ✓; `news` shares capabilityType "post" ✓;
+    // `product` needs "product:edit_own" which isn't granted ✗
+    expect(visible).toEqual(["post", "news"]);
+  });
+
+  test("returns empty when no capabilities match", () => {
+    expect(visiblePostTypes([], source)).toEqual([]);
   });
 });

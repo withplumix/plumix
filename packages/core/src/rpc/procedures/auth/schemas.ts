@@ -8,6 +8,13 @@ const sessionUserSchema = v.object({
   name: v.nullable(v.string()),
   avatarUrl: v.nullable(v.string()),
   role: v.picklist(USER_ROLES),
+  /**
+   * Effective capability names granted to this user — core + derived
+   * post-type/taxonomy caps + plugin-defined caps, resolved server-side
+   * from the role hierarchy. The admin uses this to gate nav items and
+   * UI actions without re-implementing the role → capability mapping.
+   */
+  capabilities: v.array(v.string()),
 });
 
 export const authSessionOutputSchema = v.object({

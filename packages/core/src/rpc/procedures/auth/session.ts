@@ -1,5 +1,6 @@
 import type { AuthSessionOutput } from "./schemas.js";
 import { readSessionCookie } from "../../../auth/cookies.js";
+import { capabilitiesForRole } from "../../../auth/rbac.js";
 import { validateSession } from "../../../auth/sessions.js";
 import { users } from "../../../db/schema/users.js";
 import { base } from "../../base.js";
@@ -16,7 +17,14 @@ export const session = base.handler(
       if (validated) {
         const { id, email, name, avatarUrl, role } = validated.user;
         return {
-          user: { id, email, name, avatarUrl, role },
+          user: {
+            id,
+            email,
+            name,
+            avatarUrl,
+            role,
+            capabilities: [...capabilitiesForRole(role, context.plugins)],
+          },
           needsBootstrap: false,
         };
       }

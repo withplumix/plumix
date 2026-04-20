@@ -1,9 +1,18 @@
 import { expect, test } from "@playwright/test";
 
 import { expectNoAxeViolations } from "./support/axe.js";
-import { AUTHED_ADMIN, mockRpc } from "./support/rpc-mock.js";
+import {
+  AUTHED_ADMIN,
+  MANIFEST_WITH_POST,
+  mockManifest,
+  mockRpc,
+} from "./support/rpc-mock.js";
 
-test.describe("/posts", () => {
+test.describe("/content/$slug", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockManifest(page, MANIFEST_WITH_POST);
+  });
+
   test("renders skeleton rows while loading, with zero WCAG 2.1 AA violations", async ({
     page,
   }) => {
@@ -35,7 +44,7 @@ test.describe("/posts", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
 
-    await page.goto("posts?status=all&page=1");
+    await page.goto("content/posts?status=all&page=1");
     await expect(page.getByRole("heading", { name: "Posts" })).toBeVisible();
     await expect(
       page.getByRole("region", { name: /loading posts/i }),
@@ -52,10 +61,22 @@ test.describe("/posts", () => {
       "/auth/session": AUTHED_ADMIN,
       "/post/list": [],
     });
-    await page.goto("posts?status=all&page=1");
+    await page.goto("content/posts?status=all&page=1");
     await expect(page.getByRole("heading", { name: "Posts" })).toBeVisible();
     await expect(page.getByText("No posts yet")).toBeVisible();
     await expectNoAxeViolations(page);
+  });
+
+  test("renders the router's not-found state when the slug isn't registered", async ({
+    page,
+  }) => {
+    await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
+    const response = await page.goto("content/unknown-type?status=all&page=1");
+    // TanStack Router's `notFound()` returns a 404-style render — not a
+    // literal HTTP 404 since we're behind Vite's SPA dev server, so assert
+    // the router's default "Not Found" marker instead.
+    expect(response?.status()).toBeLessThan(500);
+    await expect(page.getByText(/not found/i).first()).toBeVisible();
   });
 
   test("renders rows with zero WCAG 2.1 AA violations", async ({ page }) => {
@@ -95,7 +116,7 @@ test.describe("/posts", () => {
         },
       ],
     });
-    await page.goto("posts?status=all&page=1");
+    await page.goto("content/posts?status=all&page=1");
     await expect(page.getByText("Hello world")).toBeVisible();
     await expectNoAxeViolations(page);
   });

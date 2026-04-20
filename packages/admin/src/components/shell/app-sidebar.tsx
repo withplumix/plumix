@@ -12,6 +12,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar.js";
+import { visiblePostTypes } from "@/lib/manifest.js";
 import { Link } from "@tanstack/react-router";
 import { FileText, LayoutDashboard } from "lucide-react";
 
@@ -30,28 +31,41 @@ interface NavGroup {
   readonly items: readonly NavItem[];
 }
 
-// Hard-coded for now — when plugin admin chunks land (Phase 11 follow-up)
-// this becomes a registry fed by the manifest. `exact` controls TanStack
-// Router's active-link matching; `/` must opt in or it'd match every route.
-const NAV: readonly NavGroup[] = [
-  {
-    label: "Overview",
-    items: [
-      {
-        to: "/",
-        label: "Dashboard",
-        icon: LayoutDashboard,
-        exact: true,
-      },
-    ],
-  },
-  {
-    label: "Content",
-    items: [{ to: "/posts", label: "Posts", icon: FileText }],
-  },
-];
+// `exact` controls TanStack Router's active-link matching; `/` must opt in
+// or it'd match every route.
+const OVERVIEW_GROUP: NavGroup = {
+  label: "Overview",
+  items: [
+    {
+      to: "/",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      exact: true,
+    },
+  ],
+};
 
-export function AppSidebar({ user }: { user: UserIdentity }): ReactNode {
+function buildContentGroup(capabilities: readonly string[]): NavGroup | null {
+  const items = visiblePostTypes(capabilities).map<NavItem>((pt) => ({
+    to: `/content/${pt.adminSlug}`,
+    label: pt.labels?.plural ?? pt.label,
+    icon: FileText,
+  }));
+  if (items.length === 0) return null;
+  return { label: "Content", items };
+}
+
+export function AppSidebar({
+  user,
+  capabilities,
+}: {
+  user: UserIdentity;
+  capabilities: readonly string[];
+}): ReactNode {
+  const contentGroup = buildContentGroup(capabilities);
+  const groups = contentGroup
+    ? [OVERVIEW_GROUP, contentGroup]
+    : [OVERVIEW_GROUP];
   return (
     <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader>
@@ -77,7 +91,7 @@ export function AppSidebar({ user }: { user: UserIdentity }): ReactNode {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        {NAV.map((group) => (
+        {groups.map((group) => (
           <SidebarGroup key={group.label}>
             <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
             <SidebarGroupContent>

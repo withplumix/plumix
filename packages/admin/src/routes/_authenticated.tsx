@@ -26,7 +26,7 @@ function AppShell(): ReactNode {
   return (
     <TooltipProvider delayDuration={100}>
       <SidebarProvider>
-        <AppSidebar user={user} />
+        <AppSidebar user={user} capabilities={user.capabilities} />
         <SidebarInset>
           <ShellHeader />
           <main className="flex-1 overflow-y-auto p-6">

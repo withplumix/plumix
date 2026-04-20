@@ -17,12 +17,14 @@ import {
   PaginationItem,
 } from "@/components/ui/pagination.js";
 import { toDate } from "@/lib/dates.js";
+import { findPostTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import * as v from "valibot";
 
+import type { PostTypeManifestEntry } from "@plumix/core/manifest";
 import type { Post, PostStatus } from "@plumix/core/schema";
 
 const PAGE_SIZE = 20;
@@ -40,7 +42,7 @@ const POST_STATUSES: readonly PostStatus[] = [
 const STATUS_FILTER_VALUES = [...POST_STATUSES, "all"] as const;
 type StatusFilter = (typeof STATUS_FILTER_VALUES)[number];
 
-const postsSearchSchema = v.object({
+const searchSchema = v.object({
   page: v.optional(
     v.fallback(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
     1,
@@ -114,18 +116,32 @@ const columns: ColumnDef<Post>[] = [
   },
 ];
 
-export const Route = createFileRoute("/_authenticated/posts/")({
-  validateSearch: (search) => v.parse(postsSearchSchema, search),
-  component: PostsListRoute,
+export const Route = createFileRoute("/_authenticated/content/$slug")({
+  validateSearch: (search) => v.parse(searchSchema, search),
+  // Resolve the manifest entry in `beforeLoad` so the route component never
+  // has to handle a missing post type. `notFound()` is TanStack Router's
+  // control-flow throw — it bubbles up to the nearest `notFoundComponent`,
+  // which the admin renders as a generic 404.
+  beforeLoad: ({ params }): { postType: PostTypeManifestEntry } => {
+    const postType = findPostTypeBySlug(params.slug);
+    if (!postType) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
+      throw notFound();
+    }
+    return { postType };
+  },
+  component: ContentListRoute,
 });
 
-function PostsListRoute(): ReactNode {
+function ContentListRoute(): ReactNode {
   const search = Route.useSearch();
+  const { postType } = Route.useRouteContext();
   const navigate = useNavigate({ from: Route.fullPath });
 
   const query = useQuery(
     orpc.post.list.queryOptions({
       input: {
+        type: postType.name,
         limit: PAGE_SIZE,
         offset: (search.page - 1) * PAGE_SIZE,
         ...(search.status !== "all" ? { status: search.status } : {}),
@@ -147,19 +163,24 @@ function PostsListRoute(): ReactNode {
   // doesn't expose a total count today; accept the edge case until it does.
   const canNext = rows.length === PAGE_SIZE;
 
+  const pluralLabel = postType.labels?.plural ?? postType.label;
+  const singularLabel = postType.labels?.singular ?? postType.label;
+  const pluralLower = pluralLabel.toLowerCase();
+  const singularLower = singularLabel.toLowerCase();
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Posts</h1>
+          <h1 className="text-2xl font-semibold">{pluralLabel}</h1>
           <p className="text-muted-foreground text-sm">
-            Manage posts. Draft, scheduled, and trashed items only show for
-            users with the edit-any capability.
+            Manage {pluralLower}. Draft, scheduled, and trashed items only show
+            for users with the edit-any capability.
           </p>
         </div>
-        <Button disabled title="Post editor lands in a follow-up PR">
+        <Button disabled title="Editor lands in a follow-up PR">
           <Plus />
-          New post
+          New {singularLower}
         </Button>
       </div>
 
@@ -172,7 +193,7 @@ function PostsListRoute(): ReactNode {
           <AlertDescription>
             {query.error instanceof Error
               ? query.error.message
-              : "Couldn't load posts. Try again."}
+              : `Couldn't load ${pluralLower}. Try again.`}
           </AlertDescription>
         </Alert>
       ) : (
@@ -180,8 +201,13 @@ function PostsListRoute(): ReactNode {
           columns={columns}
           data={rows}
           isLoading={query.isPending}
-          loadingLabel="Loading posts"
-          emptyState={<PostsEmptyState />}
+          loadingLabel={`Loading ${pluralLower}`}
+          emptyState={
+            <EmptyState
+              singularLower={singularLower}
+              pluralLower={pluralLower}
+            />
+          }
         />
       )}
 
@@ -250,20 +276,26 @@ function StatusFilter({
   );
 }
 
-function PostsEmptyState(): ReactNode {
+function EmptyState({
+  singularLower,
+  pluralLower,
+}: {
+  singularLower: string;
+  pluralLower: string;
+}): ReactNode {
   return (
     <div className="flex flex-col items-center gap-2 py-12 text-center">
       <Card className="max-w-sm border-dashed">
         <CardHeader>
-          <CardTitle>No posts yet</CardTitle>
+          <CardTitle>No {pluralLower} yet</CardTitle>
           <CardDescription>
-            Create your first post to see it here.
+            Create your first {singularLower} to see it here.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Button disabled className="w-full">
             <Plus />
-            New post
+            New {singularLower}
           </Button>
         </CardContent>
       </Card>

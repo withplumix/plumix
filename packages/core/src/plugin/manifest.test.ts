@@ -5,6 +5,8 @@ import { definePlugin } from "./define.js";
 import {
   buildManifest,
   createPluginRegistry,
+  deriveAdminSlug,
+  DuplicateAdminSlugError,
   emptyManifest,
   injectManifestIntoHtml,
   MANIFEST_SCRIPT_ID,
@@ -36,6 +38,7 @@ describe("buildManifest", () => {
     expect(manifest.postTypes).toEqual([
       {
         name: "post",
+        adminSlug: "posts",
         label: "Posts",
         labels: { singular: "Post" },
         supports: ["title", "editor"],
@@ -45,6 +48,42 @@ describe("buildManifest", () => {
     const entry = manifest.postTypes[0] as unknown as Record<string, unknown>;
     expect(entry.registeredBy).toBeUndefined();
     expect(entry.rewrite).toBeUndefined();
+  });
+
+  test("uses labels.plural (slugified) for adminSlug when provided", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("shop", (ctx) => {
+      ctx.registerPostType("product", {
+        label: "Product",
+        labels: { singular: "Product", plural: "Product Catalog" },
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    expect(buildManifest(registry).postTypes[0]?.adminSlug).toBe(
+      "product-catalog",
+    );
+  });
+
+  test("falls back to `${name}s` when labels.plural is not set", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("shop", (ctx) => {
+      ctx.registerPostType("product", { label: "Product" });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    expect(buildManifest(registry).postTypes[0]?.adminSlug).toBe("products");
+  });
+
+  test("throws DuplicateAdminSlugError when two types resolve to the same slug", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("clash", (ctx) => {
+      ctx.registerPostType("product", {
+        label: "Products",
+        labels: { plural: "Items" },
+      });
+      ctx.registerPostType("item", { label: "Items" });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    expect(() => buildManifest(registry)).toThrow(DuplicateAdminSlugError);
   });
 
   test("orders post types by menuPosition, unspecified last", async () => {
@@ -61,26 +100,48 @@ describe("buildManifest", () => {
   });
 });
 
+describe("deriveAdminSlug", () => {
+  test("slugifies the plural when set", () => {
+    expect(deriveAdminSlug("product", "Products")).toBe("products");
+    expect(deriveAdminSlug("article", "News & Updates")).toBe("news-updates");
+  });
+
+  test("falls back to `${name}s` when plural is unset", () => {
+    expect(deriveAdminSlug("post")).toBe("posts");
+    expect(deriveAdminSlug("landing_page")).toBe("landing-pages");
+  });
+
+  test("throws when the derived slug would be empty", () => {
+    expect(() => deriveAdminSlug("x", "---")).toThrow(/empty/);
+  });
+});
+
 describe("serializeManifestScript", () => {
   test("emits a json script tag with the expected id", () => {
     const tag = serializeManifestScript({
-      postTypes: [{ name: "post", label: "Posts" }],
+      postTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
     });
     expect(tag).toContain(`id="${MANIFEST_SCRIPT_ID}"`);
     expect(tag).toContain(`type="application/json"`);
-    expect(tag).toContain(`{"postTypes":[{"name":"post","label":"Posts"}]}`);
+    expect(tag).toContain(
+      `{"postTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}]}`,
+    );
   });
 
   test("neutralises </ sequences in payload so the tag can't be broken out of", () => {
     const tag = serializeManifestScript({
-      postTypes: [{ name: "post", label: "</script><b>x</b>" }],
+      postTypes: [
+        { name: "post", adminSlug: "posts", label: "</script><b>x</b>" },
+      ],
     });
     expect(tag).not.toContain("</script><b>");
     expect(tag).toMatch(/<\\\/script>/);
   });
 
   test("round-trips through JSON.parse after unescaping the slash", () => {
-    const manifest = { postTypes: [{ name: "post", label: "x</y>" }] };
+    const manifest = {
+      postTypes: [{ name: "post", adminSlug: "posts", label: "x</y>" }],
+    };
     const tag = serializeManifestScript(manifest);
     const prefix = `<script id="${MANIFEST_SCRIPT_ID}" type="application/json">`;
     const suffix = `</script>`;
@@ -100,14 +161,18 @@ describe("injectManifestIntoHtml", () => {
 
   test("replaces the placeholder with the serialised manifest", () => {
     const out = injectManifestIntoHtml(TEMPLATE, {
-      postTypes: [{ name: "post", label: "Posts" }],
+      postTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
     });
-    expect(out).toContain(`{"postTypes":[{"name":"post","label":"Posts"}]}`);
+    expect(out).toContain(
+      `{"postTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}]}`,
+    );
     expect(out).not.toContain(`{"postTypes":[]}`);
   });
 
   test("is idempotent when the manifest is already injected", () => {
-    const manifest = { postTypes: [{ name: "post", label: "Posts" }] };
+    const manifest = {
+      postTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+    };
     const once = injectManifestIntoHtml(TEMPLATE, manifest);
     const twice = injectManifestIntoHtml(once, manifest);
     expect(twice).toBe(once);
@@ -128,9 +193,11 @@ describe("injectManifestIntoHtml", () => {
   test("matches uppercase SCRIPT tags (minifier-agnostic)", () => {
     const html = `<SCRIPT ID="plumix-manifest" TYPE="application/json">{"postTypes":[]}</SCRIPT>`;
     const out = injectManifestIntoHtml(html, {
-      postTypes: [{ name: "post", label: "Posts" }],
+      postTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
     });
-    expect(out).toContain(`{"postTypes":[{"name":"post","label":"Posts"}]}`);
+    expect(out).toContain(
+      `{"postTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}]}`,
+    );
   });
 
   test("tolerates whitespace inside the placeholder body", () => {
@@ -138,10 +205,10 @@ describe("injectManifestIntoHtml", () => {
       { "postTypes": [] }
     </script>`;
     const out = injectManifestIntoHtml(html, {
-      postTypes: [{ name: "post", label: "Posts" }],
+      postTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
     });
     expect(out).toMatch(
-      /^<script id="plumix-manifest" type="application\/json">\{"postTypes":\[\{"name":"post","label":"Posts"\}\]\}<\/script>$/,
+      /^<script id="plumix-manifest" type="application\/json">\{"postTypes":\[\{"name":"post","adminSlug":"posts","label":"Posts"\}\]\}<\/script>$/,
     );
   });
 });
