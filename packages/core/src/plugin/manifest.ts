@@ -225,10 +225,14 @@ export class DuplicateAdminSlugError extends Error {
  */
 export function deriveAdminSlug(name: string, plural?: string): string {
   const source = plural ?? `${name}s`;
+  // Two separate anchored replaces rather than `/^-+|-+$/g` — CodeQL flags
+  // the alternation form as a polynomial-regex risk on dash-heavy inputs,
+  // and splitting it is equally readable and provably linear.
   const slug = source
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(/^-+/, "")
+    .replace(/-+$/, "");
   if (slug.length === 0) {
     const from = plural === undefined ? "its name" : `plural="${plural}"`;
     throw new Error(
