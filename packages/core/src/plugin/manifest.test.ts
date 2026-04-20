@@ -82,9 +82,11 @@ describe("serializeManifestScript", () => {
   test("round-trips through JSON.parse after unescaping the slash", () => {
     const manifest = { postTypes: [{ name: "post", label: "x</y>" }] };
     const tag = serializeManifestScript(manifest);
-    const payload = tag
-      .replace(/^<script[^>]*>/, "")
-      .replace(/<\/script>$/, "");
+    const prefix = `<script id="${MANIFEST_SCRIPT_ID}" type="application/json">`;
+    const suffix = `</script>`;
+    expect(tag.startsWith(prefix)).toBe(true);
+    expect(tag.endsWith(suffix)).toBe(true);
+    const payload = tag.slice(prefix.length, -suffix.length);
     expect(JSON.parse(payload.replaceAll("<\\/", "</"))).toEqual(manifest);
   });
 });
