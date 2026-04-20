@@ -23,6 +23,10 @@
     "./validation": {
       "types": "./dist/rpc/validation.d.ts",
       "default": "./dist/rpc/validation.js"
+    },
+    "./manifest": {
+      "types": "./dist/plugin/manifest.d.ts",
+      "default": "./dist/plugin/manifest.js"
     }
   },
   "scripts": {

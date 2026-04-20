@@ -1,10 +1,19 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { cp, rm, stat } from "node:fs/promises";
+import { cp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
 
-import { generateSchemaSource, generateWorkerSource } from "@plumix/core";
+import type { PlumixManifest } from "@plumix/core";
+import {
+  buildManifest,
+  emptyManifest,
+  generateSchemaSource,
+  generateWorkerSource,
+  HookRegistry,
+  injectManifestIntoHtml,
+  installPlugins,
+} from "@plumix/core";
 
 import { loadConfig } from "../cli/load-config.js";
 
@@ -42,13 +51,14 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
     async buildStart() {
       const emitted = await regenerate(root, options.configFile);
       configPath = emitted.configPath;
-      await stageAdminAssets(publicDir);
+      await stageAdminAssets(publicDir, emitted.manifest);
     },
     configureServer(server) {
       server.watcher.on("change", (path) => {
         if (!configPath || resolve(path) !== configPath) return;
         void regenerate(root, options.configFile)
-          .then(() => {
+          .then(async (emitted) => {
+            await stageAdminAssets(publicDir, emitted.manifest);
             server.ws.send({ type: "full-reload" });
           })
           .catch((error: unknown) => {
@@ -73,13 +83,14 @@ export async function emitPlumixSources(
   cwd: string,
   explicitConfig?: string,
 ): Promise<{ configPath: string }> {
-  return regenerate(cwd, explicitConfig);
+  const { configPath } = await regenerate(cwd, explicitConfig);
+  return { configPath };
 }
 
 async function regenerate(
   cwd: string,
   explicitConfig: string | undefined,
-): Promise<{ configPath: string }> {
+): Promise<{ configPath: string; manifest: PlumixManifest }> {
   const { config, configPath } = await loadConfig(cwd, explicitConfig);
 
   const schemaSource = generateSchemaSource(config).source;
@@ -90,20 +101,57 @@ async function regenerate(
   });
   writeIfChanged(resolve(cwd, ".plumix/worker.ts"), workerSource);
 
-  return { configPath };
+  const manifest = await computeManifest(config.plugins);
+
+  return { configPath, manifest };
+}
+
+type PluginDescriptors = Parameters<typeof installPlugins>[0]["plugins"];
+
+// Run plugin `setup()` callbacks into a throwaway hook registry just to
+// capture what's been registered. The admin manifest only cares about the
+// resulting post-type / taxonomy / meta snapshot — hooks wired up here are
+// discarded. If a plugin throws on setup we surface it as-is: a broken
+// config should fail the build, not silently ship an empty manifest.
+async function computeManifest(
+  plugins: PluginDescriptors,
+): Promise<PlumixManifest> {
+  if (plugins.length === 0) return emptyManifest();
+  const { registry } = await installPlugins({
+    hooks: new HookRegistry(),
+    plugins,
+  });
+  return buildManifest(registry);
 }
 
 // Copies the compiled admin SPA from plumix/dist/admin-app into the effective
 // publicDir under _plumix/admin/. The runtime adapter's asset-serving layer
 // (Cloudflare Workers Assets today, equivalents in future adapters) picks the
-// files up from publicDir automatically. Skips the copy when the destination
-// is already at least as fresh as the source so repeated regenerate() calls
-// during dev don't bounce Vite's file watcher.
-async function stageAdminAssets(publicDir: string): Promise<void> {
+// files up from publicDir automatically. Skips the bulk copy when the
+// destination is already at least as fresh as the source so repeated
+// regenerate() calls during dev don't bounce Vite's file watcher — but
+// always rewrites `index.html` with the current manifest, since that one
+// depends on consumer config rather than admin source mtime.
+async function stageAdminAssets(
+  publicDir: string,
+  manifest: PlumixManifest,
+): Promise<void> {
   const dest = resolve(publicDir, "_plumix/admin");
-  if (await destIsFresh(dest, ADMIN_SOURCE_DIR)) return;
-  await rm(dest, { recursive: true, force: true });
-  await cp(ADMIN_SOURCE_DIR, dest, { recursive: true });
+  if (!(await destIsFresh(dest, ADMIN_SOURCE_DIR))) {
+    await rm(dest, { recursive: true, force: true });
+    await cp(ADMIN_SOURCE_DIR, dest, { recursive: true });
+  }
+  await injectManifest(resolve(dest, "index.html"), manifest);
+}
+
+async function injectManifest(
+  indexHtmlPath: string,
+  manifest: PlumixManifest,
+): Promise<void> {
+  const html = await readFile(indexHtmlPath, "utf8");
+  const next = injectManifestIntoHtml(html, manifest);
+  if (next === html) return;
+  await writeFile(indexHtmlPath, next, "utf8");
 }
 
 async function destIsFresh(dest: string, src: string): Promise<boolean> {
