@@ -89,9 +89,38 @@ const termSlugSchema = v.pipe(
   v.maxLength(200),
 );
 
+// Whitelist of columns the caller is allowed to sort by. Keys are the
+// wire-level names (snake_case, matching DB columns) so the API surface
+// stays stable even if we rename the drizzle TS fields later. The handler
+// maps these to column references.
+export const POST_LIST_ORDER_COLUMNS = [
+  "updated_at",
+  "published_at",
+  "title",
+  "menu_order",
+] as const;
+export type PostListOrderColumn = (typeof POST_LIST_ORDER_COLUMNS)[number];
+
 export const postListInputSchema = v.object({
   type: v.optional(trimmedText(100)),
-  status: v.optional(userSuppliableFields.entries.status),
+  /**
+   * Status filter. Accepts a single status or a list — WP admin views
+   * like "Drafts + Pending" need arrays. When omitted, the handler
+   * excludes `trash` by default (WP's "All" semantics — trash is its
+   * own view, not part of the flat list). Pass `["trash"]` explicitly
+   * to see trashed posts.
+   */
+  status: v.optional(
+    v.union([
+      userSuppliableFields.entries.status,
+      v.pipe(v.array(userSuppliableFields.entries.status), v.minLength(1)),
+    ]),
+  ),
+  /**
+   * Filter by the post's `authorId`. Admin "Mine" filter passes the
+   * session user's id here; future UIs can surface an author dropdown.
+   */
+  authorId: v.optional(postIdSchema),
   /**
    * Filter by parent post id for hierarchical types (pages, etc.).
    * - `null` → only top-level posts (parent_id IS NULL).
@@ -121,6 +150,13 @@ export const postListInputSchema = v.object({
       v.pipe(v.array(termSlugSchema), v.maxLength(MAX_TERM_SLUGS_PER_TAXONOMY)),
     ),
   ),
+  /**
+   * Column to sort by. Whitelisted — arbitrary values are rejected so a
+   * malicious caller can't probe the schema. `id` is always applied as a
+   * stable tiebreaker by the handler, not exposed here.
+   */
+  orderBy: v.optional(v.picklist(POST_LIST_ORDER_COLUMNS), "updated_at"),
+  order: v.optional(v.picklist(["asc", "desc"] as const), "desc"),
   limit: v.optional(
     v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)),
     20,

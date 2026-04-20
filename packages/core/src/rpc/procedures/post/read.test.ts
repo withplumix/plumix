@@ -346,6 +346,138 @@ describe("post.list", () => {
     expect(rows.map((r) => r.slug)).toEqual(["qbn"]);
     expect(rows.map((r) => r.slug)).not.toContain(notTagged.slug);
   });
+
+  test("default (no status) excludes trashed posts — matches WP's All tab", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await h.factory.published.create({ authorId: h.user.id, slug: "pub" });
+    await h.factory.draft.create({ authorId: h.user.id, slug: "draft" });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "trashed",
+      status: "trash",
+    });
+
+    const rows = await h.client.post.list({});
+    expect(rows.map((r) => r.slug).sort()).toEqual(["draft", "pub"]);
+  });
+
+  test("explicit status: 'trash' surfaces trashed posts (dedicated view)", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await h.factory.published.create({ authorId: h.user.id, slug: "live" });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "gone",
+      status: "trash",
+    });
+
+    const rows = await h.client.post.list({ status: "trash" });
+    expect(rows.map((r) => r.slug)).toEqual(["gone"]);
+  });
+
+  test("status array unions across listed statuses", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await h.factory.published.create({ authorId: h.user.id, slug: "pub" });
+    await h.factory.draft.create({ authorId: h.user.id, slug: "draft" });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "scheduled",
+      status: "scheduled",
+    });
+
+    const rows = await h.client.post.list({ status: ["draft", "scheduled"] });
+    expect(rows.map((r) => r.slug).sort()).toEqual(["draft", "scheduled"]);
+  });
+
+  test("subscriber asking for a status array including non-public gets empty", async () => {
+    const h = await createRpcHarness({ authAs: "subscriber" });
+    await h.factory.draft.create({ authorId: h.user.id, slug: "secret" });
+    await h.factory.published.create({ authorId: h.user.id, slug: "ok" });
+
+    // Even though `published` is allowed, asking for `[published, draft]`
+    // mixes in a status the caller can't see — match WP's silent filter.
+    const rows = await h.client.post.list({
+      status: ["published", "draft"],
+    });
+    expect(rows).toEqual([]);
+  });
+
+  test("subscriber asking for status: ['published'] is equivalent to 'published'", async () => {
+    const h = await createRpcHarness({ authAs: "subscriber" });
+    await h.factory.published.create({ authorId: h.user.id, slug: "visible" });
+    await h.factory.draft.create({ authorId: h.user.id, slug: "hidden" });
+
+    const rows = await h.client.post.list({ status: ["published"] });
+    expect(rows.map((r) => r.slug)).toEqual(["visible"]);
+  });
+
+  test("authorId filters to posts by that user", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const other = await h.factory.user.create({ email: "other@example.test" });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "by-me",
+    });
+    await h.factory.published.create({
+      authorId: other.id,
+      slug: "by-other",
+    });
+
+    const mine = await h.client.post.list({ authorId: h.user.id });
+    expect(mine.map((r) => r.slug)).toEqual(["by-me"]);
+
+    const theirs = await h.client.post.list({ authorId: other.id });
+    expect(theirs.map((r) => r.slug)).toEqual(["by-other"]);
+  });
+
+  test("orderBy=title&order=asc sorts alphabetically", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      title: "Charlie",
+      slug: "c",
+    });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      title: "Alpha",
+      slug: "a",
+    });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      title: "Bravo",
+      slug: "b",
+    });
+
+    const rows = await h.client.post.list({
+      orderBy: "title",
+      order: "asc",
+    });
+    expect(rows.map((r) => r.slug)).toEqual(["a", "b", "c"]);
+  });
+
+  test("orderBy=menu_order respects explicit order values", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "third",
+      menuOrder: 30,
+    });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "first",
+      menuOrder: 10,
+    });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "second",
+      menuOrder: 20,
+    });
+
+    const rows = await h.client.post.list({
+      orderBy: "menu_order",
+      order: "asc",
+    });
+    expect(rows.map((r) => r.slug)).toEqual(["first", "second", "third"]);
+  });
 });
 
 describe("post.get", () => {
