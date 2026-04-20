@@ -68,6 +68,27 @@ export const postUpdateInputSchema = v.object({
   terms: v.optional(postTermsSchema),
 });
 
+// Upper bound on the term-slug list per taxonomy clause. Mirrors the
+// per-taxonomy guard on `post.update` — admin UIs don't reasonably issue
+// queries beyond this, and the cap protects the generated `IN (?, ?, …)`
+// subquery from pathological input lengths.
+const MAX_TERM_SLUGS_PER_TAXONOMY = 50;
+
+const taxonomyNameSchema = v.pipe(
+  v.string(),
+  v.trim(),
+  v.minLength(1),
+  v.maxLength(100),
+  v.regex(/^[a-zA-Z0-9_-]+$/, "taxonomy must be kebab/snake ASCII"),
+);
+
+const termSlugSchema = v.pipe(
+  v.string(),
+  v.trim(),
+  v.minLength(1),
+  v.maxLength(200),
+);
+
 export const postListInputSchema = v.object({
   type: v.optional(trimmedText(100)),
   status: v.optional(userSuppliableFields.entries.status),
@@ -78,6 +99,28 @@ export const postListInputSchema = v.object({
    * - omitted → no filter, flat list across all depths.
    */
   parentId: v.optional(v.nullable(postIdSchema)),
+  /**
+   * Free-text search across `title`, `content`, and `excerpt`. Whitespace
+   * separates terms (all AND-ed), `"quoted phrases"` stay whole, and a
+   * leading `-` on a bare term excludes matches (WordPress semantics).
+   * Capped at 200 chars to bound the LIKE workload per row.
+   */
+  search: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(200))),
+  /**
+   * Taxonomy clauses, keyed by taxonomy name. Each value is a list of term
+   * slugs the post must be associated with in that taxonomy. Within one
+   * taxonomy the match is OR (any listed slug); across taxonomies the
+   * match is AND (every specified taxonomy must contribute a match).
+   * Matches the default semantics of WordPress's `tax_query`.
+   *
+   * Empty slug arrays are no-ops for that taxonomy.
+   */
+  taxonomies: v.optional(
+    v.record(
+      taxonomyNameSchema,
+      v.pipe(v.array(termSlugSchema), v.maxLength(MAX_TERM_SLUGS_PER_TAXONOMY)),
+    ),
+  ),
   limit: v.optional(
     v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)),
     20,

@@ -1,5 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { DataTable } from "@/components/data-table/data-table.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Badge } from "@/components/ui/badge.js";
@@ -11,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.js";
+import { Input } from "@/components/ui/input.js";
 import {
   Pagination,
   PaginationContent,
@@ -21,7 +23,7 @@ import { findPostTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
 import * as v from "valibot";
 
 import type { PostTypeManifestEntry } from "@plumix/core/manifest";
@@ -50,6 +52,19 @@ const searchSchema = v.object({
   status: v.optional(
     v.fallback(v.picklist(STATUS_FILTER_VALUES), "all"),
     "all",
+  ),
+  // Free-text search. Empty string coerces to `undefined` so the URL stays
+  // clean (`?q=` doesn't linger after the user clears the input).
+  q: v.optional(
+    v.fallback(
+      v.pipe(
+        v.string(),
+        v.trim(),
+        v.maxLength(200),
+        v.transform((value) => (value.length === 0 ? undefined : value)),
+      ),
+      undefined,
+    ),
   ),
 });
 
@@ -145,15 +160,19 @@ function ContentListRoute(): ReactNode {
         limit: PAGE_SIZE,
         offset: (search.page - 1) * PAGE_SIZE,
         ...(search.status !== "all" ? { status: search.status } : {}),
+        ...(search.q ? { search: search.q } : {}),
       },
     }),
   );
 
   const setStatus = (status: StatusFilter): void => {
-    void navigate({ search: { status, page: 1 } });
+    void navigate({ search: (prev) => ({ ...prev, status, page: 1 }) });
   };
   const setPage = (page: number): void => {
     void navigate({ search: (prev) => ({ ...prev, page }) });
+  };
+  const setSearch = (q: string | undefined): void => {
+    void navigate({ search: (prev) => ({ ...prev, q, page: 1 }) });
   };
 
   const rows: readonly Post[] = query.data ?? [];
@@ -186,6 +205,15 @@ function ContentListRoute(): ReactNode {
 
       <div className="flex flex-wrap items-center gap-2">
         <StatusFilter value={search.status} onChange={setStatus} />
+        <SearchInput
+          // Keyed on the URL value so external navigations (back button,
+          // links) remount the input with fresh local state instead of
+          // desynchronising from the URL.
+          key={search.q ?? ""}
+          initialValue={search.q ?? ""}
+          placeholder={`Search ${pluralLower}…`}
+          onCommit={setSearch}
+        />
       </div>
 
       {query.isError ? (
@@ -246,6 +274,54 @@ function ContentListRoute(): ReactNode {
           </PaginationItem>
         </PaginationContent>
       </Pagination>
+    </div>
+  );
+}
+
+const SEARCH_DEBOUNCE_MS = 250;
+
+function SearchInput({
+  initialValue,
+  placeholder,
+  onCommit,
+}: {
+  initialValue: string;
+  placeholder: string;
+  onCommit: (next: string | undefined) => void;
+}): ReactNode {
+  // Local state so typing feels immediate; commit to the URL (which
+  // triggers the RPC refetch) after a debounce. Parent keys this
+  // component on the URL value so external URL changes remount the
+  // input rather than needing a setState-in-effect sync.
+  const [value, setValue] = useState(initialValue);
+  useEffect(() => {
+    if (value === initialValue) return;
+    const id = setTimeout(() => {
+      onCommit(value.length === 0 ? undefined : value);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      clearTimeout(id);
+    };
+  }, [value, initialValue, onCommit]);
+
+  return (
+    <div className="relative">
+      <Search
+        aria-hidden
+        className="text-muted-foreground pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2"
+      />
+      <Input
+        type="search"
+        role="searchbox"
+        value={value}
+        maxLength={200}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        onChange={(e) => {
+          setValue(e.target.value);
+        }}
+        className="h-9 w-64 pl-8"
+      />
     </div>
   );
 }

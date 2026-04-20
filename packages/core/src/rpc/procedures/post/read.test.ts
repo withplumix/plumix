@@ -1,6 +1,29 @@
 import { describe, expect, test } from "vitest";
 
+import { postTerm } from "../../../db/schema/post_term.js";
+import { terms } from "../../../db/schema/terms.js";
 import { createRpcHarness } from "../../../test/rpc.js";
+
+async function seedTerm(
+  h: Awaited<ReturnType<typeof createRpcHarness>>,
+  taxonomy: string,
+  slug: string,
+): Promise<number> {
+  const [row] = await h.context.db
+    .insert(terms)
+    .values({ taxonomy, name: slug, slug })
+    .returning();
+  if (!row) throw new Error("seedTerm: insert returned no row");
+  return row.id;
+}
+
+async function attachTerm(
+  h: Awaited<ReturnType<typeof createRpcHarness>>,
+  postId: number,
+  termId: number,
+): Promise<void> {
+  await h.context.db.insert(postTerm).values({ postId, termId });
+}
 
 describe("post.list", () => {
   test("returns published posts by default for subscriber", async () => {
@@ -102,6 +125,226 @@ describe("post.list", () => {
 
     const all = await h.client.post.list({});
     expect(all.map((p) => p.slug).sort()).toEqual(["p-child", "p-root"]);
+  });
+
+  test("search matches on title", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      title: "Hello world",
+      slug: "hello",
+    });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      title: "Unrelated",
+      slug: "unrelated",
+    });
+
+    const rows = await h.client.post.list({ search: "hello" });
+    expect(rows.map((r) => r.slug)).toEqual(["hello"]);
+  });
+
+  test("search also matches on content and excerpt (OR across columns)", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      title: "Generic",
+      slug: "in-body",
+      content: "A paragraph mentioning giraffes in passing.",
+    });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      title: "Generic",
+      slug: "in-excerpt",
+      excerpt: "All about giraffes.",
+    });
+
+    const rows = await h.client.post.list({ search: "giraffes" });
+    expect(rows.map((r) => r.slug).sort()).toEqual(["in-body", "in-excerpt"]);
+  });
+
+  test("multi-term search AND-combines (each term must hit some column)", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      title: "Quantum physics intro",
+      slug: "both",
+    });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      title: "Quantum only",
+      slug: "quantum-only",
+    });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      title: "Physics only",
+      slug: "physics-only",
+    });
+
+    const rows = await h.client.post.list({ search: "quantum physics" });
+    expect(rows.map((r) => r.slug)).toEqual(["both"]);
+  });
+
+  test("quoted phrases match verbatim across whitespace", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      title: "quantum physics",
+      slug: "phrase-hit",
+    });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      title: "quantum mechanics and physics",
+      slug: "phrase-miss",
+    });
+
+    const rows = await h.client.post.list({ search: '"quantum physics"' });
+    expect(rows.map((r) => r.slug)).toEqual(["phrase-hit"]);
+  });
+
+  test("leading dash excludes the term (NOT LIKE)", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      title: "Pillow for sale",
+      slug: "pillow-sofa",
+      content: "Comes with a sofa",
+    });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      title: "Standalone pillow",
+      slug: "pillow-only",
+    });
+
+    const rows = await h.client.post.list({ search: "pillow -sofa" });
+    expect(rows.map((r) => r.slug)).toEqual(["pillow-only"]);
+  });
+
+  test("LIKE wildcards in user input are escaped, not interpreted", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      title: "Save 50% today",
+      slug: "with-percent",
+    });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      title: "Nothing special",
+      slug: "plain",
+    });
+
+    // A literal `%` in the query should match only "50%", not everything.
+    const rows = await h.client.post.list({ search: "50%" });
+    expect(rows.map((r) => r.slug)).toEqual(["with-percent"]);
+  });
+
+  test("taxonomy filter: single taxonomy, IN across term slugs", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const news = await seedTerm(h, "category", "news");
+    const tutorials = await seedTerm(h, "category", "tutorials");
+    const p1 = await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "news-post",
+    });
+    const p2 = await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "tut-post",
+    });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "untagged",
+    });
+    await attachTerm(h, p1.id, news);
+    await attachTerm(h, p2.id, tutorials);
+
+    const rows = await h.client.post.list({
+      taxonomies: { category: ["news", "tutorials"] },
+    });
+    expect(rows.map((r) => r.slug).sort()).toEqual(["news-post", "tut-post"]);
+  });
+
+  test("taxonomy filter: AND across taxonomies (post must match each)", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const news = await seedTerm(h, "category", "news");
+    const urgent = await seedTerm(h, "tag", "urgent");
+    const both = await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "both",
+    });
+    const newsOnly = await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "news-only",
+    });
+    const urgentOnly = await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "urgent-only",
+    });
+    await attachTerm(h, both.id, news);
+    await attachTerm(h, both.id, urgent);
+    await attachTerm(h, newsOnly.id, news);
+    await attachTerm(h, urgentOnly.id, urgent);
+
+    const rows = await h.client.post.list({
+      taxonomies: { category: ["news"], tag: ["urgent"] },
+    });
+    expect(rows.map((r) => r.slug)).toEqual(["both"]);
+  });
+
+  test("taxonomy filter: empty slug array is a no-op for that taxonomy", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await h.factory.published.create({ authorId: h.user.id, slug: "a" });
+    await h.factory.published.create({ authorId: h.user.id, slug: "b" });
+
+    const rows = await h.client.post.list({ taxonomies: { category: [] } });
+    expect(rows.map((r) => r.slug).sort()).toEqual(["a", "b"]);
+  });
+
+  test("taxonomy filter: slug scoped to taxonomy (no cross-taxonomy leak)", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    // Same slug in two taxonomies — filter must only match within the
+    // specified taxonomy. `{ category: ["news"] }` should NOT match a
+    // post tagged `tag:news`.
+    const catNews = await seedTerm(h, "category", "news");
+    const tagNews = await seedTerm(h, "tag", "news");
+    const catPost = await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "in-category",
+    });
+    const tagPost = await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "in-tag",
+    });
+    await attachTerm(h, catPost.id, catNews);
+    await attachTerm(h, tagPost.id, tagNews);
+
+    const rows = await h.client.post.list({
+      taxonomies: { category: ["news"] },
+    });
+    expect(rows.map((r) => r.slug)).toEqual(["in-category"]);
+  });
+
+  test("taxonomy filter composes with search", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const news = await seedTerm(h, "category", "news");
+    const matches = await h.factory.published.create({
+      authorId: h.user.id,
+      title: "Quantum breakthrough",
+      slug: "qbn",
+    });
+    const notTagged = await h.factory.published.create({
+      authorId: h.user.id,
+      title: "Quantum breakthrough elsewhere",
+      slug: "qbn-2",
+    });
+    await attachTerm(h, matches.id, news);
+    // `notTagged` has the same title but no term — taxonomy filter excludes it
+
+    const rows = await h.client.post.list({
+      search: "quantum",
+      taxonomies: { category: ["news"] },
+    });
+    expect(rows.map((r) => r.slug)).toEqual(["qbn"]);
+    expect(rows.map((r) => r.slug)).not.toContain(notTagged.slug);
   });
 });
 
