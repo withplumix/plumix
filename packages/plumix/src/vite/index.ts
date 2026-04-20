@@ -7,7 +7,6 @@ import type { Plugin } from "vite";
 import type { PlumixManifest } from "@plumix/core";
 import {
   buildManifest,
-  emptyManifest,
   generateSchemaSource,
   generateWorkerSource,
   HookRegistry,
@@ -113,10 +112,11 @@ type PluginDescriptors = Parameters<typeof installPlugins>[0]["plugins"];
 // resulting post-type / taxonomy / meta snapshot — hooks wired up here are
 // discarded. If a plugin throws on setup we surface it as-is: a broken
 // config should fail the build, not silently ship an empty manifest.
+// Note: plugin `setup()` callbacks run on every dev config-file change, so
+// plugins should keep setup free of IO.
 async function computeManifest(
   plugins: PluginDescriptors,
 ): Promise<PlumixManifest> {
-  if (plugins.length === 0) return emptyManifest();
   const { registry } = await installPlugins({
     hooks: new HookRegistry(),
     plugins,

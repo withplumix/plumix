@@ -152,9 +152,10 @@ export function emptyManifest(): PlumixManifest {
 
 /**
  * Project a registry snapshot into its manifest form — the subset that ships
- * to the admin bundle. Post types are ordered by `menuPosition` (ascending;
- * unspecified → Infinity) with registration order as tiebreaker, matching
- * how the sidebar should render them.
+ * to the admin bundle. Post types are ordered by `menuPosition` ascending,
+ * with unspecified positions last. Among entries with the same (or no)
+ * `menuPosition` the registration order wins — `Array.prototype.sort` is
+ * stable per ES2019, and the registry's `Map` preserves insertion order.
  */
 export function buildManifest(registry: PluginRegistry): PlumixManifest {
   const entries = Array.from(registry.postTypes.values()).map(toPostTypeEntry);
@@ -166,25 +167,42 @@ export function buildManifest(registry: PluginRegistry): PlumixManifest {
   return { postTypes: entries };
 }
 
+// Explicit allowlist — only the destructured keys ship to the browser.
+// Adding a field to `PostTypeOptions` / `RegisteredPostType` does NOT
+// automatically leak it; it must be added here AND to `PostTypeManifestEntry`
+// to surface in the admin. `registeredBy` and `rewrite` are intentionally
+// excluded: the first is debug metadata, the second is server-side URL
+// mapping.
 function toPostTypeEntry(pt: RegisteredPostType): PostTypeManifestEntry {
-  const entry: Mutable<PostTypeManifestEntry> = {
-    name: pt.name,
-    label: pt.label,
+  const {
+    name,
+    label,
+    labels,
+    description,
+    supports,
+    taxonomies,
+    isHierarchical,
+    isPublic,
+    hasArchive,
+    capabilityType,
+    menuPosition,
+    menuIcon,
+  } = pt;
+  return {
+    name,
+    label,
+    labels,
+    description,
+    supports,
+    taxonomies,
+    isHierarchical,
+    isPublic,
+    hasArchive,
+    capabilityType,
+    menuPosition,
+    menuIcon,
   };
-  if (pt.labels !== undefined) entry.labels = pt.labels;
-  if (pt.description !== undefined) entry.description = pt.description;
-  if (pt.supports !== undefined) entry.supports = pt.supports;
-  if (pt.taxonomies !== undefined) entry.taxonomies = pt.taxonomies;
-  if (pt.isHierarchical !== undefined) entry.isHierarchical = pt.isHierarchical;
-  if (pt.isPublic !== undefined) entry.isPublic = pt.isPublic;
-  if (pt.hasArchive !== undefined) entry.hasArchive = pt.hasArchive;
-  if (pt.capabilityType !== undefined) entry.capabilityType = pt.capabilityType;
-  if (pt.menuPosition !== undefined) entry.menuPosition = pt.menuPosition;
-  if (pt.menuIcon !== undefined) entry.menuIcon = pt.menuIcon;
-  return entry;
 }
-
-type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 
 /**
  * Serialise a manifest into the `<script>` markup injected into the admin
