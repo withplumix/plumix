@@ -122,4 +122,24 @@ describe("injectManifestIntoHtml", () => {
     expect(out).toContain(`<script type="module" src="/src/main.tsx">`);
     expect(out).toContain(`<div id="root"></div>`);
   });
+
+  test("matches uppercase SCRIPT tags (minifier-agnostic)", () => {
+    const html = `<SCRIPT ID="plumix-manifest" TYPE="application/json">{"postTypes":[]}</SCRIPT>`;
+    const out = injectManifestIntoHtml(html, {
+      postTypes: [{ name: "post", label: "Posts" }],
+    });
+    expect(out).toContain(`{"postTypes":[{"name":"post","label":"Posts"}]}`);
+  });
+
+  test("tolerates whitespace inside the placeholder body", () => {
+    const html = `<script id="plumix-manifest" type="application/json">
+      { "postTypes": [] }
+    </script>`;
+    const out = injectManifestIntoHtml(html, {
+      postTypes: [{ name: "post", label: "Posts" }],
+    });
+    expect(out).toMatch(
+      /^<script id="plumix-manifest" type="application\/json">\{"postTypes":\[\{"name":"post","label":"Posts"\}\]\}<\/script>$/,
+    );
+  });
 });

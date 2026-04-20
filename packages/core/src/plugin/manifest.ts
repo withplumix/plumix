@@ -157,9 +157,7 @@ export function emptyManifest(): PlumixManifest {
  * how the sidebar should render them.
  */
 export function buildManifest(registry: PluginRegistry): PlumixManifest {
-  const entries = Array.from(registry.postTypes.values()).map(
-    toPostTypeEntry,
-  );
+  const entries = Array.from(registry.postTypes.values()).map(toPostTypeEntry);
   entries.sort((a, b) => {
     const ap = a.menuPosition ?? Number.POSITIVE_INFINITY;
     const bp = b.menuPosition ?? Number.POSITIVE_INFINITY;
@@ -200,8 +198,13 @@ export function serializeManifestScript(manifest: PlumixManifest): string {
   return `<script id="${MANIFEST_SCRIPT_ID}" type="application/json">${safe}</script>`;
 }
 
+// Case-insensitive match on the script tag — Vite's bundler today emits
+// lowercase tags and we control the placeholder, but minifiers upstream
+// could normalise to uppercase and we'd rather match than silently fall
+// through to the fail-fast branch.
 const MANIFEST_SCRIPT_RE = new RegExp(
   `<script id="${MANIFEST_SCRIPT_ID}"[^>]*>[\\s\\S]*?</script>`,
+  "i",
 );
 
 /**
