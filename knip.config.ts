@@ -1,6 +1,13 @@
 import type { KnipConfig } from "knip";
 
 const config: KnipConfig = {
+  // `exports` check disabled at the project level — admin's vendored
+  // shadcn/ui primitives (sidebar, dropdown-menu, sheet, table, etc.)
+  // expose 20+ components each, and we deliberately keep the full surface
+  // so feature routes can pull from the palette as they grow. Re-enable
+  // by splitting vendor UI into its own package, or tag-based filtering
+  // via `@internal` JSDoc once that convention is in place.
+  exclude: ["exports"],
   workspaces: {
     "tooling/typescript": {
       entry: ["*.json"],
