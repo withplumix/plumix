@@ -225,14 +225,7 @@ export class DuplicateAdminSlugError extends Error {
  */
 export function deriveAdminSlug(name: string, plural?: string): string {
   const source = plural ?? `${name}s`;
-  // Two separate anchored replaces rather than `/^-+|-+$/g` — CodeQL flags
-  // the alternation form as a polynomial-regex risk on dash-heavy inputs,
-  // and splitting it is equally readable and provably linear.
-  const slug = source
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+/, "")
-    .replace(/-+$/, "");
+  const slug = slugify(source);
   if (slug.length === 0) {
     const from = plural === undefined ? "its name" : `plural="${plural}"`;
     throw new Error(
@@ -240,6 +233,30 @@ export function deriveAdminSlug(name: string, plural?: string): string {
     );
   }
   return slug;
+}
+
+// Hand-rolled single-pass slugifier rather than chained `.replace()` calls.
+// The regex form (`/[^a-z0-9]+/g` plus a trim) trips CodeQL's polynomial-
+// regex detector on library-exposed inputs; this loop is provably O(n),
+// regex-free, and produces the same output: lowercase ASCII alphanumerics
+// separated by single dashes, no leading/trailing dashes.
+function slugify(input: string): string {
+  const lower = input.toLowerCase();
+  let result = "";
+  let pendingDash = false;
+  for (let i = 0; i < lower.length; i++) {
+    const code = lower.charCodeAt(i);
+    const isAlphaNum =
+      (code >= 97 && code <= 122) || (code >= 48 && code <= 57);
+    if (isAlphaNum) {
+      if (pendingDash && result.length > 0) result += "-";
+      result += lower[i];
+      pendingDash = false;
+    } else {
+      pendingDash = true;
+    }
+  }
+  return result;
 }
 
 // Explicit allowlist — only the destructured keys ship to the browser.
