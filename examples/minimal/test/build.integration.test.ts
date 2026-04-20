@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync, rmSync, statSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -45,6 +45,14 @@ describe("examples/minimal — plumix build", () => {
 
       // Admin SPA ends up in the Cloudflare assets bundle.
       expect(existsSync(adminIndexHtml)).toBe(true);
+
+      // Manifest placeholder is replaced by the vite plugin with a
+      // config-derived payload. `examples/minimal` registers no plugins,
+      // so postTypes is empty but the tag must still be present.
+      const adminHtml = readFileSync(adminIndexHtml, "utf8");
+      expect(adminHtml).toMatch(
+        /<script id="plumix-manifest" type="application\/json">\{"postTypes":\[\]\}<\/script>/,
+      );
     },
     60_000,
   );
