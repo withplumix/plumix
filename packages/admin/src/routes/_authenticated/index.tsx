@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.js";
+import { visiblePostTypes } from "@/lib/manifest.js";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, FileText } from "lucide-react";
 
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/_authenticated/")({
 function DashboardIndex(): ReactNode {
   const { user } = Route.useRouteContext();
   const greeting = user.name ?? user.email;
+  const tiles = visiblePostTypes(user.capabilities);
 
   return (
     <div className="flex flex-col gap-6">
@@ -27,25 +29,50 @@ function DashboardIndex(): ReactNode {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
+      {tiles.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {tiles.map((pt) => {
+            const label = pt.labels?.plural ?? pt.label;
+            const labelLower = label.toLowerCase();
+            return (
+              <Card key={pt.name}>
+                <CardHeader>
+                  <div className="bg-primary/10 text-primary mb-2 flex size-10 items-center justify-center rounded-md">
+                    <FileText className="size-5" aria-hidden />
+                  </div>
+                  <CardTitle>{label}</CardTitle>
+                  <CardDescription>
+                    {pt.description ??
+                      `Write, edit, and publish ${labelLower}.`}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button asChild variant="outline" className="w-full">
+                    <Link
+                      to="/content/$slug"
+                      params={{ slug: pt.adminSlug }}
+                      search={{ status: "all", page: 1 }}
+                    >
+                      Browse {labelLower}
+                      <ArrowRight />
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <Card className="max-w-xl border-dashed">
           <CardHeader>
-            <div className="bg-primary/10 text-primary mb-2 flex size-10 items-center justify-center rounded-md">
-              <FileText className="size-5" />
-            </div>
-            <CardTitle>Posts</CardTitle>
-            <CardDescription>Write, edit, and publish content.</CardDescription>
+            <CardTitle>No content types yet</CardTitle>
+            <CardDescription>
+              Add a plugin that registers a post type (e.g.{" "}
+              <code>@plumix/plugin-blog</code>) to see it here.
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Button asChild variant="outline" className="w-full">
-              <Link to="/posts" search={{ status: "all", page: 1 }}>
-                Browse posts
-                <ArrowRight />
-              </Link>
-            </Button>
-          </CardContent>
         </Card>
-      </div>
+      )}
     </div>
   );
 }

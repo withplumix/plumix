@@ -2,7 +2,17 @@ import type { UserRole } from "../db/schema/users.js";
 
 export interface PostTypeOptions {
   readonly label: string;
-  readonly labels?: { readonly singular?: string };
+  /**
+   * Human-readable label variants. `plural` also drives the admin URL slug
+   * (`/content/<slugified-plural>`) unless overridden; omit it and the slug
+   * falls back to `${name}s`, which is acceptable for English-named types
+   * but surfaces an "anglos" for `name: "angle"` etc. — plugins with
+   * irregular plurals should set `labels.plural` explicitly.
+   */
+  readonly labels?: {
+    readonly singular?: string;
+    readonly plural?: string;
+  };
   readonly description?: string;
   readonly supports?: readonly string[];
   readonly taxonomies?: readonly string[];
@@ -123,11 +133,20 @@ export class DuplicateRegistrationError extends Error {
  * `registeredBy` (plugin attribution is server-only debug metadata) and
  * `rewrite` (URL mapping is evaluated server-side). Add fields only when the
  * admin UI needs them.
+ *
+ * `adminSlug` is derived at build time (see `buildManifest`) and is what the
+ * admin router uses for `/content/$slug`. Keeping it in the manifest rather
+ * than re-deriving client-side lets the collision check run once on the
+ * server and ships the final routing key as authoritative.
  */
 export interface PostTypeManifestEntry {
   readonly name: string;
+  readonly adminSlug: string;
   readonly label: string;
-  readonly labels?: { readonly singular?: string };
+  readonly labels?: {
+    readonly singular?: string;
+    readonly plural?: string;
+  };
   readonly description?: string;
   readonly supports?: readonly string[];
   readonly taxonomies?: readonly string[];
@@ -156,6 +175,10 @@ export function emptyManifest(): PlumixManifest {
  * with unspecified positions last. Among entries with the same (or no)
  * `menuPosition` the registration order wins — `Array.prototype.sort` is
  * stable per ES2019, and the registry's `Map` preserves insertion order.
+ *
+ * Throws `DuplicateAdminSlugError` if two post types resolve to the same
+ * admin slug — the admin router can't disambiguate `/content/$slug` in that
+ * case, and catching it at build time is cheaper than a 404 at runtime.
  */
 export function buildManifest(registry: PluginRegistry): PlumixManifest {
   const entries = Array.from(registry.postTypes.values()).map(toPostTypeEntry);
@@ -164,7 +187,76 @@ export function buildManifest(registry: PluginRegistry): PlumixManifest {
     const bp = b.menuPosition ?? Number.POSITIVE_INFINITY;
     return ap - bp;
   });
+  assertUniqueAdminSlugs(entries);
   return { postTypes: entries };
+}
+
+function assertUniqueAdminSlugs(
+  entries: readonly PostTypeManifestEntry[],
+): void {
+  const seen = new Map<string, string>();
+  for (const entry of entries) {
+    const existing = seen.get(entry.adminSlug);
+    if (existing !== undefined) {
+      throw new DuplicateAdminSlugError(existing, entry.name, entry.adminSlug);
+    }
+    seen.set(entry.adminSlug, entry.name);
+  }
+}
+
+export class DuplicateAdminSlugError extends Error {
+  constructor(firstPostType: string, secondPostType: string, slug: string) {
+    super(
+      `Post types "${firstPostType}" and "${secondPostType}" both resolve ` +
+        `to the admin slug "${slug}". Set \`labels.plural\` on one of them ` +
+        `to disambiguate.`,
+    );
+    this.name = "DuplicateAdminSlugError";
+  }
+}
+
+/**
+ * Derive the URL-safe admin slug for a post type. Prefers `plural` when
+ * set (allows "fish" → `fish`, "children" → `children`, etc.), falls back
+ * to `${name}s` which is English-biased but matches the common case.
+ * Non-alphanumerics collapse to single dashes; leading/trailing dashes
+ * are trimmed. Empty results throw — an empty slug would shadow
+ * `/content/` itself in TanStack Router.
+ */
+export function deriveAdminSlug(name: string, plural?: string): string {
+  const source = plural ?? `${name}s`;
+  const slug = slugify(source);
+  if (slug.length === 0) {
+    const from = plural === undefined ? "its name" : `plural="${plural}"`;
+    throw new Error(
+      `Cannot derive an admin slug for post type "${name}" from ${from} — result was empty.`,
+    );
+  }
+  return slug;
+}
+
+// Hand-rolled single-pass slugifier rather than chained `.replace()` calls.
+// The regex form (`/[^a-z0-9]+/g` plus a trim) trips CodeQL's polynomial-
+// regex detector on library-exposed inputs; this loop is provably O(n),
+// regex-free, and produces the same output: lowercase ASCII alphanumerics
+// separated by single dashes, no leading/trailing dashes.
+function slugify(input: string): string {
+  const lower = input.toLowerCase();
+  let result = "";
+  let pendingDash = false;
+  for (let i = 0; i < lower.length; i++) {
+    const code = lower.charCodeAt(i);
+    const isAlphaNum =
+      (code >= 97 && code <= 122) || (code >= 48 && code <= 57);
+    if (isAlphaNum) {
+      if (pendingDash && result.length > 0) result += "-";
+      result += lower[i];
+      pendingDash = false;
+    } else {
+      pendingDash = true;
+    }
+  }
+  return result;
 }
 
 // Explicit allowlist — only the destructured keys ship to the browser.
@@ -190,6 +282,7 @@ function toPostTypeEntry(pt: RegisteredPostType): PostTypeManifestEntry {
   } = pt;
   return {
     name,
+    adminSlug: deriveAdminSlug(name, labels?.plural),
     label,
     labels,
     description,

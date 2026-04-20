@@ -15,8 +15,21 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
     await context.queryClient.ensureQueryData(sessionQueryOptions());
   },
   component: RootLayout,
+  notFoundComponent: NotFound,
 });
 
 function RootLayout(): ReactNode {
   return <Outlet />;
+}
+
+function NotFound(): ReactNode {
+  return (
+    <div className="flex h-screen flex-col items-center justify-center gap-2 p-6 text-center">
+      <h1 className="text-2xl font-semibold">Not found</h1>
+      <p className="text-muted-foreground text-sm">
+        The page you're looking for doesn't exist or the resource isn't
+        registered. Check the URL and try again.
+      </p>
+    </div>
+  );
 }

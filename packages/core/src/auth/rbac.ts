@@ -159,6 +159,35 @@ export class CapabilityError extends Error {
   }
 }
 
+/**
+ * Flatten every capability the given role is granted — core plus every
+ * plugin-registered capability (including the derived `{type}:{action}`
+ * entries). Sorted for deterministic output so wire payloads are stable
+ * across identical inputs (tests, caching, etc.).
+ *
+ * The returned list is intended for shipping to the admin on `auth.session`
+ * so client code can gate nav items and actions without knowing the
+ * role-hierarchy rules.
+ */
+export function capabilitiesForRole(
+  role: UserRole,
+  plugins: PluginRegistry,
+): readonly string[] {
+  const level = roleLevel(role);
+  // Set — a plugin registering a post type with `capabilityType: 'post'`
+  // duplicates the derived `post:read` etc. caps into `plugins.capabilities`
+  // on top of the entries already present in CORE_CAPABILITIES. Dedupe so
+  // the wire payload doesn't carry `["post:read", "post:read", ...]`.
+  const granted = new Set<string>();
+  for (const [name, minRole] of Object.entries(CORE_CAPABILITIES)) {
+    if (roleLevel(minRole) <= level) granted.add(name);
+  }
+  for (const [name, cap] of plugins.capabilities) {
+    if (roleLevel(cap.minRole) <= level) granted.add(name);
+  }
+  return [...granted].sort();
+}
+
 export function requireCapability(
   resolver: CapabilityResolver,
   user: { role: UserRole } | null,
