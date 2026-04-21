@@ -105,14 +105,18 @@ export function metaBoxesForPostType(
   source: PlumixManifest = manifest,
 ): readonly MetaBoxManifestEntry[] {
   const caps = new Set(capabilities);
-  const applicable = source.metaBoxes.filter((box) => {
-    if (!box.postTypes.includes(postTypeName)) return false;
-    if (box.capability !== undefined && !caps.has(box.capability)) return false;
-    return true;
-  });
-  return [...applicable].sort((a, b) => {
-    const ap = META_BOX_PRIORITY_WEIGHT[a.priority ?? "default"];
-    const bp = META_BOX_PRIORITY_WEIGHT[b.priority ?? "default"];
-    return ap - bp;
-  });
+  // `.filter()` already returns a fresh array, so subsequent `.sort()` is
+  // safe to do in place — no need to copy again.
+  return source.metaBoxes
+    .filter((box) => {
+      if (!box.postTypes.includes(postTypeName)) return false;
+      if (box.capability !== undefined && !caps.has(box.capability))
+        return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const ap = META_BOX_PRIORITY_WEIGHT[a.priority ?? "default"];
+      const bp = META_BOX_PRIORITY_WEIGHT[b.priority ?? "default"];
+      return ap - bp;
+    });
 }

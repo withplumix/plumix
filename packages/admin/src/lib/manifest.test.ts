@@ -62,6 +62,40 @@ describe("readManifest", () => {
     const doc = withManifestScript(JSON.stringify({ postTypes: "oops" }));
     expect(readManifest(doc)).toEqual({ postTypes: [], metaBoxes: [] });
   });
+
+  test("non-array metaBoxes coerces to empty array", () => {
+    const doc = withManifestScript(
+      JSON.stringify({ postTypes: [], metaBoxes: "oops" }),
+    );
+    expect(readManifest(doc)).toEqual({ postTypes: [], metaBoxes: [] });
+  });
+
+  test("parses the injected JSON payload with metaBoxes", () => {
+    const doc = withManifestScript(
+      JSON.stringify({
+        postTypes: [],
+        metaBoxes: [
+          {
+            id: "seo",
+            label: "SEO",
+            postTypes: ["post"],
+            fields: [],
+          },
+        ],
+      }),
+    );
+    expect(readManifest(doc)).toEqual({
+      postTypes: [],
+      metaBoxes: [
+        {
+          id: "seo",
+          label: "SEO",
+          postTypes: ["post"],
+          fields: [],
+        },
+      ],
+    });
+  });
 });
 
 describe("findPostTypeBySlug", () => {
