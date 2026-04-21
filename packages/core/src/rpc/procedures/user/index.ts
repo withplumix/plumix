@@ -1,5 +1,6 @@
 import { del } from "./delete.js";
 import { disable } from "./disable.js";
+import { enable } from "./enable.js";
 import { get } from "./get.js";
 import { invite } from "./invite.js";
 import { list } from "./list.js";
@@ -11,6 +12,7 @@ export const userRouter = {
   invite,
   update,
   disable,
+  enable,
   delete: del,
 } as const;
 

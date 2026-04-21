@@ -50,5 +50,12 @@ export const disable = base
 
     await invalidateAllSessionsForUser(context.db, updated.id);
 
+    // Pairs with the `user:status_changed` fired on re-enable — one
+    // hook surface for "account active state changed" so plugins don't
+    // have to subscribe to two events.
+    await context.hooks.doAction("user:status_changed", updated, {
+      enabled: false,
+    });
+
     return context.hooks.applyFilter("rpc:user.disable:output", updated);
   });

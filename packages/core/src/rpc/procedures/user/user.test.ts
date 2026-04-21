@@ -310,3 +310,94 @@ describe("user.delete", () => {
     );
   });
 });
+
+describe("user.enable", () => {
+  test("admin can re-enable a disabled user", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const target = await h.factory.subscriber.create();
+    await h.client.user.disable({ id: target.id });
+    const re = await h.client.user.enable({ id: target.id });
+    expect(re.disabledAt).toBeNull();
+  });
+
+  test("already-active target is a no-op (idempotent)", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const target = await h.factory.subscriber.create();
+    const result = await h.client.user.enable({ id: target.id });
+    expect(result.disabledAt).toBeNull();
+  });
+
+  test("editor cannot enable (user:edit is admin-only here)", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const target = await h.factory.subscriber.create();
+    await expect(h.client.user.enable({ id: target.id })).rejects.toMatchObject(
+      {
+        code: "FORBIDDEN",
+        data: { capability: "user:edit" },
+      },
+    );
+  });
+});
+
+describe("user lifecycle action hooks", () => {
+  test("user:profile_changed fires after update with previous row", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const target = await h.factory.subscriber.create({ name: "Before" });
+    const spy = h.spyAction("user:profile_changed");
+    await h.client.user.update({ id: target.id, name: "After" });
+    spy.assertCalledOnce();
+    const [post, previous] = spy.lastArgs ?? [];
+    expect(post?.name).toBe("After");
+    expect(previous?.name).toBe("Before");
+  });
+
+  test("user:status_changed fires on disable with enabled=false", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const target = await h.factory.subscriber.create();
+    const spy = h.spyAction("user:status_changed");
+    await h.client.user.disable({ id: target.id });
+    spy.assertCalledOnce();
+    expect(spy.lastArgs?.[1]).toEqual({ enabled: false });
+  });
+
+  test("user:status_changed fires on re-enable with enabled=true", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const target = await h.factory.subscriber.create();
+    await h.client.user.disable({ id: target.id });
+    const spy = h.spyAction("user:status_changed");
+    await h.client.user.enable({ id: target.id });
+    spy.assertCalledOnce();
+    expect(spy.lastArgs?.[1]).toEqual({ enabled: true });
+  });
+
+  test("user:status_changed does NOT fire on an already-active enable (idempotent short-circuit)", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const target = await h.factory.subscriber.create();
+    const spy = h.spyAction("user:status_changed");
+    await h.client.user.enable({ id: target.id });
+    spy.assertNotCalled();
+  });
+
+  test("user:deleted fires with reassignedTo=null when the user had no posts", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const target = await h.factory.subscriber.create();
+    const spy = h.spyAction("user:deleted");
+    await h.client.user.delete({ id: target.id });
+    spy.assertCalledOnce();
+    expect(spy.lastArgs?.[1]).toEqual({ reassignedTo: null });
+  });
+
+  test("user:deleted fires with reassignedTo=<id> when posts were migrated", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const author = await h.factory.author.create();
+    const inheritor = await h.factory.author.create();
+    await h.factory.draft.create({ authorId: author.id, slug: "orphan" });
+    const spy = h.spyAction("user:deleted");
+    await h.client.user.delete({
+      id: author.id,
+      reassignPostsTo: inheritor.id,
+    });
+    spy.assertCalledOnce();
+    expect(spy.lastArgs?.[1]).toEqual({ reassignedTo: inheritor.id });
+  });
+});

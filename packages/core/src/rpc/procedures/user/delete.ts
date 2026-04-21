@@ -71,5 +71,12 @@ export const del = base
       throw errors.CONFLICT({ data: { reason: "delete_failed" } });
     }
 
+    // WP's `deleted_user` parity. `reassignedTo` is `null` if the user
+    // had no posts (no reassignment happened); otherwise carries the id
+    // we migrated posts to so audit-log plugins can reconstruct the move.
+    await context.hooks.doAction("user:deleted", deleted, {
+      reassignedTo: postCount > 0 ? (input.reassignPostsTo ?? null) : null,
+    });
+
     return context.hooks.applyFilter("rpc:user.delete:output", deleted);
   });

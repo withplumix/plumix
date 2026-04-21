@@ -12,7 +12,7 @@ import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar.js";
 import { signOut } from "@/lib/passkey.js";
 import { SESSION_QUERY_KEY } from "@/lib/session.js";
 import { useMutation } from "@tanstack/react-query";
-import { useRouter } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { ChevronsUpDown, LogOut, Settings, User } from "lucide-react";
 
 import type { AuthSessionUser } from "@plumix/core";
@@ -88,9 +88,11 @@ export function UserMenu({ user }: { user: UserIdentity }): ReactNode {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem disabled>
-            <User className="size-4" />
-            Profile
+          <DropdownMenuItem asChild>
+            <Link to="/profile" data-testid="user-menu-profile-link">
+              <User className="size-4" />
+              Profile
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuItem disabled>
             <Settings className="size-4" />

@@ -85,6 +85,7 @@ declare module "../hooks/types.js" {
     "rpc:user.update:output": (output: User) => User;
 
     "rpc:user.disable:output": (output: User) => User;
+    "rpc:user.enable:output": (output: User) => User;
     "rpc:user.delete:output": (output: User) => User;
 
     "rpc:term.list:input": (input: TermListInput) => TermListInput;
@@ -166,6 +167,42 @@ declare module "../hooks/types.js" {
      * emails or default-content seeding.
      */
     "user:registered": (user: User) => void | Promise<void>;
+
+    /**
+     * Fires after a successful `user.update`. Payload carries the
+     * post-write row and the pre-write row for diffing — matches WP's
+     * `profile_update(user_id, old_user_data)` signature. Use this
+     * instead of the output filter when you need to know what actually
+     * changed (role demotion, email swap, etc.). Named
+     * `profile_changed` (not `:updated`) so the template-literal
+     * `${string}:updated` post-row signature above doesn't swallow it.
+     */
+    "user:profile_changed": (
+      user: User,
+      previous: User,
+    ) => void | Promise<void>;
+
+    /**
+     * Fires on both disable (`enabled: false`) and re-enable
+     * (`enabled: true`). One surface so "account state changed" is a
+     * single subscription, instead of two. Sessions for the affected
+     * user are already invalidated by the time this fires.
+     */
+    "user:status_changed": (
+      user: User,
+      context: { readonly enabled: boolean },
+    ) => void | Promise<void>;
+
+    /**
+     * Fires after a successful `user.delete`. `reassignedTo` is the
+     * user id that inherited this account's posts, or `null` if the
+     * deleted user had no posts (so no reassignment happened). Mirrors
+     * WP's `deleted_user(user_id, reassign_to)`.
+     */
+    "user:deleted": (
+      user: User,
+      context: { readonly reassignedTo: number | null },
+    ) => void | Promise<void>;
   }
 }
 
