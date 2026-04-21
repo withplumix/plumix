@@ -57,5 +57,4 @@ export type UserGetInput = v.InferOutput<typeof userGetInputSchema>;
 export type UserInviteInput = v.InferOutput<typeof userInviteInputSchema>;
 export type UserUpdateInput = v.InferOutput<typeof userUpdateInputSchema>;
 export type UserDisableInput = v.InferOutput<typeof userDisableInputSchema>;
-export type UserEnableInput = v.InferOutput<typeof userEnableInputSchema>;
 export type UserDeleteInput = v.InferOutput<typeof userDeleteInputSchema>;
