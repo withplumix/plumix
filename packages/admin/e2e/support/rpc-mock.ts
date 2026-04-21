@@ -98,6 +98,48 @@ export const MANIFEST_WITH_POST: PlumixManifest = {
   metaBoxes: [],
 };
 
+// Manifest with two meta boxes — one in the right rail (`side`), one in
+// the main column (`normal`) — used by editor e2e to cover both slots.
+export const MANIFEST_WITH_META_BOXES: PlumixManifest = {
+  postTypes: [
+    {
+      name: "post",
+      adminSlug: "posts",
+      label: "Posts",
+      labels: { singular: "Post", plural: "Posts" },
+    },
+  ],
+  metaBoxes: [
+    {
+      id: "seo",
+      label: "SEO",
+      context: "normal",
+      postTypes: ["post"],
+      fields: [
+        {
+          key: "meta_title",
+          label: "Meta title",
+          inputType: "text",
+          maxLength: 60,
+        },
+      ],
+    },
+    {
+      id: "featured",
+      label: "Featured",
+      context: "side",
+      postTypes: ["post"],
+      fields: [
+        {
+          key: "is_featured",
+          label: "Featured",
+          inputType: "checkbox",
+        },
+      ],
+    },
+  ],
+};
+
 // Fixture: an authed admin session. Reused across every spec that needs a
 // logged-in user — specs override individual fields via spread if they need
 // something specific. Capabilities list covers the gates the admin UI

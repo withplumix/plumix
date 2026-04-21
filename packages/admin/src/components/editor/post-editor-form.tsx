@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { MetaBox } from "@/components/meta-box/meta-box.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Button } from "@/components/ui/button.js";
 import { Input } from "@/components/ui/input.js";
@@ -8,6 +9,7 @@ import { useForm, useStore } from "@tanstack/react-form";
 import { useBlocker } from "@tanstack/react-router";
 import * as v from "valibot";
 
+import type { MetaBoxManifestEntry } from "@plumix/core/manifest";
 import type { PostStatus } from "@plumix/core/schema";
 
 import { slugify } from "./slugify.js";
@@ -33,6 +35,14 @@ const postEditorSchema = v.object({
   content: v.optional(v.string(), ""),
   excerpt: v.optional(v.pipe(v.string(), v.maxLength(600)), ""),
   status: v.picklist(["draft", "published", "scheduled", "trash"] as const),
+  /**
+   * Meta-box values — one entry per `MetaBoxFieldManifestEntry.key` the
+   * editor renders. The form carries them as opaque `unknown` values and
+   * leaves per-field type-shaping to the dispatcher. Server persistence
+   * lands in a follow-up PR; today callers receive `meta` in `onSubmit`
+   * and can ignore it.
+   */
+  meta: v.record(v.string(), v.unknown()),
 });
 
 export type PostEditorValues = v.InferOutput<typeof postEditorSchema>;
@@ -55,6 +65,13 @@ interface PostEditorFormProps {
    * URL. */
   readonly slugLocked: boolean;
   readonly availableStatuses: readonly PostStatus[];
+  /**
+   * Meta boxes applicable to the post type being edited, already
+   * filtered by capability and sorted by priority. The form splits them
+   * into side / normal / advanced columns internally based on
+   * `entry.context`.
+   */
+  readonly metaBoxes: readonly MetaBoxManifestEntry[];
   readonly submitLabel: string;
   readonly isSubmitting: boolean;
   readonly serverError?: string | null;
@@ -66,6 +83,7 @@ export function PostEditorForm({
   initialValues,
   slugLocked: initialSlugLocked,
   availableStatuses,
+  metaBoxes,
   submitLabel,
   isSubmitting,
   serverError,
@@ -111,6 +129,20 @@ export function PostEditorForm({
     disabled: isSubmitting,
   });
 
+  // `side` floats right of the main editor column; `normal` stacks below
+  // the primary fields; `advanced` drops to the bottom of the main column
+  // — matching WP's admin layout slots.
+  const { side, normal, advanced } = partitionBoxesByContext(metaBoxes);
+
+  // Single subscription to the form's `meta` field powers all three
+  // regions — each box reads from `metaValues` and writes via the shared
+  // `onMetaChange`. Sharing the subscription avoids triple-re-renders on
+  // every keystroke.
+  const metaValues = useStore(form.store, (state) => state.values.meta);
+  const onMetaChange = (key: string, next: unknown): void => {
+    form.setFieldValue("meta", { ...metaValues, [key]: next });
+  };
+
   return (
     <form
       className="flex flex-col gap-6"
@@ -121,102 +153,132 @@ export function PostEditorForm({
         void form.handleSubmit();
       }}
     >
-      <form.Field name="title">
-        {(field) => (
-          <TextFieldRow
-            field={field}
-            label="Title"
-            required
-            disabled={isSubmitting}
-            testId="post-editor-title-input"
-          />
-        )}
-      </form.Field>
-
-      <form.Field name="slug">
-        {(field) => (
-          <TextFieldRow
-            field={field}
-            label="Slug"
-            required
-            disabled={isSubmitting}
-            testId="post-editor-slug-input"
-            onChangeValue={(next) => {
-              // Any direct edit to the slug input locks out the
-              // title-driven auto-derivation for the rest of this
-              // editor session.
-              setSlugLocked(true);
-              field.handleChange(next);
-            }}
-          />
-        )}
-      </form.Field>
-
-      <form.Field name="content">
-        {(field) => (
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="post-editor-content">Content</Label>
-            <div id="post-editor-content">
-              <TiptapEditor
-                value={field.state.value}
-                onChange={(html) => {
-                  field.handleChange(html);
-                }}
+      <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="flex flex-col gap-6">
+          <form.Field name="title">
+            {(field) => (
+              <TextFieldRow
+                field={field}
+                label="Title"
+                required
                 disabled={isSubmitting}
-                ariaLabel="Post content"
+                testId="post-editor-title-input"
               />
-            </div>
-          </div>
-        )}
-      </form.Field>
+            )}
+          </form.Field>
 
-      <form.Field name="excerpt">
-        {(field) => (
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="post-editor-excerpt">
-              Excerpt <span className="text-muted-foreground">(optional)</span>
-            </Label>
-            <textarea
-              id="post-editor-excerpt"
-              name="excerpt"
-              value={field.state.value}
-              maxLength={600}
-              rows={3}
-              disabled={isSubmitting}
-              onBlur={field.handleBlur}
-              onChange={(e) => {
-                field.handleChange(e.target.value);
-              }}
-              className="border-input bg-background focus-visible:ring-ring flex min-h-20 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-            />
-          </div>
-        )}
-      </form.Field>
+          <form.Field name="slug">
+            {(field) => (
+              <TextFieldRow
+                field={field}
+                label="Slug"
+                required
+                disabled={isSubmitting}
+                testId="post-editor-slug-input"
+                onChangeValue={(next) => {
+                  // Any direct edit to the slug input locks out the
+                  // title-driven auto-derivation for the rest of this
+                  // editor session.
+                  setSlugLocked(true);
+                  field.handleChange(next);
+                }}
+              />
+            )}
+          </form.Field>
 
-      <form.Field name="status">
-        {(field) => (
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="post-editor-status">Status</Label>
-            <select
-              id="post-editor-status"
-              name="status"
-              value={field.state.value}
-              disabled={isSubmitting}
-              onBlur={field.handleBlur}
-              onChange={(e) => {
-                field.handleChange(e.target.value as PostStatus);
-              }}
-              className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {availableStatuses.map((status) => (
-                <option key={status} value={status} className="capitalize">
-                  {capitalize(status)}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-      </form.Field>
+          <form.Field name="content">
+            {(field) => (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="post-editor-content">Content</Label>
+                <div id="post-editor-content">
+                  <TiptapEditor
+                    value={field.state.value}
+                    onChange={(html) => {
+                      field.handleChange(html);
+                    }}
+                    disabled={isSubmitting}
+                    ariaLabel="Post content"
+                  />
+                </div>
+              </div>
+            )}
+          </form.Field>
+
+          <form.Field name="excerpt">
+            {(field) => (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="post-editor-excerpt">
+                  Excerpt{" "}
+                  <span className="text-muted-foreground">(optional)</span>
+                </Label>
+                <textarea
+                  id="post-editor-excerpt"
+                  name="excerpt"
+                  value={field.state.value}
+                  maxLength={600}
+                  rows={3}
+                  disabled={isSubmitting}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => {
+                    field.handleChange(e.target.value);
+                  }}
+                  className="border-input bg-background focus-visible:ring-ring flex min-h-20 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+            )}
+          </form.Field>
+
+          <form.Field name="status">
+            {(field) => (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="post-editor-status">Status</Label>
+                <select
+                  id="post-editor-status"
+                  name="status"
+                  value={field.state.value}
+                  disabled={isSubmitting}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => {
+                    field.handleChange(e.target.value as PostStatus);
+                  }}
+                  className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {availableStatuses.map((status) => (
+                    <option key={status} value={status} className="capitalize">
+                      {capitalize(status)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </form.Field>
+
+          <MetaBoxRegion
+            boxes={normal}
+            testId="meta-boxes-normal"
+            values={metaValues}
+            onChange={onMetaChange}
+            disabled={isSubmitting}
+          />
+          <MetaBoxRegion
+            boxes={advanced}
+            testId="meta-boxes-advanced"
+            values={metaValues}
+            onChange={onMetaChange}
+            disabled={isSubmitting}
+          />
+        </div>
+
+        <aside className="flex flex-col gap-4" data-testid="meta-boxes-side">
+          <MetaBoxRegion
+            boxes={side}
+            testId="meta-boxes-side-boxes"
+            values={metaValues}
+            onChange={onMetaChange}
+            disabled={isSubmitting}
+          />
+        </aside>
+      </div>
 
       {serverError ? (
         <Alert variant="destructive">
@@ -252,6 +314,56 @@ export function PostEditorForm({
 
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+// Bucket boxes by context. Undefined `context` is treated as "normal"
+// (matches WP's default); unknown values fall through to the main
+// column so a plugin-specific `context` doesn't vanish into nowhere.
+function partitionBoxesByContext(boxes: readonly MetaBoxManifestEntry[]): {
+  side: readonly MetaBoxManifestEntry[];
+  normal: readonly MetaBoxManifestEntry[];
+  advanced: readonly MetaBoxManifestEntry[];
+} {
+  const side: MetaBoxManifestEntry[] = [];
+  const normal: MetaBoxManifestEntry[] = [];
+  const advanced: MetaBoxManifestEntry[] = [];
+  for (const box of boxes) {
+    if (box.context === "side") side.push(box);
+    else if (box.context === "advanced") advanced.push(box);
+    else normal.push(box);
+  }
+  return { side, normal, advanced };
+}
+
+// Render a stack of boxes against a shared meta bag. Nothing renders
+// when the bucket is empty so the layout stays tight.
+function MetaBoxRegion({
+  boxes,
+  testId,
+  values,
+  onChange,
+  disabled,
+}: {
+  readonly boxes: readonly MetaBoxManifestEntry[];
+  readonly testId: string;
+  readonly values: Readonly<Record<string, unknown>>;
+  readonly onChange: (key: string, next: unknown) => void;
+  readonly disabled: boolean;
+}): ReactNode {
+  if (boxes.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-4" data-testid={testId}>
+      {boxes.map((box) => (
+        <MetaBox
+          key={box.id}
+          box={box}
+          values={values}
+          disabled={disabled}
+          onChange={onChange}
+        />
+      ))}
+    </div>
+  );
 }
 
 // Lightweight field row for the editor's text inputs. FormField (used on
