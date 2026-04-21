@@ -51,7 +51,17 @@ function DashboardIndex(): ReactNode {
                     <Link
                       to="/content/$slug"
                       params={{ slug: pt.adminSlug }}
-                      search={{ status: "all", page: 1 }}
+                      // Pass every search-param default explicitly — the
+                      // generated route type requires all non-optional
+                      // fields. Omitting any would fail typecheck even
+                      // though valibot falls back at runtime.
+                      search={{
+                        status: "all",
+                        page: 1,
+                        author: "all",
+                        orderBy: "updated_at",
+                        order: "desc",
+                      }}
                     >
                       Browse {labelLower}
                       <ArrowRight />

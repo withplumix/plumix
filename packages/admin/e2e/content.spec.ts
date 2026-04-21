@@ -123,6 +123,80 @@ test.describe("/content/$slug", () => {
       .toBe("quantum");
   });
 
+  test("Mine toggle URL-syncs author=mine and sends session.user.id as authorId", async ({
+    page,
+  }) => {
+    const inputs: unknown[] = [];
+    await page.route("**/_plumix/rpc/**", async (route) => {
+      const url = route.request().url();
+      if (url.endsWith("/auth/session")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
+        });
+      }
+      if (url.endsWith("/post/list")) {
+        const body = route.request().postDataJSON() as { json?: unknown };
+        inputs.push(body.json);
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ json: [], meta: [] }),
+        });
+      }
+      return route.fulfill({ status: 404, body: "not-mocked" });
+    });
+
+    await page.goto("content/posts?status=all&page=1");
+    await page.getByRole("button", { name: "Mine" }).click();
+    await expect(page).toHaveURL(/author=mine/);
+    await expect
+      .poll(
+        () =>
+          (inputs.at(-1) as { authorId?: number } | undefined)?.authorId ??
+          null,
+      )
+      .toBe(AUTHED_ADMIN.user?.id);
+  });
+
+  test("column sort: clicking Title header sets orderBy=title and defaults to asc", async ({
+    page,
+  }) => {
+    const inputs: unknown[] = [];
+    await page.route("**/_plumix/rpc/**", async (route) => {
+      const url = route.request().url();
+      if (url.endsWith("/auth/session")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
+        });
+      }
+      if (url.endsWith("/post/list")) {
+        const body = route.request().postDataJSON() as { json?: unknown };
+        inputs.push(body.json);
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ json: [], meta: [] }),
+        });
+      }
+      return route.fulfill({ status: 404, body: "not-mocked" });
+    });
+
+    await page.goto("content/posts?status=all&page=1");
+    await page.getByRole("button", { name: /sort by title/i }).click();
+    await expect(page).toHaveURL(/orderBy=title/);
+    await expect(page).toHaveURL(/order=asc/);
+    await expect
+      .poll(
+        () =>
+          (inputs.at(-1) as { orderBy?: string } | undefined)?.orderBy ?? null,
+      )
+      .toBe("title");
+  });
+
   test("renders rows with zero WCAG 2.1 AA violations", async ({ page }) => {
     const now = new Date("2026-04-19T12:00:00Z");
     await mockRpc(page, {
