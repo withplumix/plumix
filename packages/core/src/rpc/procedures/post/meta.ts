@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 
-import type { AppContext, Db } from "../../../context/app.js";
+import type { AppContext } from "../../../context/app.js";
 import type {
   MetaScalarType,
   PluginRegistry,
@@ -8,8 +8,6 @@ import type {
 } from "../../../plugin/manifest.js";
 import { and, eq, inArray } from "../../../db/index.js";
 import { postMeta } from "../../../db/schema/post_meta.js";
-
-export type { PostWithMeta } from "../../../db/schema/posts.js";
 
 // The unfortunate truth about post meta is that the store is a single TEXT
 // column: we can only round-trip values via JSON. That's fine for what we
@@ -100,6 +98,43 @@ export class MetaSanitizationError extends Error {
     super(`meta key "${key}" failed sanitization: ${reason}`);
     this.key = key;
     this.reason = reason;
+  }
+}
+
+/**
+ * Minimum shape of the oRPC `errors` object needed to surface a
+ * `MetaSanitizationError` as a CONFLICT. Declared structurally so this
+ * helper doesn't have to import oRPC types — the handler passes its
+ * `errors` in and TS matches on shape.
+ */
+interface RpcErrorsForMeta {
+  CONFLICT: (args: {
+    data: { reason: string; key?: string };
+  }) => Error;
+}
+
+/**
+ * Thin wrapper around `sanitizeMetaInput` that translates a thrown
+ * `MetaSanitizationError` into the RPC handler's CONFLICT envelope.
+ * Keeps the per-handler call site to one line and localizes the
+ * `meta_${reason}` naming convention here instead of copy-pasting it
+ * into create.ts / update.ts.
+ */
+export function sanitizeMetaForRpc(
+  registry: PluginRegistry,
+  postType: string,
+  input: PostMetaMap | undefined,
+  errors: RpcErrorsForMeta,
+): MetaPatch | null {
+  try {
+    return sanitizeMetaInput(registry, postType, input);
+  } catch (error) {
+    if (error instanceof MetaSanitizationError) {
+      throw errors.CONFLICT({
+        data: { reason: `meta_${error.reason}`, key: error.key },
+      });
+    }
+    throw error;
   }
 }
 
@@ -232,17 +267,16 @@ function coerceOnRead(type: MetaScalarType, value: unknown): unknown {
  * `post.update` to populate the output envelope.
  */
 export async function loadPostMeta(
-  db: Db,
-  registry: PluginRegistry,
+  context: AppContext,
   postId: number,
 ): Promise<PostMetaMap> {
-  const rows = await db
+  const rows = await context.db
     .select({ key: postMeta.key, value: postMeta.value })
     .from(postMeta)
     .where(eq(postMeta.postId, postId));
   const out: PostMetaMap = {};
   for (const row of rows) {
-    out[row.key] = decodeMetaValue(registry, row.key, row.value);
+    out[row.key] = decodeMetaValue(context.plugins, row.key, row.value);
   }
   return out;
 }

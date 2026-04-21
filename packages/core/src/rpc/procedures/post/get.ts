@@ -36,7 +36,7 @@ export const get = base
       }
     }
 
-    const loaded = await loadPostMeta(context.db, context.plugins, row.id);
+    const loaded = await loadPostMeta(context, row.id);
     const meta = await applyPostMetaReadFilter(context, row, loaded);
     return context.hooks.applyFilter("rpc:post.get:output", { ...row, meta });
   });

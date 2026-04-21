@@ -12,8 +12,7 @@ import {
 import {
   applyPostMetaReadFilter,
   loadPostMeta,
-  MetaSanitizationError,
-  sanitizeMetaInput,
+  sanitizeMetaForRpc,
   writePostMetaWithHooks,
 } from "./meta.js";
 import { postCreateInputSchema } from "./schemas.js";
@@ -56,21 +55,12 @@ export const create = base
 
     // Validate meta up-front so a bad key fails before the post insert —
     // keeps the DB clean when the client sends a typo in a meta key.
-    let metaPatch;
-    try {
-      metaPatch = sanitizeMetaInput(
-        context.plugins,
-        filtered.type,
-        filtered.meta,
-      );
-    } catch (error) {
-      if (error instanceof MetaSanitizationError) {
-        throw errors.CONFLICT({
-          data: { reason: `meta_${error.reason}`, key: error.key },
-        });
-      }
-      throw error;
-    }
+    const metaPatch = sanitizeMetaForRpc(
+      context.plugins,
+      filtered.type,
+      filtered.meta,
+      errors,
+    );
 
     const candidate: NewPost = {
       type: filtered.type,
@@ -106,11 +96,7 @@ export const create = base
     if (metaPatch) {
       await writePostMetaWithHooks(context, created, metaPatch);
     }
-    const loadedMeta = await loadPostMeta(
-      context.db,
-      context.plugins,
-      created.id,
-    );
+    const loadedMeta = await loadPostMeta(context, created.id);
     const meta = await applyPostMetaReadFilter(context, created, loadedMeta);
 
     await firePostTransition(context, created, "draft");

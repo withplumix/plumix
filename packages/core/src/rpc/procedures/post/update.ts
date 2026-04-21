@@ -26,8 +26,7 @@ import {
   applyPostMetaReadFilter,
   isEmptyMetaPatch,
   loadPostMeta,
-  MetaSanitizationError,
-  sanitizeMetaInput,
+  sanitizeMetaForRpc,
   writePostMetaWithHooks,
 } from "./meta.js";
 import { postUpdateInputSchema } from "./schemas.js";
@@ -102,17 +101,12 @@ export const update = base
       meta: metaInput,
       ...changes
     } = filtered;
-    let metaPatch;
-    try {
-      metaPatch = sanitizeMetaInput(context.plugins, existing.type, metaInput);
-    } catch (error) {
-      if (error instanceof MetaSanitizationError) {
-        throw errors.CONFLICT({
-          data: { reason: `meta_${error.reason}`, key: error.key },
-        });
-      }
-      throw error;
-    }
+    const metaPatch = sanitizeMetaForRpc(
+      context.plugins,
+      existing.type,
+      metaInput,
+      errors,
+    );
     if (termsPatch !== undefined) {
       for (const taxonomy of Object.keys(termsPatch)) {
         if (!context.plugins.taxonomies.has(taxonomy)) {
@@ -150,11 +144,7 @@ export const update = base
       termsPatch === undefined &&
       isEmptyMetaPatch(metaPatch)
     ) {
-      const loaded = await loadPostMeta(
-        context.db,
-        context.plugins,
-        existing.id,
-      );
+      const loaded = await loadPostMeta(context, existing.id);
       const meta = await applyPostMetaReadFilter(context, existing, loaded);
       return context.hooks.applyFilter("rpc:post.update:output", {
         ...existing,
@@ -215,10 +205,12 @@ export const update = base
       await applyTermPatch(context, updated.id, termsPatch);
     }
 
-    if (metaPatch && !isEmptyMetaPatch(metaPatch)) {
+    // `writePostMetaWithHooks` is a no-op on an empty patch, so the null
+    // check here is the only gate we need — no separate empty-patch check.
+    if (metaPatch) {
       await writePostMetaWithHooks(context, updated, metaPatch);
     }
-    const loaded = await loadPostMeta(context.db, context.plugins, updated.id);
+    const loaded = await loadPostMeta(context, updated.id);
     const meta = await applyPostMetaReadFilter(context, updated, loaded);
 
     if (postColumnsWritten) {

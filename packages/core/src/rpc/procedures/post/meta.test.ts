@@ -191,7 +191,7 @@ describe("applyMetaPatch + loadPostMeta", () => {
     if (!patch) throw new Error("patch should not be null");
     await applyMetaPatch(h.context, post.id, patch);
 
-    const meta = await loadPostMeta(h.context.db, plugins, post.id);
+    const meta = await loadPostMeta(h.context, post.id);
     expect(meta).toEqual({ title: "Written", count: 7, untouched: "keep" });
   });
 
@@ -231,7 +231,7 @@ describe("applyMetaPatch + loadPostMeta", () => {
     await applyMetaPatch(h.context, post.id, set);
     await applyMetaPatch(h.context, post.id, clear);
 
-    const meta = await loadPostMeta(h.context.db, plugins, post.id);
+    const meta = await loadPostMeta(h.context, post.id);
     expect(meta).toEqual({});
   });
 
@@ -248,7 +248,7 @@ describe("applyMetaPatch + loadPostMeta", () => {
       .insert(postMeta)
       .values({ postId: post.id, key: "title", value: "raw-legacy" });
 
-    const meta = await loadPostMeta(h.context.db, plugins, post.id);
+    const meta = await loadPostMeta(h.context, post.id);
     expect(meta).toEqual({ title: "raw-legacy" });
   });
 });

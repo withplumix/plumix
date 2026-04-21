@@ -1,0 +1,6 @@
+# TanStack Router regenerates this on every dev / build run using its own
+# formatter (`quoteStyle` + `semicolons` are set in vite.config.ts). Our
+# repo-wide `@ianvs/prettier-plugin-sort-imports` reorders imports
+# differently, so a `prettier --write` is immediately clobbered on the
+# next generation. Per the generator's own file header, exclude it.
+src/routeTree.gen.ts
