@@ -48,7 +48,7 @@ export const POST_EDITOR_STATUSES: readonly PostStatus[] = [
   "trash",
 ];
 
-export interface PostEditorFormProps {
+interface PostEditorFormProps {
   readonly initialValues: PostEditorValues;
   /** Slug starts unlocked until user edits the slug field directly. For
    * existing posts pass `true` so title edits don't silently rename the
