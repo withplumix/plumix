@@ -16,7 +16,12 @@ import { Label } from "@/components/ui/label.js";
 import { hasCap } from "@/lib/caps.js";
 import { orpc } from "@/lib/orpc.js";
 import { useForm } from "@tanstack/react-form";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import {
   createFileRoute,
   Link,
@@ -72,6 +77,16 @@ export const Route = createFileRoute("/_authenticated/users/$id")({
       throw redirect({ to: "/" });
     }
   },
+  loader: ({ context, params }) =>
+    context.queryClient.ensureQueryData(
+      orpc.user.get.queryOptions({ input: { id: Number(params.id) } }),
+    ),
+  pendingComponent: () => (
+    <FormEditSkeleton ariaLabel="Loading user" testId="user-edit-loading" />
+  ),
+  errorComponent: () => (
+    <NotFoundPlaceholder message="Couldn't load that user. They may have been deleted." />
+  ),
   component: UserEditRoute,
 });
 
@@ -97,20 +112,9 @@ function UserEditRoute(): ReactNode {
     ? hasCap(session.capabilities, "user:edit_own")
     : hasCap(session.capabilities, "user:edit");
 
-  const query = useQuery(orpc.user.get.queryOptions({ input: { id: userId } }));
-
-  if (query.isPending) {
-    return (
-      <FormEditSkeleton ariaLabel="Loading user" testId="user-edit-loading" />
-    );
-  }
-  if (query.isError) {
-    return (
-      <NotFoundPlaceholder message="Couldn't load that user. They may have been deleted." />
-    );
-  }
-
-  const target = query.data;
+  const { data: target } = useSuspenseQuery(
+    orpc.user.get.queryOptions({ input: { id: userId } }),
+  );
   return (
     <UserEditForm
       // Remount after each save so TanStack Form re-reads `defaultValues`
@@ -126,9 +130,6 @@ function UserEditRoute(): ReactNode {
       canSave={canSave}
       canDisable={canDisable}
       canDelete={canDelete}
-      onRefetch={() => {
-        void query.refetch();
-      }}
     />
   );
 }
@@ -140,7 +141,6 @@ function UserEditForm({
   canSave,
   canDisable,
   canDelete,
-  onRefetch,
 }: {
   target: User;
   isSelf: boolean;
@@ -148,9 +148,9 @@ function UserEditForm({
   canSave: boolean;
   canDisable: boolean;
   canDelete: boolean;
-  onRefetch: () => void;
 }): ReactNode {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
   const updateUser = useMutation({
@@ -168,8 +168,14 @@ function UserEditForm({
     onMutate: () => {
       setServerError(null);
     },
-    onSuccess: () => {
-      onRefetch();
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: orpc.user.get.queryOptions({ input: { id: target.id } })
+            .queryKey,
+        }),
+        queryClient.invalidateQueries({ queryKey: orpc.user.list.key() }),
+      ]);
     },
     onError: (err) => {
       setServerError(
@@ -339,19 +345,14 @@ function UserEditForm({
         </CardContent>
       </Card>
 
-      {canDisable ? <StatusCard target={target} onChanged={onRefetch} /> : null}
+      {canDisable ? <StatusCard target={target} /> : null}
       {canDelete ? <DeleteCard target={target} /> : null}
     </div>
   );
 }
 
-function StatusCard({
-  target,
-  onChanged,
-}: {
-  target: User;
-  onChanged: () => void;
-}): ReactNode {
+function StatusCard({ target }: { target: User }): ReactNode {
+  const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const isDisabled = target.disabledAt != null;
 
@@ -363,8 +364,14 @@ function StatusCard({
     onMutate: () => {
       setServerError(null);
     },
-    onSuccess: () => {
-      onChanged();
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: orpc.user.get.queryOptions({ input: { id: target.id } })
+            .queryKey,
+        }),
+        queryClient.invalidateQueries({ queryKey: orpc.user.list.key() }),
+      ]);
     },
     onError: (err) => {
       setServerError(
@@ -424,6 +431,7 @@ function toggleButtonLabel(isDisabled: boolean, isPending: boolean): string {
 
 function DeleteCard({ target }: { target: User }): ReactNode {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState(false);
   const [reassignTo, setReassignTo] = useState<number | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -449,7 +457,13 @@ function DeleteCard({ target }: { target: User }): ReactNode {
     onMutate: () => {
       setServerError(null);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Purge the now-deleted row from the list cache before we land
+      // there — otherwise the destination renders stale within the
+      // list's staleTime window.
+      await queryClient.invalidateQueries({
+        queryKey: orpc.user.list.key(),
+      });
       void navigate({ to: "/users", search: USERS_LIST_DEFAULT_SEARCH });
     },
     onError: (err) => {

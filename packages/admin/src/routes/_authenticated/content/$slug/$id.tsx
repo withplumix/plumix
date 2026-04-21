@@ -9,8 +9,17 @@ import { Skeleton } from "@/components/ui/skeleton.js";
 import { hasCap } from "@/lib/caps.js";
 import { findPostTypeBySlug, metaBoxesForPostType } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
+import {
+  createFileRoute,
+  notFound,
+  redirect,
+  useNavigate,
+} from "@tanstack/react-router";
 
 import type { PostTypeManifestEntry } from "@plumix/core/manifest";
 import type { PostWithMeta } from "@plumix/core/schema";
@@ -24,19 +33,64 @@ export const Route = createFileRoute("/_authenticated/content/$slug/$id")({
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw notFound();
     }
+    const postId = Number(params.id);
+    if (Number.isNaN(postId) || postId < 1) {
+      // Non-numeric or negative ids can't resolve — bounce back to the
+      // post-type list rather than firing an RPC with garbage.
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router redirect pattern
+      throw redirect({
+        to: "/content/$slug",
+        params: { slug: params.slug },
+        search: CONTENT_LIST_DEFAULT_SEARCH,
+      });
+    }
     return { postType };
   },
+  loader: ({ context, params }) =>
+    context.queryClient.ensureQueryData(
+      orpc.post.get.queryOptions({ input: { id: Number(params.id) } }),
+    ),
+  // Pending/error screens are per-slug so copy reflects the actual
+  // type ("page", "product") instead of hardcoding "post".
+  pendingComponent: EditPostPendingScreen,
+  errorComponent: EditPostErrorScreen,
   component: EditPostRoute,
 });
+
+function postTypeSingular(slug: string): string {
+  const postType = findPostTypeBySlug(slug);
+  return (
+    postType?.labels?.singular ??
+    postType?.label ??
+    "post"
+  ).toLowerCase();
+}
+
+function EditPostPendingScreen(): ReactNode {
+  const { slug } = Route.useParams();
+  return <EditorSkeleton label={`Loading ${postTypeSingular(slug)}`} />;
+}
+
+function EditPostErrorScreen(): ReactNode {
+  const { slug } = Route.useParams();
+  return (
+    <NotFoundPlaceholder
+      message={`Couldn't load that ${postTypeSingular(slug)}. It may have been deleted.`}
+    />
+  );
+}
 
 function EditPostRoute(): ReactNode {
   const { user, postType } = Route.useRouteContext();
   const params = Route.useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const postId = Number(params.id);
   const [serverError, setServerError] = useState<string | null>(null);
 
-  const query = useQuery(orpc.post.get.queryOptions({ input: { id: postId } }));
+  const { data: post } = useSuspenseQuery(
+    orpc.post.get.queryOptions({ input: { id: postId } }),
+  );
 
   const updatePost = useMutation({
     mutationFn: (input: PostEditorValues) =>
@@ -52,8 +106,18 @@ function EditPostRoute(): ReactNode {
     onMutate: () => {
       setServerError(null);
     },
-    onSuccess: () => {
-      void query.refetch();
+    onSuccess: async () => {
+      // List variants are scoped by `type` so sibling post types
+      // don't needlessly refetch.
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: orpc.post.get.queryOptions({ input: { id: postId } })
+            .queryKey,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: orpc.post.list.key({ input: { type: postType.name } }),
+        }),
+      ]);
     },
     onError: (err) => {
       setServerError(err instanceof Error ? err.message : "Couldn't save.");
@@ -64,36 +128,11 @@ function EditPostRoute(): ReactNode {
     postType.labels?.singular ?? postType.label
   ).toLowerCase();
 
-  // Meta boxes registered for this post type, filtered by the user's
-  // capabilities. Computed unconditionally (before any early returns)
-  // to keep the hook order stable across render paths.
   const metaBoxes = useMemo(
     () => metaBoxesForPostType(postType.name, user.capabilities),
     [postType.name, user.capabilities],
   );
 
-  if (Number.isNaN(postId) || postId < 1) {
-    // Defensive: `$id` param is a string; reject anything non-numeric
-    // rather than hitting the RPC with garbage. The router could enforce
-    // this via a loader, but the dedicated check keeps the error local.
-    return (
-      <NotFoundPlaceholder message="The post id in the URL isn't a number." />
-    );
-  }
-
-  if (query.isPending) {
-    return <EditorSkeleton label={`Loading ${singularLower}`} />;
-  }
-
-  if (query.isError) {
-    return (
-      <NotFoundPlaceholder
-        message={`Couldn't load that ${singularLower}. It may have been deleted.`}
-      />
-    );
-  }
-
-  const post = query.data;
   const capNamespace = postType.capabilityType ?? postType.name;
   const canEditAny = hasCap(user.capabilities, `${capNamespace}:edit_any`);
   const canEditOwn =

@@ -3,7 +3,7 @@
 Pre-built React SPA that ships inside the [`plumix`](../plumix) package.
 The admin compiles once into `dist/`, gets copied into `plumix/dist/admin-app/`
 at plumix build time, and the plumix Vite plugin stages it into the consumer's
-`.plumix/public/_plumix/admin/` directory so Cloudflare Workers Assets serves
+`.plumix/public/_plumix/admin/` directory so the active runtime adapter serves
 it at `/_plumix/admin/*` with no per-consumer rebuild.
 
 ## Dev workflows
@@ -12,8 +12,8 @@ Two supported loops, pick whichever matches what you're iterating on.
 
 ### Consumer-style: `plumix dev` only (single origin)
 
-Once the consumer has the `assets` binding in their wrangler config (see
-[examples/minimal/wrangler.jsonc](../../examples/minimal/wrangler.jsonc)),
+Once the consumer has wired static-asset serving for their chosen runtime
+(the example app's config shows the right binding for that runtime),
 running the backend serves admin too — no second process:
 
 ```bash
@@ -22,8 +22,9 @@ pnpm dev                              # :5173
 # open http://localhost:5173/_plumix/admin/
 ```
 
-This mode exercises the same serving path production uses (CF Assets in
-front of the worker). Best for "does my feature work end-to-end?" checks.
+This mode exercises the same serving path production uses (the runtime's
+asset layer in front of the request handler). Best for "does my feature
+work end-to-end?" checks.
 
 ### Admin-authoring: `pnpm dev` in both workspaces (two ports, HMR)
 
@@ -57,8 +58,8 @@ two-port layout as the two-terminal variant but in one shell.
 ### First-time setup
 
 Before RPC endpoints work, the dev database needs migrations applied —
-the specifics depend on the database adapter the example app uses.
-For `examples/minimal` (Cloudflare D1):
+the specifics depend on the database adapter the example app uses. From
+your example app (e.g. `examples/minimal`):
 
 ```bash
 cd examples/minimal
@@ -143,7 +144,8 @@ as noise, so add the full set you expect to use.
 
 Admin build output (`dist/`) becomes a static asset bundle inside the
 published `plumix` tarball. At consumer build time, `plumix build` copies
-those assets into the consumer's `dist/_plumix/admin/` and the runtime
-dispatcher (see `packages/core/src/runtime/dispatcher.ts`) serves them.
-Plugin-contributed admin chunks + the manifest that wires them are planned
-for a later phase — see ARCHITECTURE.md §Admin for the full design.
+those assets into the consumer's `dist/_plumix/admin/` and the active
+runtime adapter serves them (see `packages/core/src/runtime/dispatcher.ts`
+for the runtime-agnostic request pipeline). Plugin-contributed admin
+chunks + the manifest that wires them are planned for a later phase —
+see ARCHITECTURE.md §Admin for the full design.
