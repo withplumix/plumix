@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/sidebar.js";
 import { visiblePostTypes } from "@/lib/manifest.js";
 import { Link } from "@tanstack/react-router";
-import { FileText, LayoutDashboard } from "lucide-react";
+import { FileText, LayoutDashboard, Users } from "lucide-react";
 
 import type { UserIdentity } from "./user-menu.js";
 import { UserMenu } from "./user-menu.js";
@@ -55,6 +55,19 @@ function buildContentGroup(capabilities: readonly string[]): NavGroup | null {
   return { label: "Content", items };
 }
 
+// `user:list` is admin / editor-level. Subscribers and authors see their
+// own profile via `/profile` (future PR) but don't get a user-management
+// nav entry at all — matches WordPress's "Users" menu being role-gated.
+function buildManagementGroup(
+  capabilities: readonly string[],
+): NavGroup | null {
+  if (!capabilities.includes("user:list")) return null;
+  return {
+    label: "Management",
+    items: [{ to: "/users", label: "Users", icon: Users }],
+  };
+}
+
 export function AppSidebar({
   user,
   capabilities,
@@ -63,9 +76,12 @@ export function AppSidebar({
   capabilities: readonly string[];
 }): ReactNode {
   const contentGroup = buildContentGroup(capabilities);
-  const groups = contentGroup
-    ? [OVERVIEW_GROUP, contentGroup]
-    : [OVERVIEW_GROUP];
+  const managementGroup = buildManagementGroup(capabilities);
+  const groups = [
+    OVERVIEW_GROUP,
+    ...(contentGroup ? [contentGroup] : []),
+    ...(managementGroup ? [managementGroup] : []),
+  ];
   return (
     <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader>

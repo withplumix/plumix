@@ -134,6 +134,31 @@ declare module "../hooks/types.js" {
       post: { readonly id: number; readonly type: string },
       changes: PostMetaChanges,
     ) => void | Promise<void>;
+
+    /**
+     * Fires after `user.invite` persists the pending user + token. Main
+     * consumer is an email-delivery plugin composing the invite link
+     * from `inviteToken`. Payload matches WP's `user_register` plus
+     * invite-specific fields — plugins listening on both `user:invited`
+     * and `user:registered` can tell "invite sent" from "invite taken".
+     */
+    "user:invited": (
+      user: User,
+      context: {
+        readonly inviteToken: string;
+        readonly invitedBy: number;
+        readonly expiresAt: Date;
+      },
+    ) => void | Promise<void>;
+
+    /**
+     * Fires after a user completes invite acceptance (passkey persisted,
+     * invite token consumed, session created). Parallel to WordPress's
+     * `user_register` when the user comes online for the first time.
+     * Use this (not `user:invited`) for onboarding flows like welcome
+     * emails or default-content seeding.
+     */
+    "user:registered": (user: User) => void | Promise<void>;
   }
 }
 

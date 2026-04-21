@@ -19,8 +19,11 @@ type PasskeyServerErrorCode =
   | "user_not_found"
   | "invalid_response"
   | "challenge_not_bound_to_user"
+  | "challenge_mismatch"
   | "registration_closed"
   | "email_mismatch"
+  | "invalid_token"
+  | "token_expired"
   | "invalid_input";
 
 // Browser-side failures we distinguish ourselves before/after the server call.
@@ -95,6 +98,14 @@ const MESSAGES: Record<PasskeyErrorCode, string> = {
   user_not_found: "No account found for that email.",
   registration_closed: "Sign-up is not open on this site.",
   email_mismatch: "That email doesn't match your signed-in account.",
+
+  // --- server-side: invite acceptance ---
+  invalid_token:
+    "This invite link is no longer valid. Ask your admin to send a new one.",
+  token_expired:
+    "This invite link has expired. Ask your admin to send a new one.",
+  challenge_mismatch:
+    "The passkey was created for a different invite. Please reload and try again.",
 };
 
 export function getPasskeyErrorMessage(code: string): string {

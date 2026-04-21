@@ -2,7 +2,7 @@ import type { Page, Route } from "@playwright/test";
 
 import type { AuthSessionOutput } from "@plumix/core";
 import type { PlumixManifest } from "@plumix/core/manifest";
-import type { Post } from "@plumix/core/schema";
+import type { Post, User } from "@plumix/core/schema";
 
 // The e2e webServer is just Vite — no real backend — so every /_plumix/rpc
 // call is intercepted here and answered with a deterministic fixture.
@@ -17,6 +17,8 @@ import type { Post } from "@plumix/core/schema";
 interface MockRpcHandlers {
   "/auth/session"?: AuthSessionOutput;
   "/post/list"?: readonly Post[];
+  "/user/list"?: readonly User[];
+  "/user/invite"?: { user: User; inviteToken: string };
 }
 
 // oRPC's StandardRPCSerializer wire format — `meta` is always present,

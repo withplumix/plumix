@@ -431,6 +431,11 @@ export async function handleInviteRegisterVerify(
       { userId: user.id },
       app.sessionPolicy,
     );
+    // User is fully enrolled (credential persisted, token consumed,
+    // session created). Fire after the session exists so handlers that
+    // hit the DB can rely on the user being in a stable post-invite
+    // state — matches WP's `user_register` firing post-save.
+    await ctx.hooks.doAction("user:registered", user);
     return jsonResponse(
       { userId: user.id },
       {
