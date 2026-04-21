@@ -18,7 +18,7 @@ import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 import * as v from "valibot";
 
 import type { PostTypeManifestEntry } from "@plumix/core/manifest";
-import type { PostWithMeta } from "@plumix/core/schema";
+import type { Post } from "@plumix/core/schema";
 import { idPathParam } from "@plumix/core/validation";
 
 import { CONTENT_LIST_DEFAULT_SEARCH } from "./-constants.js";
@@ -197,17 +197,13 @@ function EditPostRoute(): ReactNode {
   );
 }
 
-function toEditorValues(post: PostWithMeta): PostEditorValues {
+function toEditorValues(post: Post): PostEditorValues {
   return {
     title: post.title,
     slug: post.slug,
     content: post.content,
     excerpt: post.excerpt ?? "",
     status: post.status,
-    // `post.meta` ships alongside the post row (server hydrates it from
-    // post_meta, typed against the plugin registry). Passing as-is — the
-    // editor form treats values as `unknown` and the field dispatcher
-    // handles per-type coercion on render.
     meta: post.meta,
   };
 }

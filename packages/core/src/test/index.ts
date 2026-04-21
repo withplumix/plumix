@@ -21,9 +21,6 @@ export {
   sessionFactory,
   optionFactory,
   postTermFactory,
-  postMetaFactory,
-  userMetaFactory,
-  termMetaFactory,
   allowedDomainFactory,
   factoriesFor,
 } from "./factories.js";

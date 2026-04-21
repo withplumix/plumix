@@ -10,6 +10,11 @@ export const terms = sqliteTable(
     name: t.text().notNull(),
     slug: t.text().notNull(),
     description: t.text(),
+    meta: t
+      .text({ mode: "json" })
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
     parentId: t.integer().references((): AnySQLiteColumn => terms.id, {
       onDelete: "set null",
     }),

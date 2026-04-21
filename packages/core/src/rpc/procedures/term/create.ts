@@ -59,5 +59,6 @@ export const create = base
       throw errors.CONFLICT({ data: { reason: "insert_failed" } });
     }
 
+    await context.hooks.doAction("term:created", created);
     return context.hooks.applyFilter("rpc:term.create:output", created);
   });

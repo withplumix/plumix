@@ -15,6 +15,7 @@ function term(overrides: Partial<Term> & { id: number; name: string }): Term {
     slug: overrides.name.toLowerCase().replaceAll(" ", "-"),
     description: null,
     parentId: null,
+    meta: {},
     ...overrides,
   };
 }

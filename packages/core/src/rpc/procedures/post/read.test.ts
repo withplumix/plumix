@@ -1,7 +1,8 @@
 import { describe, expect, test } from "vitest";
 
-import { postMeta } from "../../../db/schema/post_meta.js";
+import { eq } from "../../../db/index.js";
 import { postTerm } from "../../../db/schema/post_term.js";
+import { posts } from "../../../db/schema/posts.js";
 import { terms } from "../../../db/schema/terms.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { createRpcHarness } from "../../../test/rpc.js";
@@ -551,14 +552,14 @@ describe("post.get", () => {
     expect(got.id).toBe(theirs.id);
   });
 
-  test("response includes a `meta` bag — empty object when the post has no rows", async () => {
+  test("response includes a `meta` bag — empty object on a fresh post", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const post = await h.factory.published.create({ authorId: h.user.id });
     const got = await h.client.post.get({ id: post.id });
     expect(got.meta).toEqual({});
   });
 
-  test("response hydrates meta rows, typed against the plugin registry", async () => {
+  test("response hydrates the meta bag, typed against the plugin registry", async () => {
     const plugins = createPluginRegistry();
     plugins.metaKeys.set("meta_title", {
       key: "meta_title",
@@ -574,12 +575,12 @@ describe("post.get", () => {
     });
     const h = await createRpcHarness({ authAs: "admin", plugins });
     const post = await h.factory.published.create({ authorId: h.user.id });
-    // Write directly to the DB (bypassing the RPC sanitizer) to prove the
-    // reader decodes what the writer laid down.
-    await h.context.db.insert(postMeta).values([
-      { postId: post.id, key: "meta_title", value: '"Seeded"' },
-      { postId: post.id, key: "is_featured", value: "true" },
-    ]);
+    // Write directly to the column (bypassing the RPC sanitizer) to prove
+    // the reader decodes what the writer laid down.
+    await h.context.db
+      .update(posts)
+      .set({ meta: { meta_title: "Seeded", is_featured: true } })
+      .where(eq(posts.id, post.id));
     const got = await h.client.post.get({ id: post.id });
     expect(got.meta).toEqual({ meta_title: "Seeded", is_featured: true });
   });

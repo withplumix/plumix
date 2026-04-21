@@ -40,6 +40,11 @@ export const posts = sqliteTable(
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
     menuOrder: t.integer().notNull().default(0),
+    meta: t
+      .text({ mode: "json" })
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
     publishedAt: t.integer({ mode: "timestamp" }),
     createdAt: t
       .integer({ mode: "timestamp" })
@@ -65,16 +70,6 @@ export const posts = sqliteTable(
 
 export type Post = typeof posts.$inferSelect;
 export type NewPost = typeof posts.$inferInsert;
-
-/**
- * `Post` row plus its decoded meta bag. Returned by `post.get` /
- * `post.create` / `post.update` so the editor can render meta boxes in
- * one round-trip. Values are `unknown` — per-key types are driven by
- * the plugin registry (`MetaScalarType`) and coerced on read.
- */
-export type PostWithMeta = Post & {
-  readonly meta: Readonly<Record<string, unknown>>;
-};
 
 export const postInsertSchema = createInsertSchema(posts);
 export const postSelectSchema = createSelectSchema(posts);

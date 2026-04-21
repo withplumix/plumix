@@ -75,5 +75,6 @@ export const update = base
       throw errors.CONFLICT({ data: { reason: "update_failed" } });
     }
 
+    await context.hooks.doAction("term:updated", updated, existing);
     return context.hooks.applyFilter("rpc:term.update:output", updated);
   });

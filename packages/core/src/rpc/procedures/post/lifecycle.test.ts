@@ -12,7 +12,7 @@ describe("lifecycle — WordPress-style hook fan-out", () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const trail: string[] = [];
 
-    h.hooks.addFilter("landing_page:before_save", (post) => {
+    h.hooks.addFilter("post:landing_page:before_save", (post) => {
       trail.push("specific");
       return { ...post, title: `[specific] ${post.title}` };
     });
@@ -37,7 +37,7 @@ describe("lifecycle — WordPress-style hook fan-out", () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const onSpecific = vi.fn();
     const onGeneric = vi.fn();
-    h.hooks.addAction("landing_page:published", onSpecific);
+    h.hooks.addAction("post:landing_page:published", onSpecific);
     h.hooks.addAction("post:published", onGeneric);
 
     const row = await h.factory.published.create({

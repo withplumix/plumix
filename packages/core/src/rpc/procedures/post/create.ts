@@ -11,10 +11,10 @@ import {
   postCapability,
 } from "./lifecycle.js";
 import {
-  applyPostMetaReadFilter,
+  decodeMetaBag,
   loadPostMeta,
   sanitizeMetaForRpc,
-  writePostMetaWithHooks,
+  writePostMeta,
 } from "./meta.js";
 import { postCreateInputSchema } from "./schemas.js";
 
@@ -96,11 +96,15 @@ export const create = base
       throw errors.CONFLICT({ data: { reason: "slug_taken" } });
     }
 
+    let meta: Record<string, unknown>;
     if (metaPatch) {
-      await writePostMetaWithHooks(context, created, metaPatch);
+      await writePostMeta(context, created, metaPatch);
+      meta = await loadPostMeta(context, created.id);
+    } else {
+      // No write path — `created.meta` is the default `{}`. Decode inline
+      // to save the round trip.
+      meta = decodeMetaBag(context.plugins, created.meta);
     }
-    const loadedMeta = await loadPostMeta(context, created.id);
-    const meta = await applyPostMetaReadFilter(context, created, loadedMeta);
 
     await firePostTransition(context, created, "draft");
     if (created.status === "published") {

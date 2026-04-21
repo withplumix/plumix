@@ -351,7 +351,7 @@ describe("post.update", () => {
     expect(reloaded.title).toBe("p3");
   });
 
-  test("meta hooks: rpc:post.meta:write can rewrite a patch; post.meta:updated fires with the final bag", async () => {
+  test("rpc:post.update:input can inject derived meta before sanitization; post:meta_changed fires with the final bag", async () => {
     const plugins = createPluginRegistry();
     plugins.metaKeys.set("title", {
       key: "title",
@@ -366,14 +366,16 @@ describe("post.update", () => {
       registeredBy: "test",
     });
     const h = await createRpcHarness({ authAs: "admin", plugins });
-    // Plugin that mirrors `title` into `title_lc` on every write — a
-    // realistic use of the write filter (derived / normalized field).
-    h.hooks.addFilter("rpc:post.meta:write", (patch) => {
-      const title = patch.upserts.get("title");
-      if (typeof title !== "string") return patch;
-      const upserts = new Map(patch.upserts);
-      upserts.set("title_lc", title.toLowerCase());
-      return { ...patch, upserts };
+    // Derived meta at the input stage: mirror `title` into `title_lc` on
+    // every update. Replaces the old `rpc:post.meta:write` filter —
+    // plugins operate on the raw input before sanitization.
+    h.hooks.addFilter("rpc:post.update:input", (input) => {
+      const title = input.meta?.title;
+      if (typeof title !== "string") return input;
+      return {
+        ...input,
+        meta: { ...input.meta, title_lc: title.toLowerCase() },
+      };
     });
     const onUpdated = h.spyAction("post:meta_changed");
 
@@ -388,9 +390,6 @@ describe("post.update", () => {
       title: "SHOUTING",
       title_lc: "shouting",
     });
-    // Create had no meta → write filter / action didn't fire for it.
-    // The update is the only meta-bearing call, so the action fired once
-    // with the filter's augmented changes.
     onUpdated.assertCalledOnce();
     expect(onUpdated.lastArgs?.[1]).toEqual({
       set: { title: "SHOUTING", title_lc: "shouting" },
@@ -398,7 +397,7 @@ describe("post.update", () => {
     });
   });
 
-  test("meta hooks: rpc:post.meta:read can decorate the bag without touching storage", async () => {
+  test("rpc:post.get:output can decorate the returned meta bag without touching storage", async () => {
     const plugins = createPluginRegistry();
     plugins.metaKeys.set("title", {
       key: "title",
@@ -407,9 +406,13 @@ describe("post.update", () => {
       registeredBy: "test",
     });
     const h = await createRpcHarness({ authAs: "admin", plugins });
-    h.hooks.addFilter("rpc:post.meta:read", (meta) => ({
-      ...meta,
-      _derived: "always-there",
+    // Decorate-on-read: inject a derived key into every response. Replaces
+    // the old `rpc:post.meta:read` filter — plugins subscribe to the
+    // post-level output filter (or all three: create/update/get) and
+    // mutate `output.meta`.
+    h.hooks.addFilter("rpc:post.get:output", (output) => ({
+      ...output,
+      meta: { ...output.meta, _derived: "always-there" },
     }));
 
     const post = await h.client.post.create({
@@ -417,7 +420,9 @@ describe("post.update", () => {
       slug: "p",
       meta: { title: "stored" },
     });
-    expect(post.meta).toEqual({ title: "stored", _derived: "always-there" });
+    // create:output filter wasn't installed → bag is unadorned.
+    expect(post.meta).toEqual({ title: "stored" });
+
     const refetched = await h.client.post.get({ id: post.id });
     expect(refetched.meta).toEqual({
       title: "stored",

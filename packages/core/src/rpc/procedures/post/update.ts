@@ -24,11 +24,11 @@ import {
   wouldCreateParentCycle,
 } from "./lifecycle.js";
 import {
-  applyPostMetaReadFilter,
+  decodeMetaBag,
   isEmptyMetaPatch,
   loadPostMeta,
   sanitizeMetaForRpc,
-  writePostMetaWithHooks,
+  writePostMeta,
 } from "./meta.js";
 import { postUpdateInputSchema } from "./schemas.js";
 
@@ -147,8 +147,7 @@ export const update = base
       termsPatch === undefined &&
       isEmptyMetaPatch(metaPatch)
     ) {
-      const loaded = await loadPostMeta(context, existing.id);
-      const meta = await applyPostMetaReadFilter(context, existing, loaded);
+      const meta = decodeMetaBag(context.plugins, existing.meta);
       return context.hooks.applyFilter("rpc:post.update:output", {
         ...existing,
         meta,
@@ -208,13 +207,15 @@ export const update = base
       await applyTermPatch(context, updated.id, termsPatch);
     }
 
-    // `writePostMetaWithHooks` is a no-op on an empty patch, so the null
-    // check here is the only gate we need — no separate empty-patch check.
+    // `writePostMeta` is a no-op on an empty patch, so the null check
+    // here is the only gate we need.
+    let meta: Record<string, unknown>;
     if (metaPatch) {
-      await writePostMetaWithHooks(context, updated, metaPatch);
+      await writePostMeta(context, updated, metaPatch);
+      meta = await loadPostMeta(context, updated.id);
+    } else {
+      meta = decodeMetaBag(context.plugins, updated.meta);
     }
-    const loaded = await loadPostMeta(context, updated.id);
-    const meta = await applyPostMetaReadFilter(context, updated, loaded);
 
     if (postColumnsWritten) {
       await firePostUpdated(context, updated, existing);
