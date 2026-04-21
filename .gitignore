@@ -52,3 +52,4 @@ yarn-error.log*
 # Internal planning and reference docs (not committed)
 PLAN.md
 docs/reference/
+.claude/
