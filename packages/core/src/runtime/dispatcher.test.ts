@@ -1,13 +1,16 @@
 import { describe, expect, test } from "vitest";
 
+import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness, plumixRequest } from "../test/dispatcher.js";
 
 describe("dispatcher — routing", () => {
-  test("public / returns the SSR placeholder", async () => {
+  test("public / 404s when no plugin claims it", async () => {
     const h = await createDispatcherHarness();
     const response = await h.dispatch(new Request("https://cms.example/"));
-    expect(response.status).toBe(200);
-    expect(await response.text()).toBe("<h1>Plumix</h1>");
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-plumix-hint")).toBe(
+      "public-route-not-found",
+    );
   });
 
   test("/_plumix/admin returns 404 with admin-not-available when no assets binding is configured", async () => {
@@ -245,6 +248,62 @@ describe("dispatcher — auth routes", () => {
 });
 
 describe("dispatcher — error boundary", () => {
+  test("public GET resolves a plugin-registered single-post route", async () => {
+    const blog = definePlugin("test-blog", (ctx) => {
+      ctx.registerPostType("post", { label: "Posts", isPublic: true });
+    });
+    const h = await createDispatcherHarness({ plugins: [blog] });
+    const author = await h.seedUser("admin");
+    await h.factory.post.create({
+      type: "post",
+      slug: "hello-world",
+      title: "Hello World",
+      content: {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "First post." }],
+          },
+        ],
+      },
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/hello-world"),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe(
+      "text/html; charset=utf-8",
+    );
+    const body = await response.text();
+    expect(body).toContain("<h1>Hello World</h1>");
+    expect(body).toContain("<p>First post.</p>");
+  });
+
+  test("public GET 404s for an unknown slug", async () => {
+    const blog = definePlugin("test-blog", (ctx) => {
+      ctx.registerPostType("post", { label: "Posts", isPublic: true });
+    });
+    const h = await createDispatcherHarness({ plugins: [blog] });
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/nope"),
+    );
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-plumix-hint")).toBe("public-post-not-found");
+  });
+
+  test("public POST returns 405 (public routes are GET/HEAD-only in PR 1)", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      new Request("https://cms.example/anything", { method: "POST" }),
+    );
+    expect(response.status).toBe(405);
+  });
+
   test("unhandled handler exceptions return 500 JSON (no raw throw)", async () => {
     const h = await createDispatcherHarness();
     h.app.hooks.addFilter("rpc:post.list:input", () => {

@@ -4,7 +4,7 @@ import { postInsertSchema } from "../../../db/schema/posts.js";
 import { slugSchema } from "../../schemas.js";
 import { idParam } from "../../validation.js";
 
-const MAX_CONTENT_BYTES = 1_000_000;
+export const MAX_CONTENT_BYTES = 1_000_000;
 const MAX_EXCERPT_LENGTH = 600;
 // 200 covers WordPress's practical ceiling many times over while still
 // bounding pathological payloads on the record-validate path.
@@ -13,9 +13,11 @@ const MAX_TERMS_PER_TAXONOMY = 200;
 const trimmedText = (max: number) =>
   v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(max));
 
-const contentSchema = v.nullable(
-  v.pipe(v.string(), v.maxLength(MAX_CONTENT_BYTES)),
-);
+// Content is a ProseMirror JSON document. The public renderer's walker
+// allowlists node types on render, so the RPC only rejects obvious
+// garbage (non-objects). Byte-size cap is enforced in the handler via
+// `assertContentWithinByteCap` after a single serialize.
+const contentSchema = v.nullable(v.record(v.string(), v.unknown()));
 const excerptSchema = v.nullable(
   v.pipe(v.string(), v.maxLength(MAX_EXCERPT_LENGTH)),
 );

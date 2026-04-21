@@ -1,3 +1,4 @@
+import type { JSONContent } from "@tiptap/react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { MetaBox } from "@/components/meta-box/meta-box.js";
@@ -32,7 +33,7 @@ const postEditorSchema = v.object({
       "Slug must be lowercase letters, numbers, and dashes",
     ),
   ),
-  content: v.optional(v.string(), ""),
+  content: v.nullable(v.custom<JSONContent>(() => true)),
   excerpt: v.optional(v.pipe(v.string(), v.maxLength(600)), ""),
   status: v.picklist(["draft", "published", "scheduled", "trash"] as const),
   /**
@@ -193,8 +194,8 @@ export function PostEditorForm({
                 <div id="post-editor-content">
                   <TiptapEditor
                     value={field.state.value}
-                    onChange={(html) => {
-                      field.handleChange(html);
+                    onChange={(json) => {
+                      field.handleChange(json);
                     }}
                     disabled={isSubmitting}
                     ariaLabel="Post content"

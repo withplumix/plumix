@@ -95,7 +95,7 @@ function EditPostRoute(): ReactNode {
         id: postId,
         title: input.title,
         slug: input.slug,
-        content: input.content.length > 0 ? input.content : null,
+        content: input.content,
         excerpt: input.excerpt.length > 0 ? input.excerpt : null,
         status: input.status,
         meta: input.meta,
@@ -201,7 +201,7 @@ function toEditorValues(post: PostWithMeta): PostEditorValues {
   return {
     title: post.title,
     slug: post.slug,
-    content: post.content ?? "",
+    content: post.content,
     excerpt: post.excerpt ?? "",
     status: post.status,
     // `post.meta` ships alongside the post row (server hydrates it from

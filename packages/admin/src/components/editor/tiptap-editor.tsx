@@ -1,5 +1,6 @@
+import type { JSONContent } from "@tiptap/react";
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button.js";
 import { cn } from "@/lib/utils.js";
 import { EditorContent, useEditor } from "@tiptap/react";
@@ -14,31 +15,34 @@ import {
   ListOrdered,
 } from "lucide-react";
 
-// Minimal Tiptap editor with the toolbar WP admins expect for a "light"
-// content surface. Content is stored and round-tripped as HTML via the
-// parent form — Tiptap serialises to HTML by default, which is what the
-// `posts.content` column holds today. A future PR may swap to ProseMirror
-// JSON for richer block support; keeping HTML here avoids a migration.
+// Minimal Tiptap editor. `value` is a ProseMirror JSON document — the
+// public resolver walks the JSON against a node-type allowlist, which is
+// the trust boundary that keeps `<script>` and other untrusted HTML out
+// of public pages even if a contributor bypasses the editor via RPC.
 export function TiptapEditor({
   value,
   onChange,
   disabled = false,
   ariaLabel,
 }: {
-  readonly value: string;
-  readonly onChange: (html: string) => void;
+  readonly value: JSONContent | null;
+  readonly onChange: (json: JSONContent) => void;
   readonly disabled?: boolean;
   readonly ariaLabel?: string;
 }): ReactNode {
+  // Track the last value emitted by the editor itself so the sync-effect
+  // below can skip `setContent` when the incoming prop is exactly that
+  // value coming back through the parent's state (which would fight the
+  // caret on every keystroke).
+  const lastEmittedRef = useRef<JSONContent | null>(value);
+
   const editor = useEditor({
     extensions: [
       // StarterKit v3 bundles Link; keep it configured here so the toolbar
       // button's behaviour (openOnClick off so admins can freely edit,
       // safe rel attrs on user-entered hrefs) is explicit. Whitelist URL
-      // schemes — without this a contributor could paste `javascript:…`
-      // into the prompt and the HTML would execute when another admin
-      // rendered the post. Defense-in-depth inside the admin trust
-      // boundary; matches WP's kses Link filter.
+      // schemes — defense-in-depth inside the admin; the public walker
+      // re-checks on render.
       StarterKit.configure({
         heading: { levels: [2, 3] },
         link: {
@@ -63,16 +67,15 @@ export function TiptapEditor({
       },
     },
     onUpdate: ({ editor: e }) => {
-      onChange(e.getHTML());
+      const json = e.getJSON();
+      lastEmittedRef.current = json;
+      onChange(json);
     },
   });
 
-  // Sync external value changes (e.g., loading an existing post) into the
-  // editor without a render-time setContent — that'd fight the user's
-  // cursor. Only updates when the incoming HTML genuinely differs from
-  // the editor's current content.
   useEffect(() => {
-    if (editor.getHTML() === value) return;
+    if (lastEmittedRef.current === value) return;
+    lastEmittedRef.current = value;
     editor.commands.setContent(value);
   }, [editor, value]);
 
