@@ -52,7 +52,7 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@cloudflare/vite-plugin": "^1.32.3",
+    "@cloudflare/vite-plugin": "^1.33.0",
     "@plumix/core": "workspace:*",
     "jsonc-parser": "^3.3.1",
     "plumix": "workspace:*",
