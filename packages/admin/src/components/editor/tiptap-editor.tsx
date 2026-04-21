@@ -61,7 +61,7 @@ export function TiptapEditor({
       attributes: {
         class:
           "prose prose-sm dark:prose-invert max-w-none min-h-40 p-3 focus-visible:outline-none",
-        "aria-label": ariaLabel ?? "Post content",
+        "aria-label": ariaLabel ?? "Entry content",
         role: "textbox",
         "aria-multiline": "true",
       },

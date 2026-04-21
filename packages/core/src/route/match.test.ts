@@ -7,14 +7,14 @@ function rule(pathname: string, priority = 50): RouteRule {
   return {
     pattern: new URLPattern({ pathname }),
     rawPattern: pathname,
-    intent: { kind: "single", postType: "post" },
+    intent: { kind: "single", entryType: "post" },
     priority,
   };
 }
 
 describe("matchRoute", () => {
   test("returns null when no rule matches", () => {
-    const rules = [rule("/posts/:slug")];
+    const rules = [rule("/entries/:slug")];
     expect(matchRoute(new URL("https://cms.example/other"), rules)).toBeNull();
   });
 
@@ -30,6 +30,6 @@ describe("matchRoute", () => {
   test("first match wins — iteration order is the caller's responsibility", () => {
     const rules = [rule("/a/:slug"), rule("/a/:slug")];
     const result = matchRoute(new URL("https://cms.example/a/hello"), rules);
-    expect(result?.intent).toEqual({ kind: "single", postType: "post" });
+    expect(result?.intent).toEqual({ kind: "single", entryType: "post" });
   });
 });

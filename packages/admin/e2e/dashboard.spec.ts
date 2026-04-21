@@ -18,7 +18,7 @@ test.describe("/ (dashboard)", () => {
     await expect(page.getByTestId("dashboard-welcome-heading")).toBeVisible();
     await expect(page.getByTestId("dashboard-tile-post-link")).toHaveAttribute(
       "href",
-      /\/content\/posts/,
+      /\/content\/entries/,
     );
     await expectNoAxeViolations(page);
   });

@@ -17,11 +17,11 @@ import {
   createRpcHarness,
   createTestDb,
   credentialFactory,
+  entryFactory,
   factoriesFor,
   inviteFactory,
   plumixRequest,
-  postFactory,
-  publishedPost,
+  publishedEntry,
   tagTerm,
   termFactory,
   userFactory,
@@ -32,8 +32,8 @@ describe("plumix/test subpath", () => {
   test("re-exports the full factory + harness surface", () => {
     for (const exp of [
       userFactory,
-      postFactory,
-      publishedPost,
+      entryFactory,
+      publishedEntry,
       termFactory,
       categoryTerm,
       tagTerm,
@@ -53,7 +53,7 @@ describe("plumix/test subpath", () => {
     const db = await createTestDb();
     const factories = factoriesFor(db);
     expect(factories.user).toBeDefined();
-    expect(factories.post).toBeDefined();
+    expect(factories.entry).toBeDefined();
     expect(factories.term).toBeDefined();
     expect(factories.invite).toBeDefined();
     expect(factories.credential).toBeDefined();

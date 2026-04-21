@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import { postInsertSchema } from "../../../db/schema/posts.js";
+import { entryInsertSchema } from "../../../db/schema/entries.js";
 import { slugSchema } from "../../schemas.js";
 import { idParam } from "../../validation.js";
 
@@ -30,7 +30,7 @@ const serverControlledKeys = [
   "updatedAt",
 ] as const;
 
-const userSuppliableFields = v.omit(postInsertSchema, serverControlledKeys);
+const userSuppliableFields = v.omit(entryInsertSchema, serverControlledKeys);
 
 // taxonomy → ordered term ids. Empty array clears all assignments for that
 // taxonomy. Taxonomy keys not in the map are untouched.
@@ -61,7 +61,7 @@ const metaKeySchema = v.pipe(
   v.regex(/^[a-zA-Z0-9_:-]+$/, "meta key must be alphanumeric/_/:/-"),
 );
 
-const postMetaInputSchema = v.pipe(
+const entryMetaInputSchema = v.pipe(
   v.record(metaKeySchema, v.unknown()),
   v.check(
     (val) => Object.keys(val).length <= MAX_META_KEYS_PER_REQUEST,
@@ -69,7 +69,7 @@ const postMetaInputSchema = v.pipe(
   ),
 );
 
-export const postCreateInputSchema = v.object({
+export const entryCreateInputSchema = v.object({
   ...userSuppliableFields.entries,
   type: v.optional(trimmedText(100), "post"),
   title: trimmedText(300),
@@ -78,10 +78,10 @@ export const postCreateInputSchema = v.object({
   excerpt: v.optional(excerptSchema),
   status: v.optional(userSuppliableFields.entries.status, "draft"),
   menuOrder: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0)), 0),
-  meta: v.optional(postMetaInputSchema),
+  meta: v.optional(entryMetaInputSchema),
 });
 
-export const postUpdateInputSchema = v.object({
+export const entryUpdateInputSchema = v.object({
   id: idParam,
   title: v.optional(trimmedText(300)),
   slug: v.optional(slugSchema),
@@ -91,7 +91,7 @@ export const postUpdateInputSchema = v.object({
   parentId: v.optional(v.nullable(idParam)),
   menuOrder: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
   terms: v.optional(postTermsSchema),
-  meta: v.optional(postMetaInputSchema),
+  meta: v.optional(entryMetaInputSchema),
 });
 
 // Upper bound on the term-slug list per taxonomy clause. Mirrors the
@@ -119,22 +119,22 @@ const termSlugSchema = v.pipe(
 // wire-level names (snake_case, matching DB columns) so the API surface
 // stays stable even if we rename the drizzle TS fields later. The handler
 // maps these to column references.
-export const POST_LIST_ORDER_COLUMNS = [
+export const ENTRY_LIST_ORDER_COLUMNS = [
   "updated_at",
   "published_at",
   "title",
   "menu_order",
 ] as const;
-export type PostListOrderColumn = (typeof POST_LIST_ORDER_COLUMNS)[number];
+export type EntryListOrderColumn = (typeof ENTRY_LIST_ORDER_COLUMNS)[number];
 
-export const postListInputSchema = v.object({
+export const entryListInputSchema = v.object({
   type: v.optional(trimmedText(100)),
   /**
    * Status filter. Accepts a single status or a list — WP admin views
    * like "Drafts + Pending" need arrays. When omitted, the handler
    * excludes `trash` by default (WP's "All" semantics — trash is its
    * own view, not part of the flat list). Pass `["trash"]` explicitly
-   * to see trashed posts.
+   * to see trashed entries.
    */
   status: v.optional(
     v.union([
@@ -149,7 +149,7 @@ export const postListInputSchema = v.object({
   authorId: v.optional(idParam),
   /**
    * Filter by parent post id for hierarchical types (pages, etc.).
-   * - `null` → only top-level posts (parent_id IS NULL).
+   * - `null` → only top-level entries (parent_id IS NULL).
    * - a number → only direct children of that post.
    * - omitted → no filter, flat list across all depths.
    */
@@ -181,7 +181,7 @@ export const postListInputSchema = v.object({
    * malicious caller can't probe the schema. `id` is always applied as a
    * stable tiebreaker by the handler, not exposed here.
    */
-  orderBy: v.optional(v.picklist(POST_LIST_ORDER_COLUMNS), "updated_at"),
+  orderBy: v.optional(v.picklist(ENTRY_LIST_ORDER_COLUMNS), "updated_at"),
   order: v.optional(v.picklist(["asc", "desc"] as const), "desc"),
   limit: v.optional(
     v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)),
@@ -190,11 +190,11 @@ export const postListInputSchema = v.object({
   offset: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0)), 0),
 });
 
-export const postGetInputSchema = v.object({ id: idParam });
-export const postTrashInputSchema = v.object({ id: idParam });
+export const entryGetInputSchema = v.object({ id: idParam });
+export const entryTrashInputSchema = v.object({ id: idParam });
 
-export type PostListInput = v.InferOutput<typeof postListInputSchema>;
-export type PostGetInput = v.InferOutput<typeof postGetInputSchema>;
-export type PostCreateInput = v.InferOutput<typeof postCreateInputSchema>;
-export type PostUpdateInput = v.InferOutput<typeof postUpdateInputSchema>;
-export type PostTrashInput = v.InferOutput<typeof postTrashInputSchema>;
+export type EntryListInput = v.InferOutput<typeof entryListInputSchema>;
+export type EntryGetInput = v.InferOutput<typeof entryGetInputSchema>;
+export type EntryCreateInput = v.InferOutput<typeof entryCreateInputSchema>;
+export type EntryUpdateInput = v.InferOutput<typeof entryUpdateInputSchema>;
+export type EntryTrashInput = v.InferOutput<typeof entryTrashInputSchema>;

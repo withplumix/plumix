@@ -1,7 +1,7 @@
 import type { UserRole } from "../db/schema/users.js";
 import type { RouteIntent } from "../route/intent.js";
 
-export interface PostTypeOptions {
+export interface EntryTypeOptions {
   readonly label: string;
   /**
    * Human-readable label variants. `plural` also drives the admin URL slug
@@ -34,7 +34,7 @@ export interface TaxonomyOptions {
   readonly labels?: { readonly singular?: string };
   readonly description?: string;
   readonly isHierarchical?: boolean;
-  readonly postTypes?: readonly string[];
+  readonly entryTypes?: readonly string[];
   readonly isPublic?: boolean;
   readonly isInQuickEdit?: boolean;
   readonly hasAdminColumn?: boolean;
@@ -49,7 +49,7 @@ export type MetaScalarType = "string" | "number" | "boolean" | "json";
 export interface MetaOptions {
   readonly type: MetaScalarType;
   readonly default?: unknown;
-  readonly postTypes: readonly string[];
+  readonly entryTypes: readonly string[];
   readonly sanitize?: (value: unknown) => unknown;
 }
 
@@ -91,7 +91,7 @@ export interface MetaBoxOptions {
   readonly label: string;
   readonly context?: "side" | "normal" | "advanced";
   readonly priority?: "high" | "default" | "low";
-  readonly postTypes: readonly string[];
+  readonly entryTypes: readonly string[];
   readonly capability?: string;
   readonly fields: readonly MetaBoxField[];
 }
@@ -161,7 +161,7 @@ export interface SettingsGroupOptions {
   readonly fieldsets: readonly SettingsFieldset[];
 }
 
-export interface RegisteredPostType extends PostTypeOptions {
+export interface RegisteredEntryType extends EntryTypeOptions {
   readonly name: string;
   readonly registeredBy: string | null;
 }
@@ -200,7 +200,7 @@ export interface RegisteredRewriteRule {
 }
 
 export interface PluginRegistry {
-  readonly postTypes: ReadonlyMap<string, RegisteredPostType>;
+  readonly entryTypes: ReadonlyMap<string, RegisteredEntryType>;
   readonly taxonomies: ReadonlyMap<string, RegisteredTaxonomy>;
   readonly metaKeys: ReadonlyMap<string, RegisteredMeta>;
   readonly metaBoxes: ReadonlyMap<string, RegisteredMetaBox>;
@@ -210,7 +210,7 @@ export interface PluginRegistry {
 }
 
 export interface MutablePluginRegistry extends PluginRegistry {
-  readonly postTypes: Map<string, RegisteredPostType>;
+  readonly entryTypes: Map<string, RegisteredEntryType>;
   readonly taxonomies: Map<string, RegisteredTaxonomy>;
   readonly metaKeys: Map<string, RegisteredMeta>;
   readonly metaBoxes: Map<string, RegisteredMetaBox>;
@@ -221,7 +221,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
 
 export function createPluginRegistry(): MutablePluginRegistry {
   return {
-    postTypes: new Map(),
+    entryTypes: new Map(),
     taxonomies: new Map(),
     metaKeys: new Map(),
     metaBoxes: new Map(),
@@ -240,17 +240,17 @@ export class DuplicateRegistrationError extends Error {
 
 /**
  * Shape serialised into the admin's `<script id="plumix-manifest">` payload.
- * Intentionally a strict subset of `RegisteredPostType`: drops
+ * Intentionally a strict subset of `RegisteredEntryType`: drops
  * `registeredBy` (plugin attribution is server-only debug metadata) and
  * `rewrite` (URL mapping is evaluated server-side). Add fields only when the
  * admin UI needs them.
  *
  * `adminSlug` is derived at build time (see `buildManifest`) and is what the
- * admin router uses for `/content/$slug`. Keeping it in the manifest rather
+ * admin router uses for `/entries/$slug`. Keeping it in the manifest rather
  * than re-deriving client-side lets the collision check run once on the
  * server and ships the final routing key as authoritative.
  */
-export interface PostTypeManifestEntry {
+export interface EntryTypeManifestEntry {
   readonly name: string;
   readonly adminSlug: string;
   readonly label: string;
@@ -300,7 +300,7 @@ export interface MetaBoxManifestEntry {
   readonly label: string;
   readonly context?: "side" | "normal" | "advanced";
   readonly priority?: "high" | "default" | "low";
-  readonly postTypes: readonly string[];
+  readonly entryTypes: readonly string[];
   readonly capability?: string;
   readonly fields: readonly MetaBoxFieldManifestEntry[];
 }
@@ -310,7 +310,7 @@ export interface MetaBoxManifestEntry {
  * projection of `RegisteredTaxonomy` — drops `registeredBy` (server-only
  * debug metadata) and server-only operational flags (`isInQuickEdit`,
  * `hasAdminColumn`, `rewrite`) that don't affect the admin UI today.
- * `postTypes` is kept so future admin surfaces (term-picker on post
+ * `entryTypes` is kept so future admin surfaces (term-picker on post
  * editor) can filter by post type without a second round-trip.
  */
 export interface TaxonomyManifestEntry {
@@ -319,7 +319,7 @@ export interface TaxonomyManifestEntry {
   readonly labels?: { readonly singular?: string };
   readonly description?: string;
   readonly isHierarchical?: boolean;
-  readonly postTypes?: readonly string[];
+  readonly entryTypes?: readonly string[];
 }
 
 /**
@@ -360,7 +360,7 @@ export interface SettingsGroupManifestEntry {
 }
 
 export interface PlumixManifest {
-  readonly postTypes: readonly PostTypeManifestEntry[];
+  readonly entryTypes: readonly EntryTypeManifestEntry[];
   readonly taxonomies: readonly TaxonomyManifestEntry[];
   readonly metaBoxes: readonly MetaBoxManifestEntry[];
   readonly settingsGroups: readonly SettingsGroupManifestEntry[];
@@ -370,22 +370,24 @@ export interface PlumixManifest {
 export const MANIFEST_SCRIPT_ID = "plumix-manifest";
 
 export function emptyManifest(): PlumixManifest {
-  return { postTypes: [], taxonomies: [], metaBoxes: [], settingsGroups: [] };
+  return { entryTypes: [], taxonomies: [], metaBoxes: [], settingsGroups: [] };
 }
 
 /**
  * Project a registry snapshot into its manifest form — the subset that ships
- * to the admin bundle. Post types are ordered by `menuPosition` ascending,
+ * to the admin bundle. Entry types are ordered by `menuPosition` ascending,
  * with unspecified positions last. Among entries with the same (or no)
  * `menuPosition` the registration order wins — `Array.prototype.sort` is
  * stable per ES2019, and the registry's `Map` preserves insertion order.
  *
  * Throws `DuplicateAdminSlugError` if two post types resolve to the same
- * admin slug — the admin router can't disambiguate `/content/$slug` in that
+ * admin slug — the admin router can't disambiguate `/entries/$slug` in that
  * case, and catching it at build time is cheaper than a 404 at runtime.
  */
 export function buildManifest(registry: PluginRegistry): PlumixManifest {
-  const entries = Array.from(registry.postTypes.values()).map(toPostTypeEntry);
+  const entries = Array.from(registry.entryTypes.values()).map(
+    toEntryTypeManifest,
+  );
   entries.sort((a, b) => {
     const ap = a.menuPosition ?? Number.POSITIVE_INFINITY;
     const bp = b.menuPosition ?? Number.POSITIVE_INFINITY;
@@ -399,11 +401,11 @@ export function buildManifest(registry: PluginRegistry): PlumixManifest {
   const settingsGroups = Array.from(registry.settingsGroups.values()).map(
     toSettingsGroupEntry,
   );
-  return { postTypes: entries, taxonomies, metaBoxes, settingsGroups };
+  return { entryTypes: entries, taxonomies, metaBoxes, settingsGroups };
 }
 
 function assertUniqueAdminSlugs(
-  entries: readonly PostTypeManifestEntry[],
+  entries: readonly EntryTypeManifestEntry[],
 ): void {
   const seen = new Map<string, string>();
   for (const entry of entries) {
@@ -418,7 +420,7 @@ function assertUniqueAdminSlugs(
 export class DuplicateAdminSlugError extends Error {
   constructor(firstPostType: string, secondPostType: string, slug: string) {
     super(
-      `Post types "${firstPostType}" and "${secondPostType}" both resolve ` +
+      `Entry types "${firstPostType}" and "${secondPostType}" both resolve ` +
         `to the admin slug "${slug}". Set \`labels.plural\` on one of them ` +
         `to disambiguate.`,
     );
@@ -471,12 +473,12 @@ function slugify(input: string): string {
 }
 
 // Explicit allowlist — only the destructured keys ship to the browser.
-// Adding a field to `PostTypeOptions` / `RegisteredPostType` does NOT
-// automatically leak it; it must be added here AND to `PostTypeManifestEntry`
+// Adding a field to `EntryTypeOptions` / `RegisteredEntryType` does NOT
+// automatically leak it; it must be added here AND to `EntryTypeManifestEntry`
 // to surface in the admin. `registeredBy` and `rewrite` are intentionally
 // excluded: the first is debug metadata, the second is server-side URL
 // mapping.
-function toPostTypeEntry(pt: RegisteredPostType): PostTypeManifestEntry {
+function toEntryTypeManifest(pt: RegisteredEntryType): EntryTypeManifestEntry {
   const {
     name,
     label,
@@ -508,35 +510,35 @@ function toPostTypeEntry(pt: RegisteredPostType): PostTypeManifestEntry {
   };
 }
 
-// Allowlist for taxonomy entries — same rationale as `toPostTypeEntry`.
+// Allowlist for taxonomy entries — same rationale as `toEntryTypeManifest`.
 // `registeredBy` excluded; `isPublic` / `isInQuickEdit` / `hasAdminColumn`
 // / `rewrite` are server-/public-site-only and don't affect the admin
 // surface, so they're intentionally dropped from the wire contract until
 // a concrete admin need arises.
 function toTaxonomyEntry(tax: RegisteredTaxonomy): TaxonomyManifestEntry {
-  const { name, label, labels, description, isHierarchical, postTypes } = tax;
+  const { name, label, labels, description, isHierarchical, entryTypes } = tax;
   return {
     name,
     label,
     labels,
     description,
     isHierarchical,
-    postTypes,
+    entryTypes,
   };
 }
 
-// Allowlist for meta box entries — same rationale as `toPostTypeEntry`.
+// Allowlist for meta box entries — same rationale as `toEntryTypeManifest`.
 // `registeredBy` is intentionally excluded (server-only debug metadata).
 // `fields` is projected per entry so field-level internals could diverge
 // from the registration type without altering the wire contract.
 function toMetaBoxEntry(box: RegisteredMetaBox): MetaBoxManifestEntry {
-  const { id, label, context, priority, postTypes, capability, fields } = box;
+  const { id, label, context, priority, entryTypes, capability, fields } = box;
   return {
     id,
     label,
     context,
     priority,
-    postTypes,
+    entryTypes,
     capability,
     fields: fields.map(toMetaBoxFieldEntry),
   };

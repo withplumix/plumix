@@ -11,18 +11,18 @@ import type {
   CredentialTransport,
   NewCredential,
 } from "../db/schema/credentials.js";
+import type { Entry, NewEntry } from "../db/schema/entries.js";
+import type { EntryTerm, NewEntryTerm } from "../db/schema/entry_term.js";
 import type { NewOption, Option } from "../db/schema/options.js";
-import type { NewPostTerm, PostTerm } from "../db/schema/post_term.js";
-import type { NewPost, Post } from "../db/schema/posts.js";
 import type { NewSession, Session } from "../db/schema/sessions.js";
 import type { NewTerm, Term } from "../db/schema/terms.js";
 import type { NewUser, User } from "../db/schema/users.js";
 import { allowedDomains } from "../db/schema/allowed_domains.js";
 import { authTokens } from "../db/schema/auth_tokens.js";
 import { credentials } from "../db/schema/credentials.js";
+import { entries } from "../db/schema/entries.js";
+import { entryTerm } from "../db/schema/entry_term.js";
 import { options } from "../db/schema/options.js";
-import { postTerm } from "../db/schema/post_term.js";
-import { posts } from "../db/schema/posts.js";
 import { sessions } from "../db/schema/sessions.js";
 import { terms } from "../db/schema/terms.js";
 import { users } from "../db/schema/users.js";
@@ -63,23 +63,23 @@ export const authorUser = userFactory.params({ role: "author" });
 export const contributorUser = userFactory.params({ role: "contributor" });
 export const subscriberUser = userFactory.params({ role: "subscriber" });
 
-export const postFactory = Factory.define<NewPost, DbTransient, Post>(
+export const entryFactory = Factory.define<NewEntry, DbTransient, Entry>(
   ({ sequence, transientParams, onCreate, params }) => {
     onCreate(async (attrs) => {
       const db = requireDb(transientParams);
-      const [row] = await db.insert(posts).values(attrs).returning();
-      if (!row) throw new Error("postFactory: insert returned no row");
+      const [row] = await db.insert(entries).values(attrs).returning();
+      if (!row) throw new Error("entryFactory: insert returned no row");
       return row;
     });
 
     const status = params.status ?? "draft";
     const authorId = params.authorId;
     if (authorId === undefined) {
-      throw new Error("postFactory: authorId is required");
+      throw new Error("entryFactory: authorId is required");
     }
     return {
       type: params.type ?? "post",
-      title: params.title ?? `Post ${sequence}`,
+      title: params.title ?? `Entry ${sequence}`,
       slug: params.slug ?? `post-${sequence}-${Date.now()}`,
       content: params.content ?? null,
       excerpt: params.excerpt ?? null,
@@ -93,9 +93,9 @@ export const postFactory = Factory.define<NewPost, DbTransient, Post>(
   },
 );
 
-export const draftPost = postFactory.params({ status: "draft" });
-export const publishedPost = postFactory.params({ status: "published" });
-export const trashedPost = postFactory.params({ status: "trash" });
+export const draftEntry = entryFactory.params({ status: "draft" });
+export const publishedEntry = entryFactory.params({ status: "published" });
+export const trashedEntry = entryFactory.params({ status: "trash" });
 
 export const termFactory = Factory.define<NewTerm, DbTransient, Term>(
   ({ sequence, transientParams, onCreate, params }) => {
@@ -192,26 +192,26 @@ export const optionFactory = Factory.define<NewOption, DbTransient, Option>(
   },
 );
 
-// post_term join row. Caller passes postId + termId; sortOrder defaults to 0.
-export const postTermFactory = Factory.define<
-  NewPostTerm,
+// post_term join row. Caller passes entryId + termId; sortOrder defaults to 0.
+export const entryTermFactory = Factory.define<
+  NewEntryTerm,
   DbTransient,
-  PostTerm
+  EntryTerm
 >(({ transientParams, onCreate, params }) => {
   onCreate(async (attrs) => {
     const db = requireDb(transientParams);
-    const [row] = await db.insert(postTerm).values(attrs).returning();
-    if (!row) throw new Error("postTermFactory: insert returned no row");
+    const [row] = await db.insert(entryTerm).values(attrs).returning();
+    if (!row) throw new Error("entryTermFactory: insert returned no row");
     return row;
   });
 
-  const postId = params.postId;
+  const entryId = params.entryId;
   const termId = params.termId;
-  if (postId === undefined || termId === undefined) {
-    throw new Error("postTermFactory: postId and termId are required");
+  if (entryId === undefined || termId === undefined) {
+    throw new Error("entryTermFactory: entryId and termId are required");
   }
   return {
-    postId,
+    entryId,
     termId,
     sortOrder: params.sortOrder ?? 0,
   };
@@ -281,10 +281,10 @@ export interface Factories {
   readonly author: typeof authorUser;
   readonly contributor: typeof contributorUser;
   readonly subscriber: typeof subscriberUser;
-  readonly post: typeof postFactory;
-  readonly draft: typeof draftPost;
-  readonly published: typeof publishedPost;
-  readonly trashed: typeof trashedPost;
+  readonly entry: typeof entryFactory;
+  readonly draft: typeof draftEntry;
+  readonly published: typeof publishedEntry;
+  readonly trashed: typeof trashedEntry;
   readonly term: typeof termFactory;
   readonly category: typeof categoryTerm;
   readonly tag: typeof tagTerm;
@@ -292,7 +292,7 @@ export interface Factories {
   readonly credential: typeof credentialFactory;
   readonly session: typeof sessionFactory;
   readonly option: typeof optionFactory;
-  readonly postTerm: typeof postTermFactory;
+  readonly entryTerm: typeof entryTermFactory;
   readonly allowedDomain: typeof allowedDomainFactory;
 }
 
@@ -304,10 +304,10 @@ export function factoriesFor(db: Db): Factories {
     author: authorUser.transient({ db }),
     contributor: contributorUser.transient({ db }),
     subscriber: subscriberUser.transient({ db }),
-    post: postFactory.transient({ db }),
-    draft: draftPost.transient({ db }),
-    published: publishedPost.transient({ db }),
-    trashed: trashedPost.transient({ db }),
+    entry: entryFactory.transient({ db }),
+    draft: draftEntry.transient({ db }),
+    published: publishedEntry.transient({ db }),
+    trashed: trashedEntry.transient({ db }),
     term: termFactory.transient({ db }),
     category: categoryTerm.transient({ db }),
     tag: tagTerm.transient({ db }),
@@ -315,7 +315,7 @@ export function factoriesFor(db: Db): Factories {
     credential: credentialFactory.transient({ db }),
     session: sessionFactory.transient({ db }),
     option: optionFactory.transient({ db }),
-    postTerm: postTermFactory.transient({ db }),
+    entryTerm: entryTermFactory.transient({ db }),
     allowedDomain: allowedDomainFactory.transient({ db }),
   };
 }

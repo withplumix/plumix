@@ -11,7 +11,7 @@ import { useBlocker } from "@tanstack/react-router";
 import * as v from "valibot";
 
 import type { MetaBoxManifestEntry } from "@plumix/core/manifest";
-import type { PostStatus } from "@plumix/core/schema";
+import type { EntryStatus } from "@plumix/core/schema";
 import { slugify } from "@plumix/core/slugify";
 
 import { TiptapEditor } from "./tiptap-editor.js";
@@ -52,7 +52,7 @@ export type PostEditorValues = v.InferOutput<typeof postEditorSchema>;
 // new-post flow (you don't create a post into the trash bin), but the
 // editor of an existing post may need to see it if loaded with that
 // status — caller filters the list via `availableStatuses`.
-export const POST_EDITOR_STATUSES: readonly PostStatus[] = [
+export const POST_EDITOR_STATUSES: readonly EntryStatus[] = [
   "draft",
   "published",
   "scheduled",
@@ -62,10 +62,10 @@ export const POST_EDITOR_STATUSES: readonly PostStatus[] = [
 interface PostEditorFormProps {
   readonly initialValues: PostEditorValues;
   /** Slug starts unlocked until user edits the slug field directly. For
-   * existing posts pass `true` so title edits don't silently rename the
+   * existing entries pass `true` so title edits don't silently rename the
    * URL. */
   readonly slugLocked: boolean;
-  readonly availableStatuses: readonly PostStatus[];
+  readonly availableStatuses: readonly EntryStatus[];
   /**
    * Meta boxes applicable to the post type being edited, already
    * filtered by capability and sorted by priority. The form splits them
@@ -198,7 +198,7 @@ export function PostEditorForm({
                       field.handleChange(json);
                     }}
                     disabled={isSubmitting}
-                    ariaLabel="Post content"
+                    ariaLabel="Entry content"
                   />
                 </div>
               </div>
@@ -240,7 +240,7 @@ export function PostEditorForm({
                   disabled={isSubmitting}
                   onBlur={field.handleBlur}
                   onChange={(e) => {
-                    field.handleChange(e.target.value as PostStatus);
+                    field.handleChange(e.target.value as EntryStatus);
                   }}
                   className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                 >

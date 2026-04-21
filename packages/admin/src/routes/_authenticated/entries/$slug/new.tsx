@@ -1,9 +1,9 @@
-import type { PostEditorValues } from "@/components/editor/post-editor-form.js";
+import type { PostEditorValues } from "@/components/editor/entry-editor-form.js";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
-import { PostEditorForm } from "@/components/editor/post-editor-form.js";
+import { PostEditorForm } from "@/components/editor/entry-editor-form.js";
 import { hasCap } from "@/lib/caps.js";
-import { findPostTypeBySlug, metaBoxesForPostType } from "@/lib/manifest.js";
+import { findEntryTypeBySlug, metaBoxesForEntryType } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useMutation } from "@tanstack/react-query";
 import {
@@ -13,54 +13,54 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 
-import type { PostTypeManifestEntry } from "@plumix/core/manifest";
-import type { PostStatus } from "@plumix/core/schema";
+import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
+import type { EntryStatus } from "@plumix/core/schema";
 
-import { CONTENT_LIST_DEFAULT_SEARCH } from "./-constants.js";
+import { ENTRIES_LIST_DEFAULT_SEARCH } from "./-constants.js";
 
 // Statuses the new-post dropdown should expose. `trash` is omitted — you
 // don't create a post straight into the trash bin; the list view has a
 // dedicated Trash filter for that workflow.
-const NEW_POST_STATUSES: readonly PostStatus[] = [
+const NEW_POST_STATUSES: readonly EntryStatus[] = [
   "draft",
   "published",
   "scheduled",
 ];
 
-export const Route = createFileRoute("/_authenticated/content/$slug/new")({
-  beforeLoad: ({ context, params }): { postType: PostTypeManifestEntry } => {
-    const postType = findPostTypeBySlug(params.slug);
-    if (!postType) {
+export const Route = createFileRoute("/_authenticated/entries/$slug/new")({
+  beforeLoad: ({ context, params }): { entryType: EntryTypeManifestEntry } => {
+    const entryType = findEntryTypeBySlug(params.slug);
+    if (!entryType) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw notFound();
     }
     // Only callers with the create capability see this screen. `edit_own`
     // alone isn't enough — that permission is about editing your own
-    // existing posts, not spawning new ones.
-    const capability = `${postType.capabilityType ?? postType.name}:create`;
+    // existing entries, not spawning new ones.
+    const capability = `${entryType.capabilityType ?? entryType.name}:create`;
     if (!hasCap(context.user.capabilities, capability)) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw redirect({
-        to: "/content/$slug",
+        to: "/entries/$slug",
         params: { slug: params.slug },
-        search: CONTENT_LIST_DEFAULT_SEARCH,
+        search: ENTRIES_LIST_DEFAULT_SEARCH,
       });
     }
-    return { postType };
+    return { entryType };
   },
   component: NewPostRoute,
 });
 
 function NewPostRoute(): ReactNode {
-  const { user, postType } = Route.useRouteContext();
+  const { user, entryType } = Route.useRouteContext();
   const params = Route.useParams();
   const navigate = useNavigate();
   const [serverError, setServerError] = useState<string | null>(null);
 
   const createPost = useMutation({
     mutationFn: (input: PostEditorValues) =>
-      orpc.post.create.call({
-        type: postType.name,
+      orpc.entry.create.call({
+        type: entryType.name,
         title: input.title,
         slug: input.slug,
         content: input.content,
@@ -73,7 +73,7 @@ function NewPostRoute(): ReactNode {
     },
     onSuccess: async (created) => {
       await navigate({
-        to: "/content/$slug/$id",
+        to: "/entries/$slug/$id",
         params: { slug: params.slug, id: created.id },
       });
     },
@@ -95,12 +95,12 @@ function NewPostRoute(): ReactNode {
   // capabilities. Memo keyed on `user.capabilities` avoids refiltering
   // every render while keeping the helper out of the component body.
   const metaBoxes = useMemo(
-    () => metaBoxesForPostType(postType.name, user.capabilities),
-    [postType.name, user.capabilities],
+    () => metaBoxesForEntryType(entryType.name, user.capabilities),
+    [entryType.name, user.capabilities],
   );
 
   const singularLower = (
-    postType.labels?.singular ?? postType.label
+    entryType.labels?.singular ?? entryType.label
   ).toLowerCase();
 
   return (
@@ -131,9 +131,9 @@ function NewPostRoute(): ReactNode {
         }}
         onCancel={() => {
           void navigate({
-            to: "/content/$slug",
+            to: "/entries/$slug",
             params: { slug: params.slug },
-            search: CONTENT_LIST_DEFAULT_SEARCH,
+            search: ENTRIES_LIST_DEFAULT_SEARCH,
           });
         }}
       />

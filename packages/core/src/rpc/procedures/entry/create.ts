@@ -1,33 +1,33 @@
-import type { NewPost } from "../../../db/schema/posts.js";
-import { posts } from "../../../db/schema/posts.js";
+import type { NewEntry } from "../../../db/schema/entries.js";
+import { entries } from "../../../db/schema/entries.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { assertContentWithinByteCap } from "./content.js";
 import {
-  applyPostBeforeSave,
-  firePostPublished,
-  firePostTransition,
+  applyEntryBeforeSave,
+  entryCapability,
+  fireEntryPublished,
+  fireEntryTransition,
   loadReadableParent,
-  postCapability,
 } from "./lifecycle.js";
 import {
   decodeMetaBag,
-  loadPostMeta,
+  loadEntryMeta,
   sanitizeMetaForRpc,
-  writePostMeta,
+  writeEntryMeta,
 } from "./meta.js";
-import { postCreateInputSchema } from "./schemas.js";
+import { entryCreateInputSchema } from "./schemas.js";
 
 export const create = base
   .use(authenticated)
-  .input(postCreateInputSchema)
+  .input(entryCreateInputSchema)
   .handler(async ({ input, context, errors }) => {
     const filtered = await context.hooks.applyFilter(
-      "rpc:post.create:input",
+      "rpc:entry.create:input",
       input,
     );
 
-    const createCapability = postCapability(filtered.type, "create");
+    const createCapability = entryCapability(filtered.type, "create");
     if (!context.auth.can(createCapability)) {
       throw errors.FORBIDDEN({ data: { capability: createCapability } });
     }
@@ -35,7 +35,7 @@ export const create = base
     const requiresPublishCap =
       filtered.status === "published" || filtered.status === "scheduled";
     if (requiresPublishCap) {
-      const publishCapability = postCapability(filtered.type, "publish");
+      const publishCapability = entryCapability(filtered.type, "publish");
       if (!context.auth.can(publishCapability)) {
         throw errors.FORBIDDEN({ data: { capability: publishCapability } });
       }
@@ -65,7 +65,7 @@ export const create = base
       errors,
     );
 
-    const candidate: NewPost = {
+    const candidate: NewEntry = {
       type: filtered.type,
       title: filtered.title,
       slug: filtered.slug,
@@ -78,7 +78,7 @@ export const create = base
       publishedAt: filtered.status === "published" ? new Date() : null,
     };
 
-    const prepared = await applyPostBeforeSave(
+    const prepared = await applyEntryBeforeSave(
       context,
       filtered.type,
       candidate,
@@ -87,9 +87,9 @@ export const create = base
     prepared.type = filtered.type;
 
     const [created] = await context.db
-      .insert(posts)
+      .insert(entries)
       .values(prepared)
-      .onConflictDoNothing({ target: [posts.type, posts.slug] })
+      .onConflictDoNothing({ target: [entries.type, entries.slug] })
       .returning();
 
     if (!created) {
@@ -98,20 +98,20 @@ export const create = base
 
     let meta: Record<string, unknown>;
     if (metaPatch) {
-      await writePostMeta(context, created, metaPatch);
-      meta = await loadPostMeta(context, created.id);
+      await writeEntryMeta(context, created, metaPatch);
+      meta = await loadEntryMeta(context, created.id);
     } else {
       // No write path — `created.meta` is the default `{}`. Decode inline
       // to save the round trip.
       meta = decodeMetaBag(context.plugins, created.meta);
     }
 
-    await firePostTransition(context, created, "draft");
+    await fireEntryTransition(context, created, "draft");
     if (created.status === "published") {
-      await firePostPublished(context, created);
+      await fireEntryPublished(context, created);
     }
 
-    return context.hooks.applyFilter("rpc:post.create:output", {
+    return context.hooks.applyFilter("rpc:entry.create:output", {
       ...created,
       meta,
     });

@@ -302,9 +302,9 @@ function DeleteCard({
         <CardHeader>
           <CardTitle className="text-destructive">Delete term</CardTitle>
           <CardDescription>
-            Removes this term and unassigns it from any posts that use it.
-            Descendants are promoted to root level (their posts keep their other
-            term assignments).
+            Removes this term and unassigns it from any entries that use it.
+            Descendants are promoted to root level (their entries keep their
+            other term assignments).
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -329,7 +329,7 @@ function DeleteCard({
           Confirm delete: {termName}
         </CardTitle>
         <CardDescription>
-          Post assignments to this term are removed. If the term has children,
+          Entry assignments to this term are removed. If the term has children,
           they become root-level automatically.
         </CardDescription>
       </CardHeader>

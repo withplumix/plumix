@@ -1,8 +1,8 @@
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import type { SQL } from "../../../db/index.js";
-import type { Post, PostStatus } from "../../../db/schema/posts.js";
-import type { PostListOrderColumn } from "./schemas.js";
+import type { Entry, EntryStatus } from "../../../db/schema/entries.js";
+import type { EntryListOrderColumn } from "./schemas.js";
 import type { SearchTerm } from "./search-terms.js";
 import {
   and,
@@ -14,50 +14,50 @@ import {
   not,
   sql,
 } from "../../../db/index.js";
-import { postTerm } from "../../../db/schema/post_term.js";
-import { posts } from "../../../db/schema/posts.js";
+import { entries } from "../../../db/schema/entries.js";
+import { entryTerm } from "../../../db/schema/entry_term.js";
 import { terms } from "../../../db/schema/terms.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { postCapability } from "./lifecycle.js";
-import { postListInputSchema } from "./schemas.js";
+import { entryCapability } from "./lifecycle.js";
+import { entryListInputSchema } from "./schemas.js";
 import { escapeLikePattern, tokenizeSearchQuery } from "./search-terms.js";
 
-const PUBLIC_STATUS: PostStatus = "published";
+const PUBLIC_STATUS: EntryStatus = "published";
 
 export const list = base
   .use(authenticated)
-  .input(postListInputSchema)
+  .input(entryListInputSchema)
   .handler(async ({ input, context, errors }) => {
     const filtered = await context.hooks.applyFilter(
-      "rpc:post.list:input",
+      "rpc:entry.list:input",
       input,
     );
 
     const type = filtered.type ?? "post";
-    const readCapability = postCapability(type, "read");
+    const readCapability = entryCapability(type, "read");
     if (!context.auth.can(readCapability)) {
       throw errors.FORBIDDEN({ data: { capability: readCapability } });
     }
 
-    const canSeeAnyStatus = context.auth.can(postCapability(type, "edit_any"));
+    const canSeeAnyStatus = context.auth.can(entryCapability(type, "edit_any"));
     const statusClause = resolveStatusClause(filtered.status, canSeeAnyStatus);
     if (statusClause === "forbidden") {
       return context.hooks.applyFilter(
-        "rpc:post.list:output",
-        [] as readonly Post[],
+        "rpc:entry.list:output",
+        [] as readonly Entry[],
       );
     }
 
-    const conditions: SQL[] = [eq(posts.type, type)];
+    const conditions: SQL[] = [eq(entries.type, type)];
     conditions.push(statusClause);
     if (filtered.authorId !== undefined) {
-      conditions.push(eq(posts.authorId, filtered.authorId));
+      conditions.push(eq(entries.authorId, filtered.authorId));
     }
     if (filtered.parentId === null) {
-      conditions.push(isNull(posts.parentId));
+      conditions.push(isNull(entries.parentId));
     } else if (filtered.parentId !== undefined) {
-      conditions.push(eq(posts.parentId, filtered.parentId));
+      conditions.push(eq(entries.parentId, filtered.parentId));
     }
     if (filtered.search) {
       for (const term of tokenizeSearchQuery(filtered.search)) {
@@ -72,42 +72,42 @@ export const list = base
         // per taxonomy; multiple clauses AND together — matching WP's
         // default `tax_query` relation.
         const matching = context.db
-          .select({ postId: postTerm.postId })
-          .from(postTerm)
-          .innerJoin(terms, eq(terms.id, postTerm.termId))
+          .select({ entryId: entryTerm.entryId })
+          .from(entryTerm)
+          .innerJoin(terms, eq(terms.id, entryTerm.termId))
           .where(
             and(eq(terms.taxonomy, taxonomy), inArray(terms.slug, [...slugs])),
           );
-        conditions.push(inArray(posts.id, matching));
+        conditions.push(inArray(entries.id, matching));
       }
     }
 
     const orderCol = ORDER_COLUMNS[filtered.orderBy];
     const primary = filtered.order === "asc" ? asc(orderCol) : desc(orderCol);
-    // `posts.id` is always a desc tiebreaker — pagination must be stable
+    // `entries.id` is always a desc tiebreaker — pagination must be stable
     // across ties on the user-selected order column.
     const rows = await context.db
       .select()
-      .from(posts)
+      .from(entries)
       .where(and(...conditions))
-      .orderBy(primary, desc(posts.id))
+      .orderBy(primary, desc(entries.id))
       .limit(filtered.limit)
       .offset(filtered.offset);
 
-    return context.hooks.applyFilter("rpc:post.list:output", rows);
+    return context.hooks.applyFilter("rpc:entry.list:output", rows);
   });
 
 // Whitelist map from wire-level column names to drizzle column refs.
 // Keeping it here (not in schemas.ts) lets schemas.ts stay runtime-free of
 // drizzle imports.
-const ORDER_COLUMNS: Record<PostListOrderColumn, AnySQLiteColumn> = {
-  updated_at: posts.updatedAt,
-  published_at: posts.publishedAt,
-  title: posts.title,
-  menu_order: posts.menuOrder,
+const ORDER_COLUMNS: Record<EntryListOrderColumn, AnySQLiteColumn> = {
+  updated_at: entries.updatedAt,
+  published_at: entries.publishedAt,
+  title: entries.title,
+  menu_order: entries.menuOrder,
 };
 
-const TRASH_STATUS: PostStatus = "trash";
+const TRASH_STATUS: EntryStatus = "trash";
 
 /**
  * Resolve the caller's `status` input into a WHERE clause, honoring the
@@ -120,10 +120,13 @@ const TRASH_STATUS: PostStatus = "trash";
  *   an empty result (not a 403 — WP's admin also silently filters).
  *
  * Input type is what valibot's `v.union([picklist, v.array(picklist)])`
- * produces — the array inner type widens to `PostStatus | undefined`
+ * produces — the array inner type widens to `EntryStatus | undefined`
  * through valibot's pipe, so we filter at the boundary.
  */
-type StatusInput = PostStatus | readonly (PostStatus | undefined)[] | undefined;
+type StatusInput =
+  | EntryStatus
+  | readonly (EntryStatus | undefined)[]
+  | undefined;
 
 function resolveStatusClause(
   input: StatusInput,
@@ -132,17 +135,17 @@ function resolveStatusClause(
   const normalized = normalizeStatusInput(input);
 
   if (!canSeeAnyStatus) {
-    if (normalized === undefined) return eq(posts.status, PUBLIC_STATUS);
+    if (normalized === undefined) return eq(entries.status, PUBLIC_STATUS);
     if (normalized.length === 1 && normalized[0] === PUBLIC_STATUS) {
-      return eq(posts.status, PUBLIC_STATUS);
+      return eq(entries.status, PUBLIC_STATUS);
     }
     return "forbidden";
   }
 
-  if (normalized === undefined) return not(eq(posts.status, TRASH_STATUS));
+  if (normalized === undefined) return not(eq(entries.status, TRASH_STATUS));
   const [only, ...rest] = normalized;
-  if (only !== undefined && rest.length === 0) return eq(posts.status, only);
-  return inArray(posts.status, normalized);
+  if (only !== undefined && rest.length === 0) return eq(entries.status, only);
+  return inArray(entries.status, normalized);
 }
 
 // Collapse the valibot-widened input into a non-empty list or `undefined`.
@@ -150,11 +153,11 @@ function resolveStatusClause(
 // boundary, but defend here too so the resolver's contract is explicit.
 function normalizeStatusInput(
   input: StatusInput,
-): readonly PostStatus[] | undefined {
+): readonly EntryStatus[] | undefined {
   if (input === undefined) return undefined;
   const list = Array.isArray(input)
-    ? input.filter((s): s is PostStatus => s !== undefined)
-    : [input as PostStatus];
+    ? input.filter((s): s is EntryStatus => s !== undefined)
+    : [input as EntryStatus];
   return list.length === 0 ? undefined : list;
 }
 
@@ -172,9 +175,9 @@ function searchTermCondition(term: SearchTerm): SQL {
   // `SQL | undefined`, which fights both lint rules on non-null assertion
   // style. The sql-tag form has the same parameterization guarantees.
   const match = sql`(
-    COALESCE(${posts.title}, '') LIKE ${pattern} ESCAPE '\\'
-    OR COALESCE(${posts.content}, '') LIKE ${pattern} ESCAPE '\\'
-    OR COALESCE(${posts.excerpt}, '') LIKE ${pattern} ESCAPE '\\'
+    COALESCE(${entries.title}, '') LIKE ${pattern} ESCAPE '\\'
+    OR COALESCE(${entries.content}, '') LIKE ${pattern} ESCAPE '\\'
+    OR COALESCE(${entries.excerpt}, '') LIKE ${pattern} ESCAPE '\\'
   )`;
   return term.exclude ? not(match) : match;
 }

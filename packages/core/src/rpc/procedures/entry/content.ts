@@ -1,4 +1,4 @@
-import type { PostContent } from "../../../db/schema/posts.js";
+import type { EntryContent } from "../../../db/schema/entries.js";
 import { MAX_CONTENT_BYTES } from "./schemas.js";
 
 interface RpcErrorsForContent {
@@ -11,7 +11,7 @@ interface RpcErrorsForContent {
  * lives here instead of on the schema.
  */
 export function assertContentWithinByteCap(
-  content: PostContent | null | undefined,
+  content: EntryContent | null | undefined,
   errors: RpcErrorsForContent,
 ): void {
   if (content == null) return;

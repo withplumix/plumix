@@ -1,6 +1,6 @@
 // Plugin authors and core hooks both extend these registries via TypeScript
 // module augmentation. The Vite plugin emits typed declarations from
-// `registerPostType` / `registerTaxonomy` / `registerFilter` / `registerAction`
+// `registerEntryType` / `registerTaxonomy` / `registerFilter` / `registerAction`
 // calls so cross-plugin autocompletion works without manual type wiring.
 //
 // Each registry value is the handler signature for that hook name.

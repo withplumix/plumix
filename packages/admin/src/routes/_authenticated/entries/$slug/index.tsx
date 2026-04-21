@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/pagination.js";
 import { hasCap } from "@/lib/caps.js";
 import { toDate } from "@/lib/dates.js";
-import { findPostTypeBySlug } from "@/lib/manifest.js";
+import { findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -39,28 +39,28 @@ import {
 } from "lucide-react";
 import * as v from "valibot";
 
-import type { PostTypeManifestEntry } from "@plumix/core/manifest";
-import type { Post, PostStatus } from "@plumix/core/schema";
+import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
+import type { Entry, EntryStatus } from "@plumix/core/schema";
 
 const PAGE_SIZE = 20;
 
-// Mirrors `PostStatus` from core's schema; kept local as a runtime array so
+// Mirrors `EntryStatus` from core's schema; kept local as a runtime array so
 // the valibot picklist stays tree-shakeable (importing the core runtime
 // symbol would pull drizzle into the admin bundle). The type import above
 // keeps the two in lockstep — a drift would break compilation.
-const POST_STATUSES: readonly PostStatus[] = [
+const ENTRY_STATUSES: readonly EntryStatus[] = [
   "draft",
   "published",
   "scheduled",
   "trash",
 ];
-const STATUS_FILTER_VALUES = [...POST_STATUSES, "all"] as const;
+const STATUS_FILTER_VALUES = [...ENTRY_STATUSES, "all"] as const;
 type StatusFilter = (typeof STATUS_FILTER_VALUES)[number];
 
-// Local copy of core's `POST_LIST_ORDER_COLUMNS` to keep the valibot
-// picklist tree-shakeable (same rationale as `POST_STATUSES` above —
+// Local copy of core's `ENTRY_LIST_ORDER_COLUMNS` to keep the valibot
+// picklist tree-shakeable (same rationale as `ENTRY_STATUSES` above —
 // importing the core runtime symbol would pull drizzle into the admin
-// bundle). Must stay in sync with `postListInputSchema.orderBy`; a drift
+// bundle). Must stay in sync with `entryListInputSchema.orderBy`; a drift
 // would fail server-side validation at runtime, not compile time.
 const ORDER_BY_VALUES = [
   "updated_at",
@@ -107,7 +107,7 @@ const searchSchema = v.object({
 });
 
 const STATUS_VARIANT: Record<
-  PostStatus,
+  EntryStatus,
   "default" | "secondary" | "outline" | "destructive"
 > = {
   published: "default",
@@ -139,7 +139,7 @@ function buildColumns({
   activeOrder: Order;
   onSort: (column: OrderBy, defaultDirection: Order) => void;
   adminSlug: string;
-}): ColumnDef<Post>[] {
+}): ColumnDef<Entry>[] {
   return [
     {
       accessorKey: "title",
@@ -155,7 +155,7 @@ function buildColumns({
       ),
       cell: ({ row }) => (
         <Link
-          to="/content/$slug/$id"
+          to="/entries/$slug/$id"
           params={{ slug: adminSlug, id: row.original.id }}
           data-testid={`content-list-row-${String(row.original.id)}`}
           className="hover:text-primary flex flex-col transition-colors"
@@ -204,32 +204,32 @@ function buildColumns({
   ];
 }
 
-export const Route = createFileRoute("/_authenticated/content/$slug/")({
+export const Route = createFileRoute("/_authenticated/entries/$slug/")({
   validateSearch: (search) => v.parse(searchSchema, search),
   // Resolve the manifest entry in `beforeLoad` so the route component never
   // has to handle a missing post type. `notFound()` is TanStack Router's
   // control-flow throw — it bubbles up to the nearest `notFoundComponent`,
   // which the admin renders as a generic 404.
-  beforeLoad: ({ params }): { postType: PostTypeManifestEntry } => {
-    const postType = findPostTypeBySlug(params.slug);
-    if (!postType) {
+  beforeLoad: ({ params }): { entryType: EntryTypeManifestEntry } => {
+    const entryType = findEntryTypeBySlug(params.slug);
+    if (!entryType) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw notFound();
     }
-    return { postType };
+    return { entryType };
   },
   component: ContentListRoute,
 });
 
 function ContentListRoute(): ReactNode {
   const search = Route.useSearch();
-  const { user, postType } = Route.useRouteContext();
+  const { user, entryType } = Route.useRouteContext();
   const navigate = useNavigate({ from: Route.fullPath });
 
   const query = useQuery(
-    orpc.post.list.queryOptions({
+    orpc.entry.list.queryOptions({
       input: {
-        type: postType.name,
+        type: entryType.name,
         limit: PAGE_SIZE,
         offset: (search.page - 1) * PAGE_SIZE,
         orderBy: search.orderBy,
@@ -289,15 +289,15 @@ function ContentListRoute(): ReactNode {
     [navigate],
   );
 
-  const rows: readonly Post[] = query.data ?? [];
+  const rows: readonly Entry[] = query.data ?? [];
   const canPrev = search.page > 1;
   // Heuristic "next exists": a full page came back. Imprecise when total is an
   // exact multiple of PAGE_SIZE — the user sees an extra empty page. `post.list`
   // doesn't expose a total count today; accept the edge case until it does.
   const canNext = rows.length === PAGE_SIZE;
 
-  const pluralLabel = postType.labels?.plural ?? postType.label;
-  const singularLabel = postType.labels?.singular ?? postType.label;
+  const pluralLabel = entryType.labels?.plural ?? entryType.label;
+  const singularLabel = entryType.labels?.singular ?? entryType.label;
   const pluralLower = pluralLabel.toLowerCase();
   const singularLower = singularLabel.toLowerCase();
 
@@ -305,7 +305,7 @@ function ContentListRoute(): ReactNode {
   // derived by core (`capabilityType ?? name`). Missing the cap? Hide the
   // button — the new-post route also redirects on `beforeLoad` but we
   // shouldn't surface the button at all.
-  const createCapability = `${postType.capabilityType ?? postType.name}:create`;
+  const createCapability = `${entryType.capabilityType ?? entryType.name}:create`;
   const canCreate = hasCap(user.capabilities, createCapability);
 
   const columns = useMemo(
@@ -314,9 +314,9 @@ function ContentListRoute(): ReactNode {
         activeOrderBy: search.orderBy,
         activeOrder: search.order,
         onSort: setSort,
-        adminSlug: postType.adminSlug,
+        adminSlug: entryType.adminSlug,
       }),
-    [search.orderBy, search.order, setSort, postType.adminSlug],
+    [search.orderBy, search.order, setSort, entryType.adminSlug],
   );
 
   return (
@@ -337,8 +337,8 @@ function ContentListRoute(): ReactNode {
         {canCreate ? (
           <Button asChild>
             <Link
-              to="/content/$slug/new"
-              params={{ slug: postType.adminSlug }}
+              to="/entries/$slug/new"
+              params={{ slug: entryType.adminSlug }}
               data-testid="content-list-new-button"
             >
               <Plus />
@@ -372,7 +372,7 @@ function ContentListRoute(): ReactNode {
           </AlertDescription>
         </Alert>
       ) : (
-        <DataTable<Post>
+        <DataTable<Entry>
           columns={columns}
           data={rows}
           isLoading={query.isPending}

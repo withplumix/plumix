@@ -1,13 +1,13 @@
-import type { PostEditorValues } from "@/components/editor/post-editor-form.js";
+import type { PostEditorValues } from "@/components/editor/entry-editor-form.js";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import {
   POST_EDITOR_STATUSES,
   PostEditorForm,
-} from "@/components/editor/post-editor-form.js";
+} from "@/components/editor/entry-editor-form.js";
 import { Skeleton } from "@/components/ui/skeleton.js";
 import { hasCap } from "@/lib/caps.js";
-import { findPostTypeBySlug, metaBoxesForPostType } from "@/lib/manifest.js";
+import { findEntryTypeBySlug, metaBoxesForEntryType } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import {
   useMutation,
@@ -17,13 +17,13 @@ import {
 import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 import * as v from "valibot";
 
-import type { PostTypeManifestEntry } from "@plumix/core/manifest";
-import type { Post } from "@plumix/core/schema";
+import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
+import type { Entry } from "@plumix/core/schema";
 import { idPathParam } from "@plumix/core/validation";
 
-import { CONTENT_LIST_DEFAULT_SEARCH } from "./-constants.js";
+import { ENTRIES_LIST_DEFAULT_SEARCH } from "./-constants.js";
 
-export const Route = createFileRoute("/_authenticated/content/$slug/$id")({
+export const Route = createFileRoute("/_authenticated/entries/$slug/$id")({
   // Reject invalid ids as a router 404 before `beforeLoad` / `loader`
   // fire — no RPC, no stale-id flicker through the cache.
   params: {
@@ -36,17 +36,17 @@ export const Route = createFileRoute("/_authenticated/content/$slug/$id")({
       return { slug: raw.slug, id: result.output };
     },
   },
-  beforeLoad: ({ params }): { postType: PostTypeManifestEntry } => {
-    const postType = findPostTypeBySlug(params.slug);
-    if (!postType) {
+  beforeLoad: ({ params }): { entryType: EntryTypeManifestEntry } => {
+    const entryType = findEntryTypeBySlug(params.slug);
+    if (!entryType) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw notFound();
     }
-    return { postType };
+    return { entryType };
   },
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(
-      orpc.post.get.queryOptions({ input: { id: params.id } }),
+      orpc.entry.get.queryOptions({ input: { id: params.id } }),
     ),
   // Pending/error screens are per-slug so copy reflects the actual
   // type ("page", "product") instead of hardcoding "post".
@@ -56,10 +56,10 @@ export const Route = createFileRoute("/_authenticated/content/$slug/$id")({
 });
 
 function postTypeSingular(slug: string): string {
-  const postType = findPostTypeBySlug(slug);
+  const entryType = findEntryTypeBySlug(slug);
   return (
-    postType?.labels?.singular ??
-    postType?.label ??
+    entryType?.labels?.singular ??
+    entryType?.label ??
     "post"
   ).toLowerCase();
 }
@@ -79,20 +79,20 @@ function EditPostErrorScreen(): ReactNode {
 }
 
 function EditPostRoute(): ReactNode {
-  const { user, postType } = Route.useRouteContext();
-  const { id: postId, slug } = Route.useParams();
+  const { user, entryType } = Route.useRouteContext();
+  const { id: entryId, slug } = Route.useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
   const { data: post } = useSuspenseQuery(
-    orpc.post.get.queryOptions({ input: { id: postId } }),
+    orpc.entry.get.queryOptions({ input: { id: entryId } }),
   );
 
   const updatePost = useMutation({
     mutationFn: (input: PostEditorValues) =>
-      orpc.post.update.call({
-        id: postId,
+      orpc.entry.update.call({
+        id: entryId,
         title: input.title,
         slug: input.slug,
         content: input.content,
@@ -108,11 +108,11 @@ function EditPostRoute(): ReactNode {
       // don't needlessly refetch.
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: orpc.post.get.queryOptions({ input: { id: postId } })
+          queryKey: orpc.entry.get.queryOptions({ input: { id: entryId } })
             .queryKey,
         }),
         queryClient.invalidateQueries({
-          queryKey: orpc.post.list.key({ input: { type: postType.name } }),
+          queryKey: orpc.entry.list.key({ input: { type: entryType.name } }),
         }),
       ]);
     },
@@ -122,15 +122,15 @@ function EditPostRoute(): ReactNode {
   });
 
   const singularLower = (
-    postType.labels?.singular ?? postType.label
+    entryType.labels?.singular ?? entryType.label
   ).toLowerCase();
 
   const metaBoxes = useMemo(
-    () => metaBoxesForPostType(postType.name, user.capabilities),
-    [postType.name, user.capabilities],
+    () => metaBoxesForEntryType(entryType.name, user.capabilities),
+    [entryType.name, user.capabilities],
   );
 
-  const capNamespace = postType.capabilityType ?? postType.name;
+  const capNamespace = entryType.capabilityType ?? entryType.name;
   const canEditAny = hasCap(user.capabilities, `${capNamespace}:edit_any`);
   const canEditOwn =
     post.authorId === user.id &&
@@ -163,7 +163,7 @@ function EditPostRoute(): ReactNode {
         // Key on `updatedAt` so a successful update (which bumps the
         // server's updatedAt and triggers a refetch) remounts the form
         // with fresh initial values — clears isDirty and re-arms the
-        // blocker cleanly. Switching posts (different id → different
+        // blocker cleanly. Switching entries (different id → different
         // updatedAt) resets state the same way.
         key={
           post.updatedAt instanceof Date
@@ -187,9 +187,9 @@ function EditPostRoute(): ReactNode {
         }}
         onCancel={() => {
           void navigate({
-            to: "/content/$slug",
+            to: "/entries/$slug",
             params: { slug },
-            search: CONTENT_LIST_DEFAULT_SEARCH,
+            search: ENTRIES_LIST_DEFAULT_SEARCH,
           });
         }}
       />
@@ -197,7 +197,7 @@ function EditPostRoute(): ReactNode {
   );
 }
 
-function toEditorValues(post: Post): PostEditorValues {
+function toEditorValues(post: Entry): PostEditorValues {
   return {
     title: post.title,
     slug: post.slug,

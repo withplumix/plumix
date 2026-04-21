@@ -1,17 +1,17 @@
 import { describe, expect, test } from "vitest";
 
-import { posts } from "../../../db/schema/posts.js";
+import { entries } from "../../../db/schema/entries.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
-describe("post.update", () => {
+describe("entry.update", () => {
   test("author can update their own draft via edit_own", async () => {
     const h = await createRpcHarness({ authAs: "author" });
     const own = await h.factory.draft.create({
       authorId: h.user.id,
       slug: "own",
     });
-    const updated = await h.client.post.update({
+    const updated = await h.client.entry.update({
       id: own.id,
       title: "renamed",
     });
@@ -26,7 +26,7 @@ describe("post.update", () => {
       slug: "theirs",
     });
     await expect(
-      h.client.post.update({ id: mine.id, title: "hax" }),
+      h.client.entry.update({ id: mine.id, title: "hax" }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
       data: { capability: "post:edit_any" },
@@ -40,7 +40,7 @@ describe("post.update", () => {
       slug: "self",
     });
     await expect(
-      h.client.post.update({ id: own.id, title: "x" }),
+      h.client.entry.update({ id: own.id, title: "x" }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
       data: { capability: "post:edit_any" },
@@ -54,7 +54,7 @@ describe("post.update", () => {
       authorId: other.id,
       slug: "theirs",
     });
-    const updated = await h.client.post.update({
+    const updated = await h.client.entry.update({
       id: theirs.id,
       title: "by-editor",
     });
@@ -68,10 +68,10 @@ describe("post.update", () => {
       slug: "promote",
     });
 
-    const onPublish = h.spyAction("post:published");
-    const onTransition = h.spyAction("post:transition");
+    const onPublish = h.spyAction("entry:published");
+    const onTransition = h.spyAction("entry:transition");
 
-    const updated = await h.client.post.update({
+    const updated = await h.client.entry.update({
       id: own.id,
       status: "published",
     });
@@ -88,7 +88,7 @@ describe("post.update", () => {
       slug: "solo",
     });
     await expect(
-      h.client.post.update({ id: own.id, status: "published" }),
+      h.client.entry.update({ id: own.id, status: "published" }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
       data: { capability: "post:publish" },
@@ -103,7 +103,7 @@ describe("post.update", () => {
       slug: "mine",
     });
     await expect(
-      h.client.post.update({ id: mine.id, slug: "taken" }),
+      h.client.entry.update({ id: mine.id, slug: "taken" }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "slug_taken" },
@@ -116,9 +116,9 @@ describe("post.update", () => {
       authorId: h.user.id,
       slug: "noop",
     });
-    const onUpdate = h.spyAction("post:updated");
+    const onUpdate = h.spyAction("entry:updated");
 
-    const returned = await h.client.post.update({ id: own.id });
+    const returned = await h.client.entry.update({ id: own.id });
     expect(returned.id).toBe(own.id);
     onUpdate.assertNotCalled();
   });
@@ -126,7 +126,7 @@ describe("post.update", () => {
   test("404 for a missing row", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     await expect(
-      h.client.post.update({ id: 9999, title: "x" }),
+      h.client.entry.update({ id: 9999, title: "x" }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
@@ -137,12 +137,12 @@ describe("post.update", () => {
       slug: "race-to-publish",
     });
 
-    const onPublish = h.spyAction("post:published");
+    const onPublish = h.spyAction("entry:published");
 
     const outcomes = await Promise.all([
-      h.client.post.update({ id: own.id, status: "published" }),
-      h.client.post.update({ id: own.id, status: "published" }),
-      h.client.post.update({ id: own.id, status: "published" }),
+      h.client.entry.update({ id: own.id, status: "published" }),
+      h.client.entry.update({ id: own.id, status: "published" }),
+      h.client.entry.update({ id: own.id, status: "published" }),
     ]);
     for (const result of outcomes) expect(result.status).toBe("published");
     onPublish.assertCalledOnce();
@@ -158,13 +158,13 @@ describe("post.update", () => {
       slug: "locked",
     });
 
-    h.hooks.addFilter("post:before_save", (post) => ({
+    h.hooks.addFilter("entry:before_save", (post) => ({
       ...post,
       authorId: impostor.id,
       type: "leaked",
     }));
 
-    const updated = await h.client.post.update({
+    const updated = await h.client.entry.update({
       id: own.id,
       title: "renamed",
     });
@@ -176,7 +176,7 @@ describe("post.update", () => {
   test("rejects reparenting under a post the caller cannot read", async () => {
     const h = await createRpcHarness({ authAs: "contributor" });
     const [own] = await h.db
-      .insert(posts)
+      .insert(entries)
       .values({
         type: "post",
         title: "mine",
@@ -191,7 +191,7 @@ describe("post.update", () => {
       email: "hidden@example.test",
     });
     const [secret] = await h.db
-      .insert(posts)
+      .insert(entries)
       .values({
         type: "post",
         title: "secret",
@@ -203,7 +203,7 @@ describe("post.update", () => {
     if (!secret) throw new Error("seed");
 
     await expect(
-      h.client.post.update({ id: own.id, parentId: secret.id }),
+      h.client.entry.update({ id: own.id, parentId: secret.id }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
       data: { kind: "post", id: secret.id },
@@ -212,13 +212,13 @@ describe("post.update", () => {
 
   test("rejects self-parenting as a CONFLICT (parent_cycle)", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    const p = await h.client.post.create({
+    const p = await h.client.entry.create({
       title: "self",
       slug: "self",
       status: "published",
     });
     await expect(
-      h.client.post.update({ id: p.id, parentId: p.id }),
+      h.client.entry.update({ id: p.id, parentId: p.id }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "parent_cycle" },
@@ -227,12 +227,12 @@ describe("post.update", () => {
 
   test("rejects a reparent that would form a depth-2 cycle (A→B→A)", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    const a = await h.client.post.create({
+    const a = await h.client.entry.create({
       title: "a",
       slug: "a",
       status: "published",
     });
-    const b = await h.client.post.create({
+    const b = await h.client.entry.create({
       title: "b",
       slug: "b",
       status: "published",
@@ -240,7 +240,7 @@ describe("post.update", () => {
     });
     // b→a already. Pointing a→b closes the cycle.
     await expect(
-      h.client.post.update({ id: a.id, parentId: b.id }),
+      h.client.entry.update({ id: a.id, parentId: b.id }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "parent_cycle" },
@@ -249,18 +249,18 @@ describe("post.update", () => {
 
   test("rejects a reparent that would form a depth-3 cycle (A→B→C→A)", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    const a = await h.client.post.create({
+    const a = await h.client.entry.create({
       title: "a2",
       slug: "a2",
       status: "published",
     });
-    const b = await h.client.post.create({
+    const b = await h.client.entry.create({
       title: "b2",
       slug: "b2",
       status: "published",
       parentId: a.id,
     });
-    const c = await h.client.post.create({
+    const c = await h.client.entry.create({
       title: "c2",
       slug: "c2",
       status: "published",
@@ -268,7 +268,7 @@ describe("post.update", () => {
     });
     // c→b→a already. Pointing a→c closes the cycle a→c→b→a.
     await expect(
-      h.client.post.update({ id: a.id, parentId: c.id }),
+      h.client.entry.update({ id: a.id, parentId: c.id }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "parent_cycle" },
@@ -280,23 +280,23 @@ describe("post.update", () => {
     plugins.metaKeys.set("meta_title", {
       key: "meta_title",
       type: "string",
-      postTypes: ["post"],
+      entryTypes: ["post"],
       registeredBy: "test",
     });
     plugins.metaKeys.set("is_featured", {
       key: "is_featured",
       type: "boolean",
-      postTypes: ["post"],
+      entryTypes: ["post"],
       registeredBy: "test",
     });
     const h = await createRpcHarness({ authAs: "admin", plugins });
-    const post = await h.client.post.create({
+    const post = await h.client.entry.create({
       title: "p",
       slug: "p",
       meta: { meta_title: "seed title", is_featured: false },
     });
 
-    const updated = await h.client.post.update({
+    const updated = await h.client.entry.update({
       id: post.id,
       meta: { is_featured: true },
     });
@@ -311,23 +311,23 @@ describe("post.update", () => {
     plugins.metaKeys.set("meta_title", {
       key: "meta_title",
       type: "string",
-      postTypes: ["post"],
+      entryTypes: ["post"],
       registeredBy: "test",
     });
     plugins.metaKeys.set("is_featured", {
       key: "is_featured",
       type: "boolean",
-      postTypes: ["post"],
+      entryTypes: ["post"],
       registeredBy: "test",
     });
     const h = await createRpcHarness({ authAs: "admin", plugins });
-    const post = await h.client.post.create({
+    const post = await h.client.entry.create({
       title: "p2",
       slug: "p2",
       meta: { meta_title: "keep", is_featured: true },
     });
 
-    const updated = await h.client.post.update({
+    const updated = await h.client.entry.update({
       id: post.id,
       meta: { is_featured: null },
     });
@@ -336,9 +336,9 @@ describe("post.update", () => {
 
   test("meta: bad key → CONFLICT, and the post row is untouched (validated pre-write)", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    const post = await h.client.post.create({ title: "p3", slug: "p3" });
+    const post = await h.client.entry.create({ title: "p3", slug: "p3" });
     await expect(
-      h.client.post.update({
+      h.client.entry.update({
         id: post.id,
         title: "new-title",
         meta: { bogus: "x" },
@@ -347,29 +347,29 @@ describe("post.update", () => {
       code: "CONFLICT",
       data: { reason: "meta_not_registered", key: "bogus" },
     });
-    const reloaded = await h.client.post.get({ id: post.id });
+    const reloaded = await h.client.entry.get({ id: post.id });
     expect(reloaded.title).toBe("p3");
   });
 
-  test("rpc:post.update:input can inject derived meta before sanitization; post:meta_changed fires with the final bag", async () => {
+  test("rpc:entry.update:input can inject derived meta before sanitization; post:meta_changed fires with the final bag", async () => {
     const plugins = createPluginRegistry();
     plugins.metaKeys.set("title", {
       key: "title",
       type: "string",
-      postTypes: ["post"],
+      entryTypes: ["post"],
       registeredBy: "test",
     });
     plugins.metaKeys.set("title_lc", {
       key: "title_lc",
       type: "string",
-      postTypes: ["post"],
+      entryTypes: ["post"],
       registeredBy: "test",
     });
     const h = await createRpcHarness({ authAs: "admin", plugins });
     // Derived meta at the input stage: mirror `title` into `title_lc` on
-    // every update. Replaces the old `rpc:post.meta:write` filter —
+    // every update. Replaces the old `rpc:entry.meta:write` filter —
     // plugins operate on the raw input before sanitization.
-    h.hooks.addFilter("rpc:post.update:input", (input) => {
+    h.hooks.addFilter("rpc:entry.update:input", (input) => {
       const title = input.meta?.title;
       if (typeof title !== "string") return input;
       return {
@@ -377,15 +377,15 @@ describe("post.update", () => {
         meta: { ...input.meta, title_lc: title.toLowerCase() },
       };
     });
-    const onUpdated = h.spyAction("post:meta_changed");
+    const onUpdated = h.spyAction("entry:meta_changed");
 
-    const post = await h.client.post.create({ title: "p", slug: "p" });
-    await h.client.post.update({
+    const post = await h.client.entry.create({ title: "p", slug: "p" });
+    await h.client.entry.update({
       id: post.id,
       meta: { title: "SHOUTING" },
     });
 
-    const reloaded = await h.client.post.get({ id: post.id });
+    const reloaded = await h.client.entry.get({ id: post.id });
     expect(reloaded.meta).toEqual({
       title: "SHOUTING",
       title_lc: "shouting",
@@ -397,25 +397,25 @@ describe("post.update", () => {
     });
   });
 
-  test("rpc:post.get:output can decorate the returned meta bag without touching storage", async () => {
+  test("rpc:entry.get:output can decorate the returned meta bag without touching storage", async () => {
     const plugins = createPluginRegistry();
     plugins.metaKeys.set("title", {
       key: "title",
       type: "string",
-      postTypes: ["post"],
+      entryTypes: ["post"],
       registeredBy: "test",
     });
     const h = await createRpcHarness({ authAs: "admin", plugins });
     // Decorate-on-read: inject a derived key into every response. Replaces
-    // the old `rpc:post.meta:read` filter — plugins subscribe to the
+    // the old `rpc:entry.meta:read` filter — plugins subscribe to the
     // post-level output filter (or all three: create/update/get) and
     // mutate `output.meta`.
-    h.hooks.addFilter("rpc:post.get:output", (output) => ({
+    h.hooks.addFilter("rpc:entry.get:output", (output) => ({
       ...output,
       meta: { ...output.meta, _derived: "always-there" },
     }));
 
-    const post = await h.client.post.create({
+    const post = await h.client.entry.create({
       title: "p",
       slug: "p",
       meta: { title: "stored" },
@@ -423,7 +423,7 @@ describe("post.update", () => {
     // create:output filter wasn't installed → bag is unadorned.
     expect(post.meta).toEqual({ title: "stored" });
 
-    const refetched = await h.client.post.get({ id: post.id });
+    const refetched = await h.client.entry.get({ id: post.id });
     expect(refetched.meta).toEqual({
       title: "stored",
       _derived: "always-there",

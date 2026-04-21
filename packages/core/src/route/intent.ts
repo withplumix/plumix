@@ -5,8 +5,8 @@
  * `redirect`; those land when a plugin actually needs them.
  */
 export type RouteIntent =
-  | { readonly kind: "single"; readonly postType: string }
-  | { readonly kind: "archive"; readonly postType: string };
+  | { readonly kind: "single"; readonly entryType: string }
+  | { readonly kind: "archive"; readonly entryType: string };
 
 /**
  * Compiled rule. `priority` preserves arch-doc ordering semantics — lower

@@ -148,7 +148,7 @@ describe("cloudflare adapter — buildFetchHandler", () => {
     };
 
     const response = await invoke(
-      new Request("https://cms.example/_plumix/admin/posts/new"),
+      new Request("https://cms.example/_plumix/admin/entries/new"),
       { ASSETS },
     );
 

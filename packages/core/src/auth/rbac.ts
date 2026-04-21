@@ -1,5 +1,5 @@
 import type { UserRole } from "../db/schema/users.js";
-import type { PluginRegistry, PostTypeOptions } from "../plugin/manifest.js";
+import type { EntryTypeOptions, PluginRegistry } from "../plugin/manifest.js";
 import { USER_ROLES } from "../db/schema/users.js";
 
 /**
@@ -24,7 +24,7 @@ export function roleLevel(role: UserRole): number {
 // `post:*` and `taxonomy:manage` are the built-in fallbacks — present even
 // before any plugin registers a type. Plugins registering a post type with
 // `capabilityType: 'post'` (the default) just inherit `post:*` via the
-// dedupe rule in `registerPostType`. `user`/`plugin`/`option` aren't tied
+// dedupe rule in `registerEntryType`. `user`/`plugin`/`option` aren't tied
 // to content entities so they only live here.
 //
 // `user:*` mirrors WordPress's split: list is editor+, profile self-edit is
@@ -80,7 +80,7 @@ export type CoreCapability = keyof typeof CORE_CAPABILITIES;
  * autocomplete picks these up when a `KnownCapability | (string & {})`
  * signature is used (the `string & {}` half preserves flexibility for
  * plugin-defined caps without losing literal suggestions). Derived
- * `{postType|taxonomy}:{action}` shapes deliberately aren't listed here:
+ * `{entryType|taxonomy}:{action}` shapes deliberately aren't listed here:
  * `${string}:${action}` collapses to `string` in TypeScript, which would
  * erase the autocomplete benefit for the core strings.
  */
@@ -101,9 +101,9 @@ function deriveCapabilities(
   }));
 }
 
-export function derivePostTypeCapabilities(
+export function deriveEntryTypeCapabilities(
   postTypeName: string,
-  options: PostTypeOptions,
+  options: EntryTypeOptions,
 ): readonly DerivedCapability[] {
   // Sharing `capabilityType` across post types pools their permissions —
   // that's how the built-in `post` scheme extends to plugin-registered types.

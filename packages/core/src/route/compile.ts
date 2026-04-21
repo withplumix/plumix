@@ -1,4 +1,7 @@
-import type { PluginRegistry, RegisteredPostType } from "../plugin/manifest.js";
+import type {
+  PluginRegistry,
+  RegisteredEntryType,
+} from "../plugin/manifest.js";
 import type { RouteRule } from "./intent.js";
 
 export const AUTO_ROUTE_PRIORITY = 50;
@@ -19,9 +22,9 @@ export function compileRouteMap(
 ): readonly RouteRule[] {
   const rules: CompiledRule[] = [];
 
-  for (const postType of registry.postTypes.values()) {
-    if (postType.isPublic === false) continue;
-    for (const rule of autoRulesForPostType(postType)) rules.push(rule);
+  for (const entryType of registry.entryTypes.values()) {
+    if (entryType.isPublic === false) continue;
+    for (const rule of autoRulesForEntryType(entryType)) rules.push(rule);
   }
 
   for (const registered of registry.rewriteRules) {
@@ -39,9 +42,9 @@ export function compileRouteMap(
   return rules;
 }
 
-function autoRulesForPostType(postType: RegisteredPostType): CompiledRule[] {
-  const baseSlug = postType.rewrite?.slug ?? postType.name;
-  const archiveSlug = archiveSlugFor(postType, baseSlug);
+function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
+  const baseSlug = entryType.rewrite?.slug ?? entryType.name;
+  const archiveSlug = archiveSlugFor(entryType, baseSlug);
   const rules: CompiledRule[] = [];
 
   if (archiveSlug !== null) {
@@ -49,9 +52,9 @@ function autoRulesForPostType(postType: RegisteredPostType): CompiledRule[] {
     rules.push({
       pattern: new URLPattern({ pathname: pattern }),
       rawPattern: pattern,
-      intent: { kind: "archive", postType: postType.name },
+      intent: { kind: "archive", entryType: entryType.name },
       priority: AUTO_ROUTE_PRIORITY,
-      registeredBy: postType.registeredBy,
+      registeredBy: entryType.registeredBy,
     });
   }
 
@@ -59,9 +62,9 @@ function autoRulesForPostType(postType: RegisteredPostType): CompiledRule[] {
   rules.push({
     pattern: new URLPattern({ pathname: singlePattern }),
     rawPattern: singlePattern,
-    intent: { kind: "single", postType: postType.name },
+    intent: { kind: "single", entryType: entryType.name },
     priority: AUTO_ROUTE_PRIORITY,
-    registeredBy: postType.registeredBy,
+    registeredBy: entryType.registeredBy,
   });
 
   return rules;
@@ -73,15 +76,15 @@ function autoRulesForPostType(postType: RegisteredPostType): CompiledRule[] {
 const ARCHIVE_SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 
 function archiveSlugFor(
-  postType: RegisteredPostType,
+  entryType: RegisteredEntryType,
   baseSlug: string,
 ): string | null {
-  const { hasArchive } = postType;
+  const { hasArchive } = entryType;
   if (!hasArchive) return null;
   if (typeof hasArchive === "string") {
     if (!ARCHIVE_SLUG_RE.test(hasArchive)) {
       throw new Error(
-        `Post type "${postType.name}" has invalid hasArchive "${hasArchive}" — ` +
+        `Entry type "${entryType.name}" has invalid hasArchive "${hasArchive}" — ` +
           `expected a single lowercase kebab-case path segment.`,
       );
     }

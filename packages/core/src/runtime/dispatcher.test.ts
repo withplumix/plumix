@@ -39,7 +39,7 @@ describe("dispatcher — routing", () => {
     const h = await createDispatcherHarness({ assets });
 
     const response = await h.dispatch(
-      plumixRequest("/_plumix/admin/posts/new", { method: "GET" }),
+      plumixRequest("/_plumix/admin/entries/new", { method: "GET" }),
     );
 
     expect(response.status).toBe(200);
@@ -58,7 +58,7 @@ describe("dispatcher — routing", () => {
     const h = await createDispatcherHarness({ assets });
 
     const response = await h.dispatch(
-      plumixRequest("/_plumix/admin/posts", { method: "POST" }),
+      plumixRequest("/_plumix/admin/entries", { method: "POST" }),
     );
 
     expect(response.status).toBe(405);
@@ -146,7 +146,7 @@ describe("dispatcher — CSRF", () => {
   test("POST with a mismatched Origin header is forbidden (origin fallback)", async () => {
     const h = await createDispatcherHarness();
     const response = await h.dispatch(
-      plumixRequest("/_plumix/rpc/post/list", {
+      plumixRequest("/_plumix/rpc/entry/list", {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -163,7 +163,7 @@ describe("dispatcher — CSRF", () => {
   test("POST with a matching Origin header passes through to the RPC layer", async () => {
     const h = await createDispatcherHarness();
     const response = await h.dispatch(
-      plumixRequest("/_plumix/rpc/post/list", {
+      plumixRequest("/_plumix/rpc/entry/list", {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -180,7 +180,7 @@ describe("dispatcher — CSRF", () => {
   test("POST without an Origin header is unaffected by the origin fallback", async () => {
     const h = await createDispatcherHarness();
     const response = await h.dispatch(
-      plumixRequest("/_plumix/rpc/post/list", {
+      plumixRequest("/_plumix/rpc/entry/list", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ json: {} }),
@@ -191,10 +191,10 @@ describe("dispatcher — CSRF", () => {
 });
 
 describe("dispatcher — RPC", () => {
-  test("POST /_plumix/rpc/post/list with CSRF header dispatches to oRPC (UNAUTHORIZED without session)", async () => {
+  test("POST /_plumix/rpc/entry/list with CSRF header dispatches to oRPC (UNAUTHORIZED without session)", async () => {
     const h = await createDispatcherHarness();
     const response = await h.dispatch(
-      plumixRequest("/_plumix/rpc/post/list", {
+      plumixRequest("/_plumix/rpc/entry/list", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ json: {} }),
@@ -250,11 +250,11 @@ describe("dispatcher — auth routes", () => {
 describe("dispatcher — error boundary", () => {
   test("public GET resolves a plugin-registered single-post route", async () => {
     const blog = definePlugin("test-blog", (ctx) => {
-      ctx.registerPostType("post", { label: "Posts", isPublic: true });
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
     });
     const h = await createDispatcherHarness({ plugins: [blog] });
     const author = await h.seedUser("admin");
-    await h.factory.post.create({
+    await h.factory.entry.create({
       type: "post",
       slug: "hello-world",
       title: "Hello World",
@@ -286,7 +286,7 @@ describe("dispatcher — error boundary", () => {
 
   test("public GET 404s for an unknown slug", async () => {
     const blog = definePlugin("test-blog", (ctx) => {
-      ctx.registerPostType("post", { label: "Posts", isPublic: true });
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
     });
     const h = await createDispatcherHarness({ plugins: [blog] });
     const response = await h.dispatch(
@@ -306,13 +306,13 @@ describe("dispatcher — error boundary", () => {
 
   test("unhandled handler exceptions return 500 JSON (no raw throw)", async () => {
     const h = await createDispatcherHarness();
-    h.app.hooks.addFilter("rpc:post.list:input", () => {
+    h.app.hooks.addFilter("rpc:entry.list:input", () => {
       throw new Error("boom");
     });
 
     const user = await h.seedUser("admin");
     const authed = await h.authenticateRequest(
-      plumixRequest("/_plumix/rpc/post/list", {
+      plumixRequest("/_plumix/rpc/entry/list", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ json: {} }),

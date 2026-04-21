@@ -13,16 +13,16 @@ import type {
 } from "../hooks/types.js";
 import type { RouteIntent } from "../route/intent.js";
 import type {
+  EntryTypeOptions,
   MetaBoxOptions,
   MetaOptions,
   MutablePluginRegistry,
-  PostTypeOptions,
   SettingsFieldset,
   SettingsGroupOptions,
   TaxonomyOptions,
 } from "./manifest.js";
 import {
-  derivePostTypeCapabilities,
+  deriveEntryTypeCapabilities,
   deriveTaxonomyCapabilities,
 } from "../auth/rbac.js";
 import { DEFAULT_REWRITE_RULE_PRIORITY } from "../route/compile.js";
@@ -62,7 +62,7 @@ export interface PluginSetupContext {
     options?: HookOptions,
   ): void;
 
-  registerPostType(name: string, options: PostTypeOptions): void;
+  registerEntryType(name: string, options: EntryTypeOptions): void;
   registerTaxonomy(name: string, options: TaxonomyOptions): void;
   registerMeta(key: string, options: MetaOptions): void;
   registerMetaBox(id: string, options: MetaBoxOptions): void;
@@ -91,7 +91,7 @@ export interface PluginSetupContext {
    * Declare a public URL → `RouteIntent` mapping. Lands in the compiled
    * route map at `buildApp`; `URLPattern` pathname syntax (e.g. `/:slug`,
    * `/docs/:category/:slug`). `priority` defaults to 10 — lower wins,
-   * auto-generated archive/single rules from `registerPostType` sit at 50.
+   * auto-generated archive/single rules from `registerEntryType` sit at 50.
    */
   addRewriteRule(
     pattern: string,
@@ -148,15 +148,15 @@ export function createPluginSetupContext({
       });
     },
 
-    registerPostType: (name, options) => {
-      if (registry.postTypes.has(name))
+    registerEntryType: (name, options) => {
+      if (registry.entryTypes.has(name))
         throw new DuplicateRegistrationError("post type", name);
-      registry.postTypes.set(name, {
+      registry.entryTypes.set(name, {
         ...options,
         name,
         registeredBy: pluginId,
       });
-      addDerivedCaps(derivePostTypeCapabilities(name, options));
+      addDerivedCaps(deriveEntryTypeCapabilities(name, options));
     },
 
     registerTaxonomy: (name, options) => {

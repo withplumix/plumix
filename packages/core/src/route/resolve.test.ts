@@ -4,7 +4,7 @@ import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 
 const blogPlugin = definePlugin("blog", (ctx) => {
-  ctx.registerPostType("post", {
+  ctx.registerEntryType("post", {
     label: "Posts",
     isPublic: true,
     hasArchive: true,
@@ -12,7 +12,7 @@ const blogPlugin = definePlugin("blog", (ctx) => {
 });
 
 const shopPlugin = definePlugin("shop", (ctx) => {
-  ctx.registerPostType("product", {
+  ctx.registerEntryType("product", {
     label: "Products",
     isPublic: true,
     hasArchive: true,
@@ -29,7 +29,7 @@ describe("resolvePublicRoute — single", () => {
   test("renders title + walked content for a published post", async () => {
     const h = await createDispatcherHarness({ plugins: [blogPlugin] });
     const author = await h.seedUser("admin");
-    await h.factory.post.create({
+    await h.factory.entry.create({
       type: "post",
       slug: "hello",
       title: "Hello & <world>",
@@ -52,7 +52,7 @@ describe("resolvePublicRoute — single", () => {
   test("draft with a matching slug returns 404 (status gate)", async () => {
     const h = await createDispatcherHarness({ plugins: [blogPlugin] });
     const author = await h.seedUser("admin");
-    await h.factory.post.create({
+    await h.factory.entry.create({
       type: "post",
       slug: "secret",
       title: "Secret",
@@ -71,7 +71,7 @@ describe("resolvePublicRoute — single", () => {
   test("trashed post returns 404", async () => {
     const h = await createDispatcherHarness({ plugins: [blogPlugin] });
     const author = await h.seedUser("admin");
-    await h.factory.post.create({
+    await h.factory.entry.create({
       type: "post",
       slug: "gone",
       title: "Gone",
@@ -88,10 +88,10 @@ describe("resolvePublicRoute — single", () => {
 });
 
 describe("resolvePublicRoute — archive", () => {
-  test("lists published posts with hrefs honoring rewrite.slug", async () => {
+  test("lists published entries with hrefs honoring rewrite.slug", async () => {
     const h = await createDispatcherHarness({ plugins: [shopPlugin] });
     const author = await h.seedUser("admin");
-    await h.factory.post.create({
+    await h.factory.entry.create({
       type: "product",
       slug: "widget",
       title: "Widget",
@@ -100,7 +100,7 @@ describe("resolvePublicRoute — archive", () => {
       authorId: author.id,
       publishedAt: new Date("2026-04-20"),
     });
-    await h.factory.post.create({
+    await h.factory.entry.create({
       type: "product",
       slug: "gadget",
       title: "Gadget",
@@ -120,19 +120,19 @@ describe("resolvePublicRoute — archive", () => {
     expect(body.indexOf("Gadget")).toBeLessThan(body.indexOf("Widget"));
   });
 
-  test("archive with no published posts renders the empty-state copy", async () => {
+  test("archive with no published entries renders the empty-state copy", async () => {
     const h = await createDispatcherHarness({ plugins: [blogPlugin] });
     const response = await h.dispatch(new Request("https://cms.example/post"));
     expect(response.status).toBe(200);
     const body = await response.text();
     expect(body).toContain("<h1>Posts</h1>");
-    expect(body).toContain("No posts yet.");
+    expect(body).toContain("No entries yet.");
   });
 
   test("drafts do not appear in the archive", async () => {
     const h = await createDispatcherHarness({ plugins: [blogPlugin] });
     const author = await h.seedUser("admin");
-    await h.factory.post.create({
+    await h.factory.entry.create({
       type: "post",
       slug: "draft-one",
       title: "Draft One",
@@ -143,13 +143,13 @@ describe("resolvePublicRoute — archive", () => {
 
     const response = await h.dispatch(new Request("https://cms.example/post"));
     const body = await response.text();
-    expect(body).toContain("No posts yet.");
+    expect(body).toContain("No entries yet.");
     expect(body).not.toContain("Draft One");
   });
 
-  test("archive title falls back label → postType when labels.plural is absent", async () => {
+  test("archive title falls back label → entryType when labels.plural is absent", async () => {
     const plugin = definePlugin("docs", (ctx) => {
-      ctx.registerPostType("doc", {
+      ctx.registerEntryType("doc", {
         label: "Docs",
         isPublic: true,
         hasArchive: true,

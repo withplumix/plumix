@@ -1,14 +1,14 @@
 import { describe, expect, test } from "vitest";
 
 import { eq } from "../../../db/index.js";
-import { posts } from "../../../db/schema/posts.js";
+import { entries } from "../../../db/schema/entries.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
-describe("post.create", () => {
+describe("entry.create", () => {
   test("contributor can create a draft", async () => {
     const h = await createRpcHarness({ authAs: "contributor" });
-    const created = await h.client.post.create({
+    const created = await h.client.entry.create({
       title: "Hello",
       slug: "hello",
     });
@@ -20,7 +20,7 @@ describe("post.create", () => {
   test("forbidden for a subscriber (no post:create)", async () => {
     const h = await createRpcHarness({ authAs: "subscriber" });
     await expect(
-      h.client.post.create({ title: "t", slug: "s" }),
+      h.client.entry.create({ title: "t", slug: "s" }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
       data: { capability: "post:create" },
@@ -30,7 +30,7 @@ describe("post.create", () => {
   test("forbidden when contributor tries to publish directly", async () => {
     const h = await createRpcHarness({ authAs: "contributor" });
     await expect(
-      h.client.post.create({
+      h.client.entry.create({
         title: "now",
         slug: "now",
         status: "published",
@@ -44,7 +44,7 @@ describe("post.create", () => {
   test("forbidden when contributor tries to schedule — same gate as publish", async () => {
     const h = await createRpcHarness({ authAs: "contributor" });
     await expect(
-      h.client.post.create({
+      h.client.entry.create({
         title: "later",
         slug: "later",
         status: "scheduled",
@@ -60,11 +60,11 @@ describe("post.create", () => {
     const other = await h.factory.admin.create({
       email: "other@example.test",
     });
-    h.hooks.addFilter("post:before_save", (post) => ({
+    h.hooks.addFilter("entry:before_save", (post) => ({
       ...post,
       authorId: other.id,
     }));
-    const created = await h.client.post.create({
+    const created = await h.client.entry.create({
       title: "t",
       slug: "guarded",
     });
@@ -73,7 +73,7 @@ describe("post.create", () => {
 
   test("author can publish directly and publishedAt is stamped", async () => {
     const h = await createRpcHarness({ authAs: "author" });
-    const created = await h.client.post.create({
+    const created = await h.client.entry.create({
       title: "go",
       slug: "go",
       status: "published",
@@ -84,23 +84,23 @@ describe("post.create", () => {
 
   test("slug collision within the same type returns CONFLICT", async () => {
     const h = await createRpcHarness({ authAs: "author" });
-    await h.client.post.create({ title: "A", slug: "same" });
+    await h.client.entry.create({ title: "A", slug: "same" });
     await expect(
-      h.client.post.create({ title: "B", slug: "same" }),
+      h.client.entry.create({ title: "B", slug: "same" }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "slug_taken" },
     });
   });
 
-  test("rpc:post.create:input filter can rewrite the input before persistence", async () => {
+  test("rpc:entry.create:input filter can rewrite the input before persistence", async () => {
     const h = await createRpcHarness({ authAs: "author" });
-    h.hooks.addFilter("rpc:post.create:input", (input) => ({
+    h.hooks.addFilter("rpc:entry.create:input", (input) => ({
       ...input,
       title: `[pinned] ${input.title}`,
     }));
 
-    const created = await h.client.post.create({
+    const created = await h.client.entry.create({
       title: "orig",
       slug: "orig",
     });
@@ -109,12 +109,12 @@ describe("post.create", () => {
 
   test("post:before_save filter runs before the insert", async () => {
     const h = await createRpcHarness({ authAs: "author" });
-    h.hooks.addFilter("post:before_save", (post) => ({
+    h.hooks.addFilter("entry:before_save", (post) => ({
       ...post,
       excerpt: `[auto] ${post.title}`,
     }));
 
-    const created = await h.client.post.create({
+    const created = await h.client.entry.create({
       title: "t",
       slug: "t-slug",
     });
@@ -123,12 +123,12 @@ describe("post.create", () => {
 
   test("post:published fires once when status is published, never on drafts", async () => {
     const h = await createRpcHarness({ authAs: "author" });
-    const onPublish = h.spyAction("post:published");
+    const onPublish = h.spyAction("entry:published");
 
-    await h.client.post.create({ title: "d", slug: "d-1" });
+    await h.client.entry.create({ title: "d", slug: "d-1" });
     onPublish.assertNotCalled();
 
-    await h.client.post.create({
+    await h.client.entry.create({
       title: "p",
       slug: "p-1",
       status: "published",
@@ -139,8 +139,8 @@ describe("post.create", () => {
   test("concurrent creates with the same slug: exactly one wins, the other gets CONFLICT", async () => {
     const h = await createRpcHarness({ authAs: "author" });
     const results = await Promise.allSettled([
-      h.client.post.create({ title: "A", slug: "race" }),
-      h.client.post.create({ title: "B", slug: "race" }),
+      h.client.entry.create({ title: "A", slug: "race" }),
+      h.client.entry.create({ title: "B", slug: "race" }),
     ]);
     const fulfilled = results.filter((r) => r.status === "fulfilled");
     const rejected = results.filter((r) => r.status === "rejected");
@@ -155,12 +155,12 @@ describe("post.create", () => {
 
   test("persists the row so a follow-up query returns it", async () => {
     const h = await createRpcHarness({ authAs: "author" });
-    const created = await h.client.post.create({
+    const created = await h.client.entry.create({
       title: "persist",
       slug: "persist",
     });
-    const row = await h.db.query.posts.findFirst({
-      where: eq(posts.id, created.id),
+    const row = await h.db.query.entries.findFirst({
+      where: eq(entries.id, created.id),
     });
     expect(row?.title).toBe("persist");
   });
@@ -170,7 +170,7 @@ describe("post.create", () => {
     // Another author's draft — contributor lacks post:edit_any, doesn't own it.
     const other = await h.factory.admin.create({ email: "a@example.test" });
     const [secret] = await h.db
-      .insert(posts)
+      .insert(entries)
       .values({
         type: "post",
         title: "hidden",
@@ -182,7 +182,7 @@ describe("post.create", () => {
     if (!secret) throw new Error("seed");
 
     await expect(
-      h.client.post.create({
+      h.client.entry.create({
         title: "child",
         slug: "child",
         parentId: secret.id,
@@ -196,7 +196,7 @@ describe("post.create", () => {
   test("rejects a parentId of a different post type", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const [page] = await h.db
-      .insert(posts)
+      .insert(entries)
       .values({
         type: "page",
         title: "p",
@@ -209,7 +209,7 @@ describe("post.create", () => {
     if (!page) throw new Error("seed");
 
     await expect(
-      h.client.post.create({
+      h.client.entry.create({
         // implicit type "post" — mismatched with the "page" parent
         title: "child",
         slug: "child2",
@@ -223,12 +223,12 @@ describe("post.create", () => {
 
   test("accepts a parentId the caller can read (same type, readable)", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    const parent = await h.client.post.create({
+    const parent = await h.client.entry.create({
       title: "parent",
       slug: "parent",
       status: "published",
     });
-    const child = await h.client.post.create({
+    const child = await h.client.entry.create({
       title: "child",
       slug: "child3",
       parentId: parent.id,
@@ -241,17 +241,17 @@ describe("post.create", () => {
     plugins.metaKeys.set("meta_title", {
       key: "meta_title",
       type: "string",
-      postTypes: ["post"],
+      entryTypes: ["post"],
       registeredBy: "test",
     });
     plugins.metaKeys.set("is_featured", {
       key: "is_featured",
       type: "boolean",
-      postTypes: ["post"],
+      entryTypes: ["post"],
       registeredBy: "test",
     });
     const h = await createRpcHarness({ authAs: "admin", plugins });
-    const created = await h.client.post.create({
+    const created = await h.client.entry.create({
       title: "with-meta",
       slug: "with-meta",
       meta: { meta_title: "SEO title", is_featured: true },
@@ -265,7 +265,7 @@ describe("post.create", () => {
   test("meta: unregistered key → CONFLICT with the offending key surfaced", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     await expect(
-      h.client.post.create({
+      h.client.entry.create({
         title: "bad-meta",
         slug: "bad-meta",
         meta: { mystery: "x" },
@@ -281,7 +281,7 @@ describe("post.create", () => {
     const oversized: Record<string, string> = {};
     for (let i = 0; i < 201; i++) oversized[`k${i}`] = "x";
     await expect(
-      h.client.post.create({
+      h.client.entry.create({
         title: "too-much",
         slug: "too-much",
         meta: oversized,
