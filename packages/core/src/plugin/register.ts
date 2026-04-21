@@ -33,7 +33,7 @@ export async function installPlugins({
     });
     // Plugin configs are opaque at the framework level — each plugin supplies
     // its own TConfig. `undefined` is the common case for zero-config plugins.
-    await descriptor.setup(ctx, undefined as never);
+    await descriptor.setup(ctx, undefined);
   }
   return { hooks, registry };
 }

@@ -74,7 +74,7 @@ export class HookRegistry implements HookExecutor {
       plugin: options.plugin ?? null,
       priority: options.priority ?? DEFAULT_HOOK_PRIORITY,
       insertOrder: this.#counter++,
-      fn: fn as FilterEntry["fn"],
+      fn,
     });
     this.#filters.set(name, entries);
   }
@@ -89,7 +89,7 @@ export class HookRegistry implements HookExecutor {
       plugin: options.plugin ?? null,
       priority: options.priority ?? DEFAULT_HOOK_PRIORITY,
       insertOrder: this.#counter++,
-      fn: fn as ActionEntry["fn"],
+      fn,
     });
     this.#actions.set(name, entries);
   }

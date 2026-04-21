@@ -46,7 +46,7 @@ describe("plumix CLI dispatch", () => {
     dir = mkdtempSync(join(tmpdir(), "plumix-cli-dispatch-"));
     writeFileSync(join(dir, "plumix.config.mjs"), VALID_CONFIG, "utf8");
     exitCode = undefined;
-    (process.exit as unknown as (code?: number) => void) = ((code?: number) => {
+    process.exit = ((code?: number) => {
       exitCode = code ?? 0;
     }) as typeof process.exit;
   });

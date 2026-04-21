@@ -157,7 +157,7 @@ export async function createRpcHarness(
   const db = await createTestDb();
   const hooks = options.hooks ?? new HookRegistryImpl();
   const plugins = options.plugins ?? createPluginRegistry();
-  const env = options.env ?? ({} as PlumixEnv);
+  const env = options.env ?? {};
 
   if (!options.request && options.authAs) {
     const user = await userFactory

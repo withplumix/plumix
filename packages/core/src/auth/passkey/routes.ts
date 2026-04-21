@@ -4,7 +4,7 @@ import type { AppContext } from "../../context/app.js";
 import type { User } from "../../db/schema/users.js";
 import type { PlumixApp } from "../../runtime/app.js";
 import type { ValidInvite } from "../invite.js";
-import type { AuthenticationResponse, RegistrationResponse } from "./types.js";
+import type { AuthenticationResponse } from "./types.js";
 import { eq, isUniqueConstraintError } from "../../db/index.js";
 import { credentials } from "../../db/schema/credentials.js";
 import { users } from "../../db/schema/users.js";
@@ -240,11 +240,7 @@ export async function handlePasskeyRegisterVerify(
   if (!payload) return invalidInput();
 
   try {
-    const verified = await finishRegistration(
-      ctx.db,
-      app.passkey,
-      payload as RegistrationResponse,
-    );
+    const verified = await finishRegistration(ctx.db, app.passkey, payload);
     if (verified.userId === null) {
       return jsonResponse(
         { error: "challenge_not_bound_to_user" },
@@ -417,7 +413,7 @@ export async function handleInviteRegisterVerify(
     const verified = await finishRegistration(
       ctx.db,
       app.passkey,
-      input.response as RegistrationResponse,
+      input.response,
     );
     // The challenge issued in register/options was bound to invite.userId.
     // A mismatch means the response is for a different user — refuse.

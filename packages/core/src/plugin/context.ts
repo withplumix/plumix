@@ -107,7 +107,7 @@ export function createPluginSetupContext({
 
     registerAction: (shortName, fn, options) => {
       const prefixed = `${pluginId}:${shortName}` as ActionName;
-      hooks.addAction(prefixed, fn as ActionFn<ActionName>, {
+      hooks.addAction(prefixed, fn, {
         ...options,
         plugin: pluginId,
       });
