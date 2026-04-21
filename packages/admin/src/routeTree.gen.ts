@@ -19,7 +19,10 @@ import { Route as AuthenticatedUsersIndexRouteImport } from "./routes/_authentic
 import { Route as AuthenticatedUsersNewRouteImport } from "./routes/_authenticated/users/new";
 import { Route as AuthenticatedUsersIdRouteImport } from "./routes/_authenticated/users/$id";
 import { Route as AuthAcceptInviteTokenRouteImport } from "./routes/_auth/accept-invite/$token";
+import { Route as AuthenticatedTaxonomiesNameIndexRouteImport } from "./routes/_authenticated/taxonomies/$name/index";
 import { Route as AuthenticatedContentSlugIndexRouteImport } from "./routes/_authenticated/content/$slug/index";
+import { Route as AuthenticatedTaxonomiesNameNewRouteImport } from "./routes/_authenticated/taxonomies/$name/new";
+import { Route as AuthenticatedTaxonomiesNameIdRouteImport } from "./routes/_authenticated/taxonomies/$name/$id";
 import { Route as AuthenticatedContentSlugNewRouteImport } from "./routes/_authenticated/content/$slug/new";
 import { Route as AuthenticatedContentSlugIdRouteImport } from "./routes/_authenticated/content/$slug/$id";
 
@@ -71,10 +74,28 @@ const AuthAcceptInviteTokenRoute = AuthAcceptInviteTokenRouteImport.update({
   path: "/accept-invite/$token",
   getParentRoute: () => AuthRoute,
 } as any);
+const AuthenticatedTaxonomiesNameIndexRoute =
+  AuthenticatedTaxonomiesNameIndexRouteImport.update({
+    id: "/taxonomies/$name/",
+    path: "/taxonomies/$name/",
+    getParentRoute: () => AuthenticatedRoute,
+  } as any);
 const AuthenticatedContentSlugIndexRoute =
   AuthenticatedContentSlugIndexRouteImport.update({
     id: "/content/$slug/",
     path: "/content/$slug/",
+    getParentRoute: () => AuthenticatedRoute,
+  } as any);
+const AuthenticatedTaxonomiesNameNewRoute =
+  AuthenticatedTaxonomiesNameNewRouteImport.update({
+    id: "/taxonomies/$name/new",
+    path: "/taxonomies/$name/new",
+    getParentRoute: () => AuthenticatedRoute,
+  } as any);
+const AuthenticatedTaxonomiesNameIdRoute =
+  AuthenticatedTaxonomiesNameIdRouteImport.update({
+    id: "/taxonomies/$name/$id",
+    path: "/taxonomies/$name/$id",
     getParentRoute: () => AuthenticatedRoute,
   } as any);
 const AuthenticatedContentSlugNewRoute =
@@ -101,7 +122,10 @@ export interface FileRoutesByFullPath {
   "/users/": typeof AuthenticatedUsersIndexRoute;
   "/content/$slug/$id": typeof AuthenticatedContentSlugIdRoute;
   "/content/$slug/new": typeof AuthenticatedContentSlugNewRoute;
+  "/taxonomies/$name/$id": typeof AuthenticatedTaxonomiesNameIdRoute;
+  "/taxonomies/$name/new": typeof AuthenticatedTaxonomiesNameNewRoute;
   "/content/$slug/": typeof AuthenticatedContentSlugIndexRoute;
+  "/taxonomies/$name/": typeof AuthenticatedTaxonomiesNameIndexRoute;
 }
 export interface FileRoutesByTo {
   "/": typeof AuthenticatedIndexRoute;
@@ -114,7 +138,10 @@ export interface FileRoutesByTo {
   "/users": typeof AuthenticatedUsersIndexRoute;
   "/content/$slug/$id": typeof AuthenticatedContentSlugIdRoute;
   "/content/$slug/new": typeof AuthenticatedContentSlugNewRoute;
+  "/taxonomies/$name/$id": typeof AuthenticatedTaxonomiesNameIdRoute;
+  "/taxonomies/$name/new": typeof AuthenticatedTaxonomiesNameNewRoute;
   "/content/$slug": typeof AuthenticatedContentSlugIndexRoute;
+  "/taxonomies/$name": typeof AuthenticatedTaxonomiesNameIndexRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
@@ -130,7 +157,10 @@ export interface FileRoutesById {
   "/_authenticated/users/": typeof AuthenticatedUsersIndexRoute;
   "/_authenticated/content/$slug/$id": typeof AuthenticatedContentSlugIdRoute;
   "/_authenticated/content/$slug/new": typeof AuthenticatedContentSlugNewRoute;
+  "/_authenticated/taxonomies/$name/$id": typeof AuthenticatedTaxonomiesNameIdRoute;
+  "/_authenticated/taxonomies/$name/new": typeof AuthenticatedTaxonomiesNameNewRoute;
   "/_authenticated/content/$slug/": typeof AuthenticatedContentSlugIndexRoute;
+  "/_authenticated/taxonomies/$name/": typeof AuthenticatedTaxonomiesNameIndexRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
@@ -145,7 +175,10 @@ export interface FileRouteTypes {
     | "/users/"
     | "/content/$slug/$id"
     | "/content/$slug/new"
-    | "/content/$slug/";
+    | "/taxonomies/$name/$id"
+    | "/taxonomies/$name/new"
+    | "/content/$slug/"
+    | "/taxonomies/$name/";
   fileRoutesByTo: FileRoutesByTo;
   to:
     | "/"
@@ -158,7 +191,10 @@ export interface FileRouteTypes {
     | "/users"
     | "/content/$slug/$id"
     | "/content/$slug/new"
-    | "/content/$slug";
+    | "/taxonomies/$name/$id"
+    | "/taxonomies/$name/new"
+    | "/content/$slug"
+    | "/taxonomies/$name";
   id:
     | "__root__"
     | "/_auth"
@@ -173,7 +209,10 @@ export interface FileRouteTypes {
     | "/_authenticated/users/"
     | "/_authenticated/content/$slug/$id"
     | "/_authenticated/content/$slug/new"
-    | "/_authenticated/content/$slug/";
+    | "/_authenticated/taxonomies/$name/$id"
+    | "/_authenticated/taxonomies/$name/new"
+    | "/_authenticated/content/$slug/"
+    | "/_authenticated/taxonomies/$name/";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
@@ -253,11 +292,32 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthAcceptInviteTokenRouteImport;
       parentRoute: typeof AuthRoute;
     };
+    "/_authenticated/taxonomies/$name/": {
+      id: "/_authenticated/taxonomies/$name/";
+      path: "/taxonomies/$name";
+      fullPath: "/taxonomies/$name/";
+      preLoaderRoute: typeof AuthenticatedTaxonomiesNameIndexRouteImport;
+      parentRoute: typeof AuthenticatedRoute;
+    };
     "/_authenticated/content/$slug/": {
       id: "/_authenticated/content/$slug/";
       path: "/content/$slug";
       fullPath: "/content/$slug/";
       preLoaderRoute: typeof AuthenticatedContentSlugIndexRouteImport;
+      parentRoute: typeof AuthenticatedRoute;
+    };
+    "/_authenticated/taxonomies/$name/new": {
+      id: "/_authenticated/taxonomies/$name/new";
+      path: "/taxonomies/$name/new";
+      fullPath: "/taxonomies/$name/new";
+      preLoaderRoute: typeof AuthenticatedTaxonomiesNameNewRouteImport;
+      parentRoute: typeof AuthenticatedRoute;
+    };
+    "/_authenticated/taxonomies/$name/$id": {
+      id: "/_authenticated/taxonomies/$name/$id";
+      path: "/taxonomies/$name/$id";
+      fullPath: "/taxonomies/$name/$id";
+      preLoaderRoute: typeof AuthenticatedTaxonomiesNameIdRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
     "/_authenticated/content/$slug/new": {
@@ -299,7 +359,10 @@ interface AuthenticatedRouteChildren {
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute;
   AuthenticatedContentSlugIdRoute: typeof AuthenticatedContentSlugIdRoute;
   AuthenticatedContentSlugNewRoute: typeof AuthenticatedContentSlugNewRoute;
+  AuthenticatedTaxonomiesNameIdRoute: typeof AuthenticatedTaxonomiesNameIdRoute;
+  AuthenticatedTaxonomiesNameNewRoute: typeof AuthenticatedTaxonomiesNameNewRoute;
   AuthenticatedContentSlugIndexRoute: typeof AuthenticatedContentSlugIndexRoute;
+  AuthenticatedTaxonomiesNameIndexRoute: typeof AuthenticatedTaxonomiesNameIndexRoute;
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -310,7 +373,10 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
   AuthenticatedContentSlugIdRoute: AuthenticatedContentSlugIdRoute,
   AuthenticatedContentSlugNewRoute: AuthenticatedContentSlugNewRoute,
+  AuthenticatedTaxonomiesNameIdRoute: AuthenticatedTaxonomiesNameIdRoute,
+  AuthenticatedTaxonomiesNameNewRoute: AuthenticatedTaxonomiesNameNewRoute,
   AuthenticatedContentSlugIndexRoute: AuthenticatedContentSlugIndexRoute,
+  AuthenticatedTaxonomiesNameIndexRoute: AuthenticatedTaxonomiesNameIndexRoute,
 };
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

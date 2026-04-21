@@ -2,7 +2,7 @@ import type { Page, Route } from "@playwright/test";
 
 import type { AuthSessionOutput } from "@plumix/core";
 import type { PlumixManifest } from "@plumix/core/manifest";
-import type { Post, User } from "@plumix/core/schema";
+import type { Post, Term, User } from "@plumix/core/schema";
 
 // The e2e webServer is just Vite — no real backend — so every /_plumix/rpc
 // call is intercepted here and answered with a deterministic fixture.
@@ -24,6 +24,11 @@ interface MockRpcHandlers {
   "/user/disable"?: User;
   "/user/enable"?: User;
   "/user/delete"?: User;
+  "/term/list"?: readonly Term[];
+  "/term/get"?: Term;
+  "/term/create"?: Term;
+  "/term/update"?: Term;
+  "/term/delete"?: Term;
 }
 
 // oRPC's StandardRPCSerializer wire format — `meta` is always present,
@@ -102,6 +107,35 @@ export const MANIFEST_WITH_POST: PlumixManifest = {
       labels: { singular: "Post", plural: "Posts" },
     },
   ],
+  taxonomies: [],
+  metaBoxes: [],
+};
+
+// Manifest with two taxonomies — one hierarchical (category), one flat
+// (tag) — shared by the taxonomy e2e specs so both code paths can be
+// exercised from a single fixture.
+export const MANIFEST_WITH_TAXONOMIES: PlumixManifest = {
+  postTypes: [
+    {
+      name: "post",
+      adminSlug: "posts",
+      label: "Posts",
+      labels: { singular: "Post", plural: "Posts" },
+    },
+  ],
+  taxonomies: [
+    {
+      name: "category",
+      label: "Categories",
+      labels: { singular: "Category" },
+      isHierarchical: true,
+    },
+    {
+      name: "tag",
+      label: "Tags",
+      labels: { singular: "Tag" },
+    },
+  ],
   metaBoxes: [],
 };
 
@@ -116,6 +150,7 @@ export const MANIFEST_WITH_META_BOXES: PlumixManifest = {
       labels: { singular: "Post", plural: "Posts" },
     },
   ],
+  taxonomies: [],
   metaBoxes: [
     {
       id: "seo",
@@ -175,6 +210,16 @@ export const AUTHED_ADMIN: AuthSessionOutput = {
       "user:edit_own",
       "user:list",
       "user:promote",
+      // Per-taxonomy caps matching MANIFEST_WITH_TAXONOMIES. The real
+      // server derives these from `deriveTaxonomyCapabilities(name)` for
+      // every registered taxonomy; mock-land hard-codes the union of
+      // every taxonomy that any fixture uses.
+      "category:read",
+      "category:edit",
+      "category:delete",
+      "tag:read",
+      "tag:edit",
+      "tag:delete",
     ],
   },
   needsBootstrap: false,

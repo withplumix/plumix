@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
 import { FormField } from "@/components/form/field.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Badge } from "@/components/ui/badge.js";
@@ -12,7 +13,6 @@ import {
   CardTitle,
 } from "@/components/ui/card.js";
 import { Label } from "@/components/ui/label.js";
-import { Skeleton } from "@/components/ui/skeleton.js";
 import { hasCap } from "@/lib/caps.js";
 import { orpc } from "@/lib/orpc.js";
 import { useForm } from "@tanstack/react-form";
@@ -100,7 +100,9 @@ function UserEditRoute(): ReactNode {
   const query = useQuery(orpc.user.get.queryOptions({ input: { id: userId } }));
 
   if (query.isPending) {
-    return <UserEditSkeleton />;
+    return (
+      <FormEditSkeleton ariaLabel="Loading user" testId="user-edit-loading" />
+    );
   }
   if (query.isError) {
     return (
@@ -602,31 +604,6 @@ const DELETE_ERROR_MESSAGES: Partial<Record<string, string>> = {
     "This user has authored posts. Pick someone to reassign them to above.",
   reassign_to_self: "Can't reassign to the user being deleted.",
 };
-
-function UserEditSkeleton(): ReactNode {
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      aria-label="Loading user"
-      data-testid="user-edit-loading"
-      className="mx-auto flex w-full max-w-xl flex-col gap-4"
-    >
-      <Skeleton className="h-4 w-24" />
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-72" />
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
 
 function NotFoundPlaceholder({ message }: { message: string }): ReactNode {
   return (

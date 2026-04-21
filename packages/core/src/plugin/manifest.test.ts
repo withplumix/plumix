@@ -155,6 +155,55 @@ describe("buildManifest", () => {
 
     expect(buildManifest(registry).metaBoxes).toEqual([]);
   });
+
+  test("projects registered taxonomies, dropping server-only fields", async () => {
+    const hooks = new HookRegistry();
+    const blog = definePlugin("blog", (ctx) => {
+      ctx.registerTaxonomy("category", {
+        label: "Categories",
+        labels: { singular: "Category" },
+        description: "Top-level organisation for blog posts.",
+        isHierarchical: true,
+        postTypes: ["post"],
+        // Server-only / public-site-only fields that should NOT ship to
+        // the admin manifest — asserted below.
+        isPublic: true,
+        isInQuickEdit: true,
+        hasAdminColumn: true,
+        rewrite: { slug: "category" },
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [blog] });
+
+    const manifest = buildManifest(registry);
+    expect(manifest.taxonomies).toEqual([
+      {
+        name: "category",
+        label: "Categories",
+        labels: { singular: "Category" },
+        description: "Top-level organisation for blog posts.",
+        isHierarchical: true,
+        postTypes: ["post"],
+      },
+    ]);
+    // Operational flags + `registeredBy` stay server-side.
+    const entry = manifest.taxonomies[0] as unknown as Record<string, unknown>;
+    expect(entry.registeredBy).toBeUndefined();
+    expect(entry.isPublic).toBeUndefined();
+    expect(entry.isInQuickEdit).toBeUndefined();
+    expect(entry.hasAdminColumn).toBeUndefined();
+    expect(entry.rewrite).toBeUndefined();
+  });
+
+  test("empty taxonomy registry yields an empty taxonomies array", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("blog", (ctx) => {
+      ctx.registerPostType("post", { label: "Posts" });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+
+    expect(buildManifest(registry).taxonomies).toEqual([]);
+  });
 });
 
 describe("deriveAdminSlug", () => {
@@ -177,12 +226,13 @@ describe("serializeManifestScript", () => {
   test("emits a json script tag with the expected id", () => {
     const tag = serializeManifestScript({
       postTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+      taxonomies: [],
       metaBoxes: [],
     });
     expect(tag).toContain(`id="${MANIFEST_SCRIPT_ID}"`);
     expect(tag).toContain(`type="application/json"`);
     expect(tag).toContain(
-      `{"postTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"metaBoxes":[]}`,
+      `{"postTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"taxonomies":[],"metaBoxes":[]}`,
     );
   });
 
@@ -191,6 +241,7 @@ describe("serializeManifestScript", () => {
       postTypes: [
         { name: "post", adminSlug: "posts", label: "</script><b>x</b>" },
       ],
+      taxonomies: [],
       metaBoxes: [],
     });
     expect(tag).not.toContain("</script><b>");
@@ -200,6 +251,7 @@ describe("serializeManifestScript", () => {
   test("round-trips through JSON.parse after unescaping the slash", () => {
     const manifest = {
       postTypes: [{ name: "post", adminSlug: "posts", label: "x</y>" }],
+      taxonomies: [],
       metaBoxes: [],
     };
     const tag = serializeManifestScript(manifest);
@@ -222,17 +274,21 @@ describe("injectManifestIntoHtml", () => {
   test("replaces the placeholder with the serialised manifest", () => {
     const out = injectManifestIntoHtml(TEMPLATE, {
       postTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+      taxonomies: [],
       metaBoxes: [],
     });
     expect(out).toContain(
-      `{"postTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"metaBoxes":[]}`,
+      `{"postTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"taxonomies":[],"metaBoxes":[]}`,
     );
-    expect(out).not.toContain(`{"postTypes":[],"metaBoxes":[]}`);
+    expect(out).not.toContain(
+      `{"postTypes":[],"taxonomies":[],"metaBoxes":[]}`,
+    );
   });
 
   test("is idempotent when the manifest is already injected", () => {
     const manifest = {
       postTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+      taxonomies: [],
       metaBoxes: [],
     };
     const once = injectManifestIntoHtml(TEMPLATE, manifest);
@@ -256,10 +312,11 @@ describe("injectManifestIntoHtml", () => {
     const html = `<SCRIPT ID="plumix-manifest" TYPE="application/json">{"postTypes":[]}</SCRIPT>`;
     const out = injectManifestIntoHtml(html, {
       postTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+      taxonomies: [],
       metaBoxes: [],
     });
     expect(out).toContain(
-      `{"postTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"metaBoxes":[]}`,
+      `{"postTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"taxonomies":[],"metaBoxes":[]}`,
     );
   });
 
@@ -269,10 +326,11 @@ describe("injectManifestIntoHtml", () => {
     </script>`;
     const out = injectManifestIntoHtml(html, {
       postTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+      taxonomies: [],
       metaBoxes: [],
     });
     expect(out).toMatch(
-      /^<script id="plumix-manifest" type="application\/json">\{"postTypes":\[\{"name":"post","adminSlug":"posts","label":"Posts"\}\],"metaBoxes":\[\]\}<\/script>$/,
+      /^<script id="plumix-manifest" type="application\/json">\{"postTypes":\[\{"name":"post","adminSlug":"posts","label":"Posts"\}\],"taxonomies":\[\],"metaBoxes":\[\]\}<\/script>$/,
     );
   });
 });
