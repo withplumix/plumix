@@ -9,14 +9,14 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from "./routes/__root";
-import { Route as AuthenticatedRouteImport } from "./routes/_authenticated";
 import { Route as AuthRouteImport } from "./routes/_auth";
-import { Route as AuthenticatedIndexRouteImport } from "./routes/_authenticated/index";
-import { Route as AuthLoginRouteImport } from "./routes/_auth/login";
 import { Route as AuthBootstrapRouteImport } from "./routes/_auth/bootstrap";
+import { Route as AuthLoginRouteImport } from "./routes/_auth/login";
+import { Route as AuthenticatedRouteImport } from "./routes/_authenticated";
+import { Route as AuthenticatedContentSlugIdRouteImport } from "./routes/_authenticated/content/$slug/$id";
 import { Route as AuthenticatedContentSlugIndexRouteImport } from "./routes/_authenticated/content/$slug/index";
 import { Route as AuthenticatedContentSlugNewRouteImport } from "./routes/_authenticated/content/$slug/new";
-import { Route as AuthenticatedContentSlugIdRouteImport } from "./routes/_authenticated/content/$slug/$id";
+import { Route as AuthenticatedIndexRouteImport } from "./routes/_authenticated/index";
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: "/_authenticated",
