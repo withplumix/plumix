@@ -21,6 +21,10 @@ export const RPC_ERRORS = {
     message: "Resource conflict",
     data: v.object({
       reason: v.string(),
+      // Optional identifier the client can surface in-context. Filled by
+      // reasons that pinpoint a specific field/row (e.g. `meta_*` reasons
+      // set this to the offending meta key); omitted otherwise.
+      key: v.optional(v.string()),
     }),
   },
 } as const;

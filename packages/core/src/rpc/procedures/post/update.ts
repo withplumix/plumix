@@ -22,6 +22,12 @@ import {
   postCapability,
   wouldCreateParentCycle,
 } from "./lifecycle.js";
+import {
+  applyMetaPatch,
+  loadPostMeta,
+  MetaSanitizationError,
+  sanitizeMetaInput,
+} from "./meta.js";
 import { postUpdateInputSchema } from "./schemas.js";
 
 export const update = base
@@ -85,9 +91,26 @@ export const update = base
       }
     }
 
-    // `terms` isn't a posts.* column — split it out and validate up front so
-    // a bad taxonomy or cap error fails fast, before any write happens.
-    const { id: _id, terms: termsPatch, ...changes } = filtered;
+    // `terms` and `meta` aren't posts.* columns — split them out and
+    // validate up front so a bad taxonomy/cap/meta key fails fast,
+    // before any write happens.
+    const {
+      id: _id,
+      terms: termsPatch,
+      meta: metaInput,
+      ...changes
+    } = filtered;
+    let metaPatch;
+    try {
+      metaPatch = sanitizeMetaInput(context.plugins, existing.type, metaInput);
+    } catch (error) {
+      if (error instanceof MetaSanitizationError) {
+        throw errors.CONFLICT({
+          data: { reason: `meta_${error.reason}`, key: error.key },
+        });
+      }
+      throw error;
+    }
     if (termsPatch !== undefined) {
       for (const taxonomy of Object.keys(termsPatch)) {
         if (!context.plugins.taxonomies.has(taxonomy)) {
@@ -116,9 +139,18 @@ export const update = base
       patch.publishedAt = new Date();
     }
 
-    // Nothing to write anywhere? Short-circuit without firing hooks.
-    if (Object.keys(patch).length === 0 && termsPatch === undefined) {
-      return context.hooks.applyFilter("rpc:post.update:output", existing);
+    // Nothing to write anywhere? Short-circuit without firing hooks, but
+    // still return the current meta so callers get a consistent shape.
+    if (
+      Object.keys(patch).length === 0 &&
+      termsPatch === undefined &&
+      metaPatch === null
+    ) {
+      const meta = await loadPostMeta(context.db, context.plugins, existing.id);
+      return context.hooks.applyFilter("rpc:post.update:output", {
+        ...existing,
+        meta,
+      });
     }
 
     let updated = existing;
@@ -174,6 +206,11 @@ export const update = base
       await applyTermPatch(context, updated.id, termsPatch);
     }
 
+    if (metaPatch) {
+      await applyMetaPatch(context, updated.id, metaPatch);
+    }
+    const meta = await loadPostMeta(context.db, context.plugins, updated.id);
+
     if (postColumnsWritten) {
       await firePostUpdated(context, updated, existing);
       await firePostTransition(context, updated, existing.status);
@@ -182,7 +219,10 @@ export const update = base
       }
     }
 
-    return context.hooks.applyFilter("rpc:post.update:output", updated);
+    return context.hooks.applyFilter("rpc:post.update:output", {
+      ...updated,
+      meta,
+    });
   });
 
 /** Replace post_term rows for every (postId, taxonomy) pair in the patch. */

@@ -48,6 +48,7 @@ test.describe("/content/$slug/new", () => {
               publishedAt: null,
               createdAt: new Date("2026-04-21T00:00:00Z"),
               updatedAt: new Date("2026-04-21T00:00:00Z"),
+              meta: {},
             },
             meta: [],
           }),
@@ -72,6 +73,7 @@ test.describe("/content/$slug/new", () => {
               publishedAt: null,
               createdAt: new Date("2026-04-21T00:00:00Z"),
               updatedAt: new Date("2026-04-21T00:00:00Z"),
+              meta: {},
             },
             meta: [],
           }),
@@ -177,6 +179,7 @@ test.describe("/content/$slug/$id", () => {
               publishedAt: null,
               createdAt: now,
               updatedAt: now,
+              meta: {},
             },
             meta: [],
           }),
@@ -203,6 +206,7 @@ test.describe("/content/$slug/$id", () => {
               publishedAt: null,
               createdAt: now,
               updatedAt: new Date("2026-04-21T01:00:00Z"),
+              meta: {},
             },
             meta: [],
           }),
@@ -259,5 +263,95 @@ test.describe("meta-box sidebar", () => {
     await expect(featured).not.toBeChecked();
     await featured.check();
     await expect(featured).toBeChecked();
+  });
+
+  test("submit forwards meta values on the post.create input, and hydrates them back on edit", async ({
+    page,
+  }) => {
+    await mockManifest(page, MANIFEST_WITH_META_BOXES);
+
+    const createInputs: unknown[] = [];
+    await page.route("**/_plumix/rpc/**", async (route) => {
+      const url = route.request().url();
+      if (url.endsWith("/auth/session")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
+        });
+      }
+      if (url.endsWith("/post/create")) {
+        const body = route.request().postDataJSON() as { json?: unknown };
+        createInputs.push(body.json);
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            json: {
+              id: 99,
+              type: "post",
+              parentId: null,
+              title: "meta post",
+              slug: "meta-post",
+              content: null,
+              excerpt: null,
+              status: "draft",
+              authorId: 1,
+              menuOrder: 0,
+              publishedAt: null,
+              createdAt: new Date("2026-04-21T00:00:00Z"),
+              updatedAt: new Date("2026-04-21T00:00:00Z"),
+              meta: { meta_title: "seo title", is_featured: true },
+            },
+            meta: [],
+          }),
+        });
+      }
+      if (url.endsWith("/post/get")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            json: {
+              id: 99,
+              type: "post",
+              parentId: null,
+              title: "meta post",
+              slug: "meta-post",
+              content: null,
+              excerpt: null,
+              status: "draft",
+              authorId: 1,
+              menuOrder: 0,
+              publishedAt: null,
+              createdAt: new Date("2026-04-21T00:00:00Z"),
+              updatedAt: new Date("2026-04-21T00:00:00Z"),
+              meta: { meta_title: "seo title", is_featured: true },
+            },
+            meta: [],
+          }),
+        });
+      }
+      return route.fulfill({ status: 404, body: "not-mocked" });
+    });
+
+    await page.goto("content/posts/new");
+    await page.getByTestId("post-editor-title-input").fill("meta post");
+    await page.getByTestId("meta-box-field-meta_title-input").fill("seo title");
+    await page.getByTestId("meta-box-field-is_featured-input").check();
+    await page.getByTestId("post-editor-submit").click();
+
+    await expect
+      .poll(() => (createInputs.at(-1) as { meta?: unknown } | undefined)?.meta)
+      .toEqual({ meta_title: "seo title", is_featured: true });
+    // Route advances to the edit page after save.
+    await expect(page).toHaveURL(/content\/posts\/99/);
+    // The loaded post hydrates the meta inputs from `post.get`'s `meta` bag.
+    await expect(
+      page.getByTestId("meta-box-field-meta_title-input"),
+    ).toHaveValue("seo title");
+    await expect(
+      page.getByTestId("meta-box-field-is_featured-input"),
+    ).toBeChecked();
   });
 });

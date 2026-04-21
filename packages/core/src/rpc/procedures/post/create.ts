@@ -9,6 +9,12 @@ import {
   loadReadableParent,
   postCapability,
 } from "./lifecycle.js";
+import {
+  applyMetaPatch,
+  loadPostMeta,
+  MetaSanitizationError,
+  sanitizeMetaInput,
+} from "./meta.js";
 import { postCreateInputSchema } from "./schemas.js";
 
 export const create = base
@@ -47,6 +53,24 @@ export const create = base
       }
     }
 
+    // Validate meta up-front so a bad key fails before the post insert —
+    // keeps the DB clean when the client sends a typo in a meta key.
+    let metaPatch;
+    try {
+      metaPatch = sanitizeMetaInput(
+        context.plugins,
+        filtered.type,
+        filtered.meta,
+      );
+    } catch (error) {
+      if (error instanceof MetaSanitizationError) {
+        throw errors.CONFLICT({
+          data: { reason: `meta_${error.reason}`, key: error.key },
+        });
+      }
+      throw error;
+    }
+
     const candidate: NewPost = {
       type: filtered.type,
       title: filtered.title,
@@ -78,10 +102,18 @@ export const create = base
       throw errors.CONFLICT({ data: { reason: "slug_taken" } });
     }
 
+    if (metaPatch) {
+      await applyMetaPatch(context, created.id, metaPatch);
+    }
+    const meta = await loadPostMeta(context.db, context.plugins, created.id);
+
     await firePostTransition(context, created, "draft");
     if (created.status === "published") {
       await firePostPublished(context, created);
     }
 
-    return context.hooks.applyFilter("rpc:post.create:output", created);
+    return context.hooks.applyFilter("rpc:post.create:output", {
+      ...created,
+      meta,
+    });
   });

@@ -45,6 +45,30 @@ const postTermsSchema = v.record(
   v.pipe(v.array(termIdSchema), v.maxLength(MAX_TERMS_PER_TAXONOMY)),
 );
 
+// Meta bag accepted by `post.create` / `post.update`. Per-key validation
+// happens in the handler against the plugin-registered `MetaScalarType`
+// — here we only enforce the outer shape + a defensive cap on the
+// number of keys per request so a malformed client can't ship a 10k-key
+// object at us. Values stay `unknown` because the registry drives their
+// shape.
+const MAX_META_KEYS_PER_REQUEST = 200;
+
+const metaKeySchema = v.pipe(
+  v.string(),
+  v.trim(),
+  v.minLength(1),
+  v.maxLength(200),
+  v.regex(/^[a-zA-Z0-9_:-]+$/, "meta key must be alphanumeric/_/:/-"),
+);
+
+const postMetaInputSchema = v.pipe(
+  v.record(metaKeySchema, v.unknown()),
+  v.check(
+    (val) => Object.keys(val).length <= MAX_META_KEYS_PER_REQUEST,
+    `meta accepts at most ${MAX_META_KEYS_PER_REQUEST} keys per request`,
+  ),
+);
+
 export const postCreateInputSchema = v.object({
   ...userSuppliableFields.entries,
   type: v.optional(trimmedText(100), "post"),
@@ -54,6 +78,7 @@ export const postCreateInputSchema = v.object({
   excerpt: v.optional(excerptSchema),
   status: v.optional(userSuppliableFields.entries.status, "draft"),
   menuOrder: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0)), 0),
+  meta: v.optional(postMetaInputSchema),
 });
 
 export const postUpdateInputSchema = v.object({
@@ -66,6 +91,7 @@ export const postUpdateInputSchema = v.object({
   parentId: v.optional(v.nullable(postIdSchema)),
   menuOrder: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
   terms: v.optional(postTermsSchema),
+  meta: v.optional(postMetaInputSchema),
 });
 
 // Upper bound on the term-slug list per taxonomy clause. Mirrors the

@@ -3,6 +3,7 @@ import type { NewPost, Post, PostStatus } from "../db/schema/posts.js";
 import type { Term } from "../db/schema/terms.js";
 import type { User } from "../db/schema/users.js";
 import type { OptionSetInput } from "./procedures/option/schemas.js";
+import type { PostWithMeta } from "./procedures/post/meta.js";
 import type {
   PostCreateInput,
   PostListInput,
@@ -25,13 +26,13 @@ declare module "../hooks/types.js" {
     "rpc:post.list:output": (output: readonly Post[]) => readonly Post[];
 
     "rpc:post.get:input": (input: { id: number }) => typeof input;
-    "rpc:post.get:output": (output: Post) => Post;
+    "rpc:post.get:output": (output: PostWithMeta) => PostWithMeta;
 
     "rpc:post.create:input": (input: PostCreateInput) => PostCreateInput;
-    "rpc:post.create:output": (output: Post) => Post;
+    "rpc:post.create:output": (output: PostWithMeta) => PostWithMeta;
 
     "rpc:post.update:input": (input: PostUpdateInput) => PostUpdateInput;
-    "rpc:post.update:output": (output: Post) => Post;
+    "rpc:post.update:output": (output: PostWithMeta) => PostWithMeta;
 
     "rpc:post.trash:input": (input: { id: number }) => typeof input;
     "rpc:post.trash:output": (output: Post) => Post;

@@ -1,7 +1,9 @@
 import { describe, expect, test } from "vitest";
 
+import { postMeta } from "../../../db/schema/post_meta.js";
 import { postTerm } from "../../../db/schema/post_term.js";
 import { terms } from "../../../db/schema/terms.js";
+import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 async function seedTerm(
@@ -526,5 +528,38 @@ describe("post.get", () => {
     });
     const got = await h.client.post.get({ id: theirs.id });
     expect(got.id).toBe(theirs.id);
+  });
+
+  test("response includes a `meta` bag — empty object when the post has no rows", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const post = await h.factory.published.create({ authorId: h.user.id });
+    const got = await h.client.post.get({ id: post.id });
+    expect(got.meta).toEqual({});
+  });
+
+  test("response hydrates meta rows, typed against the plugin registry", async () => {
+    const plugins = createPluginRegistry();
+    plugins.metaKeys.set("meta_title", {
+      key: "meta_title",
+      type: "string",
+      postTypes: ["post"],
+      registeredBy: "test",
+    });
+    plugins.metaKeys.set("is_featured", {
+      key: "is_featured",
+      type: "boolean",
+      postTypes: ["post"],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.factory.published.create({ authorId: h.user.id });
+    // Write directly to the DB (bypassing the RPC sanitizer) to prove the
+    // reader decodes what the writer laid down.
+    await h.context.db.insert(postMeta).values([
+      { postId: post.id, key: "meta_title", value: '"Seeded"' },
+      { postId: post.id, key: "is_featured", value: "true" },
+    ]);
+    const got = await h.client.post.get({ id: post.id });
+    expect(got.meta).toEqual({ meta_title: "Seeded", is_featured: true });
   });
 });

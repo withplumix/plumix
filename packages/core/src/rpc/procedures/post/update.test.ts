@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { posts } from "../../../db/schema/posts.js";
+import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 describe("post.update", () => {
@@ -272,5 +273,81 @@ describe("post.update", () => {
       code: "CONFLICT",
       data: { reason: "parent_cycle" },
     });
+  });
+
+  test("meta: partial write leaves keys outside the patch untouched", async () => {
+    const plugins = createPluginRegistry();
+    plugins.metaKeys.set("meta_title", {
+      key: "meta_title",
+      type: "string",
+      postTypes: ["post"],
+      registeredBy: "test",
+    });
+    plugins.metaKeys.set("is_featured", {
+      key: "is_featured",
+      type: "boolean",
+      postTypes: ["post"],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.client.post.create({
+      title: "p",
+      slug: "p",
+      meta: { meta_title: "seed title", is_featured: false },
+    });
+
+    const updated = await h.client.post.update({
+      id: post.id,
+      meta: { is_featured: true },
+    });
+    expect(updated.meta).toEqual({
+      meta_title: "seed title",
+      is_featured: true,
+    });
+  });
+
+  test("meta: null value clears a key without touching the others", async () => {
+    const plugins = createPluginRegistry();
+    plugins.metaKeys.set("meta_title", {
+      key: "meta_title",
+      type: "string",
+      postTypes: ["post"],
+      registeredBy: "test",
+    });
+    plugins.metaKeys.set("is_featured", {
+      key: "is_featured",
+      type: "boolean",
+      postTypes: ["post"],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.client.post.create({
+      title: "p2",
+      slug: "p2",
+      meta: { meta_title: "keep", is_featured: true },
+    });
+
+    const updated = await h.client.post.update({
+      id: post.id,
+      meta: { is_featured: null },
+    });
+    expect(updated.meta).toEqual({ meta_title: "keep" });
+  });
+
+  test("meta: bad key → CONFLICT, and the post row is untouched (validated pre-write)", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const post = await h.client.post.create({ title: "p3", slug: "p3" });
+    await expect(
+      h.client.post.update({
+        id: post.id,
+        title: "new-title",
+        meta: { bogus: "x" },
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "meta_not_registered", key: "bogus" },
+    });
+    const reloaded = await h.client.post.get({ id: post.id });
+    expect(reloaded.title).toBe("p3");
   });
 });
