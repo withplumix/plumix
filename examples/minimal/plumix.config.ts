@@ -1,5 +1,4 @@
-import { plumix } from "plumix";
-import { auth } from "@plumix/core/auth";
+import { auth, plumix } from "plumix";
 import { cloudflare, d1 } from "@plumix/runtime-cloudflare";
 
 export default plumix({
