@@ -59,6 +59,5 @@ export const optionGetManyInputSchema = v.object({
 
 export type OptionListInput = v.InferOutput<typeof optionListInputSchema>;
 export type OptionGetInput = v.InferOutput<typeof optionGetInputSchema>;
-export type OptionGetManyInput = v.InferOutput<typeof optionGetManyInputSchema>;
 export type OptionSetInput = v.InferOutput<typeof optionSetInputSchema>;
 export type OptionDeleteInput = v.InferOutput<typeof optionDeleteInputSchema>;
