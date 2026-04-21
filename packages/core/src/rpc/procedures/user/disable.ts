@@ -15,9 +15,13 @@ export const disable = base
     if (!context.auth.can(CAPABILITY)) {
       throw errors.FORBIDDEN({ data: { capability: CAPABILITY } });
     }
+    const filtered = await context.hooks.applyFilter(
+      "rpc:user.disable:input",
+      input,
+    );
 
     const existing = await context.db.query.users.findFirst({
-      where: eq(users.id, input.id),
+      where: eq(users.id, filtered.id),
     });
     if (!existing) {
       throw errors.NOT_FOUND({ data: { kind: "user", id: input.id } });
@@ -49,6 +53,13 @@ export const disable = base
     }
 
     await invalidateAllSessionsForUser(context.db, updated.id);
+
+    // Pairs with the `user:status_changed` fired on re-enable — one
+    // hook surface for "account active state changed" so plugins don't
+    // have to subscribe to two events.
+    await context.hooks.doAction("user:status_changed", updated, {
+      enabled: false,
+    });
 
     return context.hooks.applyFilter("rpc:user.disable:output", updated);
   });

@@ -44,6 +44,8 @@ export const userUpdateInputSchema = v.object({
 
 export const userDisableInputSchema = v.object({ id: userIdSchema });
 
+export const userEnableInputSchema = v.object({ id: userIdSchema });
+
 export const userDeleteInputSchema = v.object({
   id: userIdSchema,
   /** Reassign this user's authored posts to the given user id before deletion. */

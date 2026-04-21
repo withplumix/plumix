@@ -19,6 +19,11 @@ interface MockRpcHandlers {
   "/post/list"?: readonly Post[];
   "/user/list"?: readonly User[];
   "/user/invite"?: { user: User; inviteToken: string };
+  "/user/get"?: User;
+  "/user/update"?: User;
+  "/user/disable"?: User;
+  "/user/enable"?: User;
+  "/user/delete"?: User;
 }
 
 // oRPC's StandardRPCSerializer wire format — `meta` is always present,
