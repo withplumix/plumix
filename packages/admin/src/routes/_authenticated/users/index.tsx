@@ -1,7 +1,8 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { DataTable } from "@/components/data-table/data-table.js";
+import { DebouncedSearchInput } from "@/components/form/search-input.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Badge } from "@/components/ui/badge.js";
 import { Button } from "@/components/ui/button.js";
@@ -12,12 +13,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.js";
-import { Input } from "@/components/ui/input.js";
 import {
   Pagination,
   PaginationContent,
   PaginationItem,
 } from "@/components/ui/pagination.js";
+import { hasCap } from "@/lib/caps.js";
 import { toDate } from "@/lib/dates.js";
 import { orpc } from "@/lib/orpc.js";
 import { useQuery } from "@tanstack/react-query";
@@ -27,13 +28,7 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-  Search,
-  UserPlus,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, UserPlus } from "lucide-react";
 import * as v from "valibot";
 
 import type { User, UserRole } from "@plumix/core/schema";
@@ -75,12 +70,6 @@ const searchSchema = v.object({
   ),
 });
 
-// Reused from sibling routes that link back to this list.
-export const USERS_LIST_DEFAULT_SEARCH = {
-  page: 1,
-  role: "all",
-} as const;
-
 // Admin / editor = strong; author / contributor = neutral; subscriber =
 // muted; disabled overrides everything to destructive to signal the
 // blocked state at a glance (matches WordPress's greyed-out disabled
@@ -116,7 +105,7 @@ export const Route = createFileRoute("/_authenticated/users/")({
   // show and the RPC would 403 — redirect back to the dashboard so the
   // user doesn't land on a forbidden screen.
   beforeLoad: ({ context }) => {
-    if (!context.user.capabilities.includes("user:list")) {
+    if (!hasCap(context.user.capabilities, "user:list")) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router redirect pattern
       throw redirect({ to: "/" });
     }
@@ -169,7 +158,7 @@ function UsersListRoute(): ReactNode {
   // `user:create` is admin-only; editors see the list but don't get the
   // "Invite user" button. The route behind it also redirects on
   // `beforeLoad` for defense-in-depth.
-  const canInvite = user.capabilities.includes("user:create");
+  const canInvite = hasCap(user.capabilities, "user:create");
 
   const columns = useMemo(
     () => buildColumns({ currentUserId: user.id }),
@@ -203,9 +192,14 @@ function UsersListRoute(): ReactNode {
 
       <div className="flex flex-wrap items-center gap-2">
         <RoleFilter value={search.role} onChange={setRole} />
-        <SearchInput
+        <DebouncedSearchInput
+          // Keyed on the URL value so external navigations (back button,
+          // links) remount the input with fresh local state instead of
+          // desynchronising from the URL.
           key={search.q ?? ""}
           initialValue={search.q ?? ""}
+          placeholder="Search by email…"
+          testId="users-list-search-input"
           onCommit={setSearch}
         />
       </div>
@@ -355,49 +349,6 @@ function RoleFilter({
           {opt.label}
         </Button>
       ))}
-    </div>
-  );
-}
-
-const SEARCH_DEBOUNCE_MS = 250;
-
-function SearchInput({
-  initialValue,
-  onCommit,
-}: {
-  initialValue: string;
-  onCommit: (next: string | undefined) => void;
-}): ReactNode {
-  const [value, setValue] = useState(initialValue);
-  useEffect(() => {
-    if (value === initialValue) return;
-    const id = setTimeout(() => {
-      onCommit(value.length === 0 ? undefined : value);
-    }, SEARCH_DEBOUNCE_MS);
-    return () => {
-      clearTimeout(id);
-    };
-  }, [value, initialValue, onCommit]);
-
-  return (
-    <div className="relative">
-      <Search
-        aria-hidden
-        className="text-muted-foreground pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2"
-      />
-      <Input
-        type="search"
-        role="searchbox"
-        value={value}
-        maxLength={200}
-        placeholder="Search by email…"
-        aria-label="Search users by email"
-        data-testid="users-list-search-input"
-        onChange={(e) => {
-          setValue(e.target.value);
-        }}
-        className="h-9 w-64 pl-8"
-      />
     </div>
   );
 }

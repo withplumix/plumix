@@ -1,7 +1,8 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { DataTable } from "@/components/data-table/data-table.js";
+import { DebouncedSearchInput } from "@/components/form/search-input.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Badge } from "@/components/ui/badge.js";
 import { Button } from "@/components/ui/button.js";
@@ -12,12 +13,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.js";
-import { Input } from "@/components/ui/input.js";
 import {
   Pagination,
   PaginationContent,
   PaginationItem,
 } from "@/components/ui/pagination.js";
+import { hasCap } from "@/lib/caps.js";
 import { toDate } from "@/lib/dates.js";
 import { findPostTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
@@ -35,7 +36,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
-  Search,
 } from "lucide-react";
 import * as v from "valibot";
 
@@ -75,20 +75,6 @@ type Order = (typeof ORDER_VALUES)[number];
 
 const AUTHOR_VALUES = ["all", "mine"] as const;
 type AuthorFilter = (typeof AUTHOR_VALUES)[number];
-
-// Default search-param values for `/content/$slug` — every field in
-// `searchSchema` has a `v.fallback` default, but TanStack Router's typed
-// `Link`/`redirect` calls demand all non-optional fields spelled out at
-// the call site. Exporting this constant lets sibling routes link back
-// to the list without redeclaring the defaults (keeps the set of
-// required fields a single source of truth).
-export const CONTENT_LIST_DEFAULT_SEARCH = {
-  status: "all",
-  page: 1,
-  author: "all",
-  orderBy: "updated_at",
-  order: "desc",
-} as const;
 
 const searchSchema = v.object({
   page: v.optional(
@@ -320,7 +306,7 @@ function ContentListRoute(): ReactNode {
   // button — the new-post route also redirects on `beforeLoad` but we
   // shouldn't surface the button at all.
   const createCapability = `${postType.capabilityType ?? postType.name}:create`;
-  const canCreate = user.capabilities.includes(createCapability);
+  const canCreate = hasCap(user.capabilities, createCapability);
 
   const columns = useMemo(
     () =>
@@ -365,13 +351,14 @@ function ContentListRoute(): ReactNode {
       <div className="flex flex-wrap items-center gap-2">
         <StatusFilter value={search.status} onChange={setStatus} />
         <AuthorFilter value={search.author} onChange={setAuthor} />
-        <SearchInput
+        <DebouncedSearchInput
           // Keyed on the URL value so external navigations (back button,
           // links) remount the input with fresh local state instead of
           // desynchronising from the URL.
           key={search.q ?? ""}
           initialValue={search.q ?? ""}
           placeholder={`Search ${pluralLower}…`}
+          testId="content-list-search-input"
           onCommit={setSearch}
         />
       </div>
@@ -523,55 +510,6 @@ function AuthorFilter({
           {opt === "all" ? "All authors" : "Mine"}
         </Button>
       ))}
-    </div>
-  );
-}
-
-const SEARCH_DEBOUNCE_MS = 250;
-
-function SearchInput({
-  initialValue,
-  placeholder,
-  onCommit,
-}: {
-  initialValue: string;
-  placeholder: string;
-  onCommit: (next: string | undefined) => void;
-}): ReactNode {
-  // Local state so typing feels immediate; commit to the URL (which
-  // triggers the RPC refetch) after a debounce. Parent keys this
-  // component on the URL value so external URL changes remount the
-  // input rather than needing a setState-in-effect sync.
-  const [value, setValue] = useState(initialValue);
-  useEffect(() => {
-    if (value === initialValue) return;
-    const id = setTimeout(() => {
-      onCommit(value.length === 0 ? undefined : value);
-    }, SEARCH_DEBOUNCE_MS);
-    return () => {
-      clearTimeout(id);
-    };
-  }, [value, initialValue, onCommit]);
-
-  return (
-    <div className="relative">
-      <Search
-        aria-hidden
-        className="text-muted-foreground pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2"
-      />
-      <Input
-        type="search"
-        role="searchbox"
-        value={value}
-        maxLength={200}
-        placeholder={placeholder}
-        aria-label={placeholder}
-        data-testid="content-list-search-input"
-        onChange={(e) => {
-          setValue(e.target.value);
-        }}
-        className="h-9 w-64 pl-8"
-      />
     </div>
   );
 }

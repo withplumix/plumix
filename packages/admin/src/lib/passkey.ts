@@ -239,11 +239,15 @@ export async function acceptInviteWithPasskey(input: {
     }),
   );
 
+  // Invite-verify nests the credential under `response` (see
+  // `inviteRegisterVerifyInputSchema` server-side). This differs from the
+  // non-invite `passkey/register/verify` endpoint which takes the
+  // credential at the top level.
   const verified = await postJson<VerifySuccess>(
     "/_plumix/auth/invite/register/verify",
     {
       token: input.token,
-      ...(encodeRegistrationCredential(credential) as object),
+      response: encodeRegistrationCredential(credential),
     },
   );
 

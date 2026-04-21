@@ -5,6 +5,8 @@ import {
   POST_EDITOR_STATUSES,
   PostEditorForm,
 } from "@/components/editor/post-editor-form.js";
+import { Skeleton } from "@/components/ui/skeleton.js";
+import { hasCap } from "@/lib/caps.js";
 import { findPostTypeBySlug, metaBoxesForPostType } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -13,7 +15,7 @@ import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 import type { PostTypeManifestEntry } from "@plumix/core/manifest";
 import type { PostWithMeta } from "@plumix/core/schema";
 
-import { CONTENT_LIST_DEFAULT_SEARCH } from "./index.js";
+import { CONTENT_LIST_DEFAULT_SEARCH } from "./-constants.js";
 
 export const Route = createFileRoute("/_authenticated/content/$slug/$id")({
   beforeLoad: ({ params }): { postType: PostTypeManifestEntry } => {
@@ -80,7 +82,7 @@ function EditPostRoute(): ReactNode {
   }
 
   if (query.isPending) {
-    return <LoadingPlaceholder label={`Loading ${singularLower}`} />;
+    return <EditorSkeleton label={`Loading ${singularLower}`} />;
   }
 
   if (query.isError) {
@@ -92,14 +94,11 @@ function EditPostRoute(): ReactNode {
   }
 
   const post = query.data;
-  const canEditAny = user.capabilities.includes(
-    `${postType.capabilityType ?? postType.name}:edit_any`,
-  );
+  const capNamespace = postType.capabilityType ?? postType.name;
+  const canEditAny = hasCap(user.capabilities, `${capNamespace}:edit_any`);
   const canEditOwn =
     post.authorId === user.id &&
-    user.capabilities.includes(
-      `${postType.capabilityType ?? postType.name}:edit_own`,
-    );
+    hasCap(user.capabilities, `${capNamespace}:edit_own`);
   if (!canEditAny && !canEditOwn) {
     return (
       <NotFoundPlaceholder
@@ -177,14 +176,35 @@ function toEditorValues(post: PostWithMeta): PostEditorValues {
   };
 }
 
-function LoadingPlaceholder({ label }: { label: string }): ReactNode {
+// Content-shaped skeleton while the existing post fetches: heading +
+// title field + slug field + body block + side rail. Keeps layout stable
+// so the form doesn't pop in with a visible reflow once the query
+// resolves. `role=status` + `aria-live` announces the loading state to
+// screen readers; sighted users get the visual shimmer.
+function EditorSkeleton({ label }: { label: string }): ReactNode {
   return (
     <div
       role="status"
       aria-live="polite"
-      className="text-muted-foreground text-sm"
+      aria-label={label}
+      data-testid="post-editor-loading"
+      className="flex max-w-6xl flex-col gap-6"
     >
-      {label}…
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-4 w-72" />
+      </div>
+      <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="flex flex-col gap-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+        <aside className="flex flex-col gap-4">
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </aside>
+      </div>
     </div>
   );
 }

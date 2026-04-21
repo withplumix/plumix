@@ -2,7 +2,12 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { bufferToBase64url } from "./base64url.js";
 import { PasskeyError } from "./passkey-errors.js";
-import { registerWithPasskey, signInWithPasskey, signOut } from "./passkey.js";
+import {
+  acceptInviteWithPasskey,
+  registerWithPasskey,
+  signInWithPasskey,
+  signOut,
+} from "./passkey.js";
 
 type FetchMock = ReturnType<typeof vi.fn<typeof fetch>>;
 
@@ -232,5 +237,92 @@ describe("signOut", () => {
     expect(
       (call[1]?.headers as Record<string, string>)["x-plumix-request"],
     ).toBe("1");
+  });
+});
+
+describe("acceptInviteWithPasskey", () => {
+  test("verify POST body nests the full credential under `response` (server schema)", async () => {
+    // Critical regression guard: the server's
+    // `inviteRegisterVerifyInputSchema` is `{ token, response: credential }`
+    // — spreading the credential at the top level (earlier bug) made
+    // every accept-invite fail with `invalid_input`. Assert the shape
+    // explicitly so a future refactor can't regress.
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({
+          options: fakeRegistrationOptions(),
+          invitee: {
+            email: "invited@example.test",
+            role: "editor",
+            name: null,
+          },
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ userId: 99 }));
+    credentialsCreate.mockResolvedValue(fakeCreatedCredential());
+
+    const result = await acceptInviteWithPasskey({
+      token: "invite-token-xyz",
+      name: "Invited",
+    });
+    expect(result.userId).toBe(99);
+    expect(result.invitee.email).toBe("invited@example.test");
+
+    const optionsCall = callAt(fetchMock, 0);
+    expect(optionsCall[0]).toBe("/_plumix/auth/invite/register/options");
+    expect(JSON.parse(optionsCall[1]?.body as string)).toEqual({
+      token: "invite-token-xyz",
+      name: "Invited",
+    });
+
+    const verifyCall = callAt(fetchMock, 1);
+    expect(verifyCall[0]).toBe("/_plumix/auth/invite/register/verify");
+    const verifyBody = JSON.parse(verifyCall[1]?.body as string) as {
+      token: string;
+      response: {
+        id: string;
+        rawId: string;
+        type: string;
+        response: { clientDataJSON: string; attestationObject: string };
+      };
+      // Fields that must NOT leak to the top level — catches the
+      // regression where the credential was spread instead of nested.
+      id?: unknown;
+      rawId?: unknown;
+    };
+    expect(verifyBody.token).toBe("invite-token-xyz");
+    expect(verifyBody.id).toBeUndefined();
+    expect(verifyBody.rawId).toBeUndefined();
+    expect(verifyBody.response.id).toBe("credential-id");
+    expect(verifyBody.response.type).toBe("public-key");
+    expect(typeof verifyBody.response.response.clientDataJSON).toBe("string");
+  });
+
+  test("server 404 on invalid token → PasskeyError with invalid_token code", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ error: "invalid_token" }, 404),
+    );
+
+    const rejection = acceptInviteWithPasskey({ token: "bogus" });
+    await expect(rejection).rejects.toBeInstanceOf(PasskeyError);
+    await expect(rejection).rejects.toMatchObject({ code: "invalid_token" });
+    // Options call failed → credential create never fired.
+    expect(credentialsCreate).not.toHaveBeenCalled();
+  });
+
+  test("omits name from the options body when not provided", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({
+          options: fakeRegistrationOptions(),
+          invitee: { email: "x@example.test", role: "subscriber", name: null },
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ userId: 1 }));
+    credentialsCreate.mockResolvedValue(fakeCreatedCredential());
+
+    await acceptInviteWithPasskey({ token: "t" });
+    const optionsCall = callAt(fetchMock, 0);
+    expect(JSON.parse(optionsCall[1]?.body as string)).toEqual({ token: "t" });
   });
 });

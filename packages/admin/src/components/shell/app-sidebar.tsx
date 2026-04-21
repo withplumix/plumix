@@ -12,6 +12,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar.js";
+import { hasCap } from "@/lib/caps.js";
 import { visiblePostTypes } from "@/lib/manifest.js";
 import { Link } from "@tanstack/react-router";
 import { FileText, LayoutDashboard, Users } from "lucide-react";
@@ -61,7 +62,7 @@ function buildContentGroup(capabilities: readonly string[]): NavGroup | null {
 function buildManagementGroup(
   capabilities: readonly string[],
 ): NavGroup | null {
-  if (!capabilities.includes("user:list")) return null;
+  if (!hasCap(capabilities, "user:list")) return null;
   return {
     label: "Management",
     items: [{ to: "/users", label: "Users", icon: Users }],

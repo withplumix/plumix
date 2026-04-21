@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card.js";
 import { Label } from "@/components/ui/label.js";
+import { hasCap } from "@/lib/caps.js";
 import { ADMIN_BASE_PATH } from "@/lib/constants.js";
 import { orpc } from "@/lib/orpc.js";
 import { useForm } from "@tanstack/react-form";
@@ -26,7 +27,7 @@ import * as v from "valibot";
 
 import type { User, UserRole } from "@plumix/core/schema";
 
-import { USERS_LIST_DEFAULT_SEARCH } from "./index.js";
+import { USERS_LIST_DEFAULT_SEARCH } from "./-constants.js";
 
 // Mirrors `USER_ROLES` from core — kept local so the valibot picklist
 // stays tree-shakeable. `UserRole` type import keeps it in lockstep.
@@ -37,6 +38,10 @@ const USER_ROLES: readonly UserRole[] = [
   "editor",
   "admin",
 ];
+
+function isUserRole(value: string): value is UserRole {
+  return (USER_ROLES as readonly string[]).includes(value);
+}
 
 const ROLE_LABEL: Record<UserRole, string> = {
   admin: "Administrator — full control",
@@ -65,7 +70,7 @@ export const Route = createFileRoute("/_authenticated/users/new")({
     // `user:create` is admin-only. Defense in depth — the sidebar button
     // is already gated on this cap but someone following a direct link
     // shouldn't land on a forbidden form.
-    if (!context.user.capabilities.includes("user:create")) {
+    if (!hasCap(context.user.capabilities, "user:create")) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router redirect pattern
       throw redirect({ to: "/users", search: USERS_LIST_DEFAULT_SEARCH });
     }
@@ -73,10 +78,11 @@ export const Route = createFileRoute("/_authenticated/users/new")({
   component: InviteUserRoute,
 });
 
-// State machine. We render one of three views: the form, a submitting
-// spinner (implicit via the form's isSubmitting), or the success screen
-// with the shareable URL. `success` is a discriminated payload so React
-// doesn't have to juggle two separate optional pieces of state.
+// We render one of two views: the form (idle) or the success screen with
+// the shareable URL. The submitting state is tracked separately via
+// `inviteUser.isPending`, not by this union. Discriminated union here so
+// the success payload (user + url) correlates with the status without
+// nullable juggling.
 type ViewState =
   | { status: "idle" }
   | { status: "success"; user: User; inviteUrl: string };
@@ -220,7 +226,12 @@ function InviteUserRoute(): ReactNode {
                     name="role"
                     value={field.state.value}
                     onChange={(e) => {
-                      field.handleChange(e.target.value as UserRole);
+                      // `<option>` values come from `USER_ROLES`, but the
+                      // DOM types `e.target.value` as a bare string. Guard
+                      // via `includes` so a future refactor that adds a
+                      // raw option can't silently slip a bad role past TS.
+                      const next = e.target.value;
+                      if (isUserRole(next)) field.handleChange(next);
                     }}
                     disabled={inviteUser.isPending}
                     data-testid="invite-role-select"
@@ -325,8 +336,14 @@ function InviteSuccess({
         setCopied(false);
       }, 2000);
     } catch {
-      // Clipboard API can be denied in some contexts (non-HTTPS, iframes).
-      // Fall back silently — the URL is still visible + selectable.
+      // Clipboard API is gated in non-HTTPS / iframed / Permissions-Policy
+      // contexts. Select the input so the user can fall back to ⌘-C /
+      // Ctrl-C — better than a dead button that looks like it worked.
+      const input = document.getElementById("invite-url");
+      if (input instanceof HTMLInputElement) {
+        input.focus();
+        input.select();
+      }
     }
   };
 

@@ -2,6 +2,7 @@ import type { PostEditorValues } from "@/components/editor/post-editor-form.js";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { PostEditorForm } from "@/components/editor/post-editor-form.js";
+import { hasCap } from "@/lib/caps.js";
 import { findPostTypeBySlug, metaBoxesForPostType } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useMutation } from "@tanstack/react-query";
@@ -15,7 +16,7 @@ import {
 import type { PostTypeManifestEntry } from "@plumix/core/manifest";
 import type { PostStatus } from "@plumix/core/schema";
 
-import { CONTENT_LIST_DEFAULT_SEARCH } from "./index.js";
+import { CONTENT_LIST_DEFAULT_SEARCH } from "./-constants.js";
 
 // Statuses the new-post dropdown should expose. `trash` is omitted — you
 // don't create a post straight into the trash bin; the list view has a
@@ -37,7 +38,7 @@ export const Route = createFileRoute("/_authenticated/content/$slug/new")({
     // alone isn't enough — that permission is about editing your own
     // existing posts, not spawning new ones.
     const capability = `${postType.capabilityType ?? postType.name}:create`;
-    if (!context.user.capabilities.includes(capability)) {
+    if (!hasCap(context.user.capabilities, capability)) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw redirect({
         to: "/content/$slug",

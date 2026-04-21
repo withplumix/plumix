@@ -141,6 +141,13 @@ declare module "../hooks/types.js" {
      * from `inviteToken`. Payload matches WP's `user_register` plus
      * invite-specific fields — plugins listening on both `user:invited`
      * and `user:registered` can tell "invite sent" from "invite taken".
+     *
+     * SECURITY: `inviteToken` is the raw plaintext (the DB stores only a
+     * hash). Treat it as a credential — do NOT log it, persist it
+     * outside the consuming plugin's scope, or forward it to analytics /
+     * error-tracking services. A leaked token grants anyone the ability
+     * to complete registration as the invited user until it's consumed
+     * or expires (7 days).
      */
     "user:invited": (
       user: User,
