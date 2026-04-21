@@ -13,9 +13,9 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar.js";
 import { hasCap } from "@/lib/caps.js";
-import { visiblePostTypes } from "@/lib/manifest.js";
+import { visiblePostTypes, visibleTaxonomies } from "@/lib/manifest.js";
 import { Link } from "@tanstack/react-router";
-import { FileText, LayoutDashboard, Users } from "lucide-react";
+import { FileText, LayoutDashboard, Tag, Users } from "lucide-react";
 
 import type { UserIdentity } from "./user-menu.js";
 import { UserMenu } from "./user-menu.js";
@@ -56,6 +56,19 @@ function buildContentGroup(capabilities: readonly string[]): NavGroup | null {
   return { label: "Content", items };
 }
 
+// Core registers no taxonomies — a bare install hides the "Taxonomies"
+// group entirely. The blog plugin (Phase 12) is the first consumer;
+// other plugins bring their own (product categories, doc sections, …).
+function buildTaxonomyGroup(capabilities: readonly string[]): NavGroup | null {
+  const items = visibleTaxonomies(capabilities).map<NavItem>((tax) => ({
+    to: `/taxonomies/${tax.name}`,
+    label: tax.label,
+    icon: Tag,
+  }));
+  if (items.length === 0) return null;
+  return { label: "Taxonomies", items };
+}
+
 // `user:list` is admin / editor-level. Subscribers and authors see their
 // own profile via `/profile` (future PR) but don't get a user-management
 // nav entry at all — matches WordPress's "Users" menu being role-gated.
@@ -77,10 +90,12 @@ export function AppSidebar({
   capabilities: readonly string[];
 }): ReactNode {
   const contentGroup = buildContentGroup(capabilities);
+  const taxonomyGroup = buildTaxonomyGroup(capabilities);
   const managementGroup = buildManagementGroup(capabilities);
   const groups = [
     OVERVIEW_GROUP,
     ...(contentGroup ? [contentGroup] : []),
+    ...(taxonomyGroup ? [taxonomyGroup] : []),
     ...(managementGroup ? [managementGroup] : []),
   ];
   return (

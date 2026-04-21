@@ -2,6 +2,7 @@ import type {
   MetaBoxManifestEntry,
   PlumixManifest,
   PostTypeManifestEntry,
+  TaxonomyManifestEntry,
 } from "@plumix/core/manifest";
 import { emptyManifest, MANIFEST_SCRIPT_ID } from "@plumix/core/manifest";
 
@@ -31,9 +32,11 @@ export function readManifest(doc: Document = document): PlumixManifest {
 function normalize(value: unknown): PlumixManifest {
   if (!value || typeof value !== "object") return emptyManifest();
   const postTypes = (value as { postTypes?: unknown }).postTypes;
+  const taxonomies = (value as { taxonomies?: unknown }).taxonomies;
   const metaBoxes = (value as { metaBoxes?: unknown }).metaBoxes;
   return {
     postTypes: Array.isArray(postTypes) ? postTypes : [],
+    taxonomies: Array.isArray(taxonomies) ? taxonomies : [],
     metaBoxes: Array.isArray(metaBoxes) ? metaBoxes : [],
   };
 }
@@ -79,6 +82,32 @@ export function visiblePostTypes(
     const cap = `${pt.capabilityType ?? pt.name}:edit_own`;
     return caps.has(cap);
   });
+}
+
+/**
+ * Look up a registered taxonomy by its name (the `/taxonomies/$name`
+ * route param). Returns `undefined` when the name doesn't match — the
+ * route component should render a 404-style not-found state.
+ */
+export function findTaxonomyByName(
+  name: string,
+  source: PlumixManifest = manifest,
+): TaxonomyManifestEntry | undefined {
+  return source.taxonomies.find((tax) => tax.name === name);
+}
+
+/**
+ * Sidebar gate: which taxonomies should show up in the admin nav for a
+ * user with the given capability set. Gates on `${taxonomy}:read` —
+ * subscribers and above can see a taxonomy if they can read it; edit /
+ * delete are gated separately per action inside the route.
+ */
+export function visibleTaxonomies(
+  capabilities: readonly string[],
+  source: PlumixManifest = manifest,
+): readonly TaxonomyManifestEntry[] {
+  const caps = new Set(capabilities);
+  return source.taxonomies.filter((tax) => caps.has(`${tax.name}:read`));
 }
 
 // Ordering for meta-box `priority`. Boxes render top-down in the editor

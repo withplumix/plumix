@@ -7,9 +7,11 @@ import type {
 
 import {
   findPostTypeBySlug,
+  findTaxonomyByName,
   metaBoxesForPostType,
   readManifest,
   visiblePostTypes,
+  visibleTaxonomies,
 } from "./manifest.js";
 
 function withManifestScript(json: string): Document {
@@ -29,7 +31,11 @@ describe("readManifest", () => {
 
   test("returns empty manifest when the script tag is absent", () => {
     const doc = document.implementation.createHTMLDocument("test");
-    expect(readManifest(doc)).toEqual({ postTypes: [], metaBoxes: [] });
+    expect(readManifest(doc)).toEqual({
+      postTypes: [],
+      taxonomies: [],
+      metaBoxes: [],
+    });
   });
 
   test("parses the injected JSON payload", () => {
@@ -40,13 +46,18 @@ describe("readManifest", () => {
     );
     expect(readManifest(doc)).toEqual({
       postTypes: [{ name: "post", label: "Posts" }],
+      taxonomies: [],
       metaBoxes: [],
     });
   });
 
   test("empty payload falls back to empty manifest", () => {
     const doc = withManifestScript("");
-    expect(readManifest(doc)).toEqual({ postTypes: [], metaBoxes: [] });
+    expect(readManifest(doc)).toEqual({
+      postTypes: [],
+      taxonomies: [],
+      metaBoxes: [],
+    });
   });
 
   test("malformed JSON logs and falls back without throwing", () => {
@@ -54,20 +65,32 @@ describe("readManifest", () => {
       // swallow expected error log
     });
     const doc = withManifestScript("{not-json");
-    expect(readManifest(doc)).toEqual({ postTypes: [], metaBoxes: [] });
+    expect(readManifest(doc)).toEqual({
+      postTypes: [],
+      taxonomies: [],
+      metaBoxes: [],
+    });
     expect(errSpy).toHaveBeenCalledOnce();
   });
 
   test("non-array postTypes coerces to empty array", () => {
     const doc = withManifestScript(JSON.stringify({ postTypes: "oops" }));
-    expect(readManifest(doc)).toEqual({ postTypes: [], metaBoxes: [] });
+    expect(readManifest(doc)).toEqual({
+      postTypes: [],
+      taxonomies: [],
+      metaBoxes: [],
+    });
   });
 
   test("non-array metaBoxes coerces to empty array", () => {
     const doc = withManifestScript(
       JSON.stringify({ postTypes: [], metaBoxes: "oops" }),
     );
-    expect(readManifest(doc)).toEqual({ postTypes: [], metaBoxes: [] });
+    expect(readManifest(doc)).toEqual({
+      postTypes: [],
+      taxonomies: [],
+      metaBoxes: [],
+    });
   });
 
   test("parses the injected JSON payload with metaBoxes", () => {
@@ -86,6 +109,7 @@ describe("readManifest", () => {
     );
     expect(readManifest(doc)).toEqual({
       postTypes: [],
+      taxonomies: [],
       metaBoxes: [
         {
           id: "seo",
@@ -96,6 +120,39 @@ describe("readManifest", () => {
       ],
     });
   });
+
+  test("parses the injected JSON payload with taxonomies", () => {
+    const doc = withManifestScript(
+      JSON.stringify({
+        postTypes: [],
+        taxonomies: [
+          {
+            name: "category",
+            label: "Categories",
+            isHierarchical: true,
+          },
+        ],
+      }),
+    );
+    expect(readManifest(doc)).toEqual({
+      postTypes: [],
+      taxonomies: [
+        {
+          name: "category",
+          label: "Categories",
+          isHierarchical: true,
+        },
+      ],
+      metaBoxes: [],
+    });
+  });
+
+  test("non-array taxonomies coerces to empty array", () => {
+    const doc = withManifestScript(
+      JSON.stringify({ postTypes: [], taxonomies: "not-an-array" }),
+    );
+    expect(readManifest(doc).taxonomies).toEqual([]);
+  });
 });
 
 describe("findPostTypeBySlug", () => {
@@ -104,6 +161,7 @@ describe("findPostTypeBySlug", () => {
       { name: "post", adminSlug: "posts", label: "Posts" },
       { name: "product", adminSlug: "products", label: "Products" },
     ],
+    taxonomies: [],
     metaBoxes: [],
   };
 
@@ -133,6 +191,7 @@ describe("visiblePostTypes", () => {
         capabilityType: "post",
       },
     ],
+    taxonomies: [],
     metaBoxes: [],
   };
 
@@ -163,6 +222,7 @@ describe("metaBoxesForPostType", () => {
 
   test("returns boxes applicable to the post type, honours priority order", () => {
     const source: PlumixManifest = {
+      taxonomies: [],
       postTypes: [],
       metaBoxes: [
         box("a", { priority: "low" }),
@@ -176,6 +236,7 @@ describe("metaBoxesForPostType", () => {
 
   test("insertion order is the tiebreaker among boxes at the same priority", () => {
     const source: PlumixManifest = {
+      taxonomies: [],
       postTypes: [],
       metaBoxes: [
         box("first", { priority: "high" }),
@@ -188,6 +249,7 @@ describe("metaBoxesForPostType", () => {
 
   test("drops boxes whose `postTypes` doesn't include the target", () => {
     const source: PlumixManifest = {
+      taxonomies: [],
       postTypes: [],
       metaBoxes: [
         box("seo", { postTypes: ["post"] }),
@@ -200,6 +262,7 @@ describe("metaBoxesForPostType", () => {
 
   test("drops boxes gated by a capability the user lacks", () => {
     const source: PlumixManifest = {
+      taxonomies: [],
       postTypes: [],
       metaBoxes: [
         box("public"),
@@ -218,7 +281,52 @@ describe("metaBoxesForPostType", () => {
   });
 
   test("returns empty when no meta boxes are registered", () => {
-    const source: PlumixManifest = { postTypes: [], metaBoxes: [] };
+    const source: PlumixManifest = {
+      postTypes: [],
+      taxonomies: [],
+      metaBoxes: [],
+    };
     expect(metaBoxesForPostType("post", [], source)).toEqual([]);
+  });
+});
+
+describe("findTaxonomyByName", () => {
+  const source: PlumixManifest = {
+    postTypes: [],
+    taxonomies: [
+      { name: "category", label: "Categories", isHierarchical: true },
+      { name: "tag", label: "Tags" },
+    ],
+    metaBoxes: [],
+  };
+
+  test("returns the matching taxonomy", () => {
+    expect(findTaxonomyByName("tag", source)?.label).toBe("Tags");
+  });
+
+  test("returns undefined when no taxonomy matches", () => {
+    expect(findTaxonomyByName("mystery", source)).toBeUndefined();
+  });
+});
+
+describe("visibleTaxonomies", () => {
+  const source: PlumixManifest = {
+    postTypes: [],
+    taxonomies: [
+      { name: "category", label: "Categories" },
+      { name: "tag", label: "Tags" },
+      { name: "internal", label: "Internal" },
+    ],
+    metaBoxes: [],
+  };
+
+  test("filters by per-taxonomy :read capability", () => {
+    const caps = ["category:read", "tag:read"];
+    const visible = visibleTaxonomies(caps, source).map((t) => t.name);
+    expect(visible).toEqual(["category", "tag"]);
+  });
+
+  test("returns empty when the caller has no taxonomy :read caps", () => {
+    expect(visibleTaxonomies(["post:edit_own"], source)).toEqual([]);
   });
 });

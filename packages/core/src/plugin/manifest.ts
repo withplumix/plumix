@@ -221,8 +221,26 @@ export interface MetaBoxManifestEntry {
   readonly fields: readonly MetaBoxFieldManifestEntry[];
 }
 
+/**
+ * Shape serialised for taxonomies in the manifest. Strict allowlist
+ * projection of `RegisteredTaxonomy` — drops `registeredBy` (server-only
+ * debug metadata) and server-only operational flags (`isInQuickEdit`,
+ * `hasAdminColumn`, `rewrite`) that don't affect the admin UI today.
+ * `postTypes` is kept so future admin surfaces (term-picker on post
+ * editor) can filter by post type without a second round-trip.
+ */
+export interface TaxonomyManifestEntry {
+  readonly name: string;
+  readonly label: string;
+  readonly labels?: { readonly singular?: string };
+  readonly description?: string;
+  readonly isHierarchical?: boolean;
+  readonly postTypes?: readonly string[];
+}
+
 export interface PlumixManifest {
   readonly postTypes: readonly PostTypeManifestEntry[];
+  readonly taxonomies: readonly TaxonomyManifestEntry[];
   readonly metaBoxes: readonly MetaBoxManifestEntry[];
 }
 
@@ -230,7 +248,7 @@ export interface PlumixManifest {
 export const MANIFEST_SCRIPT_ID = "plumix-manifest";
 
 export function emptyManifest(): PlumixManifest {
-  return { postTypes: [], metaBoxes: [] };
+  return { postTypes: [], taxonomies: [], metaBoxes: [] };
 }
 
 /**
@@ -252,8 +270,11 @@ export function buildManifest(registry: PluginRegistry): PlumixManifest {
     return ap - bp;
   });
   assertUniqueAdminSlugs(entries);
+  const taxonomies = Array.from(registry.taxonomies.values()).map(
+    toTaxonomyEntry,
+  );
   const metaBoxes = Array.from(registry.metaBoxes.values()).map(toMetaBoxEntry);
-  return { postTypes: entries, metaBoxes };
+  return { postTypes: entries, taxonomies, metaBoxes };
 }
 
 function assertUniqueAdminSlugs(
@@ -359,6 +380,23 @@ function toPostTypeEntry(pt: RegisteredPostType): PostTypeManifestEntry {
     capabilityType,
     menuPosition,
     menuIcon,
+  };
+}
+
+// Allowlist for taxonomy entries — same rationale as `toPostTypeEntry`.
+// `registeredBy` excluded; `isPublic` / `isInQuickEdit` / `hasAdminColumn`
+// / `rewrite` are server-/public-site-only and don't affect the admin
+// surface, so they're intentionally dropped from the wire contract until
+// a concrete admin need arises.
+function toTaxonomyEntry(tax: RegisteredTaxonomy): TaxonomyManifestEntry {
+  const { name, label, labels, description, isHierarchical, postTypes } = tax;
+  return {
+    name,
+    label,
+    labels,
+    description,
+    isHierarchical,
+    postTypes,
   };
 }
 
