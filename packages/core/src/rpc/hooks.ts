@@ -1,10 +1,5 @@
 import type { Option } from "../db/schema/options.js";
-import type {
-  NewPost,
-  Post,
-  PostStatus,
-  PostWithMeta,
-} from "../db/schema/posts.js";
+import type { NewPost, Post, PostStatus } from "../db/schema/posts.js";
 import type { Term } from "../db/schema/terms.js";
 import type { User } from "../db/schema/users.js";
 import type { OptionSetInput } from "./procedures/option/schemas.js";
@@ -31,13 +26,13 @@ declare module "../hooks/types.js" {
     "rpc:post.list:output": (output: readonly Post[]) => readonly Post[];
 
     "rpc:post.get:input": (input: { id: number }) => typeof input;
-    "rpc:post.get:output": (output: PostWithMeta) => PostWithMeta;
+    "rpc:post.get:output": (output: Post) => Post;
 
     "rpc:post.create:input": (input: PostCreateInput) => PostCreateInput;
-    "rpc:post.create:output": (output: PostWithMeta) => PostWithMeta;
+    "rpc:post.create:output": (output: Post) => Post;
 
     "rpc:post.update:input": (input: PostUpdateInput) => PostUpdateInput;
-    "rpc:post.update:output": (output: PostWithMeta) => PostWithMeta;
+    "rpc:post.update:output": (output: Post) => Post;
 
     /**
      * Last chance to mutate or short-circuit a meta patch before it hits

@@ -18,6 +18,11 @@ export const users = sqliteTable("users", (t) => ({
   name: t.text(),
   avatarUrl: t.text(),
   role: t.text({ enum: USER_ROLES }).notNull().default("subscriber"),
+  meta: t
+    .text({ mode: "json" })
+    .$type<Record<string, unknown>>()
+    .notNull()
+    .default({}),
   emailVerifiedAt: t.integer({ mode: "timestamp" }),
   disabledAt: t.integer({ mode: "timestamp" }),
   createdAt: t

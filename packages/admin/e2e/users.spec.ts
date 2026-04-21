@@ -16,6 +16,7 @@ function user(overrides: Partial<User> & { id: number; email: string }): User {
     name: null,
     avatarUrl: null,
     role: "subscriber",
+    meta: {},
     emailVerifiedAt: new Date("2026-04-20T00:00:00Z"),
     disabledAt: null,
     createdAt: new Date("2026-04-20T00:00:00Z"),

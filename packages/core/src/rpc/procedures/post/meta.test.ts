@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { eq } from "../../../db/index.js";
-import { postMeta } from "../../../db/schema/post_meta.js";
+import { posts } from "../../../db/schema/posts.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 import {
@@ -168,7 +168,7 @@ describe("sanitizeMetaInput", () => {
 });
 
 describe("applyMetaPatch + loadPostMeta", () => {
-  test("upserts new rows, preserves existing keys outside the patch (partial write semantics)", async () => {
+  test("upserts merge into the existing bag — keys outside the patch stay put", async () => {
     const plugins = registryWithMeta({
       title: { type: "string" },
       count: { type: "number" },
@@ -179,10 +179,11 @@ describe("applyMetaPatch + loadPostMeta", () => {
       authorId: h.user.id,
       slug: "target",
     });
-    // Seed one row that the patch should NOT touch.
+    // Seed one key that the patch should NOT touch.
     await h.context.db
-      .insert(postMeta)
-      .values({ postId: post.id, key: "untouched", value: '"keep"' });
+      .update(posts)
+      .set({ meta: { untouched: "keep" } })
+      .where(eq(posts.id, post.id));
 
     const patch = sanitizeMetaInput(plugins, post.type, {
       title: "Written",
@@ -195,7 +196,7 @@ describe("applyMetaPatch + loadPostMeta", () => {
     expect(meta).toEqual({ title: "Written", count: 7, untouched: "keep" });
   });
 
-  test("re-applying overwrites via ON CONFLICT (upsert) without duplicating rows", async () => {
+  test("re-applying overwrites without leaving stale values behind", async () => {
     const plugins = registryWithMeta({ title: { type: "string" } });
     const h = await createRpcHarness({ authAs: "admin", plugins });
     const post = await h.factory.draft.create({
@@ -209,15 +210,11 @@ describe("applyMetaPatch + loadPostMeta", () => {
     await applyMetaPatch(h.context, post.id, first);
     await applyMetaPatch(h.context, post.id, second);
 
-    const rows = await h.context.db
-      .select()
-      .from(postMeta)
-      .where(eq(postMeta.postId, post.id));
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.value).toBe('"v2"');
+    const meta = await loadPostMeta(h.context, post.id);
+    expect(meta).toEqual({ title: "v2" });
   });
 
-  test("null value removes the row (caller opts out of the key)", async () => {
+  test("null value removes the key (caller opts out)", async () => {
     const plugins = registryWithMeta({ title: { type: "string" } });
     const h = await createRpcHarness({ authAs: "admin", plugins });
     const post = await h.factory.draft.create({
@@ -235,20 +232,63 @@ describe("applyMetaPatch + loadPostMeta", () => {
     expect(meta).toEqual({});
   });
 
-  test("reads gracefully recover when a row has a non-JSON value (legacy writer)", async () => {
+  test("handles keys containing `-` / `:` that aren't JS-identifier-safe", async () => {
+    // `$.some-key` fails to parse as a SQLite json path (label must be
+    // alphanumeric/underscore); applyMetaPatch uses the double-quoted
+    // `$."key"` form so hyphens + colons round-trip.
+    const plugins = registryWithMeta({
+      "og:title": { type: "string" },
+      "seo-description": { type: "string" },
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.factory.draft.create({
+      authorId: h.user.id,
+      slug: "path-escapes",
+    });
+
+    const patch = sanitizeMetaInput(plugins, post.type, {
+      "og:title": "Hello",
+      "seo-description": "A page",
+    });
+    if (!patch) throw new Error("patch should not be null");
+    await applyMetaPatch(h.context, post.id, patch);
+
+    const meta = await loadPostMeta(h.context, post.id);
+    expect(meta).toEqual({
+      "og:title": "Hello",
+      "seo-description": "A page",
+    });
+
+    // Delete path uses the same escape — cover it too.
+    const clear = sanitizeMetaInput(plugins, post.type, {
+      "og:title": null,
+      "seo-description": null,
+    });
+    if (!clear) throw new Error("clear patch should not be null");
+    await applyMetaPatch(h.context, post.id, clear);
+    expect(await loadPostMeta(h.context, post.id)).toEqual({});
+  });
+
+  test("delete + upsert of the same key in one patch lands as the upsert", async () => {
     const plugins = registryWithMeta({ title: { type: "string" } });
     const h = await createRpcHarness({ authAs: "admin", plugins });
     const post = await h.factory.draft.create({
       authorId: h.user.id,
-      slug: "legacy",
+      slug: "delete-then-set",
     });
-    // Simulate a row written before we settled on JSON encoding — raw
-    // string without surrounding quotes, so JSON.parse would throw.
-    await h.context.db
-      .insert(postMeta)
-      .values({ postId: post.id, key: "title", value: "raw-legacy" });
+    const seed = sanitizeMetaInput(plugins, post.type, { title: "old" });
+    if (!seed) throw new Error("seed should not be null");
+    await applyMetaPatch(h.context, post.id, seed);
+
+    // Manually build a patch that both deletes and sets the same key —
+    // exercises the `json_set(json_remove(...))` composition order.
+    const patch = {
+      deletes: ["title"] as const,
+      upserts: new Map([["title", "new"]]),
+    };
+    await applyMetaPatch(h.context, post.id, patch);
 
     const meta = await loadPostMeta(h.context, post.id);
-    expect(meta).toEqual({ title: "raw-legacy" });
+    expect(meta).toEqual({ title: "new" });
   });
 });

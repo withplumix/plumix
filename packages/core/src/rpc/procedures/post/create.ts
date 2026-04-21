@@ -12,6 +12,7 @@ import {
 } from "./lifecycle.js";
 import {
   applyPostMetaReadFilter,
+  decodeMetaBag,
   loadPostMeta,
   sanitizeMetaForRpc,
   writePostMetaWithHooks,
@@ -96,11 +97,18 @@ export const create = base
       throw errors.CONFLICT({ data: { reason: "slug_taken" } });
     }
 
+    let decoded: Record<string, unknown>;
     if (metaPatch) {
       await writePostMetaWithHooks(context, created, metaPatch);
+      // `writePostMetaWithHooks` can run filter plugins that mutate the
+      // patch, so re-read the column to ship the authoritative bag.
+      decoded = await loadPostMeta(context, created.id);
+    } else {
+      // No write path — `created.meta` is the default `{}`. Decode inline
+      // to save the round trip.
+      decoded = decodeMetaBag(context.plugins, created.meta);
     }
-    const loadedMeta = await loadPostMeta(context, created.id);
-    const meta = await applyPostMetaReadFilter(context, created, loadedMeta);
+    const meta = await applyPostMetaReadFilter(context, created, decoded);
 
     await firePostTransition(context, created, "draft");
     if (created.status === "published") {

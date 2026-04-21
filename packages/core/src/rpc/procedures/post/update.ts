@@ -25,6 +25,7 @@ import {
 } from "./lifecycle.js";
 import {
   applyPostMetaReadFilter,
+  decodeMetaBag,
   isEmptyMetaPatch,
   loadPostMeta,
   sanitizeMetaForRpc,
@@ -147,8 +148,8 @@ export const update = base
       termsPatch === undefined &&
       isEmptyMetaPatch(metaPatch)
     ) {
-      const loaded = await loadPostMeta(context, existing.id);
-      const meta = await applyPostMetaReadFilter(context, existing, loaded);
+      const decoded = decodeMetaBag(context.plugins, existing.meta);
+      const meta = await applyPostMetaReadFilter(context, existing, decoded);
       return context.hooks.applyFilter("rpc:post.update:output", {
         ...existing,
         meta,
@@ -210,11 +211,15 @@ export const update = base
 
     // `writePostMetaWithHooks` is a no-op on an empty patch, so the null
     // check here is the only gate we need — no separate empty-patch check.
+    let decoded: Record<string, unknown>;
     if (metaPatch) {
       await writePostMetaWithHooks(context, updated, metaPatch);
+      // Re-read so the response reflects what filter plugins wrote.
+      decoded = await loadPostMeta(context, updated.id);
+    } else {
+      decoded = decodeMetaBag(context.plugins, updated.meta);
     }
-    const loaded = await loadPostMeta(context, updated.id);
-    const meta = await applyPostMetaReadFilter(context, updated, loaded);
+    const meta = await applyPostMetaReadFilter(context, updated, decoded);
 
     if (postColumnsWritten) {
       await firePostUpdated(context, updated, existing);
