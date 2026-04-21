@@ -27,6 +27,10 @@
     "./manifest": {
       "types": "./dist/plugin/manifest.d.ts",
       "default": "./dist/plugin/manifest.js"
+    },
+    "./slugify": {
+      "types": "./dist/slugify.d.ts",
+      "default": "./dist/slugify.js"
     }
   },
   "scripts": {
@@ -44,6 +48,7 @@
     "@oslojs/crypto": "^1.0.1",
     "@oslojs/encoding": "^1.1.0",
     "@oslojs/webauthn": "^1.0.0",
+    "@sindresorhus/slugify": "^3.0.0",
     "drizzle-kit": "catalog:",
     "drizzle-orm": "catalog:",
     "drizzle-valibot": "catalog:",

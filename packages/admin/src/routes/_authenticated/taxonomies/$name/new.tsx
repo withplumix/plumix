@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { slugify } from "@/components/editor/slugify.js";
 import { TermForm } from "@/components/taxonomy/term-form.js";
 import { parentPickerOptions } from "@/components/taxonomy/tree.js";
 import {
@@ -24,6 +23,7 @@ import {
 import { ArrowLeft } from "lucide-react";
 
 import type { TaxonomyManifestEntry } from "@plumix/core/manifest";
+import { slugify } from "@plumix/core/slugify";
 
 import { TAXONOMY_LIST_DEFAULT_SEARCH } from "./-constants.js";
 import { mapTermError } from "./-errors.js";
@@ -145,6 +145,19 @@ function NewTermRoute(): ReactNode {
             serverError={serverError}
             submitLabel={`Create ${singularLower}`}
             onSubmit={(values) => {
+              // Short-circuit the RPC when the user left slug blank and
+              // the derived slug would also be empty (CJK, emoji, pure
+              // punctuation — scripts the transliterate lib doesn't
+              // cover). Surfacing this inline beats a 400 round-trip.
+              if (
+                values.slug.length === 0 &&
+                slugify(values.name).length === 0
+              ) {
+                setServerError(
+                  "Couldn't derive a slug from that name — please type one manually.",
+                );
+                return;
+              }
               createTerm.mutate(values);
             }}
             onCancel={() => {
