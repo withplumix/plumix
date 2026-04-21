@@ -13,7 +13,9 @@ import { Route as AuthRouteImport } from "./routes/_auth";
 import { Route as AuthBootstrapRouteImport } from "./routes/_auth/bootstrap";
 import { Route as AuthLoginRouteImport } from "./routes/_auth/login";
 import { Route as AuthenticatedRouteImport } from "./routes/_authenticated";
-import { Route as AuthenticatedContentSlugRouteImport } from "./routes/_authenticated/content/$slug";
+import { Route as AuthenticatedContentSlugIdRouteImport } from "./routes/_authenticated/content/$slug/$id";
+import { Route as AuthenticatedContentSlugIndexRouteImport } from "./routes/_authenticated/content/$slug/index";
+import { Route as AuthenticatedContentSlugNewRouteImport } from "./routes/_authenticated/content/$slug/new";
 import { Route as AuthenticatedIndexRouteImport } from "./routes/_authenticated/index";
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
@@ -39,10 +41,22 @@ const AuthBootstrapRoute = AuthBootstrapRouteImport.update({
   path: "/bootstrap",
   getParentRoute: () => AuthRoute,
 } as any);
-const AuthenticatedContentSlugRoute =
-  AuthenticatedContentSlugRouteImport.update({
-    id: "/content/$slug",
-    path: "/content/$slug",
+const AuthenticatedContentSlugIndexRoute =
+  AuthenticatedContentSlugIndexRouteImport.update({
+    id: "/content/$slug/",
+    path: "/content/$slug/",
+    getParentRoute: () => AuthenticatedRoute,
+  } as any);
+const AuthenticatedContentSlugNewRoute =
+  AuthenticatedContentSlugNewRouteImport.update({
+    id: "/content/$slug/new",
+    path: "/content/$slug/new",
+    getParentRoute: () => AuthenticatedRoute,
+  } as any);
+const AuthenticatedContentSlugIdRoute =
+  AuthenticatedContentSlugIdRouteImport.update({
+    id: "/content/$slug/$id",
+    path: "/content/$slug/$id",
     getParentRoute: () => AuthenticatedRoute,
   } as any);
 
@@ -50,13 +64,17 @@ export interface FileRoutesByFullPath {
   "/": typeof AuthenticatedIndexRoute;
   "/bootstrap": typeof AuthBootstrapRoute;
   "/login": typeof AuthLoginRoute;
-  "/content/$slug": typeof AuthenticatedContentSlugRoute;
+  "/content/$slug/$id": typeof AuthenticatedContentSlugIdRoute;
+  "/content/$slug/new": typeof AuthenticatedContentSlugNewRoute;
+  "/content/$slug/": typeof AuthenticatedContentSlugIndexRoute;
 }
 export interface FileRoutesByTo {
   "/": typeof AuthenticatedIndexRoute;
   "/bootstrap": typeof AuthBootstrapRoute;
   "/login": typeof AuthLoginRoute;
-  "/content/$slug": typeof AuthenticatedContentSlugRoute;
+  "/content/$slug/$id": typeof AuthenticatedContentSlugIdRoute;
+  "/content/$slug/new": typeof AuthenticatedContentSlugNewRoute;
+  "/content/$slug": typeof AuthenticatedContentSlugIndexRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
@@ -65,13 +83,27 @@ export interface FileRoutesById {
   "/_auth/bootstrap": typeof AuthBootstrapRoute;
   "/_auth/login": typeof AuthLoginRoute;
   "/_authenticated/": typeof AuthenticatedIndexRoute;
-  "/_authenticated/content/$slug": typeof AuthenticatedContentSlugRoute;
+  "/_authenticated/content/$slug/$id": typeof AuthenticatedContentSlugIdRoute;
+  "/_authenticated/content/$slug/new": typeof AuthenticatedContentSlugNewRoute;
+  "/_authenticated/content/$slug/": typeof AuthenticatedContentSlugIndexRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: "/" | "/bootstrap" | "/login" | "/content/$slug";
+  fullPaths:
+    | "/"
+    | "/bootstrap"
+    | "/login"
+    | "/content/$slug/$id"
+    | "/content/$slug/new"
+    | "/content/$slug/";
   fileRoutesByTo: FileRoutesByTo;
-  to: "/" | "/bootstrap" | "/login" | "/content/$slug";
+  to:
+    | "/"
+    | "/bootstrap"
+    | "/login"
+    | "/content/$slug/$id"
+    | "/content/$slug/new"
+    | "/content/$slug";
   id:
     | "__root__"
     | "/_auth"
@@ -79,7 +111,9 @@ export interface FileRouteTypes {
     | "/_auth/bootstrap"
     | "/_auth/login"
     | "/_authenticated/"
-    | "/_authenticated/content/$slug";
+    | "/_authenticated/content/$slug/$id"
+    | "/_authenticated/content/$slug/new"
+    | "/_authenticated/content/$slug/";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
@@ -124,11 +158,25 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthBootstrapRouteImport;
       parentRoute: typeof AuthRoute;
     };
-    "/_authenticated/content/$slug": {
-      id: "/_authenticated/content/$slug";
+    "/_authenticated/content/$slug/": {
+      id: "/_authenticated/content/$slug/";
       path: "/content/$slug";
-      fullPath: "/content/$slug";
-      preLoaderRoute: typeof AuthenticatedContentSlugRouteImport;
+      fullPath: "/content/$slug/";
+      preLoaderRoute: typeof AuthenticatedContentSlugIndexRouteImport;
+      parentRoute: typeof AuthenticatedRoute;
+    };
+    "/_authenticated/content/$slug/new": {
+      id: "/_authenticated/content/$slug/new";
+      path: "/content/$slug/new";
+      fullPath: "/content/$slug/new";
+      preLoaderRoute: typeof AuthenticatedContentSlugNewRouteImport;
+      parentRoute: typeof AuthenticatedRoute;
+    };
+    "/_authenticated/content/$slug/$id": {
+      id: "/_authenticated/content/$slug/$id";
+      path: "/content/$slug/$id";
+      fullPath: "/content/$slug/$id";
+      preLoaderRoute: typeof AuthenticatedContentSlugIdRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
   }
@@ -148,12 +196,16 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren);
 
 interface AuthenticatedRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute;
-  AuthenticatedContentSlugRoute: typeof AuthenticatedContentSlugRoute;
+  AuthenticatedContentSlugIdRoute: typeof AuthenticatedContentSlugIdRoute;
+  AuthenticatedContentSlugNewRoute: typeof AuthenticatedContentSlugNewRoute;
+  AuthenticatedContentSlugIndexRoute: typeof AuthenticatedContentSlugIndexRoute;
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
-  AuthenticatedContentSlugRoute: AuthenticatedContentSlugRoute,
+  AuthenticatedContentSlugIdRoute: AuthenticatedContentSlugIdRoute,
+  AuthenticatedContentSlugNewRoute: AuthenticatedContentSlugNewRoute,
+  AuthenticatedContentSlugIndexRoute: AuthenticatedContentSlugIndexRoute,
 };
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

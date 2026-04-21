@@ -11,6 +11,8 @@ import { visiblePostTypes } from "@/lib/manifest.js";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, FileText } from "lucide-react";
 
+import { CONTENT_LIST_DEFAULT_SEARCH } from "./content/$slug/index.js";
+
 export const Route = createFileRoute("/_authenticated/")({
   component: DashboardIndex,
 });
@@ -51,17 +53,7 @@ function DashboardIndex(): ReactNode {
                     <Link
                       to="/content/$slug"
                       params={{ slug: pt.adminSlug }}
-                      // Pass every search-param default explicitly — the
-                      // generated route type requires all non-optional
-                      // fields. Omitting any would fail typecheck even
-                      // though valibot falls back at runtime.
-                      search={{
-                        status: "all",
-                        page: 1,
-                        author: "all",
-                        orderBy: "updated_at",
-                        order: "desc",
-                      }}
+                      search={CONTENT_LIST_DEFAULT_SEARCH}
                     >
                       Browse {labelLower}
                       <ArrowRight />
