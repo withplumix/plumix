@@ -50,6 +50,7 @@ export function DataTable<TData>({
       aria-busy={isLoading || undefined}
       role={isLoading ? "region" : undefined}
       aria-label={isLoading ? loadingLabel : undefined}
+      data-testid={isLoading ? "data-table-loading" : "data-table"}
     >
       <Table>
         <TableHeader>

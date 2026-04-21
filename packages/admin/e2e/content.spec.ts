@@ -45,10 +45,8 @@ test.describe("/content/$slug", () => {
     });
 
     await page.goto("content/posts?status=all&page=1");
-    await expect(page.getByRole("heading", { name: "Posts" })).toBeVisible();
-    await expect(
-      page.getByRole("region", { name: /loading posts/i }),
-    ).toBeVisible();
+    await expect(page.getByTestId("content-list-heading")).toBeVisible();
+    await expect(page.getByTestId("data-table-loading")).toBeVisible();
     await expectNoAxeViolations(page);
 
     release?.();
@@ -62,8 +60,8 @@ test.describe("/content/$slug", () => {
       "/post/list": [],
     });
     await page.goto("content/posts?status=all&page=1");
-    await expect(page.getByRole("heading", { name: "Posts" })).toBeVisible();
-    await expect(page.getByText("No posts yet")).toBeVisible();
+    await expect(page.getByTestId("content-list-heading")).toBeVisible();
+    await expect(page.getByTestId("content-list-empty-state")).toBeVisible();
     await expectNoAxeViolations(page);
   });
 
@@ -76,7 +74,7 @@ test.describe("/content/$slug", () => {
     // literal HTTP 404 since we're behind Vite's SPA dev server, so assert
     // the router's default "Not Found" marker instead.
     expect(response?.status()).toBeLessThan(500);
-    await expect(page.getByText(/not found/i).first()).toBeVisible();
+    await expect(page.getByTestId("not-found-page")).toBeVisible();
   });
 
   test("search box URL-syncs ?q= and triggers a refetch after debounce", async ({
@@ -108,9 +106,7 @@ test.describe("/content/$slug", () => {
     });
 
     await page.goto("content/posts?status=all&page=1");
-    await page
-      .getByRole("searchbox", { name: /search posts/i })
-      .fill("quantum");
+    await page.getByTestId("content-list-search-input").fill("quantum");
     await expect(page).toHaveURL(/q=quantum/);
     // The debounced commit + refetch should eventually ship `search` in
     // the RPC input. Playwright's expect.poll waits up to 5s by default,
@@ -149,7 +145,7 @@ test.describe("/content/$slug", () => {
     });
 
     await page.goto("content/posts?status=all&page=1");
-    await page.getByRole("button", { name: "Mine" }).click();
+    await page.getByTestId("author-filter-mine").click();
     await expect(page).toHaveURL(/author=mine/);
     await expect
       .poll(
@@ -186,7 +182,7 @@ test.describe("/content/$slug", () => {
     });
 
     await page.goto("content/posts?status=all&page=1");
-    await page.getByRole("button", { name: /sort by title/i }).click();
+    await page.getByTestId("content-list-sort-title").click();
     await expect(page).toHaveURL(/orderBy=title/);
     await expect(page).toHaveURL(/order=asc/);
     await expect
@@ -235,7 +231,12 @@ test.describe("/content/$slug", () => {
       ],
     });
     await page.goto("content/posts?status=all&page=1");
-    await expect(page.getByText("Hello world")).toBeVisible();
+    // Row id 1 was seeded by the mock above with title "Hello world" —
+    // asserting the row exists + its content is enough without binding
+    // to visible copy.
+    const helloRow = page.getByTestId("content-list-row-1");
+    await expect(helloRow).toBeVisible();
+    await expect(helloRow).toContainText("Hello world");
     await expectNoAxeViolations(page);
   });
 });

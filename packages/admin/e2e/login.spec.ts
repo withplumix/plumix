@@ -9,7 +9,7 @@ test.describe("/login", () => {
   }) => {
     await mockSession(page, { user: null, needsBootstrap: false });
     await page.goto("login");
-    await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+    await expect(page.getByTestId("login-heading")).toBeVisible();
     await expectNoAxeViolations(page);
   });
 });

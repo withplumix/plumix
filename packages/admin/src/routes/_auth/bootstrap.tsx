@@ -74,7 +74,7 @@ function BootstrapRoute(): ReactNode {
     <Card>
       <CardHeader>
         <CardTitle>
-          <h1>Create admin account</h1>
+          <h1 data-testid="bootstrap-heading">Create admin account</h1>
         </CardTitle>
         <CardDescription>
           Set up your site — this email becomes the admin account.

@@ -15,10 +15,11 @@ test.describe("/ (dashboard)", () => {
     await mockManifest(page, MANIFEST_WITH_POST);
     await mockSession(page, AUTHED_ADMIN);
     await page.goto("");
-    await expect(page.getByRole("heading", { name: /welcome/i })).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: /browse posts/i }),
-    ).toHaveAttribute("href", /\/content\/posts/);
+    await expect(page.getByTestId("dashboard-welcome-heading")).toBeVisible();
+    await expect(page.getByTestId("dashboard-tile-post-link")).toHaveAttribute(
+      "href",
+      /\/content\/posts/,
+    );
     await expectNoAxeViolations(page);
   });
 
@@ -27,7 +28,7 @@ test.describe("/ (dashboard)", () => {
   }) => {
     await mockSession(page, AUTHED_ADMIN);
     await page.goto("");
-    await expect(page.getByText("No content types yet")).toBeVisible();
+    await expect(page.getByTestId("dashboard-empty-state")).toBeVisible();
     await expectNoAxeViolations(page);
   });
 });

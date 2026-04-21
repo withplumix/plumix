@@ -24,7 +24,10 @@ function RootLayout(): ReactNode {
 
 function NotFound(): ReactNode {
   return (
-    <div className="flex h-screen flex-col items-center justify-center gap-2 p-6 text-center">
+    <div
+      data-testid="not-found-page"
+      className="flex h-screen flex-col items-center justify-center gap-2 p-6 text-center"
+    >
       <h1 className="text-2xl font-semibold">Not found</h1>
       <p className="text-muted-foreground text-sm">
         The page you're looking for doesn't exist or the resource isn't

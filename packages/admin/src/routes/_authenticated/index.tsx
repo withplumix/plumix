@@ -25,7 +25,12 @@ function DashboardIndex(): ReactNode {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Welcome, {greeting}</h1>
+        <h1
+          data-testid="dashboard-welcome-heading"
+          className="text-2xl font-semibold"
+        >
+          Welcome, {greeting}
+        </h1>
         <p className="text-muted-foreground text-sm">
           What would you like to work on today?
         </p>
@@ -37,7 +42,7 @@ function DashboardIndex(): ReactNode {
             const label = pt.labels?.plural ?? pt.label;
             const labelLower = label.toLowerCase();
             return (
-              <Card key={pt.name}>
+              <Card key={pt.name} data-testid={`dashboard-tile-${pt.name}`}>
                 <CardHeader>
                   <div className="bg-primary/10 text-primary mb-2 flex size-10 items-center justify-center rounded-md">
                     <FileText className="size-5" aria-hidden />
@@ -54,6 +59,7 @@ function DashboardIndex(): ReactNode {
                       to="/content/$slug"
                       params={{ slug: pt.adminSlug }}
                       search={CONTENT_LIST_DEFAULT_SEARCH}
+                      data-testid={`dashboard-tile-${pt.name}-link`}
                     >
                       Browse {labelLower}
                       <ArrowRight />
@@ -65,7 +71,10 @@ function DashboardIndex(): ReactNode {
           })}
         </div>
       ) : (
-        <Card className="max-w-xl border-dashed">
+        <Card
+          className="max-w-xl border-dashed"
+          data-testid="dashboard-empty-state"
+        >
           <CardHeader>
             <CardTitle>No content types yet</CardTitle>
             <CardDescription>
