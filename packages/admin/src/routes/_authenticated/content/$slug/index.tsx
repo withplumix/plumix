@@ -22,7 +22,12 @@ import { toDate } from "@/lib/dates.js";
 import { findPostTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  notFound,
+  useNavigate,
+} from "@tanstack/react-router";
 import {
   ArrowDown,
   ArrowUp,
@@ -70,6 +75,20 @@ type Order = (typeof ORDER_VALUES)[number];
 
 const AUTHOR_VALUES = ["all", "mine"] as const;
 type AuthorFilter = (typeof AUTHOR_VALUES)[number];
+
+// Default search-param values for `/content/$slug` — every field in
+// `searchSchema` has a `v.fallback` default, but TanStack Router's typed
+// `Link`/`redirect` calls demand all non-optional fields spelled out at
+// the call site. Exporting this constant lets sibling routes link back
+// to the list without redeclaring the defaults (keeps the set of
+// required fields a single source of truth).
+export const CONTENT_LIST_DEFAULT_SEARCH = {
+  status: "all",
+  page: 1,
+  author: "all",
+  orderBy: "updated_at",
+  order: "desc",
+} as const;
 
 const searchSchema = v.object({
   page: v.optional(
@@ -128,10 +147,12 @@ function buildColumns({
   activeOrderBy,
   activeOrder,
   onSort,
+  adminSlug,
 }: {
   activeOrderBy: OrderBy;
   activeOrder: Order;
   onSort: (column: OrderBy, defaultDirection: Order) => void;
+  adminSlug: string;
 }): ColumnDef<Post>[] {
   return [
     {
@@ -147,7 +168,11 @@ function buildColumns({
         />
       ),
       cell: ({ row }) => (
-        <div className="flex flex-col">
+        <Link
+          to="/content/$slug/$id"
+          params={{ slug: adminSlug, id: String(row.original.id) }}
+          className="hover:text-primary flex flex-col transition-colors"
+        >
           <span className="font-medium">
             {row.original.title || (
               <span className="text-muted-foreground italic">(no title)</span>
@@ -156,7 +181,7 @@ function buildColumns({
           <span className="text-muted-foreground text-xs">
             {row.original.slug}
           </span>
-        </div>
+        </Link>
       ),
     },
     {
@@ -192,7 +217,7 @@ function buildColumns({
   ];
 }
 
-export const Route = createFileRoute("/_authenticated/content/$slug")({
+export const Route = createFileRoute("/_authenticated/content/$slug/")({
   validateSearch: (search) => v.parse(searchSchema, search),
   // Resolve the manifest entry in `beforeLoad` so the route component never
   // has to handle a missing post type. `notFound()` is TanStack Router's
@@ -289,14 +314,22 @@ function ContentListRoute(): ReactNode {
   const pluralLower = pluralLabel.toLowerCase();
   const singularLower = singularLabel.toLowerCase();
 
+  // Capability gate for the "New" button. Uses the capability namespace
+  // derived by core (`capabilityType ?? name`). Missing the cap? Hide the
+  // button — the new-post route also redirects on `beforeLoad` but we
+  // shouldn't surface the button at all.
+  const createCapability = `${postType.capabilityType ?? postType.name}:create`;
+  const canCreate = user.capabilities.includes(createCapability);
+
   const columns = useMemo(
     () =>
       buildColumns({
         activeOrderBy: search.orderBy,
         activeOrder: search.order,
         onSort: setSort,
+        adminSlug: postType.adminSlug,
       }),
-    [search.orderBy, search.order, setSort],
+    [search.orderBy, search.order, setSort, postType.adminSlug],
   );
 
   return (
@@ -309,10 +342,14 @@ function ContentListRoute(): ReactNode {
             items; trashed items live in their own view.
           </p>
         </div>
-        <Button disabled title="Editor lands in a follow-up PR">
-          <Plus />
-          New {singularLower}
-        </Button>
+        {canCreate ? (
+          <Button asChild>
+            <Link to="/content/$slug/new" params={{ slug: postType.adminSlug }}>
+              <Plus />
+              New {singularLower}
+            </Link>
+          </Button>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
