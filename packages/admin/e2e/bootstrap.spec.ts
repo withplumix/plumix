@@ -9,9 +9,7 @@ test.describe("/bootstrap", () => {
   }) => {
     await mockSession(page, { user: null, needsBootstrap: true });
     await page.goto("bootstrap");
-    await expect(
-      page.getByRole("heading", { name: "Create admin account" }),
-    ).toBeVisible();
+    await expect(page.getByTestId("bootstrap-heading")).toBeVisible();
     await expectNoAxeViolations(page);
   });
 });

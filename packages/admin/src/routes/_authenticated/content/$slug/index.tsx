@@ -171,6 +171,7 @@ function buildColumns({
         <Link
           to="/content/$slug/$id"
           params={{ slug: adminSlug, id: String(row.original.id) }}
+          data-testid={`content-list-row-${String(row.original.id)}`}
           className="hover:text-primary flex flex-col transition-colors"
         >
           <span className="font-medium">
@@ -336,7 +337,12 @@ function ContentListRoute(): ReactNode {
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">{pluralLabel}</h1>
+          <h1
+            data-testid="content-list-heading"
+            className="text-2xl font-semibold"
+          >
+            {pluralLabel}
+          </h1>
           <p className="text-muted-foreground text-sm">
             Manage {pluralLower}. "All" shows drafts, scheduled, and published
             items; trashed items live in their own view.
@@ -344,7 +350,11 @@ function ContentListRoute(): ReactNode {
         </div>
         {canCreate ? (
           <Button asChild>
-            <Link to="/content/$slug/new" params={{ slug: postType.adminSlug }}>
+            <Link
+              to="/content/$slug/new"
+              params={{ slug: postType.adminSlug }}
+              data-testid="content-list-new-button"
+            >
               <Plus />
               New {singularLower}
             </Link>
@@ -478,6 +488,7 @@ function SortableHeader({
       onClick={() => {
         onSort(column, defaultDirection);
       }}
+      data-testid={`content-list-sort-${column}`}
       className="hover:text-foreground -ml-2 inline-flex items-center gap-1 rounded px-2 py-1 text-left font-medium transition-colors"
       aria-label={`Sort by ${label} (${nextDirection})`}
       aria-pressed={isActive}
@@ -506,6 +517,7 @@ function AuthorFilter({
             onChange(opt);
           }}
           aria-pressed={value === opt}
+          data-testid={`author-filter-${opt}`}
           className="capitalize"
         >
           {opt === "all" ? "All authors" : "Mine"}
@@ -554,6 +566,7 @@ function SearchInput({
         maxLength={200}
         placeholder={placeholder}
         aria-label={placeholder}
+        data-testid="content-list-search-input"
         onChange={(e) => {
           setValue(e.target.value);
         }}
@@ -597,7 +610,10 @@ function EmptyState({
   pluralLower: string;
 }): ReactNode {
   return (
-    <div className="flex flex-col items-center gap-2 py-12 text-center">
+    <div
+      data-testid="content-list-empty-state"
+      className="flex flex-col items-center gap-2 py-12 text-center"
+    >
       <Card className="max-w-sm border-dashed">
         <CardHeader>
           <CardTitle>No {pluralLower} yet</CardTitle>

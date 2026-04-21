@@ -68,7 +68,7 @@ function LoginRoute(): ReactNode {
     <Card>
       <CardHeader>
         <CardTitle>
-          <h1>Sign in</h1>
+          <h1 data-testid="login-heading">Sign in</h1>
         </CardTitle>
         <CardDescription>
           Use a passkey registered with this site.
