@@ -306,51 +306,31 @@ function metaJsonPath(key: string): string {
 }
 
 /**
- * Fire the extension surface around a meta write: `rpc:post.meta:write`
- * lets plugins mutate or short-circuit a patch before it hits the DB;
- * `post:meta_changed` fires after the write so auditors /
- * cache-invalidators can react.
+ * Apply a meta patch and fire `post:meta_changed` so auditors /
+ * cache-invalidators can react. Plugins that need to mutate the patch
+ * should subscribe to `rpc:post.{create,update}:input` instead —
+ * mutating `input.meta` there feeds the sanitizer + writer downstream.
  */
-export async function writePostMetaWithHooks(
+export async function writePostMeta(
   context: AppContext,
   post: { id: number; type: string },
   patch: MetaPatch,
 ): Promise<void> {
-  const filtered = await context.hooks.applyFilter(
-    "rpc:post.meta:write",
-    patch,
-    post,
-  );
-  if (isEmptyMetaPatch(filtered)) return;
-  await applyMetaPatch(context, post.id, filtered);
+  if (isEmptyMetaPatch(patch)) return;
+  await applyMetaPatch(context, post.id, patch);
 
   const changes: PostMetaChanges = {
-    set: Object.fromEntries(filtered.upserts),
-    removed: [...filtered.deletes],
+    set: Object.fromEntries(patch.upserts),
+    removed: [...patch.deletes],
   };
   await context.hooks.doAction("post:meta_changed", post, changes);
 }
 
 /**
  * Payload for `post:meta_changed`. `set` is the decoded key → value map
- * of upserts; `removed` is the list of cleared keys. Plugins that need
- * the old values should subscribe to the write filter and snapshot
- * themselves — the action is strictly "what just happened".
+ * of upserts; `removed` is the list of cleared keys.
  */
 export interface PostMetaChanges {
   readonly set: Readonly<Record<string, unknown>>;
   readonly removed: readonly string[];
-}
-
-/**
- * Run the `rpc:post.meta:read` filter on a decoded meta bag. Plugins can
- * decorate (add derived keys), redact (drop secrets), or replace the bag
- * entirely.
- */
-export async function applyPostMetaReadFilter(
-  context: AppContext,
-  post: { id: number; type: string },
-  meta: PostMetaMap,
-): Promise<PostMetaMap> {
-  return context.hooks.applyFilter("rpc:post.meta:read", meta, post);
 }

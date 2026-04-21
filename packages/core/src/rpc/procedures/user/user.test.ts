@@ -340,10 +340,10 @@ describe("user.enable", () => {
 });
 
 describe("user lifecycle action hooks", () => {
-  test("user:profile_changed fires after update with previous row", async () => {
+  test("user:updated fires after update with previous row", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const target = await h.factory.subscriber.create({ name: "Before" });
-    const spy = h.spyAction("user:profile_changed");
+    const spy = h.spyAction("user:updated");
     await h.client.user.update({ id: target.id, name: "After" });
     spy.assertCalledOnce();
     const [post, previous] = spy.lastArgs ?? [];

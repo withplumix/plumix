@@ -14,7 +14,7 @@ export async function applyPostBeforeSave(
   const afterSpecific =
     type === "post"
       ? post
-      : await ctx.hooks.applyFilter(`${type}:before_save`, post);
+      : await ctx.hooks.applyFilter(`post:${type}:before_save`, post);
   return ctx.hooks.applyFilter("post:before_save", afterSpecific);
 }
 
@@ -25,7 +25,7 @@ export async function firePostTransition(
 ): Promise<void> {
   if (post.status === oldStatus) return;
   if (post.type !== "post") {
-    await ctx.hooks.doAction(`${post.type}:transition`, post, oldStatus);
+    await ctx.hooks.doAction(`post:${post.type}:transition`, post, oldStatus);
   }
   await ctx.hooks.doAction("post:transition", post, oldStatus);
 }
@@ -35,7 +35,7 @@ export async function firePostPublished(
   post: Post,
 ): Promise<void> {
   if (post.type !== "post") {
-    await ctx.hooks.doAction(`${post.type}:published`, post);
+    await ctx.hooks.doAction(`post:${post.type}:published`, post);
   }
   await ctx.hooks.doAction("post:published", post);
 }
@@ -46,7 +46,7 @@ export async function firePostUpdated(
   previous: Post,
 ): Promise<void> {
   if (post.type !== "post") {
-    await ctx.hooks.doAction(`${post.type}:updated`, post, previous);
+    await ctx.hooks.doAction(`post:${post.type}:updated`, post, previous);
   }
   await ctx.hooks.doAction("post:updated", post, previous);
 }
@@ -56,7 +56,7 @@ export async function firePostTrashed(
   post: Post,
 ): Promise<void> {
   if (post.type !== "post") {
-    await ctx.hooks.doAction(`${post.type}:trashed`, post);
+    await ctx.hooks.doAction(`post:${post.type}:trashed`, post);
   }
   await ctx.hooks.doAction("post:trashed", post);
 }

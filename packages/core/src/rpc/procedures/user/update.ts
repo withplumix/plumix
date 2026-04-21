@@ -93,7 +93,7 @@ export const update = base
 
     // WP's `profile_update` parity — plugins observe successful writes
     // with the previous row for diffing (audit log, cache invalidation).
-    await context.hooks.doAction("user:profile_changed", updated, existing);
+    await context.hooks.doAction("user:updated", updated, existing);
 
     return context.hooks.applyFilter("rpc:user.update:output", updated);
   });

@@ -3,7 +3,7 @@ import type { NewPost, Post, PostStatus } from "../db/schema/posts.js";
 import type { Term } from "../db/schema/terms.js";
 import type { User } from "../db/schema/users.js";
 import type { OptionSetInput } from "./procedures/option/schemas.js";
-import type { MetaPatch, PostMetaChanges } from "./procedures/post/meta.js";
+import type { PostMetaChanges } from "./procedures/post/meta.js";
 import type {
   PostCreateInput,
   PostListInput,
@@ -33,34 +33,6 @@ declare module "../hooks/types.js" {
 
     "rpc:post.update:input": (input: PostUpdateInput) => PostUpdateInput;
     "rpc:post.update:output": (output: Post) => Post;
-
-    /**
-     * Last chance to mutate or short-circuit a meta patch before it hits
-     * the DB. Runs after per-key type coercion + `MetaOptions.sanitize`,
-     * so the patch values are already normalized. Plugins can:
-     *   - reshape `upserts` / `deletes` (e.g. derive one key from another)
-     *   - return an empty patch to block the write entirely
-     *   - inject meta the caller didn't send
-     * Fires on both `post.create` and `post.update`.
-     */
-    "rpc:post.meta:write": (
-      patch: MetaPatch,
-      post: { readonly id: number; readonly type: string },
-    ) => MetaPatch | Promise<MetaPatch>;
-
-    /**
-     * Runs on the decoded meta bag right before `post.get` / `post.create`
-     * / `post.update` returns. Plugins can add derived keys, redact
-     * secrets, or replace the bag outright. The bag is keyed by the same
-     * strings as `metaKeys`; values are typed against each key's
-     * `MetaScalarType`.
-     */
-    "rpc:post.meta:read": (
-      meta: Readonly<Record<string, unknown>>,
-      post: { readonly id: number; readonly type: string },
-    ) =>
-      | Readonly<Record<string, unknown>>
-      | Promise<Readonly<Record<string, unknown>>>;
 
     "rpc:post.trash:input": (input: { id: number }) => typeof input;
     "rpc:post.trash:output": (output: Post) => Post;
@@ -107,29 +79,47 @@ declare module "../hooks/types.js" {
     "rpc:option.set:output": (output: Option) => Option;
     "rpc:option.delete:output": (output: Option) => Option;
 
-    [K: `${string}:before_save`]: (post: NewPost) => NewPost;
+    /**
+     * `post:before_save` fires on every save; `post:<type>:before_save`
+     * fires only for non-default CPTs (to avoid a double-fire when
+     * `post.type === "post"`). The type-scoped variant runs first, the
+     * generic second — plugins can layer transforms.
+     */
+    "post:before_save": (post: NewPost) => NewPost;
+    [K: `post:${string}:before_save`]: (post: NewPost) => NewPost;
   }
 
   interface ActionRegistry {
-    [K: `${string}:published`]: (post: Post) => void | Promise<void>;
-    [K: `${string}:updated`]: (
+    /**
+     * Post lifecycle. The generic `post:*` action fires for every post
+     * regardless of type; `post:<type>:*` also fires for non-default
+     * CPTs so plugins can target one type without re-filtering. Both
+     * carry the same payload shape — subscribe to whichever scope you
+     * need.
+     */
+    "post:published": (post: Post) => void | Promise<void>;
+    "post:updated": (post: Post, previous: Post) => void | Promise<void>;
+    "post:trashed": (post: Post) => void | Promise<void>;
+    "post:transition": (
+      post: Post,
+      oldStatus: PostStatus,
+    ) => void | Promise<void>;
+    [K: `post:${string}:published`]: (post: Post) => void | Promise<void>;
+    [K: `post:${string}:updated`]: (
       post: Post,
       previous: Post,
     ) => void | Promise<void>;
-    [K: `${string}:trashed`]: (post: Post) => void | Promise<void>;
-    [K: `${string}:transition`]: (
+    [K: `post:${string}:trashed`]: (post: Post) => void | Promise<void>;
+    [K: `post:${string}:transition`]: (
       post: Post,
       oldStatus: PostStatus,
     ) => void | Promise<void>;
 
     /**
-     * Fires after a successful meta write on any post type. Payload
-     * carries the decoded upserts + deleted keys — matches WP's
-     * `updated_post_meta` / `deleted_post_meta` / `added_post_meta`
-     * collapsed into one action. Named `meta_changed` (not `:updated`)
-     * so it doesn't collide with the `${string}:updated` post-row
-     * signature above. Plugins that care about a single CPT branch on
-     * `post.type` inside the handler.
+     * Fires after a successful meta write. Payload carries the decoded
+     * upserts + deleted keys — matches WP's `updated_post_meta` /
+     * `deleted_post_meta` / `added_post_meta` collapsed into one
+     * action.
      */
     "post:meta_changed": (
       post: { readonly id: number; readonly type: string },
@@ -177,14 +167,9 @@ declare module "../hooks/types.js" {
      * post-write row and the pre-write row for diffing — matches WP's
      * `profile_update(user_id, old_user_data)` signature. Use this
      * instead of the output filter when you need to know what actually
-     * changed (role demotion, email swap, etc.). Named
-     * `profile_changed` (not `:updated`) so the template-literal
-     * `${string}:updated` post-row signature above doesn't swallow it.
+     * changed (role demotion, email swap, etc.).
      */
-    "user:profile_changed": (
-      user: User,
-      previous: User,
-    ) => void | Promise<void>;
+    "user:updated": (user: User, previous: User) => void | Promise<void>;
 
     /**
      * Fires on both disable (`enabled: false`) and re-enable
@@ -207,6 +192,19 @@ declare module "../hooks/types.js" {
       user: User,
       context: { readonly reassignedTo: number | null },
     ) => void | Promise<void>;
+
+    /** Fires after `term.create` persists a new term row. */
+    "term:created": (term: Term) => void | Promise<void>;
+
+    /**
+     * Fires after a successful `term.update`. Payload carries the
+     * post-write row and the pre-write row for diffing — parallel to
+     * `post:updated` / `user:updated`.
+     */
+    "term:updated": (term: Term, previous: Term) => void | Promise<void>;
+
+    /** Fires after `term.delete` removes a term row. */
+    "term:deleted": (term: Term) => void | Promise<void>;
   }
 }
 
