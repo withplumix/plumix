@@ -210,7 +210,7 @@ interface InviteOptionsResponse {
   readonly invitee: InviteeSummary;
 }
 
-export interface InviteAcceptSuccess extends VerifySuccess {
+interface InviteAcceptSuccess extends VerifySuccess {
   readonly invitee: InviteeSummary;
 }
 
