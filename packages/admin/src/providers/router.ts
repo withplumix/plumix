@@ -11,6 +11,9 @@ export function createRouter(queryClient: QueryClient) {
     routeTree,
     basepath: ADMIN_BASE_PATH,
     defaultPreload: "intent",
+    // Defer freshness to Query's own cache — avoids two competing
+    // SWR policies fighting over the same data.
+    defaultPreloadStaleTime: 0,
     scrollRestoration: true,
     context: { queryClient },
   });

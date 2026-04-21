@@ -18,7 +18,12 @@ import {
 import { hasCap } from "@/lib/caps.js";
 import { findTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import {
   createFileRoute,
   Link,
@@ -60,12 +65,23 @@ export const Route = createFileRoute("/_authenticated/taxonomies/$name/$id")({
     }
     return { taxonomy };
   },
+  // Siblings load inline in the component (not here) so a flaky list
+  // fetch degrades the parent-picker to empty instead of nuking the
+  // whole edit screen via errorComponent.
+  loader: ({ context, params }) =>
+    context.queryClient.ensureQueryData(
+      orpc.term.get.queryOptions({ input: { id: params.id } }),
+    ),
+  pendingComponent: () => (
+    <FormEditSkeleton ariaLabel="Loading term" testId="term-edit-loading" />
+  ),
+  errorComponent: () => (
+    <NotFoundPlaceholder message="Couldn't load that term. It may have been deleted." />
+  ),
   component: EditTermRoute,
 });
 
 function EditTermRoute(): ReactNode {
-  // NaN-guard already ran in `beforeLoad` so `termId` is a positive
-  // integer by the time the component mounts.
   const { id: termId } = Route.useParams();
   const { user, taxonomy } = Route.useRouteContext();
 
@@ -73,39 +89,25 @@ function EditTermRoute(): ReactNode {
   const canDelete = hasCap(user.capabilities, `${taxonomy.name}:delete`);
   const isHierarchical = taxonomy.isHierarchical === true;
 
-  const query = useQuery(orpc.term.get.queryOptions({ input: { id: termId } }));
-  // Pull siblings for the parent picker; only relevant for
-  // hierarchical taxonomies. Excludes this term and its descendants so
-  // the picker can't suggest a cycle the server would reject anyway.
-  const siblings = useQuery({
+  const { data: term } = useSuspenseQuery(
+    orpc.term.get.queryOptions({ input: { id: termId } }),
+  );
+  const siblingsQuery = useQuery({
     ...orpc.term.list.queryOptions({
       input: { taxonomy: taxonomy.name, limit: 200 },
     }),
     enabled: isHierarchical,
   });
+  const siblings = siblingsQuery.data ?? [];
 
-  if (query.isPending) {
-    return (
-      <FormEditSkeleton ariaLabel="Loading term" testId="term-edit-loading" />
-    );
-  }
-  if (query.isError) {
-    return (
-      <NotFoundPlaceholder message="Couldn't load that term. It may have been deleted." />
-    );
-  }
-
-  const term = query.data;
   // Always seed the exclusion with the term's own id so self-selection
-  // is blocked even before siblings load (otherwise the dropdown is
-  // briefly un-filtered and a fast click could round-trip to the
-  // server's `parent_cycle` CONFLICT). Descendants are added in once
-  // the siblings query lands.
+  // is blocked regardless of subtree resolution — client-side mirror
+  // of the server's `parent_cycle` guard.
   const excludeIds = isHierarchical
-    ? new Set<number>([term.id, ...descendantIds(siblings.data ?? [], term.id)])
+    ? new Set<number>([term.id, ...descendantIds(siblings, term.id)])
     : new Set<number>();
   const parentOptions = isHierarchical
-    ? parentPickerOptions(siblings.data ?? [], excludeIds)
+    ? parentPickerOptions(siblings, excludeIds)
     : [];
 
   return (
@@ -119,9 +121,6 @@ function EditTermRoute(): ReactNode {
       parentOptions={parentOptions}
       canEdit={canEdit}
       canDelete={canDelete}
-      onRefetch={() => {
-        void query.refetch();
-      }}
     />
   );
 }
@@ -133,7 +132,6 @@ function EditTermContent({
   parentOptions,
   canEdit,
   canDelete,
-  onRefetch,
 }: {
   readonly taxonomy: TaxonomyManifestEntry;
   readonly term: {
@@ -150,9 +148,9 @@ function EditTermContent({
   }[];
   readonly canEdit: boolean;
   readonly canDelete: boolean;
-  readonly onRefetch: () => void;
 }): ReactNode {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
   const updateTerm = useMutation({
@@ -172,8 +170,20 @@ function EditTermContent({
     onMutate: () => {
       setServerError(null);
     },
-    onSuccess: () => {
-      onRefetch();
+    onSuccess: async () => {
+      // List variants are scoped by `taxonomy` so sibling taxonomies
+      // don't needlessly refetch.
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: orpc.term.get.queryOptions({ input: { id: term.id } })
+            .queryKey,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: orpc.term.list.key({
+            input: { taxonomy: taxonomy.name },
+          }),
+        }),
+      ]);
     },
     onError: (err) => {
       setServerError(
@@ -257,6 +267,7 @@ function DeleteCard({
   readonly termName: string;
 }): ReactNode {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -265,7 +276,14 @@ function DeleteCard({
     onMutate: () => {
       setServerError(null);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Evict cached list entries before navigating back — otherwise
+      // the list route shows the deleted row within its staleTime
+      // window. Scoped by taxonomy so sibling taxonomies don't
+      // needlessly refetch.
+      await queryClient.invalidateQueries({
+        queryKey: orpc.term.list.key({ input: { taxonomy: taxonomyName } }),
+      });
       void navigate({
         to: "/taxonomies/$name",
         params: { name: taxonomyName },
