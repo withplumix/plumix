@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import { expectNoAxeViolations } from "./support/axe.js";
 import {
   AUTHED_ADMIN,
+  MANIFEST_WITH_META_BOXES,
   MANIFEST_WITH_POST,
   mockManifest,
   mockRpc,
@@ -231,5 +232,32 @@ test.describe("/content/$slug/$id", () => {
       )
       .toBe("Edited title");
     expect((updateInputs.at(-1) as { id?: number } | undefined)?.id).toBe(7);
+  });
+});
+
+test.describe("meta-box sidebar", () => {
+  test("renders side + normal boxes, fields are typable", async ({ page }) => {
+    await mockManifest(page, MANIFEST_WITH_META_BOXES);
+    await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
+    await page.goto("content/posts/new");
+
+    // Both boxes render — one in the side rail, one in the main column.
+    await expect(page.getByTestId("meta-box-seo")).toBeVisible();
+    await expect(page.getByTestId("meta-box-featured")).toBeVisible();
+    // Side rail container picks up only side-context boxes.
+    const sideRail = page.getByTestId("meta-boxes-side");
+    await expect(sideRail.getByTestId("meta-box-featured")).toBeVisible();
+    await expect(sideRail.getByTestId("meta-box-seo")).toHaveCount(0);
+
+    // Text field in the normal box accepts input.
+    const metaTitle = page.getByTestId("meta-box-field-meta_title-input");
+    await metaTitle.fill("Hello meta");
+    await expect(metaTitle).toHaveValue("Hello meta");
+
+    // Checkbox in the side box toggles.
+    const featured = page.getByTestId("meta-box-field-is_featured-input");
+    await expect(featured).not.toBeChecked();
+    await featured.check();
+    await expect(featured).toBeChecked();
   });
 });

@@ -1,8 +1,8 @@
 import type { PostEditorValues } from "@/components/editor/post-editor-form.js";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PostEditorForm } from "@/components/editor/post-editor-form.js";
-import { findPostTypeBySlug } from "@/lib/manifest.js";
+import { findPostTypeBySlug, metaBoxesForPostType } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useMutation } from "@tanstack/react-query";
 import {
@@ -51,7 +51,7 @@ export const Route = createFileRoute("/_authenticated/content/$slug/new")({
 });
 
 function NewPostRoute(): ReactNode {
-  const { postType } = Route.useRouteContext();
+  const { user, postType } = Route.useRouteContext();
   const params = Route.useParams();
   const navigate = useNavigate();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -86,14 +86,23 @@ function NewPostRoute(): ReactNode {
     content: "",
     excerpt: "",
     status: "draft",
+    meta: {},
   };
+
+  // Meta boxes registered for this post type, filtered by the user's
+  // capabilities. Memo keyed on `user.capabilities` avoids refiltering
+  // every render while keeping the helper out of the component body.
+  const metaBoxes = useMemo(
+    () => metaBoxesForPostType(postType.name, user.capabilities),
+    [postType.name, user.capabilities],
+  );
 
   const singularLower = (
     postType.labels?.singular ?? postType.label
   ).toLowerCase();
 
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
+    <div className="flex max-w-6xl flex-col gap-6">
       <div>
         <h1
           className="text-2xl font-semibold"
@@ -106,6 +115,7 @@ function NewPostRoute(): ReactNode {
         initialValues={initialValues}
         slugLocked={false}
         availableStatuses={NEW_POST_STATUSES}
+        metaBoxes={metaBoxes}
         submitLabel="Create"
         // Stay "busy" through `isSuccess` too — TanStack Query flips
         // `isPending` to false BEFORE `onSuccess` calls navigate(), which

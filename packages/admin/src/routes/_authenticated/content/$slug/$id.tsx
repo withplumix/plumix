@@ -1,11 +1,11 @@
 import type { PostEditorValues } from "@/components/editor/post-editor-form.js";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   POST_EDITOR_STATUSES,
   PostEditorForm,
 } from "@/components/editor/post-editor-form.js";
-import { findPostTypeBySlug } from "@/lib/manifest.js";
+import { findPostTypeBySlug, metaBoxesForPostType } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
@@ -61,6 +61,14 @@ function EditPostRoute(): ReactNode {
     postType.labels?.singular ?? postType.label
   ).toLowerCase();
 
+  // Meta boxes registered for this post type, filtered by the user's
+  // capabilities. Computed unconditionally (before any early returns)
+  // to keep the hook order stable across render paths.
+  const metaBoxes = useMemo(
+    () => metaBoxesForPostType(postType.name, user.capabilities),
+    [postType.name, user.capabilities],
+  );
+
   if (Number.isNaN(postId) || postId < 1) {
     // Defensive: `$id` param is a string; reject anything non-numeric
     // rather than hitting the RPC with garbage. The router could enforce
@@ -102,7 +110,7 @@ function EditPostRoute(): ReactNode {
   const initialValues: PostEditorValues = toEditorValues(post);
 
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
+    <div className="flex max-w-6xl flex-col gap-6">
       <div>
         <h1
           className="text-2xl font-semibold"
@@ -129,6 +137,7 @@ function EditPostRoute(): ReactNode {
         initialValues={initialValues}
         slugLocked
         availableStatuses={POST_EDITOR_STATUSES}
+        metaBoxes={metaBoxes}
         submitLabel="Save"
         // For the edit path, the post-save remount (keyed on
         // `updatedAt`) resets the form's isDirty to false — so the
@@ -159,6 +168,10 @@ function toEditorValues(post: Post): PostEditorValues {
     content: post.content ?? "",
     excerpt: post.excerpt ?? "",
     status: post.status,
+    // Meta values start empty — the `Post` row doesn't carry meta yet.
+    // The next PR wires `post.meta` persistence; today the editor renders
+    // empty boxes and submitted meta is dropped by the parent route.
+    meta: {},
   };
 }
 

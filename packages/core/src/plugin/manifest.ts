@@ -52,11 +52,38 @@ export interface MetaOptions {
   readonly sanitize?: (value: unknown) => unknown;
 }
 
+export interface MetaBoxFieldOption {
+  readonly value: string;
+  readonly label: string;
+}
+
 export interface MetaBoxField {
   readonly key: string;
   readonly label: string;
+  /**
+   * Drives the admin sidebar's input renderer. Built-in dispatcher
+   * handles `text` / `textarea` / `number` / `email` / `url` /
+   * `select` / `radio` / `checkbox`. Plugins may use custom values —
+   * the renderer falls back to `<input type="text">` for unknown
+   * types with a dev-mode console warning.
+   */
   readonly inputType: string;
+  /** Optional help text rendered under the label on every input type. */
+  readonly description?: string;
+  /** Renders `required` on the native input; server validation is separate. */
+  readonly required?: boolean;
+  /** Text-shaped inputs (`text` / `textarea` / `email` / `url` / `number`). */
+  readonly placeholder?: string;
+  /** Text-shaped inputs — `text` / `textarea` / `email` / `url`. */
   readonly maxLength?: number;
+  /** `number` input only. */
+  readonly min?: number;
+  /** `number` input only. */
+  readonly max?: number;
+  /** `number` input only; defaults to 1 (integer) when omitted. */
+  readonly step?: number;
+  /** Required for `select` and `radio`; ignored otherwise. */
+  readonly options?: readonly MetaBoxFieldOption[];
 }
 
 export interface MetaBoxOptions {
@@ -160,14 +187,21 @@ export interface PostTypeManifestEntry {
 
 /**
  * Client-safe field descriptor inside a meta box. Mirrors `MetaBoxField`
- * exactly today — kept as a separate type so the manifest boundary can
- * diverge (e.g., omit server-only `sanitize` callbacks) when needed.
+ * today — kept as a separate type so the manifest boundary can diverge
+ * (e.g., omit server-only `sanitize` callbacks) when needed.
  */
 export interface MetaBoxFieldManifestEntry {
   readonly key: string;
   readonly label: string;
   readonly inputType: string;
+  readonly description?: string;
+  readonly required?: boolean;
+  readonly placeholder?: string;
   readonly maxLength?: number;
+  readonly min?: number;
+  readonly max?: number;
+  readonly step?: number;
+  readonly options?: readonly MetaBoxFieldOption[];
 }
 
 /**
@@ -346,8 +380,32 @@ function toMetaBoxEntry(box: RegisteredMetaBox): MetaBoxManifestEntry {
 }
 
 function toMetaBoxFieldEntry(field: MetaBoxField): MetaBoxFieldManifestEntry {
-  const { key, label, inputType, maxLength } = field;
-  return { key, label, inputType, maxLength };
+  const {
+    key,
+    label,
+    inputType,
+    description,
+    required,
+    placeholder,
+    maxLength,
+    min,
+    max,
+    step,
+    options,
+  } = field;
+  return {
+    key,
+    label,
+    inputType,
+    description,
+    required,
+    placeholder,
+    maxLength,
+    min,
+    max,
+    step,
+    options,
+  };
 }
 
 /**
