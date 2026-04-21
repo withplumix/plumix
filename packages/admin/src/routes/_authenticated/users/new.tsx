@@ -27,22 +27,15 @@ import * as v from "valibot";
 
 import type { User, UserRole } from "@plumix/core/schema";
 
-import { USERS_LIST_DEFAULT_SEARCH } from "./-constants.js";
+import {
+  isUserRole,
+  USER_ROLES,
+  USERS_LIST_DEFAULT_SEARCH,
+} from "./-constants.js";
 
-// Mirrors `USER_ROLES` from core — kept local so the valibot picklist
-// stays tree-shakeable. `UserRole` type import keeps it in lockstep.
-const USER_ROLES: readonly UserRole[] = [
-  "subscriber",
-  "contributor",
-  "author",
-  "editor",
-  "admin",
-];
-
-function isUserRole(value: string): value is UserRole {
-  return (USER_ROLES as readonly string[]).includes(value);
-}
-
+// Long-form labels for the invite-flow dropdown — users picking a role
+// for someone else want the trade-offs spelled out. The list view uses
+// the short form (just the noun) since a badge has no room for copy.
 const ROLE_LABEL: Record<UserRole, string> = {
   admin: "Administrator — full control",
   editor: "Editor — publish + edit any post",
@@ -286,16 +279,10 @@ function InviteUserRoute(): ReactNode {
   );
 }
 
-// Build the shareable URL for the invite. Absolute so the admin can copy
-// and paste into an email client without post-processing. Relies on the
-// SPA being served at `ADMIN_BASE_PATH` — the accept-invite route under
-// `/_auth/accept-invite/$token` consumes the token query when opened.
+// Absolute URL so the admin can copy-paste into an email client without
+// post-processing. Admin is SPA-only so `window` is always defined here
+// (jsdom covers the test path).
 function buildInviteUrl(token: string): string {
-  if (typeof window === "undefined") {
-    // SSR / Node test harness — fall back to a path-only URL. The admin
-    // is client-rendered in practice so this branch is a safety net.
-    return `${ADMIN_BASE_PATH}/accept-invite/${token}`;
-  }
   return `${window.location.origin}${ADMIN_BASE_PATH}/accept-invite/${token}`;
 }
 
@@ -330,8 +317,6 @@ function InviteSuccess({
     try {
       await navigator.clipboard.writeText(inviteUrl);
       setCopied(true);
-      // Two seconds is the shortest interval where a "Copied!" label
-      // registers as intentional feedback rather than a flicker.
       setTimeout(() => {
         setCopied(false);
       }, 2000);

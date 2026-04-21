@@ -33,20 +33,10 @@ import * as v from "valibot";
 
 import type { User, UserRole } from "@plumix/core/schema";
 
+import { USER_ROLES } from "./-constants.js";
+
 const PAGE_SIZE = 20;
 
-// Mirrors `USER_ROLES` from core's schema; kept local as a runtime array so
-// the valibot picklist stays tree-shakeable (importing the core runtime
-// symbol would pull drizzle into the admin bundle). The `UserRole` type
-// import above keeps the two in lockstep — a drift would break
-// compilation.
-const USER_ROLES: readonly UserRole[] = [
-  "subscriber",
-  "contributor",
-  "author",
-  "editor",
-  "admin",
-];
 const ROLE_FILTER_VALUES = ["all", ...USER_ROLES] as const;
 type RoleFilter = (typeof ROLE_FILTER_VALUES)[number];
 
