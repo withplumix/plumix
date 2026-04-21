@@ -255,6 +255,65 @@ test.describe("/users/$id", () => {
     await expect(page).not.toHaveURL(/\/users\/42/);
   });
 
+  test("self-save never includes `role` in the payload (guards against self-promotion)", async ({
+    page,
+  }) => {
+    const updateInputs: unknown[] = [];
+    const adminSelf = user({
+      id: 1,
+      email: "admin@example.test",
+      name: "Admin",
+      role: "admin",
+    });
+    await page.route("**/_plumix/rpc/**", async (route) => {
+      const url = route.request().url();
+      if (url.endsWith("/auth/session")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
+        });
+      }
+      if (url.endsWith("/user/get")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ json: adminSelf, meta: [] }),
+        });
+      }
+      if (url.endsWith("/user/update")) {
+        updateInputs.push(
+          (route.request().postDataJSON() as { json?: unknown }).json,
+        );
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            json: { ...adminSelf, name: "Admin 2" },
+            meta: [],
+          }),
+        });
+      }
+      return route.fulfill({ status: 404, body: "not-mocked" });
+    });
+
+    await page.goto("profile");
+    await expect(page.getByTestId("user-edit-heading")).toContainText(
+      "Your profile",
+    );
+    await page.getByTestId("user-edit-name-input").fill("Admin 2");
+    await page.getByTestId("user-edit-submit").click();
+
+    // Submit fires — assert the role field is absent so a future refactor
+    // can't re-introduce a self-promotion hole via the form.
+    await expect
+      .poll(() => (updateInputs.at(-1) as { name?: string } | undefined)?.name)
+      .toBe("Admin 2");
+    const lastCall = updateInputs.at(-1) as Record<string, unknown> | undefined;
+    expect(lastCall).toBeDefined();
+    expect(lastCall).not.toHaveProperty("role");
+  });
+
   test("subscriber can edit own row via /profile but not access /users/99", async ({
     page,
   }) => {

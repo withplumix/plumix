@@ -80,16 +80,19 @@ function UserEditRoute(): ReactNode {
   const { user: session } = Route.useRouteContext();
   const userId = Number(id);
   const isSelf = userId === session.id;
-  // `user:promote` is admin-only. Self can't promote self even with the
-  // cap (mirrors WP) — the role dropdown is hidden in the self case.
-  const canPromote = hasCap(session.capabilities, "user:promote") && !isSelf;
-  const canDisable = hasCap(session.capabilities, "user:edit") && !isSelf;
-  const canDelete = hasCap(session.capabilities, "user:delete") && !isSelf;
-  // Match the server's actual write permission, not the more permissive
-  // route gate (`user:list` vs `user:edit`). Editors can view the edit
-  // screen (via `user:list`) but not save — this disables the Save
-  // button and the Name input for them instead of surfacing a generic
-  // server 403 after a wasted keystroke.
+
+  // Self can't self-promote, self-disable, or self-delete — the `!isSelf`
+  // gate mirrors WP's user-edit UX and keeps the last-admin-lockout
+  // surface entirely server-side.
+  function otherUserCap(cap: string): boolean {
+    return !isSelf && hasCap(session.capabilities, cap);
+  }
+  const canPromote = otherUserCap("user:promote");
+  const canDisable = otherUserCap("user:edit");
+  const canDelete = otherUserCap("user:delete");
+  // Match the server's actual write permission — editors can view the
+  // edit screen (via `user:list`) but don't get `user:edit`, so we
+  // disable Save / Name input instead of letting them hit a server 403.
   const canSave = isSelf
     ? hasCap(session.capabilities, "user:edit_own")
     : hasCap(session.capabilities, "user:edit");
@@ -108,11 +111,8 @@ function UserEditRoute(): ReactNode {
   const target = query.data;
   return (
     <UserEditForm
-      // Remount after each successful save — the server bumps
-      // `updatedAt`, the refetch delivers fresh data, and this key
-      // flip gets TanStack Form to re-read `defaultValues`. Without
-      // it the form keeps displaying pre-save values until the user
-      // navigates away. Same pattern as /content/$slug/$id.
+      // Remount after each save so TanStack Form re-reads `defaultValues`
+      // from the refetched row. Same pattern as `/content/$slug/$id`.
       key={
         target.updatedAt instanceof Date
           ? target.updatedAt.toISOString()
@@ -338,12 +338,7 @@ function UserEditForm({
       </Card>
 
       {canDisable ? <StatusCard target={target} onChanged={onRefetch} /> : null}
-      {canDelete ? (
-        <DeleteCard
-          target={target}
-          isSelf={isSelf}
-        /> /* isSelf is always false here since canDelete hides for self, but spelled out for the reader */
-      ) : null}
+      {canDelete ? <DeleteCard target={target} /> : null}
     </div>
   );
 }
@@ -407,13 +402,7 @@ function StatusCard({
                 : "user-edit-disable-button"
             }
           >
-            {toggle.isPending
-              ? isDisabled
-                ? "Enabling…"
-                : "Disabling…"
-              : isDisabled
-                ? "Re-enable user"
-                : "Disable user"}
+            {toggleButtonLabel(isDisabled, toggle.isPending)}
           </Button>
         </div>
         {serverError ? (
@@ -426,7 +415,12 @@ function StatusCard({
   );
 }
 
-function DeleteCard({ target }: { target: User; isSelf: boolean }): ReactNode {
+function toggleButtonLabel(isDisabled: boolean, isPending: boolean): string {
+  if (isPending) return isDisabled ? "Enabling…" : "Disabling…";
+  return isDisabled ? "Re-enable user" : "Disable user";
+}
+
+function DeleteCard({ target }: { target: User }): ReactNode {
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
   const [reassignTo, setReassignTo] = useState<number | null>(null);
