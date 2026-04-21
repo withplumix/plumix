@@ -95,6 +95,7 @@ export const MANIFEST_WITH_POST: PlumixManifest = {
       labels: { singular: "Post", plural: "Posts" },
     },
   ],
+  metaBoxes: [],
 };
 
 // Fixture: an authed admin session. Reused across every spec that needs a

@@ -51,7 +51,7 @@ describe("examples/minimal — plumix build", () => {
       // so postTypes is empty but the tag must still be present.
       const adminHtml = readFileSync(adminIndexHtml, "utf8");
       expect(adminHtml).toMatch(
-        /<script id="plumix-manifest" type="application\/json">\{"postTypes":\[\]\}<\/script>/,
+        /<script id="plumix-manifest" type="application\/json">\{"postTypes":\[\],"metaBoxes":\[\]\}<\/script>/,
       );
     },
     60_000,

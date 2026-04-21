@@ -1,4 +1,5 @@
 import type {
+  MetaBoxManifestEntry,
   PlumixManifest,
   PostTypeManifestEntry,
 } from "@plumix/core/manifest";
@@ -30,7 +31,11 @@ export function readManifest(doc: Document = document): PlumixManifest {
 function normalize(value: unknown): PlumixManifest {
   if (!value || typeof value !== "object") return emptyManifest();
   const postTypes = (value as { postTypes?: unknown }).postTypes;
-  return { postTypes: Array.isArray(postTypes) ? postTypes : [] };
+  const metaBoxes = (value as { metaBoxes?: unknown }).metaBoxes;
+  return {
+    postTypes: Array.isArray(postTypes) ? postTypes : [],
+    metaBoxes: Array.isArray(metaBoxes) ? metaBoxes : [],
+  };
 }
 
 /**
@@ -73,5 +78,41 @@ export function visiblePostTypes(
   return source.postTypes.filter((pt) => {
     const cap = `${pt.capabilityType ?? pt.name}:edit_own`;
     return caps.has(cap);
+  });
+}
+
+// Ordering for meta-box `priority`. Boxes render top-down in the editor
+// sidebar; "high" pins above the fold, "low" drops to the bottom. Registry
+// insertion order breaks ties (Array.prototype.sort is stable per ES2019).
+const META_BOX_PRIORITY_WEIGHT: Record<
+  NonNullable<MetaBoxManifestEntry["priority"]>,
+  number
+> = {
+  high: 0,
+  default: 1,
+  low: 2,
+};
+
+/**
+ * Resolve the set of meta boxes the editor should render for a given
+ * post type, honouring each box's optional capability gate. Returned in
+ * render order: by `priority` (high → default → low; undefined treated
+ * as "default"), with registration order as the stable tiebreaker.
+ */
+export function metaBoxesForPostType(
+  postTypeName: string,
+  capabilities: readonly string[],
+  source: PlumixManifest = manifest,
+): readonly MetaBoxManifestEntry[] {
+  const caps = new Set(capabilities);
+  const applicable = source.metaBoxes.filter((box) => {
+    if (!box.postTypes.includes(postTypeName)) return false;
+    if (box.capability !== undefined && !caps.has(box.capability)) return false;
+    return true;
+  });
+  return [...applicable].sort((a, b) => {
+    const ap = META_BOX_PRIORITY_WEIGHT[a.priority ?? "default"];
+    const bp = META_BOX_PRIORITY_WEIGHT[b.priority ?? "default"];
+    return ap - bp;
   });
 }

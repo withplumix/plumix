@@ -1,9 +1,13 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import type { PlumixManifest } from "@plumix/core/manifest";
+import type {
+  MetaBoxManifestEntry,
+  PlumixManifest,
+} from "@plumix/core/manifest";
 
 import {
   findPostTypeBySlug,
+  metaBoxesForPostType,
   readManifest,
   visiblePostTypes,
 } from "./manifest.js";
@@ -25,7 +29,7 @@ describe("readManifest", () => {
 
   test("returns empty manifest when the script tag is absent", () => {
     const doc = document.implementation.createHTMLDocument("test");
-    expect(readManifest(doc)).toEqual({ postTypes: [] });
+    expect(readManifest(doc)).toEqual({ postTypes: [], metaBoxes: [] });
   });
 
   test("parses the injected JSON payload", () => {
@@ -36,12 +40,13 @@ describe("readManifest", () => {
     );
     expect(readManifest(doc)).toEqual({
       postTypes: [{ name: "post", label: "Posts" }],
+      metaBoxes: [],
     });
   });
 
   test("empty payload falls back to empty manifest", () => {
     const doc = withManifestScript("");
-    expect(readManifest(doc)).toEqual({ postTypes: [] });
+    expect(readManifest(doc)).toEqual({ postTypes: [], metaBoxes: [] });
   });
 
   test("malformed JSON logs and falls back without throwing", () => {
@@ -49,13 +54,13 @@ describe("readManifest", () => {
       // swallow expected error log
     });
     const doc = withManifestScript("{not-json");
-    expect(readManifest(doc)).toEqual({ postTypes: [] });
+    expect(readManifest(doc)).toEqual({ postTypes: [], metaBoxes: [] });
     expect(errSpy).toHaveBeenCalledOnce();
   });
 
   test("non-array postTypes coerces to empty array", () => {
     const doc = withManifestScript(JSON.stringify({ postTypes: "oops" }));
-    expect(readManifest(doc)).toEqual({ postTypes: [] });
+    expect(readManifest(doc)).toEqual({ postTypes: [], metaBoxes: [] });
   });
 });
 
@@ -65,6 +70,7 @@ describe("findPostTypeBySlug", () => {
       { name: "post", adminSlug: "posts", label: "Posts" },
       { name: "product", adminSlug: "products", label: "Products" },
     ],
+    metaBoxes: [],
   };
 
   test("returns the matching entry", () => {
@@ -93,6 +99,7 @@ describe("visiblePostTypes", () => {
         capabilityType: "post",
       },
     ],
+    metaBoxes: [],
   };
 
   test("filters by `${capabilityType}:edit_own`; unset capabilityType uses name", () => {
@@ -105,5 +112,79 @@ describe("visiblePostTypes", () => {
 
   test("returns empty when no capabilities match", () => {
     expect(visiblePostTypes([], source)).toEqual([]);
+  });
+});
+
+describe("metaBoxesForPostType", () => {
+  const box = (
+    id: string,
+    overrides: Partial<MetaBoxManifestEntry> = {},
+  ): MetaBoxManifestEntry => ({
+    id,
+    label: id,
+    postTypes: ["post"],
+    fields: [],
+    ...overrides,
+  });
+
+  test("returns boxes applicable to the post type, honours priority order", () => {
+    const source: PlumixManifest = {
+      postTypes: [],
+      metaBoxes: [
+        box("a", { priority: "low" }),
+        box("b", { priority: "high" }),
+        box("c"), // default
+      ],
+    };
+    const ids = metaBoxesForPostType("post", [], source).map((b) => b.id);
+    expect(ids).toEqual(["b", "c", "a"]);
+  });
+
+  test("insertion order is the tiebreaker among boxes at the same priority", () => {
+    const source: PlumixManifest = {
+      postTypes: [],
+      metaBoxes: [
+        box("first", { priority: "high" }),
+        box("second", { priority: "high" }),
+      ],
+    };
+    const ids = metaBoxesForPostType("post", [], source).map((b) => b.id);
+    expect(ids).toEqual(["first", "second"]);
+  });
+
+  test("drops boxes whose `postTypes` doesn't include the target", () => {
+    const source: PlumixManifest = {
+      postTypes: [],
+      metaBoxes: [
+        box("seo", { postTypes: ["post"] }),
+        box("shop", { postTypes: ["product"] }),
+      ],
+    };
+    const ids = metaBoxesForPostType("post", [], source).map((b) => b.id);
+    expect(ids).toEqual(["seo"]);
+  });
+
+  test("drops boxes gated by a capability the user lacks", () => {
+    const source: PlumixManifest = {
+      postTypes: [],
+      metaBoxes: [
+        box("public"),
+        box("privileged", { capability: "post:edit_any" }),
+      ],
+    };
+    const withoutCap = metaBoxesForPostType("post", [], source).map(
+      (b) => b.id,
+    );
+    expect(withoutCap).toEqual(["public"]);
+
+    const withCap = metaBoxesForPostType("post", ["post:edit_any"], source).map(
+      (b) => b.id,
+    );
+    expect(withCap).toEqual(["public", "privileged"]);
+  });
+
+  test("returns empty when no meta boxes are registered", () => {
+    const source: PlumixManifest = { postTypes: [], metaBoxes: [] };
+    expect(metaBoxesForPostType("post", [], source)).toEqual([]);
   });
 });

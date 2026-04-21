@@ -158,15 +158,45 @@ export interface PostTypeManifestEntry {
   readonly menuIcon?: string;
 }
 
+/**
+ * Client-safe field descriptor inside a meta box. Mirrors `MetaBoxField`
+ * exactly today — kept as a separate type so the manifest boundary can
+ * diverge (e.g., omit server-only `sanitize` callbacks) when needed.
+ */
+export interface MetaBoxFieldManifestEntry {
+  readonly key: string;
+  readonly label: string;
+  readonly inputType: string;
+  readonly maxLength?: number;
+}
+
+/**
+ * Shape serialised for meta boxes in the manifest. Strict allowlist
+ * projection of `RegisteredMetaBox`; drops `registeredBy` (server-only
+ * debug metadata). `fields` is projected via
+ * `MetaBoxFieldManifestEntry` so the field-level contract is independent
+ * of the registration type.
+ */
+export interface MetaBoxManifestEntry {
+  readonly id: string;
+  readonly label: string;
+  readonly context?: "side" | "normal" | "advanced";
+  readonly priority?: "high" | "default" | "low";
+  readonly postTypes: readonly string[];
+  readonly capability?: string;
+  readonly fields: readonly MetaBoxFieldManifestEntry[];
+}
+
 export interface PlumixManifest {
   readonly postTypes: readonly PostTypeManifestEntry[];
+  readonly metaBoxes: readonly MetaBoxManifestEntry[];
 }
 
 /** Script tag id that carries the JSON-encoded manifest in the admin HTML. */
 export const MANIFEST_SCRIPT_ID = "plumix-manifest";
 
 export function emptyManifest(): PlumixManifest {
-  return { postTypes: [] };
+  return { postTypes: [], metaBoxes: [] };
 }
 
 /**
@@ -188,7 +218,8 @@ export function buildManifest(registry: PluginRegistry): PlumixManifest {
     return ap - bp;
   });
   assertUniqueAdminSlugs(entries);
-  return { postTypes: entries };
+  const metaBoxes = Array.from(registry.metaBoxes.values()).map(toMetaBoxEntry);
+  return { postTypes: entries, metaBoxes };
 }
 
 function assertUniqueAdminSlugs(
@@ -295,6 +326,28 @@ function toPostTypeEntry(pt: RegisteredPostType): PostTypeManifestEntry {
     menuPosition,
     menuIcon,
   };
+}
+
+// Allowlist for meta box entries — same rationale as `toPostTypeEntry`.
+// `registeredBy` is intentionally excluded (server-only debug metadata).
+// `fields` is projected per entry so field-level internals could diverge
+// from the registration type without altering the wire contract.
+function toMetaBoxEntry(box: RegisteredMetaBox): MetaBoxManifestEntry {
+  const { id, label, context, priority, postTypes, capability, fields } = box;
+  return {
+    id,
+    label,
+    context,
+    priority,
+    postTypes,
+    capability,
+    fields: fields.map(toMetaBoxFieldEntry),
+  };
+}
+
+function toMetaBoxFieldEntry(field: MetaBoxField): MetaBoxFieldManifestEntry {
+  const { key, label, inputType, maxLength } = field;
+  return { key, label, inputType, maxLength };
 }
 
 /**
