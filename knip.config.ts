@@ -38,8 +38,18 @@ const config: KnipConfig = {
         "src/test/index.ts",
         "src/theme/index.ts",
         "src/vite/index.ts",
+        "bin/plumix.mjs",
       ],
       ignoreDependencies: ["drizzle-kit", "@plumix/admin"],
+    },
+    // The `./commands` subpath export points at `dist/commands/index.js` —
+    // knip's default entry discovery only reads `exports` paths and
+    // doesn't map them back to source files, so the whole `src/commands`
+    // tree plus its deps (`@cloudflare/vite-plugin`, `plumix`) read as
+    // unused. Explicit entries pin the source location. `plumix` is a
+    // workspace sibling used transitively via `emitPlumixSources`.
+    "packages/runtimes/cloudflare": {
+      entry: ["src/index.ts", "src/commands/index.ts"],
     },
   },
 };

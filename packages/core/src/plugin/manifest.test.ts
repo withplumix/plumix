@@ -98,6 +98,63 @@ describe("buildManifest", () => {
     const names = buildManifest(registry).postTypes.map((pt) => pt.name);
     expect(names).toEqual(["early", "late", "unpositioned"]);
   });
+
+  test("projects registered meta boxes, dropping server-only fields", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("seo", (ctx) => {
+      ctx.registerPostType("post", { label: "Posts" });
+      ctx.registerMetaBox("seo-meta", {
+        label: "SEO",
+        context: "side",
+        priority: "high",
+        postTypes: ["post"],
+        capability: "post:edit_any",
+        fields: [
+          {
+            key: "title",
+            label: "Meta title",
+            inputType: "text",
+            maxLength: 60,
+          },
+          { key: "desc", label: "Meta description", inputType: "textarea" },
+        ],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+
+    const manifest = buildManifest(registry);
+    expect(manifest.metaBoxes).toEqual([
+      {
+        id: "seo-meta",
+        label: "SEO",
+        context: "side",
+        priority: "high",
+        postTypes: ["post"],
+        capability: "post:edit_any",
+        fields: [
+          {
+            key: "title",
+            label: "Meta title",
+            inputType: "text",
+            maxLength: 60,
+          },
+          { key: "desc", label: "Meta description", inputType: "textarea" },
+        ],
+      },
+    ]);
+    const entry = manifest.metaBoxes[0] as unknown as Record<string, unknown>;
+    expect(entry.registeredBy).toBeUndefined();
+  });
+
+  test("empty meta-box registry yields an empty metaBoxes array", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("blog", (ctx) => {
+      ctx.registerPostType("post", { label: "Posts" });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+
+    expect(buildManifest(registry).metaBoxes).toEqual([]);
+  });
 });
 
 describe("deriveAdminSlug", () => {
@@ -120,11 +177,12 @@ describe("serializeManifestScript", () => {
   test("emits a json script tag with the expected id", () => {
     const tag = serializeManifestScript({
       postTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+      metaBoxes: [],
     });
     expect(tag).toContain(`id="${MANIFEST_SCRIPT_ID}"`);
     expect(tag).toContain(`type="application/json"`);
     expect(tag).toContain(
-      `{"postTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}]}`,
+      `{"postTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"metaBoxes":[]}`,
     );
   });
 
@@ -133,6 +191,7 @@ describe("serializeManifestScript", () => {
       postTypes: [
         { name: "post", adminSlug: "posts", label: "</script><b>x</b>" },
       ],
+      metaBoxes: [],
     });
     expect(tag).not.toContain("</script><b>");
     expect(tag).toMatch(/<\\\/script>/);
@@ -141,6 +200,7 @@ describe("serializeManifestScript", () => {
   test("round-trips through JSON.parse after unescaping the slash", () => {
     const manifest = {
       postTypes: [{ name: "post", adminSlug: "posts", label: "x</y>" }],
+      metaBoxes: [],
     };
     const tag = serializeManifestScript(manifest);
     const prefix = `<script id="${MANIFEST_SCRIPT_ID}" type="application/json">`;
@@ -162,16 +222,18 @@ describe("injectManifestIntoHtml", () => {
   test("replaces the placeholder with the serialised manifest", () => {
     const out = injectManifestIntoHtml(TEMPLATE, {
       postTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+      metaBoxes: [],
     });
     expect(out).toContain(
-      `{"postTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}]}`,
+      `{"postTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"metaBoxes":[]}`,
     );
-    expect(out).not.toContain(`{"postTypes":[]}`);
+    expect(out).not.toContain(`{"postTypes":[],"metaBoxes":[]}`);
   });
 
   test("is idempotent when the manifest is already injected", () => {
     const manifest = {
       postTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+      metaBoxes: [],
     };
     const once = injectManifestIntoHtml(TEMPLATE, manifest);
     const twice = injectManifestIntoHtml(once, manifest);
@@ -194,9 +256,10 @@ describe("injectManifestIntoHtml", () => {
     const html = `<SCRIPT ID="plumix-manifest" TYPE="application/json">{"postTypes":[]}</SCRIPT>`;
     const out = injectManifestIntoHtml(html, {
       postTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+      metaBoxes: [],
     });
     expect(out).toContain(
-      `{"postTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}]}`,
+      `{"postTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"metaBoxes":[]}`,
     );
   });
 
@@ -206,9 +269,10 @@ describe("injectManifestIntoHtml", () => {
     </script>`;
     const out = injectManifestIntoHtml(html, {
       postTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+      metaBoxes: [],
     });
     expect(out).toMatch(
-      /^<script id="plumix-manifest" type="application\/json">\{"postTypes":\[\{"name":"post","adminSlug":"posts","label":"Posts"\}\]\}<\/script>$/,
+      /^<script id="plumix-manifest" type="application\/json">\{"postTypes":\[\{"name":"post","adminSlug":"posts","label":"Posts"\}\],"metaBoxes":\[\]\}<\/script>$/,
     );
   });
 });
