@@ -8,17 +8,19 @@ updates:
       day: "monday"
     open-pull-requests-limit: 10
     groups:
-      dev-tooling:
+      eslint:
         patterns:
-          - "eslint*"
+          - "eslint"
+          - "eslint-*"
           - "@eslint/*"
-          - "prettier"
-          - "typescript-eslint"
-          - "turbo"
-          - "publint"
-          - "@arethetypeswrong/*"
-          - "@commitlint/*"
           - "eslint-plugin-*"
+          - "typescript-eslint"
+      commitlint:
+        patterns:
+          - "@commitlint/*"
+      arethetypeswrong:
+        patterns:
+          - "@arethetypeswrong/*"
     ignore:
       # @types/node major version must match .nvmrc — bump manually with Node upgrades
       - dependency-name: "@types/node"
