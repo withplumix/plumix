@@ -156,7 +156,7 @@ function buildColumns({
       cell: ({ row }) => (
         <Link
           to="/content/$slug/$id"
-          params={{ slug: adminSlug, id: String(row.original.id) }}
+          params={{ slug: adminSlug, id: row.original.id }}
           data-testid={`content-list-row-${String(row.original.id)}`}
           className="hover:text-primary flex flex-col transition-colors"
         >

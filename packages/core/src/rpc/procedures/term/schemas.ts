@@ -1,8 +1,7 @@
 import * as v from "valibot";
 
 import { slugSchema } from "../../schemas.js";
-
-const termIdSchema = v.pipe(v.number(), v.integer(), v.minValue(1));
+import { idParam } from "../../validation.js";
 
 const taxonomySchema = v.pipe(
   v.string(),
@@ -22,7 +21,7 @@ const descriptionSchema = v.nullable(v.pipe(v.string(), v.maxLength(10_000)));
 
 export const termListInputSchema = v.object({
   taxonomy: taxonomySchema,
-  parentId: v.optional(v.nullable(termIdSchema)),
+  parentId: v.optional(v.nullable(idParam)),
   search: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(200))),
   limit: v.optional(
     v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(200)),
@@ -31,25 +30,25 @@ export const termListInputSchema = v.object({
   offset: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0)), 0),
 });
 
-export const termGetInputSchema = v.object({ id: termIdSchema });
+export const termGetInputSchema = v.object({ id: idParam });
 
 export const termCreateInputSchema = v.object({
   taxonomy: taxonomySchema,
   name: nameSchema,
   slug: slugSchema,
   description: v.optional(descriptionSchema),
-  parentId: v.optional(v.nullable(termIdSchema)),
+  parentId: v.optional(v.nullable(idParam)),
 });
 
 export const termUpdateInputSchema = v.object({
-  id: termIdSchema,
+  id: idParam,
   name: v.optional(nameSchema),
   slug: v.optional(slugSchema),
   description: v.optional(descriptionSchema),
-  parentId: v.optional(v.nullable(termIdSchema)),
+  parentId: v.optional(v.nullable(idParam)),
 });
 
-export const termDeleteInputSchema = v.object({ id: termIdSchema });
+export const termDeleteInputSchema = v.object({ id: idParam });
 
 export type TermListInput = v.InferOutput<typeof termListInputSchema>;
 export type TermGetInput = v.InferOutput<typeof termGetInputSchema>;

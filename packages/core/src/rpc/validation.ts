@@ -22,3 +22,31 @@ export const nameField = v.pipe(
   v.trim(),
   v.maxLength(200, "Name is too long."),
 );
+
+/**
+ * Canonical row-id shape for RPC inputs. MAX_SAFE_INTEGER cap rejects
+ * integer-valued numbers like `1e21` that pass `v.integer()` but lose
+ * precision in cache keys and DB comparisons.
+ */
+export const idParam = v.pipe(
+  v.number(),
+  v.integer(),
+  v.minValue(1),
+  v.maxValue(Number.MAX_SAFE_INTEGER),
+);
+
+/**
+ * String-to-int coercer for URL path params. The regex is tighter than
+ * `Number()` — it rejects hex (`"0x1F"`), exponential (`"5e2"`), signed,
+ * whitespace-wrapped, leading-zero, and empty strings, all of which
+ * `Number()` would otherwise coerce to a valid positive int.
+ */
+export const idPathParam = v.pipe(
+  v.string(),
+  v.regex(/^[1-9]\d*$/, "id must be a positive decimal integer"),
+  v.transform((s) => Number(s)),
+  v.number(),
+  v.integer(),
+  v.minValue(1),
+  v.maxValue(Number.MAX_SAFE_INTEGER),
+);

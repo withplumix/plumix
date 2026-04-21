@@ -25,6 +25,7 @@ import {
 import {
   createFileRoute,
   Link,
+  notFound,
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
@@ -32,6 +33,7 @@ import { ArrowLeft } from "lucide-react";
 import * as v from "valibot";
 
 import type { User, UserRole } from "@plumix/core/schema";
+import { idPathParam } from "@plumix/core/validation";
 
 import {
   isUserRole,
@@ -56,19 +58,25 @@ const profileFormSchema = v.object({
 });
 
 export const Route = createFileRoute("/_authenticated/users/$id")({
-  parseParams: (params) => ({ id: Number(params.id) }),
+  // Reject invalid ids as a router 404 before `beforeLoad` / `loader`
+  // fire — no RPC, no stale-id flicker through the cache.
+  params: {
+    parse: (raw) => {
+      const result = v.safeParse(idPathParam, raw.id);
+      if (!result.success) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
+        throw notFound();
+      }
+      return { id: result.output };
+    },
+  },
   // More permissive than `/users/` — a user without `user:list` can
   // still edit their OWN row, so this screen doubles as `/profile`
   // (which redirects here). Other-user edits require `user:list`; the
   // server's own `user:edit_own` / `user:edit` checks are the final
   // word, but surfacing the right screen is half the UX.
   beforeLoad: ({ context, params }) => {
-    const id = Number(params.id);
-    if (Number.isNaN(id) || id < 1) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router redirect pattern
-      throw redirect({ to: "/users", search: USERS_LIST_DEFAULT_SEARCH });
-    }
-    const isSelf = id === context.user.id;
+    const isSelf = params.id === context.user.id;
     const canEditAny = hasCap(context.user.capabilities, "user:list");
     const canEditSelf =
       isSelf && hasCap(context.user.capabilities, "user:edit_own");
@@ -79,7 +87,7 @@ export const Route = createFileRoute("/_authenticated/users/$id")({
   },
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(
-      orpc.user.get.queryOptions({ input: { id: Number(params.id) } }),
+      orpc.user.get.queryOptions({ input: { id: params.id } }),
     ),
   pendingComponent: () => (
     <FormEditSkeleton ariaLabel="Loading user" testId="user-edit-loading" />
@@ -91,9 +99,8 @@ export const Route = createFileRoute("/_authenticated/users/$id")({
 });
 
 function UserEditRoute(): ReactNode {
-  const { id } = Route.useParams();
+  const { id: userId } = Route.useParams();
   const { user: session } = Route.useRouteContext();
-  const userId = Number(id);
   const isSelf = userId === session.id;
 
   // Self can't self-promote, self-disable, or self-delete — the `!isSelf`

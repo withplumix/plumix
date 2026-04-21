@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label.js";
 import { useForm } from "@tanstack/react-form";
 import * as v from "valibot";
 
+import { idParam } from "@plumix/core/validation";
+
 /** Normalised input shape consumed by both create + update paths. */
 interface TermFormValues {
   readonly name: string;
@@ -29,7 +31,7 @@ const termFormSchema = v.object({
     ),
   ),
   description: v.pipe(v.string(), v.trim(), v.maxLength(2000)),
-  parentId: v.nullable(v.pipe(v.number(), v.integer(), v.minValue(1))),
+  parentId: v.nullable(idParam),
 });
 
 /**
