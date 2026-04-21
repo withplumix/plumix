@@ -34,7 +34,7 @@ type PostMetaMap = Record<string, unknown>;
  * plugin doesn't have to double-parse. `applyMetaPatch` JSON-encodes at
  * the last moment, before the UPDATE.
  */
-export interface MetaPatch {
+interface MetaPatch {
   readonly upserts: ReadonlyMap<string, unknown>;
   readonly deletes: readonly string[];
 }
