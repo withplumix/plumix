@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
 import { TermForm } from "@/components/taxonomy/term-form.js";
 import {
   descendantIds,
@@ -14,7 +15,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.js";
-import { Skeleton } from "@/components/ui/skeleton.js";
 import { hasCap } from "@/lib/caps.js";
 import { findTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
@@ -30,7 +30,7 @@ import { ArrowLeft } from "lucide-react";
 import type { TaxonomyManifestEntry } from "@plumix/core/manifest";
 
 import { TAXONOMY_LIST_DEFAULT_SEARCH } from "./-constants.js";
-import { mapTermError } from "./new.js";
+import { mapTermError } from "./-errors.js";
 
 export const Route = createFileRoute("/_authenticated/taxonomies/$name/$id")({
   parseParams: (params) => ({
@@ -38,6 +38,15 @@ export const Route = createFileRoute("/_authenticated/taxonomies/$name/$id")({
     id: Number(params.id),
   }),
   beforeLoad: ({ context, params }): { taxonomy: TaxonomyManifestEntry } => {
+    // `parseParams` runs `Number()` on the raw string; `Number("abc")`
+    // is NaN. Reject unparseable ids before the component mounts so
+    // the RPC never sees garbage input, and the router surfaces a
+    // proper 404 instead of a misleading "term deleted" error.
+    const id = Number(params.id);
+    if (Number.isNaN(id) || id < 1) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
+      throw notFound();
+    }
     const taxonomy = findTaxonomyByName(params.name);
     if (!taxonomy) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
@@ -55,9 +64,10 @@ export const Route = createFileRoute("/_authenticated/taxonomies/$name/$id")({
 });
 
 function EditTermRoute(): ReactNode {
-  const { id } = Route.useParams();
+  // NaN-guard already ran in `beforeLoad` so `termId` is a positive
+  // integer by the time the component mounts.
+  const { id: termId } = Route.useParams();
   const { user, taxonomy } = Route.useRouteContext();
-  const termId = Number(id);
 
   const canEdit = hasCap(user.capabilities, `${taxonomy.name}:edit`);
   const canDelete = hasCap(user.capabilities, `${taxonomy.name}:delete`);
@@ -74,7 +84,11 @@ function EditTermRoute(): ReactNode {
     enabled: isHierarchical,
   });
 
-  if (query.isPending) return <EditSkeleton />;
+  if (query.isPending) {
+    return (
+      <FormEditSkeleton ariaLabel="Loading term" testId="term-edit-loading" />
+    );
+  }
   if (query.isError) {
     return (
       <NotFoundPlaceholder message="Couldn't load that term. It may have been deleted." />
@@ -82,8 +96,13 @@ function EditTermRoute(): ReactNode {
   }
 
   const term = query.data;
+  // Always seed the exclusion with the term's own id so self-selection
+  // is blocked even before siblings load (otherwise the dropdown is
+  // briefly un-filtered and a fast click could round-trip to the
+  // server's `parent_cycle` CONFLICT). Descendants are added in once
+  // the siblings query lands.
   const excludeIds = isHierarchical
-    ? descendantIds(siblings.data ?? [], term.id)
+    ? new Set<number>([term.id, ...descendantIds(siblings.data ?? [], term.id)])
     : new Set<number>();
   const parentOptions = isHierarchical
     ? parentPickerOptions(siblings.data ?? [], excludeIds)
@@ -328,31 +347,6 @@ function DeleteCard({
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-function EditSkeleton(): ReactNode {
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      aria-label="Loading term"
-      data-testid="term-edit-loading"
-      className="mx-auto flex w-full max-w-xl flex-col gap-4"
-    >
-      <Skeleton className="h-4 w-24" />
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-72" />
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-20 w-full" />
-        </CardContent>
-      </Card>
-    </div>
   );
 }
 

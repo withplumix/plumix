@@ -26,6 +26,7 @@ import { ArrowLeft } from "lucide-react";
 import type { TaxonomyManifestEntry } from "@plumix/core/manifest";
 
 import { TAXONOMY_LIST_DEFAULT_SEARCH } from "./-constants.js";
+import { mapTermError } from "./-errors.js";
 
 export const Route = createFileRoute("/_authenticated/taxonomies/$name/new")({
   beforeLoad: ({ context, params }): { taxonomy: TaxonomyManifestEntry } => {
@@ -159,34 +160,3 @@ function NewTermRoute(): ReactNode {
     </div>
   );
 }
-
-// CONFLICT → friendly copy. `term.*` surfaces these reasons:
-// `slug_taken` / `parent_mismatch` / `parent_is_self` / `parent_cycle` /
-// `insert_failed` / `update_failed`. Unknown reasons fall through to the
-// error's own message then the caller-provided `fallback`.
-function mapTermError(err: unknown, fallback: string): string {
-  const reason = extractReason(err);
-  if (reason === "slug_taken") {
-    return "A term with that slug already exists in this taxonomy.";
-  }
-  if (reason === "parent_mismatch") {
-    return "The selected parent belongs to a different taxonomy.";
-  }
-  if (reason === "parent_is_self" || reason === "parent_cycle") {
-    return "A term can't be its own ancestor — pick a different parent.";
-  }
-  if (err instanceof Error) return err.message;
-  return fallback;
-}
-
-function extractReason(err: unknown): string | undefined {
-  if (err && typeof err === "object" && "data" in err) {
-    const data = (err as { data?: { reason?: string } }).data;
-    return data?.reason;
-  }
-  return undefined;
-}
-
-// Export so the edit route can reuse the exact same copy — single
-// source of truth for server-reason → user-facing string.
-export { mapTermError };
