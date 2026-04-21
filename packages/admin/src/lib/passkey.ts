@@ -196,6 +196,64 @@ export async function registerWithPasskey(input: {
   );
 }
 
+// Server pairs the registration options with a compact `invitee` preview
+// so the accept-invite screen can confirm the target email / role before
+// the user taps their passkey.
+interface InviteeSummary {
+  readonly email: string;
+  readonly role: string;
+  readonly name: string | null;
+}
+
+interface InviteOptionsResponse {
+  readonly options: ServerRegistrationOptions;
+  readonly invitee: InviteeSummary;
+}
+
+interface InviteAcceptSuccess extends VerifySuccess {
+  readonly invitee: InviteeSummary;
+}
+
+/**
+ * Two-step invite acceptance: fetch passkey-registration options keyed to
+ * the invite token, prompt the authenticator, then POST the attestation
+ * back for verification. A successful verify creates the user session
+ * (cookie set by the server) and consumes the token — a second attempt
+ * with the same token returns `invalid_token`.
+ */
+export async function acceptInviteWithPasskey(input: {
+  token: string;
+  name?: string;
+}): Promise<InviteAcceptSuccess> {
+  const { options, invitee } = await postJson<InviteOptionsResponse>(
+    "/_plumix/auth/invite/register/options",
+    {
+      token: input.token,
+      ...(input.name ? { name: input.name } : {}),
+    },
+  );
+
+  const credential = await callCredentialsApi(() =>
+    navigator.credentials.create({
+      publicKey: decodeRegistrationOptions(options),
+    }),
+  );
+
+  // Invite-verify nests the credential under `response` (see
+  // `inviteRegisterVerifyInputSchema` server-side). This differs from the
+  // non-invite `passkey/register/verify` endpoint which takes the
+  // credential at the top level.
+  const verified = await postJson<VerifySuccess>(
+    "/_plumix/auth/invite/register/verify",
+    {
+      token: input.token,
+      response: encodeRegistrationCredential(credential),
+    },
+  );
+
+  return { ...verified, invitee };
+}
+
 export async function signInWithPasskey(
   email?: string,
 ): Promise<VerifySuccess> {

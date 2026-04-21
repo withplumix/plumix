@@ -103,6 +103,21 @@ describe("user.invite", () => {
       data: { reason: "email_taken" },
     });
   });
+
+  test("fires user:invited with the token + invitedBy for plugins to hook (e.g. email delivery)", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const onInvited = h.spyAction("user:invited");
+    const { user, inviteToken } = await h.client.user.invite({
+      email: "plugin@example.test",
+      role: "subscriber",
+    });
+    onInvited.assertCalledOnce();
+    const [userArg, ctxArg] = onInvited.lastArgs ?? [];
+    expect(userArg?.id).toBe(user.id);
+    expect(ctxArg?.inviteToken).toBe(inviteToken);
+    expect(ctxArg?.invitedBy).toBe(h.user.id);
+    expect(ctxArg?.expiresAt).toBeInstanceOf(Date);
+  });
 });
 
 describe("user.update", () => {

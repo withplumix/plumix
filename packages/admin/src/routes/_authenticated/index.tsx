@@ -11,7 +11,7 @@ import { visiblePostTypes } from "@/lib/manifest.js";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, FileText } from "lucide-react";
 
-import { CONTENT_LIST_DEFAULT_SEARCH } from "./content/$slug/index.js";
+import { CONTENT_LIST_DEFAULT_SEARCH } from "./content/$slug/-constants.js";
 
 export const Route = createFileRoute("/_authenticated/")({
   component: DashboardIndex,

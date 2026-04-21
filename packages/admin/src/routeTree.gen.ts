@@ -14,6 +14,9 @@ import { Route as AuthRouteImport } from "./routes/_auth";
 import { Route as AuthenticatedIndexRouteImport } from "./routes/_authenticated/index";
 import { Route as AuthLoginRouteImport } from "./routes/_auth/login";
 import { Route as AuthBootstrapRouteImport } from "./routes/_auth/bootstrap";
+import { Route as AuthenticatedUsersIndexRouteImport } from "./routes/_authenticated/users/index";
+import { Route as AuthenticatedUsersNewRouteImport } from "./routes/_authenticated/users/new";
+import { Route as AuthAcceptInviteTokenRouteImport } from "./routes/_auth/accept-invite/$token";
 import { Route as AuthenticatedContentSlugIndexRouteImport } from "./routes/_authenticated/content/$slug/index";
 import { Route as AuthenticatedContentSlugNewRouteImport } from "./routes/_authenticated/content/$slug/new";
 import { Route as AuthenticatedContentSlugIdRouteImport } from "./routes/_authenticated/content/$slug/$id";
@@ -41,6 +44,21 @@ const AuthBootstrapRoute = AuthBootstrapRouteImport.update({
   path: "/bootstrap",
   getParentRoute: () => AuthRoute,
 } as any);
+const AuthenticatedUsersIndexRoute = AuthenticatedUsersIndexRouteImport.update({
+  id: "/users/",
+  path: "/users/",
+  getParentRoute: () => AuthenticatedRoute,
+} as any);
+const AuthenticatedUsersNewRoute = AuthenticatedUsersNewRouteImport.update({
+  id: "/users/new",
+  path: "/users/new",
+  getParentRoute: () => AuthenticatedRoute,
+} as any);
+const AuthAcceptInviteTokenRoute = AuthAcceptInviteTokenRouteImport.update({
+  id: "/accept-invite/$token",
+  path: "/accept-invite/$token",
+  getParentRoute: () => AuthRoute,
+} as any);
 const AuthenticatedContentSlugIndexRoute =
   AuthenticatedContentSlugIndexRouteImport.update({
     id: "/content/$slug/",
@@ -64,6 +82,9 @@ export interface FileRoutesByFullPath {
   "/": typeof AuthenticatedIndexRoute;
   "/bootstrap": typeof AuthBootstrapRoute;
   "/login": typeof AuthLoginRoute;
+  "/accept-invite/$token": typeof AuthAcceptInviteTokenRoute;
+  "/users/new": typeof AuthenticatedUsersNewRoute;
+  "/users/": typeof AuthenticatedUsersIndexRoute;
   "/content/$slug/$id": typeof AuthenticatedContentSlugIdRoute;
   "/content/$slug/new": typeof AuthenticatedContentSlugNewRoute;
   "/content/$slug/": typeof AuthenticatedContentSlugIndexRoute;
@@ -72,6 +93,9 @@ export interface FileRoutesByTo {
   "/": typeof AuthenticatedIndexRoute;
   "/bootstrap": typeof AuthBootstrapRoute;
   "/login": typeof AuthLoginRoute;
+  "/accept-invite/$token": typeof AuthAcceptInviteTokenRoute;
+  "/users/new": typeof AuthenticatedUsersNewRoute;
+  "/users": typeof AuthenticatedUsersIndexRoute;
   "/content/$slug/$id": typeof AuthenticatedContentSlugIdRoute;
   "/content/$slug/new": typeof AuthenticatedContentSlugNewRoute;
   "/content/$slug": typeof AuthenticatedContentSlugIndexRoute;
@@ -83,6 +107,9 @@ export interface FileRoutesById {
   "/_auth/bootstrap": typeof AuthBootstrapRoute;
   "/_auth/login": typeof AuthLoginRoute;
   "/_authenticated/": typeof AuthenticatedIndexRoute;
+  "/_auth/accept-invite/$token": typeof AuthAcceptInviteTokenRoute;
+  "/_authenticated/users/new": typeof AuthenticatedUsersNewRoute;
+  "/_authenticated/users/": typeof AuthenticatedUsersIndexRoute;
   "/_authenticated/content/$slug/$id": typeof AuthenticatedContentSlugIdRoute;
   "/_authenticated/content/$slug/new": typeof AuthenticatedContentSlugNewRoute;
   "/_authenticated/content/$slug/": typeof AuthenticatedContentSlugIndexRoute;
@@ -93,6 +120,9 @@ export interface FileRouteTypes {
     | "/"
     | "/bootstrap"
     | "/login"
+    | "/accept-invite/$token"
+    | "/users/new"
+    | "/users/"
     | "/content/$slug/$id"
     | "/content/$slug/new"
     | "/content/$slug/";
@@ -101,6 +131,9 @@ export interface FileRouteTypes {
     | "/"
     | "/bootstrap"
     | "/login"
+    | "/accept-invite/$token"
+    | "/users/new"
+    | "/users"
     | "/content/$slug/$id"
     | "/content/$slug/new"
     | "/content/$slug";
@@ -111,6 +144,9 @@ export interface FileRouteTypes {
     | "/_auth/bootstrap"
     | "/_auth/login"
     | "/_authenticated/"
+    | "/_auth/accept-invite/$token"
+    | "/_authenticated/users/new"
+    | "/_authenticated/users/"
     | "/_authenticated/content/$slug/$id"
     | "/_authenticated/content/$slug/new"
     | "/_authenticated/content/$slug/";
@@ -158,6 +194,27 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthBootstrapRouteImport;
       parentRoute: typeof AuthRoute;
     };
+    "/_authenticated/users/": {
+      id: "/_authenticated/users/";
+      path: "/users";
+      fullPath: "/users/";
+      preLoaderRoute: typeof AuthenticatedUsersIndexRouteImport;
+      parentRoute: typeof AuthenticatedRoute;
+    };
+    "/_authenticated/users/new": {
+      id: "/_authenticated/users/new";
+      path: "/users/new";
+      fullPath: "/users/new";
+      preLoaderRoute: typeof AuthenticatedUsersNewRouteImport;
+      parentRoute: typeof AuthenticatedRoute;
+    };
+    "/_auth/accept-invite/$token": {
+      id: "/_auth/accept-invite/$token";
+      path: "/accept-invite/$token";
+      fullPath: "/accept-invite/$token";
+      preLoaderRoute: typeof AuthAcceptInviteTokenRouteImport;
+      parentRoute: typeof AuthRoute;
+    };
     "/_authenticated/content/$slug/": {
       id: "/_authenticated/content/$slug/";
       path: "/content/$slug";
@@ -185,17 +242,21 @@ declare module "@tanstack/react-router" {
 interface AuthRouteChildren {
   AuthBootstrapRoute: typeof AuthBootstrapRoute;
   AuthLoginRoute: typeof AuthLoginRoute;
+  AuthAcceptInviteTokenRoute: typeof AuthAcceptInviteTokenRoute;
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthBootstrapRoute: AuthBootstrapRoute,
   AuthLoginRoute: AuthLoginRoute,
+  AuthAcceptInviteTokenRoute: AuthAcceptInviteTokenRoute,
 };
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren);
 
 interface AuthenticatedRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute;
+  AuthenticatedUsersNewRoute: typeof AuthenticatedUsersNewRoute;
+  AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute;
   AuthenticatedContentSlugIdRoute: typeof AuthenticatedContentSlugIdRoute;
   AuthenticatedContentSlugNewRoute: typeof AuthenticatedContentSlugNewRoute;
   AuthenticatedContentSlugIndexRoute: typeof AuthenticatedContentSlugIndexRoute;
@@ -203,6 +264,8 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedUsersNewRoute: AuthenticatedUsersNewRoute,
+  AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
   AuthenticatedContentSlugIdRoute: AuthenticatedContentSlugIdRoute,
   AuthenticatedContentSlugNewRoute: AuthenticatedContentSlugNewRoute,
   AuthenticatedContentSlugIndexRoute: AuthenticatedContentSlugIndexRoute,
