@@ -11,16 +11,42 @@ updates:
       eslint:
         patterns:
           - "eslint"
-          - "eslint-*"
           - "@eslint/*"
-          - "eslint-plugin-*"
+      typescript-eslint:
+        patterns:
           - "typescript-eslint"
+          - "@typescript-eslint/*"
+      turbo:
+        patterns:
+          - "turbo"
+          - "eslint-plugin-turbo"
       commitlint:
         patterns:
           - "@commitlint/*"
       arethetypeswrong:
         patterns:
           - "@arethetypeswrong/*"
+      tailwind:
+        patterns:
+          - "tailwindcss"
+          - "@tailwindcss/*"
+      vitest:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+      tiptap:
+        patterns:
+          - "@tiptap/*"
+      orpc:
+        patterns:
+          - "@orpc/*"
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+      fontsource:
+        patterns:
+          - "@fontsource*/*"
     ignore:
       # @types/node major version must match .nvmrc — bump manually with Node upgrades
       - dependency-name: "@types/node"
