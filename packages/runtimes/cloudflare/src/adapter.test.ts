@@ -39,7 +39,7 @@ async function createApp(database: DatabaseAdapter = stubDatabase) {
 
 async function invoke(
   request: Request,
-  env: Record<string, unknown> = {},
+  env: Record<string, unknown> | undefined,
   database?: DatabaseAdapter,
 ): Promise<Response> {
   const app = await createApp(database);
@@ -52,14 +52,14 @@ async function invoke(
 
 describe("cloudflare adapter — buildFetchHandler", () => {
   test("routes the public / request through the dispatcher", async () => {
-    const response = await invoke(new Request("https://cms.example/"));
+    const response = await invoke(new Request("https://cms.example/"), {});
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("<h1>Plumix</h1>");
   });
 
   test("ALS is entered for each request and cleaned up afterwards", async () => {
     expect(requestStore.getStore()).toBeUndefined();
-    await invoke(new Request("https://cms.example/"));
+    await invoke(new Request("https://cms.example/"), {});
     expect(requestStore.getStore()).toBeUndefined();
   });
 
@@ -81,7 +81,7 @@ describe("cloudflare adapter — buildFetchHandler", () => {
   });
 
   test("tolerates a test-time executionCtx without waitUntil (after falls back to a no-op)", async () => {
-    const response = await invoke(new Request("https://cms.example/"));
+    const response = await invoke(new Request("https://cms.example/"), {});
     expect(response.status).toBe(200);
   });
 
@@ -128,6 +128,7 @@ describe("cloudflare adapter — buildFetchHandler", () => {
       new Request("https://cms.example/_plumix/rpc/post/list", {
         method: "POST",
       }),
+      {},
     );
     expect(response.status).toBe(403);
   });
@@ -156,6 +157,7 @@ describe("cloudflare adapter — buildFetchHandler", () => {
   test("/_plumix/admin/ without an ASSETS binding returns admin-not-available", async () => {
     const response = await invoke(
       new Request("https://cms.example/_plumix/admin"),
+      {},
     );
     expect(response.status).toBe(404);
     expect(response.headers.get("x-plumix-hint")).toBe("admin-not-available");
@@ -376,7 +378,7 @@ describe("cloudflare adapter — binding validation", () => {
     };
     const response = await invoke(
       new Request("https://cms.example/"),
-      undefined as unknown as Record<string, unknown>,
+      undefined,
       adapterWithBindings,
     );
     expect(response.status).toBe(500);

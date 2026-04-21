@@ -126,7 +126,7 @@ export async function createDispatcherHarness(
   options: CreateDispatcherHarnessOptions = {},
 ): Promise<DispatcherHarness> {
   const db = await createTestDb();
-  const env = options.env ?? ({} as PlumixEnv);
+  const env = options.env ?? {};
   const config = plumix({
     runtime: stubAdapter,
     database: stubDatabase,

@@ -29,7 +29,7 @@ function isExecutionContext(value: unknown): value is ExecutionContext {
     typeof value === "object" &&
     value !== null &&
     "waitUntil" in value &&
-    typeof (value as { waitUntil: unknown }).waitUntil === "function"
+    typeof value.waitUntil === "function"
   );
 }
 
@@ -45,7 +45,7 @@ function readAssetsBinding(env: unknown): AssetsBinding | undefined {
     typeof candidate === "object" &&
     candidate !== null &&
     "fetch" in candidate &&
-    typeof (candidate as { fetch: unknown }).fetch === "function"
+    typeof candidate.fetch === "function"
   ) {
     return candidate as AssetsBinding;
   }

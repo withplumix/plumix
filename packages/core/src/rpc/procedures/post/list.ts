@@ -94,10 +94,7 @@ export const list = base
       .limit(filtered.limit)
       .offset(filtered.offset);
 
-    return context.hooks.applyFilter(
-      "rpc:post.list:output",
-      rows as readonly Post[],
-    );
+    return context.hooks.applyFilter("rpc:post.list:output", rows);
   });
 
 // Whitelist map from wire-level column names to drizzle column refs.
