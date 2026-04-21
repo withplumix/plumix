@@ -14,6 +14,14 @@ export const POST_STATUSES = [
 
 export type PostStatus = (typeof POST_STATUSES)[number];
 
+/**
+ * ProseMirror / Tiptap document persisted in `posts.content`. Intentionally
+ * loose — the editor owns the outgoing block vocabulary and the public
+ * renderer's walker allowlists on the way out, so the column only needs
+ * to agree that content is a JSON object.
+ */
+export type PostContent = Record<string, unknown>;
+
 export const posts = sqliteTable(
   "posts",
   (t) => ({
@@ -24,7 +32,7 @@ export const posts = sqliteTable(
     }),
     title: t.text().notNull(),
     slug: t.text().notNull(),
-    content: t.text(),
+    content: t.text({ mode: "json" }).$type<PostContent>(),
     excerpt: t.text(),
     status: t.text({ enum: POST_STATUSES }).notNull().default("draft"),
     authorId: t

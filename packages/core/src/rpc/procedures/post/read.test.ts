@@ -152,7 +152,20 @@ describe("post.list", () => {
       authorId: h.user.id,
       title: "Generic",
       slug: "in-body",
-      content: "A paragraph mentioning giraffes in passing.",
+      content: {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [
+              {
+                type: "text",
+                text: "A paragraph mentioning giraffes in passing.",
+              },
+            ],
+          },
+        ],
+      },
     });
     await h.factory.published.create({
       authorId: h.user.id,
@@ -210,7 +223,15 @@ describe("post.list", () => {
       authorId: h.user.id,
       title: "Pillow for sale",
       slug: "pillow-sofa",
-      content: "Comes with a sofa",
+      content: {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "Comes with a sofa" }],
+          },
+        ],
+      },
     });
     await h.factory.published.create({
       authorId: h.user.id,

@@ -1,24 +1,13 @@
 import { escapeAttr, escapeHtml } from "./document.js";
 
 /**
- * Tiptap / ProseMirror JSON → HTML walker. Accepts the JSON-encoded string
- * persisted in `posts.content` (or the parsed object) and renders it
+ * Tiptap / ProseMirror JSON → HTML walker. Renders the parsed document
  * against an allowlist of node and mark types. Unknown types render empty
  * — the walker is the trust boundary that keeps public HTML free of
  * injection regardless of what reaches the column.
  */
 export function renderTiptapContent(input: unknown): string {
   if (input === null || input === undefined) return "";
-  if (typeof input === "string") {
-    if (input.trim() === "") return "";
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(input);
-    } catch {
-      return "";
-    }
-    return renderNode(parsed);
-  }
   return renderNode(input);
 }
 
@@ -129,9 +118,10 @@ function clampHeadingLevel(level: unknown): 1 | 2 | 3 | 4 | 5 | 6 {
   return Math.trunc(level) as 1 | 2 | 3 | 4 | 5 | 6;
 }
 
-// Mirrors the admin editor's link allowlist. Blocks javascript:, data:,
-// vbscript:, file: and their variants; passes relative paths and
-// `#fragment`.
+// Final server-side href gate — independent of the admin editor's allow-
+// list so rendered HTML is safe even when content reaches the column
+// via non-admin paths (seeds, scripts, future imports). Blocks
+// javascript:, data:, vbscript:, file: and their variants.
 const SAFE_HREF = /^(https?:\/\/|mailto:|tel:|\/|#|\?|\.\.?\/)/i;
 
 function sanitizeHref(href: unknown): string | null {

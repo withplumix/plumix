@@ -12,6 +12,7 @@ import { posts } from "../../../db/schema/posts.js";
 import { terms } from "../../../db/schema/terms.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { assertContentWithinByteCap } from "./content.js";
 import { stripUndefined } from "./helpers.js";
 import {
   applyPostBeforeSave,
@@ -39,6 +40,8 @@ export const update = base
       "rpc:post.update:input",
       input,
     );
+
+    assertContentWithinByteCap(filtered.content, errors);
 
     const existing = await context.db.query.posts.findFirst({
       where: eq(posts.id, filtered.id),

@@ -1,6 +1,6 @@
-import type { Content } from "@tiptap/react";
+import type { JSONContent } from "@tiptap/react";
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button.js";
 import { cn } from "@/lib/utils.js";
 import { EditorContent, useEditor } from "@tiptap/react";
@@ -15,22 +15,27 @@ import {
   ListOrdered,
 } from "lucide-react";
 
-// Minimal Tiptap editor. Content round-trips as a JSON-encoded ProseMirror
-// document — the public resolver walks the JSON against a node-type
-// allowlist, which is the trust boundary that keeps `<script>` and other
-// untrusted HTML out of public pages even if a contributor bypasses the
-// editor via the RPC.
+// Minimal Tiptap editor. `value` is a ProseMirror JSON document — the
+// public resolver walks the JSON against a node-type allowlist, which is
+// the trust boundary that keeps `<script>` and other untrusted HTML out
+// of public pages even if a contributor bypasses the editor via RPC.
 export function TiptapEditor({
   value,
   onChange,
   disabled = false,
   ariaLabel,
 }: {
-  readonly value: string;
-  readonly onChange: (json: string) => void;
+  readonly value: JSONContent | null;
+  readonly onChange: (json: JSONContent) => void;
   readonly disabled?: boolean;
   readonly ariaLabel?: string;
 }): ReactNode {
+  // Track the last value emitted by the editor itself so the sync-effect
+  // below can skip `setContent` when the incoming prop is exactly that
+  // value coming back through the parent's state (which would fight the
+  // caret on every keystroke).
+  const lastEmittedRef = useRef<JSONContent | null>(value);
+
   const editor = useEditor({
     extensions: [
       // StarterKit v3 bundles Link; keep it configured here so the toolbar
@@ -50,7 +55,7 @@ export function TiptapEditor({
         },
       }),
     ],
-    content: parseContent(value),
+    content: value,
     editable: !disabled,
     editorProps: {
       attributes: {
@@ -62,17 +67,16 @@ export function TiptapEditor({
       },
     },
     onUpdate: ({ editor: e }) => {
-      onChange(JSON.stringify(e.getJSON()));
+      const json = e.getJSON();
+      lastEmittedRef.current = json;
+      onChange(json);
     },
   });
 
-  // Sync external value changes (e.g., loading an existing post) into the
-  // editor without a render-time setContent — that'd fight the user's
-  // cursor. Only updates when the incoming JSON genuinely differs.
   useEffect(() => {
-    const current = JSON.stringify(editor.getJSON());
-    if (current === value) return;
-    editor.commands.setContent(parseContent(value));
+    if (lastEmittedRef.current === value) return;
+    lastEmittedRef.current = value;
+    editor.commands.setContent(value);
   }, [editor, value]);
 
   useEffect(() => {
@@ -200,17 +204,6 @@ function Toolbar({
 const SAFE_URL_RE = /^(https?:|mailto:|\/|#)/i;
 function isSafeUrl(href: string): boolean {
   return SAFE_URL_RE.test(href.trim());
-}
-
-// Empty or malformed payloads render as an empty doc rather than crash
-// the editor — matches Tiptap's own tolerance for `null` on setContent.
-function parseContent(value: string): Content {
-  if (value === "") return null;
-  try {
-    return JSON.parse(value) as Content;
-  } catch {
-    return null;
-  }
 }
 
 function ToolbarButton({

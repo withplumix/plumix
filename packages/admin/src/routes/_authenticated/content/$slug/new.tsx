@@ -63,7 +63,7 @@ function NewPostRoute(): ReactNode {
         type: postType.name,
         title: input.title,
         slug: input.slug,
-        content: input.content.length > 0 ? input.content : null,
+        content: input.content,
         excerpt: input.excerpt.length > 0 ? input.excerpt : null,
         status: input.status,
         meta: input.meta,
@@ -85,7 +85,7 @@ function NewPostRoute(): ReactNode {
   const initialValues: PostEditorValues = {
     title: "",
     slug: "",
-    content: "",
+    content: null,
     excerpt: "",
     status: "draft",
     meta: {},

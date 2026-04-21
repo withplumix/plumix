@@ -33,7 +33,7 @@ describe("resolvePublicRoute — single", () => {
       type: "post",
       slug: "hello",
       title: "Hello & <world>",
-      content: JSON.stringify(TIPTAP_BODY),
+      content: TIPTAP_BODY,
       status: "published",
       authorId: author.id,
       publishedAt: new Date(),
@@ -84,28 +84,6 @@ describe("resolvePublicRoute — single", () => {
       new Request("https://cms.example/post/gone"),
     );
     expect(response.status).toBe(404);
-  });
-
-  test("legacy HTML content renders empty (walker rejects non-JSON)", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
-    const author = await h.seedUser("admin");
-    await h.factory.post.create({
-      type: "post",
-      slug: "legacy",
-      title: "Legacy",
-      content: "<p>old html</p>",
-      status: "published",
-      authorId: author.id,
-      publishedAt: new Date(),
-    });
-
-    const response = await h.dispatch(
-      new Request("https://cms.example/post/legacy"),
-    );
-    expect(response.status).toBe(200);
-    const body = await response.text();
-    expect(body).toContain("<h1>Legacy</h1>");
-    expect(body).not.toContain("<p>old html</p>");
   });
 });
 

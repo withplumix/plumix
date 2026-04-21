@@ -15,24 +15,19 @@ function t(text: string, marks?: readonly { type: string; attrs?: unknown }[]) {
 }
 
 describe("renderTiptapContent — JSON input", () => {
-  test("empty / null / undefined inputs produce empty output", () => {
+  test("null and undefined inputs produce empty output", () => {
     expect(renderTiptapContent(null)).toBe("");
     expect(renderTiptapContent(undefined)).toBe("");
-    expect(renderTiptapContent("")).toBe("");
-    expect(renderTiptapContent("   ")).toBe("");
   });
 
-  test("accepts JSON-encoded string or raw object equivalently", () => {
-    const obj = doc(p(t("Hello.")));
-    const expected = "<p>Hello.</p>";
-    expect(renderTiptapContent(obj)).toBe(expected);
-    expect(renderTiptapContent(JSON.stringify(obj))).toBe(expected);
+  test("renders a doc → paragraph → text tree", () => {
+    expect(renderTiptapContent(doc(p(t("Hello."))))).toBe("<p>Hello.</p>");
   });
 
-  test("unparseable JSON string renders empty (never throws)", () => {
-    expect(renderTiptapContent("<p>legacy html</p>")).toBe("");
-    expect(renderTiptapContent("{not-json")).toBe("");
-    expect(renderTiptapContent("42")).toBe("");
+  test("non-object / scalar inputs render empty (never throw)", () => {
+    expect(renderTiptapContent(42)).toBe("");
+    expect(renderTiptapContent("stray string")).toBe("");
+    expect(renderTiptapContent(true)).toBe("");
   });
 
   test("unknown node types render empty — allowlist only", () => {

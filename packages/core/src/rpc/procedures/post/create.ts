@@ -2,6 +2,7 @@ import type { NewPost } from "../../../db/schema/posts.js";
 import { posts } from "../../../db/schema/posts.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { assertContentWithinByteCap } from "./content.js";
 import {
   applyPostBeforeSave,
   firePostPublished,
@@ -52,6 +53,8 @@ export const create = base
         });
       }
     }
+
+    assertContentWithinByteCap(filtered.content, errors);
 
     // Validate meta up-front so a bad key fails before the post insert —
     // keeps the DB clean when the client sends a typo in a meta key.

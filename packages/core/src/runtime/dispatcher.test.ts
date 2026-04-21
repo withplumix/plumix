@@ -258,7 +258,7 @@ describe("dispatcher — error boundary", () => {
       type: "post",
       slug: "hello-world",
       title: "Hello World",
-      content: JSON.stringify({
+      content: {
         type: "doc",
         content: [
           {
@@ -266,7 +266,7 @@ describe("dispatcher — error boundary", () => {
             content: [{ type: "text", text: "First post." }],
           },
         ],
-      }),
+      },
       status: "published",
       authorId: author.id,
       publishedAt: new Date(),
