@@ -29,6 +29,12 @@ interface MockRpcHandlers {
   "/term/create"?: Term;
   "/term/update"?: Term;
   "/term/delete"?: Term;
+  "/option/getMany"?: Record<string, string>;
+  "/option/set"?: {
+    name: string;
+    value: string;
+    isAutoloaded: boolean;
+  };
 }
 
 // oRPC's StandardRPCSerializer wire format — `meta` is always present,
@@ -109,6 +115,7 @@ export const MANIFEST_WITH_POST: PlumixManifest = {
   ],
   taxonomies: [],
   metaBoxes: [],
+  settingsGroups: [],
 };
 
 // Manifest with two taxonomies — one hierarchical (category), one flat
@@ -137,6 +144,7 @@ export const MANIFEST_WITH_TAXONOMIES: PlumixManifest = {
     },
   ],
   metaBoxes: [],
+  settingsGroups: [],
 };
 
 // Manifest with two meta boxes — one in the right rail (`side`), one in
@@ -176,6 +184,58 @@ export const MANIFEST_WITH_META_BOXES: PlumixManifest = {
           key: "is_featured",
           label: "Featured",
           inputType: "checkbox",
+        },
+      ],
+    },
+  ],
+  settingsGroups: [],
+};
+
+// Manifest exercising the full settings hierarchy: one page (group),
+// two fieldsets, several fields across them. Covers the plugin-author
+// contract end-to-end — plugins register a page with labelled sections
+// and the admin renders `<fieldset>` / `<legend>` accessibility markup.
+export const MANIFEST_WITH_SETTINGS: PlumixManifest = {
+  postTypes: [],
+  taxonomies: [],
+  metaBoxes: [],
+  settingsGroups: [
+    {
+      name: "general",
+      label: "General",
+      description: "Basic site identity and contact details.",
+      fieldsets: [
+        {
+          name: "identity",
+          label: "Identity",
+          description: "Public-facing site identity.",
+          fields: [
+            {
+              name: "site_title",
+              label: "Site title",
+              type: "text",
+              maxLength: 200,
+            },
+            {
+              name: "site_description",
+              label: "Tagline",
+              type: "text",
+              maxLength: 300,
+            },
+          ],
+        },
+        {
+          name: "contact",
+          label: "Contact",
+          description: "Admin notifications route to this address.",
+          fields: [
+            {
+              name: "admin_email",
+              label: "Administration email",
+              type: "text",
+              maxLength: 254,
+            },
+          ],
         },
       ],
     },

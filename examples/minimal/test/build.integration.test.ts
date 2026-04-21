@@ -48,10 +48,12 @@ describe("examples/minimal — plumix build", () => {
 
       // Manifest placeholder is replaced by the vite plugin with a
       // config-derived payload. `examples/minimal` registers no plugins,
-      // so postTypes is empty but the tag must still be present.
+      // so every manifest slice is empty but the tag must still be
+      // present — the admin bundle's `readManifest()` asserts shape on
+      // page load.
       const adminHtml = readFileSync(adminIndexHtml, "utf8");
       expect(adminHtml).toMatch(
-        /<script id="plumix-manifest" type="application\/json">\{"postTypes":\[\],"taxonomies":\[\],"metaBoxes":\[\]\}<\/script>/,
+        /<script id="plumix-manifest" type="application\/json">\{"postTypes":\[\],"taxonomies":\[\],"metaBoxes":\[\],"settingsGroups":\[\]\}<\/script>/,
       );
     },
     60_000,

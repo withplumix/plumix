@@ -13,9 +13,13 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar.js";
 import { hasCap } from "@/lib/caps.js";
-import { visiblePostTypes, visibleTaxonomies } from "@/lib/manifest.js";
+import {
+  visiblePostTypes,
+  visibleSettingsGroups,
+  visibleTaxonomies,
+} from "@/lib/manifest.js";
 import { Link } from "@tanstack/react-router";
-import { FileText, LayoutDashboard, Tag, Users } from "lucide-react";
+import { FileText, LayoutDashboard, Settings, Tag, Users } from "lucide-react";
 
 import type { UserIdentity } from "./user-menu.js";
 import { UserMenu } from "./user-menu.js";
@@ -69,17 +73,23 @@ function buildTaxonomyGroup(capabilities: readonly string[]): NavGroup | null {
   return { label: "Taxonomies", items };
 }
 
-// `user:list` is admin / editor-level. Subscribers and authors see their
-// own profile via `/profile` (future PR) but don't get a user-management
-// nav entry at all — matches WordPress's "Users" menu being role-gated.
+// `user:list` gates Users (admin / editor-level); Settings appears when
+// ANY settings group is visible to the caller (at minimum
+// `option:manage`, but plugins may declare tighter per-group gates).
+// The group only hides entirely when the caller has no management
+// surfaces at all.
 function buildManagementGroup(
   capabilities: readonly string[],
 ): NavGroup | null {
-  if (!hasCap(capabilities, "user:list")) return null;
-  return {
-    label: "Management",
-    items: [{ to: "/users", label: "Users", icon: Users }],
-  };
+  const items: NavItem[] = [];
+  if (hasCap(capabilities, "user:list")) {
+    items.push({ to: "/users", label: "Users", icon: Users });
+  }
+  if (visibleSettingsGroups(capabilities).length > 0) {
+    items.push({ to: "/settings", label: "Settings", icon: Settings });
+  }
+  if (items.length === 0) return null;
+  return { label: "Management", items };
 }
 
 export function AppSidebar({

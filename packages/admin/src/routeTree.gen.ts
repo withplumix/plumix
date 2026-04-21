@@ -16,8 +16,10 @@ import { Route as AuthenticatedProfileRouteImport } from "./routes/_authenticate
 import { Route as AuthLoginRouteImport } from "./routes/_auth/login";
 import { Route as AuthBootstrapRouteImport } from "./routes/_auth/bootstrap";
 import { Route as AuthenticatedUsersIndexRouteImport } from "./routes/_authenticated/users/index";
+import { Route as AuthenticatedSettingsIndexRouteImport } from "./routes/_authenticated/settings/index";
 import { Route as AuthenticatedUsersNewRouteImport } from "./routes/_authenticated/users/new";
 import { Route as AuthenticatedUsersIdRouteImport } from "./routes/_authenticated/users/$id";
+import { Route as AuthenticatedSettingsGroupRouteImport } from "./routes/_authenticated/settings/$group";
 import { Route as AuthAcceptInviteTokenRouteImport } from "./routes/_auth/accept-invite/$token";
 import { Route as AuthenticatedTaxonomiesNameIndexRouteImport } from "./routes/_authenticated/taxonomies/$name/index";
 import { Route as AuthenticatedContentSlugIndexRouteImport } from "./routes/_authenticated/content/$slug/index";
@@ -59,6 +61,12 @@ const AuthenticatedUsersIndexRoute = AuthenticatedUsersIndexRouteImport.update({
   path: "/users/",
   getParentRoute: () => AuthenticatedRoute,
 } as any);
+const AuthenticatedSettingsIndexRoute =
+  AuthenticatedSettingsIndexRouteImport.update({
+    id: "/settings/",
+    path: "/settings/",
+    getParentRoute: () => AuthenticatedRoute,
+  } as any);
 const AuthenticatedUsersNewRoute = AuthenticatedUsersNewRouteImport.update({
   id: "/users/new",
   path: "/users/new",
@@ -69,6 +77,12 @@ const AuthenticatedUsersIdRoute = AuthenticatedUsersIdRouteImport.update({
   path: "/users/$id",
   getParentRoute: () => AuthenticatedRoute,
 } as any);
+const AuthenticatedSettingsGroupRoute =
+  AuthenticatedSettingsGroupRouteImport.update({
+    id: "/settings/$group",
+    path: "/settings/$group",
+    getParentRoute: () => AuthenticatedRoute,
+  } as any);
 const AuthAcceptInviteTokenRoute = AuthAcceptInviteTokenRouteImport.update({
   id: "/accept-invite/$token",
   path: "/accept-invite/$token",
@@ -117,8 +131,10 @@ export interface FileRoutesByFullPath {
   "/login": typeof AuthLoginRoute;
   "/profile": typeof AuthenticatedProfileRoute;
   "/accept-invite/$token": typeof AuthAcceptInviteTokenRoute;
+  "/settings/$group": typeof AuthenticatedSettingsGroupRoute;
   "/users/$id": typeof AuthenticatedUsersIdRoute;
   "/users/new": typeof AuthenticatedUsersNewRoute;
+  "/settings/": typeof AuthenticatedSettingsIndexRoute;
   "/users/": typeof AuthenticatedUsersIndexRoute;
   "/content/$slug/$id": typeof AuthenticatedContentSlugIdRoute;
   "/content/$slug/new": typeof AuthenticatedContentSlugNewRoute;
@@ -133,8 +149,10 @@ export interface FileRoutesByTo {
   "/login": typeof AuthLoginRoute;
   "/profile": typeof AuthenticatedProfileRoute;
   "/accept-invite/$token": typeof AuthAcceptInviteTokenRoute;
+  "/settings/$group": typeof AuthenticatedSettingsGroupRoute;
   "/users/$id": typeof AuthenticatedUsersIdRoute;
   "/users/new": typeof AuthenticatedUsersNewRoute;
+  "/settings": typeof AuthenticatedSettingsIndexRoute;
   "/users": typeof AuthenticatedUsersIndexRoute;
   "/content/$slug/$id": typeof AuthenticatedContentSlugIdRoute;
   "/content/$slug/new": typeof AuthenticatedContentSlugNewRoute;
@@ -152,8 +170,10 @@ export interface FileRoutesById {
   "/_authenticated/profile": typeof AuthenticatedProfileRoute;
   "/_authenticated/": typeof AuthenticatedIndexRoute;
   "/_auth/accept-invite/$token": typeof AuthAcceptInviteTokenRoute;
+  "/_authenticated/settings/$group": typeof AuthenticatedSettingsGroupRoute;
   "/_authenticated/users/$id": typeof AuthenticatedUsersIdRoute;
   "/_authenticated/users/new": typeof AuthenticatedUsersNewRoute;
+  "/_authenticated/settings/": typeof AuthenticatedSettingsIndexRoute;
   "/_authenticated/users/": typeof AuthenticatedUsersIndexRoute;
   "/_authenticated/content/$slug/$id": typeof AuthenticatedContentSlugIdRoute;
   "/_authenticated/content/$slug/new": typeof AuthenticatedContentSlugNewRoute;
@@ -170,8 +190,10 @@ export interface FileRouteTypes {
     | "/login"
     | "/profile"
     | "/accept-invite/$token"
+    | "/settings/$group"
     | "/users/$id"
     | "/users/new"
+    | "/settings/"
     | "/users/"
     | "/content/$slug/$id"
     | "/content/$slug/new"
@@ -186,8 +208,10 @@ export interface FileRouteTypes {
     | "/login"
     | "/profile"
     | "/accept-invite/$token"
+    | "/settings/$group"
     | "/users/$id"
     | "/users/new"
+    | "/settings"
     | "/users"
     | "/content/$slug/$id"
     | "/content/$slug/new"
@@ -204,8 +228,10 @@ export interface FileRouteTypes {
     | "/_authenticated/profile"
     | "/_authenticated/"
     | "/_auth/accept-invite/$token"
+    | "/_authenticated/settings/$group"
     | "/_authenticated/users/$id"
     | "/_authenticated/users/new"
+    | "/_authenticated/settings/"
     | "/_authenticated/users/"
     | "/_authenticated/content/$slug/$id"
     | "/_authenticated/content/$slug/new"
@@ -271,6 +297,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedUsersIndexRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
+    "/_authenticated/settings/": {
+      id: "/_authenticated/settings/";
+      path: "/settings";
+      fullPath: "/settings/";
+      preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport;
+      parentRoute: typeof AuthenticatedRoute;
+    };
     "/_authenticated/users/new": {
       id: "/_authenticated/users/new";
       path: "/users/new";
@@ -283,6 +316,13 @@ declare module "@tanstack/react-router" {
       path: "/users/$id";
       fullPath: "/users/$id";
       preLoaderRoute: typeof AuthenticatedUsersIdRouteImport;
+      parentRoute: typeof AuthenticatedRoute;
+    };
+    "/_authenticated/settings/$group": {
+      id: "/_authenticated/settings/$group";
+      path: "/settings/$group";
+      fullPath: "/settings/$group";
+      preLoaderRoute: typeof AuthenticatedSettingsGroupRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
     "/_auth/accept-invite/$token": {
@@ -354,8 +394,10 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren);
 interface AuthenticatedRouteChildren {
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute;
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute;
+  AuthenticatedSettingsGroupRoute: typeof AuthenticatedSettingsGroupRoute;
   AuthenticatedUsersIdRoute: typeof AuthenticatedUsersIdRoute;
   AuthenticatedUsersNewRoute: typeof AuthenticatedUsersNewRoute;
+  AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute;
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute;
   AuthenticatedContentSlugIdRoute: typeof AuthenticatedContentSlugIdRoute;
   AuthenticatedContentSlugNewRoute: typeof AuthenticatedContentSlugNewRoute;
@@ -368,8 +410,10 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedSettingsGroupRoute: AuthenticatedSettingsGroupRoute,
   AuthenticatedUsersIdRoute: AuthenticatedUsersIdRoute,
   AuthenticatedUsersNewRoute: AuthenticatedUsersNewRoute,
+  AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
   AuthenticatedContentSlugIdRoute: AuthenticatedContentSlugIdRoute,
   AuthenticatedContentSlugNewRoute: AuthenticatedContentSlugNewRoute,

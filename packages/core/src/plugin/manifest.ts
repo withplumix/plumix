@@ -95,6 +95,71 @@ export interface MetaBoxOptions {
   readonly fields: readonly MetaBoxField[];
 }
 
+/**
+ * Narrow discriminator for settings-form fields. Mirrors the subset of
+ * `MetaBoxField.inputType` values that the settings admin's field
+ * dispatcher renders today — `text` (single-line) and `textarea`
+ * (multi-line). Extending this is cheap: add a new literal, then teach
+ * the admin's `SettingsField` dispatcher to render it. Keeping the
+ * union narrow (vs free-form string like meta boxes) trades plugin
+ * extensibility for an exhaustive type-check in the dispatcher.
+ */
+export type SettingsFieldType = "text" | "textarea";
+
+export interface SettingsField {
+  readonly name: string;
+  readonly label: string;
+  readonly type: SettingsFieldType;
+  /**
+   * Initial value rendered when the option row hasn't been saved yet.
+   * Admin forms fall back to this on first render if `option.getMany`
+   * returns no row for `${groupName}.${fieldName}`.
+   */
+  readonly default?: string;
+  readonly description?: string;
+  readonly placeholder?: string;
+  /** Text-shaped inputs. Enforced on the client; server re-validates. */
+  readonly maxLength?: number;
+  /**
+   * Whether the option row should load on every request via the
+   * autoload prefetch (equivalent to WP's `register_setting` `autoload`
+   * arg). Defaults to `true` when omitted — matches `option.set`'s
+   * default and WP convention. Flip to `false` for rarely-touched
+   * settings (seed keys, one-off tokens) to keep the autoload set tight.
+   *
+   * **The manifest is authoritative**: every form save re-sends this
+   * flag alongside the value. Out-of-band toggles to the underlying
+   * `options` row (scripts, other admin tools) get overwritten on the
+   * next save. If you need per-install autoload overrides, treat the
+   * manifest declaration as the source of truth or expose it as a
+   * separate option the user can toggle.
+   */
+  readonly autoload?: boolean;
+}
+
+/**
+ * A visual cluster of related fields inside a settings group — mirrors
+ * WordPress's `add_settings_section`. Fieldsets are UI-only; storage
+ * keys stay flat (`${groupName}.${fieldName}`), so field names must be
+ * unique across the whole group regardless of fieldset. Admin renders
+ * each fieldset inside a native `<fieldset>` with `<legend>` for
+ * accessibility; a fieldset with no `label` elides the legend and
+ * renders its fields inline — handy for groups that have only one
+ * implicit "default" fieldset.
+ */
+export interface SettingsFieldset {
+  readonly name: string;
+  readonly label?: string;
+  readonly description?: string;
+  readonly fields: readonly SettingsField[];
+}
+
+export interface SettingsGroupOptions {
+  readonly label: string;
+  readonly description?: string;
+  readonly fieldsets: readonly SettingsFieldset[];
+}
+
 export interface RegisteredPostType extends PostTypeOptions {
   readonly name: string;
   readonly registeredBy: string | null;
@@ -115,6 +180,11 @@ export interface RegisteredMetaBox extends MetaBoxOptions {
   readonly registeredBy: string | null;
 }
 
+export interface RegisteredSettingsGroup extends SettingsGroupOptions {
+  readonly name: string;
+  readonly registeredBy: string | null;
+}
+
 export interface RegisteredCapability {
   readonly name: string;
   readonly minRole: UserRole;
@@ -127,6 +197,7 @@ export interface PluginRegistry {
   readonly metaKeys: ReadonlyMap<string, RegisteredMeta>;
   readonly metaBoxes: ReadonlyMap<string, RegisteredMetaBox>;
   readonly capabilities: ReadonlyMap<string, RegisteredCapability>;
+  readonly settingsGroups: ReadonlyMap<string, RegisteredSettingsGroup>;
 }
 
 export interface MutablePluginRegistry extends PluginRegistry {
@@ -135,6 +206,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly metaKeys: Map<string, RegisteredMeta>;
   readonly metaBoxes: Map<string, RegisteredMetaBox>;
   readonly capabilities: Map<string, RegisteredCapability>;
+  readonly settingsGroups: Map<string, RegisteredSettingsGroup>;
 }
 
 export function createPluginRegistry(): MutablePluginRegistry {
@@ -144,6 +216,7 @@ export function createPluginRegistry(): MutablePluginRegistry {
     metaKeys: new Map(),
     metaBoxes: new Map(),
     capabilities: new Map(),
+    settingsGroups: new Map(),
   };
 }
 
@@ -238,17 +311,55 @@ export interface TaxonomyManifestEntry {
   readonly postTypes?: readonly string[];
 }
 
+/**
+ * Client-safe projection of a settings field. Mirrors `SettingsField`
+ * today — kept separate so the manifest boundary can diverge (e.g.,
+ * strip server-only validators / sanitisers) without rippling through
+ * plugin registration code.
+ */
+export interface SettingsFieldManifestEntry {
+  readonly name: string;
+  readonly label: string;
+  readonly type: SettingsFieldType;
+  readonly default?: string;
+  readonly description?: string;
+  readonly placeholder?: string;
+  readonly maxLength?: number;
+  readonly autoload?: boolean;
+}
+
+export interface SettingsFieldsetManifestEntry {
+  readonly name: string;
+  readonly label?: string;
+  readonly description?: string;
+  readonly fields: readonly SettingsFieldManifestEntry[];
+}
+
+/**
+ * Shape serialised for settings groups in the manifest. Same allowlist
+ * rationale as the other entry projections — `registeredBy` stays
+ * server-only; field internals project via `SettingsFieldManifestEntry`
+ * so they can diverge independently.
+ */
+export interface SettingsGroupManifestEntry {
+  readonly name: string;
+  readonly label: string;
+  readonly description?: string;
+  readonly fieldsets: readonly SettingsFieldsetManifestEntry[];
+}
+
 export interface PlumixManifest {
   readonly postTypes: readonly PostTypeManifestEntry[];
   readonly taxonomies: readonly TaxonomyManifestEntry[];
   readonly metaBoxes: readonly MetaBoxManifestEntry[];
+  readonly settingsGroups: readonly SettingsGroupManifestEntry[];
 }
 
 /** Script tag id that carries the JSON-encoded manifest in the admin HTML. */
 export const MANIFEST_SCRIPT_ID = "plumix-manifest";
 
 export function emptyManifest(): PlumixManifest {
-  return { postTypes: [], taxonomies: [], metaBoxes: [] };
+  return { postTypes: [], taxonomies: [], metaBoxes: [], settingsGroups: [] };
 }
 
 /**
@@ -274,7 +385,10 @@ export function buildManifest(registry: PluginRegistry): PlumixManifest {
     toTaxonomyEntry,
   );
   const metaBoxes = Array.from(registry.metaBoxes.values()).map(toMetaBoxEntry);
-  return { postTypes: entries, taxonomies, metaBoxes };
+  const settingsGroups = Array.from(registry.settingsGroups.values()).map(
+    toSettingsGroupEntry,
+  );
+  return { postTypes: entries, taxonomies, metaBoxes, settingsGroups };
 }
 
 function assertUniqueAdminSlugs(
@@ -414,6 +528,57 @@ function toMetaBoxEntry(box: RegisteredMetaBox): MetaBoxManifestEntry {
     postTypes,
     capability,
     fields: fields.map(toMetaBoxFieldEntry),
+  };
+}
+
+// Allowlist for settings group entries — same rationale as the other
+// `to*Entry` projections. `registeredBy` is server-only debug metadata.
+function toSettingsGroupEntry(
+  group: RegisteredSettingsGroup,
+): SettingsGroupManifestEntry {
+  const { name, label, description, fieldsets } = group;
+  return {
+    name,
+    label,
+    description,
+    fieldsets: fieldsets.map(toSettingsFieldsetEntry),
+  };
+}
+
+function toSettingsFieldsetEntry(
+  fieldset: SettingsFieldset,
+): SettingsFieldsetManifestEntry {
+  const { name, label, description, fields } = fieldset;
+  return {
+    name,
+    label,
+    description,
+    fields: fields.map(toSettingsFieldEntry),
+  };
+}
+
+function toSettingsFieldEntry(
+  field: SettingsField,
+): SettingsFieldManifestEntry {
+  const {
+    name,
+    label,
+    type,
+    default: defaultValue,
+    description,
+    placeholder,
+    maxLength,
+    autoload,
+  } = field;
+  return {
+    name,
+    label,
+    type,
+    default: defaultValue,
+    description,
+    placeholder,
+    maxLength,
+    autoload,
   };
 }
 

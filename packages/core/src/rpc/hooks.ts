@@ -105,6 +105,9 @@ declare module "../hooks/types.js" {
 
     "rpc:option.list:output": (output: readonly Option[]) => readonly Option[];
     "rpc:option.get:output": (output: Option) => Option;
+    "rpc:option.getMany:output": (
+      output: Record<string, string>,
+    ) => Record<string, string>;
     "rpc:option.set:input": (input: OptionSetInput) => OptionSetInput;
     "rpc:option.set:output": (output: Option) => Option;
     "rpc:option.delete:output": (output: Option) => Option;
