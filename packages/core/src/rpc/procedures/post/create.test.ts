@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { eq } from "../../../db/index.js";
 import { posts } from "../../../db/schema/posts.js";
+import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 describe("post.create", () => {
@@ -233,5 +234,63 @@ describe("post.create", () => {
       parentId: parent.id,
     });
     expect(child.parentId).toBe(parent.id);
+  });
+
+  test("meta: registered keys persist and come back on the create response", async () => {
+    const plugins = createPluginRegistry();
+    plugins.metaKeys.set("meta_title", {
+      key: "meta_title",
+      type: "string",
+      postTypes: ["post"],
+      registeredBy: "test",
+    });
+    plugins.metaKeys.set("is_featured", {
+      key: "is_featured",
+      type: "boolean",
+      postTypes: ["post"],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const created = await h.client.post.create({
+      title: "with-meta",
+      slug: "with-meta",
+      meta: { meta_title: "SEO title", is_featured: true },
+    });
+    expect(created.meta).toEqual({
+      meta_title: "SEO title",
+      is_featured: true,
+    });
+  });
+
+  test("meta: unregistered key → CONFLICT with the offending key surfaced", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    await expect(
+      h.client.post.create({
+        title: "bad-meta",
+        slug: "bad-meta",
+        meta: { mystery: "x" },
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "meta_not_registered", key: "mystery" },
+    });
+  });
+
+  test("meta: input schema caps the map at 200 keys (DoS guard)", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const oversized: Record<string, string> = {};
+    for (let i = 0; i < 201; i++) oversized[`k${i}`] = "x";
+    await expect(
+      h.client.post.create({
+        title: "too-much",
+        slug: "too-much",
+        meta: oversized,
+      }),
+    ).rejects.toMatchObject({
+      // oRPC's valibot adapter surfaces a `BAD_REQUEST` for schema failures,
+      // so we match on the code, not a CONFLICT reason — the cap is a wire
+      // validation check, not a sanitizer rejection.
+      code: "BAD_REQUEST",
+    });
   });
 });

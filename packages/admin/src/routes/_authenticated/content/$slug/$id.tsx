@@ -11,7 +11,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 
 import type { PostTypeManifestEntry } from "@plumix/core/manifest";
-import type { Post } from "@plumix/core/schema";
+import type { PostWithMeta } from "@plumix/core/schema";
 
 import { CONTENT_LIST_DEFAULT_SEARCH } from "./index.js";
 
@@ -45,6 +45,7 @@ function EditPostRoute(): ReactNode {
         content: input.content.length > 0 ? input.content : null,
         excerpt: input.excerpt.length > 0 ? input.excerpt : null,
         status: input.status,
+        meta: input.meta,
       }),
     onMutate: () => {
       setServerError(null);
@@ -161,17 +162,18 @@ function EditPostRoute(): ReactNode {
   );
 }
 
-function toEditorValues(post: Post): PostEditorValues {
+function toEditorValues(post: PostWithMeta): PostEditorValues {
   return {
     title: post.title,
     slug: post.slug,
     content: post.content ?? "",
     excerpt: post.excerpt ?? "",
     status: post.status,
-    // Meta values start empty — the `Post` row doesn't carry meta yet.
-    // The next PR wires `post.meta` persistence; today the editor renders
-    // empty boxes and submitted meta is dropped by the parent route.
-    meta: {},
+    // `post.meta` ships alongside the post row (server hydrates it from
+    // post_meta, typed against the plugin registry). Passing as-is — the
+    // editor form treats values as `unknown` and the field dispatcher
+    // handles per-type coercion on render.
+    meta: post.meta,
   };
 }
 

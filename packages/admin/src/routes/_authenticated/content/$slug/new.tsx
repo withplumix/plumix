@@ -65,6 +65,7 @@ function NewPostRoute(): ReactNode {
         content: input.content.length > 0 ? input.content : null,
         excerpt: input.excerpt.length > 0 ? input.excerpt : null,
         status: input.status,
+        meta: input.meta,
       }),
     onMutate: () => {
       setServerError(null);

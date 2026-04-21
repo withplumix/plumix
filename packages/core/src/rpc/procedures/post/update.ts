@@ -22,6 +22,13 @@ import {
   postCapability,
   wouldCreateParentCycle,
 } from "./lifecycle.js";
+import {
+  applyPostMetaReadFilter,
+  isEmptyMetaPatch,
+  loadPostMeta,
+  sanitizeMetaForRpc,
+  writePostMetaWithHooks,
+} from "./meta.js";
 import { postUpdateInputSchema } from "./schemas.js";
 
 export const update = base
@@ -85,9 +92,21 @@ export const update = base
       }
     }
 
-    // `terms` isn't a posts.* column — split it out and validate up front so
-    // a bad taxonomy or cap error fails fast, before any write happens.
-    const { id: _id, terms: termsPatch, ...changes } = filtered;
+    // `terms` and `meta` aren't posts.* columns — split them out and
+    // validate up front so a bad taxonomy/cap/meta key fails fast,
+    // before any write happens.
+    const {
+      id: _id,
+      terms: termsPatch,
+      meta: metaInput,
+      ...changes
+    } = filtered;
+    const metaPatch = sanitizeMetaForRpc(
+      context.plugins,
+      existing.type,
+      metaInput,
+      errors,
+    );
     if (termsPatch !== undefined) {
       for (const taxonomy of Object.keys(termsPatch)) {
         if (!context.plugins.taxonomies.has(taxonomy)) {
@@ -116,9 +135,21 @@ export const update = base
       patch.publishedAt = new Date();
     }
 
-    // Nothing to write anywhere? Short-circuit without firing hooks.
-    if (Object.keys(patch).length === 0 && termsPatch === undefined) {
-      return context.hooks.applyFilter("rpc:post.update:output", existing);
+    // Nothing to write anywhere? Short-circuit without firing hooks, but
+    // still return the current meta so callers get a consistent shape. An
+    // empty meta map from the client (e.g. admin always sending `meta: {}`)
+    // counts as no-op on the meta side too.
+    if (
+      Object.keys(patch).length === 0 &&
+      termsPatch === undefined &&
+      isEmptyMetaPatch(metaPatch)
+    ) {
+      const loaded = await loadPostMeta(context, existing.id);
+      const meta = await applyPostMetaReadFilter(context, existing, loaded);
+      return context.hooks.applyFilter("rpc:post.update:output", {
+        ...existing,
+        meta,
+      });
     }
 
     let updated = existing;
@@ -174,6 +205,14 @@ export const update = base
       await applyTermPatch(context, updated.id, termsPatch);
     }
 
+    // `writePostMetaWithHooks` is a no-op on an empty patch, so the null
+    // check here is the only gate we need — no separate empty-patch check.
+    if (metaPatch) {
+      await writePostMetaWithHooks(context, updated, metaPatch);
+    }
+    const loaded = await loadPostMeta(context, updated.id);
+    const meta = await applyPostMetaReadFilter(context, updated, loaded);
+
     if (postColumnsWritten) {
       await firePostUpdated(context, updated, existing);
       await firePostTransition(context, updated, existing.status);
@@ -182,7 +221,10 @@ export const update = base
       }
     }
 
-    return context.hooks.applyFilter("rpc:post.update:output", updated);
+    return context.hooks.applyFilter("rpc:post.update:output", {
+      ...updated,
+      meta,
+    });
   });
 
 /** Replace post_term rows for every (postId, taxonomy) pair in the patch. */

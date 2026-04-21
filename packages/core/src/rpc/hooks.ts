@@ -1,8 +1,14 @@
 import type { Option } from "../db/schema/options.js";
-import type { NewPost, Post, PostStatus } from "../db/schema/posts.js";
+import type {
+  NewPost,
+  Post,
+  PostStatus,
+  PostWithMeta,
+} from "../db/schema/posts.js";
 import type { Term } from "../db/schema/terms.js";
 import type { User } from "../db/schema/users.js";
 import type { OptionSetInput } from "./procedures/option/schemas.js";
+import type { MetaPatch, PostMetaChanges } from "./procedures/post/meta.js";
 import type {
   PostCreateInput,
   PostListInput,
@@ -25,13 +31,41 @@ declare module "../hooks/types.js" {
     "rpc:post.list:output": (output: readonly Post[]) => readonly Post[];
 
     "rpc:post.get:input": (input: { id: number }) => typeof input;
-    "rpc:post.get:output": (output: Post) => Post;
+    "rpc:post.get:output": (output: PostWithMeta) => PostWithMeta;
 
     "rpc:post.create:input": (input: PostCreateInput) => PostCreateInput;
-    "rpc:post.create:output": (output: Post) => Post;
+    "rpc:post.create:output": (output: PostWithMeta) => PostWithMeta;
 
     "rpc:post.update:input": (input: PostUpdateInput) => PostUpdateInput;
-    "rpc:post.update:output": (output: Post) => Post;
+    "rpc:post.update:output": (output: PostWithMeta) => PostWithMeta;
+
+    /**
+     * Last chance to mutate or short-circuit a meta patch before it hits
+     * the DB. Runs after per-key type coercion + `MetaOptions.sanitize`,
+     * so the patch values are already normalized. Plugins can:
+     *   - reshape `upserts` / `deletes` (e.g. derive one key from another)
+     *   - return an empty patch to block the write entirely
+     *   - inject meta the caller didn't send
+     * Fires on both `post.create` and `post.update`.
+     */
+    "rpc:post.meta:write": (
+      patch: MetaPatch,
+      post: { readonly id: number; readonly type: string },
+    ) => MetaPatch | Promise<MetaPatch>;
+
+    /**
+     * Runs on the decoded meta bag right before `post.get` / `post.create`
+     * / `post.update` returns. Plugins can add derived keys, redact
+     * secrets, or replace the bag outright. The bag is keyed by the same
+     * strings as `metaKeys`; values are typed against each key's
+     * `MetaScalarType`.
+     */
+    "rpc:post.meta:read": (
+      meta: Readonly<Record<string, unknown>>,
+      post: { readonly id: number; readonly type: string },
+    ) =>
+      | Readonly<Record<string, unknown>>
+      | Promise<Readonly<Record<string, unknown>>>;
 
     "rpc:post.trash:input": (input: { id: number }) => typeof input;
     "rpc:post.trash:output": (output: Post) => Post;
@@ -85,6 +119,20 @@ declare module "../hooks/types.js" {
     [K: `${string}:transition`]: (
       post: Post,
       oldStatus: PostStatus,
+    ) => void | Promise<void>;
+
+    /**
+     * Fires after a successful meta write on any post type. Payload
+     * carries the decoded upserts + deleted keys — matches WP's
+     * `updated_post_meta` / `deleted_post_meta` / `added_post_meta`
+     * collapsed into one action. Named `meta_changed` (not `:updated`)
+     * so it doesn't collide with the `${string}:updated` post-row
+     * signature above. Plugins that care about a single CPT branch on
+     * `post.type` inside the handler.
+     */
+    "post:meta_changed": (
+      post: { readonly id: number; readonly type: string },
+      changes: PostMetaChanges,
     ) => void | Promise<void>;
   }
 }
