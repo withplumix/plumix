@@ -108,9 +108,7 @@ export class MetaSanitizationError extends Error {
  * `errors` in and TS matches on shape.
  */
 interface RpcErrorsForMeta {
-  CONFLICT: (args: {
-    data: { reason: string; key?: string };
-  }) => Error;
+  CONFLICT: (args: { data: { reason: string; key?: string } }) => Error;
 }
 
 /**

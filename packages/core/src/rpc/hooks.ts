@@ -8,10 +8,7 @@ import type {
 import type { Term } from "../db/schema/terms.js";
 import type { User } from "../db/schema/users.js";
 import type { OptionSetInput } from "./procedures/option/schemas.js";
-import type {
-  MetaPatch,
-  PostMetaChanges,
-} from "./procedures/post/meta.js";
+import type { MetaPatch, PostMetaChanges } from "./procedures/post/meta.js";
 import type {
   PostCreateInput,
   PostListInput,
