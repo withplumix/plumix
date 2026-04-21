@@ -7,7 +7,7 @@ import { useForm } from "@tanstack/react-form";
 import * as v from "valibot";
 
 /** Normalised input shape consumed by both create + update paths. */
-export interface TermFormValues {
+interface TermFormValues {
   readonly name: string;
   readonly slug: string;
   readonly description: string;
@@ -45,7 +45,7 @@ const termFormSchema = v.object({
  * itself and its descendants — client-side cycle prevention that's
  * kinder than a round-trip to a CONFLICT.
  */
-export interface ParentOption {
+interface ParentOption {
   readonly id: number;
   readonly label: string;
 }

@@ -15,7 +15,7 @@ import type { Term } from "@plumix/core/schema";
  * enough rows (via a large limit) before calling these helpers.
  */
 
-export interface TermNode {
+interface TermNode {
   readonly term: Term;
   readonly children: readonly TermNode[];
 }
@@ -53,7 +53,7 @@ export function buildTermTree(terms: readonly Term[]): readonly TermNode[] {
   return build(null);
 }
 
-export interface FlatTermNode {
+interface FlatTermNode {
   readonly term: Term;
   readonly depth: number;
 }
