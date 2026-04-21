@@ -7,7 +7,7 @@ packages:
 
 catalog:
   "@arethetypeswrong/cli": ^0.18.2
-  "@cloudflare/workers-types": ^4.20260417.1
+  "@cloudflare/workers-types": ^4.20260421.1
   "@types/node": ^24.12.2
   "@types/react": ^19.2.14
   "@types/react-dom": ^19.2.3
