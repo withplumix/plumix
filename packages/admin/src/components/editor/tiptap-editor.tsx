@@ -106,10 +106,12 @@ function Toolbar({
     <div
       role="toolbar"
       aria-label="Formatting"
+      data-testid="post-editor-toolbar"
       className="flex flex-wrap items-center gap-1 p-1"
     >
       <ToolbarButton
         label="Bold"
+        testId="post-editor-toolbar-bold"
         onClick={() => editor.chain().focus().toggleBold().run()}
         isActive={editor.isActive("bold")}
         disabled={disabled}
@@ -203,12 +205,14 @@ function isSafeUrl(href: string): boolean {
 
 function ToolbarButton({
   label,
+  testId,
   onClick,
   isActive,
   disabled,
   children,
 }: {
   readonly label: string;
+  readonly testId?: string;
   readonly onClick: () => void;
   readonly isActive: boolean;
   readonly disabled: boolean;
@@ -224,6 +228,7 @@ function ToolbarButton({
       aria-pressed={isActive}
       aria-label={label}
       title={label}
+      data-testid={testId}
       className="size-8 p-0"
     >
       {children}

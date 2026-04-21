@@ -80,23 +80,20 @@ test.describe("/content/$slug/new", () => {
     });
 
     await page.goto("content/posts/new");
-    await expect(
-      page.getByRole("heading", { name: /new post/i }),
-    ).toBeVisible();
+    await expect(page.getByTestId("post-editor-new-heading")).toBeVisible();
 
     // Auto-slug from title while slug is still unlocked.
-    await page.getByRole("textbox", { name: "Title" }).fill("Hello World");
-    await expect(page.getByRole("textbox", { name: "Slug" })).toHaveValue(
+    await page.getByTestId("post-editor-title-input").fill("Hello World");
+    await expect(page.getByTestId("post-editor-slug-input")).toHaveValue(
       "hello-world",
     );
 
-    // Toolbar button exists and is togglable.
-    await expect(
-      page.getByRole("button", { name: "Bold", exact: true }),
-    ).toBeVisible();
+    // Toolbar renders.
+    await expect(page.getByTestId("post-editor-toolbar")).toBeVisible();
+    await expect(page.getByTestId("post-editor-toolbar-bold")).toBeVisible();
 
     // Submit → post.create fires with the form values.
-    await page.getByRole("button", { name: "Create" }).click();
+    await page.getByTestId("post-editor-submit").click();
     await expect
       .poll(
         () =>
@@ -118,15 +115,15 @@ test.describe("/content/$slug/new", () => {
     await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
     await page.goto("content/posts/new");
 
-    await page.getByRole("textbox", { name: "Title" }).fill("First title");
-    await expect(page.getByRole("textbox", { name: "Slug" })).toHaveValue(
+    await page.getByTestId("post-editor-title-input").fill("First title");
+    await expect(page.getByTestId("post-editor-slug-input")).toHaveValue(
       "first-title",
     );
 
     // Explicitly edit slug → locks auto-derivation.
-    await page.getByRole("textbox", { name: "Slug" }).fill("custom-slug");
-    await page.getByRole("textbox", { name: "Title" }).fill("Changed title");
-    await expect(page.getByRole("textbox", { name: "Slug" })).toHaveValue(
+    await page.getByTestId("post-editor-slug-input").fill("custom-slug");
+    await page.getByTestId("post-editor-title-input").fill("Changed title");
+    await expect(page.getByTestId("post-editor-slug-input")).toHaveValue(
       "custom-slug",
     );
   });
@@ -136,9 +133,7 @@ test.describe("/content/$slug/new", () => {
   }) => {
     await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
     await page.goto("content/posts/new");
-    await expect(
-      page.getByRole("heading", { name: /new post/i }),
-    ).toBeVisible();
+    await expect(page.getByTestId("post-editor-new-heading")).toBeVisible();
     await expectNoAxeViolations(page);
   });
 });
@@ -216,20 +211,18 @@ test.describe("/content/$slug/$id", () => {
     });
 
     await page.goto("content/posts/7");
-    await expect(
-      page.getByRole("heading", { name: /edit post/i }),
-    ).toBeVisible();
+    await expect(page.getByTestId("post-editor-edit-heading")).toBeVisible();
     // Existing title populates from the loaded post.
-    await expect(page.getByRole("textbox", { name: "Title" })).toHaveValue(
+    await expect(page.getByTestId("post-editor-title-input")).toHaveValue(
       "Original title",
     );
     // Edit title → slug stays locked (existing post).
-    await page.getByRole("textbox", { name: "Title" }).fill("Edited title");
-    await expect(page.getByRole("textbox", { name: "Slug" })).toHaveValue(
+    await page.getByTestId("post-editor-title-input").fill("Edited title");
+    await expect(page.getByTestId("post-editor-slug-input")).toHaveValue(
       "original",
     );
 
-    await page.getByRole("button", { name: "Save" }).click();
+    await page.getByTestId("post-editor-submit").click();
     await expect
       .poll(
         () =>

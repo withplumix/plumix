@@ -95,7 +95,12 @@ function NewPostRoute(): ReactNode {
   return (
     <div className="flex max-w-3xl flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">New {singularLower}</h1>
+        <h1
+          className="text-2xl font-semibold"
+          data-testid="post-editor-new-heading"
+        >
+          New {singularLower}
+        </h1>
       </div>
       <PostEditorForm
         initialValues={initialValues}

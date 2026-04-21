@@ -104,7 +104,12 @@ function EditPostRoute(): ReactNode {
   return (
     <div className="flex max-w-3xl flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Edit {singularLower}</h1>
+        <h1
+          className="text-2xl font-semibold"
+          data-testid="post-editor-edit-heading"
+        >
+          Edit {singularLower}
+        </h1>
         <p className="text-muted-foreground text-sm">
           ID {post.id} · last updated{" "}
           {new Date(post.updatedAt).toLocaleString()}

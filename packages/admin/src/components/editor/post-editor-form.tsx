@@ -114,6 +114,7 @@ export function PostEditorForm({
   return (
     <form
       className="flex flex-col gap-6"
+      data-testid="post-editor-form"
       onSubmit={(event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -127,6 +128,7 @@ export function PostEditorForm({
             label="Title"
             required
             disabled={isSubmitting}
+            testId="post-editor-title-input"
           />
         )}
       </form.Field>
@@ -138,6 +140,7 @@ export function PostEditorForm({
             label="Slug"
             required
             disabled={isSubmitting}
+            testId="post-editor-slug-input"
             onChangeValue={(next) => {
               // Any direct edit to the slug input locks out the
               // title-driven auto-derivation for the rest of this
@@ -227,12 +230,17 @@ export function PostEditorForm({
           variant="ghost"
           onClick={onCancel}
           disabled={isSubmitting}
+          data-testid="post-editor-cancel"
         >
           Cancel
         </Button>
         <form.Subscribe selector={(state) => state.canSubmit}>
           {(canSubmit) => (
-            <Button type="submit" disabled={!canSubmit || isSubmitting}>
+            <Button
+              type="submit"
+              disabled={!canSubmit || isSubmitting}
+              data-testid="post-editor-submit"
+            >
               {isSubmitting ? "Saving…" : submitLabel}
             </Button>
           )}
@@ -264,6 +272,8 @@ interface TextFieldRowProps {
   readonly required?: boolean;
   readonly disabled?: boolean;
   readonly onChangeValue?: (value: string) => void;
+  /** Stable hook for e2e/unit tests; prefer these over role/label queries. */
+  readonly testId?: string;
 }
 
 function TextFieldRow({
@@ -272,6 +282,7 @@ function TextFieldRow({
   required,
   disabled,
   onChangeValue,
+  testId,
 }: TextFieldRowProps): ReactNode {
   const errors = field.state.meta.errors;
   const hasError = errors.length > 0;
@@ -289,6 +300,7 @@ function TextFieldRow({
         autoComplete="off"
         aria-invalid={hasError || undefined}
         aria-describedby={hasError ? errorId : undefined}
+        data-testid={testId}
         onBlur={field.handleBlur}
         onChange={(e) => {
           const next = e.target.value;
