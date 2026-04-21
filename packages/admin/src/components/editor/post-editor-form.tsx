@@ -11,8 +11,8 @@ import * as v from "valibot";
 
 import type { MetaBoxManifestEntry } from "@plumix/core/manifest";
 import type { PostStatus } from "@plumix/core/schema";
+import { slugify } from "@plumix/core/slugify";
 
-import { slugify } from "./slugify.js";
 import { TiptapEditor } from "./tiptap-editor.js";
 
 // Matches the server's `slugSchema` — lowercase ASCII alphanumerics
