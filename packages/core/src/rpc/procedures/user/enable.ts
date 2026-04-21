@@ -17,9 +17,13 @@ export const enable = base
     if (!context.auth.can(CAPABILITY)) {
       throw errors.FORBIDDEN({ data: { capability: CAPABILITY } });
     }
+    const filtered = await context.hooks.applyFilter(
+      "rpc:user.enable:input",
+      input,
+    );
 
     const existing = await context.db.query.users.findFirst({
-      where: eq(users.id, input.id),
+      where: eq(users.id, filtered.id),
     });
     if (!existing) {
       throw errors.NOT_FOUND({ data: { kind: "user", id: input.id } });

@@ -84,7 +84,9 @@ declare module "../hooks/types.js" {
     "rpc:user.update:input": (input: UserUpdateInput) => UserUpdateInput;
     "rpc:user.update:output": (output: User) => User;
 
+    "rpc:user.disable:input": (input: { id: number }) => typeof input;
     "rpc:user.disable:output": (output: User) => User;
+    "rpc:user.enable:input": (input: { id: number }) => typeof input;
     "rpc:user.enable:output": (output: User) => User;
     "rpc:user.delete:output": (output: User) => User;
 
@@ -165,6 +167,10 @@ declare module "../hooks/types.js" {
      * `user_register` when the user comes online for the first time.
      * Use this (not `user:invited`) for onboarding flows like welcome
      * emails or default-content seeding.
+     *
+     * PII: payload carries `email`, `name`, `role`. Don't ship the full
+     * row to third-party log/analytics services without the user's
+     * consent. Same caveat applies to all `user:*` actions below.
      */
     "user:registered": (user: User) => void | Promise<void>;
 

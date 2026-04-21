@@ -85,6 +85,14 @@ function UserEditRoute(): ReactNode {
   const canPromote = hasCap(session.capabilities, "user:promote") && !isSelf;
   const canDisable = hasCap(session.capabilities, "user:edit") && !isSelf;
   const canDelete = hasCap(session.capabilities, "user:delete") && !isSelf;
+  // Match the server's actual write permission, not the more permissive
+  // route gate (`user:list` vs `user:edit`). Editors can view the edit
+  // screen (via `user:list`) but not save — this disables the Save
+  // button and the Name input for them instead of surfacing a generic
+  // server 403 after a wasted keystroke.
+  const canSave = isSelf
+    ? hasCap(session.capabilities, "user:edit_own")
+    : hasCap(session.capabilities, "user:edit");
 
   const query = useQuery(orpc.user.get.queryOptions({ input: { id: userId } }));
 
@@ -100,9 +108,20 @@ function UserEditRoute(): ReactNode {
   const target = query.data;
   return (
     <UserEditForm
+      // Remount after each successful save — the server bumps
+      // `updatedAt`, the refetch delivers fresh data, and this key
+      // flip gets TanStack Form to re-read `defaultValues`. Without
+      // it the form keeps displaying pre-save values until the user
+      // navigates away. Same pattern as /content/$slug/$id.
+      key={
+        target.updatedAt instanceof Date
+          ? target.updatedAt.toISOString()
+          : String(target.updatedAt)
+      }
       target={target}
       isSelf={isSelf}
       canPromote={canPromote}
+      canSave={canSave}
       canDisable={canDisable}
       canDelete={canDelete}
       onRefetch={() => {
@@ -116,6 +135,7 @@ function UserEditForm({
   target,
   isSelf,
   canPromote,
+  canSave,
   canDisable,
   canDelete,
   onRefetch,
@@ -123,6 +143,7 @@ function UserEditForm({
   target: User;
   isSelf: boolean;
   canPromote: boolean;
+  canSave: boolean;
   canDisable: boolean;
   canDelete: boolean;
   onRefetch: () => void;
@@ -149,7 +170,13 @@ function UserEditForm({
       onRefetch();
     },
     onError: (err) => {
-      setServerError(mapUpdateError(err));
+      setServerError(
+        mapUserError(
+          err,
+          UPDATE_ERROR_MESSAGES,
+          "Couldn't save the changes. Try again.",
+        ),
+      );
     },
   });
 
@@ -228,7 +255,7 @@ function UserEditForm({
                   }
                   type="text"
                   autoComplete="name"
-                  disabled={updateUser.isPending}
+                  disabled={updateUser.isPending || !canSave}
                   data-testid="user-edit-name-input"
                 />
               )}
@@ -298,7 +325,7 @@ function UserEditForm({
                 {(canSubmit) => (
                   <Button
                     type="submit"
-                    disabled={!canSubmit || updateUser.isPending}
+                    disabled={!canSubmit || updateUser.isPending || !canSave}
                     data-testid="user-edit-submit"
                   >
                     {updateUser.isPending ? "Saving…" : "Save changes"}
@@ -343,7 +370,13 @@ function StatusCard({
       onChanged();
     },
     onError: (err) => {
-      setServerError(mapStatusError(err));
+      setServerError(
+        mapUserError(
+          err,
+          STATUS_ERROR_MESSAGES,
+          "Couldn't change the account status. Try again.",
+        ),
+      );
     },
   });
 
@@ -424,7 +457,13 @@ function DeleteCard({ target }: { target: User; isSelf: boolean }): ReactNode {
       void navigate({ to: "/users", search: USERS_LIST_DEFAULT_SEARCH });
     },
     onError: (err) => {
-      setServerError(mapDeleteError(err));
+      setServerError(
+        mapUserError(
+          err,
+          DELETE_ERROR_MESSAGES,
+          "Couldn't delete the user. Try again.",
+        ),
+      );
     },
   });
 
@@ -523,43 +562,24 @@ function DeleteCard({ target }: { target: User; isSelf: boolean }): ReactNode {
   );
 }
 
-// CONFLICT→friendly copy. `last_admin` is the common one — the server's
-// atomic guard fires when you try to demote/disable/delete the last
-// active admin. `email_taken` can't happen from this form today (email
-// isn't editable) but the mapping is here for the future.
-function mapUpdateError(err: unknown): string {
+// CONFLICT→friendly-copy lookup for user-mutation surfaces. Each caller
+// passes its own `overrides` for per-action phrasing (the `last_admin`
+// message reads differently depending on whether you're demoting,
+// disabling, or deleting) plus a `fallback` for unmapped errors. Server
+// reasons not present in `overrides` fall through to `err.message` then
+// `fallback`.
+function mapUserError(
+  err: unknown,
+  overrides: Partial<Record<string, string>>,
+  fallback: string,
+): string {
   const reason = extractReason(err);
-  if (reason === "last_admin") {
-    return "Can't do that — this is the last administrator. Promote someone else first.";
-  }
-  if (reason === "email_taken") {
-    return "A user with that email already exists.";
+  if (reason != null && reason in overrides) {
+    const message = overrides[reason];
+    if (message != null) return message;
   }
   if (err instanceof Error) return err.message;
-  return "Couldn't save the changes. Try again.";
-}
-
-function mapStatusError(err: unknown): string {
-  if (extractReason(err) === "last_admin") {
-    return "Can't disable the last administrator. Promote someone else first.";
-  }
-  if (err instanceof Error) return err.message;
-  return "Couldn't change the account status. Try again.";
-}
-
-function mapDeleteError(err: unknown): string {
-  const reason = extractReason(err);
-  if (reason === "last_admin") {
-    return "Can't delete the last administrator. Promote someone else first.";
-  }
-  if (reason === "has_posts") {
-    return "This user has authored posts. Pick someone to reassign them to above.";
-  }
-  if (reason === "reassign_to_self") {
-    return "Can't reassign to the user being deleted.";
-  }
-  if (err instanceof Error) return err.message;
-  return "Couldn't delete the user. Try again.";
+  return fallback;
 }
 
 function extractReason(err: unknown): string | undefined {
@@ -569,6 +589,25 @@ function extractReason(err: unknown): string | undefined {
   }
   return undefined;
 }
+
+// Per-surface message bundles. Kept near the call sites (not inline at
+// `onError`) so adding a new reason is a one-line edit per surface.
+const UPDATE_ERROR_MESSAGES: Partial<Record<string, string>> = {
+  last_admin:
+    "Can't do that — this is the last administrator. Promote someone else first.",
+  email_taken: "A user with that email already exists.",
+};
+const STATUS_ERROR_MESSAGES: Partial<Record<string, string>> = {
+  last_admin:
+    "Can't disable the last administrator. Promote someone else first.",
+};
+const DELETE_ERROR_MESSAGES: Partial<Record<string, string>> = {
+  last_admin:
+    "Can't delete the last administrator. Promote someone else first.",
+  has_posts:
+    "This user has authored posts. Pick someone to reassign them to above.",
+  reassign_to_self: "Can't reassign to the user being deleted.",
+};
 
 function UserEditSkeleton(): ReactNode {
   return (
