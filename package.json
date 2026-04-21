@@ -30,7 +30,7 @@
     "@commitlint/config-conventional": "^20.5.0",
     "@commitlint/config-pnpm-scopes": "^20.4.3",
     "@commitlint/types": "^20.5.0",
-    "knip": "^6.4.1",
+    "knip": "^6.6.0",
     "turbo": "^2.9.6"
   }
 }
