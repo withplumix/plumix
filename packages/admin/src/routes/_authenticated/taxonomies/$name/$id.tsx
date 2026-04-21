@@ -31,27 +31,28 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
+import * as v from "valibot";
 
 import type { TaxonomyManifestEntry } from "@plumix/core/manifest";
+import { idPathParam } from "@plumix/core/validation";
 
 import { TAXONOMY_LIST_DEFAULT_SEARCH } from "./-constants.js";
 import { mapTermError } from "./-errors.js";
 
 export const Route = createFileRoute("/_authenticated/taxonomies/$name/$id")({
-  parseParams: (params) => ({
-    name: params.name,
-    id: Number(params.id),
-  }),
+  // Reject invalid ids as a router 404 before `beforeLoad` / `loader`
+  // fire — no RPC, no stale-id flicker through the cache.
+  params: {
+    parse: (raw) => {
+      const result = v.safeParse(idPathParam, raw.id);
+      if (!result.success) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
+        throw notFound();
+      }
+      return { name: raw.name, id: result.output };
+    },
+  },
   beforeLoad: ({ context, params }): { taxonomy: TaxonomyManifestEntry } => {
-    // `parseParams` runs `Number()` on the raw string; `Number("abc")`
-    // is NaN. Reject unparseable ids before the component mounts so
-    // the RPC never sees garbage input, and the router surfaces a
-    // proper 404 instead of a misleading "term deleted" error.
-    const id = Number(params.id);
-    if (Number.isNaN(id) || id < 1) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
-      throw notFound();
-    }
     const taxonomy = findTaxonomyByName(params.name);
     if (!taxonomy) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow

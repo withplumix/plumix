@@ -14,41 +14,39 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
-import {
-  createFileRoute,
-  notFound,
-  redirect,
-  useNavigate,
-} from "@tanstack/react-router";
+import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
+import * as v from "valibot";
 
 import type { PostTypeManifestEntry } from "@plumix/core/manifest";
 import type { PostWithMeta } from "@plumix/core/schema";
+import { idPathParam } from "@plumix/core/validation";
 
 import { CONTENT_LIST_DEFAULT_SEARCH } from "./-constants.js";
 
 export const Route = createFileRoute("/_authenticated/content/$slug/$id")({
+  // Reject invalid ids as a router 404 before `beforeLoad` / `loader`
+  // fire — no RPC, no stale-id flicker through the cache.
+  params: {
+    parse: (raw) => {
+      const result = v.safeParse(idPathParam, raw.id);
+      if (!result.success) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
+        throw notFound();
+      }
+      return { slug: raw.slug, id: result.output };
+    },
+  },
   beforeLoad: ({ params }): { postType: PostTypeManifestEntry } => {
     const postType = findPostTypeBySlug(params.slug);
     if (!postType) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw notFound();
     }
-    const postId = Number(params.id);
-    if (Number.isNaN(postId) || postId < 1) {
-      // Non-numeric or negative ids can't resolve — bounce back to the
-      // post-type list rather than firing an RPC with garbage.
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router redirect pattern
-      throw redirect({
-        to: "/content/$slug",
-        params: { slug: params.slug },
-        search: CONTENT_LIST_DEFAULT_SEARCH,
-      });
-    }
     return { postType };
   },
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(
-      orpc.post.get.queryOptions({ input: { id: Number(params.id) } }),
+      orpc.post.get.queryOptions({ input: { id: params.id } }),
     ),
   // Pending/error screens are per-slug so copy reflects the actual
   // type ("page", "product") instead of hardcoding "post".
@@ -82,10 +80,9 @@ function EditPostErrorScreen(): ReactNode {
 
 function EditPostRoute(): ReactNode {
   const { user, postType } = Route.useRouteContext();
-  const params = Route.useParams();
+  const { id: postId, slug } = Route.useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const postId = Number(params.id);
   const [serverError, setServerError] = useState<string | null>(null);
 
   const { data: post } = useSuspenseQuery(
@@ -191,7 +188,7 @@ function EditPostRoute(): ReactNode {
         onCancel={() => {
           void navigate({
             to: "/content/$slug",
-            params: { slug: params.slug },
+            params: { slug },
             search: CONTENT_LIST_DEFAULT_SEARCH,
           });
         }}

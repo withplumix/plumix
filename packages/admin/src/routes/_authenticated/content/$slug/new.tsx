@@ -74,7 +74,7 @@ function NewPostRoute(): ReactNode {
     onSuccess: async (created) => {
       await navigate({
         to: "/content/$slug/$id",
-        params: { slug: params.slug, id: String(created.id) },
+        params: { slug: params.slug, id: created.id },
       });
     },
     onError: (err) => {

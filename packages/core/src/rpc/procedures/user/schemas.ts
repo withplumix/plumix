@@ -1,9 +1,7 @@
 import * as v from "valibot";
 
 import { USER_ROLES } from "../../../db/schema/users.js";
-import { emailField, nameField } from "../../validation.js";
-
-const userIdSchema = v.pipe(v.number(), v.integer(), v.minValue(1));
+import { emailField, idParam, nameField } from "../../validation.js";
 
 const avatarUrlSchema = v.pipe(
   v.string(),
@@ -26,7 +24,7 @@ export const userListInputSchema = v.object({
   search: v.optional(searchSchema),
 });
 
-export const userGetInputSchema = v.object({ id: userIdSchema });
+export const userGetInputSchema = v.object({ id: idParam });
 
 export const userInviteInputSchema = v.object({
   email: emailField,
@@ -35,21 +33,21 @@ export const userInviteInputSchema = v.object({
 });
 
 export const userUpdateInputSchema = v.object({
-  id: userIdSchema,
+  id: idParam,
   email: v.optional(emailField),
   name: v.optional(v.nullable(nameField)),
   avatarUrl: v.optional(v.nullable(avatarUrlSchema)),
   role: v.optional(roleSchema),
 });
 
-export const userDisableInputSchema = v.object({ id: userIdSchema });
+export const userDisableInputSchema = v.object({ id: idParam });
 
-export const userEnableInputSchema = v.object({ id: userIdSchema });
+export const userEnableInputSchema = v.object({ id: idParam });
 
 export const userDeleteInputSchema = v.object({
-  id: userIdSchema,
+  id: idParam,
   /** Reassign this user's authored posts to the given user id before deletion. */
-  reassignPostsTo: v.optional(userIdSchema),
+  reassignPostsTo: v.optional(idParam),
 });
 
 export type UserListInput = v.InferOutput<typeof userListInputSchema>;

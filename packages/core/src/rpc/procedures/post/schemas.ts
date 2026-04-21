@@ -2,6 +2,7 @@ import * as v from "valibot";
 
 import { postInsertSchema } from "../../../db/schema/posts.js";
 import { slugSchema } from "../../schemas.js";
+import { idParam } from "../../validation.js";
 
 const MAX_CONTENT_BYTES = 1_000_000;
 const MAX_EXCERPT_LENGTH = 600;
@@ -11,8 +12,6 @@ const MAX_TERMS_PER_TAXONOMY = 200;
 
 const trimmedText = (max: number) =>
   v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(max));
-
-const postIdSchema = v.pipe(v.number(), v.integer(), v.minValue(1));
 
 const contentSchema = v.nullable(
   v.pipe(v.string(), v.maxLength(MAX_CONTENT_BYTES)),
@@ -33,7 +32,6 @@ const userSuppliableFields = v.omit(postInsertSchema, serverControlledKeys);
 
 // taxonomy → ordered term ids. Empty array clears all assignments for that
 // taxonomy. Taxonomy keys not in the map are untouched.
-const termIdSchema = v.pipe(v.number(), v.integer(), v.minValue(1));
 const postTermsSchema = v.record(
   v.pipe(
     v.string(),
@@ -42,7 +40,7 @@ const postTermsSchema = v.record(
     v.maxLength(100),
     v.regex(/^[a-zA-Z0-9_-]+$/, "taxonomy must be kebab/snake ASCII"),
   ),
-  v.pipe(v.array(termIdSchema), v.maxLength(MAX_TERMS_PER_TAXONOMY)),
+  v.pipe(v.array(idParam), v.maxLength(MAX_TERMS_PER_TAXONOMY)),
 );
 
 // Meta bag accepted by `post.create` / `post.update`. Per-key validation
@@ -82,13 +80,13 @@ export const postCreateInputSchema = v.object({
 });
 
 export const postUpdateInputSchema = v.object({
-  id: postIdSchema,
+  id: idParam,
   title: v.optional(trimmedText(300)),
   slug: v.optional(slugSchema),
   content: v.optional(contentSchema),
   excerpt: v.optional(excerptSchema),
   status: v.optional(userSuppliableFields.entries.status),
-  parentId: v.optional(v.nullable(postIdSchema)),
+  parentId: v.optional(v.nullable(idParam)),
   menuOrder: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
   terms: v.optional(postTermsSchema),
   meta: v.optional(postMetaInputSchema),
@@ -146,14 +144,14 @@ export const postListInputSchema = v.object({
    * Filter by the post's `authorId`. Admin "Mine" filter passes the
    * session user's id here; future UIs can surface an author dropdown.
    */
-  authorId: v.optional(postIdSchema),
+  authorId: v.optional(idParam),
   /**
    * Filter by parent post id for hierarchical types (pages, etc.).
    * - `null` → only top-level posts (parent_id IS NULL).
    * - a number → only direct children of that post.
    * - omitted → no filter, flat list across all depths.
    */
-  parentId: v.optional(v.nullable(postIdSchema)),
+  parentId: v.optional(v.nullable(idParam)),
   /**
    * Free-text search across `title`, `content`, and `excerpt`. Whitespace
    * separates terms (all AND-ed), `"quoted phrases"` stay whole, and a
@@ -190,8 +188,8 @@ export const postListInputSchema = v.object({
   offset: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0)), 0),
 });
 
-export const postGetInputSchema = v.object({ id: postIdSchema });
-export const postTrashInputSchema = v.object({ id: postIdSchema });
+export const postGetInputSchema = v.object({ id: idParam });
+export const postTrashInputSchema = v.object({ id: idParam });
 
 export type PostListInput = v.InferOutput<typeof postListInputSchema>;
 export type PostGetInput = v.InferOutput<typeof postGetInputSchema>;
