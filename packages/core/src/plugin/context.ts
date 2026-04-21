@@ -16,6 +16,8 @@ import type {
   MetaOptions,
   MutablePluginRegistry,
   PostTypeOptions,
+  SettingsFieldset,
+  SettingsGroupOptions,
   TaxonomyOptions,
 } from "./manifest.js";
 import {
@@ -63,6 +65,25 @@ export interface PluginSetupContext {
   registerMeta(key: string, options: MetaOptions): void;
   registerMetaBox(id: string, options: MetaBoxOptions): void;
   registerCapability(name: string, minRole: UserRole): void;
+
+  /**
+   * Declare a top-level settings group — its own `/settings/$name`
+   * admin page, populated by the group's fieldsets. Throws
+   * `DuplicateRegistrationError` if another plugin already registered
+   * the same name; use `registerSettingsFieldset` to append a section
+   * to an existing group.
+   */
+  registerSettingsGroup(name: string, options: SettingsGroupOptions): void;
+
+  /**
+   * Append a fieldset (WP's `add_settings_section` analogue) to an
+   * existing settings group. Throws if the group isn't registered yet
+   * (plugin install order matters), if the fieldset name collides
+   * with one already on the group, or if any field inside it collides
+   * with a field name anywhere else in the group (storage keys are
+   * flat across fieldsets).
+   */
+  registerSettingsFieldset(groupName: string, fieldset: SettingsFieldset): void;
 }
 
 interface CreatePluginContextArgs {
@@ -157,7 +178,117 @@ export function createPluginSetupContext({
         registeredBy: pluginId,
       });
     },
+
+    registerSettingsGroup: (name, options) => {
+      assertValidIdentifier("settings group", name);
+      if (registry.settingsGroups.has(name)) {
+        throw new DuplicateRegistrationError("settings group", name);
+      }
+      for (const fs of options.fieldsets)
+        assertValidIdentifier("settings fieldset", fs.name);
+      for (const fs of options.fieldsets) {
+        for (const field of fs.fields)
+          assertValidIdentifier("settings field", field.name);
+      }
+      assertUniqueFieldNamesAcrossFieldsets(name, options.fieldsets);
+      assertGroupFieldCountWithinBounds(name, options.fieldsets);
+      registry.settingsGroups.set(name, {
+        ...options,
+        name,
+        registeredBy: pluginId,
+      });
+    },
+
+    registerSettingsFieldset: (groupName, fieldset) => {
+      const existing = registry.settingsGroups.get(groupName);
+      if (existing === undefined) {
+        throw new Error(
+          `Cannot add fieldset to settings group "${groupName}" — it hasn't been registered yet. ` +
+            `Ensure the plugin that calls \`registerSettingsGroup\` runs before this one.`,
+        );
+      }
+      assertValidIdentifier("settings fieldset", fieldset.name);
+      for (const field of fieldset.fields)
+        assertValidIdentifier("settings field", field.name);
+      if (existing.fieldsets.some((fs) => fs.name === fieldset.name)) {
+        throw new DuplicateRegistrationError(
+          "settings fieldset",
+          `${groupName}.${fieldset.name}`,
+        );
+      }
+      const next = [...existing.fieldsets, fieldset];
+      assertUniqueFieldNamesAcrossFieldsets(groupName, next);
+      assertGroupFieldCountWithinBounds(groupName, next);
+      registry.settingsGroups.set(groupName, {
+        ...existing,
+        fieldsets: next,
+      });
+    },
   };
+}
+
+// Keep group / fieldset / field names portable: ASCII identifier that
+// starts with a letter, then letters/digits/underscores. This is
+// tighter than `optionNameSchema`'s regex (which allows `.`/`-`) on
+// purpose — dots in names would collide with the flat storage-key
+// convention (`${group}.${field}`), and hyphens make testids and
+// URL params awkward.
+const SETTINGS_NAME_RE = /^[a-z][a-z0-9_]*$/;
+
+function assertValidIdentifier(kind: string, name: string): void {
+  if (!SETTINGS_NAME_RE.test(name)) {
+    throw new Error(
+      `Invalid ${kind} name "${name}" — expected lowercase ASCII ` +
+        `[a-z][a-z0-9_]* so storage keys, testids, and URLs stay portable.`,
+    );
+  }
+}
+
+// Storage keys are flat (`${groupName}.${fieldName}`), so two fieldsets
+// within the same group can't declare the same field name — they'd
+// collide on disk. Enforced at registration time so plugin authors
+// fail fast rather than quietly overwriting each other's values.
+function assertUniqueFieldNamesAcrossFieldsets(
+  groupName: string,
+  fieldsets: readonly {
+    readonly fields: readonly { readonly name: string }[];
+  }[],
+): void {
+  const seen = new Set<string>();
+  for (const fs of fieldsets) {
+    for (const field of fs.fields) {
+      if (seen.has(field.name)) {
+        throw new DuplicateRegistrationError(
+          "settings field",
+          `${groupName}.${field.name}`,
+        );
+      }
+      seen.add(field.name);
+    }
+  }
+}
+
+// Mirror the RPC's `option.getMany` 200-name cap so a plugin that
+// over-registers fails at registration time rather than at route-load
+// time with a generic error. If a real CMS ever needs >200 fields in
+// one group, bump both limits together — the admin loader would need
+// to chunk the fetch to stay under the server cap.
+const MAX_FIELDS_PER_SETTINGS_GROUP = 200;
+
+function assertGroupFieldCountWithinBounds(
+  groupName: string,
+  fieldsets: readonly {
+    readonly fields: readonly { readonly name: string }[];
+  }[],
+): void {
+  const total = fieldsets.reduce((sum, fs) => sum + fs.fields.length, 0);
+  if (total > MAX_FIELDS_PER_SETTINGS_GROUP) {
+    throw new Error(
+      `Settings group "${groupName}" has ${total} fields; ` +
+        `the admin loader caps a single group at ${MAX_FIELDS_PER_SETTINGS_GROUP}. ` +
+        `Split into multiple groups or chunk the loader.`,
+    );
+  }
 }
 
 // Re-exported from our local FilterRest helper so the type used by hook wrapper

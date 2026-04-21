@@ -45,7 +45,20 @@ export const optionSetInputSchema = v.object({
 
 export const optionDeleteInputSchema = v.object({ name: optionNameSchema });
 
+// Bulk fetch used by the settings form loader — one round-trip instead
+// of N. 200-name cap is generous (the largest plausible settings group
+// won't come close); a hard ceiling blocks accidental fan-out from
+// callers that iterate on untrusted input.
+export const optionGetManyInputSchema = v.object({
+  names: v.pipe(
+    v.array(optionNameSchema),
+    v.minLength(1, "provide at least one option name"),
+    v.maxLength(200, "too many option names (max 200)"),
+  ),
+});
+
 export type OptionListInput = v.InferOutput<typeof optionListInputSchema>;
 export type OptionGetInput = v.InferOutput<typeof optionGetInputSchema>;
+export type OptionGetManyInput = v.InferOutput<typeof optionGetManyInputSchema>;
 export type OptionSetInput = v.InferOutput<typeof optionSetInputSchema>;
 export type OptionDeleteInput = v.InferOutput<typeof optionDeleteInputSchema>;

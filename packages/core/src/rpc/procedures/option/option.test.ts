@@ -90,6 +90,49 @@ describe("option.get", () => {
   });
 });
 
+describe("option.getMany", () => {
+  test("admin fetches a keyed map for existing names; missing names omitted", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    await h.client.option.set({ name: "general.site_title", value: "Plumix" });
+    await h.client.option.set({
+      name: "general.site_description",
+      value: "Headless CMS",
+    });
+    const map = await h.client.option.getMany({
+      names: [
+        "general.site_title",
+        "general.site_description",
+        "general.admin_email",
+      ],
+    });
+    expect(map).toEqual({
+      "general.site_title": "Plumix",
+      "general.site_description": "Headless CMS",
+    });
+  });
+
+  test("returns an empty object when no names match", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const map = await h.client.option.getMany({ names: ["nope.one"] });
+    expect(map).toEqual({});
+  });
+
+  test("editor cannot use getMany (reads gated by option:manage)", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await expect(
+      h.client.option.getMany({ names: ["anything"] }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { capability: "option:manage" },
+    });
+  });
+
+  test("rejects empty names array at the schema layer", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    await expect(h.client.option.getMany({ names: [] })).rejects.toThrow();
+  });
+});
+
 describe("option.list", () => {
   test("admin lists all options by default, sorted by name", async () => {
     const h = await createRpcHarness({ authAs: "admin" });

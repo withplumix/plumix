@@ -6,11 +6,14 @@ import type {
 } from "@plumix/core/manifest";
 
 import {
+  allSettingsFields,
   findPostTypeBySlug,
+  findSettingsGroupByName,
   findTaxonomyByName,
   metaBoxesForPostType,
   readManifest,
   visiblePostTypes,
+  visibleSettingsGroups,
   visibleTaxonomies,
 } from "./manifest.js";
 
@@ -35,6 +38,7 @@ describe("readManifest", () => {
       postTypes: [],
       taxonomies: [],
       metaBoxes: [],
+      settingsGroups: [],
     });
   });
 
@@ -48,6 +52,7 @@ describe("readManifest", () => {
       postTypes: [{ name: "post", label: "Posts" }],
       taxonomies: [],
       metaBoxes: [],
+      settingsGroups: [],
     });
   });
 
@@ -57,6 +62,7 @@ describe("readManifest", () => {
       postTypes: [],
       taxonomies: [],
       metaBoxes: [],
+      settingsGroups: [],
     });
   });
 
@@ -69,6 +75,7 @@ describe("readManifest", () => {
       postTypes: [],
       taxonomies: [],
       metaBoxes: [],
+      settingsGroups: [],
     });
     expect(errSpy).toHaveBeenCalledOnce();
   });
@@ -79,6 +86,7 @@ describe("readManifest", () => {
       postTypes: [],
       taxonomies: [],
       metaBoxes: [],
+      settingsGroups: [],
     });
   });
 
@@ -90,6 +98,7 @@ describe("readManifest", () => {
       postTypes: [],
       taxonomies: [],
       metaBoxes: [],
+      settingsGroups: [],
     });
   });
 
@@ -118,6 +127,7 @@ describe("readManifest", () => {
           fields: [],
         },
       ],
+      settingsGroups: [],
     });
   });
 
@@ -144,6 +154,7 @@ describe("readManifest", () => {
         },
       ],
       metaBoxes: [],
+      settingsGroups: [],
     });
   });
 
@@ -163,6 +174,7 @@ describe("findPostTypeBySlug", () => {
     ],
     taxonomies: [],
     metaBoxes: [],
+    settingsGroups: [],
   };
 
   test("returns the matching entry", () => {
@@ -193,6 +205,7 @@ describe("visiblePostTypes", () => {
     ],
     taxonomies: [],
     metaBoxes: [],
+    settingsGroups: [],
   };
 
   test("filters by `${capabilityType}:edit_own`; unset capabilityType uses name", () => {
@@ -229,6 +242,7 @@ describe("metaBoxesForPostType", () => {
         box("b", { priority: "high" }),
         box("c"), // default
       ],
+      settingsGroups: [],
     };
     const ids = metaBoxesForPostType("post", [], source).map((b) => b.id);
     expect(ids).toEqual(["b", "c", "a"]);
@@ -242,6 +256,7 @@ describe("metaBoxesForPostType", () => {
         box("first", { priority: "high" }),
         box("second", { priority: "high" }),
       ],
+      settingsGroups: [],
     };
     const ids = metaBoxesForPostType("post", [], source).map((b) => b.id);
     expect(ids).toEqual(["first", "second"]);
@@ -255,6 +270,7 @@ describe("metaBoxesForPostType", () => {
         box("seo", { postTypes: ["post"] }),
         box("shop", { postTypes: ["product"] }),
       ],
+      settingsGroups: [],
     };
     const ids = metaBoxesForPostType("post", [], source).map((b) => b.id);
     expect(ids).toEqual(["seo"]);
@@ -268,6 +284,7 @@ describe("metaBoxesForPostType", () => {
         box("public"),
         box("privileged", { capability: "post:edit_any" }),
       ],
+      settingsGroups: [],
     };
     const withoutCap = metaBoxesForPostType("post", [], source).map(
       (b) => b.id,
@@ -285,6 +302,7 @@ describe("metaBoxesForPostType", () => {
       postTypes: [],
       taxonomies: [],
       metaBoxes: [],
+      settingsGroups: [],
     };
     expect(metaBoxesForPostType("post", [], source)).toEqual([]);
   });
@@ -298,6 +316,7 @@ describe("findTaxonomyByName", () => {
       { name: "tag", label: "Tags" },
     ],
     metaBoxes: [],
+    settingsGroups: [],
   };
 
   test("returns the matching taxonomy", () => {
@@ -318,6 +337,7 @@ describe("visibleTaxonomies", () => {
       { name: "internal", label: "Internal" },
     ],
     metaBoxes: [],
+    settingsGroups: [],
   };
 
   test("filters by per-taxonomy :read capability", () => {
@@ -328,5 +348,70 @@ describe("visibleTaxonomies", () => {
 
   test("returns empty when the caller has no taxonomy :read caps", () => {
     expect(visibleTaxonomies(["post:edit_own"], source)).toEqual([]);
+  });
+});
+
+describe("findSettingsGroupByName + visibleSettingsGroups + allSettingsFields", () => {
+  const source: PlumixManifest = {
+    postTypes: [],
+    taxonomies: [],
+    metaBoxes: [],
+    settingsGroups: [
+      {
+        name: "general",
+        label: "General",
+        fieldsets: [
+          {
+            name: "identity",
+            fields: [
+              { name: "site_title", label: "Site title", type: "text" },
+              { name: "site_description", label: "Tagline", type: "text" },
+            ],
+          },
+          {
+            name: "contact",
+            fields: [
+              { name: "admin_email", label: "Admin email", type: "text" },
+            ],
+          },
+        ],
+      },
+      {
+        name: "billing",
+        label: "Billing",
+        fieldsets: [],
+      },
+    ],
+  };
+
+  test("findSettingsGroupByName returns the matching group", () => {
+    expect(findSettingsGroupByName("general", source)?.label).toBe("General");
+  });
+
+  test("findSettingsGroupByName returns undefined when missing", () => {
+    expect(findSettingsGroupByName("mystery", source)).toBeUndefined();
+  });
+
+  test("visibleSettingsGroups returns every group when caller has option:manage", () => {
+    const visible = visibleSettingsGroups(["option:manage"], source).map(
+      (g) => g.name,
+    );
+    expect(visible).toEqual(["general", "billing"]);
+  });
+
+  test("visibleSettingsGroups returns empty when caller lacks option:manage", () => {
+    expect(visibleSettingsGroups(["post:edit_own"], source)).toEqual([]);
+    expect(visibleSettingsGroups([], source)).toEqual([]);
+  });
+
+  test("allSettingsFields flattens fieldsets in declared order", () => {
+    const general = findSettingsGroupByName("general", source);
+    expect(general).toBeDefined();
+    if (!general) return;
+    expect(allSettingsFields(general).map((f) => f.name)).toEqual([
+      "site_title",
+      "site_description",
+      "admin_email",
+    ]);
   });
 });

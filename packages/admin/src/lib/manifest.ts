@@ -2,6 +2,8 @@ import type {
   MetaBoxManifestEntry,
   PlumixManifest,
   PostTypeManifestEntry,
+  SettingsFieldManifestEntry,
+  SettingsGroupManifestEntry,
   TaxonomyManifestEntry,
 } from "@plumix/core/manifest";
 import { emptyManifest, MANIFEST_SCRIPT_ID } from "@plumix/core/manifest";
@@ -34,10 +36,12 @@ function normalize(value: unknown): PlumixManifest {
   const postTypes = (value as { postTypes?: unknown }).postTypes;
   const taxonomies = (value as { taxonomies?: unknown }).taxonomies;
   const metaBoxes = (value as { metaBoxes?: unknown }).metaBoxes;
+  const settingsGroups = (value as { settingsGroups?: unknown }).settingsGroups;
   return {
     postTypes: Array.isArray(postTypes) ? postTypes : [],
     taxonomies: Array.isArray(taxonomies) ? taxonomies : [],
     metaBoxes: Array.isArray(metaBoxes) ? metaBoxes : [],
+    settingsGroups: Array.isArray(settingsGroups) ? settingsGroups : [],
   };
 }
 
@@ -148,4 +152,44 @@ export function metaBoxesForPostType(
       const bp = META_BOX_PRIORITY_WEIGHT[b.priority ?? "default"];
       return ap - bp;
     });
+}
+
+/**
+ * Look up a registered settings group by its name (the `/settings/$group`
+ * route param). Returns `undefined` when the name doesn't match — the
+ * route surfaces a 404-style not-found state in that case.
+ */
+export function findSettingsGroupByName(
+  name: string,
+  source: PlumixManifest = manifest,
+): SettingsGroupManifestEntry | undefined {
+  return source.settingsGroups.find((g) => g.name === name);
+}
+
+/**
+ * Sidebar + list-route gate: which settings groups should render for a
+ * user with the given capability set. Gate is `option:manage` across
+ * the board — matches the server's `option.*` RPC gate. Per-group
+ * capability overrides are a future feature (needs server-side
+ * plumbing to tighten / loosen the RPC check accordingly); shipping
+ * without them keeps the surface honest.
+ */
+export function visibleSettingsGroups(
+  capabilities: readonly string[],
+  source: PlumixManifest = manifest,
+): readonly SettingsGroupManifestEntry[] {
+  if (!capabilities.includes("option:manage")) return [];
+  return source.settingsGroups;
+}
+
+/**
+ * Flatten a group's fieldsets into a single array of every field — the
+ * shape the loader wants when it builds the `option.getMany` input.
+ * Fieldsets are UI-only; storage keys stay flat (`${group}.${field}`)
+ * so this collapse is lossless for the persistence layer.
+ */
+export function allSettingsFields(
+  group: SettingsGroupManifestEntry,
+): readonly SettingsFieldManifestEntry[] {
+  return group.fieldsets.flatMap((fs) => fs.fields);
 }
