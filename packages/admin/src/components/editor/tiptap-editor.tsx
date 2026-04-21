@@ -1,3 +1,4 @@
+import type { Content } from "@tiptap/react";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button.js";
@@ -14,11 +15,11 @@ import {
   ListOrdered,
 } from "lucide-react";
 
-// Minimal Tiptap editor with the toolbar WP admins expect for a "light"
-// content surface. Content is stored and round-tripped as HTML via the
-// parent form — Tiptap serialises to HTML by default, which is what the
-// `posts.content` column holds today. A future PR may swap to ProseMirror
-// JSON for richer block support; keeping HTML here avoids a migration.
+// Minimal Tiptap editor. Content round-trips as a JSON-encoded ProseMirror
+// document — the public resolver walks the JSON against a node-type
+// allowlist, which is the trust boundary that keeps `<script>` and other
+// untrusted HTML out of public pages even if a contributor bypasses the
+// editor via the RPC.
 export function TiptapEditor({
   value,
   onChange,
@@ -26,7 +27,7 @@ export function TiptapEditor({
   ariaLabel,
 }: {
   readonly value: string;
-  readonly onChange: (html: string) => void;
+  readonly onChange: (json: string) => void;
   readonly disabled?: boolean;
   readonly ariaLabel?: string;
 }): ReactNode {
@@ -35,10 +36,8 @@ export function TiptapEditor({
       // StarterKit v3 bundles Link; keep it configured here so the toolbar
       // button's behaviour (openOnClick off so admins can freely edit,
       // safe rel attrs on user-entered hrefs) is explicit. Whitelist URL
-      // schemes — without this a contributor could paste `javascript:…`
-      // into the prompt and the HTML would execute when another admin
-      // rendered the post. Defense-in-depth inside the admin trust
-      // boundary; matches WP's kses Link filter.
+      // schemes — defense-in-depth inside the admin; the public walker
+      // re-checks on render.
       StarterKit.configure({
         heading: { levels: [2, 3] },
         link: {
@@ -51,7 +50,7 @@ export function TiptapEditor({
         },
       }),
     ],
-    content: value,
+    content: parseContent(value),
     editable: !disabled,
     editorProps: {
       attributes: {
@@ -63,17 +62,17 @@ export function TiptapEditor({
       },
     },
     onUpdate: ({ editor: e }) => {
-      onChange(e.getHTML());
+      onChange(JSON.stringify(e.getJSON()));
     },
   });
 
   // Sync external value changes (e.g., loading an existing post) into the
   // editor without a render-time setContent — that'd fight the user's
-  // cursor. Only updates when the incoming HTML genuinely differs from
-  // the editor's current content.
+  // cursor. Only updates when the incoming JSON genuinely differs.
   useEffect(() => {
-    if (editor.getHTML() === value) return;
-    editor.commands.setContent(value);
+    const current = JSON.stringify(editor.getJSON());
+    if (current === value) return;
+    editor.commands.setContent(parseContent(value));
   }, [editor, value]);
 
   useEffect(() => {
@@ -201,6 +200,17 @@ function Toolbar({
 const SAFE_URL_RE = /^(https?:|mailto:|\/|#)/i;
 function isSafeUrl(href: string): boolean {
   return SAFE_URL_RE.test(href.trim());
+}
+
+// Empty or malformed payloads render as an empty doc rather than crash
+// the editor — matches Tiptap's own tolerance for `null` on setContent.
+function parseContent(value: string): Content {
+  if (value === "") return null;
+  try {
+    return JSON.parse(value) as Content;
+  } catch {
+    return null;
+  }
 }
 
 function ToolbarButton({

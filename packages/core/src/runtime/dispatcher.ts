@@ -10,6 +10,8 @@ import {
   handlePasskeyRegisterVerify,
   handleSignout,
 } from "../auth/passkey/routes.js";
+import { matchRoute } from "../route/match.js";
+import { resolvePublicRoute } from "../route/resolve.js";
 import { forbidden, jsonResponse, methodNotAllowed, notFound } from "./http.js";
 
 const RPC_PREFIX = "/_plumix/rpc";
@@ -50,7 +52,8 @@ export function createPlumixDispatcher(app: PlumixApp): PlumixDispatcher {
 }
 
 async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
-  const { pathname } = new URL(ctx.request.url);
+  const url = new URL(ctx.request.url);
+  const { pathname } = url;
 
   if (pathname.startsWith(PLUMIX_PREFIX)) {
     if (!hasCsrfHeader(ctx.request)) {
@@ -93,9 +96,13 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
     return notFound("unknown-plumix-route");
   }
 
-  return new Response("<h1>Plumix</h1>", {
-    headers: { "content-type": "text/html; charset=utf-8" },
-  });
+  if (ctx.request.method !== "GET" && ctx.request.method !== "HEAD") {
+    return methodNotAllowed(["GET", "HEAD"]);
+  }
+
+  const match = matchRoute(url, app.routeMap);
+  if (match === null) return notFound("public-route-not-found");
+  return resolvePublicRoute(ctx, match);
 }
 
 async function serveAdmin(ctx: AppContext): Promise<Response> {

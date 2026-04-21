@@ -53,8 +53,10 @@ async function invoke(
 describe("cloudflare adapter — buildFetchHandler", () => {
   test("routes the public / request through the dispatcher", async () => {
     const response = await invoke(new Request("https://cms.example/"), {});
-    expect(response.status).toBe(200);
-    expect(await response.text()).toBe("<h1>Plumix</h1>");
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-plumix-hint")).toBe(
+      "public-route-not-found",
+    );
   });
 
   test("ALS is entered for each request and cleaned up afterwards", async () => {
@@ -82,7 +84,7 @@ describe("cloudflare adapter — buildFetchHandler", () => {
 
   test("tolerates a test-time executionCtx without waitUntil (after falls back to a no-op)", async () => {
     const response = await invoke(new Request("https://cms.example/"), {});
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(404);
   });
 
   test("passes the env + request through to the database adapter", async () => {
@@ -119,8 +121,8 @@ describe("cloudflare adapter — buildFetchHandler", () => {
       ),
     ]);
 
-    expect(a.status).toBe(200);
-    expect(b.status).toBe(200);
+    expect(a.status).toBe(404);
+    expect(b.status).toBe(404);
   });
 
   test("rejects /_plumix/* non-safe method without CSRF header (403)", async () => {
@@ -202,7 +204,7 @@ describe("cloudflare adapter — connectRequest", () => {
       {},
       adapter,
     );
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(404);
     expect(connectCalls.count).toBe(0);
   });
 
@@ -277,7 +279,7 @@ describe("cloudflare adapter — connectRequest", () => {
       {},
       adapter,
     );
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(404);
     expect(connectCalled).toBe(1);
   });
 
@@ -400,12 +402,12 @@ describe("cloudflare adapter — binding validation", () => {
       { DB: { fake: true } },
       adapterWithBindings,
     );
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(404);
   });
 
   test("adapter without requiredBindings is unaffected (opt-in behaviour)", async () => {
     const response = await invoke(new Request("https://cms.example/"), {});
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(404);
   });
 
   test("validation is memoised — runs once per Worker isolate", async () => {

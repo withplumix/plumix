@@ -11,6 +11,7 @@ import type {
   FilterRest,
   HookOptions,
 } from "../hooks/types.js";
+import type { RouteIntent } from "../route/intent.js";
 import type {
   MetaBoxOptions,
   MetaOptions,
@@ -24,6 +25,7 @@ import {
   derivePostTypeCapabilities,
   deriveTaxonomyCapabilities,
 } from "../auth/rbac.js";
+import { DEFAULT_REWRITE_RULE_PRIORITY } from "../route/compile.js";
 import { DuplicateRegistrationError } from "./manifest.js";
 
 export interface PluginSetupContext {
@@ -84,6 +86,18 @@ export interface PluginSetupContext {
    * flat across fieldsets).
    */
   registerSettingsFieldset(groupName: string, fieldset: SettingsFieldset): void;
+
+  /**
+   * Declare a public URL → `RouteIntent` mapping. Lands in the compiled
+   * route map at `buildApp`; `URLPattern` pathname syntax (e.g. `/:slug`,
+   * `/docs/:category/:slug`). `priority` defaults to 10 — lower wins,
+   * auto-generated archive/single rules from `registerPostType` sit at 50.
+   */
+  addRewriteRule(
+    pattern: string,
+    intent: RouteIntent,
+    options?: { readonly priority?: number },
+  ): void;
 }
 
 interface CreatePluginContextArgs {
@@ -195,6 +209,15 @@ export function createPluginSetupContext({
       registry.settingsGroups.set(name, {
         ...options,
         name,
+        registeredBy: pluginId,
+      });
+    },
+
+    addRewriteRule: (pattern, intent, options) => {
+      registry.rewriteRules.push({
+        pattern,
+        intent,
+        priority: options?.priority ?? DEFAULT_REWRITE_RULE_PRIORITY,
         registeredBy: pluginId,
       });
     },

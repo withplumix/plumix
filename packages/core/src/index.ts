@@ -6,6 +6,7 @@ export * from "./db/index.js";
 export * from "./db/schema/index.js";
 export * from "./hooks/index.js";
 export * from "./plugin/index.js";
+export type { RouteIntent, RouteRule } from "./route/intent.js";
 export * from "./rpc/index.js";
 export type * from "./runtime/adapter.js";
 export { buildApp } from "./runtime/app.js";
