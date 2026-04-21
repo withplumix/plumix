@@ -10,10 +10,11 @@ import {
   postCapability,
 } from "./lifecycle.js";
 import {
-  applyMetaPatch,
+  applyPostMetaReadFilter,
   loadPostMeta,
   MetaSanitizationError,
   sanitizeMetaInput,
+  writePostMetaWithHooks,
 } from "./meta.js";
 import { postCreateInputSchema } from "./schemas.js";
 
@@ -103,9 +104,14 @@ export const create = base
     }
 
     if (metaPatch) {
-      await applyMetaPatch(context, created.id, metaPatch);
+      await writePostMetaWithHooks(context, created, metaPatch);
     }
-    const meta = await loadPostMeta(context.db, context.plugins, created.id);
+    const loadedMeta = await loadPostMeta(
+      context.db,
+      context.plugins,
+      created.id,
+    );
+    const meta = await applyPostMetaReadFilter(context, created, loadedMeta);
 
     await firePostTransition(context, created, "draft");
     if (created.status === "published") {

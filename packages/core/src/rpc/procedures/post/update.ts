@@ -23,10 +23,12 @@ import {
   wouldCreateParentCycle,
 } from "./lifecycle.js";
 import {
-  applyMetaPatch,
+  applyPostMetaReadFilter,
+  isEmptyMetaPatch,
   loadPostMeta,
   MetaSanitizationError,
   sanitizeMetaInput,
+  writePostMetaWithHooks,
 } from "./meta.js";
 import { postUpdateInputSchema } from "./schemas.js";
 
@@ -140,13 +142,20 @@ export const update = base
     }
 
     // Nothing to write anywhere? Short-circuit without firing hooks, but
-    // still return the current meta so callers get a consistent shape.
+    // still return the current meta so callers get a consistent shape. An
+    // empty meta map from the client (e.g. admin always sending `meta: {}`)
+    // counts as no-op on the meta side too.
     if (
       Object.keys(patch).length === 0 &&
       termsPatch === undefined &&
-      metaPatch === null
+      isEmptyMetaPatch(metaPatch)
     ) {
-      const meta = await loadPostMeta(context.db, context.plugins, existing.id);
+      const loaded = await loadPostMeta(
+        context.db,
+        context.plugins,
+        existing.id,
+      );
+      const meta = await applyPostMetaReadFilter(context, existing, loaded);
       return context.hooks.applyFilter("rpc:post.update:output", {
         ...existing,
         meta,
@@ -206,10 +215,11 @@ export const update = base
       await applyTermPatch(context, updated.id, termsPatch);
     }
 
-    if (metaPatch) {
-      await applyMetaPatch(context, updated.id, metaPatch);
+    if (metaPatch && !isEmptyMetaPatch(metaPatch)) {
+      await writePostMetaWithHooks(context, updated, metaPatch);
     }
-    const meta = await loadPostMeta(context.db, context.plugins, updated.id);
+    const loaded = await loadPostMeta(context.db, context.plugins, updated.id);
+    const meta = await applyPostMetaReadFilter(context, updated, loaded);
 
     if (postColumnsWritten) {
       await firePostUpdated(context, updated, existing);

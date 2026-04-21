@@ -48,10 +48,10 @@ describe("sanitizeMetaInput", () => {
     expect(patch).toEqual({ upserts: new Map(), deletes: [] });
   });
 
-  test("string meta encodes as JSON so reads round-trip via JSON.parse", () => {
+  test("string meta passes through as a decoded string in the patch", () => {
     const registry = registryWithMeta({ title: { type: "string" } });
     const patch = sanitizeMetaInput(registry, "post", { title: "Hello" });
-    expect(patch?.upserts.get("title")).toBe('"Hello"');
+    expect(patch?.upserts.get("title")).toBe("Hello");
   });
 
   test("number meta rejects NaN / Infinity (they would poison JSON)", () => {
@@ -67,21 +67,32 @@ describe("sanitizeMetaInput", () => {
   test("number meta coerces numeric strings (admin may ship form-value strings)", () => {
     const registry = registryWithMeta({ count: { type: "number" } });
     const patch = sanitizeMetaInput(registry, "post", { count: "42" });
-    expect(patch?.upserts.get("count")).toBe("42");
+    expect(patch?.upserts.get("count")).toBe(42);
   });
 
-  test("boolean meta coerces 0/1 and 'true'/'false' for form-field compatibility", () => {
+  test("number meta rejects empty string (would silently coerce to 0 via Number(''))", () => {
+    const registry = registryWithMeta({ count: { type: "number" } });
+    expect(() => sanitizeMetaInput(registry, "post", { count: "" })).toThrow(
+      MetaSanitizationError,
+    );
+    expect(() => sanitizeMetaInput(registry, "post", { count: "   " })).toThrow(
+      MetaSanitizationError,
+    );
+  });
+
+  test("boolean meta accepts every common truthy/falsy form callers send", () => {
     const registry = registryWithMeta({ featured: { type: "boolean" } });
-    expect(
-      sanitizeMetaInput(registry, "post", { featured: 1 })?.upserts.get(
-        "featured",
-      ),
-    ).toBe("true");
-    expect(
-      sanitizeMetaInput(registry, "post", { featured: "false" })?.upserts.get(
-        "featured",
-      ),
-    ).toBe("false");
+    for (const truthy of [true, 1, "1", "true"]) {
+      const patch = sanitizeMetaInput(registry, "post", { featured: truthy });
+      expect(patch?.upserts.get("featured")).toBe(true);
+    }
+    for (const falsy of [false, 0, "0", "false"]) {
+      const patch = sanitizeMetaInput(registry, "post", { featured: falsy });
+      expect(patch?.upserts.get("featured")).toBe(false);
+    }
+    expect(() =>
+      sanitizeMetaInput(registry, "post", { featured: "yes" }),
+    ).toThrow(MetaSanitizationError);
   });
 
   test("json meta accepts nested structures, rejects non-serializable values", () => {
@@ -89,10 +100,21 @@ describe("sanitizeMetaInput", () => {
     const patch = sanitizeMetaInput(registry, "post", {
       config: { nested: { arr: [1, 2] } },
     });
-    expect(patch?.upserts.get("config")).toBe('{"nested":{"arr":[1,2]}}');
+    expect(patch?.upserts.get("config")).toEqual({ nested: { arr: [1, 2] } });
     expect(() =>
       sanitizeMetaInput(registry, "post", { config: () => 1 }),
     ).toThrow(MetaSanitizationError);
+  });
+
+  test("value exceeding the encoded-byte cap is rejected (DoS guard)", () => {
+    const registry = registryWithMeta({ blob: { type: "string" } });
+    // 256KiB cap + one extra char → just over. The encoded form adds two
+    // quote bytes around a raw string; we use 260k chars to comfortably
+    // exceed even the bare-length cap.
+    const tooBig = "x".repeat(260 * 1024);
+    expect(() => sanitizeMetaInput(registry, "post", { blob: tooBig })).toThrow(
+      expect.objectContaining({ reason: "value_too_large" }),
+    );
   });
 
   test("null / undefined values queue a delete rather than an upsert", () => {
@@ -141,7 +163,7 @@ describe("sanitizeMetaInput", () => {
       },
     });
     const patch = sanitizeMetaInput(registry, "post", { slug: "HELLO" });
-    expect(patch?.upserts.get("slug")).toBe('"hello"');
+    expect(patch?.upserts.get("slug")).toBe("hello");
   });
 });
 
@@ -211,5 +233,22 @@ describe("applyMetaPatch + loadPostMeta", () => {
 
     const meta = await loadPostMeta(h.context.db, plugins, post.id);
     expect(meta).toEqual({});
+  });
+
+  test("reads gracefully recover when a row has a non-JSON value (legacy writer)", async () => {
+    const plugins = registryWithMeta({ title: { type: "string" } });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.factory.draft.create({
+      authorId: h.user.id,
+      slug: "legacy",
+    });
+    // Simulate a row written before we settled on JSON encoding — raw
+    // string without surrounding quotes, so JSON.parse would throw.
+    await h.context.db
+      .insert(postMeta)
+      .values({ postId: post.id, key: "title", value: "raw-legacy" });
+
+    const meta = await loadPostMeta(h.context.db, plugins, post.id);
+    expect(meta).toEqual({ title: "raw-legacy" });
   });
 });

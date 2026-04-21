@@ -3,7 +3,7 @@ import { posts } from "../../../db/schema/posts.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { postCapability } from "./lifecycle.js";
-import { loadPostMeta } from "./meta.js";
+import { applyPostMetaReadFilter, loadPostMeta } from "./meta.js";
 import { postGetInputSchema } from "./schemas.js";
 
 export const get = base
@@ -36,6 +36,7 @@ export const get = base
       }
     }
 
-    const meta = await loadPostMeta(context.db, context.plugins, row.id);
+    const loaded = await loadPostMeta(context.db, context.plugins, row.id);
+    const meta = await applyPostMetaReadFilter(context, row, loaded);
     return context.hooks.applyFilter("rpc:post.get:output", { ...row, meta });
   });

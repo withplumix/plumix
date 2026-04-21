@@ -17,15 +17,28 @@ export type { PostWithMeta } from "../../../db/schema/posts.js";
 // it with an encode/decode pair and an allowlist of types the registry is
 // willing to hydrate on read.
 
+/**
+ * Hard cap on the JSON-encoded size of a single meta value, in bytes.
+ * 256KiB fits any realistic plugin-shaped JSON config while bounding the
+ * damage an adversarial writer can do — WordPress's TEXT column tops out
+ * around 64KiB, so this is already more generous than the incumbent.
+ * Enforced in `coerceToType` rather than the valibot schema so plugin
+ * authors can calibrate per key via a custom `sanitize` if they need
+ * tighter bounds.
+ */
+const MAX_META_VALUE_BYTES = 256 * 1024;
+
 type PostMetaMap = Record<string, unknown>;
 
 /**
- * Validation outcome for a meta patch before we touch the DB. We split
- * `upserts` (key → encoded JSON string) from `deletes` so the handler can
- * issue a single upsert statement and a single delete-by-keys statement.
+ * Validated meta patch produced by `sanitizeMetaInput`. Values in
+ * `upserts` are the *decoded* post-sanitization objects — the `MetaPatch`
+ * is what filter hooks see, so keeping decoded values here means a
+ * plugin doesn't have to double-parse. `applyMetaPatch` JSON-encodes at
+ * the last moment, before the INSERT.
  */
-interface MetaPatch {
-  readonly upserts: ReadonlyMap<string, string>;
+export interface MetaPatch {
+  readonly upserts: ReadonlyMap<string, unknown>;
   readonly deletes: readonly string[];
 }
 
@@ -33,8 +46,8 @@ interface MetaPatch {
  * Validate an incoming meta map against the plugin registry and produce a
  * DB-ready patch. Unregistered keys, keys registered for a different
  * post type, and type-coercion failures all throw so the caller can
- * surface them as 4xx before any write. `null` values are deletion
- * requests; everything else is coerced + encoded.
+ * surface them as 4xx before any write. `null` / `undefined` values are
+ * deletion requests; everything else is coerced + sanitized.
  */
 export function sanitizeMetaInput(
   registry: PluginRegistry,
@@ -42,7 +55,7 @@ export function sanitizeMetaInput(
   input: PostMetaMap | undefined,
 ): MetaPatch | null {
   if (input === undefined) return null;
-  const upserts = new Map<string, string>();
+  const upserts = new Map<string, unknown>();
   const deletes: string[] = [];
   for (const [key, rawValue] of Object.entries(input)) {
     const definition = registry.metaKeys.get(key);
@@ -60,7 +73,11 @@ export function sanitizeMetaInput(
     const sanitized = definition.sanitize
       ? definition.sanitize(coerced)
       : coerced;
-    upserts.set(key, encodeMetaValue(sanitized));
+    // Encoded-size check guards the DB against a 10MB-in-one-request abuse
+    // path. Re-encoding in applyMetaPatch is cheap so we accept the double
+    // stringify rather than threading the encoded string through the patch.
+    assertEncodedSize(key, sanitized);
+    upserts.set(key, sanitized);
   }
   return { upserts, deletes };
 }
@@ -73,7 +90,8 @@ export function sanitizeMetaInput(
 type MetaSanitizationReason =
   | "not_registered"
   | "post_type_mismatch"
-  | "invalid_value";
+  | "invalid_value"
+  | "value_too_large";
 
 export class MetaSanitizationError extends Error {
   readonly key: string;
@@ -108,8 +126,14 @@ function coerceString(key: string, value: unknown): string {
 function coerceNumber(key: string, value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string") {
-    const n = Number(value);
-    if (Number.isFinite(n)) return n;
+    // Empty string comes from cleared form inputs; the admin dispatcher
+    // already sends `null` for those, but a direct RPC caller might send
+    // "" — reject here so we don't silently coerce to 0 (`Number("") === 0`).
+    if (value.trim() === "") {
+      throw new MetaSanitizationError(key, "invalid_value");
+    }
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
   }
   if (typeof value === "boolean") return value ? 1 : 0;
   throw new MetaSanitizationError(key, "invalid_value");
@@ -117,8 +141,12 @@ function coerceNumber(key: string, value: unknown): number {
 
 function coerceBoolean(key: string, value: unknown): boolean {
   if (typeof value === "boolean") return value;
-  if (value === "true" || value === 1) return true;
-  if (value === "false" || value === 0) return false;
+  // Accept the common truthy/falsy forms from form-encoded and query-string
+  // callers — 0/1 (numeric or stringified) and "true"/"false". Anything else
+  // is rejected so `"yes"` / `"off"` don't silently become booleans of
+  // surprising polarity.
+  if (value === 1 || value === "1" || value === "true") return true;
+  if (value === 0 || value === "0" || value === "false") return false;
   throw new MetaSanitizationError(key, "invalid_value");
 }
 
@@ -140,8 +168,15 @@ function coerceJson(key: string, value: unknown): unknown {
   }
 }
 
-function encodeMetaValue(value: unknown): string {
-  return JSON.stringify(value);
+function assertEncodedSize(key: string, value: unknown): void {
+  const encoded = JSON.stringify(value) as string | undefined;
+  if (encoded === undefined) return; // already caught in coerceJson
+  // `TextEncoder.encode(...).length` is the canonical UTF-8 byte length;
+  // avoids a `Buffer` dependency (which we don't have in workers anyway).
+  const byteLength = new TextEncoder().encode(encoded).length;
+  if (byteLength > MAX_META_VALUE_BYTES) {
+    throw new MetaSanitizationError(key, "value_too_large");
+  }
 }
 
 /**
@@ -213,6 +248,17 @@ export async function loadPostMeta(
 }
 
 /**
+ * True when the patch would result in any DB writes. Handlers use this to
+ * skip the short-circuit that's optimized for "no post change, no term
+ * change, no meta change" requests.
+ */
+export function isEmptyMetaPatch(patch: MetaPatch | null): boolean {
+  return (
+    patch === null || (patch.upserts.size === 0 && patch.deletes.length === 0)
+  );
+}
+
+/**
  * Apply a validated patch to the meta store. Partial semantics: keys not
  * mentioned in the patch are untouched. Deletes run first so a caller
  * that clears and re-sets the same key in one request behaves
@@ -236,7 +282,7 @@ export async function applyMetaPatch(
   const rows = Array.from(patch.upserts, ([key, value]) => ({
     postId,
     key,
-    value,
+    value: JSON.stringify(value),
   }));
   // `excluded.value` is SQLite's idiomatic "use the incoming INSERT row's
   // value" in an ON CONFLICT clause — the upsert target is the unique
@@ -248,4 +294,57 @@ export async function applyMetaPatch(
       target: [postMeta.postId, postMeta.key],
       set: { value: sql`excluded.value` },
     });
+}
+
+/**
+ * Fire the extension surface around a meta write: `rpc:post.meta:write`
+ * lets plugins mutate or short-circuit a patch before it hits the DB;
+ * `post.meta:updated` (with the CPT-scoped variant) fires after the write
+ * so auditors / cache-invalidators can react. Kept in one place so the
+ * create + update handlers stay thin.
+ */
+export async function writePostMetaWithHooks(
+  context: AppContext,
+  post: { id: number; type: string },
+  patch: MetaPatch,
+): Promise<void> {
+  const filtered = await context.hooks.applyFilter(
+    "rpc:post.meta:write",
+    patch,
+    post,
+  );
+  if (isEmptyMetaPatch(filtered)) return;
+  await applyMetaPatch(context, post.id, filtered);
+
+  const changes: PostMetaChanges = {
+    set: Object.fromEntries(filtered.upserts),
+    removed: [...filtered.deletes],
+  };
+  await context.hooks.doAction("post:meta_changed", post, changes);
+}
+
+/**
+ * Payload for `post.meta:updated` (and CPT-scoped variant). `set` is the
+ * decoded key → value map of upserts; `removed` is the list of cleared
+ * keys. Plugins that need the old values should subscribe to the write
+ * filter and snapshot themselves — the action is strictly "what just
+ * happened".
+ */
+export interface PostMetaChanges {
+  readonly set: Readonly<Record<string, unknown>>;
+  readonly removed: readonly string[];
+}
+
+/**
+ * Run the `rpc:post.meta:read` filter on a freshly-loaded meta bag.
+ * Plugins can decorate (add derived keys), redact (drop secrets), or
+ * replace the bag entirely — it's the post-read equivalent of the write
+ * filter.
+ */
+export async function applyPostMetaReadFilter(
+  context: AppContext,
+  post: { id: number; type: string },
+  meta: PostMetaMap,
+): Promise<PostMetaMap> {
+  return context.hooks.applyFilter("rpc:post.meta:read", meta, post);
 }

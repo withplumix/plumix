@@ -350,4 +350,78 @@ describe("post.update", () => {
     const reloaded = await h.client.post.get({ id: post.id });
     expect(reloaded.title).toBe("p3");
   });
+
+  test("meta hooks: rpc:post.meta:write can rewrite a patch; post.meta:updated fires with the final bag", async () => {
+    const plugins = createPluginRegistry();
+    plugins.metaKeys.set("title", {
+      key: "title",
+      type: "string",
+      postTypes: ["post"],
+      registeredBy: "test",
+    });
+    plugins.metaKeys.set("title_lc", {
+      key: "title_lc",
+      type: "string",
+      postTypes: ["post"],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    // Plugin that mirrors `title` into `title_lc` on every write — a
+    // realistic use of the write filter (derived / normalized field).
+    h.hooks.addFilter("rpc:post.meta:write", (patch) => {
+      const title = patch.upserts.get("title");
+      if (typeof title !== "string") return patch;
+      const upserts = new Map(patch.upserts);
+      upserts.set("title_lc", title.toLowerCase());
+      return { ...patch, upserts };
+    });
+    const onUpdated = h.spyAction("post:meta_changed");
+
+    const post = await h.client.post.create({ title: "p", slug: "p" });
+    await h.client.post.update({
+      id: post.id,
+      meta: { title: "SHOUTING" },
+    });
+
+    const reloaded = await h.client.post.get({ id: post.id });
+    expect(reloaded.meta).toEqual({
+      title: "SHOUTING",
+      title_lc: "shouting",
+    });
+    // Create had no meta → write filter / action didn't fire for it.
+    // The update is the only meta-bearing call, so the action fired once
+    // with the filter's augmented changes.
+    onUpdated.assertCalledOnce();
+    expect(onUpdated.lastArgs?.[1]).toEqual({
+      set: { title: "SHOUTING", title_lc: "shouting" },
+      removed: [],
+    });
+  });
+
+  test("meta hooks: rpc:post.meta:read can decorate the bag without touching storage", async () => {
+    const plugins = createPluginRegistry();
+    plugins.metaKeys.set("title", {
+      key: "title",
+      type: "string",
+      postTypes: ["post"],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    h.hooks.addFilter("rpc:post.meta:read", (meta) => ({
+      ...meta,
+      _derived: "always-there",
+    }));
+
+    const post = await h.client.post.create({
+      title: "p",
+      slug: "p",
+      meta: { title: "stored" },
+    });
+    expect(post.meta).toEqual({ title: "stored", _derived: "always-there" });
+    const refetched = await h.client.post.get({ id: post.id });
+    expect(refetched.meta).toEqual({
+      title: "stored",
+      _derived: "always-there",
+    });
+  });
 });

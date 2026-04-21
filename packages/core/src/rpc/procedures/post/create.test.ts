@@ -275,4 +275,22 @@ describe("post.create", () => {
       data: { reason: "meta_not_registered", key: "mystery" },
     });
   });
+
+  test("meta: input schema caps the map at 200 keys (DoS guard)", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const oversized: Record<string, string> = {};
+    for (let i = 0; i < 201; i++) oversized[`k${i}`] = "x";
+    await expect(
+      h.client.post.create({
+        title: "too-much",
+        slug: "too-much",
+        meta: oversized,
+      }),
+    ).rejects.toMatchObject({
+      // oRPC's valibot adapter surfaces a `BAD_REQUEST` for schema failures,
+      // so we match on the code, not a CONFLICT reason — the cap is a wire
+      // validation check, not a sanitizer rejection.
+      code: "BAD_REQUEST",
+    });
+  });
 });
