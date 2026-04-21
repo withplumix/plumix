@@ -5,11 +5,13 @@ import type { SessionPolicy } from "../auth/sessions.js";
 import type { PlumixConfig } from "../config.js";
 import type { AppContext } from "../context/app.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
+import type { RouteRule } from "../route/intent.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
 import { DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
 import * as coreSchema from "../db/schema/index.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { installPlugins } from "../plugin/register.js";
+import { compileRouteMap } from "../route/compile.js";
 import { appRouter } from "../rpc/router.js";
 
 export interface PlumixApp {
@@ -27,6 +29,12 @@ export interface PlumixApp {
   readonly passkey: ResolvedPasskeyConfig;
   readonly sessionPolicy: SessionPolicy;
   readonly schema: Record<string, unknown>;
+  /**
+   * Sorted route map compiled once at `buildApp` from the plugin registry.
+   * Module-scoped module-less equivalent: CF Worker isolates reuse this
+   * across requests without re-derivation.
+   */
+  readonly routeMap: readonly RouteRule[];
 }
 
 export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
@@ -60,5 +68,6 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     passkey,
     sessionPolicy: config.auth.sessions ?? DEFAULT_SESSION_POLICY,
     schema,
+    routeMap: compileRouteMap(registry),
   };
 }

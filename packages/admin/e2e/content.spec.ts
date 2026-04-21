@@ -279,7 +279,8 @@ test.describe("/content/$slug/new", () => {
               parentId: null,
               title: "Hello world",
               slug: "hello-world",
-              content: "<p>body</p>",
+              content:
+                '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"body"}]}]}',
               excerpt: null,
               status: "draft",
               authorId: 1,
@@ -304,7 +305,8 @@ test.describe("/content/$slug/new", () => {
               parentId: null,
               title: "Hello world",
               slug: "hello-world",
-              content: "<p>body</p>",
+              content:
+                '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"body"}]}]}',
               excerpt: null,
               status: "draft",
               authorId: 1,
@@ -410,7 +412,8 @@ test.describe("/content/$slug/$id", () => {
               parentId: null,
               title: "Original title",
               slug: "original",
-              content: "<p>Original body</p>",
+              content:
+                '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Original body"}]}]}',
               excerpt: null,
               status: "draft",
               authorId: 1,
@@ -437,7 +440,8 @@ test.describe("/content/$slug/$id", () => {
               parentId: null,
               title: "Edited title",
               slug: "original",
-              content: "<p>Original body</p>",
+              content:
+                '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Original body"}]}]}',
               excerpt: null,
               status: "draft",
               authorId: 1,

@@ -1,4 +1,5 @@
 import type { AppContext } from "../context/app.js";
+import type { AnyPluginDescriptor } from "../config.js";
 import type { User, UserRole } from "../db/schema/users.js";
 import type {
   ActionArgs,
@@ -49,6 +50,11 @@ export interface CreateDispatcherHarnessOptions {
    * when exercising the dispatcher's /_plumix/admin/* SPA fallback.
    */
   readonly assets?: AssetsBinding;
+  /**
+   * Plugins to install into the test app. Use when exercising public
+   * routes, manifest projection, or plugin-registered hooks.
+   */
+  readonly plugins?: readonly AnyPluginDescriptor[];
 }
 
 export interface DispatcherHarness {
@@ -137,6 +143,7 @@ export async function createDispatcherHarness(
         origin: "https://cms.example",
       },
     }),
+    plugins: options.plugins,
   });
   const app = await buildApp(config);
   const dispatcher = createPlumixDispatcher(app);

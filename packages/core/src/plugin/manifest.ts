@@ -1,4 +1,5 @@
 import type { UserRole } from "../db/schema/users.js";
+import type { RouteIntent } from "../route/intent.js";
 
 export interface PostTypeOptions {
   readonly label: string;
@@ -191,6 +192,13 @@ export interface RegisteredCapability {
   readonly registeredBy: string | null;
 }
 
+export interface RegisteredRewriteRule {
+  readonly pattern: string;
+  readonly intent: RouteIntent;
+  readonly priority: number;
+  readonly registeredBy: string | null;
+}
+
 export interface PluginRegistry {
   readonly postTypes: ReadonlyMap<string, RegisteredPostType>;
   readonly taxonomies: ReadonlyMap<string, RegisteredTaxonomy>;
@@ -198,6 +206,7 @@ export interface PluginRegistry {
   readonly metaBoxes: ReadonlyMap<string, RegisteredMetaBox>;
   readonly capabilities: ReadonlyMap<string, RegisteredCapability>;
   readonly settingsGroups: ReadonlyMap<string, RegisteredSettingsGroup>;
+  readonly rewriteRules: readonly RegisteredRewriteRule[];
 }
 
 export interface MutablePluginRegistry extends PluginRegistry {
@@ -207,6 +216,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly metaBoxes: Map<string, RegisteredMetaBox>;
   readonly capabilities: Map<string, RegisteredCapability>;
   readonly settingsGroups: Map<string, RegisteredSettingsGroup>;
+  readonly rewriteRules: RegisteredRewriteRule[];
 }
 
 export function createPluginRegistry(): MutablePluginRegistry {
@@ -217,6 +227,7 @@ export function createPluginRegistry(): MutablePluginRegistry {
     metaBoxes: new Map(),
     capabilities: new Map(),
     settingsGroups: new Map(),
+    rewriteRules: [],
   };
 }
 
