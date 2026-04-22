@@ -135,9 +135,7 @@ test.describe("/settings/$page", () => {
       "/settings/upsert": { site_title: "Plumix" },
     });
     await page.goto("settings/general");
-    await page
-      .getByTestId("settings-field-identity-site_title")
-      .fill("Plumix");
+    await page.getByTestId("settings-field-identity-site_title").fill("Plumix");
     await page.getByTestId("settings-submit-identity").click();
     await expect(
       page.getByTestId("settings-save-notice-identity"),
@@ -182,17 +180,15 @@ test.describe("/settings/$page", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
     await page.goto("settings/general");
-    await page
-      .getByTestId("settings-field-identity-site_title")
-      .fill("Plumix");
+    await page.getByTestId("settings-field-identity-site_title").fill("Plumix");
     await page.getByTestId("settings-submit-identity").click();
     await expect(
       page.getByTestId("settings-server-error-identity"),
     ).toBeVisible();
     // Success notice must NOT appear when the save errored.
-    await expect(
-      page.getByTestId("settings-save-notice-identity"),
-    ).toHaveCount(0);
+    await expect(page.getByTestId("settings-save-notice-identity")).toHaveCount(
+      0,
+    );
   });
 
   test("unregistered page surfaces the router 404", async ({ page }) => {
