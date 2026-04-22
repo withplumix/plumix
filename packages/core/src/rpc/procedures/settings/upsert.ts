@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 
+import type { NewSetting } from "../../../db/schema/settings.js";
 import { and, eq, inArray } from "../../../db/index.js";
 import { settings } from "../../../db/schema/settings.js";
 import { authenticated } from "../../authenticated.js";
@@ -28,14 +29,14 @@ export const upsert = base
     );
 
     const deletes: string[] = [];
-    const upserts: { key: string; value: unknown }[] = [];
+    const upsertRows: NewSetting[] = [];
     for (const [key, value] of Object.entries(filtered.values)) {
       if (value === null || value === undefined) {
         deletes.push(key);
         continue;
       }
       assertEncodedSize(filtered.group, key, value, errors);
-      upserts.push({ key, value });
+      upsertRows.push({ group: filtered.group, key, value });
     }
 
     if (deletes.length > 0) {
@@ -48,15 +49,10 @@ export const upsert = base
           ),
         );
     }
-    if (upserts.length > 0) {
-      const rows = upserts.map((u) => ({
-        group: filtered.group,
-        key: u.key,
-        value: u.value,
-      }));
+    if (upsertRows.length > 0) {
       await context.db
         .insert(settings)
-        .values(rows)
+        .values(upsertRows)
         .onConflictDoUpdate({
           target: [settings.group, settings.key],
           set: { value: sql`excluded.value` },
@@ -74,7 +70,7 @@ export const upsert = base
 
     await context.hooks.doAction("settings:group_changed", {
       group: filtered.group,
-      set: Object.fromEntries(upserts.map((u) => [u.key, u.value])),
+      set: Object.fromEntries(upsertRows.map((r) => [r.key, r.value])),
       removed: deletes,
     });
 
@@ -83,9 +79,10 @@ export const upsert = base
     });
   });
 
-// Per-value cap parallels the one on `entry.meta`. 256KiB fits any
-// realistic settings value (even a large JSON blob) while bounding
-// adversarial payloads.
+// Guard against values that can't be persisted (un-serializable) or
+// that blow past the per-value cap in `schemas.ts`. Both translate to a
+// CONFLICT with a keyed `reason` so admin UIs surface which field hit
+// the limit.
 function assertEncodedSize(
   group: string,
   key: string,

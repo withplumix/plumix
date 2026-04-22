@@ -137,6 +137,28 @@ describe("settings.upsert", () => {
     });
   });
 
+  test("round-trips non-string JSON values (the column is `mode: json`)", async () => {
+    // Locks in the contract that `value` is stored as JSON, not TEXT.
+    // If someone ever drops `mode: "json"` or stringifies at the app
+    // layer, booleans / numbers / objects would come back as strings
+    // and this assertion would flip.
+    const h = await createRpcHarness({ authAs: "admin" });
+    await h.client.settings.upsert({
+      group: "general",
+      values: {
+        count: 42,
+        enabled: true,
+        config: { nested: { arr: [1, 2] } },
+      },
+    });
+    const bag = await h.client.settings.get({ group: "general" });
+    expect(bag).toEqual({
+      count: 42,
+      enabled: true,
+      config: { nested: { arr: [1, 2] } },
+    });
+  });
+
   test("row-level isolation: upsert overwrites without duplicating the PK row", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     await h.client.settings.upsert({

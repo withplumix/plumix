@@ -23,8 +23,11 @@ export const settingsGetInputSchema = v.object({
 // Null values in an upsert are deletions; everything else is an
 // upsert. Cap on keys per request blocks accidental fan-out from
 // callers that iterate on untrusted input; cap on encoded-value size
-// lives in the handler (same pattern as `entry.meta`).
-const MAX_SETTINGS_VALUE_BYTES = 256 * 1024;
+// lives in the handler. Settings are typically short form fields —
+// 64 KiB per value comfortably fits any realistic string / JSON blob
+// a plugin would want to store as a setting and matches the WP
+// `wp_options` convention.
+const MAX_SETTINGS_VALUE_BYTES = 64 * 1024;
 const MAX_SETTINGS_KEYS_PER_UPSERT = 200;
 
 export const settingsUpsertInputSchema = v.object({

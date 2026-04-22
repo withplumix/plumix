@@ -246,10 +246,21 @@ export function createPluginSetupContext({
 // Keep page / group / field names portable: ASCII identifier that
 // starts with a letter, then letters/digits/underscores. Hyphens /
 // dots are excluded so testids, URL params, and storage keys stay
-// portable across SQLite / future MySQL without quoting.
+// portable across SQLite / future MySQL without quoting. Length cap
+// mirrors the valibot `settingsIdentifierSchema` on the RPC side so a
+// plugin can't register a name its own `settings.get` / `.upsert`
+// calls would then reject.
 const SETTINGS_NAME_RE = /^[a-z][a-z0-9_]*$/;
+const MAX_SETTINGS_IDENTIFIER_LENGTH = 64;
 
 function assertValidIdentifier(kind: string, name: string): void {
+  if (name.length > MAX_SETTINGS_IDENTIFIER_LENGTH) {
+    throw new Error(
+      `Invalid ${kind} name "${name}" — names are capped at ` +
+        `${MAX_SETTINGS_IDENTIFIER_LENGTH} characters to match the RPC ` +
+        `input schema.`,
+    );
+  }
   if (!SETTINGS_NAME_RE.test(name)) {
     throw new Error(
       `Invalid ${kind} name "${name}" — expected lowercase ASCII ` +
