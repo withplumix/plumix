@@ -169,7 +169,7 @@ describe("readManifest", () => {
 describe("findEntryTypeBySlug", () => {
   const source: PlumixManifest = {
     entryTypes: [
-      { name: "post", adminSlug: "entries", label: "Posts" },
+      { name: "post", adminSlug: "posts", label: "Posts" },
       { name: "product", adminSlug: "products", label: "Products" },
     ],
     taxonomies: [],
@@ -189,7 +189,7 @@ describe("findEntryTypeBySlug", () => {
 describe("visibleEntryTypes", () => {
   const source: PlumixManifest = {
     entryTypes: [
-      { name: "post", adminSlug: "entries", label: "Posts" },
+      { name: "post", adminSlug: "posts", label: "Posts" },
       {
         name: "product",
         adminSlug: "products",

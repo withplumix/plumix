@@ -23,7 +23,7 @@ test.describe("/entries/$slug", () => {
   test("renders skeleton rows while loading, with zero WCAG 2.1 AA violations", async ({
     page,
   }) => {
-    // Deferred promise: we control when /post/list resolves, letting the
+    // Deferred promise: we control when /entry/list resolves, letting the
     // page sit in its loading state while axe runs, then releasing it so
     // Playwright's teardown isn't waiting on a pending request.
     let release: (() => void) | undefined;
@@ -40,7 +40,7 @@ test.describe("/entries/$slug", () => {
           body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
         });
       }
-      if (url.endsWith("/post/list")) {
+      if (url.endsWith("/entry/list")) {
         await pending;
         return route.fulfill({
           status: 200,
@@ -51,7 +51,7 @@ test.describe("/entries/$slug", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
 
-    await page.goto("content/entries?status=all&page=1");
+    await page.goto("entries/posts?status=all&page=1");
     await expect(page.getByTestId("content-list-heading")).toBeVisible();
     await expect(page.getByTestId("data-table-loading")).toBeVisible();
     await expectNoAxeViolations(page);
@@ -64,9 +64,9 @@ test.describe("/entries/$slug", () => {
   }) => {
     await mockRpc(page, {
       "/auth/session": AUTHED_ADMIN,
-      "/post/list": [],
+      "/entry/list": [],
     });
-    await page.goto("content/entries?status=all&page=1");
+    await page.goto("entries/posts?status=all&page=1");
     await expect(page.getByTestId("content-list-heading")).toBeVisible();
     await expect(page.getByTestId("content-list-empty-state")).toBeVisible();
     await expectNoAxeViolations(page);
@@ -76,7 +76,7 @@ test.describe("/entries/$slug", () => {
     page,
   }) => {
     await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
-    const response = await page.goto("content/unknown-type?status=all&page=1");
+    const response = await page.goto("entries/unknown-type?status=all&page=1");
     // TanStack Router's `notFound()` returns a 404-style render — not a
     // literal HTTP 404 since we're behind Vite's SPA dev server, so assert
     // the router's default "Not Found" marker instead.
@@ -87,7 +87,7 @@ test.describe("/entries/$slug", () => {
   test("search box URL-syncs ?q= and triggers a refetch after debounce", async ({
     page,
   }) => {
-    // Capture every /post/list call so we can verify the second fetch
+    // Capture every /entry/list call so we can verify the second fetch
     // carries the search param. The mock always returns `[]` — we're
     // asserting on the RPC input, not the rendering.
     const inputs: unknown[] = [];
@@ -100,7 +100,7 @@ test.describe("/entries/$slug", () => {
           body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
         });
       }
-      if (url.endsWith("/post/list")) {
+      if (url.endsWith("/entry/list")) {
         const body = route.request().postDataJSON() as { json?: unknown };
         inputs.push(body.json);
         return route.fulfill({
@@ -112,7 +112,7 @@ test.describe("/entries/$slug", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
 
-    await page.goto("content/entries?status=all&page=1");
+    await page.goto("entries/posts?status=all&page=1");
     await page.getByTestId("content-list-search-input").fill("quantum");
     await expect(page).toHaveURL(/q=quantum/);
     // The debounced commit + refetch should eventually ship `search` in
@@ -139,7 +139,7 @@ test.describe("/entries/$slug", () => {
           body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
         });
       }
-      if (url.endsWith("/post/list")) {
+      if (url.endsWith("/entry/list")) {
         const body = route.request().postDataJSON() as { json?: unknown };
         inputs.push(body.json);
         return route.fulfill({
@@ -151,7 +151,7 @@ test.describe("/entries/$slug", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
 
-    await page.goto("content/entries?status=all&page=1");
+    await page.goto("entries/posts?status=all&page=1");
     await page.getByTestId("author-filter-mine").click();
     await expect(page).toHaveURL(/author=mine/);
     await expect
@@ -176,7 +176,7 @@ test.describe("/entries/$slug", () => {
           body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
         });
       }
-      if (url.endsWith("/post/list")) {
+      if (url.endsWith("/entry/list")) {
         const body = route.request().postDataJSON() as { json?: unknown };
         inputs.push(body.json);
         return route.fulfill({
@@ -188,7 +188,7 @@ test.describe("/entries/$slug", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
 
-    await page.goto("content/entries?status=all&page=1");
+    await page.goto("entries/posts?status=all&page=1");
     await page.getByTestId("content-list-sort-title").click();
     await expect(page).toHaveURL(/orderBy=title/);
     await expect(page).toHaveURL(/order=asc/);
@@ -204,7 +204,7 @@ test.describe("/entries/$slug", () => {
     const now = new Date("2026-04-19T12:00:00Z");
     await mockRpc(page, {
       "/auth/session": AUTHED_ADMIN,
-      "/post/list": [
+      "/entry/list": [
         {
           id: 1,
           type: "post",
@@ -239,7 +239,7 @@ test.describe("/entries/$slug", () => {
         },
       ],
     });
-    await page.goto("content/entries?status=all&page=1");
+    await page.goto("entries/posts?status=all&page=1");
     // Row id 1 was seeded by the mock above with title "Hello world" —
     // asserting the row exists + its content is enough without binding
     // to visible copy.
@@ -268,7 +268,7 @@ test.describe("/entries/$slug/new", () => {
           body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
         });
       }
-      if (url.endsWith("/post/create")) {
+      if (url.endsWith("/entry/create")) {
         const body = route.request().postDataJSON() as { json?: unknown };
         createInputs.push(body.json);
         return route.fulfill({
@@ -303,7 +303,7 @@ test.describe("/entries/$slug/new", () => {
           }),
         });
       }
-      if (url.endsWith("/post/get")) {
+      if (url.endsWith("/entry/get")) {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -339,7 +339,7 @@ test.describe("/entries/$slug/new", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
 
-    await page.goto("content/entries/new");
+    await page.goto("entries/posts/new");
     await expect(page.getByTestId("post-editor-new-heading")).toBeVisible();
 
     // Auto-slug from title while slug is still unlocked.
@@ -366,14 +366,14 @@ test.describe("/entries/$slug/new", () => {
     );
 
     // Redirects to the edit route of the new post.
-    await expect(page).toHaveURL(/content\/entries\/42/);
+    await expect(page).toHaveURL(/entries\/posts\/42/);
   });
 
   test("locked slug: once the user edits slug directly, title changes stop overwriting it", async ({
     page,
   }) => {
     await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
-    await page.goto("content/entries/new");
+    await page.goto("entries/posts/new");
 
     await page.getByTestId("post-editor-title-input").fill("First title");
     await expect(page.getByTestId("post-editor-slug-input")).toHaveValue(
@@ -392,7 +392,7 @@ test.describe("/entries/$slug/new", () => {
     page,
   }) => {
     await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
-    await page.goto("content/entries/new");
+    await page.goto("entries/posts/new");
     await expect(page.getByTestId("post-editor-new-heading")).toBeVisible();
     await expectNoAxeViolations(page);
   });
@@ -417,7 +417,7 @@ test.describe("/entries/$slug/$id", () => {
           body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
         });
       }
-      if (url.endsWith("/post/get")) {
+      if (url.endsWith("/entry/get")) {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -443,7 +443,7 @@ test.describe("/entries/$slug/$id", () => {
           }),
         });
       }
-      if (url.endsWith("/post/update")) {
+      if (url.endsWith("/entry/update")) {
         const body = route.request().postDataJSON() as { json?: unknown };
         updateInputs.push(body.json);
         return route.fulfill({
@@ -474,7 +474,7 @@ test.describe("/entries/$slug/$id", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
 
-    await page.goto("content/entries/7");
+    await page.goto("entries/posts/7");
     await expect(page.getByTestId("post-editor-edit-heading")).toBeVisible();
     // Existing title populates from the loaded post.
     await expect(page.getByTestId("post-editor-title-input")).toHaveValue(
@@ -502,7 +502,7 @@ test.describe("meta-box sidebar", () => {
   test("renders side + normal boxes, fields are typable", async ({ page }) => {
     await mockManifest(page, MANIFEST_WITH_META_BOXES);
     await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
-    await page.goto("content/entries/new");
+    await page.goto("entries/posts/new");
 
     // Both boxes render — one in the side rail, one in the main column.
     await expect(page.getByTestId("meta-box-seo")).toBeVisible();
@@ -539,7 +539,7 @@ test.describe("meta-box sidebar", () => {
           body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
         });
       }
-      if (url.endsWith("/post/create")) {
+      if (url.endsWith("/entry/create")) {
         const body = route.request().postDataJSON() as { json?: unknown };
         createInputs.push(body.json);
         return route.fulfill({
@@ -566,7 +566,7 @@ test.describe("meta-box sidebar", () => {
           }),
         });
       }
-      if (url.endsWith("/post/get")) {
+      if (url.endsWith("/entry/get")) {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -594,7 +594,7 @@ test.describe("meta-box sidebar", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
 
-    await page.goto("content/entries/new");
+    await page.goto("entries/posts/new");
     await page.getByTestId("post-editor-title-input").fill("meta post");
     await page.getByTestId("meta-box-field-meta_title-input").fill("seo title");
     await page.getByTestId("meta-box-field-is_featured-input").check();
@@ -604,7 +604,7 @@ test.describe("meta-box sidebar", () => {
       .poll(() => (createInputs.at(-1) as { meta?: unknown } | undefined)?.meta)
       .toEqual({ meta_title: "seo title", is_featured: true });
     // Route advances to the edit page after save.
-    await expect(page).toHaveURL(/content\/entries\/99/);
+    await expect(page).toHaveURL(/entries\/posts\/99/);
     // The loaded post hydrates the meta inputs from `post.get`'s `meta` bag.
     await expect(
       page.getByTestId("meta-box-field-meta_title-input"),

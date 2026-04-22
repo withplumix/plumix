@@ -16,7 +16,7 @@ import type { Entry, Term, User } from "@plumix/core/schema";
 // shape on the `mockRpc` call.
 interface MockRpcHandlers {
   "/auth/session"?: AuthSessionOutput;
-  "/post/list"?: readonly Entry[];
+  "/entry/list"?: readonly Entry[];
   "/user/list"?: readonly User[];
   "/user/invite"?: { user: User; inviteToken: string };
   "/user/get"?: User;
@@ -108,7 +108,7 @@ export const MANIFEST_WITH_POST: PlumixManifest = {
   entryTypes: [
     {
       name: "post",
-      adminSlug: "entries",
+      adminSlug: "posts",
       label: "Posts",
       labels: { singular: "Entry", plural: "Posts" },
     },
@@ -125,7 +125,7 @@ export const MANIFEST_WITH_TAXONOMIES: PlumixManifest = {
   entryTypes: [
     {
       name: "post",
-      adminSlug: "entries",
+      adminSlug: "posts",
       label: "Posts",
       labels: { singular: "Entry", plural: "Posts" },
     },
@@ -153,7 +153,7 @@ export const MANIFEST_WITH_META_BOXES: PlumixManifest = {
   entryTypes: [
     {
       name: "post",
-      adminSlug: "entries",
+      adminSlug: "posts",
       label: "Posts",
       labels: { singular: "Entry", plural: "Posts" },
     },
