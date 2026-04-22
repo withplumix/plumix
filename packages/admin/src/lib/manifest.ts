@@ -1,7 +1,7 @@
 import type {
+  EntryTypeManifestEntry,
   MetaBoxManifestEntry,
   PlumixManifest,
-  PostTypeManifestEntry,
   SettingsFieldManifestEntry,
   SettingsGroupManifestEntry,
   TaxonomyManifestEntry,
@@ -12,7 +12,7 @@ import { emptyManifest, MANIFEST_SCRIPT_ID } from "@plumix/core/manifest";
 // plumix vite plugin at consumer-build time. Falls back to an empty manifest
 // if the tag is missing or malformed so the admin shell still renders
 // (useful for `vite dev` inside the admin workspace, where the plugin isn't
-// wired and the placeholder ships with `{"postTypes":[]}`).
+// wired and the placeholder ships with `{"entryTypes":[]}`).
 export function readManifest(doc: Document = document): PlumixManifest {
   const el = doc.getElementById(MANIFEST_SCRIPT_ID);
   if (!el) return emptyManifest();
@@ -33,12 +33,12 @@ export function readManifest(doc: Document = document): PlumixManifest {
 
 function normalize(value: unknown): PlumixManifest {
   if (!value || typeof value !== "object") return emptyManifest();
-  const postTypes = (value as { postTypes?: unknown }).postTypes;
+  const entryTypes = (value as { entryTypes?: unknown }).entryTypes;
   const taxonomies = (value as { taxonomies?: unknown }).taxonomies;
   const metaBoxes = (value as { metaBoxes?: unknown }).metaBoxes;
   const settingsGroups = (value as { settingsGroups?: unknown }).settingsGroups;
   return {
-    postTypes: Array.isArray(postTypes) ? postTypes : [],
+    entryTypes: Array.isArray(entryTypes) ? entryTypes : [],
     taxonomies: Array.isArray(taxonomies) ? taxonomies : [],
     metaBoxes: Array.isArray(metaBoxes) ? metaBoxes : [],
     settingsGroups: Array.isArray(settingsGroups) ? settingsGroups : [],
@@ -57,16 +57,16 @@ function normalize(value: unknown): PlumixManifest {
 export const manifest: PlumixManifest = readManifest();
 
 /**
- * Look up a registered post type by its admin slug (the `/content/$slug`
+ * Look up a registered post type by its admin slug (the `/entries/$slug`
  * route param). Returns `undefined` when the slug doesn't match anything —
  * the route component should render a 404-style not-found state in that
  * case rather than a blank screen.
  */
-export function findPostTypeBySlug(
+export function findEntryTypeBySlug(
   slug: string,
   source: PlumixManifest = manifest,
-): PostTypeManifestEntry | undefined {
-  return source.postTypes.find((pt) => pt.adminSlug === slug);
+): EntryTypeManifestEntry | undefined {
+  return source.entryTypes.find((pt) => pt.adminSlug === slug);
 }
 
 /**
@@ -77,12 +77,12 @@ export function findPostTypeBySlug(
  * that implies "this user has any business editing this content type".
  * Subscribers (read-only) are intentionally excluded.
  */
-export function visiblePostTypes(
+export function visibleEntryTypes(
   capabilities: readonly string[],
   source: PlumixManifest = manifest,
-): readonly PostTypeManifestEntry[] {
+): readonly EntryTypeManifestEntry[] {
   const caps = new Set(capabilities);
-  return source.postTypes.filter((pt) => {
+  return source.entryTypes.filter((pt) => {
     const cap = `${pt.capabilityType ?? pt.name}:edit_own`;
     return caps.has(cap);
   });
@@ -132,7 +132,7 @@ const META_BOX_PRIORITY_WEIGHT: Record<
  * render order: by `priority` (high → default → low; undefined treated
  * as "default"), with registration order as the stable tiebreaker.
  */
-export function metaBoxesForPostType(
+export function metaBoxesForEntryType(
   postTypeName: string,
   capabilities: readonly string[],
   source: PlumixManifest = manifest,
@@ -142,7 +142,7 @@ export function metaBoxesForPostType(
   // safe to do in place — no need to copy again.
   return source.metaBoxes
     .filter((box) => {
-      if (!box.postTypes.includes(postTypeName)) return false;
+      if (!box.entryTypes.includes(postTypeName)) return false;
       if (box.capability !== undefined && !caps.has(box.capability))
         return false;
       return true;

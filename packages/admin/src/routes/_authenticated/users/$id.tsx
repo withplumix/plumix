@@ -47,7 +47,7 @@ import {
 const ROLE_LABEL: Record<UserRole, string> = {
   admin: "Administrator — full control",
   editor: "Editor — publish + edit any post",
-  author: "Author — publish own posts",
+  author: "Author — publish own entries",
   contributor: "Contributor — draft, no publish",
   subscriber: "Subscriber — read only",
 };
@@ -125,7 +125,7 @@ function UserEditRoute(): ReactNode {
   return (
     <UserEditForm
       // Remount after each save so TanStack Form re-reads `defaultValues`
-      // from the refetched row. Same pattern as `/content/$slug/$id`.
+      // from the refetched row. Same pattern as `/entries/$slug/$id`.
       key={
         target.updatedAt instanceof Date
           ? target.updatedAt.toISOString()
@@ -398,7 +398,7 @@ function StatusCard({ target }: { target: User }): ReactNode {
         <CardDescription>
           {isDisabled
             ? "Disabled accounts can't sign in. Re-enabling restores access; their passkey is still registered."
-            : "Disabling signs the user out immediately and blocks future sign-ins. Their posts stay published."}
+            : "Disabling signs the user out immediately and blocks future sign-ins. Their entries stay published."}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
@@ -490,7 +490,7 @@ function DeleteCard({ target }: { target: User }): ReactNode {
         <CardHeader>
           <CardTitle className="text-destructive">Delete user</CardTitle>
           <CardDescription>
-            Permanent. Their posts stay, but you'll choose who inherits
+            Permanent. Their entries stay, but you'll choose who inherits
             authorship.
           </CardDescription>
         </CardHeader>
@@ -516,13 +516,13 @@ function DeleteCard({ target }: { target: User }): ReactNode {
           Confirm delete: {target.email}
         </CardTitle>
         <CardDescription>
-          If this user authored any posts, the next step reassigns them. Leave
-          "Keep posts as-is" if they have none.
+          If this user authored any entries, the next step reassigns them. Leave
+          "Keep entries as-is" if they have none.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="reassign-to">Reassign posts to</Label>
+          <Label htmlFor="reassign-to">Reassign entries to</Label>
           <select
             id="reassign-to"
             value={reassignTo == null ? "" : String(reassignTo)}
@@ -534,7 +534,7 @@ function DeleteCard({ target }: { target: User }): ReactNode {
             data-testid="user-delete-reassign-select"
             className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <option value="">Keep posts as-is (none to reassign)</option>
+            <option value="">Keep entries as-is (none to reassign)</option>
             {reassignOptions.map((u) => (
               <option key={u.id} value={String(u.id)}>
                 {u.name ?? u.email} ({u.email})
@@ -622,7 +622,7 @@ const DELETE_ERROR_MESSAGES: Partial<Record<string, string>> = {
   last_admin:
     "Can't delete the last administrator. Promote someone else first.",
   has_posts:
-    "This user has authored posts. Pick someone to reassign them to above.",
+    "This user has authored entries. Pick someone to reassign them to above.",
   reassign_to_self: "Can't reassign to the user being deleted.",
 };
 

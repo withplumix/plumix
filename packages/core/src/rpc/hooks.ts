@@ -1,14 +1,14 @@
+import type { Entry, EntryStatus, NewEntry } from "../db/schema/entries.js";
 import type { Option } from "../db/schema/options.js";
-import type { NewPost, Post, PostStatus } from "../db/schema/posts.js";
 import type { Term } from "../db/schema/terms.js";
 import type { User } from "../db/schema/users.js";
-import type { OptionSetInput } from "./procedures/option/schemas.js";
-import type { PostMetaChanges } from "./procedures/post/meta.js";
+import type { EntryMetaChanges } from "./procedures/entry/meta.js";
 import type {
-  PostCreateInput,
-  PostListInput,
-  PostUpdateInput,
-} from "./procedures/post/schemas.js";
+  EntryCreateInput,
+  EntryListInput,
+  EntryUpdateInput,
+} from "./procedures/entry/schemas.js";
+import type { OptionSetInput } from "./procedures/option/schemas.js";
 import type {
   TermCreateInput,
   TermListInput,
@@ -22,20 +22,20 @@ import type {
 
 declare module "../hooks/types.js" {
   interface FilterRegistry {
-    "rpc:post.list:input": (input: PostListInput) => PostListInput;
-    "rpc:post.list:output": (output: readonly Post[]) => readonly Post[];
+    "rpc:entry.list:input": (input: EntryListInput) => EntryListInput;
+    "rpc:entry.list:output": (output: readonly Entry[]) => readonly Entry[];
 
-    "rpc:post.get:input": (input: { id: number }) => typeof input;
-    "rpc:post.get:output": (output: Post) => Post;
+    "rpc:entry.get:input": (input: { id: number }) => typeof input;
+    "rpc:entry.get:output": (output: Entry) => Entry;
 
-    "rpc:post.create:input": (input: PostCreateInput) => PostCreateInput;
-    "rpc:post.create:output": (output: Post) => Post;
+    "rpc:entry.create:input": (input: EntryCreateInput) => EntryCreateInput;
+    "rpc:entry.create:output": (output: Entry) => Entry;
 
-    "rpc:post.update:input": (input: PostUpdateInput) => PostUpdateInput;
-    "rpc:post.update:output": (output: Post) => Post;
+    "rpc:entry.update:input": (input: EntryUpdateInput) => EntryUpdateInput;
+    "rpc:entry.update:output": (output: Entry) => Entry;
 
-    "rpc:post.trash:input": (input: { id: number }) => typeof input;
-    "rpc:post.trash:output": (output: Post) => Post;
+    "rpc:entry.trash:input": (input: { id: number }) => typeof input;
+    "rpc:entry.trash:output": (output: Entry) => Entry;
 
     "rpc:user.list:input": (input: UserListInput) => UserListInput;
     "rpc:user.list:output": (output: readonly User[]) => readonly User[];
@@ -80,39 +80,37 @@ declare module "../hooks/types.js" {
     "rpc:option.delete:output": (output: Option) => Option;
 
     /**
-     * `post:before_save` fires on every save; `post:<type>:before_save`
-     * fires only for non-default CPTs (to avoid a double-fire when
-     * `post.type === "post"`). The type-scoped variant runs first, the
-     * generic second — plugins can layer transforms.
+     * `entry:before_save` fires on every save; `entry:<type>:before_save`
+     * fires the type-scoped variant first. Plugins can layer transforms
+     * (type-specific → generic).
      */
-    "post:before_save": (post: NewPost) => NewPost;
-    [K: `post:${string}:before_save`]: (post: NewPost) => NewPost;
+    "entry:before_save": (entry: NewEntry) => NewEntry;
+    [K: `entry:${string}:before_save`]: (entry: NewEntry) => NewEntry;
   }
 
   interface ActionRegistry {
     /**
-     * Post lifecycle. The generic `post:*` action fires for every post
-     * regardless of type; `post:<type>:*` also fires for non-default
-     * CPTs so plugins can target one type without re-filtering. Both
-     * carry the same payload shape — subscribe to whichever scope you
-     * need.
+     * Entry lifecycle. `entry:<event>` fires for every entry regardless
+     * of type; `entry:<type>:<event>` also fires so plugins can target
+     * one entry type without re-filtering inside a generic handler.
+     * Both always fire — subscribe to whichever granularity you need.
      */
-    "post:published": (post: Post) => void | Promise<void>;
-    "post:updated": (post: Post, previous: Post) => void | Promise<void>;
-    "post:trashed": (post: Post) => void | Promise<void>;
-    "post:transition": (
-      post: Post,
-      oldStatus: PostStatus,
+    "entry:published": (entry: Entry) => void | Promise<void>;
+    "entry:updated": (entry: Entry, previous: Entry) => void | Promise<void>;
+    "entry:trashed": (entry: Entry) => void | Promise<void>;
+    "entry:transition": (
+      entry: Entry,
+      oldStatus: EntryStatus,
     ) => void | Promise<void>;
-    [K: `post:${string}:published`]: (post: Post) => void | Promise<void>;
-    [K: `post:${string}:updated`]: (
-      post: Post,
-      previous: Post,
+    [K: `entry:${string}:published`]: (entry: Entry) => void | Promise<void>;
+    [K: `entry:${string}:updated`]: (
+      entry: Entry,
+      previous: Entry,
     ) => void | Promise<void>;
-    [K: `post:${string}:trashed`]: (post: Post) => void | Promise<void>;
-    [K: `post:${string}:transition`]: (
-      post: Post,
-      oldStatus: PostStatus,
+    [K: `entry:${string}:trashed`]: (entry: Entry) => void | Promise<void>;
+    [K: `entry:${string}:transition`]: (
+      entry: Entry,
+      oldStatus: EntryStatus,
     ) => void | Promise<void>;
 
     /**
@@ -121,9 +119,9 @@ declare module "../hooks/types.js" {
      * `deleted_post_meta` / `added_post_meta` collapsed into one
      * action.
      */
-    "post:meta_changed": (
-      post: { readonly id: number; readonly type: string },
-      changes: PostMetaChanges,
+    "entry:meta_changed": (
+      entry: { readonly id: number; readonly type: string },
+      changes: EntryMetaChanges,
     ) => void | Promise<void>;
 
     /**
@@ -184,8 +182,8 @@ declare module "../hooks/types.js" {
 
     /**
      * Fires after a successful `user.delete`. `reassignedTo` is the
-     * user id that inherited this account's posts, or `null` if the
-     * deleted user had no posts (so no reassignment happened). Mirrors
+     * user id that inherited this account's entries, or `null` if the
+     * deleted user had no entries (so no reassignment happened). Mirrors
      * WP's `deleted_user(user_id, reassign_to)`.
      */
     "user:deleted": (

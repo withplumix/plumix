@@ -7,7 +7,7 @@ const SEARCH_DEBOUNCE_MS = 250;
 
 /**
  * Debounced URL-synced search input shared by admin list screens
- * (/content/$slug, /users, etc). Local state keeps typing instant; the
+ * (/entries/$slug, /users, etc). Local state keeps typing instant; the
  * debounce defers the URL commit (which triggers the RPC refetch) so
  * every keystroke doesn't spawn a query. Parent keys this component on
  * the URL value so external URL changes (back button, deep links) remount

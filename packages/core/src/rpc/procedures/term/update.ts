@@ -3,7 +3,7 @@ import { and, eq, isUniqueConstraintError } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { stripUndefined } from "../post/helpers.js";
+import { stripUndefined } from "../entry/helpers.js";
 import { parentWouldCreateCycle, taxonomyCapability } from "./helpers.js";
 import { termUpdateInputSchema } from "./schemas.js";
 

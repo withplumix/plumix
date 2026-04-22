@@ -7,11 +7,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.js";
-import { visiblePostTypes } from "@/lib/manifest.js";
+import { visibleEntryTypes } from "@/lib/manifest.js";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, FileText } from "lucide-react";
 
-import { CONTENT_LIST_DEFAULT_SEARCH } from "./content/$slug/-constants.js";
+import { ENTRIES_LIST_DEFAULT_SEARCH } from "./entries/$slug/-constants.js";
 
 export const Route = createFileRoute("/_authenticated/")({
   component: DashboardIndex,
@@ -20,7 +20,7 @@ export const Route = createFileRoute("/_authenticated/")({
 function DashboardIndex(): ReactNode {
   const { user } = Route.useRouteContext();
   const greeting = user.name ?? user.email;
-  const tiles = visiblePostTypes(user.capabilities);
+  const tiles = visibleEntryTypes(user.capabilities);
 
   return (
     <div className="flex flex-col gap-6">
@@ -56,9 +56,9 @@ function DashboardIndex(): ReactNode {
                 <CardContent>
                   <Button asChild variant="outline" className="w-full">
                     <Link
-                      to="/content/$slug"
+                      to="/entries/$slug"
                       params={{ slug: pt.adminSlug }}
-                      search={CONTENT_LIST_DEFAULT_SEARCH}
+                      search={ENTRIES_LIST_DEFAULT_SEARCH}
                       data-testid={`dashboard-tile-${pt.name}-link`}
                     >
                       Browse {labelLower}

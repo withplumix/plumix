@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/sidebar.js";
 import { hasCap } from "@/lib/caps.js";
 import {
-  visiblePostTypes,
+  visibleEntryTypes,
   visibleSettingsGroups,
   visibleTaxonomies,
 } from "@/lib/manifest.js";
@@ -51,7 +51,7 @@ const OVERVIEW_GROUP: NavGroup = {
 };
 
 function buildContentGroup(capabilities: readonly string[]): NavGroup | null {
-  const items = visiblePostTypes(capabilities).map<NavItem>((pt) => ({
+  const items = visibleEntryTypes(capabilities).map<NavItem>((pt) => ({
     to: `/content/${pt.adminSlug}`,
     label: pt.labels?.plural ?? pt.label,
     icon: FileText,

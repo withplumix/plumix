@@ -2,7 +2,7 @@ import type { Page, Route } from "@playwright/test";
 
 import type { AuthSessionOutput } from "@plumix/core";
 import type { PlumixManifest } from "@plumix/core/manifest";
-import type { Post, Term, User } from "@plumix/core/schema";
+import type { Entry, Term, User } from "@plumix/core/schema";
 
 // The e2e webServer is just Vite — no real backend — so every /_plumix/rpc
 // call is intercepted here and answered with a deterministic fixture.
@@ -16,7 +16,7 @@ import type { Post, Term, User } from "@plumix/core/schema";
 // shape on the `mockRpc` call.
 interface MockRpcHandlers {
   "/auth/session"?: AuthSessionOutput;
-  "/post/list"?: readonly Post[];
+  "/entry/list"?: readonly Entry[];
   "/user/list"?: readonly User[];
   "/user/invite"?: { user: User; inviteToken: string };
   "/user/get"?: User;
@@ -72,7 +72,7 @@ export function mockSession(
 /**
  * Inject a manifest into the admin HTML before the module script loads.
  * Standalone `vite dev` ships an empty-manifest placeholder; specs that
- * need a registered post type (to hit `/content/$slug`) install a
+ * need a registered post type (to hit `/entries/$slug`) install a
  * synthetic one via this helper. Uses `page.route` to mutate the HTML
  * response so `readManifest()` sees the populated tag on first parse.
  */
@@ -101,16 +101,16 @@ export async function mockManifest(
   });
 }
 
-// Default post-type manifest fixture — one entry, slug `posts`, shared
+// Default post-type manifest fixture — one entry, slug `entries`, shared
 // by specs that just need "something to list" without caring about the
 // specifics.
 export const MANIFEST_WITH_POST: PlumixManifest = {
-  postTypes: [
+  entryTypes: [
     {
       name: "post",
       adminSlug: "posts",
       label: "Posts",
-      labels: { singular: "Post", plural: "Posts" },
+      labels: { singular: "Entry", plural: "Posts" },
     },
   ],
   taxonomies: [],
@@ -122,12 +122,12 @@ export const MANIFEST_WITH_POST: PlumixManifest = {
 // (tag) — shared by the taxonomy e2e specs so both code paths can be
 // exercised from a single fixture.
 export const MANIFEST_WITH_TAXONOMIES: PlumixManifest = {
-  postTypes: [
+  entryTypes: [
     {
       name: "post",
       adminSlug: "posts",
       label: "Posts",
-      labels: { singular: "Post", plural: "Posts" },
+      labels: { singular: "Entry", plural: "Posts" },
     },
   ],
   taxonomies: [
@@ -150,12 +150,12 @@ export const MANIFEST_WITH_TAXONOMIES: PlumixManifest = {
 // Manifest with two meta boxes — one in the right rail (`side`), one in
 // the main column (`normal`) — used by editor e2e to cover both slots.
 export const MANIFEST_WITH_META_BOXES: PlumixManifest = {
-  postTypes: [
+  entryTypes: [
     {
       name: "post",
       adminSlug: "posts",
       label: "Posts",
-      labels: { singular: "Post", plural: "Posts" },
+      labels: { singular: "Entry", plural: "Posts" },
     },
   ],
   taxonomies: [],
@@ -164,7 +164,7 @@ export const MANIFEST_WITH_META_BOXES: PlumixManifest = {
       id: "seo",
       label: "SEO",
       context: "normal",
-      postTypes: ["post"],
+      entryTypes: ["post"],
       fields: [
         {
           key: "meta_title",
@@ -178,7 +178,7 @@ export const MANIFEST_WITH_META_BOXES: PlumixManifest = {
       id: "featured",
       label: "Featured",
       context: "side",
-      postTypes: ["post"],
+      entryTypes: ["post"],
       fields: [
         {
           key: "is_featured",
@@ -196,7 +196,7 @@ export const MANIFEST_WITH_META_BOXES: PlumixManifest = {
 // contract end-to-end — plugins register a page with labelled sections
 // and the admin renders `<fieldset>` / `<legend>` accessibility markup.
 export const MANIFEST_WITH_SETTINGS: PlumixManifest = {
-  postTypes: [],
+  entryTypes: [],
   taxonomies: [],
   metaBoxes: [],
   settingsGroups: [

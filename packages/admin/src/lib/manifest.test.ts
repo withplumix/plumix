@@ -7,12 +7,12 @@ import type {
 
 import {
   allSettingsFields,
-  findPostTypeBySlug,
+  findEntryTypeBySlug,
   findSettingsGroupByName,
   findTaxonomyByName,
-  metaBoxesForPostType,
+  metaBoxesForEntryType,
   readManifest,
-  visiblePostTypes,
+  visibleEntryTypes,
   visibleSettingsGroups,
   visibleTaxonomies,
 } from "./manifest.js";
@@ -35,7 +35,7 @@ describe("readManifest", () => {
   test("returns empty manifest when the script tag is absent", () => {
     const doc = document.implementation.createHTMLDocument("test");
     expect(readManifest(doc)).toEqual({
-      postTypes: [],
+      entryTypes: [],
       taxonomies: [],
       metaBoxes: [],
       settingsGroups: [],
@@ -45,11 +45,11 @@ describe("readManifest", () => {
   test("parses the injected JSON payload", () => {
     const doc = withManifestScript(
       JSON.stringify({
-        postTypes: [{ name: "post", label: "Posts" }],
+        entryTypes: [{ name: "post", label: "Posts" }],
       }),
     );
     expect(readManifest(doc)).toEqual({
-      postTypes: [{ name: "post", label: "Posts" }],
+      entryTypes: [{ name: "post", label: "Posts" }],
       taxonomies: [],
       metaBoxes: [],
       settingsGroups: [],
@@ -59,7 +59,7 @@ describe("readManifest", () => {
   test("empty payload falls back to empty manifest", () => {
     const doc = withManifestScript("");
     expect(readManifest(doc)).toEqual({
-      postTypes: [],
+      entryTypes: [],
       taxonomies: [],
       metaBoxes: [],
       settingsGroups: [],
@@ -72,7 +72,7 @@ describe("readManifest", () => {
     });
     const doc = withManifestScript("{not-json");
     expect(readManifest(doc)).toEqual({
-      postTypes: [],
+      entryTypes: [],
       taxonomies: [],
       metaBoxes: [],
       settingsGroups: [],
@@ -80,10 +80,10 @@ describe("readManifest", () => {
     expect(errSpy).toHaveBeenCalledOnce();
   });
 
-  test("non-array postTypes coerces to empty array", () => {
-    const doc = withManifestScript(JSON.stringify({ postTypes: "oops" }));
+  test("non-array entryTypes coerces to empty array", () => {
+    const doc = withManifestScript(JSON.stringify({ entryTypes: "oops" }));
     expect(readManifest(doc)).toEqual({
-      postTypes: [],
+      entryTypes: [],
       taxonomies: [],
       metaBoxes: [],
       settingsGroups: [],
@@ -92,10 +92,10 @@ describe("readManifest", () => {
 
   test("non-array metaBoxes coerces to empty array", () => {
     const doc = withManifestScript(
-      JSON.stringify({ postTypes: [], metaBoxes: "oops" }),
+      JSON.stringify({ entryTypes: [], metaBoxes: "oops" }),
     );
     expect(readManifest(doc)).toEqual({
-      postTypes: [],
+      entryTypes: [],
       taxonomies: [],
       metaBoxes: [],
       settingsGroups: [],
@@ -105,25 +105,25 @@ describe("readManifest", () => {
   test("parses the injected JSON payload with metaBoxes", () => {
     const doc = withManifestScript(
       JSON.stringify({
-        postTypes: [],
+        entryTypes: [],
         metaBoxes: [
           {
             id: "seo",
             label: "SEO",
-            postTypes: ["post"],
+            entryTypes: ["post"],
             fields: [],
           },
         ],
       }),
     );
     expect(readManifest(doc)).toEqual({
-      postTypes: [],
+      entryTypes: [],
       taxonomies: [],
       metaBoxes: [
         {
           id: "seo",
           label: "SEO",
-          postTypes: ["post"],
+          entryTypes: ["post"],
           fields: [],
         },
       ],
@@ -134,7 +134,7 @@ describe("readManifest", () => {
   test("parses the injected JSON payload with taxonomies", () => {
     const doc = withManifestScript(
       JSON.stringify({
-        postTypes: [],
+        entryTypes: [],
         taxonomies: [
           {
             name: "category",
@@ -145,7 +145,7 @@ describe("readManifest", () => {
       }),
     );
     expect(readManifest(doc)).toEqual({
-      postTypes: [],
+      entryTypes: [],
       taxonomies: [
         {
           name: "category",
@@ -160,15 +160,15 @@ describe("readManifest", () => {
 
   test("non-array taxonomies coerces to empty array", () => {
     const doc = withManifestScript(
-      JSON.stringify({ postTypes: [], taxonomies: "not-an-array" }),
+      JSON.stringify({ entryTypes: [], taxonomies: "not-an-array" }),
     );
     expect(readManifest(doc).taxonomies).toEqual([]);
   });
 });
 
-describe("findPostTypeBySlug", () => {
+describe("findEntryTypeBySlug", () => {
   const source: PlumixManifest = {
-    postTypes: [
+    entryTypes: [
       { name: "post", adminSlug: "posts", label: "Posts" },
       { name: "product", adminSlug: "products", label: "Products" },
     ],
@@ -178,17 +178,17 @@ describe("findPostTypeBySlug", () => {
   };
 
   test("returns the matching entry", () => {
-    expect(findPostTypeBySlug("products", source)?.name).toBe("product");
+    expect(findEntryTypeBySlug("products", source)?.name).toBe("product");
   });
 
   test("returns undefined when no entry matches", () => {
-    expect(findPostTypeBySlug("nope", source)).toBeUndefined();
+    expect(findEntryTypeBySlug("nope", source)).toBeUndefined();
   });
 });
 
-describe("visiblePostTypes", () => {
+describe("visibleEntryTypes", () => {
   const source: PlumixManifest = {
-    postTypes: [
+    entryTypes: [
       { name: "post", adminSlug: "posts", label: "Posts" },
       {
         name: "product",
@@ -210,25 +210,25 @@ describe("visiblePostTypes", () => {
 
   test("filters by `${capabilityType}:edit_own`; unset capabilityType uses name", () => {
     const caps = ["post:edit_own", "post:read"];
-    const visible = visiblePostTypes(caps, source).map((pt) => pt.name);
+    const visible = visibleEntryTypes(caps, source).map((pt) => pt.name);
     // `post` → "post:edit_own" ✓; `news` shares capabilityType "post" ✓;
     // `product` needs "product:edit_own" which isn't granted ✗
     expect(visible).toEqual(["post", "news"]);
   });
 
   test("returns empty when no capabilities match", () => {
-    expect(visiblePostTypes([], source)).toEqual([]);
+    expect(visibleEntryTypes([], source)).toEqual([]);
   });
 });
 
-describe("metaBoxesForPostType", () => {
+describe("metaBoxesForEntryType", () => {
   const box = (
     id: string,
     overrides: Partial<MetaBoxManifestEntry> = {},
   ): MetaBoxManifestEntry => ({
     id,
     label: id,
-    postTypes: ["post"],
+    entryTypes: ["post"],
     fields: [],
     ...overrides,
   });
@@ -236,7 +236,7 @@ describe("metaBoxesForPostType", () => {
   test("returns boxes applicable to the post type, honours priority order", () => {
     const source: PlumixManifest = {
       taxonomies: [],
-      postTypes: [],
+      entryTypes: [],
       metaBoxes: [
         box("a", { priority: "low" }),
         box("b", { priority: "high" }),
@@ -244,73 +244,75 @@ describe("metaBoxesForPostType", () => {
       ],
       settingsGroups: [],
     };
-    const ids = metaBoxesForPostType("post", [], source).map((b) => b.id);
+    const ids = metaBoxesForEntryType("post", [], source).map((b) => b.id);
     expect(ids).toEqual(["b", "c", "a"]);
   });
 
   test("insertion order is the tiebreaker among boxes at the same priority", () => {
     const source: PlumixManifest = {
       taxonomies: [],
-      postTypes: [],
+      entryTypes: [],
       metaBoxes: [
         box("first", { priority: "high" }),
         box("second", { priority: "high" }),
       ],
       settingsGroups: [],
     };
-    const ids = metaBoxesForPostType("post", [], source).map((b) => b.id);
+    const ids = metaBoxesForEntryType("post", [], source).map((b) => b.id);
     expect(ids).toEqual(["first", "second"]);
   });
 
-  test("drops boxes whose `postTypes` doesn't include the target", () => {
+  test("drops boxes whose `entryTypes` doesn't include the target", () => {
     const source: PlumixManifest = {
       taxonomies: [],
-      postTypes: [],
+      entryTypes: [],
       metaBoxes: [
-        box("seo", { postTypes: ["post"] }),
-        box("shop", { postTypes: ["product"] }),
+        box("seo", { entryTypes: ["post"] }),
+        box("shop", { entryTypes: ["product"] }),
       ],
       settingsGroups: [],
     };
-    const ids = metaBoxesForPostType("post", [], source).map((b) => b.id);
+    const ids = metaBoxesForEntryType("post", [], source).map((b) => b.id);
     expect(ids).toEqual(["seo"]);
   });
 
   test("drops boxes gated by a capability the user lacks", () => {
     const source: PlumixManifest = {
       taxonomies: [],
-      postTypes: [],
+      entryTypes: [],
       metaBoxes: [
         box("public"),
         box("privileged", { capability: "post:edit_any" }),
       ],
       settingsGroups: [],
     };
-    const withoutCap = metaBoxesForPostType("post", [], source).map(
+    const withoutCap = metaBoxesForEntryType("post", [], source).map(
       (b) => b.id,
     );
     expect(withoutCap).toEqual(["public"]);
 
-    const withCap = metaBoxesForPostType("post", ["post:edit_any"], source).map(
-      (b) => b.id,
-    );
+    const withCap = metaBoxesForEntryType(
+      "post",
+      ["post:edit_any"],
+      source,
+    ).map((b) => b.id);
     expect(withCap).toEqual(["public", "privileged"]);
   });
 
   test("returns empty when no meta boxes are registered", () => {
     const source: PlumixManifest = {
-      postTypes: [],
+      entryTypes: [],
       taxonomies: [],
       metaBoxes: [],
       settingsGroups: [],
     };
-    expect(metaBoxesForPostType("post", [], source)).toEqual([]);
+    expect(metaBoxesForEntryType("post", [], source)).toEqual([]);
   });
 });
 
 describe("findTaxonomyByName", () => {
   const source: PlumixManifest = {
-    postTypes: [],
+    entryTypes: [],
     taxonomies: [
       { name: "category", label: "Categories", isHierarchical: true },
       { name: "tag", label: "Tags" },
@@ -330,7 +332,7 @@ describe("findTaxonomyByName", () => {
 
 describe("visibleTaxonomies", () => {
   const source: PlumixManifest = {
-    postTypes: [],
+    entryTypes: [],
     taxonomies: [
       { name: "category", label: "Categories" },
       { name: "tag", label: "Tags" },
@@ -353,7 +355,7 @@ describe("visibleTaxonomies", () => {
 
 describe("findSettingsGroupByName + visibleSettingsGroups + allSettingsFields", () => {
   const source: PlumixManifest = {
-    postTypes: [],
+    entryTypes: [],
     taxonomies: [],
     metaBoxes: [],
     settingsGroups: [

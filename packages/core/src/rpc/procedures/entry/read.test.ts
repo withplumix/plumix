@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
 
 import { eq } from "../../../db/index.js";
-import { postTerm } from "../../../db/schema/post_term.js";
-import { posts } from "../../../db/schema/posts.js";
+import { entries } from "../../../db/schema/entries.js";
+import { entryTerm } from "../../../db/schema/entry_term.js";
 import { terms } from "../../../db/schema/terms.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { createRpcHarness } from "../../../test/rpc.js";
@@ -22,19 +22,19 @@ async function seedTerm(
 
 async function attachTerm(
   h: Awaited<ReturnType<typeof createRpcHarness>>,
-  postId: number,
+  entryId: number,
   termId: number,
 ): Promise<void> {
-  await h.context.db.insert(postTerm).values({ postId, termId });
+  await h.context.db.insert(entryTerm).values({ entryId, termId });
 }
 
-describe("post.list", () => {
-  test("returns published posts by default for subscriber", async () => {
+describe("entry.list", () => {
+  test("returns published entries by default for subscriber", async () => {
     const h = await createRpcHarness({ authAs: "subscriber" });
     await h.factory.published.create({ authorId: h.user.id, slug: "pub-1" });
     await h.factory.draft.create({ authorId: h.user.id, slug: "draft-1" });
 
-    const rows = await h.client.post.list({});
+    const rows = await h.client.entry.list({});
     expect(rows).toEqual([expect.objectContaining({ slug: "pub-1" })]);
   });
 
@@ -43,7 +43,7 @@ describe("post.list", () => {
     await h.factory.published.create({ authorId: h.user.id, slug: "pub-2" });
     await h.factory.draft.create({ authorId: h.user.id, slug: "draft-2" });
 
-    const rows = await h.client.post.list({ status: "draft" });
+    const rows = await h.client.entry.list({ status: "draft" });
     expect(rows).toEqual([expect.objectContaining({ slug: "draft-2" })]);
   });
 
@@ -51,16 +51,16 @@ describe("post.list", () => {
     const h = await createRpcHarness({ authAs: "subscriber" });
     await h.factory.draft.create({ authorId: h.user.id, slug: "secret" });
 
-    const rows = await h.client.post.list({ status: "draft" });
+    const rows = await h.client.entry.list({ status: "draft" });
     expect(rows).toEqual([]);
   });
 
   test("honours pagination (limit + offset)", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
-    await h.factory.post.createList(5, { authorId: h.user.id });
+    await h.factory.entry.createList(5, { authorId: h.user.id });
 
-    const page1 = await h.client.post.list({ limit: 2, offset: 0 });
-    const page2 = await h.client.post.list({ limit: 2, offset: 2 });
+    const page1 = await h.client.entry.list({ limit: 2, offset: 0 });
+    const page2 = await h.client.entry.list({ limit: 2, offset: 2 });
     expect(page1).toHaveLength(2);
     expect(page2).toHaveLength(2);
     const [firstOfPage1] = page1;
@@ -71,14 +71,14 @@ describe("post.list", () => {
   test("forbidden for a non-registered post type", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     await expect(
-      h.client.post.list({ type: "unknown_type" }),
+      h.client.entry.list({ type: "unknown_type" }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
       data: { capability: "unknown_type:read" },
     });
   });
 
-  test("parentId=null returns only top-level posts", async () => {
+  test("parentId=null returns only top-level entries", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const root = await h.factory.published.create({
       authorId: h.user.id,
@@ -90,7 +90,7 @@ describe("post.list", () => {
       parentId: root.id,
     });
 
-    const top = await h.client.post.list({ parentId: null });
+    const top = await h.client.entry.list({ parentId: null });
     expect(top.map((p) => p.slug)).toEqual(["root-page"]);
   });
 
@@ -110,7 +110,7 @@ describe("post.list", () => {
       slug: "unrelated",
     });
 
-    const children = await h.client.post.list({ parentId: root.id });
+    const children = await h.client.entry.list({ parentId: root.id });
     expect(children.map((p) => p.id)).toEqual([child.id]);
   });
 
@@ -126,7 +126,7 @@ describe("post.list", () => {
       parentId: root.id,
     });
 
-    const all = await h.client.post.list({});
+    const all = await h.client.entry.list({});
     expect(all.map((p) => p.slug).sort()).toEqual(["p-child", "p-root"]);
   });
 
@@ -143,7 +143,7 @@ describe("post.list", () => {
       slug: "unrelated",
     });
 
-    const rows = await h.client.post.list({ search: "hello" });
+    const rows = await h.client.entry.list({ search: "hello" });
     expect(rows.map((r) => r.slug)).toEqual(["hello"]);
   });
 
@@ -175,7 +175,7 @@ describe("post.list", () => {
       excerpt: "All about giraffes.",
     });
 
-    const rows = await h.client.post.list({ search: "giraffes" });
+    const rows = await h.client.entry.list({ search: "giraffes" });
     expect(rows.map((r) => r.slug).sort()).toEqual(["in-body", "in-excerpt"]);
   });
 
@@ -197,7 +197,7 @@ describe("post.list", () => {
       slug: "physics-only",
     });
 
-    const rows = await h.client.post.list({ search: "quantum physics" });
+    const rows = await h.client.entry.list({ search: "quantum physics" });
     expect(rows.map((r) => r.slug)).toEqual(["both"]);
   });
 
@@ -214,7 +214,7 @@ describe("post.list", () => {
       slug: "phrase-miss",
     });
 
-    const rows = await h.client.post.list({ search: '"quantum physics"' });
+    const rows = await h.client.entry.list({ search: '"quantum physics"' });
     expect(rows.map((r) => r.slug)).toEqual(["phrase-hit"]);
   });
 
@@ -240,7 +240,7 @@ describe("post.list", () => {
       slug: "pillow-only",
     });
 
-    const rows = await h.client.post.list({ search: "pillow -sofa" });
+    const rows = await h.client.entry.list({ search: "pillow -sofa" });
     expect(rows.map((r) => r.slug)).toEqual(["pillow-only"]);
   });
 
@@ -258,7 +258,7 @@ describe("post.list", () => {
     });
 
     // A literal `%` in the query should match only "50%", not everything.
-    const rows = await h.client.post.list({ search: "50%" });
+    const rows = await h.client.entry.list({ search: "50%" });
     expect(rows.map((r) => r.slug)).toEqual(["with-percent"]);
   });
 
@@ -281,7 +281,7 @@ describe("post.list", () => {
     await attachTerm(h, p1.id, news);
     await attachTerm(h, p2.id, tutorials);
 
-    const rows = await h.client.post.list({
+    const rows = await h.client.entry.list({
       taxonomies: { category: ["news", "tutorials"] },
     });
     expect(rows.map((r) => r.slug).sort()).toEqual(["news-post", "tut-post"]);
@@ -308,7 +308,7 @@ describe("post.list", () => {
     await attachTerm(h, newsOnly.id, news);
     await attachTerm(h, urgentOnly.id, urgent);
 
-    const rows = await h.client.post.list({
+    const rows = await h.client.entry.list({
       taxonomies: { category: ["news"], tag: ["urgent"] },
     });
     expect(rows.map((r) => r.slug)).toEqual(["both"]);
@@ -319,7 +319,7 @@ describe("post.list", () => {
     await h.factory.published.create({ authorId: h.user.id, slug: "a" });
     await h.factory.published.create({ authorId: h.user.id, slug: "b" });
 
-    const rows = await h.client.post.list({ taxonomies: { category: [] } });
+    const rows = await h.client.entry.list({ taxonomies: { category: [] } });
     expect(rows.map((r) => r.slug).sort()).toEqual(["a", "b"]);
   });
 
@@ -341,7 +341,7 @@ describe("post.list", () => {
     await attachTerm(h, catPost.id, catNews);
     await attachTerm(h, tagPost.id, tagNews);
 
-    const rows = await h.client.post.list({
+    const rows = await h.client.entry.list({
       taxonomies: { category: ["news"] },
     });
     expect(rows.map((r) => r.slug)).toEqual(["in-category"]);
@@ -363,7 +363,7 @@ describe("post.list", () => {
     await attachTerm(h, matches.id, news);
     // `notTagged` has the same title but no term — taxonomy filter excludes it
 
-    const rows = await h.client.post.list({
+    const rows = await h.client.entry.list({
       search: "quantum",
       taxonomies: { category: ["news"] },
     });
@@ -371,7 +371,7 @@ describe("post.list", () => {
     expect(rows.map((r) => r.slug)).not.toContain(notTagged.slug);
   });
 
-  test("default (no status) excludes trashed posts — matches WP's All tab", async () => {
+  test("default (no status) excludes trashed entries — matches WP's All tab", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     await h.factory.published.create({ authorId: h.user.id, slug: "pub" });
     await h.factory.draft.create({ authorId: h.user.id, slug: "draft" });
@@ -381,11 +381,11 @@ describe("post.list", () => {
       status: "trash",
     });
 
-    const rows = await h.client.post.list({});
+    const rows = await h.client.entry.list({});
     expect(rows.map((r) => r.slug).sort()).toEqual(["draft", "pub"]);
   });
 
-  test("explicit status: 'trash' surfaces trashed posts (dedicated view)", async () => {
+  test("explicit status: 'trash' surfaces trashed entries (dedicated view)", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     await h.factory.published.create({ authorId: h.user.id, slug: "live" });
     await h.factory.published.create({
@@ -394,7 +394,7 @@ describe("post.list", () => {
       status: "trash",
     });
 
-    const rows = await h.client.post.list({ status: "trash" });
+    const rows = await h.client.entry.list({ status: "trash" });
     expect(rows.map((r) => r.slug)).toEqual(["gone"]);
   });
 
@@ -408,7 +408,7 @@ describe("post.list", () => {
       status: "scheduled",
     });
 
-    const rows = await h.client.post.list({ status: ["draft", "scheduled"] });
+    const rows = await h.client.entry.list({ status: ["draft", "scheduled"] });
     expect(rows.map((r) => r.slug).sort()).toEqual(["draft", "scheduled"]);
   });
 
@@ -419,7 +419,7 @@ describe("post.list", () => {
 
     // Even though `published` is allowed, asking for `[published, draft]`
     // mixes in a status the caller can't see — match WP's silent filter.
-    const rows = await h.client.post.list({
+    const rows = await h.client.entry.list({
       status: ["published", "draft"],
     });
     expect(rows).toEqual([]);
@@ -430,11 +430,11 @@ describe("post.list", () => {
     await h.factory.published.create({ authorId: h.user.id, slug: "visible" });
     await h.factory.draft.create({ authorId: h.user.id, slug: "hidden" });
 
-    const rows = await h.client.post.list({ status: ["published"] });
+    const rows = await h.client.entry.list({ status: ["published"] });
     expect(rows.map((r) => r.slug)).toEqual(["visible"]);
   });
 
-  test("authorId filters to posts by that user", async () => {
+  test("authorId filters to entries by that user", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     const other = await h.factory.user.create({ email: "other@example.test" });
     await h.factory.published.create({
@@ -446,10 +446,10 @@ describe("post.list", () => {
       slug: "by-other",
     });
 
-    const mine = await h.client.post.list({ authorId: h.user.id });
+    const mine = await h.client.entry.list({ authorId: h.user.id });
     expect(mine.map((r) => r.slug)).toEqual(["by-me"]);
 
-    const theirs = await h.client.post.list({ authorId: other.id });
+    const theirs = await h.client.entry.list({ authorId: other.id });
     expect(theirs.map((r) => r.slug)).toEqual(["by-other"]);
   });
 
@@ -471,7 +471,7 @@ describe("post.list", () => {
       slug: "b",
     });
 
-    const rows = await h.client.post.list({
+    const rows = await h.client.entry.list({
       orderBy: "title",
       order: "asc",
     });
@@ -496,7 +496,7 @@ describe("post.list", () => {
       menuOrder: 20,
     });
 
-    const rows = await h.client.post.list({
+    const rows = await h.client.entry.list({
       orderBy: "menu_order",
       order: "asc",
     });
@@ -504,17 +504,17 @@ describe("post.list", () => {
   });
 });
 
-describe("post.get", () => {
+describe("entry.get", () => {
   test("returns the row when published", async () => {
     const h = await createRpcHarness({ authAs: "subscriber" });
     const post = await h.factory.published.create({ authorId: h.user.id });
-    const got = await h.client.post.get({ id: post.id });
+    const got = await h.client.entry.get({ id: post.id });
     expect(got.id).toBe(post.id);
   });
 
   test("404 when the row does not exist", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    await expect(h.client.post.get({ id: 9999 })).rejects.toMatchObject({
+    await expect(h.client.entry.get({ id: 9999 })).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
   });
@@ -526,7 +526,7 @@ describe("post.get", () => {
       authorId: other.id,
       slug: "hidden",
     });
-    await expect(h.client.post.get({ id: hidden.id })).rejects.toMatchObject({
+    await expect(h.client.entry.get({ id: hidden.id })).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
   });
@@ -537,7 +537,7 @@ describe("post.get", () => {
       authorId: h.user.id,
       slug: "my-draft",
     });
-    const got = await h.client.post.get({ id: mine.id });
+    const got = await h.client.entry.get({ id: mine.id });
     expect(got.status).toBe("draft");
   });
 
@@ -548,14 +548,14 @@ describe("post.get", () => {
       authorId: other.id,
       slug: "others-draft",
     });
-    const got = await h.client.post.get({ id: theirs.id });
+    const got = await h.client.entry.get({ id: theirs.id });
     expect(got.id).toBe(theirs.id);
   });
 
   test("response includes a `meta` bag — empty object on a fresh post", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const post = await h.factory.published.create({ authorId: h.user.id });
-    const got = await h.client.post.get({ id: post.id });
+    const got = await h.client.entry.get({ id: post.id });
     expect(got.meta).toEqual({});
   });
 
@@ -564,13 +564,13 @@ describe("post.get", () => {
     plugins.metaKeys.set("meta_title", {
       key: "meta_title",
       type: "string",
-      postTypes: ["post"],
+      entryTypes: ["post"],
       registeredBy: "test",
     });
     plugins.metaKeys.set("is_featured", {
       key: "is_featured",
       type: "boolean",
-      postTypes: ["post"],
+      entryTypes: ["post"],
       registeredBy: "test",
     });
     const h = await createRpcHarness({ authAs: "admin", plugins });
@@ -578,10 +578,10 @@ describe("post.get", () => {
     // Write directly to the column (bypassing the RPC sanitizer) to prove
     // the reader decodes what the writer laid down.
     await h.context.db
-      .update(posts)
+      .update(entries)
       .set({ meta: { meta_title: "Seeded", is_featured: true } })
-      .where(eq(posts.id, post.id));
-    const got = await h.client.post.get({ id: post.id });
+      .where(eq(entries.id, post.id));
+    const got = await h.client.entry.get({ id: post.id });
     expect(got.meta).toEqual({ meta_title: "Seeded", is_featured: true });
   });
 });

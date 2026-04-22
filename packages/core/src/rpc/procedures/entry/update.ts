@@ -1,5 +1,5 @@
 import type { AppContext } from "../../../context/app.js";
-import type { NewPost } from "../../../db/schema/posts.js";
+import type { NewEntry } from "../../../db/schema/entries.js";
 import {
   and,
   eq,
@@ -7,52 +7,52 @@ import {
   isUniqueConstraintError,
   ne,
 } from "../../../db/index.js";
-import { postTerm } from "../../../db/schema/post_term.js";
-import { posts } from "../../../db/schema/posts.js";
+import { entries } from "../../../db/schema/entries.js";
+import { entryTerm } from "../../../db/schema/entry_term.js";
 import { terms } from "../../../db/schema/terms.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { assertContentWithinByteCap } from "./content.js";
 import { stripUndefined } from "./helpers.js";
 import {
-  applyPostBeforeSave,
-  firePostPublished,
-  firePostTransition,
-  firePostUpdated,
+  applyEntryBeforeSave,
+  entryCapability,
+  fireEntryPublished,
+  fireEntryTransition,
+  fireEntryUpdated,
   loadReadableParent,
-  postCapability,
   wouldCreateParentCycle,
 } from "./lifecycle.js";
 import {
   decodeMetaBag,
   isEmptyMetaPatch,
-  loadPostMeta,
+  loadEntryMeta,
   sanitizeMetaForRpc,
-  writePostMeta,
+  writeEntryMeta,
 } from "./meta.js";
-import { postUpdateInputSchema } from "./schemas.js";
+import { entryUpdateInputSchema } from "./schemas.js";
 
 export const update = base
   .use(authenticated)
-  .input(postUpdateInputSchema)
+  .input(entryUpdateInputSchema)
   .handler(async ({ input, context, errors }) => {
     const filtered = await context.hooks.applyFilter(
-      "rpc:post.update:input",
+      "rpc:entry.update:input",
       input,
     );
 
     assertContentWithinByteCap(filtered.content, errors);
 
-    const existing = await context.db.query.posts.findFirst({
-      where: eq(posts.id, filtered.id),
+    const existing = await context.db.query.entries.findFirst({
+      where: eq(entries.id, filtered.id),
     });
     if (!existing) {
       throw errors.NOT_FOUND({ data: { kind: "post", id: filtered.id } });
     }
 
     const isAuthor = existing.authorId === context.user.id;
-    const editOwnCapability = postCapability(existing.type, "edit_own");
-    const editAnyCapability = postCapability(existing.type, "edit_any");
+    const editOwnCapability = entryCapability(existing.type, "edit_own");
+    const editAnyCapability = entryCapability(existing.type, "edit_any");
     const canEdit =
       (isAuthor && context.auth.can(editOwnCapability)) ||
       context.auth.can(editAnyCapability);
@@ -63,13 +63,13 @@ export const update = base
     const isPublishTransition =
       filtered.status === "published" && existing.status !== "published";
     if (isPublishTransition) {
-      const publishCapability = postCapability(existing.type, "publish");
+      const publishCapability = entryCapability(existing.type, "publish");
       if (!context.auth.can(publishCapability)) {
         throw errors.FORBIDDEN({ data: { capability: publishCapability } });
       }
     }
 
-    // Reparenting: caller may only point at posts they can see, and the
+    // Reparenting: caller may only point at entries they can see, and the
     // parent must share the current post's type. Undistinguished 404 on
     // any failure — don't leak whether the parent exists. Also walk the
     // chain upward to reject cycles of any depth (self-parent, A→B→A, …) —
@@ -95,7 +95,7 @@ export const update = base
       }
     }
 
-    // `terms` and `meta` aren't posts.* columns — split them out and
+    // `terms` and `meta` aren't entries.* columns — split them out and
     // validate up front so a bad taxonomy/cap/meta key fails fast,
     // before any write happens.
     const {
@@ -133,7 +133,7 @@ export const update = base
       }
     }
 
-    const patch: Partial<NewPost> = stripUndefined(changes);
+    const patch: Partial<NewEntry> = stripUndefined(changes);
     if (isPublishTransition && !existing.publishedAt) {
       patch.publishedAt = new Date();
     }
@@ -148,7 +148,7 @@ export const update = base
       isEmptyMetaPatch(metaPatch)
     ) {
       const meta = decodeMetaBag(context.plugins, existing.meta);
-      return context.hooks.applyFilter("rpc:post.update:output", {
+      return context.hooks.applyFilter("rpc:entry.update:output", {
         ...existing,
         meta,
       });
@@ -157,25 +157,25 @@ export const update = base
     let updated = existing;
     let postColumnsWritten = false;
     if (Object.keys(patch).length > 0) {
-      const preparedFull = await applyPostBeforeSave(context, existing.type, {
+      const preparedFull = await applyEntryBeforeSave(context, existing.type, {
         ...existing,
         ...patch,
       });
-      const toWrite: Partial<NewPost> = {};
-      for (const key of Object.keys(patch) as (keyof NewPost)[]) {
+      const toWrite: Partial<NewEntry> = {};
+      for (const key of Object.keys(patch) as (keyof NewEntry)[]) {
         (toWrite as Record<string, unknown>)[key] = preparedFull[key];
       }
 
       // The ne(status, "published") guard on publish transitions can match
       // zero rows if another request won the publish race.
       const where = isPublishTransition
-        ? and(eq(posts.id, existing.id), ne(posts.status, "published"))
-        : eq(posts.id, existing.id);
+        ? and(eq(entries.id, existing.id), ne(entries.status, "published"))
+        : eq(entries.id, existing.id);
 
       let row;
       try {
         [row] = await context.db
-          .update(posts)
+          .update(entries)
           .set(toWrite)
           .where(where)
           .returning();
@@ -191,8 +191,8 @@ export const update = base
       } else if (isPublishTransition) {
         // Race-lost: someone published between our read and write. Return the
         // current state as observed, do not fire the updated/published hooks.
-        const current = await context.db.query.posts.findFirst({
-          where: eq(posts.id, existing.id),
+        const current = await context.db.query.entries.findFirst({
+          where: eq(entries.id, existing.id),
         });
         if (!current) {
           throw errors.CONFLICT({ data: { reason: "update_failed" } });
@@ -207,34 +207,34 @@ export const update = base
       await applyTermPatch(context, updated.id, termsPatch);
     }
 
-    // `writePostMeta` is a no-op on an empty patch, so the null check
+    // `writeEntryMeta` is a no-op on an empty patch, so the null check
     // here is the only gate we need.
     let meta: Record<string, unknown>;
     if (metaPatch) {
-      await writePostMeta(context, updated, metaPatch);
-      meta = await loadPostMeta(context, updated.id);
+      await writeEntryMeta(context, updated, metaPatch);
+      meta = await loadEntryMeta(context, updated.id);
     } else {
       meta = decodeMetaBag(context.plugins, updated.meta);
     }
 
     if (postColumnsWritten) {
-      await firePostUpdated(context, updated, existing);
-      await firePostTransition(context, updated, existing.status);
+      await fireEntryUpdated(context, updated, existing);
+      await fireEntryTransition(context, updated, existing.status);
       if (isPublishTransition) {
-        await firePostPublished(context, updated);
+        await fireEntryPublished(context, updated);
       }
     }
 
-    return context.hooks.applyFilter("rpc:post.update:output", {
+    return context.hooks.applyFilter("rpc:entry.update:output", {
       ...updated,
       meta,
     });
   });
 
-/** Replace post_term rows for every (postId, taxonomy) pair in the patch. */
+/** Replace post_term rows for every (entryId, taxonomy) pair in the patch. */
 async function applyTermPatch(
   context: AppContext,
-  postId: number,
+  entryId: number,
   termsPatch: Record<string, readonly number[]>,
 ): Promise<void> {
   for (const [taxonomy, termIds] of Object.entries(termsPatch)) {
@@ -243,34 +243,36 @@ async function applyTermPatch(
     // a per-term round-trip and avoids accidentally wiping another taxonomy's
     // rows in the same post_term table.
     const existingAssignments = await context.db
-      .select({ termId: postTerm.termId })
-      .from(postTerm)
-      .innerJoin(terms, eq(postTerm.termId, terms.id))
-      .where(and(eq(postTerm.postId, postId), eq(terms.taxonomy, taxonomy)));
+      .select({ termId: entryTerm.termId })
+      .from(entryTerm)
+      .innerJoin(terms, eq(entryTerm.termId, terms.id))
+      .where(and(eq(entryTerm.entryId, entryId), eq(terms.taxonomy, taxonomy)));
     if (existingAssignments.length > 0) {
       const ids = existingAssignments.map((r) => r.termId);
       await context.db
-        .delete(postTerm)
-        .where(and(eq(postTerm.postId, postId), inArray(postTerm.termId, ids)));
+        .delete(entryTerm)
+        .where(
+          and(eq(entryTerm.entryId, entryId), inArray(entryTerm.termId, ids)),
+        );
     }
 
     if (unique.length > 0) {
       // onConflictDoNothing handles the race where a concurrent update
-      // beat us to inserting the same (postId, termId) row — the desired
+      // beat us to inserting the same (entryId, termId) row — the desired
       // end state (row exists) is reached regardless of which request
       // inserted it. Without this, the second request would bubble a PK
       // violation up as a 500.
       await context.db
-        .insert(postTerm)
+        .insert(entryTerm)
         .values(
           unique.map((termId, index) => ({
-            postId,
+            entryId,
             termId,
             sortOrder: index,
           })),
         )
         .onConflictDoNothing({
-          target: [postTerm.postId, postTerm.termId],
+          target: [entryTerm.entryId, entryTerm.termId],
         });
     }
   }

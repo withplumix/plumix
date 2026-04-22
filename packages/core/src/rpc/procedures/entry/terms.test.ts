@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import type { UserRole } from "../../../db/schema/users.js";
 import { and, asc, eq } from "../../../db/index.js";
-import { postTerm } from "../../../db/schema/post_term.js";
+import { entryTerm } from "../../../db/schema/entry_term.js";
 import { terms } from "../../../db/schema/terms.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { createRpcHarness } from "../../../test/rpc.js";
@@ -54,19 +54,19 @@ async function seedTerm(
 
 async function readTermIds(
   h: Awaited<ReturnType<typeof createRpcHarness>>,
-  postId: number,
+  entryId: number,
   taxonomy: string,
 ): Promise<number[]> {
   const rows = await h.context.db
-    .select({ termId: postTerm.termId, sortOrder: postTerm.sortOrder })
-    .from(postTerm)
-    .innerJoin(terms, eq(postTerm.termId, terms.id))
-    .where(and(eq(postTerm.postId, postId), eq(terms.taxonomy, taxonomy)))
-    .orderBy(asc(postTerm.sortOrder));
+    .select({ termId: entryTerm.termId, sortOrder: entryTerm.sortOrder })
+    .from(entryTerm)
+    .innerJoin(terms, eq(entryTerm.termId, terms.id))
+    .where(and(eq(entryTerm.entryId, entryId), eq(terms.taxonomy, taxonomy)))
+    .orderBy(asc(entryTerm.sortOrder));
   return rows.map((r) => r.termId);
 }
 
-describe("post.update — terms", () => {
+describe("entry.update — terms", () => {
   test("author attaches categories to their own post", async () => {
     const plugins = taxonomyRegistry();
     const h = await createRpcHarness({ authAs: "author", plugins });
@@ -74,7 +74,7 @@ describe("post.update — terms", () => {
     const catA = await seedTerm(h, "category", "news");
     const catB = await seedTerm(h, "category", "reviews");
 
-    await h.client.post.update({
+    await h.client.entry.update({
       id: post.id,
       terms: { category: [catA, catB] },
     });
@@ -90,8 +90,8 @@ describe("post.update — terms", () => {
     const b = await seedTerm(h, "category", "b");
     const c = await seedTerm(h, "category", "c");
 
-    await h.client.post.update({ id: post.id, terms: { category: [a, b] } });
-    await h.client.post.update({ id: post.id, terms: { category: [c] } });
+    await h.client.entry.update({ id: post.id, terms: { category: [a, b] } });
+    await h.client.entry.update({ id: post.id, terms: { category: [c] } });
 
     expect(await readTermIds(h, post.id, "category")).toEqual([c]);
   });
@@ -102,8 +102,8 @@ describe("post.update — terms", () => {
     const post = await h.factory.draft.create({ authorId: h.user.id });
     const a = await seedTerm(h, "category", "a");
 
-    await h.client.post.update({ id: post.id, terms: { category: [a] } });
-    await h.client.post.update({ id: post.id, terms: { category: [] } });
+    await h.client.entry.update({ id: post.id, terms: { category: [a] } });
+    await h.client.entry.update({ id: post.id, terms: { category: [] } });
 
     expect(await readTermIds(h, post.id, "category")).toEqual([]);
   });
@@ -115,12 +115,12 @@ describe("post.update — terms", () => {
     const cat = await seedTerm(h, "category", "cat-1");
     const tag = await seedTerm(h, "post_tag", "tag-1");
 
-    await h.client.post.update({
+    await h.client.entry.update({
       id: post.id,
       terms: { category: [cat], post_tag: [tag] },
     });
     // Only update category — post_tag must stay put.
-    await h.client.post.update({
+    await h.client.entry.update({
       id: post.id,
       terms: { category: [] },
     });
@@ -135,7 +135,7 @@ describe("post.update — terms", () => {
     const post = await h.factory.draft.create({ authorId: h.user.id });
     const a = await seedTerm(h, "category", "a");
 
-    await h.client.post.update({
+    await h.client.entry.update({
       id: post.id,
       terms: { category: [a, a, a] },
     });
@@ -149,7 +149,7 @@ describe("post.update — terms", () => {
     const cat = await seedTerm(h, "category", "cat");
 
     await expect(
-      h.client.post.update({
+      h.client.entry.update({
         id: post.id,
         terms: { category: [cat], unknown_tax: [1] },
       }),
@@ -169,7 +169,7 @@ describe("post.update — terms", () => {
     const cat = await seedTerm(h, "category", "cat");
 
     await expect(
-      h.client.post.update({ id: post.id, terms: { category: [cat] } }),
+      h.client.entry.update({ id: post.id, terms: { category: [cat] } }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
       data: { capability: "category:assign" },
@@ -183,7 +183,7 @@ describe("post.update — terms", () => {
     const tag = await seedTerm(h, "post_tag", "misplaced");
 
     await expect(
-      h.client.post.update({
+      h.client.entry.update({
         id: post.id,
         terms: { category: [tag] },
       }),
@@ -199,7 +199,7 @@ describe("post.update — terms", () => {
     const post = await h.factory.draft.create({ authorId: h.user.id });
 
     await expect(
-      h.client.post.update({
+      h.client.entry.update({
         id: post.id,
         terms: { category: [99999] },
       }),
@@ -216,7 +216,7 @@ describe("post.update — terms", () => {
     const originalTitle = post.title;
     const cat = await seedTerm(h, "category", "only-terms");
 
-    const updated = await h.client.post.update({
+    const updated = await h.client.entry.update({
       id: post.id,
       terms: { category: [cat] },
     });
@@ -232,7 +232,7 @@ describe("post.update — terms", () => {
     const b = await seedTerm(h, "category", "b");
     const c = await seedTerm(h, "category", "c");
 
-    await h.client.post.update({
+    await h.client.entry.update({
       id: post.id,
       terms: { category: [c, a, b] },
     });
@@ -244,13 +244,13 @@ describe("post.update — terms", () => {
     const h = await createRpcHarness({ authAs: "editor", plugins });
     const post = await h.factory.draft.create({ authorId: h.user.id });
     await expect(
-      h.client.post.update({ id: post.id, terms: {} }),
+      h.client.entry.update({ id: post.id, terms: {} }),
     ).resolves.toBeDefined();
   });
 
   test("re-inserting the same term id is idempotent (guards PK race)", async () => {
     // Simulates the outcome of concurrent updates that both want the same
-    // final assignment — the second insert hits the (postId, termId) PK
+    // final assignment — the second insert hits the (entryId, termId) PK
     // that the first insert just created. onConflictDoNothing keeps us
     // from bubbling a 500 in that race.
     const plugins = taxonomyRegistry();
@@ -258,11 +258,11 @@ describe("post.update — terms", () => {
     const post = await h.factory.draft.create({ authorId: h.user.id });
     const cat = await seedTerm(h, "category", "stable");
 
-    await h.client.post.update({ id: post.id, terms: { category: [cat] } });
+    await h.client.entry.update({ id: post.id, terms: { category: [cat] } });
     // Second call with the same set — without onConflictDoNothing the
     // delete-then-insert pattern would still work, but a future migration
     // to batched writes could regress. This guards the invariant directly.
-    const second = await h.client.post.update({
+    const second = await h.client.entry.update({
       id: post.id,
       terms: { category: [cat] },
     });

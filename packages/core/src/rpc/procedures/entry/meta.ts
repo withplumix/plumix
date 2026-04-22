@@ -8,9 +8,9 @@ import type {
   RegisteredMeta,
 } from "../../../plugin/manifest.js";
 import { eq } from "../../../db/index.js";
-import { posts } from "../../../db/schema/posts.js";
+import { entries } from "../../../db/schema/entries.js";
 
-// Post meta lives in a single JSON column (`posts.meta`). Writes merge
+// Entry meta lives in a single JSON column (`entries.meta`). Writes merge
 // into the existing bag via SQLite's `json_set` / `json_remove` so
 // concurrent updaters touching disjoint keys don't clobber each other at
 // the row level; reads come back already-parsed thanks to drizzle's
@@ -25,7 +25,7 @@ import { posts } from "../../../db/schema/posts.js";
  */
 const MAX_META_VALUE_BYTES = 256 * 1024;
 
-type PostMetaMap = Record<string, unknown>;
+type EntryMetaMap = Record<string, unknown>;
 
 /**
  * Validated meta patch produced by `sanitizeMetaInput`. Values in
@@ -48,8 +48,8 @@ interface MetaPatch {
  */
 export function sanitizeMetaInput(
   registry: PluginRegistry,
-  postType: string,
-  input: PostMetaMap | undefined,
+  entryType: string,
+  input: EntryMetaMap | undefined,
 ): MetaPatch | null {
   if (input === undefined) return null;
   const upserts = new Map<string, unknown>();
@@ -59,7 +59,7 @@ export function sanitizeMetaInput(
     if (!definition) {
       throw new MetaSanitizationError(key, "not_registered");
     }
-    if (!definition.postTypes.includes(postType)) {
+    if (!definition.entryTypes.includes(entryType)) {
       throw new MetaSanitizationError(key, "post_type_mismatch");
     }
     if (rawValue === null || rawValue === undefined) {
@@ -113,12 +113,12 @@ interface RpcErrorsForMeta {
  */
 export function sanitizeMetaForRpc(
   registry: PluginRegistry,
-  postType: string,
-  input: PostMetaMap | undefined,
+  entryType: string,
+  input: EntryMetaMap | undefined,
   errors: RpcErrorsForMeta,
 ): MetaPatch | null {
   try {
-    return sanitizeMetaInput(registry, postType, input);
+    return sanitizeMetaInput(registry, entryType, input);
   } catch (error) {
     if (error instanceof MetaSanitizationError) {
       throw errors.CONFLICT({
@@ -208,9 +208,9 @@ function assertEncodedSize(key: string, value: unknown): void {
 export function decodeMetaBag(
   registry: PluginRegistry,
   raw: Readonly<Record<string, unknown>> | null | undefined,
-): PostMetaMap {
+): EntryMetaMap {
   if (!raw) return {};
-  const out: PostMetaMap = {};
+  const out: EntryMetaMap = {};
   for (const [key, value] of Object.entries(raw)) {
     const definition = registry.metaKeys.get(key);
     out[key] = definition ? coerceOnRead(definition.type, value) : value;
@@ -240,14 +240,14 @@ function coerceOnRead(type: MetaScalarType, value: unknown): unknown {
  * the post has no meta (fresh row) or has been deleted. Used by
  * `post.create` / `post.update` to read back the post-write state.
  */
-export async function loadPostMeta(
+export async function loadEntryMeta(
   context: AppContext,
-  postId: number,
-): Promise<PostMetaMap> {
+  entryId: number,
+): Promise<EntryMetaMap> {
   const [row] = await context.db
-    .select({ meta: posts.meta })
-    .from(posts)
-    .where(eq(posts.id, postId));
+    .select({ meta: entries.meta })
+    .from(entries)
+    .where(eq(entries.id, entryId));
   return decodeMetaBag(context.plugins, row?.meta);
 }
 
@@ -264,19 +264,19 @@ export function isEmptyMetaPatch(patch: MetaPatch | null): boolean {
 }
 
 /**
- * Merge a validated patch into `posts.meta` via `json_set` /
+ * Merge a validated patch into `entries.meta` via `json_set` /
  * `json_remove`. Deletes nest inside sets so a caller that clears and
  * re-sets the same key in one request behaves predictably. Partial
  * semantics: keys not mentioned in the patch are untouched.
  */
 export async function applyMetaPatch(
   context: AppContext,
-  postId: number,
+  entryId: number,
   patch: MetaPatch,
 ): Promise<void> {
   if (patch.upserts.size === 0 && patch.deletes.length === 0) return;
 
-  let expr: SQL = sql`${posts.meta}`;
+  let expr: SQL = sql`${entries.meta}`;
   if (patch.deletes.length > 0) {
     const paths = patch.deletes.map((k) => sql`${metaJsonPath(k)}`);
     expr = sql`json_remove(${expr}, ${sql.join(paths, sql`, `)})`;
@@ -291,9 +291,9 @@ export async function applyMetaPatch(
   }
 
   await context.db
-    .update(posts)
+    .update(entries)
     .set({ meta: expr })
-    .where(eq(posts.id, postId));
+    .where(eq(entries.id, entryId));
 }
 
 // SQLite's JSON path `$.label` only accepts `[A-Za-z0-9_]` in unquoted
@@ -308,10 +308,10 @@ function metaJsonPath(key: string): string {
 /**
  * Apply a meta patch and fire `post:meta_changed` so auditors /
  * cache-invalidators can react. Plugins that need to mutate the patch
- * should subscribe to `rpc:post.{create,update}:input` instead —
+ * should subscribe to `rpc:entry.{create,update}:input` instead —
  * mutating `input.meta` there feeds the sanitizer + writer downstream.
  */
-export async function writePostMeta(
+export async function writeEntryMeta(
   context: AppContext,
   post: { id: number; type: string },
   patch: MetaPatch,
@@ -319,18 +319,18 @@ export async function writePostMeta(
   if (isEmptyMetaPatch(patch)) return;
   await applyMetaPatch(context, post.id, patch);
 
-  const changes: PostMetaChanges = {
+  const changes: EntryMetaChanges = {
     set: Object.fromEntries(patch.upserts),
     removed: [...patch.deletes],
   };
-  await context.hooks.doAction("post:meta_changed", post, changes);
+  await context.hooks.doAction("entry:meta_changed", post, changes);
 }
 
 /**
  * Payload for `post:meta_changed`. `set` is the decoded key → value map
  * of upserts; `removed` is the list of cleared keys.
  */
-export interface PostMetaChanges {
+export interface EntryMetaChanges {
   readonly set: Readonly<Record<string, unknown>>;
   readonly removed: readonly string[];
 }

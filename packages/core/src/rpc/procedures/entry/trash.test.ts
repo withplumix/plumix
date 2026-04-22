@@ -1,9 +1,9 @@
 import { describe, expect, test, vi } from "vitest";
 
-import type { Post } from "../../../db/schema/posts.js";
+import type { Entry } from "../../../db/schema/entries.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
-describe("post.trash", () => {
+describe("entry.trash", () => {
   test("editor can soft-delete: status transitions to trash and trashed action fires", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     const target = await h.factory.published.create({
@@ -11,10 +11,10 @@ describe("post.trash", () => {
       slug: "soft",
     });
 
-    const onTrash = vi.fn<(post: Post) => void>();
-    h.hooks.addAction("post:trashed", onTrash);
+    const onTrash = vi.fn<(post: Entry) => void>();
+    h.hooks.addAction("entry:trashed", onTrash);
 
-    const result = await h.client.post.trash({ id: target.id });
+    const result = await h.client.entry.trash({ id: target.id });
     expect(result.status).toBe("trash");
     expect(onTrash).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({ id: target.id }),
@@ -27,10 +27,12 @@ describe("post.trash", () => {
       authorId: h.user.id,
       slug: "keep",
     });
-    await expect(h.client.post.trash({ id: target.id })).rejects.toMatchObject({
-      code: "FORBIDDEN",
-      data: { capability: "post:delete" },
-    });
+    await expect(h.client.entry.trash({ id: target.id })).rejects.toMatchObject(
+      {
+        code: "FORBIDDEN",
+        data: { capability: "post:delete" },
+      },
+    );
   });
 
   test("editor can trash someone else's post (edit_any is granted by role)", async () => {
@@ -40,7 +42,7 @@ describe("post.trash", () => {
       authorId: other.id,
       slug: "others",
     });
-    const result = await h.client.post.trash({ id: target.id });
+    const result = await h.client.entry.trash({ id: target.id });
     expect(result.status).toBe("trash");
   });
 
@@ -50,18 +52,18 @@ describe("post.trash", () => {
       authorId: h.user.id,
       slug: "twice",
     });
-    await h.client.post.trash({ id: target.id });
+    await h.client.entry.trash({ id: target.id });
 
     const onTrash = vi.fn();
-    h.hooks.addAction("post:trashed", onTrash);
-    const again = await h.client.post.trash({ id: target.id });
+    h.hooks.addAction("entry:trashed", onTrash);
+    const again = await h.client.entry.trash({ id: target.id });
     expect(again.status).toBe("trash");
     expect(onTrash).not.toHaveBeenCalled();
   });
 
   test("404 for a missing row", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    await expect(h.client.post.trash({ id: 9999 })).rejects.toMatchObject({
+    await expect(h.client.entry.trash({ id: 9999 })).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
   });

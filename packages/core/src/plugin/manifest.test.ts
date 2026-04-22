@@ -267,9 +267,9 @@ describe("buildManifest", () => {
   test("projects registered post types, dropping server-only fields", async () => {
     const hooks = new HookRegistry();
     const blog = definePlugin("blog", (ctx) => {
-      ctx.registerPostType("post", {
+      ctx.registerEntryType("post", {
         label: "Posts",
-        labels: { singular: "Post" },
+        labels: { singular: "Entry" },
         supports: ["title", "editor"],
         taxonomies: ["category"],
         rewrite: { slug: "posts" },
@@ -279,17 +279,17 @@ describe("buildManifest", () => {
 
     const manifest = buildManifest(registry);
 
-    expect(manifest.postTypes).toEqual([
+    expect(manifest.entryTypes).toEqual([
       {
         name: "post",
         adminSlug: "posts",
         label: "Posts",
-        labels: { singular: "Post" },
+        labels: { singular: "Entry" },
         supports: ["title", "editor"],
         taxonomies: ["category"],
       },
     ]);
-    const entry = manifest.postTypes[0] as unknown as Record<string, unknown>;
+    const entry = manifest.entryTypes[0] as unknown as Record<string, unknown>;
     expect(entry.registeredBy).toBeUndefined();
     expect(entry.rewrite).toBeUndefined();
   });
@@ -297,13 +297,13 @@ describe("buildManifest", () => {
   test("uses labels.plural (slugified) for adminSlug when provided", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("shop", (ctx) => {
-      ctx.registerPostType("product", {
+      ctx.registerEntryType("product", {
         label: "Product",
         labels: { singular: "Product", plural: "Product Catalog" },
       });
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
-    expect(buildManifest(registry).postTypes[0]?.adminSlug).toBe(
+    expect(buildManifest(registry).entryTypes[0]?.adminSlug).toBe(
       "product-catalog",
     );
   });
@@ -311,20 +311,20 @@ describe("buildManifest", () => {
   test("falls back to `${name}s` when labels.plural is not set", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("shop", (ctx) => {
-      ctx.registerPostType("product", { label: "Product" });
+      ctx.registerEntryType("product", { label: "Product" });
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
-    expect(buildManifest(registry).postTypes[0]?.adminSlug).toBe("products");
+    expect(buildManifest(registry).entryTypes[0]?.adminSlug).toBe("products");
   });
 
   test("throws DuplicateAdminSlugError when two types resolve to the same slug", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("clash", (ctx) => {
-      ctx.registerPostType("product", {
+      ctx.registerEntryType("product", {
         label: "Products",
         labels: { plural: "Items" },
       });
-      ctx.registerPostType("item", { label: "Items" });
+      ctx.registerEntryType("item", { label: "Items" });
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(() => buildManifest(registry)).toThrow(DuplicateAdminSlugError);
@@ -333,25 +333,25 @@ describe("buildManifest", () => {
   test("orders post types by menuPosition, unspecified last", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("mixed", (ctx) => {
-      ctx.registerPostType("late", { label: "Late", menuPosition: 50 });
-      ctx.registerPostType("unpositioned", { label: "Unpositioned" });
-      ctx.registerPostType("early", { label: "Early", menuPosition: 5 });
+      ctx.registerEntryType("late", { label: "Late", menuPosition: 50 });
+      ctx.registerEntryType("unpositioned", { label: "Unpositioned" });
+      ctx.registerEntryType("early", { label: "Early", menuPosition: 5 });
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
-    const names = buildManifest(registry).postTypes.map((pt) => pt.name);
+    const names = buildManifest(registry).entryTypes.map((pt) => pt.name);
     expect(names).toEqual(["early", "late", "unpositioned"]);
   });
 
   test("projects registered meta boxes, dropping server-only fields", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("seo", (ctx) => {
-      ctx.registerPostType("post", { label: "Posts" });
+      ctx.registerEntryType("post", { label: "Posts" });
       ctx.registerMetaBox("seo-meta", {
         label: "SEO",
         context: "side",
         priority: "high",
-        postTypes: ["post"],
+        entryTypes: ["post"],
         capability: "post:edit_any",
         fields: [
           {
@@ -373,7 +373,7 @@ describe("buildManifest", () => {
         label: "SEO",
         context: "side",
         priority: "high",
-        postTypes: ["post"],
+        entryTypes: ["post"],
         capability: "post:edit_any",
         fields: [
           {
@@ -393,7 +393,7 @@ describe("buildManifest", () => {
   test("empty meta-box registry yields an empty metaBoxes array", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("blog", (ctx) => {
-      ctx.registerPostType("post", { label: "Posts" });
+      ctx.registerEntryType("post", { label: "Posts" });
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
@@ -406,9 +406,9 @@ describe("buildManifest", () => {
       ctx.registerTaxonomy("category", {
         label: "Categories",
         labels: { singular: "Category" },
-        description: "Top-level organisation for blog posts.",
+        description: "Top-level organisation for blog entries.",
         isHierarchical: true,
-        postTypes: ["post"],
+        entryTypes: ["post"],
         // Server-only / public-site-only fields that should NOT ship to
         // the admin manifest — asserted below.
         isPublic: true,
@@ -425,9 +425,9 @@ describe("buildManifest", () => {
         name: "category",
         label: "Categories",
         labels: { singular: "Category" },
-        description: "Top-level organisation for blog posts.",
+        description: "Top-level organisation for blog entries.",
         isHierarchical: true,
-        postTypes: ["post"],
+        entryTypes: ["post"],
       },
     ]);
     // Operational flags + `registeredBy` stay server-side.
@@ -442,7 +442,7 @@ describe("buildManifest", () => {
   test("empty taxonomy registry yields an empty taxonomies array", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("blog", (ctx) => {
-      ctx.registerPostType("post", { label: "Posts" });
+      ctx.registerEntryType("post", { label: "Posts" });
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
@@ -469,7 +469,7 @@ describe("deriveAdminSlug", () => {
 describe("serializeManifestScript", () => {
   test("emits a json script tag with the expected id", () => {
     const tag = serializeManifestScript({
-      postTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+      entryTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
       taxonomies: [],
       metaBoxes: [],
       settingsGroups: [],
@@ -477,13 +477,13 @@ describe("serializeManifestScript", () => {
     expect(tag).toContain(`id="${MANIFEST_SCRIPT_ID}"`);
     expect(tag).toContain(`type="application/json"`);
     expect(tag).toContain(
-      `{"postTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"taxonomies":[],"metaBoxes":[],"settingsGroups":[]}`,
+      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"taxonomies":[],"metaBoxes":[],"settingsGroups":[]}`,
     );
   });
 
   test("neutralises </ sequences in payload so the tag can't be broken out of", () => {
     const tag = serializeManifestScript({
-      postTypes: [
+      entryTypes: [
         { name: "post", adminSlug: "posts", label: "</script><b>x</b>" },
       ],
       taxonomies: [],
@@ -496,7 +496,7 @@ describe("serializeManifestScript", () => {
 
   test("round-trips through JSON.parse after unescaping the slash", () => {
     const manifest = {
-      postTypes: [{ name: "post", adminSlug: "posts", label: "x</y>" }],
+      entryTypes: [{ name: "post", adminSlug: "posts", label: "x</y>" }],
       taxonomies: [],
       metaBoxes: [],
       settingsGroups: [],
@@ -514,28 +514,28 @@ describe("serializeManifestScript", () => {
 describe("injectManifestIntoHtml", () => {
   const TEMPLATE = `<!doctype html><html><body>
 <div id="root"></div>
-<script id="plumix-manifest" type="application/json">{"postTypes":[]}</script>
+<script id="plumix-manifest" type="application/json">{"entryTypes":[]}</script>
 <script type="module" src="/src/main.tsx"></script>
 </body></html>`;
 
   test("replaces the placeholder with the serialised manifest", () => {
     const out = injectManifestIntoHtml(TEMPLATE, {
-      postTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+      entryTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
       taxonomies: [],
       metaBoxes: [],
       settingsGroups: [],
     });
     expect(out).toContain(
-      `{"postTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"taxonomies":[],"metaBoxes":[],"settingsGroups":[]}`,
+      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"taxonomies":[],"metaBoxes":[],"settingsGroups":[]}`,
     );
     expect(out).not.toContain(
-      `{"postTypes":[],"taxonomies":[],"metaBoxes":[],"settingsGroups":[]}`,
+      `{"entryTypes":[],"taxonomies":[],"metaBoxes":[],"settingsGroups":[]}`,
     );
   });
 
   test("is idempotent when the manifest is already injected", () => {
     const manifest = {
-      postTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+      entryTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
       taxonomies: [],
       metaBoxes: [],
       settingsGroups: [],
@@ -558,30 +558,30 @@ describe("injectManifestIntoHtml", () => {
   });
 
   test("matches uppercase SCRIPT tags (minifier-agnostic)", () => {
-    const html = `<SCRIPT ID="plumix-manifest" TYPE="application/json">{"postTypes":[]}</SCRIPT>`;
+    const html = `<SCRIPT ID="plumix-manifest" TYPE="application/json">{"entryTypes":[]}</SCRIPT>`;
     const out = injectManifestIntoHtml(html, {
-      postTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+      entryTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
       taxonomies: [],
       metaBoxes: [],
       settingsGroups: [],
     });
     expect(out).toContain(
-      `{"postTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"taxonomies":[],"metaBoxes":[],"settingsGroups":[]}`,
+      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"taxonomies":[],"metaBoxes":[],"settingsGroups":[]}`,
     );
   });
 
   test("tolerates whitespace inside the placeholder body", () => {
     const html = `<script id="plumix-manifest" type="application/json">
-      { "postTypes": [] }
+      { "entryTypes": [] }
     </script>`;
     const out = injectManifestIntoHtml(html, {
-      postTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+      entryTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
       taxonomies: [],
       metaBoxes: [],
       settingsGroups: [],
     });
     expect(out).toMatch(
-      /^<script id="plumix-manifest" type="application\/json">\{"postTypes":\[\{"name":"post","adminSlug":"posts","label":"Posts"\}\],"taxonomies":\[\],"metaBoxes":\[\],"settingsGroups":\[\]\}<\/script>$/,
+      /^<script id="plumix-manifest" type="application\/json">\{"entryTypes":\[\{"name":"post","adminSlug":"posts","label":"Posts"\}\],"taxonomies":\[\],"metaBoxes":\[\],"settingsGroups":\[\]\}<\/script>$/,
     );
   });
 });

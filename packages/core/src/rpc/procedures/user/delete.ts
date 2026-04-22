@@ -1,5 +1,5 @@
 import { and, count, eq } from "../../../db/index.js";
-import { posts } from "../../../db/schema/posts.js";
+import { entries } from "../../../db/schema/entries.js";
 import { users } from "../../../db/schema/users.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
@@ -23,11 +23,11 @@ export const del = base
       throw errors.NOT_FOUND({ data: { kind: "user", id: input.id } });
     }
 
-    // posts.authorId FK is onDelete: restrict — reassign first or refuse.
+    // entries.authorId FK is onDelete: restrict — reassign first or refuse.
     const [countRow] = await context.db
       .select({ value: count() })
-      .from(posts)
-      .where(eq(posts.authorId, existing.id));
+      .from(entries)
+      .where(eq(entries.authorId, existing.id));
     const postCount = countRow?.value ?? 0;
 
     if (postCount > 0) {
@@ -46,9 +46,9 @@ export const del = base
         });
       }
       await context.db
-        .update(posts)
+        .update(entries)
         .set({ authorId: input.reassignPostsTo })
-        .where(eq(posts.authorId, existing.id));
+        .where(eq(entries.authorId, existing.id));
     }
 
     // Atomic last-admin guard — see user/update.ts for the same pattern.
@@ -72,8 +72,8 @@ export const del = base
     }
 
     // WP's `deleted_user` parity. `reassignedTo` is `null` if the user
-    // had no posts (no reassignment happened); otherwise carries the id
-    // we migrated posts to so audit-log plugins can reconstruct the move.
+    // had no entries (no reassignment happened); otherwise carries the id
+    // we migrated entries to so audit-log plugins can reconstruct the move.
     await context.hooks.doAction("user:deleted", deleted, {
       reassignedTo: postCount > 0 ? (input.reassignPostsTo ?? null) : null,
     });

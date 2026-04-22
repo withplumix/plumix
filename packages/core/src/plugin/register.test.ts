@@ -7,7 +7,7 @@ import { installPlugins } from "./register.js";
 
 import "../rpc/hooks.js";
 
-import type { NewPost } from "../db/schema/posts.js";
+import type { NewEntry } from "../db/schema/entries.js";
 
 declare module "../hooks/types.js" {
   interface FilterRegistry {
@@ -17,7 +17,7 @@ declare module "../hooks/types.js" {
   }
 }
 
-const examplePost = (overrides: Partial<NewPost> = {}): NewPost => ({
+const examplePost = (overrides: Partial<NewEntry> = {}): NewEntry => ({
   type: "post",
   title: "example",
   slug: "example",
@@ -48,7 +48,7 @@ describe("installPlugins", () => {
   test("plugins can subscribe to core-owned hooks without prefix", async () => {
     const hooks = new HookRegistry();
     const stamp = definePlugin("stamp", (ctx) => {
-      ctx.addFilter("post:before_save", (post) => ({
+      ctx.addFilter("entry:before_save", (post) => ({
         ...post,
         title: `[stamped] ${post.title}`,
       }));
@@ -56,7 +56,7 @@ describe("installPlugins", () => {
 
     await installPlugins({ hooks, plugins: [stamp] });
     const out = await hooks.applyFilter(
-      "post:before_save",
+      "entry:before_save",
       examplePost({ title: "hi" }),
     );
     expect(out.title).toBe("[stamped] hi");
@@ -65,14 +65,14 @@ describe("installPlugins", () => {
   test("registers post types into the manifest with plugin attribution", async () => {
     const hooks = new HookRegistry();
     const blog = definePlugin("blog", (ctx) => {
-      ctx.registerPostType("landing_page", {
+      ctx.registerEntryType("landing_page", {
         label: "Landing Pages",
         isHierarchical: false,
       });
     });
 
     const { registry } = await installPlugins({ hooks, plugins: [blog] });
-    const entry = registry.postTypes.get("landing_page");
+    const entry = registry.entryTypes.get("landing_page");
     expect(entry).toBeDefined();
     expect(entry?.label).toBe("Landing Pages");
     expect(entry?.registeredBy).toBe("blog");
@@ -81,10 +81,10 @@ describe("installPlugins", () => {
   test("throws on duplicate post-type registration across plugins", async () => {
     const hooks = new HookRegistry();
     const a = definePlugin("a", (ctx) => {
-      ctx.registerPostType("docs", { label: "Docs A" });
+      ctx.registerEntryType("docs", { label: "Docs A" });
     });
     const b = definePlugin("b", (ctx) => {
-      ctx.registerPostType("docs", { label: "Docs B" });
+      ctx.registerEntryType("docs", { label: "Docs B" });
     });
 
     await expect(
@@ -95,7 +95,7 @@ describe("installPlugins", () => {
   test("auto-derives the capability set from a post type, using the post type name", async () => {
     const hooks = new HookRegistry();
     const blog = definePlugin("blog", (ctx) => {
-      ctx.registerPostType("landing_page", { label: "Landing Pages" });
+      ctx.registerEntryType("landing_page", { label: "Landing Pages" });
     });
 
     const { registry } = await installPlugins({ hooks, plugins: [blog] });
@@ -116,10 +116,10 @@ describe("installPlugins", () => {
   test("capabilityType is the cap namespace — shared types pool their permissions", async () => {
     const hooks = new HookRegistry();
     const a = definePlugin("a", (ctx) => {
-      ctx.registerPostType("docs", { label: "Docs", capabilityType: "post" });
+      ctx.registerEntryType("docs", { label: "Docs", capabilityType: "post" });
     });
     const b = definePlugin("b", (ctx) => {
-      ctx.registerPostType("guides", {
+      ctx.registerEntryType("guides", {
         label: "Guides",
         capabilityType: "post",
       });

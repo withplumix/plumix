@@ -54,14 +54,14 @@ describe("auth.session", () => {
     const shop = definePlugin("shop", (ctx) => {
       // Plugin-registered post type with its own capability namespace —
       // surfaces on the session…
-      ctx.registerPostType("product", {
+      ctx.registerEntryType("product", {
         label: "Product",
         capabilityType: "product",
       });
       // …AND register a post type that shares the core `post` capability
       // namespace, which used to produce duplicate `post:*` entries in the
       // session's capability list.
-      ctx.registerPostType("news", { label: "News", capabilityType: "post" });
+      ctx.registerEntryType("news", { label: "News", capabilityType: "post" });
     });
     const { registry: plugins } = await installPlugins({
       hooks,

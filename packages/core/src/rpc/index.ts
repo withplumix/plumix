@@ -13,29 +13,29 @@ export type {
 } from "./procedures/auth/schemas.js";
 export { emailField, nameField } from "./validation.js";
 export {
-  applyPostBeforeSave,
-  firePostPublished,
-  firePostTransition,
-  firePostTrashed,
-  firePostUpdated,
-  postCapability,
-} from "./procedures/post/lifecycle.js";
-export { postRouter } from "./procedures/post/index.js";
-export type { PostRouter } from "./procedures/post/index.js";
+  applyEntryBeforeSave,
+  fireEntryPublished,
+  fireEntryTransition,
+  fireEntryTrashed,
+  fireEntryUpdated,
+  entryCapability,
+} from "./procedures/entry/lifecycle.js";
+export { entryRouter } from "./procedures/entry/index.js";
+export type { EntryRouter } from "./procedures/entry/index.js";
 export {
-  postCreateInputSchema,
-  postGetInputSchema,
-  postListInputSchema,
-  postTrashInputSchema,
-  postUpdateInputSchema,
-} from "./procedures/post/schemas.js";
+  entryCreateInputSchema,
+  entryGetInputSchema,
+  entryListInputSchema,
+  entryTrashInputSchema,
+  entryUpdateInputSchema,
+} from "./procedures/entry/schemas.js";
 export type {
-  PostCreateInput,
-  PostGetInput,
-  PostListInput,
-  PostTrashInput,
-  PostUpdateInput,
-} from "./procedures/post/schemas.js";
+  EntryCreateInput,
+  EntryGetInput,
+  EntryListInput,
+  EntryTrashInput,
+  EntryUpdateInput,
+} from "./procedures/entry/schemas.js";
 export { optionRouter } from "./procedures/option/index.js";
 export type { OptionRouter } from "./procedures/option/index.js";
 export {

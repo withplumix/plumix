@@ -4,7 +4,7 @@ import { and, eq, isUniqueConstraintError } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { stripUndefined } from "../post/helpers.js";
+import { stripUndefined } from "../entry/helpers.js";
 import { otherActiveAdminExists } from "./helpers.js";
 import { userUpdateInputSchema } from "./schemas.js";
 

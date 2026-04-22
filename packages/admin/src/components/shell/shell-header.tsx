@@ -17,7 +17,7 @@ import { useRouterState } from "@tanstack/react-router";
 // when we have enough routes to justify it.
 const BREADCRUMBS: Record<string, readonly string[]> = {
   "/": ["Dashboard"],
-  "/posts": ["Content", "Posts"],
+  "/entries": ["Content", "Posts"],
 };
 
 function useBreadcrumbs(): readonly string[] {

@@ -22,11 +22,11 @@ import { Route as AuthenticatedUsersIdRouteImport } from "./routes/_authenticate
 import { Route as AuthenticatedSettingsGroupRouteImport } from "./routes/_authenticated/settings/$group";
 import { Route as AuthAcceptInviteTokenRouteImport } from "./routes/_auth/accept-invite/$token";
 import { Route as AuthenticatedTaxonomiesNameIndexRouteImport } from "./routes/_authenticated/taxonomies/$name/index";
-import { Route as AuthenticatedContentSlugIndexRouteImport } from "./routes/_authenticated/content/$slug/index";
+import { Route as AuthenticatedEntriesSlugIndexRouteImport } from "./routes/_authenticated/entries/$slug/index";
 import { Route as AuthenticatedTaxonomiesNameNewRouteImport } from "./routes/_authenticated/taxonomies/$name/new";
 import { Route as AuthenticatedTaxonomiesNameIdRouteImport } from "./routes/_authenticated/taxonomies/$name/$id";
-import { Route as AuthenticatedContentSlugNewRouteImport } from "./routes/_authenticated/content/$slug/new";
-import { Route as AuthenticatedContentSlugIdRouteImport } from "./routes/_authenticated/content/$slug/$id";
+import { Route as AuthenticatedEntriesSlugNewRouteImport } from "./routes/_authenticated/entries/$slug/new";
+import { Route as AuthenticatedEntriesSlugIdRouteImport } from "./routes/_authenticated/entries/$slug/$id";
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: "/_authenticated",
@@ -94,10 +94,10 @@ const AuthenticatedTaxonomiesNameIndexRoute =
     path: "/taxonomies/$name/",
     getParentRoute: () => AuthenticatedRoute,
   } as any);
-const AuthenticatedContentSlugIndexRoute =
-  AuthenticatedContentSlugIndexRouteImport.update({
-    id: "/content/$slug/",
-    path: "/content/$slug/",
+const AuthenticatedEntriesSlugIndexRoute =
+  AuthenticatedEntriesSlugIndexRouteImport.update({
+    id: "/entries/$slug/",
+    path: "/entries/$slug/",
     getParentRoute: () => AuthenticatedRoute,
   } as any);
 const AuthenticatedTaxonomiesNameNewRoute =
@@ -112,16 +112,16 @@ const AuthenticatedTaxonomiesNameIdRoute =
     path: "/taxonomies/$name/$id",
     getParentRoute: () => AuthenticatedRoute,
   } as any);
-const AuthenticatedContentSlugNewRoute =
-  AuthenticatedContentSlugNewRouteImport.update({
-    id: "/content/$slug/new",
-    path: "/content/$slug/new",
+const AuthenticatedEntriesSlugNewRoute =
+  AuthenticatedEntriesSlugNewRouteImport.update({
+    id: "/entries/$slug/new",
+    path: "/entries/$slug/new",
     getParentRoute: () => AuthenticatedRoute,
   } as any);
-const AuthenticatedContentSlugIdRoute =
-  AuthenticatedContentSlugIdRouteImport.update({
-    id: "/content/$slug/$id",
-    path: "/content/$slug/$id",
+const AuthenticatedEntriesSlugIdRoute =
+  AuthenticatedEntriesSlugIdRouteImport.update({
+    id: "/entries/$slug/$id",
+    path: "/entries/$slug/$id",
     getParentRoute: () => AuthenticatedRoute,
   } as any);
 
@@ -136,11 +136,11 @@ export interface FileRoutesByFullPath {
   "/users/new": typeof AuthenticatedUsersNewRoute;
   "/settings/": typeof AuthenticatedSettingsIndexRoute;
   "/users/": typeof AuthenticatedUsersIndexRoute;
-  "/content/$slug/$id": typeof AuthenticatedContentSlugIdRoute;
-  "/content/$slug/new": typeof AuthenticatedContentSlugNewRoute;
+  "/entries/$slug/$id": typeof AuthenticatedEntriesSlugIdRoute;
+  "/entries/$slug/new": typeof AuthenticatedEntriesSlugNewRoute;
   "/taxonomies/$name/$id": typeof AuthenticatedTaxonomiesNameIdRoute;
   "/taxonomies/$name/new": typeof AuthenticatedTaxonomiesNameNewRoute;
-  "/content/$slug/": typeof AuthenticatedContentSlugIndexRoute;
+  "/entries/$slug/": typeof AuthenticatedEntriesSlugIndexRoute;
   "/taxonomies/$name/": typeof AuthenticatedTaxonomiesNameIndexRoute;
 }
 export interface FileRoutesByTo {
@@ -154,11 +154,11 @@ export interface FileRoutesByTo {
   "/users/new": typeof AuthenticatedUsersNewRoute;
   "/settings": typeof AuthenticatedSettingsIndexRoute;
   "/users": typeof AuthenticatedUsersIndexRoute;
-  "/content/$slug/$id": typeof AuthenticatedContentSlugIdRoute;
-  "/content/$slug/new": typeof AuthenticatedContentSlugNewRoute;
+  "/entries/$slug/$id": typeof AuthenticatedEntriesSlugIdRoute;
+  "/entries/$slug/new": typeof AuthenticatedEntriesSlugNewRoute;
   "/taxonomies/$name/$id": typeof AuthenticatedTaxonomiesNameIdRoute;
   "/taxonomies/$name/new": typeof AuthenticatedTaxonomiesNameNewRoute;
-  "/content/$slug": typeof AuthenticatedContentSlugIndexRoute;
+  "/entries/$slug": typeof AuthenticatedEntriesSlugIndexRoute;
   "/taxonomies/$name": typeof AuthenticatedTaxonomiesNameIndexRoute;
 }
 export interface FileRoutesById {
@@ -175,11 +175,11 @@ export interface FileRoutesById {
   "/_authenticated/users/new": typeof AuthenticatedUsersNewRoute;
   "/_authenticated/settings/": typeof AuthenticatedSettingsIndexRoute;
   "/_authenticated/users/": typeof AuthenticatedUsersIndexRoute;
-  "/_authenticated/content/$slug/$id": typeof AuthenticatedContentSlugIdRoute;
-  "/_authenticated/content/$slug/new": typeof AuthenticatedContentSlugNewRoute;
+  "/_authenticated/entries/$slug/$id": typeof AuthenticatedEntriesSlugIdRoute;
+  "/_authenticated/entries/$slug/new": typeof AuthenticatedEntriesSlugNewRoute;
   "/_authenticated/taxonomies/$name/$id": typeof AuthenticatedTaxonomiesNameIdRoute;
   "/_authenticated/taxonomies/$name/new": typeof AuthenticatedTaxonomiesNameNewRoute;
-  "/_authenticated/content/$slug/": typeof AuthenticatedContentSlugIndexRoute;
+  "/_authenticated/entries/$slug/": typeof AuthenticatedEntriesSlugIndexRoute;
   "/_authenticated/taxonomies/$name/": typeof AuthenticatedTaxonomiesNameIndexRoute;
 }
 export interface FileRouteTypes {
@@ -195,11 +195,11 @@ export interface FileRouteTypes {
     | "/users/new"
     | "/settings/"
     | "/users/"
-    | "/content/$slug/$id"
-    | "/content/$slug/new"
+    | "/entries/$slug/$id"
+    | "/entries/$slug/new"
     | "/taxonomies/$name/$id"
     | "/taxonomies/$name/new"
-    | "/content/$slug/"
+    | "/entries/$slug/"
     | "/taxonomies/$name/";
   fileRoutesByTo: FileRoutesByTo;
   to:
@@ -213,11 +213,11 @@ export interface FileRouteTypes {
     | "/users/new"
     | "/settings"
     | "/users"
-    | "/content/$slug/$id"
-    | "/content/$slug/new"
+    | "/entries/$slug/$id"
+    | "/entries/$slug/new"
     | "/taxonomies/$name/$id"
     | "/taxonomies/$name/new"
-    | "/content/$slug"
+    | "/entries/$slug"
     | "/taxonomies/$name";
   id:
     | "__root__"
@@ -233,11 +233,11 @@ export interface FileRouteTypes {
     | "/_authenticated/users/new"
     | "/_authenticated/settings/"
     | "/_authenticated/users/"
-    | "/_authenticated/content/$slug/$id"
-    | "/_authenticated/content/$slug/new"
+    | "/_authenticated/entries/$slug/$id"
+    | "/_authenticated/entries/$slug/new"
     | "/_authenticated/taxonomies/$name/$id"
     | "/_authenticated/taxonomies/$name/new"
-    | "/_authenticated/content/$slug/"
+    | "/_authenticated/entries/$slug/"
     | "/_authenticated/taxonomies/$name/";
   fileRoutesById: FileRoutesById;
 }
@@ -339,11 +339,11 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedTaxonomiesNameIndexRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
-    "/_authenticated/content/$slug/": {
-      id: "/_authenticated/content/$slug/";
-      path: "/content/$slug";
-      fullPath: "/content/$slug/";
-      preLoaderRoute: typeof AuthenticatedContentSlugIndexRouteImport;
+    "/_authenticated/entries/$slug/": {
+      id: "/_authenticated/entries/$slug/";
+      path: "/entries/$slug";
+      fullPath: "/entries/$slug/";
+      preLoaderRoute: typeof AuthenticatedEntriesSlugIndexRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
     "/_authenticated/taxonomies/$name/new": {
@@ -360,18 +360,18 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedTaxonomiesNameIdRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
-    "/_authenticated/content/$slug/new": {
-      id: "/_authenticated/content/$slug/new";
-      path: "/content/$slug/new";
-      fullPath: "/content/$slug/new";
-      preLoaderRoute: typeof AuthenticatedContentSlugNewRouteImport;
+    "/_authenticated/entries/$slug/new": {
+      id: "/_authenticated/entries/$slug/new";
+      path: "/entries/$slug/new";
+      fullPath: "/entries/$slug/new";
+      preLoaderRoute: typeof AuthenticatedEntriesSlugNewRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
-    "/_authenticated/content/$slug/$id": {
-      id: "/_authenticated/content/$slug/$id";
-      path: "/content/$slug/$id";
-      fullPath: "/content/$slug/$id";
-      preLoaderRoute: typeof AuthenticatedContentSlugIdRouteImport;
+    "/_authenticated/entries/$slug/$id": {
+      id: "/_authenticated/entries/$slug/$id";
+      path: "/entries/$slug/$id";
+      fullPath: "/entries/$slug/$id";
+      preLoaderRoute: typeof AuthenticatedEntriesSlugIdRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
   }
@@ -399,11 +399,11 @@ interface AuthenticatedRouteChildren {
   AuthenticatedUsersNewRoute: typeof AuthenticatedUsersNewRoute;
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute;
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute;
-  AuthenticatedContentSlugIdRoute: typeof AuthenticatedContentSlugIdRoute;
-  AuthenticatedContentSlugNewRoute: typeof AuthenticatedContentSlugNewRoute;
+  AuthenticatedEntriesSlugIdRoute: typeof AuthenticatedEntriesSlugIdRoute;
+  AuthenticatedEntriesSlugNewRoute: typeof AuthenticatedEntriesSlugNewRoute;
   AuthenticatedTaxonomiesNameIdRoute: typeof AuthenticatedTaxonomiesNameIdRoute;
   AuthenticatedTaxonomiesNameNewRoute: typeof AuthenticatedTaxonomiesNameNewRoute;
-  AuthenticatedContentSlugIndexRoute: typeof AuthenticatedContentSlugIndexRoute;
+  AuthenticatedEntriesSlugIndexRoute: typeof AuthenticatedEntriesSlugIndexRoute;
   AuthenticatedTaxonomiesNameIndexRoute: typeof AuthenticatedTaxonomiesNameIndexRoute;
 }
 
@@ -415,11 +415,11 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedUsersNewRoute: AuthenticatedUsersNewRoute,
   AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
-  AuthenticatedContentSlugIdRoute: AuthenticatedContentSlugIdRoute,
-  AuthenticatedContentSlugNewRoute: AuthenticatedContentSlugNewRoute,
+  AuthenticatedEntriesSlugIdRoute: AuthenticatedEntriesSlugIdRoute,
+  AuthenticatedEntriesSlugNewRoute: AuthenticatedEntriesSlugNewRoute,
   AuthenticatedTaxonomiesNameIdRoute: AuthenticatedTaxonomiesNameIdRoute,
   AuthenticatedTaxonomiesNameNewRoute: AuthenticatedTaxonomiesNameNewRoute,
-  AuthenticatedContentSlugIndexRoute: AuthenticatedContentSlugIndexRoute,
+  AuthenticatedEntriesSlugIndexRoute: AuthenticatedEntriesSlugIndexRoute,
   AuthenticatedTaxonomiesNameIndexRoute: AuthenticatedTaxonomiesNameIndexRoute,
 };
 

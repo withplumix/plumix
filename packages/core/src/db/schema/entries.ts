@@ -5,36 +5,36 @@ import { createInsertSchema, createSelectSchema } from "drizzle-valibot";
 
 import { users } from "./users.js";
 
-export const POST_STATUSES = [
+export const ENTRY_STATUSES = [
   "draft",
   "published",
   "scheduled",
   "trash",
 ] as const;
 
-export type PostStatus = (typeof POST_STATUSES)[number];
+export type EntryStatus = (typeof ENTRY_STATUSES)[number];
 
 /**
- * ProseMirror / Tiptap document persisted in `posts.content`. Intentionally
+ * ProseMirror / Tiptap document persisted in `entries.content`. Intentionally
  * loose — the editor owns the outgoing block vocabulary and the public
  * renderer's walker allowlists on the way out, so the column only needs
  * to agree that content is a JSON object.
  */
-export type PostContent = Record<string, unknown>;
+export type EntryContent = Record<string, unknown>;
 
-export const posts = sqliteTable(
-  "posts",
+export const entries = sqliteTable(
+  "entries",
   (t) => ({
     id: t.integer().primaryKey({ autoIncrement: true }),
     type: t.text().notNull().default("post"),
-    parentId: t.integer().references((): AnySQLiteColumn => posts.id, {
+    parentId: t.integer().references((): AnySQLiteColumn => entries.id, {
       onDelete: "set null",
     }),
     title: t.text().notNull(),
     slug: t.text().notNull(),
-    content: t.text({ mode: "json" }).$type<PostContent>(),
+    content: t.text({ mode: "json" }).$type<EntryContent>(),
     excerpt: t.text(),
-    status: t.text({ enum: POST_STATUSES }).notNull().default("draft"),
+    status: t.text({ enum: ENTRY_STATUSES }).notNull().default("draft"),
     authorId: t
       .integer()
       .notNull()
@@ -57,19 +57,19 @@ export const posts = sqliteTable(
       .$onUpdate(() => sql`(unixepoch())`),
   }),
   (table) => [
-    uniqueIndex("posts_type_slug_idx").on(table.type, table.slug),
-    index("posts_type_status_published_idx").on(
+    uniqueIndex("entries_type_slug_idx").on(table.type, table.slug),
+    index("entries_type_status_published_idx").on(
       table.type,
       table.status,
       table.publishedAt,
     ),
-    index("posts_author_id_idx").on(table.authorId),
-    index("posts_parent_id_idx").on(table.parentId),
+    index("entries_author_id_idx").on(table.authorId),
+    index("entries_parent_id_idx").on(table.parentId),
   ],
 );
 
-export type Post = typeof posts.$inferSelect;
-export type NewPost = typeof posts.$inferInsert;
+export type Entry = typeof entries.$inferSelect;
+export type NewEntry = typeof entries.$inferInsert;
 
-export const postInsertSchema = createInsertSchema(posts);
-export const postSelectSchema = createSelectSchema(posts);
+export const entryInsertSchema = createInsertSchema(entries);
+export const entrySelectSchema = createSelectSchema(entries);

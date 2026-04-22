@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { eq } from "../../../db/index.js";
-import { posts } from "../../../db/schema/posts.js";
+import { entries } from "../../../db/schema/entries.js";
 import { sessions } from "../../../db/schema/sessions.js";
 import { users } from "../../../db/schema/users.js";
 import { createRpcHarness } from "../../../test/rpc.js";
@@ -251,7 +251,7 @@ describe("user.disable", () => {
 });
 
 describe("user.delete", () => {
-  test("admin can delete a user with no authored posts", async () => {
+  test("admin can delete a user with no authored entries", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const target = await h.factory.subscriber.create();
     const deleted = await h.client.user.delete({ id: target.id });
@@ -263,10 +263,10 @@ describe("user.delete", () => {
     expect(after).toBeUndefined();
   });
 
-  test("refuses to delete a user with posts when no reassign target given", async () => {
+  test("refuses to delete a user with entries when no reassign target given", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const author = await h.factory.author.create();
-    await h.factory.post.create({ authorId: author.id });
+    await h.factory.entry.create({ authorId: author.id });
     await expect(h.client.user.delete({ id: author.id })).rejects.toMatchObject(
       {
         code: "CONFLICT",
@@ -275,16 +275,16 @@ describe("user.delete", () => {
     );
   });
 
-  test("reassigns posts when reassignPostsTo is provided", async () => {
+  test("reassigns entries when reassignPostsTo is provided", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const author = await h.factory.author.create();
     const heir = await h.factory.author.create();
-    const post = await h.factory.post.create({ authorId: author.id });
+    const post = await h.factory.entry.create({ authorId: author.id });
 
     await h.client.user.delete({ id: author.id, reassignPostsTo: heir.id });
 
-    const moved = await h.context.db.query.posts.findFirst({
-      where: eq(posts.id, post.id),
+    const moved = await h.context.db.query.entries.findFirst({
+      where: eq(entries.id, post.id),
     });
     expect(moved?.authorId).toBe(heir.id);
   });
@@ -378,7 +378,7 @@ describe("user lifecycle action hooks", () => {
     spy.assertNotCalled();
   });
 
-  test("user:deleted fires with reassignedTo=null when the user had no posts", async () => {
+  test("user:deleted fires with reassignedTo=null when the user had no entries", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const target = await h.factory.subscriber.create();
     const spy = h.spyAction("user:deleted");
@@ -387,7 +387,7 @@ describe("user lifecycle action hooks", () => {
     expect(spy.lastArgs?.[1]).toEqual({ reassignedTo: null });
   });
 
-  test("user:deleted fires with reassignedTo=<id> when posts were migrated", async () => {
+  test("user:deleted fires with reassignedTo=<id> when entries were migrated", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const author = await h.factory.author.create();
     const inheritor = await h.factory.author.create();

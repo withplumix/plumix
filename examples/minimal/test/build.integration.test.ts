@@ -53,7 +53,7 @@ describe("examples/minimal — plumix build", () => {
       // page load.
       const adminHtml = readFileSync(adminIndexHtml, "utf8");
       expect(adminHtml).toMatch(
-        /<script id="plumix-manifest" type="application\/json">\{"postTypes":\[\],"taxonomies":\[\],"metaBoxes":\[\],"settingsGroups":\[\]\}<\/script>/,
+        /<script id="plumix-manifest" type="application\/json">\{"entryTypes":\[\],"taxonomies":\[\],"metaBoxes":\[\],"settingsGroups":\[\]\}<\/script>/,
       );
     },
     60_000,

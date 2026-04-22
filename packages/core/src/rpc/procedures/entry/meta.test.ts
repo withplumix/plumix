@@ -1,12 +1,12 @@
 import { describe, expect, test } from "vitest";
 
 import { eq } from "../../../db/index.js";
-import { posts } from "../../../db/schema/posts.js";
+import { entries } from "../../../db/schema/entries.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 import {
   applyMetaPatch,
-  loadPostMeta,
+  loadEntryMeta,
   MetaSanitizationError,
   sanitizeMetaInput,
 } from "./meta.js";
@@ -16,7 +16,7 @@ function registryWithMeta(
     string,
     {
       type: "string" | "number" | "boolean" | "json";
-      postTypes?: string[];
+      entryTypes?: string[];
       sanitize?: (value: unknown) => unknown;
       default?: unknown;
     }
@@ -27,7 +27,7 @@ function registryWithMeta(
     registry.metaKeys.set(key, {
       key,
       type: options.type,
-      postTypes: options.postTypes ?? ["post"],
+      entryTypes: options.entryTypes ?? ["post"],
       sanitize: options.sanitize,
       default: options.default,
       registeredBy: "test",
@@ -142,7 +142,7 @@ describe("sanitizeMetaInput", () => {
 
   test("key registered for a different post type → POST_TYPE_MISMATCH", () => {
     const registry = registryWithMeta({
-      product_sku: { type: "string", postTypes: ["product"] },
+      product_sku: { type: "string", entryTypes: ["product"] },
     });
     expect(() =>
       sanitizeMetaInput(registry, "post", { product_sku: "ABC" }),
@@ -167,7 +167,7 @@ describe("sanitizeMetaInput", () => {
   });
 });
 
-describe("applyMetaPatch + loadPostMeta", () => {
+describe("applyMetaPatch + loadEntryMeta", () => {
   test("upserts merge into the existing bag — keys outside the patch stay put", async () => {
     const plugins = registryWithMeta({
       title: { type: "string" },
@@ -181,9 +181,9 @@ describe("applyMetaPatch + loadPostMeta", () => {
     });
     // Seed one key that the patch should NOT touch.
     await h.context.db
-      .update(posts)
+      .update(entries)
       .set({ meta: { untouched: "keep" } })
-      .where(eq(posts.id, post.id));
+      .where(eq(entries.id, post.id));
 
     const patch = sanitizeMetaInput(plugins, post.type, {
       title: "Written",
@@ -192,7 +192,7 @@ describe("applyMetaPatch + loadPostMeta", () => {
     if (!patch) throw new Error("patch should not be null");
     await applyMetaPatch(h.context, post.id, patch);
 
-    const meta = await loadPostMeta(h.context, post.id);
+    const meta = await loadEntryMeta(h.context, post.id);
     expect(meta).toEqual({ title: "Written", count: 7, untouched: "keep" });
   });
 
@@ -210,7 +210,7 @@ describe("applyMetaPatch + loadPostMeta", () => {
     await applyMetaPatch(h.context, post.id, first);
     await applyMetaPatch(h.context, post.id, second);
 
-    const meta = await loadPostMeta(h.context, post.id);
+    const meta = await loadEntryMeta(h.context, post.id);
     expect(meta).toEqual({ title: "v2" });
   });
 
@@ -228,7 +228,7 @@ describe("applyMetaPatch + loadPostMeta", () => {
     await applyMetaPatch(h.context, post.id, set);
     await applyMetaPatch(h.context, post.id, clear);
 
-    const meta = await loadPostMeta(h.context, post.id);
+    const meta = await loadEntryMeta(h.context, post.id);
     expect(meta).toEqual({});
   });
 
@@ -253,7 +253,7 @@ describe("applyMetaPatch + loadPostMeta", () => {
     if (!patch) throw new Error("patch should not be null");
     await applyMetaPatch(h.context, post.id, patch);
 
-    const meta = await loadPostMeta(h.context, post.id);
+    const meta = await loadEntryMeta(h.context, post.id);
     expect(meta).toEqual({
       "og:title": "Hello",
       "seo-description": "A page",
@@ -266,7 +266,7 @@ describe("applyMetaPatch + loadPostMeta", () => {
     });
     if (!clear) throw new Error("clear patch should not be null");
     await applyMetaPatch(h.context, post.id, clear);
-    expect(await loadPostMeta(h.context, post.id)).toEqual({});
+    expect(await loadEntryMeta(h.context, post.id)).toEqual({});
   });
 
   test("delete + upsert of the same key in one patch lands as the upsert", async () => {
@@ -288,7 +288,7 @@ describe("applyMetaPatch + loadPostMeta", () => {
     };
     await applyMetaPatch(h.context, post.id, patch);
 
-    const meta = await loadPostMeta(h.context, post.id);
+    const meta = await loadEntryMeta(h.context, post.id);
     expect(meta).toEqual({ title: "new" });
   });
 });

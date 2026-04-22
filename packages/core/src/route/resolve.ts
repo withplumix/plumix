@@ -1,9 +1,9 @@
 import type { AppContext } from "../context/app.js";
-import type { Post } from "../db/schema/posts.js";
+import type { Entry } from "../db/schema/entries.js";
 import type { RouteIntent } from "./intent.js";
 import type { RouteMatch } from "./match.js";
 import { and, desc, eq } from "../db/index.js";
-import { posts } from "../db/schema/posts.js";
+import { entries } from "../db/schema/entries.js";
 import { notFound } from "../runtime/http.js";
 import {
   escapeAttr,
@@ -36,11 +36,11 @@ async function resolveSingle(
     return notFound("public-route-slug-missing");
   }
 
-  const row = await ctx.db.query.posts.findFirst({
+  const row = await ctx.db.query.entries.findFirst({
     where: and(
-      eq(posts.type, intent.postType),
-      eq(posts.slug, slug),
-      eq(posts.status, "published"),
+      eq(entries.type, intent.entryType),
+      eq(entries.slug, slug),
+      eq(entries.status, "published"),
     ),
   });
   if (!row) return notFound("public-post-not-found");
@@ -55,23 +55,25 @@ async function resolveArchive(
 ): Promise<Response> {
   const rows = await ctx.db
     .select()
-    .from(posts)
-    .where(and(eq(posts.type, intent.postType), eq(posts.status, "published")))
-    .orderBy(desc(posts.publishedAt), desc(posts.id))
+    .from(entries)
+    .where(
+      and(eq(entries.type, intent.entryType), eq(entries.status, "published")),
+    )
+    .orderBy(desc(entries.publishedAt), desc(entries.id))
     .limit(ARCHIVE_LIMIT);
 
-  const registered = ctx.plugins.postTypes.get(intent.postType);
+  const registered = ctx.plugins.entryTypes.get(intent.entryType);
   const title =
-    registered?.labels?.plural ?? registered?.label ?? intent.postType;
-  const baseSlug = registered?.rewrite?.slug ?? intent.postType;
+    registered?.labels?.plural ?? registered?.label ?? intent.entryType;
+  const baseSlug = registered?.rewrite?.slug ?? intent.entryType;
   const body =
     rows.length === 0
-      ? `<h1>${escapeHtml(title)}</h1><p>No posts yet.</p>`
+      ? `<h1>${escapeHtml(title)}</h1><p>No entries yet.</p>`
       : `<h1>${escapeHtml(title)}</h1><ul>${rows.map((row) => renderArchiveItem(row, baseSlug)).join("")}</ul>`;
   return htmlResponse(title, body);
 }
 
-function renderArchiveItem(row: Post, baseSlug: string): string {
+function renderArchiveItem(row: Entry, baseSlug: string): string {
   const href = baseSlug === "" ? `/${row.slug}` : `/${baseSlug}/${row.slug}`;
   return `<li><a href="${escapeAttr(href)}">${escapeHtml(row.title)}</a></li>`;
 }

@@ -39,7 +39,7 @@ import {
 const ROLE_LABEL: Record<UserRole, string> = {
   admin: "Administrator — full control",
   editor: "Editor — publish + edit any post",
-  author: "Author — publish own posts",
+  author: "Author — publish own entries",
   contributor: "Contributor — draft, no publish",
   subscriber: "Subscriber — read only",
 };
