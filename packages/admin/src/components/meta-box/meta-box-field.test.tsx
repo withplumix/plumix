@@ -149,7 +149,7 @@ describe("MetaBoxField dispatcher", () => {
     );
   });
 
-  test("select: renders options, selection fires onChange with the value", async () => {
+  test("select: renders settings, selection fires onChange with the value", async () => {
     const onChange = vi.fn();
     render(
       <MetaBoxField

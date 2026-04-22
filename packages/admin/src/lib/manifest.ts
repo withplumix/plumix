@@ -2,8 +2,8 @@ import type {
   EntryTypeManifestEntry,
   MetaBoxManifestEntry,
   PlumixManifest,
-  SettingsFieldManifestEntry,
   SettingsGroupManifestEntry,
+  SettingsPageManifestEntry,
   TaxonomyManifestEntry,
 } from "@plumix/core/manifest";
 import { emptyManifest, MANIFEST_SCRIPT_ID } from "@plumix/core/manifest";
@@ -37,11 +37,13 @@ function normalize(value: unknown): PlumixManifest {
   const taxonomies = (value as { taxonomies?: unknown }).taxonomies;
   const metaBoxes = (value as { metaBoxes?: unknown }).metaBoxes;
   const settingsGroups = (value as { settingsGroups?: unknown }).settingsGroups;
+  const settingsPages = (value as { settingsPages?: unknown }).settingsPages;
   return {
     entryTypes: Array.isArray(entryTypes) ? entryTypes : [],
     taxonomies: Array.isArray(taxonomies) ? taxonomies : [],
     metaBoxes: Array.isArray(metaBoxes) ? metaBoxes : [],
     settingsGroups: Array.isArray(settingsGroups) ? settingsGroups : [],
+    settingsPages: Array.isArray(settingsPages) ? settingsPages : [],
   };
 }
 
@@ -57,7 +59,7 @@ function normalize(value: unknown): PlumixManifest {
 export const manifest: PlumixManifest = readManifest();
 
 /**
- * Look up a registered post type by its admin slug (the `/entries/$slug`
+ * Look up a registered entry type by its admin slug (the `/entries/$slug`
  * route param). Returns `undefined` when the slug doesn't match anything —
  * the route component should render a 404-style not-found state in that
  * case rather than a blank screen.
@@ -70,8 +72,8 @@ export function findEntryTypeBySlug(
 }
 
 /**
- * Sidebar gate: which post types should show up in the admin nav for a
- * user with the given capability set. Uses the post type's
+ * Sidebar gate: which entry types should show up in the admin nav for a
+ * user with the given capability set. Uses the entry type's
  * `capabilityType` (or its `name` when unset) to build the capability
  * string and checks for `${capabilityType}:edit_own` — the lowest bar
  * that implies "this user has any business editing this content type".
@@ -128,12 +130,12 @@ const META_BOX_PRIORITY_WEIGHT: Record<
 
 /**
  * Resolve the set of meta boxes the editor should render for a given
- * post type, honouring each box's optional capability gate. Returned in
+ * entry type, honouring each box's optional capability gate. Returned in
  * render order: by `priority` (high → default → low; undefined treated
  * as "default"), with registration order as the stable tiebreaker.
  */
 export function metaBoxesForEntryType(
-  postTypeName: string,
+  entryTypeName: string,
   capabilities: readonly string[],
   source: PlumixManifest = manifest,
 ): readonly MetaBoxManifestEntry[] {
@@ -142,7 +144,7 @@ export function metaBoxesForEntryType(
   // safe to do in place — no need to copy again.
   return source.metaBoxes
     .filter((box) => {
-      if (!box.entryTypes.includes(postTypeName)) return false;
+      if (!box.entryTypes.includes(entryTypeName)) return false;
       if (box.capability !== undefined && !caps.has(box.capability))
         return false;
       return true;
@@ -155,9 +157,35 @@ export function metaBoxesForEntryType(
 }
 
 /**
- * Look up a registered settings group by its name (the `/settings/$group`
+ * Look up a registered settings page by its name (the `/settings/$page`
  * route param). Returns `undefined` when the name doesn't match — the
  * route surfaces a 404-style not-found state in that case.
+ */
+export function findSettingsPageByName(
+  name: string,
+  source: PlumixManifest = manifest,
+): SettingsPageManifestEntry | undefined {
+  return source.settingsPages.find((p) => p.name === name);
+}
+
+/**
+ * Sidebar gate: which settings pages should render for a user with the
+ * given capability set. Gate is `settings:manage` across the board —
+ * matches the server's `settings.*` RPC gate. Per-page capability
+ * overrides are a future feature.
+ */
+export function visibleSettingsPages(
+  capabilities: readonly string[],
+  source: PlumixManifest = manifest,
+): readonly SettingsPageManifestEntry[] {
+  if (!capabilities.includes("settings:manage")) return [];
+  return source.settingsPages;
+}
+
+/**
+ * Look up a registered settings group by name. Used by the settings page
+ * renderer to resolve each group in `page.groups` into its label,
+ * description, and field list.
  */
 export function findSettingsGroupByName(
   name: string,
@@ -167,29 +195,16 @@ export function findSettingsGroupByName(
 }
 
 /**
- * Sidebar + list-route gate: which settings groups should render for a
- * user with the given capability set. Gate is `option:manage` across
- * the board — matches the server's `option.*` RPC gate. Per-group
- * capability overrides are a future feature (needs server-side
- * plumbing to tighten / loosen the RPC check accordingly); shipping
- * without them keeps the surface honest.
+ * Resolve a page's group references into their registered group entries,
+ * skipping any that don't resolve (`buildManifest` already asserts that
+ * every reference is valid, so this is belt-and-braces for tests /
+ * stale clients).
  */
-export function visibleSettingsGroups(
-  capabilities: readonly string[],
+export function groupsForSettingsPage(
+  page: SettingsPageManifestEntry,
   source: PlumixManifest = manifest,
 ): readonly SettingsGroupManifestEntry[] {
-  if (!capabilities.includes("option:manage")) return [];
-  return source.settingsGroups;
-}
-
-/**
- * Flatten a group's fieldsets into a single array of every field — the
- * shape the loader wants when it builds the `option.getMany` input.
- * Fieldsets are UI-only; storage keys stay flat (`${group}.${field}`)
- * so this collapse is lossless for the persistence layer.
- */
-export function allSettingsFields(
-  group: SettingsGroupManifestEntry,
-): readonly SettingsFieldManifestEntry[] {
-  return group.fieldsets.flatMap((fs) => fs.fields);
+  return page.groups
+    .map((name) => findSettingsGroupByName(name, source))
+    .filter((g): g is SettingsGroupManifestEntry => g !== undefined);
 }

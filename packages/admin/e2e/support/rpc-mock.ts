@@ -29,12 +29,8 @@ interface MockRpcHandlers {
   "/term/create"?: Term;
   "/term/update"?: Term;
   "/term/delete"?: Term;
-  "/option/getMany"?: Record<string, string>;
-  "/option/set"?: {
-    name: string;
-    value: string;
-    isAutoloaded: boolean;
-  };
+  "/settings/get"?: Record<string, unknown>;
+  "/settings/upsert"?: Record<string, unknown>;
 }
 
 // oRPC's StandardRPCSerializer wire format — `meta` is always present,
@@ -116,6 +112,7 @@ export const MANIFEST_WITH_POST: PlumixManifest = {
   taxonomies: [],
   metaBoxes: [],
   settingsGroups: [],
+  settingsPages: [],
 };
 
 // Manifest with two taxonomies — one hierarchical (category), one flat
@@ -145,6 +142,7 @@ export const MANIFEST_WITH_TAXONOMIES: PlumixManifest = {
   ],
   metaBoxes: [],
   settingsGroups: [],
+  settingsPages: [],
 };
 
 // Manifest with two meta boxes — one in the right rail (`side`), one in
@@ -189,55 +187,58 @@ export const MANIFEST_WITH_META_BOXES: PlumixManifest = {
     },
   ],
   settingsGroups: [],
+  settingsPages: [],
 };
 
 // Manifest exercising the full settings hierarchy: one page (group),
-// two fieldsets, several fields across them. Covers the plugin-author
-// contract end-to-end — plugins register a page with labelled sections
-// and the admin renders `<fieldset>` / `<legend>` accessibility markup.
+// two groups composed on one page. Covers the plugin-author contract
+// end-to-end — plugins register groups + a page that lists them, and
+// the admin renders one shadcn `<Card>` per group with its own save
+// button.
 export const MANIFEST_WITH_SETTINGS: PlumixManifest = {
   entryTypes: [],
   taxonomies: [],
   metaBoxes: [],
   settingsGroups: [
     {
+      name: "identity",
+      label: "Site identity",
+      description: "Public-facing site identity.",
+      fields: [
+        {
+          name: "site_title",
+          label: "Site title",
+          type: "text",
+          maxLength: 200,
+        },
+        {
+          name: "site_description",
+          label: "Tagline",
+          type: "text",
+          maxLength: 300,
+        },
+      ],
+    },
+    {
+      name: "contact",
+      label: "Contact",
+      description: "Admin notifications route to this address.",
+      fields: [
+        {
+          name: "admin_email",
+          label: "Administration email",
+          type: "text",
+          maxLength: 254,
+        },
+      ],
+    },
+  ],
+  settingsPages: [
+    {
       name: "general",
       label: "General",
       description: "Basic site identity and contact details.",
-      fieldsets: [
-        {
-          name: "identity",
-          label: "Identity",
-          description: "Public-facing site identity.",
-          fields: [
-            {
-              name: "site_title",
-              label: "Site title",
-              type: "text",
-              maxLength: 200,
-            },
-            {
-              name: "site_description",
-              label: "Tagline",
-              type: "text",
-              maxLength: 300,
-            },
-          ],
-        },
-        {
-          name: "contact",
-          label: "Contact",
-          description: "Admin notifications route to this address.",
-          fields: [
-            {
-              name: "admin_email",
-              label: "Administration email",
-              type: "text",
-              maxLength: 254,
-            },
-          ],
-        },
-      ],
+      groups: ["identity", "contact"],
     },
   ],
 };
@@ -255,7 +256,7 @@ export const AUTHED_ADMIN: AuthSessionOutput = {
     avatarUrl: null,
     role: "admin",
     capabilities: [
-      "option:manage",
+      "settings:manage",
       "plugin:manage",
       "post:create",
       "post:delete",

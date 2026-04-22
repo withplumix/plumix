@@ -31,7 +31,7 @@ export function roleLevel(role: UserRole): number {
 // any authenticated user, but creating / editing / promoting / deleting
 // other users is admin-only. `promote` is separate from `edit` because role
 // escalation is more sensitive than a name/avatar change.
-// `option:manage` is a single gate over both reads and writes, matching WP's
+// `settings:manage` is a single gate over both reads and writes, matching WP's
 // `manage_options`. Options can contain admin-only config; if a specific
 // option needs broader read access, expose it via a dedicated RPC procedure
 // that reads it server-side — don't widen `option.*`.
@@ -51,7 +51,7 @@ export const CORE_CAPABILITIES: Readonly<Record<string, UserRole>> =
     "user:promote": "admin",
     "user:delete": "admin",
     "plugin:manage": "admin",
-    "option:manage": "admin",
+    "settings:manage": "admin",
   });
 
 export const POST_TYPE_CAPABILITY_ACTIONS = {

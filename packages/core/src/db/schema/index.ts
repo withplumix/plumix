@@ -2,7 +2,7 @@ export * from "./allowed_domains.js";
 export * from "./auth_tokens.js";
 export * from "./credentials.js";
 export * from "./oauth_accounts.js";
-export * from "./options.js";
+export * from "./settings.js";
 export * from "./entry_term.js";
 export * from "./entries.js";
 export * from "./sessions.js";
