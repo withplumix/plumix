@@ -17,6 +17,7 @@ import type {
   TermListInput,
   TermUpdateInput,
 } from "./procedures/term/schemas.js";
+import type { UserMetaChanges } from "./procedures/user/meta.js";
 import type {
   UserInviteInput,
   UserListInput,
@@ -185,13 +186,30 @@ declare module "../hooks/types.js" {
     "user:registered": (user: User) => void | Promise<void>;
 
     /**
-     * Fires after a successful `user.update`. Payload carries the
-     * post-write row and the pre-write row for diffing — matches WP's
-     * `profile_update(user_id, old_user_data)` signature. Use this
-     * instead of the output filter when you need to know what actually
-     * changed (role demotion, email swap, etc.).
+     * Fires after a successful `user.update` row-columns write. Payload
+     * carries the post-write row and the pre-write row for diffing —
+     * matches WP's `profile_update(user_id, old_user_data)` signature.
+     * Use this instead of the output filter when you need to know what
+     * actually changed (role demotion, email swap, etc.).
+     *
+     * Only fires when row columns changed. A meta-only update does NOT
+     * fire `user:updated`; subscribe to `user:meta_changed` for that.
+     * The `user.meta` here reflects the row read right after the column
+     * write and may lag a meta write that happens in the same RPC call —
+     * use `user:meta_changed` for the authoritative meta diff.
      */
     "user:updated": (user: User, previous: User) => void | Promise<void>;
+
+    /**
+     * Fires after a successful meta write via `user.update`. Payload
+     * carries the decoded upserts + deleted keys — same shape as
+     * `entry:meta_changed` / `term:meta_changed` so plugins adopt one
+     * pattern across bags.
+     */
+    "user:meta_changed": (
+      user: { readonly id: number },
+      changes: UserMetaChanges,
+    ) => void | Promise<void>;
 
     /**
      * Fires on both disable (`enabled: false`) and re-enable

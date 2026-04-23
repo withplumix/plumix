@@ -41,6 +41,7 @@ describe("readManifest", () => {
       taxonomies: [],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -57,6 +58,7 @@ describe("readManifest", () => {
       taxonomies: [],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -69,6 +71,7 @@ describe("readManifest", () => {
       taxonomies: [],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -84,6 +87,7 @@ describe("readManifest", () => {
       taxonomies: [],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -97,6 +101,7 @@ describe("readManifest", () => {
       taxonomies: [],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -111,6 +116,7 @@ describe("readManifest", () => {
       taxonomies: [],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -142,6 +148,7 @@ describe("readManifest", () => {
         },
       ],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -171,6 +178,7 @@ describe("readManifest", () => {
       ],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -193,6 +201,7 @@ describe("findEntryTypeBySlug", () => {
     taxonomies: [],
     entryMetaBoxes: [],
     termMetaBoxes: [],
+    userMetaBoxes: [],
     settingsGroups: [],
     settingsPages: [],
   };
@@ -226,6 +235,7 @@ describe("visibleEntryTypes", () => {
     taxonomies: [],
     entryMetaBoxes: [],
     termMetaBoxes: [],
+    userMetaBoxes: [],
     settingsGroups: [],
     settingsPages: [],
   };
@@ -265,6 +275,7 @@ describe("entryMetaBoxesForType", () => {
         box("c"), // default
       ],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     };
@@ -281,6 +292,7 @@ describe("entryMetaBoxesForType", () => {
         box("second", { priority: "high" }),
       ],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     };
@@ -297,6 +309,7 @@ describe("entryMetaBoxesForType", () => {
         box("shop", { entryTypes: ["product"] }),
       ],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     };
@@ -313,6 +326,7 @@ describe("entryMetaBoxesForType", () => {
         box("privileged", { capability: "post:edit_any" }),
       ],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     };
@@ -335,6 +349,7 @@ describe("entryMetaBoxesForType", () => {
       taxonomies: [],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     };
@@ -351,6 +366,7 @@ describe("findTaxonomyByName", () => {
     ],
     entryMetaBoxes: [],
     termMetaBoxes: [],
+    userMetaBoxes: [],
     settingsGroups: [],
     settingsPages: [],
   };
@@ -374,6 +390,7 @@ describe("visibleTaxonomies", () => {
     ],
     entryMetaBoxes: [],
     termMetaBoxes: [],
+    userMetaBoxes: [],
     settingsGroups: [],
     settingsPages: [],
   };
@@ -395,6 +412,7 @@ describe("findSettingsPageByName + visibleSettingsPages + findSettingsGroupByNam
     taxonomies: [],
     entryMetaBoxes: [],
     termMetaBoxes: [],
+    userMetaBoxes: [],
     settingsGroups: [
       {
         name: "identity",
