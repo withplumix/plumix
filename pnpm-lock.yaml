@@ -6,15 +6,6 @@ settings:
 
 catalogs:
   default:
-    '@arethetypeswrong/cli':
-      specifier: ^0.18.2
-      version: 0.18.2
-    '@cloudflare/workers-types':
-      specifier: ^4.20260421.1
-      version: 4.20260421.1
-    '@types/node':
-      specifier: ^24.12.2
-      version: 24.12.2
     '@types/react':
       specifier: ^19.2.14
       version: 19.2.14
@@ -27,24 +18,12 @@ catalogs:
     '@vitest/coverage-v8':
       specifier: ^4.1.5
       version: 4.1.5
-    drizzle-kit:
-      specifier: ^0.31.10
-      version: 0.31.10
-    drizzle-orm:
-      specifier: ^0.45.2
-      version: 0.45.2
-    drizzle-valibot:
-      specifier: ^0.4.2
-      version: 0.4.2
     eslint:
       specifier: ^10.2.1
       version: 10.2.1
     prettier:
       specifier: ^3.8.3
       version: 3.8.3
-    publint:
-      specifier: ^0.3.18
-      version: 0.3.18
     react:
       specifier: ^19.2.5
       version: 19.2.5
@@ -129,15 +108,15 @@ importers:
       '@fontsource-variable/geist-mono':
         specifier: ^5.2.7
         version: 5.2.7
+      '@hookform/resolvers':
+        specifier: ^5.2.2
+        version: 5.2.2(react-hook-form@7.73.1(react@19.2.5))
       '@orpc/client':
         specifier: ^1.13.14
         version: 1.13.14
       '@orpc/tanstack-query':
         specifier: ^1.13.14
         version: 1.13.14(@orpc/client@1.13.14)(@tanstack/query-core@5.99.2)
-      '@tanstack/react-form':
-        specifier: ^1.29.0
-        version: 1.29.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@tanstack/react-query':
         specifier: ^5.99.2
         version: 5.99.2(react@19.2.5)
@@ -174,6 +153,9 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 19.2.5(react@19.2.5)
+      react-hook-form:
+        specifier: ^7.73.1
+        version: 7.73.1(react@19.2.5)
       tailwind-merge:
         specifier: ^3.5.0
         version: 3.5.0
@@ -1536,6 +1518,11 @@ packages:
   '@gwhitney/detect-indent@7.0.1':
     resolution: {integrity: sha512-7bQW+gkKa2kKZPeJf6+c6gFK9ARxQfn+FKy9ScTBppyKRWH2KzsmweXUoklqeEiHiNVWaeP5csIdsNq6w7QhzA==}
     engines: {node: '>=12.20'}
+
+  '@hookform/resolvers@5.2.2':
+    resolution: {integrity: sha512-A/IxlMLShx3KjV/HeTcTfaMxdwy690+L/ZADoeaTltLx+CVuzkeVIPuybK3jrRfw7YZnmdKsVVHAlEPIAEUNlA==}
+    peerDependencies:
+      react-hook-form: ^7.55.0
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -3016,6 +3003,9 @@ packages:
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
+  '@standard-schema/utils@0.3.0':
+    resolution: {integrity: sha512-e7Mew686owMaPJVNNLs55PUvgz371nKgwsc4vxE49zsODpJEnxgxRo2y/OKrqueavXgZNMDVj3DdHFlaSAeU8g==}
+
   '@tailwindcss/node@4.2.3':
     resolution: {integrity: sha512-dhXFXkW2dGvX4r/fi24gyXM0t1mFMrpykQjqrdA4SuavaMagm4SY1u5G2SCJwu1/0x/5RlZJ2VPjP3mKYQfCkA==}
 
@@ -3110,36 +3100,15 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
 
-  '@tanstack/devtools-event-client@0.4.3':
-    resolution: {integrity: sha512-OZI6QyULw0FI0wjgmeYzCIfbgPsOEzwJtCpa69XrfLMtNXLGnz3d/dIabk7frg0TmHo+Ah49w5I4KC7Tufwsvw==}
-    engines: {node: '>=18'}
-    hasBin: true
-
-  '@tanstack/form-core@1.29.0':
-    resolution: {integrity: sha512-uyeKEdJBfbj0bkBSwvSYVRtWLOaXvfNX3CeVw1HqGOXVLxpBBGAqWdYLc+UoX/9xcoFwFXrjR9QqMPzvwm2yyQ==}
-
   '@tanstack/history@1.161.6':
     resolution: {integrity: sha512-NaOGLRrddszbQj9upGat6HG/4TKvXLvu+osAIgfxPYA+eIvYKv8GKDJOrY2D3/U9MRnKfMWD7bU4jeD4xmqyIg==}
     engines: {node: '>=20.19'}
-
-  '@tanstack/pacer-lite@0.1.1':
-    resolution: {integrity: sha512-y/xtNPNt/YeyoVxE/JCx+T7yjEzpezmbb+toK8DDD1P4m7Kzs5YR956+7OKexG3f8aXgC3rLZl7b1V+yNUSy5w==}
-    engines: {node: '>=18'}
 
   '@tanstack/query-core@5.99.2':
     resolution: {integrity: sha512-1HunU0bXVsR1ZJMZbcOPE6VtaBJxsW809RE9xPe4Gz7MlB0GWwQvuTPhMoEmQ/hIzFKJ/DWAuttIe7BOaWx0tA==}
 
   '@tanstack/query-devtools@5.99.2':
     resolution: {integrity: sha512-TEF1d+RYO9l8oeCwgzmOHIgKwAzXQmw2s/ny2bW8qeg2OMkkLjALfVEivgCMR3OL/jVdMmeTPX56WrV+uvYJFg==}
-
-  '@tanstack/react-form@1.29.0':
-    resolution: {integrity: sha512-jj425NNX0QKqbUzqSNiYI3HCPHSk2df47acXCJyXczWOTmG81ECZGkgofgqamFsSU9kMiH6Di5RLUnftrlhWSw==}
-    peerDependencies:
-      '@tanstack/react-start': '*'
-      react: ^17.0.0 || ^18.0.0 || ^19.0.0
-    peerDependenciesMeta:
-      '@tanstack/react-start':
-        optional: true
 
   '@tanstack/react-query-devtools@5.99.2':
     resolution: {integrity: sha512-8txkK9A9XBNTB8RoxVgfp6W3qwBr25tNP10L4yu3KuyhAdEvccECfIRzesSwMVk/wpVVioAr+hbMtUkMMF+WVw==}
@@ -5356,6 +5325,12 @@ packages:
     peerDependencies:
       react: ^19.2.5
 
+  react-hook-form@7.73.1:
+    resolution: {integrity: sha512-VAfVYOPcx3piiEVQy95vyFmBwbVUsP/AUIN+mpFG8h11yshDd444nn0VyfaGWSRnhOLVgiDu7HIuBtAIzxn9dA==}
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      react: ^16.8.0 || ^17 || ^18 || ^19
+
   react-is@16.13.1:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
 
@@ -6807,6 +6782,11 @@ snapshots:
 
   '@gwhitney/detect-indent@7.0.1': {}
 
+  '@hookform/resolvers@5.2.2(react-hook-form@7.73.1(react@19.2.5))':
+    dependencies:
+      '@standard-schema/utils': 0.3.0
+      react-hook-form: 7.73.1(react@19.2.5)
+
   '@humanfs/core@0.19.1': {}
 
   '@humanfs/node@0.16.7':
@@ -8192,6 +8172,8 @@ snapshots:
 
   '@standard-schema/spec@1.1.0': {}
 
+  '@standard-schema/utils@0.3.0': {}
+
   '@tailwindcss/node@4.2.3':
     dependencies:
       '@jridgewell/remapping': 2.3.5
@@ -8260,29 +8242,11 @@ snapshots:
       tailwindcss: 4.2.3
       vite: 8.0.9(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
 
-  '@tanstack/devtools-event-client@0.4.3': {}
-
-  '@tanstack/form-core@1.29.0':
-    dependencies:
-      '@tanstack/devtools-event-client': 0.4.3
-      '@tanstack/pacer-lite': 0.1.1
-      '@tanstack/store': 0.9.3
-
   '@tanstack/history@1.161.6': {}
-
-  '@tanstack/pacer-lite@0.1.1': {}
 
   '@tanstack/query-core@5.99.2': {}
 
   '@tanstack/query-devtools@5.99.2': {}
-
-  '@tanstack/react-form@1.29.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
-    dependencies:
-      '@tanstack/form-core': 1.29.0
-      '@tanstack/react-store': 0.9.3(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      react: 19.2.5
-    transitivePeerDependencies:
-      - react-dom
 
   '@tanstack/react-query-devtools@5.99.2(@tanstack/react-query@5.99.2(react@19.2.5))(react@19.2.5)':
     dependencies:
@@ -8831,7 +8795,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.1.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.5(@types/node@24.12.2)(@vitest/coverage-v8@4.1.5)(jsdom@29.0.2)(vite@8.0.9(@types/node@24.12.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+      vitest: 4.1.5(@types/node@25.6.0)(@vitest/coverage-v8@4.1.5)(jsdom@29.0.2)(vite@8.0.9(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
 
   '@vitest/expect@4.1.5':
     dependencies:
@@ -10685,6 +10649,10 @@ snapshots:
     dependencies:
       react: 19.2.5
       scheduler: 0.27.0
+
+  react-hook-form@7.73.1(react@19.2.5):
+    dependencies:
+      react: 19.2.5
 
   react-is@16.13.1: {}
 

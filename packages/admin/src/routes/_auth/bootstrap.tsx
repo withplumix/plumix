@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { FormField } from "@/components/form/field.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Button } from "@/components/ui/button.js";
 import {
@@ -10,15 +9,24 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.js";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form.js";
+import { Input } from "@/components/ui/input.js";
 import { getPasskeyErrorMessage, PasskeyError } from "@/lib/passkey-errors.js";
 import { registerWithPasskey } from "@/lib/passkey.js";
 import { SESSION_QUERY_KEY, sessionQueryOptions } from "@/lib/session.js";
-import { useForm } from "@tanstack/react-form";
+import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
-import * as v from "valibot";
+import { useForm } from "react-hook-form";
 
-import { bootstrapEmailFieldSchema, bootstrapSchema } from "./-schemas.js";
+import { bootstrapSchema } from "./-schemas.js";
 
 export const Route = createFileRoute("/_auth/bootstrap")({
   beforeLoad: async ({ context }) => {
@@ -55,19 +63,16 @@ function BootstrapRoute(): ReactNode {
   });
 
   const form = useForm({
+    resolver: valibotResolver(bootstrapSchema),
     defaultValues: { email: "", name: "" },
-    validators: {
-      onSubmit: ({ value }) => {
-        const result = v.safeParse(bootstrapSchema, value);
-        return result.success ? undefined : result.issues[0].message;
-      },
-    },
-    onSubmit: ({ value }) => {
-      createAccount.mutate({
-        email: value.email,
-        ...(value.name ? { name: value.name } : {}),
-      });
-    },
+    mode: "onBlur",
+  });
+
+  const onSubmit = form.handleSubmit((value) => {
+    createAccount.mutate({
+      email: value.email,
+      ...(value.name ? { name: value.name } : {}),
+    });
   });
 
   return (
@@ -81,75 +86,65 @@ function BootstrapRoute(): ReactNode {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            void form.handleSubmit();
-          }}
-        >
-          <form.Field
-            name="email"
-            validators={{
-              onBlur: ({ value }) => {
-                const result = v.safeParse(bootstrapEmailFieldSchema, {
-                  email: value,
-                });
-                return result.success ? undefined : result.issues[0].message;
-              },
-            }}
-          >
-            {(field) => (
-              <FormField
-                field={field}
-                label="Email"
-                type="email"
-                autoComplete="username webauthn"
-                required
-                disabled={createAccount.isPending}
-              />
-            )}
-          </form.Field>
+        <Form {...form}>
+          <form className="flex flex-col gap-4" onSubmit={onSubmit}>
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      autoComplete="username webauthn"
+                      required
+                      disabled={createAccount.isPending}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <form.Field name="name">
-            {(field) => (
-              <FormField
-                field={field}
-                label={
-                  <>
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
                     Name{" "}
                     <span className="text-muted-foreground">(optional)</span>
-                  </>
-                }
-                type="text"
-                autoComplete="name"
-                disabled={createAccount.isPending}
-              />
-            )}
-          </form.Field>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="text"
+                      autoComplete="name"
+                      disabled={createAccount.isPending}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          {errorCode ? (
-            <Alert variant="destructive">
-              <AlertDescription>
-                {getPasskeyErrorMessage(errorCode)}
-              </AlertDescription>
-            </Alert>
-          ) : null}
+            {errorCode ? (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  {getPasskeyErrorMessage(errorCode)}
+                </AlertDescription>
+              </Alert>
+            ) : null}
 
-          <form.Subscribe selector={(state) => state.canSubmit}>
-            {(canSubmit) => (
-              <Button
-                type="submit"
-                disabled={!canSubmit || createAccount.isPending}
-              >
-                {createAccount.isPending
-                  ? "Creating account…"
-                  : "Create account with passkey"}
-              </Button>
-            )}
-          </form.Subscribe>
-        </form>
+            <Button type="submit" disabled={createAccount.isPending}>
+              {createAccount.isPending
+                ? "Creating account…"
+                : "Create account with passkey"}
+            </Button>
+          </form>
+        </Form>
       </CardContent>
     </Card>
   );

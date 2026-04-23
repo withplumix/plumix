@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
-import { FormField } from "@/components/form/field.js";
 import { MetaBoxCard } from "@/components/meta-box/meta-box.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Badge } from "@/components/ui/badge.js";
@@ -13,11 +12,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.js";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form.js";
+import { Input } from "@/components/ui/input.js";
 import { Label } from "@/components/ui/label.js";
 import { hasCap } from "@/lib/caps.js";
 import { visibleUserMetaBoxes } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
-import { useForm } from "@tanstack/react-form";
+import { valibotResolver } from "@hookform/resolvers/valibot";
 import {
   useMutation,
   useQuery,
@@ -32,6 +40,7 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
+import { useForm } from "react-hook-form";
 import * as v from "valibot";
 
 import type { UserMetaBoxManifestEntry } from "@plumix/core/manifest";
@@ -129,7 +138,7 @@ function UserEditRoute(): ReactNode {
   const metaBoxes = visibleUserMetaBoxes(session.capabilities);
   return (
     <UserEditForm
-      // Remount after each save so TanStack Form re-reads `defaultValues`
+      // Remount after each save so `useForm` re-reads `defaultValues`
       // from the refetched row. Same pattern as `/entries/$slug/$id`.
       key={
         target.updatedAt instanceof Date
@@ -212,19 +221,15 @@ function UserEditForm({
   });
 
   const form = useForm({
+    resolver: valibotResolver(profileFormSchema),
     defaultValues: {
       name: target.name ?? "",
       role: target.role,
     },
-    validators: {
-      onSubmit: ({ value }) => {
-        const result = v.safeParse(profileFormSchema, value);
-        return result.success ? undefined : result.issues[0].message;
-      },
-    },
-    onSubmit: ({ value }) => {
-      updateUser.mutate(value);
-    },
+  });
+
+  const onSubmit = form.handleSubmit((value) => {
+    updateUser.mutate(value);
   });
 
   return (
@@ -253,130 +258,133 @@ function UserEditForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form
-            className="flex flex-col gap-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              void form.handleSubmit();
-            }}
-          >
-            <div className="flex flex-col gap-2">
-              <Label>Email</Label>
-              <p
-                className="text-muted-foreground font-mono text-sm"
-                data-testid="user-edit-email"
-              >
-                {target.email}
-              </p>
-              <p className="text-muted-foreground text-xs">
-                Email changes aren't supported yet — it's the account key.
-              </p>
-            </div>
+          <Form {...form}>
+            <form className="flex flex-col gap-4" onSubmit={onSubmit}>
+              <div className="flex flex-col gap-2">
+                <Label>Email</Label>
+                <p
+                  className="text-muted-foreground font-mono text-sm"
+                  data-testid="user-edit-email"
+                >
+                  {target.email}
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  Email changes aren't supported yet — it's the account key.
+                </p>
+              </div>
 
-            <form.Field name="name">
-              {(field) => (
-                <FormField
-                  field={field}
-                  label={
-                    <>
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
                       Name{" "}
                       <span className="text-muted-foreground">(optional)</span>
-                    </>
-                  }
-                  type="text"
-                  autoComplete="name"
-                  disabled={updateUser.isPending || !canSave}
-                  data-testid="user-edit-name-input"
-                />
-              )}
-            </form.Field>
-
-            {canPromote ? (
-              <form.Field name="role">
-                {(field) => (
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="role">Role</Label>
-                    <select
-                      id="role"
-                      name="role"
-                      value={field.state.value}
-                      onChange={(e) => {
-                        const next = e.target.value;
-                        if (isUserRole(next)) field.handleChange(next);
-                      }}
-                      disabled={updateUser.isPending}
-                      data-testid="user-edit-role-select"
-                      className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {USER_ROLES.map((role) => (
-                        <option key={role} value={role}>
-                          {ROLE_LABEL[role]}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        autoComplete="name"
+                        disabled={updateUser.isPending || !canSave}
+                        data-testid="user-edit-name-input"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </form.Field>
-            ) : (
-              <div className="flex flex-col gap-2">
-                <Label>Role</Label>
-                <Badge variant="secondary" className="w-fit capitalize">
-                  {target.role}
-                </Badge>
-                {isSelf ? (
-                  <p className="text-muted-foreground text-xs">
-                    Only another administrator can change your role.
-                  </p>
-                ) : null}
-              </div>
-            )}
-
-            {metaBoxes.map((box) => (
-              <MetaBoxCard
-                key={box.id}
-                box={box}
-                values={meta}
-                disabled={updateUser.isPending || !canSave}
-                onChange={(key, value) => {
-                  setMeta((prev) => ({ ...prev, [key]: value }));
-                }}
               />
-            ))}
 
-            {serverError ? (
-              <Alert variant="destructive" data-testid="user-edit-server-error">
-                <AlertDescription>{serverError}</AlertDescription>
-              </Alert>
-            ) : null}
+              {canPromote ? (
+                <FormField
+                  control={form.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Role</FormLabel>
+                      <FormControl>
+                        <select
+                          value={field.value}
+                          onBlur={field.onBlur}
+                          onChange={(e) => {
+                            const next = e.target.value;
+                            if (isUserRole(next)) field.onChange(next);
+                          }}
+                          disabled={updateUser.isPending}
+                          data-testid="user-edit-role-select"
+                          className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {USER_ROLES.map((role) => (
+                            <option key={role} value={role}>
+                              {ROLE_LABEL[role]}
+                            </option>
+                          ))}
+                        </select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <Label>Role</Label>
+                  <Badge variant="secondary" className="w-fit capitalize">
+                    {target.role}
+                  </Badge>
+                  {isSelf ? (
+                    <p className="text-muted-foreground text-xs">
+                      Only another administrator can change your role.
+                    </p>
+                  ) : null}
+                </div>
+              )}
 
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  void navigate({
-                    to: "/users",
-                    search: USERS_LIST_DEFAULT_SEARCH,
-                  });
-                }}
-                disabled={updateUser.isPending}
-              >
-                Cancel
-              </Button>
-              <form.Subscribe selector={(state) => state.canSubmit}>
-                {(canSubmit) => (
-                  <Button
-                    type="submit"
-                    disabled={!canSubmit || updateUser.isPending || !canSave}
-                    data-testid="user-edit-submit"
-                  >
-                    {updateUser.isPending ? "Saving…" : "Save changes"}
-                  </Button>
-                )}
-              </form.Subscribe>
-            </div>
-          </form>
+              {metaBoxes.map((box) => (
+                <MetaBoxCard
+                  key={box.id}
+                  box={box}
+                  values={meta}
+                  disabled={updateUser.isPending || !canSave}
+                  onChange={(key, value) => {
+                    setMeta((prev) => ({ ...prev, [key]: value }));
+                  }}
+                />
+              ))}
+
+              {serverError ? (
+                <Alert
+                  variant="destructive"
+                  data-testid="user-edit-server-error"
+                >
+                  <AlertDescription>{serverError}</AlertDescription>
+                </Alert>
+              ) : null}
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    void navigate({
+                      to: "/users",
+                      search: USERS_LIST_DEFAULT_SEARCH,
+                    });
+                  }}
+                  disabled={updateUser.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={updateUser.isPending || !canSave}
+                  data-testid="user-edit-submit"
+                >
+                  {updateUser.isPending ? "Saving…" : "Save changes"}
+                </Button>
+              </div>
+            </form>
+          </Form>
         </CardContent>
       </Card>
 

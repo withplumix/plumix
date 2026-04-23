@@ -4,10 +4,18 @@ import { useEffect, useState } from "react";
 import { MetaBoxCard } from "@/components/meta-box/meta-box.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Button } from "@/components/ui/button.js";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
-import { Label } from "@/components/ui/label.js";
-import { useForm, useStore } from "@tanstack/react-form";
+import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useBlocker } from "@tanstack/react-router";
+import { useForm, useWatch } from "react-hook-form";
 import * as v from "valibot";
 
 import type { EntryMetaBoxManifestEntry } from "@plumix/core/manifest";
@@ -96,29 +104,20 @@ export function PostEditorForm({
   const [slugLocked, setSlugLocked] = useState(initialSlugLocked);
 
   const form = useForm({
+    resolver: valibotResolver(postEditorSchema),
     defaultValues: initialValues,
-    validators: {
-      onSubmit: ({ value }) => {
-        const result = v.safeParse(postEditorSchema, value);
-        return result.success ? undefined : result.issues[0].message;
-      },
-    },
-    onSubmit: ({ value }) => {
-      onSubmit(value);
-    },
   });
 
-  // Subscribe to title changes so we can push an auto-derived slug while
-  // the slug is still unlocked. `useStore` is TanStack Form's reactive
-  // selector — firing as the user types is exactly the debounce-free UX
-  // WP uses for new-post auto-slug.
-  const titleValue = useStore(form.store, (state) => state.values.title);
+  const titleValue = useWatch({ control: form.control, name: "title" });
+  const metaValues = useWatch({ control: form.control, name: "meta" });
+  const isDirty = form.formState.isDirty;
+
+  // Drive the slug from the title while the slug remains unlocked —
+  // same debounce-free UX WordPress uses for new-post auto-slug.
   useEffect(() => {
     if (slugLocked) return;
-    form.setFieldValue("slug", slugify(titleValue));
+    form.setValue("slug", slugify(titleValue), { shouldDirty: true });
   }, [form, slugLocked, titleValue]);
-
-  const isDirty = useStore(form.store, (state) => state.isDirty);
 
   // TanStack Router blocker: prompt before navigation (sidebar click,
   // back button, etc.) if the form is dirty and not currently saving.
@@ -132,174 +131,203 @@ export function PostEditorForm({
 
   const { bottom, sidebar } = partitionBoxesByLocation(metaBoxes);
 
-  // Single subscription to the form's `meta` field powers all three
-  // regions — each box reads from `metaValues` and writes via the shared
-  // `onMetaChange`. Sharing the subscription avoids triple-re-renders on
-  // every keystroke.
-  const metaValues = useStore(form.store, (state) => state.values.meta);
   const onMetaChange = (key: string, next: unknown): void => {
-    form.setFieldValue("meta", { ...metaValues, [key]: next });
+    form.setValue(
+      "meta",
+      { ...metaValues, [key]: next },
+      { shouldDirty: true },
+    );
   };
 
+  const handleSubmit = form.handleSubmit((value) => {
+    onSubmit(value);
+  });
+
   return (
-    <form
-      className="flex flex-col gap-6"
-      data-testid="post-editor-form"
-      onSubmit={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        void form.handleSubmit();
-      }}
-    >
-      <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="flex flex-col gap-6">
-          <form.Field name="title">
-            {(field) => (
-              <TextFieldRow
-                field={field}
-                label="Title"
-                required
-                disabled={isSubmitting}
-                testId="post-editor-title-input"
-              />
-            )}
-          </form.Field>
+    <Form {...form}>
+      <form
+        className="flex flex-col gap-6"
+        data-testid="post-editor-form"
+        onSubmit={handleSubmit}
+      >
+        <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="flex flex-col gap-6">
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="text"
+                      required
+                      autoComplete="off"
+                      disabled={isSubmitting}
+                      data-testid="post-editor-title-input"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <form.Field name="slug">
-            {(field) => (
-              <TextFieldRow
-                field={field}
-                label="Slug"
-                required
-                disabled={isSubmitting}
-                testId="post-editor-slug-input"
-                onChangeValue={(next) => {
-                  // Any direct edit to the slug input locks out the
-                  // title-driven auto-derivation for the rest of this
-                  // editor session.
-                  setSlugLocked(true);
-                  field.handleChange(next);
-                }}
-              />
-            )}
-          </form.Field>
+            <FormField
+              control={form.control}
+              name="slug"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Slug</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="text"
+                      required
+                      autoComplete="off"
+                      disabled={isSubmitting}
+                      data-testid="post-editor-slug-input"
+                      {...field}
+                      onChange={(e) => {
+                        // Any direct edit to the slug input locks out the
+                        // title-driven auto-derivation for the rest of this
+                        // editor session.
+                        setSlugLocked(true);
+                        field.onChange(e);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <form.Field name="content">
-            {(field) => (
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="post-editor-content">Content</Label>
-                <div id="post-editor-content">
-                  <TiptapEditor
-                    value={field.state.value}
-                    onChange={(json) => {
-                      field.handleChange(json);
-                    }}
-                    disabled={isSubmitting}
-                    ariaLabel="Entry content"
-                  />
-                </div>
-              </div>
-            )}
-          </form.Field>
+            <FormField
+              control={form.control}
+              name="content"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Content</FormLabel>
+                  <FormControl>
+                    <div>
+                      <TiptapEditor
+                        value={field.value}
+                        onChange={(json) => {
+                          field.onChange(json);
+                        }}
+                        disabled={isSubmitting}
+                        ariaLabel="Entry content"
+                      />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <form.Field name="excerpt">
-            {(field) => (
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="post-editor-excerpt">
-                  Excerpt{" "}
-                  <span className="text-muted-foreground">(optional)</span>
-                </Label>
-                <textarea
-                  id="post-editor-excerpt"
-                  name="excerpt"
-                  value={field.state.value}
-                  maxLength={600}
-                  rows={3}
-                  disabled={isSubmitting}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => {
-                    field.handleChange(e.target.value);
-                  }}
-                  className="border-input bg-background focus-visible:ring-ring flex min-h-20 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                />
-              </div>
-            )}
-          </form.Field>
+            <FormField
+              control={form.control}
+              name="excerpt"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Excerpt{" "}
+                    <span className="text-muted-foreground">(optional)</span>
+                  </FormLabel>
+                  <FormControl>
+                    <textarea
+                      {...field}
+                      maxLength={600}
+                      rows={3}
+                      disabled={isSubmitting}
+                      className="border-input bg-background focus-visible:ring-ring flex min-h-20 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <form.Field name="status">
-            {(field) => (
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="post-editor-status">Status</Label>
-                <select
-                  id="post-editor-status"
-                  name="status"
-                  value={field.state.value}
-                  disabled={isSubmitting}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => {
-                    field.handleChange(e.target.value as EntryStatus);
-                  }}
-                  className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {availableStatuses.map((status) => (
-                    <option key={status} value={status} className="capitalize">
-                      {capitalize(status)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </form.Field>
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <FormControl>
+                    <select
+                      value={field.value}
+                      onBlur={field.onBlur}
+                      onChange={(e) => {
+                        field.onChange(e.target.value);
+                      }}
+                      disabled={isSubmitting}
+                      className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {availableStatuses.map((status) => (
+                        <option
+                          key={status}
+                          value={status}
+                          className="capitalize"
+                        >
+                          {capitalize(status)}
+                        </option>
+                      ))}
+                    </select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <MetaBoxRegion
-            boxes={bottom}
-            testId="meta-boxes-bottom"
-            values={metaValues}
-            onChange={onMetaChange}
-            disabled={isSubmitting}
-          />
+            <MetaBoxRegion
+              boxes={bottom}
+              testId="meta-boxes-bottom"
+              values={metaValues}
+              onChange={onMetaChange}
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <aside
+            className="flex flex-col gap-4"
+            data-testid="meta-boxes-sidebar"
+          >
+            <MetaBoxRegion
+              boxes={sidebar}
+              testId="meta-boxes-sidebar-boxes"
+              values={metaValues}
+              onChange={onMetaChange}
+              disabled={isSubmitting}
+            />
+          </aside>
         </div>
 
-        <aside className="flex flex-col gap-4" data-testid="meta-boxes-sidebar">
-          <MetaBoxRegion
-            boxes={sidebar}
-            testId="meta-boxes-sidebar-boxes"
-            values={metaValues}
-            onChange={onMetaChange}
+        {serverError ? (
+          <Alert variant="destructive">
+            <AlertDescription>{serverError}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onCancel}
             disabled={isSubmitting}
-          />
-        </aside>
-      </div>
-
-      {serverError ? (
-        <Alert variant="destructive">
-          <AlertDescription>{serverError}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onCancel}
-          disabled={isSubmitting}
-          data-testid="post-editor-cancel"
-        >
-          Cancel
-        </Button>
-        <form.Subscribe selector={(state) => state.canSubmit}>
-          {(canSubmit) => (
-            <Button
-              type="submit"
-              disabled={!canSubmit || isSubmitting}
-              data-testid="post-editor-submit"
-            >
-              {isSubmitting ? "Saving…" : submitLabel}
-            </Button>
-          )}
-        </form.Subscribe>
-      </div>
-    </form>
+            data-testid="post-editor-cancel"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            data-testid="post-editor-submit"
+          >
+            {isSubmitting ? "Saving…" : submitLabel}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 }
 
@@ -351,69 +379,6 @@ function MetaBoxRegion({
           onChange={onChange}
         />
       ))}
-    </div>
-  );
-}
-
-// Lightweight field row for the editor's text inputs. FormField (used on
-// auth forms) wires `onChange` internally and doesn't expose a hook — the
-// editor needs to intercept slug edits to lock auto-derivation, so we use
-// a local binding here. Keeps the ARIA wiring equivalent.
-interface TextFieldRowProps {
-  readonly field: {
-    readonly name: string;
-    readonly state: {
-      readonly value: string;
-      readonly meta: { readonly errors: readonly unknown[] };
-    };
-    readonly handleBlur: () => void;
-    readonly handleChange: (value: string) => void;
-  };
-  readonly label: string;
-  readonly required?: boolean;
-  readonly disabled?: boolean;
-  readonly onChangeValue?: (value: string) => void;
-  /** Stable hook for e2e/unit tests; prefer these over role/label queries. */
-  readonly testId?: string;
-}
-
-function TextFieldRow({
-  field,
-  label,
-  required,
-  disabled,
-  onChangeValue,
-  testId,
-}: TextFieldRowProps): ReactNode {
-  const errors = field.state.meta.errors;
-  const hasError = errors.length > 0;
-  const errorId = `${field.name}-error`;
-  return (
-    <div className="flex flex-col gap-2">
-      <Label htmlFor={field.name}>{label}</Label>
-      <Input
-        id={field.name}
-        name={field.name}
-        type="text"
-        value={field.state.value}
-        required={required}
-        disabled={disabled}
-        autoComplete="off"
-        aria-invalid={hasError || undefined}
-        aria-describedby={hasError ? errorId : undefined}
-        data-testid={testId}
-        onBlur={field.handleBlur}
-        onChange={(e) => {
-          const next = e.target.value;
-          if (onChangeValue) onChangeValue(next);
-          else field.handleChange(next);
-        }}
-      />
-      {hasError ? (
-        <p id={errorId} className="text-destructive text-sm">
-          {String(errors[0])}
-        </p>
-      ) : null}
     </div>
   );
 }
