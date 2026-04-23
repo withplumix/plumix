@@ -113,9 +113,12 @@ export function PostEditorForm({
 
   // Drive the slug from the title while the slug remains unlocked —
   // same debounce-free UX WordPress uses for new-post auto-slug.
+  // No `shouldDirty` flag: rhf's default dirty tracking compares the
+  // current value to the default, so a mount-time sync where both are
+  // "" stays clean and the router blocker won't fire pre-emptively.
   useEffect(() => {
     if (slugLocked) return;
-    form.setValue("slug", slugify(titleValue), { shouldDirty: true });
+    form.setValue("slug", slugify(titleValue));
   }, [form, slugLocked, titleValue]);
 
   // TanStack Router blocker: prompt before navigation (sidebar click,
