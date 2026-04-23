@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
 import { FormField } from "@/components/form/field.js";
-import { UserMetaBoxCard } from "@/components/meta-box/user-meta-box-card.js";
+import { MetaBoxCard } from "@/components/meta-box/meta-box.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Badge } from "@/components/ui/badge.js";
 import { Button } from "@/components/ui/button.js";
@@ -166,6 +166,12 @@ function UserEditForm({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  // Meta rides the same Save as the profile fields — one `user.update`
+  // call per form submission. Re-seeds from the server's post-sanitize
+  // bag on success so coerce roundtrips show up in the UI.
+  const [meta, setMeta] = useState<Record<string, unknown>>(() =>
+    seedUserMeta(metaBoxes, target.meta),
+  );
 
   const updateUser = useMutation({
     mutationFn: (values: { name: string; role: UserRole }) =>
@@ -178,11 +184,13 @@ function UserEditForm({
         ...(canPromote && values.role !== target.role
           ? { role: values.role }
           : {}),
+        meta: metaBoxes.length > 0 ? meta : undefined,
       }),
     onMutate: () => {
       setServerError(null);
     },
-    onSuccess: async () => {
+    onSuccess: async (updated) => {
+      setMeta(seedUserMeta(metaBoxes, updated.meta));
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: orpc.user.get.queryOptions({ input: { id: target.id } })
@@ -323,6 +331,18 @@ function UserEditForm({
               </div>
             )}
 
+            {metaBoxes.map((box) => (
+              <MetaBoxCard
+                key={box.id}
+                box={box}
+                values={meta}
+                disabled={updateUser.isPending || !canSave}
+                onChange={(key, value) => {
+                  setMeta((prev) => ({ ...prev, [key]: value }));
+                }}
+              />
+            ))}
+
             {serverError ? (
               <Alert variant="destructive" data-testid="user-edit-server-error">
                 <AlertDescription>{serverError}</AlertDescription>
@@ -358,15 +378,6 @@ function UserEditForm({
           </form>
         </CardContent>
       </Card>
-
-      {metaBoxes.map((box) => (
-        <UserMetaBoxCard
-          key={box.id}
-          box={box}
-          user={target}
-          disabled={!canSave}
-        />
-      ))}
 
       {canDisable ? <StatusCard target={target} /> : null}
       {canDelete ? <DeleteCard target={target} /> : null}
@@ -641,6 +652,20 @@ const DELETE_ERROR_MESSAGES: Partial<Record<string, string>> = {
     "This user has authored entries. Pick someone to reassign them to above.",
   reassign_to_self: "Can't reassign to the user being deleted.",
 };
+
+function seedUserMeta(
+  boxes: readonly UserMetaBoxManifestEntry[],
+  stored: Readonly<Record<string, unknown>> | null | undefined,
+): Record<string, unknown> {
+  const bag = stored ?? {};
+  const seed: Record<string, unknown> = {};
+  for (const box of boxes) {
+    for (const field of box.fields) {
+      seed[field.key] = bag[field.key] ?? field.default;
+    }
+  }
+  return seed;
+}
 
 function NotFoundPlaceholder({ message }: { message: string }): ReactNode {
   return (

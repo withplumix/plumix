@@ -1,11 +1,13 @@
 import type { ReactNode } from "react";
 import { FormField } from "@/components/form/field.js";
+import { MetaBoxCard } from "@/components/meta-box/meta-box.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Button } from "@/components/ui/button.js";
 import { Label } from "@/components/ui/label.js";
 import { useForm } from "@tanstack/react-form";
 import * as v from "valibot";
 
+import type { TermMetaBoxManifestEntry } from "@plumix/core/manifest";
 import { idParam } from "@plumix/core/validation";
 
 /** Normalised input shape consumed by both create + update paths. */
@@ -59,6 +61,9 @@ export function TermForm({
   isSubmitting,
   serverError,
   submitLabel,
+  metaBoxes = [],
+  metaValues = {},
+  onMetaChange,
   onSubmit,
   onCancel,
 }: {
@@ -68,6 +73,12 @@ export function TermForm({
   readonly isSubmitting: boolean;
   readonly serverError: string | null;
   readonly submitLabel: string;
+  /** Plugin-registered meta boxes for this taxonomy — rendered inside
+   *  the form so the single Save button submits row fields + meta
+   *  together via one `term.update` call. */
+  readonly metaBoxes?: readonly TermMetaBoxManifestEntry[];
+  readonly metaValues?: Readonly<Record<string, unknown>>;
+  readonly onMetaChange?: (key: string, value: unknown) => void;
   readonly onSubmit: (values: TermFormValues) => void;
   readonly onCancel: () => void;
 }): ReactNode {
@@ -179,6 +190,18 @@ export function TermForm({
           )}
         </form.Field>
       ) : null}
+
+      {metaBoxes.map((box) => (
+        <MetaBoxCard
+          key={box.id}
+          box={box}
+          values={metaValues}
+          disabled={isSubmitting}
+          onChange={(key, value) => {
+            onMetaChange?.(key, value);
+          }}
+        />
+      ))}
 
       {serverError ? (
         <Alert variant="destructive" data-testid="term-form-server-error">

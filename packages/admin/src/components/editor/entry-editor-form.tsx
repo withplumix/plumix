@@ -1,7 +1,7 @@
 import type { JSONContent } from "@tiptap/react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { MetaBox } from "@/components/meta-box/meta-box.js";
+import { MetaBoxCard } from "@/components/meta-box/meta-box.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Button } from "@/components/ui/button.js";
 import { Input } from "@/components/ui/input.js";
@@ -130,10 +130,9 @@ export function PostEditorForm({
     disabled: isSubmitting,
   });
 
-  // `side` floats right of the main editor column; `normal` stacks below
-  // the primary fields; `advanced` drops to the bottom of the main column
-  // — matching WP's admin layout slots.
-  const { side, normal, advanced } = partitionBoxesByContext(metaBoxes);
+  // Two-slot layout: `sidebar` floats right of the main editor column,
+  // `bottom` (default) stacks below the primary fields.
+  const { bottom, sidebar } = partitionBoxesByLocation(metaBoxes);
 
   // Single subscription to the form's `meta` field powers all three
   // regions — each box reads from `metaValues` and writes via the shared
@@ -255,25 +254,18 @@ export function PostEditorForm({
           </form.Field>
 
           <MetaBoxRegion
-            boxes={normal}
-            testId="meta-boxes-normal"
-            values={metaValues}
-            onChange={onMetaChange}
-            disabled={isSubmitting}
-          />
-          <MetaBoxRegion
-            boxes={advanced}
-            testId="meta-boxes-advanced"
+            boxes={bottom}
+            testId="meta-boxes-bottom"
             values={metaValues}
             onChange={onMetaChange}
             disabled={isSubmitting}
           />
         </div>
 
-        <aside className="flex flex-col gap-4" data-testid="meta-boxes-side">
+        <aside className="flex flex-col gap-4" data-testid="meta-boxes-sidebar">
           <MetaBoxRegion
-            boxes={side}
-            testId="meta-boxes-side-boxes"
+            boxes={sidebar}
+            testId="meta-boxes-sidebar-boxes"
             values={metaValues}
             onChange={onMetaChange}
             disabled={isSubmitting}
@@ -317,23 +309,21 @@ function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-// Bucket boxes by context. Undefined `context` is treated as "normal"
-// (matches WP's default); unknown values fall through to the main
-// column so a plugin-specific `context` doesn't vanish into nowhere.
-function partitionBoxesByContext(boxes: readonly EntryMetaBoxManifestEntry[]): {
-  side: readonly EntryMetaBoxManifestEntry[];
-  normal: readonly EntryMetaBoxManifestEntry[];
-  advanced: readonly EntryMetaBoxManifestEntry[];
+// Two-slot layout. Unspecified / unknown `location` falls back to
+// "bottom" so plugin-specific values don't vanish into nowhere.
+function partitionBoxesByLocation(
+  boxes: readonly EntryMetaBoxManifestEntry[],
+): {
+  bottom: readonly EntryMetaBoxManifestEntry[];
+  sidebar: readonly EntryMetaBoxManifestEntry[];
 } {
-  const side: EntryMetaBoxManifestEntry[] = [];
-  const normal: EntryMetaBoxManifestEntry[] = [];
-  const advanced: EntryMetaBoxManifestEntry[] = [];
+  const bottom: EntryMetaBoxManifestEntry[] = [];
+  const sidebar: EntryMetaBoxManifestEntry[] = [];
   for (const box of boxes) {
-    if (box.context === "side") side.push(box);
-    else if (box.context === "advanced") advanced.push(box);
-    else normal.push(box);
+    if (box.location === "sidebar") sidebar.push(box);
+    else bottom.push(box);
   }
-  return { side, normal, advanced };
+  return { bottom, sidebar };
 }
 
 // Render a stack of boxes against a shared meta bag. Nothing renders
@@ -355,7 +345,7 @@ function MetaBoxRegion({
   return (
     <div className="flex flex-col gap-4" data-testid={testId}>
       {boxes.map((box) => (
-        <MetaBox
+        <MetaBoxCard
           key={box.id}
           box={box}
           values={values}

@@ -122,25 +122,26 @@ export function visibleTaxonomies(
   return source.taxonomies.filter((tax) => caps.has(`${tax.name}:read`));
 }
 
-// Ordering for entry meta-box `priority`. Boxes render top-down in the
-// editor sidebar; "high" pins above the fold, "low" drops to the
-// bottom. Registry insertion order breaks ties (Array.prototype.sort is
-// stable per ES2019).
-const META_BOX_PRIORITY_WEIGHT: Record<
-  NonNullable<EntryMetaBoxManifestEntry["priority"]>,
-  number
-> = {
-  high: 0,
-  default: 1,
-  low: 2,
-};
+// Shared ordering helper: `priority` ascending (unspecified last), ties
+// broken by `id` / `name` alphabetical. Mirrors `buildManifest`'s
+// server-side sort so the shipped manifest and the admin filter paths
+// agree on order regardless of registration sequence.
+function byPriorityThen<T extends { readonly priority?: number }>(
+  getKey: (item: T) => string,
+): (a: T, b: T) => number {
+  return (a, b) => {
+    const ap = a.priority ?? Number.POSITIVE_INFINITY;
+    const bp = b.priority ?? Number.POSITIVE_INFINITY;
+    if (ap !== bp) return ap - bp;
+    return getKey(a).localeCompare(getKey(b));
+  };
+}
 
 /**
  * Resolve the set of entry meta boxes the editor should render for a
  * given entry type, honouring each box's optional capability gate.
- * Returned in render order: by `priority` (high → default → low;
- * undefined treated as "default"), with registration order as the
- * stable tiebreaker.
+ * Returned sorted by `priority` ascending with ties broken by `id`
+ * alphabetical.
  */
 export function entryMetaBoxesForType(
   entryTypeName: string,
@@ -155,18 +156,13 @@ export function entryMetaBoxesForType(
         return false;
       return true;
     })
-    .sort((a, b) => {
-      const ap = META_BOX_PRIORITY_WEIGHT[a.priority ?? "default"];
-      const bp = META_BOX_PRIORITY_WEIGHT[b.priority ?? "default"];
-      return ap - bp;
-    });
+    .sort(byPriorityThen((b) => b.id));
 }
 
 /**
  * Resolve the term meta boxes rendered on the edit form for a given
- * taxonomy. Same capability gate + registration-order shape as
- * `entryMetaBoxesForType`; no `priority` tier because term forms
- * render boxes stacked without a sidebar split.
+ * taxonomy. Same capability gate + priority sort as
+ * `entryMetaBoxesForType`.
  */
 export function termMetaBoxesForTaxonomy(
   taxonomyName: string,
@@ -174,17 +170,20 @@ export function termMetaBoxesForTaxonomy(
   source: PlumixManifest = manifest,
 ): readonly TermMetaBoxManifestEntry[] {
   const caps = new Set(capabilities);
-  return source.termMetaBoxes.filter((box) => {
-    if (!box.taxonomies.includes(taxonomyName)) return false;
-    if (box.capability !== undefined && !caps.has(box.capability)) return false;
-    return true;
-  });
+  return source.termMetaBoxes
+    .filter((box) => {
+      if (!box.taxonomies.includes(taxonomyName)) return false;
+      if (box.capability !== undefined && !caps.has(box.capability))
+        return false;
+      return true;
+    })
+    .sort(byPriorityThen((b) => b.id));
 }
 
 /**
  * Resolve the user meta boxes rendered on the user edit form. User
  * meta is a flat keyspace — no scope argument; capability alone gates
- * visibility. Registration order is preserved.
+ * visibility. Sorted by `priority` with `id` as the tiebreaker.
  *
  * Named to match `visibleEntryTypes` / `visibleTaxonomies` — unlike
  * `entryMetaBoxesForType` / `termMetaBoxesForTaxonomy`, user meta has
@@ -195,9 +194,9 @@ export function visibleUserMetaBoxes(
   source: PlumixManifest = manifest,
 ): readonly UserMetaBoxManifestEntry[] {
   const caps = new Set(capabilities);
-  return source.userMetaBoxes.filter(
-    (box) => box.capability === undefined || caps.has(box.capability),
-  );
+  return source.userMetaBoxes
+    .filter((box) => box.capability === undefined || caps.has(box.capability))
+    .sort(byPriorityThen((b) => b.id));
 }
 
 /**
