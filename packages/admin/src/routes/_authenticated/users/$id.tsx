@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
 import { FormField } from "@/components/form/field.js";
+import { UserMetaBoxCard } from "@/components/meta-box/user-meta-box-card.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Badge } from "@/components/ui/badge.js";
 import { Button } from "@/components/ui/button.js";
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui/card.js";
 import { Label } from "@/components/ui/label.js";
 import { hasCap } from "@/lib/caps.js";
+import { visibleUserMetaBoxes } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useForm } from "@tanstack/react-form";
 import {
@@ -32,6 +34,7 @@ import {
 import { ArrowLeft } from "lucide-react";
 import * as v from "valibot";
 
+import type { UserMetaBoxManifestEntry } from "@plumix/core/manifest";
 import type { User, UserRole } from "@plumix/core/schema";
 import { idPathParam } from "@plumix/core/validation";
 
@@ -122,6 +125,7 @@ function UserEditRoute(): ReactNode {
   const { data: target } = useSuspenseQuery(
     orpc.user.get.queryOptions({ input: { id: userId } }),
   );
+  const metaBoxes = visibleUserMetaBoxes(session.capabilities);
   return (
     <UserEditForm
       // Remount after each save so TanStack Form re-reads `defaultValues`
@@ -137,6 +141,7 @@ function UserEditRoute(): ReactNode {
       canSave={canSave}
       canDisable={canDisable}
       canDelete={canDelete}
+      metaBoxes={metaBoxes}
     />
   );
 }
@@ -148,6 +153,7 @@ function UserEditForm({
   canSave,
   canDisable,
   canDelete,
+  metaBoxes,
 }: {
   target: User;
   isSelf: boolean;
@@ -155,6 +161,7 @@ function UserEditForm({
   canSave: boolean;
   canDisable: boolean;
   canDelete: boolean;
+  metaBoxes: readonly UserMetaBoxManifestEntry[];
 }): ReactNode {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -351,6 +358,15 @@ function UserEditForm({
           </form>
         </CardContent>
       </Card>
+
+      {metaBoxes.map((box) => (
+        <UserMetaBoxCard
+          key={box.id}
+          box={box}
+          user={target}
+          disabled={!canSave}
+        />
+      ))}
 
       {canDisable ? <StatusCard target={target} /> : null}
       {canDelete ? <DeleteCard target={target} /> : null}

@@ -495,7 +495,51 @@ describe("buildManifest", () => {
     );
   });
 
-  test("empty meta-box registry yields empty entry + term meta box arrays", async () => {
+  test("rejects two user meta boxes declaring the same field key", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("dupe-user", (ctx) => {
+      ctx.registerUserMetaBox("u-a", {
+        label: "A",
+        fields: [
+          { key: "bio", label: "Bio", type: "string", inputType: "textarea" },
+        ],
+      });
+      ctx.registerUserMetaBox("u-b", {
+        label: "B",
+        fields: [
+          { key: "bio", label: "Bio", type: "string", inputType: "textarea" },
+        ],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    expect(() => buildManifest(registry)).toThrow(
+      /Meta field "bio" is declared by user meta boxes "u-a" and "u-b" on the same scope "user"/,
+    );
+  });
+
+  test("projects a registered user meta box into the manifest", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("profile", (ctx) => {
+      ctx.registerUserMetaBox("profile", {
+        label: "Profile",
+        description: "Author bio + socials.",
+        fields: [
+          { key: "bio", label: "Bio", type: "string", inputType: "textarea" },
+        ],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+
+    const manifest = buildManifest(registry);
+    expect(manifest.userMetaBoxes).toHaveLength(1);
+    expect(manifest.userMetaBoxes[0]).toMatchObject({
+      id: "profile",
+      label: "Profile",
+      description: "Author bio + socials.",
+    });
+  });
+
+  test("empty meta-box registry yields empty entry + term + user meta box arrays", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("blog", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts" });
@@ -505,6 +549,7 @@ describe("buildManifest", () => {
     const manifest = buildManifest(registry);
     expect(manifest.entryMetaBoxes).toEqual([]);
     expect(manifest.termMetaBoxes).toEqual([]);
+    expect(manifest.userMetaBoxes).toEqual([]);
   });
 
   test("projects registered taxonomies, dropping server-only fields", async () => {
@@ -580,13 +625,14 @@ describe("serializeManifestScript", () => {
       taxonomies: [],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
     expect(tag).toContain(`id="${MANIFEST_SCRIPT_ID}"`);
     expect(tag).toContain(`type="application/json"`);
     expect(tag).toContain(
-      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"taxonomies":[],"entryMetaBoxes":[],"termMetaBoxes":[],"settingsGroups":[],"settingsPages":[]}`,
+      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"taxonomies":[],"entryMetaBoxes":[],"termMetaBoxes":[],"userMetaBoxes":[],"settingsGroups":[],"settingsPages":[]}`,
     );
   });
 
@@ -598,6 +644,7 @@ describe("serializeManifestScript", () => {
       taxonomies: [],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -611,6 +658,7 @@ describe("serializeManifestScript", () => {
       taxonomies: [],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     };
@@ -637,14 +685,15 @@ describe("injectManifestIntoHtml", () => {
       taxonomies: [],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
     expect(out).toContain(
-      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"taxonomies":[],"entryMetaBoxes":[],"termMetaBoxes":[],"settingsGroups":[],"settingsPages":[]}`,
+      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"taxonomies":[],"entryMetaBoxes":[],"termMetaBoxes":[],"userMetaBoxes":[],"settingsGroups":[],"settingsPages":[]}`,
     );
     expect(out).not.toContain(
-      `{"entryTypes":[],"taxonomies":[],"entryMetaBoxes":[],"termMetaBoxes":[],"settingsGroups":[],"settingsPages":[]}`,
+      `{"entryTypes":[],"taxonomies":[],"entryMetaBoxes":[],"termMetaBoxes":[],"userMetaBoxes":[],"settingsGroups":[],"settingsPages":[]}`,
     );
   });
 
@@ -654,6 +703,7 @@ describe("injectManifestIntoHtml", () => {
       taxonomies: [],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     };
@@ -681,11 +731,12 @@ describe("injectManifestIntoHtml", () => {
       taxonomies: [],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
     expect(out).toContain(
-      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"taxonomies":[],"entryMetaBoxes":[],"termMetaBoxes":[],"settingsGroups":[],"settingsPages":[]}`,
+      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"taxonomies":[],"entryMetaBoxes":[],"termMetaBoxes":[],"userMetaBoxes":[],"settingsGroups":[],"settingsPages":[]}`,
     );
   });
 
@@ -698,11 +749,12 @@ describe("injectManifestIntoHtml", () => {
       taxonomies: [],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
     expect(out).toMatch(
-      /^<script id="plumix-manifest" type="application\/json">\{"entryTypes":\[\{"name":"post","adminSlug":"posts","label":"Posts"\}\],"taxonomies":\[\],"entryMetaBoxes":\[\],"termMetaBoxes":\[\],"settingsGroups":\[\],"settingsPages":\[\]}<\/script>$/,
+      /^<script id="plumix-manifest" type="application\/json">\{"entryTypes":\[\{"name":"post","adminSlug":"posts","label":"Posts"\}\],"taxonomies":\[\],"entryMetaBoxes":\[\],"termMetaBoxes":\[\],"userMetaBoxes":\[\],"settingsGroups":\[\],"settingsPages":\[\]}<\/script>$/,
     );
   });
 });

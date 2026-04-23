@@ -6,6 +6,7 @@ import type {
   SettingsPageManifestEntry,
   TaxonomyManifestEntry,
   TermMetaBoxManifestEntry,
+  UserMetaBoxManifestEntry,
 } from "@plumix/core/manifest";
 import { emptyManifest, MANIFEST_SCRIPT_ID } from "@plumix/core/manifest";
 
@@ -38,6 +39,7 @@ function normalize(value: unknown): PlumixManifest {
   const taxonomies = (value as { taxonomies?: unknown }).taxonomies;
   const entryMetaBoxes = (value as { entryMetaBoxes?: unknown }).entryMetaBoxes;
   const termMetaBoxes = (value as { termMetaBoxes?: unknown }).termMetaBoxes;
+  const userMetaBoxes = (value as { userMetaBoxes?: unknown }).userMetaBoxes;
   const settingsGroups = (value as { settingsGroups?: unknown }).settingsGroups;
   const settingsPages = (value as { settingsPages?: unknown }).settingsPages;
   return {
@@ -45,6 +47,7 @@ function normalize(value: unknown): PlumixManifest {
     taxonomies: Array.isArray(taxonomies) ? taxonomies : [],
     entryMetaBoxes: Array.isArray(entryMetaBoxes) ? entryMetaBoxes : [],
     termMetaBoxes: Array.isArray(termMetaBoxes) ? termMetaBoxes : [],
+    userMetaBoxes: Array.isArray(userMetaBoxes) ? userMetaBoxes : [],
     settingsGroups: Array.isArray(settingsGroups) ? settingsGroups : [],
     settingsPages: Array.isArray(settingsPages) ? settingsPages : [],
   };
@@ -176,6 +179,25 @@ export function termMetaBoxesForTaxonomy(
     if (box.capability !== undefined && !caps.has(box.capability)) return false;
     return true;
   });
+}
+
+/**
+ * Resolve the user meta boxes rendered on the user edit form. User
+ * meta is a flat keyspace — no scope argument; capability alone gates
+ * visibility. Registration order is preserved.
+ *
+ * Named to match `visibleEntryTypes` / `visibleTaxonomies` — unlike
+ * `entryMetaBoxesForType` / `termMetaBoxesForTaxonomy`, user meta has
+ * no scope to filter on.
+ */
+export function visibleUserMetaBoxes(
+  capabilities: readonly string[],
+  source: PlumixManifest = manifest,
+): readonly UserMetaBoxManifestEntry[] {
+  const caps = new Set(capabilities);
+  return source.userMetaBoxes.filter(
+    (box) => box.capability === undefined || caps.has(box.capability),
+  );
 }
 
 /**

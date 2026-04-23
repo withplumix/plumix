@@ -4,6 +4,7 @@ import type {
   EntryMetaBoxManifestEntry,
   PlumixManifest,
   SettingsPageManifestEntry,
+  UserMetaBoxManifestEntry,
 } from "@plumix/core/manifest";
 
 import {
@@ -17,6 +18,7 @@ import {
   visibleEntryTypes,
   visibleSettingsPages,
   visibleTaxonomies,
+  visibleUserMetaBoxes,
 } from "./manifest.js";
 
 function withManifestScript(json: string): Document {
@@ -41,6 +43,7 @@ describe("readManifest", () => {
       taxonomies: [],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -57,6 +60,7 @@ describe("readManifest", () => {
       taxonomies: [],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -69,6 +73,7 @@ describe("readManifest", () => {
       taxonomies: [],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -84,6 +89,7 @@ describe("readManifest", () => {
       taxonomies: [],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -97,6 +103,7 @@ describe("readManifest", () => {
       taxonomies: [],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -111,6 +118,7 @@ describe("readManifest", () => {
       taxonomies: [],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -142,6 +150,7 @@ describe("readManifest", () => {
         },
       ],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -171,6 +180,7 @@ describe("readManifest", () => {
       ],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -193,6 +203,7 @@ describe("findEntryTypeBySlug", () => {
     taxonomies: [],
     entryMetaBoxes: [],
     termMetaBoxes: [],
+    userMetaBoxes: [],
     settingsGroups: [],
     settingsPages: [],
   };
@@ -226,6 +237,7 @@ describe("visibleEntryTypes", () => {
     taxonomies: [],
     entryMetaBoxes: [],
     termMetaBoxes: [],
+    userMetaBoxes: [],
     settingsGroups: [],
     settingsPages: [],
   };
@@ -265,6 +277,7 @@ describe("entryMetaBoxesForType", () => {
         box("c"), // default
       ],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     };
@@ -281,6 +294,7 @@ describe("entryMetaBoxesForType", () => {
         box("second", { priority: "high" }),
       ],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     };
@@ -297,6 +311,7 @@ describe("entryMetaBoxesForType", () => {
         box("shop", { entryTypes: ["product"] }),
       ],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     };
@@ -313,6 +328,7 @@ describe("entryMetaBoxesForType", () => {
         box("privileged", { capability: "post:edit_any" }),
       ],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     };
@@ -335,10 +351,61 @@ describe("entryMetaBoxesForType", () => {
       taxonomies: [],
       entryMetaBoxes: [],
       termMetaBoxes: [],
+      userMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     };
     expect(entryMetaBoxesForType("post", [], source)).toEqual([]);
+  });
+});
+
+describe("visibleUserMetaBoxes", () => {
+  function userBox(
+    id: string,
+    overrides: Partial<UserMetaBoxManifestEntry> = {},
+  ): UserMetaBoxManifestEntry {
+    return {
+      id,
+      label: id,
+      fields: [],
+      ...overrides,
+    };
+  }
+
+  const source: PlumixManifest = {
+    entryTypes: [],
+    taxonomies: [],
+    entryMetaBoxes: [],
+    termMetaBoxes: [],
+    userMetaBoxes: [
+      userBox("public"),
+      userBox("privileged", { capability: "user:edit" }),
+    ],
+    settingsGroups: [],
+    settingsPages: [],
+  };
+
+  test("an undefined-capability box is visible regardless of viewer caps", () => {
+    const ids = visibleUserMetaBoxes([], source).map((b) => b.id);
+    expect(ids).toContain("public");
+  });
+
+  test("drops boxes gated by a capability the viewer lacks", () => {
+    const ids = visibleUserMetaBoxes([], source).map((b) => b.id);
+    expect(ids).toEqual(["public"]);
+  });
+
+  test("keeps capability-gated boxes when the viewer has the cap", () => {
+    const ids = visibleUserMetaBoxes(["user:edit"], source).map((b) => b.id);
+    expect(ids).toEqual(["public", "privileged"]);
+  });
+
+  test("returns empty when no user meta boxes are registered", () => {
+    const empty: PlumixManifest = {
+      ...source,
+      userMetaBoxes: [],
+    };
+    expect(visibleUserMetaBoxes(["user:edit"], empty)).toEqual([]);
   });
 });
 
@@ -351,6 +418,7 @@ describe("findTaxonomyByName", () => {
     ],
     entryMetaBoxes: [],
     termMetaBoxes: [],
+    userMetaBoxes: [],
     settingsGroups: [],
     settingsPages: [],
   };
@@ -374,6 +442,7 @@ describe("visibleTaxonomies", () => {
     ],
     entryMetaBoxes: [],
     termMetaBoxes: [],
+    userMetaBoxes: [],
     settingsGroups: [],
     settingsPages: [],
   };
@@ -395,6 +464,7 @@ describe("findSettingsPageByName + visibleSettingsPages + findSettingsGroupByNam
     taxonomies: [],
     entryMetaBoxes: [],
     termMetaBoxes: [],
+    userMetaBoxes: [],
     settingsGroups: [
       {
         name: "identity",

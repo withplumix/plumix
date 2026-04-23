@@ -21,6 +21,7 @@ import type {
   SettingsPageOptions,
   TaxonomyOptions,
   TermMetaBoxOptions,
+  UserMetaBoxOptions,
 } from "./manifest.js";
 import {
   deriveEntryTypeCapabilities,
@@ -81,6 +82,14 @@ export interface PluginSetupContext {
    * are the meta key contract.
    */
   registerTermMetaBox(id: string, options: TermMetaBoxOptions): void;
+
+  /**
+   * Same model as `registerEntryMetaBox`, but rendered on the user
+   * edit form. Users have a flat meta keyspace (no scope property) —
+   * all registered boxes target every user; use `capability` to gate
+   * which boxes the viewer sees.
+   */
+  registerUserMetaBox(id: string, options: UserMetaBoxOptions): void;
   registerCapability(name: string, minRole: UserRole): void;
 
   /**
@@ -205,6 +214,18 @@ export function createPluginSetupContext({
       }
       assertMetaBoxFields("term meta box", id, options.fields);
       registry.termMetaBoxes.set(id, {
+        ...options,
+        id,
+        registeredBy: pluginId,
+      });
+    },
+
+    registerUserMetaBox: (id, options) => {
+      if (registry.userMetaBoxes.has(id)) {
+        throw new DuplicateRegistrationError("user meta box", id);
+      }
+      assertMetaBoxFields("user meta box", id, options.fields);
+      registry.userMetaBoxes.set(id, {
         ...options,
         id,
         registeredBy: pluginId,
