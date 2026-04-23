@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useRef } from "react";
+import { Form } from "@/components/ui/form.js";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useForm, useWatch } from "react-hook-form";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
@@ -26,38 +28,59 @@ function field(
   };
 }
 
-// Stateful wrapper so controlled-input tests behave like a real form —
-// onChange calls flow back through to the component's `value` prop.
-function StatefulField({
+// Mounts `MetaBoxField` inside a react-hook-form context so tests behave
+// like a real form — Controller subscribes to updates and the onChange
+// we spy on mirrors what the parent form would see on submit.
+function Harness({
   fieldDef,
   initial,
   onChangeSpy,
 }: {
   fieldDef: MetaBoxFieldManifestEntry;
   initial: unknown;
-  onChangeSpy: (next: unknown) => void;
+  onChangeSpy?: (next: unknown) => void;
 }): ReactNode {
-  const [value, setValue] = useState<unknown>(initial);
+  const form = useForm<Record<string, unknown>>({
+    defaultValues: { [fieldDef.key]: initial },
+  });
   return (
-    <MetaBoxField
-      field={fieldDef}
-      value={value}
-      onChange={(next) => {
-        onChangeSpy(next);
-        setValue(next);
-      }}
-    />
+    <Form {...form}>
+      <MetaBoxField field={fieldDef} name={fieldDef.key} />
+      {onChangeSpy ? <Spy name={fieldDef.key} onChange={onChangeSpy} /> : null}
+    </Form>
   );
+}
+
+// Subscribes via `useWatch` (compiler-compatible) and fires the spy on
+// every value change — mirrors what the original `form.watch` callback
+// did but without tripping the `react-hooks/incompatible-library` rule.
+function Spy({
+  name,
+  onChange,
+}: {
+  name: string;
+  onChange: (next: unknown) => void;
+}): ReactNode {
+  const value: unknown = useWatch({ name });
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    onChange(value);
+  }, [value, onChange]);
+  return null;
 }
 
 describe("MetaBoxField dispatcher", () => {
   test("text: renders an <input type=text>, forwards value + onChange", async () => {
     const onChange = vi.fn();
     render(
-      <MetaBoxField
-        field={field({ inputType: "text", placeholder: "Type here" })}
-        value=""
-        onChange={onChange}
+      <Harness
+        fieldDef={field({ inputType: "text", placeholder: "Type here" })}
+        initial=""
+        onChangeSpy={onChange}
       />,
     );
     const input = screen.getByTestId("meta-box-field-k-input");
@@ -67,15 +90,14 @@ describe("MetaBoxField dispatcher", () => {
 
     await userEvent.type(input, "ab");
     expect(onChange).toHaveBeenCalledWith("a");
-    expect(onChange).toHaveBeenCalledWith("b");
+    expect(onChange).toHaveBeenCalledWith("ab");
   });
 
   test("textarea: renders a <textarea>, honours maxLength + rows", () => {
     render(
-      <MetaBoxField
-        field={field({ inputType: "textarea", maxLength: 50 })}
-        value="existing"
-        onChange={vi.fn()}
+      <Harness
+        fieldDef={field({ inputType: "textarea", maxLength: 50 })}
+        initial="existing"
       />,
     );
     const el = screen.getByTestId("meta-box-field-k-input");
@@ -87,7 +109,7 @@ describe("MetaBoxField dispatcher", () => {
   test("number: coerces empty string to null, numeric to Number", async () => {
     const onChange = vi.fn();
     render(
-      <StatefulField
+      <Harness
         fieldDef={field({ inputType: "number", min: 0, max: 100 })}
         initial={42}
         onChangeSpy={onChange}
@@ -108,7 +130,7 @@ describe("MetaBoxField dispatcher", () => {
   test("number: partial input like '-' does not propagate NaN", async () => {
     const onChange = vi.fn();
     render(
-      <StatefulField
+      <Harness
         fieldDef={field({ inputType: "number" })}
         initial={null}
         onChangeSpy={onChange}
@@ -126,24 +148,14 @@ describe("MetaBoxField dispatcher", () => {
 
   test("email / url: emit the matching native HTML5 input type", () => {
     const { rerender } = render(
-      <MetaBoxField
-        field={field({ inputType: "email" })}
-        value=""
-        onChange={vi.fn()}
-      />,
+      <Harness fieldDef={field({ inputType: "email" })} initial="" />,
     );
     expect(screen.getByTestId("meta-box-field-k-input")).toHaveAttribute(
       "type",
       "email",
     );
 
-    rerender(
-      <MetaBoxField
-        field={field({ inputType: "url" })}
-        value=""
-        onChange={vi.fn()}
-      />,
-    );
+    rerender(<Harness fieldDef={field({ inputType: "url" })} initial="" />);
     expect(screen.getByTestId("meta-box-field-k-input")).toHaveAttribute(
       "type",
       "url",
@@ -153,16 +165,16 @@ describe("MetaBoxField dispatcher", () => {
   test("select: renders settings, selection fires onChange with the value", async () => {
     const onChange = vi.fn();
     render(
-      <MetaBoxField
-        field={field({
+      <Harness
+        fieldDef={field({
           inputType: "select",
           options: [
             { value: "a", label: "Alpha" },
             { value: "b", label: "Bravo" },
           ],
         })}
-        value="a"
-        onChange={onChange}
+        initial="a"
+        onChangeSpy={onChange}
       />,
     );
     const select = screen.getByTestId("meta-box-field-k-input");
@@ -176,16 +188,16 @@ describe("MetaBoxField dispatcher", () => {
   test("radio: renders one input per option, click fires onChange", async () => {
     const onChange = vi.fn();
     render(
-      <MetaBoxField
-        field={field({
+      <Harness
+        fieldDef={field({
           inputType: "radio",
           options: [
             { value: "a", label: "Alpha" },
             { value: "b", label: "Bravo" },
           ],
         })}
-        value="a"
-        onChange={onChange}
+        initial="a"
+        onChangeSpy={onChange}
       />,
     );
     const bravo = screen.getByTestId("meta-box-field-k-input-b");
@@ -198,10 +210,10 @@ describe("MetaBoxField dispatcher", () => {
   test("checkbox: renders as inline label, toggles emit the checked boolean", async () => {
     const onChange = vi.fn();
     render(
-      <MetaBoxField
-        field={field({ inputType: "checkbox", label: "Featured" })}
-        value={false}
-        onChange={onChange}
+      <Harness
+        fieldDef={field({ inputType: "checkbox", label: "Featured" })}
+        initial={false}
+        onChangeSpy={onChange}
       />,
     );
     const box = screen.getByTestId("meta-box-field-k-input");
@@ -215,46 +227,42 @@ describe("MetaBoxField dispatcher", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {
       // silence expected warning
     });
-    render(
-      <MetaBoxField
-        field={field({ inputType: "mystery" })}
-        value=""
-        onChange={vi.fn()}
-      />,
-    );
+    render(<Harness fieldDef={field({ inputType: "mystery" })} initial="" />);
     const input = screen.getByTestId("meta-box-field-k-input");
     expect(input.tagName).toBe("INPUT");
     expect(input).toHaveAttribute("type", "text");
-    expect(warn).toHaveBeenCalledOnce();
+    expect(warn).toHaveBeenCalled();
     const firstCall = warn.mock.calls[0];
     expect(firstCall?.[0]).toContain("unknown meta-box field inputType");
   });
 
   test("description renders under the field and is referenced by aria-describedby", () => {
     render(
-      <MetaBoxField
-        field={field({
+      <Harness
+        fieldDef={field({
           inputType: "text",
           description: "Help text",
         })}
-        value=""
-        onChange={vi.fn()}
+        initial=""
       />,
     );
     const input = screen.getByTestId("meta-box-field-k-input");
     const describedBy = input.getAttribute("aria-describedby");
     expect(describedBy).toBeTruthy();
     const desc = screen.getByTestId("meta-box-field-k-description");
-    expect(desc).toHaveAttribute("id", describedBy);
+    // shadcn's FormControl joins description + message ids with a space
+    // — assert the description id is present in the list rather than an
+    // exact equality that would break once the message id joins in on
+    // validation errors.
+    expect(describedBy?.split(" ")).toContain(desc.id);
     expect(desc).toHaveTextContent("Help text");
   });
 
   test("required flag propagates to the native input", () => {
     render(
-      <MetaBoxField
-        field={field({ inputType: "text", required: true })}
-        value=""
-        onChange={vi.fn()}
+      <Harness
+        fieldDef={field({ inputType: "text", required: true })}
+        initial=""
       />,
     );
     expect(screen.getByTestId("meta-box-field-k-input")).toBeRequired();

@@ -1,67 +1,110 @@
 import type { ReactNode } from "react";
+import type { ControllerRenderProps, FieldValues } from "react-hook-form";
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
-import { Label } from "@/components/ui/label.js";
 import { cn } from "@/lib/utils";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 
-// Schema-driven field renderer. One dispatcher branch per built-in
-// `inputType`; unknown types fall back to a plain text input with a
-// dev-mode warning so a plugin-specific type doesn't crash the editor.
-// Custom React renderers (plugin chunks) are a future extension seam —
-// they'll slot in ahead of the built-in switch when chunk splitting lands.
+// Schema-driven field renderer wired to react-hook-form. Each meta-box
+// field becomes a shadcn `FormField` under the supplied `name` path so
+// label/description/error rendering + ARIA wiring match every other
+// admin form surface. Expects an ancestor `<Form>` provider —
+// Controller reads the form context for `control`, which keeps this
+// component agnostic of the caller's TFieldValues generic.
+//
+// `className` lands on the outer FormItem so parent grids can push a
+// col-span class onto it (see `metaBoxFieldColSpanClass`). Unknown
+// `inputType` falls back to a plain text input with a dev-mode warning
+// so a plugin-specific type doesn't crash the editor. Custom React
+// renderers (plugin chunks) are a future extension seam — they slot in
+// ahead of the built-in switch when chunk splitting lands.
 export function MetaBoxField({
   field,
-  value,
-  onChange,
+  name,
   disabled = false,
   className,
 }: {
   readonly field: MetaBoxFieldManifestEntry;
-  readonly value: unknown;
-  readonly onChange: (next: unknown) => void;
+  readonly name: string;
   readonly disabled?: boolean;
   readonly className?: string;
 }): ReactNode {
   const testIdPrefix = `meta-box-field-${field.key}`;
+  const inputTestId = `${testIdPrefix}-input`;
+
   return (
-    <div
-      className={cn("flex flex-col gap-2", className)}
-      data-testid={testIdPrefix}
-    >
-      {field.inputType === "checkbox" ? (
-        <InlineCheckbox
-          field={field}
-          value={value}
-          onChange={onChange}
-          disabled={disabled}
-          testId={`${testIdPrefix}-input`}
-        />
-      ) : (
-        <>
-          <Label id={labelId(field)} htmlFor={inputId(field)}>
-            {field.label}
-            <RequiredMarker show={field.required} />
-          </Label>
-          <FieldInput
-            field={field}
-            value={value}
-            onChange={onChange}
-            disabled={disabled}
-            testId={`${testIdPrefix}-input`}
-          />
-        </>
-      )}
-      {field.description ? (
-        <p
-          id={descriptionId(field)}
-          className="text-muted-foreground text-xs"
-          data-testid={`${testIdPrefix}-description`}
-        >
-          {field.description}
-        </p>
-      ) : null}
-    </div>
+    <FormField
+      name={name}
+      render={({ field: rhf }) => {
+        if (field.inputType === "checkbox") {
+          // Checkboxes carry their label inline and skip the shared
+          // label-above-input shell. `FormControl` still provides the
+          // ARIA wiring + disabled state styling.
+          return (
+            <FormItem className={className} data-testid={testIdPrefix}>
+              <div className="flex items-center gap-2">
+                <FormControl>
+                  <input
+                    type="checkbox"
+                    name={rhf.name}
+                    ref={rhf.ref}
+                    checked={rhf.value === true}
+                    required={field.required}
+                    disabled={disabled}
+                    onBlur={rhf.onBlur}
+                    onChange={(e) => {
+                      rhf.onChange(e.target.checked);
+                    }}
+                    data-testid={inputTestId}
+                  />
+                </FormControl>
+                <FormLabel>
+                  {field.label}
+                  <RequiredMarker show={field.required} />
+                </FormLabel>
+              </div>
+              {field.description ? (
+                <FormDescription data-testid={`${testIdPrefix}-description`}>
+                  {field.description}
+                </FormDescription>
+              ) : null}
+              <FormMessage />
+            </FormItem>
+          );
+        }
+
+        return (
+          <FormItem className={className} data-testid={testIdPrefix}>
+            <FormLabel>
+              {field.label}
+              <RequiredMarker show={field.required} />
+            </FormLabel>
+            <FormControl>
+              {renderNativeInput({
+                field,
+                rhf,
+                disabled,
+                testId: inputTestId,
+              })}
+            </FormControl>
+            {field.description ? (
+              <FormDescription data-testid={`${testIdPrefix}-description`}>
+                {field.description}
+              </FormDescription>
+            ) : null}
+            <FormMessage />
+          </FormItem>
+        );
+      }}
+    />
   );
 }
 
@@ -75,44 +118,31 @@ function RequiredMarker({ show }: { show: boolean | undefined }): ReactNode {
 }
 
 // Base classes shared by <textarea> and <select> — mirror the shadcn
-// <Input> look (same border, ring, disabled states) so all three line up
-// visually in a dense sidebar.
+// <Input> look (same border, ring, disabled states) so all three line
+// up visually in a dense sidebar.
 const CONTROL_BASE_CLASS =
   "border-input bg-background focus-visible:ring-ring rounded-md border text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50";
 
-function inputId(field: MetaBoxFieldManifestEntry): string {
-  return `meta-${field.key}`;
-}
-
-function labelId(field: MetaBoxFieldManifestEntry): string {
-  return `meta-${field.key}-label`;
-}
-
-function descriptionId(field: MetaBoxFieldManifestEntry): string {
-  return `meta-${field.key}-description`;
-}
-
-// Dispatcher for everything except `checkbox`, which renders its label
-// inline and doesn't share this label/input/description shell.
-function FieldInput({
+// Returns the native-element body for the given field. Must render a
+// single element so shadcn's `<FormControl>` (which uses Radix `Slot`)
+// can forward id / aria-describedby / aria-invalid onto it.
+function renderNativeInput({
   field,
-  value,
-  onChange,
+  rhf,
   disabled,
   testId,
 }: {
-  readonly field: MetaBoxFieldManifestEntry;
-  readonly value: unknown;
-  readonly onChange: (next: unknown) => void;
-  readonly disabled: boolean;
-  readonly testId: string;
+  field: MetaBoxFieldManifestEntry;
+  rhf: ControllerRenderProps<FieldValues, string>;
+  disabled: boolean;
+  testId: string;
 }): ReactNode {
   const common = {
-    id: inputId(field),
-    name: field.key,
+    name: rhf.name,
+    ref: rhf.ref,
     required: field.required,
     disabled,
-    "aria-describedby": field.description ? descriptionId(field) : undefined,
+    onBlur: rhf.onBlur,
     "data-testid": testId,
   } as const;
 
@@ -120,14 +150,14 @@ function FieldInput({
     return (
       <textarea
         {...common}
-        value={asString(value)}
+        value={asString(rhf.value)}
         maxLength={field.maxLength}
         placeholder={field.placeholder}
         rows={3}
         onChange={(e) => {
-          onChange(e.target.value);
+          rhf.onChange(e.target.value);
         }}
-        className={`${CONTROL_BASE_CLASS} flex min-h-20 w-full px-3 py-2`}
+        className={cn(CONTROL_BASE_CLASS, "flex min-h-20 w-full px-3 py-2")}
       />
     );
   }
@@ -137,7 +167,7 @@ function FieldInput({
       <Input
         {...common}
         type="number"
-        value={asNumberInputValue(value)}
+        value={asNumberInputValue(rhf.value)}
         placeholder={field.placeholder}
         min={field.min}
         max={field.max}
@@ -145,15 +175,15 @@ function FieldInput({
         onChange={(e) => {
           const raw = e.target.value;
           if (raw === "") {
-            onChange(null);
+            rhf.onChange(null);
             return;
           }
-          // Native `<input type=number>` accepts partial input ("-", "1e")
-          // which parses to NaN; guard so we never propagate NaN into the
-          // form's meta bag. User can keep typing — once the input is a
-          // complete number the `isFinite` check passes.
+          // Native `<input type=number>` accepts partial input ("-",
+          // "1e") which parses to NaN; guard so we never propagate NaN
+          // into form state. User can keep typing — once the input is
+          // a complete number the `isFinite` check passes.
           const parsed = Number(raw);
-          if (Number.isFinite(parsed)) onChange(parsed);
+          if (Number.isFinite(parsed)) rhf.onChange(parsed);
         }}
       />
     );
@@ -163,11 +193,11 @@ function FieldInput({
     return (
       <select
         {...common}
-        value={asString(value)}
+        value={asString(rhf.value)}
         onChange={(e) => {
-          onChange(e.target.value);
+          rhf.onChange(e.target.value);
         }}
-        className={`${CONTROL_BASE_CLASS} h-9 px-3 py-1`}
+        className={cn(CONTROL_BASE_CLASS, "h-9 px-3 py-1")}
       >
         {(field.options ?? []).map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -182,8 +212,6 @@ function FieldInput({
     return (
       <div
         role="radiogroup"
-        aria-labelledby={labelId(field)}
-        aria-describedby={field.description ? descriptionId(field) : undefined}
         className="flex flex-col gap-1"
         data-testid={testId}
       >
@@ -194,13 +222,13 @@ function FieldInput({
           >
             <input
               type="radio"
-              name={field.key}
+              name={rhf.name}
               value={opt.value}
-              checked={asString(value) === opt.value}
+              checked={asString(rhf.value) === opt.value}
               required={field.required}
               disabled={disabled}
               onChange={() => {
-                onChange(opt.value);
+                rhf.onChange(opt.value);
               }}
               data-testid={`${testId}-${opt.value}`}
             />
@@ -216,10 +244,11 @@ function FieldInput({
     field.inputType !== "email" &&
     field.inputType !== "url"
   ) {
-    // Forward-compat fallback: unknown inputType renders as a plain text
-    // input so a plugin-specific type doesn't crash the editor. Warn once
-    // per render so the plugin author sees the mismatch in dev tools.
-    // A future `customRenderers` seam will hook in here before the fallback.
+    // Forward-compat fallback: unknown inputType renders as a plain
+    // text input so a plugin-specific type doesn't crash the editor.
+    // Warn once per render so the plugin author sees the mismatch in
+    // dev tools. A future `customRenderers` seam will hook in here
+    // before the fallback.
     console.warn(
       `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/select/radio/checkbox).`,
     );
@@ -234,54 +263,20 @@ function FieldInput({
     <Input
       {...common}
       type={htmlType}
-      value={asString(value)}
+      value={asString(rhf.value)}
       placeholder={field.placeholder}
       maxLength={field.maxLength}
       onChange={(e) => {
-        onChange(e.target.value);
+        rhf.onChange(e.target.value);
       }}
     />
   );
 }
 
-function InlineCheckbox({
-  field,
-  value,
-  onChange,
-  disabled,
-  testId,
-}: {
-  readonly field: MetaBoxFieldManifestEntry;
-  readonly value: unknown;
-  readonly onChange: (next: unknown) => void;
-  readonly disabled: boolean;
-  readonly testId: string;
-}): ReactNode {
-  return (
-    <label className="inline-flex items-center gap-2 text-sm">
-      <input
-        type="checkbox"
-        id={inputId(field)}
-        name={field.key}
-        checked={value === true}
-        required={field.required}
-        disabled={disabled}
-        aria-describedby={field.description ? descriptionId(field) : undefined}
-        onChange={(e) => {
-          onChange(e.target.checked);
-        }}
-        data-testid={testId}
-      />
-      {field.label}
-      <RequiredMarker show={field.required} />
-    </label>
-  );
-}
-
-// Tolerant coercion for inputs that display strings. Meta values arrive
-// as `unknown` because the registry isn't per-type-generic yet; each
-// input keeps the display-string stable regardless of what the server
-// sent. `null` / `undefined` become empty strings.
+// Tolerant coercion for inputs that display strings. Meta values
+// arrive as `unknown` because the registry isn't per-type-generic yet;
+// each input keeps the display-string stable regardless of what the
+// server sent. `null` / `undefined` become empty strings.
 function asString(value: unknown): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "string") return value;

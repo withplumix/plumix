@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.js";
+import { Form } from "@/components/ui/form.js";
 import { hasCap } from "@/lib/caps.js";
 import {
   findSettingsPageByName,
@@ -24,6 +25,7 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";
+import { useForm } from "react-hook-form";
 
 import type {
   SettingsGroupManifestEntry,
@@ -116,10 +118,10 @@ function SettingsGroupCard({
   // Initial form state: stored value when present, field default when
   // not. Values are `unknown` both ways — `MetaBoxField` renders the
   // right input for each field's `inputType` and hands back the coerced
-  // value via onChange.
-  const [values, setValues] = useState<Record<string, unknown>>(() =>
-    seedFromMetaBoxes([group], stored),
-  );
+  // value through rhf's Controller.
+  const form = useForm({
+    defaultValues: seedFromMetaBoxes([group], stored),
+  });
 
   const save = useMutation({
     mutationFn: (next: Record<string, unknown>) =>
@@ -131,7 +133,7 @@ function SettingsGroupCard({
     onSuccess: async (fresh) => {
       // Re-seed from the server's post-sanitize bag so the form reflects
       // any trimming / coercion the server applied.
-      setValues(seedFromMetaBoxes([group], fresh));
+      form.reset(seedFromMetaBoxes([group], fresh));
       await queryClient.invalidateQueries({
         queryKey: orpc.settings.get.queryOptions({
           input: { group: group.name },
@@ -146,77 +148,77 @@ function SettingsGroupCard({
     },
   });
 
+  const onSubmit = form.handleSubmit((values) => {
+    save.mutate(values);
+  });
+
   return (
+    // Container-query root so the inner grid's col-span classes resolve
+    // against the card's own width — consistent layout regardless of
+    // whether the page route is full-width or narrow.
     <Card
       className="@container"
       data-testid={`settings-group-card-${group.name}`}
     >
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          save.mutate(values);
-        }}
-      >
-        <CardHeader>
-          <CardTitle>
-            <h2
-              className="text-lg font-semibold"
-              data-testid={`settings-group-heading-${group.name}`}
+      <Form {...form}>
+        <form onSubmit={onSubmit}>
+          <CardHeader>
+            <CardTitle>
+              <h2
+                className="text-lg font-semibold"
+                data-testid={`settings-group-heading-${group.name}`}
+              >
+                {group.label}
+              </h2>
+            </CardTitle>
+            {group.description ? (
+              <CardDescription>{group.description}</CardDescription>
+            ) : null}
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="grid grid-cols-12 gap-4">
+              {group.fields.map((field) => (
+                <MetaBoxField
+                  key={field.key}
+                  field={field}
+                  name={field.key}
+                  disabled={save.isPending}
+                  className={metaBoxFieldColSpanClass(field.span)}
+                />
+              ))}
+            </div>
+
+            {serverError ? (
+              <Alert
+                variant="destructive"
+                role="alert"
+                data-testid={`settings-server-error-${group.name}`}
+              >
+                <AlertDescription>{serverError}</AlertDescription>
+              </Alert>
+            ) : null}
+
+            {saveNotice ? (
+              <Alert
+                role="status"
+                aria-live="polite"
+                data-testid={`settings-save-notice-${group.name}`}
+              >
+                <AlertDescription>{saveNotice}</AlertDescription>
+              </Alert>
+            ) : null}
+          </CardContent>
+          <div className="flex justify-end px-6 pb-6">
+            <Button
+              type="submit"
+              disabled={save.isPending}
+              data-testid={`settings-submit-${group.name}`}
             >
-              {group.label}
-            </h2>
-          </CardTitle>
-          {group.description ? (
-            <CardDescription>{group.description}</CardDescription>
-          ) : null}
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="grid grid-cols-12 gap-4">
-            {group.fields.map((field) => (
-              <MetaBoxField
-                key={field.key}
-                field={field}
-                value={values[field.key]}
-                disabled={save.isPending}
-                onChange={(next) => {
-                  setValues((prev) => ({ ...prev, [field.key]: next }));
-                }}
-                className={metaBoxFieldColSpanClass(field.span)}
-              />
-            ))}
+              {save.isPending ? "Saving…" : "Save changes"}
+            </Button>
           </div>
-
-          {serverError ? (
-            <Alert
-              variant="destructive"
-              role="alert"
-              data-testid={`settings-server-error-${group.name}`}
-            >
-              <AlertDescription>{serverError}</AlertDescription>
-            </Alert>
-          ) : null}
-
-          {saveNotice ? (
-            <Alert
-              role="status"
-              aria-live="polite"
-              data-testid={`settings-save-notice-${group.name}`}
-            >
-              <AlertDescription>{saveNotice}</AlertDescription>
-            </Alert>
-          ) : null}
-        </CardContent>
-        <div className="flex justify-end px-6 pb-6">
-          <Button
-            type="submit"
-            disabled={save.isPending}
-            data-testid={`settings-submit-${group.name}`}
-          >
-            {save.isPending ? "Saving…" : "Save changes"}
-          </Button>
-        </div>
-      </form>
+        </form>
+      </Form>
     </Card>
   );
 }

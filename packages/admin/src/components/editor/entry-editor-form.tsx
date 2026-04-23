@@ -109,7 +109,6 @@ export function PostEditorForm({
   });
 
   const titleValue = useWatch({ control: form.control, name: "title" });
-  const metaValues = useWatch({ control: form.control, name: "meta" });
   const isDirty = form.formState.isDirty;
 
   // Drive the slug from the title while the slug remains unlocked —
@@ -130,14 +129,6 @@ export function PostEditorForm({
   });
 
   const { bottom, sidebar } = partitionBoxesByLocation(metaBoxes);
-
-  const onMetaChange = (key: string, next: unknown): void => {
-    form.setValue(
-      "meta",
-      { ...metaValues, [key]: next },
-      { shouldDirty: true },
-    );
-  };
 
   const handleSubmit = form.handleSubmit((value) => {
     onSubmit(value);
@@ -282,8 +273,6 @@ export function PostEditorForm({
             <MetaBoxRegion
               boxes={bottom}
               testId="meta-boxes-bottom"
-              values={metaValues}
-              onChange={onMetaChange}
               disabled={isSubmitting}
             />
           </div>
@@ -295,8 +284,6 @@ export function PostEditorForm({
             <MetaBoxRegion
               boxes={sidebar}
               testId="meta-boxes-sidebar-boxes"
-              values={metaValues}
-              onChange={onMetaChange}
               disabled={isSubmitting}
             />
           </aside>
@@ -352,19 +339,15 @@ function partitionBoxesByLocation(
   return { bottom, sidebar };
 }
 
-// Render a stack of boxes against a shared meta bag. Nothing renders
-// when the bucket is empty so the layout stays tight.
+// Render a stack of boxes under the shared `meta` subtree. Nothing
+// renders when the bucket is empty so the layout stays tight.
 function MetaBoxRegion({
   boxes,
   testId,
-  values,
-  onChange,
   disabled,
 }: {
   readonly boxes: readonly EntryMetaBoxManifestEntry[];
   readonly testId: string;
-  readonly values: Readonly<Record<string, unknown>>;
-  readonly onChange: (key: string, next: unknown) => void;
   readonly disabled: boolean;
 }): ReactNode {
   if (boxes.length === 0) return null;
@@ -374,9 +357,8 @@ function MetaBoxRegion({
         <MetaBoxCard
           key={box.id}
           box={box}
-          values={values}
+          basePath="meta"
           disabled={disabled}
-          onChange={onChange}
         />
       ))}
     </div>

@@ -68,6 +68,7 @@ const ROLE_LABEL: Record<UserRole, string> = {
 const profileFormSchema = v.object({
   name: v.pipe(v.string(), v.trim(), v.maxLength(100)),
   role: v.picklist(USER_ROLES),
+  meta: v.record(v.string(), v.unknown()),
 });
 
 export const Route = createFileRoute("/_authenticated/users/$id")({
@@ -176,15 +177,13 @@ function UserEditForm({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
-  // Meta rides the same Save as the profile fields — one `user.update`
-  // call per form submission. Re-seeds from the server's post-sanitize
-  // bag on success so coerce roundtrips show up in the UI.
-  const [meta, setMeta] = useState<Record<string, unknown>>(() =>
-    seedFromMetaBoxes(metaBoxes, target.meta),
-  );
 
   const updateUser = useMutation({
-    mutationFn: (values: { name: string; role: UserRole }) =>
+    mutationFn: (values: {
+      name: string;
+      role: UserRole;
+      meta: Readonly<Record<string, unknown>>;
+    }) =>
       orpc.user.update.call({
         id: target.id,
         name: values.name.length > 0 ? values.name : null,
@@ -194,13 +193,15 @@ function UserEditForm({
         ...(canPromote && values.role !== target.role
           ? { role: values.role }
           : {}),
-        meta: metaBoxes.length > 0 ? meta : undefined,
+        meta: metaBoxes.length > 0 ? values.meta : undefined,
       }),
     onMutate: () => {
       setServerError(null);
     },
-    onSuccess: async (updated) => {
-      setMeta(seedFromMetaBoxes(metaBoxes, updated.meta));
+    onSuccess: async () => {
+      // Parent route remounts via the target.updatedAt key on refetch,
+      // so the form re-reads defaultValues (including sanitized meta)
+      // from the fresh row automatically.
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: orpc.user.get.queryOptions({ input: { id: target.id } })
@@ -225,6 +226,7 @@ function UserEditForm({
     defaultValues: {
       name: target.name ?? "",
       role: target.role,
+      meta: seedFromMetaBoxes(metaBoxes, target.meta),
     },
   });
 
@@ -344,11 +346,8 @@ function UserEditForm({
                 <MetaBoxCard
                   key={box.id}
                   box={box}
-                  values={meta}
+                  basePath="meta"
                   disabled={updateUser.isPending || !canSave}
-                  onChange={(key, value) => {
-                    setMeta((prev) => ({ ...prev, [key]: value }));
-                  }}
                 />
               ))}
 

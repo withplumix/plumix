@@ -24,6 +24,9 @@ interface TermFormValues {
   readonly slug: string;
   readonly description: string;
   readonly parentId: number | null;
+  /** Plugin-registered meta bag. Shape is open because meta-box fields
+   *  coerce per-field on edit; the server re-sanitises on write. */
+  readonly meta: Readonly<Record<string, unknown>>;
 }
 
 // Client-side shape mirrors `termCreateInputSchema` / `termUpdateInputSchema`
@@ -42,6 +45,7 @@ const termFormSchema = v.object({
   ),
   description: v.pipe(v.string(), v.trim(), v.maxLength(2000)),
   parentId: v.nullable(idParam),
+  meta: v.record(v.string(), v.unknown()),
 });
 
 /**
@@ -70,8 +74,6 @@ export function TermForm({
   serverError,
   submitLabel,
   metaBoxes,
-  metaValues,
-  onMetaChange,
   onSubmit,
   onCancel,
 }: {
@@ -86,8 +88,6 @@ export function TermForm({
    *  together via one `term.update` call. Pass an empty array when no
    *  boxes are registered for the current viewer. */
   readonly metaBoxes: readonly TermMetaBoxManifestEntry[];
-  readonly metaValues: Readonly<Record<string, unknown>>;
-  readonly onMetaChange: (key: string, value: unknown) => void;
   readonly onSubmit: (values: TermFormValues) => void;
   readonly onCancel: () => void;
 }): ReactNode {
@@ -209,9 +209,8 @@ export function TermForm({
           <MetaBoxCard
             key={box.id}
             box={box}
-            values={metaValues}
+            basePath="meta"
             disabled={isSubmitting}
-            onChange={onMetaChange}
           />
         ))}
 

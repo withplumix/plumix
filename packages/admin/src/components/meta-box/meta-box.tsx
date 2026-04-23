@@ -25,18 +25,16 @@ type MetaBoxCardEntry =
 
 /**
  * Shared stateless renderer for every entity-meta surface (entry /
- * term / user). Parent owns the `values` state and carries the bag on
- * the entity's single Save — this component just draws the Card.
+ * term / user). Expects an ancestor `<Form>` provider — each field
+ * binds to `${basePath}.${field.key}` via react-hook-form context.
  */
 export function MetaBoxCard({
   box,
-  values,
-  onChange,
+  basePath,
   disabled = false,
 }: {
   readonly box: MetaBoxCardEntry;
-  readonly values: Readonly<Record<string, unknown>>;
-  readonly onChange: (key: string, value: unknown) => void;
+  readonly basePath: string;
   readonly disabled?: boolean;
 }): ReactNode {
   return (
@@ -62,11 +60,8 @@ export function MetaBoxCard({
           <MetaBoxField
             key={field.key}
             field={field}
-            value={values[field.key]}
+            name={`${basePath}.${field.key}`}
             disabled={disabled}
-            onChange={(next) => {
-              onChange(field.key, next);
-            }}
             className={metaBoxFieldColSpanClass(field.span)}
           />
         ))}
