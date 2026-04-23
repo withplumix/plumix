@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
 import { FormField } from "@/components/form/field.js";
-import { UserMetaBoxCard } from "@/components/meta-box/user-meta-box-card.js";
+import { MetaBoxCard } from "@/components/meta-box/meta-box.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Badge } from "@/components/ui/badge.js";
 import { Button } from "@/components/ui/button.js";
@@ -36,6 +36,7 @@ import * as v from "valibot";
 
 import type { UserMetaBoxManifestEntry } from "@plumix/core/manifest";
 import type { User, UserRole } from "@plumix/core/schema";
+import { seedFromMetaBoxes } from "@plumix/core/manifest";
 import { idPathParam } from "@plumix/core/validation";
 
 import {
@@ -166,6 +167,12 @@ function UserEditForm({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  // Meta rides the same Save as the profile fields — one `user.update`
+  // call per form submission. Re-seeds from the server's post-sanitize
+  // bag on success so coerce roundtrips show up in the UI.
+  const [meta, setMeta] = useState<Record<string, unknown>>(() =>
+    seedFromMetaBoxes(metaBoxes, target.meta),
+  );
 
   const updateUser = useMutation({
     mutationFn: (values: { name: string; role: UserRole }) =>
@@ -178,11 +185,13 @@ function UserEditForm({
         ...(canPromote && values.role !== target.role
           ? { role: values.role }
           : {}),
+        meta: metaBoxes.length > 0 ? meta : undefined,
       }),
     onMutate: () => {
       setServerError(null);
     },
-    onSuccess: async () => {
+    onSuccess: async (updated) => {
+      setMeta(seedFromMetaBoxes(metaBoxes, updated.meta));
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: orpc.user.get.queryOptions({ input: { id: target.id } })
@@ -323,6 +332,18 @@ function UserEditForm({
               </div>
             )}
 
+            {metaBoxes.map((box) => (
+              <MetaBoxCard
+                key={box.id}
+                box={box}
+                values={meta}
+                disabled={updateUser.isPending || !canSave}
+                onChange={(key, value) => {
+                  setMeta((prev) => ({ ...prev, [key]: value }));
+                }}
+              />
+            ))}
+
             {serverError ? (
               <Alert variant="destructive" data-testid="user-edit-server-error">
                 <AlertDescription>{serverError}</AlertDescription>
@@ -358,15 +379,6 @@ function UserEditForm({
           </form>
         </CardContent>
       </Card>
-
-      {metaBoxes.map((box) => (
-        <UserMetaBoxCard
-          key={box.id}
-          box={box}
-          user={target}
-          disabled={!canSave}
-        />
-      ))}
 
       {canDisable ? <StatusCard target={target} /> : null}
       {canDelete ? <DeleteCard target={target} /> : null}

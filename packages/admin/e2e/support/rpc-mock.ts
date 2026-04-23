@@ -165,7 +165,7 @@ export const MANIFEST_WITH_META_BOXES: PlumixManifest = {
     {
       id: "seo",
       label: "SEO",
-      context: "normal",
+      location: "bottom",
       entryTypes: ["post"],
       fields: [
         {
@@ -180,7 +180,7 @@ export const MANIFEST_WITH_META_BOXES: PlumixManifest = {
     {
       id: "featured",
       label: "Featured",
-      context: "side",
+      location: "sidebar",
       entryTypes: ["post"],
       fields: [
         {
@@ -216,15 +216,17 @@ export const MANIFEST_WITH_SETTINGS: PlumixManifest = {
       description: "Public-facing site identity.",
       fields: [
         {
-          name: "site_title",
+          key: "site_title",
           label: "Site title",
-          type: "text",
+          type: "string",
+          inputType: "text",
           maxLength: 200,
         },
         {
-          name: "site_description",
+          key: "site_description",
           label: "Tagline",
-          type: "text",
+          type: "string",
+          inputType: "textarea",
           maxLength: 300,
         },
       ],
@@ -235,9 +237,10 @@ export const MANIFEST_WITH_SETTINGS: PlumixManifest = {
       description: "Admin notifications route to this address.",
       fields: [
         {
-          name: "admin_email",
+          key: "admin_email",
           label: "Administration email",
-          type: "text",
+          type: "string",
+          inputType: "email",
           maxLength: 254,
         },
       ],

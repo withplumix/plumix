@@ -25,7 +25,7 @@ export interface EntryTypeOptions {
     readonly isHierarchical?: boolean;
   };
   readonly capabilityType?: string;
-  readonly menuPosition?: number;
+  readonly priority?: number;
   readonly menuIcon?: string;
 }
 
@@ -102,103 +102,60 @@ export interface MetaBoxField {
 }
 
 /**
- * Meta box shown on the entry editor. Rendered alongside the post in
- * `/entries/<type>/<id>`; the `context` hint controls which column the
- * box lands in.
+ * Shared base for every "card of fields" registration surface — entry
+ * meta boxes, term meta boxes, user meta boxes, and settings groups.
+ * Each concrete surface extends this with its scope specifier (if any)
+ * and any surface-specific layout hints (`location` on entry boxes).
  *
- * `capability` is a UI-only filter: the admin hides boxes the current
- * user lacks the capability for, but the server enforces only the
- * entity-level cap (`<entryType>:edit*`). Do NOT use it to gate
- * secrets — any user who can edit the entry can write any registered
- * meta key via the raw RPC.
+ * Semantics shared across every extender:
+ * - `priority` orders cards within their region; lower first,
+ *   unspecified sorts last, ties break by `id` / `name` alphabetical.
+ * - `capability` is a UI-only filter — the admin hides cards the
+ *   viewer lacks the capability for. The server enforces only the
+ *   entity-level write gate (`<entryType>:edit*`, `<taxonomy>:edit`,
+ *   `user:edit`, `settings:manage`). Do NOT use `capability` for
+ *   secrets; any user with the entity write gate can write any
+ *   registered field via the raw RPC.
+ * - `fields` carry `MetaBoxField.sanitize` which runs server-side only
+ *   — the manifest wire contract strips callbacks before shipping.
  */
-export interface EntryMetaBoxOptions {
+export interface MetaBoxBaseOptions {
   readonly label: string;
   readonly description?: string;
-  readonly context?: "side" | "normal" | "advanced";
-  readonly priority?: "high" | "default" | "low";
+  readonly priority?: number;
+  readonly capability?: string;
+  readonly fields: readonly MetaBoxField[];
+}
+
+/**
+ * Meta box shown on the entry editor. `location` chooses between the
+ * right rail (`"sidebar"`) and below the main editor (`"bottom"`,
+ * default). Scoped by `entryTypes`.
+ */
+export interface EntryMetaBoxOptions extends MetaBoxBaseOptions {
+  readonly location?: "bottom" | "sidebar";
   readonly entryTypes: readonly string[];
-  readonly capability?: string;
-  readonly fields: readonly MetaBoxField[];
 }
 
-/**
- * Meta box shown on the taxonomy term edit form. Rendered as one
- * shadcn `<Card>` with its own save button — same card-per-box model
- * as settings groups. Scoped by `taxonomies`.
- *
- * `capability` is a UI-only filter; see `EntryMetaBoxOptions` for the
- * caveat. The server gates term meta writes on `<taxonomy>:edit`.
- */
-export interface TermMetaBoxOptions {
-  readonly label: string;
-  readonly description?: string;
+/** Meta box shown on the taxonomy term edit form. Scoped by `taxonomies`. */
+export interface TermMetaBoxOptions extends MetaBoxBaseOptions {
   readonly taxonomies: readonly string[];
-  readonly capability?: string;
-  readonly fields: readonly MetaBoxField[];
 }
 
 /**
- * Meta box shown on the user edit form. Rendered as stacked shadcn
- * `<Card>`s with independent save buttons — same card-per-box model as
- * term boxes and settings groups. User meta is a flat keyspace (no
- * scope analogue to entry types or taxonomies), so every registered
- * box targets every user; use `capability` to gate which boxes the
- * viewer sees.
- *
- * `capability` is a UI-only filter; see `EntryMetaBoxOptions` for the
- * caveat. The server gates user meta writes on `user:edit` /
- * `user:edit_own` (same check as the rest of `user.update`).
- *
- * `MetaBoxField.sanitize` runs server-side only — the manifest wire
- * contract strips callbacks before shipping to the admin bundle.
+ * Meta box shown on the user edit form. User meta is a flat keyspace
+ * (no scope analogue to entry types or taxonomies), so the base shape
+ * is everything an author needs.
  */
-export interface UserMetaBoxOptions {
-  readonly label: string;
-  readonly description?: string;
-  readonly capability?: string;
-  readonly fields: readonly MetaBoxField[];
-}
+export type UserMetaBoxOptions = MetaBoxBaseOptions;
 
 /**
- * Narrow discriminator for settings-form fields. Mirrors the subset of
- * `MetaBoxField.inputType` values that the settings admin's field
- * dispatcher renders today — `text` (single-line) and `textarea`
- * (multi-line). Extending this is cheap: add a new literal, then teach
- * the admin's `SettingsField` dispatcher to render it. Keeping the
- * union narrow (vs free-form string like meta boxes) trades plugin
- * extensibility for an exhaustive type-check in the dispatcher.
+ * A self-contained group of fields on a settings page — storage unit
+ * AND visual unit. Each group gets its own Save button (independent
+ * storage, unlike entity meta which rides the entity's single Save).
+ * Surfaced via `registerSettingsPage.groups: string[]`.
  */
-export type SettingsFieldType = "text" | "textarea";
-
-export interface SettingsField {
-  readonly name: string;
-  readonly label: string;
-  readonly type: SettingsFieldType;
-  /**
-   * Initial value rendered when nothing has been saved yet. Admin forms
-   * fall back to this on first render if `settings.get({ group })`
-   * returns no entry for the field.
-   */
-  readonly default?: string;
-  readonly description?: string;
-  readonly placeholder?: string;
-  /** Text-shaped inputs. Enforced on the client; server re-validates. */
-  readonly maxLength?: number;
-}
-
-/**
- * A self-contained group of fields — storage unit and visual unit.
- * Plugins register groups with `ctx.registerSettingsGroup(name, {...})`;
- * they land as one shadcn `<Card>` in the admin with `label` as the
- * title, `description` as the subtitle, and their own save button in
- * the card footer. Storage key is `(group.name, field.name)`.
- */
-export interface SettingsGroupOptions {
-  readonly label: string;
-  readonly description?: string;
-  readonly fields: readonly SettingsField[];
-}
+export type SettingsGroupOptions = MetaBoxBaseOptions;
 
 /**
  * A UI-level composition of groups rendered at `/settings/<page>` in the
@@ -212,10 +169,10 @@ export interface SettingsPageOptions {
   readonly groups: readonly string[];
   /**
    * Admin menu ordering. Unspecified positions sort last (in
-   * registration order). Mirrors `EntryTypeOptions.menuPosition` so
+   * registration order). Mirrors `EntryTypeOptions.priority` so
    * sidebar composition stays predictable across plugins.
    */
-  readonly menuPosition?: number;
+  readonly priority?: number;
 }
 
 export interface RegisteredEntryType extends EntryTypeOptions {
@@ -391,7 +348,7 @@ export interface EntryTypeManifestEntry {
   readonly isPublic?: boolean;
   readonly hasArchive?: boolean | string;
   readonly capabilityType?: string;
-  readonly menuPosition?: number;
+  readonly priority?: number;
   readonly menuIcon?: string;
 }
 
@@ -417,45 +374,31 @@ export interface MetaBoxFieldManifestEntry {
 }
 
 /**
- * Shape serialised for entry meta boxes (post editor sidebar). Strict
- * allowlist projection of `RegisteredEntryMetaBox`; drops
- * `registeredBy` (server-only debug metadata).
+ * Shared base for every "card of fields" serialised entry. Each
+ * concrete projection extends with its identifier + any surface-
+ * specific layout + scope fields.
  */
-export interface EntryMetaBoxManifestEntry {
-  readonly id: string;
+export interface MetaBoxBaseManifestEntry {
   readonly label: string;
   readonly description?: string;
-  readonly context?: "side" | "normal" | "advanced";
-  readonly priority?: "high" | "default" | "low";
+  readonly priority?: number;
+  readonly capability?: string;
+  readonly fields: readonly MetaBoxFieldManifestEntry[];
+}
+
+export interface EntryMetaBoxManifestEntry extends MetaBoxBaseManifestEntry {
+  readonly id: string;
+  readonly location?: "bottom" | "sidebar";
   readonly entryTypes: readonly string[];
-  readonly capability?: string;
-  readonly fields: readonly MetaBoxFieldManifestEntry[];
 }
 
-/**
- * Shape serialised for term meta boxes (taxonomy edit form). Same
- * field-level shape as `EntryMetaBoxManifestEntry`; `context` /
- * `priority` don't apply because term forms render stacked cards.
- */
-export interface TermMetaBoxManifestEntry {
+export interface TermMetaBoxManifestEntry extends MetaBoxBaseManifestEntry {
   readonly id: string;
-  readonly label: string;
-  readonly description?: string;
   readonly taxonomies: readonly string[];
-  readonly capability?: string;
-  readonly fields: readonly MetaBoxFieldManifestEntry[];
 }
 
-/**
- * Shape serialised for user meta boxes (user edit form). No scope
- * property — user meta boxes target the single user-entity surface.
- */
-export interface UserMetaBoxManifestEntry {
+export interface UserMetaBoxManifestEntry extends MetaBoxBaseManifestEntry {
   readonly id: string;
-  readonly label: string;
-  readonly description?: string;
-  readonly capability?: string;
-  readonly fields: readonly MetaBoxFieldManifestEntry[];
 }
 
 /**
@@ -476,31 +419,13 @@ export interface TaxonomyManifestEntry {
 }
 
 /**
- * Client-safe projection of a settings field. Mirrors `SettingsField`
- * today — kept separate so the manifest boundary can diverge (e.g.,
- * strip server-only validators / sanitisers) without rippling through
- * plugin registration code.
+ * Shape serialised for settings groups in the manifest. Same shared
+ * shape as every other meta surface; the storage key `name` replaces
+ * the meta-box `id`. Fields use the same `MetaBoxFieldManifestEntry`
+ * type — one field contract for plugin authors.
  */
-export interface SettingsFieldManifestEntry {
+export interface SettingsGroupManifestEntry extends MetaBoxBaseManifestEntry {
   readonly name: string;
-  readonly label: string;
-  readonly type: SettingsFieldType;
-  readonly default?: string;
-  readonly description?: string;
-  readonly placeholder?: string;
-  readonly maxLength?: number;
-}
-
-/**
- * Shape serialised for settings groups in the manifest. Strict allowlist
- * projection of `RegisteredSettingsGroup` — drops `registeredBy`
- * (server-only debug metadata).
- */
-export interface SettingsGroupManifestEntry {
-  readonly name: string;
-  readonly label: string;
-  readonly description?: string;
-  readonly fields: readonly SettingsFieldManifestEntry[];
 }
 
 /**
@@ -513,7 +438,7 @@ export interface SettingsPageManifestEntry {
   readonly label: string;
   readonly description?: string;
   readonly groups: readonly string[];
-  readonly menuPosition?: number;
+  readonly priority?: number;
 }
 
 export interface PlumixManifest {
@@ -543,37 +468,33 @@ export function emptyManifest(): PlumixManifest {
 
 /**
  * Project a registry snapshot into its manifest form — the subset that ships
- * to the admin bundle. Entry types are ordered by `menuPosition` ascending,
- * with unspecified positions last. Among entries with the same (or no)
- * `menuPosition` the registration order wins — `Array.prototype.sort` is
- * stable per ES2019, and the registry's `Map` preserves insertion order.
+ * to the admin bundle. Every surface with a `priority?: number` field —
+ * entry types, entry/term/user meta boxes, settings pages, settings groups —
+ * is sorted by `priority` ascending; ties break by `name` / `id`
+ * alphabetical so the shipped order is deterministic regardless of
+ * plugin install order.
  *
  * Throws `DuplicateAdminSlugError` if two post types resolve to the same
  * admin slug — the admin router can't disambiguate `/entries/$slug` in that
  * case, and catching it at build time is cheaper than a 404 at runtime.
  */
 export function buildManifest(registry: PluginRegistry): PlumixManifest {
-  const entries = Array.from(registry.entryTypes.values()).map(
-    toEntryTypeManifest,
-  );
-  entries.sort((a, b) => {
-    const ap = a.menuPosition ?? Number.POSITIVE_INFINITY;
-    const bp = b.menuPosition ?? Number.POSITIVE_INFINITY;
-    return ap - bp;
-  });
+  const entries = Array.from(registry.entryTypes.values())
+    .map(toEntryTypeManifest)
+    .sort(byPriorityThen((e) => e.name));
   assertUniqueAdminSlugs(entries);
   const taxonomies = Array.from(registry.taxonomies.values()).map(
     toTaxonomyEntry,
   );
-  const entryMetaBoxes = Array.from(registry.entryMetaBoxes.values()).map(
-    toEntryMetaBoxEntry,
-  );
-  const termMetaBoxes = Array.from(registry.termMetaBoxes.values()).map(
-    toTermMetaBoxEntry,
-  );
-  const userMetaBoxes = Array.from(registry.userMetaBoxes.values()).map(
-    toUserMetaBoxEntry,
-  );
+  const entryMetaBoxes = Array.from(registry.entryMetaBoxes.values())
+    .map(toEntryMetaBoxEntry)
+    .sort(byPriorityThen((b) => b.id));
+  const termMetaBoxes = Array.from(registry.termMetaBoxes.values())
+    .map(toTermMetaBoxEntry)
+    .sort(byPriorityThen((b) => b.id));
+  const userMetaBoxes = Array.from(registry.userMetaBoxes.values())
+    .map(toUserMetaBoxEntry)
+    .sort(byPriorityThen((b) => b.id));
   assertMetaBoxScopesExist(
     entryMetaBoxes,
     (box) => box.entryTypes,
@@ -597,16 +518,12 @@ export function buildManifest(registry: PluginRegistry): PlumixManifest {
   // User meta is a flat keyspace — one synthetic "user" scope keeps
   // the shared helper honest without inventing a second code path.
   assertUniqueFieldKeysPerScope(userMetaBoxes, getUserScope, "user");
-  const settingsGroups = Array.from(registry.settingsGroups.values()).map(
-    toSettingsGroupEntry,
-  );
+  const settingsGroups = Array.from(registry.settingsGroups.values())
+    .map(toSettingsGroupEntry)
+    .sort(byPriorityThen((g) => g.name));
   const settingsPages = Array.from(registry.settingsPages.values())
     .map(toSettingsPageEntry)
-    .sort((a, b) => {
-      const ap = a.menuPosition ?? Number.POSITIVE_INFINITY;
-      const bp = b.menuPosition ?? Number.POSITIVE_INFINITY;
-      return ap - bp;
-    });
+    .sort(byPriorityThen((p) => p.name));
   assertSettingsPageGroupsExist(settingsPages, registry.settingsGroups);
   return {
     entryTypes: entries,
@@ -617,6 +534,50 @@ export function buildManifest(registry: PluginRegistry): PlumixManifest {
     settingsGroups,
     settingsPages,
   };
+}
+
+/**
+ * Shared comparator: `priority` ascending (unspecified sorts last),
+ * ties broken by a caller-supplied stable key (id / name) in
+ * alphabetical order. Used by `buildManifest` server-side AND the
+ * admin's in-memory filter helpers so the shipped manifest and the
+ * admin filter paths agree on order regardless of registration
+ * sequence.
+ */
+export function byPriorityThen<T extends { readonly priority?: number }>(
+  getKey: (item: T) => string,
+): (a: T, b: T) => number {
+  return (a, b) => {
+    const ap = a.priority ?? Number.POSITIVE_INFINITY;
+    const bp = b.priority ?? Number.POSITIVE_INFINITY;
+    if (ap !== bp) return ap - bp;
+    return getKey(a).localeCompare(getKey(b));
+  };
+}
+
+/**
+ * Seed per-field values from a server meta bag, falling back to each
+ * field's registered `default`. Shared by every admin form that owns
+ * meta state (entry editor, term edit route, user edit route, settings
+ * group card) — one shape, one behaviour.
+ */
+export function seedFromMetaBoxes(
+  boxes: readonly {
+    readonly fields: readonly {
+      readonly key: string;
+      readonly default?: unknown;
+    }[];
+  }[],
+  stored: Readonly<Record<string, unknown>> | null | undefined,
+): Record<string, unknown> {
+  const bag = stored ?? {};
+  const seed: Record<string, unknown> = {};
+  for (const box of boxes) {
+    for (const field of box.fields) {
+      seed[field.key] = bag[field.key] ?? field.default;
+    }
+  }
+  return seed;
 }
 
 // Synthetic flat-keyspace scope for user meta. Hoisted so the
@@ -793,7 +754,7 @@ function toEntryTypeManifest(pt: RegisteredEntryType): EntryTypeManifestEntry {
     isPublic,
     hasArchive,
     capabilityType,
-    menuPosition,
+    priority,
     menuIcon,
   } = pt;
   return {
@@ -808,7 +769,7 @@ function toEntryTypeManifest(pt: RegisteredEntryType): EntryTypeManifestEntry {
     isPublic,
     hasArchive,
     capabilityType,
-    menuPosition,
+    priority,
     menuIcon,
   };
 }
@@ -841,7 +802,7 @@ function toEntryMetaBoxEntry(
     id,
     label,
     description,
-    context,
+    location,
     priority,
     entryTypes,
     capability,
@@ -851,7 +812,7 @@ function toEntryMetaBoxEntry(
     id,
     label,
     description,
-    context,
+    location,
     priority,
     entryTypes,
     capability,
@@ -860,30 +821,33 @@ function toEntryMetaBoxEntry(
 }
 
 // Term meta boxes are always stacked top-to-bottom on the taxonomy
-// edit form — no `context` / `priority` hints apply.
+// edit form — no `location` hint applies.
 function toTermMetaBoxEntry(
   box: RegisteredTermMetaBox,
 ): TermMetaBoxManifestEntry {
-  const { id, label, description, taxonomies, capability, fields } = box;
+  const { id, label, description, priority, taxonomies, capability, fields } =
+    box;
   return {
     id,
     label,
     description,
+    priority,
     taxonomies,
     capability,
     fields: fields.map(toMetaBoxFieldEntry),
   };
 }
 
-// User meta boxes are stacked like term boxes — no scope / context.
+// User meta boxes are stacked like term boxes — no scope / location.
 function toUserMetaBoxEntry(
   box: RegisteredUserMetaBox,
 ): UserMetaBoxManifestEntry {
-  const { id, label, description, capability, fields } = box;
+  const { id, label, description, priority, capability, fields } = box;
   return {
     id,
     label,
     description,
+    priority,
     capability,
     fields: fields.map(toMetaBoxFieldEntry),
   };
@@ -891,46 +855,27 @@ function toUserMetaBoxEntry(
 
 // Allowlist for settings group entries — same rationale as the other
 // `to*Entry` projections. `registeredBy` is server-only debug metadata.
+// Fields ship through `toMetaBoxFieldEntry` — same projection as every
+// other meta surface.
 function toSettingsGroupEntry(
   group: RegisteredSettingsGroup,
 ): SettingsGroupManifestEntry {
-  const { name, label, description, fields } = group;
+  const { name, label, description, priority, capability, fields } = group;
   return {
     name,
     label,
     description,
-    fields: fields.map(toSettingsFieldEntry),
+    priority,
+    capability,
+    fields: fields.map(toMetaBoxFieldEntry),
   };
 }
 
 function toSettingsPageEntry(
   page: RegisteredSettingsPage,
 ): SettingsPageManifestEntry {
-  const { name, label, description, groups, menuPosition } = page;
-  return { name, label, description, groups, menuPosition };
-}
-
-function toSettingsFieldEntry(
-  field: SettingsField,
-): SettingsFieldManifestEntry {
-  const {
-    name,
-    label,
-    type,
-    default: defaultValue,
-    description,
-    placeholder,
-    maxLength,
-  } = field;
-  return {
-    name,
-    label,
-    type,
-    default: defaultValue,
-    description,
-    placeholder,
-    maxLength,
-  };
+  const { name, label, description, groups, priority } = page;
+  return { name, label, description, groups, priority };
 }
 
 function toMetaBoxFieldEntry(field: MetaBoxField): MetaBoxFieldManifestEntry {

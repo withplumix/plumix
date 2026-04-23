@@ -20,7 +20,7 @@ describe("buildManifest", () => {
     expect(manifest).toEqual(emptyManifest());
   });
 
-  test("projects registered settings groups, dropping server-only fields", async () => {
+  test("projects registered settings groups, fields use the shared MetaBoxField shape", async () => {
     const hooks = new HookRegistry();
     const corePlugin = definePlugin("core", (ctx) => {
       ctx.registerSettingsGroup("identity", {
@@ -28,15 +28,17 @@ describe("buildManifest", () => {
         description: "Public-facing site identity.",
         fields: [
           {
-            name: "site_title",
+            key: "site_title",
             label: "Site title",
-            type: "text",
+            type: "string",
+            inputType: "text",
             default: "My Site",
           },
           {
-            name: "site_description",
+            key: "site_description",
             label: "Tagline",
-            type: "text",
+            type: "string",
+            inputType: "textarea",
           },
         ],
       });
@@ -46,51 +48,65 @@ describe("buildManifest", () => {
       plugins: [corePlugin],
     });
     const manifest = buildManifest(registry);
-    expect(manifest.settingsGroups).toEqual([
-      {
-        name: "identity",
-        label: "Site identity",
-        description: "Public-facing site identity.",
-        fields: [
-          {
-            name: "site_title",
-            label: "Site title",
-            type: "text",
-            default: "My Site",
-            description: undefined,
-            placeholder: undefined,
-            maxLength: undefined,
-          },
-          {
-            name: "site_description",
-            label: "Tagline",
-            type: "text",
-            default: undefined,
-            description: undefined,
-            placeholder: undefined,
-            maxLength: undefined,
-          },
-        ],
-      },
-    ]);
+    expect(manifest.settingsGroups).toHaveLength(1);
+    expect(manifest.settingsGroups[0]).toMatchObject({
+      name: "identity",
+      label: "Site identity",
+      description: "Public-facing site identity.",
+      fields: [
+        {
+          key: "site_title",
+          label: "Site title",
+          type: "string",
+          inputType: "text",
+          default: "My Site",
+        },
+        {
+          key: "site_description",
+          label: "Tagline",
+          type: "string",
+          inputType: "textarea",
+        },
+      ],
+    });
+    // `registeredBy` is server-only and must not leak to the manifest.
+    const projected = manifest.settingsGroups[0] as unknown as Record<
+      string,
+      unknown
+    >;
+    expect(projected.registeredBy).toBeUndefined();
   });
 
-  test("settings page composes registered groups by name, sorted by menuPosition", async () => {
+  test("settings page composes registered groups by name, sorted by priority", async () => {
     const hooks = new HookRegistry();
     const corePlugin = definePlugin("core", (ctx) => {
       ctx.registerSettingsGroup("identity", {
         label: "Site identity",
-        fields: [{ name: "site_title", label: "Site title", type: "text" }],
+        fields: [
+          {
+            key: "site_title",
+            label: "Site title",
+            type: "string",
+            inputType: "text",
+          },
+        ],
       });
       ctx.registerSettingsGroup("reading", {
         label: "Reading",
-        fields: [{ name: "per_page", label: "Posts per page", type: "text" }],
+        fields: [
+          {
+            key: "per_page",
+            label: "Posts per page",
+            type: "string",
+            inputType: "text",
+          },
+        ],
       });
       ctx.registerSettingsPage("general", {
         label: "General",
         description: "Basic site settings.",
         groups: ["identity", "reading"],
-        menuPosition: 10,
+        priority: 10,
       });
     });
     const { registry } = await installPlugins({ hooks, plugins: [corePlugin] });
@@ -101,7 +117,7 @@ describe("buildManifest", () => {
         label: "General",
         description: "Basic site settings.",
         groups: ["identity", "reading"],
-        menuPosition: 10,
+        priority: 10,
       },
     ]);
   });
@@ -166,7 +182,7 @@ describe("buildManifest", () => {
     );
   });
 
-  test("rejects invalid group / page / field names (must be snake_case ASCII)", async () => {
+  test("rejects invalid group / page names (must be snake_case ASCII)", async () => {
     const hooks = new HookRegistry();
     const badGroup = definePlugin("a", (ctx) => {
       ctx.registerSettingsGroup("Foo-Bar", { label: "x", fields: [] });
@@ -174,16 +190,6 @@ describe("buildManifest", () => {
     await expect(
       installPlugins({ hooks, plugins: [badGroup] }),
     ).rejects.toThrow(/Invalid settings group name "Foo-Bar"/);
-
-    const badField = definePlugin("b", (ctx) => {
-      ctx.registerSettingsGroup("good", {
-        label: "x",
-        fields: [{ name: "bad.name", label: "X", type: "text" }],
-      });
-    });
-    await expect(
-      installPlugins({ hooks: new HookRegistry(), plugins: [badField] }),
-    ).rejects.toThrow(/Invalid settings field name "bad\.name"/);
 
     const badPage = definePlugin("c", (ctx) => {
       ctx.registerSettingsPage("Bad-Page", { label: "x", groups: [] });
@@ -193,36 +199,62 @@ describe("buildManifest", () => {
     ).rejects.toThrow(/Invalid settings page name "Bad-Page"/);
   });
 
+  test("rejects a settings group field with an invalid key (shared meta regex)", async () => {
+    const hooks = new HookRegistry();
+    const badField = definePlugin("b", (ctx) => {
+      ctx.registerSettingsGroup("good", {
+        label: "x",
+        fields: [
+          { key: "bad key!", label: "X", type: "string", inputType: "text" },
+        ],
+      });
+    });
+    await expect(
+      installPlugins({ hooks, plugins: [badField] }),
+    ).rejects.toThrow(/invalid key "bad key!"/);
+  });
+
   test("rejects a group that exceeds the 200-field cap", async () => {
     const hooks = new HookRegistry();
     const tooMany = definePlugin("big", (ctx) => {
       ctx.registerSettingsGroup("big", {
         label: "x",
         fields: Array.from({ length: 201 }, (_, i) => ({
-          name: `f${i}`,
+          key: `f${i}`,
           label: `Field ${i}`,
-          type: "text" as const,
+          type: "string" as const,
+          inputType: "text",
         })),
       });
     });
     await expect(installPlugins({ hooks, plugins: [tooMany] })).rejects.toThrow(
-      /has 201 fields; the admin caps a single group at 200/,
+      /declares 201 fields; the admin caps a single box at 200/,
     );
   });
 
-  test("rejects a field name that collides within a group", async () => {
+  test("rejects a field key that collides within a group", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("dupe", (ctx) => {
       ctx.registerSettingsGroup("general", {
         label: "General",
         fields: [
-          { name: "site_title", label: "Site title", type: "text" },
-          { name: "site_title", label: "Dup", type: "text" },
+          {
+            key: "site_title",
+            label: "Site title",
+            type: "string",
+            inputType: "text",
+          },
+          {
+            key: "site_title",
+            label: "Dup",
+            type: "string",
+            inputType: "text",
+          },
         ],
       });
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
-      /settings field "general\.site_title"/,
+      /declares field "site_title" more than once/,
     );
   });
 
@@ -292,17 +324,47 @@ describe("buildManifest", () => {
     expect(() => buildManifest(registry)).toThrow(DuplicateAdminSlugError);
   });
 
-  test("orders post types by menuPosition, unspecified last", async () => {
+  test("orders post types by priority, unspecified last", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("mixed", (ctx) => {
-      ctx.registerEntryType("late", { label: "Late", menuPosition: 50 });
+      ctx.registerEntryType("late", { label: "Late", priority: 50 });
       ctx.registerEntryType("unpositioned", { label: "Unpositioned" });
-      ctx.registerEntryType("early", { label: "Early", menuPosition: 5 });
+      ctx.registerEntryType("early", { label: "Early", priority: 5 });
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
     const names = buildManifest(registry).entryTypes.map((pt) => pt.name);
     expect(names).toEqual(["early", "late", "unpositioned"]);
+  });
+
+  test("entry types with the same priority break ties by name alphabetical", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("mixed", (ctx) => {
+      ctx.registerEntryType("zebra", { label: "Zebra", priority: 0 });
+      ctx.registerEntryType("alpha", { label: "Alpha", priority: 0 });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const names = buildManifest(registry).entryTypes.map((pt) => pt.name);
+    expect(names).toEqual(["alpha", "zebra"]);
+  });
+
+  test("settings pages with the same priority break ties by name alphabetical", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("mixed", (ctx) => {
+      ctx.registerSettingsPage("zebra", {
+        label: "Zebra",
+        groups: [],
+        priority: 0,
+      });
+      ctx.registerSettingsPage("alpha", {
+        label: "Alpha",
+        groups: [],
+        priority: 0,
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const names = buildManifest(registry).settingsPages.map((p) => p.name);
+    expect(names).toEqual(["alpha", "zebra"]);
   });
 
   test("projects registered entry meta boxes, dropping server-only fields", async () => {
@@ -312,8 +374,8 @@ describe("buildManifest", () => {
       ctx.registerEntryMetaBox("seo-meta", {
         label: "SEO",
         description: "Meta title + description for search snippets.",
-        context: "side",
-        priority: "high",
+        location: "sidebar",
+        priority: 0,
         entryTypes: ["post"],
         capability: "post:edit_any",
         fields: [
@@ -342,8 +404,8 @@ describe("buildManifest", () => {
       id: "seo-meta",
       label: "SEO",
       description: "Meta title + description for search snippets.",
-      context: "side",
-      priority: "high",
+      location: "sidebar",
+      priority: 0,
       entryTypes: ["post"],
       capability: "post:edit_any",
     });

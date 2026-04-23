@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
-import { SettingsField } from "@/components/settings/field.js";
+import { MetaBoxField } from "@/components/meta-box/meta-box-field.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Button } from "@/components/ui/button.js";
 import {
@@ -17,7 +17,6 @@ import {
   groupsForSettingsPage,
 } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
-import { useForm } from "@tanstack/react-form";
 import {
   useMutation,
   useQueryClient,
@@ -29,6 +28,7 @@ import type {
   SettingsGroupManifestEntry,
   SettingsPageManifestEntry,
 } from "@plumix/core/manifest";
+import { seedFromMetaBoxes } from "@plumix/core/manifest";
 
 export const Route = createFileRoute("/_authenticated/settings/$page")({
   beforeLoad: ({ context, params }): { page: SettingsPageManifestEntry } => {
@@ -113,26 +113,24 @@ function SettingsGroupCard({
   );
 
   // Initial form state: stored value when present, field default when
-  // not. Values are `unknown` out of `settings.get`; cast to string for
-  // the text/textarea inputs the `SettingsField` dispatcher handles
-  // today.
-  const defaultValues: Record<string, string> = Object.fromEntries(
-    group.fields.map((f) => [
-      f.name,
-      typeof stored[f.name] === "string"
-        ? (stored[f.name] as string)
-        : (f.default ?? ""),
-    ]),
+  // not. Values are `unknown` both ways — `MetaBoxField` renders the
+  // right input for each field's `inputType` and hands back the coerced
+  // value via onChange.
+  const [values, setValues] = useState<Record<string, unknown>>(() =>
+    seedFromMetaBoxes([group], stored),
   );
 
   const save = useMutation({
-    mutationFn: (values: Record<string, string>) =>
-      orpc.settings.upsert.call({ group: group.name, values }),
+    mutationFn: (next: Record<string, unknown>) =>
+      orpc.settings.upsert.call({ group: group.name, values: next }),
     onMutate: () => {
       setServerError(null);
       setSaveNotice(null);
     },
-    onSuccess: async () => {
+    onSuccess: async (fresh) => {
+      // Re-seed from the server's post-sanitize bag so the form reflects
+      // any trimming / coercion the server applied.
+      setValues(seedFromMetaBoxes([group], fresh));
       await queryClient.invalidateQueries({
         queryKey: orpc.settings.get.queryOptions({
           input: { group: group.name },
@@ -147,20 +145,13 @@ function SettingsGroupCard({
     },
   });
 
-  const form = useForm({
-    defaultValues,
-    onSubmit: ({ value }) => {
-      save.mutate(value);
-    },
-  });
-
   return (
     <Card data-testid={`settings-group-card-${group.name}`}>
       <form
         onSubmit={(event) => {
           event.preventDefault();
           event.stopPropagation();
-          void form.handleSubmit();
+          save.mutate(values);
         }}
       >
         <CardHeader>
@@ -178,22 +169,21 @@ function SettingsGroupCard({
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {group.fields.map((field) => (
-            <form.Field key={field.name} name={field.name}>
-              {(f) => (
-                <SettingsField
-                  field={field}
-                  value={f.state.value}
-                  onChange={f.handleChange}
-                  disabled={save.isPending}
-                  testId={`settings-field-${group.name}-${field.name}`}
-                />
-              )}
-            </form.Field>
+            <MetaBoxField
+              key={field.key}
+              field={field}
+              value={values[field.key]}
+              disabled={save.isPending}
+              onChange={(next) => {
+                setValues((prev) => ({ ...prev, [field.key]: next }));
+              }}
+            />
           ))}
 
           {serverError ? (
             <Alert
               variant="destructive"
+              role="alert"
               data-testid={`settings-server-error-${group.name}`}
             >
               <AlertDescription>{serverError}</AlertDescription>
@@ -201,7 +191,11 @@ function SettingsGroupCard({
           ) : null}
 
           {saveNotice ? (
-            <Alert data-testid={`settings-save-notice-${group.name}`}>
+            <Alert
+              role="status"
+              aria-live="polite"
+              data-testid={`settings-save-notice-${group.name}`}
+            >
               <AlertDescription>{saveNotice}</AlertDescription>
             </Alert>
           ) : null}

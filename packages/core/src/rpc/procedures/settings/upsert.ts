@@ -68,11 +68,16 @@ export const upsert = base
     const bag: Record<string, unknown> = {};
     for (const row of fresh) bag[row.key] = row.value;
 
-    await context.hooks.doAction("settings:group_changed", {
-      group: filtered.group,
-      set: Object.fromEntries(upsertRows.map((r) => [r.key, r.value])),
-      removed: deletes,
-    });
+    // Fire only when the call actually changed state — an empty
+    // `values: {}` payload is a no-op and shouldn't wake up
+    // cache-invalidators / audit-log subscribers.
+    if (upsertRows.length > 0 || deletes.length > 0) {
+      await context.hooks.doAction("settings:group_changed", {
+        group: filtered.group,
+        set: Object.fromEntries(upsertRows.map((r) => [r.key, r.value])),
+        removed: deletes,
+      });
+    }
 
     return context.hooks.applyFilter("rpc:settings.upsert:output", bag, {
       group: filtered.group,

@@ -144,6 +144,14 @@ function NewTermRoute(): ReactNode {
             isSubmitting={createTerm.isPending}
             serverError={serverError}
             submitLabel={`Create ${singularLower}`}
+            // Meta-on-create lands in a follow-up; today meta only
+            // renders on the edit screen because empty boxes still
+            // confuse plugin authors expecting meaningful defaults.
+            metaBoxes={[]}
+            metaValues={{}}
+            onMetaChange={() => {
+              // no-op; meta boxes aren't rendered on create
+            }}
             onSubmit={(values) => {
               // Short-circuit the RPC when the user left slug blank and
               // the derived slug would also be empty (CJK, emoji, pure

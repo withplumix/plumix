@@ -77,10 +77,10 @@ test.describe("/settings/$page", () => {
     await expect(page.getByTestId("settings-group-card-contact")).toBeVisible();
     // Fields are scoped by group in their testids — two groups, two save buttons.
     await expect(
-      page.getByTestId("settings-field-identity-site_title"),
+      page.getByTestId("meta-box-field-site_title-input"),
     ).toBeVisible();
     await expect(
-      page.getByTestId("settings-field-contact-admin_email"),
+      page.getByTestId("meta-box-field-admin_email-input"),
     ).toBeVisible();
     await expectNoAxeViolations(page);
   });
@@ -95,10 +95,10 @@ test.describe("/settings/$page", () => {
     });
     await page.goto("settings/general");
     await expect(
-      page.getByTestId("settings-field-identity-site_title"),
+      page.getByTestId("meta-box-field-site_title-input"),
     ).toHaveValue("");
     await expect(
-      page.getByTestId("settings-field-contact-admin_email"),
+      page.getByTestId("meta-box-field-admin_email-input"),
     ).toHaveValue("");
   });
 
@@ -118,10 +118,10 @@ test.describe("/settings/$page", () => {
     });
     await page.goto("settings/general");
     await expect(
-      page.getByTestId("settings-field-identity-site_title"),
+      page.getByTestId("meta-box-field-site_title-input"),
     ).toHaveValue("Plumix");
     await expect(
-      page.getByTestId("settings-field-contact-admin_email"),
+      page.getByTestId("meta-box-field-admin_email-input"),
     ).toHaveValue("root@plumix.dev");
   });
 
@@ -135,7 +135,7 @@ test.describe("/settings/$page", () => {
       "/settings/upsert": { site_title: "Plumix" },
     });
     await page.goto("settings/general");
-    await page.getByTestId("settings-field-identity-site_title").fill("Plumix");
+    await page.getByTestId("meta-box-field-site_title-input").fill("Plumix");
     await page.getByTestId("settings-submit-identity").click();
     await expect(
       page.getByTestId("settings-save-notice-identity"),
@@ -180,7 +180,7 @@ test.describe("/settings/$page", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
     await page.goto("settings/general");
-    await page.getByTestId("settings-field-identity-site_title").fill("Plumix");
+    await page.getByTestId("meta-box-field-site_title-input").fill("Plumix");
     await page.getByTestId("settings-submit-identity").click();
     await expect(
       page.getByTestId("settings-server-error-identity"),

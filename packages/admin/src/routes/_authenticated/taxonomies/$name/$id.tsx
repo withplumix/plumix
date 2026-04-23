@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
-import { TermMetaBoxCard } from "@/components/meta-box/term-meta-box-card.js";
 import { TermForm } from "@/components/taxonomy/term-form.js";
 import {
   descendantIds,
@@ -38,6 +37,7 @@ import { ArrowLeft } from "lucide-react";
 import * as v from "valibot";
 
 import type { TaxonomyManifestEntry } from "@plumix/core/manifest";
+import { seedFromMetaBoxes } from "@plumix/core/manifest";
 import { idPathParam } from "@plumix/core/validation";
 
 import { TAXONOMY_LIST_DEFAULT_SEARCH } from "./-constants.js";
@@ -158,6 +158,14 @@ function EditTermContent({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const { user } = Route.useRouteContext();
+  const metaBoxes = termMetaBoxesForTaxonomy(taxonomy.name, user.capabilities);
+  // Meta lives on the parent route so `term.update` submits row fields
+  // + meta together — one Save, one RPC call. Re-seeds from the
+  // refetched term after save via the route key.
+  const [meta, setMeta] = useState<Record<string, unknown>>(() =>
+    seedFromMetaBoxes(metaBoxes, term.meta),
+  );
 
   const updateTerm = useMutation({
     mutationFn: (values: {
@@ -172,11 +180,18 @@ function EditTermContent({
         slug: values.slug.length > 0 ? values.slug : undefined,
         description: values.description.length > 0 ? values.description : null,
         parentId: values.parentId,
+        // Only ship meta keys the current user can actually see (the
+        // capability gate hides entire boxes); empty object is a no-op
+        // server-side.
+        meta: metaBoxes.length > 0 ? meta : undefined,
       }),
     onMutate: () => {
       setServerError(null);
     },
-    onSuccess: async () => {
+    onSuccess: async (updated) => {
+      // Re-seed from the server's post-sanitize bag so sanitize /
+      // coerce roundtrips show up in the form immediately.
+      setMeta(seedFromMetaBoxes(metaBoxes, updated.meta));
       // List variants are scoped by `taxonomy` so sibling taxonomies
       // don't needlessly refetch.
       await Promise.all([
@@ -201,11 +216,6 @@ function EditTermContent({
   const singularLower = (
     taxonomy.labels?.singular ?? taxonomy.label
   ).toLowerCase();
-  // Plugin-registered meta boxes for this taxonomy. Each one renders
-  // as an independent card with its own save button, parallel to the
-  // settings-page card-per-group model.
-  const { user } = Route.useRouteContext();
-  const metaBoxes = termMetaBoxesForTaxonomy(taxonomy.name, user.capabilities);
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
@@ -243,6 +253,11 @@ function EditTermContent({
             isSubmitting={updateTerm.isPending || !canEdit}
             serverError={serverError}
             submitLabel="Save changes"
+            metaBoxes={metaBoxes}
+            metaValues={meta}
+            onMetaChange={(key, value) => {
+              setMeta((prev) => ({ ...prev, [key]: value }));
+            }}
             onSubmit={(values) => {
               updateTerm.mutate(values);
             }}
@@ -256,16 +271,6 @@ function EditTermContent({
           />
         </CardContent>
       </Card>
-
-      {metaBoxes.map((box) => (
-        <TermMetaBoxCard
-          key={box.id}
-          box={box}
-          term={term}
-          taxonomyName={taxonomy.name}
-          disabled={!canEdit}
-        />
-      ))}
 
       {canDelete ? (
         <DeleteCard

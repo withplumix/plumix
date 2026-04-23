@@ -272,9 +272,9 @@ describe("entryMetaBoxesForType", () => {
       taxonomies: [],
       entryTypes: [],
       entryMetaBoxes: [
-        box("a", { priority: "low" }),
-        box("b", { priority: "high" }),
-        box("c"), // default
+        box("a", { priority: 20 }),
+        box("b", { priority: 0 }),
+        box("c"), // unspecified → sorts last
       ],
       termMetaBoxes: [],
       userMetaBoxes: [],
@@ -282,16 +282,16 @@ describe("entryMetaBoxesForType", () => {
       settingsPages: [],
     };
     const ids = entryMetaBoxesForType("post", [], source).map((b) => b.id);
-    expect(ids).toEqual(["b", "c", "a"]);
+    expect(ids).toEqual(["b", "a", "c"]);
   });
 
-  test("insertion order is the tiebreaker among boxes at the same priority", () => {
+  test("boxes at the same priority break ties by id alphabetical", () => {
     const source: PlumixManifest = {
       taxonomies: [],
       entryTypes: [],
       entryMetaBoxes: [
-        box("first", { priority: "high" }),
-        box("second", { priority: "high" }),
+        box("second", { priority: 0 }),
+        box("first", { priority: 0 }),
       ],
       termMetaBoxes: [],
       userMetaBoxes: [],
@@ -342,7 +342,7 @@ describe("entryMetaBoxesForType", () => {
       ["post:edit_any"],
       source,
     ).map((b) => b.id);
-    expect(withCap).toEqual(["public", "privileged"]);
+    expect(withCap).toEqual(["privileged", "public"]);
   });
 
   test("returns empty when no meta boxes are registered", () => {
@@ -397,7 +397,7 @@ describe("visibleUserMetaBoxes", () => {
 
   test("keeps capability-gated boxes when the viewer has the cap", () => {
     const ids = visibleUserMetaBoxes(["user:edit"], source).map((b) => b.id);
-    expect(ids).toEqual(["public", "privileged"]);
+    expect(ids).toEqual(["privileged", "public"]);
   });
 
   test("returns empty when no user meta boxes are registered", () => {
@@ -470,14 +470,31 @@ describe("findSettingsPageByName + visibleSettingsPages + findSettingsGroupByNam
         name: "identity",
         label: "Site identity",
         fields: [
-          { name: "site_title", label: "Site title", type: "text" },
-          { name: "site_description", label: "Tagline", type: "text" },
+          {
+            key: "site_title",
+            label: "Site title",
+            type: "string",
+            inputType: "text",
+          },
+          {
+            key: "site_description",
+            label: "Tagline",
+            type: "string",
+            inputType: "textarea",
+          },
         ],
       },
       {
         name: "contact",
         label: "Contact",
-        fields: [{ name: "admin_email", label: "Admin email", type: "text" }],
+        fields: [
+          {
+            key: "admin_email",
+            label: "Admin email",
+            type: "string",
+            inputType: "email",
+          },
+        ],
       },
     ],
     settingsPages: [

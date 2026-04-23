@@ -248,10 +248,7 @@ export function createPluginSetupContext({
       if (registry.settingsGroups.has(name)) {
         throw new DuplicateRegistrationError("settings group", name);
       }
-      for (const field of options.fields)
-        assertValidIdentifier("settings field", field.name);
-      assertUniqueFieldNames(name, options.fields);
-      assertGroupFieldCountWithinBounds(name, options.fields);
+      assertMetaBoxFields("settings group", name, options.fields);
       registry.settingsGroups.set(name, {
         ...options,
         name,
@@ -317,32 +314,28 @@ function assertValidIdentifier(kind: string, name: string): void {
   }
 }
 
-function assertUniqueFieldNames(
-  groupName: string,
-  fields: readonly { readonly name: string }[],
-): void {
-  const seen = new Set<string>();
-  for (const field of fields) {
-    if (seen.has(field.name)) {
-      throw new DuplicateRegistrationError(
-        "settings field",
-        `${groupName}.${field.name}`,
-      );
-    }
-    seen.add(field.name);
-  }
-}
-
 // Must match the RPC input-schema regex for meta keys — any key that
 // doesn't match is dead code (the write path rejects it), so catch it
 // at registration instead of letting the admin discover it later.
 const META_FIELD_KEY_RE = /^[a-zA-Z0-9_:-]+$/;
+
+// Cap on fields per box — keeps the admin's per-request payload
+// bounded and signals a modeling problem if a plugin wants to pile
+// hundreds of fields into one card. Matches the RPC input-schema cap
+// on the meta/upsert request surface.
+const MAX_FIELDS_PER_META_BOX = 200;
 
 function assertMetaBoxFields(
   kind: string,
   id: string,
   fields: readonly MetaBoxField[],
 ): void {
+  if (fields.length > MAX_FIELDS_PER_META_BOX) {
+    throw new Error(
+      `${kind} "${id}" declares ${fields.length} fields; the admin caps ` +
+        `a single box at ${MAX_FIELDS_PER_META_BOX}. Split into multiple boxes.`,
+    );
+  }
   const seen = new Set<string>();
   for (const field of fields) {
     if (!META_FIELD_KEY_RE.test(field.key)) {
@@ -357,25 +350,6 @@ function assertMetaBoxFields(
       );
     }
     seen.add(field.key);
-  }
-}
-
-// Cap on fields per group — keeps the admin `settings.upsert` payload
-// bounded and signals a modeling problem if a plugin wants to pile
-// hundreds of fields into one card. If a real need ever shows up,
-// bump this alongside the RPC input cap.
-const MAX_FIELDS_PER_SETTINGS_GROUP = 200;
-
-function assertGroupFieldCountWithinBounds(
-  groupName: string,
-  fields: readonly { readonly name: string }[],
-): void {
-  if (fields.length > MAX_FIELDS_PER_SETTINGS_GROUP) {
-    throw new Error(
-      `Settings group "${groupName}" has ${fields.length} fields; ` +
-        `the admin caps a single group at ${MAX_FIELDS_PER_SETTINGS_GROUP}. ` +
-        `Split into multiple groups.`,
-    );
   }
 }
 
