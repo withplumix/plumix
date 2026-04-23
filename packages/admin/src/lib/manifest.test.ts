@@ -4,6 +4,7 @@ import type {
   EntryMetaBoxManifestEntry,
   PlumixManifest,
   SettingsPageManifestEntry,
+  UserMetaBoxManifestEntry,
 } from "@plumix/core/manifest";
 
 import {
@@ -17,6 +18,7 @@ import {
   visibleEntryTypes,
   visibleSettingsPages,
   visibleTaxonomies,
+  visibleUserMetaBoxes,
 } from "./manifest.js";
 
 function withManifestScript(json: string): Document {
@@ -354,6 +356,56 @@ describe("entryMetaBoxesForType", () => {
       settingsPages: [],
     };
     expect(entryMetaBoxesForType("post", [], source)).toEqual([]);
+  });
+});
+
+describe("visibleUserMetaBoxes", () => {
+  function userBox(
+    id: string,
+    overrides: Partial<UserMetaBoxManifestEntry> = {},
+  ): UserMetaBoxManifestEntry {
+    return {
+      id,
+      label: id,
+      fields: [],
+      ...overrides,
+    };
+  }
+
+  const source: PlumixManifest = {
+    entryTypes: [],
+    taxonomies: [],
+    entryMetaBoxes: [],
+    termMetaBoxes: [],
+    userMetaBoxes: [
+      userBox("public"),
+      userBox("privileged", { capability: "user:edit" }),
+    ],
+    settingsGroups: [],
+    settingsPages: [],
+  };
+
+  test("an undefined-capability box is visible regardless of viewer caps", () => {
+    const ids = visibleUserMetaBoxes([], source).map((b) => b.id);
+    expect(ids).toContain("public");
+  });
+
+  test("drops boxes gated by a capability the viewer lacks", () => {
+    const ids = visibleUserMetaBoxes([], source).map((b) => b.id);
+    expect(ids).toEqual(["public"]);
+  });
+
+  test("keeps capability-gated boxes when the viewer has the cap", () => {
+    const ids = visibleUserMetaBoxes(["user:edit"], source).map((b) => b.id);
+    expect(ids).toEqual(["public", "privileged"]);
+  });
+
+  test("returns empty when no user meta boxes are registered", () => {
+    const empty: PlumixManifest = {
+      ...source,
+      userMetaBoxes: [],
+    };
+    expect(visibleUserMetaBoxes(["user:edit"], empty)).toEqual([]);
   });
 });
 

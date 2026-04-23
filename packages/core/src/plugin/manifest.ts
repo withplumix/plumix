@@ -149,6 +149,9 @@ export interface TermMetaBoxOptions {
  * `capability` is a UI-only filter; see `EntryMetaBoxOptions` for the
  * caveat. The server gates user meta writes on `user:edit` /
  * `user:edit_own` (same check as the rest of `user.update`).
+ *
+ * `MetaBoxField.sanitize` runs server-side only — the manifest wire
+ * contract strips callbacks before shipping to the admin bundle.
  */
 export interface UserMetaBoxOptions {
   readonly label: string;
@@ -593,7 +596,7 @@ export function buildManifest(registry: PluginRegistry): PlumixManifest {
   assertUniqueFieldKeysPerScope(termMetaBoxes, (box) => box.taxonomies, "term");
   // User meta is a flat keyspace — one synthetic "user" scope keeps
   // the shared helper honest without inventing a second code path.
-  assertUniqueFieldKeysPerScope(userMetaBoxes, () => ["user"], "user");
+  assertUniqueFieldKeysPerScope(userMetaBoxes, getUserScope, "user");
   const settingsGroups = Array.from(registry.settingsGroups.values()).map(
     toSettingsGroupEntry,
   );
@@ -615,6 +618,12 @@ export function buildManifest(registry: PluginRegistry): PlumixManifest {
     settingsPages,
   };
 }
+
+// Synthetic flat-keyspace scope for user meta. Hoisted so the
+// `assertUniqueFieldKeysPerScope` callback doesn't re-allocate per
+// buildManifest call.
+const USER_SCOPE = ["user"] as const;
+const getUserScope = (): readonly string[] => USER_SCOPE;
 
 /**
  * Two meta boxes on the same `(scope, field.key)` pair would silently

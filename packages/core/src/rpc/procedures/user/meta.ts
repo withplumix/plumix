@@ -51,7 +51,7 @@ export async function loadUserMeta(
 export async function writeUserMeta(
   ctx: AppContext,
   user: { readonly id: number },
-  patch: Parameters<typeof applyMetaPatch>[4],
+  patch: MetaPatch,
 ): Promise<void> {
   if (isEmptyMetaPatch(patch)) return;
   await applyMetaPatch(ctx, users, users.id, user.id, patch);

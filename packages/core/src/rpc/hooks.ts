@@ -194,9 +194,11 @@ declare module "../hooks/types.js" {
      *
      * Only fires when row columns changed. A meta-only update does NOT
      * fire `user:updated`; subscribe to `user:meta_changed` for that.
-     * The `user.meta` here reflects the row read right after the column
-     * write and may lag a meta write that happens in the same RPC call —
-     * use `user:meta_changed` for the authoritative meta diff.
+     * The `user.meta` on the payload is the row's `.returning()` value
+     * captured *before* the meta write — so when the same RPC writes
+     * both row columns and meta, `user.meta` here is deterministically
+     * stale. Always subscribe to `user:meta_changed` for the
+     * authoritative meta diff.
      */
     "user:updated": (user: User, previous: User) => void | Promise<void>;
 

@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/card.js";
 import { Label } from "@/components/ui/label.js";
 import { hasCap } from "@/lib/caps.js";
-import { userMetaBoxes } from "@/lib/manifest.js";
+import { visibleUserMetaBoxes } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useForm } from "@tanstack/react-form";
 import {
@@ -125,7 +125,7 @@ function UserEditRoute(): ReactNode {
   const { data: target } = useSuspenseQuery(
     orpc.user.get.queryOptions({ input: { id: userId } }),
   );
-  const metaBoxes = userMetaBoxes(session.capabilities);
+  const metaBoxes = visibleUserMetaBoxes(session.capabilities);
   return (
     <UserEditForm
       // Remount after each save so TanStack Form re-reads `defaultValues`

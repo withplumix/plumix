@@ -107,8 +107,11 @@ export const update = base
       rowWritten = true;
     }
 
+    // Match the early-return's empty-patch gate — an explicit `meta: {}`
+    // from the client produces a non-null but empty `MetaPatch`, and a
+    // plain `loadUserMeta` re-read for that case is just a wasted SELECT.
     let meta: Record<string, unknown>;
-    if (metaPatch) {
+    if (metaPatch !== null && !isEmptyMetaPatch(metaPatch)) {
       await writeUserMeta(context, updated, metaPatch);
       meta = await loadUserMeta(context, updated);
     } else {

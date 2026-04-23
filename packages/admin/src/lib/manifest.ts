@@ -185,8 +185,12 @@ export function termMetaBoxesForTaxonomy(
  * Resolve the user meta boxes rendered on the user edit form. User
  * meta is a flat keyspace — no scope argument; capability alone gates
  * visibility. Registration order is preserved.
+ *
+ * Named to match `visibleEntryTypes` / `visibleTaxonomies` — unlike
+ * `entryMetaBoxesForType` / `termMetaBoxesForTaxonomy`, user meta has
+ * no scope to filter on.
  */
-export function userMetaBoxes(
+export function visibleUserMetaBoxes(
   capabilities: readonly string[],
   source: PlumixManifest = manifest,
 ): readonly UserMetaBoxManifestEntry[] {
