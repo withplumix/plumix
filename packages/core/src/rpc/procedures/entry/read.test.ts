@@ -566,8 +566,18 @@ describe("entry.get", () => {
       label: "SEO",
       entryTypes: ["post"],
       fields: [
-        { key: "meta_title", label: "Meta title", type: "string", inputType: "text" },
-        { key: "is_featured", label: "Featured", type: "boolean", inputType: "checkbox" },
+        {
+          key: "meta_title",
+          label: "Meta title",
+          type: "string",
+          inputType: "text",
+        },
+        {
+          key: "is_featured",
+          label: "Featured",
+          type: "boolean",
+          inputType: "checkbox",
+        },
       ],
       registeredBy: "test",
     });

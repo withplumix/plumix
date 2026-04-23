@@ -18,7 +18,7 @@ import { eq } from "../../db/index.js";
  *  plugin config while bounding adversarial payloads. */
 const MAX_META_VALUE_BYTES = 256 * 1024;
 
-export type MetaMap = Record<string, unknown>;
+type MetaMap = Record<string, unknown>;
 
 /**
  * Validated meta patch produced by `sanitizeMetaInput`. Values in
@@ -37,9 +37,8 @@ export interface MetaPatch {
  * UIs and plugin tests match on these strings, so treat them as a
  * public contract.
  */
-export type MetaSanitizationReason =
+type MetaSanitizationReason =
   | "not_registered"
-  | "scope_mismatch"
   | "invalid_value"
   | "value_too_large";
 
@@ -59,7 +58,7 @@ export class MetaSanitizationError extends Error {
  * helper doesn't have to import oRPC types — the handler passes its
  * `errors` in and TS matches on shape.
  */
-export interface RpcErrorsForMeta {
+interface RpcErrorsForMeta {
   CONFLICT: (args: { data: { reason: string; key?: string } }) => Error;
 }
 
@@ -159,9 +158,7 @@ export function isEmptyMetaPatch(patch: MetaPatch | null): boolean {
  * caller clearing + re-setting the same key in one request behaves
  * predictably.
  */
-export async function applyMetaPatch<
-  TTable extends { meta: SQLiteColumn },
->(
+export async function applyMetaPatch<TTable extends { meta: SQLiteColumn }>(
   ctx: AppContext,
   table: TTable,
   idColumn: SQLiteColumn,
@@ -292,14 +289,21 @@ function coerceOnRead(type: MetaScalarType, value: unknown): unknown {
   // Reads are forgiving — the row was validated on write but a
   // schema change (e.g. a plugin flipping `number` → `string`)
   // shouldn't 500 the editor. We coerce when we can and fall through
-  // to the raw value otherwise.
+  // to the raw value otherwise. For booleans, mirror the write-side
+  // accepted tokens instead of `Boolean(value)` — the latter would
+  // flip `"false"` → `true`, silently inverting rows persisted via
+  // `type: "json"` before a plugin tightened the field to `boolean`.
   switch (type) {
     case "string":
       return typeof value === "string" ? value : String(value);
     case "number":
       return typeof value === "number" ? value : Number(value);
-    case "boolean":
-      return typeof value === "boolean" ? value : Boolean(value);
+    case "boolean": {
+      if (typeof value === "boolean") return value;
+      if (value === 1 || value === "1" || value === "true") return true;
+      if (value === 0 || value === "0" || value === "false") return false;
+      return value;
+    }
     case "json":
       return value;
   }
@@ -308,8 +312,15 @@ function coerceOnRead(type: MetaScalarType, value: unknown): unknown {
 // SQLite's JSON path `$.label` only accepts `[A-Za-z0-9_]` in unquoted
 // labels, but valid meta keys may include `-` or `:` (see the input
 // schema regex). The double-quoted label form `$."foo-bar"` handles
-// them; interpolation is safe because keys are pre-validated to
-// exclude `"` and `\`.
+// them; the RPC input schema already rejects `"` and `\`, but belt-and-
+// braces matters here because non-RPC callers (tests, hook listeners,
+// future surfaces) could bypass that schema and trigger SQL injection
+// via a crafted path.
 function metaJsonPath(key: string): string {
+  if (/["\\]/.test(key)) {
+    throw new Error(
+      `meta key "${key}" contains characters forbidden in a JSON path`,
+    );
+  }
   return `$."${key}"`;
 }

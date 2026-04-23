@@ -36,8 +36,7 @@ function normalize(value: unknown): PlumixManifest {
   if (!value || typeof value !== "object") return emptyManifest();
   const entryTypes = (value as { entryTypes?: unknown }).entryTypes;
   const taxonomies = (value as { taxonomies?: unknown }).taxonomies;
-  const entryMetaBoxes = (value as { entryMetaBoxes?: unknown })
-    .entryMetaBoxes;
+  const entryMetaBoxes = (value as { entryMetaBoxes?: unknown }).entryMetaBoxes;
   const termMetaBoxes = (value as { termMetaBoxes?: unknown }).termMetaBoxes;
   const settingsGroups = (value as { settingsGroups?: unknown }).settingsGroups;
   const settingsPages = (value as { settingsPages?: unknown }).settingsPages;

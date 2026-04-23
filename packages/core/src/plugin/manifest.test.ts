@@ -437,6 +437,64 @@ describe("buildManifest", () => {
     );
   });
 
+  test("rejects two term boxes declaring the same field key on the same taxonomy", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("dupe-term", (ctx) => {
+      ctx.registerTaxonomy("category", { label: "Categories" });
+      ctx.registerTermMetaBox("t-a", {
+        label: "A",
+        taxonomies: ["category"],
+        fields: [
+          { key: "icon", label: "Icon", type: "string", inputType: "text" },
+        ],
+      });
+      ctx.registerTermMetaBox("t-b", {
+        label: "B",
+        taxonomies: ["category"],
+        fields: [
+          { key: "icon", label: "Icon", type: "string", inputType: "text" },
+        ],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    expect(() => buildManifest(registry)).toThrow(
+      /Meta field "icon" is declared by term meta boxes "t-a" and "t-b" on the same scope "category"/,
+    );
+  });
+
+  test("rejects a term meta box scoped to an unregistered taxonomy", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("unknown-scope", (ctx) => {
+      // No `registerTaxonomy("catagory")` — the typo below is dead code.
+      ctx.registerTermMetaBox("branding", {
+        label: "Branding",
+        taxonomies: ["catagory"],
+        fields: [
+          { key: "icon", label: "Icon", type: "string", inputType: "text" },
+        ],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    expect(() => buildManifest(registry)).toThrow(
+      /term meta box "branding" references taxonomy "catagory" which hasn't been registered/,
+    );
+  });
+
+  test("rejects an entry meta box scoped to an unregistered entry type", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("unknown-scope", (ctx) => {
+      ctx.registerEntryMetaBox("seo", {
+        label: "SEO",
+        entryTypes: ["pots"],
+        fields: [{ key: "og", label: "OG", type: "string", inputType: "text" }],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    expect(() => buildManifest(registry)).toThrow(
+      /entry meta box "seo" references entry type "pots" which hasn't been registered/,
+    );
+  });
+
   test("empty meta-box registry yields empty entry + term meta box arrays", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("blog", (ctx) => {
@@ -520,7 +578,8 @@ describe("serializeManifestScript", () => {
     const tag = serializeManifestScript({
       entryTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
       taxonomies: [],
-      entryMetaBoxes: [], termMetaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -537,7 +596,8 @@ describe("serializeManifestScript", () => {
         { name: "post", adminSlug: "posts", label: "</script><b>x</b>" },
       ],
       taxonomies: [],
-      entryMetaBoxes: [], termMetaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -549,7 +609,8 @@ describe("serializeManifestScript", () => {
     const manifest = {
       entryTypes: [{ name: "post", adminSlug: "posts", label: "x</y>" }],
       taxonomies: [],
-      entryMetaBoxes: [], termMetaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     };
@@ -574,7 +635,8 @@ describe("injectManifestIntoHtml", () => {
     const out = injectManifestIntoHtml(TEMPLATE, {
       entryTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
       taxonomies: [],
-      entryMetaBoxes: [], termMetaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -590,7 +652,8 @@ describe("injectManifestIntoHtml", () => {
     const manifest = {
       entryTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
       taxonomies: [],
-      entryMetaBoxes: [], termMetaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     };
@@ -616,7 +679,8 @@ describe("injectManifestIntoHtml", () => {
     const out = injectManifestIntoHtml(html, {
       entryTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
       taxonomies: [],
-      entryMetaBoxes: [], termMetaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -632,7 +696,8 @@ describe("injectManifestIntoHtml", () => {
     const out = injectManifestIntoHtml(html, {
       entryTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
       taxonomies: [],
-      entryMetaBoxes: [], termMetaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });

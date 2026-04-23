@@ -2,7 +2,6 @@ import type { Entry, EntryStatus, NewEntry } from "../db/schema/entries.js";
 import type { Term } from "../db/schema/terms.js";
 import type { User } from "../db/schema/users.js";
 import type { EntryMetaChanges } from "./procedures/entry/meta.js";
-import type { TermMetaChanges } from "./procedures/term/meta.js";
 import type {
   EntryCreateInput,
   EntryListInput,
@@ -12,6 +11,7 @@ import type {
   SettingsGetInput,
   SettingsUpsertInput,
 } from "./procedures/settings/schemas.js";
+import type { TermMetaChanges } from "./procedures/term/meta.js";
 import type {
   TermCreateInput,
   TermListInput,
@@ -219,9 +219,16 @@ declare module "../hooks/types.js" {
     "term:created": (term: Term) => void | Promise<void>;
 
     /**
-     * Fires after a successful `term.update`. Payload carries the
-     * post-write row and the pre-write row for diffing — parallel to
-     * `post:updated` / `user:updated`.
+     * Fires after a successful `term.update` row-columns write. Payload
+     * carries the post-write row and the pre-write row for diffing —
+     * parallel to `post:updated` / `user:updated`.
+     *
+     * Only fires when the row columns changed. A meta-only update does
+     * NOT fire `term:updated`; subscribe to `term:meta_changed` for
+     * that. The `term.meta` here reflects the row read right after the
+     * column write and may lag a meta write that happens in the same
+     * RPC call — use `term:meta_changed` for the authoritative meta
+     * diff.
      */
     "term:updated": (term: Term, previous: Term) => void | Promise<void>;
 

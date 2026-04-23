@@ -15,6 +15,7 @@ import type { RouteIntent } from "../route/intent.js";
 import type {
   EntryMetaBoxOptions,
   EntryTypeOptions,
+  MetaBoxField,
   MutablePluginRegistry,
   SettingsGroupOptions,
   SettingsPageOptions,
@@ -190,6 +191,7 @@ export function createPluginSetupContext({
       if (registry.entryMetaBoxes.has(id)) {
         throw new DuplicateRegistrationError("entry meta box", id);
       }
+      assertMetaBoxFields("entry meta box", id, options.fields);
       registry.entryMetaBoxes.set(id, {
         ...options,
         id,
@@ -201,6 +203,7 @@ export function createPluginSetupContext({
       if (registry.termMetaBoxes.has(id)) {
         throw new DuplicateRegistrationError("term meta box", id);
       }
+      assertMetaBoxFields("term meta box", id, options.fields);
       registry.termMetaBoxes.set(id, {
         ...options,
         id,
@@ -306,6 +309,33 @@ function assertUniqueFieldNames(
       );
     }
     seen.add(field.name);
+  }
+}
+
+// Must match the RPC input-schema regex for meta keys — any key that
+// doesn't match is dead code (the write path rejects it), so catch it
+// at registration instead of letting the admin discover it later.
+const META_FIELD_KEY_RE = /^[a-zA-Z0-9_:-]+$/;
+
+function assertMetaBoxFields(
+  kind: string,
+  id: string,
+  fields: readonly MetaBoxField[],
+): void {
+  const seen = new Set<string>();
+  for (const field of fields) {
+    if (!META_FIELD_KEY_RE.test(field.key)) {
+      throw new Error(
+        `${kind} "${id}" declares field with invalid key "${field.key}" — ` +
+          `meta keys must match ${META_FIELD_KEY_RE}.`,
+      );
+    }
+    if (seen.has(field.key)) {
+      throw new Error(
+        `${kind} "${id}" declares field "${field.key}" more than once.`,
+      );
+    }
+    seen.add(field.key);
   }
 }
 

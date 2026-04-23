@@ -110,7 +110,8 @@ export const MANIFEST_WITH_POST: PlumixManifest = {
     },
   ],
   taxonomies: [],
-  entryMetaBoxes: [], termMetaBoxes: [],
+  entryMetaBoxes: [],
+  termMetaBoxes: [],
   settingsGroups: [],
   settingsPages: [],
 };
@@ -140,7 +141,8 @@ export const MANIFEST_WITH_TAXONOMIES: PlumixManifest = {
       labels: { singular: "Tag" },
     },
   ],
-  entryMetaBoxes: [], termMetaBoxes: [],
+  entryMetaBoxes: [],
+  termMetaBoxes: [],
   settingsGroups: [],
   settingsPages: [],
 };
@@ -201,7 +203,8 @@ export const MANIFEST_WITH_META_BOXES: PlumixManifest = {
 export const MANIFEST_WITH_SETTINGS: PlumixManifest = {
   entryTypes: [],
   taxonomies: [],
-  entryMetaBoxes: [], termMetaBoxes: [],
+  entryMetaBoxes: [],
+  termMetaBoxes: [],
   settingsGroups: [
     {
       name: "identity",

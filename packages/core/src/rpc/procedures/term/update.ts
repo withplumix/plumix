@@ -1,9 +1,9 @@
 import type { NewTerm } from "../../../db/schema/terms.js";
 import { and, eq, isUniqueConstraintError } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
-import { isEmptyMetaPatch } from "../../meta/core.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { isEmptyMetaPatch } from "../../meta/core.js";
 import { stripUndefined } from "../entry/helpers.js";
 import { parentWouldCreateCycle, taxonomyCapability } from "./helpers.js";
 import {

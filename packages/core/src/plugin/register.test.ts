@@ -155,4 +155,62 @@ describe("installPlugins", () => {
       registeredBy: "seo",
     });
   });
+
+  test("registerTermMetaBox rejects a duplicate id across plugins", async () => {
+    const hooks = new HookRegistry();
+    const first = definePlugin("a", (ctx) => {
+      ctx.registerTermMetaBox("branding", {
+        label: "A",
+        taxonomies: ["category"],
+        fields: [
+          { key: "icon", label: "Icon", type: "string", inputType: "text" },
+        ],
+      });
+    });
+    const second = definePlugin("b", (ctx) => {
+      ctx.registerTermMetaBox("branding", {
+        label: "B",
+        taxonomies: ["category"],
+        fields: [
+          { key: "icon", label: "Icon", type: "string", inputType: "text" },
+        ],
+      });
+    });
+    await expect(
+      installPlugins({ hooks, plugins: [first, second] }),
+    ).rejects.toBeInstanceOf(DuplicateRegistrationError);
+  });
+
+  test("registerEntryMetaBox rejects an invalid field key at registration time", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("bad", (ctx) => {
+      ctx.registerEntryMetaBox("seo", {
+        label: "SEO",
+        entryTypes: ["post"],
+        fields: [
+          { key: "bad key!", label: "Bad", type: "string", inputType: "text" },
+        ],
+      });
+    });
+    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
+      /invalid key "bad key!"/,
+    );
+  });
+
+  test("registerTermMetaBox rejects a duplicate field key within the same box", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("dupe", (ctx) => {
+      ctx.registerTermMetaBox("branding", {
+        label: "Branding",
+        taxonomies: ["category"],
+        fields: [
+          { key: "icon", label: "Icon", type: "string", inputType: "text" },
+          { key: "icon", label: "Icon 2", type: "string", inputType: "text" },
+        ],
+      });
+    });
+    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
+      /declares field "icon" more than once/,
+    );
+  });
 });

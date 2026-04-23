@@ -105,6 +105,12 @@ export interface MetaBoxField {
  * Meta box shown on the entry editor. Rendered alongside the post in
  * `/entries/<type>/<id>`; the `context` hint controls which column the
  * box lands in.
+ *
+ * `capability` is a UI-only filter: the admin hides boxes the current
+ * user lacks the capability for, but the server enforces only the
+ * entity-level cap (`<entryType>:edit*`). Do NOT use it to gate
+ * secrets — any user who can edit the entry can write any registered
+ * meta key via the raw RPC.
  */
 export interface EntryMetaBoxOptions {
   readonly label: string;
@@ -120,6 +126,9 @@ export interface EntryMetaBoxOptions {
  * Meta box shown on the taxonomy term edit form. Rendered as one
  * shadcn `<Card>` with its own save button — same card-per-box model
  * as settings groups. Scoped by `taxonomies`.
+ *
+ * `capability` is a UI-only filter; see `EntryMetaBoxOptions` for the
+ * caveat. The server gates term meta writes on `<taxonomy>:edit`.
  */
 export interface TermMetaBoxOptions {
   readonly label: string;
@@ -501,6 +510,20 @@ export function buildManifest(registry: PluginRegistry): PlumixManifest {
   const termMetaBoxes = Array.from(registry.termMetaBoxes.values()).map(
     toTermMetaBoxEntry,
   );
+  assertMetaBoxScopesExist(
+    entryMetaBoxes,
+    (box) => box.entryTypes,
+    new Set(entries.map((e) => e.name)),
+    "entry meta box",
+    "entry type",
+  );
+  assertMetaBoxScopesExist(
+    termMetaBoxes,
+    (box) => box.taxonomies,
+    new Set(taxonomies.map((t) => t.name)),
+    "term meta box",
+    "taxonomy",
+  );
   assertUniqueFieldKeysPerScope(entryMetaBoxes, "entry");
   assertUniqueFieldKeysPerScope(termMetaBoxes, "term");
   const settingsGroups = Array.from(registry.settingsGroups.values()).map(
@@ -531,16 +554,12 @@ export function buildManifest(registry: PluginRegistry): PlumixManifest {
  * or taxonomy (for term boxes).
  */
 function assertUniqueFieldKeysPerScope(
-  boxes: readonly (
-    | EntryMetaBoxManifestEntry
-    | TermMetaBoxManifestEntry
-  )[],
+  boxes: readonly (EntryMetaBoxManifestEntry | TermMetaBoxManifestEntry)[],
   kind: "entry" | "term",
 ): void {
   const seen = new Map<string, string>();
   for (const box of boxes) {
-    const scopes =
-      "entryTypes" in box ? box.entryTypes : box.taxonomies;
+    const scopes = "entryTypes" in box ? box.entryTypes : box.taxonomies;
     for (const scope of scopes) {
       for (const field of box.fields) {
         const scopedKey = `${scope}:${field.key}`;
@@ -554,6 +573,30 @@ function assertUniqueFieldKeysPerScope(
           );
         }
         seen.set(scopedKey, box.id);
+      }
+    }
+  }
+}
+
+// A meta box referencing an unregistered scope ("catagory" typo, a
+// taxonomy removed behind the plugin's back, etc.) is dead code — the
+// box never renders and never writes. Fail at manifest build so the
+// plugin author sees it on boot, not at first admin click. Matches the
+// settings-page→group reference check.
+function assertMetaBoxScopesExist<TBox extends { readonly id: string }>(
+  boxes: readonly TBox[],
+  getScopes: (box: TBox) => readonly string[],
+  known: ReadonlySet<string>,
+  boxKind: string,
+  scopeKind: string,
+): void {
+  for (const box of boxes) {
+    for (const scope of getScopes(box)) {
+      if (!known.has(scope)) {
+        throw new Error(
+          `${boxKind} "${box.id}" references ${scopeKind} "${scope}" ` +
+            `which hasn't been registered.`,
+        );
       }
     }
   }

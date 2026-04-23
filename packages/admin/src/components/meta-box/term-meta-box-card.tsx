@@ -16,6 +16,18 @@ import type { TermMetaBoxManifestEntry } from "@plumix/core/manifest";
 
 import { MetaBoxField } from "./meta-box-field.js";
 
+function seedFromTerm(
+  fields: TermMetaBoxManifestEntry["fields"],
+  meta: Readonly<Record<string, unknown>> | null | undefined,
+): Record<string, unknown> {
+  const bag = meta ?? {};
+  const seed: Record<string, unknown> = {};
+  for (const field of fields) {
+    seed[field.key] = bag[field.key] ?? field.default;
+  }
+  return seed;
+}
+
 /**
  * One shadcn `<Card>` for a registered term meta box. Each card is an
  * independent form — its Save button fires `term.update` with just
@@ -37,12 +49,9 @@ export function TermMetaBoxCard({
   readonly disabled?: boolean;
 }): ReactNode {
   const queryClient = useQueryClient();
-  const stored = term.meta ?? {};
-  const initial: Record<string, unknown> = {};
-  for (const field of box.fields) {
-    initial[field.key] = stored[field.key] ?? field.default;
-  }
-  const [values, setValues] = useState<Record<string, unknown>>(initial);
+  const [values, setValues] = useState<Record<string, unknown>>(() =>
+    seedFromTerm(box.fields, term.meta),
+  );
   const [serverError, setServerError] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
 
@@ -53,7 +62,11 @@ export function TermMetaBoxCard({
       setServerError(null);
       setSaveNotice(null);
     },
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      // Re-seed from the server's authoritative post-sanitize bag so
+      // the form reflects any trimming / coercion the server applied
+      // (see `coerceOnRead` / plugin sanitize hooks).
+      setValues(seedFromTerm(box.fields, data.meta));
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: orpc.term.get.queryOptions({ input: { id: term.id } })
@@ -110,6 +123,7 @@ export function TermMetaBoxCard({
           {serverError ? (
             <Alert
               variant="destructive"
+              role="alert"
               data-testid={`term-meta-box-error-${box.id}`}
             >
               <AlertDescription>{serverError}</AlertDescription>
@@ -117,7 +131,10 @@ export function TermMetaBoxCard({
           ) : null}
 
           {saveNotice ? (
-            <Alert data-testid={`term-meta-box-notice-${box.id}`}>
+            <Alert
+              aria-live="polite"
+              data-testid={`term-meta-box-notice-${box.id}`}
+            >
               <AlertDescription>{saveNotice}</AlertDescription>
             </Alert>
           ) : null}

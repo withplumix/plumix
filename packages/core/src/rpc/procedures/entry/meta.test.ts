@@ -1,9 +1,9 @@
+import { describe, expect, test } from "vitest";
+
 import type {
   MetaBoxField,
   MutablePluginRegistry,
 } from "../../../plugin/manifest.js";
-import { describe, expect, test } from "vitest";
-
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import {
@@ -62,7 +62,9 @@ function findField(registry: MutablePluginRegistry, entryType: string) {
 describe("sanitizeMetaInput", () => {
   test("returns null when the input map is absent (no patch to apply)", () => {
     const registry = registryWithMeta({});
-    expect(sanitizeMetaInput(findField(registry, "post"), undefined)).toBeNull();
+    expect(
+      sanitizeMetaInput(findField(registry, "post"), undefined),
+    ).toBeNull();
   });
 
   test("empty object produces an empty patch (valid — just nothing to do)", () => {
@@ -330,5 +332,25 @@ describe("applyMetaPatch + loadEntryMeta", () => {
     await applyMetaPatch(h.context, entries, entries.id, post.id, patch);
 
     expect(await loadEntryMeta(h.context, post)).toEqual({ title: "new" });
+  });
+
+  // Regression: `Boolean("false") === true` would silently flip rows
+  // written via `type: "json"` before a plugin tightened the field to
+  // `boolean`. `coerceOnRead` mirrors the write-side token set instead.
+  test("coerceOnRead maps legacy string booleans to their real values", async () => {
+    const plugins = registryWithMeta({ featured: { type: "boolean" } });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.factory.draft.create({
+      authorId: h.user.id,
+      slug: "legacy-bool",
+    });
+    // Seed the row as if a prior schema version stored the string "false"
+    // directly — bypass sanitize by writing to the column ourselves.
+    await h.context.db
+      .update(entries)
+      .set({ meta: { featured: "false" } })
+      .where(eq(entries.id, post.id));
+
+    expect(await loadEntryMeta(h.context, post)).toEqual({ featured: false });
   });
 });

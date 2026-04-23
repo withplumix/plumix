@@ -282,8 +282,18 @@ describe("entry.update", () => {
       label: "SEO",
       entryTypes: ["post"],
       fields: [
-        { key: "meta_title", label: "Meta title", type: "string", inputType: "text" },
-        { key: "is_featured", label: "Featured", type: "boolean", inputType: "checkbox" },
+        {
+          key: "meta_title",
+          label: "Meta title",
+          type: "string",
+          inputType: "text",
+        },
+        {
+          key: "is_featured",
+          label: "Featured",
+          type: "boolean",
+          inputType: "checkbox",
+        },
       ],
       registeredBy: "test",
     });
@@ -311,8 +321,18 @@ describe("entry.update", () => {
       label: "SEO",
       entryTypes: ["post"],
       fields: [
-        { key: "meta_title", label: "Meta title", type: "string", inputType: "text" },
-        { key: "is_featured", label: "Featured", type: "boolean", inputType: "checkbox" },
+        {
+          key: "meta_title",
+          label: "Meta title",
+          type: "string",
+          inputType: "text",
+        },
+        {
+          key: "is_featured",
+          label: "Featured",
+          type: "boolean",
+          inputType: "checkbox",
+        },
       ],
       registeredBy: "test",
     });
@@ -355,7 +375,12 @@ describe("entry.update", () => {
       entryTypes: ["post"],
       fields: [
         { key: "title", label: "Title", type: "string", inputType: "text" },
-        { key: "title_lc", label: "Title (lowercase)", type: "string", inputType: "text" },
+        {
+          key: "title_lc",
+          label: "Title (lowercase)",
+          type: "string",
+          inputType: "text",
+        },
       ],
       registeredBy: "test",
     });

@@ -1,8 +1,6 @@
 import type { AppContext } from "../../../context/app.js";
-import type {
-  MetaBoxField,
-  PluginRegistry,
-} from "../../../plugin/manifest.js";
+import type { PluginRegistry } from "../../../plugin/manifest.js";
+import type { MetaPatch } from "../../meta/core.js";
 import { terms } from "../../../db/schema/terms.js";
 import { findTermMetaField } from "../../../plugin/manifest.js";
 import {
@@ -21,7 +19,7 @@ export function sanitizeMetaForRpc(
   taxonomy: string,
   input: Record<string, unknown> | undefined,
   errors: Parameters<typeof sanitizeMetaForRpcCore>[2],
-) {
+): MetaPatch | null {
   return sanitizeMetaForRpcCore(
     (key) => findTermMetaField(registry, taxonomy, key),
     input,
@@ -33,10 +31,11 @@ export function decodeMetaBag(
   registry: PluginRegistry,
   taxonomy: string,
   raw: Readonly<Record<string, unknown>> | null | undefined,
-) {
-  const finder = (key: string): MetaBoxField | undefined =>
-    findTermMetaField(registry, taxonomy, key);
-  return decodeMetaBagCore(finder, raw);
+): Record<string, unknown> {
+  return decodeMetaBagCore(
+    (key) => findTermMetaField(registry, taxonomy, key),
+    raw,
+  );
 }
 
 export async function loadTermMeta(

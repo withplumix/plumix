@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vitest";
 
+import type { UserRole } from "../../../db/schema/users.js";
 import type {
   MetaBoxField,
   MutablePluginRegistry,
 } from "../../../plugin/manifest.js";
-import type { UserRole } from "../../../db/schema/users.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
@@ -46,7 +46,12 @@ describe("term meta: registration + round-trip via term.update", () => {
     const plugins = taxonomyRegistry();
     registerTermMetaFields(plugins, "category", [
       { key: "icon_url", label: "Icon URL", type: "string", inputType: "url" },
-      { key: "featured", label: "Featured", type: "boolean", inputType: "checkbox" },
+      {
+        key: "featured",
+        label: "Featured",
+        type: "boolean",
+        inputType: "checkbox",
+      },
     ]);
     const h = await createRpcHarness({ authAs: "admin", plugins });
 
@@ -89,7 +94,12 @@ describe("term meta: registration + round-trip via term.update", () => {
     const plugins = taxonomyRegistry();
     registerTermMetaFields(plugins, "category", [
       { key: "icon_url", label: "Icon URL", type: "string", inputType: "url" },
-      { key: "featured", label: "Featured", type: "boolean", inputType: "checkbox" },
+      {
+        key: "featured",
+        label: "Featured",
+        type: "boolean",
+        inputType: "checkbox",
+      },
     ]);
     const h = await createRpcHarness({ authAs: "admin", plugins });
 
@@ -116,6 +126,57 @@ describe("term meta: registration + round-trip via term.update", () => {
       meta: { icon_url: null },
     });
     expect(afterClear.meta).toEqual({ featured: true });
+  });
+
+  test("key registered on a different taxonomy → meta_not_registered for the other scope", async () => {
+    const plugins = taxonomyRegistry();
+    plugins.taxonomies.set("tag", {
+      name: "tag",
+      label: "Tags",
+      registeredBy: "test",
+    });
+    const tagCaps: Record<string, UserRole> = {
+      "tag:read": "subscriber",
+      "tag:edit": "editor",
+    };
+    for (const [name, minRole] of Object.entries(tagCaps)) {
+      plugins.capabilities.set(name, { name, minRole, registeredBy: "test" });
+    }
+    registerTermMetaFields(plugins, "tag", [
+      { key: "color", label: "Color", type: "string", inputType: "text" },
+    ]);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+
+    await expect(
+      h.client.term.create({
+        taxonomy: "category",
+        name: "News",
+        slug: "news",
+        meta: { color: "red" },
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "meta_not_registered", key: "color" },
+    });
+  });
+
+  test("term.update with an empty meta patch does not fire term:meta_changed", async () => {
+    const plugins = taxonomyRegistry();
+    registerTermMetaFields(plugins, "category", [
+      { key: "icon_url", label: "Icon URL", type: "string", inputType: "url" },
+    ]);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+
+    const created = await h.client.term.create({
+      taxonomy: "category",
+      name: "Travel",
+      slug: "travel",
+    });
+    const spy = h.spyAction("term:meta_changed");
+
+    await h.client.term.update({ id: created.id, meta: {} });
+
+    expect(spy.calls).toHaveLength(0);
   });
 
   test("term:meta_changed fires with the upsert + delete diff", async () => {

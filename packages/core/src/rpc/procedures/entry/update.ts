@@ -12,6 +12,7 @@ import { entryTerm } from "../../../db/schema/entry_term.js";
 import { terms } from "../../../db/schema/terms.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { isEmptyMetaPatch } from "../../meta/core.js";
 import { assertContentWithinByteCap } from "./content.js";
 import { stripUndefined } from "./helpers.js";
 import {
@@ -25,7 +26,6 @@ import {
 } from "./lifecycle.js";
 import {
   decodeMetaBag,
-  isEmptyMetaPatch,
   loadEntryMeta,
   sanitizeMetaForRpc,
   writeEntryMeta,

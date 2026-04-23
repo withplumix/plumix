@@ -7,12 +7,12 @@ import type {
 } from "@plumix/core/manifest";
 
 import {
+  entryMetaBoxesForType,
   findEntryTypeBySlug,
   findSettingsGroupByName,
   findSettingsPageByName,
   findTaxonomyByName,
   groupsForSettingsPage,
-  entryMetaBoxesForType,
   readManifest,
   visibleEntryTypes,
   visibleSettingsPages,
@@ -39,7 +39,8 @@ describe("readManifest", () => {
     expect(readManifest(doc)).toEqual({
       entryTypes: [],
       taxonomies: [],
-      entryMetaBoxes: [], termMetaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -54,7 +55,8 @@ describe("readManifest", () => {
     expect(readManifest(doc)).toEqual({
       entryTypes: [{ name: "post", label: "Posts" }],
       taxonomies: [],
-      entryMetaBoxes: [], termMetaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -65,7 +67,8 @@ describe("readManifest", () => {
     expect(readManifest(doc)).toEqual({
       entryTypes: [],
       taxonomies: [],
-      entryMetaBoxes: [], termMetaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -79,7 +82,8 @@ describe("readManifest", () => {
     expect(readManifest(doc)).toEqual({
       entryTypes: [],
       taxonomies: [],
-      entryMetaBoxes: [], termMetaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -91,7 +95,8 @@ describe("readManifest", () => {
     expect(readManifest(doc)).toEqual({
       entryTypes: [],
       taxonomies: [],
-      entryMetaBoxes: [], termMetaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -104,7 +109,8 @@ describe("readManifest", () => {
     expect(readManifest(doc)).toEqual({
       entryTypes: [],
       taxonomies: [],
-      entryMetaBoxes: [], termMetaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -163,7 +169,8 @@ describe("readManifest", () => {
           isHierarchical: true,
         },
       ],
-      entryMetaBoxes: [], termMetaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -184,7 +191,8 @@ describe("findEntryTypeBySlug", () => {
       { name: "product", adminSlug: "products", label: "Products" },
     ],
     taxonomies: [],
-    entryMetaBoxes: [], termMetaBoxes: [],
+    entryMetaBoxes: [],
+    termMetaBoxes: [],
     settingsGroups: [],
     settingsPages: [],
   };
@@ -216,7 +224,8 @@ describe("visibleEntryTypes", () => {
       },
     ],
     taxonomies: [],
-    entryMetaBoxes: [], termMetaBoxes: [],
+    entryMetaBoxes: [],
+    termMetaBoxes: [],
     settingsGroups: [],
     settingsPages: [],
   };
@@ -324,7 +333,8 @@ describe("entryMetaBoxesForType", () => {
     const source: PlumixManifest = {
       entryTypes: [],
       taxonomies: [],
-      entryMetaBoxes: [], termMetaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     };
@@ -339,7 +349,8 @@ describe("findTaxonomyByName", () => {
       { name: "category", label: "Categories", isHierarchical: true },
       { name: "tag", label: "Tags" },
     ],
-    entryMetaBoxes: [], termMetaBoxes: [],
+    entryMetaBoxes: [],
+    termMetaBoxes: [],
     settingsGroups: [],
     settingsPages: [],
   };
@@ -361,7 +372,8 @@ describe("visibleTaxonomies", () => {
       { name: "tag", label: "Tags" },
       { name: "internal", label: "Internal" },
     ],
-    entryMetaBoxes: [], termMetaBoxes: [],
+    entryMetaBoxes: [],
+    termMetaBoxes: [],
     settingsGroups: [],
     settingsPages: [],
   };
@@ -381,7 +393,8 @@ describe("findSettingsPageByName + visibleSettingsPages + findSettingsGroupByNam
   const source: PlumixManifest = {
     entryTypes: [],
     taxonomies: [],
-    entryMetaBoxes: [], termMetaBoxes: [],
+    entryMetaBoxes: [],
+    termMetaBoxes: [],
     settingsGroups: [
       {
         name: "identity",

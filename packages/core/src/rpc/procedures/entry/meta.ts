@@ -1,8 +1,6 @@
 import type { AppContext } from "../../../context/app.js";
-import type {
-  MetaBoxField,
-  PluginRegistry,
-} from "../../../plugin/manifest.js";
+import type { PluginRegistry } from "../../../plugin/manifest.js";
+import type { MetaPatch } from "../../meta/core.js";
 import { entries } from "../../../db/schema/entries.js";
 import { findEntryMetaField } from "../../../plugin/manifest.js";
 import {
@@ -13,13 +11,7 @@ import {
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
 } from "../../meta/core.js";
 
-// Re-exports for handlers that use these names from this module.
-export { isEmptyMetaPatch } from "../../meta/core.js";
-export type {
-  MetaChanges as EntryMetaChanges,
-  MetaPatch,
-  RpcErrorsForMeta,
-} from "../../meta/core.js";
+export type { MetaChanges as EntryMetaChanges } from "../../meta/core.js";
 
 /** RPC-facing sanitizer for an entry's meta input, scoped by entry type. */
 export function sanitizeMetaForRpc(
@@ -27,7 +19,7 @@ export function sanitizeMetaForRpc(
   entryType: string,
   input: Record<string, unknown> | undefined,
   errors: Parameters<typeof sanitizeMetaForRpcCore>[2],
-) {
+): MetaPatch | null {
   return sanitizeMetaForRpcCore(
     (key) => findEntryMetaField(registry, entryType, key),
     input,
@@ -40,9 +32,10 @@ export function decodeMetaBag(
   entry: { readonly type: string },
   raw: Readonly<Record<string, unknown>> | null | undefined,
 ): Record<string, unknown> {
-  const finder = (key: string): MetaBoxField | undefined =>
-    findEntryMetaField(registry, entry.type, key);
-  return decodeMetaBagCore(finder, raw);
+  return decodeMetaBagCore(
+    (key) => findEntryMetaField(registry, entry.type, key),
+    raw,
+  );
 }
 
 export async function loadEntryMeta(
