@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
+import { TermMetaBoxCard } from "@/components/meta-box/term-meta-box-card.js";
 import { TermForm } from "@/components/taxonomy/term-form.js";
 import {
   descendantIds,
@@ -16,7 +17,10 @@ import {
   CardTitle,
 } from "@/components/ui/card.js";
 import { hasCap } from "@/lib/caps.js";
-import { findTaxonomyByName } from "@/lib/manifest.js";
+import {
+  findTaxonomyByName,
+  termMetaBoxesForTaxonomy,
+} from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import {
   useMutation,
@@ -141,6 +145,7 @@ function EditTermContent({
     readonly slug: string;
     readonly description: string | null;
     readonly parentId: number | null;
+    readonly meta?: Readonly<Record<string, unknown>>;
   };
   readonly isHierarchical: boolean;
   readonly parentOptions: readonly {
@@ -196,6 +201,11 @@ function EditTermContent({
   const singularLower = (
     taxonomy.labels?.singular ?? taxonomy.label
   ).toLowerCase();
+  // Plugin-registered meta boxes for this taxonomy. Each one renders
+  // as an independent card with its own save button, parallel to the
+  // settings-page card-per-group model.
+  const { user } = Route.useRouteContext();
+  const metaBoxes = termMetaBoxesForTaxonomy(taxonomy.name, user.capabilities);
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
@@ -246,6 +256,16 @@ function EditTermContent({
           />
         </CardContent>
       </Card>
+
+      {metaBoxes.map((box) => (
+        <TermMetaBoxCard
+          key={box.id}
+          box={box}
+          term={term}
+          taxonomyName={taxonomy.name}
+          disabled={!canEdit}
+        />
+      ))}
 
       {canDelete ? (
         <DeleteCard

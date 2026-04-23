@@ -99,11 +99,11 @@ export const create = base
     let meta: Record<string, unknown>;
     if (metaPatch) {
       await writeEntryMeta(context, created, metaPatch);
-      meta = await loadEntryMeta(context, created.id);
+      meta = await loadEntryMeta(context, created);
     } else {
       // No write path — `created.meta` is the default `{}`. Decode inline
       // to save the round trip.
-      meta = decodeMetaBag(context.plugins, created.meta);
+      meta = decodeMetaBag(context.plugins, created, created.meta);
     }
 
     await fireEntryTransition(context, created, "draft");

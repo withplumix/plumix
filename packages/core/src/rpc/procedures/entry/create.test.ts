@@ -238,16 +238,14 @@ describe("entry.create", () => {
 
   test("meta: registered keys persist and come back on the create response", async () => {
     const plugins = createPluginRegistry();
-    plugins.metaKeys.set("meta_title", {
-      key: "meta_title",
-      type: "string",
+    plugins.entryMetaBoxes.set("test-seo", {
+      id: "test-seo",
+      label: "SEO",
       entryTypes: ["post"],
-      registeredBy: "test",
-    });
-    plugins.metaKeys.set("is_featured", {
-      key: "is_featured",
-      type: "boolean",
-      entryTypes: ["post"],
+      fields: [
+        { key: "meta_title", label: "Meta title", type: "string", inputType: "text" },
+        { key: "is_featured", label: "Featured", type: "boolean", inputType: "checkbox" },
+      ],
       registeredBy: "test",
     });
     const h = await createRpcHarness({ authAs: "admin", plugins });

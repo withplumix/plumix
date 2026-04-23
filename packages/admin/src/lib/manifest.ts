@@ -1,10 +1,11 @@
 import type {
+  EntryMetaBoxManifestEntry,
   EntryTypeManifestEntry,
-  MetaBoxManifestEntry,
   PlumixManifest,
   SettingsGroupManifestEntry,
   SettingsPageManifestEntry,
   TaxonomyManifestEntry,
+  TermMetaBoxManifestEntry,
 } from "@plumix/core/manifest";
 import { emptyManifest, MANIFEST_SCRIPT_ID } from "@plumix/core/manifest";
 
@@ -35,13 +36,16 @@ function normalize(value: unknown): PlumixManifest {
   if (!value || typeof value !== "object") return emptyManifest();
   const entryTypes = (value as { entryTypes?: unknown }).entryTypes;
   const taxonomies = (value as { taxonomies?: unknown }).taxonomies;
-  const metaBoxes = (value as { metaBoxes?: unknown }).metaBoxes;
+  const entryMetaBoxes = (value as { entryMetaBoxes?: unknown })
+    .entryMetaBoxes;
+  const termMetaBoxes = (value as { termMetaBoxes?: unknown }).termMetaBoxes;
   const settingsGroups = (value as { settingsGroups?: unknown }).settingsGroups;
   const settingsPages = (value as { settingsPages?: unknown }).settingsPages;
   return {
     entryTypes: Array.isArray(entryTypes) ? entryTypes : [],
     taxonomies: Array.isArray(taxonomies) ? taxonomies : [],
-    metaBoxes: Array.isArray(metaBoxes) ? metaBoxes : [],
+    entryMetaBoxes: Array.isArray(entryMetaBoxes) ? entryMetaBoxes : [],
+    termMetaBoxes: Array.isArray(termMetaBoxes) ? termMetaBoxes : [],
     settingsGroups: Array.isArray(settingsGroups) ? settingsGroups : [],
     settingsPages: Array.isArray(settingsPages) ? settingsPages : [],
   };
@@ -116,11 +120,12 @@ export function visibleTaxonomies(
   return source.taxonomies.filter((tax) => caps.has(`${tax.name}:read`));
 }
 
-// Ordering for meta-box `priority`. Boxes render top-down in the editor
-// sidebar; "high" pins above the fold, "low" drops to the bottom. Registry
-// insertion order breaks ties (Array.prototype.sort is stable per ES2019).
+// Ordering for entry meta-box `priority`. Boxes render top-down in the
+// editor sidebar; "high" pins above the fold, "low" drops to the
+// bottom. Registry insertion order breaks ties (Array.prototype.sort is
+// stable per ES2019).
 const META_BOX_PRIORITY_WEIGHT: Record<
-  NonNullable<MetaBoxManifestEntry["priority"]>,
+  NonNullable<EntryMetaBoxManifestEntry["priority"]>,
   number
 > = {
   high: 0,
@@ -129,20 +134,19 @@ const META_BOX_PRIORITY_WEIGHT: Record<
 };
 
 /**
- * Resolve the set of meta boxes the editor should render for a given
- * entry type, honouring each box's optional capability gate. Returned in
- * render order: by `priority` (high → default → low; undefined treated
- * as "default"), with registration order as the stable tiebreaker.
+ * Resolve the set of entry meta boxes the editor should render for a
+ * given entry type, honouring each box's optional capability gate.
+ * Returned in render order: by `priority` (high → default → low;
+ * undefined treated as "default"), with registration order as the
+ * stable tiebreaker.
  */
-export function metaBoxesForEntryType(
+export function entryMetaBoxesForType(
   entryTypeName: string,
   capabilities: readonly string[],
   source: PlumixManifest = manifest,
-): readonly MetaBoxManifestEntry[] {
+): readonly EntryMetaBoxManifestEntry[] {
   const caps = new Set(capabilities);
-  // `.filter()` already returns a fresh array, so subsequent `.sort()` is
-  // safe to do in place — no need to copy again.
-  return source.metaBoxes
+  return source.entryMetaBoxes
     .filter((box) => {
       if (!box.entryTypes.includes(entryTypeName)) return false;
       if (box.capability !== undefined && !caps.has(box.capability))
@@ -154,6 +158,25 @@ export function metaBoxesForEntryType(
       const bp = META_BOX_PRIORITY_WEIGHT[b.priority ?? "default"];
       return ap - bp;
     });
+}
+
+/**
+ * Resolve the term meta boxes rendered on the edit form for a given
+ * taxonomy. Same capability gate + registration-order shape as
+ * `entryMetaBoxesForType`; no `priority` tier because term forms
+ * render boxes stacked without a sidebar split.
+ */
+export function termMetaBoxesForTaxonomy(
+  taxonomyName: string,
+  capabilities: readonly string[],
+  source: PlumixManifest = manifest,
+): readonly TermMetaBoxManifestEntry[] {
+  const caps = new Set(capabilities);
+  return source.termMetaBoxes.filter((box) => {
+    if (!box.taxonomies.includes(taxonomyName)) return false;
+    if (box.capability !== undefined && !caps.has(box.capability)) return false;
+    return true;
+  });
 }
 
 /**

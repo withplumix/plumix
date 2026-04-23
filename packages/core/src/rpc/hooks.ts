@@ -2,6 +2,7 @@ import type { Entry, EntryStatus, NewEntry } from "../db/schema/entries.js";
 import type { Term } from "../db/schema/terms.js";
 import type { User } from "../db/schema/users.js";
 import type { EntryMetaChanges } from "./procedures/entry/meta.js";
+import type { TermMetaChanges } from "./procedures/term/meta.js";
 import type {
   EntryCreateInput,
   EntryListInput,
@@ -226,6 +227,17 @@ declare module "../hooks/types.js" {
 
     /** Fires after `term.delete` removes a term row. */
     "term:deleted": (term: Term) => void | Promise<void>;
+
+    /**
+     * Fires after a successful meta write via `term.create` /
+     * `term.update`. Payload carries the decoded upserts + deleted
+     * keys — same shape as `entry:meta_changed` so plugins adopt one
+     * pattern across bags.
+     */
+    "term:meta_changed": (
+      term: { readonly id: number; readonly taxonomy: string },
+      changes: TermMetaChanges,
+    ) => void | Promise<void>;
 
     /**
      * Fires after a successful `settings.upsert`. Payload carries the

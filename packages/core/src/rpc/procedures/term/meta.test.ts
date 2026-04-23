@@ -1,0 +1,154 @@
+import { describe, expect, test } from "vitest";
+
+import type {
+  MetaBoxField,
+  MutablePluginRegistry,
+} from "../../../plugin/manifest.js";
+import type { UserRole } from "../../../db/schema/users.js";
+import { createPluginRegistry } from "../../../plugin/manifest.js";
+import { createRpcHarness } from "../../../test/rpc.js";
+
+function taxonomyRegistry(): MutablePluginRegistry {
+  const registry = createPluginRegistry();
+  registry.taxonomies.set("category", {
+    name: "category",
+    label: "Categories",
+    registeredBy: "test",
+  });
+  const caps: Record<string, UserRole> = {
+    "category:read": "subscriber",
+    "category:assign": "contributor",
+    "category:edit": "editor",
+    "category:delete": "editor",
+  };
+  for (const [name, minRole] of Object.entries(caps)) {
+    registry.capabilities.set(name, { name, minRole, registeredBy: "test" });
+  }
+  return registry;
+}
+
+function registerTermMetaFields(
+  plugins: MutablePluginRegistry,
+  taxonomy: string,
+  fields: MetaBoxField[],
+): void {
+  plugins.termMetaBoxes.set(`test-${taxonomy}`, {
+    id: `test-${taxonomy}`,
+    label: "Test",
+    taxonomies: [taxonomy],
+    fields,
+    registeredBy: "test",
+  });
+}
+
+describe("term meta: registration + round-trip via term.update", () => {
+  test("registered meta keys persist through term.create + term.get", async () => {
+    const plugins = taxonomyRegistry();
+    registerTermMetaFields(plugins, "category", [
+      { key: "icon_url", label: "Icon URL", type: "string", inputType: "url" },
+      { key: "featured", label: "Featured", type: "boolean", inputType: "checkbox" },
+    ]);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+
+    const created = await h.client.term.create({
+      taxonomy: "category",
+      name: "News",
+      slug: "news",
+      meta: { icon_url: "https://example.test/news.svg", featured: true },
+    });
+    expect(created.meta).toEqual({
+      icon_url: "https://example.test/news.svg",
+      featured: true,
+    });
+
+    const reloaded = await h.client.term.get({ id: created.id });
+    expect(reloaded.meta).toEqual({
+      icon_url: "https://example.test/news.svg",
+      featured: true,
+    });
+  });
+
+  test("unregistered meta key is rejected with CONFLICT", async () => {
+    const plugins = taxonomyRegistry();
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+
+    await expect(
+      h.client.term.create({
+        taxonomy: "category",
+        name: "News",
+        slug: "news",
+        meta: { mystery: "x" },
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "meta_not_registered", key: "mystery" },
+    });
+  });
+
+  test("term.update partial patch + null-delete semantics match entry.meta", async () => {
+    const plugins = taxonomyRegistry();
+    registerTermMetaFields(plugins, "category", [
+      { key: "icon_url", label: "Icon URL", type: "string", inputType: "url" },
+      { key: "featured", label: "Featured", type: "boolean", inputType: "checkbox" },
+    ]);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+
+    const created = await h.client.term.create({
+      taxonomy: "category",
+      name: "Tech",
+      slug: "tech",
+      meta: { icon_url: "https://example.test/tech.svg", featured: false },
+    });
+
+    // Partial patch: only `featured` is touched; `icon_url` survives.
+    const afterFlip = await h.client.term.update({
+      id: created.id,
+      meta: { featured: true },
+    });
+    expect(afterFlip.meta).toEqual({
+      icon_url: "https://example.test/tech.svg",
+      featured: true,
+    });
+
+    // Null deletes the key.
+    const afterClear = await h.client.term.update({
+      id: created.id,
+      meta: { icon_url: null },
+    });
+    expect(afterClear.meta).toEqual({ featured: true });
+  });
+
+  test("term:meta_changed fires with the upsert + delete diff", async () => {
+    const plugins = taxonomyRegistry();
+    registerTermMetaFields(plugins, "category", [
+      { key: "icon_url", label: "Icon URL", type: "string", inputType: "url" },
+    ]);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+
+    const created = await h.client.term.create({
+      taxonomy: "category",
+      name: "Travel",
+      slug: "travel",
+    });
+    const spy = h.spyAction("term:meta_changed");
+
+    await h.client.term.update({
+      id: created.id,
+      meta: { icon_url: "https://example.test/travel.svg" },
+    });
+    await h.client.term.update({
+      id: created.id,
+      meta: { icon_url: null },
+    });
+
+    expect(spy.calls).toHaveLength(2);
+    expect(spy.calls[0]?.args[1]).toEqual({
+      set: { icon_url: "https://example.test/travel.svg" },
+      removed: [],
+    });
+    expect(spy.calls[1]?.args[1]).toEqual({
+      set: {},
+      removed: ["icon_url"],
+    });
+  });
+});

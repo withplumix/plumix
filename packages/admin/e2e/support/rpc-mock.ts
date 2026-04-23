@@ -110,7 +110,7 @@ export const MANIFEST_WITH_POST: PlumixManifest = {
     },
   ],
   taxonomies: [],
-  metaBoxes: [],
+  entryMetaBoxes: [], termMetaBoxes: [],
   settingsGroups: [],
   settingsPages: [],
 };
@@ -140,7 +140,7 @@ export const MANIFEST_WITH_TAXONOMIES: PlumixManifest = {
       labels: { singular: "Tag" },
     },
   ],
-  metaBoxes: [],
+  entryMetaBoxes: [], termMetaBoxes: [],
   settingsGroups: [],
   settingsPages: [],
 };
@@ -157,7 +157,7 @@ export const MANIFEST_WITH_META_BOXES: PlumixManifest = {
     },
   ],
   taxonomies: [],
-  metaBoxes: [
+  entryMetaBoxes: [
     {
       id: "seo",
       label: "SEO",
@@ -167,6 +167,7 @@ export const MANIFEST_WITH_META_BOXES: PlumixManifest = {
         {
           key: "meta_title",
           label: "Meta title",
+          type: "string",
           inputType: "text",
           maxLength: 60,
         },
@@ -181,11 +182,13 @@ export const MANIFEST_WITH_META_BOXES: PlumixManifest = {
         {
           key: "is_featured",
           label: "Featured",
+          type: "boolean",
           inputType: "checkbox",
         },
       ],
     },
   ],
+  termMetaBoxes: [],
   settingsGroups: [],
   settingsPages: [],
 };
@@ -198,7 +201,7 @@ export const MANIFEST_WITH_META_BOXES: PlumixManifest = {
 export const MANIFEST_WITH_SETTINGS: PlumixManifest = {
   entryTypes: [],
   taxonomies: [],
-  metaBoxes: [],
+  entryMetaBoxes: [], termMetaBoxes: [],
   settingsGroups: [
     {
       name: "identity",

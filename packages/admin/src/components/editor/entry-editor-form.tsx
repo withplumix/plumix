@@ -10,7 +10,7 @@ import { useForm, useStore } from "@tanstack/react-form";
 import { useBlocker } from "@tanstack/react-router";
 import * as v from "valibot";
 
-import type { MetaBoxManifestEntry } from "@plumix/core/manifest";
+import type { EntryMetaBoxManifestEntry } from "@plumix/core/manifest";
 import type { EntryStatus } from "@plumix/core/schema";
 import { slugify } from "@plumix/core/slugify";
 
@@ -72,7 +72,7 @@ interface PostEditorFormProps {
    * into side / normal / advanced columns internally based on
    * `entry.context`.
    */
-  readonly metaBoxes: readonly MetaBoxManifestEntry[];
+  readonly metaBoxes: readonly EntryMetaBoxManifestEntry[];
   readonly submitLabel: string;
   readonly isSubmitting: boolean;
   readonly serverError?: string | null;
@@ -320,14 +320,14 @@ function capitalize(value: string): string {
 // Bucket boxes by context. Undefined `context` is treated as "normal"
 // (matches WP's default); unknown values fall through to the main
 // column so a plugin-specific `context` doesn't vanish into nowhere.
-function partitionBoxesByContext(boxes: readonly MetaBoxManifestEntry[]): {
-  side: readonly MetaBoxManifestEntry[];
-  normal: readonly MetaBoxManifestEntry[];
-  advanced: readonly MetaBoxManifestEntry[];
+function partitionBoxesByContext(boxes: readonly EntryMetaBoxManifestEntry[]): {
+  side: readonly EntryMetaBoxManifestEntry[];
+  normal: readonly EntryMetaBoxManifestEntry[];
+  advanced: readonly EntryMetaBoxManifestEntry[];
 } {
-  const side: MetaBoxManifestEntry[] = [];
-  const normal: MetaBoxManifestEntry[] = [];
-  const advanced: MetaBoxManifestEntry[] = [];
+  const side: EntryMetaBoxManifestEntry[] = [];
+  const normal: EntryMetaBoxManifestEntry[] = [];
+  const advanced: EntryMetaBoxManifestEntry[] = [];
   for (const box of boxes) {
     if (box.context === "side") side.push(box);
     else if (box.context === "advanced") advanced.push(box);
@@ -345,7 +345,7 @@ function MetaBoxRegion({
   onChange,
   disabled,
 }: {
-  readonly boxes: readonly MetaBoxManifestEntry[];
+  readonly boxes: readonly EntryMetaBoxManifestEntry[];
   readonly testId: string;
   readonly values: Readonly<Record<string, unknown>>;
   readonly onChange: (key: string, next: unknown) => void;

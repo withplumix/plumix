@@ -3,6 +3,7 @@ import { terms } from "../../../db/schema/terms.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { taxonomyCapability } from "./helpers.js";
+import { decodeMetaBag } from "./meta.js";
 import { termGetInputSchema } from "./schemas.js";
 
 export const get = base
@@ -22,5 +23,9 @@ export const get = base
       throw errors.NOT_FOUND({ data: { kind: "term", id: input.id } });
     }
 
-    return context.hooks.applyFilter("rpc:term.get:output", row);
+    const meta = decodeMetaBag(context.plugins, row.taxonomy, row.meta);
+    return context.hooks.applyFilter("rpc:term.get:output", {
+      ...row,
+      meta,
+    });
   });

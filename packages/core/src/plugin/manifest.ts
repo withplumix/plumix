@@ -46,21 +46,27 @@ export interface TaxonomyOptions {
 
 export type MetaScalarType = "string" | "number" | "boolean" | "json";
 
-export interface MetaOptions {
-  readonly type: MetaScalarType;
-  readonly default?: unknown;
-  readonly entryTypes: readonly string[];
-  readonly sanitize?: (value: unknown) => unknown;
-}
-
 export interface MetaBoxFieldOption {
   readonly value: string;
   readonly label: string;
 }
 
+/**
+ * A field inside a meta box — the single source of truth for both the
+ * admin UI renderer and the server-side storage contract. Declaring a
+ * meta box is the only way to register a meta key; there is no separate
+ * `registerMeta` step.
+ */
 export interface MetaBoxField {
   readonly key: string;
   readonly label: string;
+  /**
+   * Storage type. Drives server-side sanitization on write and
+   * coercion on read (`entry.meta` / `term.meta` columns store JSON,
+   * but the type informs the expected shape). `json` accepts any
+   * JSON-serialisable value.
+   */
+  readonly type: MetaScalarType;
   /**
    * Drives the admin sidebar's input renderer. Built-in dispatcher
    * handles `text` / `textarea` / `number` / `email` / `url` /
@@ -69,6 +75,14 @@ export interface MetaBoxField {
    * types with a dev-mode console warning.
    */
   readonly inputType: string;
+  /**
+   * Applied after type coercion, before persistence. Returning a
+   * sanitized value replaces the caller's input — ideal for trimming,
+   * whitelisting, or normalising shape.
+   */
+  readonly sanitize?: (value: unknown) => unknown;
+  /** Default surfaced in the admin form when the key has no saved value. */
+  readonly default?: unknown;
   /** Optional help text rendered under the label on every input type. */
   readonly description?: string;
   /** Renders `required` on the native input; server validation is separate. */
@@ -87,11 +101,30 @@ export interface MetaBoxField {
   readonly options?: readonly MetaBoxFieldOption[];
 }
 
-export interface MetaBoxOptions {
+/**
+ * Meta box shown on the entry editor. Rendered alongside the post in
+ * `/entries/<type>/<id>`; the `context` hint controls which column the
+ * box lands in.
+ */
+export interface EntryMetaBoxOptions {
   readonly label: string;
+  readonly description?: string;
   readonly context?: "side" | "normal" | "advanced";
   readonly priority?: "high" | "default" | "low";
   readonly entryTypes: readonly string[];
+  readonly capability?: string;
+  readonly fields: readonly MetaBoxField[];
+}
+
+/**
+ * Meta box shown on the taxonomy term edit form. Rendered as one
+ * shadcn `<Card>` with its own save button — same card-per-box model
+ * as settings groups. Scoped by `taxonomies`.
+ */
+export interface TermMetaBoxOptions {
+  readonly label: string;
+  readonly description?: string;
+  readonly taxonomies: readonly string[];
   readonly capability?: string;
   readonly fields: readonly MetaBoxField[];
 }
@@ -164,12 +197,12 @@ export interface RegisteredTaxonomy extends TaxonomyOptions {
   readonly registeredBy: string | null;
 }
 
-export interface RegisteredMeta extends MetaOptions {
-  readonly key: string;
+export interface RegisteredEntryMetaBox extends EntryMetaBoxOptions {
+  readonly id: string;
   readonly registeredBy: string | null;
 }
 
-export interface RegisteredMetaBox extends MetaBoxOptions {
+export interface RegisteredTermMetaBox extends TermMetaBoxOptions {
   readonly id: string;
   readonly registeredBy: string | null;
 }
@@ -200,8 +233,8 @@ export interface RegisteredRewriteRule {
 export interface PluginRegistry {
   readonly entryTypes: ReadonlyMap<string, RegisteredEntryType>;
   readonly taxonomies: ReadonlyMap<string, RegisteredTaxonomy>;
-  readonly metaKeys: ReadonlyMap<string, RegisteredMeta>;
-  readonly metaBoxes: ReadonlyMap<string, RegisteredMetaBox>;
+  readonly entryMetaBoxes: ReadonlyMap<string, RegisteredEntryMetaBox>;
+  readonly termMetaBoxes: ReadonlyMap<string, RegisteredTermMetaBox>;
   readonly capabilities: ReadonlyMap<string, RegisteredCapability>;
   readonly settingsGroups: ReadonlyMap<string, RegisteredSettingsGroup>;
   readonly settingsPages: ReadonlyMap<string, RegisteredSettingsPage>;
@@ -211,8 +244,8 @@ export interface PluginRegistry {
 export interface MutablePluginRegistry extends PluginRegistry {
   readonly entryTypes: Map<string, RegisteredEntryType>;
   readonly taxonomies: Map<string, RegisteredTaxonomy>;
-  readonly metaKeys: Map<string, RegisteredMeta>;
-  readonly metaBoxes: Map<string, RegisteredMetaBox>;
+  readonly entryMetaBoxes: Map<string, RegisteredEntryMetaBox>;
+  readonly termMetaBoxes: Map<string, RegisteredTermMetaBox>;
   readonly capabilities: Map<string, RegisteredCapability>;
   readonly settingsGroups: Map<string, RegisteredSettingsGroup>;
   readonly settingsPages: Map<string, RegisteredSettingsPage>;
@@ -223,13 +256,49 @@ export function createPluginRegistry(): MutablePluginRegistry {
   return {
     entryTypes: new Map(),
     taxonomies: new Map(),
-    metaKeys: new Map(),
-    metaBoxes: new Map(),
+    entryMetaBoxes: new Map(),
+    termMetaBoxes: new Map(),
     capabilities: new Map(),
     settingsGroups: new Map(),
     settingsPages: new Map(),
     rewriteRules: [],
   };
+}
+
+/**
+ * Look up the `MetaBoxField` declaration for a meta key within the
+ * entry meta surface, scoped to a given entry type. Returns the first
+ * matching field across all registered entry meta boxes — key
+ * uniqueness per (entryType, key) is enforced at registration time,
+ * so "first match" is the only match.
+ */
+export function findEntryMetaField(
+  registry: PluginRegistry,
+  entryType: string,
+  key: string,
+): MetaBoxField | undefined {
+  for (const box of registry.entryMetaBoxes.values()) {
+    if (!box.entryTypes.includes(entryType)) continue;
+    const field = box.fields.find((f) => f.key === key);
+    if (field) return field;
+  }
+  return undefined;
+}
+
+/**
+ * Like `findEntryMetaField`, but for term meta. Scoped by taxonomy.
+ */
+export function findTermMetaField(
+  registry: PluginRegistry,
+  taxonomy: string,
+  key: string,
+): MetaBoxField | undefined {
+  for (const box of registry.termMetaBoxes.values()) {
+    if (!box.taxonomies.includes(taxonomy)) continue;
+    const field = box.fields.find((f) => f.key === key);
+    if (field) return field;
+  }
+  return undefined;
 }
 
 export class DuplicateRegistrationError extends Error {
@@ -272,12 +341,13 @@ export interface EntryTypeManifestEntry {
 
 /**
  * Client-safe field descriptor inside a meta box. Mirrors `MetaBoxField`
- * today — kept as a separate type so the manifest boundary can diverge
- * (e.g., omit server-only `sanitize` callbacks) when needed.
+ * minus the server-only `sanitize` callback and `default` value (the
+ * admin receives the default server-side and injects it into the form).
  */
 export interface MetaBoxFieldManifestEntry {
   readonly key: string;
   readonly label: string;
+  readonly type: MetaScalarType;
   readonly inputType: string;
   readonly description?: string;
   readonly required?: boolean;
@@ -287,21 +357,35 @@ export interface MetaBoxFieldManifestEntry {
   readonly max?: number;
   readonly step?: number;
   readonly options?: readonly MetaBoxFieldOption[];
+  readonly default?: unknown;
 }
 
 /**
- * Shape serialised for meta boxes in the manifest. Strict allowlist
- * projection of `RegisteredMetaBox`; drops `registeredBy` (server-only
- * debug metadata). `fields` is projected via
- * `MetaBoxFieldManifestEntry` so the field-level contract is independent
- * of the registration type.
+ * Shape serialised for entry meta boxes (post editor sidebar). Strict
+ * allowlist projection of `RegisteredEntryMetaBox`; drops
+ * `registeredBy` (server-only debug metadata).
  */
-export interface MetaBoxManifestEntry {
+export interface EntryMetaBoxManifestEntry {
   readonly id: string;
   readonly label: string;
+  readonly description?: string;
   readonly context?: "side" | "normal" | "advanced";
   readonly priority?: "high" | "default" | "low";
   readonly entryTypes: readonly string[];
+  readonly capability?: string;
+  readonly fields: readonly MetaBoxFieldManifestEntry[];
+}
+
+/**
+ * Shape serialised for term meta boxes (taxonomy edit form). Same
+ * field-level shape as `EntryMetaBoxManifestEntry`; `context` /
+ * `priority` don't apply because term forms render stacked cards.
+ */
+export interface TermMetaBoxManifestEntry {
+  readonly id: string;
+  readonly label: string;
+  readonly description?: string;
+  readonly taxonomies: readonly string[];
   readonly capability?: string;
   readonly fields: readonly MetaBoxFieldManifestEntry[];
 }
@@ -367,7 +451,8 @@ export interface SettingsPageManifestEntry {
 export interface PlumixManifest {
   readonly entryTypes: readonly EntryTypeManifestEntry[];
   readonly taxonomies: readonly TaxonomyManifestEntry[];
-  readonly metaBoxes: readonly MetaBoxManifestEntry[];
+  readonly entryMetaBoxes: readonly EntryMetaBoxManifestEntry[];
+  readonly termMetaBoxes: readonly TermMetaBoxManifestEntry[];
   readonly settingsGroups: readonly SettingsGroupManifestEntry[];
   readonly settingsPages: readonly SettingsPageManifestEntry[];
 }
@@ -379,7 +464,8 @@ export function emptyManifest(): PlumixManifest {
   return {
     entryTypes: [],
     taxonomies: [],
-    metaBoxes: [],
+    entryMetaBoxes: [],
+    termMetaBoxes: [],
     settingsGroups: [],
     settingsPages: [],
   };
@@ -409,7 +495,14 @@ export function buildManifest(registry: PluginRegistry): PlumixManifest {
   const taxonomies = Array.from(registry.taxonomies.values()).map(
     toTaxonomyEntry,
   );
-  const metaBoxes = Array.from(registry.metaBoxes.values()).map(toMetaBoxEntry);
+  const entryMetaBoxes = Array.from(registry.entryMetaBoxes.values()).map(
+    toEntryMetaBoxEntry,
+  );
+  const termMetaBoxes = Array.from(registry.termMetaBoxes.values()).map(
+    toTermMetaBoxEntry,
+  );
+  assertUniqueFieldKeysPerScope(entryMetaBoxes, "entry");
+  assertUniqueFieldKeysPerScope(termMetaBoxes, "term");
   const settingsGroups = Array.from(registry.settingsGroups.values()).map(
     toSettingsGroupEntry,
   );
@@ -424,10 +517,46 @@ export function buildManifest(registry: PluginRegistry): PlumixManifest {
   return {
     entryTypes: entries,
     taxonomies,
-    metaBoxes,
+    entryMetaBoxes,
+    termMetaBoxes,
     settingsGroups,
     settingsPages,
   };
+}
+
+/**
+ * Two meta boxes on the same `(scope, field.key)` pair would silently
+ * write to the same storage key — a plugin-author footgun. Fail loudly
+ * at manifest-build time. `scope` is the entry type (for entry boxes)
+ * or taxonomy (for term boxes).
+ */
+function assertUniqueFieldKeysPerScope(
+  boxes: readonly (
+    | EntryMetaBoxManifestEntry
+    | TermMetaBoxManifestEntry
+  )[],
+  kind: "entry" | "term",
+): void {
+  const seen = new Map<string, string>();
+  for (const box of boxes) {
+    const scopes =
+      "entryTypes" in box ? box.entryTypes : box.taxonomies;
+    for (const scope of scopes) {
+      for (const field of box.fields) {
+        const scopedKey = `${scope}:${field.key}`;
+        const existing = seen.get(scopedKey);
+        if (existing !== undefined && existing !== box.id) {
+          throw new Error(
+            `Meta field "${field.key}" is declared by ${kind} meta ` +
+              `boxes "${existing}" and "${box.id}" on the same scope ` +
+              `"${scope}". Each key may appear in at most one box ` +
+              `per scope.`,
+          );
+        }
+        seen.set(scopedKey, box.id);
+      }
+    }
+  }
 }
 
 // Surfacing a clear error at manifest-build time beats a runtime
@@ -574,18 +703,46 @@ function toTaxonomyEntry(tax: RegisteredTaxonomy): TaxonomyManifestEntry {
   };
 }
 
-// Allowlist for meta box entries — same rationale as `toEntryTypeManifest`.
-// `registeredBy` is intentionally excluded (server-only debug metadata).
-// `fields` is projected per entry so field-level internals could diverge
-// from the registration type without altering the wire contract.
-function toMetaBoxEntry(box: RegisteredMetaBox): MetaBoxManifestEntry {
-  const { id, label, context, priority, entryTypes, capability, fields } = box;
-  return {
+// Allowlist for entry meta box entries — same rationale as
+// `toEntryTypeManifest`. `registeredBy` is intentionally excluded
+// (server-only debug metadata). `sanitize` on each field is stripped
+// via `toMetaBoxFieldEntry` — it's a server-side callback.
+function toEntryMetaBoxEntry(
+  box: RegisteredEntryMetaBox,
+): EntryMetaBoxManifestEntry {
+  const {
     id,
     label,
+    description,
     context,
     priority,
     entryTypes,
+    capability,
+    fields,
+  } = box;
+  return {
+    id,
+    label,
+    description,
+    context,
+    priority,
+    entryTypes,
+    capability,
+    fields: fields.map(toMetaBoxFieldEntry),
+  };
+}
+
+// Term meta boxes are always stacked top-to-bottom on the taxonomy
+// edit form — no `context` / `priority` hints apply.
+function toTermMetaBoxEntry(
+  box: RegisteredTermMetaBox,
+): TermMetaBoxManifestEntry {
+  const { id, label, description, taxonomies, capability, fields } = box;
+  return {
+    id,
+    label,
+    description,
+    taxonomies,
     capability,
     fields: fields.map(toMetaBoxFieldEntry),
   };
@@ -639,6 +796,7 @@ function toMetaBoxFieldEntry(field: MetaBoxField): MetaBoxFieldManifestEntry {
   const {
     key,
     label,
+    type,
     inputType,
     description,
     required,
@@ -648,10 +806,12 @@ function toMetaBoxFieldEntry(field: MetaBoxField): MetaBoxFieldManifestEntry {
     max,
     step,
     options,
+    default: defaultValue,
   } = field;
   return {
     key,
     label,
+    type,
     inputType,
     description,
     required,
@@ -661,6 +821,7 @@ function toMetaBoxFieldEntry(field: MetaBoxField): MetaBoxFieldManifestEntry {
     max,
     step,
     options,
+    default: defaultValue,
   };
 }
 

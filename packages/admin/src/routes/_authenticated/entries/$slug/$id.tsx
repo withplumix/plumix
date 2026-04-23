@@ -7,7 +7,7 @@ import {
 } from "@/components/editor/entry-editor-form.js";
 import { Skeleton } from "@/components/ui/skeleton.js";
 import { hasCap } from "@/lib/caps.js";
-import { findEntryTypeBySlug, metaBoxesForEntryType } from "@/lib/manifest.js";
+import { findEntryTypeBySlug, entryMetaBoxesForType } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import {
   useMutation,
@@ -126,7 +126,7 @@ function EditPostRoute(): ReactNode {
   ).toLowerCase();
 
   const metaBoxes = useMemo(
-    () => metaBoxesForEntryType(entryType.name, user.capabilities),
+    () => entryMetaBoxesForType(entryType.name, user.capabilities),
     [entryType.name, user.capabilities],
   );
 
