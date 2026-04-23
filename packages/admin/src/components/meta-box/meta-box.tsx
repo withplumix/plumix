@@ -15,12 +15,9 @@ import type {
 
 import { MetaBoxField } from "./meta-box-field.js";
 
-/**
- * Any entity-meta box we render with this component. Settings groups
- * deliberately don't pass through here — they use their own per-card
- * save model in `SettingsGroupCard`.
- */
-export type MetaBoxCardEntry =
+// Settings groups deliberately don't pass through this component —
+// they use their own per-card save model in `SettingsGroupCard`.
+type MetaBoxCardEntry =
   | EntryMetaBoxManifestEntry
   | TermMetaBoxManifestEntry
   | UserMetaBoxManifestEntry;
