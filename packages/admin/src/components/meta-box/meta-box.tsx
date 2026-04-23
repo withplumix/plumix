@@ -14,6 +14,7 @@ import type {
 } from "@plumix/core/manifest";
 
 import { MetaBoxField } from "./meta-box-field.js";
+import { metaBoxFieldColSpanClass } from "./meta-box-grid.js";
 
 // Settings groups deliberately don't pass through this component —
 // they use their own per-card save model in `SettingsGroupCard`.
@@ -39,7 +40,10 @@ export function MetaBoxCard({
   readonly disabled?: boolean;
 }): ReactNode {
   return (
-    <Card data-testid={`meta-box-${box.id}`}>
+    // Container-query root so field spans resolve against the card's
+    // own width — same span renders consistently in a full-width route
+    // and a narrow sidebar, where viewport-based breakpoints would lie.
+    <Card className="@container" data-testid={`meta-box-${box.id}`}>
       <CardHeader>
         <CardTitle>
           <h2
@@ -53,7 +57,7 @@ export function MetaBoxCard({
           <CardDescription>{box.description}</CardDescription>
         ) : null}
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+      <CardContent className="grid grid-cols-12 gap-4">
         {box.fields.map((field) => (
           <MetaBoxField
             key={field.key}
@@ -63,6 +67,7 @@ export function MetaBoxCard({
             onChange={(next) => {
               onChange(field.key, next);
             }}
+            className={metaBoxFieldColSpanClass(field.span)}
           />
         ))}
       </CardContent>

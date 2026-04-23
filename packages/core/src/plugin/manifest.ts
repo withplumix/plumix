@@ -52,6 +52,24 @@ export interface MetaBoxFieldOption {
 }
 
 /**
+ * Column span for a field within its meta box's 12-column grid. A plain
+ * number applies from the smallest breakpoint up. The object form is
+ * mobile-first: `base` is the default, `sm` / `md` / `lg` override upward.
+ * Breakpoints key off the card's own width (Tailwind container queries,
+ * `@sm` / `@md` / `@lg`) so the same `span` renders consistently whether
+ * the box lands in a full-width route or a narrow sidebar. Values outside
+ * 1..12 are clamped at render time. Omitted span means full width (12).
+ */
+export type MetaBoxFieldSpan =
+  | number
+  | {
+      readonly base?: number;
+      readonly sm?: number;
+      readonly md?: number;
+      readonly lg?: number;
+    };
+
+/**
  * A field inside a meta box — the single source of truth for both the
  * admin UI renderer and the server-side storage contract. Declaring a
  * meta box is the only way to register a meta key; there is no separate
@@ -99,6 +117,11 @@ export interface MetaBoxField {
   readonly step?: number;
   /** Required for `select` and `radio`; ignored otherwise. */
   readonly options?: readonly MetaBoxFieldOption[];
+  /**
+   * Column span within the meta box's 12-column grid. Defaults to full
+   * width. See `MetaBoxFieldSpan` for the responsive object form.
+   */
+  readonly span?: MetaBoxFieldSpan;
 }
 
 /**
@@ -371,6 +394,7 @@ export interface MetaBoxFieldManifestEntry {
   readonly step?: number;
   readonly options?: readonly MetaBoxFieldOption[];
   readonly default?: unknown;
+  readonly span?: MetaBoxFieldSpan;
 }
 
 /**
@@ -893,6 +917,7 @@ function toMetaBoxFieldEntry(field: MetaBoxField): MetaBoxFieldManifestEntry {
     step,
     options,
     default: defaultValue,
+    span,
   } = field;
   return {
     key,
@@ -908,6 +933,7 @@ function toMetaBoxFieldEntry(field: MetaBoxField): MetaBoxFieldManifestEntry {
     step,
     options,
     default: defaultValue,
+    span,
   };
 }
 
