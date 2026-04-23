@@ -12,9 +12,9 @@ describe("metaBoxFieldColSpanClass", () => {
   });
 
   test("responsive object emits mobile-first breakpoints in order", () => {
-    expect(
-      metaBoxFieldColSpanClass({ base: 12, sm: 6, md: 4, lg: 3 }),
-    ).toBe("col-span-12 @sm:col-span-6 @md:col-span-4 @lg:col-span-3");
+    expect(metaBoxFieldColSpanClass({ base: 12, sm: 6, md: 4, lg: 3 })).toBe(
+      "col-span-12 @sm:col-span-6 @md:col-span-4 @lg:col-span-3",
+    );
   });
 
   test("object without base falls back to full width", () => {
