@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { PostEditorForm } from "@/components/editor/entry-editor-form.js";
 import { hasCap } from "@/lib/caps.js";
-import { findEntryTypeBySlug, entryMetaBoxesForType } from "@/lib/manifest.js";
+import { entryMetaBoxesForType, findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useMutation } from "@tanstack/react-query";
 import {

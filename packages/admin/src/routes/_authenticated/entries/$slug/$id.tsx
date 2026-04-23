@@ -7,7 +7,7 @@ import {
 } from "@/components/editor/entry-editor-form.js";
 import { Skeleton } from "@/components/ui/skeleton.js";
 import { hasCap } from "@/lib/caps.js";
-import { findEntryTypeBySlug, entryMetaBoxesForType } from "@/lib/manifest.js";
+import { entryMetaBoxesForType, findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import {
   useMutation,
