@@ -7,22 +7,20 @@ import {
   CardTitle,
 } from "@/components/ui/card.js";
 import { hasCap } from "@/lib/caps.js";
-import { allSettingsFields, visibleSettingsGroups } from "@/lib/manifest.js";
+import { visibleSettingsPages } from "@/lib/manifest.js";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 
-function groupSummary(fieldsetCount: number, fieldCount: number): string {
-  const fs = `${fieldsetCount} ${fieldsetCount === 1 ? "fieldset" : "fieldsets"}`;
-  const fl = `${fieldCount} ${fieldCount === 1 ? "field" : "fields"}`;
-  return `${fs} · ${fl}`;
+function pageSummary(groupCount: number): string {
+  return `${groupCount} ${groupCount === 1 ? "group" : "groups"}`;
 }
 
 export const Route = createFileRoute("/_authenticated/settings/")({
-  // The settings surface is admin-only at the floor — `option:manage` is
-  // the server's gate for every `option.*` RPC. Plugins may declare a
-  // tighter per-group capability; those are filtered by
-  // `visibleSettingsGroups` further down rather than rejected here.
+  // The settings surface is admin-only at the floor — `settings:manage`
+  // is the server's gate for every `settings.*` RPC. Plugins may declare
+  // a tighter per-page capability in future; those would be filtered by
+  // `visibleSettingsPages` rather than rejected here.
   beforeLoad: ({ context }) => {
-    if (!hasCap(context.user.capabilities, "option:manage")) {
+    if (!hasCap(context.user.capabilities, "settings:manage")) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router redirect pattern
       throw redirect({ to: "/" });
     }
@@ -32,9 +30,9 @@ export const Route = createFileRoute("/_authenticated/settings/")({
 
 function SettingsIndexRoute(): ReactNode {
   const { user } = Route.useRouteContext();
-  const groups = visibleSettingsGroups(user.capabilities);
+  const pages = visibleSettingsPages(user.capabilities);
 
-  if (groups.length === 0) {
+  if (pages.length === 0) {
     return (
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
         <h1 className="text-2xl font-semibold" data-testid="settings-heading">
@@ -45,11 +43,15 @@ function SettingsIndexRoute(): ReactNode {
             <CardTitle>No settings registered yet</CardTitle>
             <CardDescription>
               Core ships no settings by design — plugins (or your own
-              plumix.config) declare groups via{" "}
+              plumix.config) declare pages + groups via{" "}
               <code className="font-mono text-xs">
-                ctx.registerSettingsGroup(name, {"{"} fieldsets: [...] {"}"})
+                ctx.registerSettingsPage
+              </code>{" "}
+              and{" "}
+              <code className="font-mono text-xs">
+                ctx.registerSettingsGroup
               </code>
-              . Registered groups appear here with one card per group.
+              . Registered pages appear here with one card per page.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -62,30 +64,27 @@ function SettingsIndexRoute(): ReactNode {
       <h1 className="text-2xl font-semibold" data-testid="settings-heading">
         Settings
       </h1>
-      <div className="grid gap-3" data-testid="settings-group-list">
-        {groups.map((group) => (
+      <div className="grid gap-3" data-testid="settings-page-list">
+        {pages.map((page) => (
           <Link
-            key={group.name}
-            to="/settings/$group"
-            params={{ group: group.name }}
+            key={page.name}
+            to="/settings/$page"
+            params={{ page: page.name }}
             className="block"
-            data-testid={`settings-group-link-${group.name}`}
+            data-testid={`settings-page-link-${page.name}`}
           >
             <Card className="hover:border-primary transition-colors">
               <CardHeader>
                 <CardTitle>
-                  <h2 className="text-base font-semibold">{group.label}</h2>
+                  <h2 className="text-base font-semibold">{page.label}</h2>
                 </CardTitle>
-                {group.description ? (
-                  <CardDescription>{group.description}</CardDescription>
+                {page.description ? (
+                  <CardDescription>{page.description}</CardDescription>
                 ) : null}
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground text-xs">
-                  {groupSummary(
-                    group.fieldsets.length,
-                    allSettingsFields(group).length,
-                  )}
+                  {pageSummary(page.groups.length)}
                 </p>
               </CardContent>
             </Card>

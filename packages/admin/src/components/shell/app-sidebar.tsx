@@ -15,7 +15,7 @@ import {
 import { hasCap } from "@/lib/caps.js";
 import {
   visibleEntryTypes,
-  visibleSettingsGroups,
+  visibleSettingsPages,
   visibleTaxonomies,
 } from "@/lib/manifest.js";
 import { Link } from "@tanstack/react-router";
@@ -75,7 +75,7 @@ function buildTaxonomyGroup(capabilities: readonly string[]): NavGroup | null {
 
 // `user:list` gates Users (admin / editor-level); Settings appears when
 // ANY settings group is visible to the caller (at minimum
-// `option:manage`, but plugins may declare tighter per-group gates).
+// `settings:manage`, but plugins may declare tighter per-group gates).
 // The group only hides entirely when the caller has no management
 // surfaces at all.
 function buildManagementGroup(
@@ -85,7 +85,7 @@ function buildManagementGroup(
   if (hasCap(capabilities, "user:list")) {
     items.push({ to: "/users", label: "Users", icon: Users });
   }
-  if (visibleSettingsGroups(capabilities).length > 0) {
+  if (visibleSettingsPages(capabilities).length > 0) {
     items.push({ to: "/settings", label: "Settings", icon: Settings });
   }
   if (items.length === 0) return null;

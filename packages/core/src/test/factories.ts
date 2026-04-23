@@ -13,8 +13,8 @@ import type {
 } from "../db/schema/credentials.js";
 import type { Entry, NewEntry } from "../db/schema/entries.js";
 import type { EntryTerm, NewEntryTerm } from "../db/schema/entry_term.js";
-import type { NewOption, Option } from "../db/schema/options.js";
 import type { NewSession, Session } from "../db/schema/sessions.js";
+import type { NewSetting, Setting } from "../db/schema/settings.js";
 import type { NewTerm, Term } from "../db/schema/terms.js";
 import type { NewUser, User } from "../db/schema/users.js";
 import { allowedDomains } from "../db/schema/allowed_domains.js";
@@ -22,8 +22,8 @@ import { authTokens } from "../db/schema/auth_tokens.js";
 import { credentials } from "../db/schema/credentials.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
-import { options } from "../db/schema/options.js";
 import { sessions } from "../db/schema/sessions.js";
+import { settings } from "../db/schema/settings.js";
 import { terms } from "../db/schema/terms.js";
 import { users } from "../db/schema/users.js";
 
@@ -173,21 +173,22 @@ export const sessionFactory = Factory.define<NewSession, DbTransient, Session>(
   },
 );
 
-// Site options (key/value store). Autoloaded defaults to true — matches the
-// most common plugin usage.
-export const optionFactory = Factory.define<NewOption, DbTransient, Option>(
+// Settings row (group, key, value). Caller supplies `group` and `key`;
+// `value` defaults to an empty string so tests that care only about
+// existence don't need to pass it.
+export const settingFactory = Factory.define<NewSetting, DbTransient, Setting>(
   ({ sequence, transientParams, onCreate, params }) => {
     onCreate(async (attrs) => {
       const db = requireDb(transientParams);
-      const [row] = await db.insert(options).values(attrs).returning();
-      if (!row) throw new Error("optionFactory: insert returned no row");
+      const [row] = await db.insert(settings).values(attrs).returning();
+      if (!row) throw new Error("settingFactory: insert returned no row");
       return row;
     });
 
     return {
-      name: params.name ?? `option-${sequence}-${Date.now()}`,
+      group: params.group ?? `group_${sequence}`,
+      key: params.key ?? `key_${sequence}`,
       value: params.value ?? "",
-      isAutoloaded: params.isAutoloaded ?? true,
     };
   },
 );
@@ -291,7 +292,7 @@ export interface Factories {
   readonly invite: typeof inviteFactory;
   readonly credential: typeof credentialFactory;
   readonly session: typeof sessionFactory;
-  readonly option: typeof optionFactory;
+  readonly setting: typeof settingFactory;
   readonly entryTerm: typeof entryTermFactory;
   readonly allowedDomain: typeof allowedDomainFactory;
 }
@@ -314,7 +315,7 @@ export function factoriesFor(db: Db): Factories {
     invite: inviteFactory.transient({ db }),
     credential: credentialFactory.transient({ db }),
     session: sessionFactory.transient({ db }),
-    option: optionFactory.transient({ db }),
+    setting: settingFactory.transient({ db }),
     entryTerm: entryTermFactory.transient({ db }),
     allowedDomain: allowedDomainFactory.transient({ db }),
   };

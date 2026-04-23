@@ -17,8 +17,8 @@ import type {
   MetaBoxOptions,
   MetaOptions,
   MutablePluginRegistry,
-  SettingsFieldset,
   SettingsGroupOptions,
+  SettingsPageOptions,
   TaxonomyOptions,
 } from "./manifest.js";
 import {
@@ -69,23 +69,25 @@ export interface PluginSetupContext {
   registerCapability(name: string, minRole: UserRole): void;
 
   /**
-   * Declare a top-level settings group — its own `/settings/$name`
-   * admin page, populated by the group's fieldsets. Throws
-   * `DuplicateRegistrationError` if another plugin already registered
-   * the same name; use `registerSettingsFieldset` to append a section
-   * to an existing group.
+   * Declare a standalone settings group — a storage unit (fields land
+   * under `settings(group.name, field.name)`) and a visual unit
+   * (rendered as one shadcn `<Card>` in the admin with its own save
+   * button in the card footer). Throws `DuplicateRegistrationError` if
+   * another plugin already registered the same name. Reference the
+   * group from one or more `registerSettingsPage` calls to surface it
+   * in the admin.
    */
   registerSettingsGroup(name: string, options: SettingsGroupOptions): void;
 
   /**
-   * Append a fieldset (WP's `add_settings_section` analogue) to an
-   * existing settings group. Throws if the group isn't registered yet
-   * (plugin install order matters), if the fieldset name collides
-   * with one already on the group, or if any field inside it collides
-   * with a field name anywhere else in the group (storage keys are
-   * flat across fieldsets).
+   * Declare a settings page (admin URL `/settings/<name>`) that
+   * composes one or more registered groups. Pages are pure admin-UI
+   * metadata — they aren't stored. Throws
+   * `DuplicateRegistrationError` on name collision; group references
+   * are validated at manifest-build time (`buildManifest`), not here,
+   * so plugin install order doesn't matter.
    */
-  registerSettingsFieldset(groupName: string, fieldset: SettingsFieldset): void;
+  registerSettingsPage(name: string, options: SettingsPageOptions): void;
 
   /**
    * Declare a public URL → `RouteIntent` mapping. Lands in the compiled
@@ -111,7 +113,7 @@ export function createPluginSetupContext({
   hooks,
   registry,
 }: CreatePluginContextArgs): PluginSetupContext {
-  // First writer wins — sharing a capabilityType across post types is the
+  // First writer wins — sharing a capabilityType across entry types is the
   // supported way to pool permissions, so derived caps must not throw on
   // conflict. Explicit `registerCapability` still does.
   const addDerivedCaps = (caps: readonly DerivedCapability[]): void => {
@@ -150,7 +152,7 @@ export function createPluginSetupContext({
 
     registerEntryType: (name, options) => {
       if (registry.entryTypes.has(name))
-        throw new DuplicateRegistrationError("post type", name);
+        throw new DuplicateRegistrationError("entry type", name);
       registry.entryTypes.set(name, {
         ...options,
         name,
@@ -198,15 +200,32 @@ export function createPluginSetupContext({
       if (registry.settingsGroups.has(name)) {
         throw new DuplicateRegistrationError("settings group", name);
       }
-      for (const fs of options.fieldsets)
-        assertValidIdentifier("settings fieldset", fs.name);
-      for (const fs of options.fieldsets) {
-        for (const field of fs.fields)
-          assertValidIdentifier("settings field", field.name);
-      }
-      assertUniqueFieldNamesAcrossFieldsets(name, options.fieldsets);
-      assertGroupFieldCountWithinBounds(name, options.fieldsets);
+      for (const field of options.fields)
+        assertValidIdentifier("settings field", field.name);
+      assertUniqueFieldNames(name, options.fields);
+      assertGroupFieldCountWithinBounds(name, options.fields);
       registry.settingsGroups.set(name, {
+        ...options,
+        name,
+        registeredBy: pluginId,
+      });
+    },
+
+    registerSettingsPage: (name, options) => {
+      assertValidIdentifier("settings page", name);
+      if (registry.settingsPages.has(name)) {
+        throw new DuplicateRegistrationError("settings page", name);
+      }
+      for (const groupName of options.groups) {
+        assertValidIdentifier("settings group reference", groupName);
+      }
+      if (new Set(options.groups).size !== options.groups.length) {
+        throw new Error(
+          `Settings page "${name}" lists a group more than once; ` +
+            `each group may appear at most once per page.`,
+        );
+      }
+      registry.settingsPages.set(name, {
         ...options,
         name,
         registeredBy: pluginId,
@@ -221,44 +240,27 @@ export function createPluginSetupContext({
         registeredBy: pluginId,
       });
     },
-
-    registerSettingsFieldset: (groupName, fieldset) => {
-      const existing = registry.settingsGroups.get(groupName);
-      if (existing === undefined) {
-        throw new Error(
-          `Cannot add fieldset to settings group "${groupName}" — it hasn't been registered yet. ` +
-            `Ensure the plugin that calls \`registerSettingsGroup\` runs before this one.`,
-        );
-      }
-      assertValidIdentifier("settings fieldset", fieldset.name);
-      for (const field of fieldset.fields)
-        assertValidIdentifier("settings field", field.name);
-      if (existing.fieldsets.some((fs) => fs.name === fieldset.name)) {
-        throw new DuplicateRegistrationError(
-          "settings fieldset",
-          `${groupName}.${fieldset.name}`,
-        );
-      }
-      const next = [...existing.fieldsets, fieldset];
-      assertUniqueFieldNamesAcrossFieldsets(groupName, next);
-      assertGroupFieldCountWithinBounds(groupName, next);
-      registry.settingsGroups.set(groupName, {
-        ...existing,
-        fieldsets: next,
-      });
-    },
   };
 }
 
-// Keep group / fieldset / field names portable: ASCII identifier that
-// starts with a letter, then letters/digits/underscores. This is
-// tighter than `optionNameSchema`'s regex (which allows `.`/`-`) on
-// purpose — dots in names would collide with the flat storage-key
-// convention (`${group}.${field}`), and hyphens make testids and
-// URL params awkward.
+// Keep page / group / field names portable: ASCII identifier that
+// starts with a letter, then letters/digits/underscores. Hyphens /
+// dots are excluded so testids, URL params, and storage keys stay
+// portable across SQLite / future MySQL without quoting. Length cap
+// mirrors the valibot `settingsIdentifierSchema` on the RPC side so a
+// plugin can't register a name its own `settings.get` / `.upsert`
+// calls would then reject.
 const SETTINGS_NAME_RE = /^[a-z][a-z0-9_]*$/;
+const MAX_SETTINGS_IDENTIFIER_LENGTH = 64;
 
 function assertValidIdentifier(kind: string, name: string): void {
+  if (name.length > MAX_SETTINGS_IDENTIFIER_LENGTH) {
+    throw new Error(
+      `Invalid ${kind} name "${name}" — names are capped at ` +
+        `${MAX_SETTINGS_IDENTIFIER_LENGTH} characters to match the RPC ` +
+        `input schema.`,
+    );
+  }
   if (!SETTINGS_NAME_RE.test(name)) {
     throw new Error(
       `Invalid ${kind} name "${name}" — expected lowercase ASCII ` +
@@ -267,49 +269,37 @@ function assertValidIdentifier(kind: string, name: string): void {
   }
 }
 
-// Storage keys are flat (`${groupName}.${fieldName}`), so two fieldsets
-// within the same group can't declare the same field name — they'd
-// collide on disk. Enforced at registration time so plugin authors
-// fail fast rather than quietly overwriting each other's values.
-function assertUniqueFieldNamesAcrossFieldsets(
+function assertUniqueFieldNames(
   groupName: string,
-  fieldsets: readonly {
-    readonly fields: readonly { readonly name: string }[];
-  }[],
+  fields: readonly { readonly name: string }[],
 ): void {
   const seen = new Set<string>();
-  for (const fs of fieldsets) {
-    for (const field of fs.fields) {
-      if (seen.has(field.name)) {
-        throw new DuplicateRegistrationError(
-          "settings field",
-          `${groupName}.${field.name}`,
-        );
-      }
-      seen.add(field.name);
+  for (const field of fields) {
+    if (seen.has(field.name)) {
+      throw new DuplicateRegistrationError(
+        "settings field",
+        `${groupName}.${field.name}`,
+      );
     }
+    seen.add(field.name);
   }
 }
 
-// Mirror the RPC's `option.getMany` 200-name cap so a plugin that
-// over-registers fails at registration time rather than at route-load
-// time with a generic error. If a real CMS ever needs >200 fields in
-// one group, bump both limits together — the admin loader would need
-// to chunk the fetch to stay under the server cap.
+// Cap on fields per group — keeps the admin `settings.upsert` payload
+// bounded and signals a modeling problem if a plugin wants to pile
+// hundreds of fields into one card. If a real need ever shows up,
+// bump this alongside the RPC input cap.
 const MAX_FIELDS_PER_SETTINGS_GROUP = 200;
 
 function assertGroupFieldCountWithinBounds(
   groupName: string,
-  fieldsets: readonly {
-    readonly fields: readonly { readonly name: string }[];
-  }[],
+  fields: readonly { readonly name: string }[],
 ): void {
-  const total = fieldsets.reduce((sum, fs) => sum + fs.fields.length, 0);
-  if (total > MAX_FIELDS_PER_SETTINGS_GROUP) {
+  if (fields.length > MAX_FIELDS_PER_SETTINGS_GROUP) {
     throw new Error(
-      `Settings group "${groupName}" has ${total} fields; ` +
-        `the admin loader caps a single group at ${MAX_FIELDS_PER_SETTINGS_GROUP}. ` +
-        `Split into multiple groups or chunk the loader.`,
+      `Settings group "${groupName}" has ${fields.length} fields; ` +
+        `the admin caps a single group at ${MAX_FIELDS_PER_SETTINGS_GROUP}. ` +
+        `Split into multiple groups.`,
     );
   }
 }

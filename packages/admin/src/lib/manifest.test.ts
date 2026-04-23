@@ -3,17 +3,19 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import type {
   MetaBoxManifestEntry,
   PlumixManifest,
+  SettingsPageManifestEntry,
 } from "@plumix/core/manifest";
 
 import {
-  allSettingsFields,
   findEntryTypeBySlug,
   findSettingsGroupByName,
+  findSettingsPageByName,
   findTaxonomyByName,
+  groupsForSettingsPage,
   metaBoxesForEntryType,
   readManifest,
   visibleEntryTypes,
-  visibleSettingsGroups,
+  visibleSettingsPages,
   visibleTaxonomies,
 } from "./manifest.js";
 
@@ -39,6 +41,7 @@ describe("readManifest", () => {
       taxonomies: [],
       metaBoxes: [],
       settingsGroups: [],
+      settingsPages: [],
     });
   });
 
@@ -53,6 +56,7 @@ describe("readManifest", () => {
       taxonomies: [],
       metaBoxes: [],
       settingsGroups: [],
+      settingsPages: [],
     });
   });
 
@@ -63,6 +67,7 @@ describe("readManifest", () => {
       taxonomies: [],
       metaBoxes: [],
       settingsGroups: [],
+      settingsPages: [],
     });
   });
 
@@ -76,6 +81,7 @@ describe("readManifest", () => {
       taxonomies: [],
       metaBoxes: [],
       settingsGroups: [],
+      settingsPages: [],
     });
     expect(errSpy).toHaveBeenCalledOnce();
   });
@@ -87,6 +93,7 @@ describe("readManifest", () => {
       taxonomies: [],
       metaBoxes: [],
       settingsGroups: [],
+      settingsPages: [],
     });
   });
 
@@ -99,6 +106,7 @@ describe("readManifest", () => {
       taxonomies: [],
       metaBoxes: [],
       settingsGroups: [],
+      settingsPages: [],
     });
   });
 
@@ -128,6 +136,7 @@ describe("readManifest", () => {
         },
       ],
       settingsGroups: [],
+      settingsPages: [],
     });
   });
 
@@ -155,6 +164,7 @@ describe("readManifest", () => {
       ],
       metaBoxes: [],
       settingsGroups: [],
+      settingsPages: [],
     });
   });
 
@@ -175,6 +185,7 @@ describe("findEntryTypeBySlug", () => {
     taxonomies: [],
     metaBoxes: [],
     settingsGroups: [],
+    settingsPages: [],
   };
 
   test("returns the matching entry", () => {
@@ -206,6 +217,7 @@ describe("visibleEntryTypes", () => {
     taxonomies: [],
     metaBoxes: [],
     settingsGroups: [],
+    settingsPages: [],
   };
 
   test("filters by `${capabilityType}:edit_own`; unset capabilityType uses name", () => {
@@ -243,6 +255,7 @@ describe("metaBoxesForEntryType", () => {
         box("c"), // default
       ],
       settingsGroups: [],
+      settingsPages: [],
     };
     const ids = metaBoxesForEntryType("post", [], source).map((b) => b.id);
     expect(ids).toEqual(["b", "c", "a"]);
@@ -257,6 +270,7 @@ describe("metaBoxesForEntryType", () => {
         box("second", { priority: "high" }),
       ],
       settingsGroups: [],
+      settingsPages: [],
     };
     const ids = metaBoxesForEntryType("post", [], source).map((b) => b.id);
     expect(ids).toEqual(["first", "second"]);
@@ -271,6 +285,7 @@ describe("metaBoxesForEntryType", () => {
         box("shop", { entryTypes: ["product"] }),
       ],
       settingsGroups: [],
+      settingsPages: [],
     };
     const ids = metaBoxesForEntryType("post", [], source).map((b) => b.id);
     expect(ids).toEqual(["seo"]);
@@ -285,6 +300,7 @@ describe("metaBoxesForEntryType", () => {
         box("privileged", { capability: "post:edit_any" }),
       ],
       settingsGroups: [],
+      settingsPages: [],
     };
     const withoutCap = metaBoxesForEntryType("post", [], source).map(
       (b) => b.id,
@@ -305,6 +321,7 @@ describe("metaBoxesForEntryType", () => {
       taxonomies: [],
       metaBoxes: [],
       settingsGroups: [],
+      settingsPages: [],
     };
     expect(metaBoxesForEntryType("post", [], source)).toEqual([]);
   });
@@ -319,6 +336,7 @@ describe("findTaxonomyByName", () => {
     ],
     metaBoxes: [],
     settingsGroups: [],
+    settingsPages: [],
   };
 
   test("returns the matching taxonomy", () => {
@@ -340,6 +358,7 @@ describe("visibleTaxonomies", () => {
     ],
     metaBoxes: [],
     settingsGroups: [],
+    settingsPages: [],
   };
 
   test("filters by per-taxonomy :read capability", () => {
@@ -353,67 +372,82 @@ describe("visibleTaxonomies", () => {
   });
 });
 
-describe("findSettingsGroupByName + visibleSettingsGroups + allSettingsFields", () => {
+describe("findSettingsPageByName + visibleSettingsPages + findSettingsGroupByName + groupsForSettingsPage", () => {
   const source: PlumixManifest = {
     entryTypes: [],
     taxonomies: [],
     metaBoxes: [],
     settingsGroups: [
       {
+        name: "identity",
+        label: "Site identity",
+        fields: [
+          { name: "site_title", label: "Site title", type: "text" },
+          { name: "site_description", label: "Tagline", type: "text" },
+        ],
+      },
+      {
+        name: "contact",
+        label: "Contact",
+        fields: [{ name: "admin_email", label: "Admin email", type: "text" }],
+      },
+    ],
+    settingsPages: [
+      {
         name: "general",
         label: "General",
-        fieldsets: [
-          {
-            name: "identity",
-            fields: [
-              { name: "site_title", label: "Site title", type: "text" },
-              { name: "site_description", label: "Tagline", type: "text" },
-            ],
-          },
-          {
-            name: "contact",
-            fields: [
-              { name: "admin_email", label: "Admin email", type: "text" },
-            ],
-          },
-        ],
+        groups: ["identity", "contact"],
       },
       {
         name: "billing",
         label: "Billing",
-        fieldsets: [],
+        groups: [],
       },
     ],
   };
 
-  test("findSettingsGroupByName returns the matching group", () => {
-    expect(findSettingsGroupByName("general", source)?.label).toBe("General");
+  test("findSettingsPageByName returns the matching page", () => {
+    expect(findSettingsPageByName("general", source)?.label).toBe("General");
   });
 
-  test("findSettingsGroupByName returns undefined when missing", () => {
+  test("findSettingsPageByName returns undefined when missing", () => {
+    expect(findSettingsPageByName("mystery", source)).toBeUndefined();
+  });
+
+  test("visibleSettingsPages returns every page when caller has settings:manage", () => {
+    expect(
+      visibleSettingsPages(["settings:manage"], source).map((p) => p.name),
+    ).toEqual(["general", "billing"]);
+  });
+
+  test("visibleSettingsPages returns empty when caller lacks settings:manage", () => {
+    expect(visibleSettingsPages(["post:edit_own"], source)).toEqual([]);
+    expect(visibleSettingsPages([], source)).toEqual([]);
+  });
+
+  test("findSettingsGroupByName resolves a group by name", () => {
+    expect(findSettingsGroupByName("identity", source)?.label).toBe(
+      "Site identity",
+    );
     expect(findSettingsGroupByName("mystery", source)).toBeUndefined();
   });
 
-  test("visibleSettingsGroups returns every group when caller has option:manage", () => {
-    const visible = visibleSettingsGroups(["option:manage"], source).map(
-      (g) => g.name,
-    );
-    expect(visible).toEqual(["general", "billing"]);
+  test("groupsForSettingsPage resolves each reference to its group entry", () => {
+    const page = findSettingsPageByName("general", source);
+    expect(page).toBeDefined();
+    if (!page) return;
+    const groups = groupsForSettingsPage(page, source);
+    expect(groups.map((g) => g.name)).toEqual(["identity", "contact"]);
   });
 
-  test("visibleSettingsGroups returns empty when caller lacks option:manage", () => {
-    expect(visibleSettingsGroups(["post:edit_own"], source)).toEqual([]);
-    expect(visibleSettingsGroups([], source)).toEqual([]);
-  });
-
-  test("allSettingsFields flattens fieldsets in declared order", () => {
-    const general = findSettingsGroupByName("general", source);
-    expect(general).toBeDefined();
-    if (!general) return;
-    expect(allSettingsFields(general).map((f) => f.name)).toEqual([
-      "site_title",
-      "site_description",
-      "admin_email",
+  test("groupsForSettingsPage silently skips unresolved refs", () => {
+    const orphan: SettingsPageManifestEntry = {
+      name: "orphan",
+      label: "Orphan",
+      groups: ["identity", "nonexistent"],
+    };
+    expect(groupsForSettingsPage(orphan, source).map((g) => g.name)).toEqual([
+      "identity",
     ]);
   });
 });

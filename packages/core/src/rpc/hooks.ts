@@ -1,5 +1,4 @@
 import type { Entry, EntryStatus, NewEntry } from "../db/schema/entries.js";
-import type { Option } from "../db/schema/options.js";
 import type { Term } from "../db/schema/terms.js";
 import type { User } from "../db/schema/users.js";
 import type { EntryMetaChanges } from "./procedures/entry/meta.js";
@@ -8,7 +7,10 @@ import type {
   EntryListInput,
   EntryUpdateInput,
 } from "./procedures/entry/schemas.js";
-import type { OptionSetInput } from "./procedures/option/schemas.js";
+import type {
+  SettingsGetInput,
+  SettingsUpsertInput,
+} from "./procedures/settings/schemas.js";
 import type {
   TermCreateInput,
   TermListInput,
@@ -70,14 +72,35 @@ declare module "../hooks/types.js" {
 
     "rpc:term.delete:output": (output: Term) => Term;
 
-    "rpc:option.list:output": (output: readonly Option[]) => readonly Option[];
-    "rpc:option.get:output": (output: Option) => Option;
-    "rpc:option.getMany:output": (
-      output: Record<string, string>,
-    ) => Record<string, string>;
-    "rpc:option.set:input": (input: OptionSetInput) => OptionSetInput;
-    "rpc:option.set:output": (output: Option) => Option;
-    "rpc:option.delete:output": (output: Option) => Option;
+    "rpc:settings.get:input": (input: SettingsGetInput) => SettingsGetInput;
+    /**
+     * Output filter for the `settings.get` bag. Plugins can decorate
+     * (inject derived keys), redact secrets, or replace the bag
+     * entirely. Second argument carries the group name so one filter
+     * can branch on scope.
+     */
+    "rpc:settings.get:output": (
+      output: Readonly<Record<string, unknown>>,
+      context: { readonly group: string },
+    ) =>
+      | Readonly<Record<string, unknown>>
+      | Promise<Readonly<Record<string, unknown>>>;
+
+    "rpc:settings.upsert:input": (
+      input: SettingsUpsertInput,
+    ) => SettingsUpsertInput;
+    /**
+     * Output filter for `settings.upsert`. Runs on the authoritative
+     * bag after the write. Same context shape as `settings.get:output`
+     * so plugins can share a single decorator across read and write
+     * paths.
+     */
+    "rpc:settings.upsert:output": (
+      output: Readonly<Record<string, unknown>>,
+      context: { readonly group: string },
+    ) =>
+      | Readonly<Record<string, unknown>>
+      | Promise<Readonly<Record<string, unknown>>>;
 
     /**
      * `entry:before_save` fires on every save; `entry:<type>:before_save`
@@ -203,6 +226,19 @@ declare module "../hooks/types.js" {
 
     /** Fires after `term.delete` removes a term row. */
     "term:deleted": (term: Term) => void | Promise<void>;
+
+    /**
+     * Fires after a successful `settings.upsert`. Payload carries the
+     * group name plus the per-request `set` upserts and `removed`
+     * keys — shape mirrors `entry:meta_changed` so plugins can adopt
+     * the same pattern across bags. Subscribe for audit logs,
+     * cache-invalidators, derived-setting backfills.
+     */
+    "settings:group_changed": (changes: {
+      readonly group: string;
+      readonly set: Readonly<Record<string, unknown>>;
+      readonly removed: readonly string[];
+    }) => void | Promise<void>;
   }
 }
 

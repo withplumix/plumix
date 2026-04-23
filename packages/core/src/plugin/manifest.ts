@@ -112,53 +112,46 @@ export interface SettingsField {
   readonly label: string;
   readonly type: SettingsFieldType;
   /**
-   * Initial value rendered when the option row hasn't been saved yet.
-   * Admin forms fall back to this on first render if `option.getMany`
-   * returns no row for `${groupName}.${fieldName}`.
+   * Initial value rendered when nothing has been saved yet. Admin forms
+   * fall back to this on first render if `settings.get({ group })`
+   * returns no entry for the field.
    */
   readonly default?: string;
   readonly description?: string;
   readonly placeholder?: string;
   /** Text-shaped inputs. Enforced on the client; server re-validates. */
   readonly maxLength?: number;
-  /**
-   * Whether the option row should load on every request via the
-   * autoload prefetch (equivalent to WP's `register_setting` `autoload`
-   * arg). Defaults to `true` when omitted — matches `option.set`'s
-   * default and WP convention. Flip to `false` for rarely-touched
-   * settings (seed keys, one-off tokens) to keep the autoload set tight.
-   *
-   * **The manifest is authoritative**: every form save re-sends this
-   * flag alongside the value. Out-of-band toggles to the underlying
-   * `options` row (scripts, other admin tools) get overwritten on the
-   * next save. If you need per-install autoload overrides, treat the
-   * manifest declaration as the source of truth or expose it as a
-   * separate option the user can toggle.
-   */
-  readonly autoload?: boolean;
 }
 
 /**
- * A visual cluster of related fields inside a settings group — mirrors
- * WordPress's `add_settings_section`. Fieldsets are UI-only; storage
- * keys stay flat (`${groupName}.${fieldName}`), so field names must be
- * unique across the whole group regardless of fieldset. Admin renders
- * each fieldset inside a native `<fieldset>` with `<legend>` for
- * accessibility; a fieldset with no `label` elides the legend and
- * renders its fields inline — handy for groups that have only one
- * implicit "default" fieldset.
+ * A self-contained group of fields — storage unit and visual unit.
+ * Plugins register groups with `ctx.registerSettingsGroup(name, {...})`;
+ * they land as one shadcn `<Card>` in the admin with `label` as the
+ * title, `description` as the subtitle, and their own save button in
+ * the card footer. Storage key is `(group.name, field.name)`.
  */
-export interface SettingsFieldset {
-  readonly name: string;
-  readonly label?: string;
+export interface SettingsGroupOptions {
+  readonly label: string;
   readonly description?: string;
   readonly fields: readonly SettingsField[];
 }
 
-export interface SettingsGroupOptions {
+/**
+ * A UI-level composition of groups rendered at `/settings/<page>` in the
+ * admin. Pages are not stored — they're pure registration metadata. A
+ * page lists the groups it wants to surface by name (each group can be
+ * referenced from multiple pages if useful).
+ */
+export interface SettingsPageOptions {
   readonly label: string;
   readonly description?: string;
-  readonly fieldsets: readonly SettingsFieldset[];
+  readonly groups: readonly string[];
+  /**
+   * Admin menu ordering. Unspecified positions sort last (in
+   * registration order). Mirrors `EntryTypeOptions.menuPosition` so
+   * sidebar composition stays predictable across plugins.
+   */
+  readonly menuPosition?: number;
 }
 
 export interface RegisteredEntryType extends EntryTypeOptions {
@@ -186,6 +179,11 @@ export interface RegisteredSettingsGroup extends SettingsGroupOptions {
   readonly registeredBy: string | null;
 }
 
+export interface RegisteredSettingsPage extends SettingsPageOptions {
+  readonly name: string;
+  readonly registeredBy: string | null;
+}
+
 export interface RegisteredCapability {
   readonly name: string;
   readonly minRole: UserRole;
@@ -206,6 +204,7 @@ export interface PluginRegistry {
   readonly metaBoxes: ReadonlyMap<string, RegisteredMetaBox>;
   readonly capabilities: ReadonlyMap<string, RegisteredCapability>;
   readonly settingsGroups: ReadonlyMap<string, RegisteredSettingsGroup>;
+  readonly settingsPages: ReadonlyMap<string, RegisteredSettingsPage>;
   readonly rewriteRules: readonly RegisteredRewriteRule[];
 }
 
@@ -216,6 +215,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly metaBoxes: Map<string, RegisteredMetaBox>;
   readonly capabilities: Map<string, RegisteredCapability>;
   readonly settingsGroups: Map<string, RegisteredSettingsGroup>;
+  readonly settingsPages: Map<string, RegisteredSettingsPage>;
   readonly rewriteRules: RegisteredRewriteRule[];
 }
 
@@ -227,6 +227,7 @@ export function createPluginRegistry(): MutablePluginRegistry {
     metaBoxes: new Map(),
     capabilities: new Map(),
     settingsGroups: new Map(),
+    settingsPages: new Map(),
     rewriteRules: [],
   };
 }
@@ -336,27 +337,31 @@ export interface SettingsFieldManifestEntry {
   readonly description?: string;
   readonly placeholder?: string;
   readonly maxLength?: number;
-  readonly autoload?: boolean;
-}
-
-export interface SettingsFieldsetManifestEntry {
-  readonly name: string;
-  readonly label?: string;
-  readonly description?: string;
-  readonly fields: readonly SettingsFieldManifestEntry[];
 }
 
 /**
- * Shape serialised for settings groups in the manifest. Same allowlist
- * rationale as the other entry projections — `registeredBy` stays
- * server-only; field internals project via `SettingsFieldManifestEntry`
- * so they can diverge independently.
+ * Shape serialised for settings groups in the manifest. Strict allowlist
+ * projection of `RegisteredSettingsGroup` — drops `registeredBy`
+ * (server-only debug metadata).
  */
 export interface SettingsGroupManifestEntry {
   readonly name: string;
   readonly label: string;
   readonly description?: string;
-  readonly fieldsets: readonly SettingsFieldsetManifestEntry[];
+  readonly fields: readonly SettingsFieldManifestEntry[];
+}
+
+/**
+ * Shape serialised for settings pages in the manifest. Pages are pure
+ * admin-UI composition: `groups` names registered groups in render
+ * order, one shadcn `<Card>` per group in the admin route.
+ */
+export interface SettingsPageManifestEntry {
+  readonly name: string;
+  readonly label: string;
+  readonly description?: string;
+  readonly groups: readonly string[];
+  readonly menuPosition?: number;
 }
 
 export interface PlumixManifest {
@@ -364,13 +369,20 @@ export interface PlumixManifest {
   readonly taxonomies: readonly TaxonomyManifestEntry[];
   readonly metaBoxes: readonly MetaBoxManifestEntry[];
   readonly settingsGroups: readonly SettingsGroupManifestEntry[];
+  readonly settingsPages: readonly SettingsPageManifestEntry[];
 }
 
 /** Script tag id that carries the JSON-encoded manifest in the admin HTML. */
 export const MANIFEST_SCRIPT_ID = "plumix-manifest";
 
 export function emptyManifest(): PlumixManifest {
-  return { entryTypes: [], taxonomies: [], metaBoxes: [], settingsGroups: [] };
+  return {
+    entryTypes: [],
+    taxonomies: [],
+    metaBoxes: [],
+    settingsGroups: [],
+    settingsPages: [],
+  };
 }
 
 /**
@@ -401,7 +413,42 @@ export function buildManifest(registry: PluginRegistry): PlumixManifest {
   const settingsGroups = Array.from(registry.settingsGroups.values()).map(
     toSettingsGroupEntry,
   );
-  return { entryTypes: entries, taxonomies, metaBoxes, settingsGroups };
+  const settingsPages = Array.from(registry.settingsPages.values())
+    .map(toSettingsPageEntry)
+    .sort((a, b) => {
+      const ap = a.menuPosition ?? Number.POSITIVE_INFINITY;
+      const bp = b.menuPosition ?? Number.POSITIVE_INFINITY;
+      return ap - bp;
+    });
+  assertSettingsPageGroupsExist(settingsPages, registry.settingsGroups);
+  return {
+    entryTypes: entries,
+    taxonomies,
+    metaBoxes,
+    settingsGroups,
+    settingsPages,
+  };
+}
+
+// Surfacing a clear error at manifest-build time beats a runtime
+// "unknown group" in the admin route. Pages reference groups by name;
+// if a group name doesn't resolve, the plugin author has a typo or
+// order-of-registration problem.
+function assertSettingsPageGroupsExist(
+  pages: readonly SettingsPageManifestEntry[],
+  groups: ReadonlyMap<string, RegisteredSettingsGroup>,
+): void {
+  for (const page of pages) {
+    for (const groupName of page.groups) {
+      if (!groups.has(groupName)) {
+        throw new Error(
+          `Settings page "${page.name}" references group "${groupName}" ` +
+            `which hasn't been registered. Call ` +
+            `ctx.registerSettingsGroup("${groupName}", {...}) before the page.`,
+        );
+      }
+    }
+  }
 }
 
 function assertUniqueAdminSlugs(
@@ -549,25 +596,20 @@ function toMetaBoxEntry(box: RegisteredMetaBox): MetaBoxManifestEntry {
 function toSettingsGroupEntry(
   group: RegisteredSettingsGroup,
 ): SettingsGroupManifestEntry {
-  const { name, label, description, fieldsets } = group;
-  return {
-    name,
-    label,
-    description,
-    fieldsets: fieldsets.map(toSettingsFieldsetEntry),
-  };
-}
-
-function toSettingsFieldsetEntry(
-  fieldset: SettingsFieldset,
-): SettingsFieldsetManifestEntry {
-  const { name, label, description, fields } = fieldset;
+  const { name, label, description, fields } = group;
   return {
     name,
     label,
     description,
     fields: fields.map(toSettingsFieldEntry),
   };
+}
+
+function toSettingsPageEntry(
+  page: RegisteredSettingsPage,
+): SettingsPageManifestEntry {
+  const { name, label, description, groups, menuPosition } = page;
+  return { name, label, description, groups, menuPosition };
 }
 
 function toSettingsFieldEntry(
@@ -581,7 +623,6 @@ function toSettingsFieldEntry(
     description,
     placeholder,
     maxLength,
-    autoload,
   } = field;
   return {
     name,
@@ -591,7 +632,6 @@ function toSettingsFieldEntry(
     description,
     placeholder,
     maxLength,
-    autoload,
   };
 }
 

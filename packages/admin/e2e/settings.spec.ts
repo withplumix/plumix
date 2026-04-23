@@ -10,28 +10,28 @@ import {
 } from "./support/rpc-mock.js";
 
 // The settings admin surface:
-//   - /settings — the page index
-//   - /settings/$group — one page per registered group, rendering every
-//     declared fieldset as a native `<fieldset>` with `<legend>`
-// Scope: the plugin-facing contract end-to-end (group → fieldsets →
-// fields) and the option.getMany/set round-trips. Doesn't exercise
-// boolean / number / select field types — those land when we widen
+//   - /settings — the page index (one link per registered settings page)
+//   - /settings/$page — one admin page per registered page, rendering
+//     each referenced group as its own shadcn Card with per-card save.
+// Scope: the plugin-facing contract end-to-end (page → groups → fields)
+// and the settings.get/upsert round-trips. Doesn't exercise boolean /
+// number / select field types — those land when we widen
 // `SettingsFieldType` beyond `text | textarea`.
 
-test.describe("/settings (group index)", () => {
-  test("admin sees a card per registered group; each links into its form", async ({
+test.describe("/settings (page index)", () => {
+  test("admin sees a card per registered page; each links into its form", async ({
     page,
   }) => {
     await mockManifest(page, MANIFEST_WITH_SETTINGS);
     await mockSession(page, AUTHED_ADMIN);
     await page.goto("settings");
     await expect(page.getByTestId("settings-heading")).toBeVisible();
-    const link = page.getByTestId("settings-group-link-general");
+    const link = page.getByTestId("settings-page-link-general");
     await expect(link).toHaveAttribute("href", /\/settings\/general$/);
     await expectNoAxeViolations(page);
   });
 
-  test("empty-state card renders when no groups are registered", async ({
+  test("empty-state card renders when no pages are registered", async ({
     page,
   }) => {
     await mockSession(page, AUTHED_ADMIN);
@@ -40,7 +40,7 @@ test.describe("/settings (group index)", () => {
     await expectNoAxeViolations(page);
   });
 
-  test("non-admin without option:manage is redirected home", async ({
+  test("non-admin without settings:manage is redirected home", async ({
     page,
   }) => {
     await mockManifest(page, MANIFEST_WITH_SETTINGS);
@@ -59,28 +59,29 @@ test.describe("/settings (group index)", () => {
   });
 });
 
-test.describe("/settings/$group", () => {
-  test("renders each declared fieldset with its legend + fields", async ({
+test.describe("/settings/$page", () => {
+  test("renders one card per referenced group with title + description", async ({
     page,
   }) => {
     await mockManifest(page, MANIFEST_WITH_SETTINGS);
     await mockRpc(page, {
       "/auth/session": AUTHED_ADMIN,
-      "/option/getMany": {},
+      "/settings/get": {},
     });
     await page.goto("settings/general");
-    await expect(page.getByTestId("settings-group-heading")).toBeVisible();
-    // Both fieldsets render with their legends.
+    await expect(page.getByTestId("settings-page-heading")).toBeVisible();
+    // One card per group in the MANIFEST_WITH_SETTINGS page.
     await expect(
-      page.getByTestId("settings-fieldset-legend-identity"),
-    ).toHaveText("Identity");
+      page.getByTestId("settings-group-card-identity"),
+    ).toBeVisible();
+    await expect(page.getByTestId("settings-group-card-contact")).toBeVisible();
+    // Fields are scoped by group in their testids — two groups, two save buttons.
     await expect(
-      page.getByTestId("settings-fieldset-legend-contact"),
-    ).toHaveText("Contact");
-    // Fields inside each fieldset are reachable by the flat testid —
-    // storage keys are flat across fieldsets.
-    await expect(page.getByTestId("settings-field-site_title")).toBeVisible();
-    await expect(page.getByTestId("settings-field-admin_email")).toBeVisible();
+      page.getByTestId("settings-field-identity-site_title"),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId("settings-field-contact-admin_email"),
+    ).toBeVisible();
     await expectNoAxeViolations(page);
   });
 
@@ -90,57 +91,55 @@ test.describe("/settings/$group", () => {
     await mockManifest(page, MANIFEST_WITH_SETTINGS);
     await mockRpc(page, {
       "/auth/session": AUTHED_ADMIN,
-      "/option/getMany": {},
+      "/settings/get": {},
     });
     await page.goto("settings/general");
-    await expect(page.getByTestId("settings-field-site_title")).toHaveValue("");
-    await expect(page.getByTestId("settings-field-admin_email")).toHaveValue(
-      "",
-    );
-  });
-
-  test("hydrates field values from option.getMany across fieldsets", async ({
-    page,
-  }) => {
-    await mockManifest(page, MANIFEST_WITH_SETTINGS);
-    await mockRpc(page, {
-      "/auth/session": AUTHED_ADMIN,
-      "/option/getMany": {
-        // Storage is flat — fieldsets don't namespace the key, only
-        // `groupName.fieldName`. Same key works across fieldsets.
-        "general.site_title": "Plumix",
-        "general.admin_email": "root@plumix.dev",
-      },
-    });
-    await page.goto("settings/general");
-    await expect(page.getByTestId("settings-field-site_title")).toHaveValue(
-      "Plumix",
-    );
-    await expect(page.getByTestId("settings-field-admin_email")).toHaveValue(
-      "root@plumix.dev",
-    );
     await expect(
-      page.getByTestId("settings-field-site_description"),
+      page.getByTestId("settings-field-identity-site_title"),
+    ).toHaveValue("");
+    await expect(
+      page.getByTestId("settings-field-contact-admin_email"),
     ).toHaveValue("");
   });
 
-  test("save: submit fires option.set per field; success notice renders", async ({
+  test("hydrates field values from settings.get for each group", async ({
+    page,
+  }) => {
+    await mockManifest(page, MANIFEST_WITH_SETTINGS);
+    // All `settings.get` calls return the same fixture here; in practice
+    // each group's bag is independent, but the mock surface is path-based
+    // and the admin fans out one request per group.
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/settings/get": {
+        site_title: "Plumix",
+        admin_email: "root@plumix.dev",
+      },
+    });
+    await page.goto("settings/general");
+    await expect(
+      page.getByTestId("settings-field-identity-site_title"),
+    ).toHaveValue("Plumix");
+    await expect(
+      page.getByTestId("settings-field-contact-admin_email"),
+    ).toHaveValue("root@plumix.dev");
+  });
+
+  test("save: submitting a card fires settings.upsert; success notice renders", async ({
     page,
   }) => {
     await mockManifest(page, MANIFEST_WITH_SETTINGS);
     await mockRpc(page, {
       "/auth/session": AUTHED_ADMIN,
-      "/option/getMany": {},
-      "/option/set": {
-        name: "general.site_title",
-        value: "New",
-        isAutoloaded: true,
-      },
+      "/settings/get": {},
+      "/settings/upsert": { site_title: "Plumix" },
     });
     await page.goto("settings/general");
-    await page.getByTestId("settings-field-site_title").fill("Plumix");
-    await page.getByTestId("settings-submit").click();
-    await expect(page.getByTestId("settings-save-notice")).toBeVisible();
+    await page.getByTestId("settings-field-identity-site_title").fill("Plumix");
+    await page.getByTestId("settings-submit-identity").click();
+    await expect(
+      page.getByTestId("settings-save-notice-identity"),
+    ).toBeVisible();
   });
 
   test("save failure: RPC rejection surfaces the server-error alert", async ({
@@ -156,14 +155,14 @@ test.describe("/settings/$group", () => {
           body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
         });
       }
-      if (url.endsWith("/option/getMany")) {
+      if (url.endsWith("/settings/get")) {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
           body: JSON.stringify({ json: {}, meta: [] }),
         });
       }
-      if (url.endsWith("/option/set")) {
+      if (url.endsWith("/settings/upsert")) {
         // oRPC's error wire format — match what the server emits so the
         // client's error pipeline surfaces the message through to the
         // mutation's `onError`.
@@ -181,14 +180,18 @@ test.describe("/settings/$group", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
     await page.goto("settings/general");
-    await page.getByTestId("settings-field-site_title").fill("Plumix");
-    await page.getByTestId("settings-submit").click();
-    await expect(page.getByTestId("settings-server-error")).toBeVisible();
+    await page.getByTestId("settings-field-identity-site_title").fill("Plumix");
+    await page.getByTestId("settings-submit-identity").click();
+    await expect(
+      page.getByTestId("settings-server-error-identity"),
+    ).toBeVisible();
     // Success notice must NOT appear when the save errored.
-    await expect(page.getByTestId("settings-save-notice")).toHaveCount(0);
+    await expect(page.getByTestId("settings-save-notice-identity")).toHaveCount(
+      0,
+    );
   });
 
-  test("unregistered group surfaces the router 404", async ({ page }) => {
+  test("unregistered page surfaces the router 404", async ({ page }) => {
     await mockManifest(page, MANIFEST_WITH_SETTINGS);
     await mockSession(page, AUTHED_ADMIN);
     await page.goto("settings/nonexistent");

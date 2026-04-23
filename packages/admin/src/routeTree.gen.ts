@@ -19,7 +19,7 @@ import { Route as AuthenticatedUsersIndexRouteImport } from "./routes/_authentic
 import { Route as AuthenticatedSettingsIndexRouteImport } from "./routes/_authenticated/settings/index";
 import { Route as AuthenticatedUsersNewRouteImport } from "./routes/_authenticated/users/new";
 import { Route as AuthenticatedUsersIdRouteImport } from "./routes/_authenticated/users/$id";
-import { Route as AuthenticatedSettingsGroupRouteImport } from "./routes/_authenticated/settings/$group";
+import { Route as AuthenticatedSettingsPageRouteImport } from "./routes/_authenticated/settings/$page";
 import { Route as AuthAcceptInviteTokenRouteImport } from "./routes/_auth/accept-invite/$token";
 import { Route as AuthenticatedTaxonomiesNameIndexRouteImport } from "./routes/_authenticated/taxonomies/$name/index";
 import { Route as AuthenticatedEntriesSlugIndexRouteImport } from "./routes/_authenticated/entries/$slug/index";
@@ -77,10 +77,10 @@ const AuthenticatedUsersIdRoute = AuthenticatedUsersIdRouteImport.update({
   path: "/users/$id",
   getParentRoute: () => AuthenticatedRoute,
 } as any);
-const AuthenticatedSettingsGroupRoute =
-  AuthenticatedSettingsGroupRouteImport.update({
-    id: "/settings/$group",
-    path: "/settings/$group",
+const AuthenticatedSettingsPageRoute =
+  AuthenticatedSettingsPageRouteImport.update({
+    id: "/settings/$page",
+    path: "/settings/$page",
     getParentRoute: () => AuthenticatedRoute,
   } as any);
 const AuthAcceptInviteTokenRoute = AuthAcceptInviteTokenRouteImport.update({
@@ -131,7 +131,7 @@ export interface FileRoutesByFullPath {
   "/login": typeof AuthLoginRoute;
   "/profile": typeof AuthenticatedProfileRoute;
   "/accept-invite/$token": typeof AuthAcceptInviteTokenRoute;
-  "/settings/$group": typeof AuthenticatedSettingsGroupRoute;
+  "/settings/$page": typeof AuthenticatedSettingsPageRoute;
   "/users/$id": typeof AuthenticatedUsersIdRoute;
   "/users/new": typeof AuthenticatedUsersNewRoute;
   "/settings/": typeof AuthenticatedSettingsIndexRoute;
@@ -149,7 +149,7 @@ export interface FileRoutesByTo {
   "/login": typeof AuthLoginRoute;
   "/profile": typeof AuthenticatedProfileRoute;
   "/accept-invite/$token": typeof AuthAcceptInviteTokenRoute;
-  "/settings/$group": typeof AuthenticatedSettingsGroupRoute;
+  "/settings/$page": typeof AuthenticatedSettingsPageRoute;
   "/users/$id": typeof AuthenticatedUsersIdRoute;
   "/users/new": typeof AuthenticatedUsersNewRoute;
   "/settings": typeof AuthenticatedSettingsIndexRoute;
@@ -170,7 +170,7 @@ export interface FileRoutesById {
   "/_authenticated/profile": typeof AuthenticatedProfileRoute;
   "/_authenticated/": typeof AuthenticatedIndexRoute;
   "/_auth/accept-invite/$token": typeof AuthAcceptInviteTokenRoute;
-  "/_authenticated/settings/$group": typeof AuthenticatedSettingsGroupRoute;
+  "/_authenticated/settings/$page": typeof AuthenticatedSettingsPageRoute;
   "/_authenticated/users/$id": typeof AuthenticatedUsersIdRoute;
   "/_authenticated/users/new": typeof AuthenticatedUsersNewRoute;
   "/_authenticated/settings/": typeof AuthenticatedSettingsIndexRoute;
@@ -190,7 +190,7 @@ export interface FileRouteTypes {
     | "/login"
     | "/profile"
     | "/accept-invite/$token"
-    | "/settings/$group"
+    | "/settings/$page"
     | "/users/$id"
     | "/users/new"
     | "/settings/"
@@ -208,7 +208,7 @@ export interface FileRouteTypes {
     | "/login"
     | "/profile"
     | "/accept-invite/$token"
-    | "/settings/$group"
+    | "/settings/$page"
     | "/users/$id"
     | "/users/new"
     | "/settings"
@@ -228,7 +228,7 @@ export interface FileRouteTypes {
     | "/_authenticated/profile"
     | "/_authenticated/"
     | "/_auth/accept-invite/$token"
-    | "/_authenticated/settings/$group"
+    | "/_authenticated/settings/$page"
     | "/_authenticated/users/$id"
     | "/_authenticated/users/new"
     | "/_authenticated/settings/"
@@ -318,11 +318,11 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedUsersIdRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
-    "/_authenticated/settings/$group": {
-      id: "/_authenticated/settings/$group";
-      path: "/settings/$group";
-      fullPath: "/settings/$group";
-      preLoaderRoute: typeof AuthenticatedSettingsGroupRouteImport;
+    "/_authenticated/settings/$page": {
+      id: "/_authenticated/settings/$page";
+      path: "/settings/$page";
+      fullPath: "/settings/$page";
+      preLoaderRoute: typeof AuthenticatedSettingsPageRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
     "/_auth/accept-invite/$token": {
@@ -394,7 +394,7 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren);
 interface AuthenticatedRouteChildren {
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute;
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute;
-  AuthenticatedSettingsGroupRoute: typeof AuthenticatedSettingsGroupRoute;
+  AuthenticatedSettingsPageRoute: typeof AuthenticatedSettingsPageRoute;
   AuthenticatedUsersIdRoute: typeof AuthenticatedUsersIdRoute;
   AuthenticatedUsersNewRoute: typeof AuthenticatedUsersNewRoute;
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute;
@@ -410,7 +410,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
-  AuthenticatedSettingsGroupRoute: AuthenticatedSettingsGroupRoute,
+  AuthenticatedSettingsPageRoute: AuthenticatedSettingsPageRoute,
   AuthenticatedUsersIdRoute: AuthenticatedUsersIdRoute,
   AuthenticatedUsersNewRoute: AuthenticatedUsersNewRoute,
   AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,

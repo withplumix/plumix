@@ -19,7 +19,7 @@ export {
   inviteFactory,
   credentialFactory,
   sessionFactory,
-  optionFactory,
+  settingFactory,
   entryTermFactory,
   allowedDomainFactory,
   factoriesFor,

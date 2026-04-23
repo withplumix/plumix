@@ -128,7 +128,7 @@ describe("CORE_CAPABILITIES baseline", () => {
       "user:edit",
       "user:promote",
       "user:delete",
-      "option:manage",
+      "settings:manage",
     ]) {
       expect(CORE_CAPABILITIES[name]).toBeDefined();
     }
