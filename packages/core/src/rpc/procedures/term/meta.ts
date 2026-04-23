@@ -1,8 +1,8 @@
 import type { AppContext } from "../../../context/app.js";
 import type { PluginRegistry } from "../../../plugin/manifest.js";
 import type { MetaPatch } from "../../meta/core.js";
-import { entries } from "../../../db/schema/entries.js";
-import { findEntryMetaField } from "../../../plugin/manifest.js";
+import { terms } from "../../../db/schema/terms.js";
+import { findTermMetaField } from "../../../plugin/manifest.js";
 import {
   applyMetaPatch,
   decodeMetaBag as decodeMetaBagCore,
@@ -11,17 +11,17 @@ import {
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
 } from "../../meta/core.js";
 
-export type { MetaChanges as EntryMetaChanges } from "../../meta/core.js";
+export type { MetaChanges as TermMetaChanges } from "../../meta/core.js";
 
-/** RPC-facing sanitizer for an entry's meta input, scoped by entry type. */
+/** RPC-facing sanitizer for a term's meta input, scoped by taxonomy. */
 export function sanitizeMetaForRpc(
   registry: PluginRegistry,
-  entryType: string,
+  taxonomy: string,
   input: Record<string, unknown> | undefined,
   errors: Parameters<typeof sanitizeMetaForRpcCore>[2],
 ): MetaPatch | null {
   return sanitizeMetaForRpcCore(
-    (key) => findEntryMetaField(registry, entryType, key),
+    (key) => findTermMetaField(registry, taxonomy, key),
     input,
     errors,
   );
@@ -29,37 +29,37 @@ export function sanitizeMetaForRpc(
 
 export function decodeMetaBag(
   registry: PluginRegistry,
-  entry: { readonly type: string },
+  taxonomy: string,
   raw: Readonly<Record<string, unknown>> | null | undefined,
 ): Record<string, unknown> {
   return decodeMetaBagCore(
-    (key) => findEntryMetaField(registry, entry.type, key),
+    (key) => findTermMetaField(registry, taxonomy, key),
     raw,
   );
 }
 
-export async function loadEntryMeta(
+export async function loadTermMeta(
   ctx: AppContext,
-  entry: { readonly id: number; readonly type: string },
+  term: { readonly id: number; readonly taxonomy: string },
 ): Promise<Record<string, unknown>> {
-  return loadMeta(ctx, entries, entries.id, entry.id, (key) =>
-    findEntryMetaField(ctx.plugins, entry.type, key),
+  return loadMeta(ctx, terms, terms.id, term.id, (key) =>
+    findTermMetaField(ctx.plugins, term.taxonomy, key),
   );
 }
 
 /**
- * Apply a meta patch to `entries.meta` and fire `entry:meta_changed`.
- * Plugins that need to mutate the patch subscribe to
- * `rpc:entry.{create,update}:input` and mutate `input.meta` there.
+ * Apply a meta patch to `terms.meta` and fire `term:meta_changed`.
+ * Plugins that need to mutate the patch should subscribe to
+ * `rpc:term.{create,update}:input` and mutate `input.meta` there.
  */
-export async function writeEntryMeta(
+export async function writeTermMeta(
   ctx: AppContext,
-  entry: { readonly id: number; readonly type: string },
+  term: { readonly id: number; readonly taxonomy: string },
   patch: Parameters<typeof applyMetaPatch>[4],
 ): Promise<void> {
   if (isEmptyMetaPatch(patch)) return;
-  await applyMetaPatch(ctx, entries, entries.id, entry.id, patch);
-  await ctx.hooks.doAction("entry:meta_changed", entry, {
+  await applyMetaPatch(ctx, terms, terms.id, term.id, patch);
+  await ctx.hooks.doAction("term:meta_changed", term, {
     set: Object.fromEntries(patch.upserts),
     removed: [...patch.deletes],
   });

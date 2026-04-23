@@ -36,6 +36,6 @@ export const get = base
       }
     }
 
-    const meta = decodeMetaBag(context.plugins, row.meta);
+    const meta = decodeMetaBag(context.plugins, row, row.meta);
     return context.hooks.applyFilter("rpc:entry.get:output", { ...row, meta });
   });

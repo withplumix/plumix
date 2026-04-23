@@ -11,6 +11,7 @@ import type {
   SettingsGetInput,
   SettingsUpsertInput,
 } from "./procedures/settings/schemas.js";
+import type { TermMetaChanges } from "./procedures/term/meta.js";
 import type {
   TermCreateInput,
   TermListInput,
@@ -218,14 +219,32 @@ declare module "../hooks/types.js" {
     "term:created": (term: Term) => void | Promise<void>;
 
     /**
-     * Fires after a successful `term.update`. Payload carries the
-     * post-write row and the pre-write row for diffing — parallel to
-     * `post:updated` / `user:updated`.
+     * Fires after a successful `term.update` row-columns write. Payload
+     * carries the post-write row and the pre-write row for diffing —
+     * parallel to `post:updated` / `user:updated`.
+     *
+     * Only fires when the row columns changed. A meta-only update does
+     * NOT fire `term:updated`; subscribe to `term:meta_changed` for
+     * that. The `term.meta` here reflects the row read right after the
+     * column write and may lag a meta write that happens in the same
+     * RPC call — use `term:meta_changed` for the authoritative meta
+     * diff.
      */
     "term:updated": (term: Term, previous: Term) => void | Promise<void>;
 
     /** Fires after `term.delete` removes a term row. */
     "term:deleted": (term: Term) => void | Promise<void>;
+
+    /**
+     * Fires after a successful meta write via `term.create` /
+     * `term.update`. Payload carries the decoded upserts + deleted
+     * keys — same shape as `entry:meta_changed` so plugins adopt one
+     * pattern across bags.
+     */
+    "term:meta_changed": (
+      term: { readonly id: number; readonly taxonomy: string },
+      changes: TermMetaChanges,
+    ) => void | Promise<void>;
 
     /**
      * Fires after a successful `settings.upsert`. Payload carries the

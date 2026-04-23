@@ -6,7 +6,7 @@ import {
   CardTitle,
 } from "@/components/ui/card.js";
 
-import type { MetaBoxManifestEntry } from "@plumix/core/manifest";
+import type { EntryMetaBoxManifestEntry } from "@plumix/core/manifest";
 
 import { MetaBoxField } from "./meta-box-field.js";
 
@@ -19,7 +19,7 @@ export function MetaBox({
   onChange,
   disabled = false,
 }: {
-  readonly box: MetaBoxManifestEntry;
+  readonly box: EntryMetaBoxManifestEntry;
   readonly values: Readonly<Record<string, unknown>>;
   readonly onChange: (key: string, value: unknown) => void;
   readonly disabled?: boolean;

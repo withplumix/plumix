@@ -3,6 +3,12 @@ import { terms } from "../../../db/schema/terms.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { taxonomyCapability } from "./helpers.js";
+import {
+  decodeMetaBag,
+  loadTermMeta,
+  sanitizeMetaForRpc,
+  writeTermMeta,
+} from "./meta.js";
 import { termCreateInputSchema } from "./schemas.js";
 
 export const create = base
@@ -37,6 +43,15 @@ export const create = base
       }
     }
 
+    // Validate meta up-front so a bad key fails before the term insert —
+    // keeps the DB clean when the client sends a typo in a meta key.
+    const metaPatch = sanitizeMetaForRpc(
+      context.plugins,
+      filtered.taxonomy,
+      filtered.meta,
+      errors,
+    );
+
     let created;
     try {
       [created] = await context.db
@@ -59,6 +74,17 @@ export const create = base
       throw errors.CONFLICT({ data: { reason: "insert_failed" } });
     }
 
+    let meta: Record<string, unknown>;
+    if (metaPatch) {
+      await writeTermMeta(context, created, metaPatch);
+      meta = await loadTermMeta(context, created);
+    } else {
+      meta = decodeMetaBag(context.plugins, created.taxonomy, created.meta);
+    }
+
     await context.hooks.doAction("term:created", created);
-    return context.hooks.applyFilter("rpc:term.create:output", created);
+    return context.hooks.applyFilter("rpc:term.create:output", {
+      ...created,
+      meta,
+    });
   });

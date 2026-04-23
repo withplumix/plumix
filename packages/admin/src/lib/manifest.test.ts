@@ -1,18 +1,18 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type {
-  MetaBoxManifestEntry,
+  EntryMetaBoxManifestEntry,
   PlumixManifest,
   SettingsPageManifestEntry,
 } from "@plumix/core/manifest";
 
 import {
+  entryMetaBoxesForType,
   findEntryTypeBySlug,
   findSettingsGroupByName,
   findSettingsPageByName,
   findTaxonomyByName,
   groupsForSettingsPage,
-  metaBoxesForEntryType,
   readManifest,
   visibleEntryTypes,
   visibleSettingsPages,
@@ -39,7 +39,8 @@ describe("readManifest", () => {
     expect(readManifest(doc)).toEqual({
       entryTypes: [],
       taxonomies: [],
-      metaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -54,7 +55,8 @@ describe("readManifest", () => {
     expect(readManifest(doc)).toEqual({
       entryTypes: [{ name: "post", label: "Posts" }],
       taxonomies: [],
-      metaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -65,7 +67,8 @@ describe("readManifest", () => {
     expect(readManifest(doc)).toEqual({
       entryTypes: [],
       taxonomies: [],
-      metaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -79,7 +82,8 @@ describe("readManifest", () => {
     expect(readManifest(doc)).toEqual({
       entryTypes: [],
       taxonomies: [],
-      metaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -91,7 +95,8 @@ describe("readManifest", () => {
     expect(readManifest(doc)).toEqual({
       entryTypes: [],
       taxonomies: [],
-      metaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -104,7 +109,8 @@ describe("readManifest", () => {
     expect(readManifest(doc)).toEqual({
       entryTypes: [],
       taxonomies: [],
-      metaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -114,7 +120,7 @@ describe("readManifest", () => {
     const doc = withManifestScript(
       JSON.stringify({
         entryTypes: [],
-        metaBoxes: [
+        entryMetaBoxes: [
           {
             id: "seo",
             label: "SEO",
@@ -127,7 +133,7 @@ describe("readManifest", () => {
     expect(readManifest(doc)).toEqual({
       entryTypes: [],
       taxonomies: [],
-      metaBoxes: [
+      entryMetaBoxes: [
         {
           id: "seo",
           label: "SEO",
@@ -135,6 +141,7 @@ describe("readManifest", () => {
           fields: [],
         },
       ],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -162,7 +169,8 @@ describe("readManifest", () => {
           isHierarchical: true,
         },
       ],
-      metaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     });
@@ -183,7 +191,8 @@ describe("findEntryTypeBySlug", () => {
       { name: "product", adminSlug: "products", label: "Products" },
     ],
     taxonomies: [],
-    metaBoxes: [],
+    entryMetaBoxes: [],
+    termMetaBoxes: [],
     settingsGroups: [],
     settingsPages: [],
   };
@@ -215,7 +224,8 @@ describe("visibleEntryTypes", () => {
       },
     ],
     taxonomies: [],
-    metaBoxes: [],
+    entryMetaBoxes: [],
+    termMetaBoxes: [],
     settingsGroups: [],
     settingsPages: [],
   };
@@ -233,11 +243,11 @@ describe("visibleEntryTypes", () => {
   });
 });
 
-describe("metaBoxesForEntryType", () => {
+describe("entryMetaBoxesForType", () => {
   const box = (
     id: string,
-    overrides: Partial<MetaBoxManifestEntry> = {},
-  ): MetaBoxManifestEntry => ({
+    overrides: Partial<EntryMetaBoxManifestEntry> = {},
+  ): EntryMetaBoxManifestEntry => ({
     id,
     label: id,
     entryTypes: ["post"],
@@ -249,15 +259,16 @@ describe("metaBoxesForEntryType", () => {
     const source: PlumixManifest = {
       taxonomies: [],
       entryTypes: [],
-      metaBoxes: [
+      entryMetaBoxes: [
         box("a", { priority: "low" }),
         box("b", { priority: "high" }),
         box("c"), // default
       ],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     };
-    const ids = metaBoxesForEntryType("post", [], source).map((b) => b.id);
+    const ids = entryMetaBoxesForType("post", [], source).map((b) => b.id);
     expect(ids).toEqual(["b", "c", "a"]);
   });
 
@@ -265,14 +276,15 @@ describe("metaBoxesForEntryType", () => {
     const source: PlumixManifest = {
       taxonomies: [],
       entryTypes: [],
-      metaBoxes: [
+      entryMetaBoxes: [
         box("first", { priority: "high" }),
         box("second", { priority: "high" }),
       ],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     };
-    const ids = metaBoxesForEntryType("post", [], source).map((b) => b.id);
+    const ids = entryMetaBoxesForType("post", [], source).map((b) => b.id);
     expect(ids).toEqual(["first", "second"]);
   });
 
@@ -280,14 +292,15 @@ describe("metaBoxesForEntryType", () => {
     const source: PlumixManifest = {
       taxonomies: [],
       entryTypes: [],
-      metaBoxes: [
+      entryMetaBoxes: [
         box("seo", { entryTypes: ["post"] }),
         box("shop", { entryTypes: ["product"] }),
       ],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     };
-    const ids = metaBoxesForEntryType("post", [], source).map((b) => b.id);
+    const ids = entryMetaBoxesForType("post", [], source).map((b) => b.id);
     expect(ids).toEqual(["seo"]);
   });
 
@@ -295,19 +308,20 @@ describe("metaBoxesForEntryType", () => {
     const source: PlumixManifest = {
       taxonomies: [],
       entryTypes: [],
-      metaBoxes: [
+      entryMetaBoxes: [
         box("public"),
         box("privileged", { capability: "post:edit_any" }),
       ],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     };
-    const withoutCap = metaBoxesForEntryType("post", [], source).map(
+    const withoutCap = entryMetaBoxesForType("post", [], source).map(
       (b) => b.id,
     );
     expect(withoutCap).toEqual(["public"]);
 
-    const withCap = metaBoxesForEntryType(
+    const withCap = entryMetaBoxesForType(
       "post",
       ["post:edit_any"],
       source,
@@ -319,11 +333,12 @@ describe("metaBoxesForEntryType", () => {
     const source: PlumixManifest = {
       entryTypes: [],
       taxonomies: [],
-      metaBoxes: [],
+      entryMetaBoxes: [],
+      termMetaBoxes: [],
       settingsGroups: [],
       settingsPages: [],
     };
-    expect(metaBoxesForEntryType("post", [], source)).toEqual([]);
+    expect(entryMetaBoxesForType("post", [], source)).toEqual([]);
   });
 });
 
@@ -334,7 +349,8 @@ describe("findTaxonomyByName", () => {
       { name: "category", label: "Categories", isHierarchical: true },
       { name: "tag", label: "Tags" },
     ],
-    metaBoxes: [],
+    entryMetaBoxes: [],
+    termMetaBoxes: [],
     settingsGroups: [],
     settingsPages: [],
   };
@@ -356,7 +372,8 @@ describe("visibleTaxonomies", () => {
       { name: "tag", label: "Tags" },
       { name: "internal", label: "Internal" },
     ],
-    metaBoxes: [],
+    entryMetaBoxes: [],
+    termMetaBoxes: [],
     settingsGroups: [],
     settingsPages: [],
   };
@@ -376,7 +393,8 @@ describe("findSettingsPageByName + visibleSettingsPages + findSettingsGroupByNam
   const source: PlumixManifest = {
     entryTypes: [],
     taxonomies: [],
-    metaBoxes: [],
+    entryMetaBoxes: [],
+    termMetaBoxes: [],
     settingsGroups: [
       {
         name: "identity",

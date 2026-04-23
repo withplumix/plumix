@@ -12,6 +12,7 @@ import { entryTerm } from "../../../db/schema/entry_term.js";
 import { terms } from "../../../db/schema/terms.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { isEmptyMetaPatch } from "../../meta/core.js";
 import { assertContentWithinByteCap } from "./content.js";
 import { stripUndefined } from "./helpers.js";
 import {
@@ -25,7 +26,6 @@ import {
 } from "./lifecycle.js";
 import {
   decodeMetaBag,
-  isEmptyMetaPatch,
   loadEntryMeta,
   sanitizeMetaForRpc,
   writeEntryMeta,
@@ -147,7 +147,7 @@ export const update = base
       termsPatch === undefined &&
       isEmptyMetaPatch(metaPatch)
     ) {
-      const meta = decodeMetaBag(context.plugins, existing.meta);
+      const meta = decodeMetaBag(context.plugins, existing, existing.meta);
       return context.hooks.applyFilter("rpc:entry.update:output", {
         ...existing,
         meta,
@@ -212,9 +212,9 @@ export const update = base
     let meta: Record<string, unknown>;
     if (metaPatch) {
       await writeEntryMeta(context, updated, metaPatch);
-      meta = await loadEntryMeta(context, updated.id);
+      meta = await loadEntryMeta(context, updated);
     } else {
-      meta = decodeMetaBag(context.plugins, updated.meta);
+      meta = decodeMetaBag(context.plugins, updated, updated.meta);
     }
 
     if (postColumnsWritten) {

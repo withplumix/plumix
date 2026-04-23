@@ -277,16 +277,24 @@ describe("entry.update", () => {
 
   test("meta: partial write leaves keys outside the patch untouched", async () => {
     const plugins = createPluginRegistry();
-    plugins.metaKeys.set("meta_title", {
-      key: "meta_title",
-      type: "string",
+    plugins.entryMetaBoxes.set("test-seo", {
+      id: "test-seo",
+      label: "SEO",
       entryTypes: ["post"],
-      registeredBy: "test",
-    });
-    plugins.metaKeys.set("is_featured", {
-      key: "is_featured",
-      type: "boolean",
-      entryTypes: ["post"],
+      fields: [
+        {
+          key: "meta_title",
+          label: "Meta title",
+          type: "string",
+          inputType: "text",
+        },
+        {
+          key: "is_featured",
+          label: "Featured",
+          type: "boolean",
+          inputType: "checkbox",
+        },
+      ],
       registeredBy: "test",
     });
     const h = await createRpcHarness({ authAs: "admin", plugins });
@@ -308,16 +316,24 @@ describe("entry.update", () => {
 
   test("meta: null value clears a key without touching the others", async () => {
     const plugins = createPluginRegistry();
-    plugins.metaKeys.set("meta_title", {
-      key: "meta_title",
-      type: "string",
+    plugins.entryMetaBoxes.set("test-seo", {
+      id: "test-seo",
+      label: "SEO",
       entryTypes: ["post"],
-      registeredBy: "test",
-    });
-    plugins.metaKeys.set("is_featured", {
-      key: "is_featured",
-      type: "boolean",
-      entryTypes: ["post"],
+      fields: [
+        {
+          key: "meta_title",
+          label: "Meta title",
+          type: "string",
+          inputType: "text",
+        },
+        {
+          key: "is_featured",
+          label: "Featured",
+          type: "boolean",
+          inputType: "checkbox",
+        },
+      ],
       registeredBy: "test",
     });
     const h = await createRpcHarness({ authAs: "admin", plugins });
@@ -353,16 +369,19 @@ describe("entry.update", () => {
 
   test("rpc:entry.update:input can inject derived meta before sanitization; post:meta_changed fires with the final bag", async () => {
     const plugins = createPluginRegistry();
-    plugins.metaKeys.set("title", {
-      key: "title",
-      type: "string",
+    plugins.entryMetaBoxes.set("test-derived", {
+      id: "test-derived",
+      label: "Derived",
       entryTypes: ["post"],
-      registeredBy: "test",
-    });
-    plugins.metaKeys.set("title_lc", {
-      key: "title_lc",
-      type: "string",
-      entryTypes: ["post"],
+      fields: [
+        { key: "title", label: "Title", type: "string", inputType: "text" },
+        {
+          key: "title_lc",
+          label: "Title (lowercase)",
+          type: "string",
+          inputType: "text",
+        },
+      ],
       registeredBy: "test",
     });
     const h = await createRpcHarness({ authAs: "admin", plugins });
@@ -399,10 +418,13 @@ describe("entry.update", () => {
 
   test("rpc:entry.get:output can decorate the returned meta bag without touching storage", async () => {
     const plugins = createPluginRegistry();
-    plugins.metaKeys.set("title", {
-      key: "title",
-      type: "string",
+    plugins.entryMetaBoxes.set("test-title", {
+      id: "test-title",
+      label: "Title",
       entryTypes: ["post"],
+      fields: [
+        { key: "title", label: "Title", type: "string", inputType: "text" },
+      ],
       registeredBy: "test",
     });
     const h = await createRpcHarness({ authAs: "admin", plugins });

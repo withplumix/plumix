@@ -21,6 +21,7 @@ function field(
   return {
     key: "k",
     label: "Label",
+    type: "string",
     ...overrides,
   };
 }
