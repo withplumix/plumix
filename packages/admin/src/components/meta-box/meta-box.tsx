@@ -7,21 +7,28 @@ import {
   CardTitle,
 } from "@/components/ui/card.js";
 
-import type { MetaBoxBaseManifestEntry } from "@plumix/core/manifest";
+import type {
+  EntryMetaBoxManifestEntry,
+  TermMetaBoxManifestEntry,
+  UserMetaBoxManifestEntry,
+} from "@plumix/core/manifest";
 
 import { MetaBoxField } from "./meta-box-field.js";
 
 /**
- * Shared stateless renderer for every meta-box surface (entry / term /
- * user). Parent owns the `values` state and carries the bag on the
- * entity's single Save — this component just draws the Card. Settings
- * groups have their own per-card save model and render with the
- * `<SettingsGroupCard>` path instead.
- *
- * Accepts any meta-box manifest entry (they all share the base shape:
- * `id`, `label`, `description?`, `fields`), so the entry editor,
- * taxonomy edit route, and user edit route all pass through the same
- * component.
+ * Any entity-meta box we render with this component. Settings groups
+ * deliberately don't pass through here — they use their own per-card
+ * save model in `SettingsGroupCard`.
+ */
+export type MetaBoxCardEntry =
+  | EntryMetaBoxManifestEntry
+  | TermMetaBoxManifestEntry
+  | UserMetaBoxManifestEntry;
+
+/**
+ * Shared stateless renderer for every entity-meta surface (entry /
+ * term / user). Parent owns the `values` state and carries the bag on
+ * the entity's single Save — this component just draws the Card.
  */
 export function MetaBoxCard({
   box,
@@ -29,7 +36,7 @@ export function MetaBoxCard({
   onChange,
   disabled = false,
 }: {
-  readonly box: MetaBoxBaseManifestEntry & { readonly id: string };
+  readonly box: MetaBoxCardEntry;
   readonly values: Readonly<Record<string, unknown>>;
   readonly onChange: (key: string, value: unknown) => void;
   readonly disabled?: boolean;

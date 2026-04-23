@@ -61,8 +61,8 @@ export function TermForm({
   isSubmitting,
   serverError,
   submitLabel,
-  metaBoxes = [],
-  metaValues = {},
+  metaBoxes,
+  metaValues,
   onMetaChange,
   onSubmit,
   onCancel,
@@ -75,10 +75,11 @@ export function TermForm({
   readonly submitLabel: string;
   /** Plugin-registered meta boxes for this taxonomy — rendered inside
    *  the form so the single Save button submits row fields + meta
-   *  together via one `term.update` call. */
-  readonly metaBoxes?: readonly TermMetaBoxManifestEntry[];
-  readonly metaValues?: Readonly<Record<string, unknown>>;
-  readonly onMetaChange?: (key: string, value: unknown) => void;
+   *  together via one `term.update` call. Pass an empty array when no
+   *  boxes are registered for the current viewer. */
+  readonly metaBoxes: readonly TermMetaBoxManifestEntry[];
+  readonly metaValues: Readonly<Record<string, unknown>>;
+  readonly onMetaChange: (key: string, value: unknown) => void;
   readonly onSubmit: (values: TermFormValues) => void;
   readonly onCancel: () => void;
 }): ReactNode {
@@ -197,9 +198,7 @@ export function TermForm({
           box={box}
           values={metaValues}
           disabled={isSubmitting}
-          onChange={(key, value) => {
-            onMetaChange?.(key, value);
-          }}
+          onChange={onMetaChange}
         />
       ))}
 
