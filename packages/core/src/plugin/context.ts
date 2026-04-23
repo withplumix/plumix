@@ -248,9 +248,6 @@ export function createPluginSetupContext({
       if (registry.settingsGroups.has(name)) {
         throw new DuplicateRegistrationError("settings group", name);
       }
-      // Settings fields now share `MetaBoxField` shape + validation
-      // with entry / term / user meta — one key regex, one dup check,
-      // one field-count cap.
       assertMetaBoxFields("settings group", name, options.fields);
       registry.settingsGroups.set(name, {
         ...options,

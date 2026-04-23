@@ -1,10 +1,10 @@
 import * as v from "valibot";
 
-// Group + key identifiers share the same portability rules as the
-// registration-time `SETTINGS_NAME_RE` — lowercase ASCII starting with
-// a letter. Kept tight so storage keys, testids, and URL segments
-// don't need quoting.
-const settingsIdentifierSchema = v.pipe(
+// Group / page identifiers stay tight — lowercase snake_case ASCII so
+// they're safe in URLs (`/settings/<page>`), testids, and future
+// storage backends that may quote differently. Matches the
+// registration-time `SETTINGS_NAME_RE` in `plugin/context.ts`.
+const settingsNameSchema = v.pipe(
   v.string(),
   v.trim(),
   v.minLength(1),
@@ -12,12 +12,24 @@ const settingsIdentifierSchema = v.pipe(
   v.regex(/^[a-z][a-z0-9_]*$/, "must be lowercase ASCII [a-z][a-z0-9_]*"),
 );
 
+// Field-value keys share the permissive meta regex (`og:title`,
+// `my-field`, `2fa_enabled` all valid) so a plugin registering a
+// `MetaBoxField` via `registerSettingsGroup` isn't rejected at the
+// RPC boundary. Matches `META_FIELD_KEY_RE` in `plugin/context.ts`.
+const settingsValueKeySchema = v.pipe(
+  v.string(),
+  v.trim(),
+  v.minLength(1),
+  v.maxLength(200),
+  v.regex(/^[a-zA-Z0-9_:-]+$/, "settings value key must match [a-zA-Z0-9_:-]+"),
+);
+
 // One round-trip per group is the primary read pattern (admin card
 // loads one group). Returning the bag lets the admin form seed its
 // state; fields absent from the bag fall back to their registered
 // `default`.
 export const settingsGetInputSchema = v.object({
-  group: settingsIdentifierSchema,
+  group: settingsNameSchema,
 });
 
 // Null values in an upsert are deletions; everything else is an
@@ -31,9 +43,9 @@ const MAX_SETTINGS_VALUE_BYTES = 64 * 1024;
 const MAX_SETTINGS_KEYS_PER_UPSERT = 200;
 
 export const settingsUpsertInputSchema = v.object({
-  group: settingsIdentifierSchema,
+  group: settingsNameSchema,
   values: v.pipe(
-    v.record(settingsIdentifierSchema, v.unknown()),
+    v.record(settingsValueKeySchema, v.unknown()),
     v.check(
       (val) => Object.keys(val).length <= MAX_SETTINGS_KEYS_PER_UPSERT,
       `upsert accepts at most ${MAX_SETTINGS_KEYS_PER_UPSERT} keys per request`,

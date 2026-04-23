@@ -159,6 +159,44 @@ describe("settings.upsert", () => {
     });
   });
 
+  // Regression: the registration-time field regex is permissive
+  // (`[a-zA-Z0-9_:-]+`), matching the meta-box surface. Before #67 the
+  // RPC input schema only accepted `[a-z][a-z0-9_]*`, so a plugin that
+  // registered a field key like `og:title` would pass registration but
+  // every save request would fail at the valibot schema — dead-code
+  // field. This locks in that value keys accept the full meta regex.
+  test("accepts the same field keys that plugins can register", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const bag = await h.client.settings.upsert({
+      group: "seo",
+      values: {
+        "og:title": "Hello",
+        "meta-description": "A page",
+        "2fa_enabled": "yes",
+      },
+    });
+    expect(bag).toEqual({
+      "og:title": "Hello",
+      "meta-description": "A page",
+      "2fa_enabled": "yes",
+    });
+  });
+
+  test("empty values bag is a silent no-op and round-trips the stored bag", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    await h.context.db
+      .insert(settings)
+      .values([{ group: "general", key: "site_title", value: "Example" }]);
+    const spy = h.spyAction("settings:group_changed");
+    const bag = await h.client.settings.upsert({
+      group: "general",
+      values: {},
+    });
+    expect(bag).toEqual({ site_title: "Example" });
+    // No writes, no action fired.
+    expect(spy.calls).toHaveLength(0);
+  });
+
   test("row-level isolation: upsert overwrites without duplicating the PK row", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     await h.client.settings.upsert({

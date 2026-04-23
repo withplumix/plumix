@@ -37,6 +37,7 @@ import { ArrowLeft } from "lucide-react";
 import * as v from "valibot";
 
 import type { TaxonomyManifestEntry } from "@plumix/core/manifest";
+import { seedFromMetaBoxes } from "@plumix/core/manifest";
 import { idPathParam } from "@plumix/core/validation";
 
 import { TAXONOMY_LIST_DEFAULT_SEARCH } from "./-constants.js";
@@ -163,7 +164,7 @@ function EditTermContent({
   // + meta together — one Save, one RPC call. Re-seeds from the
   // refetched term after save via the route key.
   const [meta, setMeta] = useState<Record<string, unknown>>(() =>
-    seedMetaFromBoxes(metaBoxes, term.meta),
+    seedFromMetaBoxes(metaBoxes, term.meta),
   );
 
   const updateTerm = useMutation({
@@ -190,7 +191,7 @@ function EditTermContent({
     onSuccess: async (updated) => {
       // Re-seed from the server's post-sanitize bag so sanitize /
       // coerce roundtrips show up in the form immediately.
-      setMeta(seedMetaFromBoxes(metaBoxes, updated.meta));
+      setMeta(seedFromMetaBoxes(metaBoxes, updated.meta));
       // List variants are scoped by `taxonomy` so sibling taxonomies
       // don't needlessly refetch.
       await Promise.all([
@@ -391,28 +392,6 @@ function DeleteCard({
       </CardContent>
     </Card>
   );
-}
-
-// Seed per-field values from the server's meta bag, falling back to
-// each field's registered `default`. Keeps the form's state shape in
-// sync with what the user can see + edit.
-function seedMetaFromBoxes(
-  boxes: readonly {
-    readonly fields: readonly {
-      readonly key: string;
-      readonly default?: unknown;
-    }[];
-  }[],
-  stored: Readonly<Record<string, unknown>> | null | undefined,
-): Record<string, unknown> {
-  const bag = stored ?? {};
-  const seed: Record<string, unknown> = {};
-  for (const box of boxes) {
-    for (const field of box.fields) {
-      seed[field.key] = bag[field.key] ?? field.default;
-    }
-  }
-  return seed;
 }
 
 function NotFoundPlaceholder({ message }: { message: string }): ReactNode {

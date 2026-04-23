@@ -28,6 +28,7 @@ import type {
   SettingsGroupManifestEntry,
   SettingsPageManifestEntry,
 } from "@plumix/core/manifest";
+import { seedFromMetaBoxes } from "@plumix/core/manifest";
 
 export const Route = createFileRoute("/_authenticated/settings/$page")({
   beforeLoad: ({ context, params }): { page: SettingsPageManifestEntry } => {
@@ -116,7 +117,7 @@ function SettingsGroupCard({
   // right input for each field's `inputType` and hands back the coerced
   // value via onChange.
   const [values, setValues] = useState<Record<string, unknown>>(() =>
-    seedFromStored(group.fields, stored),
+    seedFromMetaBoxes([group], stored),
   );
 
   const save = useMutation({
@@ -129,7 +130,7 @@ function SettingsGroupCard({
     onSuccess: async (fresh) => {
       // Re-seed from the server's post-sanitize bag so the form reflects
       // any trimming / coercion the server applied.
-      setValues(seedFromStored(group.fields, fresh));
+      setValues(seedFromMetaBoxes([group], fresh));
       await queryClient.invalidateQueries({
         queryKey: orpc.settings.get.queryOptions({
           input: { group: group.name },
@@ -191,6 +192,7 @@ function SettingsGroupCard({
 
           {saveNotice ? (
             <Alert
+              role="status"
               aria-live="polite"
               data-testid={`settings-save-notice-${group.name}`}
             >
@@ -210,17 +212,6 @@ function SettingsGroupCard({
       </form>
     </Card>
   );
-}
-
-function seedFromStored(
-  fields: SettingsGroupManifestEntry["fields"],
-  stored: Readonly<Record<string, unknown>>,
-): Record<string, unknown> {
-  const seed: Record<string, unknown> = {};
-  for (const field of fields) {
-    seed[field.key] = stored[field.key] ?? field.default;
-  }
-  return seed;
 }
 
 function EmptyPagePlaceholder(): ReactNode {

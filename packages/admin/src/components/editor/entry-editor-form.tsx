@@ -69,8 +69,8 @@ interface PostEditorFormProps {
   /**
    * Meta boxes applicable to the post type being edited, already
    * filtered by capability and sorted by priority. The form splits them
-   * into side / normal / advanced columns internally based on
-   * `entry.context`.
+   * into `bottom` (default, below the main editor) and `sidebar`
+   * (right rail) regions based on `box.location`.
    */
   readonly metaBoxes: readonly EntryMetaBoxManifestEntry[];
   readonly submitLabel: string;
@@ -130,8 +130,6 @@ export function PostEditorForm({
     disabled: isSubmitting,
   });
 
-  // Two-slot layout: `sidebar` floats right of the main editor column,
-  // `bottom` (default) stacks below the primary fields.
   const { bottom, sidebar } = partitionBoxesByLocation(metaBoxes);
 
   // Single subscription to the form's `meta` field powers all three

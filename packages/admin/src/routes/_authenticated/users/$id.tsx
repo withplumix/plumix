@@ -36,6 +36,7 @@ import * as v from "valibot";
 
 import type { UserMetaBoxManifestEntry } from "@plumix/core/manifest";
 import type { User, UserRole } from "@plumix/core/schema";
+import { seedFromMetaBoxes } from "@plumix/core/manifest";
 import { idPathParam } from "@plumix/core/validation";
 
 import {
@@ -170,7 +171,7 @@ function UserEditForm({
   // call per form submission. Re-seeds from the server's post-sanitize
   // bag on success so coerce roundtrips show up in the UI.
   const [meta, setMeta] = useState<Record<string, unknown>>(() =>
-    seedUserMeta(metaBoxes, target.meta),
+    seedFromMetaBoxes(metaBoxes, target.meta),
   );
 
   const updateUser = useMutation({
@@ -190,7 +191,7 @@ function UserEditForm({
       setServerError(null);
     },
     onSuccess: async (updated) => {
-      setMeta(seedUserMeta(metaBoxes, updated.meta));
+      setMeta(seedFromMetaBoxes(metaBoxes, updated.meta));
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: orpc.user.get.queryOptions({ input: { id: target.id } })
@@ -652,20 +653,6 @@ const DELETE_ERROR_MESSAGES: Partial<Record<string, string>> = {
     "This user has authored entries. Pick someone to reassign them to above.",
   reassign_to_self: "Can't reassign to the user being deleted.",
 };
-
-function seedUserMeta(
-  boxes: readonly UserMetaBoxManifestEntry[],
-  stored: Readonly<Record<string, unknown>> | null | undefined,
-): Record<string, unknown> {
-  const bag = stored ?? {};
-  const seed: Record<string, unknown> = {};
-  for (const box of boxes) {
-    for (const field of box.fields) {
-      seed[field.key] = bag[field.key] ?? field.default;
-    }
-  }
-  return seed;
-}
 
 function NotFoundPlaceholder({ message }: { message: string }): ReactNode {
   return (

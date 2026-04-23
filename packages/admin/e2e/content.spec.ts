@@ -508,7 +508,7 @@ test.describe("meta-box sidebar", () => {
     await expect(page.getByTestId("meta-box-seo")).toBeVisible();
     await expect(page.getByTestId("meta-box-featured")).toBeVisible();
     // Side rail container picks up only side-context boxes.
-    const sideRail = page.getByTestId("meta-boxes-side");
+    const sideRail = page.getByTestId("meta-boxes-sidebar");
     await expect(sideRail.getByTestId("meta-box-featured")).toBeVisible();
     await expect(sideRail.getByTestId("meta-box-seo")).toHaveCount(0);
 

@@ -539,9 +539,12 @@ export function buildManifest(registry: PluginRegistry): PlumixManifest {
 /**
  * Shared comparator: `priority` ascending (unspecified sorts last),
  * ties broken by a caller-supplied stable key (id / name) in
- * alphabetical order. Applies to every sort in `buildManifest`.
+ * alphabetical order. Used by `buildManifest` server-side AND the
+ * admin's in-memory filter helpers so the shipped manifest and the
+ * admin filter paths agree on order regardless of registration
+ * sequence.
  */
-function byPriorityThen<T extends { priority?: number }>(
+export function byPriorityThen<T extends { readonly priority?: number }>(
   getKey: (item: T) => string,
 ): (a: T, b: T) => number {
   return (a, b) => {
@@ -550,6 +553,31 @@ function byPriorityThen<T extends { priority?: number }>(
     if (ap !== bp) return ap - bp;
     return getKey(a).localeCompare(getKey(b));
   };
+}
+
+/**
+ * Seed per-field values from a server meta bag, falling back to each
+ * field's registered `default`. Shared by every admin form that owns
+ * meta state (entry editor, term edit route, user edit route, settings
+ * group card) — one shape, one behaviour.
+ */
+export function seedFromMetaBoxes(
+  boxes: readonly {
+    readonly fields: readonly {
+      readonly key: string;
+      readonly default?: unknown;
+    }[];
+  }[],
+  stored: Readonly<Record<string, unknown>> | null | undefined,
+): Record<string, unknown> {
+  const bag = stored ?? {};
+  const seed: Record<string, unknown> = {};
+  for (const box of boxes) {
+    for (const field of box.fields) {
+      seed[field.key] = bag[field.key] ?? field.default;
+    }
+  }
+  return seed;
 }
 
 // Synthetic flat-keyspace scope for user meta. Hoisted so the

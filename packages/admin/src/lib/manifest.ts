@@ -8,7 +8,11 @@ import type {
   TermMetaBoxManifestEntry,
   UserMetaBoxManifestEntry,
 } from "@plumix/core/manifest";
-import { emptyManifest, MANIFEST_SCRIPT_ID } from "@plumix/core/manifest";
+import {
+  byPriorityThen,
+  emptyManifest,
+  MANIFEST_SCRIPT_ID,
+} from "@plumix/core/manifest";
 
 // Parse the inline `<script id="plumix-manifest">` payload injected by the
 // plumix vite plugin at consumer-build time. Falls back to an empty manifest
@@ -120,21 +124,6 @@ export function visibleTaxonomies(
 ): readonly TaxonomyManifestEntry[] {
   const caps = new Set(capabilities);
   return source.taxonomies.filter((tax) => caps.has(`${tax.name}:read`));
-}
-
-// Shared ordering helper: `priority` ascending (unspecified last), ties
-// broken by `id` / `name` alphabetical. Mirrors `buildManifest`'s
-// server-side sort so the shipped manifest and the admin filter paths
-// agree on order regardless of registration sequence.
-function byPriorityThen<T extends { readonly priority?: number }>(
-  getKey: (item: T) => string,
-): (a: T, b: T) => number {
-  return (a, b) => {
-    const ap = a.priority ?? Number.POSITIVE_INFINITY;
-    const bp = b.priority ?? Number.POSITIVE_INFINITY;
-    if (ap !== bp) return ap - bp;
-    return getKey(a).localeCompare(getKey(b));
-  };
 }
 
 /**

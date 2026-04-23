@@ -337,6 +337,36 @@ describe("buildManifest", () => {
     expect(names).toEqual(["early", "late", "unpositioned"]);
   });
 
+  test("entry types with the same priority break ties by name alphabetical", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("mixed", (ctx) => {
+      ctx.registerEntryType("zebra", { label: "Zebra", priority: 0 });
+      ctx.registerEntryType("alpha", { label: "Alpha", priority: 0 });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const names = buildManifest(registry).entryTypes.map((pt) => pt.name);
+    expect(names).toEqual(["alpha", "zebra"]);
+  });
+
+  test("settings pages with the same priority break ties by name alphabetical", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("mixed", (ctx) => {
+      ctx.registerSettingsPage("zebra", {
+        label: "Zebra",
+        groups: [],
+        priority: 0,
+      });
+      ctx.registerSettingsPage("alpha", {
+        label: "Alpha",
+        groups: [],
+        priority: 0,
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const names = buildManifest(registry).settingsPages.map((p) => p.name);
+    expect(names).toEqual(["alpha", "zebra"]);
+  });
+
   test("projects registered entry meta boxes, dropping server-only fields", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("seo", (ctx) => {
