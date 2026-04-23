@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Input } from "@/components/ui/input.js";
 import { Label } from "@/components/ui/label.js";
+import { cn } from "@/lib/utils";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 
@@ -14,15 +15,20 @@ export function MetaBoxField({
   value,
   onChange,
   disabled = false,
+  className,
 }: {
   readonly field: MetaBoxFieldManifestEntry;
   readonly value: unknown;
   readonly onChange: (next: unknown) => void;
   readonly disabled?: boolean;
+  readonly className?: string;
 }): ReactNode {
   const testIdPrefix = `meta-box-field-${field.key}`;
   return (
-    <div className="flex flex-col gap-2" data-testid={testIdPrefix}>
+    <div
+      className={cn("flex flex-col gap-2", className)}
+      data-testid={testIdPrefix}
+    >
       {field.inputType === "checkbox" ? (
         <InlineCheckbox
           field={field}

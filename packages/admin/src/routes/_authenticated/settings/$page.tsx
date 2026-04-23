@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
 import { MetaBoxField } from "@/components/meta-box/meta-box-field.js";
+import { metaBoxFieldColSpanClass } from "@/components/meta-box/meta-box-grid.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Button } from "@/components/ui/button.js";
 import {
@@ -146,7 +147,10 @@ function SettingsGroupCard({
   });
 
   return (
-    <Card data-testid={`settings-group-card-${group.name}`}>
+    <Card
+      className="@container"
+      data-testid={`settings-group-card-${group.name}`}
+    >
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -168,17 +172,20 @@ function SettingsGroupCard({
           ) : null}
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {group.fields.map((field) => (
-            <MetaBoxField
-              key={field.key}
-              field={field}
-              value={values[field.key]}
-              disabled={save.isPending}
-              onChange={(next) => {
-                setValues((prev) => ({ ...prev, [field.key]: next }));
-              }}
-            />
-          ))}
+          <div className="grid grid-cols-12 gap-4">
+            {group.fields.map((field) => (
+              <MetaBoxField
+                key={field.key}
+                field={field}
+                value={values[field.key]}
+                disabled={save.isPending}
+                onChange={(next) => {
+                  setValues((prev) => ({ ...prev, [field.key]: next }));
+                }}
+                className={metaBoxFieldColSpanClass(field.span)}
+              />
+            ))}
+          </div>
 
           {serverError ? (
             <Alert
