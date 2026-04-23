@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { Form } from "@/components/ui/form.js";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -54,6 +54,9 @@ function Harness({
 // Subscribes via `useWatch` (compiler-compatible) and fires the spy on
 // every value change — mirrors what the original `form.watch` callback
 // did but without tripping the `react-hooks/incompatible-library` rule.
+// Fires once with the initial value too; the surrounding assertions use
+// `toHaveBeenCalledWith` / `toHaveBeenLastCalledWith`, both of which are
+// indifferent to that extra call.
 function Spy({
   name,
   onChange,
@@ -62,12 +65,7 @@ function Spy({
   onChange: (next: unknown) => void;
 }): ReactNode {
   const value: unknown = useWatch({ name });
-  const first = useRef(true);
   useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
     onChange(value);
   }, [value, onChange]);
   return null;
