@@ -1,10 +1,18 @@
 import type { ReactNode } from "react";
-import { FormField } from "@/components/form/field.js";
 import { MetaBoxCard } from "@/components/meta-box/meta-box.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Button } from "@/components/ui/button.js";
-import { Label } from "@/components/ui/label.js";
-import { useForm } from "@tanstack/react-form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form.js";
+import { Input } from "@/components/ui/input.js";
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import { useForm } from "react-hook-form";
 import * as v from "valibot";
 
 import type { TermMetaBoxManifestEntry } from "@plumix/core/manifest";
@@ -16,6 +24,9 @@ interface TermFormValues {
   readonly slug: string;
   readonly description: string;
   readonly parentId: number | null;
+  /** Plugin-registered meta bag. Shape is open because meta-box fields
+   *  coerce per-field on edit; the server re-sanitises on write. */
+  readonly meta: Readonly<Record<string, unknown>>;
 }
 
 // Client-side shape mirrors `termCreateInputSchema` / `termUpdateInputSchema`
@@ -34,6 +45,7 @@ const termFormSchema = v.object({
   ),
   description: v.pipe(v.string(), v.trim(), v.maxLength(2000)),
   parentId: v.nullable(idParam),
+  meta: v.record(v.string(), v.unknown()),
 });
 
 /**
@@ -62,8 +74,6 @@ export function TermForm({
   serverError,
   submitLabel,
   metaBoxes,
-  metaValues,
-  onMetaChange,
   onSubmit,
   onCancel,
 }: {
@@ -78,157 +88,156 @@ export function TermForm({
    *  together via one `term.update` call. Pass an empty array when no
    *  boxes are registered for the current viewer. */
   readonly metaBoxes: readonly TermMetaBoxManifestEntry[];
-  readonly metaValues: Readonly<Record<string, unknown>>;
-  readonly onMetaChange: (key: string, value: unknown) => void;
   readonly onSubmit: (values: TermFormValues) => void;
   readonly onCancel: () => void;
 }): ReactNode {
   const form = useForm({
+    resolver: valibotResolver(termFormSchema),
     defaultValues: initialValues,
-    validators: {
-      onSubmit: ({ value }) => {
-        const result = v.safeParse(termFormSchema, value);
-        return result.success ? undefined : result.issues[0].message;
-      },
-    },
-    onSubmit: ({ value }) => {
-      onSubmit(value);
-    },
+  });
+
+  const handleSubmit = form.handleSubmit((value) => {
+    onSubmit(value);
   });
 
   return (
-    <form
-      className="flex flex-col gap-4"
-      onSubmit={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        void form.handleSubmit();
-      }}
-    >
-      <form.Field name="name">
-        {(field) => (
-          <FormField
-            field={field}
-            label="Name"
-            type="text"
-            required
-            disabled={isSubmitting}
-            data-testid="term-form-name-input"
-          />
-        )}
-      </form.Field>
-
-      <form.Field name="slug">
-        {(field) => (
-          <FormField
-            field={field}
-            label={
-              <>
-                Slug <span className="text-muted-foreground">(optional)</span>
-              </>
-            }
-            type="text"
-            autoComplete="off"
-            disabled={isSubmitting}
-            data-testid="term-form-slug-input"
-            placeholder="derived-from-name-if-blank"
-          />
-        )}
-      </form.Field>
-
-      <form.Field name="description">
-        {(field) => (
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="term-description">
-              Description{" "}
-              <span className="text-muted-foreground">(optional)</span>
-            </Label>
-            <textarea
-              id="term-description"
-              name="description"
-              value={field.state.value}
-              onChange={(e) => {
-                field.handleChange(e.target.value);
-              }}
-              disabled={isSubmitting}
-              rows={3}
-              data-testid="term-form-description-input"
-              className="border-input bg-background focus-visible:ring-ring flex min-h-20 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-            />
-          </div>
-        )}
-      </form.Field>
-
-      {isHierarchical ? (
-        <form.Field name="parentId">
-          {(field) => (
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="term-parent">
-                Parent <span className="text-muted-foreground">(optional)</span>
-              </Label>
-              <select
-                id="term-parent"
-                name="parentId"
-                value={
-                  field.state.value == null ? "" : String(field.state.value)
-                }
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  field.handleChange(raw === "" ? null : Number(raw));
-                }}
-                disabled={isSubmitting}
-                data-testid="term-form-parent-select"
-                className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <option value="">— root —</option>
-                {parentOptions.map((opt) => (
-                  <option key={opt.id} value={String(opt.id)}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+    <Form {...form}>
+      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Name</FormLabel>
+              <FormControl>
+                <Input
+                  type="text"
+                  required
+                  disabled={isSubmitting}
+                  data-testid="term-form-name-input"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
-        </form.Field>
-      ) : null}
-
-      {metaBoxes.map((box) => (
-        <MetaBoxCard
-          key={box.id}
-          box={box}
-          values={metaValues}
-          disabled={isSubmitting}
-          onChange={onMetaChange}
         />
-      ))}
 
-      {serverError ? (
-        <Alert variant="destructive" data-testid="term-form-server-error">
-          <AlertDescription>{serverError}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      <div className="flex justify-end gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          disabled={isSubmitting}
-        >
-          Cancel
-        </Button>
-        <form.Subscribe selector={(state) => state.canSubmit}>
-          {(canSubmit) => (
-            <Button
-              type="submit"
-              disabled={!canSubmit || isSubmitting}
-              data-testid="term-form-submit"
-            >
-              {isSubmitting ? "Saving…" : submitLabel}
-            </Button>
+        <FormField
+          control={form.control}
+          name="slug"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Slug <span className="text-muted-foreground">(optional)</span>
+              </FormLabel>
+              <FormControl>
+                <Input
+                  type="text"
+                  autoComplete="off"
+                  disabled={isSubmitting}
+                  data-testid="term-form-slug-input"
+                  placeholder="derived-from-name-if-blank"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
-        </form.Subscribe>
-      </div>
-    </form>
+        />
+
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Description{" "}
+                <span className="text-muted-foreground">(optional)</span>
+              </FormLabel>
+              <FormControl>
+                <textarea
+                  {...field}
+                  disabled={isSubmitting}
+                  rows={3}
+                  data-testid="term-form-description-input"
+                  className="border-input bg-background focus-visible:ring-ring flex min-h-20 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {isHierarchical ? (
+          <FormField
+            control={form.control}
+            name="parentId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Parent{" "}
+                  <span className="text-muted-foreground">(optional)</span>
+                </FormLabel>
+                <FormControl>
+                  <select
+                    value={field.value == null ? "" : String(field.value)}
+                    onBlur={field.onBlur}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      field.onChange(raw === "" ? null : Number(raw));
+                    }}
+                    disabled={isSubmitting}
+                    data-testid="term-form-parent-select"
+                    className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">— root —</option>
+                    {parentOptions.map((opt) => (
+                      <option key={opt.id} value={String(opt.id)}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        ) : null}
+
+        {metaBoxes.map((box) => (
+          <MetaBoxCard
+            key={box.id}
+            box={box}
+            basePath="meta"
+            disabled={isSubmitting}
+          />
+        ))}
+
+        {serverError ? (
+          <Alert variant="destructive" data-testid="term-form-server-error">
+            <AlertDescription>{serverError}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            data-testid="term-form-submit"
+          >
+            {isSubmitting ? "Saving…" : submitLabel}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 }

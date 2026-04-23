@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { FormField } from "@/components/form/field.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Button } from "@/components/ui/button.js";
 import {
@@ -10,15 +9,24 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.js";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form.js";
+import { Input } from "@/components/ui/input.js";
 import { getPasskeyErrorMessage, PasskeyError } from "@/lib/passkey-errors.js";
 import { signInWithPasskey } from "@/lib/passkey.js";
 import { SESSION_QUERY_KEY, sessionQueryOptions } from "@/lib/session.js";
-import { useForm } from "@tanstack/react-form";
+import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
-import * as v from "valibot";
+import { useForm } from "react-hook-form";
 
-import { loginEmailFieldSchema, loginSchema } from "./-schemas.js";
+import { loginSchema } from "./-schemas.js";
 
 export const Route = createFileRoute("/_auth/login")({
   beforeLoad: async ({ context }) => {
@@ -52,16 +60,13 @@ function LoginRoute(): ReactNode {
   });
 
   const form = useForm({
+    resolver: valibotResolver(loginSchema),
     defaultValues: { email: "" },
-    validators: {
-      onSubmit: ({ value }) => {
-        const result = v.safeParse(loginSchema, value);
-        return result.success ? undefined : result.issues[0].message;
-      },
-    },
-    onSubmit: ({ value }) => {
-      signIn.mutate({ email: value.email || undefined });
-    },
+    mode: "onChange",
+  });
+
+  const onSubmit = form.handleSubmit(({ email }) => {
+    signIn.mutate({ email: email || undefined });
   });
 
   return (
@@ -75,54 +80,43 @@ function LoginRoute(): ReactNode {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            void form.handleSubmit();
-          }}
-        >
-          <form.Field
-            name="email"
-            validators={{
-              onChange: ({ value }) => {
-                if (!value) return undefined;
-                const result = v.safeParse(loginEmailFieldSchema, {
-                  email: value,
-                });
-                return result.success ? undefined : result.issues[0].message;
-              },
-            }}
-          >
-            {(field) => (
-              <FormField
-                field={field}
-                label={
-                  <>
+        <Form {...form}>
+          <form className="flex flex-col gap-4" onSubmit={onSubmit}>
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
                     Email{" "}
                     <span className="text-muted-foreground">(optional)</span>
-                  </>
-                }
-                type="email"
-                autoComplete="username webauthn"
-                disabled={signIn.isPending}
-              />
-            )}
-          </form.Field>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      autoComplete="username webauthn"
+                      disabled={signIn.isPending}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          {errorCode ? (
-            <Alert variant="destructive">
-              <AlertDescription>
-                {getPasskeyErrorMessage(errorCode)}
-              </AlertDescription>
-            </Alert>
-          ) : null}
+            {errorCode ? (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  {getPasskeyErrorMessage(errorCode)}
+                </AlertDescription>
+              </Alert>
+            ) : null}
 
-          <Button type="submit" disabled={signIn.isPending}>
-            {signIn.isPending ? "Signing in…" : "Sign in with passkey"}
-          </Button>
-        </form>
+            <Button type="submit" disabled={signIn.isPending}>
+              {signIn.isPending ? "Signing in…" : "Sign in with passkey"}
+            </Button>
+          </form>
+        </Form>
       </CardContent>
     </Card>
   );

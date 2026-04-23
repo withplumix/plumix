@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { FormField } from "@/components/form/field.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Button } from "@/components/ui/button.js";
 import {
@@ -10,11 +9,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.js";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form.js";
+import { Input } from "@/components/ui/input.js";
 import { Label } from "@/components/ui/label.js";
 import { hasCap } from "@/lib/caps.js";
 import { ADMIN_BASE_PATH } from "@/lib/constants.js";
 import { orpc } from "@/lib/orpc.js";
-import { useForm } from "@tanstack/react-form";
+import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation } from "@tanstack/react-query";
 import {
   createFileRoute,
@@ -23,6 +31,7 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import { ArrowLeft, Check, Copy } from "lucide-react";
+import { useForm } from "react-hook-form";
 import * as v from "valibot";
 
 import type { User, UserRole } from "@plumix/core/schema";
@@ -108,16 +117,13 @@ function InviteUserRoute(): ReactNode {
   });
 
   const form = useForm({
+    resolver: valibotResolver(inviteFormSchema),
     defaultValues: { email: "", name: "", role: "subscriber" as UserRole },
-    validators: {
-      onSubmit: ({ value }) => {
-        const result = v.safeParse(inviteFormSchema, value);
-        return result.success ? undefined : result.issues[0].message;
-      },
-    },
-    onSubmit: ({ value }) => {
-      inviteUser.mutate(value);
-    },
+    mode: "onBlur",
+  });
+
+  const onSubmit = form.handleSubmit((value) => {
+    inviteUser.mutate(value);
   });
 
   if (view.status === "success") {
@@ -159,120 +165,116 @@ function InviteUserRoute(): ReactNode {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form
-            className="flex flex-col gap-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              void form.handleSubmit();
-            }}
-          >
-            <form.Field
-              name="email"
-              validators={{
-                onBlur: ({ value }) => {
-                  const result = v.safeParse(
-                    inviteFormSchema.entries.email,
-                    value,
-                  );
-                  return result.success ? undefined : result.issues[0].message;
-                },
-              }}
-            >
-              {(field) => (
-                <FormField
-                  field={field}
-                  label="Email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  disabled={inviteUser.isPending}
-                  data-testid="invite-email-input"
-                />
-              )}
-            </form.Field>
+          <Form {...form}>
+            <form className="flex flex-col gap-4" onSubmit={onSubmit}>
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        autoComplete="email"
+                        required
+                        disabled={inviteUser.isPending}
+                        data-testid="invite-email-input"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <form.Field name="name">
-              {(field) => (
-                <FormField
-                  field={field}
-                  label={
-                    <>
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
                       Name{" "}
                       <span className="text-muted-foreground">(optional)</span>
-                    </>
-                  }
-                  type="text"
-                  autoComplete="name"
-                  disabled={inviteUser.isPending}
-                  data-testid="invite-name-input"
-                />
-              )}
-            </form.Field>
-
-            <form.Field name="role">
-              {(field) => (
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="role">Role</Label>
-                  <select
-                    id="role"
-                    name="role"
-                    value={field.state.value}
-                    onChange={(e) => {
-                      // `<option>` values come from `USER_ROLES`, but the
-                      // DOM types `e.target.value` as a bare string. Guard
-                      // via `includes` so a future refactor that adds a
-                      // raw option can't silently slip a bad role past TS.
-                      const next = e.target.value;
-                      if (isUserRole(next)) field.handleChange(next);
-                    }}
-                    disabled={inviteUser.isPending}
-                    data-testid="invite-role-select"
-                    className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {USER_ROLES.map((role) => (
-                      <option key={role} value={role}>
-                        {ROLE_LABEL[role]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </form.Field>
-
-            {serverError ? (
-              <Alert variant="destructive" data-testid="invite-server-error">
-                <AlertDescription>{serverError}</AlertDescription>
-              </Alert>
-            ) : null}
-
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  void navigate({
-                    to: "/users",
-                    search: USERS_LIST_DEFAULT_SEARCH,
-                  });
-                }}
-                disabled={inviteUser.isPending}
-              >
-                Cancel
-              </Button>
-              <form.Subscribe selector={(state) => state.canSubmit}>
-                {(canSubmit) => (
-                  <Button
-                    type="submit"
-                    disabled={!canSubmit || inviteUser.isPending}
-                    data-testid="invite-submit"
-                  >
-                    {inviteUser.isPending ? "Inviting…" : "Send invite"}
-                  </Button>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        autoComplete="name"
+                        disabled={inviteUser.isPending}
+                        data-testid="invite-name-input"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </form.Subscribe>
-            </div>
-          </form>
+              />
+
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Role</FormLabel>
+                    <FormControl>
+                      <select
+                        value={field.value}
+                        onBlur={field.onBlur}
+                        onChange={(e) => {
+                          // `<option>` values come from `USER_ROLES`, but the
+                          // DOM types `e.target.value` as a bare string. Guard
+                          // via `includes` so a future refactor that adds a
+                          // raw option can't silently slip a bad role past TS.
+                          const next = e.target.value;
+                          if (isUserRole(next)) field.onChange(next);
+                        }}
+                        disabled={inviteUser.isPending}
+                        data-testid="invite-role-select"
+                        className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {USER_ROLES.map((role) => (
+                          <option key={role} value={role}>
+                            {ROLE_LABEL[role]}
+                          </option>
+                        ))}
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {serverError ? (
+                <Alert variant="destructive" data-testid="invite-server-error">
+                  <AlertDescription>{serverError}</AlertDescription>
+                </Alert>
+              ) : null}
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    void navigate({
+                      to: "/users",
+                      search: USERS_LIST_DEFAULT_SEARCH,
+                    });
+                  }}
+                  disabled={inviteUser.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={inviteUser.isPending}
+                  data-testid="invite-submit"
+                >
+                  {inviteUser.isPending ? "Inviting…" : "Send invite"}
+                </Button>
+              </div>
+            </form>
+          </Form>
         </CardContent>
       </Card>
     </div>

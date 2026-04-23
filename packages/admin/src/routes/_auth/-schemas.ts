@@ -20,12 +20,3 @@ export const bootstrapSchema = v.object({
   email: emailField,
   name: v.optional(nameField, ""),
 });
-
-// Per-field slices for on-change / on-blur validators. Hoisted so we aren't
-// rebuilding the valibot schema on every keystroke.
-export const loginEmailFieldSchema = v.object({
-  email: loginSchema.entries.email,
-});
-export const bootstrapEmailFieldSchema = v.object({
-  email: bootstrapSchema.entries.email,
-});

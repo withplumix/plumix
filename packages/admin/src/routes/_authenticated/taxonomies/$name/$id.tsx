@@ -117,8 +117,10 @@ function EditTermRoute(): ReactNode {
 
   return (
     <EditTermContent
-      // Keep the form fresh after a save — same pattern as the
-      // user/post edit screens.
+      // Keep the form fresh after a term id change (navigation between
+      // sibling terms). Server-sanitize reseed after save doesn't
+      // apply here — the terms table has no `updatedAt`, so we can't
+      // detect a save-driven refetch the way user/entry edit do.
       key={term.id}
       taxonomy={taxonomy}
       term={term}
@@ -160,12 +162,6 @@ function EditTermContent({
   const [serverError, setServerError] = useState<string | null>(null);
   const { user } = Route.useRouteContext();
   const metaBoxes = termMetaBoxesForTaxonomy(taxonomy.name, user.capabilities);
-  // Meta lives on the parent route so `term.update` submits row fields
-  // + meta together — one Save, one RPC call. Re-seeds from the
-  // refetched term after save via the route key.
-  const [meta, setMeta] = useState<Record<string, unknown>>(() =>
-    seedFromMetaBoxes(metaBoxes, term.meta),
-  );
 
   const updateTerm = useMutation({
     mutationFn: (values: {
@@ -173,6 +169,7 @@ function EditTermContent({
       slug: string;
       description: string;
       parentId: number | null;
+      meta: Readonly<Record<string, unknown>>;
     }) =>
       orpc.term.update.call({
         id: term.id,
@@ -183,17 +180,15 @@ function EditTermContent({
         // Only ship meta keys the current user can actually see (the
         // capability gate hides entire boxes); empty object is a no-op
         // server-side.
-        meta: metaBoxes.length > 0 ? meta : undefined,
+        meta: metaBoxes.length > 0 ? values.meta : undefined,
       }),
     onMutate: () => {
       setServerError(null);
     },
-    onSuccess: async (updated) => {
-      // Re-seed from the server's post-sanitize bag so sanitize /
-      // coerce roundtrips show up in the form immediately.
-      setMeta(seedFromMetaBoxes(metaBoxes, updated.meta));
+    onSuccess: async () => {
       // List variants are scoped by `taxonomy` so sibling taxonomies
-      // don't needlessly refetch.
+      // don't needlessly refetch. Parent route remounts via the
+      // updatedAt key so the refetched row reseeds the form.
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: orpc.term.get.queryOptions({ input: { id: term.id } })
@@ -247,6 +242,7 @@ function EditTermContent({
               slug: term.slug,
               description: term.description ?? "",
               parentId: term.parentId,
+              meta: seedFromMetaBoxes(metaBoxes, term.meta),
             }}
             isHierarchical={isHierarchical}
             parentOptions={parentOptions}
@@ -254,10 +250,6 @@ function EditTermContent({
             serverError={serverError}
             submitLabel="Save changes"
             metaBoxes={metaBoxes}
-            metaValues={meta}
-            onMetaChange={(key, value) => {
-              setMeta((prev) => ({ ...prev, [key]: value }));
-            }}
             onSubmit={(values) => {
               updateTerm.mutate(values);
             }}
