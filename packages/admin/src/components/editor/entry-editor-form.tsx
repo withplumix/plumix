@@ -1,15 +1,15 @@
 import type { JSONContent } from "@tiptap/react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { MetaBoxCard } from "@/components/meta-box/meta-box.js";
+import { MetaBoxAccordionItem } from "@/components/meta-box/meta-box.js";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Button } from "@/components/ui/button.js";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card.js";
 import {
   Form,
   FormControl,
@@ -178,6 +178,17 @@ export function PostEditorForm({
   const showSlug = supports.includes("slug");
   const showExcerpt = supports.includes("excerpt");
 
+  // Open every rail section by default — Gutenberg parity. Users
+  // collapse what they don't use; the multi-select accordion keeps
+  // the toggled state independent per section for the rest of the
+  // editor session.
+  const openSections = [
+    ...(showSlug ? ["permalink"] : []),
+    "status",
+    ...(showExcerpt ? ["excerpt"] : []),
+    ...metaBoxes.map((box) => box.id),
+  ];
+
   return (
     <Form {...form}>
       {/* `contents` makes the form invisible in the flex flow so
@@ -257,29 +268,35 @@ export function PostEditorForm({
               Document
             </SidebarHeader>
             <SidebarContent>
-              <div className="flex flex-col gap-4 p-4">
+              <Accordion
+                type="multiple"
+                defaultValue={openSections}
+                className="divide-y"
+              >
                 {showSlug ? (
-                  <PermalinkCard
+                  <PermalinkSection
                     disabled={isSubmitting}
                     onSlugEdit={() => {
                       setSlugLocked(true);
                     }}
                   />
                 ) : null}
-                <StatusCard
+                <StatusSection
                   availableStatuses={availableStatuses}
                   disabled={isSubmitting}
                 />
-                {showExcerpt ? <ExcerptCard disabled={isSubmitting} /> : null}
+                {showExcerpt ? (
+                  <ExcerptSection disabled={isSubmitting} />
+                ) : null}
                 {metaBoxes.map((box) => (
-                  <MetaBoxCard
+                  <MetaBoxAccordionItem
                     key={box.id}
                     box={box}
                     basePath="meta"
                     disabled={isSubmitting}
                   />
                 ))}
-              </div>
+              </Accordion>
             </SidebarContent>
           </Sidebar>
         </SidebarProvider>
@@ -352,7 +369,13 @@ function ContentField({ disabled }: { readonly disabled: boolean }): ReactNode {
 
 // ---------- rail cards ----------
 
-function PermalinkCard({
+// Accordion-item wrappers for the built-in document sections —
+// Permalink / Status / Excerpt render the same shape as plugin meta
+// boxes (see `MetaBoxAccordionItem`) so the rail reads as one
+// consistent stack of collapsible panels. `value` props collide with
+// `openSections` keys — keep them stable.
+
+function PermalinkSection({
   disabled,
   onSlugEdit,
 }: {
@@ -361,11 +384,11 @@ function PermalinkCard({
 }): ReactNode {
   const { control } = useFormContext<PostEditorValues>();
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm font-semibold">Permalink</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <AccordionItem value="permalink">
+      <AccordionTrigger className="px-4 py-3 text-sm font-semibold">
+        Permalink
+      </AccordionTrigger>
+      <AccordionContent className="px-4 pb-4">
         <FormField
           control={control}
           name="slug"
@@ -393,12 +416,12 @@ function PermalinkCard({
             </FormItem>
           )}
         />
-      </CardContent>
-    </Card>
+      </AccordionContent>
+    </AccordionItem>
   );
 }
 
-function StatusCard({
+function StatusSection({
   availableStatuses,
   disabled,
 }: {
@@ -407,11 +430,11 @@ function StatusCard({
 }): ReactNode {
   const { control } = useFormContext<PostEditorValues>();
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm font-semibold">Status</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <AccordionItem value="status">
+      <AccordionTrigger className="px-4 py-3 text-sm font-semibold">
+        Status
+      </AccordionTrigger>
+      <AccordionContent className="px-4 pb-4">
         <FormField
           control={control}
           name="status"
@@ -440,19 +463,23 @@ function StatusCard({
             </FormItem>
           )}
         />
-      </CardContent>
-    </Card>
+      </AccordionContent>
+    </AccordionItem>
   );
 }
 
-function ExcerptCard({ disabled }: { readonly disabled: boolean }): ReactNode {
+function ExcerptSection({
+  disabled,
+}: {
+  readonly disabled: boolean;
+}): ReactNode {
   const { control } = useFormContext<PostEditorValues>();
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm font-semibold">Excerpt</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <AccordionItem value="excerpt">
+      <AccordionTrigger className="px-4 py-3 text-sm font-semibold">
+        Excerpt
+      </AccordionTrigger>
+      <AccordionContent className="px-4 pb-4">
         <FormField
           control={control}
           name="excerpt"
@@ -473,8 +500,8 @@ function ExcerptCard({ disabled }: { readonly disabled: boolean }): ReactNode {
             </FormItem>
           )}
         />
-      </CardContent>
-    </Card>
+      </AccordionContent>
+    </AccordionItem>
   );
 }
 
