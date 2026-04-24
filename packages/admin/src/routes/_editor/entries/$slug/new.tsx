@@ -1,11 +1,9 @@
 import type { PostEditorValues } from "@/components/editor/entry-editor-form.js";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
-import {
-  DEFAULT_ENTRY_SUPPORTS,
-  PostEditorForm,
-} from "@/components/editor/entry-editor-form.js";
+import { PostEditorForm } from "@/components/editor/entry-editor-form.js";
 import { hasCap } from "@/lib/caps.js";
+import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import { entryMetaBoxesForType, findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useMutation } from "@tanstack/react-query";
@@ -18,8 +16,6 @@ import {
 
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import type { EntryStatus } from "@plumix/core/schema";
-
-import { ENTRIES_LIST_DEFAULT_SEARCH } from "../../../_authenticated/entries/$slug/-constants.js";
 
 // Statuses the new-post dropdown should expose. `trash` is omitted — you
 // don't create a post straight into the trash bin; the list view has a
@@ -111,7 +107,7 @@ function NewPostRoute(): ReactNode {
       initialValues={initialValues}
       slugLocked={false}
       availableStatuses={NEW_POST_STATUSES}
-      supports={entryType.supports ?? DEFAULT_ENTRY_SUPPORTS}
+      supports={entryType.supports}
       metaBoxes={metaBoxes}
       headline={`New ${singularLower}`}
       submitLabel="Create"

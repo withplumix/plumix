@@ -7,11 +7,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.js";
+import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import { visibleEntryTypes } from "@/lib/manifest.js";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, FileText } from "lucide-react";
-
-import { ENTRIES_LIST_DEFAULT_SEARCH } from "./entries/$slug/-constants.js";
 
 export const Route = createFileRoute("/_authenticated/")({
   component: DashboardIndex,

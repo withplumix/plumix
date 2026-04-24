@@ -90,11 +90,7 @@ export const POST_EDITOR_STATUSES: readonly EntryStatus[] = [
  * load-bearing for routing; a plugin that genuinely wants slug off can
  * opt out explicitly.
  */
-export const DEFAULT_ENTRY_SUPPORTS: readonly string[] = [
-  "title",
-  "editor",
-  "slug",
-];
+const DEFAULT_ENTRY_SUPPORTS: readonly string[] = ["title", "editor", "slug"];
 
 interface PostEditorFormProps {
   readonly initialValues: PostEditorValues;
@@ -103,9 +99,9 @@ interface PostEditorFormProps {
    * URL. */
   readonly slugLocked: boolean;
   readonly availableStatuses: readonly EntryStatus[];
-  /** `entryType.supports` — gates which canvas + rail pieces render.
-   *  Default resolved by the caller (use `DEFAULT_ENTRY_SUPPORTS`). */
-  readonly supports: readonly string[];
+  /** Pass `entryType.supports` straight through. Omit (or `undefined`)
+   *  falls back to `["title", "editor", "slug"]` — WP parity plus slug. */
+  readonly supports?: readonly string[];
   /**
    * Meta boxes applicable to the post type being edited, already
    * filtered by capability and sorted by priority. All boxes land in
@@ -173,10 +169,11 @@ export function PostEditorForm({
     onSubmit(value);
   });
 
-  const showTitle = supports.includes("title");
-  const showEditor = supports.includes("editor");
-  const showSlug = supports.includes("slug");
-  const showExcerpt = supports.includes("excerpt");
+  const resolvedSupports = supports ?? DEFAULT_ENTRY_SUPPORTS;
+  const showTitle = resolvedSupports.includes("title");
+  const showEditor = resolvedSupports.includes("editor");
+  const showSlug = resolvedSupports.includes("slug");
+  const showExcerpt = resolvedSupports.includes("excerpt");
 
   // Open every rail section by default — Gutenberg parity. Users
   // collapse what they don't use; the multi-select accordion keeps
@@ -230,7 +227,11 @@ export function PostEditorForm({
                 >
                   {isSubmitting ? "Saving…" : submitLabel}
                 </Button>
-                <SidebarTrigger />
+                {/* `type="button"` is load-bearing: shadcn's `Button`
+                    doesn't default it, and an un-typed button inside
+                    `<form>` inherits `submit` — clicking the toggle
+                    would otherwise fire the form's onSubmit + mutate. */}
+                <SidebarTrigger type="button" />
               </div>
             </header>
 
@@ -348,6 +349,11 @@ function ContentField({ disabled }: { readonly disabled: boolean }): ReactNode {
       render={({ field }) => (
         <FormItem>
           <FormLabel className="sr-only">Content</FormLabel>
+          {/* `<div>` is the Slot target: shadcn's FormControl clones
+              its single direct child to merge `id` / `aria-*` props,
+              but TiptapEditor is a component that doesn't forward DOM
+              attrs onto its root. The wrapper gives Slot a plain
+              element to target. */}
           <FormControl>
             <div>
               <TiptapEditor
@@ -367,13 +373,30 @@ function ContentField({ disabled }: { readonly disabled: boolean }): ReactNode {
   );
 }
 
-// ---------- rail cards ----------
+// ---------- rail sections ----------
 
-// Accordion-item wrappers for the built-in document sections —
-// Permalink / Status / Excerpt render the same shape as plugin meta
-// boxes (see `MetaBoxAccordionItem`) so the rail reads as one
-// consistent stack of collapsible panels. `value` props collide with
-// `openSections` keys — keep them stable.
+// Shared shell for every built-in rail section — matches the layout
+// `MetaBoxAccordionItem` uses for plugin boxes so the rail reads as
+// one consistent stack of collapsible panels. `value` props collide
+// with `openSections` keys; keep them stable.
+function RailSection({
+  value,
+  title,
+  children,
+}: {
+  readonly value: string;
+  readonly title: string;
+  readonly children: ReactNode;
+}): ReactNode {
+  return (
+    <AccordionItem value={value}>
+      <AccordionTrigger className="px-4 py-3 text-sm font-semibold">
+        {title}
+      </AccordionTrigger>
+      <AccordionContent className="px-4 pb-4">{children}</AccordionContent>
+    </AccordionItem>
+  );
+}
 
 function PermalinkSection({
   disabled,
@@ -384,40 +407,35 @@ function PermalinkSection({
 }): ReactNode {
   const { control } = useFormContext<PostEditorValues>();
   return (
-    <AccordionItem value="permalink">
-      <AccordionTrigger className="px-4 py-3 text-sm font-semibold">
-        Permalink
-      </AccordionTrigger>
-      <AccordionContent className="px-4 pb-4">
-        <FormField
-          control={control}
-          name="slug"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="sr-only">Slug</FormLabel>
-              <FormControl>
-                <Input
-                  type="text"
-                  required
-                  autoComplete="off"
-                  disabled={disabled}
-                  data-testid="post-editor-slug-input"
-                  {...field}
-                  onChange={(e) => {
-                    // Any direct edit to the slug input locks out the
-                    // title-driven auto-derivation for the rest of this
-                    // editor session.
-                    onSlugEdit();
-                    field.onChange(e);
-                  }}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </AccordionContent>
-    </AccordionItem>
+    <RailSection value="permalink" title="Permalink">
+      <FormField
+        control={control}
+        name="slug"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="sr-only">Slug</FormLabel>
+            <FormControl>
+              <Input
+                type="text"
+                required
+                autoComplete="off"
+                disabled={disabled}
+                data-testid="post-editor-slug-input"
+                {...field}
+                onChange={(e) => {
+                  // Any direct edit to the slug input locks out the
+                  // title-driven auto-derivation for the rest of this
+                  // editor session.
+                  onSlugEdit();
+                  field.onChange(e);
+                }}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </RailSection>
   );
 }
 
@@ -430,41 +448,36 @@ function StatusSection({
 }): ReactNode {
   const { control } = useFormContext<PostEditorValues>();
   return (
-    <AccordionItem value="status">
-      <AccordionTrigger className="px-4 py-3 text-sm font-semibold">
-        Status
-      </AccordionTrigger>
-      <AccordionContent className="px-4 pb-4">
-        <FormField
-          control={control}
-          name="status"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="sr-only">Status</FormLabel>
-              <FormControl>
-                <select
-                  value={field.value}
-                  onBlur={field.onBlur}
-                  onChange={(e) => {
-                    field.onChange(e.target.value);
-                  }}
-                  disabled={disabled}
-                  data-testid="post-editor-status-select"
-                  className="border-input bg-background focus-visible:ring-ring h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {availableStatuses.map((status) => (
-                    <option key={status} value={status} className="capitalize">
-                      {capitalize(status)}
-                    </option>
-                  ))}
-                </select>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </AccordionContent>
-    </AccordionItem>
+    <RailSection value="status" title="Status">
+      <FormField
+        control={control}
+        name="status"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="sr-only">Status</FormLabel>
+            <FormControl>
+              <select
+                value={field.value}
+                onBlur={field.onBlur}
+                onChange={(e) => {
+                  field.onChange(e.target.value);
+                }}
+                disabled={disabled}
+                data-testid="post-editor-status-select"
+                className="border-input bg-background focus-visible:ring-ring h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {availableStatuses.map((status) => (
+                  <option key={status} value={status} className="capitalize">
+                    {capitalize(status)}
+                  </option>
+                ))}
+              </select>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </RailSection>
   );
 }
 
@@ -475,33 +488,28 @@ function ExcerptSection({
 }): ReactNode {
   const { control } = useFormContext<PostEditorValues>();
   return (
-    <AccordionItem value="excerpt">
-      <AccordionTrigger className="px-4 py-3 text-sm font-semibold">
-        Excerpt
-      </AccordionTrigger>
-      <AccordionContent className="px-4 pb-4">
-        <FormField
-          control={control}
-          name="excerpt"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="sr-only">Excerpt</FormLabel>
-              <FormControl>
-                <textarea
-                  {...field}
-                  maxLength={600}
-                  rows={3}
-                  disabled={disabled}
-                  data-testid="post-editor-excerpt-input"
-                  className="border-input bg-background focus-visible:ring-ring flex min-h-20 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </AccordionContent>
-    </AccordionItem>
+    <RailSection value="excerpt" title="Excerpt">
+      <FormField
+        control={control}
+        name="excerpt"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="sr-only">Excerpt</FormLabel>
+            <FormControl>
+              <textarea
+                {...field}
+                maxLength={600}
+                rows={3}
+                disabled={disabled}
+                data-testid="post-editor-excerpt-input"
+                className="border-input bg-background focus-visible:ring-ring flex min-h-20 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </RailSection>
   );
 }
 

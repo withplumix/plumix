@@ -2,12 +2,12 @@ import type { PostEditorValues } from "@/components/editor/entry-editor-form.js"
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import {
-  DEFAULT_ENTRY_SUPPORTS,
   POST_EDITOR_STATUSES,
   PostEditorForm,
 } from "@/components/editor/entry-editor-form.js";
 import { Skeleton } from "@/components/ui/skeleton.js";
 import { hasCap } from "@/lib/caps.js";
+import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import { entryMetaBoxesForType, findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import {
@@ -21,8 +21,6 @@ import * as v from "valibot";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import type { Entry } from "@plumix/core/schema";
 import { idPathParam } from "@plumix/core/validation";
-
-import { ENTRIES_LIST_DEFAULT_SEARCH } from "../../../_authenticated/entries/$slug/-constants.js";
 
 export const Route = createFileRoute("/_editor/entries/$slug/$id")({
   // Reject invalid ids as a router 404 before `beforeLoad` / `loader`
@@ -161,7 +159,7 @@ function EditPostRoute(): ReactNode {
       initialValues={initialValues}
       slugLocked
       availableStatuses={POST_EDITOR_STATUSES}
-      supports={entryType.supports ?? DEFAULT_ENTRY_SUPPORTS}
+      supports={entryType.supports}
       metaBoxes={metaBoxes}
       headline={`Edit ${singularLower}`}
       submitLabel="Save"
@@ -222,7 +220,10 @@ function EditorSkeleton({ label }: { label: string }): ReactNode {
             <Skeleton className="h-64 w-full" />
           </div>
         </div>
-        <aside className="flex w-(--sidebar-width) shrink-0 flex-col gap-4 border-l p-4 max-md:hidden">
+        {/* Width hardcoded to 16rem to match shadcn's `SIDEBAR_WIDTH`
+            constant — the `--sidebar-width` CSS variable isn't in scope
+            here because `SidebarProvider` mounts with the form below. */}
+        <aside className="flex w-64 shrink-0 flex-col gap-4 border-l p-4 max-md:hidden">
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-40 w-full" />
