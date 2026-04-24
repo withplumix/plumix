@@ -5,6 +5,12 @@ import { MetaBoxCard } from "@/components/meta-box/meta-box.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Button } from "@/components/ui/button.js";
 import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card.js";
+import {
   Form,
   FormControl,
   FormField,
@@ -13,9 +19,19 @@ import {
   FormMessage,
 } from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar.js";
+import { cn } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useBlocker } from "@tanstack/react-router";
-import { useForm, useWatch } from "react-hook-form";
+import { ArrowLeft } from "lucide-react";
+import { useForm, useFormContext, useWatch } from "react-hook-form";
 import * as v from "valibot";
 
 import type { EntryMetaBoxManifestEntry } from "@plumix/core/manifest";
@@ -67,6 +83,19 @@ export const POST_EDITOR_STATUSES: readonly EntryStatus[] = [
   "trash",
 ];
 
+/**
+ * Default feature set when `entryType.supports` is omitted — matches
+ * what the admin surface needs to render a usable entry editor.
+ * WordPress parity: `title` + `editor`. We add `slug` because it's
+ * load-bearing for routing; a plugin that genuinely wants slug off can
+ * opt out explicitly.
+ */
+export const DEFAULT_ENTRY_SUPPORTS: readonly string[] = [
+  "title",
+  "editor",
+  "slug",
+];
+
 interface PostEditorFormProps {
   readonly initialValues: PostEditorValues;
   /** Slug starts unlocked until user edits the slug field directly. For
@@ -74,13 +103,20 @@ interface PostEditorFormProps {
    * URL. */
   readonly slugLocked: boolean;
   readonly availableStatuses: readonly EntryStatus[];
+  /** `entryType.supports` — gates which canvas + rail pieces render.
+   *  Default resolved by the caller (use `DEFAULT_ENTRY_SUPPORTS`). */
+  readonly supports: readonly string[];
   /**
    * Meta boxes applicable to the post type being edited, already
-   * filtered by capability and sorted by priority. The form splits them
-   * into `bottom` (default, below the main editor) and `sidebar`
-   * (right rail) regions based on `box.location`.
+   * filtered by capability and sorted by priority. All boxes land in
+   * the right rail stacked below the built-in Permalink / Status /
+   * Excerpt cards — `box.location` is ignored.
    */
   readonly metaBoxes: readonly EntryMetaBoxManifestEntry[];
+  /** Caption shown next to the back button — e.g. `"New post"` or
+   *  `"Edit post"`. The editor itself is the page, so there's no
+   *  separate `<h1>` above it. */
+  readonly headline: string;
   readonly submitLabel: string;
   readonly isSubmitting: boolean;
   readonly serverError?: string | null;
@@ -92,7 +128,9 @@ export function PostEditorForm({
   initialValues,
   slugLocked: initialSlugLocked,
   availableStatuses,
+  supports,
   metaBoxes,
+  headline,
   submitLabel,
   isSubmitting,
   serverError,
@@ -131,239 +169,315 @@ export function PostEditorForm({
     disabled: isSubmitting,
   });
 
-  const { bottom, sidebar } = partitionBoxesByLocation(metaBoxes);
-
   const handleSubmit = form.handleSubmit((value) => {
     onSubmit(value);
   });
 
+  const showTitle = supports.includes("title");
+  const showEditor = supports.includes("editor");
+  const showSlug = supports.includes("slug");
+  const showExcerpt = supports.includes("excerpt");
+
   return (
     <Form {...form}>
+      {/* `contents` makes the form invisible in the flex flow so
+          SidebarProvider owns the layout; fields in the rail still
+          submit via Controller (rhf state, not DOM form semantics). */}
       <form
-        className="flex flex-col gap-6"
+        id="entry-editor-form"
         data-testid="post-editor-form"
         onSubmit={handleSubmit}
+        className="contents"
       >
-        <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_20rem]">
-          <div className="flex flex-col gap-6">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="text"
-                      required
-                      autoComplete="off"
-                      disabled={isSubmitting}
-                      data-testid="post-editor-title-input"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <SidebarProvider defaultOpen className="flex-1">
+          <SidebarInset className="flex min-w-0 flex-col">
+            <header className="bg-background sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between gap-3 border-b px-4">
+              <div className="flex min-w-0 items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={onCancel}
+                  disabled={isSubmitting}
+                  data-testid="post-editor-cancel"
+                  aria-label="Back"
+                >
+                  <ArrowLeft />
+                </Button>
+                <span
+                  className="truncate text-sm font-medium"
+                  data-testid="post-editor-headline"
+                >
+                  {headline}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  data-testid="post-editor-submit"
+                >
+                  {isSubmitting ? "Saving…" : submitLabel}
+                </Button>
+                <SidebarTrigger />
+              </div>
+            </header>
 
-            <FormField
-              control={form.control}
-              name="slug"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Slug</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="text"
-                      required
-                      autoComplete="off"
-                      disabled={isSubmitting}
-                      data-testid="post-editor-slug-input"
-                      {...field}
-                      onChange={(e) => {
-                        // Any direct edit to the slug input locks out the
-                        // title-driven auto-derivation for the rest of this
-                        // editor session.
-                        setSlugLocked(true);
-                        field.onChange(e);
-                      }}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {serverError ? (
+              <div className="border-b px-4 py-2">
+                <Alert variant="destructive">
+                  <AlertDescription>{serverError}</AlertDescription>
+                </Alert>
+              </div>
+            ) : null}
 
-            <FormField
-              control={form.control}
-              name="content"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Content</FormLabel>
-                  <FormControl>
-                    <div>
-                      <TiptapEditor
-                        value={field.value}
-                        onChange={(json) => {
-                          field.onChange(json);
-                        }}
-                        disabled={isSubmitting}
-                        ariaLabel="Entry content"
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <main className="flex-1 overflow-auto">
+              <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-8 py-10">
+                {showTitle ? <TitleField disabled={isSubmitting} /> : null}
+                {showEditor ? <ContentField disabled={isSubmitting} /> : null}
+                {!showTitle && !showEditor ? (
+                  <p
+                    className="text-muted-foreground text-sm"
+                    data-testid="post-editor-empty-canvas"
+                  >
+                    This entry type has no title or editor. Use the panels on
+                    the right to manage its content.
+                  </p>
+                ) : null}
+              </div>
+            </main>
+          </SidebarInset>
 
-            <FormField
-              control={form.control}
-              name="excerpt"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Excerpt{" "}
-                    <span className="text-muted-foreground">(optional)</span>
-                  </FormLabel>
-                  <FormControl>
-                    <textarea
-                      {...field}
-                      maxLength={600}
-                      rows={3}
-                      disabled={isSubmitting}
-                      className="border-input bg-background focus-visible:ring-ring flex min-h-20 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <FormControl>
-                    <select
-                      value={field.value}
-                      onBlur={field.onBlur}
-                      onChange={(e) => {
-                        field.onChange(e.target.value);
-                      }}
-                      disabled={isSubmitting}
-                      className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {availableStatuses.map((status) => (
-                        <option
-                          key={status}
-                          value={status}
-                          className="capitalize"
-                        >
-                          {capitalize(status)}
-                        </option>
-                      ))}
-                    </select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <MetaBoxRegion
-              boxes={bottom}
-              testId="meta-boxes-bottom"
-              disabled={isSubmitting}
-            />
-          </div>
-
-          <aside
-            className="flex flex-col gap-4"
+          <Sidebar
+            side="right"
+            collapsible="offcanvas"
             data-testid="meta-boxes-sidebar"
           >
-            <MetaBoxRegion
-              boxes={sidebar}
-              testId="meta-boxes-sidebar-boxes"
-              disabled={isSubmitting}
-            />
-          </aside>
-        </div>
-
-        {serverError ? (
-          <Alert variant="destructive">
-            <AlertDescription>{serverError}</AlertDescription>
-          </Alert>
-        ) : null}
-
-        <div className="flex items-center justify-end gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={onCancel}
-            disabled={isSubmitting}
-            data-testid="post-editor-cancel"
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            data-testid="post-editor-submit"
-          >
-            {isSubmitting ? "Saving…" : submitLabel}
-          </Button>
-        </div>
+            <SidebarHeader className="border-b px-4 py-3 text-sm font-semibold">
+              Document
+            </SidebarHeader>
+            <SidebarContent>
+              <div className="flex flex-col gap-4 p-4">
+                {showSlug ? (
+                  <PermalinkCard
+                    disabled={isSubmitting}
+                    onSlugEdit={() => {
+                      setSlugLocked(true);
+                    }}
+                  />
+                ) : null}
+                <StatusCard
+                  availableStatuses={availableStatuses}
+                  disabled={isSubmitting}
+                />
+                {showExcerpt ? <ExcerptCard disabled={isSubmitting} /> : null}
+                {metaBoxes.map((box) => (
+                  <MetaBoxCard
+                    key={box.id}
+                    box={box}
+                    basePath="meta"
+                    disabled={isSubmitting}
+                  />
+                ))}
+              </div>
+            </SidebarContent>
+          </Sidebar>
+        </SidebarProvider>
       </form>
     </Form>
   );
 }
 
-function capitalize(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
+// ---------- canvas fields ----------
+
+function TitleField({ disabled }: { readonly disabled: boolean }): ReactNode {
+  const { control } = useFormContext<PostEditorValues>();
+  return (
+    <FormField
+      control={control}
+      name="title"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel className="sr-only">Title</FormLabel>
+          <FormControl>
+            <Input
+              type="text"
+              required
+              autoComplete="off"
+              disabled={disabled}
+              placeholder="Add title"
+              data-testid="post-editor-title-input"
+              className={cn(
+                "h-auto border-0 bg-transparent px-0 text-3xl font-semibold shadow-none",
+                "placeholder:text-muted-foreground/60",
+                "focus-visible:border-0 focus-visible:ring-0",
+              )}
+              {...field}
+            />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
 }
 
-// Two-slot layout. Unspecified / unknown `location` falls back to
-// "bottom" so plugin-specific values don't vanish into nowhere.
-function partitionBoxesByLocation(
-  boxes: readonly EntryMetaBoxManifestEntry[],
-): {
-  bottom: readonly EntryMetaBoxManifestEntry[];
-  sidebar: readonly EntryMetaBoxManifestEntry[];
-} {
-  const bottom: EntryMetaBoxManifestEntry[] = [];
-  const sidebar: EntryMetaBoxManifestEntry[] = [];
-  for (const box of boxes) {
-    if (box.location === "sidebar") sidebar.push(box);
-    else bottom.push(box);
-  }
-  return { bottom, sidebar };
+function ContentField({ disabled }: { readonly disabled: boolean }): ReactNode {
+  const { control } = useFormContext<PostEditorValues>();
+  return (
+    <FormField
+      control={control}
+      name="content"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel className="sr-only">Content</FormLabel>
+          <FormControl>
+            <div>
+              <TiptapEditor
+                value={field.value}
+                onChange={(json) => {
+                  field.onChange(json);
+                }}
+                disabled={disabled}
+                ariaLabel="Entry content"
+              />
+            </div>
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
 }
 
-// Render a stack of boxes under the shared `meta` subtree. Nothing
-// renders when the bucket is empty so the layout stays tight.
-function MetaBoxRegion({
-  boxes,
-  testId,
+// ---------- rail cards ----------
+
+function PermalinkCard({
+  disabled,
+  onSlugEdit,
+}: {
+  readonly disabled: boolean;
+  readonly onSlugEdit: () => void;
+}): ReactNode {
+  const { control } = useFormContext<PostEditorValues>();
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm font-semibold">Permalink</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <FormField
+          control={control}
+          name="slug"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="sr-only">Slug</FormLabel>
+              <FormControl>
+                <Input
+                  type="text"
+                  required
+                  autoComplete="off"
+                  disabled={disabled}
+                  data-testid="post-editor-slug-input"
+                  {...field}
+                  onChange={(e) => {
+                    // Any direct edit to the slug input locks out the
+                    // title-driven auto-derivation for the rest of this
+                    // editor session.
+                    onSlugEdit();
+                    field.onChange(e);
+                  }}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+function StatusCard({
+  availableStatuses,
   disabled,
 }: {
-  readonly boxes: readonly EntryMetaBoxManifestEntry[];
-  readonly testId: string;
+  readonly availableStatuses: readonly EntryStatus[];
   readonly disabled: boolean;
 }): ReactNode {
-  if (boxes.length === 0) return null;
+  const { control } = useFormContext<PostEditorValues>();
   return (
-    <div className="flex flex-col gap-4" data-testid={testId}>
-      {boxes.map((box) => (
-        <MetaBoxCard
-          key={box.id}
-          box={box}
-          basePath="meta"
-          disabled={disabled}
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm font-semibold">Status</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <FormField
+          control={control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="sr-only">Status</FormLabel>
+              <FormControl>
+                <select
+                  value={field.value}
+                  onBlur={field.onBlur}
+                  onChange={(e) => {
+                    field.onChange(e.target.value);
+                  }}
+                  disabled={disabled}
+                  data-testid="post-editor-status-select"
+                  className="border-input bg-background focus-visible:ring-ring h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {availableStatuses.map((status) => (
+                    <option key={status} value={status} className="capitalize">
+                      {capitalize(status)}
+                    </option>
+                  ))}
+                </select>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      ))}
-    </div>
+      </CardContent>
+    </Card>
   );
+}
+
+function ExcerptCard({ disabled }: { readonly disabled: boolean }): ReactNode {
+  const { control } = useFormContext<PostEditorValues>();
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm font-semibold">Excerpt</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <FormField
+          control={control}
+          name="excerpt"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="sr-only">Excerpt</FormLabel>
+              <FormControl>
+                <textarea
+                  {...field}
+                  maxLength={600}
+                  rows={3}
+                  disabled={disabled}
+                  data-testid="post-editor-excerpt-input"
+                  className="border-input bg-background focus-visible:ring-ring flex min-h-20 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }

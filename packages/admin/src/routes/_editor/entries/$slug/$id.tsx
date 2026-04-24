@@ -2,6 +2,7 @@ import type { PostEditorValues } from "@/components/editor/entry-editor-form.js"
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import {
+  DEFAULT_ENTRY_SUPPORTS,
   POST_EDITOR_STATUSES,
   PostEditorForm,
 } from "@/components/editor/entry-editor-form.js";
@@ -21,9 +22,9 @@ import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import type { Entry } from "@plumix/core/schema";
 import { idPathParam } from "@plumix/core/validation";
 
-import { ENTRIES_LIST_DEFAULT_SEARCH } from "./-constants.js";
+import { ENTRIES_LIST_DEFAULT_SEARCH } from "../../../_authenticated/entries/$slug/-constants.js";
 
-export const Route = createFileRoute("/_authenticated/entries/$slug/$id")({
+export const Route = createFileRoute("/_editor/entries/$slug/$id")({
   // Reject invalid ids as a router 404 before `beforeLoad` / `loader`
   // fire — no RPC, no stale-id flicker through the cache.
   params: {
@@ -146,54 +147,42 @@ function EditPostRoute(): ReactNode {
   const initialValues: PostEditorValues = toEditorValues(post);
 
   return (
-    <div className="flex max-w-6xl flex-col gap-6">
-      <div>
-        <h1
-          className="text-2xl font-semibold"
-          data-testid="post-editor-edit-heading"
-        >
-          Edit {singularLower}
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          ID {post.id} · last updated{" "}
-          {new Date(post.updatedAt).toLocaleString()}
-        </p>
-      </div>
-      <PostEditorForm
-        // Key on `updatedAt` so a successful update (which bumps the
-        // server's updatedAt and triggers a refetch) remounts the form
-        // with fresh initial values — clears isDirty and re-arms the
-        // blocker cleanly. Switching entries (different id → different
-        // updatedAt) resets state the same way.
-        key={
-          post.updatedAt instanceof Date
-            ? post.updatedAt.toISOString()
-            : String(post.updatedAt)
-        }
-        initialValues={initialValues}
-        slugLocked
-        availableStatuses={POST_EDITOR_STATUSES}
-        metaBoxes={metaBoxes}
-        submitLabel="Save"
-        // For the edit path, the post-save remount (keyed on
-        // `updatedAt`) resets the form's isDirty to false — so the
-        // blocker naturally stops prompting once the mutation settles.
-        // No need to carry `isSuccess` across, unlike the new-post
-        // route which has a navigation to bridge.
-        isSubmitting={updatePost.isPending}
-        serverError={updatePost.isPending ? null : serverError}
-        onSubmit={(values) => {
-          updatePost.mutate(values);
-        }}
-        onCancel={() => {
-          void navigate({
-            to: "/entries/$slug",
-            params: { slug },
-            search: ENTRIES_LIST_DEFAULT_SEARCH,
-          });
-        }}
-      />
-    </div>
+    <PostEditorForm
+      // Key on `updatedAt` so a successful update (which bumps the
+      // server's updatedAt and triggers a refetch) remounts the form
+      // with fresh initial values — clears isDirty and re-arms the
+      // blocker cleanly. Switching entries (different id → different
+      // updatedAt) resets state the same way.
+      key={
+        post.updatedAt instanceof Date
+          ? post.updatedAt.toISOString()
+          : String(post.updatedAt)
+      }
+      initialValues={initialValues}
+      slugLocked
+      availableStatuses={POST_EDITOR_STATUSES}
+      supports={entryType.supports ?? DEFAULT_ENTRY_SUPPORTS}
+      metaBoxes={metaBoxes}
+      headline={`Edit ${singularLower}`}
+      submitLabel="Save"
+      // For the edit path, the post-save remount (keyed on
+      // `updatedAt`) resets the form's isDirty to false — so the
+      // blocker naturally stops prompting once the mutation settles.
+      // No need to carry `isSuccess` across, unlike the new-post
+      // route which has a navigation to bridge.
+      isSubmitting={updatePost.isPending}
+      serverError={updatePost.isPending ? null : serverError}
+      onSubmit={(values) => {
+        updatePost.mutate(values);
+      }}
+      onCancel={() => {
+        void navigate({
+          to: "/entries/$slug",
+          params: { slug },
+          search: ENTRIES_LIST_DEFAULT_SEARCH,
+        });
+      }}
+    />
   );
 }
 
@@ -208,9 +197,9 @@ function toEditorValues(post: Entry): PostEditorValues {
   };
 }
 
-// Content-shaped skeleton while the existing post fetches: heading +
-// title field + slug field + body block + side rail. Keeps layout stable
-// so the form doesn't pop in with a visible reflow once the query
+// Full-screen-editor-shaped skeleton: sticky header line + centered
+// canvas placeholders + right rail. Layout mirrors the real editor so
+// the form doesn't pop in with a visible reflow once the query
 // resolves. `role=status` + `aria-live` announces the loading state to
 // screen readers; sighted users get the visual shimmer.
 function EditorSkeleton({ label }: { label: string }): ReactNode {
@@ -220,21 +209,23 @@ function EditorSkeleton({ label }: { label: string }): ReactNode {
       aria-live="polite"
       aria-label={label}
       data-testid="post-editor-loading"
-      className="flex max-w-6xl flex-col gap-6"
+      className="flex flex-1 flex-col"
     >
-      <div className="flex flex-col gap-2">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-4 w-72" />
+      <div className="flex h-14 shrink-0 items-center justify-between border-b px-4">
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="h-9 w-20" />
       </div>
-      <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="flex flex-col gap-4">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-64 w-full" />
+      <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-auto">
+          <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-8 py-10">
+            <Skeleton className="h-10 w-2/3" />
+            <Skeleton className="h-64 w-full" />
+          </div>
         </div>
-        <aside className="flex flex-col gap-4">
-          <Skeleton className="h-40 w-full" />
+        <aside className="flex w-(--sidebar-width) shrink-0 flex-col gap-4 border-l p-4 max-md:hidden">
           <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-40 w-full" />
         </aside>
       </div>
     </div>

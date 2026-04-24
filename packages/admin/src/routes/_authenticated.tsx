@@ -3,20 +3,11 @@ import { AppSidebar } from "@/components/shell/app-sidebar.js";
 import { ShellHeader } from "@/components/shell/shell-header.js";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar.js";
 import { TooltipProvider } from "@/components/ui/tooltip.js";
-import { sessionQueryOptions } from "@/lib/session.js";
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { requireAuthenticatedSession } from "@/lib/session.js";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: async ({ context }) => {
-    const session = await context.queryClient.ensureQueryData(
-      sessionQueryOptions(),
-    );
-    if (!session.user) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow; see https://tanstack.com/router/latest/docs/framework/react/guide/authenticated-routes
-      throw redirect({ to: session.needsBootstrap ? "/bootstrap" : "/login" });
-    }
-    return { user: session.user };
-  },
+  beforeLoad: ({ context }) => requireAuthenticatedSession(context.queryClient),
   component: AppShell,
 });
 
