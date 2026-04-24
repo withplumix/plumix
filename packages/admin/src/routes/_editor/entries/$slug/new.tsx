@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { PostEditorForm } from "@/components/editor/entry-editor-form.js";
 import { hasCap } from "@/lib/caps.js";
+import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import { entryMetaBoxesForType, findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useMutation } from "@tanstack/react-query";
@@ -16,8 +17,6 @@ import {
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import type { EntryStatus } from "@plumix/core/schema";
 
-import { ENTRIES_LIST_DEFAULT_SEARCH } from "./-constants.js";
-
 // Statuses the new-post dropdown should expose. `trash` is omitted — you
 // don't create a post straight into the trash bin; the list view has a
 // dedicated Trash filter for that workflow.
@@ -27,7 +26,7 @@ const NEW_POST_STATUSES: readonly EntryStatus[] = [
   "scheduled",
 ];
 
-export const Route = createFileRoute("/_authenticated/entries/$slug/new")({
+export const Route = createFileRoute("/_editor/entries/$slug/new")({
   beforeLoad: ({ context, params }): { entryType: EntryTypeManifestEntry } => {
     const entryType = findEntryTypeBySlug(params.slug);
     if (!entryType) {
@@ -104,39 +103,31 @@ function NewPostRoute(): ReactNode {
   ).toLowerCase();
 
   return (
-    <div className="flex max-w-6xl flex-col gap-6">
-      <div>
-        <h1
-          className="text-2xl font-semibold"
-          data-testid="post-editor-new-heading"
-        >
-          New {singularLower}
-        </h1>
-      </div>
-      <PostEditorForm
-        initialValues={initialValues}
-        slugLocked={false}
-        availableStatuses={NEW_POST_STATUSES}
-        metaBoxes={metaBoxes}
-        submitLabel="Create"
-        // Stay "busy" through `isSuccess` too — TanStack Query flips
-        // `isPending` to false BEFORE `onSuccess` calls navigate(), which
-        // would otherwise let the dirty-warn blocker prompt on the
-        // successful-save navigation. The component unmounts when the
-        // new route mounts, at which point the flag no longer matters.
-        isSubmitting={createPost.isPending || createPost.isSuccess}
-        serverError={createPost.isPending ? null : serverError}
-        onSubmit={(values) => {
-          createPost.mutate(values);
-        }}
-        onCancel={() => {
-          void navigate({
-            to: "/entries/$slug",
-            params: { slug: params.slug },
-            search: ENTRIES_LIST_DEFAULT_SEARCH,
-          });
-        }}
-      />
-    </div>
+    <PostEditorForm
+      initialValues={initialValues}
+      slugLocked={false}
+      availableStatuses={NEW_POST_STATUSES}
+      supports={entryType.supports}
+      metaBoxes={metaBoxes}
+      headline={`New ${singularLower}`}
+      submitLabel="Create"
+      // Stay "busy" through `isSuccess` too — TanStack Query flips
+      // `isPending` to false BEFORE `onSuccess` calls navigate(), which
+      // would otherwise let the dirty-warn blocker prompt on the
+      // successful-save navigation. The component unmounts when the
+      // new route mounts, at which point the flag no longer matters.
+      isSubmitting={createPost.isPending || createPost.isSuccess}
+      serverError={createPost.isPending ? null : serverError}
+      onSubmit={(values) => {
+        createPost.mutate(values);
+      }}
+      onCancel={() => {
+        void navigate({
+          to: "/entries/$slug",
+          params: { slug: params.slug },
+          search: ENTRIES_LIST_DEFAULT_SEARCH,
+        });
+      }}
+    />
   );
 }

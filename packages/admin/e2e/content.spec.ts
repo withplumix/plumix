@@ -340,7 +340,7 @@ test.describe("/entries/$slug/new", () => {
     });
 
     await page.goto("entries/posts/new");
-    await expect(page.getByTestId("post-editor-new-heading")).toBeVisible();
+    await expect(page.getByTestId("post-editor-headline")).toBeVisible();
 
     // Auto-slug from title while slug is still unlocked.
     await page.getByTestId("post-editor-title-input").fill("Hello World");
@@ -393,7 +393,7 @@ test.describe("/entries/$slug/new", () => {
   }) => {
     await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
     await page.goto("entries/posts/new");
-    await expect(page.getByTestId("post-editor-new-heading")).toBeVisible();
+    await expect(page.getByTestId("post-editor-headline")).toBeVisible();
     await expectNoAxeViolations(page);
   });
 });
@@ -475,7 +475,7 @@ test.describe("/entries/$slug/$id", () => {
     });
 
     await page.goto("entries/posts/7");
-    await expect(page.getByTestId("post-editor-edit-heading")).toBeVisible();
+    await expect(page.getByTestId("post-editor-headline")).toBeVisible();
     // Existing title populates from the loaded post.
     await expect(page.getByTestId("post-editor-title-input")).toHaveValue(
       "Original title",
@@ -499,25 +499,25 @@ test.describe("/entries/$slug/$id", () => {
 });
 
 test.describe("meta-box sidebar", () => {
-  test("renders side + normal boxes, fields are typable", async ({ page }) => {
+  test("all meta boxes render in the rail, fields are typable", async ({
+    page,
+  }) => {
     await mockManifest(page, MANIFEST_WITH_META_BOXES);
     await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
     await page.goto("entries/posts/new");
 
-    // Both boxes render — one in the side rail, one in the main column.
-    await expect(page.getByTestId("meta-box-seo")).toBeVisible();
-    await expect(page.getByTestId("meta-box-featured")).toBeVisible();
-    // Side rail container picks up only side-context boxes.
-    const sideRail = page.getByTestId("meta-boxes-sidebar");
-    await expect(sideRail.getByTestId("meta-box-featured")).toBeVisible();
-    await expect(sideRail.getByTestId("meta-box-seo")).toHaveCount(0);
+    // Full-screen editor: every registered meta box lands in the right
+    // rail. `box.location` is no longer honoured — all boxes are rail.
+    const rail = page.getByTestId("meta-boxes-sidebar");
+    await expect(rail.getByTestId("meta-box-seo")).toBeVisible();
+    await expect(rail.getByTestId("meta-box-featured")).toBeVisible();
 
-    // Text field in the normal box accepts input.
+    // Text field in the seo box accepts input.
     const metaTitle = page.getByTestId("meta-box-field-meta_title-input");
     await metaTitle.fill("Hello meta");
     await expect(metaTitle).toHaveValue("Hello meta");
 
-    // Checkbox in the side box toggles.
+    // Checkbox in the featured box toggles.
     const featured = page.getByTestId("meta-box-field-is_featured-input");
     await expect(featured).not.toBeChecked();
     await featured.check();

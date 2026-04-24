@@ -151,11 +151,17 @@ export interface MetaBoxBaseOptions {
 }
 
 /**
- * Meta box shown on the entry editor. `location` chooses between the
- * right rail (`"sidebar"`) and below the main editor (`"bottom"`,
- * default). Scoped by `entryTypes`.
+ * Meta box shown on the entry editor. Scoped by `entryTypes`. Renders
+ * as a collapsible section in the editor's document rail.
  */
 export interface EntryMetaBoxOptions extends MetaBoxBaseOptions {
+  /**
+   * @deprecated The entry editor no longer partitions meta boxes by
+   * location — every registered box renders as a collapsible section in
+   * the right rail regardless of this flag. Declared for backward
+   * compatibility with plugins that still set it; safe to remove from
+   * new code.
+   */
   readonly location?: "bottom" | "sidebar";
   readonly entryTypes: readonly string[];
 }
@@ -412,6 +418,11 @@ export interface MetaBoxBaseManifestEntry {
 
 export interface EntryMetaBoxManifestEntry extends MetaBoxBaseManifestEntry {
   readonly id: string;
+  /**
+   * @deprecated Ignored by the admin editor — all entry meta boxes
+   * render in the document rail as collapsible sections. Kept on the
+   * wire so older plugins that set it don't fail manifest validation.
+   */
   readonly location?: "bottom" | "sidebar";
   readonly entryTypes: readonly string[];
 }
