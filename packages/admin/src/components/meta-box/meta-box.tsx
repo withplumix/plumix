@@ -21,12 +21,10 @@ import type {
 import { MetaBoxField } from "./meta-box-field.js";
 import { metaBoxFieldColSpanClass } from "./meta-box-grid.js";
 
-// Settings groups deliberately don't pass through this component —
-// they use their own per-card save model in `SettingsGroupCard`.
-type MetaBoxCardEntry =
-  | EntryMetaBoxManifestEntry
-  | TermMetaBoxManifestEntry
-  | UserMetaBoxManifestEntry;
+// `MetaBoxCard` serves the page-width surfaces (term + user edit). The
+// entry editor rail uses `MetaBoxAccordionItem`, and settings groups
+// use their own per-card save model in `SettingsGroupCard`.
+type MetaBoxCardEntry = TermMetaBoxManifestEntry | UserMetaBoxManifestEntry;
 
 interface MetaBoxProps {
   readonly box: MetaBoxCardEntry;
@@ -36,8 +34,9 @@ interface MetaBoxProps {
 
 /**
  * Card variant — used by standalone meta-box surfaces (term + user
- * edit forms) where the box is its own card on the page. Entry-editor
- * rail uses `MetaBoxAccordionItem` instead.
+ * edit forms) where the box is its own card on the page. Honours
+ * `field.span` for multi-column layouts. Entry-editor rail uses
+ * `MetaBoxAccordionItem` instead, which is always single-column.
  *
  * Expects an ancestor `<Form>` provider — each field binds to
  * `${basePath}.${field.key}` via react-hook-form context.
@@ -72,23 +71,30 @@ export function MetaBoxCard({
   );
 }
 
+interface MetaBoxAccordionItemProps {
+  readonly box: EntryMetaBoxManifestEntry;
+  readonly basePath: string;
+  readonly disabled?: boolean;
+}
+
 /**
  * Accordion-section variant — used inside the entry editor's right
  * rail, where meta boxes stack as collapsible sections alongside
  * built-in document panels (Permalink, Status, Excerpt). Must render
  * inside an `<Accordion>` parent; `box.id` is the accordion value.
+ *
+ * Fields always occupy the full row — the rail is fixed at 256px and
+ * side-by-side layouts don't fit legibly. `EntryMetaBoxField` drops
+ * `span` from the type, and this renderer ignores it besides, so a
+ * runtime-loaded plugin can't force a squished layout.
  */
 export function MetaBoxAccordionItem({
   box,
   basePath,
   disabled = false,
-}: MetaBoxProps): ReactNode {
+}: MetaBoxAccordionItemProps): ReactNode {
   return (
-    <AccordionItem
-      value={box.id}
-      className="@container"
-      data-testid={`meta-box-${box.id}`}
-    >
+    <AccordionItem value={box.id} data-testid={`meta-box-${box.id}`}>
       <AccordionTrigger
         className="px-4 py-3 text-sm font-semibold"
         data-testid={`meta-box-heading-${box.id}`}
@@ -101,7 +107,16 @@ export function MetaBoxAccordionItem({
             {box.description}
           </p>
         ) : null}
-        <MetaBoxFieldsGrid box={box} basePath={basePath} disabled={disabled} />
+        <div className="flex flex-col gap-4">
+          {box.fields.map((field) => (
+            <MetaBoxField
+              key={field.key}
+              field={field}
+              name={`${basePath}.${field.key}`}
+              disabled={disabled}
+            />
+          ))}
+        </div>
       </AccordionContent>
     </AccordionItem>
   );

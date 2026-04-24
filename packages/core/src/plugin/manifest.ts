@@ -151,10 +151,23 @@ export interface MetaBoxBaseOptions {
 }
 
 /**
- * Meta box shown on the entry editor. Scoped by `entryTypes`. Renders
- * as a collapsible section in the editor's document rail.
+ * Field shape for entry meta boxes. Drops `span` from the shared
+ * `MetaBoxField` — the editor's document rail is a fixed 256px column,
+ * so side-by-side layouts can't fit legibly. Compile-time signal to
+ * plugin authors that spans are a page-width affordance only (term,
+ * user, settings).
  */
-export interface EntryMetaBoxOptions extends MetaBoxBaseOptions {
+export type EntryMetaBoxField = Omit<MetaBoxField, "span">;
+
+/**
+ * Meta box shown on the entry editor. Scoped by `entryTypes`. Renders
+ * as a collapsible section in the editor's document rail, which is
+ * fixed at 256px — fields always occupy the full row.
+ */
+export interface EntryMetaBoxOptions extends Omit<
+  MetaBoxBaseOptions,
+  "fields"
+> {
   /**
    * @deprecated The entry editor no longer partitions meta boxes by
    * location — every registered box renders as a collapsible section in
@@ -164,6 +177,7 @@ export interface EntryMetaBoxOptions extends MetaBoxBaseOptions {
    */
   readonly location?: "bottom" | "sidebar";
   readonly entryTypes: readonly string[];
+  readonly fields: readonly EntryMetaBoxField[];
 }
 
 /** Meta box shown on the taxonomy term edit form. Scoped by `taxonomies`. */
@@ -416,7 +430,19 @@ export interface MetaBoxBaseManifestEntry {
   readonly fields: readonly MetaBoxFieldManifestEntry[];
 }
 
-export interface EntryMetaBoxManifestEntry extends MetaBoxBaseManifestEntry {
+/**
+ * Wire-side mirror of `EntryMetaBoxField` — drops `span` from the
+ * shared `MetaBoxFieldManifestEntry`. See `EntryMetaBoxField` for why.
+ */
+export type EntryMetaBoxFieldManifestEntry = Omit<
+  MetaBoxFieldManifestEntry,
+  "span"
+>;
+
+export interface EntryMetaBoxManifestEntry extends Omit<
+  MetaBoxBaseManifestEntry,
+  "fields"
+> {
   readonly id: string;
   /**
    * @deprecated Ignored by the admin editor — all entry meta boxes
@@ -425,6 +451,7 @@ export interface EntryMetaBoxManifestEntry extends MetaBoxBaseManifestEntry {
    */
   readonly location?: "bottom" | "sidebar";
   readonly entryTypes: readonly string[];
+  readonly fields: readonly EntryMetaBoxFieldManifestEntry[];
 }
 
 export interface TermMetaBoxManifestEntry extends MetaBoxBaseManifestEntry {
@@ -829,7 +856,9 @@ function toTaxonomyEntry(tax: RegisteredTaxonomy): TaxonomyManifestEntry {
 // Allowlist for entry meta box entries — same rationale as
 // `toEntryTypeManifest`. `registeredBy` is intentionally excluded
 // (server-only debug metadata). `sanitize` on each field is stripped
-// via `toMetaBoxFieldEntry` — it's a server-side callback.
+// via `toEntryMetaBoxFieldEntry` — it's a server-side callback. `span`
+// is also stripped: the editor rail renders every entry field at full
+// width, and shipping a hint the renderer ignores just bloats the wire.
 function toEntryMetaBoxEntry(
   box: RegisteredEntryMetaBox,
 ): EntryMetaBoxManifestEntry {
@@ -851,7 +880,7 @@ function toEntryMetaBoxEntry(
     priority,
     entryTypes,
     capability,
-    fields: fields.map(toMetaBoxFieldEntry),
+    fields: fields.map(toEntryMetaBoxFieldEntry),
   };
 }
 
@@ -945,6 +974,42 @@ function toMetaBoxFieldEntry(field: MetaBoxField): MetaBoxFieldManifestEntry {
     options,
     default: defaultValue,
     span,
+  };
+}
+
+// Entry meta fields ship without `span` — see `EntryMetaBoxField`.
+function toEntryMetaBoxFieldEntry(
+  field: EntryMetaBoxField,
+): EntryMetaBoxFieldManifestEntry {
+  const {
+    key,
+    label,
+    type,
+    inputType,
+    description,
+    required,
+    placeholder,
+    maxLength,
+    min,
+    max,
+    step,
+    options,
+    default: defaultValue,
+  } = field;
+  return {
+    key,
+    label,
+    type,
+    inputType,
+    description,
+    required,
+    placeholder,
+    maxLength,
+    min,
+    max,
+    step,
+    options,
+    default: defaultValue,
   };
 }
 
