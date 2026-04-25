@@ -13,10 +13,10 @@ Opens a local Workers dev server (via `@cloudflare/vite-plugin`) on `http://loca
 ## Build
 
 ```bash
-pnpm exec plumix build
+pnpm build
 ```
 
-Emits the worker bundle to `dist/plumix_minimal/`.
+Emits the worker bundle to `dist/plumix_minimal/`. Equivalent to `pnpm exec plumix build`.
 
 ## Deploy
 
