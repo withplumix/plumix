@@ -14,7 +14,9 @@ function entryLabel(entry: Entry): string {
 
 // Orphans (children whose parent isn't in the input set) get promoted
 // to roots so a paginated `entry.list` page never silently drops rows.
-export function buildEntryTree(entries: readonly Entry[]): readonly EntryNode[] {
+export function buildEntryTree(
+  entries: readonly Entry[],
+): readonly EntryNode[] {
   const byId = new Map<number, Entry>();
   for (const e of entries) byId.set(e.id, e);
 

@@ -57,7 +57,6 @@ import { slugify } from "@plumix/core/slugify";
 import { idParam } from "@plumix/core/validation";
 
 import type { ParentPickerOption } from "./entry-tree.js";
-
 import { TiptapEditor } from "./tiptap-editor.js";
 
 // Stable empty fallbacks — react-query returns a fresh `[]` for
