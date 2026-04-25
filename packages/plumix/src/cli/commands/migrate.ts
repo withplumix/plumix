@@ -61,6 +61,12 @@ async function migrateGenerate(ctx: CommandContext): Promise<void> {
       "sqlite",
       "--out",
       MIGRATIONS_OUT,
+      // Match the runtime drizzle config, which sets `casing: "snake_case"`
+      // for D1. Without this, generated SQL keeps schema-side camelCase
+      // (`emailVerifiedAt`) but runtime queries snake_case (`email_verified_at`)
+      // — every INSERT/SELECT then fails with `no such column`.
+      "--casing",
+      "snake_case",
     ],
     { cwd },
   );
