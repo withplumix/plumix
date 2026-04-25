@@ -24,13 +24,19 @@ import type {
   UserUpdateInput,
 } from "./procedures/user/schemas.js";
 
+// `entry.get` enriches the row with the assigned term ids per
+// taxonomy. Plugins editing the output filter receive this shape.
+type EntryWithTerms = Entry & {
+  readonly terms: Record<string, readonly number[]>;
+};
+
 declare module "../hooks/types.js" {
   interface FilterRegistry {
     "rpc:entry.list:input": (input: EntryListInput) => EntryListInput;
     "rpc:entry.list:output": (output: readonly Entry[]) => readonly Entry[];
 
     "rpc:entry.get:input": (input: { id: number }) => typeof input;
-    "rpc:entry.get:output": (output: Entry) => Entry;
+    "rpc:entry.get:output": (output: EntryWithTerms) => EntryWithTerms;
 
     "rpc:entry.create:input": (input: EntryCreateInput) => EntryCreateInput;
     "rpc:entry.create:output": (output: Entry) => Entry;

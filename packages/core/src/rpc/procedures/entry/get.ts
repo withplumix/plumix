@@ -5,6 +5,7 @@ import { base } from "../../base.js";
 import { entryCapability } from "./lifecycle.js";
 import { decodeMetaBag } from "./meta.js";
 import { entryGetInputSchema } from "./schemas.js";
+import { loadEntryTerms } from "./terms.js";
 
 export const get = base
   .use(authenticated)
@@ -37,5 +38,10 @@ export const get = base
     }
 
     const meta = decodeMetaBag(context.plugins, row, row.meta);
-    return context.hooks.applyFilter("rpc:entry.get:output", { ...row, meta });
+    const terms = await loadEntryTerms(context, row.id);
+    return context.hooks.applyFilter("rpc:entry.get:output", {
+      ...row,
+      meta,
+      terms,
+    });
   });

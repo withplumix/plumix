@@ -1,3 +1,4 @@
+import type { Crumb } from "@/lib/breadcrumbs.js";
 import type { ReactNode } from "react";
 import { Fragment } from "react";
 import {
@@ -10,9 +11,9 @@ import {
 import { Separator } from "@/components/ui/separator.js";
 import { SidebarTrigger } from "@/components/ui/sidebar.js";
 import { pathToCrumbs } from "@/lib/breadcrumbs.js";
-import { useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 
-function useBreadcrumbs(): readonly string[] {
+function useBreadcrumbs(): readonly Crumb[] {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
@@ -30,13 +31,20 @@ export function ShellHeader(): ReactNode {
           {crumbs.map((crumb, index) => {
             const isLast = index === crumbs.length - 1;
             return (
-              <Fragment key={`${String(index)}-${crumb}`}>
+              <Fragment key={`${String(index)}-${crumb.label}`}>
                 {index > 0 ? <BreadcrumbSeparator /> : null}
                 <BreadcrumbItem>
                   {isLast ? (
-                    <BreadcrumbPage>{crumb}</BreadcrumbPage>
+                    <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                  ) : crumb.to !== undefined ? (
+                    <Link
+                      to={crumb.to}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {crumb.label}
+                    </Link>
                   ) : (
-                    <span className="text-muted-foreground">{crumb}</span>
+                    <span className="text-muted-foreground">{crumb.label}</span>
                   )}
                 </BreadcrumbItem>
               </Fragment>

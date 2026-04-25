@@ -11,12 +11,13 @@ import {
   Empty,
   EmptyDescription,
   EmptyHeader,
+  EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import { visibleEntryTypes } from "@/lib/manifest.js";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, FileText } from "lucide-react";
+import { ArrowRight, FileText, Puzzle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/")({
   component: DashboardIndex,
@@ -79,6 +80,9 @@ function DashboardIndex(): ReactNode {
         <Card className="max-w-xl" data-testid="dashboard-empty-state">
           <Empty>
             <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Puzzle />
+              </EmptyMedia>
               <EmptyTitle>No content types yet</EmptyTitle>
               <EmptyDescription>
                 Add a plugin that registers a post type (e.g.{" "}
