@@ -1,6 +1,7 @@
 import type { JSONContent } from "@tiptap/react";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { MultiSelect } from "@/components/form/multi-select.js";
 import { MetaBoxAccordionItem } from "@/components/meta-box/meta-box.js";
 import {
   Accordion,
@@ -37,18 +38,30 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar.js";
+import { orpc } from "@/lib/orpc.js";
+import { buildEditorTermOptions } from "@/lib/terms.js";
 import { cn } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { useQuery } from "@tanstack/react-query";
 import { useBlocker } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { useForm, useFormContext, useWatch } from "react-hook-form";
 import * as v from "valibot";
 
-import type { EntryMetaBoxManifestEntry } from "@plumix/core/manifest";
-import type { EntryStatus } from "@plumix/core/schema";
+import type {
+  EntryMetaBoxManifestEntry,
+  TermTaxonomyManifestEntry,
+} from "@plumix/core/manifest";
+import type { EntryStatus, Term } from "@plumix/core/schema";
 import { slugify } from "@plumix/core/slugify";
 
 import { TiptapEditor } from "./tiptap-editor.js";
+
+// Stable empty fallbacks — react-query returns a fresh `[]` for
+// `data` while loading, which would invalidate `useMemo` deps every
+// render if we used `?? []` inline.
+const EMPTY_TERMS: readonly Term[] = [];
+const EMPTY_NUMBER_IDS: readonly number[] = [];
 
 // Matches the server's `slugSchema` — lowercase ASCII alphanumerics
 // separated by single dashes. Keeping a local copy so the admin form
@@ -78,6 +91,13 @@ const postEditorSchema = v.object({
    * and can ignore it.
    */
   meta: v.record(v.string(), v.unknown()),
+  /**
+   * Term assignments per taxonomy: `{ category: [3, 7], tag: [12] }`.
+   * Caller filters this against the entry-type's registered
+   * taxonomies on submit; arbitrary keys are tolerated here so a
+   * plugin-added taxonomy doesn't require a schema update.
+   */
+  terms: v.record(v.string(), v.array(v.number())),
 });
 
 export type PostEditorValues = v.InferOutput<typeof postEditorSchema>;
@@ -119,6 +139,10 @@ interface PostEditorFormProps {
    * Excerpt cards — `box.location` is ignored.
    */
   readonly metaBoxes: readonly EntryMetaBoxManifestEntry[];
+  /** Taxonomies registered for this entry type. One Accordion section
+   *  is rendered per taxonomy, with a Combobox-based multi-select
+   *  populated from `term.list`. */
+  readonly taxonomies: readonly TermTaxonomyManifestEntry[];
   /** Caption shown next to the back button — e.g. `"New post"` or
    *  `"Edit post"`. The editor itself is the page, so there's no
    *  separate `<h1>` above it. */
@@ -136,6 +160,7 @@ export function PostEditorForm({
   availableStatuses,
   supports,
   metaBoxes,
+  taxonomies,
   headline,
   submitLabel,
   isSubmitting,
@@ -193,6 +218,7 @@ export function PostEditorForm({
     ...(showSlug ? ["permalink"] : []),
     "status",
     ...(showExcerpt ? ["excerpt"] : []),
+    ...taxonomies.map((tax) => `taxonomy:${tax.name}`),
     ...metaBoxes.map((box) => box.id),
   ];
 
@@ -299,6 +325,13 @@ export function PostEditorForm({
                 {showExcerpt ? (
                   <ExcerptSection disabled={isSubmitting} />
                 ) : null}
+                {taxonomies.map((tax) => (
+                  <TaxonomySection
+                    key={tax.name}
+                    taxonomy={tax}
+                    disabled={isSubmitting}
+                  />
+                ))}
                 {metaBoxes.map((box) => (
                   <MetaBoxAccordionItem
                     key={box.id}
@@ -360,10 +393,11 @@ function TitleField({ disabled }: { readonly disabled: boolean }): ReactNode {
               required
               autoComplete="off"
               disabled={disabled}
+              placeholder="Title"
               data-testid="post-editor-title-input"
               className={cn(
                 "h-auto border-0 bg-transparent px-0 text-3xl font-semibold shadow-none dark:bg-transparent",
-                "placeholder:text-muted-foreground/60",
+                "placeholder:text-muted-foreground/40",
                 "focus-visible:border-0 focus-visible:ring-0",
               )}
               {...field}
@@ -551,4 +585,62 @@ function ExcerptSection({
 
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function TaxonomySection({
+  taxonomy,
+  disabled,
+}: {
+  readonly taxonomy: TermTaxonomyManifestEntry;
+  readonly disabled: boolean;
+}): ReactNode {
+  const { control } = useFormContext<PostEditorValues>();
+  const termsQuery = useQuery(
+    orpc.term.list.queryOptions({
+      input: { taxonomy: taxonomy.name, limit: 200 },
+    }),
+  );
+  const isHierarchical = taxonomy.isHierarchical === true;
+  const options = useMemo(
+    () =>
+      buildEditorTermOptions(termsQuery.data ?? EMPTY_TERMS, isHierarchical),
+    [termsQuery.data, isHierarchical],
+  );
+
+  const pluralLower = taxonomy.label.toLowerCase();
+  return (
+    <RailSection value={`taxonomy:${taxonomy.name}`} title={taxonomy.label}>
+      <FormField
+        control={control}
+        name={`terms.${taxonomy.name}`}
+        render={({ field }) => {
+          // rhf returns whatever's at `terms.<taxonomy>`; default to []
+          // when the form was initialised without this taxonomy.
+          const ids =
+            (field.value as readonly number[] | undefined) ?? EMPTY_NUMBER_IDS;
+          return (
+            <FormItem>
+              <FormLabel className="sr-only">{taxonomy.label}</FormLabel>
+              <FormControl>
+                <MultiSelect
+                  options={options}
+                  value={ids.map(String)}
+                  onChange={(next) => {
+                    field.onChange(next.map(Number));
+                  }}
+                  placeholder={`Add ${pluralLower}…`}
+                  searchPlaceholder={`Search ${pluralLower}…`}
+                  emptyText={`No ${pluralLower} match.`}
+                  testId={`post-editor-taxonomy-${taxonomy.name}`}
+                  disabled={disabled}
+                  className="w-full"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          );
+        }}
+      />
+    </RailSection>
+  );
 }

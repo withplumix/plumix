@@ -1,15 +1,6 @@
-import type { AppContext } from "../../../context/app.js";
 import type { NewEntry } from "../../../db/schema/entries.js";
-import {
-  and,
-  eq,
-  inArray,
-  isUniqueConstraintError,
-  ne,
-} from "../../../db/index.js";
+import { and, eq, isUniqueConstraintError, ne } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
-import { entryTerm } from "../../../db/schema/entry_term.js";
-import { terms } from "../../../db/schema/terms.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { isEmptyMetaPatch } from "../../meta/core.js";
@@ -31,6 +22,7 @@ import {
   writeEntryMeta,
 } from "./meta.js";
 import { entryUpdateInputSchema } from "./schemas.js";
+import { applyTermPatch, assertTermsPatchValid } from "./terms.js";
 
 export const update = base
   .use(authenticated)
@@ -111,28 +103,19 @@ export const update = base
       errors,
     );
     if (termsPatch !== undefined) {
-      for (const taxonomy of Object.keys(termsPatch)) {
-        if (!context.plugins.termTaxonomies.has(taxonomy)) {
+      await assertTermsPatchValid(context, termsPatch, {
+        taxonomyNotFound: (taxonomy) => {
           throw errors.NOT_FOUND({
             data: { kind: "termTaxonomy", id: taxonomy },
           });
-        }
-        const assignCap = `term:${taxonomy}:assign`;
-        if (!context.auth.can(assignCap)) {
-          throw errors.FORBIDDEN({ data: { capability: assignCap } });
-        }
-      }
-      for (const [taxonomy, termIds] of Object.entries(termsPatch)) {
-        const unique = Array.from(new Set(termIds));
-        if (unique.length === 0) continue;
-        const rows = await context.db
-          .select({ id: terms.id })
-          .from(terms)
-          .where(and(eq(terms.taxonomy, taxonomy), inArray(terms.id, unique)));
-        if (rows.length !== unique.length) {
+        },
+        forbidden: (capability) => {
+          throw errors.FORBIDDEN({ data: { capability } });
+        },
+        termTaxonomyMismatch: () => {
           throw errors.CONFLICT({ data: { reason: "term_taxonomy_mismatch" } });
-        }
-      }
+        },
+      });
     }
 
     const patch: Partial<NewEntry> = stripUndefined(changes);
@@ -232,50 +215,3 @@ export const update = base
       meta,
     });
   });
-
-/** Replace post_term rows for every (entryId, taxonomy) pair in the patch. */
-async function applyTermPatch(
-  context: AppContext,
-  entryId: number,
-  termsPatch: Record<string, readonly number[]>,
-): Promise<void> {
-  for (const [taxonomy, termIds] of Object.entries(termsPatch)) {
-    const unique = Array.from(new Set(termIds));
-    // Scope the delete to rows whose term belongs to this taxonomy — saves
-    // a per-term round-trip and avoids accidentally wiping another taxonomy's
-    // rows in the same post_term table.
-    const existingAssignments = await context.db
-      .select({ termId: entryTerm.termId })
-      .from(entryTerm)
-      .innerJoin(terms, eq(entryTerm.termId, terms.id))
-      .where(and(eq(entryTerm.entryId, entryId), eq(terms.taxonomy, taxonomy)));
-    if (existingAssignments.length > 0) {
-      const ids = existingAssignments.map((r) => r.termId);
-      await context.db
-        .delete(entryTerm)
-        .where(
-          and(eq(entryTerm.entryId, entryId), inArray(entryTerm.termId, ids)),
-        );
-    }
-
-    if (unique.length > 0) {
-      // onConflictDoNothing handles the race where a concurrent update
-      // beat us to inserting the same (entryId, termId) row — the desired
-      // end state (row exists) is reached regardless of which request
-      // inserted it. Without this, the second request would bubble a PK
-      // violation up as a 500.
-      await context.db
-        .insert(entryTerm)
-        .values(
-          unique.map((termId, index) => ({
-            entryId,
-            termId,
-            sortOrder: index,
-          })),
-        )
-        .onConflictDoNothing({
-          target: [entryTerm.entryId, entryTerm.termId],
-        });
-    }
-  }
-}
