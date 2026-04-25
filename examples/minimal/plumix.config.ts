@@ -1,5 +1,19 @@
 import { auth, plumix } from "plumix";
-import { cloudflare, d1 } from "@plumix/runtime-cloudflare";
+import {
+  cloudflare,
+  cloudflareDeployOrigin,
+  d1,
+} from "@plumix/runtime-cloudflare";
+
+// Derives `rpId` + `origin` from the Workers Builds env (`WORKERS_CI`,
+// `WORKERS_CI_BRANCH`): production deploys → `<worker>.<account>.workers.dev`,
+// preview deploys → `<branch>-<worker>.<account>.workers.dev`,
+// local `pnpm dev` → `http://localhost:8787`. Swap to a hardcoded
+// `{ rpId, origin }` once you wire a custom domain.
+const { rpId, origin } = cloudflareDeployOrigin({
+  workerName: "plumix-minimal",
+  accountSubdomain: "enasyrov",
+});
 
 export default plumix({
   runtime: cloudflare(),
@@ -9,8 +23,8 @@ export default plumix({
   auth: auth({
     passkey: {
       rpName: "Plumix — Minimal",
-      rpId: "localhost",
-      origin: "http://localhost:8787",
+      rpId,
+      origin,
     },
   }),
 });
