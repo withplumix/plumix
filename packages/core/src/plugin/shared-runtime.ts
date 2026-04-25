@@ -62,7 +62,9 @@ export interface ImportMap {
  * build can inline the map and tests can assert the wire shape.
  */
 export function buildSharedRuntimeImportMap(adminBasePath: string): ImportMap {
-  const base = adminBasePath.replace(/\/+$/, "");
+  const base = adminBasePath.endsWith("/")
+    ? adminBasePath.slice(0, -1)
+    : adminBasePath;
   const imports: Record<string, string> = {};
   for (const { specifier, chunk } of SHARED_RUNTIME_ENTRIES) {
     imports[specifier] = `${base}/vendor/${chunk}.js`;
