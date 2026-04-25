@@ -17,9 +17,6 @@ const config: KnipConfig = {
     "packages/blocks": {
       ignoreDependencies: ["@plumix/core"],
     },
-    "packages/plugins/blog": {
-      ignoreDependencies: ["@plumix/core"],
-    },
     "packages/plugins/pages": {
       ignoreDependencies: ["@plumix/core"],
     },
