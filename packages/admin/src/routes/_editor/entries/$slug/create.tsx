@@ -2,6 +2,7 @@ import type { PostEditorValues } from "@/components/editor/entry-editor-form.js"
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { PostEditorForm } from "@/components/editor/entry-editor-form.js";
+import { useParentOptions } from "@/components/editor/use-parent-options.js";
 import { hasCap } from "@/lib/caps.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import {
@@ -62,6 +63,8 @@ function NewPostRoute(): ReactNode {
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
+  const isHierarchical = entryType.isHierarchical === true;
+
   const createPost = useMutation({
     mutationFn: (input: PostEditorValues) =>
       orpc.entry.create.call({
@@ -73,6 +76,7 @@ function NewPostRoute(): ReactNode {
         status: input.status,
         meta: input.meta,
         terms: filterTermsForEntryType(input.terms, entryType.termTaxonomies),
+        ...(isHierarchical ? { parentId: input.parentId } : {}),
       }),
     onMutate: () => {
       setServerError(null);
@@ -101,7 +105,13 @@ function NewPostRoute(): ReactNode {
     status: "draft",
     meta: {},
     terms: {},
+    parentId: null,
   };
+
+  const parentOptions = useParentOptions({
+    entryTypeName: entryType.name,
+    isHierarchical,
+  });
 
   // Meta boxes registered for this post type, filtered by the user's
   // capabilities. Memo keyed on `user.capabilities` avoids refiltering
@@ -131,6 +141,8 @@ function NewPostRoute(): ReactNode {
       supports={entryType.supports}
       metaBoxes={metaBoxes}
       taxonomies={taxonomies}
+      isHierarchical={isHierarchical}
+      parentOptions={parentOptions}
       headline={`New ${singularLower}`}
       submitLabel="Create"
       // Stay "busy" through `isSuccess` too — TanStack Query flips
