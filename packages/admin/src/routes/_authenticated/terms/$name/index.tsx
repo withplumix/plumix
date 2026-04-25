@@ -21,7 +21,6 @@ import {
 import { hasCap } from "@/lib/caps.js";
 import { findTermTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
-import { cn } from "@/lib/utils.js";
 import { useQuery } from "@tanstack/react-query";
 import {
   createFileRoute,
@@ -175,15 +174,22 @@ function TaxonomyListRoute(): ReactNode {
               params={{ name: taxonomy.name, id: term.id }}
               data-testid={`taxonomy-list-row-${String(term.id)}`}
               aria-level={depth + 1}
-              className="hover:text-primary flex items-start gap-2 transition-colors"
+              className="hover:text-primary flex min-w-0 flex-col transition-colors"
             >
-              <TreeIndent depth={depth} />
-              <div className="flex min-w-0 flex-col">
-                <span className="font-medium">{term.name}</span>
-                <span className="text-muted-foreground font-mono text-xs">
-                  {term.slug}
-                </span>
-              </div>
+              <span className="font-medium">
+                {depth > 0 ? (
+                  <span
+                    aria-hidden
+                    className="text-muted-foreground/60 mr-1 font-normal select-none"
+                  >
+                    {"— ".repeat(depth)}
+                  </span>
+                ) : null}
+                {term.name}
+              </span>
+              <span className="text-muted-foreground font-mono text-xs">
+                {term.slug}
+              </span>
             </Link>
           );
         },
@@ -191,11 +197,21 @@ function TaxonomyListRoute(): ReactNode {
       {
         accessorKey: "description",
         header: "Description",
-        cell: ({ row }) => (
-          <span className="text-muted-foreground line-clamp-1 text-sm">
-            {row.original.term.description ?? ""}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const value = row.original.term.description;
+          if (value === null || value.length === 0) {
+            return (
+              <span aria-hidden className="text-muted-foreground/50">
+                —
+              </span>
+            );
+          }
+          return (
+            <span className="text-muted-foreground line-clamp-1 text-sm">
+              {value}
+            </span>
+          );
+        },
       },
     ];
   }, [taxonomy.name]);
@@ -301,37 +317,6 @@ function TaxonomyListRoute(): ReactNode {
           </PaginationItem>
         </PaginationContent>
       </Pagination>
-    </div>
-  );
-}
-
-// Tree-line connector for hierarchical term rows. Renders one column per
-// ancestor; the column for the immediate parent draws a corner glyph,
-// shallower columns draw a vertical guide so successive rows visually
-// chain. Pure CSS (border-l + border-b on a small div) so it renders
-// uniformly regardless of row height.
-function TreeIndent({ depth }: { depth: number }): ReactNode {
-  if (depth === 0) return null;
-  return (
-    <div
-      aria-hidden
-      className="text-muted-foreground/40 flex shrink-0 self-stretch"
-    >
-      {Array.from({ length: depth }).map((_, i) => (
-        <div
-          key={i}
-          className={cn(
-            "relative w-5",
-            i < depth - 1
-              ? "before:absolute before:inset-y-0 before:left-2 before:border-l before:border-current/30"
-              : null,
-          )}
-        >
-          {i === depth - 1 ? (
-            <div className="absolute top-0 bottom-1/2 left-2 rounded-bl-md border-b border-l border-current/40" />
-          ) : null}
-        </div>
-      ))}
     </div>
   );
 }

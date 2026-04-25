@@ -55,9 +55,26 @@ export function cloudflareDeployOrigin(input: DeployOriginInput): DeployOrigin {
 // covers the cases the user is likely to push (slashes from feat/x,
 // underscores from snake_case, etc.) and lines up with the URLs
 // Workers Builds generates in practice.
+//
+// Hand-rolled single-pass to dodge CodeQL's `js/polynomial-redos` —
+// the `replace(/^-+|-+$/g, "")` trim is technically polynomial when
+// fed pathological dash runs, even though the upstream input is a
+// short branch name.
 function sanitizeBranch(branch: string): string {
-  return branch
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  let result = "";
+  let pendingDash = false;
+  for (let i = 0; i < branch.length; i++) {
+    const c = branch.charCodeAt(i);
+    const lower = c >= 65 && c <= 90 ? c + 32 : c; // ASCII upper → lower
+    const isAlphaNum =
+      (lower >= 97 && lower <= 122) || (lower >= 48 && lower <= 57);
+    if (isAlphaNum) {
+      if (pendingDash && result.length > 0) result += "-";
+      result += String.fromCharCode(lower);
+      pendingDash = false;
+    } else {
+      pendingDash = true;
+    }
+  }
+  return result;
 }

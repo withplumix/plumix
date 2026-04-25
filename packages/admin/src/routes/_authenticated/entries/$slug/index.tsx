@@ -1,7 +1,9 @@
+import type { MultiSelectOption } from "@/components/form/multi-select.js";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
-import { Fragment, useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { DataTable } from "@/components/data-table/data-table.js";
+import { MultiSelect } from "@/components/form/multi-select.js";
 import { DebouncedSearchInput } from "@/components/form/search-input.js";
 import { buildTermTree, flattenTree } from "@/components/taxonomy/tree.js";
 import {
@@ -29,6 +31,7 @@ import {
   PaginationContent,
   PaginationItem,
 } from "@/components/ui/pagination.js";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group.js";
 import { hasCap } from "@/lib/caps.js";
 import { toDate } from "@/lib/dates.js";
 import { findEntryTypeBySlug, findTermTaxonomyByName } from "@/lib/manifest.js";
@@ -198,6 +201,7 @@ function buildColumns({
     },
     {
       accessorKey: "updatedAt",
+      meta: { className: "text-right" },
       header: () => (
         <SortableHeader
           label="Updated"
@@ -206,6 +210,7 @@ function buildColumns({
           activeOrderBy={activeOrderBy}
           activeOrder={activeOrder}
           onSort={onSort}
+          align="right"
         />
       ),
       cell: ({ row }) => (
@@ -241,14 +246,19 @@ function ContentListRoute(): ReactNode {
 
   const taxonomyNames = entryType.termTaxonomies ?? EMPTY_TAXONOMY_NAMES;
   // Memoised so `entry.list`'s queryOptions input has a stable
-  // identity across renders — without this the queryOptions object
-  // is re-allocated each tick even when search hasn't changed.
+  // identity across renders. Comma-separated URL values
+  // (`?category=foo,bar`) split into the slug array the server
+  // expects for multi-term filtering.
   const termFilters = useMemo(() => {
     const out: Record<string, string[]> = {};
     for (const name of taxonomyNames) {
       const raw = (search as Record<string, unknown>)[name];
       if (typeof raw === "string" && raw.length > 0) {
-        out[name] = [raw];
+        const slugs = raw
+          .split(",")
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
+        if (slugs.length > 0) out[name] = slugs;
       }
     }
     return out;
@@ -300,15 +310,15 @@ function ContentListRoute(): ReactNode {
     [navigate],
   );
   const setTermFilter = useCallback(
-    (taxonomy: string, slug: string | undefined): void => {
+    (taxonomy: string, slugs: readonly string[]): void => {
       void navigate({
         search: (prev) => {
           const next: Record<string, unknown> = {
             ...(prev as Record<string, unknown>),
             page: 1,
           };
-          if (slug !== undefined && slug.length > 0) {
-            next[taxonomy] = slug;
+          if (slugs.length > 0) {
+            next[taxonomy] = slugs.join(",");
           } else {
             delete next[taxonomy];
           }
@@ -439,9 +449,9 @@ function ContentListRoute(): ReactNode {
           <TaxonomyFilter
             key={name}
             taxonomyName={name}
-            value={termFilters[name]?.[0]}
-            onChange={(slug) => {
-              setTermFilter(name, slug);
+            value={termFilters[name] ?? EMPTY_TAXONOMY_NAMES}
+            onChange={(slugs) => {
+              setTermFilter(name, slugs);
             }}
           />
         ))}
@@ -477,6 +487,8 @@ function ContentListRoute(): ReactNode {
             <EmptyState
               singularLower={singularLower}
               pluralLower={pluralLower}
+              canCreate={canCreate}
+              entryTypeSlug={entryType.adminSlug}
             />
           }
         />
@@ -586,6 +598,7 @@ function SortableHeader({
   activeOrderBy,
   activeOrder,
   onSort,
+  align = "left",
 }: {
   label: string;
   column: OrderBy;
@@ -593,6 +606,7 @@ function SortableHeader({
   activeOrderBy: OrderBy;
   activeOrder: Order;
   onSort: (column: OrderBy, defaultDirection: Order) => void;
+  align?: "left" | "right";
 }): ReactNode {
   const isActive = activeOrderBy === column;
   const nextDirection = nextSortOrder(isActive, activeOrder, defaultDirection);
@@ -603,7 +617,10 @@ function SortableHeader({
         onSort(column, defaultDirection);
       }}
       data-testid={`content-list-sort-${column}`}
-      className="hover:text-foreground -ml-2 inline-flex items-center gap-1 rounded px-2 py-1 text-left font-medium transition-colors"
+      className={cn(
+        "hover:text-foreground inline-flex items-center gap-1 rounded px-2 py-1 font-medium transition-colors",
+        align === "right" ? "-mr-2 text-right" : "-ml-2 text-left",
+      )}
       aria-label={`Sort by ${label} (${nextDirection})`}
       aria-pressed={isActive}
     >
@@ -680,9 +697,7 @@ function TitleCell({
   );
 }
 
-// WP-style status views: inline text-link strip with `|` separators.
-// Active view gets bold + foreground colour; siblings sit in muted
-// colour and reveal on hover.
+// Pill-style status filter (shadcn ToggleGroup, single-select).
 function StatusViews({
   value,
   onChange,
@@ -691,37 +706,28 @@ function StatusViews({
   onChange: (next: StatusFilter) => void;
 }): ReactNode {
   return (
-    <div
-      role="group"
+    <ToggleGroup
+      type="single"
+      variant="outline"
+      value={value}
+      onValueChange={(next) => {
+        // ToggleGroup emits "" when the user toggles off the active
+        // item; pin to "all" so the filter never lands in an invalid
+        // empty state.
+        onChange((next || "all") as StatusFilter);
+      }}
       aria-label="Filter by status"
-      className="flex flex-wrap items-center gap-2 text-sm"
     >
-      {STATUS_FILTER_OPTIONS.map((opt, idx) => (
-        <Fragment key={opt.value}>
-          {idx > 0 ? (
-            <span aria-hidden className="text-muted-foreground/50">
-              |
-            </span>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => {
-              onChange(opt.value);
-            }}
-            aria-pressed={value === opt.value}
-            data-testid={`status-view-${opt.value}`}
-            className={cn(
-              "transition-colors",
-              value === opt.value
-                ? "text-foreground font-semibold"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {opt.label}
-          </button>
-        </Fragment>
+      {STATUS_FILTER_OPTIONS.map((opt) => (
+        <ToggleGroupItem
+          key={opt.value}
+          value={opt.value}
+          data-testid={`status-view-${opt.value}`}
+        >
+          {opt.label}
+        </ToggleGroupItem>
       ))}
-    </div>
+    </ToggleGroup>
   );
 }
 
@@ -767,8 +773,8 @@ function TaxonomyFilter({
   onChange,
 }: {
   taxonomyName: string;
-  value: string | undefined;
-  onChange: (slug: string | undefined) => void;
+  value: readonly string[];
+  onChange: (slugs: readonly string[]) => void;
 }): ReactNode {
   const taxonomy = findTermTaxonomyByName(taxonomyName);
   const termsQuery = useQuery(
@@ -777,44 +783,44 @@ function TaxonomyFilter({
     }),
   );
   const isHierarchical = taxonomy?.isHierarchical === true;
-  const items = useMemo(() => {
+  const options = useMemo<MultiSelectOption[]>(() => {
     const terms: readonly Term[] = termsQuery.data ?? EMPTY_TERMS;
     if (!isHierarchical) {
       return terms
-        .map((term) => ({ term, depth: 0 }))
-        .sort((a, b) => a.term.name.localeCompare(b.term.name));
+        .map((term) => ({ value: term.slug, label: term.name, depth: 0 }))
+        .sort((a, b) => a.label.localeCompare(b.label));
     }
-    return flattenTree(buildTermTree(terms));
+    return flattenTree(buildTermTree(terms)).map(({ term, depth }) => ({
+      value: term.slug,
+      label: term.name,
+      depth,
+    }));
   }, [termsQuery.data, isHierarchical]);
 
   const pluralLower = (taxonomy?.label ?? taxonomyName).toLowerCase();
   return (
-    <select
-      aria-label={`Filter by ${pluralLower}`}
-      data-testid={`taxonomy-filter-${taxonomyName}`}
-      className={SELECT_CLASS}
-      value={value ?? ""}
-      onChange={(e) => {
-        const next = e.target.value;
-        onChange(next.length === 0 ? undefined : next);
-      }}
-    >
-      <option value="">All {pluralLower}</option>
-      {items.map(({ term, depth }) => (
-        <option key={term.id} value={term.slug}>
-          {depth === 0 ? term.name : `${"— ".repeat(depth)}${term.name}`}
-        </option>
-      ))}
-    </select>
+    <MultiSelect
+      options={options}
+      value={value}
+      onChange={onChange}
+      placeholder={`All ${pluralLower}`}
+      searchPlaceholder={`Search ${pluralLower}…`}
+      emptyText={`No ${pluralLower} match.`}
+      testId={`taxonomy-filter-${taxonomyName}`}
+    />
   );
 }
 
 function EmptyState({
   singularLower,
   pluralLower,
+  canCreate,
+  entryTypeSlug,
 }: {
   singularLower: string;
   pluralLower: string;
+  canCreate: boolean;
+  entryTypeSlug: string;
 }): ReactNode {
   return (
     <Empty data-testid="content-list-empty-state" className="border">
@@ -825,10 +831,19 @@ function EmptyState({
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <Button disabled>
-          <Plus />
-          New {singularLower}
-        </Button>
+        {canCreate ? (
+          <Button asChild>
+            <Link to="/entries/$slug/create" params={{ slug: entryTypeSlug }}>
+              <Plus />
+              New {singularLower}
+            </Link>
+          </Button>
+        ) : (
+          <Button disabled>
+            <Plus />
+            New {singularLower}
+          </Button>
+        )}
       </EmptyContent>
     </Empty>
   );
