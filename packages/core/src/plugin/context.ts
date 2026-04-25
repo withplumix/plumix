@@ -38,7 +38,86 @@ import { DEFAULT_REWRITE_RULE_PRIORITY } from "../route/compile.js";
 import { MAX_PLUGIN_ID_LENGTH, PLUGIN_ID_RE } from "./define.js";
 import { CORE_RPC_NAMESPACES, DuplicateRegistrationError } from "./manifest.js";
 
-export interface PluginSetupContext {
+/**
+ * One entry in either extension registry — the value the plugin
+ * provided plus the plugin id for diagnostics. Same shape for plugin
+ * and theme contexts, so we name it once.
+ */
+export interface ContextExtensionEntry {
+  readonly value: unknown;
+  readonly pluginId: string;
+}
+
+/**
+ * Augmentable map of values that plugins register via
+ * `ctx.extendPluginContext(key, value)` in their `provides` phase. Other
+ * plugins consume these in their `setup` callback as `ctx[key](...)`.
+ *
+ * Plugins augment to type their own keys:
+ *
+ * ```ts
+ * declare module "plumix/plugin" {
+ *   interface PluginContextExtensions {
+ *     registerMenuItemType(type: string, opts: MenuItemTypeOpts): void;
+ *   }
+ * }
+ * ```
+ *
+ * Calling `extendPluginContext` for a key that's not in this interface
+ * is a type error — keeps the `ctx` surface authoritative.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface PluginContextExtensions {}
+
+/**
+ * Same model as `PluginContextExtensions` but for the `ctx` passed to
+ * `defineTheme` callbacks. Themes don't ship in week 1; the registry is
+ * collected anyway so plugins can declare extensions before the theme
+ * runtime lands without a follow-up shape change.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface ThemeContextExtensions {}
+
+/**
+ * `ctx` passed to a plugin's `provides` callback. Phase 1 — runs before
+ * any plugin's `setup`. The only methods here are the two extension
+ * registrars: `provides` is deliberately narrow so plugins can't reach
+ * for hooks / RPC / admin during this phase (those land in `setup`).
+ */
+export interface PluginProvidesContext {
+  readonly id: string;
+
+  /**
+   * Add a method or value to the `PluginSetupContext` that every
+   * plugin's `setup` callback (including this plugin's own) sees.
+   * Augment `PluginContextExtensions` to type the key. Two plugins
+   * extending the same key throws at install time — config order is
+   * not load-bearing.
+   */
+  extendPluginContext<TKey extends keyof PluginContextExtensions>(
+    key: TKey,
+    value: PluginContextExtensions[TKey],
+  ): void;
+
+  /**
+   * Same as `extendPluginContext` but targets the `ThemeContext` that
+   * `defineTheme` callbacks receive. Themes aren't wired in week 1 —
+   * the registry is collected for forward-compat so plugin extensions
+   * declared today work the moment themes land.
+   */
+  extendThemeContext<TKey extends keyof ThemeContextExtensions>(
+    key: TKey,
+    value: ThemeContextExtensions[TKey],
+  ): void;
+}
+
+/**
+ * Built-in members of the plugin setup context. Constructed by
+ * `createPluginSetupContext` and unaffected by plugin module
+ * augmentation — the augmentation lives on `PluginContextExtensions`
+ * and is intersected at the public `PluginSetupContext` boundary.
+ */
+export interface PluginSetupContextBase {
   readonly id: string;
 
   /** Subscribe to an existing (core or other-plugin) filter. */
@@ -159,16 +238,85 @@ export interface PluginSetupContext {
   registerFieldType(options: FieldTypeOptions): void;
 }
 
+/**
+ * What plugin authors actually consume in their `setup` callback —
+ * built-ins plus every extension declared by another plugin's
+ * `provides` phase. Plugin module augmentation against
+ * `PluginContextExtensions` extends this surface automatically.
+ */
+export type PluginSetupContext = PluginSetupContextBase &
+  PluginContextExtensions;
+
 interface CreatePluginContextArgs {
   readonly pluginId: string;
   readonly hooks: HookRegistry;
   readonly registry: MutablePluginRegistry;
+  /**
+   * Key/value pairs collected from every plugin's `provides` phase.
+   * Spread onto the returned context after the built-in methods so a
+   * plugin can't shadow `addFilter` / `registerEntryType` / etc. — that
+   * collision is also detected at registration time, but defending here
+   * keeps the contract local.
+   */
+  readonly extensions?: ReadonlyMap<string, unknown>;
+}
+
+interface CreateProvidesContextArgs {
+  readonly pluginId: string;
+  readonly pluginExtensions: Map<string, ContextExtensionEntry>;
+  readonly themeExtensions: Map<string, ContextExtensionEntry>;
+}
+
+/**
+ * Build the narrow `ctx` passed to a plugin's `provides` callback. The
+ * two extension maps are shared across all plugins so collisions can be
+ * detected globally (first writer logs the plugin id; second writer
+ * throws with both ids in the message).
+ */
+export function createPluginProvidesContext({
+  pluginId,
+  pluginExtensions,
+  themeExtensions,
+}: CreateProvidesContextArgs): PluginProvidesContext {
+  const stash = (
+    target: Map<string, ContextExtensionEntry>,
+    kind: "Plugin" | "Theme",
+    key: string,
+    value: unknown,
+  ): void => {
+    if (typeof key !== "string" || key.length === 0) {
+      throw new Error(
+        `Plugin "${pluginId}" called extend${kind}Context with an ` +
+          `invalid key — must be a non-empty string.`,
+      );
+    }
+    const existing = target.get(key);
+    if (existing) {
+      throw new Error(
+        `Plugin "${pluginId}" extended the ${kind.toLowerCase()} context ` +
+          `with "${key}", but "${existing.pluginId}" already registered it. ` +
+          `Each extension key has exactly one provider — rename one or ` +
+          `consolidate the providing plugin.`,
+      );
+    }
+    target.set(key, { value, pluginId });
+  };
+  return {
+    id: pluginId,
+    extendPluginContext: (key, value) => {
+      stash(pluginExtensions, "Plugin", key, value);
+    },
+    extendThemeContext: (key, value) => {
+      stash(themeExtensions, "Theme", key, value);
+    },
+  };
 }
 
 export function createPluginSetupContext({
   pluginId,
   hooks,
   registry,
+  extensions,
 }: CreatePluginContextArgs): PluginSetupContext {
   // Pooling caps by capabilityType is safe when minRoles agree; if one
   // type applies a `capabilities` override and another doesn't, silent
@@ -193,7 +341,7 @@ export function createPluginSetupContext({
     }
   };
 
-  return {
+  const ctx: PluginSetupContextBase = {
     id: pluginId,
 
     addFilter: (name, fn, options) => {
@@ -429,6 +577,25 @@ export function createPluginSetupContext({
       });
     },
   };
+
+  if (extensions && extensions.size > 0) {
+    // Extensions go on a `Record<string, unknown>` view of the context
+    // before the cast — `PluginSetupContext` doesn't index by string but
+    // its augmentations do.
+    const target = ctx as unknown as Record<string, unknown>;
+    for (const [key, value] of extensions) {
+      if (key in target) {
+        throw new Error(
+          `Plugin context extension key "${key}" collides with a built-in ` +
+            `PluginSetupContext member. Rename the extension to avoid ` +
+            `shadowing core registration APIs.`,
+        );
+      }
+      target[key] = value;
+    }
+  }
+
+  return ctx as PluginSetupContext;
 }
 
 // Three meta-box registrations (entry/term/user) only differ in their
