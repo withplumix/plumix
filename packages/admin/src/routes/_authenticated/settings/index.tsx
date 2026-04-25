@@ -6,6 +6,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.js";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty.js";
 import { hasCap } from "@/lib/caps.js";
 import { visibleSettingsPages } from "@/lib/manifest.js";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
@@ -38,10 +44,10 @@ function SettingsIndexRoute(): ReactNode {
         <h1 className="text-2xl font-semibold" data-testid="settings-heading">
           Settings
         </h1>
-        <Card data-testid="settings-empty-state">
-          <CardHeader>
-            <CardTitle>No settings registered yet</CardTitle>
-            <CardDescription>
+        <Empty data-testid="settings-empty-state" className="border">
+          <EmptyHeader>
+            <EmptyTitle>No settings registered yet</EmptyTitle>
+            <EmptyDescription>
               Core ships no settings by design — plugins (or your own
               plumix.config) declare pages + groups via{" "}
               <code className="font-mono text-xs">
@@ -52,9 +58,9 @@ function SettingsIndexRoute(): ReactNode {
                 ctx.registerSettingsGroup
               </code>
               . Registered pages appear here with one card per page.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       </div>
     );
   }

@@ -12,6 +12,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.js";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty.js";
 import { Form } from "@/components/ui/form.js";
 import { hasCap } from "@/lib/caps.js";
 import {
@@ -225,19 +231,19 @@ function SettingsGroupCard({
 
 function EmptyPagePlaceholder(): ReactNode {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>No groups on this page</CardTitle>
-        <CardDescription>
+    <Empty className="border">
+      <EmptyHeader>
+        <EmptyTitle>No groups on this page</EmptyTitle>
+        <EmptyDescription>
           This settings page doesn't reference any registered groups yet.
           Plugins compose pages with{" "}
           <code className="font-mono text-xs">
             ctx.registerSettingsPage(name, {"{"} groups: [...] {"}"})
           </code>
           .
-        </CardDescription>
-      </CardHeader>
-    </Card>
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 }
 

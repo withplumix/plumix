@@ -7,12 +7,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Badge } from "@/components/ui/badge.js";
 import { Button } from "@/components/ui/button.js";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card.js";
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty.js";
 import {
   Pagination,
   PaginationContent,
@@ -345,33 +345,28 @@ function RoleFilter({
 
 function EmptyState({ canInvite }: { canInvite: boolean }): ReactNode {
   return (
-    <div
-      data-testid="users-list-empty-state"
-      className="flex flex-col items-center gap-2 py-12 text-center"
-    >
-      <Card className="max-w-sm border-dashed">
-        <CardHeader>
-          <CardTitle>No users match your filter</CardTitle>
-          <CardDescription>
-            Clear the filter, or invite someone new to join.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {canInvite ? (
-            <Button asChild className="w-full">
-              <Link to="/users/new">
-                <Plus />
-                Invite user
-              </Link>
-            </Button>
-          ) : (
-            <Button disabled className="w-full">
+    <Empty data-testid="users-list-empty-state" className="border">
+      <EmptyHeader>
+        <EmptyTitle>No users match your filter</EmptyTitle>
+        <EmptyDescription>
+          Clear the filter, or invite someone new to join.
+        </EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        {canInvite ? (
+          <Button asChild>
+            <Link to="/users/new">
               <Plus />
               Invite user
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+            </Link>
+          </Button>
+        ) : (
+          <Button disabled>
+            <Plus />
+            Invite user
+          </Button>
+        )}
+      </EmptyContent>
+    </Empty>
   );
 }
