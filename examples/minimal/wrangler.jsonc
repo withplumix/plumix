@@ -8,7 +8,8 @@
     {
       "binding": "DB",
       "database_name": "plumix_minimal",
-      "database_id": "b8642267-9b20-4111-a5cc-3e3cba0e8ebb"
+      "database_id": "b8642267-9b20-4111-a5cc-3e3cba0e8ebb",
+      "migrations_dir": "drizzle"
     }
   ],
   "assets": {
