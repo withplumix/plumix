@@ -90,6 +90,34 @@ importers:
         specifier: ^2.9.6
         version: 2.9.6
 
+  examples/blog:
+    dependencies:
+      '@plumix/plugin-blog':
+        specifier: workspace:*
+        version: link:../../packages/plugins/blog
+      '@plumix/plugin-pages':
+        specifier: workspace:*
+        version: link:../../packages/plugins/pages
+      '@plumix/runtime-cloudflare':
+        specifier: workspace:*
+        version: link:../../packages/runtimes/cloudflare
+      plumix:
+        specifier: workspace:*
+        version: link:../../packages/plumix
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: 'catalog:'
+        version: 4.20260421.1
+      '@plumix/typescript-config':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.12.2
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+
   examples/minimal:
     dependencies:
       '@plumix/runtime-cloudflare':

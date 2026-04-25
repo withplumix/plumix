@@ -1,0 +1,26 @@
+{
+  "name": "@plumix-examples/blog",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Plumix app with the blog and pages plugins — Cloudflare + D1",
+  "license": "MIT",
+  "scripts": {
+    "build": "plumix build",
+    "clean": "git clean -xdf .plumix .wrangler dist node_modules",
+    "dev": "plumix dev",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@plumix/plugin-blog": "workspace:*",
+    "@plumix/plugin-pages": "workspace:*",
+    "@plumix/runtime-cloudflare": "workspace:*",
+    "plumix": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:",
+    "@plumix/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}
