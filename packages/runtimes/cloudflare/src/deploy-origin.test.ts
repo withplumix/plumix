@@ -95,7 +95,7 @@ describe("cloudflareDeployOrigin", () => {
     ).toBe("feat-foo-bar-baz-site.acct.workers.dev");
   });
 
-  test("falls back to localhost when WORKERS_CI is set but branch is empty", () => {
+  test("treats empty WORKERS_CI_BRANCH as the default branch (production)", () => {
     process.env.WORKERS_CI = "1";
     process.env.WORKERS_CI_BRANCH = "";
 
@@ -104,6 +104,30 @@ describe("cloudflareDeployOrigin", () => {
         workerName: "site",
         accountSubdomain: "acct",
       }).rpId,
-    ).toBe("localhost");
+    ).toBe("site.acct.workers.dev");
+  });
+
+  test("treats missing WORKERS_CI_BRANCH as the default branch (production)", () => {
+    process.env.WORKERS_CI = "1";
+    delete process.env.WORKERS_CI_BRANCH;
+
+    expect(
+      cloudflareDeployOrigin({
+        workerName: "site",
+        accountSubdomain: "acct",
+      }).rpId,
+    ).toBe("site.acct.workers.dev");
+  });
+
+  test("trims whitespace from WORKERS_CI_BRANCH", () => {
+    process.env.WORKERS_CI = "1";
+    process.env.WORKERS_CI_BRANCH = "  main\n";
+
+    expect(
+      cloudflareDeployOrigin({
+        workerName: "site",
+        accountSubdomain: "acct",
+      }).rpId,
+    ).toBe("site.acct.workers.dev");
   });
 });

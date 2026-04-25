@@ -130,6 +130,8 @@ describe("migrate generate", () => {
       "sqlite",
       "--out",
       "drizzle",
+      "--casing",
+      "snake_case",
     ]);
     expect(options).toEqual({ cwd: dir });
   });

@@ -47,9 +47,22 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
     // served automatically in the common case. Consumers with an explicit
     // publicDir in their vite.config keep theirs — plumix just namespaces
     // admin under `<their-publicDir>/_plumix/admin/` instead.
+    //
+    // Also `define` the Workers Builds env vars consumers can read from
+    // `plumix.config.ts` (e.g. via `cloudflareDeployOrigin`). Vite
+    // substitutes the literals at bundle time so the runtime worker
+    // doesn't depend on `process.env` being populated — CF Workers'
+    // process.env is empty by default and the helper would otherwise
+    // fall back to localhost on every deployed request.
     config(userConfig) {
-      if (userConfig.publicDir !== undefined) return;
-      return { publicDir: ".plumix/public" };
+      const define = {
+        "process.env.WORKERS_CI": JSON.stringify(process.env.WORKERS_CI ?? ""),
+        "process.env.WORKERS_CI_BRANCH": JSON.stringify(
+          process.env.WORKERS_CI_BRANCH ?? "",
+        ),
+      };
+      if (userConfig.publicDir !== undefined) return { define };
+      return { publicDir: ".plumix/public", define };
     },
     configResolved(config) {
       root = config.root;

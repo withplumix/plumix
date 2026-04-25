@@ -9,6 +9,7 @@
       "binding": "DB",
       "database_name": "plumix_blog",
       "database_id": "67ed8348-4cfa-45ce-8b0a-17eb9e351896",
+      "migrations_dir": "drizzle",
     },
   ],
   "assets": {

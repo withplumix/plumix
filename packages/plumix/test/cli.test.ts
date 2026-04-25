@@ -65,7 +65,7 @@ describe("plumix CLI dispatch", () => {
       .spyOn(migrateGenerateDeps, "spawnInherit")
       .mockResolvedValue();
 
-    await run(["migrate", "generate", "--cwd", dir]);
+    await run(["--cwd", dir, "migrate", "generate"]);
 
     const emitted = join(dir, ".plumix/schema.ts");
     expect(existsSync(emitted)).toBe(true);
@@ -77,20 +77,20 @@ describe("plumix CLI dispatch", () => {
   });
 
   test("unknown command throws CliError with UNKNOWN_COMMAND", async () => {
-    await expect(run(["nonsense-command", "--cwd", dir])).rejects.toMatchObject(
+    await expect(run(["--cwd", dir, "nonsense-command"])).rejects.toMatchObject(
       { code: "UNKNOWN_COMMAND" },
     );
   });
 
   test("--help exits cleanly without loading a command", async () => {
-    await run(["--help", "--cwd", dir]);
+    await run(["--cwd", dir, "--help"]);
     expect(exitCode).toBeUndefined();
   });
 
   test("--version prints without requiring a config", async () => {
     const emptyDir = mkdtempSync(join(tmpdir(), "plumix-cli-version-"));
     try {
-      await run(["--version", "--cwd", emptyDir]);
+      await run(["--cwd", emptyDir, "--version"]);
       expect(exitCode).toBeUndefined();
     } finally {
       rmSync(emptyDir, { recursive: true, force: true });
