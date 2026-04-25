@@ -85,18 +85,15 @@
   },
   "dependencies": {
     "@plumix/core": "workspace:*",
+    "drizzle-kit": "catalog:",
     "jiti": "^2.6.1",
     "valibot": "catalog:"
   },
   "peerDependencies": {
-    "drizzle-kit": "catalog:",
     "drizzle-orm": "catalog:",
     "vite": "catalog:"
   },
   "peerDependenciesMeta": {
-    "drizzle-kit": {
-      "optional": true
-    },
     "vite": {
       "optional": true
     }

@@ -43,9 +43,9 @@ async function migrateGenerate(ctx: CommandContext): Promise<void> {
 
   const bin = migrateGenerateDeps.resolveDrizzleKitBin(cwd);
   if (bin === null) {
-    throw new CliError("drizzle-kit is not installed in this project", {
+    throw new CliError("drizzle-kit could not be resolved", {
       code: "MIGRATE_GENERATE_NO_DRIZZLE_KIT",
-      hint: "Install it as a devDependency (e.g. `pnpm add -D drizzle-kit`) and rerun `plumix migrate generate`.",
+      hint: "drizzle-kit ships with plumix; rerun `pnpm install` to restore node_modules, or pin a specific version as a devDependency to override.",
     });
   }
 
@@ -81,12 +81,24 @@ function writeSchema(
 }
 
 function resolveDrizzleKitBin(cwd: string): string | null {
-  try {
-    const req = createRequire(pathToFileURL(resolve(cwd, "package.json")).href);
-    return req.resolve("drizzle-kit/bin.cjs");
-  } catch {
-    return null;
+  // Consumer's own drizzle-kit takes precedence so they can pin a
+  // specific version; falls back to the one bundled with plumix.
+  // drizzle-kit's `exports` field doesn't expose `./bin.cjs` as a
+  // subpath, so we resolve the package's main entry and walk to the
+  // bin file (which sits next to it per `package.json#bin`).
+  const bases = [
+    pathToFileURL(resolve(cwd, "package.json")).href,
+    import.meta.url,
+  ];
+  for (const base of bases) {
+    try {
+      const main = createRequire(base).resolve("drizzle-kit");
+      return resolve(dirname(main), "bin.cjs");
+    } catch {
+      // try the next base
+    }
   }
+  return null;
 }
 
 // Mutable seam for tests — swap without vi.mock ceremony.

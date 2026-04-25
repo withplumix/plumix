@@ -82,7 +82,7 @@
     "publint": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",
-    "wrangler": "^4.84.0"
+    "wrangler": "catalog:"
   },
   "prettier": "@plumix/prettier-config"
 }

@@ -156,7 +156,7 @@ describe("migrate generate", () => {
       migrateCommand.run(ctx({ cwd: dir, argv: ["generate"] })),
     ).rejects.toMatchObject({
       code: "MIGRATE_GENERATE_NO_DRIZZLE_KIT",
-      hint: expect.stringContaining("pnpm add -D drizzle-kit") as unknown,
+      hint: expect.stringContaining("ships with plumix") as unknown,
     });
     expect(spawn).not.toHaveBeenCalled();
   });
@@ -178,11 +178,12 @@ describe("migrate generate", () => {
 });
 
 describe("resolveDrizzleKitBin", () => {
-  test("returns null when drizzle-kit cannot be resolved from cwd", () => {
+  test("falls back to plumix's bundled drizzle-kit when cwd has none", () => {
     const empty = mkdtempSync(join(tmpdir(), "plumix-empty-"));
     try {
       const bin = migrateGenerateDeps.resolveDrizzleKitBin(empty);
-      expect(bin).toBeNull();
+      expect(bin).not.toBeNull();
+      expect(bin).toMatch(/drizzle-kit\/bin\.cjs$/);
     } finally {
       rmSync(empty, { recursive: true, force: true });
     }
