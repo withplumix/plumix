@@ -17,6 +17,7 @@ import {
   writeEntryMeta,
 } from "./meta.js";
 import { entryCreateInputSchema } from "./schemas.js";
+import { applyTermPatch, assertTermsPatchValid } from "./terms.js";
 
 export const create = base
   .use(authenticated)
@@ -65,6 +66,25 @@ export const create = base
       errors,
     );
 
+    // Same up-front validation: a bad term reference shouldn't leave a
+    // half-created entry behind.
+    const termsPatch = filtered.terms;
+    if (termsPatch !== undefined) {
+      await assertTermsPatchValid(context, termsPatch, {
+        taxonomyNotFound: (taxonomy) => {
+          throw errors.NOT_FOUND({
+            data: { kind: "termTaxonomy", id: taxonomy },
+          });
+        },
+        forbidden: (capability) => {
+          throw errors.FORBIDDEN({ data: { capability } });
+        },
+        termTaxonomyMismatch: () => {
+          throw errors.CONFLICT({ data: { reason: "term_taxonomy_mismatch" } });
+        },
+      });
+    }
+
     const candidate: NewEntry = {
       type: filtered.type,
       title: filtered.title,
@@ -94,6 +114,10 @@ export const create = base
 
     if (!created) {
       throw errors.CONFLICT({ data: { reason: "slug_taken" } });
+    }
+
+    if (termsPatch !== undefined) {
+      await applyTermPatch(context, created.id, termsPatch);
     }
 
     let meta: Record<string, unknown>;

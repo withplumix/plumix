@@ -8,8 +8,13 @@ import {
 import { Skeleton } from "@/components/ui/skeleton.js";
 import { hasCap } from "@/lib/caps.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
-import { entryMetaBoxesForType, findEntryTypeBySlug } from "@/lib/manifest.js";
+import {
+  entryMetaBoxesForType,
+  findEntryTypeBySlug,
+  visibleTermTaxonomies,
+} from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
+import { filterTermsForEntryType } from "@/lib/terms.js";
 import {
   useMutation,
   useQueryClient,
@@ -98,6 +103,7 @@ function EditPostRoute(): ReactNode {
         excerpt: input.excerpt.length > 0 ? input.excerpt : null,
         status: input.status,
         meta: input.meta,
+        terms: filterTermsForEntryType(input.terms, entryType.termTaxonomies),
       }),
     onMutate: () => {
       setServerError(null);
@@ -128,6 +134,12 @@ function EditPostRoute(): ReactNode {
     () => entryMetaBoxesForType(entryType.name, user.capabilities),
     [entryType.name, user.capabilities],
   );
+  const taxonomies = useMemo(() => {
+    const allowed = new Set(entryType.termTaxonomies ?? []);
+    return visibleTermTaxonomies(user.capabilities).filter((t) =>
+      allowed.has(t.name),
+    );
+  }, [entryType.termTaxonomies, user.capabilities]);
 
   const capNamespace = `entry:${entryType.capabilityType ?? entryType.name}`;
   const canEditAny = hasCap(user.capabilities, `${capNamespace}:edit_any`);
@@ -161,6 +173,7 @@ function EditPostRoute(): ReactNode {
       availableStatuses={POST_EDITOR_STATUSES}
       supports={entryType.supports}
       metaBoxes={metaBoxes}
+      taxonomies={taxonomies}
       headline={`Edit ${singularLower}`}
       submitLabel="Save"
       // For the edit path, the post-save remount (keyed on
@@ -184,7 +197,9 @@ function EditPostRoute(): ReactNode {
   );
 }
 
-function toEditorValues(post: Entry): PostEditorValues {
+function toEditorValues(
+  post: Entry & { terms?: Record<string, readonly number[]> },
+): PostEditorValues {
   return {
     title: post.title,
     slug: post.slug,
@@ -192,6 +207,9 @@ function toEditorValues(post: Entry): PostEditorValues {
     excerpt: post.excerpt ?? "",
     status: post.status,
     meta: post.meta,
+    terms: Object.fromEntries(
+      Object.entries(post.terms ?? {}).map(([k, v]) => [k, [...v]]),
+    ),
   };
 }
 

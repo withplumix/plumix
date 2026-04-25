@@ -1,11 +1,9 @@
-import type { MultiSelectOption } from "@/components/form/multi-select.js";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { DataTable } from "@/components/data-table/data-table.js";
 import { MultiSelect } from "@/components/form/multi-select.js";
 import { DebouncedSearchInput } from "@/components/form/search-input.js";
-import { buildTermTree, flattenTree } from "@/components/taxonomy/tree.js";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +34,7 @@ import { hasCap } from "@/lib/caps.js";
 import { toDate } from "@/lib/dates.js";
 import { findEntryTypeBySlug, findTermTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
+import { buildFilterTermOptions } from "@/lib/terms.js";
 import { cn } from "@/lib/utils.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -783,19 +782,11 @@ function TaxonomyFilter({
     }),
   );
   const isHierarchical = taxonomy?.isHierarchical === true;
-  const options = useMemo<MultiSelectOption[]>(() => {
-    const terms: readonly Term[] = termsQuery.data ?? EMPTY_TERMS;
-    if (!isHierarchical) {
-      return terms
-        .map((term) => ({ value: term.slug, label: term.name, depth: 0 }))
-        .sort((a, b) => a.label.localeCompare(b.label));
-    }
-    return flattenTree(buildTermTree(terms)).map(({ term, depth }) => ({
-      value: term.slug,
-      label: term.name,
-      depth,
-    }));
-  }, [termsQuery.data, isHierarchical]);
+  const options = useMemo(
+    () =>
+      buildFilterTermOptions(termsQuery.data ?? EMPTY_TERMS, isHierarchical),
+    [termsQuery.data, isHierarchical],
+  );
 
   const pluralLower = (taxonomy?.label ?? taxonomyName).toLowerCase();
   return (

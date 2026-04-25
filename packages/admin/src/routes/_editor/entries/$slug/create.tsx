@@ -4,8 +4,13 @@ import { useMemo, useState } from "react";
 import { PostEditorForm } from "@/components/editor/entry-editor-form.js";
 import { hasCap } from "@/lib/caps.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
-import { entryMetaBoxesForType, findEntryTypeBySlug } from "@/lib/manifest.js";
+import {
+  entryMetaBoxesForType,
+  findEntryTypeBySlug,
+  visibleTermTaxonomies,
+} from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
+import { filterTermsForEntryType } from "@/lib/terms.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   createFileRoute,
@@ -67,6 +72,7 @@ function NewPostRoute(): ReactNode {
         excerpt: input.excerpt.length > 0 ? input.excerpt : null,
         status: input.status,
         meta: input.meta,
+        terms: filterTermsForEntryType(input.terms, entryType.termTaxonomies),
       }),
     onMutate: () => {
       setServerError(null);
@@ -94,6 +100,7 @@ function NewPostRoute(): ReactNode {
     excerpt: "",
     status: "draft",
     meta: {},
+    terms: {},
   };
 
   // Meta boxes registered for this post type, filtered by the user's
@@ -103,6 +110,14 @@ function NewPostRoute(): ReactNode {
     () => entryMetaBoxesForType(entryType.name, user.capabilities),
     [entryType.name, user.capabilities],
   );
+  // Taxonomies registered against this entry type AND visible to the
+  // viewer. The form renders one rail section per taxonomy.
+  const taxonomies = useMemo(() => {
+    const allowed = new Set(entryType.termTaxonomies ?? []);
+    return visibleTermTaxonomies(user.capabilities).filter((t) =>
+      allowed.has(t.name),
+    );
+  }, [entryType.termTaxonomies, user.capabilities]);
 
   const singularLower = (
     entryType.labels?.singular ?? entryType.label
@@ -115,6 +130,7 @@ function NewPostRoute(): ReactNode {
       availableStatuses={NEW_POST_STATUSES}
       supports={entryType.supports}
       metaBoxes={metaBoxes}
+      taxonomies={taxonomies}
       headline={`New ${singularLower}`}
       submitLabel="Create"
       // Stay "busy" through `isSuccess` too — TanStack Query flips

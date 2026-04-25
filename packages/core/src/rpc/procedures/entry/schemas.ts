@@ -78,6 +78,7 @@ export const entryCreateInputSchema = v.object({
   excerpt: v.optional(excerptSchema),
   status: v.optional(userSuppliableFields.entries.status, "draft"),
   menuOrder: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0)), 0),
+  terms: v.optional(postTermsSchema),
   meta: v.optional(entryMetaInputSchema),
 });
 
