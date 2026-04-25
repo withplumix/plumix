@@ -360,10 +360,11 @@ function TitleField({ disabled }: { readonly disabled: boolean }): ReactNode {
               required
               autoComplete="off"
               disabled={disabled}
+              placeholder="Title"
               data-testid="post-editor-title-input"
               className={cn(
                 "h-auto border-0 bg-transparent px-0 text-3xl font-semibold shadow-none dark:bg-transparent",
-                "placeholder:text-muted-foreground/60",
+                "placeholder:text-muted-foreground/40",
                 "focus-visible:border-0 focus-visible:ring-0",
               )}
               {...field}

@@ -10,11 +10,13 @@ import {
   Empty,
   EmptyDescription,
   EmptyHeader,
+  EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty.js";
 import { hasCap } from "@/lib/caps.js";
 import { visibleSettingsPages } from "@/lib/manifest.js";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { Settings as SettingsIcon } from "lucide-react";
 
 function pageSummary(groupCount: number): string {
   return `${groupCount} ${groupCount === 1 ? "group" : "groups"}`;
@@ -47,6 +49,9 @@ function SettingsIndexRoute(): ReactNode {
         <Card data-testid="settings-empty-state">
           <Empty>
             <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <SettingsIcon />
+              </EmptyMedia>
               <EmptyTitle>No settings registered yet</EmptyTitle>
               <EmptyDescription>
                 Core ships no settings by design — plugins (or your own
