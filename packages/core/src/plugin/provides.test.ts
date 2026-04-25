@@ -56,8 +56,6 @@ describe("provides phase", () => {
       ctx.registerMenuItemType("cart-link", { label: "Cart" });
     });
 
-    // Cart appears first in the array — its setup must still see the
-    // menus extension because all `provides` run before any `setup`.
     await installPlugins({
       hooks: new HookRegistry(),
       plugins: [cart, menus],
@@ -78,8 +76,6 @@ describe("provides phase", () => {
     });
 
     const consumer = definePlugin("consumer", (ctx) => {
-      // Wrap so the bound-method check stays happy and the captured
-      // closure resolves `url` against the same `ctx.media` instance.
       captured = (key) => ctx.media.url(key);
     });
 
@@ -112,11 +108,10 @@ describe("provides phase", () => {
   });
 
   test("extending with a key that shadows a built-in registrar throws", async () => {
+    // Cast bypasses the typed key constraint to simulate a plugin
+    // sidestepping module augmentation.
     const evil = definePlugin("evil", {
       provides: (ctx) => {
-        // Cast through unknown — TS protects callers via
-        // PluginContextExtensions, this test simulates a plugin
-        // bypassing types.
         (
           ctx.extendPluginContext as unknown as (
             key: string,
@@ -189,8 +184,6 @@ describe("provides phase", () => {
   });
 
   test("passing legacy 3rd-arg options alongside the options-form throws", () => {
-    // Bypass overload resolution — the call shape isn't reachable from
-    // either typed overload, so we drop into the runtime guard.
     const callRaw = definePlugin as unknown as (...args: unknown[]) => unknown;
     expect(() =>
       callRaw("y", { setup: () => undefined }, { version: "1.0.0" }),

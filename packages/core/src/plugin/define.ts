@@ -12,21 +12,12 @@ export type PluginProvides = (
 export interface PluginDescriptor<TConfig = undefined> {
   readonly id: string;
   readonly version?: string;
-  /**
-   * Phase 1 — runs before any plugin's `setup`. Use to declare
-   * `extendPluginContext` / `extendThemeContext` registrations that
-   * other plugins (or themes) consume during their `setup`. Most
-   * plugins don't need this.
-   */
   readonly provides?: PluginProvides;
   readonly setup: PluginSetup<TConfig>;
   readonly schema?: Record<string, unknown>;
   readonly schemaModule?: string;
-  /** Pre-built ESM staged at `/_plumix/admin/plugins/<id>.js`. */
   readonly adminChunk?: string;
-  /** Pre-built stylesheet staged at `/_plumix/admin/plugins/<id>.css`. */
   readonly adminCss?: string;
-  /** Semver range of `@plumix/admin` this plugin was built against. */
   readonly adminPeerVersion?: string;
 }
 
@@ -39,11 +30,6 @@ export interface DefinePluginOptions {
   readonly adminPeerVersion?: string;
 }
 
-/**
- * Options-form input — `setup` is required, `provides` is optional, plus
- * everything in `DefinePluginOptions`. Mirrors the architecture's
- * `definePlugin(id, { provides, setup, ... })` shape.
- */
 export interface DefinePluginInput<TConfig> extends DefinePluginOptions {
   readonly provides?: PluginProvides;
   readonly setup: PluginSetup<TConfig>;
