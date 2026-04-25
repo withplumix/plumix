@@ -96,9 +96,8 @@ function NewTermRoute(): ReactNode {
       setServerError(null);
     },
     onSuccess: async () => {
-      // Drop the cached `term.list` for this taxonomy so the list view
-      // shows the freshly created term on landing — without this the
-      // post-create navigation lands on a stale empty result.
+      // Awaited because the navigate target IS the list page; without
+      // this the user lands on a 60s-stale cache before refetch.
       await queryClient.invalidateQueries({
         queryKey: orpc.term.list.key({ input: { taxonomy: taxonomy.name } }),
       });

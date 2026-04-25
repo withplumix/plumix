@@ -72,10 +72,9 @@ function NewPostRoute(): ReactNode {
       setServerError(null);
     },
     onSuccess: async (created) => {
-      // Drop the cached `entry.list` for this type so navigating back
-      // to the list view (now or later in the session) reflects the
-      // newly created row instead of the stale pre-create payload.
-      await queryClient.invalidateQueries({
+      // Editor doesn't read entry.list — fire-and-forget so navigation
+      // isn't blocked on a refetch nothing on this screen consumes.
+      void queryClient.invalidateQueries({
         queryKey: orpc.entry.list.key({ input: { type: entryType.name } }),
       });
       await navigate({
