@@ -21,6 +21,7 @@
     "@cloudflare/workers-types": "catalog:",
     "@plumix/typescript-config": "workspace:*",
     "@types/node": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "wrangler": "catalog:"
   }
 }
