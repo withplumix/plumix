@@ -5,6 +5,7 @@ import {
   POST_EDITOR_STATUSES,
   PostEditorForm,
 } from "@/components/editor/entry-editor-form.js";
+import { useParentOptions } from "@/components/editor/use-parent-options.js";
 import { Skeleton } from "@/components/ui/skeleton.js";
 import { hasCap } from "@/lib/caps.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
@@ -93,6 +94,8 @@ function EditPostRoute(): ReactNode {
     orpc.entry.get.queryOptions({ input: { id: entryId } }),
   );
 
+  const isHierarchical = entryType.isHierarchical === true;
+
   const updatePost = useMutation({
     mutationFn: (input: PostEditorValues) =>
       orpc.entry.update.call({
@@ -104,6 +107,7 @@ function EditPostRoute(): ReactNode {
         status: input.status,
         meta: input.meta,
         terms: filterTermsForEntryType(input.terms, entryType.termTaxonomies),
+        ...(isHierarchical ? { parentId: input.parentId } : {}),
       }),
     onMutate: () => {
       setServerError(null);
@@ -141,6 +145,12 @@ function EditPostRoute(): ReactNode {
     );
   }, [entryType.termTaxonomies, user.capabilities]);
 
+  const parentOptions = useParentOptions({
+    entryTypeName: entryType.name,
+    isHierarchical,
+    excludeSelfId: entryId,
+  });
+
   const capNamespace = `entry:${entryType.capabilityType ?? entryType.name}`;
   const canEditAny = hasCap(user.capabilities, `${capNamespace}:edit_any`);
   const canEditOwn =
@@ -174,6 +184,8 @@ function EditPostRoute(): ReactNode {
       supports={entryType.supports}
       metaBoxes={metaBoxes}
       taxonomies={taxonomies}
+      isHierarchical={isHierarchical}
+      parentOptions={parentOptions}
       headline={`Edit ${singularLower}`}
       submitLabel="Save"
       // For the edit path, the post-save remount (keyed on
@@ -210,6 +222,7 @@ function toEditorValues(
     terms: Object.fromEntries(
       Object.entries(post.terms ?? {}).map(([k, v]) => [k, [...v]]),
     ),
+    parentId: post.parentId,
   };
 }
 

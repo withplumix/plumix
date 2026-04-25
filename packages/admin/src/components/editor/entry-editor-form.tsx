@@ -54,7 +54,9 @@ import type {
 } from "@plumix/core/manifest";
 import type { EntryStatus, Term } from "@plumix/core/schema";
 import { slugify } from "@plumix/core/slugify";
+import { idParam } from "@plumix/core/validation";
 
+import type { ParentPickerOption } from "./entry-tree.js";
 import { TiptapEditor } from "./tiptap-editor.js";
 
 // Stable empty fallbacks — react-query returns a fresh `[]` for
@@ -98,6 +100,9 @@ const postEditorSchema = v.object({
    * plugin-added taxonomy doesn't require a schema update.
    */
   terms: v.record(v.string(), v.array(v.number())),
+  /** `null` means root. Hidden for non-hierarchical types — the field
+   *  stays at `null` and the route's mutation skips it. */
+  parentId: v.nullable(idParam),
 });
 
 export type PostEditorValues = v.InferOutput<typeof postEditorSchema>;
@@ -143,6 +148,12 @@ interface PostEditorFormProps {
    *  is rendered per taxonomy, with a Combobox-based multi-select
    *  populated from `term.list`. */
   readonly taxonomies: readonly TermTaxonomyManifestEntry[];
+  /** When true, render the Parent rail section. Pages are hierarchical;
+   *  posts are not. */
+  readonly isHierarchical: boolean;
+  /** Depth-indented options. Edit route excludes self+descendants for
+   *  cycle prevention. Ignored when `isHierarchical` is false. */
+  readonly parentOptions: readonly ParentPickerOption[];
   /** Caption shown next to the back button — e.g. `"New post"` or
    *  `"Edit post"`. The editor itself is the page, so there's no
    *  separate `<h1>` above it. */
@@ -161,6 +172,8 @@ export function PostEditorForm({
   supports,
   metaBoxes,
   taxonomies,
+  isHierarchical,
+  parentOptions,
   headline,
   submitLabel,
   isSubmitting,
@@ -217,6 +230,7 @@ export function PostEditorForm({
   const openSections = [
     ...(showSlug ? ["permalink"] : []),
     "status",
+    ...(isHierarchical ? ["parent"] : []),
     ...(showExcerpt ? ["excerpt"] : []),
     ...taxonomies.map((tax) => `taxonomy:${tax.name}`),
     ...metaBoxes.map((box) => box.id),
@@ -322,6 +336,12 @@ export function PostEditorForm({
                   availableStatuses={availableStatuses}
                   disabled={isSubmitting}
                 />
+                {isHierarchical ? (
+                  <ParentSection
+                    parentOptions={parentOptions}
+                    disabled={isSubmitting}
+                  />
+                ) : null}
                 {showExcerpt ? (
                   <ExcerptSection disabled={isSubmitting} />
                 ) : null}
@@ -539,6 +559,50 @@ function StatusSection({
                 {availableStatuses.map((status) => (
                   <option key={status} value={status} className="capitalize">
                     {capitalize(status)}
+                  </option>
+                ))}
+              </select>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </RailSection>
+  );
+}
+
+function ParentSection({
+  parentOptions,
+  disabled,
+}: {
+  readonly parentOptions: readonly ParentPickerOption[];
+  readonly disabled: boolean;
+}): ReactNode {
+  const { control } = useFormContext<PostEditorValues>();
+  return (
+    <RailSection value="parent" title="Parent">
+      <FormField
+        control={control}
+        name="parentId"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="sr-only">Parent</FormLabel>
+            <FormControl>
+              <select
+                value={field.value == null ? "" : String(field.value)}
+                onBlur={field.onBlur}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  field.onChange(raw === "" ? null : Number(raw));
+                }}
+                disabled={disabled}
+                data-testid="post-editor-parent-select"
+                className="border-input bg-background focus-visible:ring-ring h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">— root —</option>
+                {parentOptions.map((opt) => (
+                  <option key={opt.id} value={String(opt.id)}>
+                    {opt.label}
                   </option>
                 ))}
               </select>
