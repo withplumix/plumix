@@ -1,13 +1,18 @@
 import type { AnyPluginDescriptor } from "../config.js";
 import type { HookRegistry } from "../hooks/registry.js";
+import type { ContextExtensionEntry } from "./context.js";
 import type { MutablePluginRegistry, PluginRegistry } from "./manifest.js";
-import { createPluginSetupContext } from "./context.js";
+import {
+  createPluginProvidesContext,
+  createPluginSetupContext,
+} from "./context.js";
 import { assertValidPluginId } from "./define.js";
 import { createPluginRegistry } from "./manifest.js";
 
 export interface PluginInstallResult {
   readonly hooks: HookRegistry;
   readonly registry: PluginRegistry;
+  readonly themeExtensions: ReadonlyMap<string, ContextExtensionEntry>;
 }
 
 interface InstallPluginsArgs {
@@ -33,13 +38,33 @@ export async function installPlugins({
     }
     seenIds.add(descriptor.id);
   }
+
+  const pluginExtensions = new Map<string, ContextExtensionEntry>();
+  const themeExtensions = new Map<string, ContextExtensionEntry>();
+  for (const descriptor of plugins) {
+    if (!descriptor.provides) continue;
+    const providesCtx = createPluginProvidesContext({
+      pluginId: descriptor.id,
+      pluginExtensions,
+      themeExtensions,
+    });
+    await descriptor.provides(providesCtx);
+  }
+
+  const mergedPluginExtensions = new Map<string, unknown>();
+  for (const [key, entry] of pluginExtensions) {
+    mergedPluginExtensions.set(key, entry.value);
+  }
+
   for (const descriptor of plugins) {
     const ctx = createPluginSetupContext({
       pluginId: descriptor.id,
       hooks,
       registry,
+      extensions: mergedPluginExtensions,
     });
     await descriptor.setup(ctx, undefined);
   }
-  return { hooks, registry };
+
+  return { hooks, registry, themeExtensions };
 }

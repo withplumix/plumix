@@ -38,7 +38,30 @@ import { DEFAULT_REWRITE_RULE_PRIORITY } from "../route/compile.js";
 import { MAX_PLUGIN_ID_LENGTH, PLUGIN_ID_RE } from "./define.js";
 import { CORE_RPC_NAMESPACES, DuplicateRegistrationError } from "./manifest.js";
 
-export interface PluginSetupContext {
+export interface ContextExtensionEntry {
+  readonly value: unknown;
+  readonly pluginId: string;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface PluginContextExtensions {}
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface ThemeContextExtensions {}
+
+export interface PluginProvidesContext {
+  readonly id: string;
+  extendPluginContext<TKey extends keyof PluginContextExtensions>(
+    key: TKey,
+    value: PluginContextExtensions[TKey],
+  ): void;
+  extendThemeContext<TKey extends keyof ThemeContextExtensions>(
+    key: TKey,
+    value: ThemeContextExtensions[TKey],
+  ): void;
+}
+
+export interface PluginSetupContextBase {
   readonly id: string;
 
   /** Subscribe to an existing (core or other-plugin) filter. */
@@ -159,16 +182,66 @@ export interface PluginSetupContext {
   registerFieldType(options: FieldTypeOptions): void;
 }
 
+export type PluginSetupContext = PluginSetupContextBase &
+  PluginContextExtensions;
+
 interface CreatePluginContextArgs {
   readonly pluginId: string;
   readonly hooks: HookRegistry;
   readonly registry: MutablePluginRegistry;
+  readonly extensions?: ReadonlyMap<string, unknown>;
+}
+
+interface CreateProvidesContextArgs {
+  readonly pluginId: string;
+  readonly pluginExtensions: Map<string, ContextExtensionEntry>;
+  readonly themeExtensions: Map<string, ContextExtensionEntry>;
+}
+
+export function createPluginProvidesContext({
+  pluginId,
+  pluginExtensions,
+  themeExtensions,
+}: CreateProvidesContextArgs): PluginProvidesContext {
+  const stash = (
+    target: Map<string, ContextExtensionEntry>,
+    kind: "Plugin" | "Theme",
+    key: string,
+    value: unknown,
+  ): void => {
+    if (typeof key !== "string" || key.length === 0) {
+      throw new Error(
+        `Plugin "${pluginId}" called extend${kind}Context with an ` +
+          `invalid key — must be a non-empty string.`,
+      );
+    }
+    const existing = target.get(key);
+    if (existing) {
+      throw new Error(
+        `Plugin "${pluginId}" extended the ${kind.toLowerCase()} context ` +
+          `with "${key}", but "${existing.pluginId}" already registered it. ` +
+          `Each extension key has exactly one provider — rename one or ` +
+          `consolidate the providing plugin.`,
+      );
+    }
+    target.set(key, { value, pluginId });
+  };
+  return {
+    id: pluginId,
+    extendPluginContext: (key, value) => {
+      stash(pluginExtensions, "Plugin", key, value);
+    },
+    extendThemeContext: (key, value) => {
+      stash(themeExtensions, "Theme", key, value);
+    },
+  };
 }
 
 export function createPluginSetupContext({
   pluginId,
   hooks,
   registry,
+  extensions,
 }: CreatePluginContextArgs): PluginSetupContext {
   // Pooling caps by capabilityType is safe when minRoles agree; if one
   // type applies a `capabilities` override and another doesn't, silent
@@ -193,7 +266,7 @@ export function createPluginSetupContext({
     }
   };
 
-  return {
+  const ctx: PluginSetupContextBase = {
     id: pluginId,
 
     addFilter: (name, fn, options) => {
@@ -429,6 +502,22 @@ export function createPluginSetupContext({
       });
     },
   };
+
+  if (extensions && extensions.size > 0) {
+    const target = ctx as unknown as Record<string, unknown>;
+    for (const [key, value] of extensions) {
+      if (key in target) {
+        throw new Error(
+          `Plugin context extension key "${key}" collides with a built-in ` +
+            `PluginSetupContext member. Rename the extension to avoid ` +
+            `shadowing core registration APIs.`,
+        );
+      }
+      target[key] = value;
+    }
+  }
+
+  return ctx as PluginSetupContext;
 }
 
 // Three meta-box registrations (entry/term/user) only differ in their
