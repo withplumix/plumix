@@ -115,7 +115,7 @@ test.describe("/users", () => {
           name: "Sub",
           avatarUrl: null,
           role: "subscriber",
-          capabilities: ["post:read"],
+          capabilities: ["entry:post:read"],
         },
         needsBootstrap: false,
       },
@@ -240,7 +240,7 @@ test.describe("/users/new", () => {
           avatarUrl: null,
           role: "editor",
           // Editor has user:list but NOT user:create.
-          capabilities: ["user:list", "post:read"],
+          capabilities: ["user:list", "entry:post:read"],
         },
         needsBootstrap: false,
       },
@@ -566,7 +566,7 @@ test.describe("/users/$id", () => {
           avatarUrl: null,
           role: "subscriber",
           // Subscribers have `user:edit_own` by default but NOT `user:list`.
-          capabilities: ["user:edit_own", "post:read"],
+          capabilities: ["user:edit_own", "entry:post:read"],
         },
         needsBootstrap: false,
       },

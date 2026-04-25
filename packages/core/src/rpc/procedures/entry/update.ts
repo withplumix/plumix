@@ -112,10 +112,12 @@ export const update = base
     );
     if (termsPatch !== undefined) {
       for (const taxonomy of Object.keys(termsPatch)) {
-        if (!context.plugins.taxonomies.has(taxonomy)) {
-          throw errors.NOT_FOUND({ data: { kind: "taxonomy", id: taxonomy } });
+        if (!context.plugins.termTaxonomies.has(taxonomy)) {
+          throw errors.NOT_FOUND({
+            data: { kind: "termTaxonomy", id: taxonomy },
+          });
         }
-        const assignCap = `${taxonomy}:assign`;
+        const assignCap = `term:${taxonomy}:assign`;
         if (!context.auth.can(assignCap)) {
           throw errors.FORBIDDEN({ data: { capability: assignCap } });
         }

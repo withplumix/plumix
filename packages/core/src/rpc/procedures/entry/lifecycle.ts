@@ -64,7 +64,7 @@ export async function fireEntryTrashed(
 }
 
 export function entryCapability(type: string, action: string): string {
-  return `${type}:${action}`;
+  return `entry:${type}:${action}`;
 }
 
 // Mirrors the readability rules in `entry.get`: any type-level `read` cap,

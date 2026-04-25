@@ -50,7 +50,7 @@ test.describe("/settings (page index)", () => {
       user: {
         ...adminUser,
         role: "editor",
-        capabilities: ["post:edit_own"],
+        capabilities: ["entry:post:edit_own"],
       },
       needsBootstrap: false,
     });

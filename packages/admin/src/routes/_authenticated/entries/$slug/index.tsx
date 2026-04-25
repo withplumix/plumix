@@ -305,7 +305,7 @@ function ContentListRoute(): ReactNode {
   // derived by core (`capabilityType ?? name`). Missing the cap? Hide the
   // button — the new-post route also redirects on `beforeLoad` but we
   // shouldn't surface the button at all.
-  const createCapability = `${entryType.capabilityType ?? entryType.name}:create`;
+  const createCapability = `entry:${entryType.capabilityType ?? entryType.name}:create`;
   const canCreate = hasCap(user.capabilities, createCapability);
 
   const columns = useMemo(

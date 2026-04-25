@@ -52,9 +52,23 @@ describe("examples/minimal — plumix build", () => {
       // present — the admin bundle's `readManifest()` asserts shape on
       // page load.
       const adminHtml = readFileSync(adminIndexHtml, "utf8");
-      expect(adminHtml).toMatch(
-        /<script id="plumix-manifest" type="application\/json">\{"entryTypes":\[\],"taxonomies":\[\],"entryMetaBoxes":\[\],"termMetaBoxes":\[\],"userMetaBoxes":\[\],"settingsGroups":\[\],"settingsPages":\[\]\}<\/script>/,
+      const match = adminHtml.match(
+        /<script id="plumix-manifest" type="application\/json">([\s\S]*?)<\/script>/,
       );
+      expect(match).not.toBeNull();
+      const manifest = JSON.parse(match![1]!) as {
+        entryTypes: unknown[];
+        adminNav: { id: string; items: { to: string }[] }[];
+      };
+      expect(manifest.entryTypes).toEqual([]);
+      // Bare install ships core-seeded nav: overview/management groups.
+      const overview = manifest.adminNav.find((g) => g.id === "overview");
+      expect(overview?.items.map((i) => i.to)).toEqual(["/"]);
+      const management = manifest.adminNav.find((g) => g.id === "management");
+      expect(management?.items.map((i) => i.to)).toEqual([
+        "/users",
+        "/settings",
+      ]);
     },
     60_000,
   );

@@ -1,10 +1,18 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { cp, readFile, rm, stat, writeFile } from "node:fs/promises";
-import { dirname, relative, resolve } from "node:path";
+import {
+  copyFile,
+  cp,
+  mkdir,
+  readFile,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
+import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
 
-import type { PlumixManifest } from "@plumix/core";
+import type { AnyPluginDescriptor, PlumixManifest } from "@plumix/core";
 import {
   buildManifest,
   generateSchemaSource,
@@ -50,14 +58,25 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
     async buildStart() {
       const emitted = await regenerate(root, options.configFile);
       configPath = emitted.configPath;
-      await stageAdminAssets(publicDir, emitted.manifest);
+      warnOnPluginAdminMismatch(emitted.plugins, this.warn.bind(this));
+      await stageAdminAssets(
+        publicDir,
+        emitted.manifest,
+        emitted.plugins,
+        root,
+      );
     },
     configureServer(server) {
       server.watcher.on("change", (path) => {
         if (!configPath || resolve(path) !== configPath) return;
         void regenerate(root, options.configFile)
           .then(async (emitted) => {
-            await stageAdminAssets(publicDir, emitted.manifest);
+            await stageAdminAssets(
+              publicDir,
+              emitted.manifest,
+              emitted.plugins,
+              root,
+            );
             server.ws.send({ type: "full-reload" });
           })
           .catch((error: unknown) => {
@@ -89,7 +108,11 @@ export async function emitPlumixSources(
 async function regenerate(
   cwd: string,
   explicitConfig: string | undefined,
-): Promise<{ configPath: string; manifest: PlumixManifest }> {
+): Promise<{
+  configPath: string;
+  manifest: PlumixManifest;
+  plugins: readonly AnyPluginDescriptor[];
+}> {
   const { config, configPath } = await loadConfig(cwd, explicitConfig);
 
   const schemaSource = generateSchemaSource(config).source;
@@ -102,7 +125,7 @@ async function regenerate(
 
   const manifest = await computeManifest(config.plugins);
 
-  return { configPath, manifest };
+  return { configPath, manifest, plugins: config.plugins };
 }
 
 type PluginDescriptors = Parameters<typeof installPlugins>[0]["plugins"];
@@ -135,23 +158,150 @@ async function computeManifest(
 async function stageAdminAssets(
   publicDir: string,
   manifest: PlumixManifest,
+  plugins: readonly AnyPluginDescriptor[],
+  projectRoot: string,
 ): Promise<void> {
   const dest = resolve(publicDir, "_plumix/admin");
   if (!(await destIsFresh(dest, ADMIN_SOURCE_DIR))) {
     await rm(dest, { recursive: true, force: true });
     await cp(ADMIN_SOURCE_DIR, dest, { recursive: true });
   }
-  await injectManifest(resolve(dest, "index.html"), manifest);
+  const chunks = await stagePluginChunks(dest, plugins, projectRoot);
+  await injectIndexHtml(resolve(dest, "index.html"), manifest, chunks);
 }
 
-async function injectManifest(
+interface PluginChunkRef {
+  readonly pluginId: string;
+  readonly chunkUrl: string;
+  readonly cssUrl?: string;
+}
+
+async function stagePluginChunks(
+  adminDest: string,
+  plugins: readonly AnyPluginDescriptor[],
+  projectRoot: string,
+): Promise<readonly PluginChunkRef[]> {
+  const chunks: PluginChunkRef[] = [];
+  const withChunks = plugins.filter(
+    (p): p is AnyPluginDescriptor & { adminChunk: string } =>
+      typeof p.adminChunk === "string" && p.adminChunk.length > 0,
+  );
+  if (withChunks.length === 0) return chunks;
+
+  const pluginsDir = resolve(adminDest, "plugins");
+  await mkdir(pluginsDir, { recursive: true });
+  const staged = await Promise.all(
+    withChunks.map(async (plugin): Promise<PluginChunkRef> => {
+      const chunkSource = await resolvePluginAsset(
+        plugin.id,
+        "adminChunk",
+        plugin.adminChunk,
+        projectRoot,
+      );
+      const chunkCopy = copyFile(
+        chunkSource,
+        resolve(pluginsDir, `${plugin.id}.js`),
+      );
+      let cssUrl: string | undefined;
+      let cssCopy: Promise<void> | undefined;
+      if (plugin.adminCss) {
+        const cssSource = await resolvePluginAsset(
+          plugin.id,
+          "adminCss",
+          plugin.adminCss,
+          projectRoot,
+        );
+        cssCopy = copyFile(cssSource, resolve(pluginsDir, `${plugin.id}.css`));
+        cssUrl = `./plugins/${plugin.id}.css`;
+      }
+      const pending: Promise<void>[] = [chunkCopy];
+      if (cssCopy) pending.push(cssCopy);
+      await Promise.all(pending);
+      return {
+        pluginId: plugin.id,
+        chunkUrl: `./plugins/${plugin.id}.js`,
+        cssUrl,
+      };
+    }),
+  );
+  chunks.push(...staged);
+  return chunks;
+}
+
+async function resolvePluginAsset(
+  pluginId: string,
+  field: string,
+  relOrAbs: string,
+  projectRoot: string,
+): Promise<string> {
+  const source = isAbsolute(relOrAbs)
+    ? relOrAbs
+    : resolve(projectRoot, relOrAbs);
+  try {
+    await stat(source);
+  } catch {
+    throw new Error(
+      `[plumix] plugin "${pluginId}" declares ${field} "${relOrAbs}" but ` +
+        `the file was not found at ${source}. Build the plugin's admin ` +
+        `assets before running \`plumix build\`.`,
+    );
+  }
+  return source;
+}
+
+async function injectIndexHtml(
   indexHtmlPath: string,
   manifest: PlumixManifest,
+  chunks: readonly PluginChunkRef[],
 ): Promise<void> {
   const html = await readFile(indexHtmlPath, "utf8");
-  const next = injectManifestIntoHtml(html, manifest);
+  const withManifest = injectManifestIntoHtml(html, manifest);
+  const next = injectPluginChunkScripts(withManifest, chunks);
   if (next === html) return;
   await writeFile(indexHtmlPath, next, "utf8");
+}
+
+// Plugin chunks load AFTER the main admin bundle so window.plumix is
+// populated before they execute. Block is replaced (not appended) on
+// rebuild so the HTML stays stable.
+const PLUGIN_CHUNKS_MARKER = "<!-- plumix:plugin-chunks -->";
+const PLUGIN_CHUNKS_RE =
+  /<!-- plumix:plugin-chunks -->[\s\S]*?<!-- \/plumix:plugin-chunks -->/;
+
+function injectPluginChunkScripts(
+  html: string,
+  chunks: readonly PluginChunkRef[],
+): string {
+  const block = buildPluginChunkBlock(chunks);
+  if (PLUGIN_CHUNKS_RE.test(html)) {
+    return html.replace(PLUGIN_CHUNKS_RE, block);
+  }
+  if (html.includes("</body>")) {
+    return html.replace("</body>", `${block}\n</body>`);
+  }
+  return `${html}\n${block}`;
+}
+
+function buildPluginChunkBlock(chunks: readonly PluginChunkRef[]): string {
+  const tags: string[] = [];
+  for (const c of chunks) {
+    if (c.cssUrl) {
+      tags.push(
+        `<link rel="stylesheet" data-plumix-plugin="${escapeAttribute(c.pluginId)}" href="${escapeAttribute(c.cssUrl)}">`,
+      );
+    }
+    tags.push(
+      `<script type="module" data-plumix-plugin="${escapeAttribute(c.pluginId)}" src="${escapeAttribute(c.chunkUrl)}"></script>`,
+    );
+  }
+  return `${PLUGIN_CHUNKS_MARKER}\n${tags.join("\n")}\n<!-- /plumix:plugin-chunks -->`;
+}
+
+function escapeAttribute(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
 }
 
 async function destIsFresh(dest: string, src: string): Promise<boolean> {
@@ -185,6 +335,55 @@ function writeIfChanged(path: string, content: string): void {
 function resolveConfigSpecifier(cwd: string, configPath: string): string {
   const rel = relative(resolve(cwd, ".plumix"), configPath).replace(/\\/g, "/");
   return rel.startsWith(".") ? rel : `./${rel}`;
+}
+
+function warnOnPluginAdminMismatch(
+  plugins: readonly AnyPluginDescriptor[],
+  warn: (message: string) => void,
+): void {
+  const adminVersion = readAdminVersion();
+  for (const plugin of plugins) {
+    if (plugin.adminPeerVersion && adminVersion) {
+      if (!satisfiesLoose(adminVersion, plugin.adminPeerVersion)) {
+        warn(
+          `plugin "${plugin.id}" was built against @plumix/admin ` +
+            `${plugin.adminPeerVersion}, but the consumer has ` +
+            `${adminVersion}. Its admin chunk may call APIs the host ` +
+            `no longer exposes.`,
+        );
+      }
+    }
+  }
+}
+
+function readAdminVersion(): string | null {
+  try {
+    const adminPkgPath = fileURLToPath(
+      new URL("../../../admin/package.json", import.meta.url),
+    );
+    const raw = readFileSync(adminPkgPath, "utf8");
+    const pkg = JSON.parse(raw) as { version?: unknown };
+    return typeof pkg.version === "string" ? pkg.version : null;
+  } catch {
+    return null;
+  }
+}
+
+// Strips common range prefixes and matches on 0.x-minor or 1.x+ major.
+// Advisory only; not a rigorous semver implementation.
+function satisfiesLoose(installed: string, range: string): boolean {
+  const base = range.replace(/^[~^><=]+/, "").trim();
+  if (!base) return true;
+  const [rMajor, rMinor] = base.split(".");
+  const [iMajor, iMinor] = installed.split(".");
+  if (rMajor === "0") {
+    // 0.x-pinned ranges require an explicit minor (`^0.5` matches
+    // 0.5.x). A bare "0" is too loose to interpret meaningfully —
+    // fall back to major-only equality so we don't spuriously warn.
+    if (rMinor === undefined) return rMajor === iMajor;
+    return rMajor === iMajor && rMinor === iMinor;
+  }
+  return rMajor === iMajor;
 }
 
 export { plumix as default };

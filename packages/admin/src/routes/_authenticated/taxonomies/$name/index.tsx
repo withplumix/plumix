@@ -19,7 +19,7 @@ import {
   PaginationItem,
 } from "@/components/ui/pagination.js";
 import { hasCap } from "@/lib/caps.js";
-import { findTaxonomyByName } from "@/lib/manifest.js";
+import { findTermTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -31,7 +31,7 @@ import {
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import * as v from "valibot";
 
-import type { TaxonomyManifestEntry } from "@plumix/core/manifest";
+import type { TermTaxonomyManifestEntry } from "@plumix/core/manifest";
 import type { Term } from "@plumix/core/schema";
 
 // Flat (non-hierarchical) lists paginate conventionally. Hierarchical
@@ -65,15 +65,18 @@ export const Route = createFileRoute("/_authenticated/taxonomies/$name/")({
   // Resolve the manifest entry in `beforeLoad` so the component never
   // has to handle a missing taxonomy — unregistered names bubble up to
   // the router's 404 state.
-  beforeLoad: ({ context, params }): { taxonomy: TaxonomyManifestEntry } => {
-    const taxonomy = findTaxonomyByName(params.name);
+  beforeLoad: ({
+    context,
+    params,
+  }): { taxonomy: TermTaxonomyManifestEntry } => {
+    const taxonomy = findTermTaxonomyByName(params.name);
     if (!taxonomy) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw notFound();
     }
     // Server's `term.list` requires `${name}:read`. Check here too so
     // users land on a friendly redirect rather than a 403 from the RPC.
-    if (!hasCap(context.user.capabilities, `${taxonomy.name}:read`)) {
+    if (!hasCap(context.user.capabilities, `term:${taxonomy.name}:read`)) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw notFound();
     }
@@ -83,7 +86,7 @@ export const Route = createFileRoute("/_authenticated/taxonomies/$name/")({
 });
 
 // Row shape for the list table — `displayDepth` is the tree indent for
-// hierarchical taxonomies (always 0 for flat ones). Keyed on the term
+// hierarchical termTaxonomies (always 0 for flat ones). Keyed on the term
 // so react-table can key rows cleanly even when the same term appears
 // on different pages.
 interface TermRow {
@@ -129,7 +132,7 @@ function TaxonomyListRoute(): ReactNode {
   // stability on `data` across renders within the same request state.
   const rawRows = query.data;
 
-  // Hierarchical taxonomies render as a tree: flatten-with-depth so
+  // Hierarchical termTaxonomies render as a tree: flatten-with-depth so
   // each row carries its indent level. Non-hierarchical just keeps the
   // server-provided order. Searching in a hierarchical taxonomy
   // temporarily collapses to flat-list mode so search results aren't
@@ -151,7 +154,7 @@ function TaxonomyListRoute(): ReactNode {
   // Heuristic "next page exists": full page came back.
   const canNext = (rawRows?.length ?? 0) === pageSize;
 
-  const canEdit = hasCap(user.capabilities, `${taxonomy.name}:edit`);
+  const canEdit = hasCap(user.capabilities, `term:${taxonomy.name}:edit`);
   const singularLower = (
     taxonomy.labels?.singular ?? taxonomy.label
   ).toLowerCase();

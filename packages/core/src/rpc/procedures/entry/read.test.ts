@@ -9,12 +9,12 @@ import { createRpcHarness } from "../../../test/rpc.js";
 
 async function seedTerm(
   h: Awaited<ReturnType<typeof createRpcHarness>>,
-  taxonomy: string,
+  termTaxonomy: string,
   slug: string,
 ): Promise<number> {
   const [row] = await h.context.db
     .insert(terms)
-    .values({ taxonomy, name: slug, slug })
+    .values({ taxonomy: termTaxonomy, name: slug, slug })
     .returning();
   if (!row) throw new Error("seedTerm: insert returned no row");
   return row.id;
@@ -74,7 +74,7 @@ describe("entry.list", () => {
       h.client.entry.list({ type: "unknown_type" }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
-      data: { capability: "unknown_type:read" },
+      data: { capability: "entry:unknown_type:read" },
     });
   });
 
@@ -262,7 +262,7 @@ describe("entry.list", () => {
     expect(rows.map((r) => r.slug)).toEqual(["with-percent"]);
   });
 
-  test("taxonomy filter: single taxonomy, IN across term slugs", async () => {
+  test("termTaxonomy filter: single termTaxonomy, IN across term slugs", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     const news = await seedTerm(h, "category", "news");
     const tutorials = await seedTerm(h, "category", "tutorials");
@@ -282,12 +282,12 @@ describe("entry.list", () => {
     await attachTerm(h, p2.id, tutorials);
 
     const rows = await h.client.entry.list({
-      taxonomies: { category: ["news", "tutorials"] },
+      termTaxonomies: { category: ["news", "tutorials"] },
     });
     expect(rows.map((r) => r.slug).sort()).toEqual(["news-post", "tut-post"]);
   });
 
-  test("taxonomy filter: AND across taxonomies (post must match each)", async () => {
+  test("termTaxonomy filter: AND across termTaxonomies (post must match each)", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     const news = await seedTerm(h, "category", "news");
     const urgent = await seedTerm(h, "tag", "urgent");
@@ -309,24 +309,26 @@ describe("entry.list", () => {
     await attachTerm(h, urgentOnly.id, urgent);
 
     const rows = await h.client.entry.list({
-      taxonomies: { category: ["news"], tag: ["urgent"] },
+      termTaxonomies: { category: ["news"], tag: ["urgent"] },
     });
     expect(rows.map((r) => r.slug)).toEqual(["both"]);
   });
 
-  test("taxonomy filter: empty slug array is a no-op for that taxonomy", async () => {
+  test("termTaxonomy filter: empty slug array is a no-op for that termTaxonomy", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     await h.factory.published.create({ authorId: h.user.id, slug: "a" });
     await h.factory.published.create({ authorId: h.user.id, slug: "b" });
 
-    const rows = await h.client.entry.list({ taxonomies: { category: [] } });
+    const rows = await h.client.entry.list({
+      termTaxonomies: { category: [] },
+    });
     expect(rows.map((r) => r.slug).sort()).toEqual(["a", "b"]);
   });
 
-  test("taxonomy filter: slug scoped to taxonomy (no cross-taxonomy leak)", async () => {
+  test("termTaxonomy filter: slug scoped to termTaxonomy (no cross-termTaxonomy leak)", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
-    // Same slug in two taxonomies — filter must only match within the
-    // specified taxonomy. `{ category: ["news"] }` should NOT match a
+    // Same slug in two termTaxonomies — filter must only match within the
+    // specified termTaxonomy. `{ category: ["news"] }` should NOT match a
     // post tagged `tag:news`.
     const catNews = await seedTerm(h, "category", "news");
     const tagNews = await seedTerm(h, "tag", "news");
@@ -342,12 +344,12 @@ describe("entry.list", () => {
     await attachTerm(h, tagPost.id, tagNews);
 
     const rows = await h.client.entry.list({
-      taxonomies: { category: ["news"] },
+      termTaxonomies: { category: ["news"] },
     });
     expect(rows.map((r) => r.slug)).toEqual(["in-category"]);
   });
 
-  test("taxonomy filter composes with search", async () => {
+  test("termTaxonomy filter composes with search", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     const news = await seedTerm(h, "category", "news");
     const matches = await h.factory.published.create({
@@ -361,11 +363,11 @@ describe("entry.list", () => {
       slug: "qbn-2",
     });
     await attachTerm(h, matches.id, news);
-    // `notTagged` has the same title but no term — taxonomy filter excludes it
+    // `notTagged` has the same title but no term — termTaxonomy filter excludes it
 
     const rows = await h.client.entry.list({
       search: "quantum",
-      taxonomies: { category: ["news"] },
+      termTaxonomies: { category: ["news"] },
     });
     expect(rows.map((r) => r.slug)).toEqual(["qbn"]);
     expect(rows.map((r) => r.slug)).not.toContain(notTagged.slug);

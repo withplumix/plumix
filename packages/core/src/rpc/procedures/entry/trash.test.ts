@@ -30,7 +30,7 @@ describe("entry.trash", () => {
     await expect(h.client.entry.trash({ id: target.id })).rejects.toMatchObject(
       {
         code: "FORBIDDEN",
-        data: { capability: "post:delete" },
+        data: { capability: "entry:post:delete" },
       },
     );
   });

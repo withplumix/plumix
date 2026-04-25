@@ -1,5 +1,7 @@
 import type { AppContext } from "../context/app.js";
+import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { PlumixApp } from "./app.js";
+import { readSessionCookie } from "../auth/cookies.js";
 import { hasCsrfHeader, hasMatchingOrigin } from "../auth/csrf.js";
 import {
   handleInviteRegisterOptions,
@@ -10,12 +12,15 @@ import {
   handlePasskeyRegisterVerify,
   handleSignout,
 } from "../auth/passkey/routes.js";
+import { validateSession } from "../auth/sessions.js";
+import { withUser } from "../context/app.js";
 import { matchRoute } from "../route/match.js";
 import { resolvePublicRoute } from "../route/resolve.js";
 import { forbidden, jsonResponse, methodNotAllowed, notFound } from "./http.js";
 
 const RPC_PREFIX = "/_plumix/rpc";
 const ADMIN_PREFIX = "/_plumix/admin";
+const AUTH_PREFIX = "/_plumix/auth/";
 const PLUMIX_PREFIX = "/_plumix/";
 
 // Filenames look like `index.html`, `chunk-abc.js`, `fonts/g.woff2` — paths
@@ -92,6 +97,20 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
     return serveAdmin(ctx);
   }
 
+  if (pathname.startsWith(PLUMIX_PREFIX) && !pathname.startsWith(AUTH_PREFIX)) {
+    const pluginMatch = matchPluginRawRoute(
+      app.rawRoutes,
+      pathname,
+      ctx.request.method,
+    );
+    if (pluginMatch !== null) {
+      return dispatchPluginRawRoute(pluginMatch.route, ctx, app);
+    }
+    // Method-allowed-but-path-unmatched falls through to the 404 below;
+    // a plugin that registered only GET wouldn't want POST to 405 here
+    // because the path itself is unrecognised from the dispatcher's pov.
+  }
+
   if (pathname.startsWith(PLUMIX_PREFIX)) {
     return notFound("unknown-plumix-route");
   }
@@ -103,6 +122,65 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   const match = matchRoute(url, app.routeMap);
   if (match === null) return notFound("public-route-not-found");
   return resolvePublicRoute(ctx, match);
+}
+
+interface PluginRawRouteMatch {
+  readonly route: RegisteredRawRoute;
+}
+
+export function matchPluginRawRoute(
+  routes: readonly RegisteredRawRoute[],
+  pathname: string,
+  method: string,
+): PluginRawRouteMatch | null {
+  const methodUpper = method.toUpperCase();
+  for (const route of routes) {
+    if (route.method !== "*" && route.method !== methodUpper) continue;
+    const pluginPrefix = `/_plumix/${route.pluginId}`;
+    if (pathname !== pluginPrefix && !pathname.startsWith(`${pluginPrefix}/`)) {
+      continue;
+    }
+    const localPath =
+      pathname === pluginPrefix ? "/" : pathname.slice(pluginPrefix.length);
+    if (route.path.endsWith("/*")) {
+      const prefix = route.path.slice(0, -1);
+      if (localPath === prefix.slice(0, -1) || localPath.startsWith(prefix)) {
+        return { route };
+      }
+      continue;
+    }
+    if (localPath === route.path) return { route };
+  }
+  return null;
+}
+
+async function dispatchPluginRawRoute(
+  route: RegisteredRawRoute,
+  ctx: AppContext,
+  app: PlumixApp,
+): Promise<Response> {
+  const gate = route.auth;
+  if (gate === "public") {
+    return route.handler(ctx.request, ctx);
+  }
+
+  const token = readSessionCookie(ctx.request);
+  if (!token) return jsonResponse({ error: "unauthorized" }, { status: 401 });
+  const validated = await validateSession(ctx.db, token);
+  if (!validated)
+    return jsonResponse({ error: "unauthorized" }, { status: 401 });
+
+  const { id, email, role } = validated.user;
+  const authedCtx = withUser(ctx, { id, email, role });
+
+  if (gate === "authenticated") {
+    return route.handler(authedCtx.request, authedCtx);
+  }
+  const capability = gate.capability;
+  if (!app.capabilityResolver.hasCapability(role, capability)) {
+    return jsonResponse({ error: "forbidden", capability }, { status: 403 });
+  }
+  return route.handler(authedCtx.request, authedCtx);
 }
 
 async function serveAdmin(ctx: AppContext): Promise<Response> {

@@ -23,7 +23,7 @@ describe("entry.create", () => {
       h.client.entry.create({ title: "t", slug: "s" }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
-      data: { capability: "post:create" },
+      data: { capability: "entry:post:create" },
     });
   });
 
@@ -37,7 +37,7 @@ describe("entry.create", () => {
       }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
-      data: { capability: "post:publish" },
+      data: { capability: "entry:post:publish" },
     });
   });
 
@@ -51,7 +51,7 @@ describe("entry.create", () => {
       }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
-      data: { capability: "post:publish" },
+      data: { capability: "entry:post:publish" },
     });
   });
 

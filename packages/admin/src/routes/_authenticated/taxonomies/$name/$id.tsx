@@ -17,8 +17,8 @@ import {
 } from "@/components/ui/card.js";
 import { hasCap } from "@/lib/caps.js";
 import {
-  findTaxonomyByName,
-  termMetaBoxesForTaxonomy,
+  findTermTaxonomyByName,
+  termMetaBoxesForTermTaxonomy,
 } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import {
@@ -36,7 +36,7 @@ import {
 import { ArrowLeft } from "lucide-react";
 import * as v from "valibot";
 
-import type { TaxonomyManifestEntry } from "@plumix/core/manifest";
+import type { TermTaxonomyManifestEntry } from "@plumix/core/manifest";
 import { seedFromMetaBoxes } from "@plumix/core/manifest";
 import { idPathParam } from "@plumix/core/validation";
 
@@ -56,15 +56,18 @@ export const Route = createFileRoute("/_authenticated/taxonomies/$name/$id")({
       return { name: raw.name, id: result.output };
     },
   },
-  beforeLoad: ({ context, params }): { taxonomy: TaxonomyManifestEntry } => {
-    const taxonomy = findTaxonomyByName(params.name);
+  beforeLoad: ({
+    context,
+    params,
+  }): { taxonomy: TermTaxonomyManifestEntry } => {
+    const taxonomy = findTermTaxonomyByName(params.name);
     if (!taxonomy) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw notFound();
     }
     // Minimum bar is `:read`; edit/delete actions gate separately
     // below so a read-only user can still land on the screen.
-    if (!hasCap(context.user.capabilities, `${taxonomy.name}:read`)) {
+    if (!hasCap(context.user.capabilities, `term:${taxonomy.name}:read`)) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw notFound();
     }
@@ -90,8 +93,8 @@ function EditTermRoute(): ReactNode {
   const { id: termId } = Route.useParams();
   const { user, taxonomy } = Route.useRouteContext();
 
-  const canEdit = hasCap(user.capabilities, `${taxonomy.name}:edit`);
-  const canDelete = hasCap(user.capabilities, `${taxonomy.name}:delete`);
+  const canEdit = hasCap(user.capabilities, `term:${taxonomy.name}:edit`);
+  const canDelete = hasCap(user.capabilities, `term:${taxonomy.name}:delete`);
   const isHierarchical = taxonomy.isHierarchical === true;
 
   const { data: term } = useSuspenseQuery(
@@ -140,7 +143,7 @@ function EditTermContent({
   canEdit,
   canDelete,
 }: {
-  readonly taxonomy: TaxonomyManifestEntry;
+  readonly taxonomy: TermTaxonomyManifestEntry;
   readonly term: {
     readonly id: number;
     readonly name: string;
@@ -161,7 +164,10 @@ function EditTermContent({
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const { user } = Route.useRouteContext();
-  const metaBoxes = termMetaBoxesForTaxonomy(taxonomy.name, user.capabilities);
+  const metaBoxes = termMetaBoxesForTermTaxonomy(
+    taxonomy.name,
+    user.capabilities,
+  );
 
   const updateTerm = useMutation({
     mutationFn: (values: {
@@ -186,7 +192,7 @@ function EditTermContent({
       setServerError(null);
     },
     onSuccess: async () => {
-      // List variants are scoped by `taxonomy` so sibling taxonomies
+      // List variants are scoped by `taxonomy` so sibling termTaxonomies
       // don't needlessly refetch. Parent route remounts via the
       // updatedAt key so the refetched row reseeds the form.
       await Promise.all([
@@ -297,7 +303,7 @@ function DeleteCard({
     onSuccess: async () => {
       // Evict cached list entries before navigating back — otherwise
       // the list route shows the deleted row within its staleTime
-      // window. Scoped by taxonomy so sibling taxonomies don't
+      // window. Scoped by taxonomy so sibling termTaxonomies don't
       // needlessly refetch.
       await queryClient.invalidateQueries({
         queryKey: orpc.term.list.key({ input: { taxonomy: taxonomyName } }),

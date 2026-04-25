@@ -64,19 +64,24 @@ export const list = base
         conditions.push(searchTermCondition(term));
       }
     }
-    if (filtered.taxonomies) {
-      for (const [taxonomy, slugs] of Object.entries(filtered.taxonomies)) {
+    if (filtered.termTaxonomies) {
+      for (const [termTaxonomy, slugs] of Object.entries(
+        filtered.termTaxonomies,
+      )) {
         if (slugs.length === 0) continue;
         // Correlated subquery: post.id must appear in `post_term` joined
-        // to `terms` filtered by this taxonomy + listed slugs. One clause
-        // per taxonomy; multiple clauses AND together — matching WP's
+        // to `terms` filtered by this termTaxonomy + listed slugs. One clause
+        // per termTaxonomy; multiple clauses AND together — matching WP's
         // default `tax_query` relation.
         const matching = context.db
           .select({ entryId: entryTerm.entryId })
           .from(entryTerm)
           .innerJoin(terms, eq(terms.id, entryTerm.termId))
           .where(
-            and(eq(terms.taxonomy, taxonomy), inArray(terms.slug, [...slugs])),
+            and(
+              eq(terms.taxonomy, termTaxonomy),
+              inArray(terms.slug, [...slugs]),
+            ),
           );
         conditions.push(inArray(entries.id, matching));
       }

@@ -1,5 +1,5 @@
-// Default search-param set for `/taxonomies/$name`. Sibling routes
-// (`/taxonomies/$name/new`, `/taxonomies/$name/$id`) link back to the
+// Default search-param set for `/termTaxonomies/$name`. Sibling routes
+// (`/termTaxonomies/$name/new`, `/termTaxonomies/$name/$id`) link back to the
 // list with this constant rather than re-declaring the defaults. Kept
 // in `-constants.ts` so cross-route imports don't drag the list-route
 // module into the sibling chunks (same pattern as `users/-constants.ts`

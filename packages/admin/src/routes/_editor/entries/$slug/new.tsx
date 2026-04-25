@@ -36,7 +36,7 @@ export const Route = createFileRoute("/_editor/entries/$slug/new")({
     // Only callers with the create capability see this screen. `edit_own`
     // alone isn't enough — that permission is about editing your own
     // existing entries, not spawning new ones.
-    const capability = `${entryType.capabilityType ?? entryType.name}:create`;
+    const capability = `entry:${entryType.capabilityType ?? entryType.name}:create`;
     if (!hasCap(context.user.capabilities, capability)) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw redirect({

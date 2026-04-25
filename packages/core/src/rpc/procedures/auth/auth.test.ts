@@ -35,8 +35,8 @@ describe("auth.session", () => {
     // read/write gates the admin UI will actually query.
     expect(result.user?.capabilities).toEqual(
       expect.arrayContaining([
-        "post:read",
-        "post:edit_any",
+        "entry:post:read",
+        "entry:post:edit_any",
         "user:list",
         "plugin:manage",
       ]),
@@ -46,7 +46,10 @@ describe("auth.session", () => {
   test("subscriber role returns only the low-privilege capabilities", async () => {
     const h = await createRpcHarness({ authAs: "subscriber" });
     const result = await h.client.auth.session({});
-    expect(result.user?.capabilities).toEqual(["post:read", "user:edit_own"]);
+    expect(result.user?.capabilities).toEqual([
+      "entry:post:read",
+      "user:edit_own",
+    ]);
   });
 
   test("plugin-registered post type surfaces derived capabilities without duplicating the core set", async () => {
@@ -71,7 +74,7 @@ describe("auth.session", () => {
     const result = await h.client.auth.session({});
 
     expect(result.user?.capabilities).toEqual(
-      expect.arrayContaining(["product:read", "product:edit_any"]),
+      expect.arrayContaining(["entry:product:read", "entry:product:edit_any"]),
     );
     // Regression: derived `post:*` entries from the `news` post type alias
     // the core capabilities — dedupe in `capabilitiesForRole` must prevent

@@ -72,7 +72,7 @@ describe("compileRouteMap", () => {
     expect(compileRouteMap(registry)).toHaveLength(0);
   });
 
-  test("addRewriteRule lands ahead of auto rules via default priority", async () => {
+  test("registerRewriteRule lands ahead of auto rules via default priority", async () => {
     const registry = await buildRegistry([
       definePlugin("docs", (ctx) => {
         ctx.registerEntryType("doc", {
@@ -80,7 +80,7 @@ describe("compileRouteMap", () => {
           isPublic: true,
           rewrite: { slug: "docs" },
         });
-        ctx.addRewriteRule("/docs/:category/:slug", {
+        ctx.registerRewriteRule("/docs/:category/:slug", {
           kind: "single",
           entryType: "doc",
         });
@@ -95,8 +95,8 @@ describe("compileRouteMap", () => {
   test("duplicate explicit pattern within one plugin throws at compile", async () => {
     const registry = await buildRegistry([
       definePlugin("a", (ctx) => {
-        ctx.addRewriteRule("/cart", { kind: "single", entryType: "x" });
-        ctx.addRewriteRule("/cart", { kind: "single", entryType: "x" });
+        ctx.registerRewriteRule("/cart", { kind: "single", entryType: "x" });
+        ctx.registerRewriteRule("/cart", { kind: "single", entryType: "x" });
       }),
     ]);
     expect(() => compileRouteMap(registry)).toThrow(
@@ -108,7 +108,7 @@ describe("compileRouteMap", () => {
     const registry = await buildRegistry([
       definePlugin("conflict", (ctx) => {
         ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-        ctx.addRewriteRule("/post/:slug", {
+        ctx.registerRewriteRule("/post/:slug", {
           kind: "single",
           entryType: "post",
         });
@@ -122,10 +122,10 @@ describe("compileRouteMap", () => {
   test("cross-plugin collisions name both plugin ids", async () => {
     const registry = await buildRegistry([
       definePlugin("plugin-a", (ctx) => {
-        ctx.addRewriteRule("/x", { kind: "single", entryType: "a" });
+        ctx.registerRewriteRule("/x", { kind: "single", entryType: "a" });
       }),
       definePlugin("plugin-b", (ctx) => {
-        ctx.addRewriteRule("/x", { kind: "single", entryType: "b" });
+        ctx.registerRewriteRule("/x", { kind: "single", entryType: "b" });
       }),
     ]);
     expect(() => compileRouteMap(registry)).toThrow(/"plugin-a".*"plugin-b"/);
@@ -134,8 +134,8 @@ describe("compileRouteMap", () => {
   test("stable sort preserves registration order on equal priorities", async () => {
     const registry = await buildRegistry([
       definePlugin("a", (ctx) => {
-        ctx.addRewriteRule("/a", { kind: "single", entryType: "x" });
-        ctx.addRewriteRule("/b", { kind: "single", entryType: "x" });
+        ctx.registerRewriteRule("/a", { kind: "single", entryType: "x" });
+        ctx.registerRewriteRule("/b", { kind: "single", entryType: "x" });
       }),
     ]);
     const map = compileRouteMap(registry);
@@ -159,7 +159,7 @@ describe("compileRouteMap", () => {
         ctx.registerEntryType("post", { label: "Posts", isPublic: true });
       }),
       definePlugin("overrider", (ctx) => {
-        ctx.addRewriteRule(
+        ctx.registerRewriteRule(
           "/post/featured",
           { kind: "archive", entryType: "post" },
           { priority: 5 },

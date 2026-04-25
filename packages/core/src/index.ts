@@ -20,4 +20,6 @@ export {
   methodNotAllowed,
   notFound,
 } from "./runtime/http.js";
+export { memoryStorage } from "./runtime/memory-storage.js";
+export type { MemoryStorageConfig } from "./runtime/memory-storage.js";
 export type * from "./runtime/slots.js";

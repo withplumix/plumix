@@ -32,15 +32,15 @@ const serverControlledKeys = [
 
 const userSuppliableFields = v.omit(entryInsertSchema, serverControlledKeys);
 
-// taxonomy → ordered term ids. Empty array clears all assignments for that
-// taxonomy. Taxonomy keys not in the map are untouched.
+// termTaxonomy → ordered term ids. Empty array clears all assignments for that
+// termTaxonomy. Taxonomy keys not in the map are untouched.
 const postTermsSchema = v.record(
   v.pipe(
     v.string(),
     v.trim(),
     v.minLength(1),
     v.maxLength(100),
-    v.regex(/^[a-zA-Z0-9_-]+$/, "taxonomy must be kebab/snake ASCII"),
+    v.regex(/^[a-zA-Z0-9_-]+$/, "termTaxonomy must be kebab/snake ASCII"),
   ),
   v.pipe(v.array(idParam), v.maxLength(MAX_TERMS_PER_TAXONOMY)),
 );
@@ -94,8 +94,8 @@ export const entryUpdateInputSchema = v.object({
   meta: v.optional(entryMetaInputSchema),
 });
 
-// Upper bound on the term-slug list per taxonomy clause. Mirrors the
-// per-taxonomy guard on `post.update` — admin UIs don't reasonably issue
+// Upper bound on the term-slug list per termTaxonomy clause. Mirrors the
+// per-termTaxonomy guard on `post.update` — admin UIs don't reasonably issue
 // queries beyond this, and the cap protects the generated `IN (?, ?, …)`
 // subquery from pathological input lengths.
 const MAX_TERM_SLUGS_PER_TAXONOMY = 50;
@@ -105,7 +105,7 @@ const taxonomyNameSchema = v.pipe(
   v.trim(),
   v.minLength(1),
   v.maxLength(100),
-  v.regex(/^[a-zA-Z0-9_-]+$/, "taxonomy must be kebab/snake ASCII"),
+  v.regex(/^[a-zA-Z0-9_-]+$/, "termTaxonomy must be kebab/snake ASCII"),
 );
 
 const termSlugSchema = v.pipe(
@@ -162,15 +162,15 @@ export const entryListInputSchema = v.object({
    */
   search: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(200))),
   /**
-   * Taxonomy clauses, keyed by taxonomy name. Each value is a list of term
-   * slugs the post must be associated with in that taxonomy. Within one
-   * taxonomy the match is OR (any listed slug); across taxonomies the
-   * match is AND (every specified taxonomy must contribute a match).
+   * Taxonomy clauses, keyed by termTaxonomy name. Each value is a list of term
+   * slugs the post must be associated with in that termTaxonomy. Within one
+   * termTaxonomy the match is OR (any listed slug); across termTaxonomies the
+   * match is AND (every specified termTaxonomy must contribute a match).
    * Matches the default semantics of WordPress's `tax_query`.
    *
-   * Empty slug arrays are no-ops for that taxonomy.
+   * Empty slug arrays are no-ops for that termTaxonomy.
    */
-  taxonomies: v.optional(
+  termTaxonomies: v.optional(
     v.record(
       taxonomyNameSchema,
       v.pipe(v.array(termSlugSchema), v.maxLength(MAX_TERM_SLUGS_PER_TAXONOMY)),

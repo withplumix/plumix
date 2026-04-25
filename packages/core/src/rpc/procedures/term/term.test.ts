@@ -16,17 +16,17 @@ function first<T>(rows: T[]): T {
 // fixture because term RPC requires a registered taxonomy to operate.
 function taxonomyRegistry() {
   const registry = createPluginRegistry();
-  registry.taxonomies.set("category", {
+  registry.termTaxonomies.set("category", {
     name: "category",
     label: "Categories",
     isHierarchical: true,
     registeredBy: "test",
   });
   const caps: Record<string, UserRole> = {
-    "category:read": "subscriber",
-    "category:assign": "contributor",
-    "category:edit": "editor",
-    "category:delete": "editor",
+    "term:category:read": "subscriber",
+    "term:category:assign": "contributor",
+    "term:category:edit": "editor",
+    "term:category:delete": "editor",
   };
   for (const [name, minRole] of Object.entries(caps)) {
     registry.capabilities.set(name, { name, minRole, registeredBy: "test" });
@@ -129,7 +129,7 @@ describe("term.create", () => {
       }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
-      data: { capability: "category:edit" },
+      data: { capability: "term:category:edit" },
     });
   });
 
@@ -155,13 +155,13 @@ describe("term.create", () => {
 
   test("parent in a different taxonomy → CONFLICT", async () => {
     const plugins = taxonomyRegistry();
-    plugins.taxonomies.set("post_tag", {
+    plugins.termTaxonomies.set("post_tag", {
       name: "post_tag",
       label: "Tags",
       registeredBy: "test",
     });
-    plugins.capabilities.set("post_tag:edit", {
-      name: "post_tag:edit",
+    plugins.capabilities.set("term:post_tag:edit", {
+      name: "term:post_tag:edit",
       minRole: "editor",
       registeredBy: "test",
     });
@@ -216,7 +216,7 @@ describe("term.update", () => {
       h.client.term.update({ id: row.id, name: "Hax" }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
-      data: { capability: "category:edit" },
+      data: { capability: "term:category:edit" },
     });
   });
 
@@ -340,7 +340,7 @@ describe("term.delete", () => {
     );
     await expect(h.client.term.delete({ id: row.id })).rejects.toMatchObject({
       code: "FORBIDDEN",
-      data: { capability: "category:delete" },
+      data: { capability: "term:category:delete" },
     });
   });
 
