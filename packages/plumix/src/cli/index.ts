@@ -1,7 +1,6 @@
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { parseArgs } from "node:util";
 
 import type {
   CommandDefinition,
@@ -34,26 +33,67 @@ interface CliArgs {
 }
 
 function parseCli(argv: readonly string[]): CliArgs {
-  const { values, positionals } = parseArgs({
-    args: [...argv],
-    allowPositionals: true,
-    strict: false,
-    options: {
-      config: { type: "string" },
-      cwd: { type: "string" },
-      help: { type: "boolean", short: "h" },
-      version: { type: "boolean", short: "v" },
-      verbose: { type: "boolean" },
-    },
-  });
+  // Eat plumix-level flags from the start of argv. The first non-plumix
+  // token (positional or unknown flag) becomes the command name; every
+  // token after that passes through unparsed so subcommand flags like
+  // `--remote` aren't dropped by node:util.parseArgs.
+  let cwd = process.cwd();
+  let config: string | undefined;
+  let help = false;
+  let version = false;
+  let verbose = false;
+
+  let i = 0;
+  while (i < argv.length) {
+    const token = argv[i];
+    if (token === undefined) break;
+    if (token === "--help" || token === "-h") {
+      help = true;
+      i += 1;
+      continue;
+    }
+    if (token === "--version" || token === "-v") {
+      version = true;
+      i += 1;
+      continue;
+    }
+    if (token === "--verbose") {
+      verbose = true;
+      i += 1;
+      continue;
+    }
+    if (token === "--cwd") {
+      cwd = argv[i + 1] ?? cwd;
+      i += 2;
+      continue;
+    }
+    if (token === "--config") {
+      config = argv[i + 1];
+      i += 2;
+      continue;
+    }
+    if (token.startsWith("--cwd=")) {
+      cwd = token.slice("--cwd=".length);
+      i += 1;
+      continue;
+    }
+    if (token.startsWith("--config=")) {
+      config = token.slice("--config=".length);
+      i += 1;
+      continue;
+    }
+    // First non-plumix token: command name (or, if it's a flag, subcommand-only).
+    break;
+  }
+
   return {
-    command: positionals[0],
-    rest: positionals.slice(1),
-    config: typeof values.config === "string" ? values.config : undefined,
-    cwd: resolve(typeof values.cwd === "string" ? values.cwd : process.cwd()),
-    help: values.help === true,
-    version: values.version === true,
-    verbose: values.verbose === true,
+    command: argv[i],
+    rest: argv.slice(i + 1),
+    config,
+    cwd: resolve(cwd),
+    help,
+    version,
+    verbose,
   };
 }
 
