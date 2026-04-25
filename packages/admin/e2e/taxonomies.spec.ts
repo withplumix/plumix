@@ -92,7 +92,7 @@ test.describe("/taxonomies/$name (hierarchical)", () => {
           name: "Sub",
           avatarUrl: null,
           role: "subscriber",
-          capabilities: ["post:read"],
+          capabilities: ["entry:post:read"],
         },
         needsBootstrap: false,
       },

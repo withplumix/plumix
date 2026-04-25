@@ -59,8 +59,84 @@ export interface DatabaseAdapter<TSchema = Record<string, unknown>> {
   readonly requiredBindings?: readonly string[];
 }
 
+export type ObjectBody =
+  | ReadableStream<Uint8Array>
+  | ArrayBuffer
+  | ArrayBufferView
+  | string
+  | Blob
+  | null;
+
+export interface PutOptions {
+  readonly contentType?: string;
+  readonly contentLength?: number;
+  readonly cacheControl?: string;
+  readonly customMetadata?: Readonly<Record<string, string>>;
+}
+
+export interface GetResult {
+  readonly body: ReadableStream<Uint8Array>;
+  readonly size: number;
+  readonly contentType?: string;
+  readonly etag: string;
+  readonly customMetadata?: Readonly<Record<string, string>>;
+  arrayBuffer(): Promise<ArrayBuffer>;
+}
+
+export interface ListOptions {
+  readonly limit?: number;
+  readonly cursor?: string;
+  readonly delimiter?: string;
+}
+
+export interface ListItem {
+  readonly key: string;
+  readonly size: number;
+  readonly etag: string;
+  readonly uploaded: Date;
+}
+
+export interface ListResult {
+  readonly items: readonly ListItem[];
+  readonly cursor?: string;
+  readonly truncated: boolean;
+}
+
+export interface UrlOptions {
+  readonly expiresIn?: number;
+}
+
+export interface PresignPutOptions {
+  readonly contentType: string;
+  readonly maxBytes?: number;
+  /** Default 300. */
+  readonly expiresIn?: number;
+}
+
+export interface PresignedPutResult {
+  readonly url: string;
+  readonly method: "PUT";
+  readonly headers: Readonly<Record<string, string>>;
+  /** Unix epoch seconds. */
+  readonly expiresAt: number;
+}
+
+export interface ConnectedObjectStorage {
+  put(key: string, body: ObjectBody, opts?: PutOptions): Promise<void>;
+  get(key: string): Promise<GetResult | null>;
+  delete(key: string): Promise<void>;
+  list(prefix?: string, opts?: ListOptions): Promise<ListResult>;
+  url(key: string, opts?: UrlOptions): Promise<string>;
+  presignPut?(
+    key: string,
+    opts: PresignPutOptions,
+  ): Promise<PresignedPutResult>;
+}
+
 export interface ObjectStorage {
   readonly kind: string;
+  readonly requiredBindings?: readonly string[];
+  connect(env: unknown): ConnectedObjectStorage;
 }
 
 export interface KV {

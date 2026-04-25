@@ -1,5 +1,9 @@
 import type { UserRole } from "../db/schema/users.js";
-import type { EntryTypeOptions, PluginRegistry } from "../plugin/manifest.js";
+import type {
+  EntryTypeOptions,
+  PluginRegistry,
+  TermTaxonomyOptions,
+} from "../plugin/manifest.js";
 import { USER_ROLES } from "../db/schema/users.js";
 
 /**
@@ -21,29 +25,31 @@ export function roleLevel(role: UserRole): number {
   return ROLE_LEVEL[role];
 }
 
-// `post:*` and `taxonomy:manage` are the built-in fallbacks — present even
-// before any plugin registers a type. Plugins registering a post type with
-// `capabilityType: 'post'` (the default) just inherit `post:*` via the
-// dedupe rule in `registerEntryType`. `user`/`plugin`/`option` aren't tied
-// to content entities so they only live here.
+// Capability shape: `<entity>:<typeName>:<action>` for per-type
+// resources (`entry:post:edit_own`, `term:category:manage`); flat
+// `<entity>:<action>` for entity-level caps without a type segment
+// (`user:list`, `settings:manage`).
 //
-// `user:*` mirrors WordPress's split: list is editor+, profile self-edit is
-// any authenticated user, but creating / editing / promoting / deleting
-// other users is admin-only. `promote` is separate from `edit` because role
-// escalation is more sensitive than a name/avatar change.
-// `settings:manage` is a single gate over both reads and writes, matching WP's
-// `manage_options`. Options can contain admin-only config; if a specific
-// option needs broader read access, expose it via a dedicated RPC procedure
-// that reads it server-side — don't widen `option.*`.
+// `entry:post:*` is the baked-in default — plumix assumes a "post"
+// entry type exists out of the box (the conventional default). Other
+// entry types and every term taxonomy derive their caps at plugin
+// registration time. The `entry:` and `term:` prefixes prevent name
+// collisions when an entry type and a taxonomy share a name (e.g.
+// `entry:location:read` ≠ `term:location:read`).
+//
+// `user:*` mirrors WP's split: `list` is editor+, `edit_own` is any
+// authenticated user, create / edit / promote / delete are admin-only.
+// `promote` is split out from `edit` — role escalation is more
+// sensitive than a name/avatar change. `settings:manage` is a single
+// gate over both reads and writes (matches WP's `manage_options`).
 export const CORE_CAPABILITIES: Readonly<Record<string, UserRole>> =
   Object.freeze({
-    "post:read": "subscriber",
-    "post:create": "contributor",
-    "post:edit_own": "contributor",
-    "post:publish": "author",
-    "post:edit_any": "editor",
-    "post:delete": "editor",
-    "taxonomy:manage": "editor",
+    "entry:post:read": "subscriber",
+    "entry:post:create": "contributor",
+    "entry:post:edit_own": "contributor",
+    "entry:post:publish": "author",
+    "entry:post:edit_any": "editor",
+    "entry:post:delete": "editor",
     "user:list": "editor",
     "user:edit_own": "subscriber",
     "user:create": "admin",
@@ -63,7 +69,7 @@ export const POST_TYPE_CAPABILITY_ACTIONS = {
   delete: "editor",
 } as const satisfies Record<string, UserRole>;
 
-export const TAXONOMY_CAPABILITY_ACTIONS = {
+export const TERM_TAXONOMY_CAPABILITY_ACTIONS = {
   read: "subscriber",
   assign: "contributor",
   edit: "editor",
@@ -72,15 +78,24 @@ export const TAXONOMY_CAPABILITY_ACTIONS = {
 } as const satisfies Record<string, UserRole>;
 
 export type PostCapabilityAction = keyof typeof POST_TYPE_CAPABILITY_ACTIONS;
-export type TaxonomyCapabilityAction = keyof typeof TAXONOMY_CAPABILITY_ACTIONS;
+export type TermTaxonomyCapabilityAction =
+  keyof typeof TERM_TAXONOMY_CAPABILITY_ACTIONS;
 export type CoreCapability = keyof typeof CORE_CAPABILITIES;
+
+export type EntryTypeCapabilityOverrides = Partial<
+  Record<PostCapabilityAction, UserRole>
+>;
+
+export type TermTaxonomyCapabilityOverrides = Partial<
+  Record<TermTaxonomyCapabilityAction, UserRole>
+>;
 
 /**
  * Capabilities we know about statically — the built-in core caps. IDE
  * autocomplete picks these up when a `KnownCapability | (string & {})`
  * signature is used (the `string & {}` half preserves flexibility for
  * plugin-defined caps without losing literal suggestions). Derived
- * `{entryType|taxonomy}:{action}` shapes deliberately aren't listed here:
+ * `{entryType|termTaxonomy}:{action}` shapes deliberately aren't listed here:
  * `${string}:${action}` collapses to `string` in TypeScript, which would
  * erase the autocomplete benefit for the core strings.
  */
@@ -94,29 +109,36 @@ export interface DerivedCapability {
 function deriveCapabilities(
   base: string,
   actions: Record<string, UserRole>,
+  overrides: Partial<Record<string, UserRole>> | undefined,
 ): readonly DerivedCapability[] {
   return Object.entries(actions).map(([action, minRole]) => ({
     name: `${base}:${action}`,
-    minRole,
+    minRole: overrides?.[action] ?? minRole,
   }));
 }
 
 export function deriveEntryTypeCapabilities(
-  postTypeName: string,
+  entryTypeName: string,
   options: EntryTypeOptions,
 ): readonly DerivedCapability[] {
-  // Sharing `capabilityType` across post types pools their permissions —
-  // that's how the built-in `post` scheme extends to plugin-registered types.
+  // Sharing `capabilityType` across entry types pools their permissions —
+  // two plugins both with `capabilityType: "post"` share `entry:post:*`.
   return deriveCapabilities(
-    options.capabilityType ?? postTypeName,
+    `entry:${options.capabilityType ?? entryTypeName}`,
     POST_TYPE_CAPABILITY_ACTIONS,
+    options.capabilities,
   );
 }
 
-export function deriveTaxonomyCapabilities(
-  taxonomyName: string,
+export function deriveTermTaxonomyCapabilities(
+  termTaxonomyName: string,
+  options: TermTaxonomyOptions,
 ): readonly DerivedCapability[] {
-  return deriveCapabilities(taxonomyName, TAXONOMY_CAPABILITY_ACTIONS);
+  return deriveCapabilities(
+    `term:${termTaxonomyName}`,
+    TERM_TAXONOMY_CAPABILITY_ACTIONS,
+    options.capabilities,
+  );
 }
 
 export interface CapabilityResolver {
@@ -136,6 +158,9 @@ export function createCapabilityResolver(
       return CORE_CAPABILITIES[capability] ?? null;
     },
     hasCapability(role, capability) {
+      const fromPlugin = plugins.capabilities.get(capability);
+      // defaultGrants is an explicit allowlist independent of hierarchy.
+      if (fromPlugin?.defaultGrants?.includes(role)) return true;
       const required = this.requiredRole(capability);
       if (required === null) return false;
       return roleLevel(role) >= roleLevel(required);
@@ -177,13 +202,15 @@ export function capabilitiesForRole(
   // Set — a plugin registering a post type with `capabilityType: 'post'`
   // duplicates the derived `post:read` etc. caps into `plugins.capabilities`
   // on top of the entries already present in CORE_CAPABILITIES. Dedupe so
-  // the wire payload doesn't carry `["post:read", "post:read", ...]`.
+  // the wire payload doesn't carry `["entry:post:read", "entry:post:read", ...]`.
   const granted = new Set<string>();
   for (const [name, minRole] of Object.entries(CORE_CAPABILITIES)) {
     if (roleLevel(minRole) <= level) granted.add(name);
   }
   for (const [name, cap] of plugins.capabilities) {
-    if (roleLevel(cap.minRole) <= level) granted.add(name);
+    if (roleLevel(cap.minRole) <= level || cap.defaultGrants?.includes(role)) {
+      granted.add(name);
+    }
   }
   return [...granted].sort();
 }

@@ -1,4 +1,5 @@
 import type { DerivedCapability } from "../auth/rbac.js";
+import type { AppContext } from "../context/app.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import type {
@@ -13,22 +14,29 @@ import type {
 } from "../hooks/types.js";
 import type { RouteIntent } from "../route/intent.js";
 import type {
+  AdminPageOptions,
+  BlockOptions,
   EntryMetaBoxOptions,
   EntryTypeOptions,
+  FieldTypeOptions,
   MetaBoxField,
   MutablePluginRegistry,
+  PluginRouteAuth,
+  PluginRouteMethod,
+  PluginRpcRouter,
   SettingsGroupOptions,
   SettingsPageOptions,
-  TaxonomyOptions,
   TermMetaBoxOptions,
+  TermTaxonomyOptions,
   UserMetaBoxOptions,
 } from "./manifest.js";
 import {
   deriveEntryTypeCapabilities,
-  deriveTaxonomyCapabilities,
+  deriveTermTaxonomyCapabilities,
 } from "../auth/rbac.js";
 import { DEFAULT_REWRITE_RULE_PRIORITY } from "../route/compile.js";
-import { DuplicateRegistrationError } from "./manifest.js";
+import { MAX_PLUGIN_ID_LENGTH, PLUGIN_ID_RE } from "./define.js";
+import { CORE_RPC_NAMESPACES, DuplicateRegistrationError } from "./manifest.js";
 
 export interface PluginSetupContext {
   readonly id: string;
@@ -65,7 +73,7 @@ export interface PluginSetupContext {
   ): void;
 
   registerEntryType(name: string, options: EntryTypeOptions): void;
-  registerTaxonomy(name: string, options: TaxonomyOptions): void;
+  registerTermTaxonomy(name: string, options: TermTaxonomyOptions): void;
   /**
    * Declare a meta box on the entry editor sidebar. The fields inside
    * the box drive both the admin input rendering and the server-side
@@ -76,7 +84,7 @@ export interface PluginSetupContext {
    */
   registerEntryMetaBox(id: string, options: EntryMetaBoxOptions): void;
   /**
-   * Same model as `registerEntryMetaBox`, but scoped to taxonomies and
+   * Same model as `registerEntryMetaBox`, but scoped to termTaxonomies and
    * rendered on the term edit form as one stacked shadcn `<Card>` per
    * box. `registerTermMeta` is not a separate step — the box's fields
    * are the meta key contract.
@@ -91,6 +99,13 @@ export interface PluginSetupContext {
    */
   registerUserMetaBox(id: string, options: UserMetaBoxOptions): void;
   registerCapability(name: string, minRole: UserRole): void;
+  registerCapability(
+    name: string,
+    options: {
+      readonly minRole: UserRole;
+      readonly defaultGrants?: readonly UserRole[];
+    },
+  ): void;
 
   /**
    * Declare a standalone settings group — a storage unit (fields land
@@ -119,11 +134,29 @@ export interface PluginSetupContext {
    * `/docs/:category/:slug`). `priority` defaults to 10 — lower wins,
    * auto-generated archive/single rules from `registerEntryType` sit at 50.
    */
-  addRewriteRule(
+  registerRewriteRule(
     pattern: string,
     intent: RouteIntent,
     options?: { readonly priority?: number },
   ): void;
+
+  /** Mounted at `/_plumix/rpc/<pluginId>/*`. */
+  registerRpcRouter(router: PluginRpcRouter): void;
+
+  /** Mounted at `/_plumix/<pluginId><path>`. CSRF is enforced by the dispatcher. */
+  registerRoute(options: {
+    readonly method: PluginRouteMethod;
+    readonly path: string;
+    readonly auth: PluginRouteAuth;
+    readonly handler: (
+      request: Request,
+      ctx: AppContext,
+    ) => Response | Promise<Response>;
+  }): void;
+
+  registerAdminPage(options: AdminPageOptions): void;
+  registerBlock(options: BlockOptions): void;
+  registerFieldType(options: FieldTypeOptions): void;
 }
 
 interface CreatePluginContextArgs {
@@ -137,12 +170,25 @@ export function createPluginSetupContext({
   hooks,
   registry,
 }: CreatePluginContextArgs): PluginSetupContext {
-  // First writer wins — sharing a capabilityType across entry types is the
-  // supported way to pool permissions, so derived caps must not throw on
-  // conflict. Explicit `registerCapability` still does.
+  // Pooling caps by capabilityType is safe when minRoles agree; if one
+  // type applies a `capabilities` override and another doesn't, silent
+  // first-writer-wins would tie the resolved cap to registration order.
   const addDerivedCaps = (caps: readonly DerivedCapability[]): void => {
     for (const cap of caps) {
-      if (registry.capabilities.has(cap.name)) continue;
+      const existing = registry.capabilities.get(cap.name);
+      if (existing) {
+        if (existing.minRole !== cap.minRole) {
+          throw new Error(
+            `Plugin "${pluginId}" derived capability "${cap.name}" with ` +
+              `minRole "${cap.minRole}", but it was already registered ` +
+              `with minRole "${existing.minRole}" by ` +
+              `"${existing.registeredBy ?? "<unknown>"}". Two entry types ` +
+              `/ termTaxonomies sharing a capabilityType must agree on any ` +
+              `\`capabilities\` override — the pool has one cap per name.`,
+          );
+        }
+        continue;
+      }
       registry.capabilities.set(cap.name, { ...cap, registeredBy: pluginId });
     }
   };
@@ -185,60 +231,55 @@ export function createPluginSetupContext({
       addDerivedCaps(deriveEntryTypeCapabilities(name, options));
     },
 
-    registerTaxonomy: (name, options) => {
-      if (registry.taxonomies.has(name))
-        throw new DuplicateRegistrationError("taxonomy", name);
-      registry.taxonomies.set(name, {
+    registerTermTaxonomy: (name, options) => {
+      if (registry.termTaxonomies.has(name))
+        throw new DuplicateRegistrationError("termTaxonomy", name);
+      registry.termTaxonomies.set(name, {
         ...options,
         name,
         registeredBy: pluginId,
       });
-      addDerivedCaps(deriveTaxonomyCapabilities(name));
+      addDerivedCaps(deriveTermTaxonomyCapabilities(name, options));
     },
 
-    registerEntryMetaBox: (id, options) => {
-      if (registry.entryMetaBoxes.has(id)) {
-        throw new DuplicateRegistrationError("entry meta box", id);
-      }
-      assertMetaBoxFields("entry meta box", id, options.fields);
-      registry.entryMetaBoxes.set(id, {
-        ...options,
-        id,
-        registeredBy: pluginId,
-      });
-    },
+    registerEntryMetaBox: makeMetaBoxRegistrar(
+      registry.entryMetaBoxes,
+      "entry meta box",
+      pluginId,
+    ),
+    registerTermMetaBox: makeMetaBoxRegistrar(
+      registry.termMetaBoxes,
+      "term meta box",
+      pluginId,
+    ),
+    registerUserMetaBox: makeMetaBoxRegistrar(
+      registry.userMetaBoxes,
+      "user meta box",
+      pluginId,
+    ),
 
-    registerTermMetaBox: (id, options) => {
-      if (registry.termMetaBoxes.has(id)) {
-        throw new DuplicateRegistrationError("term meta box", id);
-      }
-      assertMetaBoxFields("term meta box", id, options.fields);
-      registry.termMetaBoxes.set(id, {
-        ...options,
-        id,
-        registeredBy: pluginId,
-      });
-    },
-
-    registerUserMetaBox: (id, options) => {
-      if (registry.userMetaBoxes.has(id)) {
-        throw new DuplicateRegistrationError("user meta box", id);
-      }
-      assertMetaBoxFields("user meta box", id, options.fields);
-      registry.userMetaBoxes.set(id, {
-        ...options,
-        id,
-        registeredBy: pluginId,
-      });
-    },
-
-    registerCapability: (name, minRole) => {
+    registerCapability: (
+      name: string,
+      minRoleOrOptions:
+        | UserRole
+        | { minRole: UserRole; defaultGrants?: readonly UserRole[] },
+    ) => {
       if (registry.capabilities.has(name)) {
         throw new DuplicateRegistrationError("capability", name);
       }
+      const resolved =
+        typeof minRoleOrOptions === "string"
+          ? { minRole: minRoleOrOptions, defaultGrants: undefined }
+          : {
+              minRole: minRoleOrOptions.minRole,
+              defaultGrants: minRoleOrOptions.defaultGrants,
+            };
       registry.capabilities.set(name, {
         name,
-        minRole,
+        minRole: resolved.minRole,
+        defaultGrants: resolved.defaultGrants
+          ? [...new Set(resolved.defaultGrants)].sort()
+          : undefined,
         registeredBy: pluginId,
       });
     },
@@ -277,7 +318,7 @@ export function createPluginSetupContext({
       });
     },
 
-    addRewriteRule: (pattern, intent, options) => {
+    registerRewriteRule: (pattern, intent, options) => {
       registry.rewriteRules.push({
         pattern,
         intent,
@@ -285,7 +326,247 @@ export function createPluginSetupContext({
         registeredBy: pluginId,
       });
     },
+
+    registerRpcRouter: (router) => {
+      if (CORE_RPC_NAMESPACES.has(pluginId)) {
+        throw new Error(
+          `Plugin id "${pluginId}" collides with core RPC namespace. ` +
+            `Rename the plugin — reserved names are: ` +
+            `${[...CORE_RPC_NAMESPACES].sort().join(", ")}.`,
+        );
+      }
+      if (registry.rpcRouters.has(pluginId)) {
+        throw new DuplicateRegistrationError("plugin RPC router", pluginId);
+      }
+      registry.rpcRouters.set(pluginId, router);
+    },
+
+    registerRoute: ({ method, path, auth, handler }) => {
+      assertValidPluginRoutePath(pluginId, path);
+      for (const existing of registry.rawRoutes) {
+        if (
+          existing.pluginId === pluginId &&
+          existing.method === method &&
+          existing.path === path
+        ) {
+          throw new Error(
+            `Plugin "${pluginId}" already registered a route for ` +
+              `${method} ${path}.`,
+          );
+        }
+      }
+      registry.rawRoutes.push({
+        pluginId,
+        method,
+        path,
+        auth,
+        handler,
+      });
+    },
+
+    registerAdminPage: (options) => {
+      assertValidAdminPagePath(pluginId, options.path);
+      if (registry.adminPages.has(options.path)) {
+        throw new DuplicateRegistrationError("admin page", options.path);
+      }
+      assertComponentRef(
+        pluginId,
+        `admin page "${options.path}"`,
+        options.component,
+      );
+      if (options.nav) {
+        const groupId =
+          typeof options.nav.group === "string"
+            ? options.nav.group
+            : options.nav.group.id;
+        assertValidNavGroupId(pluginId, groupId);
+      }
+      registry.adminPages.set(options.path, {
+        ...options,
+        registeredBy: pluginId,
+      });
+    },
+
+    registerBlock: (options) => {
+      assertValidBlockName(pluginId, options.name);
+      if (registry.blocks.has(options.name)) {
+        throw new DuplicateRegistrationError("block", options.name);
+      }
+      // Defense against loose `any` casts at the call site.
+      const kind = options.kind as unknown;
+      if (kind !== "node" && kind !== "mark") {
+        throw new Error(
+          `Plugin "${pluginId}" registered block "${options.name}" with ` +
+            `invalid kind "${String(kind)}" — must be "node" or "mark".`,
+        );
+      }
+      if (options.component) {
+        assertComponentRef(
+          pluginId,
+          `block "${options.name}"`,
+          options.component,
+        );
+      }
+      registry.blocks.set(options.name, {
+        ...options,
+        registeredBy: pluginId,
+      });
+    },
+
+    registerFieldType: (options) => {
+      assertValidFieldTypeName(pluginId, options.type);
+      if (registry.fieldTypes.has(options.type)) {
+        throw new DuplicateRegistrationError("field type", options.type);
+      }
+      assertComponentRef(
+        pluginId,
+        `field type "${options.type}"`,
+        options.component,
+      );
+      registry.fieldTypes.set(options.type, {
+        ...options,
+        registeredBy: pluginId,
+      });
+    },
   };
+}
+
+// Three meta-box registrations (entry/term/user) only differ in their
+// target Map and the human-facing kind label — extracted into a
+// factory so the call sites read as data, not three near-identical
+// blocks.
+function makeMetaBoxRegistrar<
+  T extends { readonly id: string; readonly fields: readonly MetaBoxField[] },
+>(
+  map: Map<string, T & { registeredBy: string | null }>,
+  kind: string,
+  pluginId: string,
+): (id: string, options: Omit<T, "id">) => void {
+  return (id, options) => {
+    if (map.has(id)) throw new DuplicateRegistrationError(kind, id);
+    assertMetaBoxFields(kind, id, options.fields);
+    map.set(id, {
+      ...(options as unknown as T),
+      id,
+      registeredBy: pluginId,
+    });
+  };
+}
+
+function assertComponentRef(
+  pluginId: string,
+  descriptor: string,
+  ref: { package: string; export: string },
+): void {
+  if (
+    typeof ref.package !== "string" ||
+    ref.package.length === 0 ||
+    typeof ref.export !== "string" ||
+    ref.export.length === 0
+  ) {
+    throw new Error(
+      `Plugin "${pluginId}" registered ${descriptor} with an invalid ` +
+        `component ref — both "package" and "export" must be non-empty strings.`,
+    );
+  }
+}
+
+const BLOCK_NAME_RE = /^[a-z][a-z0-9_-]*$/;
+
+function assertValidBlockName(pluginId: string, name: string): void {
+  if (!BLOCK_NAME_RE.test(name) || name.length > 64) {
+    throw new Error(
+      `Plugin "${pluginId}" registered block with invalid name "${name}" ` +
+        `— must match ${BLOCK_NAME_RE} and be at most 64 characters.`,
+    );
+  }
+}
+
+function assertValidFieldTypeName(pluginId: string, type: string): void {
+  if (!BLOCK_NAME_RE.test(type) || type.length > 64) {
+    throw new Error(
+      `Plugin "${pluginId}" registered meta-box field type with invalid ` +
+        `name "${type}" — must match ${BLOCK_NAME_RE} and be at most 64 ` +
+        `characters.`,
+    );
+  }
+}
+
+function assertValidNavGroupId(pluginId: string, id: string): void {
+  if (id.length === 0 || id.length > MAX_PLUGIN_ID_LENGTH) {
+    throw new Error(
+      `Plugin "${pluginId}" registered admin nav group with invalid id ` +
+        `"${id}" — length must be 1..${MAX_PLUGIN_ID_LENGTH}.`,
+    );
+  }
+  if (!PLUGIN_ID_RE.test(id)) {
+    throw new Error(
+      `Plugin "${pluginId}" registered admin nav group with invalid id ` +
+        `"${id}" — must match ${PLUGIN_ID_RE}.`,
+    );
+  }
+}
+
+function assertValidAdminPagePath(pluginId: string, path: string): void {
+  if (!path.startsWith("/")) {
+    throw new Error(
+      `Plugin "${pluginId}" admin page path "${path}" must start with "/".`,
+    );
+  }
+  if (path.includes("//") || path.includes("..")) {
+    throw new Error(
+      `Plugin "${pluginId}" admin page path "${path}" contains "//" or "..".`,
+    );
+  }
+  if (path.includes("?") || path.includes("#")) {
+    throw new Error(
+      `Plugin "${pluginId}" admin page path "${path}" must not include ` +
+        `a query string or fragment.`,
+    );
+  }
+  if (path.includes("*")) {
+    throw new Error(
+      `Plugin "${pluginId}" admin page path "${path}" must not contain "*" ` +
+        `— register nested routes via TanStack Router children inside the ` +
+        `page component rather than a wildcard suffix.`,
+    );
+  }
+}
+
+function assertValidPluginRoutePath(pluginId: string, path: string): void {
+  if (!path.startsWith("/")) {
+    throw new Error(
+      `Plugin "${pluginId}" route path "${path}" must start with "/".`,
+    );
+  }
+  if (path.includes("//") || path.includes("..")) {
+    throw new Error(
+      `Plugin "${pluginId}" route path "${path}" contains "//" or "..".`,
+    );
+  }
+  if (path.includes("?") || path.includes("#")) {
+    throw new Error(
+      `Plugin "${pluginId}" route path "${path}" must not include a ` +
+        `query string or fragment — match on the pathname only.`,
+    );
+  }
+  // Allow exactly `/*` at the very end. Any other `*` is ambiguous.
+  const starIndex = path.indexOf("*");
+  if (starIndex !== -1 && starIndex !== path.length - 1) {
+    throw new Error(
+      `Plugin "${pluginId}" route path "${path}" may only contain "*" ` +
+        `as a trailing wildcard (e.g. "/storage/*").`,
+    );
+  }
+  if (
+    path.endsWith("*") &&
+    (path.length < 2 || path[path.length - 2] !== "/")
+  ) {
+    throw new Error(
+      `Plugin "${pluginId}" route path "${path}" must place the trailing ` +
+        `wildcard after a "/" ("/prefix/*", not "/prefix*").`,
+    );
+  }
 }
 
 // Keep page / group / field names portable: ASCII identifier that

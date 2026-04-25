@@ -10,14 +10,32 @@ import {
   emptyManifest,
   injectManifestIntoHtml,
   MANIFEST_SCRIPT_ID,
+  manifestEntryVisibility,
+  resolveEntryTypeVisibility,
+  resolveTermTaxonomyVisibility,
   serializeManifestScript,
 } from "./manifest.js";
 import { installPlugins } from "./register.js";
 
 describe("buildManifest", () => {
-  test("empty registry yields an empty manifest", () => {
+  test("empty registry projects core-seeded adminNav (Dashboard / Management) and empty everything else", () => {
     const manifest = buildManifest(createPluginRegistry());
-    expect(manifest).toEqual(emptyManifest());
+    expect(manifest.entryTypes).toEqual([]);
+    expect(manifest.termTaxonomies).toEqual([]);
+    expect(manifest.entryMetaBoxes).toEqual([]);
+    expect(manifest.termMetaBoxes).toEqual([]);
+    expect(manifest.userMetaBoxes).toEqual([]);
+    expect(manifest.settingsGroups).toEqual([]);
+    expect(manifest.settingsPages).toEqual([]);
+    expect(manifest.blocks).toEqual([]);
+    expect(manifest.fieldTypes).toEqual([]);
+    // Overview always carries Dashboard; Management carries Users +
+    // Settings. Capability filtering happens admin-side at render
+    // time — the projection ships every item.
+    const overview = manifest.adminNav.find((g) => g.id === "overview");
+    expect(overview?.items.map((i) => i.to)).toEqual(["/"]);
+    const management = manifest.adminNav.find((g) => g.id === "management");
+    expect(management?.items.map((i) => i.to)).toEqual(["/users", "/settings"]);
   });
 
   test("projects registered settings groups, fields use the shared MetaBoxField shape", async () => {
@@ -265,7 +283,7 @@ describe("buildManifest", () => {
         label: "Posts",
         labels: { singular: "Entry" },
         supports: ["title", "editor"],
-        taxonomies: ["category"],
+        termTaxonomies: ["category"],
         rewrite: { slug: "posts" },
       });
     });
@@ -280,12 +298,16 @@ describe("buildManifest", () => {
         label: "Posts",
         labels: { singular: "Entry" },
         supports: ["title", "editor"],
-        taxonomies: ["category"],
+        termTaxonomies: ["category"],
+        isPublic: true,
+        showUI: true,
+        showInSidebar: true,
       },
     ]);
     const entry = manifest.entryTypes[0] as unknown as Record<string, unknown>;
     expect(entry.registeredBy).toBeUndefined();
     expect(entry.rewrite).toBeUndefined();
+    expect(entry.capabilities).toBeUndefined();
   });
 
   test("uses labels.plural (slugified) for adminSlug when provided", async () => {
@@ -377,7 +399,7 @@ describe("buildManifest", () => {
         location: "sidebar",
         priority: 0,
         entryTypes: ["post"],
-        capability: "post:edit_any",
+        capability: "entry:post:edit_any",
         fields: [
           {
             key: "title",
@@ -407,7 +429,7 @@ describe("buildManifest", () => {
       location: "sidebar",
       priority: 0,
       entryTypes: ["post"],
-      capability: "post:edit_any",
+      capability: "entry:post:edit_any",
     });
     expect(box?.fields).toEqual([
       {
@@ -448,11 +470,11 @@ describe("buildManifest", () => {
   test("projects registered term meta boxes, keyed by taxonomy", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("branding", (ctx) => {
-      ctx.registerTaxonomy("category", { label: "Categories" });
+      ctx.registerTermTaxonomy("category", { label: "Categories" });
       ctx.registerTermMetaBox("category-branding", {
         label: "Branding",
         description: "Optional icon + accent colour.",
-        taxonomies: ["category"],
+        termTaxonomies: ["category"],
         fields: [
           {
             key: "icon_url",
@@ -470,7 +492,7 @@ describe("buildManifest", () => {
     expect(manifest.termMetaBoxes[0]).toMatchObject({
       id: "category-branding",
       label: "Branding",
-      taxonomies: ["category"],
+      termTaxonomies: ["category"],
     });
   });
 
@@ -502,17 +524,17 @@ describe("buildManifest", () => {
   test("rejects two term boxes declaring the same field key on the same taxonomy", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("dupe-term", (ctx) => {
-      ctx.registerTaxonomy("category", { label: "Categories" });
+      ctx.registerTermTaxonomy("category", { label: "Categories" });
       ctx.registerTermMetaBox("t-a", {
         label: "A",
-        taxonomies: ["category"],
+        termTaxonomies: ["category"],
         fields: [
           { key: "icon", label: "Icon", type: "string", inputType: "text" },
         ],
       });
       ctx.registerTermMetaBox("t-b", {
         label: "B",
-        taxonomies: ["category"],
+        termTaxonomies: ["category"],
         fields: [
           { key: "icon", label: "Icon", type: "string", inputType: "text" },
         ],
@@ -527,10 +549,10 @@ describe("buildManifest", () => {
   test("rejects a term meta box scoped to an unregistered taxonomy", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("unknown-scope", (ctx) => {
-      // No `registerTaxonomy("catagory")` — the typo below is dead code.
+      // No `registerTermTaxonomy("catagory")` — the typo below is dead code.
       ctx.registerTermMetaBox("branding", {
         label: "Branding",
-        taxonomies: ["catagory"],
+        termTaxonomies: ["catagory"],
         fields: [
           { key: "icon", label: "Icon", type: "string", inputType: "text" },
         ],
@@ -538,7 +560,7 @@ describe("buildManifest", () => {
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(() => buildManifest(registry)).toThrow(
-      /term meta box "branding" references taxonomy "catagory" which hasn't been registered/,
+      /term meta box "branding" references termTaxonomy "catagory" which hasn't been registered/,
     );
   });
 
@@ -614,10 +636,10 @@ describe("buildManifest", () => {
     expect(manifest.userMetaBoxes).toEqual([]);
   });
 
-  test("projects registered taxonomies, dropping server-only fields", async () => {
+  test("projects registered termTaxonomies, dropping server-only fields", async () => {
     const hooks = new HookRegistry();
     const blog = definePlugin("blog", (ctx) => {
-      ctx.registerTaxonomy("category", {
+      ctx.registerTermTaxonomy("category", {
         label: "Categories",
         labels: { singular: "Category" },
         description: "Top-level organisation for blog entries.",
@@ -634,7 +656,7 @@ describe("buildManifest", () => {
     const { registry } = await installPlugins({ hooks, plugins: [blog] });
 
     const manifest = buildManifest(registry);
-    expect(manifest.taxonomies).toEqual([
+    expect(manifest.termTaxonomies).toEqual([
       {
         name: "category",
         label: "Categories",
@@ -642,15 +664,23 @@ describe("buildManifest", () => {
         description: "Top-level organisation for blog entries.",
         isHierarchical: true,
         entryTypes: ["post"],
+        isPublic: true,
+        showUI: true,
+        showInSidebar: true,
       },
     ]);
-    // Operational flags + `registeredBy` stay server-side.
-    const entry = manifest.taxonomies[0] as unknown as Record<string, unknown>;
+    // `registeredBy` + server-only operational flags stay server-side.
+    // Visibility ships as the resolved triple; raw per-surface inputs
+    // and capability overrides aren't on the wire.
+    const entry = manifest.termTaxonomies[0] as unknown as Record<
+      string,
+      unknown
+    >;
     expect(entry.registeredBy).toBeUndefined();
-    expect(entry.isPublic).toBeUndefined();
     expect(entry.isInQuickEdit).toBeUndefined();
     expect(entry.hasAdminColumn).toBeUndefined();
     expect(entry.rewrite).toBeUndefined();
+    expect(entry.capabilities).toBeUndefined();
   });
 
   test("empty taxonomy registry yields an empty taxonomies array", async () => {
@@ -660,7 +690,7 @@ describe("buildManifest", () => {
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
-    expect(buildManifest(registry).taxonomies).toEqual([]);
+    expect(buildManifest(registry).termTaxonomies).toEqual([]);
   });
 });
 
@@ -684,17 +714,11 @@ describe("serializeManifestScript", () => {
   test("emits a json script tag with the expected id", () => {
     const tag = serializeManifestScript({
       entryTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
-      taxonomies: [],
-      entryMetaBoxes: [],
-      termMetaBoxes: [],
-      userMetaBoxes: [],
-      settingsGroups: [],
-      settingsPages: [],
     });
     expect(tag).toContain(`id="${MANIFEST_SCRIPT_ID}"`);
     expect(tag).toContain(`type="application/json"`);
     expect(tag).toContain(
-      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"taxonomies":[],"entryMetaBoxes":[],"termMetaBoxes":[],"userMetaBoxes":[],"settingsGroups":[],"settingsPages":[]}`,
+      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}]}`,
     );
   });
 
@@ -703,12 +727,6 @@ describe("serializeManifestScript", () => {
       entryTypes: [
         { name: "post", adminSlug: "posts", label: "</script><b>x</b>" },
       ],
-      taxonomies: [],
-      entryMetaBoxes: [],
-      termMetaBoxes: [],
-      userMetaBoxes: [],
-      settingsGroups: [],
-      settingsPages: [],
     });
     expect(tag).not.toContain("</script><b>");
     expect(tag).toMatch(/<\\\/script>/);
@@ -717,12 +735,6 @@ describe("serializeManifestScript", () => {
   test("round-trips through JSON.parse after unescaping the slash", () => {
     const manifest = {
       entryTypes: [{ name: "post", adminSlug: "posts", label: "x</y>" }],
-      taxonomies: [],
-      entryMetaBoxes: [],
-      termMetaBoxes: [],
-      userMetaBoxes: [],
-      settingsGroups: [],
-      settingsPages: [],
     };
     const tag = serializeManifestScript(manifest);
     const prefix = `<script id="${MANIFEST_SCRIPT_ID}" type="application/json">`;
@@ -744,30 +756,16 @@ describe("injectManifestIntoHtml", () => {
   test("replaces the placeholder with the serialised manifest", () => {
     const out = injectManifestIntoHtml(TEMPLATE, {
       entryTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
-      taxonomies: [],
-      entryMetaBoxes: [],
-      termMetaBoxes: [],
-      userMetaBoxes: [],
-      settingsGroups: [],
-      settingsPages: [],
     });
     expect(out).toContain(
-      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"taxonomies":[],"entryMetaBoxes":[],"termMetaBoxes":[],"userMetaBoxes":[],"settingsGroups":[],"settingsPages":[]}`,
+      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}]}`,
     );
-    expect(out).not.toContain(
-      `{"entryTypes":[],"taxonomies":[],"entryMetaBoxes":[],"termMetaBoxes":[],"userMetaBoxes":[],"settingsGroups":[],"settingsPages":[]}`,
-    );
+    expect(out).not.toContain(`{"entryTypes":[]}`);
   });
 
   test("is idempotent when the manifest is already injected", () => {
     const manifest = {
       entryTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
-      taxonomies: [],
-      entryMetaBoxes: [],
-      termMetaBoxes: [],
-      userMetaBoxes: [],
-      settingsGroups: [],
-      settingsPages: [],
     };
     const once = injectManifestIntoHtml(TEMPLATE, manifest);
     const twice = injectManifestIntoHtml(once, manifest);
@@ -790,15 +788,9 @@ describe("injectManifestIntoHtml", () => {
     const html = `<SCRIPT ID="plumix-manifest" TYPE="application/json">{"entryTypes":[]}</SCRIPT>`;
     const out = injectManifestIntoHtml(html, {
       entryTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
-      taxonomies: [],
-      entryMetaBoxes: [],
-      termMetaBoxes: [],
-      userMetaBoxes: [],
-      settingsGroups: [],
-      settingsPages: [],
     });
     expect(out).toContain(
-      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}],"taxonomies":[],"entryMetaBoxes":[],"termMetaBoxes":[],"userMetaBoxes":[],"settingsGroups":[],"settingsPages":[]}`,
+      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}]}`,
     );
   });
 
@@ -808,15 +800,279 @@ describe("injectManifestIntoHtml", () => {
     </script>`;
     const out = injectManifestIntoHtml(html, {
       entryTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
-      taxonomies: [],
-      entryMetaBoxes: [],
-      termMetaBoxes: [],
-      userMetaBoxes: [],
-      settingsGroups: [],
-      settingsPages: [],
     });
     expect(out).toMatch(
-      /^<script id="plumix-manifest" type="application\/json">\{"entryTypes":\[\{"name":"post","adminSlug":"posts","label":"Posts"\}\],"taxonomies":\[\],"entryMetaBoxes":\[\],"termMetaBoxes":\[\],"userMetaBoxes":\[\],"settingsGroups":\[\],"settingsPages":\[\]}<\/script>$/,
+      /^<script id="plumix-manifest" type="application\/json">\{"entryTypes":\[\{"name":"post","adminSlug":"posts","label":"Posts"\}\]}<\/script>$/,
     );
+  });
+});
+
+describe("resolveEntryTypeVisibility", () => {
+  test("defaults isPublic=true → everything visible, nothing excluded", () => {
+    expect(resolveEntryTypeVisibility({ label: "Posts" })).toEqual({
+      isPublic: true,
+      showUI: true,
+      showInSidebar: true,
+      excludeFromGenericRpc: false,
+      excludeFromSearch: false,
+    });
+  });
+
+  test("isPublic=false cascades to hidden everywhere + excluded from RPC/search", () => {
+    expect(
+      resolveEntryTypeVisibility({ label: "Menu items", isPublic: false }),
+    ).toEqual({
+      isPublic: false,
+      showUI: false,
+      showInSidebar: false,
+      excludeFromGenericRpc: true,
+      excludeFromSearch: true,
+    });
+  });
+
+  test("explicit showUI:true overrides isPublic=false cascade (for plugin-owned admin pages)", () => {
+    const v = resolveEntryTypeVisibility({
+      label: "Menu items",
+      isPublic: false,
+      showUI: true,
+    });
+    expect(v.showUI).toBe(true);
+    expect(v.showInSidebar).toBe(true); // cascades off showUI when unset
+    expect(v.excludeFromGenericRpc).toBe(true); // still cascades off isPublic
+  });
+
+  test("explicit showInSidebar:false with showUI:true keeps admin surface but hides sidebar row", () => {
+    const v = resolveEntryTypeVisibility({
+      label: "Attachments",
+      isPublic: true,
+      showInSidebar: false,
+    });
+    expect(v.showUI).toBe(true);
+    expect(v.showInSidebar).toBe(false);
+  });
+
+  test("media-shape: public + excludeFromSearch true keeps generic RPC but hides from site search", () => {
+    const v = resolveEntryTypeVisibility({
+      label: "Attachments",
+      excludeFromSearch: true,
+    });
+    expect(v.excludeFromSearch).toBe(true);
+    expect(v.excludeFromGenericRpc).toBe(false);
+  });
+});
+
+describe("resolveTermTaxonomyVisibility", () => {
+  test("default cascade mirrors entry types (sans excludeFromSearch)", () => {
+    expect(resolveTermTaxonomyVisibility({ label: "Categories" })).toEqual({
+      isPublic: true,
+      showUI: true,
+      showInSidebar: true,
+      excludeFromGenericRpc: false,
+    });
+  });
+
+  test("isPublic=false hides nav-menu taxonomy from admin + RPC", () => {
+    expect(
+      resolveTermTaxonomyVisibility({ label: "Nav menus", isPublic: false }),
+    ).toEqual({
+      isPublic: false,
+      showUI: false,
+      showInSidebar: false,
+      excludeFromGenericRpc: true,
+    });
+  });
+});
+
+describe("manifestEntryVisibility", () => {
+  test("falls through to cascade defaults when wire payload omits the fields", () => {
+    expect(
+      manifestEntryVisibility({
+        isPublic: undefined,
+        showUI: undefined,
+        showInSidebar: undefined,
+      }),
+    ).toEqual({ isPublic: true, showUI: true, showInSidebar: true });
+  });
+
+  test("honors explicit wire values", () => {
+    expect(
+      manifestEntryVisibility({
+        isPublic: false,
+        showUI: true,
+        showInSidebar: false,
+      }),
+    ).toEqual({ isPublic: false, showUI: true, showInSidebar: false });
+  });
+});
+
+describe("buildManifest adminNav projection", () => {
+  test("page with inline group metadata creates the custom group on the fly", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("menus", (ctx) => {
+      ctx.registerAdminPage({
+        path: "/menus",
+        title: "Menus",
+        nav: {
+          group: { id: "appearance", label: "Appearance", priority: 40 },
+          label: "Menus",
+          order: 10,
+        },
+        capability: "menu:manage",
+        component: { package: "@plumix/plugin-menus", export: "MenusPage" },
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    const appearance = manifest.adminNav.find((g) => g.id === "appearance");
+    expect(appearance).toBeDefined();
+    expect(appearance?.label).toBe("Appearance");
+    expect(appearance?.priority).toBe(40);
+    expect(appearance?.items).toEqual([
+      {
+        to: "/pages/menus",
+        label: "Menus",
+        order: 10,
+        capability: "menu:manage",
+        coreIcon: "puzzle",
+        component: { package: "@plumix/plugin-menus", export: "MenusPage" },
+      },
+    ]);
+  });
+
+  test("page with bare-string custom group humanizes the id and uses default priority", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("menus", (ctx) => {
+      ctx.registerAdminPage({
+        path: "/menus",
+        title: "Menus",
+        nav: { group: "appearance", label: "Menus" },
+        component: { package: "@plumix/plugin-menus", export: "MenusPage" },
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    const appearance = manifest.adminNav.find((g) => g.id === "appearance");
+    expect(appearance?.label).toBe("Appearance");
+  });
+
+  test("page targeting a core-reserved nav group lands in that group", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("media", (ctx) => {
+      ctx.registerAdminPage({
+        path: "/media-library",
+        title: "Media Library",
+        nav: { group: "management", label: "Media Library", order: 50 },
+        component: { package: "@plumix/plugin-media", export: "MediaLibrary" },
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    const management = manifest.adminNav.find((g) => g.id === "management");
+    expect(management?.items.map((i) => i.to)).toContain(
+      "/pages/media-library",
+    );
+  });
+
+  test("items sort by order ascending, then label as tiebreak", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("menus", (ctx) => {
+      ctx.registerAdminPage({
+        path: "/zeta",
+        title: "Zeta",
+        nav: { group: "appearance", label: "Z", order: 5 },
+        component: { package: "p", export: "A" },
+      });
+      ctx.registerAdminPage({
+        path: "/alpha",
+        title: "Alpha",
+        nav: { group: "appearance", label: "A", order: 1 },
+        component: { package: "p", export: "B" },
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    const appearance = manifest.adminNav.find((g) => g.id === "appearance");
+    expect(appearance?.items.map((i) => i.label)).toEqual(["A", "Z"]);
+  });
+
+  test("groups sort by priority ascending, ties broken by id", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("multi", (ctx) => {
+      ctx.registerAdminPage({
+        path: "/z",
+        title: "Z",
+        nav: { group: { id: "zulu", priority: 10 }, label: "z" },
+        component: { package: "p", export: "Z" },
+      });
+      ctx.registerAdminPage({
+        path: "/a",
+        title: "A",
+        nav: { group: { id: "alpha", priority: 10 }, label: "a" },
+        component: { package: "p", export: "A" },
+      });
+      ctx.registerAdminPage({
+        path: "/b",
+        title: "B",
+        nav: { group: { id: "bravo", priority: 5 }, label: "b" },
+        component: { package: "p", export: "B" },
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    const customGroups = manifest.adminNav
+      .filter((g) => ["alpha", "bravo", "zulu"].includes(g.id))
+      .map((g) => g.id);
+    expect(customGroups).toEqual(["bravo", "alpha", "zulu"]);
+  });
+});
+
+describe("buildManifest visibility projection", () => {
+  test("emits resolved visibility for a hidden (menu-like) entry type", async () => {
+    const hooks = new HookRegistry();
+    const menus = definePlugin("menus", (ctx) => {
+      ctx.registerEntryType("nav_menu_item", {
+        label: "Nav menu items",
+        isPublic: false,
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [menus] });
+    const entry = buildManifest(registry).entryTypes[0];
+    expect(entry?.isPublic).toBe(false);
+    expect(entry?.showUI).toBe(false);
+    expect(entry?.showInSidebar).toBe(false);
+  });
+
+  test("emits resolved visibility for a sidebar-hidden but UI-present entry type", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("media", (ctx) => {
+      ctx.registerEntryType("attachment", {
+        label: "Attachments",
+        showInSidebar: false,
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const entry = buildManifest(registry).entryTypes[0];
+    expect(entry?.isPublic).toBe(true);
+    expect(entry?.showUI).toBe(true);
+    expect(entry?.showInSidebar).toBe(false);
+  });
+
+  test("taxonomies get the same resolved-visibility projection", async () => {
+    const hooks = new HookRegistry();
+    const menus = definePlugin("menus", (ctx) => {
+      ctx.registerEntryType("nav_menu_item", {
+        label: "Items",
+        isPublic: false,
+      });
+      ctx.registerTermTaxonomy("nav_menu", {
+        label: "Nav menus",
+        isPublic: false,
+        entryTypes: ["nav_menu_item"],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [menus] });
+    const tax = buildManifest(registry).termTaxonomies[0];
+    expect(tax?.isPublic).toBe(false);
+    expect(tax?.showInSidebar).toBe(false);
   });
 });

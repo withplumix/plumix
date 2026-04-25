@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card.js";
 import { hasCap } from "@/lib/caps.js";
-import { findTaxonomyByName } from "@/lib/manifest.js";
+import { findTermTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
@@ -22,22 +22,25 @@ import {
 } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 
-import type { TaxonomyManifestEntry } from "@plumix/core/manifest";
+import type { TermTaxonomyManifestEntry } from "@plumix/core/manifest";
 import { slugify } from "@plumix/core/slugify";
 
 import { TAXONOMY_LIST_DEFAULT_SEARCH } from "./-constants.js";
 import { mapTermError } from "./-errors.js";
 
 export const Route = createFileRoute("/_authenticated/taxonomies/$name/new")({
-  beforeLoad: ({ context, params }): { taxonomy: TaxonomyManifestEntry } => {
-    const taxonomy = findTaxonomyByName(params.name);
+  beforeLoad: ({
+    context,
+    params,
+  }): { taxonomy: TermTaxonomyManifestEntry } => {
+    const taxonomy = findTermTaxonomyByName(params.name);
     if (!taxonomy) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw notFound();
     }
     // `term.create` requires `${name}:edit` — gate the route too so a
     // caller without edit doesn't land on a form that will 403 on save.
-    if (!hasCap(context.user.capabilities, `${taxonomy.name}:edit`)) {
+    if (!hasCap(context.user.capabilities, `term:${taxonomy.name}:edit`)) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw redirect({
         to: "/taxonomies/$name",
@@ -55,9 +58,9 @@ function NewTermRoute(): ReactNode {
   const { taxonomy } = Route.useRouteContext();
   const [serverError, setServerError] = useState<string | null>(null);
 
-  // For hierarchical taxonomies we pull the existing term set so the
+  // For hierarchical termTaxonomies we pull the existing term set so the
   // parent picker can render a depth-indented list. Skipped for flat
-  // taxonomies — no parent, no query.
+  // termTaxonomies — no parent, no query.
   const isHierarchical = taxonomy.isHierarchical === true;
   const parents = useQuery({
     ...orpc.term.list.queryOptions({

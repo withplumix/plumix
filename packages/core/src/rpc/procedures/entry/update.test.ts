@@ -29,7 +29,7 @@ describe("entry.update", () => {
       h.client.entry.update({ id: mine.id, title: "hax" }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
-      data: { capability: "post:edit_any" },
+      data: { capability: "entry:post:edit_any" },
     });
   });
 
@@ -43,7 +43,7 @@ describe("entry.update", () => {
       h.client.entry.update({ id: own.id, title: "x" }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
-      data: { capability: "post:edit_any" },
+      data: { capability: "entry:post:edit_any" },
     });
   });
 
@@ -91,7 +91,7 @@ describe("entry.update", () => {
       h.client.entry.update({ id: own.id, status: "published" }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
-      data: { capability: "post:publish" },
+      data: { capability: "entry:post:publish" },
     });
   });
 

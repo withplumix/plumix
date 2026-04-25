@@ -129,7 +129,7 @@ function EditPostRoute(): ReactNode {
     [entryType.name, user.capabilities],
   );
 
-  const capNamespace = entryType.capabilityType ?? entryType.name;
+  const capNamespace = `entry:${entryType.capabilityType ?? entryType.name}`;
   const canEditAny = hasCap(user.capabilities, `${capNamespace}:edit_any`);
   const canEditOwn =
     post.authorId === user.id &&

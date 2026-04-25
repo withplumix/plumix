@@ -10,28 +10,28 @@ import { createRpcHarness } from "../../../test/rpc.js";
 function taxonomyRegistry(
   opts: {
     readonly assignRole?: UserRole;
-    readonly taxonomies?: readonly string[];
+    readonly termTaxonomies?: readonly string[];
   } = {},
 ) {
   const registry = createPluginRegistry();
-  for (const name of opts.taxonomies ?? ["category", "post_tag"]) {
-    registry.taxonomies.set(name, {
+  for (const name of opts.termTaxonomies ?? ["category", "post_tag"]) {
+    registry.termTaxonomies.set(name, {
       name,
       label: name,
       registeredBy: "test",
     });
-    registry.capabilities.set(`${name}:read`, {
-      name: `${name}:read`,
+    registry.capabilities.set(`term:${name}:read`, {
+      name: `term:${name}:read`,
       minRole: "subscriber",
       registeredBy: "test",
     });
-    registry.capabilities.set(`${name}:assign`, {
-      name: `${name}:assign`,
+    registry.capabilities.set(`term:${name}:assign`, {
+      name: `term:${name}:assign`,
       minRole: opts.assignRole ?? "contributor",
       registeredBy: "test",
     });
-    registry.capabilities.set(`${name}:edit`, {
-      name: `${name}:edit`,
+    registry.capabilities.set(`term:${name}:edit`, {
+      name: `term:${name}:edit`,
       minRole: "editor",
       registeredBy: "test",
     });
@@ -41,12 +41,12 @@ function taxonomyRegistry(
 
 async function seedTerm(
   h: Awaited<ReturnType<typeof createRpcHarness>>,
-  taxonomy: string,
+  termTaxonomy: string,
   slug: string,
 ): Promise<number> {
   const [row] = await h.context.db
     .insert(terms)
-    .values({ taxonomy, name: slug, slug })
+    .values({ taxonomy: termTaxonomy, name: slug, slug })
     .returning();
   if (!row) throw new Error("seedTerm: insert returned no row");
   return row.id;
@@ -55,13 +55,15 @@ async function seedTerm(
 async function readTermIds(
   h: Awaited<ReturnType<typeof createRpcHarness>>,
   entryId: number,
-  taxonomy: string,
+  termTaxonomy: string,
 ): Promise<number[]> {
   const rows = await h.context.db
-    .select({ termId: entryTerm.termId, sortOrder: entryTerm.sortOrder })
+    .select({ termId: entryTerm.termId })
     .from(entryTerm)
     .innerJoin(terms, eq(entryTerm.termId, terms.id))
-    .where(and(eq(entryTerm.entryId, entryId), eq(terms.taxonomy, taxonomy)))
+    .where(
+      and(eq(entryTerm.entryId, entryId), eq(terms.taxonomy, termTaxonomy)),
+    )
     .orderBy(asc(entryTerm.sortOrder));
   return rows.map((r) => r.termId);
 }
@@ -96,7 +98,7 @@ describe("entry.update — terms", () => {
     expect(await readTermIds(h, post.id, "category")).toEqual([c]);
   });
 
-  test("empty array clears assignments for that taxonomy", async () => {
+  test("empty array clears assignments for that termTaxonomy", async () => {
     const plugins = taxonomyRegistry();
     const h = await createRpcHarness({ authAs: "editor", plugins });
     const post = await h.factory.draft.create({ authorId: h.user.id });
@@ -108,7 +110,7 @@ describe("entry.update — terms", () => {
     expect(await readTermIds(h, post.id, "category")).toEqual([]);
   });
 
-  test("omitted taxonomy is untouched", async () => {
+  test("omitted termTaxonomy is untouched", async () => {
     const plugins = taxonomyRegistry();
     const h = await createRpcHarness({ authAs: "editor", plugins });
     const post = await h.factory.draft.create({ authorId: h.user.id });
@@ -142,7 +144,7 @@ describe("entry.update — terms", () => {
     expect(await readTermIds(h, post.id, "category")).toEqual([a]);
   });
 
-  test("unregistered taxonomy → NOT_FOUND (no partial writes)", async () => {
+  test("unregistered termTaxonomy → NOT_FOUND (no partial writes)", async () => {
     const plugins = taxonomyRegistry();
     const h = await createRpcHarness({ authAs: "editor", plugins });
     const post = await h.factory.draft.create({ authorId: h.user.id });
@@ -155,14 +157,14 @@ describe("entry.update — terms", () => {
       }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
-      data: { kind: "taxonomy", id: "unknown_tax" },
+      data: { kind: "termTaxonomy", id: "unknown_tax" },
     });
-    // Partial-write guard: the first taxonomy wasn't applied because the
+    // Partial-write guard: the first termTaxonomy wasn't applied because the
     // second one failed capability/registration validation up front.
     expect(await readTermIds(h, post.id, "category")).toEqual([]);
   });
 
-  test("missing {taxonomy}:assign cap → FORBIDDEN (even for editor if cap elevated)", async () => {
+  test("missing {termTaxonomy}:assign cap → FORBIDDEN (even for editor if cap elevated)", async () => {
     const plugins = taxonomyRegistry({ assignRole: "admin" });
     const h = await createRpcHarness({ authAs: "editor", plugins });
     const post = await h.factory.draft.create({ authorId: h.user.id });
@@ -172,11 +174,11 @@ describe("entry.update — terms", () => {
       h.client.entry.update({ id: post.id, terms: { category: [cat] } }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
-      data: { capability: "category:assign" },
+      data: { capability: "term:category:assign" },
     });
   });
 
-  test("term from a different taxonomy → CONFLICT term_taxonomy_mismatch", async () => {
+  test("term from a different termTaxonomy → CONFLICT term_taxonomy_mismatch", async () => {
     const plugins = taxonomyRegistry();
     const h = await createRpcHarness({ authAs: "editor", plugins });
     const post = await h.factory.draft.create({ authorId: h.user.id });

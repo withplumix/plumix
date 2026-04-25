@@ -6,7 +6,10 @@ import type { UserRole } from "../db/schema/users.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
-import type { AssetsBinding } from "../runtime/slots.js";
+import type {
+  AssetsBinding,
+  ConnectedObjectStorage,
+} from "../runtime/slots.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
 
 export type CoreSchema = typeof coreSchema;
@@ -60,6 +63,13 @@ export interface AppContext<
    * asset layer. Consumed by the dispatcher to serve admin SPA deep-links.
    */
   readonly assets?: AssetsBinding;
+  /**
+   * Bound object storage for this request. Present when the config
+   * declared a `storage:` slot and the runtime adapter connected it.
+   * Plugin handlers (e.g. media upload finalization) read/write via
+   * this; core procedures don't use it today.
+   */
+  readonly storage?: ConnectedObjectStorage;
 }
 
 export type AuthenticatedAppContext<
@@ -78,6 +88,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly logger?: Logger;
   readonly after?: AfterResponse;
   readonly assets?: AssetsBinding;
+  readonly storage?: ConnectedObjectStorage;
 }
 
 const dropPromise: AfterResponse = () => undefined;
@@ -101,6 +112,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     },
     after: args.after ?? dropPromise,
     assets: args.assets,
+    storage: args.storage,
   };
 }
 

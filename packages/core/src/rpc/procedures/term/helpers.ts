@@ -4,7 +4,7 @@ import { eq } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 
 export function taxonomyCapability(taxonomy: string, action: string): string {
-  return `${taxonomy}:${action}`;
+  return `term:${taxonomy}:${action}`;
 }
 
 /**

@@ -197,6 +197,11 @@ function buildFetch(app: PlumixApp): FetchHandler {
         ? (response: Response) => scoped.commit(response)
         : (response: Response) => response;
 
+      // Object storage binds once per isolate — R2 binding is stateless,
+      // so connecting on every request is wasted work. Memoise lazily so
+      // apps without `storage` configured never pay the cost.
+      const storage = app.config.storage?.connect(env);
+
       const appCtx = createAppContext({
         db: db as Db,
         env: env as PlumixEnv,
@@ -205,6 +210,7 @@ function buildFetch(app: PlumixApp): FetchHandler {
         plugins: app.plugins,
         after,
         assets: readAssetsBinding(env),
+        storage,
       });
       const response = await requestStore.run(appCtx, () => dispatcher(appCtx));
       return finalize(response);

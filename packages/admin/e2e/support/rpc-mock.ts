@@ -3,6 +3,7 @@ import type { Page, Route } from "@playwright/test";
 import type { AuthSessionOutput } from "@plumix/core";
 import type { PlumixManifest } from "@plumix/core/manifest";
 import type { Entry, Term, User } from "@plumix/core/schema";
+import { emptyManifest } from "@plumix/core/manifest";
 
 // The e2e webServer is just Vite — no real backend — so every /_plumix/rpc
 // call is intercepted here and answered with a deterministic fixture.
@@ -101,6 +102,7 @@ export async function mockManifest(
 // by specs that just need "something to list" without caring about the
 // specifics.
 export const MANIFEST_WITH_POST: PlumixManifest = {
+  ...emptyManifest(),
   entryTypes: [
     {
       name: "post",
@@ -109,18 +111,13 @@ export const MANIFEST_WITH_POST: PlumixManifest = {
       labels: { singular: "Entry", plural: "Posts" },
     },
   ],
-  taxonomies: [],
-  entryMetaBoxes: [],
-  termMetaBoxes: [],
-  userMetaBoxes: [],
-  settingsGroups: [],
-  settingsPages: [],
 };
 
-// Manifest with two taxonomies — one hierarchical (category), one flat
+// Manifest with two termTaxonomies — one hierarchical (category), one flat
 // (tag) — shared by the taxonomy e2e specs so both code paths can be
 // exercised from a single fixture.
 export const MANIFEST_WITH_TAXONOMIES: PlumixManifest = {
+  ...emptyManifest(),
   entryTypes: [
     {
       name: "post",
@@ -129,7 +126,7 @@ export const MANIFEST_WITH_TAXONOMIES: PlumixManifest = {
       labels: { singular: "Entry", plural: "Posts" },
     },
   ],
-  taxonomies: [
+  termTaxonomies: [
     {
       name: "category",
       label: "Categories",
@@ -142,16 +139,12 @@ export const MANIFEST_WITH_TAXONOMIES: PlumixManifest = {
       labels: { singular: "Tag" },
     },
   ],
-  entryMetaBoxes: [],
-  termMetaBoxes: [],
-  userMetaBoxes: [],
-  settingsGroups: [],
-  settingsPages: [],
 };
 
 // Manifest with two meta boxes — one in the right rail (`side`), one in
 // the main column (`normal`) — used by editor e2e to cover both slots.
 export const MANIFEST_WITH_META_BOXES: PlumixManifest = {
+  ...emptyManifest(),
   entryTypes: [
     {
       name: "post",
@@ -160,7 +153,6 @@ export const MANIFEST_WITH_META_BOXES: PlumixManifest = {
       labels: { singular: "Entry", plural: "Posts" },
     },
   ],
-  taxonomies: [],
   entryMetaBoxes: [
     {
       id: "seo",
@@ -192,10 +184,6 @@ export const MANIFEST_WITH_META_BOXES: PlumixManifest = {
       ],
     },
   ],
-  termMetaBoxes: [],
-  userMetaBoxes: [],
-  settingsGroups: [],
-  settingsPages: [],
 };
 
 // Manifest exercising the full settings hierarchy: one page (group),
@@ -204,11 +192,7 @@ export const MANIFEST_WITH_META_BOXES: PlumixManifest = {
 // the admin renders one shadcn `<Card>` per group with its own save
 // button.
 export const MANIFEST_WITH_SETTINGS: PlumixManifest = {
-  entryTypes: [],
-  taxonomies: [],
-  entryMetaBoxes: [],
-  termMetaBoxes: [],
-  userMetaBoxes: [],
+  ...emptyManifest(),
   settingsGroups: [
     {
       name: "identity",
@@ -271,13 +255,12 @@ export const AUTHED_ADMIN: AuthSessionOutput = {
     capabilities: [
       "settings:manage",
       "plugin:manage",
-      "post:create",
-      "post:delete",
-      "post:edit_any",
-      "post:edit_own",
-      "post:publish",
-      "post:read",
-      "taxonomy:manage",
+      "entry:post:create",
+      "entry:post:delete",
+      "entry:post:edit_any",
+      "entry:post:edit_own",
+      "entry:post:publish",
+      "entry:post:read",
       "user:create",
       "user:delete",
       "user:edit",
@@ -285,15 +268,15 @@ export const AUTHED_ADMIN: AuthSessionOutput = {
       "user:list",
       "user:promote",
       // Per-taxonomy caps matching MANIFEST_WITH_TAXONOMIES. The real
-      // server derives these from `deriveTaxonomyCapabilities(name)` for
+      // server derives these from `deriveTermTaxonomyCapabilities(name)` for
       // every registered taxonomy; mock-land hard-codes the union of
       // every taxonomy that any fixture uses.
-      "category:read",
-      "category:edit",
-      "category:delete",
-      "tag:read",
-      "tag:edit",
-      "tag:delete",
+      "term:category:read",
+      "term:category:edit",
+      "term:category:delete",
+      "term:tag:read",
+      "term:tag:edit",
+      "term:tag:delete",
     ],
   },
   needsBootstrap: false,

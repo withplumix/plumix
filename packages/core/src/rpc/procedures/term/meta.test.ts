@@ -10,16 +10,16 @@ import { createRpcHarness } from "../../../test/rpc.js";
 
 function taxonomyRegistry(): MutablePluginRegistry {
   const registry = createPluginRegistry();
-  registry.taxonomies.set("category", {
+  registry.termTaxonomies.set("category", {
     name: "category",
     label: "Categories",
     registeredBy: "test",
   });
   const caps: Record<string, UserRole> = {
-    "category:read": "subscriber",
-    "category:assign": "contributor",
-    "category:edit": "editor",
-    "category:delete": "editor",
+    "term:category:read": "subscriber",
+    "term:category:assign": "contributor",
+    "term:category:edit": "editor",
+    "term:category:delete": "editor",
   };
   for (const [name, minRole] of Object.entries(caps)) {
     registry.capabilities.set(name, { name, minRole, registeredBy: "test" });
@@ -35,7 +35,7 @@ function registerTermMetaFields(
   plugins.termMetaBoxes.set(`test-${taxonomy}`, {
     id: `test-${taxonomy}`,
     label: "Test",
-    taxonomies: [taxonomy],
+    termTaxonomies: [taxonomy],
     fields,
     registeredBy: "test",
   });
@@ -130,14 +130,14 @@ describe("term meta: registration + round-trip via term.update", () => {
 
   test("key registered on a different taxonomy → meta_not_registered for the other scope", async () => {
     const plugins = taxonomyRegistry();
-    plugins.taxonomies.set("tag", {
+    plugins.termTaxonomies.set("tag", {
       name: "tag",
       label: "Tags",
       registeredBy: "test",
     });
     const tagCaps: Record<string, UserRole> = {
-      "tag:read": "subscriber",
-      "tag:edit": "editor",
+      "term:tag:read": "subscriber",
+      "term:tag:edit": "editor",
     };
     for (const [name, minRole] of Object.entries(tagCaps)) {
       plugins.capabilities.set(name, { name, minRole, registeredBy: "test" });

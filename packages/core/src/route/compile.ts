@@ -14,7 +14,7 @@ interface CompiledRule extends RouteRule {
 /**
  * Compile the route map from the plugin registry. Auto-generates single +
  * archive rules for each public post type, appends explicit
- * `addRewriteRule` entries, sorts ascending by priority. Identical raw
+ * `registerRewriteRule` entries, sorts ascending by priority. Identical raw
  * patterns throw — the error names both offending plugins.
  */
 export function compileRouteMap(

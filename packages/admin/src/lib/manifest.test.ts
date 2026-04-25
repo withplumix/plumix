@@ -12,12 +12,12 @@ import {
   findEntryTypeBySlug,
   findSettingsGroupByName,
   findSettingsPageByName,
-  findTaxonomyByName,
+  findTermTaxonomyByName,
   groupsForSettingsPage,
   readManifest,
   visibleEntryTypes,
   visibleSettingsPages,
-  visibleTaxonomies,
+  visibleTermTaxonomies,
   visibleUserMetaBoxes,
 } from "./manifest.js";
 
@@ -38,15 +38,7 @@ describe("readManifest", () => {
 
   test("returns empty manifest when the script tag is absent", () => {
     const doc = document.implementation.createHTMLDocument("test");
-    expect(readManifest(doc)).toEqual({
-      entryTypes: [],
-      taxonomies: [],
-      entryMetaBoxes: [],
-      termMetaBoxes: [],
-      userMetaBoxes: [],
-      settingsGroups: [],
-      settingsPages: [],
-    });
+    expect(readManifest(doc)).toEqual({});
   });
 
   test("parses the injected JSON payload", () => {
@@ -57,26 +49,12 @@ describe("readManifest", () => {
     );
     expect(readManifest(doc)).toEqual({
       entryTypes: [{ name: "post", label: "Posts" }],
-      taxonomies: [],
-      entryMetaBoxes: [],
-      termMetaBoxes: [],
-      userMetaBoxes: [],
-      settingsGroups: [],
-      settingsPages: [],
     });
   });
 
   test("empty payload falls back to empty manifest", () => {
     const doc = withManifestScript("");
-    expect(readManifest(doc)).toEqual({
-      entryTypes: [],
-      taxonomies: [],
-      entryMetaBoxes: [],
-      termMetaBoxes: [],
-      userMetaBoxes: [],
-      settingsGroups: [],
-      settingsPages: [],
-    });
+    expect(readManifest(doc)).toEqual({});
   });
 
   test("malformed JSON logs and falls back without throwing", () => {
@@ -84,50 +62,27 @@ describe("readManifest", () => {
       // swallow expected error log
     });
     const doc = withManifestScript("{not-json");
-    expect(readManifest(doc)).toEqual({
-      entryTypes: [],
-      taxonomies: [],
-      entryMetaBoxes: [],
-      termMetaBoxes: [],
-      userMetaBoxes: [],
-      settingsGroups: [],
-      settingsPages: [],
-    });
+    expect(readManifest(doc)).toEqual({});
     expect(errSpy).toHaveBeenCalledOnce();
   });
 
   test("non-array entryTypes coerces to empty array", () => {
     const doc = withManifestScript(JSON.stringify({ entryTypes: "oops" }));
-    expect(readManifest(doc)).toEqual({
-      entryTypes: [],
-      taxonomies: [],
-      entryMetaBoxes: [],
-      termMetaBoxes: [],
-      userMetaBoxes: [],
-      settingsGroups: [],
-      settingsPages: [],
-    });
+    expect(readManifest(doc)).toEqual({});
   });
 
-  test("non-array metaBoxes coerces to empty array", () => {
+  test("non-array metaBoxes is dropped from the result", () => {
     const doc = withManifestScript(
-      JSON.stringify({ entryTypes: [], metaBoxes: "oops" }),
+      JSON.stringify({ entryTypes: [], entryMetaBoxes: "oops" }),
     );
-    expect(readManifest(doc)).toEqual({
-      entryTypes: [],
-      taxonomies: [],
-      entryMetaBoxes: [],
-      termMetaBoxes: [],
-      userMetaBoxes: [],
-      settingsGroups: [],
-      settingsPages: [],
-    });
+    const result = readManifest(doc);
+    expect(result.entryTypes).toEqual([]);
+    expect(result.entryMetaBoxes).toBeUndefined();
   });
 
   test("parses the injected JSON payload with metaBoxes", () => {
     const doc = withManifestScript(
       JSON.stringify({
-        entryTypes: [],
         entryMetaBoxes: [
           {
             id: "seo",
@@ -139,8 +94,6 @@ describe("readManifest", () => {
       }),
     );
     expect(readManifest(doc)).toEqual({
-      entryTypes: [],
-      taxonomies: [],
       entryMetaBoxes: [
         {
           id: "seo",
@@ -149,18 +102,13 @@ describe("readManifest", () => {
           fields: [],
         },
       ],
-      termMetaBoxes: [],
-      userMetaBoxes: [],
-      settingsGroups: [],
-      settingsPages: [],
     });
   });
 
-  test("parses the injected JSON payload with taxonomies", () => {
+  test("parses the injected JSON payload with termTaxonomies", () => {
     const doc = withManifestScript(
       JSON.stringify({
-        entryTypes: [],
-        taxonomies: [
+        termTaxonomies: [
           {
             name: "category",
             label: "Categories",
@@ -170,27 +118,21 @@ describe("readManifest", () => {
       }),
     );
     expect(readManifest(doc)).toEqual({
-      entryTypes: [],
-      taxonomies: [
+      termTaxonomies: [
         {
           name: "category",
           label: "Categories",
           isHierarchical: true,
         },
       ],
-      entryMetaBoxes: [],
-      termMetaBoxes: [],
-      userMetaBoxes: [],
-      settingsGroups: [],
-      settingsPages: [],
     });
   });
 
-  test("non-array taxonomies coerces to empty array", () => {
+  test("non-array termTaxonomies is dropped from the result", () => {
     const doc = withManifestScript(
-      JSON.stringify({ entryTypes: [], taxonomies: "not-an-array" }),
+      JSON.stringify({ entryTypes: [], termTaxonomies: "not-an-array" }),
     );
-    expect(readManifest(doc).taxonomies).toEqual([]);
+    expect(readManifest(doc).termTaxonomies).toBeUndefined();
   });
 });
 
@@ -200,12 +142,6 @@ describe("findEntryTypeBySlug", () => {
       { name: "post", adminSlug: "posts", label: "Posts" },
       { name: "product", adminSlug: "products", label: "Products" },
     ],
-    taxonomies: [],
-    entryMetaBoxes: [],
-    termMetaBoxes: [],
-    userMetaBoxes: [],
-    settingsGroups: [],
-    settingsPages: [],
   };
 
   test("returns the matching entry", () => {
@@ -234,19 +170,13 @@ describe("visibleEntryTypes", () => {
         capabilityType: "post",
       },
     ],
-    taxonomies: [],
-    entryMetaBoxes: [],
-    termMetaBoxes: [],
-    userMetaBoxes: [],
-    settingsGroups: [],
-    settingsPages: [],
   };
 
   test("filters by `${capabilityType}:edit_own`; unset capabilityType uses name", () => {
-    const caps = ["post:edit_own", "post:read"];
+    const caps = ["entry:post:edit_own", "entry:post:read"];
     const visible = visibleEntryTypes(caps, source).map((pt) => pt.name);
-    // `post` → "post:edit_own" ✓; `news` shares capabilityType "post" ✓;
-    // `product` needs "product:edit_own" which isn't granted ✗
+    // `post` → "entry:post:edit_own" ✓; `news` shares capabilityType "post" ✓;
+    // `product` needs "entry:product:edit_own" which isn't granted ✗
     expect(visible).toEqual(["post", "news"]);
   });
 
@@ -269,17 +199,11 @@ describe("entryMetaBoxesForType", () => {
 
   test("returns boxes applicable to the post type, honours priority order", () => {
     const source: PlumixManifest = {
-      taxonomies: [],
-      entryTypes: [],
       entryMetaBoxes: [
         box("a", { priority: 20 }),
         box("b", { priority: 0 }),
         box("c"), // unspecified → sorts last
       ],
-      termMetaBoxes: [],
-      userMetaBoxes: [],
-      settingsGroups: [],
-      settingsPages: [],
     };
     const ids = entryMetaBoxesForType("post", [], source).map((b) => b.id);
     expect(ids).toEqual(["b", "a", "c"]);
@@ -287,16 +211,10 @@ describe("entryMetaBoxesForType", () => {
 
   test("boxes at the same priority break ties by id alphabetical", () => {
     const source: PlumixManifest = {
-      taxonomies: [],
-      entryTypes: [],
       entryMetaBoxes: [
         box("second", { priority: 0 }),
         box("first", { priority: 0 }),
       ],
-      termMetaBoxes: [],
-      userMetaBoxes: [],
-      settingsGroups: [],
-      settingsPages: [],
     };
     const ids = entryMetaBoxesForType("post", [], source).map((b) => b.id);
     expect(ids).toEqual(["first", "second"]);
@@ -304,16 +222,10 @@ describe("entryMetaBoxesForType", () => {
 
   test("drops boxes whose `entryTypes` doesn't include the target", () => {
     const source: PlumixManifest = {
-      taxonomies: [],
-      entryTypes: [],
       entryMetaBoxes: [
         box("seo", { entryTypes: ["post"] }),
         box("shop", { entryTypes: ["product"] }),
       ],
-      termMetaBoxes: [],
-      userMetaBoxes: [],
-      settingsGroups: [],
-      settingsPages: [],
     };
     const ids = entryMetaBoxesForType("post", [], source).map((b) => b.id);
     expect(ids).toEqual(["seo"]);
@@ -321,16 +233,10 @@ describe("entryMetaBoxesForType", () => {
 
   test("drops boxes gated by a capability the user lacks", () => {
     const source: PlumixManifest = {
-      taxonomies: [],
-      entryTypes: [],
       entryMetaBoxes: [
         box("public"),
-        box("privileged", { capability: "post:edit_any" }),
+        box("privileged", { capability: "entry:post:edit_any" }),
       ],
-      termMetaBoxes: [],
-      userMetaBoxes: [],
-      settingsGroups: [],
-      settingsPages: [],
     };
     const withoutCap = entryMetaBoxesForType("post", [], source).map(
       (b) => b.id,
@@ -339,22 +245,14 @@ describe("entryMetaBoxesForType", () => {
 
     const withCap = entryMetaBoxesForType(
       "post",
-      ["post:edit_any"],
+      ["entry:post:edit_any"],
       source,
     ).map((b) => b.id);
     expect(withCap).toEqual(["privileged", "public"]);
   });
 
   test("returns empty when no meta boxes are registered", () => {
-    const source: PlumixManifest = {
-      entryTypes: [],
-      taxonomies: [],
-      entryMetaBoxes: [],
-      termMetaBoxes: [],
-      userMetaBoxes: [],
-      settingsGroups: [],
-      settingsPages: [],
-    };
+    const source: PlumixManifest = {};
     expect(entryMetaBoxesForType("post", [], source)).toEqual([]);
   });
 });
@@ -373,16 +271,10 @@ describe("visibleUserMetaBoxes", () => {
   }
 
   const source: PlumixManifest = {
-    entryTypes: [],
-    taxonomies: [],
-    entryMetaBoxes: [],
-    termMetaBoxes: [],
     userMetaBoxes: [
       userBox("public"),
       userBox("privileged", { capability: "user:edit" }),
     ],
-    settingsGroups: [],
-    settingsPages: [],
   };
 
   test("an undefined-capability box is visible regardless of viewer caps", () => {
@@ -401,70 +293,49 @@ describe("visibleUserMetaBoxes", () => {
   });
 
   test("returns empty when no user meta boxes are registered", () => {
-    const empty: PlumixManifest = {
-      ...source,
-      userMetaBoxes: [],
-    };
-    expect(visibleUserMetaBoxes(["user:edit"], empty)).toEqual([]);
+    expect(visibleUserMetaBoxes(["user:edit"], {})).toEqual([]);
   });
 });
 
-describe("findTaxonomyByName", () => {
+describe("findTermTaxonomyByName", () => {
   const source: PlumixManifest = {
-    entryTypes: [],
-    taxonomies: [
+    termTaxonomies: [
       { name: "category", label: "Categories", isHierarchical: true },
       { name: "tag", label: "Tags" },
     ],
-    entryMetaBoxes: [],
-    termMetaBoxes: [],
-    userMetaBoxes: [],
-    settingsGroups: [],
-    settingsPages: [],
   };
 
   test("returns the matching taxonomy", () => {
-    expect(findTaxonomyByName("tag", source)?.label).toBe("Tags");
+    expect(findTermTaxonomyByName("tag", source)?.label).toBe("Tags");
   });
 
   test("returns undefined when no taxonomy matches", () => {
-    expect(findTaxonomyByName("mystery", source)).toBeUndefined();
+    expect(findTermTaxonomyByName("mystery", source)).toBeUndefined();
   });
 });
 
-describe("visibleTaxonomies", () => {
+describe("visibleTermTaxonomies", () => {
   const source: PlumixManifest = {
-    entryTypes: [],
-    taxonomies: [
+    termTaxonomies: [
       { name: "category", label: "Categories" },
       { name: "tag", label: "Tags" },
       { name: "internal", label: "Internal" },
     ],
-    entryMetaBoxes: [],
-    termMetaBoxes: [],
-    userMetaBoxes: [],
-    settingsGroups: [],
-    settingsPages: [],
   };
 
   test("filters by per-taxonomy :read capability", () => {
-    const caps = ["category:read", "tag:read"];
-    const visible = visibleTaxonomies(caps, source).map((t) => t.name);
+    const caps = ["term:category:read", "term:tag:read"];
+    const visible = visibleTermTaxonomies(caps, source).map((t) => t.name);
     expect(visible).toEqual(["category", "tag"]);
   });
 
   test("returns empty when the caller has no taxonomy :read caps", () => {
-    expect(visibleTaxonomies(["post:edit_own"], source)).toEqual([]);
+    expect(visibleTermTaxonomies(["entry:post:edit_own"], source)).toEqual([]);
   });
 });
 
 describe("findSettingsPageByName + visibleSettingsPages + findSettingsGroupByName + groupsForSettingsPage", () => {
   const source: PlumixManifest = {
-    entryTypes: [],
-    taxonomies: [],
-    entryMetaBoxes: [],
-    termMetaBoxes: [],
-    userMetaBoxes: [],
     settingsGroups: [
       {
         name: "identity",
@@ -526,7 +397,7 @@ describe("findSettingsPageByName + visibleSettingsPages + findSettingsGroupByNam
   });
 
   test("visibleSettingsPages returns empty when caller lacks settings:manage", () => {
-    expect(visibleSettingsPages(["post:edit_own"], source)).toEqual([]);
+    expect(visibleSettingsPages(["entry:post:edit_own"], source)).toEqual([]);
     expect(visibleSettingsPages([], source)).toEqual([]);
   });
 

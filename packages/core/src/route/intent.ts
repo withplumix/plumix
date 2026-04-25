@@ -10,7 +10,7 @@ export type RouteIntent =
 
 /**
  * Compiled rule. `priority` preserves arch-doc ordering semantics — lower
- * number wins. Explicit `addRewriteRule` defaults to 10; auto-generated
+ * number wins. Explicit `registerRewriteRule` defaults to 10; auto-generated
  * rules from `hasArchive` / `rewrite.slug` land at 50.
  */
 export interface RouteRule {

@@ -20,7 +20,7 @@ export const create = base
       input,
     );
 
-    if (!context.plugins.taxonomies.has(filtered.taxonomy)) {
+    if (!context.plugins.termTaxonomies.has(filtered.taxonomy)) {
       throw errors.NOT_FOUND({
         data: { kind: "taxonomy", id: filtered.taxonomy },
       });

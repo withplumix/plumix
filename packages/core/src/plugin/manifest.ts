@@ -1,3 +1,8 @@
+import type {
+  EntryTypeCapabilityOverrides,
+  TermTaxonomyCapabilityOverrides,
+} from "../auth/rbac.js";
+import type { AppContext } from "../context/app.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { RouteIntent } from "../route/intent.js";
 
@@ -16,31 +21,93 @@ export interface EntryTypeOptions {
   };
   readonly description?: string;
   readonly supports?: readonly string[];
-  readonly taxonomies?: readonly string[];
+  readonly termTaxonomies?: readonly string[];
   readonly isHierarchical?: boolean;
+  /** Master visibility switch; defaults to `true`. Cascades to `showUI`/`showInSidebar`/`excludeFromGenericRpc`/`excludeFromSearch` when those are unset. */
   readonly isPublic?: boolean;
+  readonly showUI?: boolean;
+  readonly showInSidebar?: boolean;
+  readonly excludeFromGenericRpc?: boolean;
+  readonly excludeFromSearch?: boolean;
   readonly hasArchive?: boolean | string;
   readonly rewrite?: {
     readonly slug?: string;
     readonly isHierarchical?: boolean;
   };
   readonly capabilityType?: string;
+  readonly capabilities?: EntryTypeCapabilityOverrides;
   readonly priority?: number;
   readonly menuIcon?: string;
 }
 
-export interface TaxonomyOptions {
+export interface TermTaxonomyOptions {
   readonly label: string;
   readonly labels?: { readonly singular?: string };
   readonly description?: string;
   readonly isHierarchical?: boolean;
   readonly entryTypes?: readonly string[];
   readonly isPublic?: boolean;
+  readonly showUI?: boolean;
+  readonly showInSidebar?: boolean;
+  readonly excludeFromGenericRpc?: boolean;
   readonly isInQuickEdit?: boolean;
   readonly hasAdminColumn?: boolean;
   readonly rewrite?: {
     readonly slug?: string;
     readonly isHierarchical?: boolean;
+  };
+  readonly capabilities?: TermTaxonomyCapabilityOverrides;
+}
+
+export function resolveEntryTypeVisibility(options: EntryTypeOptions): {
+  readonly isPublic: boolean;
+  readonly showUI: boolean;
+  readonly showInSidebar: boolean;
+  readonly excludeFromGenericRpc: boolean;
+  readonly excludeFromSearch: boolean;
+} {
+  const isPublic = options.isPublic ?? true;
+  const showUI = options.showUI ?? isPublic;
+  return {
+    isPublic,
+    showUI,
+    showInSidebar: options.showInSidebar ?? showUI,
+    excludeFromGenericRpc: options.excludeFromGenericRpc ?? !isPublic,
+    excludeFromSearch: options.excludeFromSearch ?? !isPublic,
+  };
+}
+
+export function resolveTermTaxonomyVisibility(options: TermTaxonomyOptions): {
+  readonly isPublic: boolean;
+  readonly showUI: boolean;
+  readonly showInSidebar: boolean;
+  readonly excludeFromGenericRpc: boolean;
+} {
+  const isPublic = options.isPublic ?? true;
+  const showUI = options.showUI ?? isPublic;
+  return {
+    isPublic,
+    showUI,
+    showInSidebar: options.showInSidebar ?? showUI,
+    excludeFromGenericRpc: options.excludeFromGenericRpc ?? !isPublic,
+  };
+}
+
+export function manifestEntryVisibility(
+  entry:
+    | Pick<EntryTypeManifestEntry, "isPublic" | "showUI" | "showInSidebar">
+    | Pick<TermTaxonomyManifestEntry, "isPublic" | "showUI" | "showInSidebar">,
+): {
+  readonly isPublic: boolean;
+  readonly showUI: boolean;
+  readonly showInSidebar: boolean;
+} {
+  const isPublic = entry.isPublic ?? true;
+  const showUI = entry.showUI ?? isPublic;
+  return {
+    isPublic,
+    showUI,
+    showInSidebar: entry.showInSidebar ?? showUI,
   };
 }
 
@@ -135,7 +202,7 @@ export interface MetaBoxField {
  *   unspecified sorts last, ties break by `id` / `name` alphabetical.
  * - `capability` is a UI-only filter — the admin hides cards the
  *   viewer lacks the capability for. The server enforces only the
- *   entity-level write gate (`<entryType>:edit*`, `<taxonomy>:edit`,
+ *   entity-level write gate (`<entryType>:edit*`, `<termTaxonomy>:edit`,
  *   `user:edit`, `settings:manage`). Do NOT use `capability` for
  *   secrets; any user with the entity write gate can write any
  *   registered field via the raw RPC.
@@ -180,14 +247,14 @@ export interface EntryMetaBoxOptions extends Omit<
   readonly fields: readonly EntryMetaBoxField[];
 }
 
-/** Meta box shown on the taxonomy term edit form. Scoped by `taxonomies`. */
+/** Meta box shown on the termTaxonomy term edit form. Scoped by `termTaxonomies`. */
 export interface TermMetaBoxOptions extends MetaBoxBaseOptions {
-  readonly taxonomies: readonly string[];
+  readonly termTaxonomies: readonly string[];
 }
 
 /**
  * Meta box shown on the user edit form. User meta is a flat keyspace
- * (no scope analogue to entry types or taxonomies), so the base shape
+ * (no scope analogue to entry types or termTaxonomies), so the base shape
  * is everything an author needs.
  */
 export type UserMetaBoxOptions = MetaBoxBaseOptions;
@@ -223,7 +290,7 @@ export interface RegisteredEntryType extends EntryTypeOptions {
   readonly registeredBy: string | null;
 }
 
-export interface RegisteredTaxonomy extends TaxonomyOptions {
+export interface RegisteredTermTaxonomy extends TermTaxonomyOptions {
   readonly name: string;
   readonly registeredBy: string | null;
 }
@@ -256,6 +323,15 @@ export interface RegisteredSettingsPage extends SettingsPageOptions {
 export interface RegisteredCapability {
   readonly name: string;
   readonly minRole: UserRole;
+  /**
+   * Additional roles explicitly granted the capability, independent of
+   * hierarchy. Complements `minRole`: a role satisfies the capability
+   * if it meets `minRole` OR appears here. Useful for non-contiguous
+   * grants ("editors and authors but not admins in between" stays
+   * impossible; "admin by hierarchy + author explicitly" becomes
+   * expressible). Sorted + deduped at registration.
+   */
+  readonly defaultGrants?: readonly UserRole[];
   readonly registeredBy: string | null;
 }
 
@@ -266,9 +342,146 @@ export interface RegisteredRewriteRule {
   readonly registeredBy: string | null;
 }
 
+export interface PluginComponentRef {
+  readonly package: string;
+  readonly export: string;
+}
+
+/**
+ * How an admin page slots into the sidebar. `group` is either a bare
+ * id (string) or an object that declares group metadata inline — first
+ * page using a given id sets the label/priority for that group; later
+ * pages can use the bare-string form to attach to it. Core group ids
+ * (`overview` / `content` / `term-taxonomies` / `management`) carry
+ * their own label/priority and ignore inline metadata.
+ */
+export type AdminNavGroupRef =
+  | string
+  | {
+      readonly id: string;
+      readonly label?: string;
+      readonly priority?: number;
+    };
+
+export interface AdminPageOptions {
+  readonly path: string;
+  readonly title: string;
+  readonly nav?: {
+    readonly group: AdminNavGroupRef;
+    readonly label: string;
+    readonly icon?: PluginComponentRef;
+    readonly order?: number;
+  };
+  readonly capability?: string;
+  readonly component: PluginComponentRef;
+}
+
+export interface RegisteredAdminPage extends AdminPageOptions {
+  readonly registeredBy: string | null;
+}
+
+/**
+ * Built-in nav-icon names that core nav items reference. The admin maps
+ * each value to a lucide component at render time — keeps the wire
+ * payload free of package identifiers and makes the union exhaustive at
+ * the type level.
+ */
+export type CoreIconName =
+  | "dashboard"
+  | "content"
+  | "tag"
+  | "users"
+  | "settings"
+  | "puzzle";
+
+/**
+ * Built-in nav groups core ships. Plugins target their items at these
+ * ids via `nav.group`, and can interleave their own groups by picking
+ * priorities between or around these defaults.
+ */
+export const CORE_NAV_GROUPS: readonly {
+  readonly id: string;
+  readonly label: string;
+  readonly priority: number;
+}[] = [
+  { id: "overview", label: "Overview", priority: 0 },
+  { id: "content", label: "Content", priority: 100 },
+  { id: "term-taxonomies", label: "Taxonomies", priority: 200 },
+  { id: "management", label: "Management", priority: 1000 },
+];
+
+export interface BlockOptions {
+  readonly name: string;
+  readonly kind: "node" | "mark";
+  /** Opaque Tiptap spec passed to `Node.create` / `Mark.create`. */
+  readonly schema: Readonly<Record<string, unknown>>;
+  readonly component?: PluginComponentRef;
+}
+
+/**
+ * Plugin-contributed form field renderer. The admin's form dispatcher
+ * falls through to a plain text input on unknown `inputType` values
+ * (with a dev-mode warning); registering a type here swaps in a
+ * plugin React component that renders the custom UI.
+ *
+ * The `type` string must match a field's `inputType` — registering
+ * `type: "media_picker"` means any field (entry meta, term meta,
+ * user meta, settings group) with `inputType: "media_picker"`
+ * renders through the plugin's component.
+ */
+export interface FieldTypeOptions {
+  readonly type: string;
+  readonly component: PluginComponentRef;
+}
+
+export interface RegisteredBlock extends BlockOptions {
+  readonly registeredBy: string | null;
+}
+
+export interface RegisteredFieldType extends FieldTypeOptions {
+  readonly registeredBy: string | null;
+}
+
+export type PluginRouteMethod =
+  | "GET"
+  | "HEAD"
+  | "POST"
+  | "PUT"
+  | "PATCH"
+  | "DELETE"
+  | "OPTIONS"
+  | "*";
+
+export type PluginRouteAuth =
+  | "public"
+  | "authenticated"
+  | { readonly capability: string };
+
+export interface RegisteredRawRoute {
+  readonly pluginId: string;
+  readonly method: PluginRouteMethod;
+  readonly path: string;
+  readonly auth: PluginRouteAuth;
+  readonly handler: (
+    request: Request,
+    ctx: AppContext,
+  ) => Response | Promise<Response>;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type PluginRpcRouter = Record<string, any>;
+
+export const CORE_RPC_NAMESPACES: ReadonlySet<string> = new Set([
+  "auth",
+  "entry",
+  "term",
+  "user",
+  "settings",
+]);
+
 export interface PluginRegistry {
   readonly entryTypes: ReadonlyMap<string, RegisteredEntryType>;
-  readonly taxonomies: ReadonlyMap<string, RegisteredTaxonomy>;
+  readonly termTaxonomies: ReadonlyMap<string, RegisteredTermTaxonomy>;
   readonly entryMetaBoxes: ReadonlyMap<string, RegisteredEntryMetaBox>;
   readonly termMetaBoxes: ReadonlyMap<string, RegisteredTermMetaBox>;
   readonly userMetaBoxes: ReadonlyMap<string, RegisteredUserMetaBox>;
@@ -276,11 +489,16 @@ export interface PluginRegistry {
   readonly settingsGroups: ReadonlyMap<string, RegisteredSettingsGroup>;
   readonly settingsPages: ReadonlyMap<string, RegisteredSettingsPage>;
   readonly rewriteRules: readonly RegisteredRewriteRule[];
+  readonly rpcRouters: ReadonlyMap<string, PluginRpcRouter>;
+  readonly rawRoutes: readonly RegisteredRawRoute[];
+  readonly adminPages: ReadonlyMap<string, RegisteredAdminPage>;
+  readonly blocks: ReadonlyMap<string, RegisteredBlock>;
+  readonly fieldTypes: ReadonlyMap<string, RegisteredFieldType>;
 }
 
 export interface MutablePluginRegistry extends PluginRegistry {
   readonly entryTypes: Map<string, RegisteredEntryType>;
-  readonly taxonomies: Map<string, RegisteredTaxonomy>;
+  readonly termTaxonomies: Map<string, RegisteredTermTaxonomy>;
   readonly entryMetaBoxes: Map<string, RegisteredEntryMetaBox>;
   readonly termMetaBoxes: Map<string, RegisteredTermMetaBox>;
   readonly userMetaBoxes: Map<string, RegisteredUserMetaBox>;
@@ -288,12 +506,17 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly settingsGroups: Map<string, RegisteredSettingsGroup>;
   readonly settingsPages: Map<string, RegisteredSettingsPage>;
   readonly rewriteRules: RegisteredRewriteRule[];
+  readonly rpcRouters: Map<string, PluginRpcRouter>;
+  readonly rawRoutes: RegisteredRawRoute[];
+  readonly adminPages: Map<string, RegisteredAdminPage>;
+  readonly blocks: Map<string, RegisteredBlock>;
+  readonly fieldTypes: Map<string, RegisteredFieldType>;
 }
 
 export function createPluginRegistry(): MutablePluginRegistry {
   return {
     entryTypes: new Map(),
-    taxonomies: new Map(),
+    termTaxonomies: new Map(),
     entryMetaBoxes: new Map(),
     termMetaBoxes: new Map(),
     userMetaBoxes: new Map(),
@@ -301,6 +524,11 @@ export function createPluginRegistry(): MutablePluginRegistry {
     settingsGroups: new Map(),
     settingsPages: new Map(),
     rewriteRules: [],
+    rpcRouters: new Map(),
+    rawRoutes: [],
+    adminPages: new Map(),
+    blocks: new Map(),
+    fieldTypes: new Map(),
   };
 }
 
@@ -325,15 +553,15 @@ export function findEntryMetaField(
 }
 
 /**
- * Like `findEntryMetaField`, but for term meta. Scoped by taxonomy.
+ * Like `findEntryMetaField`, but for term meta. Scoped by termTaxonomy.
  */
 export function findTermMetaField(
   registry: PluginRegistry,
-  taxonomy: string,
+  termTaxonomy: string,
   key: string,
 ): MetaBoxField | undefined {
   for (const box of registry.termMetaBoxes.values()) {
-    if (!box.taxonomies.includes(taxonomy)) continue;
+    if (!box.termTaxonomies.includes(termTaxonomy)) continue;
     const field = box.fields.find((f) => f.key === key);
     if (field) return field;
   }
@@ -342,7 +570,7 @@ export function findTermMetaField(
 
 /**
  * Like `findEntryMetaField`, but for user meta. Users have a flat
- * keyspace (no entry-type / taxonomy analogue), so no scope argument —
+ * keyspace (no entry-type / termTaxonomy analogue), so no scope argument —
  * key uniqueness across all user meta boxes is enforced at manifest-
  * build time.
  */
@@ -386,9 +614,18 @@ export interface EntryTypeManifestEntry {
   };
   readonly description?: string;
   readonly supports?: readonly string[];
-  readonly taxonomies?: readonly string[];
+  readonly termTaxonomies?: readonly string[];
   readonly isHierarchical?: boolean;
+  /**
+   * Resolved visibility. `buildManifest` always emits these — consumers
+   * should read them via `manifestEntryVisibility(entry)` which applies
+   * the same cascade rules as `resolveEntryTypeVisibility` when they
+   * happen to be missing (lets admin test fixtures stay terse without
+   * the client ever branching on undefined).
+   */
   readonly isPublic?: boolean;
+  readonly showUI?: boolean;
+  readonly showInSidebar?: boolean;
   readonly hasArchive?: boolean | string;
   readonly capabilityType?: string;
   readonly priority?: number;
@@ -456,7 +693,7 @@ export interface EntryMetaBoxManifestEntry extends Omit<
 
 export interface TermMetaBoxManifestEntry extends MetaBoxBaseManifestEntry {
   readonly id: string;
-  readonly taxonomies: readonly string[];
+  readonly termTaxonomies: readonly string[];
 }
 
 export interface UserMetaBoxManifestEntry extends MetaBoxBaseManifestEntry {
@@ -464,20 +701,24 @@ export interface UserMetaBoxManifestEntry extends MetaBoxBaseManifestEntry {
 }
 
 /**
- * Shape serialised for taxonomies in the manifest. Strict allowlist
- * projection of `RegisteredTaxonomy` — drops `registeredBy` (server-only
+ * Shape serialised for termTaxonomies in the manifest. Strict allowlist
+ * projection of `RegisteredTermTaxonomy` — drops `registeredBy` (server-only
  * debug metadata) and server-only operational flags (`isInQuickEdit`,
  * `hasAdminColumn`, `rewrite`) that don't affect the admin UI today.
  * `entryTypes` is kept so future admin surfaces (term-picker on post
  * editor) can filter by post type without a second round-trip.
  */
-export interface TaxonomyManifestEntry {
+export interface TermTaxonomyManifestEntry {
   readonly name: string;
   readonly label: string;
   readonly labels?: { readonly singular?: string };
   readonly description?: string;
   readonly isHierarchical?: boolean;
   readonly entryTypes?: readonly string[];
+  /** Resolved visibility — see `EntryTypeManifestEntry`. */
+  readonly isPublic?: boolean;
+  readonly showUI?: boolean;
+  readonly showInSidebar?: boolean;
 }
 
 /**
@@ -503,15 +744,82 @@ export interface SettingsPageManifestEntry {
   readonly priority?: number;
 }
 
-export interface PlumixManifest {
-  readonly entryTypes: readonly EntryTypeManifestEntry[];
-  readonly taxonomies: readonly TaxonomyManifestEntry[];
-  readonly entryMetaBoxes: readonly EntryMetaBoxManifestEntry[];
-  readonly termMetaBoxes: readonly TermMetaBoxManifestEntry[];
-  readonly userMetaBoxes: readonly UserMetaBoxManifestEntry[];
-  readonly settingsGroups: readonly SettingsGroupManifestEntry[];
-  readonly settingsPages: readonly SettingsPageManifestEntry[];
+/**
+ * One row in the assembled admin sidebar tree. Sources contributing
+ * items: core (Dashboard, Users, Settings), entry types (auto-projected
+ * to the `content` group), term taxonomies (auto-projected to the
+ * `term-taxonomies` group), and plugin-registered admin pages with
+ * `nav` set.
+ *
+ * Exactly one of `icon` (plugin-supplied React component ref) or
+ * `coreIcon` (built-in lucide name) is set per item; admin picks a
+ * generic fallback when neither is provided.
+ *
+ * `component` is set only for plugin-rendered routes — the admin's
+ * `/p/$` catch-all looks up this ref to render the page. Items that
+ * point at core admin routes (`/`, `/users`, `/settings`,
+ * `/content/<slug>`, etc.) leave it undefined.
+ */
+export interface AdminNavItem {
+  readonly to: string;
+  readonly label: string;
+  readonly order?: number;
+  readonly capability?: string;
+  readonly icon?: PluginComponentRef;
+  readonly coreIcon?: CoreIconName;
+  readonly component?: PluginComponentRef;
+  readonly exact?: boolean;
 }
+
+export interface AdminNavGroup {
+  readonly id: string;
+  readonly label: string;
+  readonly priority?: number;
+  readonly icon?: PluginComponentRef;
+  readonly coreIcon?: CoreIconName;
+  readonly items: readonly AdminNavItem[];
+}
+
+export interface BlockManifestEntry {
+  readonly name: string;
+  readonly kind: "node" | "mark";
+  readonly schema: Readonly<Record<string, unknown>>;
+  readonly component?: PluginComponentRef;
+}
+
+export interface FieldTypeManifestEntry {
+  readonly type: string;
+  readonly component: PluginComponentRef;
+}
+
+/**
+ * Wire-shipped manifest payload. Every field is optional on the type
+ * so test fixtures can declare just the slice they exercise; the
+ * server's `buildManifest` always populates all of them and consumers
+ * coerce missing fields to `[]` at the read site.
+ */
+export interface PlumixManifest {
+  readonly entryTypes?: readonly EntryTypeManifestEntry[];
+  readonly termTaxonomies?: readonly TermTaxonomyManifestEntry[];
+  readonly entryMetaBoxes?: readonly EntryMetaBoxManifestEntry[];
+  readonly termMetaBoxes?: readonly TermMetaBoxManifestEntry[];
+  readonly userMetaBoxes?: readonly UserMetaBoxManifestEntry[];
+  readonly settingsGroups?: readonly SettingsGroupManifestEntry[];
+  readonly settingsPages?: readonly SettingsPageManifestEntry[];
+  readonly adminNav?: readonly AdminNavGroup[];
+  readonly blocks?: readonly BlockManifestEntry[];
+  readonly fieldTypes?: readonly FieldTypeManifestEntry[];
+}
+
+/**
+ * Strict manifest shape — every slice is populated. `buildManifest`
+ * returns this; tests reading from it don't need `?.` everywhere. The
+ * wider `PlumixManifest` (all-optional) is what flows over the wire
+ * and what test fixtures construct.
+ */
+export type BuiltManifest = {
+  readonly [K in keyof PlumixManifest]-?: NonNullable<PlumixManifest[K]>;
+};
 
 /** Script tag id that carries the JSON-encoded manifest in the admin HTML. */
 export const MANIFEST_SCRIPT_ID = "plumix-manifest";
@@ -519,12 +827,15 @@ export const MANIFEST_SCRIPT_ID = "plumix-manifest";
 export function emptyManifest(): PlumixManifest {
   return {
     entryTypes: [],
-    taxonomies: [],
+    termTaxonomies: [],
     entryMetaBoxes: [],
     termMetaBoxes: [],
     userMetaBoxes: [],
     settingsGroups: [],
     settingsPages: [],
+    adminNav: [],
+    blocks: [],
+    fieldTypes: [],
   };
 }
 
@@ -540,13 +851,13 @@ export function emptyManifest(): PlumixManifest {
  * admin slug — the admin router can't disambiguate `/entries/$slug` in that
  * case, and catching it at build time is cheaper than a 404 at runtime.
  */
-export function buildManifest(registry: PluginRegistry): PlumixManifest {
+export function buildManifest(registry: PluginRegistry): BuiltManifest {
   const entries = Array.from(registry.entryTypes.values())
     .map(toEntryTypeManifest)
     .sort(byPriorityThen((e) => e.name));
   assertUniqueAdminSlugs(entries);
-  const taxonomies = Array.from(registry.taxonomies.values()).map(
-    toTaxonomyEntry,
+  const termTaxonomies = Array.from(registry.termTaxonomies.values()).map(
+    toTermTaxonomyEntry,
   );
   const entryMetaBoxes = Array.from(registry.entryMetaBoxes.values())
     .map(toEntryMetaBoxEntry)
@@ -566,17 +877,21 @@ export function buildManifest(registry: PluginRegistry): PlumixManifest {
   );
   assertMetaBoxScopesExist(
     termMetaBoxes,
-    (box) => box.taxonomies,
-    new Set(taxonomies.map((t) => t.name)),
+    (box) => box.termTaxonomies,
+    new Set(termTaxonomies.map((t) => t.name)),
     "term meta box",
-    "taxonomy",
+    "termTaxonomy",
   );
   assertUniqueFieldKeysPerScope(
     entryMetaBoxes,
     (box) => box.entryTypes,
     "entry",
   );
-  assertUniqueFieldKeysPerScope(termMetaBoxes, (box) => box.taxonomies, "term");
+  assertUniqueFieldKeysPerScope(
+    termMetaBoxes,
+    (box) => box.termTaxonomies,
+    "term",
+  );
   // User meta is a flat keyspace — one synthetic "user" scope keeps
   // the shared helper honest without inventing a second code path.
   assertUniqueFieldKeysPerScope(userMetaBoxes, getUserScope, "user");
@@ -587,15 +902,174 @@ export function buildManifest(registry: PluginRegistry): PlumixManifest {
     .map(toSettingsPageEntry)
     .sort(byPriorityThen((p) => p.name));
   assertSettingsPageGroupsExist(settingsPages, registry.settingsGroups);
+  const adminNav = projectAdminNav(registry, entries, termTaxonomies);
+  const blocks = Array.from(registry.blocks.values())
+    .map(toBlockEntry)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const fieldTypes = Array.from(registry.fieldTypes.values())
+    .map(toFieldTypeEntry)
+    .sort((a, b) => a.type.localeCompare(b.type));
   return {
     entryTypes: entries,
-    taxonomies,
+    termTaxonomies,
     entryMetaBoxes,
     termMetaBoxes,
     userMetaBoxes,
     settingsGroups,
     settingsPages,
+    adminNav,
+    blocks,
+    fieldTypes,
   };
+}
+
+interface MutableAdminNavGroup {
+  id: string;
+  label: string;
+  priority?: number;
+  icon?: PluginComponentRef;
+  coreIcon?: CoreIconName;
+  items: AdminNavItem[];
+}
+
+// Built-in items core seeds into the projection. Each row is keyed by
+// the group id it lands in; capability gating is admin-side at render
+// time (the manifest projection ships every item, the sidebar drops
+// what the user can't see).
+const CORE_NAV_ITEMS: readonly { groupId: string; item: AdminNavItem }[] = [
+  {
+    groupId: "overview",
+    item: {
+      to: "/",
+      label: "Dashboard",
+      coreIcon: "dashboard",
+      order: 0,
+      exact: true,
+    },
+  },
+  {
+    groupId: "management",
+    item: {
+      to: "/users",
+      label: "Users",
+      coreIcon: "users",
+      order: 100,
+      capability: "user:list",
+    },
+  },
+  {
+    groupId: "management",
+    item: {
+      to: "/settings",
+      label: "Settings",
+      coreIcon: "settings",
+      order: 200,
+      capability: "settings:manage",
+    },
+  },
+];
+
+// Default priority for plugin-declared custom groups — sits between
+// `term-taxonomies` (200) and `management` (1000). Plugin authors who
+// need a different position pass `priority` in the inline group form
+// on `registerAdminPage`.
+const CUSTOM_NAV_GROUP_PRIORITY = 500;
+
+// Title-case a kebab/snake id when a plugin doesn't declare a label
+// inline. `appearance` → `Appearance`, `my-custom-group` → `My custom
+// group`. Plugins can override by passing the rich group form.
+function humanizeGroupId(id: string): string {
+  const spaced = id.replace(/[-_]+/g, " ").trim();
+  if (spaced.length === 0) return id;
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+function projectAdminNav(
+  registry: PluginRegistry,
+  entries: readonly EntryTypeManifestEntry[],
+  termTaxonomies: readonly TermTaxonomyManifestEntry[],
+): readonly AdminNavGroup[] {
+  const groups = new Map<string, MutableAdminNavGroup>();
+  for (const g of CORE_NAV_GROUPS) {
+    groups.set(g.id, {
+      id: g.id,
+      label: g.label,
+      priority: g.priority,
+      items: [],
+    });
+  }
+
+  for (const { groupId, item } of CORE_NAV_ITEMS) {
+    groups.get(groupId)?.items.push(item);
+  }
+
+  for (const entry of entries) {
+    if (entry.showInSidebar !== true) continue;
+    groups.get("content")?.items.push({
+      to: `/content/${entry.adminSlug}`,
+      label: entry.labels?.plural ?? entry.label,
+      order: entry.priority,
+      coreIcon: "content",
+      capability: `entry:${entry.capabilityType ?? entry.name}:edit_own`,
+    });
+  }
+
+  for (const tax of termTaxonomies) {
+    if (tax.showInSidebar !== true) continue;
+    groups.get("term-taxonomies")?.items.push({
+      to: `/taxonomies/${tax.name}`,
+      label: tax.label,
+      coreIcon: "tag",
+      capability: `term:${tax.name}:read`,
+    });
+  }
+
+  for (const page of registry.adminPages.values()) {
+    if (!page.nav) continue;
+    const groupRef = page.nav.group;
+    const groupId = typeof groupRef === "string" ? groupRef : groupRef.id;
+    let target = groups.get(groupId);
+    if (!target) {
+      // Custom group, first occurrence — derive metadata from the
+      // inline form when present, else humanize the id.
+      const meta = typeof groupRef === "object" ? groupRef : null;
+      target = {
+        id: groupId,
+        label: meta?.label ?? humanizeGroupId(groupId),
+        priority: meta?.priority ?? CUSTOM_NAV_GROUP_PRIORITY,
+        items: [],
+      };
+      groups.set(groupId, target);
+    }
+    target.items.push({
+      to: `/pages${page.path}`,
+      label: page.nav.label,
+      order: page.nav.order,
+      icon: page.nav.icon ? copyComponentRef(page.nav.icon) : undefined,
+      coreIcon: page.nav.icon ? undefined : "puzzle",
+      component: copyComponentRef(page.component),
+      capability: page.capability,
+    });
+  }
+
+  return Array.from(groups.values())
+    .map((g) => ({
+      ...g,
+      items: g.items
+        .slice()
+        .sort(
+          (a, b) =>
+            (a.order ?? Number.POSITIVE_INFINITY) -
+              (b.order ?? Number.POSITIVE_INFINITY) ||
+            a.label.localeCompare(b.label),
+        ),
+    }))
+    .filter((g) => g.items.length > 0)
+    .sort(
+      (a, b) =>
+        (a.priority ?? Number.POSITIVE_INFINITY) -
+          (b.priority ?? Number.POSITIVE_INFINITY) || a.id.localeCompare(b.id),
+    );
 }
 
 /**
@@ -652,7 +1126,7 @@ const getUserScope = (): readonly string[] => USER_SCOPE;
  * Two meta boxes on the same `(scope, field.key)` pair would silently
  * write to the same storage key — a plugin-author footgun. Fail loudly
  * at manifest-build time. `scope` is the entry type (for entry boxes)
- * or taxonomy (for term boxes); user boxes collapse to one synthetic
+ * or termTaxonomy (for term boxes); user boxes collapse to one synthetic
  * scope because the user keyspace is flat.
  */
 function assertUniqueFieldKeysPerScope<
@@ -686,7 +1160,7 @@ function assertUniqueFieldKeysPerScope<
 }
 
 // A meta box referencing an unregistered scope ("catagory" typo, a
-// taxonomy removed behind the plugin's back, etc.) is dead code — the
+// termTaxonomy removed behind the plugin's back, etc.) is dead code — the
 // box never renders and never writes. Fail at manifest build so the
 // plugin author sees it on boot, not at first admin click. Matches the
 // settings-page→group reference check.
@@ -801,9 +1275,10 @@ function slugify(input: string): string {
 // Explicit allowlist — only the destructured keys ship to the browser.
 // Adding a field to `EntryTypeOptions` / `RegisteredEntryType` does NOT
 // automatically leak it; it must be added here AND to `EntryTypeManifestEntry`
-// to surface in the admin. `registeredBy` and `rewrite` are intentionally
-// excluded: the first is debug metadata, the second is server-side URL
-// mapping.
+// to surface in the admin. `registeredBy`, `rewrite`, `capabilities`, and
+// the raw per-surface visibility inputs are intentionally excluded — the
+// resolved `isPublic` / `showUI` / `showInSidebar` triple is what the
+// admin consumes, and `capabilities` is server-side authorization metadata.
 function toEntryTypeManifest(pt: RegisteredEntryType): EntryTypeManifestEntry {
   const {
     name,
@@ -811,14 +1286,14 @@ function toEntryTypeManifest(pt: RegisteredEntryType): EntryTypeManifestEntry {
     labels,
     description,
     supports,
-    taxonomies,
+    termTaxonomies,
     isHierarchical,
-    isPublic,
     hasArchive,
     capabilityType,
     priority,
     menuIcon,
   } = pt;
+  const visibility = resolveEntryTypeVisibility(pt);
   return {
     name,
     adminSlug: deriveAdminSlug(name, labels?.plural),
@@ -826,9 +1301,11 @@ function toEntryTypeManifest(pt: RegisteredEntryType): EntryTypeManifestEntry {
     labels,
     description,
     supports,
-    taxonomies,
+    termTaxonomies,
     isHierarchical,
-    isPublic,
+    isPublic: visibility.isPublic,
+    showUI: visibility.showUI,
+    showInSidebar: visibility.showInSidebar,
     hasArchive,
     capabilityType,
     priority,
@@ -836,13 +1313,15 @@ function toEntryTypeManifest(pt: RegisteredEntryType): EntryTypeManifestEntry {
   };
 }
 
-// Allowlist for taxonomy entries — same rationale as `toEntryTypeManifest`.
-// `registeredBy` excluded; `isPublic` / `isInQuickEdit` / `hasAdminColumn`
-// / `rewrite` are server-/public-site-only and don't affect the admin
-// surface, so they're intentionally dropped from the wire contract until
-// a concrete admin need arises.
-function toTaxonomyEntry(tax: RegisteredTaxonomy): TaxonomyManifestEntry {
+// Allowlist for termTaxonomy entries — same rationale as `toEntryTypeManifest`.
+// `registeredBy`, `capabilities`, `isInQuickEdit`, `hasAdminColumn`, and
+// `rewrite` stay server-side. Visibility is projected via the resolver so
+// the admin sees the same resolved triple as for entry types.
+function toTermTaxonomyEntry(
+  tax: RegisteredTermTaxonomy,
+): TermTaxonomyManifestEntry {
   const { name, label, labels, description, isHierarchical, entryTypes } = tax;
+  const visibility = resolveTermTaxonomyVisibility(tax);
   return {
     name,
     label,
@@ -850,6 +1329,9 @@ function toTaxonomyEntry(tax: RegisteredTaxonomy): TaxonomyManifestEntry {
     description,
     isHierarchical,
     entryTypes,
+    isPublic: visibility.isPublic,
+    showUI: visibility.showUI,
+    showInSidebar: visibility.showInSidebar,
   };
 }
 
@@ -884,19 +1366,26 @@ function toEntryMetaBoxEntry(
   };
 }
 
-// Term meta boxes are always stacked top-to-bottom on the taxonomy
+// Term meta boxes are always stacked top-to-bottom on the termTaxonomy
 // edit form — no `location` hint applies.
 function toTermMetaBoxEntry(
   box: RegisteredTermMetaBox,
 ): TermMetaBoxManifestEntry {
-  const { id, label, description, priority, taxonomies, capability, fields } =
-    box;
+  const {
+    id,
+    label,
+    description,
+    priority,
+    termTaxonomies,
+    capability,
+    fields,
+  } = box;
   return {
     id,
     label,
     description,
     priority,
-    taxonomies,
+    termTaxonomies,
     capability,
     fields: fields.map(toMetaBoxFieldEntry),
   };
@@ -940,6 +1429,27 @@ function toSettingsPageEntry(
 ): SettingsPageManifestEntry {
   const { name, label, description, groups, priority } = page;
   return { name, label, description, groups, priority };
+}
+
+function copyComponentRef(ref: PluginComponentRef): PluginComponentRef {
+  return { package: ref.package, export: ref.export };
+}
+
+function toBlockEntry(block: RegisteredBlock): BlockManifestEntry {
+  const { name, kind, schema, component } = block;
+  return {
+    name,
+    kind,
+    schema,
+    component: component ? copyComponentRef(component) : undefined,
+  };
+}
+
+function toFieldTypeEntry(
+  fieldType: RegisteredFieldType,
+): FieldTypeManifestEntry {
+  const { type, component } = fieldType;
+  return { type, component: copyComponentRef(component) };
 }
 
 function toMetaBoxFieldEntry(field: MetaBoxField): MetaBoxFieldManifestEntry {

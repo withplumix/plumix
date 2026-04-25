@@ -12,85 +12,30 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar.js";
-import { hasCap } from "@/lib/caps.js";
-import {
-  visibleEntryTypes,
-  visibleSettingsPages,
-  visibleTaxonomies,
-} from "@/lib/manifest.js";
+import { visibleAdminNav } from "@/lib/manifest.js";
 import { Link } from "@tanstack/react-router";
-import { FileText, LayoutDashboard, Settings, Tag, Users } from "lucide-react";
+import {
+  FileText,
+  LayoutDashboard,
+  Puzzle,
+  Settings,
+  Tag,
+  Users,
+} from "lucide-react";
+
+import type { CoreIconName } from "@plumix/core/manifest";
 
 import type { UserIdentity } from "./user-menu.js";
 import { UserMenu } from "./user-menu.js";
 
-interface NavItem {
-  readonly to: string;
-  readonly label: string;
-  readonly icon: LucideIcon;
-  readonly exact?: boolean;
-}
-
-interface NavGroup {
-  readonly label: string;
-  readonly items: readonly NavItem[];
-}
-
-// `exact` controls TanStack Router's active-link matching; `/` must opt in
-// or it'd match every route.
-const OVERVIEW_GROUP: NavGroup = {
-  label: "Overview",
-  items: [
-    {
-      to: "/",
-      label: "Dashboard",
-      icon: LayoutDashboard,
-      exact: true,
-    },
-  ],
+const CORE_ICON: Record<CoreIconName, LucideIcon> = {
+  dashboard: LayoutDashboard,
+  content: FileText,
+  tag: Tag,
+  users: Users,
+  settings: Settings,
+  puzzle: Puzzle,
 };
-
-function buildContentGroup(capabilities: readonly string[]): NavGroup | null {
-  const items = visibleEntryTypes(capabilities).map<NavItem>((pt) => ({
-    to: `/content/${pt.adminSlug}`,
-    label: pt.labels?.plural ?? pt.label,
-    icon: FileText,
-  }));
-  if (items.length === 0) return null;
-  return { label: "Content", items };
-}
-
-// Core registers no taxonomies — a bare install hides the "Taxonomies"
-// group entirely. The blog plugin (Phase 12) is the first consumer;
-// other plugins bring their own (product categories, doc sections, …).
-function buildTaxonomyGroup(capabilities: readonly string[]): NavGroup | null {
-  const items = visibleTaxonomies(capabilities).map<NavItem>((tax) => ({
-    to: `/taxonomies/${tax.name}`,
-    label: tax.label,
-    icon: Tag,
-  }));
-  if (items.length === 0) return null;
-  return { label: "Taxonomies", items };
-}
-
-// `user:list` gates Users (admin / editor-level); Settings appears when
-// ANY settings group is visible to the caller (at minimum
-// `settings:manage`, but plugins may declare tighter per-group gates).
-// The group only hides entirely when the caller has no management
-// surfaces at all.
-function buildManagementGroup(
-  capabilities: readonly string[],
-): NavGroup | null {
-  const items: NavItem[] = [];
-  if (hasCap(capabilities, "user:list")) {
-    items.push({ to: "/users", label: "Users", icon: Users });
-  }
-  if (visibleSettingsPages(capabilities).length > 0) {
-    items.push({ to: "/settings", label: "Settings", icon: Settings });
-  }
-  if (items.length === 0) return null;
-  return { label: "Management", items };
-}
 
 export function AppSidebar({
   user,
@@ -99,15 +44,7 @@ export function AppSidebar({
   user: UserIdentity;
   capabilities: readonly string[];
 }): ReactNode {
-  const contentGroup = buildContentGroup(capabilities);
-  const taxonomyGroup = buildTaxonomyGroup(capabilities);
-  const managementGroup = buildManagementGroup(capabilities);
-  const groups = [
-    OVERVIEW_GROUP,
-    ...(contentGroup ? [contentGroup] : []),
-    ...(taxonomyGroup ? [taxonomyGroup] : []),
-    ...(managementGroup ? [managementGroup] : []),
-  ];
+  const groups = visibleAdminNav(capabilities);
   return (
     <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader>
@@ -134,24 +71,29 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         {groups.map((group) => (
-          <SidebarGroup key={group.label}>
+          <SidebarGroup key={group.id}>
             <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {group.items.map((item) => (
-                  <SidebarMenuItem key={item.to}>
-                    <SidebarMenuButton asChild tooltip={item.label}>
-                      <Link
-                        to={item.to}
-                        activeProps={{ "data-active": "true" }}
-                        activeOptions={{ exact: item.exact ?? false }}
-                      >
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {group.items.map((item) => {
+                  const Icon = item.coreIcon
+                    ? CORE_ICON[item.coreIcon]
+                    : Puzzle;
+                  return (
+                    <SidebarMenuItem key={item.to}>
+                      <SidebarMenuButton asChild tooltip={item.label}>
+                        <Link
+                          to={item.to}
+                          activeProps={{ "data-active": "true" }}
+                          activeOptions={{ exact: item.exact ?? false }}
+                        >
+                          <Icon />
+                          <span>{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

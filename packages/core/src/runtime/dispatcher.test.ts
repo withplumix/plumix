@@ -1,7 +1,9 @@
 import { describe, expect, test } from "vitest";
 
+import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness, plumixRequest } from "../test/dispatcher.js";
+import { matchPluginRawRoute } from "./dispatcher.js";
 
 describe("dispatcher — routing", () => {
   test("public / 404s when no plugin claims it", async () => {
@@ -321,5 +323,243 @@ describe("dispatcher — error boundary", () => {
     );
     const response = await h.dispatch(authed);
     expect(response.status).toBe(500);
+  });
+});
+
+describe("matchPluginRawRoute", () => {
+  const route = (
+    partial: Pick<RegisteredRawRoute, "pluginId" | "method" | "path">,
+  ): RegisteredRawRoute => ({
+    ...partial,
+    auth: "public",
+    handler: () => new Response("ok"),
+  });
+
+  test("exact path matches under /_plumix/<pluginId>/<path>", () => {
+    const routes = [
+      route({ pluginId: "media", method: "POST", path: "/upload" }),
+    ];
+    const match = matchPluginRawRoute(routes, "/_plumix/media/upload", "POST");
+    expect(match?.route.path).toBe("/upload");
+  });
+
+  test("trailing /* matches the bare prefix and any sub-path", () => {
+    const routes = [
+      route({ pluginId: "media", method: "GET", path: "/storage/*" }),
+    ];
+    expect(
+      matchPluginRawRoute(routes, "/_plumix/media/storage", "GET"),
+    ).not.toBeNull();
+    expect(
+      matchPluginRawRoute(routes, "/_plumix/media/storage/", "GET"),
+    ).not.toBeNull();
+    expect(
+      matchPluginRawRoute(routes, "/_plumix/media/storage/key-abc", "GET"),
+    ).not.toBeNull();
+    expect(
+      matchPluginRawRoute(routes, "/_plumix/media/storage/a/b/c.jpg", "GET"),
+    ).not.toBeNull();
+  });
+
+  test("trailing /* does not match sibling paths with the same stem", () => {
+    const routes = [
+      route({ pluginId: "media", method: "GET", path: "/storage/*" }),
+    ];
+    expect(
+      matchPluginRawRoute(routes, "/_plumix/media/storages", "GET"),
+    ).toBeNull();
+  });
+
+  test("method `*` matches every HTTP method", () => {
+    const routes = [route({ pluginId: "media", method: "*", path: "/proxy" })];
+    for (const m of ["GET", "POST", "DELETE", "PUT", "PATCH"]) {
+      expect(
+        matchPluginRawRoute(routes, "/_plumix/media/proxy", m),
+      ).not.toBeNull();
+    }
+  });
+
+  test("method match is case-insensitive on the request side", () => {
+    const routes = [
+      route({ pluginId: "media", method: "POST", path: "/upload" }),
+    ];
+    expect(
+      matchPluginRawRoute(routes, "/_plumix/media/upload", "post"),
+    ).not.toBeNull();
+  });
+
+  test("returns null for paths not rooted under /_plumix/<pluginId>", () => {
+    const routes = [
+      route({ pluginId: "media", method: "GET", path: "/upload" }),
+    ];
+    expect(
+      matchPluginRawRoute(routes, "/_plumix/rpc/entry/list", "GET"),
+    ).toBeNull();
+    expect(
+      matchPluginRawRoute(routes, "/_plumix/menus/upload", "GET"),
+    ).toBeNull();
+  });
+
+  test("registration order breaks ties across plugins", () => {
+    const first = route({ pluginId: "a", method: "GET", path: "/*" });
+    const second = route({ pluginId: "b", method: "GET", path: "/*" });
+    const match = matchPluginRawRoute(
+      [first, second],
+      "/_plumix/a/anything",
+      "GET",
+    );
+    expect(match?.route.pluginId).toBe("a");
+  });
+});
+
+describe("dispatcher — plugin raw routes", () => {
+  test("public GET route is dispatched without a session", async () => {
+    const plugin = definePlugin("media", (ctx) => {
+      ctx.registerRoute({
+        method: "GET",
+        path: "/ping",
+        auth: "public",
+        handler: () => new Response("pong", { status: 200 }),
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [plugin] });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/media/ping", { method: "GET" }),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("pong");
+  });
+
+  test("authenticated route rejects anonymous requests with 401", async () => {
+    const plugin = definePlugin("media", (ctx) => {
+      ctx.registerRoute({
+        method: "POST",
+        path: "/upload",
+        auth: "authenticated",
+        handler: () => new Response("ok"),
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [plugin] });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/media/upload", { method: "POST" }),
+    );
+    expect(response.status).toBe(401);
+  });
+
+  test("authenticated route dispatches when a valid session is present", async () => {
+    const plugin = definePlugin("media", (ctx) => {
+      ctx.registerRoute({
+        method: "POST",
+        path: "/upload",
+        auth: "authenticated",
+        handler: (_req, c) =>
+          new Response(String(c.user?.email ?? ""), { status: 200 }),
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [plugin] });
+    const user = await h.seedUser("author");
+    const authed = await h.authenticateRequest(
+      plumixRequest("/_plumix/media/upload", { method: "POST" }),
+      user.id,
+    );
+
+    const response = await h.dispatch(authed);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe(user.email);
+  });
+
+  test("capability gate returns 403 when the role is below the minimum", async () => {
+    const plugin = definePlugin("menus", (ctx) => {
+      ctx.registerCapability("menu:manage", "admin");
+      ctx.registerRoute({
+        method: "POST",
+        path: "/sync",
+        auth: { capability: "menu:manage" },
+        handler: () => new Response("ok"),
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [plugin] });
+    const user = await h.seedUser("editor");
+    const authed = await h.authenticateRequest(
+      plumixRequest("/_plumix/menus/sync", { method: "POST" }),
+      user.id,
+    );
+
+    const response = await h.dispatch(authed);
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as {
+      error: string;
+      capability: string;
+    };
+    expect(body.error).toBe("forbidden");
+    expect(body.capability).toBe("menu:manage");
+  });
+
+  test("capability gate dispatches when the role meets the minimum", async () => {
+    const plugin = definePlugin("menus", (ctx) => {
+      ctx.registerCapability("menu:manage", "admin");
+      ctx.registerRoute({
+        method: "POST",
+        path: "/sync",
+        auth: { capability: "menu:manage" },
+        handler: () => new Response("ok"),
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [plugin] });
+    const user = await h.seedUser("admin");
+    const authed = await h.authenticateRequest(
+      plumixRequest("/_plumix/menus/sync", { method: "POST" }),
+      user.id,
+    );
+
+    const response = await h.dispatch(authed);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("ok");
+  });
+
+  test("plugin raw routes inherit the dispatcher-level CSRF gate on write methods", async () => {
+    const plugin = definePlugin("media", (ctx) => {
+      ctx.registerRoute({
+        method: "POST",
+        path: "/upload",
+        auth: "public",
+        handler: () => new Response("ok"),
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [plugin] });
+
+    // Request without the custom CSRF header is rejected by the shared
+    // /_plumix/* gate before the route even runs.
+    const response = await h.dispatch(
+      new Request("https://cms.example/_plumix/media/upload", {
+        method: "POST",
+      }),
+    );
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as {
+      error: string;
+      reason: string;
+    };
+    expect(body.reason).toBe("csrf_header_missing");
+  });
+
+  test("an unknown /_plumix/<pluginId>/* path still returns unknown-plumix-route", async () => {
+    const plugin = definePlugin("media", (ctx) => {
+      ctx.registerRoute({
+        method: "GET",
+        path: "/known",
+        auth: "public",
+        handler: () => new Response("ok"),
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [plugin] });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/media/unknown", { method: "GET" }),
+    );
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-plumix-hint")).toBe("unknown-plumix-route");
   });
 });
