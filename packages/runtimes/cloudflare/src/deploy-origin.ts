@@ -35,11 +35,14 @@ export function cloudflareDeployOrigin(input: DeployOriginInput): DeployOrigin {
   if (process.env.WORKERS_CI !== "1") {
     return { rpId: "localhost", origin: localOrigin };
   }
-  const branch = process.env.WORKERS_CI_BRANCH;
-  if (!branch || branch.length === 0) {
-    return { rpId: "localhost", origin: localOrigin };
-  }
   const defaultBranch = input.defaultBranch ?? "main";
+  // WORKERS_CI_BRANCH is set on push-triggered builds; on the very
+  // first deploy or some redeploy paths it can be missing. Treating
+  // an empty value as "the default branch" keeps production CSRF
+  // working instead of falling back to localhost (which would fail
+  // every deployed request).
+  const raw = (process.env.WORKERS_CI_BRANCH ?? "").trim();
+  const branch = raw === "" ? defaultBranch : raw;
   const isProduction = branch === defaultBranch;
   const host = isProduction
     ? `${input.workerName}.${input.accountSubdomain}.workers.dev`
