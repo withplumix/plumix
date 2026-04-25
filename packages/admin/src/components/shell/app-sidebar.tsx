@@ -7,7 +7,6 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -15,7 +14,11 @@ import {
 import { visibleAdminNav } from "@/lib/manifest.js";
 import { Link } from "@tanstack/react-router";
 import {
+  Calendar,
   FileText,
+  Folder,
+  Image,
+  Layout,
   LayoutDashboard,
   Puzzle,
   Settings,
@@ -31,7 +34,12 @@ import { UserMenu } from "./user-menu.js";
 const CORE_ICON: Record<CoreIconName, LucideIcon> = {
   dashboard: LayoutDashboard,
   content: FileText,
+  "file-text": FileText,
+  layout: Layout,
+  image: Image,
+  calendar: Calendar,
   tag: Tag,
+  folder: Folder,
   users: Users,
   settings: Settings,
   puzzle: Puzzle,
@@ -47,28 +55,6 @@ export function AppSidebar({
   const groups = visibleAdminNav(capabilities);
   return (
     <Sidebar collapsible="icon" variant="inset">
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <Link to="/">
-                <div
-                  aria-hidden
-                  className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-md font-semibold"
-                >
-                  P
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Plumix</span>
-                  <span className="text-muted-foreground truncate text-xs">
-                    Admin
-                  </span>
-                </div>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
       <SidebarContent>
         {groups.map((group) => (
           <SidebarGroup key={group.id}>

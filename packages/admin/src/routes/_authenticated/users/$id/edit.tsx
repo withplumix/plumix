@@ -52,7 +52,7 @@ import {
   isUserRole,
   USER_ROLES,
   USERS_LIST_DEFAULT_SEARCH,
-} from "./-constants.js";
+} from "../-constants.js";
 
 // Long-form labels for the role dropdown — same rationale as the invite
 // form (the picker benefits from affordance copy, unlike the list view's
@@ -71,7 +71,7 @@ const profileFormSchema = v.object({
   meta: v.record(v.string(), v.unknown()),
 });
 
-export const Route = createFileRoute("/_authenticated/users/$id")({
+export const Route = createFileRoute("/_authenticated/users/$id/edit")({
   // Reject invalid ids as a router 404 before `beforeLoad` / `loader`
   // fire — no RPC, no stale-id flicker through the cache.
   params: {
@@ -280,10 +280,7 @@ function UserEditForm({
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      Name{" "}
-                      <span className="text-muted-foreground">(optional)</span>
-                    </FormLabel>
+                    <FormLabel>Name</FormLabel>
                     <FormControl>
                       <Input
                         type="text"

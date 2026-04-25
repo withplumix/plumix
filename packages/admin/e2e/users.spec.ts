@@ -6,8 +6,8 @@ import { AUTHED_ADMIN, mockRpc } from "./support/rpc-mock.js";
 
 // All /users admin coverage lives here:
 //   - /users list (role filter, search, access gates)
-//   - /users/new invite form (happy path, email-taken, cap gate)
-//   - /users/$id edit (admin-editing-other, self-via-profile, last-admin
+//   - /users/create invite form (happy path, email-taken, cap gate)
+//   - /users/$id/edit edit (admin-editing-other, self-via-profile, last-admin
 //     CONFLICT, delete-with-reassign)
 // Ordering follows the user journey: list → invite → edit.
 
@@ -88,6 +88,7 @@ test.describe("/users", () => {
       "/user/list": [],
     });
     await page.goto("users");
+    await page.getByTestId("users-role-filter").click();
     await page.getByTestId("users-role-filter-editor").click();
     await expect(page).toHaveURL(/role=editor/);
     await expect(page).toHaveURL(/page=1/);
@@ -126,7 +127,7 @@ test.describe("/users", () => {
   });
 });
 
-test.describe("/users/new", () => {
+test.describe("/users/create", () => {
   test("invite happy path: email + role → success screen with copy-able URL", async ({
     page,
   }) => {
@@ -163,7 +164,7 @@ test.describe("/users/new", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
 
-    await page.goto("users/new");
+    await page.goto("users/create");
     await expect(page.getByTestId("invite-heading")).toBeVisible();
 
     await page.getByTestId("invite-email-input").fill("newbie@example.test");
@@ -218,7 +219,7 @@ test.describe("/users/new", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
 
-    await page.goto("users/new");
+    await page.goto("users/create");
     await page.getByTestId("invite-email-input").fill("taken@example.test");
     await page.getByTestId("invite-submit").click();
 
@@ -246,13 +247,13 @@ test.describe("/users/new", () => {
       },
       "/user/list": [],
     });
-    await page.goto("users/new");
+    await page.goto("users/create");
     // Route's beforeLoad redirects to /users.
     await expect(page).toHaveURL(/\/users/);
     await expect(page.getByTestId("users-list-heading")).toBeVisible();
   });
 });
-test.describe("/users/$id", () => {
+test.describe("/users/$id/edit", () => {
   test("admin editing another user: form prefilled, role dropdown visible, Disable + Delete cards present", async ({
     page,
   }) => {
@@ -267,7 +268,7 @@ test.describe("/users/$id", () => {
       "/user/get": target,
       "/user/list": [target, user({ id: 1, email: "admin@example.test" })],
     });
-    await page.goto("users/42");
+    await page.goto("users/42/edit");
 
     await expect(page.getByTestId("user-edit-heading")).toContainText(
       "Edit eddie@example.test",
@@ -284,7 +285,7 @@ test.describe("/users/$id", () => {
     await expect(page.getByTestId("user-edit-delete-button")).toBeVisible();
   });
 
-  test("self-edit via /profile: redirects to /users/$id, role dropdown hidden, no Disable/Delete", async ({
+  test("self-edit via /profile: redirects to /users/$id/edit, role dropdown hidden, no Disable/Delete", async ({
     page,
   }) => {
     // AUTHED_ADMIN.user.id === 1 — /profile redirects to /users/1.
@@ -346,7 +347,7 @@ test.describe("/users/$id", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
 
-    await page.goto("users/42");
+    await page.goto("users/42/edit");
     await page.getByTestId("user-edit-name-input").fill("After");
     await page.getByTestId("user-edit-submit").click();
 
@@ -409,7 +410,7 @@ test.describe("/users/$id", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
 
-    await page.goto("users/1");
+    await page.goto("users/1/edit");
     await page.getByTestId("user-edit-disable-button").click();
     await expect(page.getByTestId("user-status-error")).toBeVisible();
     await expect(page.getByTestId("user-status-error")).toContainText(
@@ -468,7 +469,7 @@ test.describe("/users/$id", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
 
-    await page.goto("users/42");
+    await page.goto("users/42/edit");
     // Reveal confirmation → pick reassignee → confirm.
     await page.getByTestId("user-edit-delete-button").click();
     await page
@@ -574,13 +575,13 @@ test.describe("/users/$id", () => {
     });
 
     // Own row: works.
-    await page.goto("users/5");
+    await page.goto("users/5/edit");
     await expect(page.getByTestId("user-edit-heading")).toContainText(
       "Your profile",
     );
 
     // Someone else's row: redirected to dashboard.
-    await page.goto("users/99");
+    await page.goto("users/99/edit");
     await expect(page).toHaveURL(/_plumix\/admin\/?$/);
   });
 });

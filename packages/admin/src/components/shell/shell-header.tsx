@@ -9,22 +9,14 @@ import {
 } from "@/components/ui/breadcrumb.js";
 import { Separator } from "@/components/ui/separator.js";
 import { SidebarTrigger } from "@/components/ui/sidebar.js";
+import { pathToCrumbs } from "@/lib/breadcrumbs.js";
 import { useRouterState } from "@tanstack/react-router";
-
-// Path → breadcrumb trail. When a route needs its own breadcrumbs it can
-// register them here; routes absent from this map fall back to a single
-// "Admin" crumb. Will migrate to TanStack Router `staticData.breadcrumbs`
-// when we have enough routes to justify it.
-const BREADCRUMBS: Record<string, readonly string[]> = {
-  "/": ["Dashboard"],
-  "/entries": ["Content", "Posts"],
-};
 
 function useBreadcrumbs(): readonly string[] {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  return BREADCRUMBS[pathname] ?? ["Admin"];
+  return pathToCrumbs(pathname);
 }
 
 export function ShellHeader(): ReactNode {

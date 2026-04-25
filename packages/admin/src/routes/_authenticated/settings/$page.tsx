@@ -231,19 +231,21 @@ function SettingsGroupCard({
 
 function EmptyPagePlaceholder(): ReactNode {
   return (
-    <Empty className="border">
-      <EmptyHeader>
-        <EmptyTitle>No groups on this page</EmptyTitle>
-        <EmptyDescription>
-          This settings page doesn't reference any registered groups yet.
-          Plugins compose pages with{" "}
-          <code className="font-mono text-xs">
-            ctx.registerSettingsPage(name, {"{"} groups: [...] {"}"})
-          </code>
-          .
-        </EmptyDescription>
-      </EmptyHeader>
-    </Empty>
+    <Card>
+      <Empty>
+        <EmptyHeader>
+          <EmptyTitle>No groups on this page</EmptyTitle>
+          <EmptyDescription>
+            This settings page doesn't reference any registered groups yet.
+            Plugins compose pages with{" "}
+            <code className="font-mono text-xs">
+              ctx.registerSettingsPage(name, {"{"} groups: [...] {"}"})
+            </code>
+            .
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    </Card>
   );
 }
 

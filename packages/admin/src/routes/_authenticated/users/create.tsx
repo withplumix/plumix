@@ -67,7 +67,7 @@ const inviteFormSchema = v.object({
   role: v.picklist(USER_ROLES),
 });
 
-export const Route = createFileRoute("/_authenticated/users/new")({
+export const Route = createFileRoute("/_authenticated/users/create")({
   beforeLoad: ({ context }) => {
     // `user:create` is admin-only. Defense in depth — the sidebar button
     // is already gated on this cap but someone following a direct link
@@ -193,10 +193,7 @@ function InviteUserRoute(): ReactNode {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      Name{" "}
-                      <span className="text-muted-foreground">(optional)</span>
-                    </FormLabel>
+                    <FormLabel>Name</FormLabel>
                     <FormControl>
                       <Input
                         type="text"

@@ -76,15 +76,17 @@ function DashboardIndex(): ReactNode {
           })}
         </div>
       ) : (
-        <Empty data-testid="dashboard-empty-state" className="border">
-          <EmptyHeader>
-            <EmptyTitle>No content types yet</EmptyTitle>
-            <EmptyDescription>
-              Add a plugin that registers a post type (e.g.{" "}
-              <code>@plumix/plugin-blog</code>) to see it here.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <Card className="max-w-xl" data-testid="dashboard-empty-state">
+          <Empty>
+            <EmptyHeader>
+              <EmptyTitle>No content types yet</EmptyTitle>
+              <EmptyDescription>
+                Add a plugin that registers a post type (e.g.{" "}
+                <code>@plumix/plugin-blog</code>) to see it here.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </Card>
       )}
     </div>
   );

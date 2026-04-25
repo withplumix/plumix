@@ -49,8 +49,8 @@ const termFormSchema = v.object({
 });
 
 /**
- * Form component shared by `/taxonomies/$name/new` and
- * `/taxonomies/$name/$id` — the only differences between create and
+ * Form component shared by `/terms/$name/new` and
+ * `/terms/$name/$id` — the only differences between create and
  * edit are the mutation target + the default values, both injected by
  * the parent route. The `submitLabel` prop lets callers say "Create" vs
  * "Save changes" without the form knowing which mode it's in.
@@ -128,16 +128,13 @@ export function TermForm({
           name="slug"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>
-                Slug <span className="text-muted-foreground">(optional)</span>
-              </FormLabel>
+              <FormLabel>Slug</FormLabel>
               <FormControl>
                 <Input
                   type="text"
                   autoComplete="off"
                   disabled={isSubmitting}
                   data-testid="term-form-slug-input"
-                  placeholder="derived-from-name-if-blank"
                   {...field}
                 />
               </FormControl>
@@ -151,10 +148,7 @@ export function TermForm({
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>
-                Description{" "}
-                <span className="text-muted-foreground">(optional)</span>
-              </FormLabel>
+              <FormLabel>Description</FormLabel>
               <FormControl>
                 <textarea
                   {...field}
@@ -175,10 +169,7 @@ export function TermForm({
             name="parentId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>
-                  Parent{" "}
-                  <span className="text-muted-foreground">(optional)</span>
-                </FormLabel>
+                <FormLabel>Parent</FormLabel>
                 <FormControl>
                   <select
                     value={field.value == null ? "" : String(field.value)}

@@ -28,7 +28,7 @@ import { slugify } from "@plumix/core/slugify";
 import { TAXONOMY_LIST_DEFAULT_SEARCH } from "./-constants.js";
 import { mapTermError } from "./-errors.js";
 
-export const Route = createFileRoute("/_authenticated/taxonomies/$name/new")({
+export const Route = createFileRoute("/_authenticated/terms/$name/create")({
   beforeLoad: ({
     context,
     params,
@@ -43,7 +43,7 @@ export const Route = createFileRoute("/_authenticated/taxonomies/$name/new")({
     if (!hasCap(context.user.capabilities, `term:${taxonomy.name}:edit`)) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw redirect({
-        to: "/taxonomies/$name",
+        to: "/terms/$name",
         params: { name: params.name },
         search: TAXONOMY_LIST_DEFAULT_SEARCH,
       });
@@ -102,7 +102,7 @@ function NewTermRoute(): ReactNode {
         queryKey: orpc.term.list.key({ input: { taxonomy: taxonomy.name } }),
       });
       void navigate({
-        to: "/taxonomies/$name",
+        to: "/terms/$name",
         params: { name: taxonomy.name },
         search: TAXONOMY_LIST_DEFAULT_SEARCH,
       });
@@ -119,7 +119,7 @@ function NewTermRoute(): ReactNode {
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
       <Link
-        to="/taxonomies/$name"
+        to="/terms/$name"
         params={{ name: taxonomy.name }}
         search={TAXONOMY_LIST_DEFAULT_SEARCH}
         className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
@@ -176,7 +176,7 @@ function NewTermRoute(): ReactNode {
             }}
             onCancel={() => {
               void navigate({
-                to: "/taxonomies/$name",
+                to: "/terms/$name",
                 params: { name: taxonomy.name },
                 search: TAXONOMY_LIST_DEFAULT_SEARCH,
               });

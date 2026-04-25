@@ -84,16 +84,9 @@ export function TiptapEditor({
   }, [editor, disabled]);
 
   return (
-    <div
-      className={cn(
-        "bg-background rounded-md border",
-        disabled && "opacity-60",
-      )}
-    >
+    <div className={cn("bg-background", disabled && "opacity-60")}>
       <Toolbar editor={editor} disabled={disabled} />
-      <div className="border-t">
-        <EditorContent editor={editor} />
-      </div>
+      <EditorContent editor={editor} />
     </div>
   );
 }

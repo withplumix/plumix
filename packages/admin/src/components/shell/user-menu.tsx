@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar.js";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,12 +50,11 @@ export function UserMenu({ user }: { user: UserIdentity }): ReactNode {
           size="lg"
           className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
         >
-          <div
-            aria-hidden
-            className="bg-sidebar-accent text-sidebar-accent-foreground flex size-8 items-center justify-center rounded-md text-xs font-semibold"
-          >
-            {initials}
-          </div>
+          <Avatar className="size-8">
+            <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs font-semibold">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
           <div className="grid flex-1 text-left text-sm leading-tight">
             <span className="truncate font-medium">{displayName}</span>
             <span className="text-muted-foreground truncate text-xs">

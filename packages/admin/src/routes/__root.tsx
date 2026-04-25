@@ -1,11 +1,19 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { useEffect } from "react";
+import { pathToCrumbs } from "@/lib/breadcrumbs.js";
 import { sessionQueryOptions } from "@/lib/session.js";
-import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
+import {
+  createRootRouteWithContext,
+  Outlet,
+  useRouterState,
+} from "@tanstack/react-router";
 
 interface RouterAppContext {
   readonly queryClient: QueryClient;
 }
+
+const TITLE_BRAND = "Plumix Admin";
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   // Kick off the session probe as early as possible so child routes' beforeLoad
@@ -19,7 +27,19 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 });
 
 function RootLayout(): ReactNode {
+  useDocumentTitle();
   return <Outlet />;
+}
+
+function useDocumentTitle(): void {
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+  useEffect(() => {
+    const crumbs = pathToCrumbs(pathname);
+    const leaf = crumbs[crumbs.length - 1];
+    document.title = leaf ? `${leaf} · ${TITLE_BRAND}` : TITLE_BRAND;
+  }, [pathname]);
 }
 
 function NotFound(): ReactNode {

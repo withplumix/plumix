@@ -18,6 +18,13 @@ import {
   PaginationContent,
   PaginationItem,
 } from "@/components/ui/pagination.js";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select.js";
 import { hasCap } from "@/lib/caps.js";
 import { toDate } from "@/lib/dates.js";
 import { orpc } from "@/lib/orpc.js";
@@ -165,16 +172,12 @@ function UsersListRoute(): ReactNode {
           >
             Users
           </h1>
-          <p className="text-muted-foreground text-sm">
-            Manage people with access to this site. Invite new users via email —
-            they'll enrol their passkey from the link you share.
-          </p>
         </div>
         {canInvite ? (
           <Button asChild>
-            <Link to="/users/new" data-testid="users-list-invite-button">
+            <Link to="/users/create" data-testid="users-list-invite-button">
               <UserPlus />
-              Invite user
+              Add new
             </Link>
           </Button>
         ) : null}
@@ -182,16 +185,18 @@ function UsersListRoute(): ReactNode {
 
       <div className="flex flex-wrap items-center gap-2">
         <RoleFilter value={search.role} onChange={setRole} />
-        <DebouncedSearchInput
-          // Keyed on the URL value so external navigations (back button,
-          // links) remount the input with fresh local state instead of
-          // desynchronising from the URL.
-          key={search.q ?? ""}
-          initialValue={search.q ?? ""}
-          placeholder="Search by email…"
-          testId="users-list-search-input"
-          onCommit={setSearch}
-        />
+        <div className="ms-auto">
+          <DebouncedSearchInput
+            // Keyed on the URL value so external navigations (back button,
+            // links) remount the input with fresh local state instead of
+            // desynchronising from the URL.
+            key={search.q ?? ""}
+            initialValue={search.q ?? ""}
+            placeholder="Search by email…"
+            testId="users-list-search-input"
+            onCommit={setSearch}
+          />
+        </div>
       </div>
 
       {query.isError ? (
@@ -306,7 +311,7 @@ function buildColumns({
     },
     {
       accessorKey: "createdAt",
-      header: "Joined",
+      header: "Created",
       cell: ({ row }) => (
         <span className="text-muted-foreground text-sm">
           {dateFormatter.format(toDate(row.original.createdAt))}
@@ -324,22 +329,32 @@ function RoleFilter({
   onChange: (next: RoleFilter) => void;
 }): ReactNode {
   return (
-    <div role="group" aria-label="Filter by role" className="flex gap-1">
-      {ROLE_FILTER_OPTIONS.map((opt) => (
-        <Button
-          key={opt.value}
-          variant={value === opt.value ? "default" : "outline"}
-          size="sm"
-          onClick={() => {
-            onChange(opt.value);
-          }}
-          aria-pressed={value === opt.value}
-          data-testid={`users-role-filter-${opt.value}`}
-        >
-          {opt.label}
-        </Button>
-      ))}
-    </div>
+    <Select
+      value={value}
+      onValueChange={(next) => {
+        onChange(next as RoleFilter);
+      }}
+    >
+      <SelectTrigger
+        size="sm"
+        aria-label="Filter by role"
+        data-testid="users-role-filter"
+        className="w-[180px]"
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {ROLE_FILTER_OPTIONS.map((opt) => (
+          <SelectItem
+            key={opt.value}
+            value={opt.value}
+            data-testid={`users-role-filter-${opt.value}`}
+          >
+            {opt.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -355,7 +370,7 @@ function EmptyState({ canInvite }: { canInvite: boolean }): ReactNode {
       <EmptyContent>
         {canInvite ? (
           <Button asChild>
-            <Link to="/users/new">
+            <Link to="/users/create">
               <Plus />
               Invite user
             </Link>

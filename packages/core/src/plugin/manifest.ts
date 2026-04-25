@@ -57,6 +57,7 @@ export interface TermTaxonomyOptions {
     readonly isHierarchical?: boolean;
   };
   readonly capabilities?: TermTaxonomyCapabilityOverrides;
+  readonly menuIcon?: string;
 }
 
 export function resolveEntryTypeVisibility(options: EntryTypeOptions): {
@@ -389,10 +390,30 @@ export interface RegisteredAdminPage extends AdminPageOptions {
 export type CoreIconName =
   | "dashboard"
   | "content"
+  | "file-text"
+  | "layout"
+  | "image"
+  | "calendar"
   | "tag"
+  | "folder"
   | "users"
   | "settings"
   | "puzzle";
+
+// Subset of `CoreIconName` plugins may emit on `EntryTypeOptions.menuIcon`
+// or `TermTaxonomyOptions.menuIcon`. Names outside this set fall back to
+// a sensible default at projection time.
+const ENTRY_MENU_ICONS: ReadonlySet<CoreIconName> = new Set<CoreIconName>([
+  "content",
+  "file-text",
+  "layout",
+  "image",
+  "calendar",
+]);
+const TAXONOMY_MENU_ICONS: ReadonlySet<CoreIconName> = new Set<CoreIconName>([
+  "tag",
+  "folder",
+]);
 
 /**
  * Built-in nav groups core ships. Plugins target their items at these
@@ -405,7 +426,7 @@ export const CORE_NAV_GROUPS: readonly {
   readonly priority: number;
 }[] = [
   { id: "overview", label: "Overview", priority: 0 },
-  { id: "content", label: "Content", priority: 100 },
+  { id: "content", label: "Entries", priority: 100 },
   { id: "term-taxonomies", label: "Taxonomies", priority: 200 },
   { id: "management", label: "Management", priority: 1000 },
 ];
@@ -719,6 +740,7 @@ export interface TermTaxonomyManifestEntry {
   readonly isPublic?: boolean;
   readonly showUI?: boolean;
   readonly showInSidebar?: boolean;
+  readonly menuIcon?: string;
 }
 
 /**
@@ -1009,7 +1031,7 @@ function projectAdminNav(
       to: `/entries/${entry.adminSlug}`,
       label: entry.labels?.plural ?? entry.label,
       order: entry.priority,
-      coreIcon: "content",
+      coreIcon: resolveEntryMenuIcon(entry.menuIcon),
       capability: `entry:${entry.capabilityType ?? entry.name}:edit_own`,
     });
   }
@@ -1017,9 +1039,9 @@ function projectAdminNav(
   for (const tax of termTaxonomies) {
     if (tax.showInSidebar !== true) continue;
     groups.get("term-taxonomies")?.items.push({
-      to: `/taxonomies/${tax.name}`,
+      to: `/terms/${tax.name}`,
       label: tax.label,
-      coreIcon: "tag",
+      coreIcon: resolveTaxonomyMenuIcon(tax.menuIcon, tax.isHierarchical),
       capability: `term:${tax.name}:read`,
     });
   }
@@ -1320,7 +1342,15 @@ function toEntryTypeManifest(pt: RegisteredEntryType): EntryTypeManifestEntry {
 function toTermTaxonomyEntry(
   tax: RegisteredTermTaxonomy,
 ): TermTaxonomyManifestEntry {
-  const { name, label, labels, description, isHierarchical, entryTypes } = tax;
+  const {
+    name,
+    label,
+    labels,
+    description,
+    isHierarchical,
+    entryTypes,
+    menuIcon,
+  } = tax;
   const visibility = resolveTermTaxonomyVisibility(tax);
   return {
     name,
@@ -1332,7 +1362,31 @@ function toTermTaxonomyEntry(
     isPublic: visibility.isPublic,
     showUI: visibility.showUI,
     showInSidebar: visibility.showInSidebar,
+    menuIcon,
   };
+}
+
+function resolveEntryMenuIcon(menuIcon: string | undefined): CoreIconName {
+  if (
+    menuIcon !== undefined &&
+    ENTRY_MENU_ICONS.has(menuIcon as CoreIconName)
+  ) {
+    return menuIcon as CoreIconName;
+  }
+  return "content";
+}
+
+function resolveTaxonomyMenuIcon(
+  menuIcon: string | undefined,
+  isHierarchical: boolean | undefined,
+): CoreIconName {
+  if (
+    menuIcon !== undefined &&
+    TAXONOMY_MENU_ICONS.has(menuIcon as CoreIconName)
+  ) {
+    return menuIcon as CoreIconName;
+  }
+  return isHierarchical === true ? "folder" : "tag";
 }
 
 // Allowlist for entry meta box entries — same rationale as

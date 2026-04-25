@@ -66,10 +66,7 @@ export function MetaBoxField({
                     data-testid={inputTestId}
                   />
                 </FormControl>
-                <FormLabel>
-                  {field.label}
-                  <RequiredMarker show={field.required} />
-                </FormLabel>
+                <FormLabel>{field.label}</FormLabel>
               </div>
               {field.description ? (
                 <FormDescription data-testid={`${testIdPrefix}-description`}>
@@ -83,10 +80,7 @@ export function MetaBoxField({
 
         return (
           <FormItem className={className} data-testid={testIdPrefix}>
-            <FormLabel>
-              {field.label}
-              <RequiredMarker show={field.required} />
-            </FormLabel>
+            <FormLabel>{field.label}</FormLabel>
             <FormControl>
               {renderNativeInput({
                 field,
@@ -105,15 +99,6 @@ export function MetaBoxField({
         );
       }}
     />
-  );
-}
-
-function RequiredMarker({ show }: { show: boolean | undefined }): ReactNode {
-  if (!show) return null;
-  return (
-    <span aria-hidden className="text-destructive ml-0.5">
-      *
-    </span>
   );
 }
 
