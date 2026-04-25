@@ -45,13 +45,13 @@ function entriesCrumbs(parts: readonly string[]): readonly string[] {
 
 function taxonomiesCrumbs(parts: readonly string[]): readonly string[] {
   const name = parts[1];
-  if (name === undefined) return ["Taxonomies"];
+  if (name === undefined) return ["Terms"];
   const tax = findTermTaxonomyByName(name);
   const label = tax?.label ?? name;
   const singular = (tax?.labels?.singular ?? label).toLowerCase();
-  if (parts[2] === "create") return ["Taxonomies", label, `Create ${singular}`];
-  if (parts[3] === "edit") return ["Taxonomies", label, `Edit ${singular}`];
-  return ["Taxonomies", label];
+  if (parts[2] === "create") return ["Terms", label, `Create ${singular}`];
+  if (parts[3] === "edit") return ["Terms", label, `Edit ${singular}`];
+  return ["Terms", label];
 }
 
 function usersCrumbs(parts: readonly string[]): readonly string[] {

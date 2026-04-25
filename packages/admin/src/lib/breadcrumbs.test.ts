@@ -72,17 +72,14 @@ describe("pathToCrumbs", () => {
   });
 
   test("terms list + create + edit use the taxonomy label and singular", () => {
-    expect(pathToCrumbs("/terms/category")).toEqual([
-      "Taxonomies",
-      "Categories",
-    ]);
+    expect(pathToCrumbs("/terms/category")).toEqual(["Terms", "Categories"]);
     expect(pathToCrumbs("/terms/category/create")).toEqual([
-      "Taxonomies",
+      "Terms",
       "Categories",
       "Create category",
     ]);
     expect(pathToCrumbs("/terms/category/7/edit")).toEqual([
-      "Taxonomies",
+      "Terms",
       "Categories",
       "Edit category",
     ]);

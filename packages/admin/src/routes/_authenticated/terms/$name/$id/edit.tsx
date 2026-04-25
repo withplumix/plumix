@@ -6,6 +6,16 @@ import {
   descendantIds,
   parentPickerOptions,
 } from "@/components/taxonomy/tree.js";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Button } from "@/components/ui/button.js";
 import {
@@ -319,8 +329,8 @@ function DeleteCard({
     },
   });
 
-  if (!confirming) {
-    return (
+  return (
+    <>
       <Card className="border-destructive/50">
         <CardHeader>
           <CardTitle className="text-destructive">Delete term</CardTitle>
@@ -342,53 +352,48 @@ function DeleteCard({
           </Button>
         </CardContent>
       </Card>
-    );
-  }
 
-  return (
-    <Card className="border-destructive">
-      <CardHeader>
-        <CardTitle className="text-destructive">
-          Confirm delete: {termName}
-        </CardTitle>
-        <CardDescription>
-          Entry assignments to this term are removed. If the term has children,
-          they become root-level automatically.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        {serverError ? (
-          <Alert variant="destructive" data-testid="term-delete-error">
-            <AlertDescription>{serverError}</AlertDescription>
-          </Alert>
-        ) : null}
-
-        <div className="flex justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              setConfirming(false);
-              setServerError(null);
-            }}
-            disabled={deleteTerm.isPending}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={() => {
-              deleteTerm.mutate();
-            }}
-            disabled={deleteTerm.isPending}
-            data-testid="term-delete-confirm-button"
-          >
-            {deleteTerm.isPending ? "Deleting…" : "Delete forever"}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+      <AlertDialog
+        open={confirming}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirming(false);
+            setServerError(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {termName}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Entry assignments to this term are removed. If the term has
+              children, they become root-level automatically.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {serverError ? (
+            <Alert variant="destructive" data-testid="term-delete-error">
+              <AlertDescription>{serverError}</AlertDescription>
+            </Alert>
+          ) : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteTerm.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="term-delete-confirm-button"
+              disabled={deleteTerm.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => {
+                e.preventDefault();
+                deleteTerm.mutate();
+              }}
+            >
+              {deleteTerm.isPending ? "Deleting…" : "Delete forever"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

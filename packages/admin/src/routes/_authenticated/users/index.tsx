@@ -311,6 +311,7 @@ function buildColumns({
     },
     {
       accessorKey: "createdAt",
+      meta: { className: "text-right" },
       header: "Created",
       cell: ({ row }) => (
         <span className="text-muted-foreground text-sm">

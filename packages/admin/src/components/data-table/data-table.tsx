@@ -16,11 +16,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table.js";
+import { cn } from "@/lib/utils.js";
 import {
   flexRender,
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+
+// Per-column alignment + className passthrough. Column defs opt in via
+// `meta: { className: "text-right" }`; both the header cell and every
+// body cell pick up the class so alignment stays in sync.
+declare module "@tanstack/react-table" {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface ColumnMeta<TData extends RowData, TValue> {
+    className?: string;
+  }
+}
+type RowData = unknown;
 
 export function DataTable<TData>({
   columns,
@@ -57,7 +69,11 @@ export function DataTable<TData>({
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
-                <TableHead key={header.id} colSpan={header.colSpan}>
+                <TableHead
+                  key={header.id}
+                  colSpan={header.colSpan}
+                  className={cn(header.column.columnDef.meta?.className)}
+                >
                   {header.isPlaceholder
                     ? null
                     : flexRender(
@@ -80,7 +96,10 @@ export function DataTable<TData>({
                 className="group/row"
               >
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
+                  <TableCell
+                    key={cell.id}
+                    className={cn(cell.column.columnDef.meta?.className)}
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
