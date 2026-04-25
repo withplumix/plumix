@@ -45,63 +45,80 @@ afterEach(() => {
 
 describe("pathToCrumbs", () => {
   test("dashboard", () => {
-    expect(pathToCrumbs("/")).toEqual(["Dashboard"]);
-    expect(pathToCrumbs("")).toEqual(["Dashboard"]);
+    expect(pathToCrumbs("/")).toEqual([{ label: "Dashboard" }]);
+    expect(pathToCrumbs("")).toEqual([{ label: "Dashboard" }]);
   });
 
-  test("entries list resolves the plural label from manifest", () => {
-    expect(pathToCrumbs("/entries/posts")).toEqual(["Entries", "Posts"]);
-    expect(pathToCrumbs("/entries/pages")).toEqual(["Entries", "Pages"]);
-  });
-
-  test("entries create + edit append the action segment", () => {
-    expect(pathToCrumbs("/entries/posts/create")).toEqual([
-      "Entries",
-      "Posts",
-      "Create",
+  test("entries list resolves the plural label from manifest (no link on leaf)", () => {
+    expect(pathToCrumbs("/entries/posts")).toEqual([
+      { label: "Entries" },
+      { label: "Posts" },
     ]);
+  });
+
+  test("entries create: list crumb is a link, action crumb is leaf", () => {
+    expect(pathToCrumbs("/entries/posts/create")).toEqual([
+      { label: "Entries" },
+      { label: "Posts", to: "/entries/posts" },
+      { label: "Create" },
+    ]);
+  });
+
+  test("entries edit: list crumb is a link, edit crumb is leaf", () => {
     expect(pathToCrumbs("/entries/posts/42/edit")).toEqual([
-      "Entries",
-      "Posts",
-      "Edit",
+      { label: "Entries" },
+      { label: "Posts", to: "/entries/posts" },
+      { label: "Edit" },
     ]);
   });
 
   test("entries with unknown slug falls back to the raw segment", () => {
-    expect(pathToCrumbs("/entries/widgets")).toEqual(["Entries", "widgets"]);
+    expect(pathToCrumbs("/entries/widgets")).toEqual([
+      { label: "Entries" },
+      { label: "widgets" },
+    ]);
   });
 
-  test("terms list + create + edit use the taxonomy label and singular", () => {
-    expect(pathToCrumbs("/terms/category")).toEqual(["Terms", "Categories"]);
+  test("terms create: taxonomy crumb is a link", () => {
     expect(pathToCrumbs("/terms/category/create")).toEqual([
-      "Terms",
-      "Categories",
-      "Create category",
-    ]);
-    expect(pathToCrumbs("/terms/category/7/edit")).toEqual([
-      "Terms",
-      "Categories",
-      "Edit category",
+      { label: "Terms" },
+      { label: "Categories", to: "/terms/category" },
+      { label: "Create category" },
     ]);
   });
 
-  test("users list + create + edit", () => {
-    expect(pathToCrumbs("/users")).toEqual(["Users"]);
-    expect(pathToCrumbs("/users/create")).toEqual(["Users", "Add new"]);
-    expect(pathToCrumbs("/users/3/edit")).toEqual(["Users", "Edit user"]);
+  test("terms edit: taxonomy crumb is a link, action uses singular label", () => {
+    expect(pathToCrumbs("/terms/category/7/edit")).toEqual([
+      { label: "Terms" },
+      { label: "Categories", to: "/terms/category" },
+      { label: "Edit category" },
+    ]);
+  });
+
+  test("users edit: list crumb is a link", () => {
+    expect(pathToCrumbs("/users/3/edit")).toEqual([
+      { label: "Users", to: "/users" },
+      { label: "Edit user" },
+    ]);
   });
 
   test("settings list + page", () => {
-    expect(pathToCrumbs("/settings")).toEqual(["Settings"]);
-    expect(pathToCrumbs("/settings/general")).toEqual(["Settings", "General"]);
+    expect(pathToCrumbs("/settings")).toEqual([{ label: "Settings" }]);
+    expect(pathToCrumbs("/settings/general")).toEqual([
+      { label: "Settings", to: "/settings" },
+      { label: "General" },
+    ]);
   });
 
   test("profile + plugin pages", () => {
-    expect(pathToCrumbs("/profile")).toEqual(["Profile"]);
-    expect(pathToCrumbs("/pages/menus")).toEqual(["Pages", "menus"]);
+    expect(pathToCrumbs("/profile")).toEqual([{ label: "Profile" }]);
+    expect(pathToCrumbs("/pages/menus")).toEqual([
+      { label: "Pages" },
+      { label: "menus" },
+    ]);
   });
 
   test("unknown top-level segment falls back to Admin", () => {
-    expect(pathToCrumbs("/whatever")).toEqual(["Admin"]);
+    expect(pathToCrumbs("/whatever")).toEqual([{ label: "Admin" }]);
   });
 });

@@ -38,7 +38,7 @@ function useDocumentTitle(): void {
   useEffect(() => {
     const crumbs = pathToCrumbs(pathname);
     const leaf = crumbs[crumbs.length - 1];
-    document.title = leaf ? `${leaf} · ${TITLE_BRAND}` : TITLE_BRAND;
+    document.title = leaf ? `${leaf.label} · ${TITLE_BRAND}` : TITLE_BRAND;
   }, [pathname]);
 }
 
