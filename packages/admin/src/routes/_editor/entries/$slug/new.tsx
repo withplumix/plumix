@@ -6,7 +6,7 @@ import { hasCap } from "@/lib/caps.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import { entryMetaBoxesForType, findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   createFileRoute,
   notFound,
@@ -54,6 +54,7 @@ function NewPostRoute(): ReactNode {
   const { user, entryType } = Route.useRouteContext();
   const params = Route.useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
   const createPost = useMutation({
@@ -71,6 +72,12 @@ function NewPostRoute(): ReactNode {
       setServerError(null);
     },
     onSuccess: async (created) => {
+      // Drop the cached `entry.list` for this type so navigating back
+      // to the list view (now or later in the session) reflects the
+      // newly created row instead of the stale pre-create payload.
+      await queryClient.invalidateQueries({
+        queryKey: orpc.entry.list.key({ input: { type: entryType.name } }),
+      });
       await navigate({
         to: "/entries/$slug/$id",
         params: { slug: params.slug, id: created.id },

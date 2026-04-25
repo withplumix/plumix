@@ -12,7 +12,7 @@ import {
 import { hasCap } from "@/lib/caps.js";
 import { findTermTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFileRoute,
   Link,
@@ -55,6 +55,7 @@ export const Route = createFileRoute("/_authenticated/taxonomies/$name/new")({
 
 function NewTermRoute(): ReactNode {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { taxonomy } = Route.useRouteContext();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -94,7 +95,13 @@ function NewTermRoute(): ReactNode {
     onMutate: () => {
       setServerError(null);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Drop the cached `term.list` for this taxonomy so the list view
+      // shows the freshly created term on landing — without this the
+      // post-create navigation lands on a stale empty result.
+      await queryClient.invalidateQueries({
+        queryKey: orpc.term.list.key({ input: { taxonomy: taxonomy.name } }),
+      });
       void navigate({
         to: "/taxonomies/$name",
         params: { name: taxonomy.name },

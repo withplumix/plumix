@@ -7,12 +7,12 @@ import { buildTermTree, flattenTree } from "@/components/taxonomy/tree.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Button } from "@/components/ui/button.js";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card.js";
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty.js";
 import {
   Pagination,
   PaginationContent,
@@ -319,33 +319,28 @@ function EmptyState({
   taxonomyName: string;
 }): ReactNode {
   return (
-    <div
-      data-testid="taxonomy-list-empty-state"
-      className="flex flex-col items-center gap-2 py-12 text-center"
-    >
-      <Card className="max-w-sm border-dashed">
-        <CardHeader>
-          <CardTitle>No {singularLower} yet</CardTitle>
-          <CardDescription>
-            Create your first {singularLower} to see it here.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {canCreate ? (
-            <Button asChild className="w-full">
-              <Link to="/taxonomies/$name/new" params={{ name: taxonomyName }}>
-                <Plus />
-                New {singularLower}
-              </Link>
-            </Button>
-          ) : (
-            <Button disabled className="w-full">
+    <Empty data-testid="taxonomy-list-empty-state" className="border">
+      <EmptyHeader>
+        <EmptyTitle>No {singularLower} yet</EmptyTitle>
+        <EmptyDescription>
+          Create your first {singularLower} to see it here.
+        </EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        {canCreate ? (
+          <Button asChild>
+            <Link to="/taxonomies/$name/new" params={{ name: taxonomyName }}>
               <Plus />
               New {singularLower}
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+            </Link>
+          </Button>
+        ) : (
+          <Button disabled>
+            <Plus />
+            New {singularLower}
+          </Button>
+        )}
+      </EmptyContent>
+    </Empty>
   );
 }

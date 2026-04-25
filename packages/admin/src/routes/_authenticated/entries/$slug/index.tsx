@@ -7,12 +7,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Badge } from "@/components/ui/badge.js";
 import { Button } from "@/components/ui/button.js";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card.js";
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty.js";
 import {
   Pagination,
   PaginationContent,
@@ -548,24 +548,19 @@ function EmptyState({
   pluralLower: string;
 }): ReactNode {
   return (
-    <div
-      data-testid="content-list-empty-state"
-      className="flex flex-col items-center gap-2 py-12 text-center"
-    >
-      <Card className="max-w-sm border-dashed">
-        <CardHeader>
-          <CardTitle>No {pluralLower} yet</CardTitle>
-          <CardDescription>
-            Create your first {singularLower} to see it here.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button disabled className="w-full">
-            <Plus />
-            New {singularLower}
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
+    <Empty data-testid="content-list-empty-state" className="border">
+      <EmptyHeader>
+        <EmptyTitle>No {pluralLower} yet</EmptyTitle>
+        <EmptyDescription>
+          Create your first {singularLower} to see it here.
+        </EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <Button disabled>
+          <Plus />
+          New {singularLower}
+        </Button>
+      </EmptyContent>
+    </Empty>
   );
 }

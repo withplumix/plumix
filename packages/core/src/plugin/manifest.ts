@@ -10,7 +10,7 @@ export interface EntryTypeOptions {
   readonly label: string;
   /**
    * Human-readable label variants. `plural` also drives the admin URL slug
-   * (`/content/<slugified-plural>`) unless overridden; omit it and the slug
+   * (`/entries/<slugified-plural>`) unless overridden; omit it and the slug
    * falls back to `${name}s`, which is acceptable for English-named types
    * but surfaces an "anglos" for `name: "angle"` etc. — plugins with
    * irregular plurals should set `labels.plural` explicitly.
@@ -758,7 +758,7 @@ export interface SettingsPageManifestEntry {
  * `component` is set only for plugin-rendered routes — the admin's
  * `/p/$` catch-all looks up this ref to render the page. Items that
  * point at core admin routes (`/`, `/users`, `/settings`,
- * `/content/<slug>`, etc.) leave it undefined.
+ * `/entries/<slug>`, etc.) leave it undefined.
  */
 export interface AdminNavItem {
   readonly to: string;
@@ -1006,7 +1006,7 @@ function projectAdminNav(
   for (const entry of entries) {
     if (entry.showInSidebar !== true) continue;
     groups.get("content")?.items.push({
-      to: `/content/${entry.adminSlug}`,
+      to: `/entries/${entry.adminSlug}`,
       label: entry.labels?.plural ?? entry.label,
       order: entry.priority,
       coreIcon: "content",
@@ -1234,7 +1234,7 @@ export class DuplicateAdminSlugError extends Error {
  * to `${name}s` which is English-biased but matches the common case.
  * Non-alphanumerics collapse to single dashes; leading/trailing dashes
  * are trimmed. Empty results throw — an empty slug would shadow
- * `/content/` itself in TanStack Router.
+ * `/entries/` itself in TanStack Router.
  */
 export function deriveAdminSlug(name: string, plural?: string): string {
   const source = plural ?? `${name}s`;

@@ -7,6 +7,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.js";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import { visibleEntryTypes } from "@/lib/manifest.js";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -70,18 +76,15 @@ function DashboardIndex(): ReactNode {
           })}
         </div>
       ) : (
-        <Card
-          className="max-w-xl border-dashed"
-          data-testid="dashboard-empty-state"
-        >
-          <CardHeader>
-            <CardTitle>No content types yet</CardTitle>
-            <CardDescription>
+        <Empty data-testid="dashboard-empty-state" className="border">
+          <EmptyHeader>
+            <EmptyTitle>No content types yet</EmptyTitle>
+            <EmptyDescription>
               Add a plugin that registers a post type (e.g.{" "}
               <code>@plumix/plugin-blog</code>) to see it here.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       )}
     </div>
   );
