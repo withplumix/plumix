@@ -381,6 +381,8 @@ function ContentListRoute(): ReactNode {
             <EmptyState
               singularLower={singularLower}
               pluralLower={pluralLower}
+              canCreate={canCreate}
+              entryTypeSlug={entryType.adminSlug}
             />
           }
         />
@@ -543,9 +545,13 @@ function StatusFilter({
 function EmptyState({
   singularLower,
   pluralLower,
+  canCreate,
+  entryTypeSlug,
 }: {
   singularLower: string;
   pluralLower: string;
+  canCreate: boolean;
+  entryTypeSlug: string;
 }): ReactNode {
   return (
     <Empty data-testid="content-list-empty-state" className="border">
@@ -556,10 +562,19 @@ function EmptyState({
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <Button disabled>
-          <Plus />
-          New {singularLower}
-        </Button>
+        {canCreate ? (
+          <Button asChild>
+            <Link to="/entries/$slug/new" params={{ slug: entryTypeSlug }}>
+              <Plus />
+              New {singularLower}
+            </Link>
+          </Button>
+        ) : (
+          <Button disabled>
+            <Plus />
+            New {singularLower}
+          </Button>
+        )}
       </EmptyContent>
     </Empty>
   );

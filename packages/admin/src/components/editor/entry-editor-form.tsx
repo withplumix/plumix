@@ -155,15 +155,23 @@ export function PostEditorForm({
     form.setValue("slug", slugify(titleValue));
   }, [form, slugLocked, titleValue]);
 
-  // TanStack Router blocker: prompt before navigation (sidebar click,
-  // back button, etc.) if the form is dirty and not currently saving.
-  // `isSubmitting` guard avoids the prompt firing on the redirect that
-  // follows a successful save.
-  useBlocker({
+  // Block in-app navigation while dirty so the user gets a chance to
+  // confirm. `withResolver: true` is load-bearing: with `false`, a
+  // dirty form would silently swallow back-button / link clicks.
+  // `isSubmitting` guard avoids prompting on the post-save redirect.
+  const blocker = useBlocker({
     shouldBlockFn: () => !isSubmitting && isDirty,
-    withResolver: false,
+    withResolver: true,
     disabled: isSubmitting,
   });
+  useEffect(() => {
+    if (blocker.status !== "blocked") return;
+    if (window.confirm("Discard unsaved changes?")) {
+      blocker.proceed();
+    } else {
+      blocker.reset();
+    }
+  }, [blocker]);
 
   const handleSubmit = form.handleSubmit((value) => {
     onSubmit(value);
@@ -265,7 +273,7 @@ export function PostEditorForm({
             collapsible="offcanvas"
             data-testid="meta-boxes-sidebar"
           >
-            <SidebarHeader className="border-b px-4 py-3 text-sm font-semibold">
+            <SidebarHeader className="flex h-14 shrink-0 flex-row items-center border-b px-4 text-sm font-semibold">
               Document
             </SidebarHeader>
             <SidebarContent>
