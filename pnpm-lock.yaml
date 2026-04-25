@@ -90,6 +90,34 @@ importers:
         specifier: ^2.9.6
         version: 2.9.6
 
+  examples/blog:
+    dependencies:
+      '@plumix/plugin-blog':
+        specifier: workspace:*
+        version: link:../../packages/plugins/blog
+      '@plumix/plugin-pages':
+        specifier: workspace:*
+        version: link:../../packages/plugins/pages
+      '@plumix/runtime-cloudflare':
+        specifier: workspace:*
+        version: link:../../packages/runtimes/cloudflare
+      plumix:
+        specifier: workspace:*
+        version: link:../../packages/plumix
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: 'catalog:'
+        version: 4.20260421.1
+      '@plumix/typescript-config':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.12.2
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+
   examples/minimal:
     dependencies:
       '@plumix/runtime-cloudflare':
@@ -397,6 +425,12 @@ importers:
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../../../tooling/typescript
+      '@plumix/vitest-config':
+        specifier: workspace:*
+        version: link:../../../tooling/vitest
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.5(vitest@4.1.5)
       eslint:
         specifier: 'catalog:'
         version: 10.2.1(jiti@2.6.1)
@@ -409,6 +443,9 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.5(@types/node@25.6.0)(@vitest/coverage-v8@4.1.5)(jsdom@29.0.2)(vite@8.0.9(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/plugins/pages:
     dependencies:
@@ -428,6 +465,12 @@ importers:
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../../../tooling/typescript
+      '@plumix/vitest-config':
+        specifier: workspace:*
+        version: link:../../../tooling/vitest
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.5(vitest@4.1.5)
       eslint:
         specifier: 'catalog:'
         version: 10.2.1(jiti@2.6.1)
@@ -440,6 +483,9 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.5(@types/node@25.6.0)(@vitest/coverage-v8@4.1.5)(jsdom@29.0.2)(vite@8.0.9(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/plumix:
     dependencies:

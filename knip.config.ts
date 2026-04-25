@@ -12,15 +12,17 @@ const config: KnipConfig = {
     "tooling/typescript": {
       entry: ["*.json"],
     },
+    // plumix.config.ts is the consumer's entry — knip can't infer it
+    // from package.json's exports because examples don't publish.
+    "examples/blog": {
+      entry: ["plumix.config.ts"],
+    },
+    "examples/minimal": {
+      entry: ["plumix.config.ts"],
+    },
     // @plumix/core is a dependency but has no real imports yet (empty skeleton).
     // Remove these once packages have actual code importing from core.
     "packages/blocks": {
-      ignoreDependencies: ["@plumix/core"],
-    },
-    "packages/plugins/blog": {
-      ignoreDependencies: ["@plumix/core"],
-    },
-    "packages/plugins/pages": {
       ignoreDependencies: ["@plumix/core"],
     },
     // - drizzle-kit is invoked by consumers as a CLI hint, not imported.
