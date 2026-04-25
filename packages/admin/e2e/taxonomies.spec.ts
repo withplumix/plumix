@@ -20,7 +20,7 @@ function term(overrides: Partial<Term> & { id: number; name: string }): Term {
   };
 }
 
-test.describe("/taxonomies/$name (hierarchical)", () => {
+test.describe("/terms/$name (hierarchical)", () => {
   test.beforeEach(async ({ page }) => {
     await mockManifest(page, MANIFEST_WITH_TAXONOMIES);
   });
@@ -46,7 +46,7 @@ test.describe("/taxonomies/$name (hierarchical)", () => {
       "/term/list": [fruit, apple, granny],
     });
 
-    await page.goto("taxonomies/category");
+    await page.goto("terms/category");
     await expect(page.getByTestId("taxonomy-list-heading")).toHaveText(
       "Categories",
     );
@@ -70,13 +70,13 @@ test.describe("/taxonomies/$name (hierarchical)", () => {
       "/auth/session": AUTHED_ADMIN,
       "/term/list": [],
     });
-    await page.goto("taxonomies/category");
+    await page.goto("terms/category");
     await expect(page.getByTestId("taxonomy-list-empty-state")).toBeVisible();
   });
 
   test("unregistered taxonomy name → not-found page", async ({ page }) => {
     await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
-    await page.goto("taxonomies/unregistered");
+    await page.goto("terms/unregistered");
     // TanStack Router renders the admin's generic not-found state.
     await expect(page.getByTestId("not-found-page")).toBeVisible();
   });
@@ -97,14 +97,14 @@ test.describe("/taxonomies/$name (hierarchical)", () => {
         needsBootstrap: false,
       },
     });
-    await page.goto("taxonomies/category");
+    await page.goto("terms/category");
     // beforeLoad throws notFound() since the user can't read this
     // taxonomy — the generic 404 surface handles it.
     await expect(page.getByTestId("not-found-page")).toBeVisible();
   });
 });
 
-test.describe("/taxonomies/$name/new", () => {
+test.describe("/terms/$name/create", () => {
   test.beforeEach(async ({ page }) => {
     await mockManifest(page, MANIFEST_WITH_TAXONOMIES);
   });
@@ -151,7 +151,7 @@ test.describe("/taxonomies/$name/new", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
 
-    await page.goto("taxonomies/category/new");
+    await page.goto("terms/category/create");
     await expect(page.getByTestId("term-new-heading")).toContainText(
       "New category",
     );
@@ -166,7 +166,7 @@ test.describe("/taxonomies/$name/new", () => {
       "Vegetables",
     );
     // Redirected back to list on success.
-    await expect(page).toHaveURL(/\/taxonomies\/category\?/);
+    await expect(page).toHaveURL(/\/terms\/category\?/);
   });
 
   test("flat taxonomy (tag): parent picker is hidden", async ({ page }) => {
@@ -174,7 +174,7 @@ test.describe("/taxonomies/$name/new", () => {
       "/auth/session": AUTHED_ADMIN,
       "/term/list": [],
     });
-    await page.goto("taxonomies/tag/new");
+    await page.goto("terms/tag/create");
     await expect(page.getByTestId("term-new-heading")).toContainText("New tag");
     // Parent picker is hidden for flat taxonomies.
     await expect(page.getByTestId("term-form-parent-select")).toHaveCount(0);
@@ -216,7 +216,7 @@ test.describe("/taxonomies/$name/new", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
 
-    await page.goto("taxonomies/category/new");
+    await page.goto("terms/category/create");
     await page.getByTestId("term-form-name-input").fill("Dup");
     await page.getByTestId("term-form-submit").click();
     await expect(page.getByTestId("term-form-server-error")).toBeVisible();
@@ -226,7 +226,7 @@ test.describe("/taxonomies/$name/new", () => {
   });
 });
 
-test.describe("/taxonomies/$name/$id", () => {
+test.describe("/terms/$name/$id/edit", () => {
   test.beforeEach(async ({ page }) => {
     await mockManifest(page, MANIFEST_WITH_TAXONOMIES);
   });
@@ -255,7 +255,7 @@ test.describe("/taxonomies/$name/$id", () => {
       "/term/get": apple,
       "/term/list": [fruit, apple, granny],
     });
-    await page.goto("taxonomies/category/2");
+    await page.goto("terms/category/2/edit");
     await expect(page.getByTestId("term-edit-heading")).toContainText(
       "Edit category",
     );
@@ -309,13 +309,13 @@ test.describe("/taxonomies/$name/$id", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
 
-    await page.goto("taxonomies/category/42");
+    await page.goto("terms/category/42/edit");
     await page.getByTestId("term-edit-delete-button").click();
     await page.getByTestId("term-delete-confirm-button").click();
 
     await expect
       .poll(() => (deleteInputs.at(-1) as { id?: number } | undefined)?.id)
       .toBe(42);
-    await expect(page).toHaveURL(/\/taxonomies\/category\?/);
+    await expect(page).toHaveURL(/\/terms\/category\?/);
   });
 });

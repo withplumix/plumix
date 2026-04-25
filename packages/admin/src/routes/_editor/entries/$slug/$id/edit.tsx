@@ -22,7 +22,7 @@ import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import type { Entry } from "@plumix/core/schema";
 import { idPathParam } from "@plumix/core/validation";
 
-export const Route = createFileRoute("/_editor/entries/$slug/$id")({
+export const Route = createFileRoute("/_editor/entries/$slug/$id/edit")({
   // Reject invalid ids as a router 404 before `beforeLoad` / `loader`
   // fire — no RPC, no stale-id flicker through the cache.
   params: {

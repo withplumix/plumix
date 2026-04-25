@@ -1,8 +1,19 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
-import { useCallback, useMemo } from "react";
+import { Fragment, useCallback, useMemo, useState } from "react";
 import { DataTable } from "@/components/data-table/data-table.js";
 import { DebouncedSearchInput } from "@/components/form/search-input.js";
+import { buildTermTree, flattenTree } from "@/components/taxonomy/tree.js";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Badge } from "@/components/ui/badge.js";
 import { Button } from "@/components/ui/button.js";
@@ -20,9 +31,10 @@ import {
 } from "@/components/ui/pagination.js";
 import { hasCap } from "@/lib/caps.js";
 import { toDate } from "@/lib/dates.js";
-import { findEntryTypeBySlug } from "@/lib/manifest.js";
+import { findEntryTypeBySlug, findTermTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
-import { useQuery } from "@tanstack/react-query";
+import { cn } from "@/lib/utils.js";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFileRoute,
   Link,
@@ -40,7 +52,7 @@ import {
 import * as v from "valibot";
 
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
-import type { Entry, EntryStatus } from "@plumix/core/schema";
+import type { Entry, EntryStatus, Term } from "@plumix/core/schema";
 
 const PAGE_SIZE = 20;
 
@@ -76,7 +88,10 @@ type Order = (typeof ORDER_VALUES)[number];
 const AUTHOR_VALUES = ["all", "mine"] as const;
 type AuthorFilter = (typeof AUTHOR_VALUES)[number];
 
-const searchSchema = v.object({
+// `looseObject` keeps unknown keys verbatim so per-taxonomy filters
+// land on the URL as `?category=foo&tag=bar` without requiring the
+// schema to enumerate every taxonomy a plugin might register.
+const searchSchema = v.looseObject({
   page: v.optional(
     v.fallback(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
     1,
@@ -134,11 +149,17 @@ function buildColumns({
   activeOrder,
   onSort,
   adminSlug,
+  canDelete,
+  onTrash,
+  trashingId,
 }: {
   activeOrderBy: OrderBy;
   activeOrder: Order;
   onSort: (column: OrderBy, defaultDirection: Order) => void;
   adminSlug: string;
+  canDelete: boolean;
+  onTrash: (id: number) => void;
+  trashingId: number | null;
 }): ColumnDef<Entry>[] {
   return [
     {
@@ -154,21 +175,13 @@ function buildColumns({
         />
       ),
       cell: ({ row }) => (
-        <Link
-          to="/entries/$slug/$id"
-          params={{ slug: adminSlug, id: row.original.id }}
-          data-testid={`content-list-row-${String(row.original.id)}`}
-          className="hover:text-primary flex flex-col transition-colors"
-        >
-          <span className="font-medium">
-            {row.original.title || (
-              <span className="text-muted-foreground italic">(no title)</span>
-            )}
-          </span>
-          <span className="text-muted-foreground text-xs">
-            {row.original.slug}
-          </span>
-        </Link>
+        <TitleCell
+          entry={row.original}
+          adminSlug={adminSlug}
+          canDelete={canDelete}
+          onTrash={onTrash}
+          isTrashing={trashingId === row.original.id}
+        />
       ),
     },
     {
@@ -226,6 +239,21 @@ function ContentListRoute(): ReactNode {
   const { user, entryType } = Route.useRouteContext();
   const navigate = useNavigate({ from: Route.fullPath });
 
+  const taxonomyNames = entryType.termTaxonomies ?? EMPTY_TAXONOMY_NAMES;
+  // Memoised so `entry.list`'s queryOptions input has a stable
+  // identity across renders — without this the queryOptions object
+  // is re-allocated each tick even when search hasn't changed.
+  const termFilters = useMemo(() => {
+    const out: Record<string, string[]> = {};
+    for (const name of taxonomyNames) {
+      const raw = (search as Record<string, unknown>)[name];
+      if (typeof raw === "string" && raw.length > 0) {
+        out[name] = [raw];
+      }
+    }
+    return out;
+  }, [search, taxonomyNames]);
+
   const query = useQuery(
     orpc.entry.list.queryOptions({
       input: {
@@ -237,6 +265,9 @@ function ContentListRoute(): ReactNode {
         ...(search.status !== "all" ? { status: search.status } : {}),
         ...(search.q ? { search: search.q } : {}),
         ...(search.author === "mine" ? { authorId: user.id } : {}),
+        ...(Object.keys(termFilters).length > 0
+          ? { termTaxonomies: termFilters }
+          : {}),
       },
     }),
   );
@@ -265,6 +296,25 @@ function ContentListRoute(): ReactNode {
   const setAuthor = useCallback(
     (author: AuthorFilter): void => {
       void navigate({ search: (prev) => ({ ...prev, author, page: 1 }) });
+    },
+    [navigate],
+  );
+  const setTermFilter = useCallback(
+    (taxonomy: string, slug: string | undefined): void => {
+      void navigate({
+        search: (prev) => {
+          const next: Record<string, unknown> = {
+            ...(prev as Record<string, unknown>),
+            page: 1,
+          };
+          if (slug !== undefined && slug.length > 0) {
+            next[taxonomy] = slug;
+          } else {
+            delete next[taxonomy];
+          }
+          return next as typeof prev;
+        },
+      });
     },
     [navigate],
   );
@@ -307,6 +357,32 @@ function ContentListRoute(): ReactNode {
   // shouldn't surface the button at all.
   const createCapability = `entry:${entryType.capabilityType ?? entryType.name}:create`;
   const canCreate = hasCap(user.capabilities, createCapability);
+  const deleteCapability = `entry:${entryType.capabilityType ?? entryType.name}:delete`;
+  const canDelete = hasCap(user.capabilities, deleteCapability);
+
+  const queryClient = useQueryClient();
+  const [pendingTrashId, setPendingTrashId] = useState<number | null>(null);
+  const trash = useMutation({
+    mutationFn: (id: number) => orpc.entry.trash.call({ id }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: orpc.entry.list.key({ input: { type: entryType.name } }),
+      });
+    },
+    // Close the dialog regardless of outcome — keeping it open after a
+    // server error left users stuck with no error surface and a still-
+    // clickable Confirm button.
+    onSettled: () => {
+      setPendingTrashId(null);
+    },
+  });
+  const onTrash = useCallback((id: number): void => {
+    setPendingTrashId(id);
+  }, []);
+  const trashingId =
+    trash.isPending && typeof trash.variables === "number"
+      ? trash.variables
+      : null;
 
   const columns = useMemo(
     () =>
@@ -315,8 +391,19 @@ function ContentListRoute(): ReactNode {
         activeOrder: search.order,
         onSort: setSort,
         adminSlug: entryType.adminSlug,
+        canDelete,
+        onTrash,
+        trashingId,
       }),
-    [search.orderBy, search.order, setSort, entryType.adminSlug],
+    [
+      search.orderBy,
+      search.order,
+      setSort,
+      entryType.adminSlug,
+      canDelete,
+      onTrash,
+      trashingId,
+    ],
   );
 
   return (
@@ -329,15 +416,11 @@ function ContentListRoute(): ReactNode {
           >
             {pluralLabel}
           </h1>
-          <p className="text-muted-foreground text-sm">
-            Manage {pluralLower}. "All" shows drafts, scheduled, and published
-            items; trashed items live in their own view.
-          </p>
         </div>
         {canCreate ? (
           <Button asChild>
             <Link
-              to="/entries/$slug/new"
+              to="/entries/$slug/create"
               params={{ slug: entryType.adminSlug }}
               data-testid="content-list-new-button"
             >
@@ -348,19 +431,32 @@ function ContentListRoute(): ReactNode {
         ) : null}
       </div>
 
+      <StatusViews value={search.status} onChange={setStatus} />
+
       <div className="flex flex-wrap items-center gap-2">
-        <StatusFilter value={search.status} onChange={setStatus} />
-        <AuthorFilter value={search.author} onChange={setAuthor} />
-        <DebouncedSearchInput
-          // Keyed on the URL value so external navigations (back button,
-          // links) remount the input with fresh local state instead of
-          // desynchronising from the URL.
-          key={search.q ?? ""}
-          initialValue={search.q ?? ""}
-          placeholder={`Search ${pluralLower}…`}
-          testId="content-list-search-input"
-          onCommit={setSearch}
-        />
+        <AuthorSelect value={search.author} onChange={setAuthor} />
+        {taxonomyNames.map((name) => (
+          <TaxonomyFilter
+            key={name}
+            taxonomyName={name}
+            value={termFilters[name]?.[0]}
+            onChange={(slug) => {
+              setTermFilter(name, slug);
+            }}
+          />
+        ))}
+        <div className="ms-auto">
+          <DebouncedSearchInput
+            // Keyed on the URL value so external navigations (back button,
+            // links) remount the input with fresh local state instead of
+            // desynchronising from the URL.
+            key={search.q ?? ""}
+            initialValue={search.q ?? ""}
+            placeholder={`Search ${pluralLower}…`}
+            testId="content-list-search-input"
+            onCommit={setSearch}
+          />
+        </div>
       </div>
 
       {query.isError ? (
@@ -421,6 +517,37 @@ function ContentListRoute(): ReactNode {
           </PaginationItem>
         </PaginationContent>
       </Pagination>
+
+      <AlertDialog
+        open={pendingTrashId !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingTrashId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Move {singularLower} to trash?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You can restore it from the Trash view later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={trash.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="content-list-trash-confirm"
+              disabled={trash.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (pendingTrashId !== null) trash.mutate(pendingTrashId);
+              }}
+            >
+              {trash.isPending ? "Moving…" : "Move to trash"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -486,35 +613,77 @@ function SortableHeader({
   );
 }
 
-function AuthorFilter({
-  value,
-  onChange,
+// WP-style title cell: title (clickable), slug, then a row-action
+// strip below. Actions reserve vertical space always (`invisible`
+// rather than `hidden`) so hover doesn't reflow the row.
+function TitleCell({
+  entry,
+  adminSlug,
+  canDelete,
+  onTrash,
+  isTrashing,
 }: {
-  value: AuthorFilter;
-  onChange: (next: AuthorFilter) => void;
+  entry: Entry;
+  adminSlug: string;
+  canDelete: boolean;
+  onTrash: (id: number) => void;
+  isTrashing: boolean;
 }): ReactNode {
+  const showTrashAction = canDelete && entry.status !== "trash";
   return (
-    <div role="group" aria-label="Filter by author" className="flex gap-1">
-      {AUTHOR_VALUES.map((opt) => (
-        <Button
-          key={opt}
-          variant={value === opt ? "default" : "outline"}
-          size="sm"
-          onClick={() => {
-            onChange(opt);
-          }}
-          aria-pressed={value === opt}
-          data-testid={`author-filter-${opt}`}
-          className="capitalize"
+    <div className="flex flex-col gap-0.5">
+      <Link
+        to="/entries/$slug/$id/edit"
+        params={{ slug: adminSlug, id: entry.id }}
+        data-testid={`content-list-row-${String(entry.id)}`}
+        className="hover:text-primary font-medium transition-colors"
+      >
+        {entry.title || (
+          <span className="text-muted-foreground italic">(no title)</span>
+        )}
+      </Link>
+      <span className="text-muted-foreground text-xs">{entry.slug}</span>
+      <div
+        className={cn(
+          "flex h-4 items-center gap-2 text-xs transition-opacity",
+          "invisible group-hover/row:visible focus-within:visible",
+        )}
+        data-testid={`content-list-row-actions-${String(entry.id)}`}
+      >
+        <Link
+          to="/entries/$slug/$id/edit"
+          params={{ slug: adminSlug, id: entry.id }}
+          className="text-muted-foreground hover:text-foreground"
         >
-          {opt === "all" ? "All authors" : "Mine"}
-        </Button>
-      ))}
+          Edit
+        </Link>
+        {showTrashAction ? (
+          <>
+            <span aria-hidden className="text-muted-foreground/50">
+              |
+            </span>
+            <button
+              type="button"
+              disabled={isTrashing}
+              onClick={() => {
+                onTrash(entry.id);
+              }}
+              className="text-muted-foreground hover:text-destructive disabled:opacity-50"
+              data-testid={`content-list-row-trash-${String(entry.id)}`}
+            >
+              {isTrashing ? "Trashing…" : "Trash"}
+            </button>
+          </>
+        ) : null}
+      </div>
     </div>
   );
 }
 
-function StatusFilter({
+// WP-style status views: inline text-link strip with `|` separators.
+// Active view gets bold + foreground colour; siblings sit in muted
+// colour and reveal on hover.
+function StatusViews({
   value,
   onChange,
 }: {
@@ -522,21 +691,121 @@ function StatusFilter({
   onChange: (next: StatusFilter) => void;
 }): ReactNode {
   return (
-    <div role="group" aria-label="Filter by status" className="flex gap-1">
-      {STATUS_FILTER_OPTIONS.map((opt) => (
-        <Button
-          key={opt.value}
-          variant={value === opt.value ? "default" : "outline"}
-          size="sm"
-          onClick={() => {
-            onChange(opt.value);
-          }}
-          aria-pressed={value === opt.value}
-        >
-          {opt.label}
-        </Button>
+    <div
+      role="group"
+      aria-label="Filter by status"
+      className="flex flex-wrap items-center gap-2 text-sm"
+    >
+      {STATUS_FILTER_OPTIONS.map((opt, idx) => (
+        <Fragment key={opt.value}>
+          {idx > 0 ? (
+            <span aria-hidden className="text-muted-foreground/50">
+              |
+            </span>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => {
+              onChange(opt.value);
+            }}
+            aria-pressed={value === opt.value}
+            data-testid={`status-view-${opt.value}`}
+            className={cn(
+              "transition-colors",
+              value === opt.value
+                ? "text-foreground font-semibold"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {opt.label}
+          </button>
+        </Fragment>
       ))}
     </div>
+  );
+}
+
+const SELECT_CLASS =
+  "border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-2 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50";
+
+// Stable empty array reference — react-query returns a fresh `[]`
+// fallback on every render when `data` is undefined, which breaks
+// useMemo identity in `TaxonomyFilter`.
+const EMPTY_TERMS: readonly Term[] = [];
+
+// Stable fallback for `entryType.termTaxonomies ?? ...` so the array
+// identity stays put across renders (otherwise `useMemo([..., names])`
+// invalidates every tick when termTaxonomies is undefined).
+const EMPTY_TAXONOMY_NAMES: readonly string[] = [];
+
+function AuthorSelect({
+  value,
+  onChange,
+}: {
+  value: AuthorFilter;
+  onChange: (next: AuthorFilter) => void;
+}): ReactNode {
+  return (
+    <select
+      aria-label="Filter by author"
+      data-testid="author-filter"
+      className={SELECT_CLASS}
+      value={value}
+      onChange={(e) => {
+        onChange(e.target.value as AuthorFilter);
+      }}
+    >
+      <option value="all">All authors</option>
+      <option value="mine">Mine</option>
+    </select>
+  );
+}
+
+function TaxonomyFilter({
+  taxonomyName,
+  value,
+  onChange,
+}: {
+  taxonomyName: string;
+  value: string | undefined;
+  onChange: (slug: string | undefined) => void;
+}): ReactNode {
+  const taxonomy = findTermTaxonomyByName(taxonomyName);
+  const termsQuery = useQuery(
+    orpc.term.list.queryOptions({
+      input: { taxonomy: taxonomyName, limit: 200 },
+    }),
+  );
+  const isHierarchical = taxonomy?.isHierarchical === true;
+  const items = useMemo(() => {
+    const terms: readonly Term[] = termsQuery.data ?? EMPTY_TERMS;
+    if (!isHierarchical) {
+      return terms
+        .map((term) => ({ term, depth: 0 }))
+        .sort((a, b) => a.term.name.localeCompare(b.term.name));
+    }
+    return flattenTree(buildTermTree(terms));
+  }, [termsQuery.data, isHierarchical]);
+
+  const pluralLower = (taxonomy?.label ?? taxonomyName).toLowerCase();
+  return (
+    <select
+      aria-label={`Filter by ${pluralLower}`}
+      data-testid={`taxonomy-filter-${taxonomyName}`}
+      className={SELECT_CLASS}
+      value={value ?? ""}
+      onChange={(e) => {
+        const next = e.target.value;
+        onChange(next.length === 0 ? undefined : next);
+      }}
+    >
+      <option value="">All {pluralLower}</option>
+      {items.map(({ term, depth }) => (
+        <option key={term.id} value={term.slug}>
+          {depth === 0 ? term.name : `${"— ".repeat(depth)}${term.name}`}
+        </option>
+      ))}
+    </select>
   );
 }
 

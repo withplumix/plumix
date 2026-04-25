@@ -44,23 +44,25 @@ function SettingsIndexRoute(): ReactNode {
         <h1 className="text-2xl font-semibold" data-testid="settings-heading">
           Settings
         </h1>
-        <Empty data-testid="settings-empty-state" className="border">
-          <EmptyHeader>
-            <EmptyTitle>No settings registered yet</EmptyTitle>
-            <EmptyDescription>
-              Core ships no settings by design — plugins (or your own
-              plumix.config) declare pages + groups via{" "}
-              <code className="font-mono text-xs">
-                ctx.registerSettingsPage
-              </code>{" "}
-              and{" "}
-              <code className="font-mono text-xs">
-                ctx.registerSettingsGroup
-              </code>
-              . Registered pages appear here with one card per page.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <Card data-testid="settings-empty-state">
+          <Empty>
+            <EmptyHeader>
+              <EmptyTitle>No settings registered yet</EmptyTitle>
+              <EmptyDescription>
+                Core ships no settings by design — plugins (or your own
+                plumix.config) declare pages + groups via{" "}
+                <code className="font-mono text-xs">
+                  ctx.registerSettingsPage
+                </code>{" "}
+                and{" "}
+                <code className="font-mono text-xs">
+                  ctx.registerSettingsGroup
+                </code>
+                . Registered pages appear here with one card per page.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </Card>
       </div>
     );
   }

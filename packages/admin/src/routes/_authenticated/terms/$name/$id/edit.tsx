@@ -40,10 +40,10 @@ import type { TermTaxonomyManifestEntry } from "@plumix/core/manifest";
 import { seedFromMetaBoxes } from "@plumix/core/manifest";
 import { idPathParam } from "@plumix/core/validation";
 
-import { TAXONOMY_LIST_DEFAULT_SEARCH } from "./-constants.js";
-import { mapTermError } from "./-errors.js";
+import { TAXONOMY_LIST_DEFAULT_SEARCH } from "../-constants.js";
+import { mapTermError } from "../-errors.js";
 
-export const Route = createFileRoute("/_authenticated/taxonomies/$name/$id")({
+export const Route = createFileRoute("/_authenticated/terms/$name/$id/edit")({
   // Reject invalid ids as a router 404 before `beforeLoad` / `loader`
   // fire — no RPC, no stale-id flicker through the cache.
   params: {
@@ -221,7 +221,7 @@ function EditTermContent({
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
       <Link
-        to="/taxonomies/$name"
+        to="/terms/$name"
         params={{ name: taxonomy.name }}
         search={TAXONOMY_LIST_DEFAULT_SEARCH}
         className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
@@ -261,7 +261,7 @@ function EditTermContent({
             }}
             onCancel={() => {
               void navigate({
-                to: "/taxonomies/$name",
+                to: "/terms/$name",
                 params: { name: taxonomy.name },
                 search: TAXONOMY_LIST_DEFAULT_SEARCH,
               });
@@ -309,7 +309,7 @@ function DeleteCard({
         queryKey: orpc.term.list.key({ input: { taxonomy: taxonomyName } }),
       });
       void navigate({
-        to: "/taxonomies/$name",
+        to: "/terms/$name",
         params: { name: taxonomyName },
         search: TAXONOMY_LIST_DEFAULT_SEARCH,
       });

@@ -5,7 +5,7 @@ export const pages = definePlugin("pages", (ctx) => {
     label: "Pages",
     labels: { singular: "Page", plural: "Pages" },
     description: "Hierarchical static pages",
-    supports: ["title", "editor", "excerpt"],
+    supports: ["title", "editor", "slug", "excerpt"],
     isHierarchical: true,
     isPublic: true,
     hasArchive: false,

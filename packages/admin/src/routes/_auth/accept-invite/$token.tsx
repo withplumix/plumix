@@ -98,10 +98,7 @@ function AcceptInviteRoute(): ReactNode {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>
-                    Name{" "}
-                    <span className="text-muted-foreground">(optional)</span>
-                  </FormLabel>
+                  <FormLabel>Name</FormLabel>
                   <FormControl>
                     <Input
                       type="text"

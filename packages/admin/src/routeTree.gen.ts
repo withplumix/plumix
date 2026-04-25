@@ -18,17 +18,17 @@ import { Route as AuthLoginRouteImport } from "./routes/_auth/login";
 import { Route as AuthBootstrapRouteImport } from "./routes/_auth/bootstrap";
 import { Route as AuthenticatedUsersIndexRouteImport } from "./routes/_authenticated/users/index";
 import { Route as AuthenticatedSettingsIndexRouteImport } from "./routes/_authenticated/settings/index";
-import { Route as AuthenticatedUsersNewRouteImport } from "./routes/_authenticated/users/new";
-import { Route as AuthenticatedUsersIdRouteImport } from "./routes/_authenticated/users/$id";
+import { Route as AuthenticatedUsersCreateRouteImport } from "./routes/_authenticated/users/create";
 import { Route as AuthenticatedSettingsPageRouteImport } from "./routes/_authenticated/settings/$page";
 import { Route as AuthenticatedPagesSplatRouteImport } from "./routes/_authenticated/pages/$";
 import { Route as AuthAcceptInviteTokenRouteImport } from "./routes/_auth/accept-invite/$token";
-import { Route as AuthenticatedTaxonomiesNameIndexRouteImport } from "./routes/_authenticated/taxonomies/$name/index";
+import { Route as AuthenticatedTermsNameIndexRouteImport } from "./routes/_authenticated/terms/$name/index";
 import { Route as AuthenticatedEntriesSlugIndexRouteImport } from "./routes/_authenticated/entries/$slug/index";
-import { Route as EditorEntriesSlugNewRouteImport } from "./routes/_editor/entries/$slug/new";
-import { Route as EditorEntriesSlugIdRouteImport } from "./routes/_editor/entries/$slug/$id";
-import { Route as AuthenticatedTaxonomiesNameNewRouteImport } from "./routes/_authenticated/taxonomies/$name/new";
-import { Route as AuthenticatedTaxonomiesNameIdRouteImport } from "./routes/_authenticated/taxonomies/$name/$id";
+import { Route as EditorEntriesSlugCreateRouteImport } from "./routes/_editor/entries/$slug/create";
+import { Route as AuthenticatedUsersIdEditRouteImport } from "./routes/_authenticated/users/$id/edit";
+import { Route as AuthenticatedTermsNameCreateRouteImport } from "./routes/_authenticated/terms/$name/create";
+import { Route as EditorEntriesSlugIdEditRouteImport } from "./routes/_editor/entries/$slug/$id/edit";
+import { Route as AuthenticatedTermsNameIdEditRouteImport } from "./routes/_authenticated/terms/$name/$id/edit";
 
 const EditorRoute = EditorRouteImport.update({
   id: "/_editor",
@@ -73,16 +73,12 @@ const AuthenticatedSettingsIndexRoute =
     path: "/settings/",
     getParentRoute: () => AuthenticatedRoute,
   } as any);
-const AuthenticatedUsersNewRoute = AuthenticatedUsersNewRouteImport.update({
-  id: "/users/new",
-  path: "/users/new",
-  getParentRoute: () => AuthenticatedRoute,
-} as any);
-const AuthenticatedUsersIdRoute = AuthenticatedUsersIdRouteImport.update({
-  id: "/users/$id",
-  path: "/users/$id",
-  getParentRoute: () => AuthenticatedRoute,
-} as any);
+const AuthenticatedUsersCreateRoute =
+  AuthenticatedUsersCreateRouteImport.update({
+    id: "/users/create",
+    path: "/users/create",
+    getParentRoute: () => AuthenticatedRoute,
+  } as any);
 const AuthenticatedSettingsPageRoute =
   AuthenticatedSettingsPageRouteImport.update({
     id: "/settings/$page",
@@ -99,10 +95,10 @@ const AuthAcceptInviteTokenRoute = AuthAcceptInviteTokenRouteImport.update({
   path: "/accept-invite/$token",
   getParentRoute: () => AuthRoute,
 } as any);
-const AuthenticatedTaxonomiesNameIndexRoute =
-  AuthenticatedTaxonomiesNameIndexRouteImport.update({
-    id: "/taxonomies/$name/",
-    path: "/taxonomies/$name/",
+const AuthenticatedTermsNameIndexRoute =
+  AuthenticatedTermsNameIndexRouteImport.update({
+    id: "/terms/$name/",
+    path: "/terms/$name/",
     getParentRoute: () => AuthenticatedRoute,
   } as any);
 const AuthenticatedEntriesSlugIndexRoute =
@@ -111,26 +107,32 @@ const AuthenticatedEntriesSlugIndexRoute =
     path: "/entries/$slug/",
     getParentRoute: () => AuthenticatedRoute,
   } as any);
-const EditorEntriesSlugNewRoute = EditorEntriesSlugNewRouteImport.update({
-  id: "/entries/$slug/new",
-  path: "/entries/$slug/new",
+const EditorEntriesSlugCreateRoute = EditorEntriesSlugCreateRouteImport.update({
+  id: "/entries/$slug/create",
+  path: "/entries/$slug/create",
   getParentRoute: () => EditorRoute,
 } as any);
-const EditorEntriesSlugIdRoute = EditorEntriesSlugIdRouteImport.update({
-  id: "/entries/$slug/$id",
-  path: "/entries/$slug/$id",
-  getParentRoute: () => EditorRoute,
-} as any);
-const AuthenticatedTaxonomiesNameNewRoute =
-  AuthenticatedTaxonomiesNameNewRouteImport.update({
-    id: "/taxonomies/$name/new",
-    path: "/taxonomies/$name/new",
+const AuthenticatedUsersIdEditRoute =
+  AuthenticatedUsersIdEditRouteImport.update({
+    id: "/users/$id/edit",
+    path: "/users/$id/edit",
     getParentRoute: () => AuthenticatedRoute,
   } as any);
-const AuthenticatedTaxonomiesNameIdRoute =
-  AuthenticatedTaxonomiesNameIdRouteImport.update({
-    id: "/taxonomies/$name/$id",
-    path: "/taxonomies/$name/$id",
+const AuthenticatedTermsNameCreateRoute =
+  AuthenticatedTermsNameCreateRouteImport.update({
+    id: "/terms/$name/create",
+    path: "/terms/$name/create",
+    getParentRoute: () => AuthenticatedRoute,
+  } as any);
+const EditorEntriesSlugIdEditRoute = EditorEntriesSlugIdEditRouteImport.update({
+  id: "/entries/$slug/$id/edit",
+  path: "/entries/$slug/$id/edit",
+  getParentRoute: () => EditorRoute,
+} as any);
+const AuthenticatedTermsNameIdEditRoute =
+  AuthenticatedTermsNameIdEditRouteImport.update({
+    id: "/terms/$name/$id/edit",
+    path: "/terms/$name/$id/edit",
     getParentRoute: () => AuthenticatedRoute,
   } as any);
 
@@ -142,16 +144,16 @@ export interface FileRoutesByFullPath {
   "/accept-invite/$token": typeof AuthAcceptInviteTokenRoute;
   "/pages/$": typeof AuthenticatedPagesSplatRoute;
   "/settings/$page": typeof AuthenticatedSettingsPageRoute;
-  "/users/$id": typeof AuthenticatedUsersIdRoute;
-  "/users/new": typeof AuthenticatedUsersNewRoute;
+  "/users/create": typeof AuthenticatedUsersCreateRoute;
   "/settings/": typeof AuthenticatedSettingsIndexRoute;
   "/users/": typeof AuthenticatedUsersIndexRoute;
-  "/taxonomies/$name/$id": typeof AuthenticatedTaxonomiesNameIdRoute;
-  "/taxonomies/$name/new": typeof AuthenticatedTaxonomiesNameNewRoute;
-  "/entries/$slug/$id": typeof EditorEntriesSlugIdRoute;
-  "/entries/$slug/new": typeof EditorEntriesSlugNewRoute;
+  "/terms/$name/create": typeof AuthenticatedTermsNameCreateRoute;
+  "/users/$id/edit": typeof AuthenticatedUsersIdEditRoute;
+  "/entries/$slug/create": typeof EditorEntriesSlugCreateRoute;
   "/entries/$slug/": typeof AuthenticatedEntriesSlugIndexRoute;
-  "/taxonomies/$name/": typeof AuthenticatedTaxonomiesNameIndexRoute;
+  "/terms/$name/": typeof AuthenticatedTermsNameIndexRoute;
+  "/terms/$name/$id/edit": typeof AuthenticatedTermsNameIdEditRoute;
+  "/entries/$slug/$id/edit": typeof EditorEntriesSlugIdEditRoute;
 }
 export interface FileRoutesByTo {
   "/": typeof AuthenticatedIndexRoute;
@@ -161,16 +163,16 @@ export interface FileRoutesByTo {
   "/accept-invite/$token": typeof AuthAcceptInviteTokenRoute;
   "/pages/$": typeof AuthenticatedPagesSplatRoute;
   "/settings/$page": typeof AuthenticatedSettingsPageRoute;
-  "/users/$id": typeof AuthenticatedUsersIdRoute;
-  "/users/new": typeof AuthenticatedUsersNewRoute;
+  "/users/create": typeof AuthenticatedUsersCreateRoute;
   "/settings": typeof AuthenticatedSettingsIndexRoute;
   "/users": typeof AuthenticatedUsersIndexRoute;
-  "/taxonomies/$name/$id": typeof AuthenticatedTaxonomiesNameIdRoute;
-  "/taxonomies/$name/new": typeof AuthenticatedTaxonomiesNameNewRoute;
-  "/entries/$slug/$id": typeof EditorEntriesSlugIdRoute;
-  "/entries/$slug/new": typeof EditorEntriesSlugNewRoute;
+  "/terms/$name/create": typeof AuthenticatedTermsNameCreateRoute;
+  "/users/$id/edit": typeof AuthenticatedUsersIdEditRoute;
+  "/entries/$slug/create": typeof EditorEntriesSlugCreateRoute;
   "/entries/$slug": typeof AuthenticatedEntriesSlugIndexRoute;
-  "/taxonomies/$name": typeof AuthenticatedTaxonomiesNameIndexRoute;
+  "/terms/$name": typeof AuthenticatedTermsNameIndexRoute;
+  "/terms/$name/$id/edit": typeof AuthenticatedTermsNameIdEditRoute;
+  "/entries/$slug/$id/edit": typeof EditorEntriesSlugIdEditRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
@@ -184,16 +186,16 @@ export interface FileRoutesById {
   "/_auth/accept-invite/$token": typeof AuthAcceptInviteTokenRoute;
   "/_authenticated/pages/$": typeof AuthenticatedPagesSplatRoute;
   "/_authenticated/settings/$page": typeof AuthenticatedSettingsPageRoute;
-  "/_authenticated/users/$id": typeof AuthenticatedUsersIdRoute;
-  "/_authenticated/users/new": typeof AuthenticatedUsersNewRoute;
+  "/_authenticated/users/create": typeof AuthenticatedUsersCreateRoute;
   "/_authenticated/settings/": typeof AuthenticatedSettingsIndexRoute;
   "/_authenticated/users/": typeof AuthenticatedUsersIndexRoute;
-  "/_authenticated/taxonomies/$name/$id": typeof AuthenticatedTaxonomiesNameIdRoute;
-  "/_authenticated/taxonomies/$name/new": typeof AuthenticatedTaxonomiesNameNewRoute;
-  "/_editor/entries/$slug/$id": typeof EditorEntriesSlugIdRoute;
-  "/_editor/entries/$slug/new": typeof EditorEntriesSlugNewRoute;
+  "/_authenticated/terms/$name/create": typeof AuthenticatedTermsNameCreateRoute;
+  "/_authenticated/users/$id/edit": typeof AuthenticatedUsersIdEditRoute;
+  "/_editor/entries/$slug/create": typeof EditorEntriesSlugCreateRoute;
   "/_authenticated/entries/$slug/": typeof AuthenticatedEntriesSlugIndexRoute;
-  "/_authenticated/taxonomies/$name/": typeof AuthenticatedTaxonomiesNameIndexRoute;
+  "/_authenticated/terms/$name/": typeof AuthenticatedTermsNameIndexRoute;
+  "/_authenticated/terms/$name/$id/edit": typeof AuthenticatedTermsNameIdEditRoute;
+  "/_editor/entries/$slug/$id/edit": typeof EditorEntriesSlugIdEditRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
@@ -205,16 +207,16 @@ export interface FileRouteTypes {
     | "/accept-invite/$token"
     | "/pages/$"
     | "/settings/$page"
-    | "/users/$id"
-    | "/users/new"
+    | "/users/create"
     | "/settings/"
     | "/users/"
-    | "/taxonomies/$name/$id"
-    | "/taxonomies/$name/new"
-    | "/entries/$slug/$id"
-    | "/entries/$slug/new"
+    | "/terms/$name/create"
+    | "/users/$id/edit"
+    | "/entries/$slug/create"
     | "/entries/$slug/"
-    | "/taxonomies/$name/";
+    | "/terms/$name/"
+    | "/terms/$name/$id/edit"
+    | "/entries/$slug/$id/edit";
   fileRoutesByTo: FileRoutesByTo;
   to:
     | "/"
@@ -224,16 +226,16 @@ export interface FileRouteTypes {
     | "/accept-invite/$token"
     | "/pages/$"
     | "/settings/$page"
-    | "/users/$id"
-    | "/users/new"
+    | "/users/create"
     | "/settings"
     | "/users"
-    | "/taxonomies/$name/$id"
-    | "/taxonomies/$name/new"
-    | "/entries/$slug/$id"
-    | "/entries/$slug/new"
+    | "/terms/$name/create"
+    | "/users/$id/edit"
+    | "/entries/$slug/create"
     | "/entries/$slug"
-    | "/taxonomies/$name";
+    | "/terms/$name"
+    | "/terms/$name/$id/edit"
+    | "/entries/$slug/$id/edit";
   id:
     | "__root__"
     | "/_auth"
@@ -246,16 +248,16 @@ export interface FileRouteTypes {
     | "/_auth/accept-invite/$token"
     | "/_authenticated/pages/$"
     | "/_authenticated/settings/$page"
-    | "/_authenticated/users/$id"
-    | "/_authenticated/users/new"
+    | "/_authenticated/users/create"
     | "/_authenticated/settings/"
     | "/_authenticated/users/"
-    | "/_authenticated/taxonomies/$name/$id"
-    | "/_authenticated/taxonomies/$name/new"
-    | "/_editor/entries/$slug/$id"
-    | "/_editor/entries/$slug/new"
+    | "/_authenticated/terms/$name/create"
+    | "/_authenticated/users/$id/edit"
+    | "/_editor/entries/$slug/create"
     | "/_authenticated/entries/$slug/"
-    | "/_authenticated/taxonomies/$name/";
+    | "/_authenticated/terms/$name/"
+    | "/_authenticated/terms/$name/$id/edit"
+    | "/_editor/entries/$slug/$id/edit";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
@@ -329,18 +331,11 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
-    "/_authenticated/users/new": {
-      id: "/_authenticated/users/new";
-      path: "/users/new";
-      fullPath: "/users/new";
-      preLoaderRoute: typeof AuthenticatedUsersNewRouteImport;
-      parentRoute: typeof AuthenticatedRoute;
-    };
-    "/_authenticated/users/$id": {
-      id: "/_authenticated/users/$id";
-      path: "/users/$id";
-      fullPath: "/users/$id";
-      preLoaderRoute: typeof AuthenticatedUsersIdRouteImport;
+    "/_authenticated/users/create": {
+      id: "/_authenticated/users/create";
+      path: "/users/create";
+      fullPath: "/users/create";
+      preLoaderRoute: typeof AuthenticatedUsersCreateRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
     "/_authenticated/settings/$page": {
@@ -364,11 +359,11 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthAcceptInviteTokenRouteImport;
       parentRoute: typeof AuthRoute;
     };
-    "/_authenticated/taxonomies/$name/": {
-      id: "/_authenticated/taxonomies/$name/";
-      path: "/taxonomies/$name";
-      fullPath: "/taxonomies/$name/";
-      preLoaderRoute: typeof AuthenticatedTaxonomiesNameIndexRouteImport;
+    "/_authenticated/terms/$name/": {
+      id: "/_authenticated/terms/$name/";
+      path: "/terms/$name";
+      fullPath: "/terms/$name/";
+      preLoaderRoute: typeof AuthenticatedTermsNameIndexRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
     "/_authenticated/entries/$slug/": {
@@ -378,32 +373,39 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedEntriesSlugIndexRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
-    "/_editor/entries/$slug/new": {
-      id: "/_editor/entries/$slug/new";
-      path: "/entries/$slug/new";
-      fullPath: "/entries/$slug/new";
-      preLoaderRoute: typeof EditorEntriesSlugNewRouteImport;
+    "/_editor/entries/$slug/create": {
+      id: "/_editor/entries/$slug/create";
+      path: "/entries/$slug/create";
+      fullPath: "/entries/$slug/create";
+      preLoaderRoute: typeof EditorEntriesSlugCreateRouteImport;
       parentRoute: typeof EditorRoute;
     };
-    "/_editor/entries/$slug/$id": {
-      id: "/_editor/entries/$slug/$id";
-      path: "/entries/$slug/$id";
-      fullPath: "/entries/$slug/$id";
-      preLoaderRoute: typeof EditorEntriesSlugIdRouteImport;
-      parentRoute: typeof EditorRoute;
-    };
-    "/_authenticated/taxonomies/$name/new": {
-      id: "/_authenticated/taxonomies/$name/new";
-      path: "/taxonomies/$name/new";
-      fullPath: "/taxonomies/$name/new";
-      preLoaderRoute: typeof AuthenticatedTaxonomiesNameNewRouteImport;
+    "/_authenticated/users/$id/edit": {
+      id: "/_authenticated/users/$id/edit";
+      path: "/users/$id/edit";
+      fullPath: "/users/$id/edit";
+      preLoaderRoute: typeof AuthenticatedUsersIdEditRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
-    "/_authenticated/taxonomies/$name/$id": {
-      id: "/_authenticated/taxonomies/$name/$id";
-      path: "/taxonomies/$name/$id";
-      fullPath: "/taxonomies/$name/$id";
-      preLoaderRoute: typeof AuthenticatedTaxonomiesNameIdRouteImport;
+    "/_authenticated/terms/$name/create": {
+      id: "/_authenticated/terms/$name/create";
+      path: "/terms/$name/create";
+      fullPath: "/terms/$name/create";
+      preLoaderRoute: typeof AuthenticatedTermsNameCreateRouteImport;
+      parentRoute: typeof AuthenticatedRoute;
+    };
+    "/_editor/entries/$slug/$id/edit": {
+      id: "/_editor/entries/$slug/$id/edit";
+      path: "/entries/$slug/$id/edit";
+      fullPath: "/entries/$slug/$id/edit";
+      preLoaderRoute: typeof EditorEntriesSlugIdEditRouteImport;
+      parentRoute: typeof EditorRoute;
+    };
+    "/_authenticated/terms/$name/$id/edit": {
+      id: "/_authenticated/terms/$name/$id/edit";
+      path: "/terms/$name/$id/edit";
+      fullPath: "/terms/$name/$id/edit";
+      preLoaderRoute: typeof AuthenticatedTermsNameIdEditRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
   }
@@ -428,14 +430,14 @@ interface AuthenticatedRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute;
   AuthenticatedPagesSplatRoute: typeof AuthenticatedPagesSplatRoute;
   AuthenticatedSettingsPageRoute: typeof AuthenticatedSettingsPageRoute;
-  AuthenticatedUsersIdRoute: typeof AuthenticatedUsersIdRoute;
-  AuthenticatedUsersNewRoute: typeof AuthenticatedUsersNewRoute;
+  AuthenticatedUsersCreateRoute: typeof AuthenticatedUsersCreateRoute;
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute;
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute;
-  AuthenticatedTaxonomiesNameIdRoute: typeof AuthenticatedTaxonomiesNameIdRoute;
-  AuthenticatedTaxonomiesNameNewRoute: typeof AuthenticatedTaxonomiesNameNewRoute;
+  AuthenticatedTermsNameCreateRoute: typeof AuthenticatedTermsNameCreateRoute;
+  AuthenticatedUsersIdEditRoute: typeof AuthenticatedUsersIdEditRoute;
   AuthenticatedEntriesSlugIndexRoute: typeof AuthenticatedEntriesSlugIndexRoute;
-  AuthenticatedTaxonomiesNameIndexRoute: typeof AuthenticatedTaxonomiesNameIndexRoute;
+  AuthenticatedTermsNameIndexRoute: typeof AuthenticatedTermsNameIndexRoute;
+  AuthenticatedTermsNameIdEditRoute: typeof AuthenticatedTermsNameIdEditRoute;
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -443,14 +445,14 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedPagesSplatRoute: AuthenticatedPagesSplatRoute,
   AuthenticatedSettingsPageRoute: AuthenticatedSettingsPageRoute,
-  AuthenticatedUsersIdRoute: AuthenticatedUsersIdRoute,
-  AuthenticatedUsersNewRoute: AuthenticatedUsersNewRoute,
+  AuthenticatedUsersCreateRoute: AuthenticatedUsersCreateRoute,
   AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
-  AuthenticatedTaxonomiesNameIdRoute: AuthenticatedTaxonomiesNameIdRoute,
-  AuthenticatedTaxonomiesNameNewRoute: AuthenticatedTaxonomiesNameNewRoute,
+  AuthenticatedTermsNameCreateRoute: AuthenticatedTermsNameCreateRoute,
+  AuthenticatedUsersIdEditRoute: AuthenticatedUsersIdEditRoute,
   AuthenticatedEntriesSlugIndexRoute: AuthenticatedEntriesSlugIndexRoute,
-  AuthenticatedTaxonomiesNameIndexRoute: AuthenticatedTaxonomiesNameIndexRoute,
+  AuthenticatedTermsNameIndexRoute: AuthenticatedTermsNameIndexRoute,
+  AuthenticatedTermsNameIdEditRoute: AuthenticatedTermsNameIdEditRoute,
 };
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -458,13 +460,13 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 );
 
 interface EditorRouteChildren {
-  EditorEntriesSlugIdRoute: typeof EditorEntriesSlugIdRoute;
-  EditorEntriesSlugNewRoute: typeof EditorEntriesSlugNewRoute;
+  EditorEntriesSlugCreateRoute: typeof EditorEntriesSlugCreateRoute;
+  EditorEntriesSlugIdEditRoute: typeof EditorEntriesSlugIdEditRoute;
 }
 
 const EditorRouteChildren: EditorRouteChildren = {
-  EditorEntriesSlugIdRoute: EditorEntriesSlugIdRoute,
-  EditorEntriesSlugNewRoute: EditorEntriesSlugNewRoute,
+  EditorEntriesSlugCreateRoute: EditorEntriesSlugCreateRoute,
+  EditorEntriesSlugIdEditRoute: EditorEntriesSlugIdEditRoute,
 };
 
 const EditorRouteWithChildren =

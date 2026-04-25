@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton.js";
 
 /**
  * Shared "form-shaped loading state" for the admin's edit routes
- * (users/$id, taxonomies/$name/$id, and future settings screens).
+ * (users/$id, terms/$name/$id, and future settings screens).
  * Renders a content-shaped shimmer instead of a plain "Loading…"
  * string so the form doesn't pop in with a visible reflow once the
  * query resolves.

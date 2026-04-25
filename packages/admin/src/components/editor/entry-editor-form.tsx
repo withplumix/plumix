@@ -8,6 +8,16 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion.js";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Button } from "@/components/ui/button.js";
 import {
@@ -155,13 +165,13 @@ export function PostEditorForm({
     form.setValue("slug", slugify(titleValue));
   }, [form, slugLocked, titleValue]);
 
-  // TanStack Router blocker: prompt before navigation (sidebar click,
-  // back button, etc.) if the form is dirty and not currently saving.
-  // `isSubmitting` guard avoids the prompt firing on the redirect that
-  // follows a successful save.
-  useBlocker({
+  // Block in-app navigation while dirty so the user gets a chance to
+  // confirm. `withResolver: true` is load-bearing: with `false`, a
+  // dirty form would silently swallow back-button / link clicks.
+  // `isSubmitting` guard avoids prompting on the post-save redirect.
+  const blocker = useBlocker({
     shouldBlockFn: () => !isSubmitting && isDirty,
-    withResolver: false,
+    withResolver: true,
     disabled: isSubmitting,
   });
 
@@ -265,7 +275,7 @@ export function PostEditorForm({
             collapsible="offcanvas"
             data-testid="meta-boxes-sidebar"
           >
-            <SidebarHeader className="border-b px-4 py-3 text-sm font-semibold">
+            <SidebarHeader className="flex h-14 shrink-0 flex-row items-center border-b px-4 text-sm font-semibold">
               Document
             </SidebarHeader>
             <SidebarContent>
@@ -302,6 +312,33 @@ export function PostEditorForm({
           </Sidebar>
         </SidebarProvider>
       </form>
+
+      <AlertDialog
+        open={blocker.status === "blocked"}
+        onOpenChange={(open) => {
+          if (!open && blocker.status === "blocked") blocker.reset();
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Leaving this page will lose any edits you haven't saved.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                if (blocker.status === "blocked") blocker.proceed();
+              }}
+            >
+              Discard
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Form>
   );
 }
@@ -323,10 +360,9 @@ function TitleField({ disabled }: { readonly disabled: boolean }): ReactNode {
               required
               autoComplete="off"
               disabled={disabled}
-              placeholder="Add title"
               data-testid="post-editor-title-input"
               className={cn(
-                "h-auto border-0 bg-transparent px-0 text-3xl font-semibold shadow-none",
+                "h-auto border-0 bg-transparent px-0 text-3xl font-semibold shadow-none dark:bg-transparent",
                 "placeholder:text-muted-foreground/60",
                 "focus-visible:border-0 focus-visible:ring-0",
               )}

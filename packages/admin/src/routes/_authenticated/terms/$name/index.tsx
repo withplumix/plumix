@@ -21,6 +21,7 @@ import {
 import { hasCap } from "@/lib/caps.js";
 import { findTermTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
+import { cn } from "@/lib/utils.js";
 import { useQuery } from "@tanstack/react-query";
 import {
   createFileRoute,
@@ -60,7 +61,7 @@ const searchSchema = v.object({
   ),
 });
 
-export const Route = createFileRoute("/_authenticated/taxonomies/$name/")({
+export const Route = createFileRoute("/_authenticated/terms/$name/")({
   validateSearch: (search) => v.parse(searchSchema, search),
   // Resolve the manifest entry in `beforeLoad` so the component never
   // has to handle a missing taxonomy — unregistered names bubble up to
@@ -167,25 +168,22 @@ function TaxonomyListRoute(): ReactNode {
         header: "Name",
         cell: ({ row }) => {
           const term = row.original.term;
-          // `--taxonomy-indent` drives the left padding so the depth
-          // visual is purely CSS — accessible to screen readers via the
-          // `aria-level` below.
-          const style = {
-            paddingLeft: `${row.original.displayDepth * 1.5}rem`,
-          };
+          const depth = row.original.displayDepth;
           return (
             <Link
-              to="/taxonomies/$name/$id"
+              to="/terms/$name/$id/edit"
               params={{ name: taxonomy.name, id: term.id }}
               data-testid={`taxonomy-list-row-${String(term.id)}`}
-              aria-level={row.original.displayDepth + 1}
-              className="hover:text-primary flex flex-col transition-colors"
-              style={style}
+              aria-level={depth + 1}
+              className="hover:text-primary flex items-start gap-2 transition-colors"
             >
-              <span className="font-medium">{term.name}</span>
-              <span className="text-muted-foreground font-mono text-xs">
-                {term.slug}
-              </span>
+              <TreeIndent depth={depth} />
+              <div className="flex min-w-0 flex-col">
+                <span className="font-medium">{term.name}</span>
+                <span className="text-muted-foreground font-mono text-xs">
+                  {term.slug}
+                </span>
+              </div>
             </Link>
           );
         },
@@ -216,16 +214,12 @@ function TaxonomyListRoute(): ReactNode {
             <p className="text-muted-foreground text-sm">
               {taxonomy.description}
             </p>
-          ) : (
-            <p className="text-muted-foreground text-sm">
-              Manage {pluralLower} for this site.
-            </p>
-          )}
+          ) : null}
         </div>
         {canEdit ? (
           <Button asChild>
             <Link
-              to="/taxonomies/$name/new"
+              to="/terms/$name/create"
               params={{ name: taxonomy.name }}
               data-testid="taxonomy-list-new-button"
             >
@@ -237,13 +231,15 @@ function TaxonomyListRoute(): ReactNode {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <DebouncedSearchInput
-          key={search.q ?? ""}
-          initialValue={search.q ?? ""}
-          placeholder={`Search ${pluralLower}…`}
-          testId="taxonomy-list-search-input"
-          onCommit={setSearch}
-        />
+        <div className="ms-auto">
+          <DebouncedSearchInput
+            key={search.q ?? ""}
+            initialValue={search.q ?? ""}
+            placeholder={`Search ${pluralLower}…`}
+            testId="taxonomy-list-search-input"
+            onCommit={setSearch}
+          />
+        </div>
       </div>
 
       {query.isError ? (
@@ -309,6 +305,37 @@ function TaxonomyListRoute(): ReactNode {
   );
 }
 
+// Tree-line connector for hierarchical term rows. Renders one column per
+// ancestor; the column for the immediate parent draws a corner glyph,
+// shallower columns draw a vertical guide so successive rows visually
+// chain. Pure CSS (border-l + border-b on a small div) so it renders
+// uniformly regardless of row height.
+function TreeIndent({ depth }: { depth: number }): ReactNode {
+  if (depth === 0) return null;
+  return (
+    <div
+      aria-hidden
+      className="text-muted-foreground/40 flex shrink-0 self-stretch"
+    >
+      {Array.from({ length: depth }).map((_, i) => (
+        <div
+          key={i}
+          className={cn(
+            "relative w-5",
+            i < depth - 1
+              ? "before:absolute before:inset-y-0 before:left-2 before:border-l before:border-current/30"
+              : null,
+          )}
+        >
+          {i === depth - 1 ? (
+            <div className="absolute top-0 bottom-1/2 left-2 rounded-bl-md border-b border-l border-current/40" />
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function EmptyState({
   singularLower,
   canCreate,
@@ -329,7 +356,7 @@ function EmptyState({
       <EmptyContent>
         {canCreate ? (
           <Button asChild>
-            <Link to="/taxonomies/$name/new" params={{ name: taxonomyName }}>
+            <Link to="/terms/$name/create" params={{ name: taxonomyName }}>
               <Plus />
               New {singularLower}
             </Link>

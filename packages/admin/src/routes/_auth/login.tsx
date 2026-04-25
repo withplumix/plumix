@@ -87,10 +87,7 @@ function LoginRoute(): ReactNode {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>
-                    Email{" "}
-                    <span className="text-muted-foreground">(optional)</span>
-                  </FormLabel>
+                  <FormLabel>Email</FormLabel>
                   <FormControl>
                     <Input
                       type="email"

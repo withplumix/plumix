@@ -26,7 +26,7 @@ const NEW_POST_STATUSES: readonly EntryStatus[] = [
   "scheduled",
 ];
 
-export const Route = createFileRoute("/_editor/entries/$slug/new")({
+export const Route = createFileRoute("/_editor/entries/$slug/create")({
   beforeLoad: ({ context, params }): { entryType: EntryTypeManifestEntry } => {
     const entryType = findEntryTypeBySlug(params.slug);
     if (!entryType) {
@@ -78,7 +78,7 @@ function NewPostRoute(): ReactNode {
         queryKey: orpc.entry.list.key({ input: { type: entryType.name } }),
       });
       await navigate({
-        to: "/entries/$slug/$id",
+        to: "/entries/$slug/$id/edit",
         params: { slug: params.slug, id: created.id },
       });
     },

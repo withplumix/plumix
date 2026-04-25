@@ -1024,6 +1024,67 @@ describe("buildManifest adminNav projection", () => {
       .map((g) => g.id);
     expect(customGroups).toEqual(["bravo", "alpha", "zulu"]);
   });
+
+  test("entry-type sidebar items emit /entries/<adminSlug>", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("blog", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts" });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const content = buildManifest(registry).adminNav.find(
+      (g) => g.id === "content",
+    );
+    expect(content?.items[0]?.to).toBe("/entries/posts");
+  });
+
+  test("taxonomy sidebar items emit /terms/<name>", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("blog", (ctx) => {
+      ctx.registerTermTaxonomy("category", { label: "Categories" });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const tax = buildManifest(registry).adminNav.find(
+      (g) => g.id === "term-taxonomies",
+    );
+    expect(tax?.items[0]?.to).toBe("/terms/category");
+  });
+
+  test("plugin menuIcon plumbs through to the sidebar item's coreIcon", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("blog", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", menuIcon: "file-text" });
+      ctx.registerTermTaxonomy("category", {
+        label: "Categories",
+        isHierarchical: true,
+      });
+      ctx.registerTermTaxonomy("tag", { label: "Tags" });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    const post = manifest.adminNav
+      .find((g) => g.id === "content")
+      ?.items.find((i) => i.label === "Posts");
+    expect(post?.coreIcon).toBe("file-text");
+
+    const tax = manifest.adminNav.find((g) => g.id === "term-taxonomies");
+    const cat = tax?.items.find((i) => i.label === "Categories");
+    const tag = tax?.items.find((i) => i.label === "Tags");
+    // Hierarchical → folder; flat → tag (default fallbacks).
+    expect(cat?.coreIcon).toBe("folder");
+    expect(tag?.coreIcon).toBe("tag");
+  });
+
+  test("unknown menuIcon falls back to the generic content icon", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("blog", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", menuIcon: "frobnicate" });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const item = buildManifest(registry).adminNav.find(
+      (g) => g.id === "content",
+    )?.items[0];
+    expect(item?.coreIcon).toBe("content");
+  });
 });
 
 describe("buildManifest visibility projection", () => {

@@ -11,8 +11,8 @@ import {
 
 // All content-related e2e coverage lives here:
 //   - /entries/$slug list (filters, search, sort, pagination, auth gates)
-//   - /entries/$slug/new editor (toolbar, auto-slug, submit)
-//   - /entries/$slug/$id editor (load existing, edit, meta-box sidebar)
+//   - /entries/$slug/create editor (toolbar, auto-slug, submit)
+//   - /entries/$slug/$id/edit editor (load existing, edit, meta-box sidebar)
 // Ordering follows the user journey: list → new → edit.
 
 test.describe("/entries/$slug", () => {
@@ -152,7 +152,7 @@ test.describe("/entries/$slug", () => {
     });
 
     await page.goto("entries/posts?status=all&page=1");
-    await page.getByTestId("author-filter-mine").click();
+    await page.getByTestId("author-filter").selectOption("mine");
     await expect(page).toHaveURL(/author=mine/);
     await expect
       .poll(
@@ -250,7 +250,7 @@ test.describe("/entries/$slug", () => {
   });
 });
 
-test.describe("/entries/$slug/new", () => {
+test.describe("/entries/$slug/create", () => {
   test.beforeEach(async ({ page }) => {
     await mockManifest(page, MANIFEST_WITH_POST);
   });
@@ -339,7 +339,7 @@ test.describe("/entries/$slug/new", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
 
-    await page.goto("entries/posts/new");
+    await page.goto("entries/posts/create");
     await expect(page.getByTestId("post-editor-headline")).toBeVisible();
 
     // Auto-slug from title while slug is still unlocked.
@@ -373,7 +373,7 @@ test.describe("/entries/$slug/new", () => {
     page,
   }) => {
     await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
-    await page.goto("entries/posts/new");
+    await page.goto("entries/posts/create");
 
     await page.getByTestId("post-editor-title-input").fill("First title");
     await expect(page.getByTestId("post-editor-slug-input")).toHaveValue(
@@ -392,13 +392,13 @@ test.describe("/entries/$slug/new", () => {
     page,
   }) => {
     await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
-    await page.goto("entries/posts/new");
+    await page.goto("entries/posts/create");
     await expect(page.getByTestId("post-editor-headline")).toBeVisible();
     await expectNoAxeViolations(page);
   });
 });
 
-test.describe("/entries/$slug/$id", () => {
+test.describe("/entries/$slug/$id/edit", () => {
   test.beforeEach(async ({ page }) => {
     await mockManifest(page, MANIFEST_WITH_POST);
   });
@@ -474,7 +474,7 @@ test.describe("/entries/$slug/$id", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
 
-    await page.goto("entries/posts/7");
+    await page.goto("entries/posts/7/edit");
     await expect(page.getByTestId("post-editor-headline")).toBeVisible();
     // Existing title populates from the loaded post.
     await expect(page.getByTestId("post-editor-title-input")).toHaveValue(
@@ -504,7 +504,7 @@ test.describe("meta-box sidebar", () => {
   }) => {
     await mockManifest(page, MANIFEST_WITH_META_BOXES);
     await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
-    await page.goto("entries/posts/new");
+    await page.goto("entries/posts/create");
 
     // Full-screen editor: every registered meta box lands in the right
     // rail. `box.location` is no longer honoured — all boxes are rail.
@@ -594,7 +594,7 @@ test.describe("meta-box sidebar", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
 
-    await page.goto("entries/posts/new");
+    await page.goto("entries/posts/create");
     await page.getByTestId("post-editor-title-input").fill("meta post");
     await page.getByTestId("meta-box-field-meta_title-input").fill("seo title");
     await page.getByTestId("meta-box-field-is_featured-input").check();
