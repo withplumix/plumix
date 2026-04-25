@@ -17,9 +17,6 @@ const config: KnipConfig = {
     "packages/blocks": {
       ignoreDependencies: ["@plumix/core"],
     },
-    "packages/plugins/pages": {
-      ignoreDependencies: ["@plumix/core"],
-    },
     // - drizzle-kit is invoked by consumers as a CLI hint, not imported.
     // - @plumix/admin is consumed via filesystem copy (scripts/copy-admin.mjs)
     //   at build time, not as a TypeScript import.
