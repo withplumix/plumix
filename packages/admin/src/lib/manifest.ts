@@ -73,6 +73,12 @@ export function visibleEntryTypes(
 ): readonly EntryTypeManifestEntry[] {
   const caps = new Set(capabilities);
   return (source.entryTypes ?? []).filter((pt) => {
+    // `showInSidebar: false` already hides the type from the auto-
+    // generated sidebar entry-list link. Apply the same flag to the
+    // dashboard quick-card grid — types that opted out of the sidebar
+    // weren't meant to be a generic content surface either (e.g. the
+    // media plugin renders its own Media Library page).
+    if (pt.showInSidebar === false) return false;
     const cap = `entry:${pt.capabilityType ?? pt.name}:edit_own`;
     return caps.has(cap);
   });

@@ -1,9 +1,23 @@
 # @plumix/plugin-media
 
 Media library for Plumix. Registers a `media` entry type, RPC procedures
-for uploads (presigned PUT to your bucket → bytes never traverse the
-worker), and an admin Media Library page (grid + thumbnails + drag-to-
-upload + delete + alt-text editing + Copy URL + infinite scroll).
+for uploads, and an admin Media Library page (grid + thumbnails +
+drag-to-upload + delete + alt-text editing + Copy URL + infinite scroll).
+
+Two upload modes, picked automatically based on what your runtime
+exposes:
+
+- **Presigned PUT** — bytes go straight from the browser to your bucket
+  via an AWS-SigV4 query-signed URL. No worker hop, no CPU cost on
+  upload. Requires S3 API credentials (see below) and bucket CORS rules.
+- **Worker-routed** — bytes flow through the worker via the storage
+  binding's `put()`. Works the moment the binding is attached, no
+  credentials or CORS configuration. Capped at the runtime's request-
+  body limit (~100 MiB on Workers free).
+
+You don't pick — `media.createUploadUrl` returns a presigned URL when
+`storage.presignPut` is wired up, otherwise a `/_plumix/media/upload/<id>`
+URL routed through the worker. The browser PUTs to whichever it gets.
 
 ## Install
 
@@ -53,17 +67,20 @@ export default plumix({
 }
 ```
 
-## R2 CORS (required for browser uploads)
+## R2 CORS (only required for presigned-PUT mode)
 
-Without CORS rules on the bucket, the browser's `PUT` to the presigned
-URL fails with a CORS error before the bytes ever reach R2. Apply this
-once per bucket:
+Skip this section if you're running on the binding-only path — the
+worker-routed upload is same-origin so no CORS rules are needed.
+
+For presigned PUTs, the browser hits R2 directly. Without CORS rules on
+the bucket, the request fails before the bytes ever reach R2. Apply
+this once per bucket:
 
 ```bash
 wrangler r2 bucket cors put my-media-bucket --rules '[{
   "AllowedOrigins": ["https://your-admin.example.com"],
   "AllowedMethods": ["PUT"],
-  "AllowedHeaders": ["Content-Type", "Content-Length"],
+  "AllowedHeaders": ["Content-Type"],
   "ExposeHeaders": ["ETag"],
   "MaxAgeSeconds": 3600
 }]'
@@ -118,11 +135,15 @@ Owners can always confirm/update/delete their own media. `delete` and
 
 ```
 client → media.createUploadUrl({ filename, contentType, size })
-       → server: validate, draft entry, mint presigned URL
+       → server: validate, draft entry, mint upload URL
        ← { uploadUrl, headers, mediaId, storageKey, expiresAt }
+            └─ presigned R2 URL    (storage.presignPut available)
+            └─ /_plumix/media/upload/<id>  (worker-routed fallback)
 
 client → PUT bytes (XHR with progress)
-       ← R2 200 OK   (bytes never traverse the worker)
+       ← 200/204 OK
+            └─ R2:    bytes never traverse the worker
+            └─ Worker: bytes streamed through env.MEDIA.put()
 
 client → media.confirm({ id: mediaId })
        → server: read first 64 bytes, magic-byte sniff, flip to

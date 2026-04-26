@@ -1,5 +1,6 @@
 import {
   findEntryTypeBySlug,
+  findPluginPageByPath,
   findSettingsPageByName,
   findTermTaxonomyByName,
 } from "./manifest.js";
@@ -36,10 +37,7 @@ export function pathToCrumbs(pathname: string): readonly Crumb[] {
     case "profile":
       return [{ label: "Profile" }];
     case "pages":
-      return [
-        { label: "Pages" },
-        ...parts.slice(1).map((label) => ({ label })),
-      ];
+      return pluginPagesCrumbs(parts);
     default:
       return [{ label: "Admin" }];
   }
@@ -78,6 +76,22 @@ function usersCrumbs(parts: readonly string[]): readonly Crumb[] {
   if (parts[1] === "create") return [usersList, { label: "Add new" }];
   if (parts[2] === "edit") return [usersList, { label: "Edit user" }];
   return [{ label: "Users" }];
+}
+
+function pluginPagesCrumbs(parts: readonly string[]): readonly Crumb[] {
+  // Plugin admin pages are mounted at /pages/<plugin-path>. The leaf
+  // label comes from the registered nav item (`registerAdminPage`'s
+  // `label` / `title`) so the document title and breadcrumb match the
+  // sidebar — not the URL slug, which would render as "media" instead
+  // of "Media Library". No parent crumb: a "Pages > X" trail collides
+  // with the entry-type "Pages" in the user's sidebar.
+  const path = `/${parts.join("/")}`;
+  const item = findPluginPageByPath(path);
+  if (item) return [{ label: item.label }];
+  // Unknown plugin path — keep the URL slug as a placeholder so the
+  // user doesn't see an opaque "Admin" header during a 404.
+  const tail = parts[parts.length - 1] ?? "Admin";
+  return [{ label: tail }];
 }
 
 function settingsCrumbs(parts: readonly string[]): readonly Crumb[] {

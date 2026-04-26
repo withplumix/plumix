@@ -21,12 +21,10 @@ interface PresignPutInput {
   readonly bucket: string;
   /** Object key (already URL-safe; we re-encode segment-by-segment). */
   readonly key: string;
-  /** Mime to bind the upload to. The browser MUST echo this header. */
+  /** Mime echoed back to the browser so R2 stores correct metadata. NOT signed (see comment in `presignPutUrl`). */
   readonly contentType: string;
   /** Seconds until the URL expires. Clamped to AWS's 1..604800 range. */
   readonly expiresIn: number;
-  /** Optional content-length cap signed into the request. */
-  readonly contentLength?: number;
   readonly credentials: SigV4Credentials;
   /** Override "now" — used by tests for deterministic signatures. */
   readonly now?: Date;
@@ -68,16 +66,24 @@ export async function presignPutUrl(
   const host = new URL(input.endpoint).host;
   const path = `/${rfc3986Encode(input.bucket)}/${encodePath(input.key)}`;
 
-  // Headers we sign + require the browser to send back. content-type pins
-  // the upload's mime; content-length (when known) caps the body size.
-  const headers: Record<string, string> = {
-    host,
+  // Sign only `host`. We used to also sign `content-type` and
+  // `content-length`, but R2 + browser uploads fail in obscure ways
+  // when those are part of the signature: some browsers append
+  // `; charset=…` to text mimes after we've signed the bare type, and
+  // `XMLHttpRequest` rewrites Content-Length transparently. The result
+  // was opaque `SignatureDoesNotMatch` 403s with no client-side recourse.
+  // The browser still echoes Content-Type (we hand it back via
+  // `browserHeaders`) so R2 stores the right mime; the magic-byte
+  // sniff in `media.confirm` is the actual defense against mime lies.
+  // Size enforcement comes from `X-Amz-Expires` (10 min window) +
+  // capability gating on `media.createUploadUrl`.
+  const headers: Record<string, string> = { host };
+  const signedHeaders = "host";
+  // Headers the browser still needs to send so R2 stores correct
+  // metadata, even though they're not part of the signature.
+  const browserHeaders: Record<string, string> = {
     "content-type": input.contentType,
   };
-  if (input.contentLength !== undefined) {
-    headers["content-length"] = String(input.contentLength);
-  }
-  const signedHeaders = Object.keys(headers).sort().join(";");
 
   const queryParams: Record<string, string> = {
     "X-Amz-Algorithm": "AWS4-HMAC-SHA256",
@@ -116,12 +122,6 @@ export async function presignPutUrl(
   const signature = bytesToHex(new Uint8Array(signatureBytes));
 
   const url = `${input.endpoint.replace(/\/$/, "")}${path}?${canonicalQuery}&X-Amz-Signature=${signature}`;
-
-  // Strip `host` from the response — `fetch()` sets it automatically and
-  // including it as an explicit header in the browser flow trips a
-  // "Refused to set unsafe header" error in every modern browser.
-  const browserHeaders: Record<string, string> = { ...headers };
-  delete browserHeaders.host;
 
   return {
     url,

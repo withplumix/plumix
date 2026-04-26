@@ -16,11 +16,13 @@ import {
 // then visit http://localhost:8787/_plumix/admin to register the first
 // admin via passkey and try the Media Library.
 //
-// R2 presigned uploads require S3 API tokens — set CF_ACCOUNT_ID,
+// R2 presigned uploads (browser PUTs straight to R2, bytes never
+// traverse the worker) require S3 API tokens — set CF_ACCOUNT_ID,
 // R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, and MEDIA_BUCKET as a group
-// (all four or none). With them omitted, the binding-only path works
-// for server-side reads / writes / lists but the client-side
-// `media.createUploadUrl` returns a `presign_not_supported` CONFLICT.
+// (all four or none). Without them, `media.createUploadUrl` falls
+// back to a worker-routed PUT (bytes flow through `env.MEDIA.put` via
+// the binding) — no extra setup, capped at the runtime's request body
+// limit (~100 MiB on Workers free).
 
 const { rpId, origin } = cloudflareDeployOrigin({
   workerName: "plumix-media-playground",

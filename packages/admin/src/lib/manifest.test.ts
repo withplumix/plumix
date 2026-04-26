@@ -183,6 +183,31 @@ describe("visibleEntryTypes", () => {
   test("returns empty when no capabilities match", () => {
     expect(visibleEntryTypes([], source)).toEqual([]);
   });
+
+  test("hides entry types whose `showInSidebar` is explicitly false", () => {
+    // The dashboard quick-card grid should mirror sidebar visibility:
+    // a type that opted out of the sidebar (e.g. media — it has its
+    // own custom admin page) doesn't want a generic "Browse media"
+    // tile auto-generated either. Capability gate alone isn't enough,
+    // since contributors do have `entry:media:edit_own` but the type
+    // shouldn't show up here.
+    const sourceWithHidden: PlumixManifest = {
+      entryTypes: [
+        { name: "post", adminSlug: "posts", label: "Posts" },
+        {
+          name: "media",
+          adminSlug: "media",
+          label: "Media",
+          showInSidebar: false,
+        },
+      ],
+    };
+    const caps = ["entry:post:edit_own", "entry:media:edit_own"];
+    const visible = visibleEntryTypes(caps, sourceWithHidden).map(
+      (pt) => pt.name,
+    );
+    expect(visible).toEqual(["post"]);
+  });
 });
 
 describe("entryMetaBoxesForType", () => {

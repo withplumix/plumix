@@ -136,9 +136,6 @@ export function createMediaRouter(
         if (!storage) {
           throw errors.CONFLICT({ data: { reason: "storage_not_configured" } });
         }
-        if (!storage.presignPut) {
-          throw errors.CONFLICT({ data: { reason: "presign_not_supported" } });
-        }
 
         const id = crypto.randomUUID();
         const ext =
@@ -173,28 +170,42 @@ export function createMediaRouter(
           throw errors.CONFLICT({ data: { reason: "db_insert_failed" } });
         }
 
-        // If the presign step throws after the draft row landed (bad
-        // creds, S3 endpoint unreachable, …) the row would otherwise
-        // leak forever. Roll it back before propagating.
-        let presigned;
-        try {
-          presigned = await storage.presignPut(storageKey, {
-            contentType: input.contentType,
-            maxBytes: input.size,
-            expiresIn: 600,
-          });
-        } catch (error) {
-          await context.db.delete(entries).where(eq(entries.id, created.id));
-          throw error;
+        // Presigned PUT — bytes go straight from the browser to the
+        // bucket. Requires S3-API credentials (storage.presignPut).
+        if (storage.presignPut) {
+          let presigned;
+          try {
+            presigned = await storage.presignPut(storageKey, {
+              contentType: input.contentType,
+              maxBytes: input.size,
+              expiresIn: 600,
+            });
+          } catch (error) {
+            await context.db.delete(entries).where(eq(entries.id, created.id));
+            throw error;
+          }
+          return {
+            uploadUrl: presigned.url,
+            method: presigned.method,
+            headers: presigned.headers,
+            mediaId: created.id,
+            storageKey,
+            expiresAt: presigned.expiresAt,
+          };
         }
 
+        // Worker-routed fallback — bytes flow through the worker via
+        // the storage binding. Triggered when the runtime has the R2
+        // binding attached but no S3 credentials configured. Caps at
+        // ~100 MiB on Workers free plan; presigned mode is the path
+        // for larger files.
         return {
-          uploadUrl: presigned.url,
-          method: presigned.method,
-          headers: presigned.headers,
+          uploadUrl: `/_plumix/media/upload/${String(created.id)}`,
+          method: "PUT",
+          headers: { "content-type": input.contentType },
           mediaId: created.id,
           storageKey,
-          expiresAt: presigned.expiresAt,
+          expiresAt: Math.floor(Date.now() / 1000) + 600,
         };
       },
     );

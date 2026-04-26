@@ -49,7 +49,13 @@ describe("presignPutUrl", () => {
     expect(a.url).not.toBe(b.url);
   });
 
-  test("signature changes when contentType changes", async () => {
+  test("contentType is returned in browser headers but does NOT change the signature", async () => {
+    // Regression: signing Content-Type made browser uploads to R2 fail
+    // intermittently — browsers append `; charset=…` to text mimes after
+    // we've signed the bare type, producing `SignatureDoesNotMatch`. We
+    // only sign `host` now; Content-Type is still echoed back to the
+    // browser so R2 stores the correct mime, but it's outside the
+    // signature.
     const base = {
       endpoint: "https://abc.r2.cloudflarestorage.com",
       bucket: "bucket-a",
@@ -60,24 +66,12 @@ describe("presignPutUrl", () => {
     };
     const a = await presignPutUrl({ ...base, contentType: "image/jpeg" });
     const b = await presignPutUrl({ ...base, contentType: "image/png" });
-    expect(a.url).not.toBe(b.url);
+    expect(a.url).toBe(b.url);
+    expect(a.headers["content-type"]).toBe("image/jpeg");
+    expect(b.headers["content-type"]).toBe("image/png");
   });
 
-  test("signed Content-Length is included in browser headers", async () => {
-    const result = await presignPutUrl({
-      endpoint: "https://abc.r2.cloudflarestorage.com",
-      bucket: "bucket-a",
-      key: "k",
-      contentType: "image/jpeg",
-      contentLength: 4096,
-      expiresIn: 600,
-      credentials: TEST_CREDENTIALS,
-      now: FIXED_NOW,
-    });
-    expect(result.headers["content-length"]).toBe("4096");
-  });
-
-  test("X-Amz-SignedHeaders includes content-type but not host in browser headers", async () => {
+  test("X-Amz-SignedHeaders is host-only; browser headers omit host", async () => {
     const result = await presignPutUrl({
       endpoint: "https://abc.r2.cloudflarestorage.com",
       bucket: "bucket-a",
@@ -87,7 +81,8 @@ describe("presignPutUrl", () => {
       credentials: TEST_CREDENTIALS,
       now: FIXED_NOW,
     });
-    expect(result.url).toContain("X-Amz-SignedHeaders=content-type%3Bhost");
+    expect(result.url).toContain("X-Amz-SignedHeaders=host");
+    expect(result.url).not.toContain("content-type%3Bhost");
     // browsers refuse to set `host`; we sign it via the URL but the
     // returned header bag must omit it.
     expect(result.headers).not.toHaveProperty("host");

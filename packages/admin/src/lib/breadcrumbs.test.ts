@@ -26,6 +26,10 @@ const FIXTURE: PlumixManifest = {
   settingsPages: [{ name: "general", label: "General", groups: [] }],
 };
 
+const PLUGIN_PAGES: { readonly to: string; readonly label: string }[] = [
+  { to: "/pages/media", label: "Media Library" },
+];
+
 vi.mock("./manifest.js", async (importOriginal) => {
   const real = await importOriginal<typeof ManifestLib>();
   return {
@@ -36,6 +40,7 @@ vi.mock("./manifest.js", async (importOriginal) => {
       FIXTURE.termTaxonomies?.find((t) => t.name === name),
     findSettingsPageByName: (name: string) =>
       FIXTURE.settingsPages?.find((p) => p.name === name),
+    findPluginPageByPath: (to: string) => PLUGIN_PAGES.find((p) => p.to === to),
   };
 });
 
@@ -112,10 +117,12 @@ describe("pathToCrumbs", () => {
 
   test("profile + plugin pages", () => {
     expect(pathToCrumbs("/profile")).toEqual([{ label: "Profile" }]);
-    expect(pathToCrumbs("/pages/menus")).toEqual([
-      { label: "Pages" },
-      { label: "menus" },
-    ]);
+    // Registered plugin page → resolves to its declared label, no
+    // synthetic "Pages" parent (would collide with the entry-type Pages
+    // surface in the user's sidebar).
+    expect(pathToCrumbs("/pages/media")).toEqual([{ label: "Media Library" }]);
+    // Unregistered plugin path → fall back to URL slug, still no parent.
+    expect(pathToCrumbs("/pages/unknown")).toEqual([{ label: "unknown" }]);
   });
 
   test("unknown top-level segment falls back to Admin", () => {

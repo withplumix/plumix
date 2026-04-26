@@ -226,7 +226,6 @@ export function r2(config: R2Config): R2ObjectStorage {
             bucket: s3.bucket,
             key,
             contentType: opts.contentType,
-            contentLength: opts.maxBytes,
             expiresIn: opts.expiresIn ?? DEFAULT_PRESIGN_TTL_SECONDS,
             credentials: {
               accessKeyId: s3.accessKeyId,
