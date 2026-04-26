@@ -52,12 +52,10 @@ export default defineConfig(({ command }) => ({
   },
   build: {
     rollupOptions: {
-      // In production, treat shared-runtime specifiers as external —
-      // they're resolved at runtime through the importmap to the
-      // standalone vendor chunks built by `scripts/build-vendor-chunks.ts`.
-      // The admin's main bundle and every plugin chunk consume the same
-      // ESM modules, so React (and friends) instantiate exactly once.
-      // In `vite dev` we keep them inlined for the usual fast HMR path.
+      // External in build only — at runtime the importmap resolves
+      // these to the vendor chunks emitted by build-vendor-chunks.ts,
+      // so admin + plugin chunks share one React instance. Dev keeps
+      // them inlined for HMR.
       external: command === "build" ? [...SHARED_RUNTIME_SPECIFIERS] : [],
     },
   },

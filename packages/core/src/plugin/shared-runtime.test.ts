@@ -2,11 +2,11 @@ import { describe, expect, test } from "vitest";
 
 import {
   buildSharedRuntimeImportMap,
-  SHARED_RUNTIME_CHUNK_NAMES,
+  SHARED_RUNTIME_ENTRIES,
   SHARED_RUNTIME_SPECIFIERS,
 } from "./shared-runtime.js";
 
-describe("SHARED_RUNTIME_SPECIFIERS", () => {
+describe("SHARED_RUNTIME_ENTRIES", () => {
   test("includes the load-bearing host packages plugin chunks rely on", () => {
     expect(SHARED_RUNTIME_SPECIFIERS).toEqual(
       expect.arrayContaining([
@@ -20,23 +20,14 @@ describe("SHARED_RUNTIME_SPECIFIERS", () => {
     );
   });
 
-  test("contains no duplicates", () => {
+  test("specifiers contain no duplicates", () => {
     const set = new Set(SHARED_RUNTIME_SPECIFIERS);
     expect(set.size).toBe(SHARED_RUNTIME_SPECIFIERS.length);
   });
-});
 
-describe("SHARED_RUNTIME_CHUNK_NAMES", () => {
-  test("maps every specifier to a filename-safe chunk name", () => {
-    for (const specifier of SHARED_RUNTIME_SPECIFIERS) {
-      const chunk = SHARED_RUNTIME_CHUNK_NAMES[specifier];
-      expect(chunk).toBeDefined();
-      expect(chunk).toMatch(/^[a-z0-9-]+$/);
-    }
-  });
-
-  test("chunk names are unique — one specifier per output file", () => {
-    const chunks = Object.values(SHARED_RUNTIME_CHUNK_NAMES);
+  test("chunk names are filename-safe and unique", () => {
+    const chunks = SHARED_RUNTIME_ENTRIES.map((e) => e.chunk);
+    for (const chunk of chunks) expect(chunk).toMatch(/^[a-z0-9-]+$/);
     expect(new Set(chunks).size).toBe(chunks.length);
   });
 });

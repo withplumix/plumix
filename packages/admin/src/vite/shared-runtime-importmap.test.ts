@@ -13,11 +13,7 @@ function callTransform(): readonly HtmlTagDescriptor[] {
   if (typeof hook !== "function") {
     throw new Error("plugin.transformIndexHtml must be a function");
   }
-  // The `transformIndexHtml` hook is called by Vite with the HTML and a
-  // context object — none of which the importmap injector reads, so the
-  // test invokes it bare and asserts the returned tag descriptors.
-  const result = (hook as unknown as () => readonly HtmlTagDescriptor[])();
-  return result;
+  return (hook as unknown as () => readonly HtmlTagDescriptor[])();
 }
 
 describe("sharedRuntimeImportmap", () => {

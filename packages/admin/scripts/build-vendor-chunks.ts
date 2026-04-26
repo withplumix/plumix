@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 
-import { SHARED_RUNTIME_CHUNK_NAMES } from "@plumix/core";
+import { SHARED_RUNTIME_ENTRIES } from "@plumix/core";
 
 import {
   isValidIdentifier,
@@ -35,13 +35,13 @@ const OUT_DIR = resolve(ADMIN_ROOT, "dist/vendor");
 
 async function main(): Promise<void> {
   await mkdir(OUT_DIR, { recursive: true });
-  const built = await Promise.all(
-    Object.entries(SHARED_RUNTIME_CHUNK_NAMES).map(([specifier, chunk]) =>
+  await Promise.all(
+    SHARED_RUNTIME_ENTRIES.map(({ specifier, chunk }) =>
       buildOne(specifier, chunk),
     ),
   );
   console.log(
-    `[admin/vendor] built ${String(built.length)} chunk(s) → ${OUT_DIR}`,
+    `[admin/vendor] built ${String(SHARED_RUNTIME_ENTRIES.length)} chunk(s) → ${OUT_DIR}`,
   );
 }
 

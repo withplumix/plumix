@@ -11,9 +11,7 @@ function callConfigHook(): UserConfig {
   if (typeof hook !== "function") {
     throw new Error("plugin.config must be a function");
   }
-  // Vite passes (userConfig, env). The author preset reads neither.
-  const result = (hook as () => UserConfig)();
-  return result;
+  return (hook as unknown as () => UserConfig)();
 }
 
 describe("plumixPluginAuthor", () => {
