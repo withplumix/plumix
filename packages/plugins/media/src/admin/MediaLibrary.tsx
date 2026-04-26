@@ -314,7 +314,11 @@ export function MediaLibrary(): ReactNode {
       {list.status === "success" && items.length > 0 && (
         <div
           data-testid="media-library-grid"
-          className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+            gap: "1rem",
+          }}
         >
           {items.map((item) => (
             <MediaCard
@@ -353,7 +357,17 @@ export function MediaLibrary(): ReactNode {
         <div
           data-testid="media-library-drop-overlay"
           aria-hidden="true"
-          className="border-primary bg-primary/5 pointer-events-none absolute inset-4 rounded-lg border-2 border-dashed"
+          style={{
+            position: "absolute",
+            top: "1rem",
+            right: "1rem",
+            bottom: "1rem",
+            left: "1rem",
+            border: "2px dashed var(--primary, #888)",
+            background: "rgba(127,127,127,0.05)",
+            borderRadius: "0.5rem",
+            pointerEvents: "none",
+          }}
         />
       )}
 
@@ -447,6 +461,12 @@ async function tryCleanupDraft(mediaId: number): Promise<void> {
 // already cover the entire library, but a visible target on the empty
 // state tells the user the library accepts files at all — without it
 // the page reads as "nothing to do here".
+// Plugin admin chunks ship Tailwind class strings the host admin's
+// CSS pipeline never scanned, so unusual classes (`size-12`,
+// `border-dashed`, `py-16`, opacity variants) don't render. Keep
+// common classes for typography but use inline styles for the
+// load-bearing layout primitives so the dropzone always has a
+// visible shape and the SVG can't escape its container.
 function Dropzone({
   onSelect,
   highlight,
@@ -458,16 +478,35 @@ function Dropzone({
     <label
       data-testid="media-library-dropzone"
       data-active={highlight ? "true" : undefined}
-      className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed py-16 text-center transition ${
-        highlight
-          ? "border-primary bg-primary/5"
-          : "border-border hover:border-primary/50"
-      }`}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "0.75rem",
+        padding: "4rem 1rem",
+        borderRadius: "0.5rem",
+        border: `2px dashed ${highlight ? "var(--primary, #888)" : "var(--border, #444)"}`,
+        background: highlight ? "rgba(127,127,127,0.05)" : "transparent",
+        textAlign: "center",
+        cursor: "pointer",
+        transition: "border-color 120ms ease",
+      }}
     >
       <input
         type="file"
         multiple
-        className="sr-only"
+        style={{
+          position: "absolute",
+          width: 1,
+          height: 1,
+          padding: 0,
+          margin: -1,
+          overflow: "hidden",
+          clip: "rect(0,0,0,0)",
+          whiteSpace: "nowrap",
+          border: 0,
+        }}
         onChange={(event) => {
           const files = Array.from(event.target.files ?? []);
           if (files.length > 0) onSelect(files);
@@ -475,13 +514,21 @@ function Dropzone({
         }}
       />
       <CloudUploadGlyph />
-      <div className="flex flex-col gap-1">
-        <p className="text-sm font-medium">
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+        <p style={{ fontSize: "0.875rem", fontWeight: 500, margin: 0 }}>
           Your library is empty. Add files to get started.
         </p>
-        <p className="text-muted-foreground text-xs">
+        <p
+          style={{
+            fontSize: "0.75rem",
+            color: "var(--muted-foreground, #888)",
+            margin: 0,
+          }}
+        >
           Drag and drop or{" "}
-          <span className="text-primary underline">select from computer</span>
+          <span style={{ textDecoration: "underline" }}>
+            select from computer
+          </span>
         </p>
       </div>
     </label>
@@ -492,13 +539,15 @@ function CloudUploadGlyph(): ReactNode {
   return (
     <svg
       aria-hidden="true"
+      width="48"
+      height="48"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
       strokeWidth="1.5"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="text-muted-foreground size-12"
+      style={{ color: "var(--muted-foreground, #888)" }}
     >
       <path d="M16 16l-4-4-4 4" />
       <path d="M12 12v9" />
@@ -591,7 +640,15 @@ function MediaCard({
       data-testid={`media-card-${String(item.id)}`}
       className="bg-card group relative flex flex-col gap-2 rounded border p-3"
     >
-      <div className="bg-muted aspect-square w-full overflow-hidden rounded">
+      <div
+        style={{
+          aspectRatio: "1 / 1",
+          width: "100%",
+          overflow: "hidden",
+          borderRadius: "0.25rem",
+          background: "var(--muted, rgba(127,127,127,0.1))",
+        }}
+      >
         {isImage ? (
           <img
             data-testid={`media-card-${String(item.id)}-thumb`}
