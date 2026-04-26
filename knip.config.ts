@@ -42,6 +42,9 @@ const config: KnipConfig = {
         "src/admin/react-dom-client.ts",
         "src/admin/react-query.ts",
         "src/admin/react-router.ts",
+        "src/admin/orpc-client.ts",
+        "src/admin/orpc-client-fetch.ts",
+        "src/admin/orpc-tanstack-query.ts",
         "src/blocks/index.ts",
         "src/cli/index.ts",
         "src/i18n/index.ts",
@@ -63,6 +66,10 @@ const config: KnipConfig = {
       entry: [
         "e2e/fixtures/build-runtime-proof-plugin.ts",
         "e2e/fixtures/runtime-proof-plugin/src/admin.ts",
+        // Reachable via `import "./MediaLibrary.js"` from admin.ts but
+        // knip's static analysis on fixtures doesn't resolve the .js→
+        // .tsx extension swap; list explicitly.
+        "e2e/fixtures/runtime-proof-plugin/src/MediaLibrary.tsx",
       ],
     },
     // The `./commands` subpath export points at `dist/commands/index.js` —

@@ -4,6 +4,7 @@ const ns = getRuntime().react;
 
 export default ns;
 
+export const Activity = ns.Activity;
 export const Children = ns.Children;
 export const Component = ns.Component;
 export const Fragment = ns.Fragment;
@@ -11,7 +12,10 @@ export const Profiler = ns.Profiler;
 export const PureComponent = ns.PureComponent;
 export const StrictMode = ns.StrictMode;
 export const Suspense = ns.Suspense;
+export const act = ns.act;
 export const cache = ns.cache;
+export const cacheSignal = ns.cacheSignal;
+export const captureOwnerStack = ns.captureOwnerStack;
 export const cloneElement = ns.cloneElement;
 export const createContext = ns.createContext;
 export const createElement = ns.createElement;
@@ -28,6 +32,7 @@ export const useContext = ns.useContext;
 export const useDebugValue = ns.useDebugValue;
 export const useDeferredValue = ns.useDeferredValue;
 export const useEffect = ns.useEffect;
+export const useEffectEvent = ns.useEffectEvent;
 export const useId = ns.useId;
 export const useImperativeHandle = ns.useImperativeHandle;
 export const useInsertionEffect = ns.useInsertionEffect;

@@ -12,6 +12,13 @@ const SHIM_SLUGS = {
   "react-dom/client": "react-dom-client",
   "@tanstack/react-query": "react-query",
   "@tanstack/react-router": "react-router",
+  // oRPC client + tanstack-query bridge — plugin pages call their
+  // server-registered RPC routes via these. Sharing the modules with
+  // the host means plugin queries hit the QueryClient cache the admin
+  // already populates from its own `auth.session` etc.
+  "@orpc/client": "orpc-client",
+  "@orpc/client/fetch": "orpc-client-fetch",
+  "@orpc/tanstack-query": "orpc-tanstack-query",
 } as const satisfies Record<string, string>;
 
 export type SharedAdminRuntimeSpecifier = keyof typeof SHIM_SLUGS;

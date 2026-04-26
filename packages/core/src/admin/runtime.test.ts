@@ -9,6 +9,9 @@ import {
 describe("SHARED_ADMIN_RUNTIME_SPECIFIERS", () => {
   test("covers every shared library plugin chunks may need", () => {
     expect(Object.keys(SHARED_ADMIN_RUNTIME_SPECIFIERS).sort()).toEqual([
+      "@orpc/client",
+      "@orpc/client/fetch",
+      "@orpc/tanstack-query",
       "@tanstack/react-query",
       "@tanstack/react-router",
       "react",
@@ -37,6 +40,13 @@ describe("adminRuntimeShimSlug", () => {
     expect(adminRuntimeShimSlug("react-dom/client")).toBe("react-dom-client");
     expect(adminRuntimeShimSlug("@tanstack/react-query")).toBe("react-query");
     expect(adminRuntimeShimSlug("@tanstack/react-router")).toBe("react-router");
+    expect(adminRuntimeShimSlug("@orpc/client")).toBe("orpc-client");
+    expect(adminRuntimeShimSlug("@orpc/client/fetch")).toBe(
+      "orpc-client-fetch",
+    );
+    expect(adminRuntimeShimSlug("@orpc/tanstack-query")).toBe(
+      "orpc-tanstack-query",
+    );
   });
 
   test("slug is a filename-safe segment (used as `<slug>.js`)", () => {
