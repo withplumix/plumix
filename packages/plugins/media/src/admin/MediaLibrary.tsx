@@ -1,5 +1,5 @@
 import type { DragEvent, ReactNode } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useInfiniteQuery,
   useMutation,
@@ -143,7 +143,10 @@ export function MediaLibrary(): ReactNode {
       last.hasMore ? allPages.length * PAGE_SIZE : undefined,
   });
 
-  const items = list.data?.pages.flatMap((p) => p.items) ?? [];
+  const items = useMemo(
+    () => list.data?.pages.flatMap((p) => p.items) ?? [],
+    [list.data?.pages],
+  );
 
   const invalidateList = useCallback((): void => {
     void queryClient.invalidateQueries({ queryKey: MEDIA_LIST_KEY });
@@ -271,102 +274,168 @@ export function MediaLibrary(): ReactNode {
     },
   };
 
+  // Keep `selectedItem` in state, not derived from `items`. The list
+  // refetches on every mutation; deriving would make the drawer
+  // disappear silently when the row briefly drops out of the page
+  // window or while a refetch is in flight. We refresh from the list
+  // by id when a fresh copy is available, never null it from absence.
+  const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
+  useEffect(() => {
+    if (selectedItem === null) return;
+    const fresh = items.find((it) => it.id === selectedItem.id);
+    if (fresh && fresh !== selectedItem) setSelectedItem(fresh);
+    // If the row was deleted (not in items AND list is settled), close.
+    if (!fresh && list.status === "success" && !list.isFetching) {
+      setSelectedItem(null);
+    }
+  }, [items, list.status, list.isFetching, selectedItem]);
+
+  // ESC closes the detail drawer. Depend on the boolean `open` flag
+  // (primitive) so the listener doesn't tear down/rebind on every
+  // refresh of `selectedItem`.
+  const drawerOpen = selectedItem !== null;
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") setSelectedItem(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [drawerOpen]);
+
   return (
     <div
       data-testid="media-library"
-      className="relative flex flex-col gap-6 p-8"
+      style={{
+        display: "flex",
+        gap: "1.5rem",
+        padding: "2rem",
+        position: "relative",
+        minHeight: "100%",
+      }}
       {...dropProps}
     >
-      <header className="flex items-center justify-between">
-        <h1
-          data-testid="media-library-title"
-          className="text-3xl font-semibold tracking-tight"
-        >
-          Media Library
-        </h1>
-        <UploadButton onSelect={(files) => void startUpload(files)} />
-      </header>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          gap: "1.5rem",
+          minWidth: 0,
+        }}
+      >
+        <header className="flex items-center justify-between">
+          <h1
+            data-testid="media-library-title"
+            className="text-3xl font-semibold tracking-tight"
+          >
+            Media Library
+          </h1>
+          <UploadButton onSelect={(files) => void startUpload(files)} />
+        </header>
 
-      {pending.length > 0 && <UploadProgressBar pending={pending} />}
+        {pending.length > 0 && <UploadProgressBar pending={pending} />}
 
-      {list.status === "pending" && (
-        <div data-testid="media-library-loading" className="text-sm">
-          Loading…
-        </div>
-      )}
-      {list.status === "error" && (
-        <div
-          role="alert"
-          data-testid="media-library-error"
-          className="text-destructive text-sm"
-        >
-          Failed to load media.
-        </div>
-      )}
+        {list.status === "pending" && (
+          <div data-testid="media-library-loading" className="text-sm">
+            Loading…
+          </div>
+        )}
+        {list.status === "error" && (
+          <div
+            role="alert"
+            data-testid="media-library-error"
+            className="text-destructive text-sm"
+          >
+            Failed to load media.
+          </div>
+        )}
 
-      {list.status === "success" && items.length === 0 && (
-        <Dropzone
-          onSelect={(files) => void startUpload(files)}
-          highlight={dragging}
-        />
-      )}
+        {list.status === "success" && items.length === 0 && (
+          <Dropzone
+            onSelect={(files) => void startUpload(files)}
+            highlight={dragging}
+          />
+        )}
 
-      {list.status === "success" && items.length > 0 && (
-        <div
-          data-testid="media-library-grid"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-            gap: "1rem",
-          }}
-        >
-          {items.map((item) => (
-            <MediaCard
-              key={item.id}
-              item={item}
-              onDelete={() => {
-                if (
-                  typeof window !== "undefined" &&
-                  window.confirm(`Delete ${item.title}?`)
-                ) {
-                  remove.mutate(item.id);
-                }
-              }}
-              onAltChange={(alt) => update.mutate({ id: item.id, alt })}
-              deleting={remove.isPending && remove.variables === item.id}
-            />
-          ))}
-        </div>
-      )}
+        {list.status === "success" && items.length > 0 && (
+          <div
+            data-testid="media-library-grid"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+              gap: "1rem",
+            }}
+          >
+            {items.map((item) => (
+              <MediaCard
+                key={item.id}
+                item={item}
+                selected={selectedItem?.id === item.id}
+                onOpen={() => setSelectedItem(item)}
+                onDelete={() => {
+                  if (
+                    typeof window !== "undefined" &&
+                    window.confirm(`Delete ${item.title}?`)
+                  ) {
+                    if (selectedItem?.id === item.id) setSelectedItem(null);
+                    remove.mutate(item.id);
+                  }
+                }}
+                onAltChange={(alt) => update.mutate({ id: item.id, alt })}
+                deleting={remove.isPending && remove.variables === item.id}
+              />
+            ))}
+          </div>
+        )}
 
-      <div ref={sentinelRef} data-testid="media-library-sentinel" />
+        <div ref={sentinelRef} data-testid="media-library-sentinel" />
 
-      {list.isFetchingNextPage && (
-        <div
-          data-testid="media-library-loading-more"
-          className="text-muted-foreground text-center text-sm"
-        >
-          Loading more…
-        </div>
-      )}
+        {list.isFetchingNextPage && (
+          <div
+            data-testid="media-library-loading-more"
+            className="text-muted-foreground text-center text-sm"
+          >
+            Loading more…
+          </div>
+        )}
 
-      {/* Page-wide drop overlay — visible whenever a drag is active and
-          the populated grid is rendered (the empty state has its own
-          built-in highlight via the Dropzone component). */}
-      {dragging && items.length > 0 && (
-        <div
-          data-testid="media-library-drop-overlay"
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            top: "1rem",
-            right: "1rem",
-            bottom: "1rem",
-            left: "1rem",
-            border: "2px dashed var(--primary, #888)",
-            background: "rgba(127,127,127,0.05)",
-            borderRadius: "0.5rem",
-            pointerEvents: "none",
+        {/* Page-wide drop overlay — visible whenever a drag is active and
+            the populated grid is rendered (the empty state has its own
+            built-in highlight via the Dropzone component). */}
+        {dragging && items.length > 0 && (
+          <div
+            data-testid="media-library-drop-overlay"
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              top: "1rem",
+              right: "1rem",
+              bottom: "1rem",
+              left: "1rem",
+              border: "2px dashed var(--primary, #888)",
+              background: "rgba(127,127,127,0.05)",
+              borderRadius: "0.5rem",
+              pointerEvents: "none",
+            }}
+          />
+        )}
+      </div>
+
+      {selectedItem && (
+        <MediaDetailDrawer
+          item={selectedItem}
+          onClose={() => setSelectedItem(null)}
+          onAltChange={(alt) => update.mutate({ id: selectedItem.id, alt })}
+          onDelete={() => {
+            if (
+              typeof window !== "undefined" &&
+              window.confirm(`Delete ${selectedItem.title}?`)
+            ) {
+              const id = selectedItem.id;
+              setSelectedItem(null);
+              remove.mutate(id);
+            }
           }}
         />
       )}
@@ -612,11 +681,15 @@ function UploadProgressBar({
 
 function MediaCard({
   item,
+  selected,
+  onOpen,
   onDelete,
   onAltChange,
   deleting,
 }: {
   item: MediaItem;
+  selected: boolean;
+  onOpen: () => void;
   onDelete: () => void;
   onAltChange: (alt: string) => void;
   deleting: boolean;
@@ -638,7 +711,23 @@ function MediaCard({
   return (
     <article
       data-testid={`media-card-${String(item.id)}`}
+      data-selected={selected ? "true" : undefined}
       className="bg-card group relative flex flex-col gap-2 rounded border p-3"
+      style={{
+        outline: selected ? "2px solid var(--primary, #fff)" : undefined,
+        outlineOffset: selected ? "2px" : undefined,
+        cursor: "pointer",
+      }}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`Open details for ${item.title}`}
     >
       <div
         style={{
@@ -647,6 +736,7 @@ function MediaCard({
           overflow: "hidden",
           borderRadius: "0.25rem",
           background: "var(--muted, rgba(127,127,127,0.1))",
+          display: "block",
         }}
       >
         {isImage ? (
@@ -655,7 +745,12 @@ function MediaCard({
             src={item.thumbnailUrl}
             alt={item.alt ?? item.title}
             loading="lazy"
-            className="h-full w-full object-cover"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+            }}
           />
         ) : (
           <FileGlyph mime={item.mime} />
@@ -671,11 +766,25 @@ function MediaCard({
       <div className="text-muted-foreground text-xs">
         {item.mime} · {formatSize(item.size)}
       </div>
-      <div className="absolute top-2 right-2 flex gap-1 opacity-0 transition group-hover:opacity-100">
+      <div
+        style={{
+          position: "absolute",
+          top: "0.5rem",
+          right: "0.5rem",
+          display: "flex",
+          gap: "0.25rem",
+          opacity: 0,
+          transition: "opacity 120ms",
+        }}
+        className="group-hover:opacity-100"
+      >
         <button
           type="button"
           data-testid={`media-card-${String(item.id)}-copy`}
-          onClick={() => void copyUrl()}
+          onClick={(e) => {
+            e.stopPropagation();
+            void copyUrl();
+          }}
           className="bg-card hover:bg-muted rounded border px-2 py-0.5 text-xs"
         >
           {copied ? "Copied" : "Copy URL"}
@@ -684,7 +793,10 @@ function MediaCard({
           type="button"
           data-testid={`media-card-${String(item.id)}-delete`}
           disabled={deleting}
-          onClick={onDelete}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
           className="bg-card hover:bg-destructive hover:text-destructive-foreground rounded border px-2 py-0.5 text-xs disabled:opacity-50"
         >
           {deleting ? "Deleting…" : "Delete"}
@@ -694,13 +806,261 @@ function MediaCard({
   );
 }
 
+function MediaDetailDrawer({
+  item,
+  onClose,
+  onAltChange,
+  onDelete,
+}: {
+  item: MediaItem;
+  onClose: () => void;
+  onAltChange: (alt: string) => void;
+  onDelete: () => void;
+}): ReactNode {
+  const [copied, setCopied] = useState(false);
+  const isImage = item.mime.startsWith("image/");
+  const copy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(item.url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* user can copy from the visible URL */
+    }
+  }, [item.url]);
+
+  return (
+    <aside
+      data-testid="media-detail-drawer"
+      style={{
+        width: "320px",
+        flexShrink: 0,
+        position: "sticky",
+        top: "2rem",
+        alignSelf: "flex-start",
+        maxHeight: "calc(100vh - 4rem)",
+        overflowY: "auto",
+        border: "1px solid var(--border, rgba(255,255,255,0.1))",
+        borderRadius: "0.5rem",
+        background: "var(--card, rgba(255,255,255,0.02))",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0.75rem 1rem",
+          borderBottom: "1px solid var(--border, rgba(255,255,255,0.1))",
+        }}
+      >
+        <span
+          style={{ fontSize: "0.75rem", letterSpacing: "0.05em", opacity: 0.7 }}
+        >
+          ASSET DETAILS
+        </span>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close details"
+          data-testid="media-detail-close"
+          style={{
+            all: "unset",
+            cursor: "pointer",
+            padding: "0.125rem 0.375rem",
+            borderRadius: "0.25rem",
+            fontSize: "1rem",
+            lineHeight: 1,
+          }}
+        >
+          ×
+        </button>
+      </div>
+
+      <div
+        style={{
+          aspectRatio: "1 / 1",
+          width: "100%",
+          background: "var(--muted, rgba(127,127,127,0.1))",
+          overflow: "hidden",
+        }}
+      >
+        {isImage ? (
+          <img
+            src={item.thumbnailUrl}
+            alt={item.alt ?? item.title}
+            style={{ width: "100%", height: "100%", objectFit: "contain" }}
+          />
+        ) : (
+          <FileGlyph mime={item.mime} />
+        )}
+      </div>
+
+      <div
+        style={{
+          padding: "1rem",
+          display: "flex",
+          flexDirection: "column",
+          gap: "1rem",
+        }}
+      >
+        <div>
+          <h2
+            style={{
+              fontSize: "1rem",
+              fontWeight: 600,
+              margin: 0,
+              wordBreak: "break-all",
+            }}
+          >
+            {item.title}
+          </h2>
+        </div>
+
+        <DetailField label="ASSET TYPE" value={item.mime} />
+        <DetailField label="FILE SIZE" value={formatSize(item.size)} />
+
+        <div>
+          <DetailLabel>ALT TEXT</DetailLabel>
+          <AltEditor
+            cardId={item.id}
+            testIdPrefix="media-detail"
+            value={item.alt ?? ""}
+            placeholder={
+              isImage ? "Describe this image…" : "Add a description…"
+            }
+            onSave={onAltChange}
+          />
+        </div>
+
+        <div>
+          <DetailLabel>URL</DetailLabel>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+            }}
+          >
+            <code
+              style={{
+                fontSize: "0.7rem",
+                flex: 1,
+                wordBreak: "break-all",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                opacity: 0.85,
+              }}
+              title={item.url}
+            >
+              {item.url}
+            </code>
+            <button
+              type="button"
+              onClick={() => void copy()}
+              data-testid="media-detail-copy"
+              className="bg-card hover:bg-muted rounded border px-2 py-0.5 text-xs"
+              style={{ flexShrink: 0 }}
+            >
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            gap: "0.5rem",
+            paddingTop: "0.5rem",
+            borderTop: "1px solid var(--border, rgba(255,255,255,0.1))",
+          }}
+        >
+          <a
+            // Always go through the worker serve route with
+            // ?attachment=1 — the HTML `download` attribute is ignored
+            // cross-origin (e.g. when `publicUrlBase` is configured),
+            // but the route always sends `Content-Disposition:
+            // attachment` for this query param, so downloads work
+            // regardless of which mode `item.url` is in.
+            href={`/_plumix/media/serve/${String(item.id)}?attachment=1`}
+            download={item.title}
+            data-testid="media-detail-download"
+            className="bg-card hover:bg-muted rounded border text-xs"
+            style={{
+              flex: 1,
+              padding: "0.5rem 0.75rem",
+              textAlign: "center",
+              textDecoration: "none",
+              color: "inherit",
+            }}
+          >
+            Download
+          </a>
+          <button
+            type="button"
+            data-testid="media-detail-delete"
+            onClick={onDelete}
+            className="hover:bg-destructive hover:text-destructive-foreground rounded border text-xs"
+            style={{
+              flex: 1,
+              padding: "0.5rem 0.75rem",
+              cursor: "pointer",
+              background: "transparent",
+              color: "inherit",
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function DetailLabel({ children }: { children: ReactNode }): ReactNode {
+  return (
+    <div
+      style={{
+        fontSize: "0.7rem",
+        letterSpacing: "0.05em",
+        opacity: 0.6,
+        marginBottom: "0.25rem",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function DetailField({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}): ReactNode {
+  return (
+    <div>
+      <DetailLabel>{label}</DetailLabel>
+      <div style={{ fontSize: "0.875rem", wordBreak: "break-word" }}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
 function AltEditor({
   cardId,
+  testIdPrefix = "media-card",
   value,
   placeholder,
   onSave,
 }: {
   cardId: number;
+  testIdPrefix?: string;
   value: string;
   placeholder: string;
   onSave: (alt: string) => void;
@@ -715,7 +1075,7 @@ function AltEditor({
   }, [value]);
   return (
     <input
-      data-testid={`media-card-${String(cardId)}-alt`}
+      data-testid={`${testIdPrefix}-${String(cardId)}-alt`}
       type="text"
       value={draft}
       placeholder={placeholder}

@@ -79,7 +79,11 @@ const isPlainText: Matcher = (b) => {
 const isISOBMFF: Matcher = sigAt(4, 0x66, 0x74, 0x79, 0x70);
 
 // PKZIP local-file header — also matches DOCX/XLSX/PPTX (they're zip
-// archives) and odt/ods/odp.
+// archives) and odt/ods/odp. We sniff "is this a zip container", NOT
+// "is this the right Office subtype". A `.docx` claimed as xlsx still
+// passes — verifying via the OOXML `[Content_Types].xml` is out of
+// scope; the inline-safe allowlist excludes all of these so the
+// serve route force-downloads regardless of subtype.
 const isZipContainer: Matcher = startsWith(0x50, 0x4b, 0x03, 0x04);
 
 // OLE2 compound document — legacy Office (.doc/.xls/.ppt).

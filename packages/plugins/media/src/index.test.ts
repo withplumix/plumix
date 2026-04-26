@@ -386,6 +386,36 @@ describe("@plumix/plugin-media — media.confirm", () => {
     expect(confirm.error?.data?.reason).toBe("object_not_found");
   });
 
+  test("rejects an upload that exceeds meta.size with PAYLOAD_TOO_LARGE (413)", async () => {
+    // Bytes are not signed into the SigV4 query, so `meta.size` is
+    // just the client's claim. confirm must verify via head() that
+    // the actually-stored object isn't oversized — otherwise an
+    // attacker who got a presigned URL could PUT arbitrary size.
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const user = await h.seedUser("contributor");
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      { filename: "big.png", contentType: "image/png", size: 8 },
+      user.id,
+    );
+    if (!created.output) throw new Error("expected createUploadUrl output");
+    // Stuff 64 bytes of valid PNG header into a slot that claimed 8.
+    await storage.put(created.output.storageKey, PNG_1X1_BYTES, {
+      contentType: "image/png",
+    });
+    const confirm = await rpcDispatch(
+      h,
+      "media/confirm",
+      { id: created.output.mediaId },
+      user.id,
+    );
+    expect(confirm.status).toBe(413);
+    // Object should be deleted (defense-in-depth, no junk in bucket).
+    expect(await storage.head(created.output.storageKey)).toBeNull();
+  });
+
   test("returns FORBIDDEN for a different user's draft", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({ plugins: [media()], storage });
@@ -406,6 +436,31 @@ describe("@plumix/plugin-media — media.confirm", () => {
       "media/confirm",
       { id: mediaId },
       other.id,
+    );
+    expect(confirm.status).toBe(403);
+  });
+
+  test("editors with entry:media:edit_any cannot confirm someone else's draft (owner-only)", async () => {
+    // Confirm finalizes someone else's pending upload — `edit_any` is
+    // for editing existing assets, not for taking over a half-baked
+    // draft. Even editor-tier users get 403 when they didn't author
+    // the draft.
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const owner = await h.seedUser("contributor");
+    const editor = await h.seedUser("editor");
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      { filename: "x.png", contentType: "image/png", size: 5 },
+      owner.id,
+    );
+    if (!created.output) throw new Error("expected createUploadUrl output");
+    const confirm = await rpcDispatch<ConfirmOutput>(
+      h,
+      "media/confirm",
+      { id: created.output.mediaId },
+      editor.id,
     );
     expect(confirm.status).toBe(403);
   });
