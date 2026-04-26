@@ -101,7 +101,7 @@ export function media(
         title: "Media Library",
         capability: "entry:media:read",
         nav: {
-          group: "management",
+          group: "content",
           label: "Media Library",
           order: 50,
         },

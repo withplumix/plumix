@@ -45,7 +45,7 @@ describe("@plumix/plugin-media — registration", () => {
     expect(page).toBeDefined();
     expect(page?.title).toBe("Media Library");
     expect(page?.capability).toBe("entry:media:read");
-    expect(page?.nav?.group).toBe("management");
+    expect(page?.nav?.group).toBe("content");
     expect(page?.nav?.label).toBe("Media Library");
     expect(page?.component).toEqual({
       package: "@plumix/plugin-media",
@@ -326,7 +326,7 @@ describe("@plumix/plugin-media — media.confirm", () => {
     expect(confirm.error?.data?.reason).toBe("object_not_found");
   });
 
-  test("returns NOT_FOUND for a different user's draft (uniform with non-existent ids)", async () => {
+  test("returns FORBIDDEN for a different user's draft", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({ plugins: [media()], storage });
     const owner = await h.seedUser("contributor");
@@ -347,9 +347,7 @@ describe("@plumix/plugin-media — media.confirm", () => {
       { id: mediaId },
       other.id,
     );
-    // 404 (not 403) — the procedure doesn't disclose the row's existence
-    // to non-owners. Same code path as a non-existent id.
-    expect(confirm.status).toBe(404);
+    expect(confirm.status).toBe(403);
   });
 
   test("returns NOT_FOUND for a non-existent id", async () => {
@@ -494,7 +492,7 @@ describe("@plumix/plugin-media — media.delete", () => {
     expect(await storage.head(seeded.storageKey)).toBeNull();
   });
 
-  test("returns NOT_FOUND for a non-owner without entry:media:delete", async () => {
+  test("returns FORBIDDEN for a non-owner without entry:media:delete", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({ plugins: [media()], storage });
     const owner = await h.seedUser("contributor");
@@ -507,8 +505,7 @@ describe("@plumix/plugin-media — media.delete", () => {
       { id: seeded.id },
       other.id,
     );
-    // 404, uniform with non-existent id — no existence disclosure.
-    expect(status).toBe(404);
+    expect(status).toBe(403);
     // Object stays untouched.
     expect(await storage.head(seeded.storageKey)).not.toBeNull();
   });
@@ -576,7 +573,7 @@ describe("@plumix/plugin-media — media.update", () => {
     );
   });
 
-  test("returns NOT_FOUND for a non-owner without edit_any", async () => {
+  test("returns FORBIDDEN for a non-owner without edit_any", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({ plugins: [media()], storage });
     const owner = await h.seedUser("contributor");
@@ -589,7 +586,7 @@ describe("@plumix/plugin-media — media.update", () => {
       { id: seeded.id, alt: "snooped" },
       other.id,
     );
-    expect(result.status).toBe(404);
+    expect(result.status).toBe(403);
   });
 
   test("rolls back the draft entry when presignPut throws", async () => {

@@ -215,7 +215,9 @@ export function createMediaRouter(
 
       const isOwner = row.authorId === context.user.id;
       if (!isOwner && !context.auth.can("entry:media:edit_any")) {
-        throw notFound();
+        throw errors.FORBIDDEN({
+          data: { capability: "entry:media:edit_any" },
+        });
       }
 
       const meta = parseMediaMeta(row.meta);
@@ -353,7 +355,9 @@ export function createMediaRouter(
 
       const isOwner = row.authorId === context.user.id;
       if (!isOwner && !context.auth.can("entry:media:edit_any")) {
-        throw notFound();
+        throw errors.FORBIDDEN({
+          data: { capability: "entry:media:edit_any" },
+        });
       }
 
       const meta = parseMediaMeta(row.meta);
@@ -401,7 +405,7 @@ export function createMediaRouter(
 
       const isOwner = row.authorId === context.user.id;
       if (!isOwner && !context.auth.can("entry:media:delete")) {
-        throw notFound();
+        throw errors.FORBIDDEN({ data: { capability: "entry:media:delete" } });
       }
 
       // Delete the row first, then the bytes. If the storage delete

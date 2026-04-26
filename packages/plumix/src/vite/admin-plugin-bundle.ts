@@ -91,6 +91,12 @@ export async function assemblePluginAdminBundle({
     plugins: [pluginRuntimeAliasPlugin()],
     nodePaths: [resolve(projectRoot, "node_modules")],
     absWorkingDir: projectRoot,
+    // Plugin admin entries are bare `import "..."` for the
+    // module-eval side effect (`window.plumix.registerPluginPage`).
+    // A plugin's `package.json` `"sideEffects": false` would let
+    // esbuild tree-shake the entire import — silently producing a
+    // 0-byte bundle. Ignore those annotations for this build.
+    ignoreAnnotations: true,
   });
 
   return { chunkUrl: "./plugins/site-bundle.js" };
