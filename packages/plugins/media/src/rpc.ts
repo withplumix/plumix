@@ -41,6 +41,12 @@ interface MediaListItem {
   readonly alt: string | null;
   readonly url: string;
   readonly thumbnailUrl: string;
+  // ISO-8601 timestamp — surfaces in the drawer's "Uploaded" line.
+  readonly uploadedAt: string;
+  // Author display info for the "Uploaded by" line. Populated when the
+  // join lands; left undefined when the row's authorId no longer
+  // resolves (deleted user).
+  readonly uploadedById: number;
 }
 
 interface MediaListResponse {
@@ -332,6 +338,10 @@ export function createMediaRouter(
         const url = context.storage
           ? await resolveMediaUrl(context.storage, meta.storageKey, row.id)
           : meta.storageKey;
+        // `publishedAt` is the source of truth for "uploaded on"
+        // (set by `confirm`'s CAS); fall back to createdAt for the
+        // edge case where publishedAt is somehow null.
+        const uploadedAt = (row.publishedAt ?? row.createdAt).toISOString();
         items.push({
           id: row.id,
           title: row.title,
@@ -341,6 +351,8 @@ export function createMediaRouter(
           alt: meta.alt,
           url,
           thumbnailUrl: thumbnailFor(context, url, meta.mime),
+          uploadedAt,
+          uploadedById: row.authorId,
         });
       }
       return { items, hasMore };
@@ -456,7 +468,15 @@ function thumbnailFor(
   url: string,
   mime: string,
 ): string {
+  // imageDelivery transforms (e.g. Cloudflare Image Transformations)
+  // need an absolute, publicly-reachable source URL — the transform
+  // CDN fetches the source itself. When `storage.url()` falls back to
+  // the worker-proxied `/_plumix/media/serve/<id>` (binding-only mode,
+  // no publicUrlBase), the transform CDN can't fetch it: relative URL,
+  // no public origin to dereference. Apply transforms only to absolute
+  // URLs.
   if (!mime.startsWith("image/") || !context.imageDelivery) return url;
+  if (!url.startsWith("http://") && !url.startsWith("https://")) return url;
   return context.imageDelivery.url(url, THUMBNAIL_OPTS);
 }
 

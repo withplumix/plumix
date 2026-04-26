@@ -10,6 +10,42 @@ const PAGE_SIZE = 24;
 const MEDIA_LIST_KEY = ["media", "list"] as const;
 const UPLOAD_CONCURRENCY = 4;
 
+// Shimmer keyframes — injected once at module load. Plugin chunks
+// can't rely on host CSS scanning their classnames (host Tailwind
+// pipeline doesn't see plugin source), so we inline the small bit of
+// CSS we need.
+const SHIMMER_STYLE_ID = "plumix-media-shimmer";
+if (
+  typeof document !== "undefined" &&
+  !document.getElementById(SHIMMER_STYLE_ID)
+) {
+  const styleEl = document.createElement("style");
+  styleEl.id = SHIMMER_STYLE_ID;
+  styleEl.textContent = `
+@keyframes plumix-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+`;
+  document.head.appendChild(styleEl);
+}
+
+// Resolve a media URL to absolute form for copy/display. The plugin
+// emits relative `/_plumix/media/serve/<id>` URLs in binding-only
+// mode (no `publicUrlBase`); they work for `<img src=...>` on the
+// admin page itself but break the moment a user copies the URL into
+// an email, an external editor, or a different origin's post body.
+// `Copy URL` MUST hand back something pasteable.
+function toAbsoluteUrl(url: string): string {
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  if (typeof window === "undefined") return url;
+  try {
+    return new URL(url, window.location.origin).toString();
+  } catch {
+    return url;
+  }
+}
+
 async function runWithConcurrency<T>(
   items: readonly T[],
   limit: number,
@@ -31,12 +67,13 @@ async function runWithConcurrency<T>(
 interface MediaItem {
   readonly id: number;
   readonly title: string;
-  readonly slug: string;
   readonly mime: string;
   readonly size: number;
   readonly url: string;
   readonly thumbnailUrl: string;
   readonly alt: string | null;
+  readonly uploadedAt: string;
+  readonly uploadedById: number;
 }
 
 interface MediaListResponse {
@@ -336,11 +373,7 @@ export function MediaLibrary(): ReactNode {
 
         {pending.length > 0 && <UploadProgressBar pending={pending} />}
 
-        {list.status === "pending" && (
-          <div data-testid="media-library-loading" className="text-sm">
-            Loading…
-          </div>
-        )}
+        {list.status === "pending" && <MediaSkeletonGrid />}
         {list.status === "error" && (
           <div
             role="alert"
@@ -373,17 +406,6 @@ export function MediaLibrary(): ReactNode {
                 item={item}
                 selected={selectedItem?.id === item.id}
                 onOpen={() => setSelectedItem(item)}
-                onDelete={() => {
-                  if (
-                    typeof window !== "undefined" &&
-                    window.confirm(`Delete ${item.title}?`)
-                  ) {
-                    if (selectedItem?.id === item.id) setSelectedItem(null);
-                    remove.mutate(item.id);
-                  }
-                }}
-                onAltChange={(alt) => update.mutate({ id: item.id, alt })}
-                deleting={remove.isPending && remove.variables === item.id}
               />
             ))}
           </div>
@@ -428,14 +450,11 @@ export function MediaLibrary(): ReactNode {
           onClose={() => setSelectedItem(null)}
           onAltChange={(alt) => update.mutate({ id: selectedItem.id, alt })}
           onDelete={() => {
-            if (
-              typeof window !== "undefined" &&
-              window.confirm(`Delete ${selectedItem.title}?`)
-            ) {
-              const id = selectedItem.id;
-              setSelectedItem(null);
-              remove.mutate(id);
-            }
+            // Confirmation handled inside the drawer's ConfirmDialog;
+            // by the time we get here the user already confirmed.
+            const id = selectedItem.id;
+            setSelectedItem(null);
+            remove.mutate(id);
           }}
         />
       )}
@@ -683,39 +702,31 @@ function MediaCard({
   item,
   selected,
   onOpen,
-  onDelete,
-  onAltChange,
-  deleting,
 }: {
   item: MediaItem;
   selected: boolean;
   onOpen: () => void;
-  onDelete: () => void;
-  onAltChange: (alt: string) => void;
-  deleting: boolean;
+  // onDelete + onAltChange removed from card — both belong to the
+  // detail drawer now (matches the WP/screenshot pattern: card is
+  // the index, drawer is the detail editor).
 }): ReactNode {
-  const [copied, setCopied] = useState(false);
   const isImage = item.mime.startsWith("image/");
-
-  const copyUrl = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(item.url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // Clipboard write rejected (HTTP context, denied permission, …).
-      // The URL is already visible on the card; user can copy by hand.
-    }
-  }, [item.url]);
 
   return (
     <article
       data-testid={`media-card-${String(item.id)}`}
       data-selected={selected ? "true" : undefined}
-      className="bg-card group relative flex flex-col gap-2 rounded border p-3"
       style={{
+        position: "relative",
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.5rem",
+        padding: "0.75rem",
+        borderRadius: "0.5rem",
+        border: "1px solid var(--border, rgba(255,255,255,0.1))",
+        background: "var(--card, rgba(255,255,255,0.02))",
         outline: selected ? "2px solid var(--primary, #fff)" : undefined,
-        outlineOffset: selected ? "2px" : undefined,
+        outlineOffset: selected ? "1px" : undefined,
         cursor: "pointer",
       }}
       onClick={onOpen}
@@ -731,79 +742,169 @@ function MediaCard({
     >
       <div
         style={{
+          position: "relative",
           aspectRatio: "1 / 1",
           width: "100%",
           overflow: "hidden",
           borderRadius: "0.25rem",
           background: "var(--muted, rgba(127,127,127,0.1))",
-          display: "block",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
         {isImage ? (
-          <img
-            data-testid={`media-card-${String(item.id)}-thumb`}
+          <ImageWithFallback
             src={item.thumbnailUrl}
             alt={item.alt ?? item.title}
-            loading="lazy"
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              display: "block",
-            }}
+            mime={item.mime}
+            testId={`media-card-${String(item.id)}-thumb`}
           />
         ) : (
           <FileGlyph mime={item.mime} />
         )}
+        <FileTypeBadge mime={item.mime} />
       </div>
-      <div className="truncate text-sm">{item.title}</div>
-      <AltEditor
-        cardId={item.id}
-        value={item.alt ?? ""}
-        placeholder={isImage ? "Describe this image…" : "Add a description…"}
-        onSave={onAltChange}
-      />
-      <div className="text-muted-foreground text-xs">
-        {item.mime} · {formatSize(item.size)}
+      <div
+        data-testid={`media-card-${String(item.id)}-title`}
+        style={{
+          fontSize: "0.875rem",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+        title={item.title}
+      >
+        {item.title}
       </div>
       <div
         style={{
-          position: "absolute",
-          top: "0.5rem",
-          right: "0.5rem",
+          fontSize: "0.7rem",
+          opacity: 0.6,
           display: "flex",
-          gap: "0.25rem",
-          opacity: 0,
-          transition: "opacity 120ms",
+          gap: "0.5rem",
         }}
-        className="group-hover:opacity-100"
       >
-        <button
-          type="button"
-          data-testid={`media-card-${String(item.id)}-copy`}
-          onClick={(e) => {
-            e.stopPropagation();
-            void copyUrl();
-          }}
-          className="bg-card hover:bg-muted rounded border px-2 py-0.5 text-xs"
-        >
-          {copied ? "Copied" : "Copy URL"}
-        </button>
-        <button
-          type="button"
-          data-testid={`media-card-${String(item.id)}-delete`}
-          disabled={deleting}
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-          className="bg-card hover:bg-destructive hover:text-destructive-foreground rounded border px-2 py-0.5 text-xs disabled:opacity-50"
-        >
-          {deleting ? "Deleting…" : "Delete"}
-        </button>
+        <span>{formatShortDate(item.uploadedAt)}</span>
+        <span>·</span>
+        <span>{formatSize(item.size)}</span>
       </div>
     </article>
   );
+}
+
+function MediaSkeletonGrid(): ReactNode {
+  // Same grid shape as the populated state so the layout is stable
+  // across the loading → loaded transition (no shift, no reflow).
+  const placeholders = Array.from({ length: 8 }, (_, i) => i);
+  return (
+    <div
+      data-testid="media-library-loading"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+        gap: "1rem",
+      }}
+    >
+      {placeholders.map((i) => (
+        <div
+          key={i}
+          aria-hidden="true"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.5rem",
+            padding: "0.75rem",
+            borderRadius: "0.5rem",
+            border: "1px solid var(--border, rgba(255,255,255,0.08))",
+            background: "var(--card, rgba(255,255,255,0.02))",
+          }}
+        >
+          <div
+            style={{
+              aspectRatio: "1 / 1",
+              width: "100%",
+              borderRadius: "0.25rem",
+              background:
+                "linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0.04) 100%)",
+              backgroundSize: "200% 100%",
+              animation: "plumix-shimmer 1.4s ease-in-out infinite",
+            }}
+          />
+          <div
+            style={{
+              height: "0.875rem",
+              width: "70%",
+              borderRadius: "0.125rem",
+              background: "rgba(255,255,255,0.06)",
+            }}
+          />
+          <div
+            style={{
+              height: "0.7rem",
+              width: "40%",
+              borderRadius: "0.125rem",
+              background: "rgba(255,255,255,0.04)",
+            }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FileTypeBadge({ mime }: { mime: string }): ReactNode {
+  const label = badgeLabel(mime);
+  if (!label) return null;
+  return (
+    <span
+      style={{
+        position: "absolute",
+        top: "0.5rem",
+        right: "0.5rem",
+        background: "rgba(0,0,0,0.75)",
+        color: "#fff",
+        padding: "0.125rem 0.4rem",
+        borderRadius: "0.125rem",
+        fontSize: "0.65rem",
+        letterSpacing: "0.05em",
+        fontWeight: 600,
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
+function badgeLabel(mime: string): string | null {
+  if (mime === "application/pdf") return "PDF";
+  if (mime.includes("wordprocessingml")) return "DOCX";
+  if (mime.includes("spreadsheetml")) return "XLSX";
+  if (mime.includes("presentationml")) return "PPTX";
+  if (mime === "application/msword") return "DOC";
+  if (mime === "application/vnd.ms-excel") return "XLS";
+  if (mime === "application/vnd.ms-powerpoint") return "PPT";
+  if (mime === "application/zip") return "ZIP";
+  const sub = mime.split("/")[1] ?? "";
+  return sub.replace(/^x-/, "").toUpperCase().slice(0, 5);
+}
+
+function formatShortDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d
+    .toLocaleDateString(undefined, { month: "short", day: "numeric" })
+    .toUpperCase();
+}
+
+function formatLongDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function MediaDetailDrawer({
@@ -818,16 +919,18 @@ function MediaDetailDrawer({
   onDelete: () => void;
 }): ReactNode {
   const [copied, setCopied] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const isImage = item.mime.startsWith("image/");
+  const absoluteUrl = toAbsoluteUrl(item.url);
   const copy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(item.url);
+      await navigator.clipboard.writeText(absoluteUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
       /* user can copy from the visible URL */
     }
-  }, [item.url]);
+  }, [absoluteUrl]);
 
   return (
     <aside
@@ -921,6 +1024,7 @@ function MediaDetailDrawer({
 
         <DetailField label="ASSET TYPE" value={item.mime} />
         <DetailField label="FILE SIZE" value={formatSize(item.size)} />
+        <DetailField label="UPLOADED" value={formatLongDate(item.uploadedAt)} />
 
         <div>
           <DetailLabel>ALT TEXT</DetailLabel>
@@ -945,6 +1049,7 @@ function MediaDetailDrawer({
             }}
           >
             <code
+              data-testid="media-detail-url"
               style={{
                 fontSize: "0.7rem",
                 flex: 1,
@@ -954,16 +1059,24 @@ function MediaDetailDrawer({
                 whiteSpace: "nowrap",
                 opacity: 0.85,
               }}
-              title={item.url}
+              title={absoluteUrl}
             >
-              {item.url}
+              {absoluteUrl}
             </code>
             <button
               type="button"
               onClick={() => void copy()}
               data-testid="media-detail-copy"
-              className="bg-card hover:bg-muted rounded border px-2 py-0.5 text-xs"
-              style={{ flexShrink: 0 }}
+              style={{
+                flexShrink: 0,
+                padding: "0.25rem 0.5rem",
+                fontSize: "0.7rem",
+                background: "transparent",
+                color: "inherit",
+                border: "1px solid var(--border, rgba(255,255,255,0.15))",
+                borderRadius: "0.25rem",
+                cursor: "pointer",
+              }}
             >
               {copied ? "Copied" : "Copy"}
             </button>
@@ -1002,21 +1115,168 @@ function MediaDetailDrawer({
           <button
             type="button"
             data-testid="media-detail-delete"
-            onClick={onDelete}
-            className="hover:bg-destructive hover:text-destructive-foreground rounded border text-xs"
+            onClick={() => setConfirmingDelete(true)}
             style={{
               flex: 1,
               padding: "0.5rem 0.75rem",
               cursor: "pointer",
               background: "transparent",
               color: "inherit",
+              border: "1px solid var(--border, rgba(255,255,255,0.15))",
+              borderRadius: "0.25rem",
+              fontSize: "0.75rem",
             }}
           >
             Delete
           </button>
         </div>
       </div>
+      {confirmingDelete && (
+        <ConfirmDialog
+          title="Delete this asset?"
+          description={`"${item.title}" will be removed permanently. Pages or posts that embed it will show a broken link.`}
+          confirmLabel="Delete"
+          danger
+          onCancel={() => setConfirmingDelete(false)}
+          onConfirm={() => {
+            setConfirmingDelete(false);
+            onDelete();
+          }}
+        />
+      )}
     </aside>
+  );
+}
+
+function ConfirmDialog({
+  title,
+  description,
+  confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
+  danger = false,
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  description?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  danger?: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}): ReactNode {
+  // Close on ESC; trap obvious-bg click as cancel.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+
+  return (
+    <div
+      data-testid="confirm-dialog-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirm-dialog-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCancel();
+      }}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 50,
+        padding: "1rem",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "420px",
+          background: "var(--card, #1a1a1a)",
+          border: "1px solid var(--border, rgba(255,255,255,0.1))",
+          borderRadius: "0.5rem",
+          padding: "1.25rem",
+          display: "flex",
+          flexDirection: "column",
+          gap: "0.75rem",
+          color: "inherit",
+        }}
+      >
+        <h3
+          id="confirm-dialog-title"
+          data-testid="confirm-dialog-title"
+          style={{ fontSize: "1rem", fontWeight: 600, margin: 0 }}
+        >
+          {title}
+        </h3>
+        {description && (
+          <p
+            style={{
+              fontSize: "0.85rem",
+              opacity: 0.75,
+              margin: 0,
+              lineHeight: 1.4,
+            }}
+          >
+            {description}
+          </p>
+        )}
+        <div
+          style={{
+            display: "flex",
+            gap: "0.5rem",
+            justifyContent: "flex-end",
+            marginTop: "0.5rem",
+          }}
+        >
+          <button
+            type="button"
+            data-testid="confirm-dialog-cancel"
+            onClick={onCancel}
+            style={{
+              padding: "0.5rem 0.875rem",
+              borderRadius: "0.25rem",
+              border: "1px solid var(--border, rgba(255,255,255,0.15))",
+              background: "transparent",
+              color: "inherit",
+              cursor: "pointer",
+              fontSize: "0.8rem",
+            }}
+          >
+            {cancelLabel}
+          </button>
+          <button
+            type="button"
+            data-testid="confirm-dialog-confirm"
+            onClick={onConfirm}
+            autoFocus
+            style={{
+              padding: "0.5rem 0.875rem",
+              borderRadius: "0.25rem",
+              border: "1px solid",
+              borderColor: danger
+                ? "rgba(220,80,80,0.7)"
+                : "var(--primary, rgba(255,255,255,0.4))",
+              background: danger
+                ? "rgba(220,80,80,0.85)"
+                : "var(--primary, #fff)",
+              color: danger ? "#fff" : "var(--primary-foreground, #000)",
+              cursor: "pointer",
+              fontSize: "0.8rem",
+              fontWeight: 600,
+            }}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1066,6 +1326,7 @@ function AltEditor({
   onSave: (alt: string) => void;
 }): ReactNode {
   const [draft, setDraft] = useState(value);
+  const [savedFlash, setSavedFlash] = useState(false);
   const dirtyRef = useRef(false);
   // Resync from the canonical value only when the user isn't mid-edit.
   // Without this, a list refetch landing while the input is focused
@@ -1073,30 +1334,153 @@ function AltEditor({
   useEffect(() => {
     if (!dirtyRef.current) setDraft(value);
   }, [value]);
+
+  const commit = useCallback(() => {
+    dirtyRef.current = false;
+    if (draft !== value) {
+      onSave(draft);
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 1200);
+    }
+  }, [draft, value, onSave]);
+
   return (
-    <input
-      data-testid={`${testIdPrefix}-${String(cardId)}-alt`}
-      type="text"
-      value={draft}
-      placeholder={placeholder}
-      onChange={(e) => {
-        dirtyRef.current = true;
-        setDraft(e.target.value);
-      }}
-      onBlur={() => {
-        dirtyRef.current = false;
-        if (draft !== value) onSave(draft);
-      }}
-      className="text-muted-foreground hover:bg-muted focus:bg-muted w-full truncate rounded bg-transparent px-1 text-xs outline-none"
-    />
+    <div style={{ position: "relative" }}>
+      <input
+        data-testid={`${testIdPrefix}-${String(cardId)}-alt`}
+        type="text"
+        value={draft}
+        placeholder={placeholder}
+        onChange={(e) => {
+          dirtyRef.current = true;
+          setDraft(e.target.value);
+        }}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commit();
+            e.currentTarget.blur();
+          } else if (e.key === "Escape") {
+            // Discard edit + restore canonical value, no save.
+            e.preventDefault();
+            dirtyRef.current = false;
+            setDraft(value);
+            e.currentTarget.blur();
+          }
+        }}
+        className="text-muted-foreground hover:bg-muted focus:bg-muted w-full truncate rounded bg-transparent px-1 text-xs outline-none"
+        style={{
+          width: "100%",
+          background: "transparent",
+          border: "1px solid var(--border, rgba(255,255,255,0.1))",
+          borderRadius: "0.25rem",
+          padding: "0.25rem 0.5rem",
+          fontSize: "0.75rem",
+          color: "inherit",
+          outline: "none",
+        }}
+      />
+      {savedFlash && (
+        <span
+          data-testid={`${testIdPrefix}-${String(cardId)}-alt-saved`}
+          aria-live="polite"
+          style={{
+            position: "absolute",
+            right: "0.5rem",
+            top: "50%",
+            transform: "translateY(-50%)",
+            fontSize: "0.65rem",
+            color: "var(--primary, #8f8)",
+            pointerEvents: "none",
+          }}
+        >
+          ✓ Saved
+        </span>
+      )}
+    </div>
   );
 }
 
 function FileGlyph({ mime }: { mime: string }): ReactNode {
   return (
-    <div className="text-muted-foreground flex h-full w-full items-center justify-center text-2xl font-medium tracking-wider">
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "1.25rem",
+        fontWeight: 600,
+        letterSpacing: "0.1em",
+        color: "var(--muted-foreground, rgba(255,255,255,0.5))",
+      }}
+    >
       {mimeGlyph(mime)}
     </div>
+  );
+}
+
+// Image with avatar-style fallback. Shows a shimmer skeleton while
+// loading, fades the image in once `onLoad` fires, falls back to the
+// file glyph if the image errors. Container has a fixed aspect ratio
+// so there's no layout shift between skeleton → image.
+function ImageWithFallback({
+  src,
+  alt,
+  mime,
+  testId,
+}: {
+  src: string;
+  alt: string;
+  mime: string;
+  testId?: string;
+}): ReactNode {
+  const [state, setState] = useState<"loading" | "loaded" | "error">("loading");
+  return (
+    <>
+      {state !== "loaded" && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background:
+              state === "error"
+                ? "var(--muted, rgba(127,127,127,0.1))"
+                : "linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0.04) 100%)",
+            backgroundSize: "200% 100%",
+            animation:
+              state === "loading"
+                ? "plumix-shimmer 1.4s ease-in-out infinite"
+                : undefined,
+          }}
+        >
+          {state === "error" && <FileGlyph mime={mime} />}
+        </div>
+      )}
+      <img
+        data-testid={testId}
+        src={src}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        onLoad={() => setState("loaded")}
+        onError={() => setState("error")}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          display: "block",
+          opacity: state === "loaded" ? 1 : 0,
+          transition: "opacity 200ms ease",
+        }}
+      />
+    </>
   );
 }
 
