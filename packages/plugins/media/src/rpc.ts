@@ -214,10 +214,13 @@ export function createMediaRouter(
         .limit(1);
       if (row?.type !== MEDIA_ENTRY_TYPE) throw notFound();
 
-      const isOwner = row.authorId === context.user.id;
-      if (!isOwner && !context.auth.can("entry:media:edit_any")) {
+      // Confirm is owner-only — `entry:media:edit_any` is for editing
+      // existing assets, not finalizing someone else's drafts. A
+      // non-owner shouldn't be able to publish another user's
+      // half-completed upload.
+      if (row.authorId !== context.user.id) {
         throw errors.FORBIDDEN({
-          data: { capability: "entry:media:edit_any" },
+          data: { capability: "entry:media:create" },
         });
       }
 
@@ -231,14 +234,23 @@ export function createMediaRouter(
         throw errors.CONFLICT({ data: { reason: "storage_not_configured" } });
       }
 
-      // Verify the presigned PUT actually landed AND defend against MIME
-      // confusion in one round-trip: a ranged read returns null if the
-      // object is missing, otherwise hands us the first bytes to check
-      // against the claimed content-type. The bucket stores whatever the
-      // upload signed, so if a client claimed `image/png` but uploaded
-      // arbitrary bytes, we'd serve them as PNG forever. Delete on
-      // mismatch so an attacker can't force-leave junk in the bucket
-      // between a forged claim and our detection.
+      // Size check — bytes are not signed into the SigV4 query, so
+      // `meta.size` is just the client's claim at draft creation. Use
+      // head() to verify the actually-stored bytes don't exceed it.
+      const head = await storage.head(meta.storageKey);
+      if (!head) {
+        throw errors.CONFLICT({ data: { reason: "object_not_found" } });
+      }
+      if (head.size > meta.size) {
+        await storage.delete(meta.storageKey);
+        throw errors.PAYLOAD_TOO_LARGE({
+          data: { limit: meta.size, received: head.size },
+        });
+      }
+
+      // Verify the bytes match the claimed mime via magic-byte sniff.
+      // Delete on mismatch so an attacker can't force-leave junk in
+      // the bucket between a forged claim and our detection.
       const sampleObj = await storage.get(meta.storageKey, {
         range: { offset: 0, length: MAGIC_BYTE_SAMPLE_SIZE },
       });

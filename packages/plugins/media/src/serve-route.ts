@@ -84,18 +84,32 @@ export async function handleMediaServe(
     });
   }
 
+  // `?attachment=1` forces a download regardless of mime. The admin's
+  // Download button uses this so the response carries the attachment
+  // disposition even when `publicUrlBase` would otherwise route around
+  // the worker (HTML `<a download>` is silently ignored cross-origin
+  // without a matching `Content-Disposition` header).
+  const forceAttachment = url.searchParams.get("attachment") === "1";
+  const inline = !forceAttachment && INLINE_SAFE_MIMES.has(meta.mime);
+
   const headers = new Headers();
   headers.set("content-type", meta.mime);
   headers.set("content-length", String(obj.size));
   headers.set("cache-control", cacheControl());
   headers.set("x-content-type-options", "nosniff");
   if (obj.etag) headers.set("etag", obj.etag);
-  if (!INLINE_SAFE_MIMES.has(meta.mime)) {
-    const filename = sanitizeFilename(row.title);
-    headers.set("content-disposition", `attachment; filename="${filename}"`);
-  }
+  if (!inline)
+    headers.set("content-disposition", contentDisposition(row.title));
 
   return new Response(obj.body, { status: 200, headers });
+}
+
+function contentDisposition(title: string): string {
+  // RFC 6266: ASCII fallback in `filename="..."` plus a UTF-8
+  // `filename*=UTF-8''...` so non-Latin titles aren't mangled.
+  const ascii = sanitizeFilename(title);
+  const utf8 = encodeURIComponent(title);
+  return `attachment; filename="${ascii}"; filename*=UTF-8''${utf8}`;
 }
 
 function cacheControl(): string {
