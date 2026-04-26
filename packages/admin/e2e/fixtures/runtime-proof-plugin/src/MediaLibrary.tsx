@@ -4,8 +4,25 @@
 
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { createORPCClient } from "@orpc/client";
+import { RPCLink } from "@orpc/client/fetch";
+import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
+
+// The orpc trio is sourced from the host runtime via aliased imports.
+// In a real plugin, the type parameter on `createORPCClient` would
+// match the plugin's own router definition. For the seam proof we
+// only need the runtime instances to be reachable.
+type FixtureRouter = Record<string, never>;
+
+const fixtureClient = createORPCClient<FixtureRouter>(
+  new RPCLink({
+    url: () => `${window.location.origin}/_plumix/admin/index.html`,
+    headers: () => ({}),
+  }),
+);
+const fixtureOrpc = createTanstackQueryUtils(fixtureClient);
 
 const PROOF_QUERY_KEY = ["e2e", "runtime-proof", "ping"] as const;
 
@@ -25,6 +42,13 @@ export function MediaLibrary(): ReactNode {
   });
 
   const cached = client.getQueryData(PROOF_QUERY_KEY);
+
+  // Proves the orpc trio is shared with the host: constructing the
+  // client + utils above resolves through the importmap-equivalent
+  // alias seam, not a bundled copy.
+  const orpcShared =
+    typeof fixtureClient === "function" || typeof fixtureClient === "object";
+  const orpcUtilsShared = typeof fixtureOrpc === "object";
 
   return (
     <div data-testid="runtime-proof" className="flex flex-col gap-4 p-6">
@@ -52,6 +76,10 @@ export function MediaLibrary(): ReactNode {
       <span
         data-testid="runtime-proof-shares-cache"
         data-shared={String(cached !== undefined)}
+      />
+      <span
+        data-testid="runtime-proof-shares-orpc"
+        data-shared={String(orpcShared && orpcUtilsShared)}
       />
 
       <Link

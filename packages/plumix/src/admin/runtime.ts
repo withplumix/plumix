@@ -3,6 +3,9 @@
 // to `runtime`). This module is just the runtime slice plugin chunks
 // see, plus the throw if it's missing.
 
+import type * as OrpcClientNs from "@orpc/client";
+import type * as OrpcClientFetchNs from "@orpc/client/fetch";
+import type * as OrpcTanstackQueryNs from "@orpc/tanstack-query";
 import type * as ReactQueryNs from "@tanstack/react-query";
 import type * as ReactRouterNs from "@tanstack/react-router";
 import type * as ReactNs from "react";
@@ -17,6 +20,9 @@ export interface PlumixAdminRuntime {
   readonly reactDomClient: typeof ReactDomClientNs;
   readonly reactQuery: typeof ReactQueryNs;
   readonly reactRouter: typeof ReactRouterNs;
+  readonly orpcClient: typeof OrpcClientNs;
+  readonly orpcClientFetch: typeof OrpcClientFetchNs;
+  readonly orpcTanstackQuery: typeof OrpcTanstackQueryNs;
 }
 
 export interface PlumixGlobal {

@@ -27,11 +27,24 @@ export const useSuspenseInfiniteQuery = ns.useSuspenseInfiniteQuery;
 
 export const queryOptions = ns.queryOptions;
 export const infiniteQueryOptions = ns.infiniteQueryOptions;
+export const mutationOptions = ns.mutationOptions;
 export const hydrate = ns.hydrate;
 export const dehydrate = ns.dehydrate;
 export const matchQuery = ns.matchQuery;
 export const matchMutation = ns.matchMutation;
 export const replaceEqualDeep = ns.replaceEqualDeep;
 export const hashKey = ns.hashKey;
+export const keepPreviousData = ns.keepPreviousData;
 export const isCancelledError = ns.isCancelledError;
 export const skipToken = ns.skipToken;
+export const usePrefetchQuery = ns.usePrefetchQuery;
+export const usePrefetchInfiniteQuery = ns.usePrefetchInfiniteQuery;
+
+export const CancelledError = ns.CancelledError;
+export const Query = ns.Query;
+export const Mutation = ns.Mutation;
+export const QueryObserver = ns.QueryObserver;
+export const InfiniteQueryObserver = ns.InfiniteQueryObserver;
+export const QueriesObserver = ns.QueriesObserver;
+export const MutationObserver = ns.MutationObserver;
+export const QueryClientContext = ns.QueryClientContext;

@@ -1,5 +1,8 @@
 import * as ReactNs from "react";
 import * as ReactJsxRuntimeNs from "react/jsx-runtime";
+import * as OrpcClientNs from "@orpc/client";
+import * as OrpcClientFetchNs from "@orpc/client/fetch";
+import * as OrpcTanstackQueryNs from "@orpc/tanstack-query";
 import * as ReactQueryNs from "@tanstack/react-query";
 import * as ReactRouterNs from "@tanstack/react-router";
 import * as ReactDomNs from "react-dom";
@@ -11,10 +14,8 @@ import {
   registerPluginPage,
 } from "./plugin-registry.js";
 
-// The runtime bag the per-site plugin bundle reads via `plumix/admin/*`
-// shims. Listed here (not destructured into a const) so the property
-// names line up exactly with the `PlumixAdminRuntime` type in
-// `plumix/admin/runtime`.
+// Property names line up with `PlumixAdminRuntime` in
+// `plumix/admin/runtime` — keep in sync.
 const runtime = {
   react: ReactNs,
   reactJsxRuntime: ReactJsxRuntimeNs,
@@ -22,6 +23,9 @@ const runtime = {
   reactDomClient: ReactDomClientNs,
   reactQuery: ReactQueryNs,
   reactRouter: ReactRouterNs,
+  orpcClient: OrpcClientNs,
+  orpcClientFetch: OrpcClientFetchNs,
+  orpcTanstackQuery: OrpcTanstackQueryNs,
 } as const;
 
 declare global {

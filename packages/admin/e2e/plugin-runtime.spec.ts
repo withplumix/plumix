@@ -88,5 +88,14 @@ test.describe("plugin runtime alias seam", () => {
     // (6) Router hook navigates inside admin
     await page.getByTestId("runtime-proof-navigate").click();
     await expect(page).toHaveURL(/\/_plumix\/admin\/?$/);
+
+    // (7) The orpc trio resolves through the runtime — plugins can
+    // construct an orpc client + tanstack-query utils against their
+    // own router type without bundling a private copy.
+    await page.goto("pages/__runtime-proof");
+    await expect(page.getByTestId("runtime-proof-shares-orpc")).toHaveAttribute(
+      "data-shared",
+      "true",
+    );
   });
 });
