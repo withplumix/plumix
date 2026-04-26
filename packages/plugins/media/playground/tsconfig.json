@@ -1,7 +1,25 @@
 {
   "extends": "@plumix/typescript-config/base.json",
   "compilerOptions": {
-    "types": ["node", "@cloudflare/workers-types"]
+    "types": ["node", "@cloudflare/workers-types"],
+    // Resolve the workspace packages directly from `src/` rather than
+    // their built `dist/`. Otherwise the playground's typecheck
+    // depends on `^build` for every workspace dep, and turbo's task
+    // scheduler races: when an upstream package's typecheck is
+    // cache-hit but its build is cache-miss, the playground's
+    // typecheck can run before `dist/` exists, producing
+    // `Cannot find module '@plumix/runtime-cloudflare'` even though
+    // the dependency is correctly declared. Pointing TS at `src/`
+    // sidesteps the race entirely — this is a dogfooding rig, not a
+    // published package, so the layered-through-dist behavior of
+    // real consumers isn't what we're verifying here.
+    "paths": {
+      "plumix": ["../../../plumix/src/index.ts"],
+      "@plumix/plugin-media": ["../src/index.ts"],
+      "@plumix/runtime-cloudflare": [
+        "../../../runtimes/cloudflare/src/index.ts"
+      ]
+    }
   },
   "include": ["plumix.config.ts", ".plumix"]
 }
