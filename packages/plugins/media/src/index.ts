@@ -18,10 +18,11 @@ interface MediaPluginOptions {
    */
   readonly acceptedTypes?: readonly string[];
   /**
-   * Maximum upload size in bytes. Browsers report `size` in
-   * `media.createUploadUrl`; uploads above this cap are rejected up front
-   * and the cap is signed into the presigned URL's `Content-Length`.
-   * Defaults to 25 MiB.
+   * Maximum upload size in bytes. The browser-declared `size` in
+   * `media.createUploadUrl` is rejected up front if it exceeds this
+   * cap, the value is signed into presigned PUTs as `Content-Length`,
+   * and the worker-routed upload counts actual bytes streamed and
+   * aborts past the cap. Defaults to 25 MiB.
    */
   readonly maxUploadSize?: number;
 }

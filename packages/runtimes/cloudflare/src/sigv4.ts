@@ -23,6 +23,8 @@ interface PresignPutInput {
   readonly key: string;
   /** Mime echoed back to the browser so R2 stores correct metadata. NOT signed (see comment in `presignPutUrl`). */
   readonly contentType: string;
+  /** Required: signed into the canonical request so the browser can't upload more bytes than the draft allows. */
+  readonly contentLength: number;
   /** Seconds until the URL expires. Clamped to AWS's 1..604800 range. */
   readonly expiresIn: number;
   readonly credentials: SigV4Credentials;
@@ -66,21 +68,21 @@ export async function presignPutUrl(
   const host = new URL(input.endpoint).host;
   const path = `/${rfc3986Encode(input.bucket)}/${encodePath(input.key)}`;
 
-  // Sign only `host`. We used to also sign `content-type` and
-  // `content-length`, but R2 + browser uploads fail in obscure ways
-  // when those are part of the signature: some browsers append
-  // `; charset=…` to text mimes after we've signed the bare type, and
-  // `XMLHttpRequest` rewrites Content-Length transparently. The result
-  // was opaque `SignatureDoesNotMatch` 403s with no client-side recourse.
-  // The browser still echoes Content-Type (we hand it back via
-  // `browserHeaders`) so R2 stores the right mime; the magic-byte
-  // sniff in `media.confirm` is the actual defense against mime lies.
-  // Size enforcement comes from `X-Amz-Expires` (10 min window) +
-  // capability gating on `media.createUploadUrl`.
-  const headers: Record<string, string> = { host };
-  const signedHeaders = "host";
-  // Headers the browser still needs to send so R2 stores correct
-  // metadata, even though they're not part of the signature.
+  // Sign `host` and `content-length`, NOT `content-type`. Browsers
+  // append `; charset=…` to text mimes after the signature is made,
+  // producing opaque `SignatureDoesNotMatch` from R2. Content-Length
+  // is safe — XHR/fetch send what we set verbatim — and signing it
+  // closes a replay attack: a leaked URL otherwise lets the holder
+  // upload arbitrary-size content during the expires window.
+  const headers: Record<string, string> = {
+    host,
+    "content-length": String(input.contentLength),
+  };
+  const signedHeaders = "content-length;host";
+  // Browser must echo content-length (XHR does this automatically)
+  // and content-type (we send it explicitly so R2 stores the right
+  // mime metadata). Content-type is outside the signature; mime
+  // correctness is verified by `media.confirm`'s magic-byte sniff.
   const browserHeaders: Record<string, string> = {
     "content-type": input.contentType,
   };

@@ -8,6 +8,25 @@ import {
 
 const PAGE_SIZE = 24;
 const MEDIA_LIST_KEY = ["media", "list"] as const;
+const UPLOAD_CONCURRENCY = 4;
+
+async function runWithConcurrency<T>(
+  items: readonly T[],
+  limit: number,
+  worker: (item: T) => Promise<void>,
+): Promise<void> {
+  let cursor = 0;
+  const next = async (): Promise<void> => {
+    const i = cursor++;
+    if (i >= items.length) return;
+    const item = items[i];
+    if (item !== undefined) await worker(item);
+    return next();
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, () => next()),
+  );
+}
 
 interface MediaItem {
   readonly id: number;
@@ -168,10 +187,16 @@ export function MediaLibrary(): ReactNode {
         },
       );
       try {
+        // Same-origin worker route needs the CSRF header that the
+        // dispatcher enforces on `/_plumix/*`. R2 (cross-origin) must
+        // NOT receive it — extra headers would break SigV4.
+        const headers = init.uploadUrl.startsWith("/")
+          ? { ...init.headers, "x-plumix-request": "1" }
+          : init.headers;
         await putWithProgress(
           init.uploadUrl,
           init.method,
-          init.headers,
+          headers,
           file,
           (loaded, total) => {
             setPending((prev) =>
@@ -198,9 +223,10 @@ export function MediaLibrary(): ReactNode {
   const startUpload = useCallback(
     async (files: readonly File[]): Promise<void> => {
       if (files.length === 0) return;
-      // Concurrent uploads — simpler than batching and the bottleneck
-      // is the user's network anyway.
-      await Promise.all(files.map(uploadOne));
+      // Cap parallelism so a 50-file drop doesn't fire 50 simultaneous
+      // RPCs / XHRs. Browsers throttle to ~6 connections per origin
+      // anyway; pulling work off a small pool gives proper backpressure.
+      await runWithConcurrency(files, UPLOAD_CONCURRENCY, uploadOne);
       invalidateList();
     },
     [uploadOne, invalidateList],
@@ -354,13 +380,26 @@ function friendlyError(raw: string): string {
     case "storage_not_configured":
       return "No storage adapter is wired up — set `storage:` in plumix.config.ts.";
     case "payload_too_large":
+    case "rpc_413":
       return "File exceeds the configured maxUploadSize.";
     case "unsupported_media_type":
+    case "rpc_415":
+    case "content_type_mismatch":
       return "This file type isn't allowed by the media plugin's acceptedTypes.";
     case "mime_mismatch":
       return "The uploaded bytes don't match the declared file type.";
     case "object_not_found":
       return "Upload didn't reach storage — check your bucket's CORS rules.";
+    case "already_confirmed":
+      return "This upload was already confirmed by another tab or device.";
+    case "media_meta_invalid":
+    case "db_insert_failed":
+    case "storage_put_failed":
+      return "Server couldn't process this upload. Try again.";
+    case "content_length_required":
+      return "Upload missing Content-Length — your browser/proxy may be using chunked transfer.";
+    case "csrf_token_missing":
+      return "Request blocked by CSRF check. Reload the page and try again.";
     default:
       return raw;
   }
@@ -610,16 +649,25 @@ function AltEditor({
   onSave: (alt: string) => void;
 }): ReactNode {
   const [draft, setDraft] = useState(value);
-  // Resync if the canonical value changes (e.g. invalidated list refetch).
-  useEffect(() => setDraft(value), [value]);
+  const dirtyRef = useRef(false);
+  // Resync from the canonical value only when the user isn't mid-edit.
+  // Without this, a list refetch landing while the input is focused
+  // would silently stomp the in-progress draft.
+  useEffect(() => {
+    if (!dirtyRef.current) setDraft(value);
+  }, [value]);
   return (
     <input
       data-testid={`media-card-${String(cardId)}-alt`}
       type="text"
       value={draft}
       placeholder={placeholder}
-      onChange={(e) => setDraft(e.target.value)}
+      onChange={(e) => {
+        dirtyRef.current = true;
+        setDraft(e.target.value);
+      }}
       onBlur={() => {
+        dirtyRef.current = false;
         if (draft !== value) onSave(draft);
       }}
       className="text-muted-foreground hover:bg-muted focus:bg-muted w-full truncate rounded bg-transparent px-1 text-xs outline-none"
@@ -635,16 +683,13 @@ function FileGlyph({ mime }: { mime: string }): ReactNode {
   );
 }
 
-const GLYPH_RULES: readonly (readonly [(mime: string) => boolean, string])[] = [
-  [(m) => m.startsWith("video/"), "VID"],
-  [(m) => m.startsWith("audio/"), "AUD"],
-  [(m) => m === "application/pdf", "PDF"],
-  [(m) => m.includes("zip"), "ZIP"],
-  [(m) => m.startsWith("text/"), "TXT"],
-];
-
 function mimeGlyph(mime: string): string {
-  return GLYPH_RULES.find(([test]) => test(mime))?.[1] ?? "DOC";
+  if (mime.startsWith("video/")) return "VID";
+  if (mime.startsWith("audio/")) return "AUD";
+  if (mime === "application/pdf") return "PDF";
+  if (mime.includes("zip")) return "ZIP";
+  if (mime.startsWith("text/")) return "TXT";
+  return "DOC";
 }
 
 function formatSize(bytes: number | undefined): string {

@@ -27,4 +27,17 @@ export const RPC_ERRORS = {
       key: v.optional(v.string()),
     }),
   },
+  PAYLOAD_TOO_LARGE: {
+    message: "Payload too large",
+    data: v.object({
+      limit: v.number(),
+      received: v.optional(v.number()),
+    }),
+  },
+  UNSUPPORTED_MEDIA_TYPE: {
+    message: "Unsupported media type",
+    data: v.object({
+      mime: v.string(),
+    }),
+  },
 } as const;

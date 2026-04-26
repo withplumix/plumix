@@ -122,7 +122,10 @@ function readR2Binding(env: unknown, bindingName: string): R2Bucket {
   return bucket as unknown as R2Bucket;
 }
 
-const DEFAULT_PRESIGN_TTL_SECONDS = 300;
+// Tight default — same-page XHR PUTs land in seconds; a longer window
+// is a replay surface (logs, browser history). Callers can extend via
+// `expiresIn` when they actually need it (e.g. resumable uploads).
+const DEFAULT_PRESIGN_TTL_SECONDS = 60;
 
 export function r2(config: R2Config): R2ObjectStorage {
   return {
@@ -221,11 +224,20 @@ export function r2(config: R2Config): R2ObjectStorage {
         ): Promise<PresignedPutResult> => {
           const endpoint =
             s3.endpoint ?? `https://${s3.accountId}.r2.cloudflarestorage.com`;
+          if (opts.maxBytes === undefined) {
+            // Unsigned size = unbounded upload window. Force the
+            // caller to commit to a length so the SigV4 signer can
+            // bind it into the canonical request.
+            throw new Error(
+              "presignPut: maxBytes is required (signed into Content-Length)",
+            );
+          }
           return presignPutUrl({
             endpoint,
             bucket: s3.bucket,
             key,
             contentType: opts.contentType,
+            contentLength: opts.maxBytes,
             expiresIn: opts.expiresIn ?? DEFAULT_PRESIGN_TTL_SECONDS,
             credentials: {
               accessKeyId: s3.accessKeyId,

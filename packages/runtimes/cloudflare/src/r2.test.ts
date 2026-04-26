@@ -236,6 +236,7 @@ describe("r2 presignPut", () => {
 
     const result = await store.presignPut("uploads/cat.jpg", {
       contentType: "image/jpeg",
+      maxBytes: 4096,
       expiresIn: 600,
     });
 
