@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 const PAGE_SIZE = 24;
 const MEDIA_LIST_KEY = ["media", "list"] as const;
@@ -13,6 +17,7 @@ interface MediaItem {
   readonly size: number;
   readonly url: string;
   readonly thumbnailUrl: string;
+  readonly alt: string | null;
 }
 
 interface MediaListResponse {
@@ -66,28 +71,94 @@ async function rpcCall<TOutput>(
   return envelope?.json as TOutput;
 }
 
-export function MediaLibrary(): ReactNode {
-  const [page, setPage] = useState(0);
-  const queryClient = useQueryClient();
+// Browser PUT with progress reporting. `fetch()` in 2026 still doesn't
+// expose request-body progress; XMLHttpRequest's `upload.onprogress` is
+// the only portable signal. The signed headers must be echoed verbatim.
+function putWithProgress(
+  url: string,
+  method: string,
+  headers: Record<string, string>,
+  body: File,
+  onProgress: (loaded: number, total: number) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(method, url);
+    for (const [name, value] of Object.entries(headers)) {
+      xhr.setRequestHeader(name, value);
+    }
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress(event.loaded, event.total);
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error(`upload_failed_${String(xhr.status)}`));
+    };
+    xhr.onerror = () => reject(new Error("upload_network_error"));
+    xhr.send(body);
+  });
+}
 
-  const list = useQuery({
-    queryKey: [...MEDIA_LIST_KEY, { page }] as const,
-    queryFn: () =>
+interface PendingUpload {
+  readonly id: string;
+  readonly name: string;
+  readonly progress: number; // 0..1
+}
+
+export function MediaLibrary(): ReactNode {
+  const queryClient = useQueryClient();
+  const [pending, setPending] = useState<readonly PendingUpload[]>([]);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const list = useInfiniteQuery({
+    queryKey: MEDIA_LIST_KEY,
+    initialPageParam: 0,
+    queryFn: ({ pageParam }: { pageParam: number }) =>
       rpcCall<MediaListResponse>("media/list", {
         limit: PAGE_SIZE,
-        offset: page * PAGE_SIZE,
+        offset: pageParam,
       }),
+    getNextPageParam: (last, allPages) =>
+      last.hasMore ? allPages.length * PAGE_SIZE : undefined,
   });
 
-  const invalidateList = (): void => {
-    // TanStack Query matches by queryKey prefix by default — listing
-    // the prefix is enough to invalidate every page.
-    void queryClient.invalidateQueries({ queryKey: MEDIA_LIST_KEY });
-  };
+  const items = list.data?.pages.flatMap((p) => p.items) ?? [];
 
-  const upload = useMutation({
-    mutationFn: async (file: File): Promise<ConfirmResponse> => {
-      // Phase 1 — server creates a `draft` entry + signs a PUT URL.
+  const invalidateList = useCallback((): void => {
+    void queryClient.invalidateQueries({ queryKey: MEDIA_LIST_KEY });
+  }, [queryClient]);
+
+  // Auto-fetch the next page when the sentinel scrolls into view. The
+  // dependency on `list.data?.pages.length` re-binds the observer after
+  // each page lands so we don't miss the next intersection.
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return;
+    if (!list.hasNextPage) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && !list.isFetchingNextPage) {
+        void list.fetchNextPage();
+      }
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [
+    list,
+    list.hasNextPage,
+    list.isFetchingNextPage,
+    list.data?.pages.length,
+  ]);
+
+  const uploadOne = useCallback(async (file: File): Promise<void> => {
+    const slot: PendingUpload = {
+      id: crypto.randomUUID(),
+      name: file.name,
+      progress: 0,
+    };
+    setPending((prev) => [...prev, slot]);
+    try {
       const init = await rpcCall<CreateUploadUrlResponse>(
         "media/createUploadUrl",
         {
@@ -96,47 +167,59 @@ export function MediaLibrary(): ReactNode {
           size: file.size,
         },
       );
-
-      // Phase 2 — browser PUTs the bytes directly to storage.
-      // Phase 3 — server head-checks + magic-byte-sniffs the upload,
-      // then flips draft → published.
-      // Any failure between phase 1 and phase 3 leaves a zombie draft
-      // on the server; the catch fires a best-effort `media.delete` so
-      // the row doesn't pile up. We rethrow the original error — a
-      // failed cleanup shouldn't shadow it.
       try {
-        const putRes = await fetch(init.uploadUrl, {
-          method: init.method,
-          headers: init.headers,
-          body: file,
-        });
-        if (!putRes.ok) {
-          throw new Error(`upload_failed_${String(putRes.status)}`);
-        }
-        return await rpcCall<ConfirmResponse>("media/confirm", {
+        await putWithProgress(
+          init.uploadUrl,
+          init.method,
+          init.headers,
+          file,
+          (loaded, total) => {
+            setPending((prev) =>
+              prev.map((p) =>
+                p.id === slot.id ? { ...p, progress: loaded / total } : p,
+              ),
+            );
+          },
+        );
+        await rpcCall<ConfirmResponse>("media/confirm", {
           id: init.mediaId,
         });
       } catch (error) {
         await tryCleanupDraft(init.mediaId);
         throw error;
       }
-    },
-    onSuccess: () => {
-      // Jump back to page 1 so the freshly-uploaded asset (sorted by
-      // `updated_at desc`) is in view; uploading from a later page would
-      // otherwise hide the new card.
-      setPage(0);
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setPending((prev) => prev.filter((p) => p.id !== slot.id));
+    }
+  }, []);
+
+  const startUpload = useCallback(
+    async (files: readonly File[]): Promise<void> => {
+      if (files.length === 0) return;
+      // Concurrent uploads — simpler than batching and the bottleneck
+      // is the user's network anyway.
+      await Promise.all(files.map(uploadOne));
       invalidateList();
     },
-  });
+    [uploadOne, invalidateList],
+  );
 
   const remove = useMutation({
     mutationFn: (id: number) => rpcCall<{ id: number }>("media/delete", { id }),
     onSuccess: invalidateList,
+    onError: (error) =>
+      setErrorMsg(error instanceof Error ? error.message : String(error)),
   });
 
-  const items = list.status === "success" ? list.data.items : [];
-  const hasNext = list.status === "success" && list.data.hasMore;
+  const update = useMutation({
+    mutationFn: (input: { id: number; alt: string }) =>
+      rpcCall<{ id: number; alt: string | null }>("media/update", input),
+    onSuccess: invalidateList,
+    onError: (error) =>
+      setErrorMsg(error instanceof Error ? error.message : String(error)),
+  });
 
   return (
     <div data-testid="media-library" className="flex flex-col gap-6 p-8">
@@ -147,11 +230,10 @@ export function MediaLibrary(): ReactNode {
         >
           Media Library
         </h1>
-        <UploadButton
-          onSelect={(file) => upload.mutate(file)}
-          disabled={upload.isPending}
-        />
+        <UploadButton onSelect={(files) => void startUpload(files)} />
       </header>
+
+      {pending.length > 0 && <UploadProgressBar pending={pending} />}
 
       {list.status === "pending" && (
         <div data-testid="media-library-loading" className="text-sm">
@@ -173,14 +255,28 @@ export function MediaLibrary(): ReactNode {
           data-testid="media-library-empty"
           className="text-muted-foreground py-12 text-center text-sm"
         >
-          No media yet — upload your first asset.
+          No media yet — upload your first asset, or drop files anywhere on this
+          page.
         </div>
       )}
 
       {list.status === "success" && items.length > 0 && (
         <div
           data-testid="media-library-grid"
-          className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4"
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragging(false);
+            const files = Array.from(e.dataTransfer.files);
+            void startUpload(files);
+          }}
+          className={`grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4 ${
+            dragging ? "ring-primary rounded ring-2" : ""
+          }`}
         >
           {items.map((item) => (
             <MediaCard
@@ -194,26 +290,29 @@ export function MediaLibrary(): ReactNode {
                   remove.mutate(item.id);
                 }
               }}
+              onAltChange={(alt) => update.mutate({ id: item.id, alt })}
               deleting={remove.isPending && remove.variables === item.id}
             />
           ))}
         </div>
       )}
 
-      <Pagination page={page} hasNext={hasNext} onChange={setPage} />
+      <div ref={sentinelRef} data-testid="media-library-sentinel" />
 
-      {upload.error && (
-        <ErrorBanner
-          testIdRoot="media-library-upload-error"
-          error={upload.error}
-          onDismiss={() => upload.reset()}
-        />
+      {list.isFetchingNextPage && (
+        <div
+          data-testid="media-library-loading-more"
+          className="text-muted-foreground text-center text-sm"
+        >
+          Loading more…
+        </div>
       )}
-      {remove.error && (
+
+      {errorMsg && (
         <ErrorBanner
-          testIdRoot="media-library-delete-error"
-          error={remove.error}
-          onDismiss={() => remove.reset()}
+          testIdRoot="media-library-banner-error"
+          message={errorMsg}
+          onDismiss={() => setErrorMsg(null)}
         />
       )}
     </div>
@@ -222,11 +321,11 @@ export function MediaLibrary(): ReactNode {
 
 function ErrorBanner({
   testIdRoot,
-  error,
+  message,
   onDismiss,
 }: {
   testIdRoot: string;
-  error: unknown;
+  message: string;
   onDismiss: () => void;
 }): ReactNode {
   return (
@@ -235,7 +334,7 @@ function ErrorBanner({
       data-testid={testIdRoot}
       className="text-destructive flex items-center justify-between gap-3 text-sm"
     >
-      <span>{error instanceof Error ? error.message : String(error)}</span>
+      <span>{message}</span>
       <button
         type="button"
         data-testid={`${testIdRoot}-dismiss`}
@@ -252,17 +351,14 @@ async function tryCleanupDraft(mediaId: number): Promise<void> {
   try {
     await rpcCall<{ id: number }>("media/delete", { id: mediaId });
   } catch {
-    // Best-effort — if the cleanup fails the server-side draft GC will
-    // catch it. We don't want to mask the original upload error.
+    // Best-effort — server-side draft GC will catch it.
   }
 }
 
 function UploadButton({
   onSelect,
-  disabled,
 }: {
-  onSelect: (file: File) => void;
-  disabled?: boolean;
+  onSelect: (files: readonly File[]) => void;
 }): ReactNode {
   return (
     <label
@@ -271,29 +367,73 @@ function UploadButton({
     >
       <input
         type="file"
+        multiple
         className="sr-only"
-        disabled={disabled}
         onChange={(event) => {
-          const file = event.target.files?.[0];
-          if (file) onSelect(file);
+          const files = Array.from(event.target.files ?? []);
+          if (files.length > 0) onSelect(files);
           event.target.value = "";
         }}
       />
-      {disabled ? "Uploading…" : "Upload"}
+      Upload
     </label>
+  );
+}
+
+function UploadProgressBar({
+  pending,
+}: {
+  pending: readonly PendingUpload[];
+}): ReactNode {
+  const total = pending.reduce((sum, p) => sum + p.progress, 0);
+  const ratio = total / pending.length;
+  return (
+    <div
+      data-testid="media-library-progress"
+      className="text-muted-foreground flex flex-col gap-1 text-xs"
+    >
+      <div className="flex items-center justify-between">
+        <span>
+          Uploading {String(pending.length)} file
+          {pending.length === 1 ? "" : "s"}…
+        </span>
+        <span>{Math.round(ratio * 100)}%</span>
+      </div>
+      <div className="bg-muted h-1 w-full overflow-hidden rounded">
+        <div
+          className="bg-primary h-full transition-[width]"
+          style={{ width: `${String(Math.round(ratio * 100))}%` }}
+        />
+      </div>
+    </div>
   );
 }
 
 function MediaCard({
   item,
   onDelete,
+  onAltChange,
   deleting,
 }: {
   item: MediaItem;
   onDelete: () => void;
+  onAltChange: (alt: string) => void;
   deleting: boolean;
 }): ReactNode {
+  const [copied, setCopied] = useState(false);
   const isImage = item.mime.startsWith("image/");
+
+  const copyUrl = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(item.url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard write rejected (HTTP context, denied permission, …).
+      // The URL is already visible on the card; user can copy by hand.
+    }
+  }, [item.url]);
+
   return (
     <article
       data-testid={`media-card-${String(item.id)}`}
@@ -304,7 +444,7 @@ function MediaCard({
           <img
             data-testid={`media-card-${String(item.id)}-thumb`}
             src={item.thumbnailUrl}
-            alt={item.title}
+            alt={item.alt ?? item.title}
             loading="lazy"
             className="h-full w-full object-cover"
           />
@@ -313,19 +453,64 @@ function MediaCard({
         )}
       </div>
       <div className="truncate text-sm">{item.title}</div>
+      <AltEditor
+        cardId={item.id}
+        value={item.alt ?? ""}
+        placeholder={isImage ? "Describe this image…" : "Add a description…"}
+        onSave={onAltChange}
+      />
       <div className="text-muted-foreground text-xs">
         {item.mime} · {formatSize(item.size)}
       </div>
-      <button
-        type="button"
-        data-testid={`media-card-${String(item.id)}-delete`}
-        disabled={deleting}
-        onClick={onDelete}
-        className="bg-card hover:bg-destructive hover:text-destructive-foreground absolute top-2 right-2 rounded border px-2 py-0.5 text-xs opacity-0 transition group-hover:opacity-100 disabled:opacity-50"
-      >
-        {deleting ? "Deleting…" : "Delete"}
-      </button>
+      <div className="absolute top-2 right-2 flex gap-1 opacity-0 transition group-hover:opacity-100">
+        <button
+          type="button"
+          data-testid={`media-card-${String(item.id)}-copy`}
+          onClick={() => void copyUrl()}
+          className="bg-card hover:bg-muted rounded border px-2 py-0.5 text-xs"
+        >
+          {copied ? "Copied" : "Copy URL"}
+        </button>
+        <button
+          type="button"
+          data-testid={`media-card-${String(item.id)}-delete`}
+          disabled={deleting}
+          onClick={onDelete}
+          className="bg-card hover:bg-destructive hover:text-destructive-foreground rounded border px-2 py-0.5 text-xs disabled:opacity-50"
+        >
+          {deleting ? "Deleting…" : "Delete"}
+        </button>
+      </div>
     </article>
+  );
+}
+
+function AltEditor({
+  cardId,
+  value,
+  placeholder,
+  onSave,
+}: {
+  cardId: number;
+  value: string;
+  placeholder: string;
+  onSave: (alt: string) => void;
+}): ReactNode {
+  const [draft, setDraft] = useState(value);
+  // Resync if the canonical value changes (e.g. invalidated list refetch).
+  useEffect(() => setDraft(value), [value]);
+  return (
+    <input
+      data-testid={`media-card-${String(cardId)}-alt`}
+      type="text"
+      value={draft}
+      placeholder={placeholder}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => {
+        if (draft !== value) onSave(draft);
+      }}
+      className="text-muted-foreground hover:bg-muted focus:bg-muted w-full truncate rounded bg-transparent px-1 text-xs outline-none"
+    />
   );
 }
 
@@ -337,9 +522,6 @@ function FileGlyph({ mime }: { mime: string }): ReactNode {
   );
 }
 
-// Tiny vocabulary — no external icon set; just a 2-3 letter token so
-// the category is glanceable. Order matters: `application/zip` would
-// otherwise fall through to the generic `DOC` bucket.
 const GLYPH_RULES: readonly (readonly [(mime: string) => boolean, string])[] = [
   [(m) => m.startsWith("video/"), "VID"],
   [(m) => m.startsWith("audio/"), "AUD"],
@@ -350,45 +532,6 @@ const GLYPH_RULES: readonly (readonly [(mime: string) => boolean, string])[] = [
 
 function mimeGlyph(mime: string): string {
   return GLYPH_RULES.find(([test]) => test(mime))?.[1] ?? "DOC";
-}
-
-function Pagination({
-  page,
-  hasNext,
-  onChange,
-}: {
-  page: number;
-  hasNext: boolean;
-  onChange: (next: number) => void;
-}): ReactNode {
-  return (
-    <nav className="flex items-center justify-center gap-3">
-      <button
-        type="button"
-        data-testid="media-library-prev"
-        disabled={page === 0}
-        onClick={() => onChange(page - 1)}
-        className="rounded border px-3 py-1 text-sm disabled:opacity-50"
-      >
-        Previous
-      </button>
-      <span
-        data-testid="media-library-page"
-        className="text-muted-foreground text-sm"
-      >
-        Page {String(page + 1)}
-      </span>
-      <button
-        type="button"
-        data-testid="media-library-next"
-        disabled={!hasNext}
-        onClick={() => onChange(page + 1)}
-        className="rounded border px-3 py-1 text-sm disabled:opacity-50"
-      >
-        Next
-      </button>
-    </nav>
-  );
 }
 
 function formatSize(bytes: number | undefined): string {

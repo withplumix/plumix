@@ -27,7 +27,7 @@ describe("@plumix/plugin-media — registration", () => {
     );
   });
 
-  test("registers the `media` RPC router with create/confirm/list/delete", async () => {
+  test("registers the `media` RPC router with the full procedure set", async () => {
     const { registry } = await install();
     const router = registry.rpcRouters.get("media");
     expect(router).toBeDefined();
@@ -35,6 +35,7 @@ describe("@plumix/plugin-media — registration", () => {
     expect(typeof procedures.createUploadUrl).toBe("object");
     expect(typeof procedures.confirm).toBe("object");
     expect(typeof procedures.list).toBe("object");
+    expect(typeof procedures.update).toBe("object");
     expect(typeof procedures.delete).toBe("object");
   });
 
@@ -44,7 +45,7 @@ describe("@plumix/plugin-media — registration", () => {
     expect(page).toBeDefined();
     expect(page?.title).toBe("Media Library");
     expect(page?.capability).toBe("entry:media:read");
-    expect(page?.nav?.group).toBe("management");
+    expect(page?.nav?.group).toBe("content");
     expect(page?.nav?.label).toBe("Media Library");
     expect(page?.component).toEqual({
       package: "@plumix/plugin-media",
@@ -325,7 +326,7 @@ describe("@plumix/plugin-media — media.confirm", () => {
     expect(confirm.error?.data?.reason).toBe("object_not_found");
   });
 
-  test("returns NOT_FOUND for a different user's draft (uniform with non-existent ids)", async () => {
+  test("returns FORBIDDEN for a different user's draft", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({ plugins: [media()], storage });
     const owner = await h.seedUser("contributor");
@@ -346,9 +347,7 @@ describe("@plumix/plugin-media — media.confirm", () => {
       { id: mediaId },
       other.id,
     );
-    // 404 (not 403) — the procedure doesn't disclose the row's existence
-    // to non-owners. Same code path as a non-existent id.
-    expect(confirm.status).toBe(404);
+    expect(confirm.status).toBe(403);
   });
 
   test("returns NOT_FOUND for a non-existent id", async () => {
@@ -372,6 +371,7 @@ interface MediaListItemOutput {
   readonly size: number;
   readonly url: string;
   readonly thumbnailUrl: string;
+  readonly alt: string | null;
 }
 
 interface MediaListOutput {
@@ -492,7 +492,7 @@ describe("@plumix/plugin-media — media.delete", () => {
     expect(await storage.head(seeded.storageKey)).toBeNull();
   });
 
-  test("returns NOT_FOUND for a non-owner without entry:media:delete", async () => {
+  test("returns FORBIDDEN for a non-owner without entry:media:delete", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({ plugins: [media()], storage });
     const owner = await h.seedUser("contributor");
@@ -505,8 +505,7 @@ describe("@plumix/plugin-media — media.delete", () => {
       { id: seeded.id },
       other.id,
     );
-    // 404, uniform with non-existent id — no existence disclosure.
-    expect(status).toBe(404);
+    expect(status).toBe(403);
     // Object stays untouched.
     expect(await storage.head(seeded.storageKey)).not.toBeNull();
   });
@@ -539,5 +538,84 @@ describe("@plumix/plugin-media — media.delete", () => {
       user.id,
     );
     expect(status).toBe(404);
+  });
+});
+
+describe("@plumix/plugin-media — media.update", () => {
+  test("owner can set alt text on their own media", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const owner = await h.seedUser("contributor");
+    const seeded = await seedPublishedMedia(h, storage, owner.id, "cat.png");
+
+    const result = await rpcDispatch<{
+      id: number;
+      title: string;
+      alt: string | null;
+    }>(
+      h,
+      "media/update",
+      { id: seeded.id, alt: "A black cat looking at the camera" },
+      owner.id,
+    );
+    expect(result.status).toBe(200);
+    expect(result.output?.alt).toBe("A black cat looking at the camera");
+
+    // List query reflects the new alt.
+    const listed = await rpcDispatch<MediaListOutput>(
+      h,
+      "media/list",
+      { limit: 10, offset: 0 },
+      owner.id,
+    );
+    expect(listed.output?.items[0]?.alt).toBe(
+      "A black cat looking at the camera",
+    );
+  });
+
+  test("returns FORBIDDEN for a non-owner without edit_any", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const owner = await h.seedUser("contributor");
+    const other = await h.seedUser("contributor");
+    const seeded = await seedPublishedMedia(h, storage, owner.id, "x.png");
+
+    const result = await rpcDispatch(
+      h,
+      "media/update",
+      { id: seeded.id, alt: "snooped" },
+      other.id,
+    );
+    expect(result.status).toBe(403);
+  });
+
+  test("rolls back the draft entry when presignPut throws", async () => {
+    const stub = memoryStorage().connect({});
+    // Replace presignPut with one that always throws — the procedure
+    // should delete the draft entry it just inserted before propagating.
+    (
+      stub as { presignPut: (...args: unknown[]) => Promise<unknown> }
+    ).presignPut = () => Promise.reject(new Error("simulated_presign_fail"));
+    const h = await createDispatcherHarness({
+      plugins: [media()],
+      storage: stub,
+    });
+    const user = await h.seedUser("contributor");
+
+    const before = await h.db.query.entries.findMany();
+    const beforeCount = before.length;
+
+    const result = await rpcDispatch(
+      h,
+      "media/createUploadUrl",
+      { filename: "ghost.png", contentType: "image/png", size: 4 },
+      user.id,
+    );
+    // The handler rethrows the underlying error; oRPC surfaces it as a
+    // 500 because it isn't a typed CONFLICT/FORBIDDEN.
+    expect(result.status).toBe(500);
+
+    const after = await h.db.query.entries.findMany();
+    expect(after.length).toBe(beforeCount);
   });
 });
