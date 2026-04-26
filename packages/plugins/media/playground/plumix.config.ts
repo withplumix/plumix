@@ -65,21 +65,25 @@ function resolveS3Credentials():
   // All four come together — partial config silently builds a broken
   // endpoint (e.g. `https://.r2.cloudflarestorage.com`) that fails at
   // request time with a misleading DNS error.
-  const present = [accountId, accessKeyId, secretAccessKey, bucket].filter(
-    (v): v is string => typeof v === "string" && v.length > 0,
-  );
-  if (present.length === 0) return undefined;
-  if (present.length !== 4) {
-    throw new Error(
-      "media playground: partial S3 credentials. Set all of " +
-        "CF_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, MEDIA_BUCKET " +
-        "(or none).",
-    );
+  if (
+    accountId !== undefined &&
+    accessKeyId !== undefined &&
+    secretAccessKey !== undefined &&
+    bucket !== undefined
+  ) {
+    return { accountId, accessKeyId, secretAccessKey, bucket };
   }
-  return {
-    bucket: bucket as string,
-    accountId: accountId as string,
-    accessKeyId: accessKeyId as string,
-    secretAccessKey: secretAccessKey as string,
-  };
+  if (
+    accountId === undefined &&
+    accessKeyId === undefined &&
+    secretAccessKey === undefined &&
+    bucket === undefined
+  ) {
+    return undefined;
+  }
+  throw new Error(
+    "media playground: partial S3 credentials. Set all of " +
+      "CF_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, MEDIA_BUCKET " +
+      "(or none).",
+  );
 }

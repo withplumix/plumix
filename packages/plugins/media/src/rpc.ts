@@ -1,7 +1,9 @@
 import * as v from "valibot";
 
-import { authenticated, base, entries, eq } from "@plumix/core";
+import type { AppContext, AuthenticatedAppContext } from "@plumix/core";
+import { and, authenticated, base, desc, entries, eq } from "@plumix/core";
 
+import { looksLikeMime, MAGIC_BYTE_SAMPLE_SIZE } from "./magic-bytes.js";
 import { extensionForMime } from "./mime.js";
 
 const MEDIA_ENTRY_TYPE = "media";
@@ -23,15 +25,43 @@ interface CreateUploadUrlResponse {
 interface ConfirmResponse {
   readonly id: number;
   readonly url: string;
+  readonly thumbnailUrl: string;
   readonly storageKey: string;
   readonly mime: string;
   readonly size: number;
+}
+
+interface MediaListItem {
+  readonly id: number;
+  readonly title: string;
+  readonly slug: string;
+  readonly status: "draft" | "published" | "scheduled" | "trash";
+  readonly authorId: number;
+  readonly publishedAt: Date | null;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+  readonly mime: string;
+  readonly size: number;
+  readonly storageKey: string;
+  readonly originalName: string | null;
+  readonly url: string;
+  readonly thumbnailUrl: string;
+}
+
+interface MediaListResponse {
+  readonly items: readonly MediaListItem[];
+  readonly hasMore: boolean;
+}
+
+interface DeleteResponse {
+  readonly id: number;
 }
 
 interface MediaMeta {
   readonly mime: string;
   readonly size: number;
   readonly storageKey: string;
+  readonly originalName: string | null;
 }
 
 // Reject control characters and whitespace inside `Content-Type`. They'd
@@ -40,6 +70,18 @@ interface MediaMeta {
 // at the boundary so the failure surfaces here instead of as a cryptic
 // `403 SignatureDoesNotMatch` from R2.
 const CONTENT_TYPE_RE = /^[\x21-\x7E]+$/;
+
+const DEFAULT_PAGE_SIZE = 24;
+const MAX_PAGE_SIZE = 100;
+
+// Default thumbnail variant the admin grid renders. 320px-wide AVIF/WebP
+// is enough for the 160px card under 2× DPI; format=auto lets Cloudflare
+// negotiate via `Accept`.
+const THUMBNAIL_OPTS = {
+  width: 320,
+  format: "auto",
+  fit: "cover",
+} as const;
 
 export function createMediaRouter(
   options: MediaRpcOptions,
@@ -74,9 +116,7 @@ export function createMediaRouter(
           });
         }
         if (input.size > options.maxUploadSize) {
-          throw errors.CONFLICT({
-            data: { reason: "payload_too_large" },
-          });
+          throw errors.CONFLICT({ data: { reason: "payload_too_large" } });
         }
         if (!acceptedTypeSet.has(input.contentType)) {
           throw errors.CONFLICT({
@@ -86,18 +126,16 @@ export function createMediaRouter(
 
         const storage = context.storage;
         if (!storage) {
-          throw errors.CONFLICT({
-            data: { reason: "storage_not_configured" },
-          });
+          throw errors.CONFLICT({ data: { reason: "storage_not_configured" } });
         }
         if (!storage.presignPut) {
-          throw errors.CONFLICT({
-            data: { reason: "presign_not_supported" },
-          });
+          throw errors.CONFLICT({ data: { reason: "presign_not_supported" } });
         }
 
         const id = crypto.randomUUID();
-        const ext = pickExtension(input.filename, input.contentType);
+        const ext =
+          sanitizeExtension(input.filename) ??
+          extensionForMime(input.contentType);
         const datePrefix = new Date()
           .toISOString()
           .slice(0, 7)
@@ -158,9 +196,6 @@ export function createMediaRouter(
         .limit(1);
       if (row?.type !== MEDIA_ENTRY_TYPE) throw notFound();
 
-      // Owner OR `edit_any` capability. We respond with NOT_FOUND for
-      // both "row missing" and "you can't see it" so the procedure
-      // doesn't leak existence to non-owners.
       const isOwner = row.authorId === context.user.id;
       if (!isOwner && !context.auth.can("entry:media:edit_any")) {
         throw notFound();
@@ -171,19 +206,29 @@ export function createMediaRouter(
         throw errors.CONFLICT({ data: { reason: "media_meta_invalid" } });
       }
 
-      // Verify the presigned PUT actually landed before flipping to
-      // `published`. Without this, a client that called createUploadUrl
-      // but never PUT bytes (or PUT to a different URL) would publish a
-      // broken entry pointing at a 404.
       const storage = context.storage;
       if (!storage) {
-        throw errors.CONFLICT({
-          data: { reason: "storage_not_configured" },
-        });
+        throw errors.CONFLICT({ data: { reason: "storage_not_configured" } });
       }
-      const head = await storage.head(meta.storageKey);
-      if (!head) {
+
+      // Verify the presigned PUT actually landed AND defend against MIME
+      // confusion in one round-trip: a ranged read returns null if the
+      // object is missing, otherwise hands us the first bytes to check
+      // against the claimed content-type. The bucket stores whatever the
+      // upload signed, so if a client claimed `image/png` but uploaded
+      // arbitrary bytes, we'd serve them as PNG forever. Delete on
+      // mismatch so an attacker can't force-leave junk in the bucket
+      // between a forged claim and our detection.
+      const sampleObj = await storage.get(meta.storageKey, {
+        range: { offset: 0, length: MAGIC_BYTE_SAMPLE_SIZE },
+      });
+      if (!sampleObj) {
         throw errors.CONFLICT({ data: { reason: "object_not_found" } });
+      }
+      const sample = new Uint8Array(await sampleObj.arrayBuffer());
+      if (!looksLikeMime(sample, meta.mime)) {
+        await storage.delete(meta.storageKey);
+        throw errors.CONFLICT({ data: { reason: "mime_mismatch" } });
       }
 
       const [published] = await context.db
@@ -193,16 +238,137 @@ export function createMediaRouter(
         .returning();
       if (!published) throw notFound();
 
+      const url = await storage.url(meta.storageKey);
       return {
         id: published.id,
-        url: await storage.url(meta.storageKey),
+        url,
+        thumbnailUrl: thumbnailFor(context, url, meta.mime),
         storageKey: meta.storageKey,
         mime: meta.mime,
         size: meta.size,
       };
     });
 
-  return { createUploadUrl, confirm };
+  const list = base
+    .use(authenticated)
+    .input(
+      v.object({
+        limit: v.optional(
+          v.pipe(
+            v.number(),
+            v.integer(),
+            v.minValue(1),
+            v.maxValue(MAX_PAGE_SIZE),
+          ),
+          DEFAULT_PAGE_SIZE,
+        ),
+        offset: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0)), 0),
+      }),
+    )
+    .handler(async ({ input, context, errors }): Promise<MediaListResponse> => {
+      if (!context.auth.can("entry:media:read")) {
+        throw errors.FORBIDDEN({ data: { capability: "entry:media:read" } });
+      }
+      // Fetch one extra row so we can report `hasMore` without a
+      // separate COUNT(*) query.
+      const rows = await context.db
+        .select()
+        .from(entries)
+        .where(
+          and(
+            eq(entries.type, MEDIA_ENTRY_TYPE),
+            eq(entries.status, "published"),
+          ),
+        )
+        .orderBy(desc(entries.updatedAt), desc(entries.id))
+        .limit(input.limit + 1)
+        .offset(input.offset);
+      const hasMore = rows.length > input.limit;
+      const visibleRows = hasMore ? rows.slice(0, input.limit) : rows;
+
+      const items: MediaListItem[] = [];
+      for (const row of visibleRows) {
+        const meta = parseMediaMeta(row.meta);
+        if (!meta) continue;
+        const url = context.storage
+          ? await context.storage.url(meta.storageKey)
+          : meta.storageKey;
+        items.push({
+          id: row.id,
+          title: row.title,
+          slug: row.slug,
+          status: row.status,
+          authorId: row.authorId,
+          publishedAt: row.publishedAt,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt,
+          mime: meta.mime,
+          size: meta.size,
+          storageKey: meta.storageKey,
+          originalName: meta.originalName,
+          url,
+          thumbnailUrl: thumbnailFor(context, url, meta.mime),
+        });
+      }
+      return { items, hasMore };
+    });
+
+  const remove = base
+    .use(authenticated)
+    .input(v.object({ id: v.pipe(v.number(), v.integer(), v.minValue(1)) }))
+    .handler(async ({ input, context, errors }): Promise<DeleteResponse> => {
+      const notFound = (): Error =>
+        errors.NOT_FOUND({ data: { kind: "media", id: input.id } });
+
+      const [row] = await context.db
+        .select()
+        .from(entries)
+        .where(eq(entries.id, input.id))
+        .limit(1);
+      if (row?.type !== MEDIA_ENTRY_TYPE) throw notFound();
+
+      const isOwner = row.authorId === context.user.id;
+      if (!isOwner && !context.auth.can("entry:media:delete")) {
+        throw notFound();
+      }
+
+      // Delete the row first, then the bytes. If the storage delete
+      // fails we'd rather leave an orphan in the bucket (admin can
+      // sweep) than a row pointing at a deleted file (which would
+      // surface as a permanent broken card). DB delete is the
+      // authoritative state.
+      const [deleted] = await context.db
+        .delete(entries)
+        .where(eq(entries.id, input.id))
+        .returning();
+      if (!deleted) throw notFound();
+
+      const meta = parseMediaMeta(row.meta);
+      if (meta && context.storage) {
+        try {
+          await context.storage.delete(meta.storageKey);
+        } catch (error) {
+          context.logger.warn("media_delete_storage_failed", {
+            error,
+            id: row.id,
+            storageKey: meta.storageKey,
+          });
+        }
+      }
+
+      return { id: deleted.id };
+    });
+
+  return { createUploadUrl, confirm, list, delete: remove };
+}
+
+function thumbnailFor(
+  context: AppContext | AuthenticatedAppContext,
+  url: string,
+  mime: string,
+): string {
+  if (!mime.startsWith("image/") || !context.imageDelivery) return url;
+  return context.imageDelivery.url(url, THUMBNAIL_OPTS);
 }
 
 function parseMediaMeta(raw: unknown): MediaMeta | null {
@@ -215,17 +381,16 @@ function parseMediaMeta(raw: unknown): MediaMeta | null {
   ) {
     return null;
   }
-  return { storageKey: r.storageKey, mime: r.mime, size: r.size };
+  return {
+    storageKey: r.storageKey,
+    mime: r.mime,
+    size: r.size,
+    originalName: typeof r.originalName === "string" ? r.originalName : null,
+  };
 }
 
 const SAFE_EXT_RE = /^[a-z0-9]+$/;
 const MAX_EXT_LEN = 10;
-
-function pickExtension(filename: string, mime: string): string | undefined {
-  const fromName = sanitizeExtension(filename);
-  if (fromName !== undefined) return fromName;
-  return extensionForMime(mime);
-}
 
 function sanitizeExtension(filename: string): string | undefined {
   const lastDot = filename.lastIndexOf(".");

@@ -53,16 +53,22 @@ export function memoryStorage(config: MemoryStorageConfig = {}): ObjectStorage {
       });
     },
     // eslint-disable-next-line @typescript-eslint/require-await
-    async get(key): Promise<GetResult | null> {
+    async get(key, opts): Promise<GetResult | null> {
       const entry = store.get(key);
       if (!entry) return null;
+      const slice = opts?.range
+        ? entry.bytes.subarray(
+            opts.range.offset,
+            opts.range.offset + opts.range.length,
+          )
+        : entry.bytes;
       return {
-        body: streamFromBytes(entry.bytes),
-        size: entry.bytes.byteLength,
+        body: streamFromBytes(slice),
+        size: slice.byteLength,
         contentType: entry.contentType,
         etag: entry.etag,
         customMetadata: entry.customMetadata,
-        arrayBuffer: () => Promise.resolve(toFreshArrayBuffer(entry.bytes)),
+        arrayBuffer: () => Promise.resolve(toFreshArrayBuffer(slice)),
       };
     },
     // eslint-disable-next-line @typescript-eslint/require-await

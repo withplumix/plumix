@@ -128,9 +128,19 @@ export interface HeadResult {
   readonly customMetadata?: Readonly<Record<string, string>>;
 }
 
+export interface GetOptions {
+  /**
+   * Read only the given byte range from the object. Inclusive offset,
+   * exclusive end (matches the `[offset, offset+length)` half-open
+   * convention). Useful for magic-byte sniffing or partial-content
+   * preview without fetching the whole body.
+   */
+  readonly range?: { readonly offset: number; readonly length: number };
+}
+
 export interface ConnectedObjectStorage {
   put(key: string, body: ObjectBody, opts?: PutOptions): Promise<void>;
-  get(key: string): Promise<GetResult | null>;
+  get(key: string, opts?: GetOptions): Promise<GetResult | null>;
   /**
    * Object existence + lightweight metadata without fetching the body.
    * Plugins use this to verify a presigned PUT actually landed before
