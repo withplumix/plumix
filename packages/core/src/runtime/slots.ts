@@ -150,7 +150,13 @@ export interface ConnectedObjectStorage {
   head(key: string): Promise<HeadResult | null>;
   delete(key: string): Promise<void>;
   list(prefix?: string, opts?: ListOptions): Promise<ListResult>;
-  url(key: string, opts?: UrlOptions): Promise<string>;
+  /**
+   * Resolve a public URL for the object, or `null` if the bucket isn't
+   * publicly addressable (private bucket without a custom domain). When
+   * null, the plugin layer is expected to mint a worker-proxied URL
+   * (e.g. media plugin's `/_plumix/media/serve/<id>` route).
+   */
+  url(key: string, opts?: UrlOptions): Promise<string | null>;
   presignPut?(
     key: string,
     opts: PresignPutOptions,

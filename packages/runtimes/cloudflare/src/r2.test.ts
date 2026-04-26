@@ -159,12 +159,15 @@ describe("r2 put/get/delete", () => {
 });
 
 describe("r2 url", () => {
-  test("throws when publicUrlBase is not configured", async () => {
+  test("returns null when publicUrlBase is not configured", async () => {
+    // Binding-only deploys (private bucket, no custom domain) get
+    // `null` so the consumer can mint a worker-proxied URL keyed on
+    // an entry id — keying on the storage key would let anyone with
+    // the key fetch bytes regardless of publication status.
     const fake = fakeR2Binding();
     const store = r2({ binding: "MEDIA" }).connect({ MEDIA: fake.binding });
-    await expect(store.url("a.jpg")).rejects.toThrow(
-      /no publicUrlBase configured/,
-    );
+    expect(await store.url("a.jpg")).toBeNull();
+    expect(await store.url("2026/04/uuid.png")).toBeNull();
   });
 
   test("returns the composed public URL when publicUrlBase is set", async () => {
@@ -236,7 +239,6 @@ describe("r2 presignPut", () => {
 
     const result = await store.presignPut("uploads/cat.jpg", {
       contentType: "image/jpeg",
-      maxBytes: 4096,
       expiresIn: 600,
     });
 

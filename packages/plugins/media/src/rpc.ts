@@ -112,9 +112,15 @@ export function createMediaRouter(
             data: { limit: options.maxUploadSize, received: input.size },
           });
         }
-        if (!acceptedTypeSet.has(input.contentType)) {
+        // Normalize once at the entry point: strip parameters
+        // (`; charset=utf-8`), lowercase. We compare against the
+        // bare-mime allowlist; the worker-route's content-type check
+        // also splits on `;`, so storing the bare form keeps both
+        // sides in agreement.
+        const normalizedMime = normalizeMime(input.contentType);
+        if (!acceptedTypeSet.has(normalizedMime)) {
           throw errors.UNSUPPORTED_MEDIA_TYPE({
-            data: { mime: input.contentType },
+            data: { mime: normalizedMime },
           });
         }
 
@@ -125,8 +131,7 @@ export function createMediaRouter(
 
         const id = crypto.randomUUID();
         const ext =
-          sanitizeExtension(input.filename) ??
-          extensionForMime(input.contentType);
+          sanitizeExtension(input.filename) ?? extensionForMime(normalizedMime);
         const datePrefix = new Date()
           .toISOString()
           .slice(0, 7)
@@ -145,7 +150,7 @@ export function createMediaRouter(
             status: "draft",
             authorId: context.user.id,
             meta: {
-              mime: input.contentType,
+              mime: normalizedMime,
               size: input.size,
               originalName: input.filename,
               storageKey,
@@ -160,7 +165,7 @@ export function createMediaRouter(
           let presigned;
           try {
             presigned = await storage.presignPut(storageKey, {
-              contentType: input.contentType,
+              contentType: normalizedMime,
               maxBytes: input.size,
               // 60s is plenty for a same-page XHR PUT and tightens the
               // replay window if the URL leaks (logs, browser history).
@@ -187,7 +192,7 @@ export function createMediaRouter(
         return {
           uploadUrl: `/_plumix/media/upload/${String(created.id)}`,
           method: "PUT",
-          headers: { "content-type": input.contentType },
+          headers: { "content-type": normalizedMime },
           mediaId: created.id,
           storageKey,
           expiresAt: Math.floor(Date.now() / 1000) + 60,
@@ -260,7 +265,7 @@ export function createMediaRouter(
         throw errors.CONFLICT({ data: { reason: "already_confirmed" } });
       }
 
-      const url = await storage.url(meta.storageKey);
+      const url = await resolveMediaUrl(storage, meta.storageKey, published.id);
       return {
         id: published.id,
         url,
@@ -313,7 +318,7 @@ export function createMediaRouter(
         const meta = parseMediaMeta(row.meta);
         if (!meta) continue;
         const url = context.storage
-          ? await context.storage.url(meta.storageKey)
+          ? await resolveMediaUrl(context.storage, meta.storageKey, row.id)
           : meta.storageKey;
         items.push({
           id: row.id,
@@ -441,6 +446,30 @@ function thumbnailFor(
 ): string {
   if (!mime.startsWith("image/") || !context.imageDelivery) return url;
   return context.imageDelivery.url(url, THUMBNAIL_OPTS);
+}
+
+/**
+ * Resolve a publicly-fetchable URL for a media row. Prefers the
+ * storage adapter's native URL (presigned R2 / public bucket via
+ * `publicUrlBase`); falls back to the worker-proxied serve route
+ * keyed on the entry id when the bucket isn't publicly addressable.
+ *
+ * The id-based fallback is critical: keying on storageKey would
+ * mean anyone with a key could fetch bytes (incl. drafts). Keying
+ * on id lets the serve route enforce `status='published'`.
+ */
+async function resolveMediaUrl(
+  storage: NonNullable<AppContext["storage"]>,
+  storageKey: string,
+  entryId: number,
+): Promise<string> {
+  const direct = await storage.url(storageKey);
+  return direct ?? `/_plumix/media/serve/${String(entryId)}`;
+}
+
+function normalizeMime(raw: string): string {
+  const semi = raw.indexOf(";");
+  return (semi === -1 ? raw : raw.slice(0, semi)).trim().toLowerCase();
 }
 
 const SAFE_EXT_RE = /^[a-z0-9]+$/;

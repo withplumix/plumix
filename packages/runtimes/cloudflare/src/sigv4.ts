@@ -21,10 +21,8 @@ interface PresignPutInput {
   readonly bucket: string;
   /** Object key (already URL-safe; we re-encode segment-by-segment). */
   readonly key: string;
-  /** Mime echoed back to the browser so R2 stores correct metadata. NOT signed (see comment in `presignPutUrl`). */
+  /** Mime signed into the canonical request — browser must echo. */
   readonly contentType: string;
-  /** Required: signed into the canonical request so the browser can't upload more bytes than the draft allows. */
-  readonly contentLength: number;
   /** Seconds until the URL expires. Clamped to AWS's 1..604800 range. */
   readonly expiresIn: number;
   readonly credentials: SigV4Credentials;
@@ -68,24 +66,13 @@ export async function presignPutUrl(
   const host = new URL(input.endpoint).host;
   const path = `/${rfc3986Encode(input.bucket)}/${encodePath(input.key)}`;
 
-  // Sign `host` and `content-length`, NOT `content-type`. Browsers
-  // append `; charset=…` to text mimes after the signature is made,
-  // producing opaque `SignatureDoesNotMatch` from R2. Content-Length
-  // is safe — XHR/fetch send what we set verbatim — and signing it
-  // closes a replay attack: a leaked URL otherwise lets the holder
-  // upload arbitrary-size content during the expires window.
+  // Sign content-type;host — matches the AWS SDK PutObjectCommand
+  // default and the Cloudflare R2 presigned-URL docs.
   const headers: Record<string, string> = {
-    host,
-    "content-length": String(input.contentLength),
-  };
-  const signedHeaders = "content-length;host";
-  // Browser must echo content-length (XHR does this automatically)
-  // and content-type (we send it explicitly so R2 stores the right
-  // mime metadata). Content-type is outside the signature; mime
-  // correctness is verified by `media.confirm`'s magic-byte sniff.
-  const browserHeaders: Record<string, string> = {
     "content-type": input.contentType,
+    host,
   };
+  const signedHeaders = "content-type;host";
 
   const queryParams: Record<string, string> = {
     "X-Amz-Algorithm": "AWS4-HMAC-SHA256",
@@ -128,7 +115,7 @@ export async function presignPutUrl(
   return {
     url,
     method: "PUT",
-    headers: browserHeaders,
+    headers: { "content-type": input.contentType },
     expiresAt: Math.floor(now.getTime() / 1000) + input.expiresIn,
   };
 }
