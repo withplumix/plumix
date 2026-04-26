@@ -57,14 +57,42 @@ describe("looksLikeMime — rejects mismatched headers", () => {
   });
 });
 
-describe("looksLikeMime — accepts when no matcher exists", () => {
-  // text/* has no reliable magic; we accept arbitrary bytes for those.
+describe("looksLikeMime — accepts plain text payloads for text/* mimes", () => {
   test.each([
     ["text/plain", PLAIN_TEXT],
-    ["text/plain", new Uint8Array([0xff, 0xd8])], // even garbage
     ["text/csv", PLAIN_TEXT],
     ["text/markdown", PLAIN_TEXT],
-    ["application/octet-stream", PLAIN_TEXT], // unknown mime
+  ])("%s", (mime, bytes) => {
+    expect(looksLikeMime(bytes, mime)).toBe(true);
+  });
+});
+
+describe("looksLikeMime — text/* rejects HTML-shaped payloads (XSS defense)", () => {
+  // Authors stash HTML in `.txt` to bypass the image allowlist. The
+  // text matcher requires UTF-8 decodable bytes that don't open with
+  // common HTML/XML/script markers.
+  test.each([
+    ["<!DOCTYPE html><html>"],
+    ["<html><body>x</body></html>"],
+    ["<script>alert(1)</script>"],
+    ['<?xml version="1.0"?><svg/>'],
+    ["<iframe src='https://evil'></iframe>"],
+  ])("%s rejected as text/plain", (payload) => {
+    const bytes = new TextEncoder().encode(payload);
+    expect(looksLikeMime(bytes, "text/plain")).toBe(false);
+  });
+
+  test("non-UTF-8 bytes rejected as text/plain", () => {
+    // Lone 0xFF is invalid UTF-8.
+    expect(looksLikeMime(new Uint8Array([0xff, 0xd8]), "text/plain")).toBe(
+      false,
+    );
+  });
+});
+
+describe("looksLikeMime — accepts when no matcher exists", () => {
+  test.each([
+    ["application/octet-stream", PLAIN_TEXT], // truly unknown mime
   ])("%s", (mime, bytes) => {
     expect(looksLikeMime(bytes, mime)).toBe(true);
   });

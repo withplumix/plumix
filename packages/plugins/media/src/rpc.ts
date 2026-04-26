@@ -4,6 +4,7 @@ import type { AppContext, AuthenticatedAppContext } from "@plumix/core";
 import { and, authenticated, base, desc, entries, eq } from "@plumix/core";
 
 import { looksLikeMime, MAGIC_BYTE_SAMPLE_SIZE } from "./magic-bytes.js";
+import { parseMediaMeta } from "./meta.js";
 import { extensionForMime } from "./mime.js";
 
 const MEDIA_ENTRY_TYPE = "media";
@@ -34,16 +35,9 @@ interface ConfirmResponse {
 interface MediaListItem {
   readonly id: number;
   readonly title: string;
-  readonly slug: string;
-  readonly status: "draft" | "published" | "scheduled" | "trash";
-  readonly authorId: number;
-  readonly publishedAt: Date | null;
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
   readonly mime: string;
   readonly size: number;
   readonly storageKey: string;
-  readonly originalName: string | null;
   readonly alt: string | null;
   readonly url: string;
   readonly thumbnailUrl: string;
@@ -64,19 +58,9 @@ interface UpdateResponse {
   readonly alt: string | null;
 }
 
-interface MediaMeta {
-  readonly mime: string;
-  readonly size: number;
-  readonly storageKey: string;
-  readonly originalName: string | null;
-  readonly alt: string | null;
-}
-
-// Reject control characters and whitespace inside `Content-Type`. They'd
-// silently corrupt the SigV4 canonical-header block (and the browser
-// would refuse to set the header anyway, breaking the upload). Validate
-// at the boundary so the failure surfaces here instead of as a cryptic
-// `403 SignatureDoesNotMatch` from R2.
+// Reject control characters and whitespace. Browsers send a bare
+// `Content-Type: image/png` (no space, no parameters) when uploading
+// a File via XHR; anything else here is a sign of a malformed client.
 const CONTENT_TYPE_RE = /^[\x21-\x7E]+$/;
 
 const DEFAULT_PAGE_SIZE = 24;
@@ -124,20 +108,19 @@ export function createMediaRouter(
           });
         }
         if (input.size > options.maxUploadSize) {
-          throw errors.CONFLICT({ data: { reason: "payload_too_large" } });
+          throw errors.PAYLOAD_TOO_LARGE({
+            data: { limit: options.maxUploadSize, received: input.size },
+          });
         }
         if (!acceptedTypeSet.has(input.contentType)) {
-          throw errors.CONFLICT({
-            data: { reason: "unsupported_media_type", key: input.contentType },
+          throw errors.UNSUPPORTED_MEDIA_TYPE({
+            data: { mime: input.contentType },
           });
         }
 
         const storage = context.storage;
         if (!storage) {
           throw errors.CONFLICT({ data: { reason: "storage_not_configured" } });
-        }
-        if (!storage.presignPut) {
-          throw errors.CONFLICT({ data: { reason: "presign_not_supported" } });
         }
 
         const id = crypto.randomUUID();
@@ -173,28 +156,41 @@ export function createMediaRouter(
           throw errors.CONFLICT({ data: { reason: "db_insert_failed" } });
         }
 
-        // If the presign step throws after the draft row landed (bad
-        // creds, S3 endpoint unreachable, …) the row would otherwise
-        // leak forever. Roll it back before propagating.
-        let presigned;
-        try {
-          presigned = await storage.presignPut(storageKey, {
-            contentType: input.contentType,
-            maxBytes: input.size,
-            expiresIn: 600,
-          });
-        } catch (error) {
-          await context.db.delete(entries).where(eq(entries.id, created.id));
-          throw error;
+        if (storage.presignPut) {
+          let presigned;
+          try {
+            presigned = await storage.presignPut(storageKey, {
+              contentType: input.contentType,
+              maxBytes: input.size,
+              // 60s is plenty for a same-page XHR PUT and tightens the
+              // replay window if the URL leaks (logs, browser history).
+              expiresIn: 60,
+            });
+          } catch (error) {
+            await context.db.delete(entries).where(eq(entries.id, created.id));
+            throw error;
+          }
+          return {
+            uploadUrl: presigned.url,
+            method: presigned.method,
+            headers: presigned.headers,
+            mediaId: created.id,
+            storageKey,
+            expiresAt: presigned.expiresAt,
+          };
         }
 
+        // Worker-routed fallback — when the runtime has the binding
+        // but no S3 credentials. Bytes flow through `env.MEDIA.put()`
+        // and the upload-route enforces the size cap on the actual
+        // stream, not just the Content-Length header.
         return {
-          uploadUrl: presigned.url,
-          method: presigned.method,
-          headers: presigned.headers,
+          uploadUrl: `/_plumix/media/upload/${String(created.id)}`,
+          method: "PUT",
+          headers: { "content-type": input.contentType },
           mediaId: created.id,
           storageKey,
-          expiresAt: presigned.expiresAt,
+          expiresAt: Math.floor(Date.now() / 1000) + 60,
         };
       },
     );
@@ -250,12 +246,19 @@ export function createMediaRouter(
         throw errors.CONFLICT({ data: { reason: "mime_mismatch" } });
       }
 
+      // CAS the draft → published transition: the WHERE clause
+      // includes `status = 'draft'`. Two concurrent confirms on the
+      // same draft will race the sniff but exactly one will flip the
+      // row; the loser sees `already_confirmed` instead of double-
+      // publishing or stomping `publishedAt`.
       const [published] = await context.db
         .update(entries)
         .set({ status: "published", publishedAt: new Date() })
-        .where(eq(entries.id, input.id))
+        .where(and(eq(entries.id, input.id), eq(entries.status, "draft")))
         .returning();
-      if (!published) throw notFound();
+      if (!published) {
+        throw errors.CONFLICT({ data: { reason: "already_confirmed" } });
+      }
 
       const url = await storage.url(meta.storageKey);
       return {
@@ -315,16 +318,9 @@ export function createMediaRouter(
         items.push({
           id: row.id,
           title: row.title,
-          slug: row.slug,
-          status: row.status,
-          authorId: row.authorId,
-          publishedAt: row.publishedAt,
-          createdAt: row.createdAt,
-          updatedAt: row.updatedAt,
           mime: meta.mime,
           size: meta.size,
           storageKey: meta.storageKey,
-          originalName: meta.originalName,
           alt: meta.alt,
           url,
           thumbnailUrl: thumbnailFor(context, url, meta.mime),
@@ -445,25 +441,6 @@ function thumbnailFor(
 ): string {
   if (!mime.startsWith("image/") || !context.imageDelivery) return url;
   return context.imageDelivery.url(url, THUMBNAIL_OPTS);
-}
-
-function parseMediaMeta(raw: unknown): MediaMeta | null {
-  if (!raw || typeof raw !== "object") return null;
-  const r = raw as Record<string, unknown>;
-  if (
-    typeof r.storageKey !== "string" ||
-    typeof r.mime !== "string" ||
-    typeof r.size !== "number"
-  ) {
-    return null;
-  }
-  return {
-    storageKey: r.storageKey,
-    mime: r.mime,
-    size: r.size,
-    originalName: typeof r.originalName === "string" ? r.originalName : null,
-    alt: typeof r.alt === "string" ? r.alt : null,
-  };
 }
 
 const SAFE_EXT_RE = /^[a-z0-9]+$/;

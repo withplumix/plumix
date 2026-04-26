@@ -12,96 +12,76 @@ const TEST_CREDENTIALS = {
   secretAccessKey: "test-secret",
 };
 
+const BASE_PARAMS = {
+  endpoint: "https://abc.r2.cloudflarestorage.com",
+  bucket: "bucket-a",
+  contentType: "image/jpeg",
+  contentLength: 4096,
+  expiresIn: 60,
+  credentials: TEST_CREDENTIALS,
+  now: FIXED_NOW,
+} as const;
+
 describe("presignPutUrl", () => {
   test("signature is deterministic for fixed inputs", async () => {
-    const a = await presignPutUrl({
-      endpoint: "https://abc.r2.cloudflarestorage.com",
-      bucket: "bucket-a",
-      key: "uploads/cat.jpg",
-      contentType: "image/jpeg",
-      expiresIn: 600,
-      credentials: TEST_CREDENTIALS,
-      now: FIXED_NOW,
-    });
-    const b = await presignPutUrl({
-      endpoint: "https://abc.r2.cloudflarestorage.com",
-      bucket: "bucket-a",
-      key: "uploads/cat.jpg",
-      contentType: "image/jpeg",
-      expiresIn: 600,
-      credentials: TEST_CREDENTIALS,
-      now: FIXED_NOW,
-    });
+    const a = await presignPutUrl({ ...BASE_PARAMS, key: "uploads/cat.jpg" });
+    const b = await presignPutUrl({ ...BASE_PARAMS, key: "uploads/cat.jpg" });
     expect(a.url).toBe(b.url);
   });
 
   test("signature changes when key changes (otherwise replay attack)", async () => {
-    const base = {
-      endpoint: "https://abc.r2.cloudflarestorage.com",
-      bucket: "bucket-a",
-      contentType: "image/jpeg",
-      expiresIn: 600,
-      credentials: TEST_CREDENTIALS,
-      now: FIXED_NOW,
-    };
-    const a = await presignPutUrl({ ...base, key: "uploads/cat.jpg" });
-    const b = await presignPutUrl({ ...base, key: "uploads/dog.jpg" });
+    const a = await presignPutUrl({ ...BASE_PARAMS, key: "uploads/cat.jpg" });
+    const b = await presignPutUrl({ ...BASE_PARAMS, key: "uploads/dog.jpg" });
     expect(a.url).not.toBe(b.url);
   });
 
-  test("signature changes when contentType changes", async () => {
-    const base = {
-      endpoint: "https://abc.r2.cloudflarestorage.com",
-      bucket: "bucket-a",
+  test("signature changes when contentLength changes — closes the size-replay attack", async () => {
+    // A leaked presigned URL must not let the holder upload more
+    // bytes than the draft expected. Signing Content-Length binds it.
+    const a = await presignPutUrl({
+      ...BASE_PARAMS,
       key: "k",
-      expiresIn: 600,
-      credentials: TEST_CREDENTIALS,
-      now: FIXED_NOW,
-    };
-    const a = await presignPutUrl({ ...base, contentType: "image/jpeg" });
-    const b = await presignPutUrl({ ...base, contentType: "image/png" });
+      contentLength: 100,
+    });
+    const b = await presignPutUrl({
+      ...BASE_PARAMS,
+      key: "k",
+      contentLength: 100_000,
+    });
     expect(a.url).not.toBe(b.url);
   });
 
-  test("signed Content-Length is included in browser headers", async () => {
-    const result = await presignPutUrl({
-      endpoint: "https://abc.r2.cloudflarestorage.com",
-      bucket: "bucket-a",
+  test("contentType is returned in browser headers but does NOT change the signature", async () => {
+    // Browsers append `; charset=…` to text mimes after we've signed
+    // the bare type — that broke uploads with opaque
+    // `SignatureDoesNotMatch` errors. Mime correctness is enforced
+    // by the magic-byte sniff in `media.confirm` instead.
+    const a = await presignPutUrl({
+      ...BASE_PARAMS,
       key: "k",
       contentType: "image/jpeg",
-      contentLength: 4096,
-      expiresIn: 600,
-      credentials: TEST_CREDENTIALS,
-      now: FIXED_NOW,
     });
-    expect(result.headers["content-length"]).toBe("4096");
+    const b = await presignPutUrl({
+      ...BASE_PARAMS,
+      key: "k",
+      contentType: "image/png",
+    });
+    expect(a.url).toBe(b.url);
+    expect(a.headers["content-type"]).toBe("image/jpeg");
+    expect(b.headers["content-type"]).toBe("image/png");
   });
 
-  test("X-Amz-SignedHeaders includes content-type but not host in browser headers", async () => {
-    const result = await presignPutUrl({
-      endpoint: "https://abc.r2.cloudflarestorage.com",
-      bucket: "bucket-a",
-      key: "k",
-      contentType: "image/jpeg",
-      expiresIn: 600,
-      credentials: TEST_CREDENTIALS,
-      now: FIXED_NOW,
-    });
-    expect(result.url).toContain("X-Amz-SignedHeaders=content-type%3Bhost");
+  test("X-Amz-SignedHeaders is content-length;host; browser headers omit host", async () => {
+    const result = await presignPutUrl({ ...BASE_PARAMS, key: "k" });
+    // `;` URL-encodes to `%3B`.
+    expect(result.url).toContain("X-Amz-SignedHeaders=content-length%3Bhost");
     // browsers refuse to set `host`; we sign it via the URL but the
     // returned header bag must omit it.
     expect(result.headers).not.toHaveProperty("host");
   });
 
   test("expiresIn out of range throws", async () => {
-    const base = {
-      endpoint: "https://abc.r2.cloudflarestorage.com",
-      bucket: "bucket-a",
-      key: "k",
-      contentType: "image/jpeg",
-      credentials: TEST_CREDENTIALS,
-      now: FIXED_NOW,
-    };
+    const base = { ...BASE_PARAMS, key: "k" };
     await expect(presignPutUrl({ ...base, expiresIn: 0 })).rejects.toThrow(
       /expiresIn must be in/,
     );
@@ -115,13 +95,8 @@ describe("presignPutUrl", () => {
 
   test("special characters in object key are encoded segment-by-segment", async () => {
     const result = await presignPutUrl({
-      endpoint: "https://abc.r2.cloudflarestorage.com",
-      bucket: "bucket-a",
+      ...BASE_PARAMS,
       key: "uploads/some path/with spaces & symbols.jpg",
-      contentType: "image/jpeg",
-      expiresIn: 600,
-      credentials: TEST_CREDENTIALS,
-      now: FIXED_NOW,
     });
     // `/` is preserved as a literal separator; everything else encoded.
     expect(result.url).toContain(

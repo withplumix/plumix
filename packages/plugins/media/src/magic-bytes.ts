@@ -47,6 +47,33 @@ const isXmlOrSvg: Matcher = (b) => {
   return trimmed.startsWith("<?xml") || trimmed.startsWith("<svg");
 };
 
+// `text/*` payloads must not look like HTML. Authors stash HTML in
+// `.txt` to bypass the image allowlist and have CDNs serve it as
+// content. Magic bytes can't fully prove "this is plain text", but we
+// can reject obvious HTML markers and require UTF-8 decodability.
+const isPlainText: Matcher = (b) => {
+  let text: string;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(
+      b.subarray(0, Math.min(b.length, 256)),
+    );
+  } catch {
+    return false;
+  }
+  const trimmed = text
+    .replace(/^\uFEFF/, "")
+    .trimStart()
+    .toLowerCase();
+  return !(
+    trimmed.startsWith("<!doctype") ||
+    trimmed.startsWith("<html") ||
+    trimmed.startsWith("<?xml") ||
+    trimmed.startsWith("<svg") ||
+    trimmed.startsWith("<script") ||
+    trimmed.startsWith("<iframe")
+  );
+};
+
 // `ftyp` at offset 4 covers MP4, MOV, AVIF, HEIC, etc. We only need to
 // detect "is this an isobmff container", not which brand exactly.
 const isISOBMFF: Matcher = sigAt(4, 0x66, 0x74, 0x79, 0x70);
@@ -90,7 +117,9 @@ const MATCHERS: Readonly<Record<string, Matcher>> = {
   "video/mp4": isISOBMFF,
   "video/webm": startsWith(0x1a, 0x45, 0xdf, 0xa3), // EBML
   "video/quicktime": isISOBMFF,
-  // text/* (plain, markdown, csv): no reliable magic; skipped on purpose.
+  "text/plain": isPlainText,
+  "text/markdown": isPlainText,
+  "text/csv": isPlainText,
 };
 
 /** Buffer size we ask storage to read for the magic-byte sniff. */

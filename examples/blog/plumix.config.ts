@@ -20,11 +20,14 @@ const { rpId, origin } = cloudflareDeployOrigin({
   accountSubdomain: "enasyrov",
 });
 
-// Media R2 + image-delivery wiring is opt-in via env. Without
-// CF_ACCOUNT_ID + R2_ACCESS_KEY_ID + R2_SECRET_ACCESS_KEY + MEDIA_BUCKET,
-// presigned uploads fail with `presign_not_supported`; the binding-only
-// path keeps the rest of the app running. Set MEDIA_PUBLIC_URL_BASE to a
-// CF zone with Image Transformations enabled for thumbnails on the fly.
+// Media R2 + image-delivery wiring is opt-in via env. With S3
+// credentials (CF_ACCOUNT_ID + R2_ACCESS_KEY_ID + R2_SECRET_ACCESS_KEY +
+// MEDIA_BUCKET), uploads bypass the worker via presigned PUTs straight
+// to R2. Without them, `media.createUploadUrl` returns a worker-routed
+// URL and bytes flow through `env.MEDIA.put` via the binding — slower
+// at scale but works the moment the bucket binding is attached. Set
+// MEDIA_PUBLIC_URL_BASE to a CF zone with Image Transformations enabled
+// for thumbnails on the fly.
 const s3 = resolveR2S3Credentials();
 
 export default plumix({

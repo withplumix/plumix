@@ -3,11 +3,21 @@
 // (the upload allowlist) and the rpc layer's extension picker derive from
 // here, so the two stay in lockstep.
 //
-// SECURITY NOTE: the browser-claimed `Content-Type` is signed into the
-// presigned PUT, but the bucket does not sniff bytes — a user can upload
-// arbitrary content under any allowed mime. Serve uploads from a domain
-// distinct from the admin (e.g. `media.example.com` vs `admin.example.com`)
-// so a forged `text/html` or `image/svg+xml` cannot reach admin cookies.
+// SECURITY:
+// - The bucket stores whatever bytes the client uploads; the worker
+//   verifies them against the claimed mime via magic-byte sniff in
+//   `media.confirm` (defense-in-depth — we don't trust the signed
+//   Content-Type header at upload time).
+// - `image/svg+xml` is intentionally NOT in the default allowlist:
+//   SVG is XML and can carry executable `<script>`/`onload=` payloads.
+//   A magic-byte sniff can confirm the bytes start with `<svg`/`<?xml`
+//   but cannot prove they're safe to render. Operators who need SVG
+//   uploads must opt in explicitly via `media({ acceptedTypes: [...] })`
+//   AND serve from a separate cookie domain (so any embedded script
+//   can't reach admin cookies).
+// - Same precaution applies to `text/*` mimes: bytes are stored verbatim,
+//   and a malicious actor could disguise HTML/JS as `text/plain`. Always
+//   serve uploads from a domain distinct from the admin.
 
 export const MEDIA_MIME_REGISTRY: Readonly<Record<string, string>> = {
   // images
@@ -16,6 +26,8 @@ export const MEDIA_MIME_REGISTRY: Readonly<Record<string, string>> = {
   "image/gif": "gif",
   "image/webp": "webp",
   "image/avif": "avif",
+  // SVG kept in the registry so opt-in consumers get the right extension,
+  // but excluded from DEFAULT_ACCEPTED_TYPES below.
   "image/svg+xml": "svg",
   // documents
   "application/pdf": "pdf",
@@ -42,8 +54,10 @@ export const MEDIA_MIME_REGISTRY: Readonly<Record<string, string>> = {
   "application/zip": "zip",
 };
 
+const SVG_MIME = "image/svg+xml";
+
 export const DEFAULT_ACCEPTED_TYPES: readonly string[] = Object.freeze(
-  Object.keys(MEDIA_MIME_REGISTRY),
+  Object.keys(MEDIA_MIME_REGISTRY).filter((m) => m !== SVG_MIME),
 );
 
 export function extensionForMime(mime: string): string | undefined {

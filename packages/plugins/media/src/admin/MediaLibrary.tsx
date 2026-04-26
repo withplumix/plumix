@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { DragEvent, ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   useInfiniteQuery,
@@ -8,6 +8,25 @@ import {
 
 const PAGE_SIZE = 24;
 const MEDIA_LIST_KEY = ["media", "list"] as const;
+const UPLOAD_CONCURRENCY = 4;
+
+async function runWithConcurrency<T>(
+  items: readonly T[],
+  limit: number,
+  worker: (item: T) => Promise<void>,
+): Promise<void> {
+  let cursor = 0;
+  const next = async (): Promise<void> => {
+    const i = cursor++;
+    if (i >= items.length) return;
+    const item = items[i];
+    if (item !== undefined) await worker(item);
+    return next();
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, () => next()),
+  );
+}
 
 interface MediaItem {
   readonly id: number;
@@ -168,10 +187,16 @@ export function MediaLibrary(): ReactNode {
         },
       );
       try {
+        // Same-origin worker route needs the CSRF header that the
+        // dispatcher enforces on `/_plumix/*`. R2 (cross-origin) must
+        // NOT receive it — extra headers would break SigV4.
+        const headers = init.uploadUrl.startsWith("/")
+          ? { ...init.headers, "x-plumix-request": "1" }
+          : init.headers;
         await putWithProgress(
           init.uploadUrl,
           init.method,
-          init.headers,
+          headers,
           file,
           (loaded, total) => {
             setPending((prev) =>
@@ -198,9 +223,10 @@ export function MediaLibrary(): ReactNode {
   const startUpload = useCallback(
     async (files: readonly File[]): Promise<void> => {
       if (files.length === 0) return;
-      // Concurrent uploads — simpler than batching and the bottleneck
-      // is the user's network anyway.
-      await Promise.all(files.map(uploadOne));
+      // Cap parallelism so a 50-file drop doesn't fire 50 simultaneous
+      // RPCs / XHRs. Browsers throttle to ~6 connections per origin
+      // anyway; pulling work off a small pool gives proper backpressure.
+      await runWithConcurrency(files, UPLOAD_CONCURRENCY, uploadOne);
       invalidateList();
     },
     [uploadOne, invalidateList],
@@ -221,8 +247,36 @@ export function MediaLibrary(): ReactNode {
       setErrorMsg(error instanceof Error ? error.message : String(error)),
   });
 
+  // Drop anywhere on the page — including the empty state, the loading
+  // state, and the gaps between cards. The grid div used to own these
+  // handlers, but it only renders when items exist; on a fresh install
+  // the user lands on the empty state and dropping a file did nothing.
+  const dropProps = {
+    onDragOver: (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      setDragging(true);
+    },
+    onDragLeave: (e: DragEvent) => {
+      // `dragleave` fires on every child boundary cross — ignore unless
+      // the cursor actually left the root container.
+      if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+      setDragging(false);
+    },
+    onDrop: (e: DragEvent) => {
+      e.preventDefault();
+      setDragging(false);
+      const files = Array.from(e.dataTransfer.files);
+      void startUpload(files);
+    },
+  };
+
   return (
-    <div data-testid="media-library" className="flex flex-col gap-6 p-8">
+    <div
+      data-testid="media-library"
+      className="relative flex flex-col gap-6 p-8"
+      {...dropProps}
+    >
       <header className="flex items-center justify-between">
         <h1
           data-testid="media-library-title"
@@ -251,32 +305,16 @@ export function MediaLibrary(): ReactNode {
       )}
 
       {list.status === "success" && items.length === 0 && (
-        <div
-          data-testid="media-library-empty"
-          className="text-muted-foreground py-12 text-center text-sm"
-        >
-          No media yet — upload your first asset, or drop files anywhere on this
-          page.
-        </div>
+        <Dropzone
+          onSelect={(files) => void startUpload(files)}
+          highlight={dragging}
+        />
       )}
 
       {list.status === "success" && items.length > 0 && (
         <div
           data-testid="media-library-grid"
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragging(true);
-          }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragging(false);
-            const files = Array.from(e.dataTransfer.files);
-            void startUpload(files);
-          }}
-          className={`grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4 ${
-            dragging ? "ring-primary rounded ring-2" : ""
-          }`}
+          className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4"
         >
           {items.map((item) => (
             <MediaCard
@@ -308,15 +346,63 @@ export function MediaLibrary(): ReactNode {
         </div>
       )}
 
+      {/* Page-wide drop overlay — visible whenever a drag is active and
+          the populated grid is rendered (the empty state has its own
+          built-in highlight via the Dropzone component). */}
+      {dragging && items.length > 0 && (
+        <div
+          data-testid="media-library-drop-overlay"
+          aria-hidden="true"
+          className="border-primary bg-primary/5 pointer-events-none absolute inset-4 rounded-lg border-2 border-dashed"
+        />
+      )}
+
       {errorMsg && (
         <ErrorBanner
           testIdRoot="media-library-banner-error"
-          message={errorMsg}
+          message={friendlyError(errorMsg)}
           onDismiss={() => setErrorMsg(null)}
         />
       )}
     </div>
   );
+}
+
+function hasFiles(e: DragEvent): boolean {
+  return Array.from(e.dataTransfer.types).includes("Files");
+}
+
+// Map opaque RPC `reason` codes to actionable text. The error banner is
+// the only surface a user sees when an upload fails — raw reasons like
+// `mime_mismatch` read like 404s.
+function friendlyError(raw: string): string {
+  switch (raw) {
+    case "storage_not_configured":
+      return "No storage adapter is wired up — set `storage:` in plumix.config.ts.";
+    case "payload_too_large":
+    case "rpc_413":
+      return "File exceeds the configured maxUploadSize.";
+    case "unsupported_media_type":
+    case "rpc_415":
+    case "content_type_mismatch":
+      return "This file type isn't allowed by the media plugin's acceptedTypes.";
+    case "mime_mismatch":
+      return "The uploaded bytes don't match the declared file type.";
+    case "object_not_found":
+      return "Upload didn't reach storage — check your bucket's CORS rules.";
+    case "already_confirmed":
+      return "This upload was already confirmed by another tab or device.";
+    case "media_meta_invalid":
+    case "db_insert_failed":
+    case "storage_put_failed":
+      return "Server couldn't process this upload. Try again.";
+    case "content_length_required":
+      return "Upload missing Content-Length — your browser/proxy may be using chunked transfer.";
+    case "csrf_token_missing":
+      return "Request blocked by CSRF check. Reload the page and try again.";
+    default:
+      return raw;
+  }
 }
 
 function ErrorBanner({
@@ -353,6 +439,72 @@ async function tryCleanupDraft(mediaId: number): Promise<void> {
   } catch {
     // Best-effort — server-side draft GC will catch it.
   }
+}
+
+// First-impression empty state. Mirrors the shape of CF R2's bucket
+// dashboard: a dashed-border drop target with cloud-up glyph and an
+// inline "select from computer" picker. The page-wide drop handlers
+// already cover the entire library, but a visible target on the empty
+// state tells the user the library accepts files at all — without it
+// the page reads as "nothing to do here".
+function Dropzone({
+  onSelect,
+  highlight,
+}: {
+  onSelect: (files: readonly File[]) => void;
+  highlight: boolean;
+}): ReactNode {
+  return (
+    <label
+      data-testid="media-library-dropzone"
+      data-active={highlight ? "true" : undefined}
+      className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed py-16 text-center transition ${
+        highlight
+          ? "border-primary bg-primary/5"
+          : "border-border hover:border-primary/50"
+      }`}
+    >
+      <input
+        type="file"
+        multiple
+        className="sr-only"
+        onChange={(event) => {
+          const files = Array.from(event.target.files ?? []);
+          if (files.length > 0) onSelect(files);
+          event.target.value = "";
+        }}
+      />
+      <CloudUploadGlyph />
+      <div className="flex flex-col gap-1">
+        <p className="text-sm font-medium">
+          Your library is empty. Add files to get started.
+        </p>
+        <p className="text-muted-foreground text-xs">
+          Drag and drop or{" "}
+          <span className="text-primary underline">select from computer</span>
+        </p>
+      </div>
+    </label>
+  );
+}
+
+function CloudUploadGlyph(): ReactNode {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="text-muted-foreground size-12"
+    >
+      <path d="M16 16l-4-4-4 4" />
+      <path d="M12 12v9" />
+      <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+    </svg>
+  );
 }
 
 function UploadButton({
@@ -497,16 +649,25 @@ function AltEditor({
   onSave: (alt: string) => void;
 }): ReactNode {
   const [draft, setDraft] = useState(value);
-  // Resync if the canonical value changes (e.g. invalidated list refetch).
-  useEffect(() => setDraft(value), [value]);
+  const dirtyRef = useRef(false);
+  // Resync from the canonical value only when the user isn't mid-edit.
+  // Without this, a list refetch landing while the input is focused
+  // would silently stomp the in-progress draft.
+  useEffect(() => {
+    if (!dirtyRef.current) setDraft(value);
+  }, [value]);
   return (
     <input
       data-testid={`media-card-${String(cardId)}-alt`}
       type="text"
       value={draft}
       placeholder={placeholder}
-      onChange={(e) => setDraft(e.target.value)}
+      onChange={(e) => {
+        dirtyRef.current = true;
+        setDraft(e.target.value);
+      }}
       onBlur={() => {
+        dirtyRef.current = false;
         if (draft !== value) onSave(draft);
       }}
       className="text-muted-foreground hover:bg-muted focus:bg-muted w-full truncate rounded bg-transparent px-1 text-xs outline-none"
@@ -522,16 +683,13 @@ function FileGlyph({ mime }: { mime: string }): ReactNode {
   );
 }
 
-const GLYPH_RULES: readonly (readonly [(mime: string) => boolean, string])[] = [
-  [(m) => m.startsWith("video/"), "VID"],
-  [(m) => m.startsWith("audio/"), "AUD"],
-  [(m) => m === "application/pdf", "PDF"],
-  [(m) => m.includes("zip"), "ZIP"],
-  [(m) => m.startsWith("text/"), "TXT"],
-];
-
 function mimeGlyph(mime: string): string {
-  return GLYPH_RULES.find(([test]) => test(mime))?.[1] ?? "DOC";
+  if (mime.startsWith("video/")) return "VID";
+  if (mime.startsWith("audio/")) return "AUD";
+  if (mime === "application/pdf") return "PDF";
+  if (mime.includes("zip")) return "ZIP";
+  if (mime.startsWith("text/")) return "TXT";
+  return "DOC";
 }
 
 function formatSize(bytes: number | undefined): string {

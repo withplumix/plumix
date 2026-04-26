@@ -3,6 +3,7 @@ import { definePlugin } from "@plumix/core";
 
 import { DEFAULT_ACCEPTED_TYPES } from "./mime.js";
 import { createMediaRouter } from "./rpc.js";
+import { handleWorkerUpload } from "./upload-route.js";
 
 export { DEFAULT_ACCEPTED_TYPES };
 
@@ -17,10 +18,11 @@ interface MediaPluginOptions {
    */
   readonly acceptedTypes?: readonly string[];
   /**
-   * Maximum upload size in bytes. Browsers report `size` in
-   * `media.createUploadUrl`; uploads above this cap are rejected up front
-   * and the cap is signed into the presigned URL's `Content-Length`.
-   * Defaults to 25 MiB.
+   * Maximum upload size in bytes. The browser-declared `size` in
+   * `media.createUploadUrl` is rejected up front if it exceeds this
+   * cap, the value is signed into presigned PUTs as `Content-Length`,
+   * and the worker-routed upload counts actual bytes streamed and
+   * aborts past the cap. Defaults to 25 MiB.
    */
   readonly maxUploadSize?: number;
 }
@@ -86,6 +88,11 @@ export function media(
         labels: { singular: "Asset", plural: "Media" },
         description: "Uploaded files — images, video, documents",
         supports: ["title", "excerpt"],
+        // `isPublic: false` cascades to `showUI: false` and
+        // `showInSidebar: false`. Both are load-bearing here:
+        // the plugin renders its own admin page (registered below)
+        // — we don't want the generic entries list, sidebar item,
+        // or dashboard quick-card auto-registered too.
         isPublic: false,
         excludeFromGenericRpc: false,
         hasArchive: false,
@@ -96,12 +103,28 @@ export function media(
         createMediaRouter({ acceptedTypes, maxUploadSize }),
       );
 
+      // Worker-routed upload fallback. `media.createUploadUrl` returns
+      // this URL when `storage.presignPut` isn't configured (e.g. the
+      // R2 binding is attached but no S3 credentials are wired up). The
+      // browser PUTs bytes here, the dispatcher authenticates the
+      // session, and the handler streams them through to storage.
+      ctx.registerRoute({
+        method: "PUT",
+        path: "/upload/*",
+        auth: "authenticated",
+        handler: handleWorkerUpload,
+      });
+
       ctx.registerAdminPage({
         path: "/media",
         title: "Media Library",
         capability: "entry:media:read",
         nav: {
-          group: "content",
+          // Own group between Entries (priority 100) and Taxonomies
+          // (priority 200). Media isn't a content surface like Posts/
+          // Pages — putting it under "Entries" reads as nesting, which
+          // doesn't match the WordPress mental model.
+          group: { id: "library", label: "Library", priority: 150 },
           label: "Media Library",
           order: 50,
         },

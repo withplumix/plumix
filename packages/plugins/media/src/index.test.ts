@@ -39,13 +39,20 @@ describe("@plumix/plugin-media — registration", () => {
     expect(typeof procedures.delete).toBe("object");
   });
 
-  test("registers the Media Library admin page in the management nav group", async () => {
+  test("registers the Media Library admin page in its own Library nav group", async () => {
     const { registry } = await install();
     const page = registry.adminPages.get("/media");
     expect(page).toBeDefined();
     expect(page?.title).toBe("Media Library");
     expect(page?.capability).toBe("entry:media:read");
-    expect(page?.nav?.group).toBe("content");
+    // Custom nav group between Entries (100) and Taxonomies (200) —
+    // media isn't a content surface like Posts/Pages, so it doesn't
+    // belong nested under "Entries".
+    expect(page?.nav?.group).toEqual({
+      id: "library",
+      label: "Library",
+      priority: 150,
+    });
     expect(page?.nav?.label).toBe("Media Library");
     expect(page?.component).toEqual({
       package: "@plumix/plugin-media",
@@ -60,12 +67,11 @@ describe("@plumix/plugin-media — registration", () => {
     );
   });
 
-  test("DEFAULT_ACCEPTED_TYPES covers the headline file kinds", () => {
+  test("DEFAULT_ACCEPTED_TYPES covers the headline file kinds, excludes SVG by default", () => {
     for (const mime of [
       "image/jpeg",
       "image/png",
       "image/gif",
-      "image/svg+xml",
       "application/pdf",
       "application/msword",
       "video/mp4",
@@ -74,6 +80,9 @@ describe("@plumix/plugin-media — registration", () => {
     ]) {
       expect(DEFAULT_ACCEPTED_TYPES).toContain(mime);
     }
+    // SVG is opt-in: scriptable XML can carry XSS, the magic-byte sniff
+    // can prove it parses as `<svg>` but cannot prove it's safe to render.
+    expect(DEFAULT_ACCEPTED_TYPES).not.toContain("image/svg+xml");
   });
 });
 
@@ -153,11 +162,11 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
     expect(output?.storageKey).toMatch(/^\d{4}\/\d{2}\/[0-9a-f-]+\.png$/);
   });
 
-  test("rejects unsupported mime types with a CONFLICT", async () => {
+  test("rejects unsupported mime types with UNSUPPORTED_MEDIA_TYPE (415)", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({ plugins: [media()], storage });
     const user = await h.seedUser("contributor");
-    const { status, error } = await rpcDispatch(
+    const { status, error } = await rpcDispatch<unknown>(
       h,
       "media/createUploadUrl",
       {
@@ -167,30 +176,36 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
       },
       user.id,
     );
-    expect(status).toBe(409);
-    expect(error?.data?.reason).toBe("unsupported_media_type");
+    expect(status).toBe(415);
+    expect((error as { data?: { mime?: string } }).data?.mime).toBe(
+      "application/x-msdownload",
+    );
   });
 
-  test("rejects oversize uploads with a CONFLICT", async () => {
+  test("rejects oversize uploads with PAYLOAD_TOO_LARGE (413)", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({
       plugins: [media({ maxUploadSize: 4 })],
       storage,
     });
     const user = await h.seedUser("contributor");
-    const { status, error } = await rpcDispatch(
+    const { status, error } = await rpcDispatch<unknown>(
       h,
       "media/createUploadUrl",
       { filename: "big.png", contentType: "image/png", size: 16 },
       user.id,
     );
-    expect(status).toBe(409);
-    expect(error?.data?.reason).toBe("payload_too_large");
+    expect(status).toBe(413);
+    expect(
+      (error as { data?: { limit?: number; received?: number } }).data?.limit,
+    ).toBe(4);
   });
 
-  test("returns CONFLICT when storage.presignPut is not available", async () => {
+  test("falls back to a worker-routed upload URL when presignPut is unavailable", async () => {
     // memoryStorage exposes presignPut, but we can stub it out by passing
-    // a connected storage with the method removed.
+    // a connected storage with the method removed — simulates the
+    // production case where the R2 binding is attached but no S3
+    // credentials are configured.
     const stub = memoryStorage().connect({});
     delete (stub as { presignPut?: unknown }).presignPut;
     const h = await createDispatcherHarness({
@@ -198,14 +213,17 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
       storage: stub,
     });
     const user = await h.seedUser("contributor");
-    const { status, error } = await rpcDispatch(
+    const { status, output } = await rpcDispatch<CreateUploadUrlOutput>(
       h,
       "media/createUploadUrl",
       { filename: "tiny.txt", contentType: "text/plain", size: 3 },
       user.id,
     );
-    expect(status).toBe(409);
-    expect(error?.data?.reason).toBe("presign_not_supported");
+    expect(status).toBe(200);
+    expect(output?.uploadUrl).toMatch(/^\/_plumix\/media\/upload\/\d+$/);
+    expect(output?.method).toBe("PUT");
+    expect(output?.headers["content-type"]).toBe("text/plain");
+    expect(output?.mediaId).toBeGreaterThan(0);
   });
 
   test("rejects users below the create capability with FORBIDDEN", async () => {
@@ -300,6 +318,48 @@ describe("@plumix/plugin-media — media.confirm", () => {
     // The object must have been deleted from storage so an attacker
     // can't re-trigger confirm or share the bucket-direct URL.
     expect(await storage.head(init.storageKey)).toBeNull();
+  });
+
+  test("CAS prevents double-publish: a second confirm on a published row returns already_confirmed", async () => {
+    // Two confirms on the same draft race the magic-byte sniff but
+    // exactly one must flip the row from draft → published. The
+    // loser sees `already_confirmed`, not a silent stomp of
+    // `publishedAt` or a duplicate publish.
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const user = await h.seedUser("contributor");
+
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      {
+        filename: "tile.png",
+        contentType: "image/png",
+        size: PNG_1X1_BYTES.byteLength,
+      },
+      user.id,
+    );
+    if (!created.output) throw new Error("expected createUploadUrl output");
+    await storage.put(created.output.storageKey, PNG_1X1_BYTES, {
+      contentType: "image/png",
+    });
+
+    const first = await rpcDispatch(
+      h,
+      "media/confirm",
+      { id: created.output.mediaId },
+      user.id,
+    );
+    expect(first.status).toBe(200);
+
+    const second = await rpcDispatch(
+      h,
+      "media/confirm",
+      { id: created.output.mediaId },
+      user.id,
+    );
+    expect(second.status).toBe(409);
+    expect(second.error?.data?.reason).toBe("already_confirmed");
   });
 
   test("returns CONFLICT when the upload didn't actually land in storage", async () => {
@@ -617,5 +677,301 @@ describe("@plumix/plugin-media — media.update", () => {
 
     const after = await h.db.query.entries.findMany();
     expect(after.length).toBe(beforeCount);
+  });
+});
+
+// PNG (1x1, transparent) for round-trip tests below — magic-byte sniff
+// in `media.confirm` requires real PNG bytes, not synthetic noise.
+const PNG_1X1_BYTES = new Uint8Array([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49,
+  0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06,
+  0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x44,
+  0x41, 0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0d,
+  0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42,
+  0x60, 0x82,
+]);
+
+describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", () => {
+  // Regression for the deployed-blog-doesn't-upload bug:
+  // when only the R2 binding is configured (no S3 credentials), the
+  // plugin used to throw `presign_not_supported` and the admin showed
+  // an opaque error. The createUploadUrl → PUT → confirm flow has to
+  // work end-to-end through the worker route in that mode.
+  test("createUploadUrl → PUT to /_plumix/media/upload/<id> → confirm round-trips bytes through the worker", async () => {
+    const stub = memoryStorage().connect({});
+    delete (stub as { presignPut?: unknown }).presignPut;
+    const h = await createDispatcherHarness({
+      plugins: [media()],
+      storage: stub,
+    });
+    const owner = await h.seedUser("contributor");
+
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      {
+        filename: "tile.png",
+        contentType: "image/png",
+        size: PNG_1X1_BYTES.byteLength,
+      },
+      owner.id,
+    );
+    expect(created.status).toBe(200);
+    const out = created.output;
+    if (!out) throw new Error("expected createUploadUrl output");
+    expect(out.uploadUrl).toMatch(/^\/_plumix\/media\/upload\/\d+$/);
+
+    // PUT bytes through the worker route — exactly what the browser
+    // would do with the returned uploadUrl + headers.
+    const put = await h.dispatch(
+      await h.authenticateRequest(
+        plumixRequest(out.uploadUrl, {
+          method: "PUT",
+          headers: {
+            ...out.headers,
+            "content-length": String(PNG_1X1_BYTES.byteLength),
+          },
+          body: PNG_1X1_BYTES,
+        }),
+        owner.id,
+      ),
+    );
+    expect(put.status).toBe(204);
+
+    // Bytes really landed in storage.
+    const obj = await stub.get(out.storageKey);
+    if (!obj) throw new Error("expected storage object after worker PUT");
+    expect(new Uint8Array(await obj.arrayBuffer())).toEqual(PNG_1X1_BYTES);
+
+    // Confirm should now succeed — magic-byte sniff sees real PNG.
+    const confirmed = await rpcDispatch<ConfirmOutput>(
+      h,
+      "media/confirm",
+      { id: out.mediaId },
+      owner.id,
+    );
+    expect(confirmed.status).toBe(200);
+    expect(confirmed.output?.id).toBe(out.mediaId);
+  });
+
+  test("anonymous PUT to upload route is rejected with 401", async () => {
+    const stub = memoryStorage().connect({});
+    delete (stub as { presignPut?: unknown }).presignPut;
+    const h = await createDispatcherHarness({
+      plugins: [media()],
+      storage: stub,
+    });
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/media/upload/1", {
+        method: "PUT",
+        headers: { "content-type": "image/png" },
+        body: PNG_1X1_BYTES,
+      }),
+    );
+    expect(response.status).toBe(401);
+  });
+
+  test("non-owner without edit_any cannot PUT to another user's draft", async () => {
+    const stub = memoryStorage().connect({});
+    delete (stub as { presignPut?: unknown }).presignPut;
+    const h = await createDispatcherHarness({
+      plugins: [media()],
+      storage: stub,
+    });
+    const owner = await h.seedUser("contributor");
+    const other = await h.seedUser("contributor");
+
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      {
+        filename: "tile.png",
+        contentType: "image/png",
+        size: PNG_1X1_BYTES.byteLength,
+      },
+      owner.id,
+    );
+    if (!created.output) throw new Error("expected createUploadUrl output");
+
+    const response = await h.dispatch(
+      await h.authenticateRequest(
+        plumixRequest(created.output.uploadUrl, {
+          method: "PUT",
+          headers: {
+            ...created.output.headers,
+            "content-length": String(PNG_1X1_BYTES.byteLength),
+          },
+          body: PNG_1X1_BYTES,
+        }),
+        other.id,
+      ),
+    );
+    expect(response.status).toBe(403);
+  });
+
+  test("malformed id in URL path is rejected (400) before any DB hit", async () => {
+    // Anchored regex on the id segment: scientific notation, leading
+    // zeros, non-numeric tails, and trailing path segments all fail.
+    const stub = memoryStorage().connect({});
+    delete (stub as { presignPut?: unknown }).presignPut;
+    const h = await createDispatcherHarness({
+      plugins: [media()],
+      storage: stub,
+    });
+    const owner = await h.seedUser("contributor");
+    const cases = ["1e3", "0", "01", "1.5", "abc", "-1", " 1"];
+    for (const idStr of cases) {
+      const response = await h.dispatch(
+        await h.authenticateRequest(
+          plumixRequest(`/_plumix/media/upload/${encodeURIComponent(idStr)}`, {
+            method: "PUT",
+            headers: {
+              "content-type": "image/png",
+              "content-length": "1",
+            },
+            body: new Uint8Array([0x89]),
+          }),
+          owner.id,
+        ),
+      );
+      expect(response.status, `idStr=${idStr}`).toBe(400);
+    }
+  });
+
+  test("trailing path segment after id is rejected (400)", async () => {
+    // The route is mounted with `/upload/*` wildcard — without
+    // strict shape validation, `/upload/1/extra` would still hit the
+    // handler. The handler enforces exact `/upload/<id>$`.
+    const stub = memoryStorage().connect({});
+    delete (stub as { presignPut?: unknown }).presignPut;
+    const h = await createDispatcherHarness({
+      plugins: [media()],
+      storage: stub,
+    });
+    const owner = await h.seedUser("contributor");
+    const response = await h.dispatch(
+      await h.authenticateRequest(
+        plumixRequest("/_plumix/media/upload/1/extra", {
+          method: "PUT",
+          headers: { "content-type": "image/png", "content-length": "1" },
+          body: new Uint8Array([0x89]),
+        }),
+        owner.id,
+      ),
+    );
+    expect(response.status).toBe(400);
+  });
+
+  test("PUT without Content-Length is rejected (411)", async () => {
+    // Without Content-Length the byte cap could only be enforced
+    // mid-stream — and a chunked body could DOS the bucket. Require
+    // it up front.
+    const stub = memoryStorage().connect({});
+    delete (stub as { presignPut?: unknown }).presignPut;
+    const h = await createDispatcherHarness({
+      plugins: [media()],
+      storage: stub,
+    });
+    const owner = await h.seedUser("contributor");
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      {
+        filename: "tile.png",
+        contentType: "image/png",
+        size: PNG_1X1_BYTES.byteLength,
+      },
+      owner.id,
+    );
+    if (!created.output) throw new Error("expected createUploadUrl output");
+    const req = await h.authenticateRequest(
+      plumixRequest(created.output.uploadUrl, {
+        method: "PUT",
+        headers: created.output.headers,
+        body: PNG_1X1_BYTES,
+      }),
+      owner.id,
+    );
+    // `Request` may set Content-Length automatically when given a
+    // typed body; explicitly strip it for this test.
+    req.headers.delete("content-length");
+    expect(req.headers.get("content-length")).toBeNull();
+    const response = await h.dispatch(req);
+    expect(response.status).toBe(411);
+  });
+
+  test("PUT body exceeding meta.size aborts via the byte counter (413)", async () => {
+    // Lying Content-Length: declare 8 bytes, send 64. The transform
+    // stream tallies actual bytes streamed and aborts past the cap.
+    const stub = memoryStorage().connect({});
+    delete (stub as { presignPut?: unknown }).presignPut;
+    const h = await createDispatcherHarness({
+      plugins: [media()],
+      storage: stub,
+    });
+    const owner = await h.seedUser("contributor");
+    const small = PNG_1X1_BYTES.byteLength;
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      { filename: "tile.png", contentType: "image/png", size: 8 },
+      owner.id,
+    );
+    if (!created.output) throw new Error("expected createUploadUrl output");
+    const oversized = new Uint8Array(small);
+    oversized.set(PNG_1X1_BYTES.slice(0, small));
+    const response = await h.dispatch(
+      await h.authenticateRequest(
+        plumixRequest(created.output.uploadUrl, {
+          method: "PUT",
+          // Header LIES — claims 8 (matching meta.size) but body is
+          // larger. The byte counter must catch it.
+          headers: {
+            ...created.output.headers,
+            "content-length": "8",
+          },
+          body: oversized,
+        }),
+        owner.id,
+      ),
+    );
+    expect(response.status).toBe(413);
+  });
+
+  test("declared content-type that doesn't match the draft's mime is rejected", async () => {
+    const stub = memoryStorage().connect({});
+    delete (stub as { presignPut?: unknown }).presignPut;
+    const h = await createDispatcherHarness({
+      plugins: [media()],
+      storage: stub,
+    });
+    const owner = await h.seedUser("contributor");
+
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      {
+        filename: "tile.png",
+        contentType: "image/png",
+        size: PNG_1X1_BYTES.byteLength,
+      },
+      owner.id,
+    );
+    if (!created.output) throw new Error("expected createUploadUrl output");
+
+    const response = await h.dispatch(
+      await h.authenticateRequest(
+        plumixRequest(created.output.uploadUrl, {
+          method: "PUT",
+          headers: {
+            "content-type": "image/jpeg",
+            "content-length": String(PNG_1X1_BYTES.byteLength),
+          },
+          body: PNG_1X1_BYTES,
+        }),
+        owner.id,
+      ),
+    );
+    expect(response.status).toBe(415);
   });
 });
