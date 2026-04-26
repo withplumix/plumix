@@ -399,4 +399,5 @@ function satisfiesLoose(installed: string, range: string): boolean {
   return rMajor === iMajor;
 }
 
+export { plumixPluginAuthor } from "./plugin-author.js";
 export { plumix as default };

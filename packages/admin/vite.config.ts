@@ -4,7 +4,13 @@ import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
+import {
+  buildSharedRuntimeImportMap,
+  SHARED_RUNTIME_SPECIFIERS,
+} from "@plumix/core";
+
 import { ADMIN_BASE_PATH } from "./src/lib/constants.js";
+import { sharedRuntimeImportmap } from "./src/vite/shared-runtime-importmap.js";
 
 // `plumix dev` runs on Vite's default port 5173, so the admin moves to 5174
 // to avoid a conflict. Admin proxies /_plumix/{rpc,auth} back to the plumix
@@ -14,7 +20,9 @@ import { ADMIN_BASE_PATH } from "./src/lib/constants.js";
 const ADMIN_DEV_PORT = 5174;
 const BACKEND_URL = process.env.PLUMIX_BACKEND_URL ?? "http://localhost:5173";
 
-export default defineConfig({
+const IMPORT_MAP = buildSharedRuntimeImportMap(ADMIN_BASE_PATH);
+
+export default defineConfig(({ command }) => ({
   base: `${ADMIN_BASE_PATH}/`,
   // tanstackRouter must run before @vitejs/plugin-react. quoteStyle +
   // semicolons keep routeTree.gen.ts prettier-clean across builds.
@@ -27,6 +35,7 @@ export default defineConfig({
     }),
     tailwindcss(),
     react(),
+    sharedRuntimeImportmap(IMPORT_MAP),
   ],
   server: {
     port: ADMIN_DEV_PORT,
@@ -41,4 +50,13 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
-});
+  build: {
+    rollupOptions: {
+      // External in build only — at runtime the importmap resolves
+      // these to the vendor chunks emitted by build-vendor-chunks.ts,
+      // so admin + plugin chunks share one React instance. Dev keeps
+      // them inlined for HMR.
+      external: command === "build" ? [...SHARED_RUNTIME_SPECIFIERS] : [],
+    },
+  },
+}));
