@@ -16,6 +16,17 @@ export interface PluginDescriptor<TConfig = undefined> {
   readonly setup: PluginSetup<TConfig>;
   readonly schema?: Record<string, unknown>;
   readonly schemaModule?: string;
+  /**
+   * Path to the plugin's admin entry — a TypeScript/TSX module that
+   * imports React from the bare specifier and registers components via
+   * `window.plumix.registerPluginPage(...)`. Resolved relative to the
+   * consumer site's root. The plumix vite plugin assembles every
+   * declared `adminEntry` into a single per-site bundle with `react`,
+   * `react-dom`, `@tanstack/*` aliased to host-shared shims.
+   */
+  readonly adminEntry?: string;
+  /** Pre-built admin chunk path. Legacy alternative to `adminEntry` —
+   *  prefer source for the alias seam. */
   readonly adminChunk?: string;
   readonly adminCss?: string;
   readonly adminPeerVersion?: string;
@@ -25,6 +36,7 @@ export interface DefinePluginOptions {
   readonly version?: string;
   readonly schema?: Record<string, unknown>;
   readonly schemaModule?: string;
+  readonly adminEntry?: string;
   readonly adminChunk?: string;
   readonly adminCss?: string;
   readonly adminPeerVersion?: string;
@@ -77,6 +89,7 @@ export function definePlugin<TConfig = undefined>(
       setup: setupOrInput,
       schema: legacyOptions?.schema,
       schemaModule: legacyOptions?.schemaModule,
+      adminEntry: legacyOptions?.adminEntry,
       adminChunk: legacyOptions?.adminChunk,
       adminCss: legacyOptions?.adminCss,
       adminPeerVersion: legacyOptions?.adminPeerVersion,
@@ -96,6 +109,7 @@ export function definePlugin<TConfig = undefined>(
     setup: setupOrInput.setup,
     schema: setupOrInput.schema,
     schemaModule: setupOrInput.schemaModule,
+    adminEntry: setupOrInput.adminEntry,
     adminChunk: setupOrInput.adminChunk,
     adminCss: setupOrInput.adminCss,
     adminPeerVersion: setupOrInput.adminPeerVersion,

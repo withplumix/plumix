@@ -20,6 +20,10 @@
       "types": "./dist/test/index.d.ts",
       "default": "./dist/test/index.js"
     },
+    "./test/playwright": {
+      "types": "./dist/test/playwright/index.d.ts",
+      "default": "./dist/test/playwright/index.js"
+    },
     "./validation": {
       "types": "./dist/rpc/validation.d.ts",
       "default": "./dist/rpc/validation.js"
@@ -55,7 +59,16 @@
     "fishery": "^2.4.0",
     "valibot": "catalog:"
   },
+  "peerDependencies": {
+    "@playwright/test": "^1.59.0"
+  },
+  "peerDependenciesMeta": {
+    "@playwright/test": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",

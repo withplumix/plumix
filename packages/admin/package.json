@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsx scripts/build-vendor-chunks.ts && vite build",
-    "build:vendor": "tsx scripts/build-vendor-chunks.ts",
+    "build": "vite build",
     "clean": "git clean -xdf .cache .turbo dist node_modules playwright-report test-results",
     "dev": "vite",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path .prettierignore",

@@ -2,8 +2,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 import { ADMIN_BASE_PATH } from "./src/lib/constants.js";
 
-// Isolate e2e's Vite from the regular dev server port to avoid clashing with
-// a developer already running `pnpm dev`.
+// E2E always runs against the production build via `vite preview`. The
+// build-time alias seam (admin globals + per-site plugin assembly)
+// only kicks in for built artifacts; dev-mode HMR doesn't exercise it.
 const E2E_PORT = 5180;
 const BASE_URL = `http://localhost:${String(E2E_PORT)}${ADMIN_BASE_PATH}/`;
 
@@ -20,11 +21,19 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: `pnpm exec vite --port ${String(E2E_PORT)} --strictPort`,
+    // Build admin → assemble the runtime-proof fixture plugin via
+    // plumix's real assembler → preview the dist. The assembler
+    // writes site-bundle.js into dist/plugins/ and patches the script
+    // tag into index.html.
+    command: [
+      "pnpm run build",
+      "pnpm exec tsx e2e/fixtures/build-runtime-proof-plugin.ts",
+      `pnpm exec vite preview --port ${String(E2E_PORT)} --strictPort`,
+    ].join(" && "),
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     stdout: "pipe",
     stderr: "pipe",
-    timeout: 60_000,
+    timeout: 180_000,
   },
 });

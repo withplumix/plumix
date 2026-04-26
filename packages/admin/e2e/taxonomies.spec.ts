@@ -7,6 +7,7 @@ import {
   MANIFEST_WITH_TAXONOMIES,
   mockManifest,
   mockRpc,
+  rpcOkBody,
 } from "./support/rpc-mock.js";
 
 function term(overrides: Partial<Term> & { id: number; name: string }): Term {
@@ -120,14 +121,14 @@ test.describe("/terms/$name/create", () => {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
+          body: rpcOkBody(AUTHED_ADMIN),
         });
       }
       if (url.endsWith("/term/list")) {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ json: [fruit], meta: [] }),
+          body: rpcOkBody([fruit]),
         });
       }
       if (url.endsWith("/term/create")) {
@@ -187,14 +188,14 @@ test.describe("/terms/$name/create", () => {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
+          body: rpcOkBody(AUTHED_ADMIN),
         });
       }
       if (url.endsWith("/term/list")) {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ json: [], meta: [] }),
+          body: rpcOkBody([]),
         });
       }
       if (url.endsWith("/term/create")) {
@@ -279,21 +280,21 @@ test.describe("/terms/$name/$id/edit", () => {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
+          body: rpcOkBody(AUTHED_ADMIN),
         });
       }
       if (url.endsWith("/term/get")) {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ json: target, meta: [] }),
+          body: rpcOkBody(target),
         });
       }
       if (url.endsWith("/term/list")) {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ json: [target], meta: [] }),
+          body: rpcOkBody([target]),
         });
       }
       if (url.endsWith("/term/delete")) {
@@ -303,7 +304,7 @@ test.describe("/terms/$name/$id/edit", () => {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ json: target, meta: [] }),
+          body: rpcOkBody(target),
         });
       }
       return route.fulfill({ status: 404, body: "not-mocked" });

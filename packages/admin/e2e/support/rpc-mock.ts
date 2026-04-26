@@ -1,102 +1,25 @@
-import type { Page, Route } from "@playwright/test";
+// Admin's e2e support layer. The generic playwright helpers
+// (`mockRpc`, `mockSession`, `mockManifest`, `rpcOkBody`, etc.) live
+// in `@plumix/core/test/playwright` so the same surface is what
+// external plugin authors use — admin re-exports them and adds the
+// admin-specific manifest + session fixtures the suite shares.
 
-import type { AuthSessionOutput } from "@plumix/core";
 import type { PlumixManifest } from "@plumix/core/manifest";
-import type { Entry, Term, User } from "@plumix/core/schema";
 import { emptyManifest } from "@plumix/core/manifest";
+import {
+  AUTHED_ADMIN as BASE_AUTHED_ADMIN,
+  withCapabilities,
+} from "@plumix/core/test/playwright";
 
-// The e2e webServer is just Vite — no real backend — so every /_plumix/rpc
-// call is intercepted here and answered with a deterministic fixture.
-// Individual specs declare the shape they want per procedure so route
-// `beforeLoad` + component queries resolve without hitting the network.
-
-// One entry per procedure path we know how to mock. Typed against the
-// real server shapes so a schema change on the core side fails this file's
-// typecheck, forcing the spec author to update their fixture. Not exported
-// — specs pass object literals that get structurally checked against this
-// shape on the `mockRpc` call.
-interface MockRpcHandlers {
-  "/auth/session"?: AuthSessionOutput;
-  "/entry/list"?: readonly Entry[];
-  "/user/list"?: readonly User[];
-  "/user/invite"?: { user: User; inviteToken: string };
-  "/user/get"?: User;
-  "/user/update"?: User;
-  "/user/disable"?: User;
-  "/user/enable"?: User;
-  "/user/delete"?: User;
-  "/term/list"?: readonly Term[];
-  "/term/get"?: Term;
-  "/term/create"?: Term;
-  "/term/update"?: Term;
-  "/term/delete"?: Term;
-  "/settings/get"?: Record<string, unknown>;
-  "/settings/upsert"?: Record<string, unknown>;
-}
-
-// oRPC's StandardRPCSerializer wire format — `meta` is always present,
-// empty array for payloads with no BigInt/Date/etc. transforms.
-function rpcOk(route: Route, body: unknown): Promise<void> {
-  return route.fulfill({
-    status: 200,
-    contentType: "application/json",
-    body: JSON.stringify({ json: body, meta: [] }),
-  });
-}
-
-export async function mockRpc(
-  page: Page,
-  handlers: MockRpcHandlers,
-): Promise<void> {
-  await page.route("**/_plumix/rpc/**", (route) => {
-    const url = route.request().url();
-    for (const [suffix, body] of Object.entries(handlers)) {
-      if (url.endsWith(suffix)) {
-        return rpcOk(route, body);
-      }
-    }
-    return route.fulfill({ status: 404, body: "not-mocked" });
-  });
-}
-
-export function mockSession(
-  page: Page,
-  body: AuthSessionOutput,
-): Promise<void> {
-  return mockRpc(page, { "/auth/session": body });
-}
-
-/**
- * Inject a manifest into the admin HTML before the module script loads.
- * Standalone `vite dev` ships an empty-manifest placeholder; specs that
- * need a registered post type (to hit `/entries/$slug`) install a
- * synthetic one via this helper. Uses `page.route` to mutate the HTML
- * response so `readManifest()` sees the populated tag on first parse.
- */
-export async function mockManifest(
-  page: Page,
-  manifest: PlumixManifest,
-): Promise<void> {
-  await page.route("**/*", async (route) => {
-    const request = route.request();
-    if (request.resourceType() !== "document") {
-      await route.fallback();
-      return;
-    }
-    const response = await route.fetch();
-    const html = await response.text();
-    const payload = JSON.stringify(manifest).replaceAll("</", "<\\/");
-    const next = html.replace(
-      /<script id="plumix-manifest"[^>]*>[\s\S]*?<\/script>/i,
-      `<script id="plumix-manifest" type="application/json">${payload}</script>`,
-    );
-    await route.fulfill({
-      response,
-      body: next,
-      headers: { ...response.headers(), "content-length": String(next.length) },
-    });
-  });
-}
+export {
+  anonymousSession,
+  mockManifest,
+  mockRpc,
+  mockSession,
+  rpcErrorBody,
+  rpcOkBody,
+  withCapabilities,
+} from "@plumix/core/test/playwright";
 
 // Default post-type manifest fixture — one entry, slug `entries`, shared
 // by specs that just need "something to list" without caring about the
@@ -240,44 +163,16 @@ export const MANIFEST_WITH_SETTINGS: PlumixManifest = {
   ],
 };
 
-// Fixture: an authed admin session. Reused across every spec that needs a
-// logged-in user — specs override individual fields via spread if they need
-// something specific. Capabilities list covers the gates the admin UI
-// checks (post sidebar, dashboard tiles, etc.); keep in sync with what
-// `capabilitiesForRole("admin", ...)` returns for a bare install.
-export const AUTHED_ADMIN: AuthSessionOutput = {
-  user: {
-    id: 1,
-    email: "admin@example.test",
-    name: "Admin",
-    avatarUrl: null,
-    role: "admin",
-    capabilities: [
-      "settings:manage",
-      "plugin:manage",
-      "entry:post:create",
-      "entry:post:delete",
-      "entry:post:edit_any",
-      "entry:post:edit_own",
-      "entry:post:publish",
-      "entry:post:read",
-      "user:create",
-      "user:delete",
-      "user:edit",
-      "user:edit_own",
-      "user:list",
-      "user:promote",
-      // Per-taxonomy caps matching MANIFEST_WITH_TAXONOMIES. The real
-      // server derives these from `deriveTermTaxonomyCapabilities(name)` for
-      // every registered taxonomy; mock-land hard-codes the union of
-      // every taxonomy that any fixture uses.
-      "term:category:read",
-      "term:category:edit",
-      "term:category:delete",
-      "term:tag:read",
-      "term:tag:edit",
-      "term:tag:delete",
-    ],
-  },
-  needsBootstrap: false,
-};
+// Admin's e2e suite needs a bigger capability set than `core`'s baseline
+// `AUTHED_ADMIN` because the taxonomy fixtures depend on per-taxonomy
+// caps the real server would derive at registration time. Layer them
+// on once and let specs use this fixture by default.
+export const AUTHED_ADMIN = withCapabilities(
+  BASE_AUTHED_ADMIN,
+  "term:category:read",
+  "term:category:edit",
+  "term:category:delete",
+  "term:tag:read",
+  "term:tag:edit",
+  "term:tag:delete",
+);

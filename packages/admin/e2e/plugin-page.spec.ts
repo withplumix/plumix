@@ -3,20 +3,17 @@ import { expect, test } from "@playwright/test";
 import type { AuthSessionOutput } from "@plumix/core";
 import type { PlumixManifest } from "@plumix/core/manifest";
 
-import { AUTHED_ADMIN, mockManifest, mockSession } from "./support/rpc-mock.js";
+import {
+  AUTHED_ADMIN,
+  mockManifest,
+  mockSession,
+  withCapabilities,
+} from "./support/rpc-mock.js";
 
-const AUTHED_ADMIN_WITH_MENU_CAP: AuthSessionOutput = (() => {
-  if (!AUTHED_ADMIN.user) {
-    throw new Error("AUTHED_ADMIN fixture is expected to carry a user");
-  }
-  return {
-    ...AUTHED_ADMIN,
-    user: {
-      ...AUTHED_ADMIN.user,
-      capabilities: [...AUTHED_ADMIN.user.capabilities, "menu:manage"],
-    },
-  };
-})();
+const AUTHED_ADMIN_WITH_MENU_CAP = withCapabilities(
+  AUTHED_ADMIN,
+  "menu:manage",
+);
 
 const AUTHED_EDITOR: AuthSessionOutput = {
   user: {
