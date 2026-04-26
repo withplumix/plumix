@@ -1,4 +1,4 @@
-import type { AppContext, ConnectedObjectStorage } from "@plumix/core";
+import type { AppContext } from "@plumix/core";
 import { and, entries, eq } from "@plumix/core";
 
 import { parseMediaMeta } from "./meta.js";
@@ -67,9 +67,8 @@ export async function handleWorkerUpload(
     return jsonError(415, "content_type_mismatch");
   }
 
-  // Require a believable Content-Length. We still enforce the actual
-  // byte count below, but this rejects the obvious cases up front so
-  // we don't open a stream we can't finish.
+  // Reject missing CL (chunked is unbounded) or CL > meta.size; HTTP
+  // framing truncates the actual stream to the declared length.
   const declaredLengthHeader = request.headers.get("content-length");
   if (declaredLengthHeader === null) {
     return jsonError(411, "content_length_required");
@@ -86,36 +85,19 @@ export async function handleWorkerUpload(
   const body = request.body;
   if (!body) return jsonError(400, "empty_body");
 
-  // Wrap the request body in a stream that aborts if the running byte
-  // total ever exceeds `meta.size`. Without this, a client can lie
-  // about Content-Length (or omit it on chunked transfer) and stream
-  // gigabytes into the bucket. The transform also catches the case
-  // where the actual body is smaller than declared — storage gets
-  // exactly what flowed.
-  const cap = meta.size;
-  let seen = 0;
-  const limited = body.pipeThrough(
-    new TransformStream<Uint8Array, Uint8Array>({
-      transform(chunk, controller) {
-        seen += chunk.byteLength;
-        if (seen > cap) {
-          controller.error(new PayloadTooLargeError());
-          return;
-        }
-        controller.enqueue(chunk);
-      },
-    }),
-  );
-
+  // Stream the body straight to R2 per the docs example:
+  //   await env.R2.put(key, request.body, { httpMetadata })
   try {
-    await storage.put(meta.storageKey, limited, { contentType: meta.mime });
+    await storage.put(meta.storageKey, body, { contentType: meta.mime });
   } catch (error) {
-    // Best-effort cleanup — partial multipart uploads can leave junk
-    // behind. Storage delete failures are logged, not propagated:
-    // the user already saw the upload fail.
-    await tryDelete(storage, meta.storageKey, ctx);
-    if (error instanceof PayloadTooLargeError) {
-      return jsonError(413, "payload_too_large");
+    // Best-effort cleanup — a partial put can leave junk behind.
+    try {
+      await storage.delete(meta.storageKey);
+    } catch (cleanupError) {
+      ctx.logger.warn("media_worker_upload_cleanup_failed", {
+        error: cleanupError,
+        key: meta.storageKey,
+      });
     }
     ctx.logger.warn("media_worker_upload_failed", {
       error,
@@ -126,25 +108,6 @@ export async function handleWorkerUpload(
   }
 
   return new Response(null, { status: 204 });
-}
-
-class PayloadTooLargeError extends Error {
-  constructor() {
-    super("payload_too_large");
-    this.name = "PayloadTooLargeError";
-  }
-}
-
-async function tryDelete(
-  storage: ConnectedObjectStorage,
-  key: string,
-  ctx: AppContext,
-): Promise<void> {
-  try {
-    await storage.delete(key);
-  } catch (error) {
-    ctx.logger.warn("media_worker_upload_cleanup_failed", { error, key });
-  }
 }
 
 function jsonError(status: number, reason: string): Response {

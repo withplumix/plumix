@@ -16,7 +16,6 @@ const BASE_PARAMS = {
   endpoint: "https://abc.r2.cloudflarestorage.com",
   bucket: "bucket-a",
   contentType: "image/jpeg",
-  contentLength: 4096,
   expiresIn: 60,
   credentials: TEST_CREDENTIALS,
   now: FIXED_NOW,
@@ -35,27 +34,9 @@ describe("presignPutUrl", () => {
     expect(a.url).not.toBe(b.url);
   });
 
-  test("signature changes when contentLength changes — closes the size-replay attack", async () => {
-    // A leaked presigned URL must not let the holder upload more
-    // bytes than the draft expected. Signing Content-Length binds it.
-    const a = await presignPutUrl({
-      ...BASE_PARAMS,
-      key: "k",
-      contentLength: 100,
-    });
-    const b = await presignPutUrl({
-      ...BASE_PARAMS,
-      key: "k",
-      contentLength: 100_000,
-    });
-    expect(a.url).not.toBe(b.url);
-  });
-
-  test("contentType is returned in browser headers but does NOT change the signature", async () => {
-    // Browsers append `; charset=…` to text mimes after we've signed
-    // the bare type — that broke uploads with opaque
-    // `SignatureDoesNotMatch` errors. Mime correctness is enforced
-    // by the magic-byte sniff in `media.confirm` instead.
+  test("signature changes when contentType changes (mime is part of the signature)", async () => {
+    // The browser MUST send `Content-Type: <signed value>` exactly,
+    // or R2 returns SignatureDoesNotMatch. Matches AWS SDK default.
     const a = await presignPutUrl({
       ...BASE_PARAMS,
       key: "k",
@@ -66,15 +47,15 @@ describe("presignPutUrl", () => {
       key: "k",
       contentType: "image/png",
     });
-    expect(a.url).toBe(b.url);
+    expect(a.url).not.toBe(b.url);
     expect(a.headers["content-type"]).toBe("image/jpeg");
     expect(b.headers["content-type"]).toBe("image/png");
   });
 
-  test("X-Amz-SignedHeaders is content-length;host; browser headers omit host", async () => {
+  test("X-Amz-SignedHeaders is content-type;host (matches AWS SDK + Cloudflare docs)", async () => {
     const result = await presignPutUrl({ ...BASE_PARAMS, key: "k" });
     // `;` URL-encodes to `%3B`.
-    expect(result.url).toContain("X-Amz-SignedHeaders=content-length%3Bhost");
+    expect(result.url).toContain("X-Amz-SignedHeaders=content-type%3Bhost");
     // browsers refuse to set `host`; we sign it via the URL but the
     // returned header bag must omit it.
     expect(result.headers).not.toHaveProperty("host");

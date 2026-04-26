@@ -197,18 +197,14 @@ export function r2(config: R2Config): R2ObjectStorage {
           };
         },
         // eslint-disable-next-line @typescript-eslint/require-await
-        async url(key, _opts?: UrlOptions): Promise<string> {
-          if (!config.publicUrlBase) {
-            throw new Error(
-              `r2.url("${key}"): no publicUrlBase configured. Set ` +
-                `r2({ binding, publicUrlBase: 'https://media.example.com' }) ` +
-                `when the bucket is public, or route reads through a ` +
-                `plugin-registered proxy endpoint.`,
-            );
-          }
-          const base = config.publicUrlBase.endsWith("/")
-            ? config.publicUrlBase.slice(0, -1)
-            : config.publicUrlBase;
+        async url(key, _opts?: UrlOptions): Promise<string | null> {
+          // Bucket-level public URL only — without a custom domain or
+          // CDN base, returning the storage key directly would leak
+          // unguessable-but-static keys publicly with no published-
+          // status check. The consumer (media plugin) mints a
+          // worker-proxied URL keyed on the entry id instead.
+          if (!config.publicUrlBase) return null;
+          const base = config.publicUrlBase.replace(/\/$/, "");
           return `${base}/${encodePath(key)}`;
         },
       };
@@ -224,20 +220,11 @@ export function r2(config: R2Config): R2ObjectStorage {
         ): Promise<PresignedPutResult> => {
           const endpoint =
             s3.endpoint ?? `https://${s3.accountId}.r2.cloudflarestorage.com`;
-          if (opts.maxBytes === undefined) {
-            // Unsigned size = unbounded upload window. Force the
-            // caller to commit to a length so the SigV4 signer can
-            // bind it into the canonical request.
-            throw new Error(
-              "presignPut: maxBytes is required (signed into Content-Length)",
-            );
-          }
           return presignPutUrl({
             endpoint,
             bucket: s3.bucket,
             key,
             contentType: opts.contentType,
-            contentLength: opts.maxBytes,
             expiresIn: opts.expiresIn ?? DEFAULT_PRESIGN_TTL_SECONDS,
             credentials: {
               accessKeyId: s3.accessKeyId,

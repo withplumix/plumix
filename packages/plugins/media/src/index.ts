@@ -3,6 +3,7 @@ import { definePlugin } from "@plumix/core";
 
 import { DEFAULT_ACCEPTED_TYPES } from "./mime.js";
 import { createMediaRouter } from "./rpc.js";
+import { handleMediaServe } from "./serve-route.js";
 import { handleWorkerUpload } from "./upload-route.js";
 
 export { DEFAULT_ACCEPTED_TYPES };
@@ -113,6 +114,17 @@ export function media(
         path: "/upload/*",
         auth: "authenticated",
         handler: handleWorkerUpload,
+      });
+
+      // Worker-proxied media serve. When the storage adapter has no
+      // public URL base (private bucket without a custom domain),
+      // `r2.url()` returns a relative URL pointing here. Public so
+      // published media can be embedded in pages/posts.
+      ctx.registerRoute({
+        method: "GET",
+        path: "/serve/*",
+        auth: "public",
+        handler: handleMediaServe,
       });
 
       ctx.registerAdminPage({

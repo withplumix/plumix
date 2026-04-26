@@ -900,9 +900,10 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
     expect(response.status).toBe(411);
   });
 
-  test("PUT body exceeding meta.size aborts via the byte counter (413)", async () => {
-    // Lying Content-Length: declare 8 bytes, send 64. The transform
-    // stream tallies actual bytes streamed and aborts past the cap.
+  test("PUT with Content-Length over meta.size is rejected (413)", async () => {
+    // We trust Content-Length as the size cap — HTTP framing only
+    // delivers up to CL bytes, and an honest CL is enforced by the
+    // 413 check before any byte hits storage.
     const stub = memoryStorage().connect({});
     delete (stub as { presignPut?: unknown }).presignPut;
     const h = await createDispatcherHarness({
@@ -910,7 +911,6 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
       storage: stub,
     });
     const owner = await h.seedUser("contributor");
-    const small = PNG_1X1_BYTES.byteLength;
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
       "media/createUploadUrl",
@@ -918,19 +918,15 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
       owner.id,
     );
     if (!created.output) throw new Error("expected createUploadUrl output");
-    const oversized = new Uint8Array(small);
-    oversized.set(PNG_1X1_BYTES.slice(0, small));
     const response = await h.dispatch(
       await h.authenticateRequest(
         plumixRequest(created.output.uploadUrl, {
           method: "PUT",
-          // Header LIES — claims 8 (matching meta.size) but body is
-          // larger. The byte counter must catch it.
           headers: {
             ...created.output.headers,
-            "content-length": "8",
+            "content-length": "999",
           },
-          body: oversized,
+          body: PNG_1X1_BYTES,
         }),
         owner.id,
       ),
@@ -973,5 +969,119 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
       ),
     );
     expect(response.status).toBe(415);
+  });
+});
+
+describe("@plumix/plugin-media — worker-proxied serve route", () => {
+  // The serve route is keyed on entry id (NOT storage key) so it can
+  // enforce `status='published'` before streaming bytes. Anyone with
+  // a leaked storage key would otherwise be able to fetch draft
+  // bytes (the bytes exist in R2 between PUT and confirm).
+  test("GET /_plumix/media/serve/<id> returns published media bytes with security headers", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const owner = await h.seedUser("contributor");
+    const seeded = await seedPublishedMedia(h, storage, owner.id, "serve.png");
+
+    const response = await h.dispatch(
+      plumixRequest(`/_plumix/media/serve/${String(seeded.id)}`),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("image/png");
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+    // Image mimes render inline; only non-images get attachment.
+    expect(response.headers.get("content-disposition")).toBeNull();
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    expect(bytes[0]).toBe(0x89);
+    expect(bytes[1]).toBe(0x50);
+  });
+
+  test("draft entries return 404 — only published is reachable", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const owner = await h.seedUser("contributor");
+    // Create a draft via createUploadUrl, PUT bytes, but DON'T confirm.
+    // The bytes exist in storage at meta.storageKey, but the entry
+    // is still `draft` — serve route MUST refuse it.
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      { filename: "draft.png", contentType: "image/png", size: 8 },
+      owner.id,
+    );
+    if (!created.output) throw new Error("expected createUploadUrl output");
+    await storage.put(
+      created.output.storageKey,
+      new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      { contentType: "image/png" },
+    );
+    const response = await h.dispatch(
+      plumixRequest(`/_plumix/media/serve/${String(created.output.mediaId)}`),
+    );
+    expect(response.status).toBe(404);
+  });
+
+  test("non-existent id returns 404", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/media/serve/999999"),
+    );
+    expect(response.status).toBe(404);
+  });
+
+  test("malformed id returns 400 (rejects scientific notation, leading zeros, traversal attempts)", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    for (const idStr of ["1e3", "abc", "0", "01", "..%2Fetc", "1/extra"]) {
+      const response = await h.dispatch(
+        plumixRequest(`/_plumix/media/serve/${encodeURIComponent(idStr)}`),
+      );
+      expect(response.status, `idStr=${idStr}`).toBeGreaterThanOrEqual(400);
+      expect(response.status, `idStr=${idStr}`).toBeLessThan(500);
+    }
+  });
+
+  test("non-image mimes are forced to attachment disposition (XSS defense)", async () => {
+    // Even with magic-byte sniff catching obvious HTML in `text/*`,
+    // the serve route adds Content-Disposition: attachment to force
+    // download instead of inline render — same-origin defense.
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const owner = await h.seedUser("contributor");
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      { filename: "notes.txt", contentType: "text/plain", size: 5 },
+      owner.id,
+    );
+    if (!created.output) throw new Error("expected createUploadUrl output");
+    await storage.put(
+      created.output.storageKey,
+      new TextEncoder().encode("hello"),
+      { contentType: "text/plain" },
+    );
+    await rpcDispatch(
+      h,
+      "media/confirm",
+      { id: created.output.mediaId },
+      owner.id,
+    );
+    const response = await h.dispatch(
+      plumixRequest(`/_plumix/media/serve/${String(created.output.mediaId)}`),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-disposition")).toMatch(/^attachment;/);
+  });
+
+  test("anonymous GET works — published media is publicly embeddable", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const owner = await h.seedUser("contributor");
+    const seeded = await seedPublishedMedia(h, storage, owner.id, "pub.png");
+    const response = await h.dispatch(
+      plumixRequest(`/_plumix/media/serve/${String(seeded.id)}`),
+    );
+    expect(response.status).toBe(200);
   });
 });
