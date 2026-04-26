@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@plumix/plugin-blog": "workspace:*",
+    "@plumix/plugin-media": "workspace:*",
     "@plumix/plugin-pages": "workspace:*",
     "@plumix/runtime-cloudflare": "workspace:*",
     "plumix": "workspace:*"

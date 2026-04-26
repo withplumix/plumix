@@ -27,13 +27,15 @@ describe("@plumix/plugin-media — registration", () => {
     );
   });
 
-  test("registers the `media` RPC router (createUploadUrl + confirm)", async () => {
+  test("registers the `media` RPC router with create/confirm/list/delete", async () => {
     const { registry } = await install();
     const router = registry.rpcRouters.get("media");
     expect(router).toBeDefined();
     const procedures = router as Record<string, unknown>;
     expect(typeof procedures.createUploadUrl).toBe("object");
     expect(typeof procedures.confirm).toBe("object");
+    expect(typeof procedures.list).toBe("object");
+    expect(typeof procedures.delete).toBe("object");
   });
 
   test("registers the Media Library admin page in the management nav group", async () => {
@@ -74,14 +76,7 @@ describe("@plumix/plugin-media — registration", () => {
   });
 });
 
-interface OrpcEnvelope<T> {
-  readonly json?: T | OrpcErrorPayload;
-}
-
 interface OrpcErrorPayload {
-  readonly defined?: boolean;
-  readonly code?: string;
-  readonly status?: number;
   readonly message?: string;
   readonly data?: { readonly reason?: string };
 }
@@ -92,10 +87,10 @@ interface RpcResult<TOutput> {
   readonly error: OrpcErrorPayload | undefined;
 }
 
-async function rpcDispatch<TInput, TOutput>(
+async function rpcDispatch<TOutput>(
   h: Awaited<ReturnType<typeof createDispatcherHarness>>,
   procedure: string,
-  input: TInput,
+  input: Record<string, unknown>,
   userId: number | null,
 ): Promise<RpcResult<TOutput>> {
   const base = plumixRequest(`/_plumix/rpc/${procedure}`, {
@@ -106,20 +101,13 @@ async function rpcDispatch<TInput, TOutput>(
   const request =
     userId !== null ? await h.authenticateRequest(base, userId) : base;
   const response = await h.dispatch(request);
-  const body = (await response
-    .json()
-    .catch(() => ({}))) as OrpcEnvelope<TOutput>;
-  if (response.ok) {
-    return {
-      status: response.status,
-      output: body.json as TOutput | undefined,
-      error: undefined,
-    };
-  }
+  const body = (await response.json().catch(() => ({}))) as {
+    json?: unknown;
+  };
   return {
     status: response.status,
-    output: undefined,
-    error: body.json as OrpcErrorPayload | undefined,
+    output: response.ok ? (body.json as TOutput) : undefined,
+    error: response.ok ? undefined : (body.json as OrpcErrorPayload),
   };
 }
 
@@ -149,10 +137,7 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
     });
     const user = await h.seedUser("contributor");
 
-    const { status, output } = await rpcDispatch<
-      { filename: string; contentType: string; size: number },
-      CreateUploadUrlOutput
-    >(
+    const { status, output } = await rpcDispatch<CreateUploadUrlOutput>(
       h,
       "media/createUploadUrl",
       { filename: "cat.png", contentType: "image/png", size: 5 },
@@ -249,28 +234,29 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
 });
 
 describe("@plumix/plugin-media — media.confirm", () => {
-  test("flips the draft to published once the upload landed in storage", async () => {
+  test("flips the draft to published once a valid upload landed", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({ plugins: [media()], storage });
     const user = await h.seedUser("contributor");
 
-    const created = await rpcDispatch<
-      { filename: string; contentType: string; size: number },
-      CreateUploadUrlOutput
-    >(
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
       "media/createUploadUrl",
-      { filename: "cat.png", contentType: "image/png", size: 5 },
+      { filename: "cat.png", contentType: "image/png", size: 8 },
       user.id,
     );
     expect(created.status).toBe(200);
     if (!created.output) throw new Error("expected createUploadUrl output");
     const init = created.output;
 
-    // Simulate the browser's PUT having landed in storage.
-    await storage.put(init.storageKey, "hello", { contentType: "image/png" });
+    // PNG magic-byte signature — confirm sniffs the first bytes and
+    // verifies they match the claimed mime.
+    const pngHeader = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ]);
+    await storage.put(init.storageKey, pngHeader, { contentType: "image/png" });
 
-    const confirmed = await rpcDispatch<{ id: number }, ConfirmOutput>(
+    const confirmed = await rpcDispatch<ConfirmOutput>(
       h,
       "media/confirm",
       { id: init.mediaId },
@@ -280,7 +266,39 @@ describe("@plumix/plugin-media — media.confirm", () => {
     expect(confirmed.output?.id).toBe(init.mediaId);
     expect(confirmed.output?.storageKey).toBe(init.storageKey);
     expect(confirmed.output?.mime).toBe("image/png");
-    expect(confirmed.output?.size).toBe(5);
+    expect(confirmed.output?.size).toBe(8);
+  });
+
+  test("rejects + deletes the object when bytes don't match the claimed mime", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const user = await h.seedUser("contributor");
+
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      { filename: "fake.png", contentType: "image/png", size: 5 },
+      user.id,
+    );
+    if (!created.output) throw new Error("expected createUploadUrl output");
+    const init = created.output;
+
+    // Claimed image/png but upload arbitrary bytes — magic-byte sniff
+    // should catch this and delete the object before flipping the draft.
+    await storage.put(init.storageKey, "hello", { contentType: "image/png" });
+    expect(await storage.head(init.storageKey)).not.toBeNull();
+
+    const confirm = await rpcDispatch(
+      h,
+      "media/confirm",
+      { id: init.mediaId },
+      user.id,
+    );
+    expect(confirm.status).toBe(409);
+    expect(confirm.error?.data?.reason).toBe("mime_mismatch");
+    // The object must have been deleted from storage so an attacker
+    // can't re-trigger confirm or share the bucket-direct URL.
+    expect(await storage.head(init.storageKey)).toBeNull();
   });
 
   test("returns CONFLICT when the upload didn't actually land in storage", async () => {
@@ -288,10 +306,7 @@ describe("@plumix/plugin-media — media.confirm", () => {
     const h = await createDispatcherHarness({ plugins: [media()], storage });
     const user = await h.seedUser("contributor");
 
-    const created = await rpcDispatch<
-      { filename: string; contentType: string; size: number },
-      CreateUploadUrlOutput
-    >(
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
       "media/createUploadUrl",
       { filename: "ghost.png", contentType: "image/png", size: 5 },
@@ -316,10 +331,7 @@ describe("@plumix/plugin-media — media.confirm", () => {
     const owner = await h.seedUser("contributor");
     const other = await h.seedUser("contributor");
 
-    const created = await rpcDispatch<
-      { filename: string; contentType: string; size: number },
-      CreateUploadUrlOutput
-    >(
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
       "media/createUploadUrl",
       { filename: "cat.png", contentType: "image/png", size: 5 },
@@ -328,7 +340,7 @@ describe("@plumix/plugin-media — media.confirm", () => {
     if (!created.output) throw new Error("expected createUploadUrl output");
     const { mediaId } = created.output;
 
-    const confirm = await rpcDispatch<{ id: number }, ConfirmOutput>(
+    const confirm = await rpcDispatch<ConfirmOutput>(
       h,
       "media/confirm",
       { id: mediaId },
@@ -343,9 +355,186 @@ describe("@plumix/plugin-media — media.confirm", () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({ plugins: [media()], storage });
     const user = await h.seedUser("editor");
-    const { status } = await rpcDispatch<{ id: number }, ConfirmOutput>(
+    const { status } = await rpcDispatch<ConfirmOutput>(
       h,
       "media/confirm",
+      { id: 999_999 },
+      user.id,
+    );
+    expect(status).toBe(404);
+  });
+});
+
+interface MediaListItemOutput {
+  readonly id: number;
+  readonly title: string;
+  readonly mime: string;
+  readonly size: number;
+  readonly url: string;
+  readonly thumbnailUrl: string;
+}
+
+interface MediaListOutput {
+  readonly items: readonly MediaListItemOutput[];
+  readonly hasMore: boolean;
+}
+
+async function seedPublishedMedia(
+  h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+  storage: ReturnType<ReturnType<typeof memoryStorage>["connect"]>,
+  userId: number,
+  filename: string,
+): Promise<{ id: number; storageKey: string }> {
+  const created = await rpcDispatch<CreateUploadUrlOutput>(
+    h,
+    "media/createUploadUrl",
+    { filename, contentType: "image/png", size: 8 },
+    userId,
+  );
+  if (!created.output) throw new Error("expected createUploadUrl output");
+  await storage.put(
+    created.output.storageKey,
+    new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    { contentType: "image/png" },
+  );
+  await rpcDispatch(h, "media/confirm", { id: created.output.mediaId }, userId);
+  return {
+    id: created.output.mediaId,
+    storageKey: created.output.storageKey,
+  };
+}
+
+describe("@plumix/plugin-media — media.list", () => {
+  test("returns published media for any reader; thumbnail url is the storage url when no imageDelivery", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const owner = await h.seedUser("contributor");
+    const reader = await h.seedUser("subscriber");
+    await seedPublishedMedia(h, storage, owner.id, "alpha.png");
+    await seedPublishedMedia(h, storage, owner.id, "beta.png");
+
+    const result = await rpcDispatch<MediaListOutput>(
+      h,
+      "media/list",
+      { limit: 10, offset: 0 },
+      reader.id,
+    );
+    expect(result.status).toBe(200);
+    expect(result.output?.items.length).toBe(2);
+    expect(result.output?.hasMore).toBe(false);
+    // Without an `imageDelivery` slot the thumbnail collapses to the
+    // raw storage URL — same shape the client renders against.
+    const first = result.output?.items[0];
+    expect(first?.thumbnailUrl).toBe(first?.url);
+    expect(first?.mime).toBe("image/png");
+  });
+
+  test("rejects readers without entry:media:read", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    // The default `subscriber` has read; explicitly drop the reader to
+    // a role that can't even see the entry type. A user not in any
+    // role wouldn't authenticate at all, so we just test the cap path
+    // by seeding the row but reaching for a non-existent capability:
+    // since `entry:media:read` is granted to subscriber+, this test
+    // confirms anonymous (no session) is denied.
+    const { status } = await rpcDispatch<MediaListOutput>(
+      h,
+      "media/list",
+      { limit: 10, offset: 0 },
+      null,
+    );
+    expect(status).toBe(401);
+  });
+
+  test("hasMore flag fires when there are more rows than the page", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const user = await h.seedUser("contributor");
+    for (let i = 0; i < 3; i++) {
+      await seedPublishedMedia(h, storage, user.id, `n${String(i)}.png`);
+    }
+    const page1 = await rpcDispatch<MediaListOutput>(
+      h,
+      "media/list",
+      { limit: 2, offset: 0 },
+      user.id,
+    );
+    expect(page1.output?.items.length).toBe(2);
+    expect(page1.output?.hasMore).toBe(true);
+    const page2 = await rpcDispatch<MediaListOutput>(
+      h,
+      "media/list",
+      { limit: 2, offset: 2 },
+      user.id,
+    );
+    expect(page2.output?.items.length).toBe(1);
+    expect(page2.output?.hasMore).toBe(false);
+  });
+});
+
+describe("@plumix/plugin-media — media.delete", () => {
+  test("removes the row + the storage object for the owner", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const owner = await h.seedUser("contributor");
+    const seeded = await seedPublishedMedia(h, storage, owner.id, "kill.png");
+    expect(await storage.head(seeded.storageKey)).not.toBeNull();
+
+    const result = await rpcDispatch<{ id: number }>(
+      h,
+      "media/delete",
+      { id: seeded.id },
+      owner.id,
+    );
+    expect(result.status).toBe(200);
+    expect(result.output?.id).toBe(seeded.id);
+    expect(await storage.head(seeded.storageKey)).toBeNull();
+  });
+
+  test("returns NOT_FOUND for a non-owner without entry:media:delete", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const owner = await h.seedUser("contributor");
+    const other = await h.seedUser("contributor");
+    const seeded = await seedPublishedMedia(h, storage, owner.id, "x.png");
+
+    const { status } = await rpcDispatch(
+      h,
+      "media/delete",
+      { id: seeded.id },
+      other.id,
+    );
+    // 404, uniform with non-existent id — no existence disclosure.
+    expect(status).toBe(404);
+    // Object stays untouched.
+    expect(await storage.head(seeded.storageKey)).not.toBeNull();
+  });
+
+  test("editor (entry:media:delete cap) can remove other users' media", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const owner = await h.seedUser("contributor");
+    const editor = await h.seedUser("editor");
+    const seeded = await seedPublishedMedia(h, storage, owner.id, "y.png");
+
+    const result = await rpcDispatch(
+      h,
+      "media/delete",
+      { id: seeded.id },
+      editor.id,
+    );
+    expect(result.status).toBe(200);
+    expect(await storage.head(seeded.storageKey)).toBeNull();
+  });
+
+  test("returns NOT_FOUND for a non-existent id", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const user = await h.seedUser("editor");
+    const { status } = await rpcDispatch(
+      h,
+      "media/delete",
       { id: 999_999 },
       user.id,
     );

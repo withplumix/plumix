@@ -66,7 +66,10 @@ interface R2Bucket {
       customMetadata?: Record<string, string>;
     },
   ): Promise<unknown>;
-  get(key: string): Promise<R2Object | null>;
+  get(
+    key: string,
+    options?: { range?: { offset: number; length: number } },
+  ): Promise<R2Object | null>;
   head(key: string): Promise<R2Object | null>;
   delete(key: string): Promise<void>;
   list(options?: {
@@ -140,8 +143,11 @@ export function r2(config: R2Config): R2ObjectStorage {
               : undefined,
           });
         },
-        async get(key): Promise<GetResult | null> {
-          const obj = await bucket.get(key);
+        async get(key, opts): Promise<GetResult | null> {
+          const obj = await bucket.get(
+            key,
+            opts?.range ? { range: opts.range } : undefined,
+          );
           if (!obj) return null;
           return {
             body: obj.body,

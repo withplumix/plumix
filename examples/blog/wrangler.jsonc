@@ -12,6 +12,12 @@
       "migrations_dir": "drizzle",
     },
   ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "plumix-blog-media",
+    },
+  ],
   "assets": {
     "directory": ".plumix/public",
     "binding": "ASSETS",

@@ -98,6 +98,9 @@ importers:
       '@plumix/plugin-blog':
         specifier: workspace:*
         version: link:../../packages/plugins/blog
+      '@plumix/plugin-media':
+        specifier: workspace:*
+        version: link:../../packages/plugins/media
       '@plumix/plugin-pages':
         specifier: workspace:*
         version: link:../../packages/plugins/pages
@@ -471,12 +474,6 @@ importers:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
         version: 0.18.2
-      '@orpc/client':
-        specifier: ^1.13.14
-        version: 1.13.14
-      '@orpc/tanstack-query':
-        specifier: ^1.13.14
-        version: 1.13.14(@orpc/client@1.13.14)(@tanstack/query-core@5.99.2)
       '@playwright/test':
         specifier: ^1.59.1
         version: 1.59.1
