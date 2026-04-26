@@ -66,6 +66,17 @@ export function memoryStorage(config: MemoryStorageConfig = {}): ObjectStorage {
       };
     },
     // eslint-disable-next-line @typescript-eslint/require-await
+    async head(key) {
+      const entry = store.get(key);
+      if (!entry) return null;
+      return {
+        size: entry.bytes.byteLength,
+        contentType: entry.contentType,
+        etag: entry.etag,
+        customMetadata: entry.customMetadata,
+      };
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await
     async delete(key) {
       store.delete(key);
     },

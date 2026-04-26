@@ -9,6 +9,7 @@ import type { PlumixEnv } from "../runtime/bindings.js";
 import type {
   AssetsBinding,
   ConnectedObjectStorage,
+  ImageDelivery,
 } from "../runtime/slots.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
 
@@ -70,6 +71,14 @@ export interface AppContext<
    * this; core procedures don't use it today.
    */
   readonly storage?: ConnectedObjectStorage;
+  /**
+   * On-the-fly image delivery (resize / format / quality URLs). Present
+   * when the config declared an `imageDelivery:` slot. Pure URL math —
+   * `imageDelivery.url(src, opts)` returns the CDN-transformed URL.
+   * Plugins that render images (media plugin, themes) read this; core
+   * procedures don't use it today.
+   */
+  readonly imageDelivery?: ImageDelivery;
 }
 
 export type AuthenticatedAppContext<
@@ -89,6 +98,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly after?: AfterResponse;
   readonly assets?: AssetsBinding;
   readonly storage?: ConnectedObjectStorage;
+  readonly imageDelivery?: ImageDelivery;
 }
 
 const dropPromise: AfterResponse = () => undefined;
@@ -113,6 +123,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     after: args.after ?? dropPromise,
     assets: args.assets,
     storage: args.storage,
+    imageDelivery: args.imageDelivery,
   };
 }
 

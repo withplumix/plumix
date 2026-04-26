@@ -563,3 +563,61 @@ describe("dispatcher — plugin raw routes", () => {
     expect(response.headers.get("x-plumix-hint")).toBe("unknown-plumix-route");
   });
 });
+
+describe("dispatcher — imageDelivery slot wiring", () => {
+  test("ctx.imageDelivery is exposed to plugin route handlers when configured", async () => {
+    const plugin = definePlugin("media", (ctx) => {
+      ctx.registerRoute({
+        method: "GET",
+        path: "/transform",
+        auth: "public",
+        handler: (req, c) => {
+          const url = new URL(req.url);
+          const src = url.searchParams.get("src") ?? "";
+          const w = url.searchParams.get("w");
+          const transformed =
+            c.imageDelivery?.url(src, w ? { width: Number(w) } : undefined) ??
+            "no-delivery";
+          return new Response(transformed, { status: 200 });
+        },
+      });
+    });
+    const h = await createDispatcherHarness({
+      plugins: [plugin],
+      imageDelivery: {
+        kind: "stub",
+        url: (src, opts) =>
+          opts?.width === undefined ? src : `${src}?w=${opts.width}`,
+      },
+    });
+
+    const response = await h.dispatch(
+      plumixRequest(
+        "/_plumix/media/transform?src=https://media.example/cat.jpg&w=400",
+        { method: "GET" },
+      ),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("https://media.example/cat.jpg?w=400");
+  });
+
+  test("ctx.imageDelivery is undefined when no slot is configured", async () => {
+    const plugin = definePlugin("media", (ctx) => {
+      ctx.registerRoute({
+        method: "GET",
+        path: "/probe",
+        auth: "public",
+        handler: (_req, c) =>
+          new Response(c.imageDelivery === undefined ? "absent" : "present", {
+            status: 200,
+          }),
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [plugin] });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/media/probe", { method: "GET" }),
+    );
+    expect(await response.text()).toBe("absent");
+  });
+});

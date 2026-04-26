@@ -20,6 +20,12 @@ const config: KnipConfig = {
     "examples/minimal": {
       entry: ["plumix.config.ts"],
     },
+    // Plugin playground — same shape as examples/*: `plumix.config.ts`
+    // is the consumer entry, not visible to knip without an explicit
+    // hint.
+    "packages/plugins/media/playground": {
+      entry: ["plumix.config.ts"],
+    },
     // @plumix/core is a dependency but has no real imports yet (empty skeleton).
     // Remove these once packages have actual code importing from core.
     "packages/blocks": {
@@ -80,6 +86,23 @@ const config: KnipConfig = {
     // workspace sibling used transitively via `emitPlumixSources`.
     "packages/runtimes/cloudflare": {
       entry: ["src/index.ts", "src/commands/index.ts"],
+    },
+    // The admin chunk is loaded by the plumix vite plugin at consumer
+    // build time via `adminEntry` — knip can't follow that runtime path.
+    // Listing the entry pulls react / orpc / tanstack-query into the
+    // referenced graph so they stop reading as unused devDependencies.
+    // Listing MediaLibrary.tsx explicitly because knip's static analysis
+    // doesn't resolve the `.js` → `.tsx` extension swap inside the chunk.
+    // The e2e/* entries cover the playwright rig: build-chunk runs via
+    // tsx from playwright's webServer (no static import), the spec runs
+    // via the playwright CLI.
+    "packages/plugins/media": {
+      entry: [
+        "src/admin/index.tsx",
+        "src/admin/MediaLibrary.tsx",
+        "e2e/build-chunk.ts",
+        "e2e/*.spec.ts",
+      ],
     },
   },
 };
