@@ -2,6 +2,7 @@ packages:
   - "packages/*"
   - "packages/runtimes/*"
   - "packages/plugins/*"
+  - "packages/plugins/*/playground"
   - "examples/*"
   - "tooling/*"
 

@@ -1,7 +1,12 @@
 import type { PlumixAuthConfig } from "./auth/config.js";
 import type { PluginDescriptor } from "./plugin/define.js";
 import type { RuntimeAdapter } from "./runtime/adapter.js";
-import type { DatabaseAdapter, KV, ObjectStorage } from "./runtime/slots.js";
+import type {
+  DatabaseAdapter,
+  ImageDelivery,
+  KV,
+  ObjectStorage,
+} from "./runtime/slots.js";
 
 export interface Theme {
   readonly id: string;
@@ -19,6 +24,7 @@ export interface PlumixConfigInput {
   readonly database: AnyDatabaseAdapter;
   readonly auth: PlumixAuthConfig;
   readonly storage?: ObjectStorage;
+  readonly imageDelivery?: ImageDelivery;
   readonly kv?: KV;
   readonly themes?: readonly Theme[];
   readonly plugins?: readonly AnyPluginDescriptor[];
@@ -29,6 +35,7 @@ export interface PlumixConfig {
   readonly database: AnyDatabaseAdapter;
   readonly auth: PlumixAuthConfig;
   readonly storage?: ObjectStorage;
+  readonly imageDelivery?: ImageDelivery;
   readonly kv?: KV;
   readonly themes: readonly Theme[];
   readonly plugins: readonly AnyPluginDescriptor[];
@@ -40,6 +47,7 @@ export function plumix(config: PlumixConfigInput): PlumixConfig {
     database: config.database,
     auth: config.auth,
     storage: config.storage,
+    imageDelivery: config.imageDelivery,
     kv: config.kv,
     themes: config.themes ?? [],
     plugins: config.plugins ?? [],

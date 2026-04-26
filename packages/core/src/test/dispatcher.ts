@@ -10,7 +10,11 @@ import type {
 } from "../hooks/types.js";
 import type { PlumixApp } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
-import type { AssetsBinding } from "../runtime/slots.js";
+import type {
+  AssetsBinding,
+  ConnectedObjectStorage,
+  ImageDelivery,
+} from "../runtime/slots.js";
 import type { Factories } from "./factories.js";
 import type { FetchOptions } from "./request.js";
 import type { ActionSpy, FilterSpy } from "./spies.js";
@@ -55,6 +59,17 @@ export interface CreateDispatcherHarnessOptions {
    * routes, manifest projection, or plugin-registered hooks.
    */
   readonly plugins?: readonly AnyPluginDescriptor[];
+  /**
+   * On-the-fly image delivery slot. Stub it in tests that need
+   * `ctx.imageDelivery` populated (e.g. media plugin route handlers).
+   */
+  readonly imageDelivery?: ImageDelivery;
+  /**
+   * Connected object storage. Stub it in tests that need `ctx.storage`
+   * populated (e.g. media plugin upload route). Pass the result of
+   * `memoryStorage().connect({})` for a working in-memory backend.
+   */
+  readonly storage?: ConnectedObjectStorage;
 }
 
 export interface DispatcherHarness {
@@ -111,6 +126,7 @@ function withRequest(
   db: TestDb,
   env: PlumixEnv,
   assets: AssetsBinding | undefined,
+  storage: ConnectedObjectStorage | undefined,
   request: Request,
   user: User | null,
 ): AppContext {
@@ -125,6 +141,8 @@ function withRequest(
       ? { id: user.id, email: user.email, role: user.role }
       : undefined,
     assets,
+    storage,
+    imageDelivery: app.config.imageDelivery,
   });
 }
 
@@ -144,17 +162,18 @@ export async function createDispatcherHarness(
       },
     }),
     plugins: options.plugins,
+    imageDelivery: options.imageDelivery,
   });
   const app = await buildApp(config);
   const dispatcher = createPlumixDispatcher(app);
-  const { assets } = options;
+  const { assets, storage } = options;
 
   const harness: DispatcherHarness = {
     db,
     app,
     env,
     dispatch: async (request, user = null) => {
-      const ctx = withRequest(app, db, env, assets, request, user);
+      const ctx = withRequest(app, db, env, assets, storage, request, user);
       return dispatcher(ctx);
     },
     fetch: async (path, fetchOptions = {}) => {
@@ -164,6 +183,7 @@ export async function createDispatcherHarness(
         db,
         env,
         assets,
+        storage,
         request,
         fetchOptions.as ?? null,
       );

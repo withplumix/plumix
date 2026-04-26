@@ -11,9 +11,37 @@ import type {
   UrlOptions,
 } from "@plumix/core";
 
+import { presignPutUrl } from "./sigv4.js";
+
+/**
+ * S3-compatible credentials for R2 — required only when the application
+ * needs presigned uploads. Without these, the binding-only path supports
+ * server-side reads / writes / lists but `presignPut` is unavailable.
+ */
+export interface R2S3Credentials {
+  /**
+   * R2 bucket name as declared in `wrangler.toml`'s `r2_buckets[].bucket_name`.
+   * Distinct from the binding handle — the S3 API addresses by bucket name.
+   */
+  readonly bucket: string;
+  /** Cloudflare account id — forms the endpoint host. */
+  readonly accountId: string;
+  readonly accessKeyId: string;
+  readonly secretAccessKey: string;
+  /** Custom endpoint override. Defaults to `<accountId>.r2.cloudflarestorage.com`. */
+  readonly endpoint?: string;
+}
+
 export interface R2Config {
   readonly binding: string;
   readonly publicUrlBase?: string;
+  /**
+   * S3-compatible credentials for presigned PUT URLs. Without this block,
+   * `presignPut` throws "not configured" and consumers must accept that
+   * uploads cannot bypass the worker. R2 native bindings cannot mint
+   * presigned URLs — that's an S3-API-only capability.
+   */
+  readonly s3?: R2S3Credentials;
 }
 
 export interface R2ObjectStorage extends ObjectStorage {
@@ -39,6 +67,7 @@ interface R2Bucket {
     },
   ): Promise<unknown>;
   get(key: string): Promise<R2Object | null>;
+  head(key: string): Promise<R2Object | null>;
   delete(key: string): Promise<void>;
   list(options?: {
     prefix?: string;
@@ -90,6 +119,8 @@ function readR2Binding(env: unknown, bindingName: string): R2Bucket {
   return bucket as unknown as R2Bucket;
 }
 
+const DEFAULT_PRESIGN_TTL_SECONDS = 300;
+
 export function r2(config: R2Config): R2ObjectStorage {
   return {
     kind: "r2",
@@ -97,7 +128,7 @@ export function r2(config: R2Config): R2ObjectStorage {
     config,
     connect(env): ConnectedObjectStorage {
       const bucket = readR2Binding(env, config.binding);
-      return {
+      const connected: ConnectedObjectStorage = {
         async put(key, body: ObjectBody, opts?: PutOptions): Promise<void> {
           await bucket.put(key, body, {
             httpMetadata: {
@@ -120,6 +151,16 @@ export function r2(config: R2Config): R2ObjectStorage {
             contentType: obj.httpMetadata?.contentType,
             customMetadata: obj.customMetadata,
             arrayBuffer: () => obj.arrayBuffer(),
+          };
+        },
+        async head(key) {
+          const obj = await bucket.head(key);
+          if (!obj) return null;
+          return {
+            size: obj.size,
+            etag: obj.httpEtag || obj.etag,
+            contentType: obj.httpMetadata?.contentType,
+            customMetadata: obj.customMetadata,
           };
         },
         async delete(key): Promise<void> {
@@ -161,21 +202,35 @@ export function r2(config: R2Config): R2ObjectStorage {
             : config.publicUrlBase;
           return `${base}/${encodePath(key)}`;
         },
-        // eslint-disable-next-line @typescript-eslint/require-await
-        async presignPut(
-          _key: string,
-          _opts: PresignPutOptions,
-        ): Promise<PresignedPutResult> {
-          // SigV4 over Web Crypto is a focused follow-up; consumers
-          // worker-proxy uploads via ctx.registerRoute + ctx.storage.put
-          // until then.
-          throw new Error(
-            `r2.presignPut: not implemented yet. Use a plugin-registered ` +
-              `raw POST route that calls ctx.storage.put(key, request.body) ` +
-              `for worker-proxied uploads in the meantime.`,
-          );
-        },
       };
+
+      // Attach `presignPut` only when S3 credentials are configured —
+      // R2 native bindings can't mint presigned URLs, so the optional
+      // slot stays `undefined` if the consumer didn't opt in.
+      if (config.s3) {
+        const s3 = config.s3;
+        connected.presignPut = async (
+          key: string,
+          opts: PresignPutOptions,
+        ): Promise<PresignedPutResult> => {
+          const endpoint =
+            s3.endpoint ?? `https://${s3.accountId}.r2.cloudflarestorage.com`;
+          return presignPutUrl({
+            endpoint,
+            bucket: s3.bucket,
+            key,
+            contentType: opts.contentType,
+            contentLength: opts.maxBytes,
+            expiresIn: opts.expiresIn ?? DEFAULT_PRESIGN_TTL_SECONDS,
+            credentials: {
+              accessKeyId: s3.accessKeyId,
+              secretAccessKey: s3.secretAccessKey,
+            },
+          });
+        };
+      }
+
+      return connected;
     },
   };
 }

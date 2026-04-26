@@ -1,0 +1,82 @@
+{
+  "name": "@plumix/plugin-media",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Media plugin for Plumix — uploads, library, and CDN delivery",
+  "license": "MIT",
+  "author": "Plumix Contributors",
+  "homepage": "https://github.com/withplumix/plumix#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/withplumix/plumix.git",
+    "directory": "packages/plugins/media"
+  },
+  "bugs": {
+    "url": "https://github.com/withplumix/plumix/issues"
+  },
+  "keywords": [
+    "plumix",
+    "plugin",
+    "media",
+    "uploads"
+  ],
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "attw": "attw --pack . --profile esm-only",
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "git clean -xdf .cache .turbo dist node_modules e2e/playwright-report e2e/test-results",
+    "format": "prettier --check . --ignore-path ../../../.gitignore",
+    "lint": "eslint",
+    "publint": "publint",
+    "test": "vitest run",
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts",
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+  },
+  "dependencies": {
+    "@plumix/core": "workspace:*",
+    "valibot": "catalog:"
+  },
+  "peerDependencies": {
+    "@orpc/client": "^1.13.14",
+    "@orpc/tanstack-query": "^1.13.14",
+    "@tanstack/react-query": "^5.99.2",
+    "react": "catalog:"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "catalog:",
+    "@orpc/client": "^1.13.14",
+    "@orpc/tanstack-query": "^1.13.14",
+    "@playwright/test": "^1.59.1",
+    "@plumix/eslint-config": "workspace:*",
+    "@plumix/prettier-config": "workspace:*",
+    "@plumix/typescript-config": "workspace:*",
+    "@plumix/vitest-config": "workspace:*",
+    "@tanstack/react-query": "^5.99.2",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "esbuild": "0.27.7",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "publint": "catalog:",
+    "react": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "prettier": "@plumix/prettier-config"
+}

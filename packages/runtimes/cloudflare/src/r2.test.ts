@@ -10,6 +10,7 @@ function fakeR2Binding(): {
   binding: {
     put: (k: string, b: unknown, o?: unknown) => Promise<unknown>;
     get: (k: string) => Promise<unknown>;
+    head: (k: string) => Promise<unknown>;
     delete: (k: string) => Promise<void>;
     list: (o?: unknown) => Promise<unknown>;
   };
@@ -58,6 +59,18 @@ function fakeR2Binding(): {
             new Uint8Array(ab).set(entry.bytes);
             return Promise.resolve(ab);
           },
+        };
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await
+      async head(key) {
+        const entry = store.get(key);
+        if (!entry) return null;
+        return {
+          size: entry.bytes.byteLength,
+          etag: "fake-etag",
+          httpEtag: '"fake-etag"',
+          httpMetadata: entry.httpMetadata,
+          uploaded: new Date(0),
         };
       },
       // eslint-disable-next-line @typescript-eslint/require-await
@@ -200,12 +213,41 @@ describe("r2 list", () => {
 });
 
 describe("r2 presignPut", () => {
-  test("throws with a clear hint pointing at the worker-proxy fallback", async () => {
+  test("is undefined when s3 credentials are not configured", () => {
     const fake = fakeR2Binding();
     const store = r2({ binding: "MEDIA" }).connect({ MEDIA: fake.binding });
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- absence check, not invocation
+    const presign = store.presignPut;
+    expect(presign).toBeUndefined();
+  });
+
+  test("returns a SigV4 presigned PUT URL when s3 credentials are configured", async () => {
+    const fake = fakeR2Binding();
+    const store = r2({
+      binding: "MEDIA",
+      s3: {
+        bucket: "plumix-media",
+        accountId: "abc123",
+        accessKeyId: "AKIAFAKE",
+        secretAccessKey: "secret",
+      },
+    }).connect({ MEDIA: fake.binding });
     if (!store.presignPut) throw new Error("r2 should expose presignPut");
-    await expect(
-      store.presignPut("k", { contentType: "image/jpeg" }),
-    ).rejects.toThrow(/not implemented yet/);
+
+    const result = await store.presignPut("uploads/cat.jpg", {
+      contentType: "image/jpeg",
+      expiresIn: 600,
+    });
+
+    expect(result.method).toBe("PUT");
+    expect(result.url).toContain("https://abc123.r2.cloudflarestorage.com/");
+    expect(result.url).toContain("/plumix-media/uploads/cat.jpg");
+    expect(result.url).toContain("X-Amz-Algorithm=AWS4-HMAC-SHA256");
+    expect(result.url).toContain("X-Amz-Signature=");
+    expect(result.url).toContain("X-Amz-Expires=600");
+    expect(result.headers["content-type"]).toBe("image/jpeg");
+    // `host` is set automatically by the browser; we must NOT include it
+    // among the headers the browser is told to send back.
+    expect(result.headers).not.toHaveProperty("host");
   });
 });

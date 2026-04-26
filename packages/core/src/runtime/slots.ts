@@ -121,9 +121,23 @@ export interface PresignedPutResult {
   readonly expiresAt: number;
 }
 
+export interface HeadResult {
+  readonly size: number;
+  readonly contentType?: string;
+  readonly etag: string;
+  readonly customMetadata?: Readonly<Record<string, string>>;
+}
+
 export interface ConnectedObjectStorage {
   put(key: string, body: ObjectBody, opts?: PutOptions): Promise<void>;
   get(key: string): Promise<GetResult | null>;
+  /**
+   * Object existence + lightweight metadata without fetching the body.
+   * Plugins use this to verify a presigned PUT actually landed before
+   * committing a draft media row to `published`. Returns `null` if the
+   * object doesn't exist.
+   */
+  head(key: string): Promise<HeadResult | null>;
   delete(key: string): Promise<void>;
   list(prefix?: string, opts?: ListOptions): Promise<ListResult>;
   url(key: string, opts?: UrlOptions): Promise<string>;
@@ -141,6 +155,32 @@ export interface ObjectStorage {
 
 export interface KV {
   readonly kind: string;
+}
+
+export interface TransformOpts {
+  readonly width?: number;
+  readonly height?: number;
+  readonly fit?: "cover" | "contain" | "scale-down";
+  readonly quality?: number;
+  readonly format?: "auto" | "webp" | "avif" | "jpeg";
+  readonly dpr?: number;
+}
+
+/**
+ * On-the-fly image delivery — pairs with `storage:` to serve resized /
+ * format-converted images from a CDN. The contract is pure URL math: take
+ * a source URL (already publicly reachable, typically through the bucket's
+ * custom domain) plus `TransformOpts` and return the transformed URL.
+ *
+ * No `connect(env)` step today: the canonical implementation (Cloudflare
+ * Image Transformations) only needs a zone hostname known at config time.
+ * If a future implementation needs request-time / env-time resolution, add
+ * an optional `connect(env)` method — existing implementations stay valid
+ * because the dispatcher would fall back to the bare object.
+ */
+export interface ImageDelivery {
+  readonly kind: string;
+  url(sourceUrl: string, opts?: TransformOpts): string;
 }
 
 /**
