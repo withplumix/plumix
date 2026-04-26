@@ -346,7 +346,6 @@ export function MediaLibrary(): ReactNode {
       style={{
         display: "flex",
         gap: "1.5rem",
-        padding: "2rem",
         position: "relative",
         minHeight: "100%",
       }}
@@ -676,22 +675,50 @@ function UploadProgressBar({
 }): ReactNode {
   const total = pending.reduce((sum, p) => sum + p.progress, 0);
   const ratio = total / pending.length;
+  const pct = Math.round(ratio * 100);
   return (
     <div
       data-testid="media-library-progress"
-      className="text-muted-foreground flex flex-col gap-1 text-xs"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.375rem",
+        padding: "0.75rem 1rem",
+        border: "1px solid var(--border, rgba(255,255,255,0.1))",
+        borderRadius: "0.375rem",
+        background: "var(--card, rgba(255,255,255,0.02))",
+        fontSize: "0.75rem",
+      }}
     >
-      <div className="flex items-center justify-between">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
         <span>
           Uploading {String(pending.length)} file
           {pending.length === 1 ? "" : "s"}…
         </span>
-        <span>{Math.round(ratio * 100)}%</span>
+        <span data-testid="media-library-progress-pct">{pct}%</span>
       </div>
-      <div className="bg-muted h-1 w-full overflow-hidden rounded">
+      <div
+        style={{
+          height: "6px",
+          width: "100%",
+          background: "rgba(255,255,255,0.08)",
+          borderRadius: "0.125rem",
+          overflow: "hidden",
+        }}
+      >
         <div
-          className="bg-primary h-full transition-[width]"
-          style={{ width: `${String(Math.round(ratio * 100))}%` }}
+          style={{
+            height: "100%",
+            width: `${String(pct)}%`,
+            background: "var(--primary, #fff)",
+            transition: "width 200ms ease",
+          }}
         />
       </div>
     </div>
@@ -1328,16 +1355,22 @@ function AltEditor({
   const [draft, setDraft] = useState(value);
   const [savedFlash, setSavedFlash] = useState(false);
   const dirtyRef = useRef(false);
-  // Resync from the canonical value only when the user isn't mid-edit.
-  // Without this, a list refetch landing while the input is focused
-  // would silently stomp the in-progress draft.
+  // Track the last value WE saved so we can recognise it when it
+  // round-trips back via list refetch and not stomp the user's draft.
+  // The naive "if not dirty, sync" approach raced: between commit
+  // (which clears dirty) and the refetch arriving with the new value,
+  // a re-render would set draft back to the OLD value because the
+  // effect ran before the refetch updated `value`.
+  const lastSavedRef = useRef(value);
   useEffect(() => {
-    if (!dirtyRef.current) setDraft(value);
+    if (value === lastSavedRef.current) return; // our own save came back
+    if (!dirtyRef.current) setDraft(value); // external update, not editing
   }, [value]);
 
   const commit = useCallback(() => {
     dirtyRef.current = false;
     if (draft !== value) {
+      lastSavedRef.current = draft;
       onSave(draft);
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 1200);
@@ -1369,16 +1402,26 @@ function AltEditor({
             e.currentTarget.blur();
           }
         }}
-        className="text-muted-foreground hover:bg-muted focus:bg-muted w-full truncate rounded bg-transparent px-1 text-xs outline-none"
         style={{
           width: "100%",
-          background: "transparent",
-          border: "1px solid var(--border, rgba(255,255,255,0.1))",
-          borderRadius: "0.25rem",
-          padding: "0.25rem 0.5rem",
-          fontSize: "0.75rem",
+          background: "rgba(255,255,255,0.03)",
+          border: "1px solid var(--border, rgba(255,255,255,0.12))",
+          borderRadius: "0.375rem",
+          padding: "0.5rem 0.625rem",
+          fontSize: "0.8125rem",
           color: "inherit",
           outline: "none",
+          fontFamily: "inherit",
+          lineHeight: 1.4,
+        }}
+        onFocus={(e) => {
+          e.currentTarget.style.borderColor = "var(--primary, #fff)";
+          e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+        }}
+        onBlurCapture={(e) => {
+          e.currentTarget.style.borderColor =
+            "var(--border, rgba(255,255,255,0.12))";
+          e.currentTarget.style.background = "rgba(255,255,255,0.03)";
         }}
       />
       {savedFlash && (
