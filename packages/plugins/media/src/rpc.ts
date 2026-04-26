@@ -44,6 +44,7 @@ interface MediaListItem {
   readonly size: number;
   readonly storageKey: string;
   readonly originalName: string | null;
+  readonly alt: string | null;
   readonly url: string;
   readonly thumbnailUrl: string;
 }
@@ -57,11 +58,18 @@ interface DeleteResponse {
   readonly id: number;
 }
 
+interface UpdateResponse {
+  readonly id: number;
+  readonly title: string;
+  readonly alt: string | null;
+}
+
 interface MediaMeta {
   readonly mime: string;
   readonly size: number;
   readonly storageKey: string;
   readonly originalName: string | null;
+  readonly alt: string | null;
 }
 
 // Reject control characters and whitespace inside `Content-Type`. They'd
@@ -165,11 +173,20 @@ export function createMediaRouter(
           throw errors.CONFLICT({ data: { reason: "db_insert_failed" } });
         }
 
-        const presigned = await storage.presignPut(storageKey, {
-          contentType: input.contentType,
-          maxBytes: input.size,
-          expiresIn: 600,
-        });
+        // If the presign step throws after the draft row landed (bad
+        // creds, S3 endpoint unreachable, …) the row would otherwise
+        // leak forever. Roll it back before propagating.
+        let presigned;
+        try {
+          presigned = await storage.presignPut(storageKey, {
+            contentType: input.contentType,
+            maxBytes: input.size,
+            expiresIn: 600,
+          });
+        } catch (error) {
+          await context.db.delete(entries).where(eq(entries.id, created.id));
+          throw error;
+        }
 
         return {
           uploadUrl: presigned.url,
@@ -306,11 +323,66 @@ export function createMediaRouter(
           size: meta.size,
           storageKey: meta.storageKey,
           originalName: meta.originalName,
+          alt: meta.alt,
           url,
           thumbnailUrl: thumbnailFor(context, url, meta.mime),
         });
       }
       return { items, hasMore };
+    });
+
+  const update = base
+    .use(authenticated)
+    .input(
+      v.object({
+        id: v.pipe(v.number(), v.integer(), v.minValue(1)),
+        title: v.optional(v.pipe(v.string(), v.minLength(1), v.maxLength(255))),
+        alt: v.optional(v.pipe(v.string(), v.maxLength(1024))),
+      }),
+    )
+    .handler(async ({ input, context, errors }): Promise<UpdateResponse> => {
+      const notFound = (): Error =>
+        errors.NOT_FOUND({ data: { kind: "media", id: input.id } });
+
+      const [row] = await context.db
+        .select()
+        .from(entries)
+        .where(eq(entries.id, input.id))
+        .limit(1);
+      if (row?.type !== MEDIA_ENTRY_TYPE) throw notFound();
+
+      const isOwner = row.authorId === context.user.id;
+      if (!isOwner && !context.auth.can("entry:media:edit_any")) {
+        throw notFound();
+      }
+
+      const meta = parseMediaMeta(row.meta);
+      if (!meta) {
+        throw errors.CONFLICT({ data: { reason: "media_meta_invalid" } });
+      }
+
+      const nextMeta = {
+        mime: meta.mime,
+        size: meta.size,
+        storageKey: meta.storageKey,
+        originalName: meta.originalName,
+        alt: input.alt ?? meta.alt,
+      };
+      const [updated] = await context.db
+        .update(entries)
+        .set({
+          title: input.title ?? row.title,
+          meta: nextMeta,
+        })
+        .where(eq(entries.id, input.id))
+        .returning();
+      if (!updated) throw notFound();
+
+      return {
+        id: updated.id,
+        title: updated.title,
+        alt: nextMeta.alt,
+      };
     });
 
   const remove = base
@@ -359,7 +431,7 @@ export function createMediaRouter(
       return { id: deleted.id };
     });
 
-  return { createUploadUrl, confirm, list, delete: remove };
+  return { createUploadUrl, confirm, list, update, delete: remove };
 }
 
 function thumbnailFor(
@@ -386,6 +458,7 @@ function parseMediaMeta(raw: unknown): MediaMeta | null {
     mime: r.mime,
     size: r.size,
     originalName: typeof r.originalName === "string" ? r.originalName : null,
+    alt: typeof r.alt === "string" ? r.alt : null,
   };
 }
 
