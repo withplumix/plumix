@@ -43,6 +43,34 @@
       "types": "./dist/admin/index.d.ts",
       "default": "./dist/admin/index.js"
     },
+    "./admin/react": {
+      "types": "./dist/admin/react.d.ts",
+      "default": "./dist/admin/react.js"
+    },
+    "./admin/react-jsx-runtime": {
+      "types": "./dist/admin/react-jsx-runtime.d.ts",
+      "default": "./dist/admin/react-jsx-runtime.js"
+    },
+    "./admin/react-dom": {
+      "types": "./dist/admin/react-dom.d.ts",
+      "default": "./dist/admin/react-dom.js"
+    },
+    "./admin/react-dom-client": {
+      "types": "./dist/admin/react-dom-client.d.ts",
+      "default": "./dist/admin/react-dom-client.js"
+    },
+    "./admin/react-query": {
+      "types": "./dist/admin/react-query.d.ts",
+      "default": "./dist/admin/react-query.js"
+    },
+    "./admin/react-router": {
+      "types": "./dist/admin/react-router.d.ts",
+      "default": "./dist/admin/react-router.js"
+    },
+    "./test/playwright": {
+      "types": "./dist/test/playwright.d.ts",
+      "default": "./dist/test/playwright.js"
+    },
     "./blocks": {
       "types": "./dist/blocks/index.d.ts",
       "default": "./dist/blocks/index.js"
@@ -86,31 +114,59 @@
   "dependencies": {
     "@plumix/core": "workspace:*",
     "drizzle-kit": "catalog:",
+    "esbuild": "0.27.7",
     "jiti": "^2.6.1",
     "valibot": "catalog:"
   },
   "peerDependencies": {
+    "@playwright/test": "^1.59.0",
+    "@tanstack/react-query": "^5.99.0",
+    "@tanstack/react-router": "^1.168.0",
     "drizzle-orm": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
     "vite": "catalog:"
   },
   "peerDependenciesMeta": {
+    "@playwright/test": {
+      "optional": true
+    },
+    "@tanstack/react-query": {
+      "optional": true
+    },
+    "@tanstack/react-router": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    },
     "vite": {
       "optional": true
     }
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
+    "@playwright/test": "^1.59.1",
     "@plumix/admin": "workspace:*",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
     "@plumix/vitest-config": "workspace:*",
+    "@tanstack/react-query": "^5.99.2",
+    "@tanstack/react-router": "^1.168.23",
     "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "drizzle-kit": "catalog:",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "publint": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"

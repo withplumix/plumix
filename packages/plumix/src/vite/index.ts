@@ -23,6 +23,7 @@ import {
 } from "@plumix/core";
 
 import { loadConfig } from "../cli/load-config.js";
+import { assemblePluginAdminBundle } from "./admin-plugin-bundle.js";
 
 // `import.meta.url` for this module lives at plumix/dist/vite/index.js in
 // consumer installs, so the pre-compiled admin artifact is a sibling at
@@ -180,7 +181,22 @@ async function stageAdminAssets(
     await cp(ADMIN_SOURCE_DIR, dest, { recursive: true });
   }
   const chunks = await stagePluginChunks(dest, plugins, projectRoot);
-  await injectIndexHtml(resolve(dest, "index.html"), manifest, chunks);
+  // Plugins that ship `adminEntry` (TS source) get assembled into a
+  // single per-site bundle with the runtime alias seam. Legacy
+  // `adminChunk` (pre-built JS) plugins keep their existing path.
+  const assembled = await assemblePluginAdminBundle({
+    plugins,
+    adminDest: dest,
+    projectRoot,
+  });
+  const allChunks: PluginChunkRef[] = [...chunks];
+  if (assembled) {
+    allChunks.push({
+      pluginId: "site-bundle",
+      chunkUrl: assembled.chunkUrl,
+    });
+  }
+  await injectIndexHtml(resolve(dest, "index.html"), manifest, allChunks);
 }
 
 interface PluginChunkRef {
@@ -399,5 +415,5 @@ function satisfiesLoose(installed: string, range: string): boolean {
   return rMajor === iMajor;
 }
 
-export { plumixPluginAuthor } from "./plugin-author.js";
+export { assemblePluginAdminBundle } from "./admin-plugin-bundle.js";
 export { plumix as default };

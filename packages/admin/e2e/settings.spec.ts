@@ -7,6 +7,7 @@ import {
   mockManifest,
   mockRpc,
   mockSession,
+  rpcOkBody,
 } from "./support/rpc-mock.js";
 
 // The settings admin surface:
@@ -152,14 +153,14 @@ test.describe("/settings/$page", () => {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
+          body: rpcOkBody(AUTHED_ADMIN),
         });
       }
       if (url.endsWith("/settings/get")) {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ json: {}, meta: [] }),
+          body: rpcOkBody({}),
         });
       }
       if (url.endsWith("/settings/upsert")) {

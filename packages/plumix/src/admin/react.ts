@@ -1,0 +1,42 @@
+import { getRuntime } from "./runtime.js";
+
+const ns = getRuntime().react;
+
+export default ns;
+
+export const Children = ns.Children;
+export const Component = ns.Component;
+export const Fragment = ns.Fragment;
+export const Profiler = ns.Profiler;
+export const PureComponent = ns.PureComponent;
+export const StrictMode = ns.StrictMode;
+export const Suspense = ns.Suspense;
+export const cache = ns.cache;
+export const cloneElement = ns.cloneElement;
+export const createContext = ns.createContext;
+export const createElement = ns.createElement;
+export const createRef = ns.createRef;
+export const forwardRef = ns.forwardRef;
+export const isValidElement = ns.isValidElement;
+export const lazy = ns.lazy;
+export const memo = ns.memo;
+export const startTransition = ns.startTransition;
+export const use = ns.use;
+export const useActionState = ns.useActionState;
+export const useCallback = ns.useCallback;
+export const useContext = ns.useContext;
+export const useDebugValue = ns.useDebugValue;
+export const useDeferredValue = ns.useDeferredValue;
+export const useEffect = ns.useEffect;
+export const useId = ns.useId;
+export const useImperativeHandle = ns.useImperativeHandle;
+export const useInsertionEffect = ns.useInsertionEffect;
+export const useLayoutEffect = ns.useLayoutEffect;
+export const useMemo = ns.useMemo;
+export const useOptimistic = ns.useOptimistic;
+export const useReducer = ns.useReducer;
+export const useRef = ns.useRef;
+export const useState = ns.useState;
+export const useSyncExternalStore = ns.useSyncExternalStore;
+export const useTransition = ns.useTransition;
+export const version = ns.version;

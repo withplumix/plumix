@@ -33,16 +33,37 @@ const config: KnipConfig = {
         "src/index.ts",
         "src/plugin.ts",
         "src/admin/index.ts",
+        // Each `plumix/admin/<lib>` shim is a leaf entry consumed by
+        // plugin chunks at the consumer's build time via the alias
+        // seam — knip can't see the runtime resolution.
+        "src/admin/react.ts",
+        "src/admin/react-jsx-runtime.ts",
+        "src/admin/react-dom.ts",
+        "src/admin/react-dom-client.ts",
+        "src/admin/react-query.ts",
+        "src/admin/react-router.ts",
         "src/blocks/index.ts",
         "src/cli/index.ts",
         "src/i18n/index.ts",
         "src/schema/index.ts",
         "src/test/index.ts",
+        "src/test/playwright.ts",
         "src/theme/index.ts",
         "src/vite/index.ts",
         "bin/plumix.mjs",
       ],
+      // - drizzle-kit is invoked by consumers as a CLI hint, not imported.
+      // - @plumix/admin is consumed via filesystem copy (scripts/copy-admin.mjs).
       ignoreDependencies: ["drizzle-kit", "@plumix/admin"],
+    },
+    // The runtime-proof fixture plugin is loaded by playwright's
+    // webServer command at e2e time — not via a static import knip
+    // can follow. Same for the assembler script.
+    "packages/admin": {
+      entry: [
+        "e2e/fixtures/build-runtime-proof-plugin.ts",
+        "e2e/fixtures/runtime-proof-plugin/src/admin.ts",
+      ],
     },
     // The `./commands` subpath export points at `dist/commands/index.js` —
     // knip's default entry discovery only reads `exports` paths and

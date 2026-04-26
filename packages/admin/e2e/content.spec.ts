@@ -7,6 +7,7 @@ import {
   MANIFEST_WITH_POST,
   mockManifest,
   mockRpc,
+  rpcOkBody,
 } from "./support/rpc-mock.js";
 
 // All content-related e2e coverage lives here:
@@ -37,7 +38,7 @@ test.describe("/entries/$slug", () => {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
+          body: rpcOkBody(AUTHED_ADMIN),
         });
       }
       if (url.endsWith("/entry/list")) {
@@ -45,7 +46,7 @@ test.describe("/entries/$slug", () => {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ json: [], meta: [] }),
+          body: rpcOkBody([]),
         });
       }
       return route.fulfill({ status: 404, body: "not-mocked" });
@@ -97,7 +98,7 @@ test.describe("/entries/$slug", () => {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
+          body: rpcOkBody(AUTHED_ADMIN),
         });
       }
       if (url.endsWith("/entry/list")) {
@@ -106,7 +107,7 @@ test.describe("/entries/$slug", () => {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ json: [], meta: [] }),
+          body: rpcOkBody([]),
         });
       }
       return route.fulfill({ status: 404, body: "not-mocked" });
@@ -136,7 +137,7 @@ test.describe("/entries/$slug", () => {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
+          body: rpcOkBody(AUTHED_ADMIN),
         });
       }
       if (url.endsWith("/entry/list")) {
@@ -145,7 +146,7 @@ test.describe("/entries/$slug", () => {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ json: [], meta: [] }),
+          body: rpcOkBody([]),
         });
       }
       return route.fulfill({ status: 404, body: "not-mocked" });
@@ -173,7 +174,7 @@ test.describe("/entries/$slug", () => {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
+          body: rpcOkBody(AUTHED_ADMIN),
         });
       }
       if (url.endsWith("/entry/list")) {
@@ -182,7 +183,7 @@ test.describe("/entries/$slug", () => {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ json: [], meta: [] }),
+          body: rpcOkBody([]),
         });
       }
       return route.fulfill({ status: 404, body: "not-mocked" });
@@ -265,7 +266,7 @@ test.describe("/entries/$slug/create", () => {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
+          body: rpcOkBody(AUTHED_ADMIN),
         });
       }
       if (url.endsWith("/entry/create")) {
@@ -414,7 +415,7 @@ test.describe("/entries/$slug/$id/edit", () => {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
+          body: rpcOkBody(AUTHED_ADMIN),
         });
       }
       if (url.endsWith("/entry/get")) {
@@ -536,7 +537,7 @@ test.describe("meta-box sidebar", () => {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
+          body: rpcOkBody(AUTHED_ADMIN),
         });
       }
       if (url.endsWith("/entry/create")) {
