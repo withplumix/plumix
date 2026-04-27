@@ -455,7 +455,7 @@ describe("registerAdminPage nav.group validation", () => {
         path: "/menus",
         title: "Menus",
         nav: { group: id, label: "Menus" },
-        component: { package: "@plumix/plugin-menus", export: "MenusPage" },
+        component: "MenusPage",
       });
     });
     await expect(
@@ -468,7 +468,7 @@ describe("registerAdminPage", () => {
   const page = {
     path: "/menus",
     title: "Menus",
-    component: { package: "@plumix/plugin-menus", export: "MenusPage" },
+    component: "MenusPage",
   };
 
   test("stores the page keyed by path", async () => {
@@ -515,12 +515,12 @@ describe("registerAdminPage", () => {
     ).rejects.toThrow();
   });
 
-  test("rejects empty package / export in component ref", async () => {
+  test("rejects empty component ref", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("menus", (ctx) => {
       ctx.registerAdminPage({
         ...page,
-        component: { package: "", export: "X" },
+        component: "",
       });
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
@@ -530,10 +530,7 @@ describe("registerAdminPage", () => {
 });
 
 describe("registerBlock", () => {
-  const componentRef = {
-    package: "@plumix/plugin-media",
-    export: "ImageNodeView",
-  };
+  const componentRef = "ImageNodeView";
 
   test("stores the block keyed by name with registeredBy attribution", async () => {
     const hooks = new HookRegistry();
@@ -594,14 +591,14 @@ describe("registerBlock", () => {
     ).rejects.toThrow();
   });
 
-  test("rejects component ref with empty package", async () => {
+  test("rejects empty component ref", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("media", (ctx) => {
       ctx.registerBlock({
         name: "image",
         kind: "node",
         schema: {},
-        component: { package: "", export: "X" },
+        component: "",
       });
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
@@ -611,10 +608,7 @@ describe("registerBlock", () => {
 });
 
 describe("registerFieldType", () => {
-  const componentRef = {
-    package: "@plumix/plugin-media",
-    export: "MediaPickerField",
-  };
+  const componentRef = "MediaPickerField";
 
   test("stores the field type keyed by type string", async () => {
     const hooks = new HookRegistry();
@@ -649,7 +643,7 @@ describe("registerFieldType", () => {
     const plugin = definePlugin("media", (ctx) => {
       ctx.registerFieldType({
         type: "color",
-        component: { package: "@plumix/plugin-x", export: "" },
+        component: "",
       });
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(

@@ -12,7 +12,11 @@ import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
 
-import type { AnyPluginDescriptor, PlumixManifest } from "@plumix/core";
+import type {
+  AnyPluginDescriptor,
+  PluginRegistry,
+  PlumixManifest,
+} from "@plumix/core";
 import {
   buildManifest,
   generateSchemaSource,
@@ -77,6 +81,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         publicDir,
         emitted.manifest,
         emitted.plugins,
+        emitted.registry,
         root,
       );
     },
@@ -89,6 +94,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
               publicDir,
               emitted.manifest,
               emitted.plugins,
+              emitted.registry,
               root,
             );
             server.ws.send({ type: "full-reload" });
@@ -125,6 +131,7 @@ async function regenerate(
 ): Promise<{
   configPath: string;
   manifest: PlumixManifest;
+  registry: PluginRegistry;
   plugins: readonly AnyPluginDescriptor[];
 }> {
   const { config, configPath } = await loadConfig(cwd, explicitConfig);
@@ -137,28 +144,31 @@ async function regenerate(
   });
   writeIfChanged(resolve(cwd, ".plumix/worker.ts"), workerSource);
 
-  const manifest = await computeManifest(config.plugins);
+  const { manifest, registry } = await computeManifestAndRegistry(
+    config.plugins,
+  );
 
-  return { configPath, manifest, plugins: config.plugins };
+  return { configPath, manifest, registry, plugins: config.plugins };
 }
 
 type PluginDescriptors = Parameters<typeof installPlugins>[0]["plugins"];
 
 // Run plugin `setup()` callbacks into a throwaway hook registry just to
-// capture what's been registered. The admin manifest only cares about the
-// resulting post-type / taxonomy / meta snapshot — hooks wired up here are
-// discarded. If a plugin throws on setup we surface it as-is: a broken
-// config should fail the build, not silently ship an empty manifest.
-// Note: plugin `setup()` callbacks run on every dev config-file change, so
-// plugins should keep setup free of IO.
-async function computeManifest(
+// capture what's been registered. Hooks wired up here are discarded —
+// the manifest plus the populated registry are everything downstream
+// needs (manifest → wire payload, registry → admin-plugin-bundle's
+// auto-register synthesis). If a plugin throws on setup we surface it
+// as-is: a broken config should fail the build, not silently ship an
+// empty manifest. Note: `setup()` runs on every dev config-file change,
+// so plugins should keep setup free of IO.
+async function computeManifestAndRegistry(
   plugins: PluginDescriptors,
-): Promise<PlumixManifest> {
+): Promise<{ manifest: PlumixManifest; registry: PluginRegistry }> {
   const { registry } = await installPlugins({
     hooks: new HookRegistry(),
     plugins,
   });
-  return buildManifest(registry);
+  return { manifest: buildManifest(registry), registry };
 }
 
 // Copies the compiled admin SPA from plumix/dist/admin-app into the effective
@@ -173,6 +183,7 @@ async function stageAdminAssets(
   publicDir: string,
   manifest: PlumixManifest,
   plugins: readonly AnyPluginDescriptor[],
+  registry: PluginRegistry,
   projectRoot: string,
 ): Promise<void> {
   const dest = resolve(publicDir, "_plumix/admin");
@@ -186,6 +197,7 @@ async function stageAdminAssets(
   // `adminChunk` (pre-built JS) plugins keep their existing path.
   const assembled = await assemblePluginAdminBundle({
     plugins,
+    registry,
     adminDest: dest,
     projectRoot,
   });
@@ -194,6 +206,7 @@ async function stageAdminAssets(
     allChunks.push({
       pluginId: "site-bundle",
       chunkUrl: assembled.chunkUrl,
+      cssUrl: assembled.cssUrl,
     });
   }
   await injectIndexHtml(resolve(dest, "index.html"), manifest, allChunks);

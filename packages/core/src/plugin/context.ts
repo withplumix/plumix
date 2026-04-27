@@ -473,7 +473,10 @@ export function createPluginSetupContext({
             `invalid kind "${String(kind)}" — must be "node" or "mark".`,
         );
       }
-      if (options.component) {
+      if (options.component !== undefined) {
+        // Validate any explicit value, including empty string — `if
+        // (options.component)` would silently accept `component: ""`,
+        // which serializes to a manifest entry the admin can't resolve.
         assertComponentRef(
           pluginId,
           `block "${options.name}"`,
@@ -545,17 +548,13 @@ function makeMetaBoxRegistrar<
 function assertComponentRef(
   pluginId: string,
   descriptor: string,
-  ref: { package: string; export: string },
+  ref: unknown,
 ): void {
-  if (
-    typeof ref.package !== "string" ||
-    ref.package.length === 0 ||
-    typeof ref.export !== "string" ||
-    ref.export.length === 0
-  ) {
+  if (typeof ref !== "string" || ref.length === 0) {
     throw new Error(
       `Plugin "${pluginId}" registered ${descriptor} with an invalid ` +
-        `component ref — both "package" and "export" must be non-empty strings.`,
+        `component ref — must be a non-empty string naming the export on ` +
+        `the plugin's adminEntry module (e.g. "MediaLibrary").`,
     );
   }
 }

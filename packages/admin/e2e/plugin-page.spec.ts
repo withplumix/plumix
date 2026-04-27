@@ -46,10 +46,7 @@ const MANIFEST_WITH_PLUGIN_PAGE: PlumixManifest = {
           order: 1,
           capability: "menu:manage",
           coreIcon: "puzzle",
-          component: {
-            package: "@example/plugin-menus",
-            export: "MenusPage",
-          },
+          component: "MenusPage",
         },
       ],
     },

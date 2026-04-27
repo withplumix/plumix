@@ -29,10 +29,7 @@ const MANIFEST: PlumixManifest = {
           order: 1,
           capability: PROOF_CAPABILITY,
           coreIcon: "puzzle",
-          component: {
-            package: "@plumix/e2e/runtime-proof",
-            export: "MediaLibrary",
-          },
+          component: "MediaLibrary",
         },
       ],
     },

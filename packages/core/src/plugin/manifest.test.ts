@@ -918,7 +918,7 @@ describe("buildManifest adminNav projection", () => {
           order: 10,
         },
         capability: "menu:manage",
-        component: { package: "@plumix/plugin-menus", export: "MenusPage" },
+        component: "MenusPage",
       });
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
@@ -934,7 +934,7 @@ describe("buildManifest adminNav projection", () => {
         order: 10,
         capability: "menu:manage",
         coreIcon: "puzzle",
-        component: { package: "@plumix/plugin-menus", export: "MenusPage" },
+        component: "MenusPage",
       },
     ]);
   });
@@ -946,7 +946,7 @@ describe("buildManifest adminNav projection", () => {
         path: "/menus",
         title: "Menus",
         nav: { group: "appearance", label: "Menus" },
-        component: { package: "@plumix/plugin-menus", export: "MenusPage" },
+        component: "MenusPage",
       });
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
@@ -962,7 +962,7 @@ describe("buildManifest adminNav projection", () => {
         path: "/media-library",
         title: "Media Library",
         nav: { group: "management", label: "Media Library", order: 50 },
-        component: { package: "@plumix/plugin-media", export: "MediaLibrary" },
+        component: "MediaLibrary",
       });
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
@@ -980,13 +980,13 @@ describe("buildManifest adminNav projection", () => {
         path: "/zeta",
         title: "Zeta",
         nav: { group: "appearance", label: "Z", order: 5 },
-        component: { package: "p", export: "A" },
+        component: "A",
       });
       ctx.registerAdminPage({
         path: "/alpha",
         title: "Alpha",
         nav: { group: "appearance", label: "A", order: 1 },
-        component: { package: "p", export: "B" },
+        component: "B",
       });
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
@@ -1002,19 +1002,19 @@ describe("buildManifest adminNav projection", () => {
         path: "/z",
         title: "Z",
         nav: { group: { id: "zulu", priority: 10 }, label: "z" },
-        component: { package: "p", export: "Z" },
+        component: "Z",
       });
       ctx.registerAdminPage({
         path: "/a",
         title: "A",
         nav: { group: { id: "alpha", priority: 10 }, label: "a" },
-        component: { package: "p", export: "A" },
+        component: "A",
       });
       ctx.registerAdminPage({
         path: "/b",
         title: "B",
         nav: { group: { id: "bravo", priority: 5 }, label: "b" },
-        component: { package: "p", export: "B" },
+        component: "B",
       });
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });

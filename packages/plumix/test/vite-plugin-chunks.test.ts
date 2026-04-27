@@ -110,28 +110,19 @@ describe("plugin-host acceptance — end-to-end primitive coverage", () => {
             order: 1,
           },
           capability: "hello:manage",
-          component: {
-            package: "@plumix-examples/hello-world",
-            export: "HelloPage",
-          },
+          component: "HelloPage",
         });
         // 8. Editor block.
         ctx.registerBlock({
           name: "hello_callout",
           kind: "node",
           schema: { group: "block", atom: false },
-          component: {
-            package: "@plumix-examples/hello-world",
-            export: "HelloCalloutView",
-          },
+          component: "HelloCalloutView",
         });
         // 9. Custom meta-box field type.
         ctx.registerFieldType({
           type: "hello_picker",
-          component: {
-            package: "@plumix-examples/hello-world",
-            export: "HelloPickerField",
-          },
+          component: "HelloPickerField",
         });
         // 10. Plugin-owned settings (reusing the existing settings-group API).
         ctx.registerSettingsGroup("hello", {

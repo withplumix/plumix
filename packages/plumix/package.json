@@ -125,9 +125,12 @@
   },
   "dependencies": {
     "@plumix/core": "workspace:*",
+    "@tailwindcss/node": "4.2.4",
+    "@tailwindcss/oxide": "4.2.4",
     "drizzle-kit": "catalog:",
     "esbuild": "0.27.7",
     "jiti": "^2.6.1",
+    "tailwindcss": "4.2.4",
     "valibot": "catalog:"
   },
   "peerDependencies": {
