@@ -487,6 +487,8 @@ interface MediaListItemOutput {
   readonly url: string;
   readonly thumbnailUrl: string;
   readonly alt: string | null;
+  readonly uploadedAt: string;
+  readonly uploadedById: number;
 }
 
 interface MediaListOutput {
@@ -542,6 +544,14 @@ describe("@plumix/plugin-media — media.list", () => {
     const first = result.output?.items[0];
     expect(first?.thumbnailUrl).toBe(first?.url);
     expect(first?.mime).toBe("image/png");
+    // New fields surfaced for the drawer's "Uploaded" line + future
+    // user-display join.
+    expect(first?.uploadedById).toBe(owner.id);
+    expect(typeof first?.uploadedAt).toBe("string");
+    // ISO-8601 round-trip — a parser shouldn't NaN it.
+    expect(Number.isNaN(new Date(first?.uploadedAt ?? "").getTime())).toBe(
+      false,
+    );
   });
 
   test("rejects readers without entry:media:read", async () => {

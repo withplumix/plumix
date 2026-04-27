@@ -21,6 +21,6 @@
   "assets": {
     "directory": ".plumix/public",
     "binding": "ASSETS",
-    "not_found_handling": "none",
+    "not_found_handling": "single-page-application",
   },
 }

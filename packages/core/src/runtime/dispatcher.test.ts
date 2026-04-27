@@ -47,9 +47,11 @@ describe("dispatcher — routing", () => {
     expect(response.status).toBe(200);
     expect(await response.text()).toBe(indexBody);
     expect(calls).toHaveLength(1);
-    expect(new URL(calls[0]?.url ?? "").pathname).toBe(
-      "/_plumix/admin/index.html",
-    );
+    // Fetch the admin prefix itself (which the assets binding maps to
+    // index.html with a 200) rather than `${PREFIX}/index.html` —
+    // miniflare's `single-page-application` not_found_handling
+    // redirects /index.html → /, breaking SPA deep links.
+    expect(new URL(calls[0]?.url ?? "").pathname).toBe("/_plumix/admin/");
   });
 
   test("POST /_plumix/admin is rejected with 405 even when an assets binding is present", async () => {

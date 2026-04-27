@@ -201,7 +201,12 @@ async function serveAdmin(ctx: AppContext): Promise<Response> {
     return notFound("admin-asset-not-found");
   }
   // SPA deep link: admin's client router owns routing past /_plumix/admin/.
-  // Hand the client its index.html so it can resolve the path.
-  const indexUrl = new URL(`${ADMIN_PREFIX}/index.html`, ctx.request.url);
+  // Hand the client its index.html so it can resolve the path. Fetch
+  // the prefix URL itself (which the assets binding maps to index.html
+  // with a 200) rather than `${PREFIX}/index.html` — the latter
+  // triggers a redirect to the trailing-slash version under
+  // `not_found_handling: "single-page-application"` and miniflare's
+  // local emulation.
+  const indexUrl = new URL(`${ADMIN_PREFIX}/`, ctx.request.url);
   return ctx.assets.fetch(new Request(indexUrl, ctx.request));
 }
