@@ -6,18 +6,23 @@ import { createRoot } from "react-dom/client";
 
 import { App } from "./App.js";
 import { bootPlumixGlobals } from "./lib/plumix-globals.js";
+import { waitForPluginChunks } from "./lib/wait-for-plugin-chunks.js";
 
 import "./styles/globals.css";
 
-// Plugin chunks load after this script and call window.plumix.* at
-// module-eval time, so the global has to exist before they execute.
+// Plugin chunks evaluate after this script and call `window.plumix.*`
+// at module-eval time. Boot the global first so it exists when they
+// run, then defer the initial mount until every chunk has settled —
+// see `waitForPluginChunks` for why.
 bootPlumixGlobals();
 
 const rootElement = document.getElementById("root");
 if (!rootElement) throw new Error("Missing #root element");
 
-createRoot(rootElement).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+void waitForPluginChunks().then(() => {
+  createRoot(rootElement).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
+});
