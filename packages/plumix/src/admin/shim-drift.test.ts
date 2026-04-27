@@ -70,11 +70,17 @@ const SHIMS: readonly ShimSpec[] = [
     upstream: ReactQueryNs,
     load: () => import("./react-query.js"),
     knownGaps: new Set([
-      // Internal singletons — typing doesn't round-trip cleanly; plugin
-      // code reaches them via hooks (useIsFetching etc.) instead.
+      // Internal singletons — plugin code reaches them via hooks
+      // (useIsFetching etc.) instead.
       "focusManager",
       "notifyManager",
       "onlineManager",
+      // Public hook, but its inferred return type references
+      // `QueryErrorResetBoundaryValue` from react-query's internal
+      // `_tsup-dts-rollup.js` — re-exporting trips TS2883 in our
+      // `.d.ts` emit. Plugins that need error-boundary reset can read
+      // it via the `QueryErrorResetBoundary` component (re-exported)
+      // through context.
       "useQueryErrorResetBoundary",
       // Internal helpers + symbols — not part of the documented surface.
       "dataTagErrorSymbol",
