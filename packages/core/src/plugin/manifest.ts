@@ -343,10 +343,20 @@ export interface RegisteredRewriteRule {
   readonly registeredBy: string | null;
 }
 
-export interface PluginComponentRef {
-  readonly package: string;
-  readonly export: string;
-}
+/**
+ * Reference to a React component contributed by a plugin. The string is
+ * the export name on the plugin's `adminEntry` module — the plumix vite
+ * pipeline namespace-imports each plugin's entry and emits the matching
+ * `window.plumix.registerPlugin{Page,Block,FieldType}` calls into the
+ * synthesised admin chunk, so plugin authors only need `export const
+ * MyComponent = ...` and a single registration call to `ctx.register*`.
+ *
+ * No `package` field is needed: the plugin id (implicit from
+ * registration context) keys the namespace import the export resolves
+ * against. Drop-in for the previous `{ package, export }` shape; bumped
+ * pre-release so consumers can update in one pass.
+ */
+export type PluginComponentRef = string;
 
 /**
  * How an admin page slots into the sidebar. `group` is either a bare
@@ -1067,9 +1077,9 @@ function projectAdminNav(
       to: `/pages${page.path}`,
       label: page.nav.label,
       order: page.nav.order,
-      icon: page.nav.icon ? copyComponentRef(page.nav.icon) : undefined,
+      icon: page.nav.icon,
       coreIcon: page.nav.icon ? undefined : "puzzle",
-      component: copyComponentRef(page.component),
+      component: page.component,
       capability: page.capability,
     });
   }
@@ -1485,25 +1495,16 @@ function toSettingsPageEntry(
   return { name, label, description, groups, priority };
 }
 
-function copyComponentRef(ref: PluginComponentRef): PluginComponentRef {
-  return { package: ref.package, export: ref.export };
-}
-
 function toBlockEntry(block: RegisteredBlock): BlockManifestEntry {
   const { name, kind, schema, component } = block;
-  return {
-    name,
-    kind,
-    schema,
-    component: component ? copyComponentRef(component) : undefined,
-  };
+  return { name, kind, schema, component };
 }
 
 function toFieldTypeEntry(
   fieldType: RegisteredFieldType,
 ): FieldTypeManifestEntry {
   const { type, component } = fieldType;
-  return { type, component: copyComponentRef(component) };
+  return { type, component };
 }
 
 function toMetaBoxFieldEntry(field: MetaBoxField): MetaBoxFieldManifestEntry {

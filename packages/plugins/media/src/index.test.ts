@@ -54,10 +54,7 @@ describe("@plumix/plugin-media — registration", () => {
       priority: 150,
     });
     expect(page?.nav?.label).toBe("Media Library");
-    expect(page?.component).toEqual({
-      package: "@plumix/plugin-media",
-      export: "MediaLibrary",
-    });
+    expect(page?.component).toBe("MediaLibrary");
   });
 
   test("declares the adminEntry chunk path the plumix vite plugin loads", () => {

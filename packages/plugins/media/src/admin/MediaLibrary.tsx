@@ -10,26 +10,6 @@ const PAGE_SIZE = 24;
 const MEDIA_LIST_KEY = ["media", "list"] as const;
 const UPLOAD_CONCURRENCY = 4;
 
-// Shimmer keyframes — injected once at module load. Plugin chunks
-// can't rely on host CSS scanning their classnames (host Tailwind
-// pipeline doesn't see plugin source), so we inline the small bit of
-// CSS we need.
-const SHIMMER_STYLE_ID = "plumix-media-shimmer";
-if (
-  typeof document !== "undefined" &&
-  !document.getElementById(SHIMMER_STYLE_ID)
-) {
-  const styleEl = document.createElement("style");
-  styleEl.id = SHIMMER_STYLE_ID;
-  styleEl.textContent = `
-@keyframes plumix-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-`;
-  document.head.appendChild(styleEl);
-}
-
 // Resolve a media URL to absolute form for copy/display. The plugin
 // emits relative `/_plumix/media/serve/<id>` URLs in binding-only
 // mode (no `publicUrlBase`); they work for `<img src=...>` on the
@@ -343,23 +323,10 @@ export function MediaLibrary(): ReactNode {
   return (
     <div
       data-testid="media-library"
-      style={{
-        display: "flex",
-        gap: "1.5rem",
-        position: "relative",
-        minHeight: "100%",
-      }}
+      className="relative flex min-h-full gap-6"
       {...dropProps}
     >
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          gap: "1.5rem",
-          minWidth: 0,
-        }}
-      >
+      <div className="flex min-w-0 flex-1 flex-col gap-6">
         <header className="flex items-center justify-between">
           <h1
             data-testid="media-library-title"
@@ -393,11 +360,7 @@ export function MediaLibrary(): ReactNode {
         {list.status === "success" && items.length > 0 && (
           <div
             data-testid="media-library-grid"
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-              gap: "1rem",
-            }}
+            className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4"
           >
             {items.map((item) => (
               <MediaCard
@@ -428,17 +391,7 @@ export function MediaLibrary(): ReactNode {
           <div
             data-testid="media-library-drop-overlay"
             aria-hidden="true"
-            style={{
-              position: "absolute",
-              top: "1rem",
-              right: "1rem",
-              bottom: "1rem",
-              left: "1rem",
-              border: "2px dashed var(--primary, #888)",
-              background: "rgba(127,127,127,0.05)",
-              borderRadius: "0.5rem",
-              pointerEvents: "none",
-            }}
+            className="border-primary pointer-events-none absolute inset-4 rounded-lg border-2 border-dashed bg-white/5"
           />
         )}
       </div>
@@ -548,12 +501,6 @@ async function tryCleanupDraft(mediaId: number): Promise<void> {
 // already cover the entire library, but a visible target on the empty
 // state tells the user the library accepts files at all — without it
 // the page reads as "nothing to do here".
-// Plugin admin chunks ship Tailwind class strings the host admin's
-// CSS pipeline never scanned, so unusual classes (`size-12`,
-// `border-dashed`, `py-16`, opacity variants) don't render. Keep
-// common classes for typography but use inline styles for the
-// load-bearing layout primitives so the dropzone always has a
-// visible shape and the SVG can't escape its container.
 function Dropzone({
   onSelect,
   highlight,
@@ -565,35 +512,14 @@ function Dropzone({
     <label
       data-testid="media-library-dropzone"
       data-active={highlight ? "true" : undefined}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "0.75rem",
-        padding: "4rem 1rem",
-        borderRadius: "0.5rem",
-        border: `2px dashed ${highlight ? "var(--primary, #888)" : "var(--border, #444)"}`,
-        background: highlight ? "rgba(127,127,127,0.05)" : "transparent",
-        textAlign: "center",
-        cursor: "pointer",
-        transition: "border-color 120ms ease",
-      }}
+      className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed px-4 py-16 text-center transition-colors duration-150 ${
+        highlight ? "border-primary bg-white/5" : "border-border bg-transparent"
+      }`}
     >
       <input
         type="file"
         multiple
-        style={{
-          position: "absolute",
-          width: 1,
-          height: 1,
-          padding: 0,
-          margin: -1,
-          overflow: "hidden",
-          clip: "rect(0,0,0,0)",
-          whiteSpace: "nowrap",
-          border: 0,
-        }}
+        className="sr-only"
         onChange={(event) => {
           const files = Array.from(event.target.files ?? []);
           if (files.length > 0) onSelect(files);
@@ -601,21 +527,13 @@ function Dropzone({
         }}
       />
       <CloudUploadGlyph />
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-        <p style={{ fontSize: "0.875rem", fontWeight: 500, margin: 0 }}>
+      <div className="flex flex-col gap-1">
+        <p className="m-0 text-sm font-medium">
           Your library is empty. Add files to get started.
         </p>
-        <p
-          style={{
-            fontSize: "0.75rem",
-            color: "var(--muted-foreground, #888)",
-            margin: 0,
-          }}
-        >
+        <p className="text-muted-foreground m-0 text-xs">
           Drag and drop or{" "}
-          <span style={{ textDecoration: "underline" }}>
-            select from computer
-          </span>
+          <span className="underline">select from computer</span>
         </p>
       </div>
     </label>
@@ -626,15 +544,13 @@ function CloudUploadGlyph(): ReactNode {
   return (
     <svg
       aria-hidden="true"
-      width="48"
-      height="48"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
       strokeWidth="1.5"
       strokeLinecap="round"
       strokeLinejoin="round"
-      style={{ color: "var(--muted-foreground, #888)" }}
+      className="text-muted-foreground size-12"
     >
       <path d="M16 16l-4-4-4 4" />
       <path d="M12 12v9" />
@@ -679,46 +595,19 @@ function UploadProgressBar({
   return (
     <div
       data-testid="media-library-progress"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "0.375rem",
-        padding: "0.75rem 1rem",
-        border: "1px solid var(--border, rgba(255,255,255,0.1))",
-        borderRadius: "0.375rem",
-        background: "var(--card, rgba(255,255,255,0.02))",
-        fontSize: "0.75rem",
-      }}
+      className="border-border bg-card flex flex-col gap-1.5 rounded-md border px-4 py-3 text-xs"
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
+      <div className="flex items-center justify-between">
         <span>
           Uploading {String(pending.length)} file
           {pending.length === 1 ? "" : "s"}…
         </span>
         <span data-testid="media-library-progress-pct">{pct}%</span>
       </div>
-      <div
-        style={{
-          height: "6px",
-          width: "100%",
-          background: "rgba(255,255,255,0.08)",
-          borderRadius: "0.125rem",
-          overflow: "hidden",
-        }}
-      >
+      <div className="h-1.5 w-full overflow-hidden rounded-sm bg-white/10">
         <div
-          style={{
-            height: "100%",
-            width: `${String(pct)}%`,
-            background: "var(--primary, #fff)",
-            transition: "width 200ms ease",
-          }}
+          className="bg-primary h-full transition-[width] duration-200 ease-in-out"
+          style={{ width: `${String(pct)}%` }}
         />
       </div>
     </div>
@@ -743,19 +632,9 @@ function MediaCard({
     <article
       data-testid={`media-card-${String(item.id)}`}
       data-selected={selected ? "true" : undefined}
-      style={{
-        position: "relative",
-        display: "flex",
-        flexDirection: "column",
-        gap: "0.5rem",
-        padding: "0.75rem",
-        borderRadius: "0.5rem",
-        border: "1px solid var(--border, rgba(255,255,255,0.1))",
-        background: "var(--card, rgba(255,255,255,0.02))",
-        outline: selected ? "2px solid var(--primary, #fff)" : undefined,
-        outlineOffset: selected ? "1px" : undefined,
-        cursor: "pointer",
-      }}
+      className={`border-border bg-card relative flex cursor-pointer flex-col gap-2 rounded-lg border p-3 ${
+        selected ? "outline-primary outline-2 outline-offset-1" : ""
+      }`}
       onClick={onOpen}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -767,19 +646,7 @@ function MediaCard({
       tabIndex={0}
       aria-label={`Open details for ${item.title}`}
     >
-      <div
-        style={{
-          position: "relative",
-          aspectRatio: "1 / 1",
-          width: "100%",
-          overflow: "hidden",
-          borderRadius: "0.25rem",
-          background: "var(--muted, rgba(127,127,127,0.1))",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
+      <div className="bg-muted relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-sm">
         {isImage ? (
           <ImageWithFallback
             src={item.thumbnailUrl}
@@ -794,24 +661,12 @@ function MediaCard({
       </div>
       <div
         data-testid={`media-card-${String(item.id)}-title`}
-        style={{
-          fontSize: "0.875rem",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
+        className="truncate text-sm"
         title={item.title}
       >
         {item.title}
       </div>
-      <div
-        style={{
-          fontSize: "0.7rem",
-          opacity: 0.6,
-          display: "flex",
-          gap: "0.5rem",
-        }}
-      >
+      <div className="flex gap-2 text-[0.7rem] opacity-60">
         <span>{formatShortDate(item.uploadedAt)}</span>
         <span>·</span>
         <span>{formatSize(item.size)}</span>
@@ -827,53 +682,17 @@ function MediaSkeletonGrid(): ReactNode {
   return (
     <div
       data-testid="media-library-loading"
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-        gap: "1rem",
-      }}
+      className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4"
     >
       {placeholders.map((i) => (
         <div
           key={i}
           aria-hidden="true"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.5rem",
-            padding: "0.75rem",
-            borderRadius: "0.5rem",
-            border: "1px solid var(--border, rgba(255,255,255,0.08))",
-            background: "var(--card, rgba(255,255,255,0.02))",
-          }}
+          className="border-border bg-card flex flex-col gap-2 rounded-lg border p-3"
         >
-          <div
-            style={{
-              aspectRatio: "1 / 1",
-              width: "100%",
-              borderRadius: "0.25rem",
-              background:
-                "linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0.04) 100%)",
-              backgroundSize: "200% 100%",
-              animation: "plumix-shimmer 1.4s ease-in-out infinite",
-            }}
-          />
-          <div
-            style={{
-              height: "0.875rem",
-              width: "70%",
-              borderRadius: "0.125rem",
-              background: "rgba(255,255,255,0.06)",
-            }}
-          />
-          <div
-            style={{
-              height: "0.7rem",
-              width: "40%",
-              borderRadius: "0.125rem",
-              background: "rgba(255,255,255,0.04)",
-            }}
-          />
+          <div className="aspect-square w-full animate-pulse rounded-sm bg-white/10" />
+          <div className="h-3.5 w-[70%] rounded-sm bg-white/[0.06]" />
+          <div className="h-[0.7rem] w-[40%] rounded-sm bg-white/[0.04]" />
         </div>
       ))}
     </div>
@@ -884,20 +703,7 @@ function FileTypeBadge({ mime }: { mime: string }): ReactNode {
   const label = badgeLabel(mime);
   if (!label) return null;
   return (
-    <span
-      style={{
-        position: "absolute",
-        top: "0.5rem",
-        right: "0.5rem",
-        background: "rgba(0,0,0,0.75)",
-        color: "#fff",
-        padding: "0.125rem 0.4rem",
-        borderRadius: "0.125rem",
-        fontSize: "0.65rem",
-        letterSpacing: "0.05em",
-        fontWeight: 600,
-      }}
-    >
+    <span className="absolute top-2 right-2 rounded-sm bg-black/75 px-1.5 py-0.5 text-[0.65rem] font-semibold tracking-wider text-white">
       {label}
     </span>
   );
@@ -962,89 +768,36 @@ function MediaDetailDrawer({
   return (
     <aside
       data-testid="media-detail-drawer"
-      style={{
-        width: "320px",
-        flexShrink: 0,
-        position: "sticky",
-        top: "2rem",
-        alignSelf: "flex-start",
-        maxHeight: "calc(100vh - 4rem)",
-        overflowY: "auto",
-        border: "1px solid var(--border, rgba(255,255,255,0.1))",
-        borderRadius: "0.5rem",
-        background: "var(--card, rgba(255,255,255,0.02))",
-        display: "flex",
-        flexDirection: "column",
-      }}
+      className="border-border bg-card sticky top-8 flex max-h-[calc(100vh-4rem)] w-80 flex-shrink-0 flex-col self-start overflow-y-auto rounded-lg border"
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0.75rem 1rem",
-          borderBottom: "1px solid var(--border, rgba(255,255,255,0.1))",
-        }}
-      >
-        <span
-          style={{ fontSize: "0.75rem", letterSpacing: "0.05em", opacity: 0.7 }}
-        >
-          ASSET DETAILS
-        </span>
+      <div className="border-border flex items-center justify-between border-b px-4 py-3">
+        <span className="text-xs tracking-wider opacity-70">ASSET DETAILS</span>
         <button
           type="button"
           onClick={onClose}
           aria-label="Close details"
           data-testid="media-detail-close"
-          style={{
-            all: "unset",
-            cursor: "pointer",
-            padding: "0.125rem 0.375rem",
-            borderRadius: "0.25rem",
-            fontSize: "1rem",
-            lineHeight: 1,
-          }}
+          className="cursor-pointer rounded px-1.5 py-0.5 text-base leading-none"
         >
           ×
         </button>
       </div>
 
-      <div
-        style={{
-          aspectRatio: "1 / 1",
-          width: "100%",
-          background: "var(--muted, rgba(127,127,127,0.1))",
-          overflow: "hidden",
-        }}
-      >
+      <div className="bg-muted aspect-square w-full overflow-hidden">
         {isImage ? (
           <img
             src={item.thumbnailUrl}
             alt={item.alt ?? item.title}
-            style={{ width: "100%", height: "100%", objectFit: "contain" }}
+            className="size-full object-contain"
           />
         ) : (
           <FileGlyph mime={item.mime} />
         )}
       </div>
 
-      <div
-        style={{
-          padding: "1rem",
-          display: "flex",
-          flexDirection: "column",
-          gap: "1rem",
-        }}
-      >
+      <div className="flex flex-col gap-4 p-4">
         <div>
-          <h2
-            style={{
-              fontSize: "1rem",
-              fontWeight: 600,
-              margin: 0,
-              wordBreak: "break-all",
-            }}
-          >
+          <h2 className="m-0 text-base font-semibold break-all">
             {item.title}
           </h2>
         </div>
@@ -1068,24 +821,10 @@ function MediaDetailDrawer({
 
         <div>
           <DetailLabel>URL</DetailLabel>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-            }}
-          >
+          <div className="flex items-center gap-2">
             <code
               data-testid="media-detail-url"
-              style={{
-                fontSize: "0.7rem",
-                flex: 1,
-                wordBreak: "break-all",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                opacity: 0.85,
-              }}
+              className="flex-1 truncate text-[0.7rem] break-all opacity-85"
               title={absoluteUrl}
             >
               {absoluteUrl}
@@ -1094,30 +833,14 @@ function MediaDetailDrawer({
               type="button"
               onClick={() => void copy()}
               data-testid="media-detail-copy"
-              style={{
-                flexShrink: 0,
-                padding: "0.25rem 0.5rem",
-                fontSize: "0.7rem",
-                background: "transparent",
-                color: "inherit",
-                border: "1px solid var(--border, rgba(255,255,255,0.15))",
-                borderRadius: "0.25rem",
-                cursor: "pointer",
-              }}
+              className="border-border flex-shrink-0 cursor-pointer rounded border bg-transparent px-2 py-1 text-[0.7rem]"
             >
               {copied ? "Copied" : "Copy"}
             </button>
           </div>
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            gap: "0.5rem",
-            paddingTop: "0.5rem",
-            borderTop: "1px solid var(--border, rgba(255,255,255,0.1))",
-          }}
-        >
+        <div className="border-border flex gap-2 border-t pt-2">
           <a
             // Always go through the worker serve route with
             // ?attachment=1 — the HTML `download` attribute is ignored
@@ -1128,14 +851,7 @@ function MediaDetailDrawer({
             href={`/_plumix/media/serve/${String(item.id)}?attachment=1`}
             download={item.title}
             data-testid="media-detail-download"
-            className="bg-card hover:bg-muted rounded border text-xs"
-            style={{
-              flex: 1,
-              padding: "0.5rem 0.75rem",
-              textAlign: "center",
-              textDecoration: "none",
-              color: "inherit",
-            }}
+            className="bg-card hover:bg-muted flex-1 rounded border px-3 py-2 text-center text-xs no-underline"
           >
             Download
           </a>
@@ -1143,16 +859,7 @@ function MediaDetailDrawer({
             type="button"
             data-testid="media-detail-delete"
             onClick={() => setConfirmingDelete(true)}
-            style={{
-              flex: 1,
-              padding: "0.5rem 0.75rem",
-              cursor: "pointer",
-              background: "transparent",
-              color: "inherit",
-              border: "1px solid var(--border, rgba(255,255,255,0.15))",
-              borderRadius: "0.25rem",
-              fontSize: "0.75rem",
-            }}
+            className="border-border flex-1 cursor-pointer rounded border bg-transparent px-3 py-2 text-xs"
           >
             Delete
           </button>
@@ -1210,71 +917,25 @@ function ConfirmDialog({
       onClick={(e) => {
         if (e.target === e.currentTarget) onCancel();
       }}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.6)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 50,
-        padding: "1rem",
-      }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
     >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "420px",
-          background: "var(--card, #1a1a1a)",
-          border: "1px solid var(--border, rgba(255,255,255,0.1))",
-          borderRadius: "0.5rem",
-          padding: "1.25rem",
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.75rem",
-          color: "inherit",
-        }}
-      >
+      <div className="border-border bg-card flex w-full max-w-md flex-col gap-3 rounded-lg border p-5">
         <h3
           id="confirm-dialog-title"
           data-testid="confirm-dialog-title"
-          style={{ fontSize: "1rem", fontWeight: 600, margin: 0 }}
+          className="m-0 text-base font-semibold"
         >
           {title}
         </h3>
         {description && (
-          <p
-            style={{
-              fontSize: "0.85rem",
-              opacity: 0.75,
-              margin: 0,
-              lineHeight: 1.4,
-            }}
-          >
-            {description}
-          </p>
+          <p className="m-0 text-sm leading-snug opacity-75">{description}</p>
         )}
-        <div
-          style={{
-            display: "flex",
-            gap: "0.5rem",
-            justifyContent: "flex-end",
-            marginTop: "0.5rem",
-          }}
-        >
+        <div className="mt-2 flex justify-end gap-2">
           <button
             type="button"
             data-testid="confirm-dialog-cancel"
             onClick={onCancel}
-            style={{
-              padding: "0.5rem 0.875rem",
-              borderRadius: "0.25rem",
-              border: "1px solid var(--border, rgba(255,255,255,0.15))",
-              background: "transparent",
-              color: "inherit",
-              cursor: "pointer",
-              fontSize: "0.8rem",
-            }}
+            className="border-border cursor-pointer rounded border bg-transparent px-3.5 py-2 text-[0.8rem]"
           >
             {cancelLabel}
           </button>
@@ -1283,21 +944,11 @@ function ConfirmDialog({
             data-testid="confirm-dialog-confirm"
             onClick={onConfirm}
             autoFocus
-            style={{
-              padding: "0.5rem 0.875rem",
-              borderRadius: "0.25rem",
-              border: "1px solid",
-              borderColor: danger
-                ? "rgba(220,80,80,0.7)"
-                : "var(--primary, rgba(255,255,255,0.4))",
-              background: danger
-                ? "rgba(220,80,80,0.85)"
-                : "var(--primary, #fff)",
-              color: danger ? "#fff" : "var(--primary-foreground, #000)",
-              cursor: "pointer",
-              fontSize: "0.8rem",
-              fontWeight: 600,
-            }}
+            className={`cursor-pointer rounded border px-3.5 py-2 text-[0.8rem] font-semibold ${
+              danger
+                ? "border-destructive bg-destructive text-white"
+                : "border-primary bg-primary text-primary-foreground"
+            }`}
           >
             {confirmLabel}
           </button>
@@ -1309,14 +960,7 @@ function ConfirmDialog({
 
 function DetailLabel({ children }: { children: ReactNode }): ReactNode {
   return (
-    <div
-      style={{
-        fontSize: "0.7rem",
-        letterSpacing: "0.05em",
-        opacity: 0.6,
-        marginBottom: "0.25rem",
-      }}
-    >
+    <div className="mb-1 text-[0.7rem] tracking-wider opacity-60">
       {children}
     </div>
   );
@@ -1332,9 +976,7 @@ function DetailField({
   return (
     <div>
       <DetailLabel>{label}</DetailLabel>
-      <div style={{ fontSize: "0.875rem", wordBreak: "break-word" }}>
-        {value}
-      </div>
+      <div className="text-sm break-words">{value}</div>
     </div>
   );
 }
@@ -1378,7 +1020,7 @@ function AltEditor({
   }, [draft, value, onSave]);
 
   return (
-    <div style={{ position: "relative" }}>
+    <div className="relative">
       <input
         data-testid={`${testIdPrefix}-${String(cardId)}-alt`}
         type="text"
@@ -1402,41 +1044,13 @@ function AltEditor({
             e.currentTarget.blur();
           }
         }}
-        style={{
-          width: "100%",
-          background: "rgba(255,255,255,0.03)",
-          border: "1px solid var(--border, rgba(255,255,255,0.12))",
-          borderRadius: "0.375rem",
-          padding: "0.5rem 0.625rem",
-          fontSize: "0.8125rem",
-          color: "inherit",
-          outline: "none",
-          fontFamily: "inherit",
-          lineHeight: 1.4,
-        }}
-        onFocus={(e) => {
-          e.currentTarget.style.borderColor = "var(--primary, #fff)";
-          e.currentTarget.style.background = "rgba(255,255,255,0.05)";
-        }}
-        onBlurCapture={(e) => {
-          e.currentTarget.style.borderColor =
-            "var(--border, rgba(255,255,255,0.12))";
-          e.currentTarget.style.background = "rgba(255,255,255,0.03)";
-        }}
+        className="border-border focus:border-primary w-full rounded-md border bg-white/[0.03] px-2.5 py-2 text-[0.8125rem] leading-snug outline-none focus:bg-white/5"
       />
       {savedFlash && (
         <span
           data-testid={`${testIdPrefix}-${String(cardId)}-alt-saved`}
           aria-live="polite"
-          style={{
-            position: "absolute",
-            right: "0.5rem",
-            top: "50%",
-            transform: "translateY(-50%)",
-            fontSize: "0.65rem",
-            color: "var(--primary, #8f8)",
-            pointerEvents: "none",
-          }}
+          className="text-primary pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-[0.65rem]"
         >
           ✓ Saved
         </span>
@@ -1447,19 +1061,7 @@ function AltEditor({
 
 function FileGlyph({ mime }: { mime: string }): ReactNode {
   return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: "1.25rem",
-        fontWeight: 600,
-        letterSpacing: "0.1em",
-        color: "var(--muted-foreground, rgba(255,255,255,0.5))",
-      }}
-    >
+    <div className="text-muted-foreground flex size-full items-center justify-center text-xl font-semibold tracking-widest">
       {mimeGlyph(mime)}
     </div>
   );
@@ -1486,22 +1088,9 @@ function ImageWithFallback({
       {state !== "loaded" && (
         <div
           aria-hidden="true"
-          style={{
-            position: "absolute",
-            inset: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background:
-              state === "error"
-                ? "var(--muted, rgba(127,127,127,0.1))"
-                : "linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0.04) 100%)",
-            backgroundSize: "200% 100%",
-            animation:
-              state === "loading"
-                ? "plumix-shimmer 1.4s ease-in-out infinite"
-                : undefined,
-          }}
+          className={`absolute inset-0 flex items-center justify-center ${
+            state === "error" ? "bg-muted" : "animate-pulse bg-white/10"
+          }`}
         >
           {state === "error" && <FileGlyph mime={mime} />}
         </div>
@@ -1514,14 +1103,9 @@ function ImageWithFallback({
         decoding="async"
         onLoad={() => setState("loaded")}
         onError={() => setState("error")}
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          display: "block",
-          opacity: state === "loaded" ? 1 : 0,
-          transition: "opacity 200ms ease",
-        }}
+        className={`block size-full object-cover transition-opacity duration-200 ${
+          state === "loaded" ? "opacity-100" : "opacity-0"
+        }`}
       />
     </>
   );

@@ -140,10 +140,7 @@ export function media(
           label: "Media Library",
           order: 50,
         },
-        component: {
-          package: "@plumix/plugin-media",
-          export: "MediaLibrary",
-        },
+        component: "MediaLibrary",
       });
     },
     { adminEntry: ADMIN_ENTRY_PATH },

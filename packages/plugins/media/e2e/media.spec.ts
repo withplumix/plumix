@@ -83,10 +83,7 @@ const MANIFEST: PlumixManifest = {
           order: 50,
           capability: "entry:media:read",
           coreIcon: "image",
-          component: {
-            package: "@plumix/plugin-media",
-            export: "MediaLibrary",
-          },
+          component: "MediaLibrary",
         },
       ],
     },

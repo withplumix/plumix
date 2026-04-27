@@ -51,6 +51,11 @@ const config: KnipConfig = {
         "src/admin/orpc-client.ts",
         "src/admin/orpc-client-fetch.ts",
         "src/admin/orpc-tanstack-query.ts",
+        // `theme.css` is read at runtime by `compilePluginCss`
+        // (admin-plugin-bundle.ts) via `readFile(ADMIN_THEME_CSS)` and
+        // shipped to consumers via `scripts/copy-admin.mjs` — neither
+        // path is a static import knip can follow.
+        "src/admin/theme.css",
         "src/blocks/index.ts",
         "src/cli/index.ts",
         "src/i18n/index.ts",
@@ -63,7 +68,11 @@ const config: KnipConfig = {
       ],
       // - drizzle-kit is invoked by consumers as a CLI hint, not imported.
       // - @plumix/admin is consumed via filesystem copy (scripts/copy-admin.mjs).
-      ignoreDependencies: ["drizzle-kit", "@plumix/admin"],
+      // - tailwindcss is resolved at runtime by `@tailwindcss/node`'s
+      //   `compile()` (which `import`s `tailwindcss/theme` and
+      //   `tailwindcss/utilities` from the synthesised CSS string), not
+      //   from any TS source.
+      ignoreDependencies: ["drizzle-kit", "@plumix/admin", "tailwindcss"],
     },
     // The runtime-proof fixture plugin is loaded by playwright's
     // webServer command at e2e time — not via a static import knip
