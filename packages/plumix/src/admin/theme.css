@@ -1,15 +1,15 @@
 /*
- * Shared admin design tokens. Imported into per-plugin Tailwind compiles
- * by `assemblePluginAdminBundle` so plugin utility classes resolve
- * against the same theme as the host admin (`@plumix/admin`'s
- * `globals.css`). Keep in sync with that file — `:root` / `.dark` vars
+ * Shared admin design tokens. Inlined into per-plugin Tailwind compiles
+ * by `assemblePluginAdminBundle` (it reads this file via readFile and
+ * concatenates the contents into the synthesised CSS entry) so plugin
+ * utility classes resolve against the same theme as the host admin's
+ * `globals.css`. Keep in sync with that file — `:root` / `.dark` vars
  * must match, and the `@theme inline` block must list every token a
  * plugin can reference via Tailwind utilities.
  *
- * Plugins inherit these via `@import "@plumix/plumix/admin/theme.css"`
- * inside the synthesised compile entry; the host admin defines the
- * variables on the live document, so plugin CSS only needs the
- * `@theme inline` mapping for utility-class resolution.
+ * The host admin defines the variables on the live document, so plugin
+ * CSS only needs the @theme inline mapping for utility-class
+ * resolution; preflight + token vars stay with the admin.
  */
 
 @theme inline {

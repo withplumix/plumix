@@ -532,7 +532,8 @@ function Dropzone({
           Your library is empty. Add files to get started.
         </p>
         <p className="text-muted-foreground m-0 text-xs">
-          Drag and drop or <span className="underline">select from computer</span>
+          Drag and drop or{" "}
+          <span className="underline">select from computer</span>
         </p>
       </div>
     </label>
@@ -632,7 +633,7 @@ function MediaCard({
       data-testid={`media-card-${String(item.id)}`}
       data-selected={selected ? "true" : undefined}
       className={`border-border bg-card relative flex cursor-pointer flex-col gap-2 rounded-lg border p-3 ${
-        selected ? "outline-primary outline-offset-1 outline-2" : ""
+        selected ? "outline-primary outline-2 outline-offset-1" : ""
       }`}
       onClick={onOpen}
       onKeyDown={(e) => {

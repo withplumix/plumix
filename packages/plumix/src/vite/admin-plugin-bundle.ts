@@ -1,9 +1,9 @@
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import type { Plugin as EsbuildPlugin } from "esbuild";
 import { compile, optimize } from "@tailwindcss/node";
 import { Scanner } from "@tailwindcss/oxide";
-import type { Plugin as EsbuildPlugin } from "esbuild";
 import { build } from "esbuild";
 
 import type {

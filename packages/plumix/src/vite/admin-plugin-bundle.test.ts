@@ -3,7 +3,12 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { createPluginRegistry, definePlugin, HookRegistry, installPlugins } from "@plumix/core";
+import {
+  createPluginRegistry,
+  definePlugin,
+  HookRegistry,
+  installPlugins,
+} from "@plumix/core";
 
 import {
   assemblePluginAdminBundle,
@@ -159,7 +164,9 @@ describe("assemblePluginAdminBundle", () => {
 
     const result = await assemblePluginAdminBundle({
       plugins: [
-        plugin("./node_modules/@fixture/plugin-css/entry.js") as AssemblerPlugin,
+        plugin(
+          "./node_modules/@fixture/plugin-css/entry.js",
+        ) as AssemblerPlugin,
       ],
       registry: emptyRegistry(),
       adminDest,
@@ -239,9 +246,7 @@ describe("assemblePluginAdminBundle", () => {
     await mkdir(adminDest, { recursive: true });
 
     const result = await assemblePluginAdminBundle({
-      plugins: [
-        descriptor as AssemblerPlugin,
-      ],
+      plugins: [descriptor as AssemblerPlugin],
       registry,
       adminDest,
       projectRoot: workspace,
