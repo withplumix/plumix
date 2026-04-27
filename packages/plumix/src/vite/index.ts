@@ -27,7 +27,10 @@ import {
 } from "@plumix/core";
 
 import { loadConfig } from "../cli/load-config.js";
-import { assemblePluginAdminBundle } from "./admin-plugin-bundle.js";
+import {
+  ADMIN_URL_PREFIX,
+  assemblePluginAdminBundle,
+} from "./admin-plugin-bundle.js";
 
 // `import.meta.url` for this module lives at plumix/dist/vite/index.js in
 // consumer installs, so the pre-compiled admin artifact is a sibling at
@@ -254,14 +257,14 @@ async function stagePluginChunks(
           projectRoot,
         );
         cssCopy = copyFile(cssSource, resolve(pluginsDir, `${plugin.id}.css`));
-        cssUrl = `./plugins/${plugin.id}.css`;
+        cssUrl = `${ADMIN_URL_PREFIX}/plugins/${plugin.id}.css`;
       }
       const pending: Promise<void>[] = [chunkCopy];
       if (cssCopy) pending.push(cssCopy);
       await Promise.all(pending);
       return {
         pluginId: plugin.id,
-        chunkUrl: `./plugins/${plugin.id}.js`,
+        chunkUrl: `${ADMIN_URL_PREFIX}/plugins/${plugin.id}.js`,
         cssUrl,
       };
     }),

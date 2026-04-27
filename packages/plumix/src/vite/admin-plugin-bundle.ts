@@ -20,6 +20,15 @@ import {
 // `plumix/admin/<lib>` shims that read from `window.plumix.runtime.*`
 // — single React instance across host + plugin.
 
+// Plugin chunk URLs MUST be absolute (not `./plugins/...`). The SPA's
+// index.html is served for every deep-link, so a relative `src`
+// resolves against the current URL — `/_plumix/admin/pages/media`
+// would fetch `/_plumix/admin/pages/plugins/site-bundle.js` and 404,
+// leaving the plugin registry empty and rendering "Plugin not loaded"
+// on direct deep-links. Same prefix the dispatcher and admin Vite
+// config hardcode.
+export const ADMIN_URL_PREFIX = "/_plumix/admin";
+
 interface AssembledBundle {
   readonly chunkUrl: string;
   readonly cssUrl?: string;
@@ -127,8 +136,8 @@ export async function assemblePluginAdminBundle({
   });
 
   return {
-    chunkUrl: "./plugins/site-bundle.js",
-    cssUrl: cssUrl ? "./plugins/site-bundle.css" : undefined,
+    chunkUrl: `${ADMIN_URL_PREFIX}/plugins/site-bundle.js`,
+    cssUrl: cssUrl ? `${ADMIN_URL_PREFIX}/plugins/site-bundle.css` : undefined,
   };
 }
 
