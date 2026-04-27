@@ -29,6 +29,13 @@ import {
   PaginationContent,
   PaginationItem,
 } from "@/components/ui/pagination.js";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select.js";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group.js";
 import { hasCap } from "@/lib/caps.js";
 import { toDate } from "@/lib/dates.js";
@@ -730,9 +737,6 @@ function StatusViews({
   );
 }
 
-const SELECT_CLASS =
-  "border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-2 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50";
-
 // Stable empty array reference — react-query returns a fresh `[]`
 // fallback on every render when `data` is undefined, which breaks
 // useMemo identity in `TaxonomyFilter`.
@@ -743,6 +747,12 @@ const EMPTY_TERMS: readonly Term[] = [];
 // invalidates every tick when termTaxonomies is undefined).
 const EMPTY_TAXONOMY_NAMES: readonly string[] = [];
 
+const AUTHOR_FILTER_OPTIONS: readonly { value: AuthorFilter; label: string }[] =
+  [
+    { value: "all", label: "All authors" },
+    { value: "mine", label: "Mine" },
+  ];
+
 function AuthorSelect({
   value,
   onChange,
@@ -751,18 +761,31 @@ function AuthorSelect({
   onChange: (next: AuthorFilter) => void;
 }): ReactNode {
   return (
-    <select
-      aria-label="Filter by author"
-      data-testid="author-filter"
-      className={SELECT_CLASS}
+    <Select
       value={value}
-      onChange={(e) => {
-        onChange(e.target.value as AuthorFilter);
+      onValueChange={(next) => {
+        onChange(next as AuthorFilter);
       }}
     >
-      <option value="all">All authors</option>
-      <option value="mine">Mine</option>
-    </select>
+      <SelectTrigger
+        size="sm"
+        aria-label="Filter by author"
+        data-testid="author-filter"
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {AUTHOR_FILTER_OPTIONS.map((opt) => (
+          <SelectItem
+            key={opt.value}
+            value={opt.value}
+            data-testid={`author-filter-${opt.value}`}
+          >
+            {opt.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 

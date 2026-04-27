@@ -49,7 +49,9 @@ export async function handleMediaServe(
     return new Response(null, { status: 404 });
   }
   const idStr = url.pathname.slice(PREFIX.length);
-  if (!/^[1-9]\d{0,15}$/.test(idStr)) {
+  // 15 digits max keeps the parsed value below Number.MAX_SAFE_INTEGER
+  // (~9.007e15) — 16 digits could round on parseInt.
+  if (!/^[1-9]\d{0,14}$/.test(idStr)) {
     return new Response(null, { status: 400 });
   }
   const id = Number.parseInt(idStr, 10);

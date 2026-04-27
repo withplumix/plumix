@@ -153,7 +153,8 @@ test.describe("/entries/$slug", () => {
     });
 
     await page.goto("entries/posts?status=all&page=1");
-    await page.getByTestId("author-filter").selectOption("mine");
+    await page.getByTestId("author-filter").click();
+    await page.getByTestId("author-filter-mine").click();
     await expect(page).toHaveURL(/author=mine/);
     await expect
       .poll(
