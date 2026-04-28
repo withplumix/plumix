@@ -4,6 +4,34 @@ import { entries } from "../../../db/schema/entries.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
+// SEO meta box fixture used by the partial-write and null-clear tests.
+// Registers two fields on the `post` entry type so each test can flip
+// one without disturbing the other.
+function registerSeoMetaBox(
+  plugins: ReturnType<typeof createPluginRegistry>,
+): void {
+  plugins.entryMetaBoxes.set("test-seo", {
+    id: "test-seo",
+    label: "SEO",
+    entryTypes: ["post"],
+    fields: [
+      {
+        key: "meta_title",
+        label: "Meta title",
+        type: "string",
+        inputType: "text",
+      },
+      {
+        key: "is_featured",
+        label: "Featured",
+        type: "boolean",
+        inputType: "checkbox",
+      },
+    ],
+    registeredBy: "test",
+  });
+}
+
 describe("entry.update", () => {
   test("author can update their own draft via edit_own", async () => {
     const h = await createRpcHarness({ authAs: "author" });
@@ -277,26 +305,7 @@ describe("entry.update", () => {
 
   test("meta: partial write leaves keys outside the patch untouched", async () => {
     const plugins = createPluginRegistry();
-    plugins.entryMetaBoxes.set("test-seo", {
-      id: "test-seo",
-      label: "SEO",
-      entryTypes: ["post"],
-      fields: [
-        {
-          key: "meta_title",
-          label: "Meta title",
-          type: "string",
-          inputType: "text",
-        },
-        {
-          key: "is_featured",
-          label: "Featured",
-          type: "boolean",
-          inputType: "checkbox",
-        },
-      ],
-      registeredBy: "test",
-    });
+    registerSeoMetaBox(plugins);
     const h = await createRpcHarness({ authAs: "admin", plugins });
     const post = await h.client.entry.create({
       title: "p",
@@ -316,26 +325,7 @@ describe("entry.update", () => {
 
   test("meta: null value clears a key without touching the others", async () => {
     const plugins = createPluginRegistry();
-    plugins.entryMetaBoxes.set("test-seo", {
-      id: "test-seo",
-      label: "SEO",
-      entryTypes: ["post"],
-      fields: [
-        {
-          key: "meta_title",
-          label: "Meta title",
-          type: "string",
-          inputType: "text",
-        },
-        {
-          key: "is_featured",
-          label: "Featured",
-          type: "boolean",
-          inputType: "checkbox",
-        },
-      ],
-      registeredBy: "test",
-    });
+    registerSeoMetaBox(plugins);
     const h = await createRpcHarness({ authAs: "admin", plugins });
     const post = await h.client.entry.create({
       title: "p2",
