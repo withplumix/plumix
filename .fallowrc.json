@@ -6,5 +6,11 @@
     "packages/admin/test/setup.ts",
     "packages/plugins/*/src/admin/index.tsx",
     "packages/plumix/src/admin/theme.css"
-  ]
+  ],
+  "duplicates": {
+    "ignore": [
+      "examples/**/plumix.config.ts",
+      "packages/plugins/*/playground/plumix.config.ts"
+    ]
+  }
 }
