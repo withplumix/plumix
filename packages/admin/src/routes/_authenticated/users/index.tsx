@@ -25,12 +25,7 @@ import { hasCap } from "@/lib/caps.js";
 import { toDate } from "@/lib/dates.js";
 import { orpc } from "@/lib/orpc.js";
 import { useQuery } from "@tanstack/react-query";
-import {
-  createFileRoute,
-  Link,
-  redirect,
-  useNavigate,
-} from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Plus, UserPlus } from "lucide-react";
 import * as v from "valibot";
 
@@ -106,22 +101,14 @@ export const Route = createFileRoute("/_authenticated/users/")({
   component: UsersListRoute,
 });
 
-function UsersListRoute(): ReactNode {
-  const search = Route.useSearch();
-  const { user } = Route.useRouteContext();
-  const navigate = useNavigate({ from: Route.fullPath });
+interface UsersListNavActions {
+  setRole: (role: RoleFilter) => void;
+  setPage: (page: number) => void;
+  setSearch: (q: string | undefined) => void;
+}
 
-  const query = useQuery(
-    orpc.user.list.queryOptions({
-      input: {
-        limit: PAGE_SIZE,
-        offset: (search.page - 1) * PAGE_SIZE,
-        ...(search.role !== "all" ? { role: search.role } : {}),
-        ...(search.q ? { search: search.q } : {}),
-      },
-    }),
-  );
-
+function useUsersListNavActions(): UsersListNavActions {
+  const navigate = Route.useNavigate();
   const setRole = useCallback(
     (role: RoleFilter): void => {
       void navigate({ search: (prev) => ({ ...prev, role, page: 1 }) });
@@ -140,6 +127,25 @@ function UsersListRoute(): ReactNode {
     },
     [navigate],
   );
+  return { setRole, setPage, setSearch };
+}
+
+function UsersListRoute(): ReactNode {
+  const search = Route.useSearch();
+  const { user } = Route.useRouteContext();
+
+  const query = useQuery(
+    orpc.user.list.queryOptions({
+      input: {
+        limit: PAGE_SIZE,
+        offset: (search.page - 1) * PAGE_SIZE,
+        ...(search.role !== "all" ? { role: search.role } : {}),
+        ...(search.q ? { search: search.q } : {}),
+      },
+    }),
+  );
+
+  const { setRole, setPage, setSearch } = useUsersListNavActions();
 
   const rows: readonly User[] = query.data ?? [];
   const canPrev = search.page > 1;
