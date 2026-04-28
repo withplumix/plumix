@@ -715,7 +715,7 @@ const EXACT_BADGE_LABELS: Readonly<Record<string, string>> = {
   "application/zip": "ZIP",
 };
 
-const SUBSTRING_BADGE_LABELS: ReadonlyArray<readonly [string, string]> = [
+const SUBSTRING_BADGE_LABELS: readonly (readonly [string, string])[] = [
   ["wordprocessingml", "DOCX"],
   ["spreadsheetml", "XLSX"],
   ["presentationml", "PPTX"],
