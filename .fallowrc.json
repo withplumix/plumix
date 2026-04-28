@@ -1,0 +1,10 @@
+{
+  "$schema": "https://docs.fallow.tools/schema/fallowrc.json",
+  "entry": [
+    "examples/*/plumix.config.ts",
+    "packages/plugins/*/playground/plumix.config.ts",
+    "packages/admin/test/setup.ts",
+    "packages/plugins/*/src/admin/index.tsx",
+    "packages/plumix/src/admin/theme.css"
+  ]
+}

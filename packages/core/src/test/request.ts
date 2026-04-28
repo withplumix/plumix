@@ -102,21 +102,29 @@ export class TestResponse {
     this.#bodyText = response.clone().text();
   }
 
-  // Surfaced for cookie / header pass-through patterns where a test
-  // needs the raw header value after asserting it exists.
+  // The five members below are consumed only from *.test.ts files;
+  // fallow's class-member analyser treats test files as terminal
+  // entry points (not usage sites), so it flags everything as unused
+  // even though the passkey-routes test suite calls them directly.
+  // Per-line suppressions document the consumer.
+
+  // fallow-ignore-next-line unused-class-member
   get headers(): Headers {
     return this.#response.headers;
   }
 
+  // fallow-ignore-next-line unused-class-member
   async text(): Promise<string> {
     return this.#bodyText;
   }
 
+  // fallow-ignore-next-line unused-class-member
   async json<T = unknown>(): Promise<T> {
     const text = await this.#bodyText;
     return JSON.parse(text) as T;
   }
 
+  // fallow-ignore-next-line unused-class-member
   assertStatus(code: number): this {
     if (this.#response.status !== code) {
       throw new Error(
@@ -129,6 +137,7 @@ export class TestResponse {
   /**
    * Assert a Set-Cookie header was issued for the named cookie.
    */
+  // fallow-ignore-next-line unused-class-member
   assertCookieSet(name: string): this {
     const set = this.#response.headers.get("set-cookie");
     if (!set?.includes(`${name}=`)) {
