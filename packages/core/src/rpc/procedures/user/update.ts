@@ -44,7 +44,8 @@ function assertCanChangeRole(
   context: AuthenticatedAppContext,
   guards: AccessGuards,
 ): void {
-  if (!context.auth.can(PROMOTE_CAPABILITY)) guards.forbidden(PROMOTE_CAPABILITY);
+  if (!context.auth.can(PROMOTE_CAPABILITY))
+    guards.forbidden(PROMOTE_CAPABILITY);
 }
 
 async function writeUserColumns(
@@ -134,17 +135,23 @@ export const update = base
     let updated: User = existing;
     let rowWritten = false;
     if (Object.keys(patch).length > 0) {
-      updated = await writeUserColumns(context, existing, patch, demotingAdmin, {
-        emailTaken: () => {
-          throw errors.CONFLICT({ data: { reason: "email_taken" } });
+      updated = await writeUserColumns(
+        context,
+        existing,
+        patch,
+        demotingAdmin,
+        {
+          emailTaken: () => {
+            throw errors.CONFLICT({ data: { reason: "email_taken" } });
+          },
+          lastAdmin: () => {
+            throw errors.CONFLICT({ data: { reason: "last_admin" } });
+          },
+          updateFailed: () => {
+            throw errors.CONFLICT({ data: { reason: "update_failed" } });
+          },
         },
-        lastAdmin: () => {
-          throw errors.CONFLICT({ data: { reason: "last_admin" } });
-        },
-        updateFailed: () => {
-          throw errors.CONFLICT({ data: { reason: "update_failed" } });
-        },
-      });
+      );
       rowWritten = true;
     }
 

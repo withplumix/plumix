@@ -1019,7 +1019,12 @@ function humanizeGroupId(id: string): string {
 function seedNavGroups(): Map<string, MutableAdminNavGroup> {
   const groups = new Map<string, MutableAdminNavGroup>();
   for (const g of CORE_NAV_GROUPS) {
-    groups.set(g.id, { id: g.id, label: g.label, priority: g.priority, items: [] });
+    groups.set(g.id, {
+      id: g.id,
+      label: g.label,
+      priority: g.priority,
+      items: [],
+    });
   }
   for (const { groupId, item } of CORE_NAV_ITEMS) {
     groups.get(groupId)?.items.push(item);
@@ -1126,7 +1131,10 @@ function projectAdminNav(
 
   return Array.from(groups.values())
     .filter((g) => g.items.length > 0)
-    .map((g) => ({ ...g, items: g.items.slice().sort(compareByOrderThenLabel) }))
+    .map((g) => ({
+      ...g,
+      items: g.items.slice().sort(compareByOrderThenLabel),
+    }))
     .sort(compareByPriorityThenId);
 }
 

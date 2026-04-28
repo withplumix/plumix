@@ -144,7 +144,6 @@ export class HookRegistry implements HookExecutor {
       }
     }
   }
-
 }
 
 function sortEntries<T extends { priority: number; insertOrder: number }>(

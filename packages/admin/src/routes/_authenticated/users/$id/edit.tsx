@@ -1,3 +1,4 @@
+import type { QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
@@ -26,7 +27,6 @@ import { hasCap } from "@/lib/caps.js";
 import { visibleUserMetaBoxes } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import type { QueryClient } from "@tanstack/react-query";
 import {
   useMutation,
   useQuery,

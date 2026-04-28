@@ -155,14 +155,19 @@ export const update = base
     }
 
     if (filtered.parentId != null && filtered.parentId !== existing.parentId) {
-      await assertParentReassignmentValid(context, existing, filtered.parentId, {
-        notFound: (parentId) => {
-          throw errors.NOT_FOUND({ data: { kind: "post", id: parentId } });
+      await assertParentReassignmentValid(
+        context,
+        existing,
+        filtered.parentId,
+        {
+          notFound: (parentId) => {
+            throw errors.NOT_FOUND({ data: { kind: "post", id: parentId } });
+          },
+          cycle: () => {
+            throw errors.CONFLICT({ data: { reason: "parent_cycle" } });
+          },
         },
-        cycle: () => {
-          throw errors.CONFLICT({ data: { reason: "parent_cycle" } });
-        },
-      });
+      );
     }
 
     // `terms` and `meta` aren't entries.* columns — split them out and
