@@ -141,54 +141,16 @@ interface PendingUpload {
   readonly progress: number; // 0..1
 }
 
-export function MediaLibrary(): ReactNode {
-  const queryClient = useQueryClient();
+interface MediaUploadState {
+  readonly pending: readonly PendingUpload[];
+  readonly errorMsg: string | null;
+  readonly setErrorMsg: (msg: string | null) => void;
+  readonly startUpload: (files: readonly File[]) => Promise<void>;
+}
+
+function useMediaUpload(invalidateList: () => void): MediaUploadState {
   const [pending, setPending] = useState<readonly PendingUpload[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [dragging, setDragging] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-
-  const list = useInfiniteQuery({
-    queryKey: MEDIA_LIST_KEY,
-    initialPageParam: 0,
-    queryFn: ({ pageParam }: { pageParam: number }) =>
-      rpcCall<MediaListResponse>("media/list", {
-        limit: PAGE_SIZE,
-        offset: pageParam,
-      }),
-    getNextPageParam: (last, allPages) =>
-      last.hasMore ? allPages.length * PAGE_SIZE : undefined,
-  });
-
-  const items = useMemo(
-    () => list.data?.pages.flatMap((p) => p.items) ?? [],
-    [list.data?.pages],
-  );
-
-  const invalidateList = useCallback((): void => {
-    void queryClient.invalidateQueries({ queryKey: MEDIA_LIST_KEY });
-  }, [queryClient]);
-
-  // Auto-fetch the next page when the sentinel scrolls into view. The
-  // dependency on `list.data?.pages.length` re-binds the observer after
-  // each page lands so we don't miss the next intersection.
-  useEffect(() => {
-    const node = sentinelRef.current;
-    if (!node) return;
-    if (!list.hasNextPage) return;
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0]?.isIntersecting && !list.isFetchingNextPage) {
-        void list.fetchNextPage();
-      }
-    });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [
-    list,
-    list.hasNextPage,
-    list.isFetchingNextPage,
-    list.data?.pages.length,
-  ]);
 
   const uploadOne = useCallback(async (file: File): Promise<void> => {
     const slot: PendingUpload = {
@@ -226,9 +188,7 @@ export function MediaLibrary(): ReactNode {
             );
           },
         );
-        await rpcCall<ConfirmResponse>("media/confirm", {
-          id: init.mediaId,
-        });
+        await rpcCall<ConfirmResponse>("media/confirm", { id: init.mediaId });
       } catch (error) {
         await tryCleanupDraft(init.mediaId);
         throw error;
@@ -251,6 +211,72 @@ export function MediaLibrary(): ReactNode {
     },
     [uploadOne, invalidateList],
   );
+
+  return { pending, errorMsg, setErrorMsg, startUpload };
+}
+
+// Generic intersection-observer-on-sentinel hook. Re-binds when the
+// data length changes so we don't miss the next intersection after a
+// page lands.
+function useInfiniteScrollSentinel(
+  sentinelRef: React.RefObject<HTMLDivElement | null>,
+  hasNextPage: boolean,
+  isFetchingNextPage: boolean,
+  fetchNextPage: () => void,
+  dataLength: number | undefined,
+): void {
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return;
+    if (!hasNextPage) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [sentinelRef, hasNextPage, isFetchingNextPage, fetchNextPage, dataLength]);
+}
+
+export function MediaLibrary(): ReactNode {
+  const queryClient = useQueryClient();
+  const [dragging, setDragging] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const list = useInfiniteQuery({
+    queryKey: MEDIA_LIST_KEY,
+    initialPageParam: 0,
+    queryFn: ({ pageParam }: { pageParam: number }) =>
+      rpcCall<MediaListResponse>("media/list", {
+        limit: PAGE_SIZE,
+        offset: pageParam,
+      }),
+    getNextPageParam: (last, allPages) =>
+      last.hasMore ? allPages.length * PAGE_SIZE : undefined,
+  });
+
+  const items = useMemo(
+    () => list.data?.pages.flatMap((p) => p.items) ?? [],
+    [list.data?.pages],
+  );
+
+  const invalidateList = useCallback((): void => {
+    void queryClient.invalidateQueries({ queryKey: MEDIA_LIST_KEY });
+  }, [queryClient]);
+
+  useInfiniteScrollSentinel(
+    sentinelRef,
+    list.hasNextPage,
+    list.isFetchingNextPage,
+    () => {
+      void list.fetchNextPage();
+    },
+    list.data?.pages.length,
+  );
+
+  const { pending, errorMsg, setErrorMsg, startUpload } =
+    useMediaUpload(invalidateList);
 
   const remove = useMutation({
     mutationFn: (id: number) => rpcCall<{ id: number }>("media/delete", { id }),
