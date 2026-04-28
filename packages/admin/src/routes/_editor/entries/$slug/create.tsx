@@ -1,15 +1,12 @@
 import type { PostEditorValues } from "@/components/editor/entry-editor-form.js";
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { PostEditorForm } from "@/components/editor/entry-editor-form.js";
+import { useEntryFormScope } from "@/components/editor/use-entry-form-scope.js";
 import { useParentOptions } from "@/components/editor/use-parent-options.js";
 import { hasCap } from "@/lib/caps.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
-import {
-  entryMetaBoxesForType,
-  findEntryTypeBySlug,
-  visibleTermTaxonomies,
-} from "@/lib/manifest.js";
+import { findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { filterTermsForEntryType } from "@/lib/terms.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -113,21 +110,10 @@ function NewPostRoute(): ReactNode {
     isHierarchical,
   });
 
-  // Meta boxes registered for this post type, filtered by the user's
-  // capabilities. Memo keyed on `user.capabilities` avoids refiltering
-  // every render while keeping the helper out of the component body.
-  const metaBoxes = useMemo(
-    () => entryMetaBoxesForType(entryType.name, user.capabilities),
-    [entryType.name, user.capabilities],
+  const { metaBoxes, taxonomies } = useEntryFormScope(
+    entryType,
+    user.capabilities,
   );
-  // Taxonomies registered against this entry type AND visible to the
-  // viewer. The form renders one rail section per taxonomy.
-  const taxonomies = useMemo(() => {
-    const allowed = new Set(entryType.termTaxonomies ?? []);
-    return visibleTermTaxonomies(user.capabilities).filter((t) =>
-      allowed.has(t.name),
-    );
-  }, [entryType.termTaxonomies, user.capabilities]);
 
   const singularLower = (
     entryType.labels?.singular ?? entryType.label
