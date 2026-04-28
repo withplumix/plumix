@@ -1016,25 +1016,21 @@ function humanizeGroupId(id: string): string {
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
-function projectAdminNav(
-  registry: PluginRegistry,
-  entries: readonly EntryTypeManifestEntry[],
-  termTaxonomies: readonly TermTaxonomyManifestEntry[],
-): readonly AdminNavGroup[] {
+function seedNavGroups(): Map<string, MutableAdminNavGroup> {
   const groups = new Map<string, MutableAdminNavGroup>();
   for (const g of CORE_NAV_GROUPS) {
-    groups.set(g.id, {
-      id: g.id,
-      label: g.label,
-      priority: g.priority,
-      items: [],
-    });
+    groups.set(g.id, { id: g.id, label: g.label, priority: g.priority, items: [] });
   }
-
   for (const { groupId, item } of CORE_NAV_ITEMS) {
     groups.get(groupId)?.items.push(item);
   }
+  return groups;
+}
 
+function addEntryNavItems(
+  groups: Map<string, MutableAdminNavGroup>,
+  entries: readonly EntryTypeManifestEntry[],
+): void {
   for (const entry of entries) {
     if (entry.showInSidebar !== true) continue;
     groups.get("content")?.items.push({
@@ -1045,8 +1041,13 @@ function projectAdminNav(
       capability: `entry:${entry.capabilityType ?? entry.name}:edit_own`,
     });
   }
+}
 
-  for (const tax of termTaxonomies) {
+function addTaxonomyNavItems(
+  groups: Map<string, MutableAdminNavGroup>,
+  taxonomies: readonly TermTaxonomyManifestEntry[],
+): void {
+  for (const tax of taxonomies) {
     if (tax.showInSidebar !== true) continue;
     groups.get("term-taxonomies")?.items.push({
       to: `/terms/${tax.name}`,
@@ -1055,25 +1056,35 @@ function projectAdminNav(
       capability: `term:${tax.name}:read`,
     });
   }
+}
 
+function ensureNavGroup(
+  groups: Map<string, MutableAdminNavGroup>,
+  groupRef: string | { id: string; label?: string; priority?: number },
+): MutableAdminNavGroup {
+  const groupId = typeof groupRef === "string" ? groupRef : groupRef.id;
+  const existing = groups.get(groupId);
+  if (existing) return existing;
+  // Custom group, first occurrence — derive metadata from the inline
+  // form when present, else humanize the id.
+  const meta = typeof groupRef === "object" ? groupRef : null;
+  const created: MutableAdminNavGroup = {
+    id: groupId,
+    label: meta?.label ?? humanizeGroupId(groupId),
+    priority: meta?.priority ?? CUSTOM_NAV_GROUP_PRIORITY,
+    items: [],
+  };
+  groups.set(groupId, created);
+  return created;
+}
+
+function addAdminPageNavItems(
+  groups: Map<string, MutableAdminNavGroup>,
+  registry: PluginRegistry,
+): void {
   for (const page of registry.adminPages.values()) {
     if (!page.nav) continue;
-    const groupRef = page.nav.group;
-    const groupId = typeof groupRef === "string" ? groupRef : groupRef.id;
-    let target = groups.get(groupId);
-    if (!target) {
-      // Custom group, first occurrence — derive metadata from the
-      // inline form when present, else humanize the id.
-      const meta = typeof groupRef === "object" ? groupRef : null;
-      target = {
-        id: groupId,
-        label: meta?.label ?? humanizeGroupId(groupId),
-        priority: meta?.priority ?? CUSTOM_NAV_GROUP_PRIORITY,
-        items: [],
-      };
-      groups.set(groupId, target);
-    }
-    target.items.push({
+    ensureNavGroup(groups, page.nav.group).items.push({
       to: `/pages${page.path}`,
       label: page.nav.label,
       order: page.nav.order,
@@ -1083,25 +1094,40 @@ function projectAdminNav(
       capability: page.capability,
     });
   }
+}
+
+function compareByOrderThenLabel(
+  a: { order?: number; label: string },
+  b: { order?: number; label: string },
+): number {
+  const ao = a.order ?? Number.POSITIVE_INFINITY;
+  const bo = b.order ?? Number.POSITIVE_INFINITY;
+  return ao - bo || a.label.localeCompare(b.label);
+}
+
+function compareByPriorityThenId(
+  a: { priority?: number; id: string },
+  b: { priority?: number; id: string },
+): number {
+  const ap = a.priority ?? Number.POSITIVE_INFINITY;
+  const bp = b.priority ?? Number.POSITIVE_INFINITY;
+  return ap - bp || a.id.localeCompare(b.id);
+}
+
+function projectAdminNav(
+  registry: PluginRegistry,
+  entries: readonly EntryTypeManifestEntry[],
+  termTaxonomies: readonly TermTaxonomyManifestEntry[],
+): readonly AdminNavGroup[] {
+  const groups = seedNavGroups();
+  addEntryNavItems(groups, entries);
+  addTaxonomyNavItems(groups, termTaxonomies);
+  addAdminPageNavItems(groups, registry);
 
   return Array.from(groups.values())
-    .map((g) => ({
-      ...g,
-      items: g.items
-        .slice()
-        .sort(
-          (a, b) =>
-            (a.order ?? Number.POSITIVE_INFINITY) -
-              (b.order ?? Number.POSITIVE_INFINITY) ||
-            a.label.localeCompare(b.label),
-        ),
-    }))
     .filter((g) => g.items.length > 0)
-    .sort(
-      (a, b) =>
-        (a.priority ?? Number.POSITIVE_INFINITY) -
-          (b.priority ?? Number.POSITIVE_INFINITY) || a.id.localeCompare(b.id),
-    );
+    .map((g) => ({ ...g, items: g.items.slice().sort(compareByOrderThenLabel) }))
+    .sort(compareByPriorityThenId);
 }
 
 /**
