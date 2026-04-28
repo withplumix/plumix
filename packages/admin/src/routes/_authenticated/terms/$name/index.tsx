@@ -2,6 +2,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import { useCallback, useMemo } from "react";
 import { DataTable } from "@/components/data-table/data-table.js";
+import { ListPagination } from "@/components/data-table/list-pagination.js";
 import { DebouncedSearchInput } from "@/components/form/search-input.js";
 import { buildTermTree, flattenTree } from "@/components/taxonomy/tree.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
@@ -13,11 +14,6 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty.js";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-} from "@/components/ui/pagination.js";
 import { hasCap } from "@/lib/caps.js";
 import { findTermTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
@@ -28,7 +24,7 @@ import {
   notFound,
   useNavigate,
 } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import * as v from "valibot";
 
 import type { TermTaxonomyManifestEntry } from "@plumix/core/manifest";
@@ -282,41 +278,13 @@ function TaxonomyListRoute(): ReactNode {
         />
       )}
 
-      <Pagination className="justify-between">
-        <span className="text-muted-foreground text-sm">
-          Page {search.page}
-        </span>
-        <PaginationContent>
-          <PaginationItem>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={!canPrev || query.isPending}
-              onClick={() => {
-                setPage(search.page - 1);
-              }}
-              aria-label="Go to previous page"
-            >
-              <ChevronLeft />
-              <span className="hidden sm:inline">Previous</span>
-            </Button>
-          </PaginationItem>
-          <PaginationItem>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={!canNext || query.isPending}
-              onClick={() => {
-                setPage(search.page + 1);
-              }}
-              aria-label="Go to next page"
-            >
-              <span className="hidden sm:inline">Next</span>
-              <ChevronRight />
-            </Button>
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
+      <ListPagination
+        page={search.page}
+        canPrev={canPrev}
+        canNext={canNext}
+        isLoading={query.isPending}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

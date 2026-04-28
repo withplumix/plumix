@@ -2,6 +2,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { DataTable } from "@/components/data-table/data-table.js";
+import { ListPagination } from "@/components/data-table/list-pagination.js";
 import { MultiSelect } from "@/components/form/multi-select.js";
 import { DebouncedSearchInput } from "@/components/form/search-input.js";
 import {
@@ -25,11 +26,6 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty.js";
 import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-} from "@/components/ui/pagination.js";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -50,14 +46,7 @@ import {
   notFound,
   useNavigate,
 } from "@tanstack/react-router";
-import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-} from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Plus } from "lucide-react";
 import * as v from "valibot";
 
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
@@ -500,41 +489,13 @@ function ContentListRoute(): ReactNode {
         />
       )}
 
-      <Pagination className="justify-between">
-        <span className="text-muted-foreground text-sm">
-          Page {search.page}
-        </span>
-        <PaginationContent>
-          <PaginationItem>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={!canPrev || query.isPending}
-              onClick={() => {
-                setPage(search.page - 1);
-              }}
-              aria-label="Go to previous page"
-            >
-              <ChevronLeft />
-              <span className="hidden sm:inline">Previous</span>
-            </Button>
-          </PaginationItem>
-          <PaginationItem>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={!canNext || query.isPending}
-              onClick={() => {
-                setPage(search.page + 1);
-              }}
-              aria-label="Go to next page"
-            >
-              <span className="hidden sm:inline">Next</span>
-              <ChevronRight />
-            </Button>
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
+      <ListPagination
+        page={search.page}
+        canPrev={canPrev}
+        canNext={canNext}
+        isLoading={query.isPending}
+        onPageChange={setPage}
+      />
 
       <AlertDialog
         open={pendingTrashId !== null}
