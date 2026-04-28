@@ -11,13 +11,13 @@ const CHALLENGE_TYPE = "webauthn_challenge" as const;
 // At 10% we expect the sweep to fire ~1 in 10 registrations/logins.
 const OPPORTUNISTIC_PRUNE_PROBABILITY = 0.1;
 
-export interface IssuedChallenge {
+interface IssuedChallenge {
   /** Raw challenge (sent to the browser, base64url). */
   readonly challenge: string;
   readonly expiresAt: Date;
 }
 
-export interface ChallengeRecord {
+interface ChallengeRecord {
   readonly userId: number | null;
   readonly expiresAt: Date;
 }

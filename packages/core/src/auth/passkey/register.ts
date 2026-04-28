@@ -26,7 +26,7 @@ import { credentials } from "../../db/schema/credentials.js";
 import { consumeChallenge, issueChallenge } from "./challenges.js";
 import { PasskeyError } from "./errors.js";
 
-export interface BeginRegistrationInput {
+interface BeginRegistrationInput {
   readonly userId: number;
   readonly userEmail: string;
   readonly userDisplayName?: string;
@@ -72,7 +72,7 @@ export async function beginRegistration(
   };
 }
 
-export interface VerifiedRegistration {
+interface VerifiedRegistration {
   readonly credentialId: string;
   /** SEC1-uncompressed P-256 public key, ready for storage. */
   readonly publicKey: Uint8Array;
@@ -177,7 +177,7 @@ export async function finishRegistration(
   };
 }
 
-export interface PersistCredentialInput {
+interface PersistCredentialInput {
   readonly userId: number;
   readonly verified: VerifiedRegistration;
   readonly name?: string;

@@ -25,7 +25,7 @@ import { credentials } from "../../db/schema/credentials.js";
 import { consumeChallenge, issueChallenge } from "./challenges.js";
 import { PasskeyError } from "./errors.js";
 
-export interface BeginAuthenticationInput {
+interface BeginAuthenticationInput {
   readonly allowCredentials?: readonly Credential[];
 }
 
@@ -48,7 +48,7 @@ export async function beginAuthentication(
   };
 }
 
-export interface VerifiedAuthentication {
+interface VerifiedAuthentication {
   readonly credential: Credential;
   readonly newSignatureCounter: number;
 }
