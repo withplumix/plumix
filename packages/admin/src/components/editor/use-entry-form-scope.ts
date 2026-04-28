@@ -10,7 +10,7 @@ import type {
   TermTaxonomyManifestEntry,
 } from "@plumix/core/manifest";
 
-export interface EntryFormScope {
+interface EntryFormScope {
   readonly metaBoxes: readonly EntryMetaBoxManifestEntry[];
   readonly taxonomies: readonly TermTaxonomyManifestEntry[];
 }
