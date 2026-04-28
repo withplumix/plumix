@@ -41,6 +41,33 @@ function registerTermMetaFields(
   });
 }
 
+// The term:meta_changed empty-patch and upsert/delete tests share the
+// same scaffold: an admin-authed harness with a category that has an
+// icon_url field registered, a "Travel" term created, and an action
+// spy already attached.
+async function setupTravelCategoryWithIconUrl(): Promise<{
+  h: Awaited<ReturnType<typeof createRpcHarness>>;
+  created: Awaited<
+    ReturnType<
+      Awaited<ReturnType<typeof createRpcHarness>>["client"]["term"]["create"]
+    >
+  >;
+  spy: ReturnType<Awaited<ReturnType<typeof createRpcHarness>>["spyAction"]>;
+}> {
+  const plugins = taxonomyRegistry();
+  registerTermMetaFields(plugins, "category", [
+    { key: "icon_url", label: "Icon URL", type: "string", inputType: "url" },
+  ]);
+  const h = await createRpcHarness({ authAs: "admin", plugins });
+  const created = await h.client.term.create({
+    taxonomy: "category",
+    name: "Travel",
+    slug: "travel",
+  });
+  const spy = h.spyAction("term:meta_changed");
+  return { h, created, spy };
+}
+
 describe("term meta: registration + round-trip via term.update", () => {
   test("registered meta keys persist through term.create + term.get", async () => {
     const plugins = taxonomyRegistry();
@@ -161,18 +188,7 @@ describe("term meta: registration + round-trip via term.update", () => {
   });
 
   test("term.update with an empty meta patch does not fire term:meta_changed", async () => {
-    const plugins = taxonomyRegistry();
-    registerTermMetaFields(plugins, "category", [
-      { key: "icon_url", label: "Icon URL", type: "string", inputType: "url" },
-    ]);
-    const h = await createRpcHarness({ authAs: "admin", plugins });
-
-    const created = await h.client.term.create({
-      taxonomy: "category",
-      name: "Travel",
-      slug: "travel",
-    });
-    const spy = h.spyAction("term:meta_changed");
+    const { h, created, spy } = await setupTravelCategoryWithIconUrl();
 
     await h.client.term.update({ id: created.id, meta: {} });
 
@@ -180,18 +196,7 @@ describe("term meta: registration + round-trip via term.update", () => {
   });
 
   test("term:meta_changed fires with the upsert + delete diff", async () => {
-    const plugins = taxonomyRegistry();
-    registerTermMetaFields(plugins, "category", [
-      { key: "icon_url", label: "Icon URL", type: "string", inputType: "url" },
-    ]);
-    const h = await createRpcHarness({ authAs: "admin", plugins });
-
-    const created = await h.client.term.create({
-      taxonomy: "category",
-      name: "Travel",
-      slug: "travel",
-    });
-    const spy = h.spyAction("term:meta_changed");
+    const { h, created, spy } = await setupTravelCategoryWithIconUrl();
 
     await h.client.term.update({
       id: created.id,
