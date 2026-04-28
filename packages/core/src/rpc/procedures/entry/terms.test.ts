@@ -52,6 +52,30 @@ async function seedTerm(
   return row.id;
 }
 
+// Both replacement-semantics and sortOrder tests need the same shape:
+// an editor-authed harness, an empty post, and three pre-seeded
+// "category" terms. Centralized so a future tweak to the scaffold
+// only edits once.
+async function setupEditorWithThreeCategoryTerms(): Promise<{
+  h: Awaited<ReturnType<typeof createRpcHarness>>;
+  post: Awaited<
+    ReturnType<
+      Awaited<ReturnType<typeof createRpcHarness>>["factory"]["draft"]["create"]
+    >
+  >;
+  a: number;
+  b: number;
+  c: number;
+}> {
+  const plugins = taxonomyRegistry();
+  const h = await createRpcHarness({ authAs: "editor", plugins });
+  const post = await h.factory.draft.create({ authorId: h.user.id });
+  const a = await seedTerm(h, "category", "a");
+  const b = await seedTerm(h, "category", "b");
+  const c = await seedTerm(h, "category", "c");
+  return { h, post, a, b, c };
+}
+
 async function readTermIds(
   h: Awaited<ReturnType<typeof createRpcHarness>>,
   entryId: number,
@@ -85,12 +109,7 @@ describe("entry.update — terms", () => {
   });
 
   test("replacement semantics — new list overwrites the old one entirely", async () => {
-    const plugins = taxonomyRegistry();
-    const h = await createRpcHarness({ authAs: "editor", plugins });
-    const post = await h.factory.draft.create({ authorId: h.user.id });
-    const a = await seedTerm(h, "category", "a");
-    const b = await seedTerm(h, "category", "b");
-    const c = await seedTerm(h, "category", "c");
+    const { h, post, a, b, c } = await setupEditorWithThreeCategoryTerms();
 
     await h.client.entry.update({ id: post.id, terms: { category: [a, b] } });
     await h.client.entry.update({ id: post.id, terms: { category: [c] } });
@@ -227,12 +246,7 @@ describe("entry.update — terms", () => {
   });
 
   test("sortOrder mirrors input array order", async () => {
-    const plugins = taxonomyRegistry();
-    const h = await createRpcHarness({ authAs: "editor", plugins });
-    const post = await h.factory.draft.create({ authorId: h.user.id });
-    const a = await seedTerm(h, "category", "a");
-    const b = await seedTerm(h, "category", "b");
-    const c = await seedTerm(h, "category", "c");
+    const { h, post, a, b, c } = await setupEditorWithThreeCategoryTerms();
 
     await h.client.entry.update({
       id: post.id,
