@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 
-import { CliError } from "@plumix/core";
+import { CliError } from "./errors.js";
 
 interface SpawnOptions {
   readonly cwd: string;
@@ -35,9 +35,7 @@ export function spawnInherit(
       reject(
         new CliError(
           `${command} exited with ${signal ? `signal ${signal}` : `code ${code ?? "unknown"}`}`,
-          {
-            code: "SPAWN_NONZERO_EXIT",
-          },
+          { code: "SPAWN_NONZERO_EXIT" },
         ),
       );
     });
