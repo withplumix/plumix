@@ -12,6 +12,37 @@ interface TermPatchThrowers {
   termTaxonomyMismatch(): never;
 }
 
+interface TermsPatchErrorMap {
+  NOT_FOUND(opts: { data: { kind: string; id: string | number } }): Error;
+  FORBIDDEN(opts: { data: { capability: string } }): Error;
+  CONFLICT(opts: { data: { reason: string } }): Error;
+}
+
+/**
+ * Build the standard guard-callback bundle entry create / update both
+ * pass to `assertTermsPatchValid`: NOT_FOUND for unknown taxonomies,
+ * FORBIDDEN for missing assign capability, CONFLICT for cross-taxonomy
+ * mismatch. Centralizes the rpc-error shapes shared between the two
+ * procedures so a future error-payload tweak only changes here.
+ */
+export function buildTermsPatchGuards(
+  errors: TermsPatchErrorMap,
+): TermPatchThrowers {
+  return {
+    taxonomyNotFound: (taxonomy) => {
+      throw errors.NOT_FOUND({
+        data: { kind: "termTaxonomy", id: taxonomy },
+      });
+    },
+    forbidden: (capability) => {
+      throw errors.FORBIDDEN({ data: { capability } });
+    },
+    termTaxonomyMismatch: () => {
+      throw errors.CONFLICT({ data: { reason: "term_taxonomy_mismatch" } });
+    },
+  };
+}
+
 /**
  * Validate a `terms` patch from an entry create/update payload:
  * - every taxonomy must be registered with core

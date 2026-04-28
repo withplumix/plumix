@@ -23,7 +23,11 @@ import {
   writeEntryMeta,
 } from "./meta.js";
 import { entryUpdateInputSchema } from "./schemas.js";
-import { applyTermPatch, assertTermsPatchValid } from "./terms.js";
+import {
+  applyTermPatch,
+  assertTermsPatchValid,
+  buildTermsPatchGuards,
+} from "./terms.js";
 
 interface AccessGuards {
   readonly forbidden: (capability: string) => never;
@@ -186,19 +190,11 @@ export const update = base
       errors,
     );
     if (termsPatch !== undefined) {
-      await assertTermsPatchValid(context, termsPatch, {
-        taxonomyNotFound: (taxonomy) => {
-          throw errors.NOT_FOUND({
-            data: { kind: "termTaxonomy", id: taxonomy },
-          });
-        },
-        forbidden: (capability) => {
-          throw errors.FORBIDDEN({ data: { capability } });
-        },
-        termTaxonomyMismatch: () => {
-          throw errors.CONFLICT({ data: { reason: "term_taxonomy_mismatch" } });
-        },
-      });
+      await assertTermsPatchValid(
+        context,
+        termsPatch,
+        buildTermsPatchGuards(errors),
+      );
     }
 
     const patch: Partial<NewEntry> = stripUndefined(changes);
