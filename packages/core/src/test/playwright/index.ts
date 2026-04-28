@@ -4,6 +4,9 @@ import type { PlumixManifest } from "../../plugin/manifest.js";
 import type { AuthSessionOutput } from "../../rpc/procedures/auth/schemas.js";
 import { emptyManifest } from "../../plugin/manifest.js";
 
+export type { BuildAdminPluginChunkOptions } from "./build-admin-chunk.js";
+export { buildAdminPluginChunkForE2E } from "./build-admin-chunk.js";
+
 /**
  * Playwright helpers for plugin authors testing their admin pages
  * against a running plumix site. Keep the surface small: mock RPC

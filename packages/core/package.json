@@ -60,10 +60,14 @@
     "valibot": "catalog:"
   },
   "peerDependencies": {
-    "@playwright/test": "^1.59.0"
+    "@playwright/test": "^1.59.0",
+    "esbuild": "^0.27.0"
   },
   "peerDependenciesMeta": {
     "@playwright/test": {
+      "optional": true
+    },
+    "esbuild": {
       "optional": true
     }
   },
@@ -75,6 +79,7 @@
     "@plumix/vitest-config": "workspace:*",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "esbuild": "0.27.7",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:",
