@@ -30,9 +30,8 @@ yarn-error.log*
 # turbo
 .turbo
 
-# caches (tsbuildinfo, eslint, prettier, fallow)
+# caches (tsbuildinfo, eslint, prettier)
 .cache
-.fallow/
 
 # cloudflare
 .wrangler/
