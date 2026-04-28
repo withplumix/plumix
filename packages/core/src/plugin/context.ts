@@ -595,23 +595,35 @@ function assertValidNavGroupId(pluginId: string, id: string): void {
   }
 }
 
-function assertValidAdminPagePath(pluginId: string, path: string): void {
+// Shared `/`-anchored path validation: must start with /, no `//` or
+// `..` traversal, no `?` / `#` (we match on pathname only). The
+// admin-page and plugin-route validators diverge after this on how
+// they handle `*`, so the wildcard rule stays at each call site.
+function assertValidPathPrefix(
+  pluginId: string,
+  path: string,
+  kind: string,
+): void {
   if (!path.startsWith("/")) {
     throw new Error(
-      `Plugin "${pluginId}" admin page path "${path}" must start with "/".`,
+      `Plugin "${pluginId}" ${kind} path "${path}" must start with "/".`,
     );
   }
   if (path.includes("//") || path.includes("..")) {
     throw new Error(
-      `Plugin "${pluginId}" admin page path "${path}" contains "//" or "..".`,
+      `Plugin "${pluginId}" ${kind} path "${path}" contains "//" or "..".`,
     );
   }
   if (path.includes("?") || path.includes("#")) {
     throw new Error(
-      `Plugin "${pluginId}" admin page path "${path}" must not include ` +
-        `a query string or fragment.`,
+      `Plugin "${pluginId}" ${kind} path "${path}" must not include a query ` +
+        `string or fragment — match on the pathname only.`,
     );
   }
+}
+
+function assertValidAdminPagePath(pluginId: string, path: string): void {
+  assertValidPathPrefix(pluginId, path, "admin page");
   if (path.includes("*")) {
     throw new Error(
       `Plugin "${pluginId}" admin page path "${path}" must not contain "*" ` +
@@ -622,22 +634,7 @@ function assertValidAdminPagePath(pluginId: string, path: string): void {
 }
 
 function assertValidPluginRoutePath(pluginId: string, path: string): void {
-  if (!path.startsWith("/")) {
-    throw new Error(
-      `Plugin "${pluginId}" route path "${path}" must start with "/".`,
-    );
-  }
-  if (path.includes("//") || path.includes("..")) {
-    throw new Error(
-      `Plugin "${pluginId}" route path "${path}" contains "//" or "..".`,
-    );
-  }
-  if (path.includes("?") || path.includes("#")) {
-    throw new Error(
-      `Plugin "${pluginId}" route path "${path}" must not include a ` +
-        `query string or fragment — match on the pathname only.`,
-    );
-  }
+  assertValidPathPrefix(pluginId, path, "route");
   // Allow exactly `/*` at the very end. Any other `*` is ambiguous.
   const starIndex = path.indexOf("*");
   if (starIndex !== -1 && starIndex !== path.length - 1) {
