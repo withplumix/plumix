@@ -181,7 +181,7 @@
     "@plumix/typescript-config": "workspace:*",
     "@plumix/vitest-config": "workspace:*",
     "@tanstack/react-query": "^5.99.2",
-    "@tanstack/react-router": "^1.168.23",
+    "@tanstack/react-router": "^1.168.25",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
