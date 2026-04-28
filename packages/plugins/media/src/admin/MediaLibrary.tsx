@@ -222,7 +222,7 @@ function useInfiniteScrollSentinel(
   sentinelRef: React.RefObject<HTMLDivElement | null>,
   hasNextPage: boolean,
   isFetchingNextPage: boolean,
-  fetchNextPage: () => void,
+  fetchNextPage: () => Promise<unknown> | void,
   dataLength: number | undefined,
 ): void {
   useEffect(() => {
@@ -231,7 +231,10 @@ function useInfiniteScrollSentinel(
     if (!hasNextPage) return;
     const observer = new IntersectionObserver((entries) => {
       if (entries[0]?.isIntersecting && !isFetchingNextPage) {
-        fetchNextPage();
+        // The callback may be async (e.g. React Query's fetchNextPage)
+        // — discard the promise so eslint's no-misused-promises stays
+        // happy and we don't accidentally await inside the observer.
+        void fetchNextPage();
       }
     });
     observer.observe(node);
