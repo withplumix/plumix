@@ -69,6 +69,38 @@ export async function mockRpc(
   });
 }
 
+/**
+ * Same as `mockRpc`, but pushes the parsed `json` payload of every
+ * request whose URL ends in `captureSuffix` into an array that the
+ * caller holds a reference to. Use to assert on the RPC input shape
+ * a UI interaction produces (search box → /entry/list `search`,
+ * column header click → `orderBy`, etc) without re-implementing the
+ * page.route handler in every test.
+ */
+export async function mockRpcWithCapture(
+  page: Page,
+  options: {
+    readonly captureSuffix: string;
+    readonly captureResponse: unknown;
+    readonly handlers: MockRpcHandlers;
+  },
+): Promise<readonly unknown[]> {
+  const inputs: unknown[] = [];
+  await page.route("**/_plumix/rpc/**", (route) => {
+    const url = route.request().url();
+    if (url.endsWith(options.captureSuffix)) {
+      const body = route.request().postDataJSON() as { json?: unknown };
+      inputs.push(body.json);
+      return rpcOk(route, options.captureResponse);
+    }
+    for (const [suffix, body] of Object.entries(options.handlers)) {
+      if (url.endsWith(suffix)) return rpcOk(route, body);
+    }
+    return route.fulfill({ status: 404, body: "not-mocked" });
+  });
+  return inputs;
+}
+
 export function mockSession(
   page: Page,
   body: AuthSessionOutput,

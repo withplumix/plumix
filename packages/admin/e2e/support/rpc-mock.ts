@@ -15,6 +15,7 @@ export {
   anonymousSession,
   mockManifest,
   mockRpc,
+  mockRpcWithCapture,
   mockSession,
   rpcErrorBody,
   rpcOkBody,

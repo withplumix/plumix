@@ -7,6 +7,7 @@ import {
   MANIFEST_WITH_POST,
   mockManifest,
   mockRpc,
+  mockRpcWithCapture,
   rpcOkBody,
 } from "./support/rpc-mock.js";
 
@@ -91,26 +92,10 @@ test.describe("/entries/$slug", () => {
     // Capture every /entry/list call so we can verify the second fetch
     // carries the search param. The mock always returns `[]` — we're
     // asserting on the RPC input, not the rendering.
-    const inputs: unknown[] = [];
-    await page.route("**/_plumix/rpc/**", async (route) => {
-      const url = route.request().url();
-      if (url.endsWith("/auth/session")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody(AUTHED_ADMIN),
-        });
-      }
-      if (url.endsWith("/entry/list")) {
-        const body = route.request().postDataJSON() as { json?: unknown };
-        inputs.push(body.json);
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody([]),
-        });
-      }
-      return route.fulfill({ status: 404, body: "not-mocked" });
+    const inputs = await mockRpcWithCapture(page, {
+      captureSuffix: "/entry/list",
+      captureResponse: [],
+      handlers: { "/auth/session": AUTHED_ADMIN },
     });
 
     await page.goto("entries/posts?status=all&page=1");
@@ -130,26 +115,10 @@ test.describe("/entries/$slug", () => {
   test("Mine toggle URL-syncs author=mine and sends session.user.id as authorId", async ({
     page,
   }) => {
-    const inputs: unknown[] = [];
-    await page.route("**/_plumix/rpc/**", async (route) => {
-      const url = route.request().url();
-      if (url.endsWith("/auth/session")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody(AUTHED_ADMIN),
-        });
-      }
-      if (url.endsWith("/entry/list")) {
-        const body = route.request().postDataJSON() as { json?: unknown };
-        inputs.push(body.json);
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody([]),
-        });
-      }
-      return route.fulfill({ status: 404, body: "not-mocked" });
+    const inputs = await mockRpcWithCapture(page, {
+      captureSuffix: "/entry/list",
+      captureResponse: [],
+      handlers: { "/auth/session": AUTHED_ADMIN },
     });
 
     await page.goto("entries/posts?status=all&page=1");
@@ -168,26 +137,10 @@ test.describe("/entries/$slug", () => {
   test("column sort: clicking Title header sets orderBy=title and defaults to asc", async ({
     page,
   }) => {
-    const inputs: unknown[] = [];
-    await page.route("**/_plumix/rpc/**", async (route) => {
-      const url = route.request().url();
-      if (url.endsWith("/auth/session")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody(AUTHED_ADMIN),
-        });
-      }
-      if (url.endsWith("/entry/list")) {
-        const body = route.request().postDataJSON() as { json?: unknown };
-        inputs.push(body.json);
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody([]),
-        });
-      }
-      return route.fulfill({ status: 404, body: "not-mocked" });
+    const inputs = await mockRpcWithCapture(page, {
+      captureSuffix: "/entry/list",
+      captureResponse: [],
+      handlers: { "/auth/session": AUTHED_ADMIN },
     });
 
     await page.goto("entries/posts?status=all&page=1");
