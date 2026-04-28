@@ -170,28 +170,20 @@ function UserEditRoute(): ReactNode {
   );
 }
 
-function UserEditForm({
+function useUserUpdateMutation({
   target,
-  isSelf,
   canPromote,
-  canSave,
-  canDisable,
-  canDelete,
   metaBoxes,
+  queryClient,
+  setServerError,
 }: {
   target: User;
-  isSelf: boolean;
   canPromote: boolean;
-  canSave: boolean;
-  canDisable: boolean;
-  canDelete: boolean;
   metaBoxes: readonly UserMetaBoxManifestEntry[];
-}): ReactNode {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [serverError, setServerError] = useState<string | null>(null);
-
-  const updateUser = useMutation({
+  queryClient: QueryClient;
+  setServerError: (message: string | null) => void;
+}) {
+  return useMutation({
     mutationFn: (values: {
       name: string;
       role: UserRole;
@@ -226,6 +218,36 @@ function UserEditForm({
         ),
       );
     },
+  });
+}
+
+function UserEditForm({
+  target,
+  isSelf,
+  canPromote,
+  canSave,
+  canDisable,
+  canDelete,
+  metaBoxes,
+}: {
+  target: User;
+  isSelf: boolean;
+  canPromote: boolean;
+  canSave: boolean;
+  canDisable: boolean;
+  canDelete: boolean;
+  metaBoxes: readonly UserMetaBoxManifestEntry[];
+}): ReactNode {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const updateUser = useUserUpdateMutation({
+    target,
+    canPromote,
+    metaBoxes,
+    queryClient,
+    setServerError,
   });
 
   const form = useForm({
