@@ -26,6 +26,7 @@ import { hasCap } from "@/lib/caps.js";
 import { visibleUserMetaBoxes } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import type { QueryClient } from "@tanstack/react-query";
 import {
   useMutation,
   useQuery,
@@ -53,6 +54,18 @@ import {
   USER_ROLES,
   USERS_LIST_DEFAULT_SEARCH,
 } from "../-constants.js";
+
+async function invalidateUserCaches(
+  queryClient: QueryClient,
+  id: number,
+): Promise<void> {
+  await Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: orpc.user.get.queryOptions({ input: { id } }).queryKey,
+    }),
+    queryClient.invalidateQueries({ queryKey: orpc.user.list.key() }),
+  ]);
+}
 
 // Long-form labels for the role dropdown — same rationale as the invite
 // form (the picker benefits from affordance copy, unlike the list view's
@@ -202,13 +215,7 @@ function UserEditForm({
       // Parent route remounts via the target.updatedAt key on refetch,
       // so the form re-reads defaultValues (including sanitized meta)
       // from the fresh row automatically.
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: orpc.user.get.queryOptions({ input: { id: target.id } })
-            .queryKey,
-        }),
-        queryClient.invalidateQueries({ queryKey: orpc.user.list.key() }),
-      ]);
+      await invalidateUserCaches(queryClient, target.id);
     },
     onError: (err) => {
       setServerError(
@@ -404,13 +411,7 @@ function StatusCard({ target }: { target: User }): ReactNode {
       setServerError(null);
     },
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: orpc.user.get.queryOptions({ input: { id: target.id } })
-            .queryKey,
-        }),
-        queryClient.invalidateQueries({ queryKey: orpc.user.list.key() }),
-      ]);
+      await invalidateUserCaches(queryClient, target.id);
     },
     onError: (err) => {
       setServerError(
