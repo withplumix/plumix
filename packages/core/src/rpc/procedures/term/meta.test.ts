@@ -1,10 +1,12 @@
 import { describe, expect, test } from "vitest";
 
 import type { UserRole } from "../../../db/schema/users.js";
+import type { ActionArgs } from "../../../hooks/types.js";
 import type {
   MetaBoxField,
   MutablePluginRegistry,
 } from "../../../plugin/manifest.js";
+import type { ActionSpy } from "../../../test/spies.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
@@ -52,7 +54,7 @@ async function setupTravelCategoryWithIconUrl(): Promise<{
       Awaited<ReturnType<typeof createRpcHarness>>["client"]["term"]["create"]
     >
   >;
-  spy: ReturnType<Awaited<ReturnType<typeof createRpcHarness>>["spyAction"]>;
+  spy: ActionSpy<ActionArgs<"term:meta_changed">>;
 }> {
   const plugins = taxonomyRegistry();
   registerTermMetaFields(plugins, "category", [
