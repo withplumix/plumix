@@ -47,7 +47,7 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@libsql/client": "^0.17.2",
+    "@libsql/client": "^0.17.3",
     "@orpc/server": "^1.13.14",
     "@oslojs/crypto": "^1.0.1",
     "@oslojs/encoding": "^1.1.0",
