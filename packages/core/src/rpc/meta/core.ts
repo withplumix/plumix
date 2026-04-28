@@ -285,25 +285,31 @@ function assertEncodedSize(key: string, value: unknown): void {
   }
 }
 
+// Mirror the write-side accepted tokens instead of `Boolean(value)` — the
+// latter would flip `"false"` → `true`, silently inverting rows persisted
+// via `type: "json"` before a plugin tightened the field to `boolean`.
+const TRUTHY_BOOLEAN_TOKENS: ReadonlySet<unknown> = new Set([1, "1", "true"]);
+const FALSY_BOOLEAN_TOKENS: ReadonlySet<unknown> = new Set([0, "0", "false"]);
+
+function coerceBooleanOnRead(value: unknown): unknown {
+  if (typeof value === "boolean") return value;
+  if (TRUTHY_BOOLEAN_TOKENS.has(value)) return true;
+  if (FALSY_BOOLEAN_TOKENS.has(value)) return false;
+  return value;
+}
+
 function coerceOnRead(type: MetaScalarType, value: unknown): unknown {
   // Reads are forgiving — the row was validated on write but a
   // schema change (e.g. a plugin flipping `number` → `string`)
   // shouldn't 500 the editor. We coerce when we can and fall through
-  // to the raw value otherwise. For booleans, mirror the write-side
-  // accepted tokens instead of `Boolean(value)` — the latter would
-  // flip `"false"` → `true`, silently inverting rows persisted via
-  // `type: "json"` before a plugin tightened the field to `boolean`.
+  // to the raw value otherwise.
   switch (type) {
     case "string":
       return typeof value === "string" ? value : String(value);
     case "number":
       return typeof value === "number" ? value : Number(value);
-    case "boolean": {
-      if (typeof value === "boolean") return value;
-      if (value === 1 || value === "1" || value === "true") return true;
-      if (value === 0 || value === "0" || value === "false") return false;
-      return value;
-    }
+    case "boolean":
+      return coerceBooleanOnRead(value);
     case "json":
       return value;
   }
