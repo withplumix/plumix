@@ -1,8 +1,9 @@
 // challenge_expired is folded into challenge_not_found — `consumeChallenge`
 // returns null whether the row was missing or just expired, since the
 // distinction is meaningless to the caller (and leaking it would help
-// timing-distinguish stale from never-issued).
-export type PasskeyErrorCode =
+// timing-distinguish stale from never-issued). Admin maintains its own
+// mirror union (admin/src/lib/passkey-errors.ts) — keep them in sync.
+type PasskeyErrorCode =
   | "challenge_not_found"
   | "invalid_client_data"
   | "invalid_origin"
@@ -21,7 +22,7 @@ export type PasskeyErrorCode =
 
 // Structured diagnostic payload. Never returned to clients — the dispatcher
 // pulls it off via `error.detail` for server-side logging only.
-export interface PasskeyErrorDetail {
+interface PasskeyErrorDetail {
   readonly expected?: string;
   readonly actual?: string;
 }
