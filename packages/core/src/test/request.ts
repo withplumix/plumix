@@ -88,10 +88,12 @@ export async function buildRequest(
  * actually needs them. `deepEqual` / `partialMatch` are exported
  * from `./match.js` for body-shape checks. Earlier this class
  * shipped with `assertJson`, `assertJsonMatch`, `assertBodyContains`,
- * `assertRedirect`, `assertHeader`, `assertTemplate`, plus `raw` /
- * `status` getters — nothing called them, so they were removed
- * under the "address fallow dead-code" pass. Re-add a method when
- * you write the first test that needs it.
+ * `assertRedirect`, `assertHeader`, plus `raw` / `status` getters —
+ * nothing called them, so they were removed under the
+ * "address fallow dead-code" pass. Re-add a method when you write
+ * the first test that needs it. `assertTemplate` is intentionally
+ * kept as a NotImplemented stub for the upcoming themes phase
+ * (Phase 11+); see its JSDoc.
  */
 export class TestResponse {
   readonly #response: Response;
@@ -144,5 +146,22 @@ export class TestResponse {
       throw new Error(`assertCookieSet: no Set-Cookie for "${name}"`);
     }
     return this;
+  }
+
+  /**
+   * Assert the request resolved to the named template.
+   *
+   * @throws NotImplementedError
+   *
+   * The template layer is not built yet (Phase 11+ per PLAN.md). Once
+   * themes land, this will read from a request-scoped tracker populated
+   * by the template resolver. The surface is locked in now so tests
+   * written against it work verbatim later.
+   */
+  // fallow-ignore-next-line unused-class-member
+  assertTemplate(_name: string): this {
+    throw new Error(
+      "assertTemplate is not yet implemented — theme / template system lands with the themes phase. API is stable; call sites written now will work once the feature ships.",
+    );
   }
 }

@@ -265,13 +265,15 @@ export function MediaLibrary(): ReactNode {
     void queryClient.invalidateQueries({ queryKey: MEDIA_LIST_KEY });
   }, [queryClient]);
 
+  // `list.fetchNextPage` is a stable React Query callback. Passing it
+  // directly (rather than wrapping it in a fresh arrow each render)
+  // keeps the IntersectionObserver from being torn down + rebuilt on
+  // every parent re-render.
   useInfiniteScrollSentinel(
     sentinelRef,
     list.hasNextPage,
     list.isFetchingNextPage,
-    () => {
-      void list.fetchNextPage();
-    },
+    list.fetchNextPage,
     list.data?.pages.length,
   );
 
