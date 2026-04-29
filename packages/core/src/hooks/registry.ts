@@ -144,14 +144,6 @@ export class HookRegistry implements HookExecutor {
       }
     }
   }
-
-  listFilters(name: string): readonly FilterEntry[] {
-    return this.#filters.get(name) ?? [];
-  }
-
-  listActions(name: string): readonly ActionEntry[] {
-    return this.#actions.get(name) ?? [];
-  }
 }
 
 function sortEntries<T extends { priority: number; insertOrder: number }>(

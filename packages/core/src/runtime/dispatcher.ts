@@ -56,25 +56,31 @@ export function createPlumixDispatcher(app: PlumixApp): PlumixDispatcher {
   };
 }
 
+function enforcePlumixCsrf(app: PlumixApp, ctx: AppContext): Response | null {
+  if (!hasCsrfHeader(ctx.request)) {
+    return forbidden("csrf_header_missing");
+  }
+  // Defense-in-depth: the custom-header check already blocks cross-origin
+  // POSTs (a browser can't set X-Plumix-Request without a CORS preflight,
+  // which Plumix never grants). If an Origin header is present anyway,
+  // reject mismatches too — protects against a future misconfigured CORS
+  // layer or an intermediate that strips/forwards headers loosely.
+  if (
+    ctx.request.headers.has("origin") &&
+    !hasMatchingOrigin(ctx.request, { allowed: [app.origin] })
+  ) {
+    return forbidden("csrf_origin_mismatch");
+  }
+  return null;
+}
+
 async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   const url = new URL(ctx.request.url);
   const { pathname } = url;
 
   if (pathname.startsWith(PLUMIX_PREFIX)) {
-    if (!hasCsrfHeader(ctx.request)) {
-      return forbidden("csrf_header_missing");
-    }
-    // Defense-in-depth: the custom-header check already blocks cross-origin
-    // POSTs (a browser can't set X-Plumix-Request without a CORS preflight,
-    // which Plumix never grants). If an Origin header is present anyway,
-    // reject mismatches too — protects against a future misconfigured CORS
-    // layer or an intermediate that strips/forwards headers loosely.
-    if (
-      ctx.request.headers.has("origin") &&
-      !hasMatchingOrigin(ctx.request, { allowed: [app.origin] })
-    ) {
-      return forbidden("csrf_origin_mismatch");
-    }
+    const csrfFailure = enforcePlumixCsrf(app, ctx);
+    if (csrfFailure) return csrfFailure;
   }
 
   if (pathname === RPC_PREFIX || pathname.startsWith(`${RPC_PREFIX}/`)) {

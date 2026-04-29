@@ -4,7 +4,7 @@ import type { CredentialTransport } from "../../db/schema/credentials.js";
 // PublicKeyCredentialCreationOptions / RequestOptions shape but with strings
 // (base64url-encoded) instead of ArrayBuffers, so it serializes to JSON.
 
-export interface PublicKeyCredentialDescriptor {
+interface PublicKeyCredentialDescriptor {
   readonly type: "public-key";
   readonly id: string;
   readonly transports?: readonly CredentialTransport[];

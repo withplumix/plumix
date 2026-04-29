@@ -203,12 +203,7 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
     // a connected storage with the method removed — simulates the
     // production case where the R2 binding is attached but no S3
     // credentials are configured.
-    const stub = memoryStorage().connect({});
-    delete (stub as { presignPut?: unknown }).presignPut;
-    const h = await createDispatcherHarness({
-      plugins: [media()],
-      storage: stub,
-    });
+    const { h } = await setupBindingOnlyHarness();
     const user = await h.seedUser("contributor");
     const { status, output } = await rpcDispatch<CreateUploadUrlOutput>(
       h,
@@ -753,6 +748,25 @@ const PNG_1X1_BYTES = new Uint8Array([
   0x60, 0x82,
 ]);
 
+// Worker-routed upload tests share the same binding-only harness:
+// memoryStorage with `presignPut` stripped so the plugin falls back
+// to the worker route, plus the media plugin wired up through
+// createDispatcherHarness. Each test then layers its own auth /
+// request shape on top. The connected storage is returned alongside
+// so tests can assert directly on what landed in the bucket.
+async function setupBindingOnlyHarness(): Promise<{
+  h: Awaited<ReturnType<typeof createDispatcherHarness>>;
+  stub: ReturnType<ReturnType<typeof memoryStorage>["connect"]>;
+}> {
+  const stub = memoryStorage().connect({});
+  delete (stub as { presignPut?: unknown }).presignPut;
+  const h = await createDispatcherHarness({
+    plugins: [media()],
+    storage: stub,
+  });
+  return { h, stub };
+}
+
 describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", () => {
   // Regression for the deployed-blog-doesn't-upload bug:
   // when only the R2 binding is configured (no S3 credentials), the
@@ -760,12 +774,7 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
   // an opaque error. The createUploadUrl → PUT → confirm flow has to
   // work end-to-end through the worker route in that mode.
   test("createUploadUrl → PUT to /_plumix/media/upload/<id> → confirm round-trips bytes through the worker", async () => {
-    const stub = memoryStorage().connect({});
-    delete (stub as { presignPut?: unknown }).presignPut;
-    const h = await createDispatcherHarness({
-      plugins: [media()],
-      storage: stub,
-    });
+    const { h, stub } = await setupBindingOnlyHarness();
     const owner = await h.seedUser("contributor");
 
     const created = await rpcDispatch<CreateUploadUrlOutput>(
@@ -817,12 +826,7 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
   });
 
   test("anonymous PUT to upload route is rejected with 401", async () => {
-    const stub = memoryStorage().connect({});
-    delete (stub as { presignPut?: unknown }).presignPut;
-    const h = await createDispatcherHarness({
-      plugins: [media()],
-      storage: stub,
-    });
+    const { h } = await setupBindingOnlyHarness();
     const response = await h.dispatch(
       plumixRequest("/_plumix/media/upload/1", {
         method: "PUT",
@@ -834,12 +838,7 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
   });
 
   test("non-owner without edit_any cannot PUT to another user's draft", async () => {
-    const stub = memoryStorage().connect({});
-    delete (stub as { presignPut?: unknown }).presignPut;
-    const h = await createDispatcherHarness({
-      plugins: [media()],
-      storage: stub,
-    });
+    const { h } = await setupBindingOnlyHarness();
     const owner = await h.seedUser("contributor");
     const other = await h.seedUser("contributor");
 
@@ -874,12 +873,7 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
   test("malformed id in URL path is rejected (400) before any DB hit", async () => {
     // Anchored regex on the id segment: scientific notation, leading
     // zeros, non-numeric tails, and trailing path segments all fail.
-    const stub = memoryStorage().connect({});
-    delete (stub as { presignPut?: unknown }).presignPut;
-    const h = await createDispatcherHarness({
-      plugins: [media()],
-      storage: stub,
-    });
+    const { h } = await setupBindingOnlyHarness();
     const owner = await h.seedUser("contributor");
     const cases = ["1e3", "0", "01", "1.5", "abc", "-1", " 1"];
     for (const idStr of cases) {
@@ -904,12 +898,7 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
     // The route is mounted with `/upload/*` wildcard — without
     // strict shape validation, `/upload/1/extra` would still hit the
     // handler. The handler enforces exact `/upload/<id>$`.
-    const stub = memoryStorage().connect({});
-    delete (stub as { presignPut?: unknown }).presignPut;
-    const h = await createDispatcherHarness({
-      plugins: [media()],
-      storage: stub,
-    });
+    const { h } = await setupBindingOnlyHarness();
     const owner = await h.seedUser("contributor");
     const response = await h.dispatch(
       await h.authenticateRequest(
@@ -928,12 +917,7 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
     // Without Content-Length the byte cap could only be enforced
     // mid-stream — and a chunked body could DOS the bucket. Require
     // it up front.
-    const stub = memoryStorage().connect({});
-    delete (stub as { presignPut?: unknown }).presignPut;
-    const h = await createDispatcherHarness({
-      plugins: [media()],
-      storage: stub,
-    });
+    const { h } = await setupBindingOnlyHarness();
     const owner = await h.seedUser("contributor");
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
@@ -966,12 +950,7 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
     // We trust Content-Length as the size cap — HTTP framing only
     // delivers up to CL bytes, and an honest CL is enforced by the
     // 413 check before any byte hits storage.
-    const stub = memoryStorage().connect({});
-    delete (stub as { presignPut?: unknown }).presignPut;
-    const h = await createDispatcherHarness({
-      plugins: [media()],
-      storage: stub,
-    });
+    const { h } = await setupBindingOnlyHarness();
     const owner = await h.seedUser("contributor");
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
@@ -997,12 +976,7 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
   });
 
   test("declared content-type that doesn't match the draft's mime is rejected", async () => {
-    const stub = memoryStorage().connect({});
-    delete (stub as { presignPut?: unknown }).presignPut;
-    const h = await createDispatcherHarness({
-      plugins: [media()],
-      storage: stub,
-    });
+    const { h } = await setupBindingOnlyHarness();
     const owner = await h.seedUser("contributor");
 
     const created = await rpcDispatch<CreateUploadUrlOutput>(

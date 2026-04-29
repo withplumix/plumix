@@ -1,8 +1,7 @@
 import type { CommandDefinition } from "@plumix/core";
-import { CliError } from "@plumix/core";
+import { CliError, spawnInherit } from "@plumix/core";
 
 import { loadWranglerConfig } from "../wrangler-config.js";
-import { spawnInherit } from "./spawn.js";
 
 export const migrateApplyCommand: CommandDefinition = {
   describe: "Apply pending D1 migrations (wrangler d1 migrations apply)",

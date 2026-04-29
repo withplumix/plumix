@@ -17,7 +17,11 @@ import {
   writeEntryMeta,
 } from "./meta.js";
 import { entryCreateInputSchema } from "./schemas.js";
-import { applyTermPatch, assertTermsPatchValid } from "./terms.js";
+import {
+  applyTermPatch,
+  assertTermsPatchValid,
+  buildTermsPatchGuards,
+} from "./terms.js";
 
 export const create = base
   .use(authenticated)
@@ -70,19 +74,11 @@ export const create = base
     // half-created entry behind.
     const termsPatch = filtered.terms;
     if (termsPatch !== undefined) {
-      await assertTermsPatchValid(context, termsPatch, {
-        taxonomyNotFound: (taxonomy) => {
-          throw errors.NOT_FOUND({
-            data: { kind: "termTaxonomy", id: taxonomy },
-          });
-        },
-        forbidden: (capability) => {
-          throw errors.FORBIDDEN({ data: { capability } });
-        },
-        termTaxonomyMismatch: () => {
-          throw errors.CONFLICT({ data: { reason: "term_taxonomy_mismatch" } });
-        },
-      });
+      await assertTermsPatchValid(
+        context,
+        termsPatch,
+        buildTermsPatchGuards(errors),
+      );
     }
 
     const candidate: NewEntry = {

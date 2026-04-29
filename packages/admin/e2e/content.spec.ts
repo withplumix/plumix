@@ -7,6 +7,7 @@ import {
   MANIFEST_WITH_POST,
   mockManifest,
   mockRpc,
+  mockRpcWithCapture,
   rpcOkBody,
 } from "./support/rpc-mock.js";
 
@@ -15,6 +16,36 @@ import {
 //   - /entries/$slug/create editor (toolbar, auto-slug, submit)
 //   - /entries/$slug/$id/edit editor (load existing, edit, meta-box sidebar)
 // Ordering follows the user journey: list → new → edit.
+
+// Shared "Hello world" post fixture used by the create/edit tests for
+// both /entry/create response and the /entry/get round-trip on
+// redirect. Date columns serialize through JSON.stringify as ISO
+// strings — the admin form's read path coerces them back so the wire
+// shape matches what the server emits.
+const HELLO_WORLD_POST_FIXTURE = {
+  id: 42,
+  type: "post",
+  parentId: null,
+  title: "Hello world",
+  slug: "hello-world",
+  content: {
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        content: [{ type: "text", text: "body" }],
+      },
+    ],
+  },
+  excerpt: null,
+  status: "draft",
+  authorId: 1,
+  menuOrder: 0,
+  publishedAt: null,
+  createdAt: new Date("2026-04-21T00:00:00Z"),
+  updatedAt: new Date("2026-04-21T00:00:00Z"),
+  meta: {},
+};
 
 test.describe("/entries/$slug", () => {
   test.beforeEach(async ({ page }) => {
@@ -91,26 +122,10 @@ test.describe("/entries/$slug", () => {
     // Capture every /entry/list call so we can verify the second fetch
     // carries the search param. The mock always returns `[]` — we're
     // asserting on the RPC input, not the rendering.
-    const inputs: unknown[] = [];
-    await page.route("**/_plumix/rpc/**", async (route) => {
-      const url = route.request().url();
-      if (url.endsWith("/auth/session")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody(AUTHED_ADMIN),
-        });
-      }
-      if (url.endsWith("/entry/list")) {
-        const body = route.request().postDataJSON() as { json?: unknown };
-        inputs.push(body.json);
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody([]),
-        });
-      }
-      return route.fulfill({ status: 404, body: "not-mocked" });
+    const inputs = await mockRpcWithCapture(page, {
+      captureSuffix: "/entry/list",
+      captureResponse: [],
+      handlers: { "/auth/session": AUTHED_ADMIN },
     });
 
     await page.goto("entries/posts?status=all&page=1");
@@ -130,26 +145,10 @@ test.describe("/entries/$slug", () => {
   test("Mine toggle URL-syncs author=mine and sends session.user.id as authorId", async ({
     page,
   }) => {
-    const inputs: unknown[] = [];
-    await page.route("**/_plumix/rpc/**", async (route) => {
-      const url = route.request().url();
-      if (url.endsWith("/auth/session")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody(AUTHED_ADMIN),
-        });
-      }
-      if (url.endsWith("/entry/list")) {
-        const body = route.request().postDataJSON() as { json?: unknown };
-        inputs.push(body.json);
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody([]),
-        });
-      }
-      return route.fulfill({ status: 404, body: "not-mocked" });
+    const inputs = await mockRpcWithCapture(page, {
+      captureSuffix: "/entry/list",
+      captureResponse: [],
+      handlers: { "/auth/session": AUTHED_ADMIN },
     });
 
     await page.goto("entries/posts?status=all&page=1");
@@ -168,26 +167,10 @@ test.describe("/entries/$slug", () => {
   test("column sort: clicking Title header sets orderBy=title and defaults to asc", async ({
     page,
   }) => {
-    const inputs: unknown[] = [];
-    await page.route("**/_plumix/rpc/**", async (route) => {
-      const url = route.request().url();
-      if (url.endsWith("/auth/session")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody(AUTHED_ADMIN),
-        });
-      }
-      if (url.endsWith("/entry/list")) {
-        const body = route.request().postDataJSON() as { json?: unknown };
-        inputs.push(body.json);
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody([]),
-        });
-      }
-      return route.fulfill({ status: 404, body: "not-mocked" });
+    const inputs = await mockRpcWithCapture(page, {
+      captureSuffix: "/entry/list",
+      captureResponse: [],
+      handlers: { "/auth/session": AUTHED_ADMIN },
     });
 
     await page.goto("entries/posts?status=all&page=1");
@@ -260,85 +243,13 @@ test.describe("/entries/$slug/create", () => {
   test("auto-slug, toolbar, submit → creates post and redirects", async ({
     page,
   }) => {
-    const createInputs: unknown[] = [];
-    await page.route("**/_plumix/rpc/**", async (route) => {
-      const url = route.request().url();
-      if (url.endsWith("/auth/session")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody(AUTHED_ADMIN),
-        });
-      }
-      if (url.endsWith("/entry/create")) {
-        const body = route.request().postDataJSON() as { json?: unknown };
-        createInputs.push(body.json);
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            json: {
-              id: 42,
-              type: "post",
-              parentId: null,
-              title: "Hello world",
-              slug: "hello-world",
-              content: {
-                type: "doc",
-                content: [
-                  {
-                    type: "paragraph",
-                    content: [{ type: "text", text: "body" }],
-                  },
-                ],
-              },
-              excerpt: null,
-              status: "draft",
-              authorId: 1,
-              menuOrder: 0,
-              publishedAt: null,
-              createdAt: new Date("2026-04-21T00:00:00Z"),
-              updatedAt: new Date("2026-04-21T00:00:00Z"),
-              meta: {},
-            },
-            meta: [],
-          }),
-        });
-      }
-      if (url.endsWith("/entry/get")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            json: {
-              id: 42,
-              type: "post",
-              parentId: null,
-              title: "Hello world",
-              slug: "hello-world",
-              content: {
-                type: "doc",
-                content: [
-                  {
-                    type: "paragraph",
-                    content: [{ type: "text", text: "body" }],
-                  },
-                ],
-              },
-              excerpt: null,
-              status: "draft",
-              authorId: 1,
-              menuOrder: 0,
-              publishedAt: null,
-              createdAt: new Date("2026-04-21T00:00:00Z"),
-              updatedAt: new Date("2026-04-21T00:00:00Z"),
-              meta: {},
-            },
-            meta: [],
-          }),
-        });
-      }
-      return route.fulfill({ status: 404, body: "not-mocked" });
+    const createInputs = await mockRpcWithCapture(page, {
+      captureSuffix: "/entry/create",
+      captureResponse: HELLO_WORLD_POST_FIXTURE,
+      handlers: {
+        "/auth/session": AUTHED_ADMIN,
+        "/entry/get": HELLO_WORLD_POST_FIXTURE,
+      },
     });
 
     await page.goto("entries/posts/create");

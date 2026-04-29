@@ -1,6 +1,5 @@
 import type { CommandDefinition } from "@plumix/core";
-
-import { spawnInherit } from "./spawn.js";
+import { spawnInherit } from "@plumix/core";
 
 export const deployCommand: CommandDefinition = {
   describe: "Deploy to Cloudflare (via wrangler)",

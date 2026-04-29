@@ -4,7 +4,7 @@ import type {
 } from "../plugin/manifest.js";
 import type { RouteRule } from "./intent.js";
 
-export const AUTO_ROUTE_PRIORITY = 50;
+const AUTO_ROUTE_PRIORITY = 50;
 export const DEFAULT_REWRITE_RULE_PRIORITY = 10;
 
 interface CompiledRule extends RouteRule {

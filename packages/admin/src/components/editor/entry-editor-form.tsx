@@ -165,6 +165,52 @@ interface PostEditorFormProps {
   readonly onCancel: () => void;
 }
 
+interface SupportFlags {
+  readonly showTitle: boolean;
+  readonly showEditor: boolean;
+  readonly showSlug: boolean;
+  readonly showExcerpt: boolean;
+}
+
+function resolveSupportFlags(
+  supports: readonly string[] | undefined,
+): SupportFlags {
+  const resolved = supports ?? DEFAULT_ENTRY_SUPPORTS;
+  return {
+    showTitle: resolved.includes("title"),
+    showEditor: resolved.includes("editor"),
+    showSlug: resolved.includes("slug"),
+    showExcerpt: resolved.includes("excerpt"),
+  };
+}
+
+// Open every rail section by default — Gutenberg parity. Users
+// collapse what they don't use; the multi-select accordion keeps
+// the toggled state independent per section for the rest of the
+// editor session.
+function buildOpenSections({
+  showSlug,
+  isHierarchical,
+  showExcerpt,
+  taxonomies,
+  metaBoxes,
+}: {
+  showSlug: boolean;
+  isHierarchical: boolean;
+  showExcerpt: boolean;
+  taxonomies: readonly { name: string }[];
+  metaBoxes: readonly { id: string }[];
+}): string[] {
+  return [
+    ...(showSlug ? ["permalink"] : []),
+    "status",
+    ...(isHierarchical ? ["parent"] : []),
+    ...(showExcerpt ? ["excerpt"] : []),
+    ...taxonomies.map((tax) => `taxonomy:${tax.name}`),
+    ...metaBoxes.map((box) => box.id),
+  ];
+}
+
 export function PostEditorForm({
   initialValues,
   slugLocked: initialSlugLocked,
@@ -217,24 +263,16 @@ export function PostEditorForm({
     onSubmit(value);
   });
 
-  const resolvedSupports = supports ?? DEFAULT_ENTRY_SUPPORTS;
-  const showTitle = resolvedSupports.includes("title");
-  const showEditor = resolvedSupports.includes("editor");
-  const showSlug = resolvedSupports.includes("slug");
-  const showExcerpt = resolvedSupports.includes("excerpt");
+  const { showTitle, showEditor, showSlug, showExcerpt } =
+    resolveSupportFlags(supports);
 
-  // Open every rail section by default — Gutenberg parity. Users
-  // collapse what they don't use; the multi-select accordion keeps
-  // the toggled state independent per section for the rest of the
-  // editor session.
-  const openSections = [
-    ...(showSlug ? ["permalink"] : []),
-    "status",
-    ...(isHierarchical ? ["parent"] : []),
-    ...(showExcerpt ? ["excerpt"] : []),
-    ...taxonomies.map((tax) => `taxonomy:${tax.name}`),
-    ...metaBoxes.map((box) => box.id),
-  ];
+  const openSections = buildOpenSections({
+    showSlug,
+    isHierarchical,
+    showExcerpt,
+    taxonomies,
+    metaBoxes,
+  });
 
   return (
     <Form {...form}>

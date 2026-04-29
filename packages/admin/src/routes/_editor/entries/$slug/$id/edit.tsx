@@ -1,19 +1,16 @@
 import type { PostEditorValues } from "@/components/editor/entry-editor-form.js";
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   POST_EDITOR_STATUSES,
   PostEditorForm,
 } from "@/components/editor/entry-editor-form.js";
+import { useEntryFormScope } from "@/components/editor/use-entry-form-scope.js";
 import { useParentOptions } from "@/components/editor/use-parent-options.js";
 import { Skeleton } from "@/components/ui/skeleton.js";
 import { hasCap } from "@/lib/caps.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
-import {
-  entryMetaBoxesForType,
-  findEntryTypeBySlug,
-  visibleTermTaxonomies,
-} from "@/lib/manifest.js";
+import { findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { filterTermsForEntryType } from "@/lib/terms.js";
 import {
@@ -134,16 +131,10 @@ function EditPostRoute(): ReactNode {
     entryType.labels?.singular ?? entryType.label
   ).toLowerCase();
 
-  const metaBoxes = useMemo(
-    () => entryMetaBoxesForType(entryType.name, user.capabilities),
-    [entryType.name, user.capabilities],
+  const { metaBoxes, taxonomies } = useEntryFormScope(
+    entryType,
+    user.capabilities,
   );
-  const taxonomies = useMemo(() => {
-    const allowed = new Set(entryType.termTaxonomies ?? []);
-    return visibleTermTaxonomies(user.capabilities).filter((t) =>
-      allowed.has(t.name),
-    );
-  }, [entryType.termTaxonomies, user.capabilities]);
 
   const parentOptions = useParentOptions({
     entryTypeName: entryType.name,

@@ -2,6 +2,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import { useCallback, useMemo } from "react";
 import { DataTable } from "@/components/data-table/data-table.js";
+import { ListPagination } from "@/components/data-table/list-pagination.js";
 import { DebouncedSearchInput } from "@/components/form/search-input.js";
 import { buildTermTree, flattenTree } from "@/components/taxonomy/tree.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
@@ -13,22 +14,12 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty.js";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-} from "@/components/ui/pagination.js";
 import { hasCap } from "@/lib/caps.js";
 import { findTermTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useQuery } from "@tanstack/react-query";
-import {
-  createFileRoute,
-  Link,
-  notFound,
-  useNavigate,
-} from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { Plus } from "lucide-react";
 import * as v from "valibot";
 
 import type { TermTaxonomyManifestEntry } from "@plumix/core/manifest";
@@ -94,10 +85,52 @@ interface TermRow {
   readonly displayDepth: number;
 }
 
+// Hierarchical termTaxonomies render as a tree: flatten-with-depth so
+// each row carries its indent level. Non-hierarchical just keeps the
+// server-provided order. Searching in a hierarchical taxonomy
+// temporarily collapses to flat-list mode so search results aren't
+// hidden inside collapsed parents that didn't match — matches the
+// WP behaviour where category search flattens.
+function deriveTermRows(
+  data: readonly Term[],
+  isHierarchical: boolean,
+  hasSearch: boolean,
+): readonly TermRow[] {
+  if (!isHierarchical || hasSearch) {
+    return data.map((t) => ({ term: t, displayDepth: 0 }));
+  }
+  const tree = buildTermTree(data);
+  return flattenTree(tree).map((n) => ({
+    term: n.term,
+    displayDepth: n.depth,
+  }));
+}
+
+interface TaxonomyListNavActions {
+  setPage: (page: number) => void;
+  setSearch: (q: string | undefined) => void;
+}
+
+function useTaxonomyListNavActions(): TaxonomyListNavActions {
+  const navigate = Route.useNavigate();
+  const setPage = useCallback(
+    (page: number): void => {
+      void navigate({ search: (prev) => ({ ...prev, page }) });
+    },
+    [navigate],
+  );
+  const setSearch = useCallback(
+    (q: string | undefined): void => {
+      void navigate({ search: (prev) => ({ ...prev, q, page: 1 }) });
+    },
+    [navigate],
+  );
+  return { setPage, setSearch };
+}
+
 function TaxonomyListRoute(): ReactNode {
   const search = Route.useSearch();
   const { user, taxonomy } = Route.useRouteContext();
-  const navigate = useNavigate({ from: Route.fullPath });
   const isHierarchical = taxonomy.isHierarchical === true;
   const pageSize = isHierarchical ? TREE_PAGE_SIZE : FLAT_PAGE_SIZE;
 
@@ -112,18 +145,7 @@ function TaxonomyListRoute(): ReactNode {
     }),
   );
 
-  const setPage = useCallback(
-    (page: number): void => {
-      void navigate({ search: (prev) => ({ ...prev, page }) });
-    },
-    [navigate],
-  );
-  const setSearch = useCallback(
-    (q: string | undefined): void => {
-      void navigate({ search: (prev) => ({ ...prev, q, page: 1 }) });
-    },
-    [navigate],
-  );
+  const { setPage, setSearch } = useTaxonomyListNavActions();
 
   // `query.data` is `Term[] | undefined`; depending on the identity of
   // `rawRows` directly in the tree memo below would make it re-run on
@@ -131,24 +153,10 @@ function TaxonomyListRoute(): ReactNode {
   // memo to the query itself — react-query gives us referential
   // stability on `data` across renders within the same request state.
   const rawRows = query.data;
-
-  // Hierarchical termTaxonomies render as a tree: flatten-with-depth so
-  // each row carries its indent level. Non-hierarchical just keeps the
-  // server-provided order. Searching in a hierarchical taxonomy
-  // temporarily collapses to flat-list mode so search results aren't
-  // hidden inside collapsed parents that didn't match — matches the
-  // WP behaviour where category search flattens.
-  const rows: readonly TermRow[] = useMemo(() => {
-    const data = rawRows ?? [];
-    if (!isHierarchical || search.q) {
-      return data.map((t) => ({ term: t, displayDepth: 0 }));
-    }
-    const tree = buildTermTree(data);
-    return flattenTree(tree).map((n) => ({
-      term: n.term,
-      displayDepth: n.depth,
-    }));
-  }, [rawRows, isHierarchical, search.q]);
+  const rows: readonly TermRow[] = useMemo(
+    () => deriveTermRows(rawRows ?? [], isHierarchical, Boolean(search.q)),
+    [rawRows, isHierarchical, search.q],
+  );
 
   const canPrev = search.page > 1;
   // Heuristic "next page exists": full page came back.
@@ -282,41 +290,13 @@ function TaxonomyListRoute(): ReactNode {
         />
       )}
 
-      <Pagination className="justify-between">
-        <span className="text-muted-foreground text-sm">
-          Page {search.page}
-        </span>
-        <PaginationContent>
-          <PaginationItem>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={!canPrev || query.isPending}
-              onClick={() => {
-                setPage(search.page - 1);
-              }}
-              aria-label="Go to previous page"
-            >
-              <ChevronLeft />
-              <span className="hidden sm:inline">Previous</span>
-            </Button>
-          </PaginationItem>
-          <PaginationItem>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={!canNext || query.isPending}
-              onClick={() => {
-                setPage(search.page + 1);
-              }}
-              aria-label="Go to next page"
-            >
-              <span className="hidden sm:inline">Next</span>
-              <ChevronRight />
-            </Button>
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
+      <ListPagination
+        page={search.page}
+        canPrev={canPrev}
+        canNext={canNext}
+        isLoading={query.isPending}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

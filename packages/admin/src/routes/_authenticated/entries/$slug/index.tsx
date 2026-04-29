@@ -2,6 +2,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { DataTable } from "@/components/data-table/data-table.js";
+import { ListPagination } from "@/components/data-table/list-pagination.js";
 import { MultiSelect } from "@/components/form/multi-select.js";
 import { DebouncedSearchInput } from "@/components/form/search-input.js";
 import {
@@ -25,11 +26,6 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty.js";
 import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-} from "@/components/ui/pagination.js";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -44,20 +40,8 @@ import { orpc } from "@/lib/orpc.js";
 import { buildFilterTermOptions } from "@/lib/terms.js";
 import { cn } from "@/lib/utils.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  createFileRoute,
-  Link,
-  notFound,
-  useNavigate,
-} from "@tanstack/react-router";
-import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-} from "lucide-react";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { ArrowDown, ArrowUp, ArrowUpDown, Plus } from "lucide-react";
 import * as v from "valibot";
 
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
@@ -245,52 +229,39 @@ export const Route = createFileRoute("/_authenticated/entries/$slug/")({
   component: ContentListRoute,
 });
 
-function ContentListRoute(): ReactNode {
-  const search = Route.useSearch();
-  const { user, entryType } = Route.useRouteContext();
-  const navigate = useNavigate({ from: Route.fullPath });
+// Parse comma-separated URL values (`?category=foo,bar`) into the slug
+// array the server expects for multi-term filtering.
+function parseTermFilters(
+  search: Record<string, unknown>,
+  taxonomyNames: readonly string[],
+): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const name of taxonomyNames) {
+    const raw = search[name];
+    if (typeof raw !== "string" || raw.length === 0) continue;
+    const slugs = raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    if (slugs.length > 0) out[name] = slugs;
+  }
+  return out;
+}
 
-  const taxonomyNames = entryType.termTaxonomies ?? EMPTY_TAXONOMY_NAMES;
-  // Memoised so `entry.list`'s queryOptions input has a stable
-  // identity across renders. Comma-separated URL values
-  // (`?category=foo,bar`) split into the slug array the server
-  // expects for multi-term filtering.
-  const termFilters = useMemo(() => {
-    const out: Record<string, string[]> = {};
-    for (const name of taxonomyNames) {
-      const raw = (search as Record<string, unknown>)[name];
-      if (typeof raw === "string" && raw.length > 0) {
-        const slugs = raw
-          .split(",")
-          .map((s) => s.trim())
-          .filter((s) => s.length > 0);
-        if (slugs.length > 0) out[name] = slugs;
-      }
-    }
-    return out;
-  }, [search, taxonomyNames]);
+interface EntriesListNavActions {
+  setStatus: (status: StatusFilter) => void;
+  setPage: (page: number) => void;
+  setSearch: (q: string | undefined) => void;
+  setAuthor: (author: AuthorFilter) => void;
+  setTermFilter: (taxonomy: string, slugs: readonly string[]) => void;
+  setSort: (column: OrderBy, defaultDirection: Order) => void;
+}
 
-  const query = useQuery(
-    orpc.entry.list.queryOptions({
-      input: {
-        type: entryType.name,
-        limit: PAGE_SIZE,
-        offset: (search.page - 1) * PAGE_SIZE,
-        orderBy: search.orderBy,
-        order: search.order,
-        ...(search.status !== "all" ? { status: search.status } : {}),
-        ...(search.q ? { search: search.q } : {}),
-        ...(search.author === "mine" ? { authorId: user.id } : {}),
-        ...(Object.keys(termFilters).length > 0
-          ? { termTaxonomies: termFilters }
-          : {}),
-      },
-    }),
-  );
-
-  // useCallback keeps these navigation handlers stable across renders so
-  // the `columns` memo below (and any future memoised consumers) don't
-  // invalidate on every tick.
+// useCallback keeps these navigation handlers stable across renders so
+// the `columns` memo (and any future memoised consumers) doesn't
+// invalidate on every tick.
+function useEntriesListNavActions(): EntriesListNavActions {
+  const navigate = Route.useNavigate();
   const setStatus = useCallback(
     (status: StatusFilter): void => {
       void navigate({ search: (prev) => ({ ...prev, status, page: 1 }) });
@@ -335,8 +306,7 @@ function ContentListRoute(): ReactNode {
     [navigate],
   );
   // Clicking a sortable header: if it's already the active column, flip
-  // direction; otherwise pick the column with a sensible default
-  // direction (asc for alphabetical, desc for date-ish).
+  // direction; otherwise pick the column with a sensible default.
   const setSort = useCallback(
     (column: OrderBy, defaultDirection: Order): void => {
       void navigate({
@@ -354,6 +324,39 @@ function ContentListRoute(): ReactNode {
     },
     [navigate],
   );
+  return { setStatus, setPage, setSearch, setAuthor, setTermFilter, setSort };
+}
+
+function ContentListRoute(): ReactNode {
+  const search = Route.useSearch();
+  const { user, entryType } = Route.useRouteContext();
+
+  const taxonomyNames = entryType.termTaxonomies ?? EMPTY_TAXONOMY_NAMES;
+  const termFilters = useMemo(
+    () => parseTermFilters(search as Record<string, unknown>, taxonomyNames),
+    [search, taxonomyNames],
+  );
+
+  const query = useQuery(
+    orpc.entry.list.queryOptions({
+      input: {
+        type: entryType.name,
+        limit: PAGE_SIZE,
+        offset: (search.page - 1) * PAGE_SIZE,
+        orderBy: search.orderBy,
+        order: search.order,
+        ...(search.status !== "all" ? { status: search.status } : {}),
+        ...(search.q ? { search: search.q } : {}),
+        ...(search.author === "mine" ? { authorId: user.id } : {}),
+        ...(Object.keys(termFilters).length > 0
+          ? { termTaxonomies: termFilters }
+          : {}),
+      },
+    }),
+  );
+
+  const { setStatus, setPage, setSearch, setAuthor, setTermFilter, setSort } =
+    useEntriesListNavActions();
 
   const rows: readonly Entry[] = query.data ?? [];
   const canPrev = search.page > 1;
@@ -500,41 +503,13 @@ function ContentListRoute(): ReactNode {
         />
       )}
 
-      <Pagination className="justify-between">
-        <span className="text-muted-foreground text-sm">
-          Page {search.page}
-        </span>
-        <PaginationContent>
-          <PaginationItem>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={!canPrev || query.isPending}
-              onClick={() => {
-                setPage(search.page - 1);
-              }}
-              aria-label="Go to previous page"
-            >
-              <ChevronLeft />
-              <span className="hidden sm:inline">Previous</span>
-            </Button>
-          </PaginationItem>
-          <PaginationItem>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={!canNext || query.isPending}
-              onClick={() => {
-                setPage(search.page + 1);
-              }}
-              aria-label="Go to next page"
-            >
-              <span className="hidden sm:inline">Next</span>
-              <ChevronRight />
-            </Button>
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
+      <ListPagination
+        page={search.page}
+        canPrev={canPrev}
+        canNext={canNext}
+        isLoading={query.isPending}
+        onPageChange={setPage}
+      />
 
       <AlertDialog
         open={pendingTrashId !== null}

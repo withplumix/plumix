@@ -19,7 +19,7 @@
 //   and a malicious actor could disguise HTML/JS as `text/plain`. Always
 //   serve uploads from a domain distinct from the admin.
 
-export const MEDIA_MIME_REGISTRY: Readonly<Record<string, string>> = {
+const MEDIA_MIME_REGISTRY: Readonly<Record<string, string>> = {
   // images
   "image/jpeg": "jpg",
   "image/png": "png",

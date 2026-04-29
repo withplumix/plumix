@@ -4,10 +4,9 @@ import { dirname, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import type { CommandContext, CommandDefinition } from "@plumix/core";
-import { CliError, generateSchemaSource } from "@plumix/core";
+import { CliError, generateSchemaSource, spawnInherit } from "@plumix/core";
 
 import { report } from "../report.js";
-import { spawnInherit } from "../spawn.js";
 
 const SCHEMA_OUT = ".plumix/schema.ts";
 const MIGRATIONS_OUT = "drizzle";

@@ -1,3 +1,4 @@
+import type { QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
@@ -53,6 +54,18 @@ import {
   USER_ROLES,
   USERS_LIST_DEFAULT_SEARCH,
 } from "../-constants.js";
+
+async function invalidateUserCaches(
+  queryClient: QueryClient,
+  id: number,
+): Promise<void> {
+  await Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: orpc.user.get.queryOptions({ input: { id } }).queryKey,
+    }),
+    queryClient.invalidateQueries({ queryKey: orpc.user.list.key() }),
+  ]);
+}
 
 // Long-form labels for the role dropdown — same rationale as the invite
 // form (the picker benefits from affordance copy, unlike the list view's
@@ -157,28 +170,20 @@ function UserEditRoute(): ReactNode {
   );
 }
 
-function UserEditForm({
+function useUserUpdateMutation({
   target,
-  isSelf,
   canPromote,
-  canSave,
-  canDisable,
-  canDelete,
   metaBoxes,
+  queryClient,
+  setServerError,
 }: {
   target: User;
-  isSelf: boolean;
   canPromote: boolean;
-  canSave: boolean;
-  canDisable: boolean;
-  canDelete: boolean;
   metaBoxes: readonly UserMetaBoxManifestEntry[];
-}): ReactNode {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [serverError, setServerError] = useState<string | null>(null);
-
-  const updateUser = useMutation({
+  queryClient: QueryClient;
+  setServerError: (message: string | null) => void;
+}) {
+  return useMutation({
     mutationFn: (values: {
       name: string;
       role: UserRole;
@@ -202,13 +207,7 @@ function UserEditForm({
       // Parent route remounts via the target.updatedAt key on refetch,
       // so the form re-reads defaultValues (including sanitized meta)
       // from the fresh row automatically.
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: orpc.user.get.queryOptions({ input: { id: target.id } })
-            .queryKey,
-        }),
-        queryClient.invalidateQueries({ queryKey: orpc.user.list.key() }),
-      ]);
+      await invalidateUserCaches(queryClient, target.id);
     },
     onError: (err) => {
       setServerError(
@@ -219,6 +218,36 @@ function UserEditForm({
         ),
       );
     },
+  });
+}
+
+function UserEditForm({
+  target,
+  isSelf,
+  canPromote,
+  canSave,
+  canDisable,
+  canDelete,
+  metaBoxes,
+}: {
+  target: User;
+  isSelf: boolean;
+  canPromote: boolean;
+  canSave: boolean;
+  canDisable: boolean;
+  canDelete: boolean;
+  metaBoxes: readonly UserMetaBoxManifestEntry[];
+}): ReactNode {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const updateUser = useUserUpdateMutation({
+    target,
+    canPromote,
+    metaBoxes,
+    queryClient,
+    setServerError,
   });
 
   const form = useForm({
@@ -404,13 +433,7 @@ function StatusCard({ target }: { target: User }): ReactNode {
       setServerError(null);
     },
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: orpc.user.get.queryOptions({ input: { id: target.id } })
-            .queryKey,
-        }),
-        queryClient.invalidateQueries({ queryKey: orpc.user.list.key() }),
-      ]);
+      await invalidateUserCaches(queryClient, target.id);
     },
     onError: (err) => {
       setServerError(

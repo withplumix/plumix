@@ -4,7 +4,6 @@ import type * as schema from "../db/schema/index.js";
 import type { User } from "../db/schema/users.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { createSession } from "../auth/sessions.js";
-import { deepEqual, partialMatch } from "./match.js";
 
 type TestDb = LibSQLDatabase<typeof schema>;
 
@@ -84,6 +83,17 @@ export async function buildRequest(
 /**
  * Wraps a Response with chainable assertion helpers. Returned from
  * harness.fetch() — callers never construct this directly.
+ *
+ * Surface intentionally minimal: assertions land here when a test
+ * actually needs them. `deepEqual` / `partialMatch` are exported
+ * from `./match.js` for body-shape checks. Earlier this class
+ * shipped with `assertJson`, `assertJsonMatch`, `assertBodyContains`,
+ * `assertRedirect`, `assertHeader`, plus `raw` / `status` getters —
+ * nothing called them, so they were removed under the
+ * "address fallow dead-code" pass. Re-add a method when you write
+ * the first test that needs it. `assertTemplate` is intentionally
+ * kept as a NotImplemented stub for the upcoming themes phase
+ * (Phase 11+); see its JSDoc.
  */
 export class TestResponse {
   readonly #response: Response;
@@ -94,27 +104,29 @@ export class TestResponse {
     this.#bodyText = response.clone().text();
   }
 
-  get raw(): Response {
-    return this.#response;
-  }
+  // The five members below are consumed only from *.test.ts files;
+  // fallow's class-member analyser treats test files as terminal
+  // entry points (not usage sites), so it flags everything as unused
+  // even though the passkey-routes test suite calls them directly.
+  // Per-line suppressions document the consumer.
 
-  get status(): number {
-    return this.#response.status;
-  }
-
+  // fallow-ignore-next-line unused-class-member
   get headers(): Headers {
     return this.#response.headers;
   }
 
+  // fallow-ignore-next-line unused-class-member
   async text(): Promise<string> {
     return this.#bodyText;
   }
 
+  // fallow-ignore-next-line unused-class-member
   async json<T = unknown>(): Promise<T> {
     const text = await this.#bodyText;
     return JSON.parse(text) as T;
   }
 
+  // fallow-ignore-next-line unused-class-member
   assertStatus(code: number): this {
     if (this.#response.status !== code) {
       throw new Error(
@@ -124,74 +136,14 @@ export class TestResponse {
     return this;
   }
 
-  assertHeader(name: string, expected: string | RegExp): this {
-    const actual = this.#response.headers.get(name);
-    if (actual === null) {
-      throw new Error(`assertHeader: header "${name}" is absent`);
-    }
-    const matches =
-      typeof expected === "string"
-        ? actual === expected
-        : expected.test(actual);
-    if (!matches) {
-      throw new Error(
-        `assertHeader: "${name}" was "${actual}", expected ${String(expected)}`,
-      );
-    }
-    return this;
-  }
-
-  async assertJson(expected: unknown): Promise<this> {
-    const body = await this.json();
-    if (!deepEqual(body, expected)) {
-      throw new Error(
-        `assertJson: body did not equal expected\n  expected: ${JSON.stringify(expected)}\n  actual:   ${JSON.stringify(body)}`,
-      );
-    }
-    return this;
-  }
-
-  async assertJsonMatch(expected: unknown): Promise<this> {
-    const body = await this.json();
-    if (!partialMatch(body, expected)) {
-      throw new Error(
-        `assertJsonMatch: body did not match expected shape\n  expected: ${JSON.stringify(expected)}\n  actual:   ${JSON.stringify(body)}`,
-      );
-    }
-    return this;
-  }
-
-  async assertBodyContains(needle: string | RegExp): Promise<this> {
-    const body = await this.text();
-    const ok =
-      typeof needle === "string" ? body.includes(needle) : needle.test(body);
-    if (!ok) {
-      throw new Error(
-        `assertBodyContains: body did not contain ${String(needle)}`,
-      );
-    }
-    return this;
-  }
-
   /**
-   * Assert a Set-Cookie header was issued for the named cookie. Does not
-   * inspect the value — use assertHeader("set-cookie", /pattern/) for that.
+   * Assert a Set-Cookie header was issued for the named cookie.
    */
+  // fallow-ignore-next-line unused-class-member
   assertCookieSet(name: string): this {
     const set = this.#response.headers.get("set-cookie");
     if (!set?.includes(`${name}=`)) {
       throw new Error(`assertCookieSet: no Set-Cookie for "${name}"`);
-    }
-    return this;
-  }
-
-  assertRedirect(location?: string | RegExp): this {
-    const status = this.#response.status;
-    if (status < 300 || status >= 400) {
-      throw new Error(`assertRedirect: status ${status} is not a redirect`);
-    }
-    if (location !== undefined) {
-      this.assertHeader("location", location);
     }
     return this;
   }
@@ -206,6 +158,7 @@ export class TestResponse {
    * by the template resolver. The surface is locked in now so tests
    * written against it work verbatim later.
    */
+  // fallow-ignore-next-line unused-class-member
   assertTemplate(_name: string): this {
     throw new Error(
       "assertTemplate is not yet implemented — theme / template system lands with the themes phase. API is stable; call sites written now will work once the feature ships.",

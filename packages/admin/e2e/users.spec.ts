@@ -2,7 +2,12 @@ import { expect, test } from "@playwright/test";
 
 import type { User } from "@plumix/core/schema";
 
-import { AUTHED_ADMIN, mockRpc, rpcOkBody } from "./support/rpc-mock.js";
+import {
+  AUTHED_ADMIN,
+  mockRpc,
+  mockRpcWithCapture,
+  rpcOkBody,
+} from "./support/rpc-mock.js";
 
 // All /users admin coverage lives here:
 //   - /users list (role filter, search, access gates)
@@ -313,38 +318,14 @@ test.describe("/users/$id/edit", () => {
   test("name update: PATCHes user.update and shows no errors", async ({
     page,
   }) => {
-    const updateInputs: unknown[] = [];
     const target = user({ id: 42, email: "a@example.test", name: "Before" });
-    await page.route("**/_plumix/rpc/**", async (route) => {
-      const url = route.request().url();
-      if (url.endsWith("/auth/session")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody(AUTHED_ADMIN),
-        });
-      }
-      if (url.endsWith("/user/get")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody(target),
-        });
-      }
-      if (url.endsWith("/user/update")) {
-        updateInputs.push(
-          (route.request().postDataJSON() as { json?: unknown }).json,
-        );
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            json: { ...target, name: "After" },
-            meta: [],
-          }),
-        });
-      }
-      return route.fulfill({ status: 404, body: "not-mocked" });
+    const updateInputs = await mockRpcWithCapture(page, {
+      captureSuffix: "/user/update",
+      captureResponse: { ...target, name: "After" },
+      handlers: {
+        "/auth/session": AUTHED_ADMIN,
+        "/user/get": target,
+      },
     });
 
     await page.goto("users/42/edit");
@@ -432,41 +413,14 @@ test.describe("/users/$id/edit", () => {
       email: "inheritor@example.test",
       name: "Inheritor",
     });
-    const deleteInputs: unknown[] = [];
-    await page.route("**/_plumix/rpc/**", async (route) => {
-      const url = route.request().url();
-      if (url.endsWith("/auth/session")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody(AUTHED_ADMIN),
-        });
-      }
-      if (url.endsWith("/user/get")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody(target),
-        });
-      }
-      if (url.endsWith("/user/list")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({ json: [target, inheritor], meta: [] }),
-        });
-      }
-      if (url.endsWith("/user/delete")) {
-        deleteInputs.push(
-          (route.request().postDataJSON() as { json?: unknown }).json,
-        );
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody(target),
-        });
-      }
-      return route.fulfill({ status: 404, body: "not-mocked" });
+    const deleteInputs = await mockRpcWithCapture(page, {
+      captureSuffix: "/user/delete",
+      captureResponse: target,
+      handlers: {
+        "/auth/session": AUTHED_ADMIN,
+        "/user/get": target,
+        "/user/list": [target, inheritor],
+      },
     });
 
     await page.goto("users/42/edit");

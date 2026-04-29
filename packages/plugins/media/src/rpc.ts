@@ -81,6 +81,42 @@ const THUMBNAIL_OPTS = {
   fit: "cover",
 } as const;
 
+interface MediaRowGuards {
+  readonly NOT_FOUND: (opts: {
+    data: { kind: string; id: string | number };
+  }) => Error;
+  readonly FORBIDDEN: (opts: { data: { capability: string } }) => Error;
+}
+
+/**
+ * Load a media-entry row and verify the caller is either the owner or
+ * holds the supplied capability. Used by `update` and `remove`, which
+ * share the same load + ownership pattern but differ on the capability
+ * a non-owner needs.
+ */
+async function loadOwnedMediaRow(
+  context: AuthenticatedAppContext,
+  id: number,
+  options: { readonly capability: string; readonly errors: MediaRowGuards },
+): Promise<typeof entries.$inferSelect> {
+  const { capability, errors } = options;
+  const notFound = (): Error =>
+    errors.NOT_FOUND({ data: { kind: "media", id } });
+
+  const [row] = await context.db
+    .select()
+    .from(entries)
+    .where(eq(entries.id, id))
+    .limit(1);
+  if (row?.type !== MEDIA_ENTRY_TYPE) throw notFound();
+
+  const isOwner = row.authorId === context.user.id;
+  if (!isOwner && !context.auth.can(capability)) {
+    throw errors.FORBIDDEN({ data: { capability } });
+  }
+  return row;
+}
+
 export function createMediaRouter(
   options: MediaRpcOptions,
 ): Record<string, unknown> {
@@ -370,20 +406,10 @@ export function createMediaRouter(
     .handler(async ({ input, context, errors }): Promise<UpdateResponse> => {
       const notFound = (): Error =>
         errors.NOT_FOUND({ data: { kind: "media", id: input.id } });
-
-      const [row] = await context.db
-        .select()
-        .from(entries)
-        .where(eq(entries.id, input.id))
-        .limit(1);
-      if (row?.type !== MEDIA_ENTRY_TYPE) throw notFound();
-
-      const isOwner = row.authorId === context.user.id;
-      if (!isOwner && !context.auth.can("entry:media:edit_any")) {
-        throw errors.FORBIDDEN({
-          data: { capability: "entry:media:edit_any" },
-        });
-      }
+      const row = await loadOwnedMediaRow(context, input.id, {
+        capability: "entry:media:edit_any",
+        errors,
+      });
 
       const meta = parseMediaMeta(row.meta);
       if (!meta) {
@@ -420,18 +446,10 @@ export function createMediaRouter(
     .handler(async ({ input, context, errors }): Promise<DeleteResponse> => {
       const notFound = (): Error =>
         errors.NOT_FOUND({ data: { kind: "media", id: input.id } });
-
-      const [row] = await context.db
-        .select()
-        .from(entries)
-        .where(eq(entries.id, input.id))
-        .limit(1);
-      if (row?.type !== MEDIA_ENTRY_TYPE) throw notFound();
-
-      const isOwner = row.authorId === context.user.id;
-      if (!isOwner && !context.auth.can("entry:media:delete")) {
-        throw errors.FORBIDDEN({ data: { capability: "entry:media:delete" } });
-      }
+      const row = await loadOwnedMediaRow(context, input.id, {
+        capability: "entry:media:delete",
+        errors,
+      });
 
       // Delete the row first, then the bytes. If the storage delete
       // fails we'd rather leave an orphan in the bucket (admin can

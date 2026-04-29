@@ -2,6 +2,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import { useCallback, useMemo } from "react";
 import { DataTable } from "@/components/data-table/data-table.js";
+import { ListPagination } from "@/components/data-table/list-pagination.js";
 import { DebouncedSearchInput } from "@/components/form/search-input.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Badge } from "@/components/ui/badge.js";
@@ -14,11 +15,6 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty.js";
 import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-} from "@/components/ui/pagination.js";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -29,13 +25,8 @@ import { hasCap } from "@/lib/caps.js";
 import { toDate } from "@/lib/dates.js";
 import { orpc } from "@/lib/orpc.js";
 import { useQuery } from "@tanstack/react-query";
-import {
-  createFileRoute,
-  Link,
-  redirect,
-  useNavigate,
-} from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, Plus, UserPlus } from "lucide-react";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { Plus, UserPlus } from "lucide-react";
 import * as v from "valibot";
 
 import type { User, UserRole } from "@plumix/core/schema";
@@ -110,22 +101,14 @@ export const Route = createFileRoute("/_authenticated/users/")({
   component: UsersListRoute,
 });
 
-function UsersListRoute(): ReactNode {
-  const search = Route.useSearch();
-  const { user } = Route.useRouteContext();
-  const navigate = useNavigate({ from: Route.fullPath });
+interface UsersListNavActions {
+  setRole: (role: RoleFilter) => void;
+  setPage: (page: number) => void;
+  setSearch: (q: string | undefined) => void;
+}
 
-  const query = useQuery(
-    orpc.user.list.queryOptions({
-      input: {
-        limit: PAGE_SIZE,
-        offset: (search.page - 1) * PAGE_SIZE,
-        ...(search.role !== "all" ? { role: search.role } : {}),
-        ...(search.q ? { search: search.q } : {}),
-      },
-    }),
-  );
-
+function useUsersListNavActions(): UsersListNavActions {
+  const navigate = Route.useNavigate();
   const setRole = useCallback(
     (role: RoleFilter): void => {
       void navigate({ search: (prev) => ({ ...prev, role, page: 1 }) });
@@ -144,6 +127,25 @@ function UsersListRoute(): ReactNode {
     },
     [navigate],
   );
+  return { setRole, setPage, setSearch };
+}
+
+function UsersListRoute(): ReactNode {
+  const search = Route.useSearch();
+  const { user } = Route.useRouteContext();
+
+  const query = useQuery(
+    orpc.user.list.queryOptions({
+      input: {
+        limit: PAGE_SIZE,
+        offset: (search.page - 1) * PAGE_SIZE,
+        ...(search.role !== "all" ? { role: search.role } : {}),
+        ...(search.q ? { search: search.q } : {}),
+      },
+    }),
+  );
+
+  const { setRole, setPage, setSearch } = useUsersListNavActions();
 
   const rows: readonly User[] = query.data ?? [];
   const canPrev = search.page > 1;
@@ -217,41 +219,13 @@ function UsersListRoute(): ReactNode {
         />
       )}
 
-      <Pagination className="justify-between">
-        <span className="text-muted-foreground text-sm">
-          Page {search.page}
-        </span>
-        <PaginationContent>
-          <PaginationItem>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={!canPrev || query.isPending}
-              onClick={() => {
-                setPage(search.page - 1);
-              }}
-              aria-label="Go to previous page"
-            >
-              <ChevronLeft />
-              <span className="hidden sm:inline">Previous</span>
-            </Button>
-          </PaginationItem>
-          <PaginationItem>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={!canNext || query.isPending}
-              onClick={() => {
-                setPage(search.page + 1);
-              }}
-              aria-label="Go to next page"
-            >
-              <span className="hidden sm:inline">Next</span>
-              <ChevronRight />
-            </Button>
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
+      <ListPagination
+        page={search.page}
+        canPrev={canPrev}
+        canNext={canNext}
+        isLoading={query.isPending}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

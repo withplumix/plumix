@@ -58,7 +58,7 @@ function normalize(value: unknown): PlumixManifest {
   return result;
 }
 
-export const manifest: PlumixManifest = readManifest();
+const manifest: PlumixManifest = readManifest();
 
 export function findEntryTypeBySlug(
   slug: string,

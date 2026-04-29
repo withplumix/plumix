@@ -141,54 +141,16 @@ interface PendingUpload {
   readonly progress: number; // 0..1
 }
 
-export function MediaLibrary(): ReactNode {
-  const queryClient = useQueryClient();
+interface MediaUploadState {
+  readonly pending: readonly PendingUpload[];
+  readonly errorMsg: string | null;
+  readonly setErrorMsg: (msg: string | null) => void;
+  readonly startUpload: (files: readonly File[]) => Promise<void>;
+}
+
+function useMediaUpload(invalidateList: () => void): MediaUploadState {
   const [pending, setPending] = useState<readonly PendingUpload[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [dragging, setDragging] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-
-  const list = useInfiniteQuery({
-    queryKey: MEDIA_LIST_KEY,
-    initialPageParam: 0,
-    queryFn: ({ pageParam }: { pageParam: number }) =>
-      rpcCall<MediaListResponse>("media/list", {
-        limit: PAGE_SIZE,
-        offset: pageParam,
-      }),
-    getNextPageParam: (last, allPages) =>
-      last.hasMore ? allPages.length * PAGE_SIZE : undefined,
-  });
-
-  const items = useMemo(
-    () => list.data?.pages.flatMap((p) => p.items) ?? [],
-    [list.data?.pages],
-  );
-
-  const invalidateList = useCallback((): void => {
-    void queryClient.invalidateQueries({ queryKey: MEDIA_LIST_KEY });
-  }, [queryClient]);
-
-  // Auto-fetch the next page when the sentinel scrolls into view. The
-  // dependency on `list.data?.pages.length` re-binds the observer after
-  // each page lands so we don't miss the next intersection.
-  useEffect(() => {
-    const node = sentinelRef.current;
-    if (!node) return;
-    if (!list.hasNextPage) return;
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0]?.isIntersecting && !list.isFetchingNextPage) {
-        void list.fetchNextPage();
-      }
-    });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [
-    list,
-    list.hasNextPage,
-    list.isFetchingNextPage,
-    list.data?.pages.length,
-  ]);
 
   const uploadOne = useCallback(async (file: File): Promise<void> => {
     const slot: PendingUpload = {
@@ -226,9 +188,7 @@ export function MediaLibrary(): ReactNode {
             );
           },
         );
-        await rpcCall<ConfirmResponse>("media/confirm", {
-          id: init.mediaId,
-        });
+        await rpcCall<ConfirmResponse>("media/confirm", { id: init.mediaId });
       } catch (error) {
         await tryCleanupDraft(init.mediaId);
         throw error;
@@ -251,6 +211,77 @@ export function MediaLibrary(): ReactNode {
     },
     [uploadOne, invalidateList],
   );
+
+  return { pending, errorMsg, setErrorMsg, startUpload };
+}
+
+// Generic intersection-observer-on-sentinel hook. Re-binds when the
+// data length changes so we don't miss the next intersection after a
+// page lands.
+function useInfiniteScrollSentinel(
+  sentinelRef: React.RefObject<HTMLDivElement | null>,
+  hasNextPage: boolean,
+  isFetchingNextPage: boolean,
+  fetchNextPage: () => Promise<unknown> | void,
+  dataLength: number | undefined,
+): void {
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return;
+    if (!hasNextPage) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && !isFetchingNextPage) {
+        // The callback may be async (e.g. React Query's fetchNextPage)
+        // — discard the promise so eslint's no-misused-promises stays
+        // happy and we don't accidentally await inside the observer.
+        void fetchNextPage();
+      }
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [sentinelRef, hasNextPage, isFetchingNextPage, fetchNextPage, dataLength]);
+}
+
+export function MediaLibrary(): ReactNode {
+  const queryClient = useQueryClient();
+  const [dragging, setDragging] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const list = useInfiniteQuery({
+    queryKey: MEDIA_LIST_KEY,
+    initialPageParam: 0,
+    queryFn: ({ pageParam }: { pageParam: number }) =>
+      rpcCall<MediaListResponse>("media/list", {
+        limit: PAGE_SIZE,
+        offset: pageParam,
+      }),
+    getNextPageParam: (last, allPages) =>
+      last.hasMore ? allPages.length * PAGE_SIZE : undefined,
+  });
+
+  const items = useMemo(
+    () => list.data?.pages.flatMap((p) => p.items) ?? [],
+    [list.data?.pages],
+  );
+
+  const invalidateList = useCallback((): void => {
+    void queryClient.invalidateQueries({ queryKey: MEDIA_LIST_KEY });
+  }, [queryClient]);
+
+  // `list.fetchNextPage` is a stable React Query callback. Passing it
+  // directly (rather than wrapping it in a fresh arrow each render)
+  // keeps the IntersectionObserver from being torn down + rebuilt on
+  // every parent re-render.
+  useInfiniteScrollSentinel(
+    sentinelRef,
+    list.hasNextPage,
+    list.isFetchingNextPage,
+    list.fetchNextPage,
+    list.data?.pages.length,
+  );
+
+  const { pending, errorMsg, setErrorMsg, startUpload } =
+    useMediaUpload(invalidateList);
 
   const remove = useMutation({
     mutationFn: (id: number) => rpcCall<{ id: number }>("media/delete", { id }),
@@ -429,34 +460,32 @@ function hasFiles(e: DragEvent): boolean {
 // Map opaque RPC `reason` codes to actionable text. The error banner is
 // the only surface a user sees when an upload fails — raw reasons like
 // `mime_mismatch` read like 404s.
+const FRIENDLY_ERRORS: Readonly<Record<string, string>> = {
+  storage_not_configured:
+    "No storage adapter is wired up — set `storage:` in plumix.config.ts.",
+  payload_too_large: "File exceeds the configured maxUploadSize.",
+  rpc_413: "File exceeds the configured maxUploadSize.",
+  unsupported_media_type:
+    "This file type isn't allowed by the media plugin's acceptedTypes.",
+  rpc_415: "This file type isn't allowed by the media plugin's acceptedTypes.",
+  content_type_mismatch:
+    "This file type isn't allowed by the media plugin's acceptedTypes.",
+  mime_mismatch: "The uploaded bytes don't match the declared file type.",
+  object_not_found:
+    "Upload didn't reach storage — check your bucket's CORS rules.",
+  already_confirmed:
+    "This upload was already confirmed by another tab or device.",
+  media_meta_invalid: "Server couldn't process this upload. Try again.",
+  db_insert_failed: "Server couldn't process this upload. Try again.",
+  storage_put_failed: "Server couldn't process this upload. Try again.",
+  content_length_required:
+    "Upload missing Content-Length — your browser/proxy may be using chunked transfer.",
+  csrf_token_missing:
+    "Request blocked by CSRF check. Reload the page and try again.",
+};
+
 function friendlyError(raw: string): string {
-  switch (raw) {
-    case "storage_not_configured":
-      return "No storage adapter is wired up — set `storage:` in plumix.config.ts.";
-    case "payload_too_large":
-    case "rpc_413":
-      return "File exceeds the configured maxUploadSize.";
-    case "unsupported_media_type":
-    case "rpc_415":
-    case "content_type_mismatch":
-      return "This file type isn't allowed by the media plugin's acceptedTypes.";
-    case "mime_mismatch":
-      return "The uploaded bytes don't match the declared file type.";
-    case "object_not_found":
-      return "Upload didn't reach storage — check your bucket's CORS rules.";
-    case "already_confirmed":
-      return "This upload was already confirmed by another tab or device.";
-    case "media_meta_invalid":
-    case "db_insert_failed":
-    case "storage_put_failed":
-      return "Server couldn't process this upload. Try again.";
-    case "content_length_required":
-      return "Upload missing Content-Length — your browser/proxy may be using chunked transfer.";
-    case "csrf_token_missing":
-      return "Request blocked by CSRF check. Reload the page and try again.";
-    default:
-      return raw;
-  }
+  return FRIENDLY_ERRORS[raw] ?? raw;
 }
 
 function ErrorBanner({
@@ -709,17 +738,27 @@ function FileTypeBadge({ mime }: { mime: string }): ReactNode {
   );
 }
 
+const EXACT_BADGE_LABELS: Readonly<Record<string, string>> = {
+  "application/pdf": "PDF",
+  "application/msword": "DOC",
+  "application/vnd.ms-excel": "XLS",
+  "application/vnd.ms-powerpoint": "PPT",
+  "application/zip": "ZIP",
+};
+
+const SUBSTRING_BADGE_LABELS: readonly (readonly [string, string])[] = [
+  ["wordprocessingml", "DOCX"],
+  ["spreadsheetml", "XLSX"],
+  ["presentationml", "PPTX"],
+];
+
 function badgeLabel(mime: string): string | null {
-  if (mime === "application/pdf") return "PDF";
-  if (mime.includes("wordprocessingml")) return "DOCX";
-  if (mime.includes("spreadsheetml")) return "XLSX";
-  if (mime.includes("presentationml")) return "PPTX";
-  if (mime === "application/msword") return "DOC";
-  if (mime === "application/vnd.ms-excel") return "XLS";
-  if (mime === "application/vnd.ms-powerpoint") return "PPT";
-  if (mime === "application/zip") return "ZIP";
-  const sub = mime.split("/")[1] ?? "";
-  return sub.replace(/^x-/, "").toUpperCase().slice(0, 5);
+  const exact = EXACT_BADGE_LABELS[mime];
+  if (exact) return exact;
+  const sub = SUBSTRING_BADGE_LABELS.find(([needle]) => mime.includes(needle));
+  if (sub) return sub[1];
+  const tail = mime.split("/")[1] ?? "";
+  return tail.replace(/^x-/, "").toUpperCase().slice(0, 5);
 }
 
 function formatShortDate(iso: string): string {
