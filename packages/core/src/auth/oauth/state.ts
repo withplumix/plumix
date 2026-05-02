@@ -1,5 +1,4 @@
 import type { Db } from "../../context/app.js";
-import type { OAuthProviderKey } from "./types.js";
 import { and, eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { generateToken, hashToken } from "../tokens.js";
@@ -7,7 +6,7 @@ import { generateToken, hashToken } from "../tokens.js";
 export const OAUTH_STATE_TTL_SECONDS = 10 * 60;
 
 interface OAuthStatePayload {
-  readonly provider: OAuthProviderKey;
+  readonly provider: string;
   readonly codeVerifier: string;
 }
 

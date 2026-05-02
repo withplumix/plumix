@@ -1,6 +1,5 @@
 import { RPCHandler } from "@orpc/server/fetch";
 
-import type { OAuthProviderKey } from "../auth/oauth/types.js";
 import type { ResolvedPasskeyConfig } from "../auth/passkey/config.js";
 import type { CapabilityResolver } from "../auth/rbac.js";
 import type { SessionPolicy } from "../auth/sessions.js";
@@ -8,7 +7,6 @@ import type { PlumixConfig } from "../config.js";
 import type { AppContext } from "../context/app.js";
 import type { PluginRegistry, RegisteredRawRoute } from "../plugin/manifest.js";
 import type { RouteRule } from "../route/intent.js";
-import { OAUTH_PROVIDER_KEYS } from "../auth/oauth/types.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
 import { DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
@@ -18,6 +16,13 @@ import { CORE_RPC_NAMESPACES } from "../plugin/manifest.js";
 import { installPlugins } from "../plugin/register.js";
 import { compileRouteMap } from "../route/compile.js";
 import { appRouter } from "../rpc/router.js";
+
+export interface OAuthProviderSummary {
+  /** Map key in `auth.oauth.providers`; the URL path segment. */
+  readonly key: string;
+  /** Human-readable name for the login button ("GitHub", "Google", …). */
+  readonly label: string;
+}
 
 export interface PlumixApp {
   readonly config: PlumixConfig;
@@ -33,8 +38,13 @@ export interface PlumixApp {
   readonly origin: string;
   readonly passkey: ResolvedPasskeyConfig;
   readonly sessionPolicy: SessionPolicy;
-  /** Provider keys with credentials configured. Empty when oauth() wasn't passed. */
-  readonly oauthProviders: readonly OAuthProviderKey[];
+  /**
+   * Public summary of configured OAuth providers — `{ key, label }` per
+   * entry, derived from the user's `oauth.providers` map at app build
+   * time. The login screen reads this verbatim through the
+   * `auth.oauthProviders` RPC; secrets never leave config.
+   */
+  readonly oauthProviders: readonly OAuthProviderSummary[];
   readonly schema: Record<string, unknown>;
   /**
    * Sorted route map compiled once at `buildApp` from the plugin registry.
@@ -88,8 +98,11 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
 
   const passkey = resolvePasskeyConfig(config.auth.passkey);
   const oauth = config.auth.oauth;
-  const oauthProviders = oauth
-    ? OAUTH_PROVIDER_KEYS.filter((key) => oauth.providers[key])
+  const oauthProviders: OAuthProviderSummary[] = oauth
+    ? Object.entries(oauth.providers).map(([key, provider]) => ({
+        key,
+        label: provider.label,
+      }))
     : [];
   return {
     config,

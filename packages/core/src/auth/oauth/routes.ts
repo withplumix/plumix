@@ -1,7 +1,7 @@
 import type { AppContext } from "../../context/app.js";
 import type { PlumixApp } from "../../runtime/app.js";
 import type { OAuthErrorCode } from "./errors.js";
-import type { OAuthClientConfig, OAuthProviderKey } from "./types.js";
+import type { OAuthProviderClient } from "./types.js";
 import { users } from "../../db/schema/users.js";
 import { buildSessionCookie, isSecureRequest } from "../cookies.js";
 import { createSession } from "../sessions.js";
@@ -9,24 +9,27 @@ import { buildAuthorizeUrl, exchangeAndFetchProfile } from "./consumer.js";
 import { OAuthError } from "./errors.js";
 import { resolveOAuthUser } from "./signup.js";
 import { consumeOAuthState } from "./state.js";
-import { OAUTH_PROVIDER_KEYS } from "./types.js";
+import { OAUTH_PROVIDER_KEY_PATTERN } from "./types.js";
 
 const ADMIN_PATH = "/_plumix/admin";
 const LOGIN_PATH = "/_plumix/admin/login";
 const BOOTSTRAP_PATH = "/_plumix/admin/bootstrap";
 
 // Defensive bound on `code` from the provider's redirect. GitHub's codes
-// are ~20 chars; Google's a few hundred. 4 KiB is generous for any current
-// provider while bounding URL/body amplification on a malformed callback.
+// are ~20 chars; Google's a few hundred. 4 KiB is generous for any
+// current provider while bounding URL/body amplification on a malformed
+// callback.
 const MAX_CODE_LENGTH = 4096;
 
 interface OAuthRouteParams {
-  readonly provider: OAuthProviderKey;
+  readonly providerKey: string;
 }
 
 /**
- * Match `/_plumix/auth/oauth/<provider>/(start|callback)`. Returns the
- * provider + tail or null if the path doesn't match the OAuth shape.
+ * Match `/_plumix/auth/oauth/<key>/(start|callback)`. The shape check
+ * (alphanum + `_-`) happens here; existence check ("is this a configured
+ * provider?") happens in the handler. A path that doesn't match the
+ * shape returns null → 404 from the dispatcher.
  */
 export function parseOAuthPath(
   pathname: string,
@@ -36,24 +39,20 @@ export function parseOAuthPath(
   const rest = pathname.slice(prefix.length);
   const slash = rest.indexOf("/");
   if (slash < 0) return null;
-  const provider = rest.slice(0, slash);
+  const providerKey = rest.slice(0, slash);
   const tail = rest.slice(slash + 1);
-  if (!isProviderKey(provider)) return null;
+  if (!OAUTH_PROVIDER_KEY_PATTERN.test(providerKey)) return null;
   if (tail !== "start" && tail !== "callback") return null;
-  return { params: { provider }, tail };
-}
-
-function isProviderKey(value: string): value is OAuthProviderKey {
-  return (OAUTH_PROVIDER_KEYS as readonly string[]).includes(value);
+  return { params: { providerKey }, tail };
 }
 
 export async function handleOAuthStart(
   ctx: AppContext,
   app: PlumixApp,
-  provider: OAuthProviderKey,
+  providerKey: string,
 ): Promise<Response> {
-  const client = pickClient(app, provider);
-  if (!client) return loginError("provider_not_configured");
+  const provider = pickProvider(app, providerKey);
+  if (!provider) return loginError("provider_not_configured");
 
   // Block OAuth on a fresh deploy. Bootstrap is passkey-only; an OAuth
   // signup before any user exists would either fail with a confusing
@@ -64,18 +63,18 @@ export async function handleOAuthStart(
     return redirectTo(BOOTSTRAP_PATH);
   }
 
-  const redirectUri = oauthCallbackUrl(app, provider);
+  const redirectUri = oauthCallbackUrl(app, providerKey);
 
   try {
     const { url } = await buildAuthorizeUrl({
       db: ctx.db,
+      providerKey,
       provider,
-      client,
       redirectUri,
     });
     return redirectTo(url);
   } catch (error) {
-    ctx.logger.error("oauth_start_failed", { error, provider });
+    ctx.logger.error("oauth_start_failed", { error, provider: providerKey });
     return loginError("code_exchange_failed");
   }
 }
@@ -83,17 +82,17 @@ export async function handleOAuthStart(
 export async function handleOAuthCallback(
   ctx: AppContext,
   app: PlumixApp,
-  provider: OAuthProviderKey,
+  providerKey: string,
 ): Promise<Response> {
-  const client = pickClient(app, provider);
-  if (!client) return loginError("provider_not_configured");
+  const provider = pickProvider(app, providerKey);
+  if (!provider) return loginError("provider_not_configured");
 
   const url = new URL(ctx.request.url);
   const state = url.searchParams.get("state");
 
   // Provider-side denial (user clicked Cancel, scope rejected, etc.)
-  // arrives as `?error=...`. The state row would otherwise sit until TTL;
-  // consume it here so the slot is freed immediately.
+  // arrives as `?error=...`. The state row would otherwise sit until
+  // TTL; consume it here so the slot is freed immediately.
   if (url.searchParams.has("error")) {
     if (state) await consumeOAuthState(ctx.db, state);
     return loginError("state_invalid");
@@ -105,20 +104,22 @@ export async function handleOAuthCallback(
 
   const stored = await consumeOAuthState(ctx.db, state);
   if (!stored) return loginError("state_expired");
-  if (stored.provider !== provider) return loginError("state_invalid");
+  if (stored.provider !== providerKey) return loginError("state_invalid");
 
-  const redirectUri = oauthCallbackUrl(app, provider);
+  const redirectUri = oauthCallbackUrl(app, providerKey);
 
   try {
     const profile = await exchangeAndFetchProfile({
       provider,
-      client,
       code,
       redirectUri,
       codeVerifier: stored.codeVerifier,
     });
 
-    const { user } = await resolveOAuthUser(ctx.db, { provider, profile });
+    const { user } = await resolveOAuthUser(ctx.db, {
+      provider: providerKey,
+      profile,
+    });
 
     const { token } = await createSession(
       ctx.db,
@@ -136,23 +137,18 @@ export async function handleOAuthCallback(
   } catch (error) {
     if (error instanceof OAuthError) {
       ctx.logger.warn("oauth_callback_rejected", {
-        provider,
+        provider: providerKey,
         code: error.code,
       });
       return loginError(error.code);
     }
-    ctx.logger.error("oauth_callback_failed", { error, provider });
+    ctx.logger.error("oauth_callback_failed", { error, provider: providerKey });
     return loginError("code_exchange_failed");
   }
 }
 
-function pickClient(
-  app: PlumixApp,
-  provider: OAuthProviderKey,
-): OAuthClientConfig | null {
-  const oauth = app.config.auth.oauth;
-  if (!oauth) return null;
-  return oauth.providers[provider] ?? null;
+function pickProvider(app: PlumixApp, key: string): OAuthProviderClient | null {
+  return app.config.auth.oauth?.providers[key] ?? null;
 }
 
 // `app.origin` is the canonical site origin from passkey config — pinning
@@ -160,8 +156,8 @@ function pickClient(
 // time is identical at token-exchange time even if a load balancer or
 // custom adapter rewrites Host on the way in. (Cloudflare Workers binds
 // `request.url` to the connection hostname, but other adapters may not.)
-function oauthCallbackUrl(app: PlumixApp, provider: OAuthProviderKey): string {
-  return `${app.origin}/_plumix/auth/oauth/${provider}/callback`;
+function oauthCallbackUrl(app: PlumixApp, providerKey: string): string {
+  return `${app.origin}/_plumix/auth/oauth/${providerKey}/callback`;
 }
 
 function redirectTo(

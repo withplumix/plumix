@@ -1,11 +1,20 @@
 import * as v from "valibot";
 
-import type { OAuthProvidersConfig } from "./oauth/types.js";
+import type { OAuthProviderClient } from "./oauth/types.js";
 import type { PasskeyConfig } from "./passkey/config.js";
 import type { SessionPolicy } from "./sessions.js";
+import { OAUTH_PROVIDER_KEY_PATTERN } from "./oauth/types.js";
 
 export interface PlumixOAuthConfig {
-  readonly providers: OAuthProvidersConfig;
+  /**
+   * Map of provider keys → configured provider clients. The map key
+   * doubles as the URL path segment (`/_plumix/auth/oauth/<key>/start`)
+   * and the value of `oauth_accounts.provider` for any user that signs
+   * in via this provider. Pass instances from `github(creds)` /
+   * `google(creds)` (built-ins) or from your own factory implementing
+   * `OAuthProviderClient` for provider parity.
+   */
+  readonly providers: Readonly<Record<string, OAuthProviderClient>>;
 }
 
 export interface PlumixAuthInput {
@@ -66,27 +75,66 @@ const sessionPolicySchema = v.pipe(
   ),
 );
 
-const oauthClientSchema = v.object({
-  clientId: v.pipe(
-    v.string(),
-    v.nonEmpty("clientId must be a non-empty string"),
+// Provider clients are user-supplied factory output — we shape-check the
+// minimum required fields so a malformed entry surfaces at config time
+// rather than at the first sign-in attempt. Anything beyond these (the
+// `parseProfile` impl, optional hooks) is the provider author's contract.
+const oauthProviderClientSchema = v.object({
+  label: v.pipe(v.string(), v.nonEmpty("provider label must be non-empty")),
+  authorizeUrl: v.pipe(v.string(), v.url("authorizeUrl must be a valid URL")),
+  tokenUrl: v.pipe(v.string(), v.url("tokenUrl must be a valid URL")),
+  userInfoUrl: v.pipe(v.string(), v.url("userInfoUrl must be a valid URL")),
+  scopes: v.array(v.string()),
+  client: v.object({
+    clientId: v.pipe(v.string(), v.nonEmpty("clientId must be non-empty")),
+    clientSecret: v.pipe(
+      v.string(),
+      v.nonEmpty("clientSecret must be non-empty"),
+    ),
+  }),
+  parseProfile: v.pipe(
+    v.unknown(),
+    v.check(
+      (val) => typeof val === "function",
+      "parseProfile must be a function",
+    ),
   ),
-  clientSecret: v.pipe(
-    v.string(),
-    v.nonEmpty("clientSecret must be a non-empty string"),
+  // optional hooks — present-or-absent, no shape check beyond function
+  decorateAuthorizeUrl: v.optional(
+    v.pipe(
+      v.unknown(),
+      v.check(
+        (val) => typeof val === "function",
+        "decorateAuthorizeUrl must be a function",
+      ),
+    ),
+  ),
+  fetchVerifiedEmail: v.optional(
+    v.pipe(
+      v.unknown(),
+      v.check(
+        (val) => typeof val === "function",
+        "fetchVerifiedEmail must be a function",
+      ),
+    ),
   ),
 });
 
 const oauthSchema = v.pipe(
   v.object({
-    providers: v.object({
-      github: v.optional(oauthClientSchema),
-      google: v.optional(oauthClientSchema),
-    }),
+    providers: v.record(
+      v.pipe(
+        v.string(),
+        v.regex(
+          OAUTH_PROVIDER_KEY_PATTERN,
+          "oauth.providers key must be lowercase alphanum + dash/underscore (1-32 chars)",
+        ),
+      ),
+      oauthProviderClientSchema,
+    ),
   }),
   v.check(
-    (cfg) =>
-      cfg.providers.github !== undefined || cfg.providers.google !== undefined,
+    (cfg) => Object.keys(cfg.providers).length > 0,
     "oauth.providers must declare at least one provider",
   ),
 );

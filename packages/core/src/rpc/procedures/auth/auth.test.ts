@@ -105,16 +105,26 @@ describe("auth.oauthProviders", () => {
     expect(result).toEqual([]);
   });
 
-  test("returns enabled provider keys", async () => {
-    const h = await createRpcHarness({ oauthProviders: ["github"] });
+  test("returns key + label per configured provider", async () => {
+    const h = await createRpcHarness({
+      oauthProviders: [{ key: "github", label: "GitHub" }],
+    });
     const result = await h.client.auth.oauthProviders({});
-    expect(result).toEqual(["github"]);
+    expect(result).toEqual([{ key: "github", label: "GitHub" }]);
   });
 
   test("returns multiple providers in declared order", async () => {
-    const h = await createRpcHarness({ oauthProviders: ["github", "google"] });
+    const h = await createRpcHarness({
+      oauthProviders: [
+        { key: "github", label: "GitHub" },
+        { key: "google", label: "Google" },
+      ],
+    });
     const result = await h.client.auth.oauthProviders({});
-    expect(result).toEqual(["github", "google"]);
+    expect(result).toEqual([
+      { key: "github", label: "GitHub" },
+      { key: "google", label: "Google" },
+    ]);
   });
 });
 

@@ -112,8 +112,8 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   if (oauth) {
     if (ctx.request.method !== "GET") return methodNotAllowed(["GET"]);
     return oauth.tail === "start"
-      ? handleOAuthStart(ctx, app, oauth.params.provider)
-      : handleOAuthCallback(ctx, app, oauth.params.provider);
+      ? handleOAuthStart(ctx, app, oauth.params.providerKey)
+      : handleOAuthCallback(ctx, app, oauth.params.providerKey);
   }
 
   if (pathname === ADMIN_PREFIX || pathname.startsWith(`${ADMIN_PREFIX}/`)) {

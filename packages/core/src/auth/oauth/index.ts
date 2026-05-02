@@ -1,20 +1,32 @@
-// Public OAuth surface. Internals (PKCE primitives, state store, provider
-// singletons, GitHub email helper, the `consumer` exchange/fetch helpers,
-// the path parser) are intentionally NOT re-exported — they're only used
-// by the dispatcher + tests, which import them by file path. Keeping the
-// barrel narrow prevents accidental load-bearing dependencies on internal
-// helpers ahead of the 0.1.0 freeze.
+// Public OAuth surface.
+//
+// Built-in provider factories (`github`, `google`) ship from this barrel
+// alongside the public types so a user wiring up `auth({ oauth: ... })`
+// has everything from one import:
+//
+//   import { auth, github, google } from "@plumix/core";
+//
+// User-defined providers live in user code — they implement
+// `OAuthProviderClient` (often via a factory matching the
+// `OAuthProviderFactory` signature) and pass the result into the same
+// `oauth.providers` map. Adding a third built-in or a custom provider
+// follows the same path; no privileged registry, no const enum.
+//
+// Internals (PKCE, state store, consumer, signup, route handlers, the
+// path parser) are imported directly by the dispatcher and tests; they
+// don't leave the package.
 
 export { OAUTH_ERROR_CODES, OAuthError } from "./errors.js";
 export type { OAuthErrorCode } from "./errors.js";
 
 export { handleOAuthCallback, handleOAuthStart } from "./routes.js";
 
-export { OAUTH_PROVIDER_KEYS } from "./types.js";
+export { github, google } from "./providers/index.js";
+
+export { OAUTH_PROVIDER_KEY_PATTERN } from "./types.js";
 export type {
   OAuthClientConfig,
   OAuthProfile,
-  OAuthProvider,
-  OAuthProviderKey,
-  OAuthProvidersConfig,
+  OAuthProviderClient,
+  OAuthProviderFactory,
 } from "./types.js";

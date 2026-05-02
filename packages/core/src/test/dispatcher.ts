@@ -1,4 +1,4 @@
-import type { OAuthProvidersConfig } from "../auth/oauth/types.js";
+import type { OAuthProviderClient } from "../auth/oauth/types.js";
 import type { AnyPluginDescriptor } from "../config.js";
 import type { AppContext } from "../context/app.js";
 import type { User, UserRole } from "../db/schema/users.js";
@@ -72,11 +72,11 @@ export interface CreateDispatcherHarnessOptions {
    */
   readonly storage?: ConnectedObjectStorage;
   /**
-   * OAuth provider credentials to expose on `app.config.auth.oauth`. Tests
-   * exercising the OAuth start/callback routes pass dummy clientId/secret
-   * here; passkey-only deployments leave it undefined.
+   * Configured OAuth providers for tests exercising the start/callback
+   * routes. Pass `{ github: github({ clientId, clientSecret }), google:
+   * google(...) }`. Passkey-only deployments leave undefined.
    */
-  readonly oauth?: OAuthProvidersConfig;
+  readonly oauth?: Readonly<Record<string, OAuthProviderClient>>;
 }
 
 export interface DispatcherHarness {

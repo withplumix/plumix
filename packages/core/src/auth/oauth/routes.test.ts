@@ -6,11 +6,13 @@ import { oauthAccounts } from "../../db/schema/oauth_accounts.js";
 import { sessions } from "../../db/schema/sessions.js";
 import { users } from "../../db/schema/users.js";
 import { createDispatcherHarness } from "../../test/dispatcher.js";
+import { github } from "./providers/github.js";
+import { google } from "./providers/google.js";
 import { issueOAuthState } from "./state.js";
 
 const TEST_OAUTH = {
-  github: { clientId: "gh-client", clientSecret: "gh-secret" },
-  google: { clientId: "gg-client", clientSecret: "gg-secret" },
+  github: github({ clientId: "gh-client", clientSecret: "gh-secret" }),
+  google: google({ clientId: "gg-client", clientSecret: "gg-secret" }),
 } as const;
 
 interface StubResponse {
@@ -123,10 +125,21 @@ describe("oauth start route", () => {
     expect(response.status).toBe(405);
   });
 
-  test("returns 404 on unknown provider", async () => {
+  test("redirects to login with provider_not_configured for an unknown key", async () => {
     const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
     const response = await h.dispatch(
       new Request("https://cms.example/_plumix/auth/oauth/twitter/start"),
+    );
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toContain(
+      "oauth_error=provider_not_configured",
+    );
+  });
+
+  test("returns 404 on a malformed provider key (uppercase / specials)", async () => {
+    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const response = await h.dispatch(
+      new Request("https://cms.example/_plumix/auth/oauth/Bad-Key!/start"),
     );
     expect(response.status).toBe(404);
   });

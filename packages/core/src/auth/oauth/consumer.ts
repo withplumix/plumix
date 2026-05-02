@@ -1,19 +1,13 @@
 import type { Db } from "../../context/app.js";
-import type {
-  OAuthClientConfig,
-  OAuthProfile,
-  OAuthProvider,
-  OAuthProviderKey,
-} from "./types.js";
+import type { OAuthProfile, OAuthProviderClient } from "./types.js";
 import { OAuthError } from "./errors.js";
 import { computeS256Challenge, generateCodeVerifier } from "./pkce.js";
-import { fetchPrimaryEmail, getProvider } from "./providers/index.js";
 import { issueOAuthState } from "./state.js";
 
 interface BuildAuthorizeUrlInput {
   readonly db: Db;
-  readonly provider: OAuthProviderKey;
-  readonly client: OAuthClientConfig;
+  readonly providerKey: string;
+  readonly provider: OAuthProviderClient;
   readonly redirectUri: string;
 }
 
@@ -23,43 +17,37 @@ interface BuiltAuthorizeUrl {
 }
 
 /**
- * Mint a PKCE verifier + state, persist them under `oauth_state`, and return
- * the authorize URL. State is what the provider echoes back; it's the only
- * way the callback ties the response to a verifier we can replay.
+ * Mint a PKCE verifier + state, persist them under `oauth_state`, and
+ * return the authorize URL. State is what the provider echoes back; it's
+ * the only way the callback ties the response to a verifier we can replay.
  */
 export async function buildAuthorizeUrl(
   input: BuildAuthorizeUrlInput,
 ): Promise<BuiltAuthorizeUrl> {
-  const provider = getProvider(input.provider);
+  const { provider } = input;
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = await computeS256Challenge(codeVerifier);
 
   const { state } = await issueOAuthState(input.db, {
-    provider: input.provider,
+    provider: input.providerKey,
     codeVerifier,
   });
 
   const url = new URL(provider.authorizeUrl);
-  url.searchParams.set("client_id", input.client.clientId);
+  url.searchParams.set("client_id", provider.client.clientId);
   url.searchParams.set("redirect_uri", input.redirectUri);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", provider.scopes.join(" "));
   url.searchParams.set("state", state);
   url.searchParams.set("code_challenge", codeChallenge);
   url.searchParams.set("code_challenge_method", "S256");
-  // Google requires this to surface email_verified on the userinfo endpoint
-  // for accounts that aren't currently signed in. Harmless for GitHub.
-  if (input.provider === "google") {
-    url.searchParams.set("access_type", "offline");
-    url.searchParams.set("prompt", "consent");
-  }
+  provider.decorateAuthorizeUrl?.(url);
 
   return { url: url.toString(), state };
 }
 
 interface ExchangeAndFetchInput {
-  readonly provider: OAuthProviderKey;
-  readonly client: OAuthClientConfig;
+  readonly provider: OAuthProviderClient;
   readonly code: string;
   readonly redirectUri: string;
   readonly codeVerifier: string;
@@ -72,23 +60,23 @@ interface TokenResponse {
 }
 
 /**
- * Exchange the authorization code for tokens, then fetch the user's profile.
- * Returns a normalised OAuthProfile or throws OAuthError on any step
- * failure — the route layer maps codes to user-facing messages.
+ * Exchange the authorization code for tokens, then fetch the user's
+ * profile. Returns a normalised OAuthProfile or throws OAuthError on any
+ * step failure — the route layer maps codes to user-facing messages.
  */
 export async function exchangeAndFetchProfile(
   input: ExchangeAndFetchInput,
 ): Promise<OAuthProfile> {
-  const provider = getProvider(input.provider);
-  const tokens = await exchangeCode(provider, input);
+  const { provider } = input;
+  const tokens = await exchangeCode(input);
   const profile = await fetchProfile(provider, tokens.access_token);
 
   let { email, emailVerified } = profile;
-  if (input.provider === "github" && !email) {
-    const primary = await fetchPrimaryEmail(tokens.access_token);
-    if (primary) {
-      email = primary.email;
-      emailVerified = primary.verified;
+  if (!email && provider.fetchVerifiedEmail) {
+    const fallback = await provider.fetchVerifiedEmail(tokens.access_token);
+    if (fallback) {
+      email = fallback.email;
+      emailVerified = fallback.verified;
     }
   }
 
@@ -106,9 +94,9 @@ export async function exchangeAndFetchProfile(
 }
 
 async function exchangeCode(
-  provider: OAuthProvider,
   input: ExchangeAndFetchInput,
 ): Promise<TokenResponse> {
+  const { provider } = input;
   // RFC 6749 §2.3.1 / Copenhagen Book: client credentials go in the
   // Authorization header (HTTP Basic). client_id stays in the body for
   // providers (like Google) whose docs require it on the form too —
@@ -117,10 +105,12 @@ async function exchangeCode(
     grant_type: "authorization_code",
     code: input.code,
     redirect_uri: input.redirectUri,
-    client_id: input.client.clientId,
+    client_id: provider.client.clientId,
     code_verifier: input.codeVerifier,
   });
-  const basic = btoa(`${input.client.clientId}:${input.client.clientSecret}`);
+  const basic = btoa(
+    `${provider.client.clientId}:${provider.client.clientSecret}`,
+  );
 
   let response: Response;
   try {
@@ -160,9 +150,9 @@ async function exchangeCode(
 }
 
 async function fetchProfile(
-  provider: OAuthProvider,
+  provider: OAuthProviderClient,
   accessToken: string,
-): Promise<ReturnType<OAuthProvider["parseProfile"]>> {
+): Promise<ReturnType<OAuthProviderClient["parseProfile"]>> {
   let response: Response;
   try {
     response = await fetch(provider.userInfoUrl, {

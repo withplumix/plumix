@@ -32,11 +32,6 @@ import * as v from "valibot";
 
 import { loginSchema } from "./-schemas.js";
 
-const PROVIDER_LABEL: Record<string, string> = {
-  github: "GitHub",
-  google: "Google",
-};
-
 const loginSearchSchema = v.object({
   oauth_error: v.optional(v.string()),
 });
@@ -152,15 +147,15 @@ function LoginRoute(): ReactNode {
               </span>
               <Separator className="flex-1" />
             </div>
-            {providers.data.map((provider) => (
+            {providers.data.map(({ key, label }) => (
               <Button
-                key={provider}
+                key={key}
                 asChild
                 variant="outline"
-                data-testid={`login-oauth-${provider}`}
+                data-testid={`login-oauth-${key}`}
               >
-                <a href={`/_plumix/auth/oauth/${provider}/start`}>
-                  Continue with {PROVIDER_LABEL[provider] ?? provider}
+                <a href={`/_plumix/auth/oauth/${key}/start`}>
+                  Continue with {label}
                 </a>
               </Button>
             ))}

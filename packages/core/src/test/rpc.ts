@@ -1,7 +1,6 @@
 import type { RouterClient } from "@orpc/server";
 import { createRouterClient } from "@orpc/server";
 
-import type { OAuthProviderKey } from "../auth/oauth/types.js";
 import type { AppContext, Db } from "../context/app.js";
 import type { User, UserRole } from "../db/schema/users.js";
 import type { HookExecutor, HookRegistry } from "../hooks/registry.js";
@@ -13,6 +12,7 @@ import type {
   FilterRest,
 } from "../hooks/types.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
+import type { OAuthProviderSummary } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
 import type { Factories } from "./factories.js";
 import type { ActionSpy, FilterSpy } from "./spies.js";
@@ -42,7 +42,7 @@ export interface BaseRpcHarnessOptions {
    * `["github"]` etc. when exercising the auth.oauthProviders procedure;
    * default `[]` matches a passkey-only deploy.
    */
-  readonly oauthProviders?: readonly OAuthProviderKey[];
+  readonly oauthProviders?: readonly OAuthProviderSummary[];
 }
 
 export interface AuthenticatedHarnessOptions extends BaseRpcHarnessOptions {
@@ -92,7 +92,7 @@ function buildContext(
   hooks: HookExecutor,
   plugins: PluginRegistry,
   request: Request,
-  oauthProviders: readonly OAuthProviderKey[],
+  oauthProviders: readonly OAuthProviderSummary[],
 ): AppContext {
   return createAppContext({
     db,
@@ -127,7 +127,7 @@ function assemble<TUser extends User | null>(
   plugins: PluginRegistry,
   request: Request,
   user: TUser,
-  oauthProviders: readonly OAuthProviderKey[],
+  oauthProviders: readonly OAuthProviderSummary[],
 ): RpcHarnessBase<TUser> {
   const context = buildContext(
     db,

@@ -1,6 +1,6 @@
 import type { Db } from "../../context/app.js";
 import type { User, UserRole } from "../../db/schema/users.js";
-import type { OAuthProfile, OAuthProviderKey } from "./types.js";
+import type { OAuthProfile } from "./types.js";
 import { and, eq, isUniqueConstraintError } from "../../db/index.js";
 import { allowedDomains } from "../../db/schema/allowed_domains.js";
 import { oauthAccounts } from "../../db/schema/oauth_accounts.js";
@@ -8,7 +8,7 @@ import { users } from "../../db/schema/users.js";
 import { OAuthError } from "./errors.js";
 
 interface ResolveOAuthUserInput {
-  readonly provider: OAuthProviderKey;
+  readonly provider: string;
   readonly profile: OAuthProfile;
 }
 

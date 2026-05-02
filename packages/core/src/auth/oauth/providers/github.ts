@@ -1,4 +1,8 @@
-import type { OAuthProvider } from "../types.js";
+import type {
+  OAuthClientConfig,
+  OAuthProviderClient,
+  OAuthProviderFactory,
+} from "../types.js";
 
 interface GitHubProfile {
   readonly id: number;
@@ -14,12 +18,15 @@ interface GitHubEmail {
   readonly verified: boolean;
 }
 
-export const github: OAuthProvider = {
-  key: "github",
+export const github: OAuthProviderFactory = (
+  client: OAuthClientConfig,
+): OAuthProviderClient => ({
+  label: "GitHub",
   authorizeUrl: "https://github.com/login/oauth/authorize",
   tokenUrl: "https://github.com/login/oauth/access_token",
   userInfoUrl: "https://api.github.com/user",
   scopes: ["read:user", "user:email"],
+  client,
   parseProfile(raw) {
     const p = raw as GitHubProfile;
     return {
@@ -33,27 +40,19 @@ export const github: OAuthProvider = {
       avatarUrl: p.avatar_url,
     };
   },
-};
-
-interface PrimaryEmail {
-  readonly email: string;
-  readonly verified: boolean;
-}
-
-export async function fetchPrimaryEmail(
-  accessToken: string,
-): Promise<PrimaryEmail | null> {
-  const response = await fetch("https://api.github.com/user/emails", {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "plumix",
-    },
-  });
-  if (!response.ok) return null;
-  const list = (await response.json()) as readonly GitHubEmail[];
-  const primary = list.find((e) => e.primary) ?? list[0];
-  if (!primary) return null;
-  return { email: primary.email, verified: primary.verified };
-}
+  async fetchVerifiedEmail(accessToken) {
+    const response = await fetch("https://api.github.com/user/emails", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "plumix",
+      },
+    });
+    if (!response.ok) return null;
+    const list = (await response.json()) as readonly GitHubEmail[];
+    const primary = list.find((e) => e.primary) ?? list[0];
+    if (!primary) return null;
+    return { email: primary.email, verified: primary.verified };
+  },
+});

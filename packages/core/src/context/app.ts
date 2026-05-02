@@ -1,11 +1,11 @@
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 
-import type { OAuthProviderKey } from "../auth/oauth/types.js";
 import type { KnownCapability } from "../auth/rbac.js";
 import type * as coreSchema from "../db/schema/index.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
+import type { OAuthProviderSummary } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
 import type {
   AssetsBinding,
@@ -53,12 +53,12 @@ export interface AppContext<
   readonly logger: Logger;
   readonly auth: AuthNamespace;
   /**
-   * OAuth provider keys configured on this app. Empty when the deploy is
-   * passkey-only. Read by the login screen (via auth.oauthProviders RPC)
-   * to render provider buttons; the actual client_id/client_secret never
-   * leave the app config.
+   * Configured OAuth providers — `{ key, label }` per entry. Empty when
+   * the deploy is passkey-only. Read by the login screen (via the
+   * `auth.oauthProviders` RPC) to render provider buttons; client
+   * credentials never reach this surface.
    */
-  readonly oauthProviders: readonly OAuthProviderKey[];
+  readonly oauthProviders: readonly OAuthProviderSummary[];
   /**
    * Extend work past the returned Response. Runtime adapters bind this
    * to their platform primitive (CF Workers: `ExecutionContext.waitUntil`).
@@ -107,7 +107,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly assets?: AssetsBinding;
   readonly storage?: ConnectedObjectStorage;
   readonly imageDelivery?: ImageDelivery;
-  readonly oauthProviders?: readonly OAuthProviderKey[];
+  readonly oauthProviders?: readonly OAuthProviderSummary[];
 }
 
 const dropPromise: AfterResponse = () => undefined;
