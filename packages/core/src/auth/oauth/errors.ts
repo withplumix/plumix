@@ -8,6 +8,7 @@ export const OAUTH_ERROR_CODES = [
   "email_unverified",
   "domain_not_allowed",
   "account_disabled",
+  "link_broken",
   "registration_closed",
 ] as const;
 

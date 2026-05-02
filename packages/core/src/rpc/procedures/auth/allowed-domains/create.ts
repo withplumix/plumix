@@ -22,9 +22,8 @@ export const create = base
           isEnabled: input.isEnabled,
         })
         .returning();
-      if (!row) {
-        throw errors.CONFLICT({ data: { reason: "insert_failed" } });
-      }
+      if (!row)
+        throw new Error("allowedDomains.create: insert returned no row");
       return row;
     } catch (error) {
       if (isUniqueConstraintError(error)) {

@@ -14,10 +14,10 @@ export const update = base
       throw errors.FORBIDDEN({ data: { capability: CAPABILITY } });
     }
 
-    const patch: Partial<{
-      defaultRole: typeof input.defaultRole;
-      isEnabled: boolean;
-    }> = {};
+    const patch: {
+      defaultRole?: typeof input.defaultRole;
+      isEnabled?: boolean;
+    } = {};
     if (input.defaultRole !== undefined) patch.defaultRole = input.defaultRole;
     if (input.isEnabled !== undefined) patch.isEnabled = input.isEnabled;
     if (Object.keys(patch).length === 0) {

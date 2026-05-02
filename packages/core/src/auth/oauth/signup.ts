@@ -1,7 +1,7 @@
 import type { Db } from "../../context/app.js";
 import type { User, UserRole } from "../../db/schema/users.js";
 import type { OAuthProfile, OAuthProviderKey } from "./types.js";
-import { and, eq } from "../../db/index.js";
+import { and, eq, isUniqueConstraintError } from "../../db/index.js";
 import { allowedDomains } from "../../db/schema/allowed_domains.js";
 import { oauthAccounts } from "../../db/schema/oauth_accounts.js";
 import { users } from "../../db/schema/users.js";
@@ -32,8 +32,26 @@ export interface ResolvedOAuthUser {
  *      provision a new user with the domain's `defaultRole`. Otherwise
  *      reject — bootstrap remains passkey-only, so we never create an
  *      admin via OAuth here even on a fresh deploy.
+ *
+ * Concurrent callbacks for the same email or the same `(provider,
+ * providerAccountId)` race on the underlying UNIQUE constraints. We retry
+ * the whole resolution exactly once on a unique-violation: by then the
+ * winner's row is durable, and the second attempt falls into branch 1 or
+ * 2 deterministically.
  */
 export async function resolveOAuthUser(
+  db: Db,
+  input: ResolveOAuthUserInput,
+): Promise<ResolvedOAuthUser> {
+  try {
+    return await resolveOnce(db, input);
+  } catch (error) {
+    if (!isUniqueConstraintError(error)) throw error;
+    return resolveOnce(db, input);
+  }
+}
+
+async function resolveOnce(
   db: Db,
   input: ResolveOAuthUserInput,
 ): Promise<ResolvedOAuthUser> {
@@ -49,12 +67,11 @@ export async function resolveOAuthUser(
     const linked = await db.query.users.findFirst({
       where: eq(users.id, existingLink.userId),
     });
-    if (!linked) {
-      // The OAuth row is dangling — likely raced with a user delete that
-      // didn't cascade. Treat as a hard error rather than silently
-      // re-provisioning a new admin under the same provider id.
-      throw new OAuthError("account_disabled");
-    }
+    // A dangling oauth_accounts row means the cascade-on-delete didn't
+    // fire (FK enforcement off, or hand-rolled SQL). Surface a distinct
+    // code so the friendly-message map can say "support" rather than
+    // "your account is disabled" — the row is gone, not paused.
+    if (!linked) throw new OAuthError("link_broken");
     if (linked.disabledAt) throw new OAuthError("account_disabled");
     return { user: linked, created: false, linked: false };
   }

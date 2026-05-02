@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { eq } from "../../db/index.js";
+import { eq, sql } from "../../db/index.js";
 import { allowedDomains } from "../../db/schema/allowed_domains.js";
 import { oauthAccounts } from "../../db/schema/oauth_accounts.js";
 import { users } from "../../db/schema/users.js";
@@ -16,6 +16,30 @@ const PROFILE = {
   name: "Alice",
   avatarUrl: "https://example.com/a.png",
 } as const;
+
+describe("resolveOAuthUser — dangling oauth_accounts row", () => {
+  test("missing user behind an oauth_accounts row throws link_broken", async () => {
+    const db = await createTestDb();
+    // SQLite enforces FKs in our test harness; produce a dangling row by
+    // disabling enforcement just long enough to insert a forward-reference
+    // to a userId that doesn't exist. Mirrors the production-data shape we
+    // care about: a row that the cascade should have deleted but didn't.
+    await db.run(sql`PRAGMA foreign_keys = OFF`);
+    await db.insert(oauthAccounts).values({
+      provider: "github",
+      providerAccountId: "ghost-1",
+      userId: 9999,
+    });
+    await db.run(sql`PRAGMA foreign_keys = ON`);
+
+    await expect(
+      resolveOAuthUser(db, {
+        provider: "github",
+        profile: { ...PROFILE, providerAccountId: "ghost-1" },
+      }),
+    ).rejects.toMatchObject({ code: "link_broken" });
+  });
+});
 
 describe("resolveOAuthUser — link existing oauth account", () => {
   test("returns the linked user without creating anything", async () => {
@@ -195,5 +219,69 @@ describe("resolveOAuthUser — error type", () => {
         profile: { ...PROFILE, emailVerified: false },
       }),
     ).rejects.toBeInstanceOf(OAuthError);
+  });
+});
+
+describe("resolveOAuthUser — race on concurrent inserts", () => {
+  test("two callbacks for the same new email both resolve without throwing 500", async () => {
+    const db = await createTestDb();
+    await userFactory.transient({ db }).create({ role: "admin" });
+    await allowedDomainFactory.transient({ db }).create({
+      domain: "example.com",
+      defaultRole: "subscriber",
+      isEnabled: true,
+    });
+
+    const [a, b] = await Promise.all([
+      resolveOAuthUser(db, {
+        provider: "github",
+        profile: { ...PROFILE, providerAccountId: "race-1" },
+      }),
+      resolveOAuthUser(db, {
+        provider: "github",
+        // Identical email but a *different* providerAccountId — both
+        // would normally try to insert a new user row keyed by that
+        // email. The unique-constraint retry pattern lets the loser
+        // fall through to the email-link branch on attempt #2.
+        profile: { ...PROFILE, providerAccountId: "race-2" },
+      }),
+    ]);
+
+    // Both calls return the same user (one created it, the other linked).
+    expect(a.user.id).toBe(b.user.id);
+    expect(a.user.email).toBe(PROFILE.email);
+    // Exactly one user row, two oauth_accounts rows.
+    const usersForEmail = await db.query.users.findMany({
+      where: eq(users.email, PROFILE.email),
+    });
+    expect(usersForEmail).toHaveLength(1);
+    const userId = usersForEmail[0]?.id;
+    if (userId === undefined) throw new Error("user not created");
+    const linksForUser = await db.query.oauthAccounts.findMany({
+      where: eq(oauthAccounts.userId, userId),
+    });
+    expect(linksForUser).toHaveLength(2);
+  });
+
+  test("two callbacks for the same provider account map to the same user", async () => {
+    const db = await createTestDb();
+    const seeded = await userFactory.transient({ db }).create({
+      email: PROFILE.email,
+      role: "editor",
+    });
+
+    const [a, b] = await Promise.all([
+      resolveOAuthUser(db, { provider: "github", profile: PROFILE }),
+      resolveOAuthUser(db, { provider: "github", profile: PROFILE }),
+    ]);
+
+    expect(a.user.id).toBe(seeded.id);
+    expect(b.user.id).toBe(seeded.id);
+    // Composite PK on (provider, providerAccountId) means the second
+    // insert raced — exactly one row must exist.
+    const links = await db.query.oauthAccounts.findMany({
+      where: eq(oauthAccounts.providerAccountId, PROFILE.providerAccountId),
+    });
+    expect(links).toHaveLength(1);
   });
 });

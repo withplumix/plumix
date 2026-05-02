@@ -33,8 +33,14 @@ afterEach(() => {
 });
 
 function answer(routes: Record<string, Stub>): void {
+  // Match longest-prefix first so a specific pattern like
+  // `https://api.github.com/user/emails` wins over the parent
+  // `https://api.github.com/user`.
+  const patterns = Object.entries(routes).sort(
+    ([a], [b]) => b.length - a.length,
+  );
   fetchMock.mockImplementation((url, init) => {
-    for (const [pattern, stub] of Object.entries(routes)) {
+    for (const [pattern, stub] of patterns) {
       if (url.startsWith(pattern)) {
         const result = typeof stub === "function" ? stub(url, init) : stub;
         return Promise.resolve(
@@ -391,6 +397,157 @@ describe("oauth callback route", () => {
     expect(response.status).toBe(302);
     expect(response.headers.get("location")).toContain(
       "oauth_error=code_exchange_failed",
+    );
+  });
+
+  test("github email fallback — provisions a user from /user/emails when /user.email is null", async () => {
+    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    await h.seedUser("admin");
+    await h.factory.allowedDomain.create({
+      domain: "example.com",
+      defaultRole: "subscriber",
+      isEnabled: true,
+    });
+    const state = await seedState(h, "github", "v-fallback");
+
+    answer({
+      "https://github.com/login/oauth/access_token": {
+        body: { access_token: "tk", token_type: "bearer" },
+      },
+      "https://api.github.com/user": {
+        body: {
+          id: 4242,
+          login: "newcomer",
+          name: "New Comer",
+          email: null,
+          avatar_url: null,
+        },
+      },
+      "https://api.github.com/user/emails": {
+        body: [
+          { email: "newcomer@example.com", primary: true, verified: true },
+        ],
+      },
+    });
+
+    const response = await get(
+      h,
+      `/_plumix/auth/oauth/github/callback?code=abc&state=${state}`,
+    );
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/_plumix/admin");
+
+    const created = await h.db.query.users.findFirst({
+      where: eq(users.email, "newcomer@example.com"),
+    });
+    expect(created?.role).toBe("subscriber");
+    expect(created?.emailVerifiedAt).not.toBeNull();
+  });
+
+  test("github email fallback rejects when the primary is unverified", async () => {
+    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    await h.seedUser("admin");
+    await h.factory.allowedDomain.create({
+      domain: "example.com",
+      defaultRole: "subscriber",
+      isEnabled: true,
+    });
+    const state = await seedState(h, "github", "v-fallback-unverified");
+
+    answer({
+      "https://github.com/login/oauth/access_token": {
+        body: { access_token: "tk", token_type: "bearer" },
+      },
+      "https://api.github.com/user": {
+        body: {
+          id: 4243,
+          login: "u",
+          name: null,
+          email: null,
+          avatar_url: null,
+        },
+      },
+      "https://api.github.com/user/emails": {
+        body: [{ email: "u@example.com", primary: true, verified: false }],
+      },
+    });
+
+    const response = await get(
+      h,
+      `/_plumix/auth/oauth/github/callback?code=abc&state=${state}`,
+    );
+    expect(response.headers.get("location")).toContain(
+      "oauth_error=email_unverified",
+    );
+  });
+
+  test("malformed userinfo body (missing fields) rejects with email_missing", async () => {
+    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    await h.seedUser("admin");
+    const state = await seedState(h, "google", "v-malformed");
+
+    answer({
+      "https://oauth2.googleapis.com/token": {
+        body: { access_token: "tk", token_type: "bearer" },
+      },
+      "https://openidconnect.googleapis.com/v1/userinfo": {
+        body: { sub: "g-malformed" },
+      },
+    });
+
+    const response = await get(
+      h,
+      `/_plumix/auth/oauth/google/callback?code=abc&state=${state}`,
+    );
+    expect(response.headers.get("location")).toContain(
+      "oauth_error=email_missing",
+    );
+  });
+
+  test("oversized code is rejected before any provider call", async () => {
+    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    await h.seedUser("admin");
+    const state = await seedState(h, "github", "v-oversize");
+    const huge = "x".repeat(8192);
+
+    fetchMock.mockImplementation(() =>
+      Promise.reject(new Error("provider must not be called")),
+    );
+
+    const response = await get(
+      h,
+      `/_plumix/auth/oauth/github/callback?code=${huge}&state=${state}`,
+    );
+    expect(response.headers.get("location")).toContain(
+      "oauth_error=state_invalid",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test("provider-error callback consumes the state row", async () => {
+    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    await h.seedUser("admin");
+    const state = await seedState(h, "github", "v-canceled");
+
+    const response = await get(
+      h,
+      `/_plumix/auth/oauth/github/callback?error=access_denied&state=${state}`,
+    );
+    expect(response.headers.get("location")).toContain(
+      "oauth_error=state_invalid",
+    );
+
+    // The state row must be gone — replaying with the same value can't
+    // reach the code-exchange path.
+    answer({
+      "https://github.com/login/oauth/access_token": { body: {} },
+    });
+    const replay = await get(
+      h,
+      `/_plumix/auth/oauth/github/callback?code=abc&state=${state}`,
+    );
+    expect(replay.headers.get("location")).toContain(
+      "oauth_error=state_expired",
     );
   });
 

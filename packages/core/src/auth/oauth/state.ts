@@ -1,6 +1,6 @@
 import type { Db } from "../../context/app.js";
 import type { OAuthProviderKey } from "./types.js";
-import { eq } from "../../db/index.js";
+import { and, eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { generateToken, hashToken } from "../tokens.js";
 
@@ -44,15 +44,19 @@ export async function consumeOAuthState(
   state: string,
 ): Promise<OAuthStatePayload | null> {
   const hash = await hashToken(state);
-  const row = await db.query.authTokens.findFirst({
-    where: eq(authTokens.hash, hash),
-  });
-  if (row?.type !== "oauth_state") return null;
 
-  // Single-use regardless of expiry: a replay should never succeed even if
-  // the row hasn't been pruned. Delete first, then evaluate validity.
-  await db.delete(authTokens).where(eq(authTokens.hash, hash));
+  // Atomic compare-and-delete: `DELETE … RETURNING` returns at most one
+  // row to whichever caller wins the SQLite write. A concurrent second
+  // consume sees an empty result, never the same payload twice. Scope the
+  // DELETE by `type = 'oauth_state'` so a hash collision with another
+  // token type (invite, magic_link, …) doesn't accidentally consume that
+  // row when the oauth row was never present.
+  const [row] = await db
+    .delete(authTokens)
+    .where(and(eq(authTokens.hash, hash), eq(authTokens.type, "oauth_state")))
+    .returning();
 
+  if (!row) return null;
   if (row.expiresAt.getTime() < Date.now()) return null;
 
   const payload = row.payload as Partial<OAuthStatePayload> | null;

@@ -15,6 +15,11 @@ const ADMIN_PATH = "/_plumix/admin";
 const LOGIN_PATH = "/_plumix/admin/login";
 const BOOTSTRAP_PATH = "/_plumix/admin/bootstrap";
 
+// Defensive bound on `code` from the provider's redirect. GitHub's codes
+// are ~20 chars; Google's a few hundred. 4 KiB is generous for any current
+// provider while bounding URL/body amplification on a malformed callback.
+const MAX_CODE_LENGTH = 4096;
+
 interface OAuthRouteParams {
   readonly provider: OAuthProviderKey;
 }
@@ -59,7 +64,7 @@ export async function handleOAuthStart(
     return redirectTo(BOOTSTRAP_PATH);
   }
 
-  const redirectUri = oauthCallbackUrl(ctx.request, provider);
+  const redirectUri = oauthCallbackUrl(app, provider);
 
   try {
     const { url } = await buildAuthorizeUrl({
@@ -84,23 +89,25 @@ export async function handleOAuthCallback(
   if (!client) return loginError("provider_not_configured");
 
   const url = new URL(ctx.request.url);
+  const state = url.searchParams.get("state");
+
   // Provider-side denial (user clicked Cancel, scope rejected, etc.)
-  // arrives as `?error=...`. Treat as state_invalid for messaging since
-  // the original state is now unreachable; we're also discarding any
-  // pending row by deleting it on consume below if it exists.
+  // arrives as `?error=...`. The state row would otherwise sit until TTL;
+  // consume it here so the slot is freed immediately.
   if (url.searchParams.has("error")) {
+    if (state) await consumeOAuthState(ctx.db, state);
     return loginError("state_invalid");
   }
 
   const code = url.searchParams.get("code");
-  const state = url.searchParams.get("state");
   if (!code || !state) return loginError("state_invalid");
+  if (code.length > MAX_CODE_LENGTH) return loginError("state_invalid");
 
   const stored = await consumeOAuthState(ctx.db, state);
   if (!stored) return loginError("state_expired");
   if (stored.provider !== provider) return loginError("state_invalid");
 
-  const redirectUri = oauthCallbackUrl(ctx.request, provider);
+  const redirectUri = oauthCallbackUrl(app, provider);
 
   try {
     const profile = await exchangeAndFetchProfile({
@@ -148,12 +155,13 @@ function pickClient(
   return oauth.providers[provider] ?? null;
 }
 
-function oauthCallbackUrl(
-  request: Request,
-  provider: OAuthProviderKey,
-): string {
-  const url = new URL(request.url);
-  return `${url.origin}/_plumix/auth/oauth/${provider}/callback`;
+// `app.origin` is the canonical site origin from passkey config — pinning
+// the callback URL there means the value the provider sees at authorize
+// time is identical at token-exchange time even if a load balancer or
+// custom adapter rewrites Host on the way in. (Cloudflare Workers binds
+// `request.url` to the connection hostname, but other adapters may not.)
+function oauthCallbackUrl(app: PlumixApp, provider: OAuthProviderKey): string {
+  return `${app.origin}/_plumix/auth/oauth/${provider}/callback`;
 }
 
 function redirectTo(
