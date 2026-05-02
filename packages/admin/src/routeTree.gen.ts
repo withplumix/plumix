@@ -18,6 +18,7 @@ import { Route as AuthLoginRouteImport } from "./routes/_auth/login";
 import { Route as AuthBootstrapRouteImport } from "./routes/_auth/bootstrap";
 import { Route as AuthenticatedUsersIndexRouteImport } from "./routes/_authenticated/users/index";
 import { Route as AuthenticatedSettingsIndexRouteImport } from "./routes/_authenticated/settings/index";
+import { Route as AuthenticatedAllowedDomainsIndexRouteImport } from "./routes/_authenticated/allowed-domains/index";
 import { Route as AuthenticatedUsersCreateRouteImport } from "./routes/_authenticated/users/create";
 import { Route as AuthenticatedSettingsPageRouteImport } from "./routes/_authenticated/settings/$page";
 import { Route as AuthenticatedPagesSplatRouteImport } from "./routes/_authenticated/pages/$";
@@ -71,6 +72,12 @@ const AuthenticatedSettingsIndexRoute =
   AuthenticatedSettingsIndexRouteImport.update({
     id: "/settings/",
     path: "/settings/",
+    getParentRoute: () => AuthenticatedRoute,
+  } as any);
+const AuthenticatedAllowedDomainsIndexRoute =
+  AuthenticatedAllowedDomainsIndexRouteImport.update({
+    id: "/allowed-domains/",
+    path: "/allowed-domains/",
     getParentRoute: () => AuthenticatedRoute,
   } as any);
 const AuthenticatedUsersCreateRoute =
@@ -145,6 +152,7 @@ export interface FileRoutesByFullPath {
   "/pages/$": typeof AuthenticatedPagesSplatRoute;
   "/settings/$page": typeof AuthenticatedSettingsPageRoute;
   "/users/create": typeof AuthenticatedUsersCreateRoute;
+  "/allowed-domains/": typeof AuthenticatedAllowedDomainsIndexRoute;
   "/settings/": typeof AuthenticatedSettingsIndexRoute;
   "/users/": typeof AuthenticatedUsersIndexRoute;
   "/terms/$name/create": typeof AuthenticatedTermsNameCreateRoute;
@@ -164,6 +172,7 @@ export interface FileRoutesByTo {
   "/pages/$": typeof AuthenticatedPagesSplatRoute;
   "/settings/$page": typeof AuthenticatedSettingsPageRoute;
   "/users/create": typeof AuthenticatedUsersCreateRoute;
+  "/allowed-domains": typeof AuthenticatedAllowedDomainsIndexRoute;
   "/settings": typeof AuthenticatedSettingsIndexRoute;
   "/users": typeof AuthenticatedUsersIndexRoute;
   "/terms/$name/create": typeof AuthenticatedTermsNameCreateRoute;
@@ -187,6 +196,7 @@ export interface FileRoutesById {
   "/_authenticated/pages/$": typeof AuthenticatedPagesSplatRoute;
   "/_authenticated/settings/$page": typeof AuthenticatedSettingsPageRoute;
   "/_authenticated/users/create": typeof AuthenticatedUsersCreateRoute;
+  "/_authenticated/allowed-domains/": typeof AuthenticatedAllowedDomainsIndexRoute;
   "/_authenticated/settings/": typeof AuthenticatedSettingsIndexRoute;
   "/_authenticated/users/": typeof AuthenticatedUsersIndexRoute;
   "/_authenticated/terms/$name/create": typeof AuthenticatedTermsNameCreateRoute;
@@ -208,6 +218,7 @@ export interface FileRouteTypes {
     | "/pages/$"
     | "/settings/$page"
     | "/users/create"
+    | "/allowed-domains/"
     | "/settings/"
     | "/users/"
     | "/terms/$name/create"
@@ -227,6 +238,7 @@ export interface FileRouteTypes {
     | "/pages/$"
     | "/settings/$page"
     | "/users/create"
+    | "/allowed-domains"
     | "/settings"
     | "/users"
     | "/terms/$name/create"
@@ -249,6 +261,7 @@ export interface FileRouteTypes {
     | "/_authenticated/pages/$"
     | "/_authenticated/settings/$page"
     | "/_authenticated/users/create"
+    | "/_authenticated/allowed-domains/"
     | "/_authenticated/settings/"
     | "/_authenticated/users/"
     | "/_authenticated/terms/$name/create"
@@ -329,6 +342,13 @@ declare module "@tanstack/react-router" {
       path: "/settings";
       fullPath: "/settings/";
       preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport;
+      parentRoute: typeof AuthenticatedRoute;
+    };
+    "/_authenticated/allowed-domains/": {
+      id: "/_authenticated/allowed-domains/";
+      path: "/allowed-domains";
+      fullPath: "/allowed-domains/";
+      preLoaderRoute: typeof AuthenticatedAllowedDomainsIndexRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
     "/_authenticated/users/create": {
@@ -431,6 +451,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPagesSplatRoute: typeof AuthenticatedPagesSplatRoute;
   AuthenticatedSettingsPageRoute: typeof AuthenticatedSettingsPageRoute;
   AuthenticatedUsersCreateRoute: typeof AuthenticatedUsersCreateRoute;
+  AuthenticatedAllowedDomainsIndexRoute: typeof AuthenticatedAllowedDomainsIndexRoute;
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute;
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute;
   AuthenticatedTermsNameCreateRoute: typeof AuthenticatedTermsNameCreateRoute;
@@ -446,6 +467,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPagesSplatRoute: AuthenticatedPagesSplatRoute,
   AuthenticatedSettingsPageRoute: AuthenticatedSettingsPageRoute,
   AuthenticatedUsersCreateRoute: AuthenticatedUsersCreateRoute,
+  AuthenticatedAllowedDomainsIndexRoute: AuthenticatedAllowedDomainsIndexRoute,
   AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
   AuthenticatedTermsNameCreateRoute: AuthenticatedTermsNameCreateRoute,

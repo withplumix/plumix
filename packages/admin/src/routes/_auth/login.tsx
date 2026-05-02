@@ -18,17 +18,46 @@ import {
   FormMessage,
 } from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
+import { Separator } from "@/components/ui/separator.js";
+import { orpc } from "@/lib/orpc.js";
 import { getPasskeyErrorMessage, PasskeyError } from "@/lib/passkey-errors.js";
 import { signInWithPasskey } from "@/lib/passkey.js";
 import { SESSION_QUERY_KEY, sessionQueryOptions } from "@/lib/session.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
+import * as v from "valibot";
 
 import { loginSchema } from "./-schemas.js";
 
+const PROVIDER_LABEL: Record<string, string> = {
+  github: "GitHub",
+  google: "Google",
+};
+
+const OAUTH_ERROR_MESSAGE: Record<string, string> = {
+  state_invalid: "Sign-in expired or invalid. Try again.",
+  state_expired: "Sign-in expired. Try again.",
+  code_exchange_failed: "Couldn't reach the provider. Try again.",
+  profile_fetch_failed: "Couldn't read your profile. Try again.",
+  email_missing: "The provider didn't return an email address.",
+  email_unverified:
+    "The provider hasn't verified your email yet. Verify it there, then try again.",
+  domain_not_allowed:
+    "Your email domain isn't on the allowlist. Ask an administrator to add it.",
+  account_disabled: "That account is disabled.",
+  registration_closed:
+    "OAuth signup is unavailable until an admin has finished setup.",
+  provider_not_configured: "That provider isn't configured.",
+};
+
+const loginSearchSchema = v.object({
+  oauth_error: v.optional(v.string()),
+});
+
 export const Route = createFileRoute("/_auth/login")({
+  validateSearch: loginSearchSchema,
   beforeLoad: async ({ context }) => {
     const session = await context.queryClient.ensureQueryData(
       sessionQueryOptions(),
@@ -43,7 +72,10 @@ export const Route = createFileRoute("/_auth/login")({
 
 function LoginRoute(): ReactNode {
   const router = useRouter();
+  const search = Route.useSearch();
   const [errorCode, setErrorCode] = useState<string | null>(null);
+
+  const providers = useQuery(orpc.auth.oauthProviders.queryOptions());
 
   const signIn = useMutation({
     mutationFn: (input: { email?: string }) => signInWithPasskey(input.email),
@@ -68,6 +100,11 @@ function LoginRoute(): ReactNode {
   const onSubmit = form.handleSubmit(({ email }) => {
     signIn.mutate({ email: email || undefined });
   });
+
+  const oauthErrorCode = search.oauth_error;
+  const oauthErrorMessage = oauthErrorCode
+    ? (OAUTH_ERROR_MESSAGE[oauthErrorCode] ?? "Couldn't sign in. Try again.")
+    : null;
 
   return (
     <Card>
@@ -102,10 +139,16 @@ function LoginRoute(): ReactNode {
             />
 
             {errorCode ? (
-              <Alert variant="destructive">
+              <Alert variant="destructive" data-testid="login-passkey-error">
                 <AlertDescription>
                   {getPasskeyErrorMessage(errorCode)}
                 </AlertDescription>
+              </Alert>
+            ) : null}
+
+            {oauthErrorMessage ? (
+              <Alert variant="destructive" data-testid="login-oauth-error">
+                <AlertDescription>{oauthErrorMessage}</AlertDescription>
               </Alert>
             ) : null}
 
@@ -114,6 +157,33 @@ function LoginRoute(): ReactNode {
             </Button>
           </form>
         </Form>
+
+        {providers.data && providers.data.length > 0 ? (
+          <div
+            className="mt-6 flex flex-col gap-3"
+            data-testid="login-oauth-providers"
+          >
+            <div className="flex items-center gap-2">
+              <Separator className="flex-1" />
+              <span className="text-muted-foreground text-xs tracking-wide uppercase">
+                or
+              </span>
+              <Separator className="flex-1" />
+            </div>
+            {providers.data.map((provider) => (
+              <Button
+                key={provider}
+                asChild
+                variant="outline"
+                data-testid={`login-oauth-${provider}`}
+              >
+                <a href={`/_plumix/auth/oauth/${provider}/start`}>
+                  Continue with {PROVIDER_LABEL[provider] ?? provider}
+                </a>
+              </Button>
+            ))}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );
