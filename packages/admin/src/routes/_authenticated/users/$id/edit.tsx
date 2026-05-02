@@ -514,7 +514,7 @@ function DeleteCard({ target }: { target: User }): ReactNode {
     mutationFn: () =>
       orpc.user.delete.call({
         id: target.id,
-        ...(reassignTo != null ? { reassignPostsTo: reassignTo } : {}),
+        ...(reassignTo != null ? { reassignTo } : {}),
       }),
     onMutate: () => {
       setServerError(null);
@@ -676,7 +676,7 @@ const STATUS_ERROR_MESSAGES: Partial<Record<string, string>> = {
 const DELETE_ERROR_MESSAGES: Partial<Record<string, string>> = {
   last_admin:
     "Can't delete the last administrator. Promote someone else first.",
-  has_posts:
+  has_entries:
     "This user has authored entries. Pick someone to reassign them to above.",
   reassign_to_self: "Can't reassign to the user being deleted.",
 };

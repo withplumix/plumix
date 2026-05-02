@@ -55,7 +55,7 @@ describe("entry.create", () => {
     });
   });
 
-  test("post:before_save cannot overwrite authorId at create", async () => {
+  test("entry:before_save cannot overwrite authorId at create", async () => {
     const h = await createRpcHarness({ authAs: "author" });
     const other = await h.factory.admin.create({
       email: "other@example.test",
@@ -107,7 +107,7 @@ describe("entry.create", () => {
     expect(created.title).toBe("[pinned] orig");
   });
 
-  test("post:before_save filter runs before the insert", async () => {
+  test("entry:before_save filter runs before the insert", async () => {
     const h = await createRpcHarness({ authAs: "author" });
     h.hooks.addFilter("entry:before_save", (post) => ({
       ...post,
@@ -121,7 +121,7 @@ describe("entry.create", () => {
     expect(created.excerpt).toBe("[auto] t");
   });
 
-  test("post:published fires once when status is published, never on drafts", async () => {
+  test("entry:published fires once when status is published, never on drafts", async () => {
     const h = await createRpcHarness({ authAs: "author" });
     const onPublish = h.spyAction("entry:published");
 
@@ -189,7 +189,7 @@ describe("entry.create", () => {
       }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
-      data: { kind: "post", id: secret.id },
+      data: { kind: "entry", id: secret.id },
     });
   });
 
@@ -217,7 +217,7 @@ describe("entry.create", () => {
       }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
-      data: { kind: "post", id: page.id },
+      data: { kind: "entry", id: page.id },
     });
   });
 

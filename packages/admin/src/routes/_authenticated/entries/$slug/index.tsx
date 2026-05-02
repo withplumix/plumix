@@ -361,7 +361,7 @@ function ContentListRoute(): ReactNode {
   const rows: readonly Entry[] = query.data ?? [];
   const canPrev = search.page > 1;
   // Heuristic "next exists": a full page came back. Imprecise when total is an
-  // exact multiple of PAGE_SIZE — the user sees an extra empty page. `post.list`
+  // exact multiple of PAGE_SIZE — the user sees an extra empty page. `entry.list`
   // doesn't expose a total count today; accept the edge case until it does.
   const canNext = rows.length === PAGE_SIZE;
 

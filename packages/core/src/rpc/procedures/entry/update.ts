@@ -67,7 +67,7 @@ function assertCanPublishTransition(
 }
 
 // Reparenting: caller may only point at entries they can see, and the
-// parent must share the current post's type. Undistinguished 404 on
+// parent must share the current entry's type. Undistinguished 404 on
 // any failure — don't leak whether the parent exists. Also walk the
 // chain upward to reject cycles of any depth (self-parent, A→B→A, …) —
 // admin UI tree renders will infinite-loop on any cycle in the DB.
@@ -142,7 +142,7 @@ export const update = base
       where: eq(entries.id, filtered.id),
     });
     if (!existing) {
-      throw errors.NOT_FOUND({ data: { kind: "post", id: filtered.id } });
+      throw errors.NOT_FOUND({ data: { kind: "entry", id: filtered.id } });
     }
 
     const accessGuards: AccessGuards = {
@@ -165,7 +165,7 @@ export const update = base
         filtered.parentId,
         {
           notFound: (parentId) => {
-            throw errors.NOT_FOUND({ data: { kind: "post", id: parentId } });
+            throw errors.NOT_FOUND({ data: { kind: "entry", id: parentId } });
           },
           cycle: () => {
             throw errors.CONFLICT({ data: { reason: "parent_cycle" } });

@@ -138,7 +138,7 @@ describe("entry.update", () => {
     });
   });
 
-  test("empty patch is a no-op and does not fire post:updated", async () => {
+  test("empty patch is a no-op and does not fire entry:updated", async () => {
     const h = await createRpcHarness({ authAs: "author" });
     const own = await h.factory.draft.create({
       authorId: h.user.id,
@@ -158,7 +158,7 @@ describe("entry.update", () => {
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
-  test("concurrent publish transitions: post:published fires exactly once", async () => {
+  test("concurrent publish transitions: entry:published fires exactly once", async () => {
     const h = await createRpcHarness({ authAs: "author" });
     const own = await h.factory.draft.create({
       authorId: h.user.id,
@@ -176,7 +176,7 @@ describe("entry.update", () => {
     onPublish.assertCalledOnce();
   });
 
-  test("post:before_save cannot overwrite immutable fields", async () => {
+  test("entry:before_save cannot overwrite immutable fields", async () => {
     const h = await createRpcHarness({ authAs: "author" });
     const impostor = await h.factory.admin.create({
       email: "impostor@example.test",
@@ -234,7 +234,7 @@ describe("entry.update", () => {
       h.client.entry.update({ id: own.id, parentId: secret.id }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
-      data: { kind: "post", id: secret.id },
+      data: { kind: "entry", id: secret.id },
     });
   });
 
@@ -357,7 +357,7 @@ describe("entry.update", () => {
     expect(reloaded.title).toBe("p3");
   });
 
-  test("rpc:entry.update:input can inject derived meta before sanitization; post:meta_changed fires with the final bag", async () => {
+  test("rpc:entry.update:input can inject derived meta before sanitization; entry:meta_changed fires with the final bag", async () => {
     const plugins = createPluginRegistry();
     plugins.entryMetaBoxes.set("test-derived", {
       id: "test-derived",

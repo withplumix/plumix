@@ -247,7 +247,7 @@ declare module "../hooks/types.js" {
     /**
      * Fires after a successful `term.update` row-columns write. Payload
      * carries the post-write row and the pre-write row for diffing —
-     * parallel to `post:updated` / `user:updated`.
+     * parallel to `entry:updated` / `user:updated`.
      *
      * Only fires when the row columns changed. A meta-only update does
      * NOT fire `term:updated`; subscribe to `term:meta_changed` for

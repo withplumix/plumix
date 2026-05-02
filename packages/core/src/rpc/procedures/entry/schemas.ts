@@ -45,7 +45,7 @@ const postTermsSchema = v.record(
   v.pipe(v.array(idParam), v.maxLength(MAX_TERMS_PER_TAXONOMY)),
 );
 
-// Meta bag accepted by `post.create` / `post.update`. Per-key validation
+// Meta bag accepted by `entry.create` / `entry.update`. Per-key validation
 // happens in the handler against the plugin-registered `MetaScalarType`
 // — here we only enforce the outer shape + a defensive cap on the
 // number of keys per request so a malformed client can't ship a 10k-key
@@ -97,7 +97,7 @@ export const entryUpdateInputSchema = v.object({
 });
 
 // Upper bound on the term-slug list per termTaxonomy clause. Mirrors the
-// per-termTaxonomy guard on `post.update` — admin UIs don't reasonably issue
+// per-termTaxonomy guard on `entry.update` — admin UIs don't reasonably issue
 // queries beyond this, and the cap protects the generated `IN (?, ?, …)`
 // subquery from pathological input lengths.
 const MAX_TERM_SLUGS_PER_TAXONOMY = 50;
@@ -145,7 +145,7 @@ export const entryListInputSchema = v.object({
     ]),
   ),
   /**
-   * Filter by the post's `authorId`. Admin "Mine" filter passes the
+   * Filter by the entry's `authorId`. Admin "Mine" filter passes the
    * session user's id here; future UIs can surface an author dropdown.
    */
   authorId: v.optional(idParam),

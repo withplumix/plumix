@@ -69,7 +69,7 @@ export const userEnableInputSchema = v.object({ id: idParam });
 export const userDeleteInputSchema = v.object({
   id: idParam,
   /** Reassign this user's authored entries to the given user id before deletion. */
-  reassignPostsTo: v.optional(idParam),
+  reassignTo: v.optional(idParam),
 });
 
 export type UserListInput = v.InferOutput<typeof userListInputSchema>;

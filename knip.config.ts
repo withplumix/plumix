@@ -64,7 +64,6 @@ const config: KnipConfig = {
         "src/test/playwright.ts",
         "src/theme/index.ts",
         "src/vite/index.ts",
-        "bin/plumix.mjs",
       ],
       // - drizzle-kit is invoked by consumers as a CLI hint, not imported.
       // - @plumix/admin is consumed via filesystem copy (scripts/copy-admin.mjs).
@@ -86,15 +85,6 @@ const config: KnipConfig = {
         // .tsx extension swap; list explicitly.
         "e2e/fixtures/runtime-proof-plugin/src/MediaLibrary.tsx",
       ],
-    },
-    // The `./commands` subpath export points at `dist/commands/index.js` —
-    // knip's default entry discovery only reads `exports` paths and
-    // doesn't map them back to source files, so the whole `src/commands`
-    // tree plus its deps (`@cloudflare/vite-plugin`, `plumix`) read as
-    // unused. Explicit entries pin the source location. `plumix` is a
-    // workspace sibling used transitively via `emitPlumixSources`.
-    "packages/runtimes/cloudflare": {
-      entry: ["src/index.ts", "src/commands/index.ts"],
     },
     // The admin chunk is loaded by the plumix vite plugin at consumer
     // build time via `adminEntry` — knip can't follow that runtime path.

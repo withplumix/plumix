@@ -19,7 +19,7 @@ export const get = base
 
     const readCap = taxonomyCapability(row.taxonomy, "read");
     if (!context.auth.can(readCap)) {
-      // Hide existence — mirror post.get's "no oracle" rule.
+      // Hide existence — mirror entry.get's "no oracle" rule.
       throw errors.NOT_FOUND({ data: { kind: "term", id: input.id } });
     }
 

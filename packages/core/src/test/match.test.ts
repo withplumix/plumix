@@ -55,8 +55,8 @@ describe("partialMatch", () => {
   test("nested partial match", () => {
     expect(
       partialMatch(
-        { code: "NOT_FOUND", data: { kind: "post", id: 5, extra: true } },
-        { code: "NOT_FOUND", data: { kind: "post", id: 5 } },
+        { code: "NOT_FOUND", data: { kind: "entry", id: 5, extra: true } },
+        { code: "NOT_FOUND", data: { kind: "entry", id: 5 } },
       ),
     ).toBe(true);
   });
