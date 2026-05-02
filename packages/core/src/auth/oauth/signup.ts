@@ -7,12 +7,12 @@ import { oauthAccounts } from "../../db/schema/oauth_accounts.js";
 import { users } from "../../db/schema/users.js";
 import { OAuthError } from "./errors.js";
 
-export interface ResolveOAuthUserInput {
+interface ResolveOAuthUserInput {
   readonly provider: OAuthProviderKey;
   readonly profile: OAuthProfile;
 }
 
-export interface ResolvedOAuthUser {
+interface ResolvedOAuthUser {
   readonly user: User;
   /** True when this call provisioned a new user row. */
   readonly created: boolean;

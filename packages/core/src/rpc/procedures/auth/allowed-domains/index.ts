@@ -9,5 +9,3 @@ export const allowedDomainsRouter = {
   update,
   delete: del,
 } as const;
-
-export type AllowedDomainsRouter = typeof allowedDomainsRouter;

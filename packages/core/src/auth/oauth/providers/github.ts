@@ -35,7 +35,7 @@ export const github: OAuthProvider = {
   },
 };
 
-export interface PrimaryEmail {
+interface PrimaryEmail {
   readonly email: string;
   readonly verified: boolean;
 }

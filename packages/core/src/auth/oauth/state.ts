@@ -6,12 +6,12 @@ import { generateToken, hashToken } from "../tokens.js";
 
 export const OAUTH_STATE_TTL_SECONDS = 10 * 60;
 
-export interface OAuthStatePayload {
+interface OAuthStatePayload {
   readonly provider: OAuthProviderKey;
   readonly codeVerifier: string;
 }
 
-export interface IssuedOAuthState {
+interface IssuedOAuthState {
   /** Raw state token to send to the provider via the URL. Never persisted. */
   readonly state: string;
   readonly expiresAt: Date;

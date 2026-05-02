@@ -10,14 +10,14 @@ import { computeS256Challenge, generateCodeVerifier } from "./pkce.js";
 import { fetchPrimaryEmail, getProvider } from "./providers/index.js";
 import { issueOAuthState } from "./state.js";
 
-export interface BuildAuthorizeUrlInput {
+interface BuildAuthorizeUrlInput {
   readonly db: Db;
   readonly provider: OAuthProviderKey;
   readonly client: OAuthClientConfig;
   readonly redirectUri: string;
 }
 
-export interface BuiltAuthorizeUrl {
+interface BuiltAuthorizeUrl {
   readonly url: string;
   readonly state: string;
 }
@@ -57,7 +57,7 @@ export async function buildAuthorizeUrl(
   return { url: url.toString(), state };
 }
 
-export interface ExchangeAndFetchInput {
+interface ExchangeAndFetchInput {
   readonly provider: OAuthProviderKey;
   readonly client: OAuthClientConfig;
   readonly code: string;
