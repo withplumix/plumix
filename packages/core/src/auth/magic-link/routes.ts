@@ -43,7 +43,10 @@ export async function handleMagicLinkRequest(
   // 503 distinguishes "plumix doesn't have magic-link wired up" (operator
   // omission, should fail loudly) from "this email isn't registered"
   // (always-success contract, intentionally silent). Don't fold them.
-  if (!app.config.auth.magicLink) {
+  // The cross-field check in `plumix()` prevents `magicLink` from being
+  // configured without a top-level mailer, so `ctx.mailer` is reliably
+  // present here when `magicLink` is. Belt + braces: re-check both.
+  if (!app.config.auth.magicLink || !ctx.mailer) {
     return jsonResponse(
       { error: "magic_link_not_configured" },
       { status: 503 },
@@ -63,7 +66,7 @@ export async function handleMagicLinkRequest(
     await requestMagicLink(ctx.db, {
       email: parsed.output.email,
       origin: app.origin,
-      mailer: app.config.auth.magicLink.mailer,
+      mailer: ctx.mailer,
       siteName: app.config.auth.magicLink.siteName,
       ttlSeconds: app.config.auth.magicLink.ttlSeconds,
       logger: ctx.logger,

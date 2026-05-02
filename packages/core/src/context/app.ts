@@ -1,5 +1,6 @@
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 
+import type { Mailer } from "../auth/mailer/types.js";
 import type { KnownCapability } from "../auth/rbac.js";
 import type * as coreSchema from "../db/schema/index.js";
 import type { UserRole } from "../db/schema/users.js";
@@ -87,6 +88,15 @@ export interface AppContext<
    * procedures don't use it today.
    */
   readonly imageDelivery?: ImageDelivery;
+  /**
+   * Configured outbound email transport. Present when the operator
+   * passed `mailer:` at the top of `plumix({...})`. Magic-link reads
+   * this; future invite-email / password-reset / plugin-defined
+   * notifications read the same instance — operators configure once,
+   * every feature reuses. Plugin handlers should null-check and
+   * degrade if mail is optional for their feature.
+   */
+  readonly mailer?: Mailer;
 }
 
 export type AuthenticatedAppContext<
@@ -107,6 +117,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly assets?: AssetsBinding;
   readonly storage?: ConnectedObjectStorage;
   readonly imageDelivery?: ImageDelivery;
+  readonly mailer?: Mailer;
   readonly oauthProviders?: readonly OAuthProviderSummary[];
 }
 
@@ -133,6 +144,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     assets: args.assets,
     storage: args.storage,
     imageDelivery: args.imageDelivery,
+    mailer: args.mailer,
     oauthProviders: args.oauthProviders ?? [],
   };
 }

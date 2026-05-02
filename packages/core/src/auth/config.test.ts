@@ -186,12 +186,10 @@ describe("auth() — oauth schema", () => {
 });
 
 describe("auth() — magicLink schema", () => {
-  const stubMailer = { send: () => Promise.resolve() };
-
   test("accepts a minimal valid magicLink config", () => {
     const config = auth({
       passkey: validPasskey,
-      magicLink: { mailer: stubMailer, siteName: "Plumix" },
+      magicLink: { siteName: "Plumix" },
     });
     expect(config.magicLink?.siteName).toBe("Plumix");
   });
@@ -199,9 +197,7 @@ describe("auth() — magicLink schema", () => {
   test("rejects a missing siteName", () => {
     const error = rejected({
       passkey: validPasskey,
-      magicLink: {
-        mailer: stubMailer,
-      } as unknown as PlumixAuthInput["magicLink"],
+      magicLink: {} as unknown as PlumixAuthInput["magicLink"],
     });
     expect(error.issues[0]?.path).toContain("magicLink.siteName");
   });
@@ -209,26 +205,15 @@ describe("auth() — magicLink schema", () => {
   test("rejects a siteName with newline (CR/LF defense)", () => {
     const error = rejected({
       passkey: validPasskey,
-      magicLink: { mailer: stubMailer, siteName: "bad\r\nSubject: x" },
+      magicLink: { siteName: "bad\r\nSubject: x" },
     });
     expect(error.issues[0]?.message).toMatch(/newlines/);
-  });
-
-  test("rejects a mailer without a send method", () => {
-    const error = rejected({
-      passkey: validPasskey,
-      magicLink: {
-        mailer: {} as unknown as { send: () => Promise<void> },
-        siteName: "Plumix",
-      },
-    });
-    expect(error.issues[0]?.message).toMatch(/mailer/);
   });
 
   test("rejects ttlSeconds below 60", () => {
     const error = rejected({
       passkey: validPasskey,
-      magicLink: { mailer: stubMailer, siteName: "Plumix", ttlSeconds: 30 },
+      magicLink: { siteName: "Plumix", ttlSeconds: 30 },
     });
     expect(error.issues[0]?.message).toMatch(/ttlSeconds/);
   });
@@ -236,7 +221,7 @@ describe("auth() — magicLink schema", () => {
   test("rejects ttlSeconds above 3600", () => {
     const error = rejected({
       passkey: validPasskey,
-      magicLink: { mailer: stubMailer, siteName: "Plumix", ttlSeconds: 7200 },
+      magicLink: { siteName: "Plumix", ttlSeconds: 7200 },
     });
     expect(error.issues[0]?.message).toMatch(/ttlSeconds/);
   });

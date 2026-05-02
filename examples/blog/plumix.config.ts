@@ -41,36 +41,39 @@ export default plumix({
   imageDelivery: process.env.MEDIA_PUBLIC_URL_BASE
     ? images({ zone: process.env.MEDIA_PUBLIC_URL_BASE })
     : undefined,
+  // Outbound email transport. Top-level so every feature that sends
+  // mail (magic-link today; future invite-email, notifications, plugin
+  // emails) reuses the same instance — operators wire one transport,
+  // it's available repo-wide via `ctx.mailer`. The default
+  // `consoleMailer()` logs the message; production swaps in any
+  // `Mailer` (one method):
+  //
+  //   const mailer = {
+  //     async send(message) {
+  //       await fetch("https://api.resend.com/emails", {
+  //         method: "POST",
+  //         headers: {
+  //           Authorization: `Bearer ${env.RESEND_API_KEY}`,
+  //           "Content-Type": "application/json",
+  //         },
+  //         body: JSON.stringify({
+  //           from: "noreply@plumix.test",
+  //           ...message,
+  //         }),
+  //       });
+  //     },
+  //   };
+  mailer: consoleMailer(),
   auth: auth({
     passkey: {
       rpName: "Plumix — Blog",
       rpId,
       origin,
     },
-    // Magic-link sign-in / signup. The default `consoleMailer()` logs
-    // the message instead of sending — fine for dev / `wrangler tail`,
-    // not fine for production. Swap in your own factory for Resend /
-    // Postmark / SES / SMTP — the `Mailer` interface is one method:
-    //
-    //   const mailer = {
-    //     async send(message) {
-    //       await fetch("https://api.resend.com/emails", {
-    //         method: "POST",
-    //         headers: {
-    //           Authorization: `Bearer ${env.RESEND_API_KEY}`,
-    //           "Content-Type": "application/json",
-    //         },
-    //         body: JSON.stringify({
-    //           from: "noreply@plumix.test",
-    //           ...message,
-    //         }),
-    //       });
-    //     },
-    //   };
-    magicLink: {
-      siteName: "Plumix — Blog",
-      mailer: consoleMailer(),
-    },
+    // Magic-link sign-in + signup (allowed-domain gated). The transport
+    // is the top-level `mailer` above; siteName is the user-visible
+    // string in the email subject + body.
+    magicLink: { siteName: "Plumix — Blog" },
   }),
   plugins: [blog, pages, media()],
 });

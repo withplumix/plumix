@@ -1,17 +1,11 @@
 import * as v from "valibot";
 
-import type { Mailer } from "./mailer/types.js";
 import type { OAuthProviderClient } from "./oauth/types.js";
 import type { PasskeyConfig } from "./passkey/config.js";
 import type { SessionPolicy } from "./sessions.js";
 import { OAUTH_PROVIDER_KEY_PATTERN } from "./oauth/types.js";
 
 export interface PlumixMagicLinkConfig {
-  /**
-   * Required when magic-link sign-in is enabled. Implementations must
-   * conform to the `Mailer` interface; ship `consoleMailer()` for dev.
-   */
-  readonly mailer: Mailer;
   /**
    * Site name shown in the email subject + body ("Sign in to {siteName}").
    * Required so the operator picks the user-visible string explicitly —
@@ -163,17 +157,6 @@ const oauthSchema = v.pipe(
 );
 
 const magicLinkSchema = v.object({
-  mailer: v.pipe(
-    v.unknown(),
-    v.check(
-      (val) =>
-        typeof val === "object" &&
-        val !== null &&
-        "send" in val &&
-        typeof val.send === "function",
-      "magicLink.mailer must implement `send(message)`",
-    ),
-  ),
   siteName: v.pipe(
     v.string(),
     v.nonEmpty("siteName must be non-empty"),

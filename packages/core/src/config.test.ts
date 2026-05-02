@@ -56,3 +56,38 @@ test("plumix() leaves imageDelivery undefined when not provided", () => {
   const config = plumix({ runtime, database, auth: authConfig });
   expect(config.imageDelivery).toBeUndefined();
 });
+
+test("plumix() preserves the top-level mailer slot", () => {
+  const mailer = { send: () => Promise.resolve() };
+  const config = plumix({ runtime, database, auth: authConfig, mailer });
+  expect(config.mailer).toBe(mailer);
+});
+
+test("plumix() requires mailer when auth.magicLink is configured", () => {
+  const authWithMagicLink = auth({
+    passkey: {
+      rpName: "mock",
+      rpId: "cms.example",
+      origin: "https://cms.example",
+    },
+    magicLink: { siteName: "mock" },
+  });
+  expect(() => plumix({ runtime, database, auth: authWithMagicLink })).toThrow(
+    /magicLink.*requires.*mailer/,
+  );
+});
+
+test("plumix() accepts auth.magicLink when paired with a top-level mailer", () => {
+  const authWithMagicLink = auth({
+    passkey: {
+      rpName: "mock",
+      rpId: "cms.example",
+      origin: "https://cms.example",
+    },
+    magicLink: { siteName: "mock" },
+  });
+  const mailer = { send: () => Promise.resolve() };
+  expect(() =>
+    plumix({ runtime, database, auth: authWithMagicLink, mailer }),
+  ).not.toThrow();
+});

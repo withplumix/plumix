@@ -1,4 +1,5 @@
 import type { PlumixMagicLinkConfig } from "../auth/config.js";
+import type { Mailer } from "../auth/mailer/types.js";
 import type { OAuthProviderClient } from "../auth/oauth/types.js";
 import type { AnyPluginDescriptor } from "../config.js";
 import type { AppContext } from "../context/app.js";
@@ -80,10 +81,15 @@ export interface CreateDispatcherHarnessOptions {
   readonly oauth?: Readonly<Record<string, OAuthProviderClient>>;
   /**
    * Magic-link config for tests exercising the request/verify routes.
-   * The `mailer` field is required; pass `consoleMailer({ logger })` or
-   * a mock to assert sends.
+   * Pair with `mailer` at the top level (the request route requires
+   * both — same cross-field invariant `plumix()` enforces).
    */
   readonly magicLink?: PlumixMagicLinkConfig;
+  /**
+   * Top-level outbound email transport. Tests that exercise magic-link
+   * pass a capturing `Mailer` here so they can assert what was sent.
+   */
+  readonly mailer?: Mailer;
 }
 
 export interface DispatcherHarness {
@@ -157,6 +163,7 @@ function withRequest(
     assets,
     storage,
     imageDelivery: app.config.imageDelivery,
+    mailer: app.config.mailer,
     oauthProviders: app.oauthProviders,
   });
 }
@@ -180,6 +187,7 @@ export async function createDispatcherHarness(
     }),
     plugins: options.plugins,
     imageDelivery: options.imageDelivery,
+    mailer: options.mailer,
   });
   const app = await buildApp(config);
   const dispatcher = createPlumixDispatcher(app);

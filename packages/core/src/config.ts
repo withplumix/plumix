@@ -1,4 +1,5 @@
 import type { PlumixAuthConfig } from "./auth/config.js";
+import type { Mailer } from "./auth/mailer/types.js";
 import type { PluginDescriptor } from "./plugin/define.js";
 import type { RuntimeAdapter } from "./runtime/adapter.js";
 import type {
@@ -26,6 +27,16 @@ export interface PlumixConfigInput {
   readonly storage?: ObjectStorage;
   readonly imageDelivery?: ImageDelivery;
   readonly kv?: KV;
+  /**
+   * Outbound email transport. Implementations conform to the `Mailer`
+   * interface from `@plumix/core` — one method, swap in any provider
+   * (Resend, Postmark, SES, SMTP). Shared by every feature that sends
+   * mail (magic-link today; future invite-email, password-reset,
+   * plugin-defined notifications), so plugin authors and operators
+   * configure the transport once at the top level. `consoleMailer()`
+   * is the dev default.
+   */
+  readonly mailer?: Mailer;
   readonly themes?: readonly Theme[];
   readonly plugins?: readonly AnyPluginDescriptor[];
 }
@@ -37,11 +48,21 @@ export interface PlumixConfig {
   readonly storage?: ObjectStorage;
   readonly imageDelivery?: ImageDelivery;
   readonly kv?: KV;
+  readonly mailer?: Mailer;
   readonly themes: readonly Theme[];
   readonly plugins: readonly AnyPluginDescriptor[];
 }
 
 export function plumix(config: PlumixConfigInput): PlumixConfig {
+  // Cross-field invariant: features that require email (magic-link
+  // today) need a configured mailer at the top level. Surface this at
+  // app build time rather than letting it crash on the first request.
+  if (config.auth.magicLink && !config.mailer) {
+    throw new Error(
+      "plumix(): `auth.magicLink` requires a top-level `mailer` " +
+        "(use `consoleMailer()` for dev or pass your own `Mailer`).",
+    );
+  }
   return {
     runtime: config.runtime,
     database: config.database,
@@ -49,6 +70,7 @@ export function plumix(config: PlumixConfigInput): PlumixConfig {
     storage: config.storage,
     imageDelivery: config.imageDelivery,
     kv: config.kv,
+    mailer: config.mailer,
     themes: config.themes ?? [],
     plugins: config.plugins ?? [],
   };
