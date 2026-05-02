@@ -142,7 +142,7 @@ export const update = base
       where: eq(entries.id, filtered.id),
     });
     if (!existing) {
-      throw errors.NOT_FOUND({ data: { kind: "post", id: filtered.id } });
+      throw errors.NOT_FOUND({ data: { kind: "entry", id: filtered.id } });
     }
 
     const accessGuards: AccessGuards = {
@@ -165,7 +165,7 @@ export const update = base
         filtered.parentId,
         {
           notFound: (parentId) => {
-            throw errors.NOT_FOUND({ data: { kind: "post", id: parentId } });
+            throw errors.NOT_FOUND({ data: { kind: "entry", id: parentId } });
           },
           cycle: () => {
             throw errors.CONFLICT({ data: { reason: "parent_cycle" } });

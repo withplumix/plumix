@@ -54,7 +54,7 @@ export const create = base
       );
       if (!parent) {
         throw errors.NOT_FOUND({
-          data: { kind: "post", id: filtered.parentId },
+          data: { kind: "entry", id: filtered.parentId },
         });
       }
     }

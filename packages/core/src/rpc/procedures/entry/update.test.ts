@@ -234,7 +234,7 @@ describe("entry.update", () => {
       h.client.entry.update({ id: own.id, parentId: secret.id }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
-      data: { kind: "post", id: secret.id },
+      data: { kind: "entry", id: secret.id },
     });
   });
 

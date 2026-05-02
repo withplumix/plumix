@@ -189,7 +189,7 @@ describe("entry.create", () => {
       }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
-      data: { kind: "post", id: secret.id },
+      data: { kind: "entry", id: secret.id },
     });
   });
 
@@ -217,7 +217,7 @@ describe("entry.create", () => {
       }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
-      data: { kind: "post", id: page.id },
+      data: { kind: "entry", id: page.id },
     });
   });
 

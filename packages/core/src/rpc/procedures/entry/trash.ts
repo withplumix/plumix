@@ -18,7 +18,7 @@ export const trash = base
       where: eq(entries.id, filtered.id),
     });
     if (!existing) {
-      throw errors.NOT_FOUND({ data: { kind: "post", id: filtered.id } });
+      throw errors.NOT_FOUND({ data: { kind: "entry", id: filtered.id } });
     }
 
     const deleteCapability = entryCapability(existing.type, "delete");

@@ -270,18 +270,18 @@ describe("user.delete", () => {
     await expect(h.client.user.delete({ id: author.id })).rejects.toMatchObject(
       {
         code: "CONFLICT",
-        data: { reason: "has_posts" },
+        data: { reason: "has_entries" },
       },
     );
   });
 
-  test("reassigns entries when reassignPostsTo is provided", async () => {
+  test("reassigns entries when reassignTo is provided", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const author = await h.factory.author.create();
     const heir = await h.factory.author.create();
     const post = await h.factory.entry.create({ authorId: author.id });
 
-    await h.client.user.delete({ id: author.id, reassignPostsTo: heir.id });
+    await h.client.user.delete({ id: author.id, reassignTo: heir.id });
 
     const moved = await h.context.db.query.entries.findFirst({
       where: eq(entries.id, post.id),
@@ -395,7 +395,7 @@ describe("user lifecycle action hooks", () => {
     const spy = h.spyAction("user:deleted");
     await h.client.user.delete({
       id: author.id,
-      reassignPostsTo: inheritor.id,
+      reassignTo: inheritor.id,
     });
     spy.assertCalledOnce();
     expect(spy.lastArgs?.[1]).toEqual({ reassignedTo: inheritor.id });

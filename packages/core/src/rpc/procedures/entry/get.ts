@@ -20,11 +20,11 @@ export const get = base
       where: eq(entries.id, filtered.id),
     });
     if (!row) {
-      throw errors.NOT_FOUND({ data: { kind: "post", id: filtered.id } });
+      throw errors.NOT_FOUND({ data: { kind: "entry", id: filtered.id } });
     }
 
     if (!context.auth.can(entryCapability(row.type, "read"))) {
-      throw errors.NOT_FOUND({ data: { kind: "post", id: filtered.id } });
+      throw errors.NOT_FOUND({ data: { kind: "entry", id: filtered.id } });
     }
 
     if (row.status !== "published") {
@@ -33,7 +33,7 @@ export const get = base
         row.authorId === context.user.id &&
         context.auth.can(entryCapability(row.type, "edit_own"));
       if (!canSeeAny && !ownsAndCanEdit) {
-        throw errors.NOT_FOUND({ data: { kind: "post", id: filtered.id } });
+        throw errors.NOT_FOUND({ data: { kind: "entry", id: filtered.id } });
       }
     }
 

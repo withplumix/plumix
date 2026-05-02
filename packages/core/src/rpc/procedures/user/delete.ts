@@ -28,26 +28,26 @@ export const del = base
       .select({ value: count() })
       .from(entries)
       .where(eq(entries.authorId, existing.id));
-    const postCount = countRow?.value ?? 0;
+    const entryCount = countRow?.value ?? 0;
 
-    if (postCount > 0) {
-      if (input.reassignPostsTo === undefined) {
-        throw errors.CONFLICT({ data: { reason: "has_posts" } });
+    if (entryCount > 0) {
+      if (input.reassignTo === undefined) {
+        throw errors.CONFLICT({ data: { reason: "has_entries" } });
       }
-      if (input.reassignPostsTo === existing.id) {
+      if (input.reassignTo === existing.id) {
         throw errors.CONFLICT({ data: { reason: "reassign_to_self" } });
       }
       const target = await context.db.query.users.findFirst({
-        where: eq(users.id, input.reassignPostsTo),
+        where: eq(users.id, input.reassignTo),
       });
       if (!target) {
         throw errors.NOT_FOUND({
-          data: { kind: "user", id: input.reassignPostsTo },
+          data: { kind: "user", id: input.reassignTo },
         });
       }
       await context.db
         .update(entries)
-        .set({ authorId: input.reassignPostsTo })
+        .set({ authorId: input.reassignTo })
         .where(eq(entries.authorId, existing.id));
     }
 
@@ -75,7 +75,7 @@ export const del = base
     // had no entries (no reassignment happened); otherwise carries the id
     // we migrated entries to so audit-log plugins can reconstruct the move.
     await context.hooks.doAction("user:deleted", deleted, {
-      reassignedTo: postCount > 0 ? (input.reassignPostsTo ?? null) : null,
+      reassignedTo: entryCount > 0 ? (input.reassignTo ?? null) : null,
     });
 
     return context.hooks.applyFilter("rpc:user.delete:output", deleted);

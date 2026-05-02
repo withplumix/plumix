@@ -436,9 +436,9 @@ test.describe("/users/$id/edit", () => {
         () =>
           (
             deleteInputs.at(-1) as
-              | { id?: number; reassignPostsTo?: number }
+              | { id?: number; reassignTo?: number }
               | undefined
-          )?.reassignPostsTo,
+          )?.reassignTo,
       )
       .toBe(inheritor.id);
     await expect(page).toHaveURL(/\/users/);
