@@ -292,6 +292,7 @@ function DomainRow({
   onDelete: () => void;
   busy: boolean;
 }): ReactNode {
+  const [confirming, setConfirming] = useState(false);
   return (
     <li
       className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:gap-4"
@@ -328,17 +329,45 @@ function DomainRow({
         >
           {row.isEnabled ? "Enabled" : "Disabled"}
         </Toggle>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={onDelete}
-          disabled={busy}
-          aria-label={`Delete ${row.domain}`}
-          data-testid={`allowed-domains-row-delete-${row.domain}`}
-        >
-          <Trash2 className="size-4" />
-        </Button>
+        {confirming ? (
+          <>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                setConfirming(false);
+                onDelete();
+              }}
+              disabled={busy}
+              data-testid={`allowed-domains-row-delete-confirm-${row.domain}`}
+            >
+              Confirm delete
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setConfirming(false)}
+              disabled={busy}
+              data-testid={`allowed-domains-row-delete-cancel-${row.domain}`}
+            >
+              Cancel
+            </Button>
+          </>
+        ) : (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => setConfirming(true)}
+            disabled={busy}
+            aria-label={`Delete ${row.domain}`}
+            data-testid={`allowed-domains-row-delete-${row.domain}`}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        )}
       </div>
     </li>
   );

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
 import { Separator } from "@/components/ui/separator.js";
+import { getOAuthErrorMessage } from "@/lib/oauth-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { getPasskeyErrorMessage, PasskeyError } from "@/lib/passkey-errors.js";
 import { signInWithPasskey } from "@/lib/passkey.js";
@@ -34,22 +35,6 @@ import { loginSchema } from "./-schemas.js";
 const PROVIDER_LABEL: Record<string, string> = {
   github: "GitHub",
   google: "Google",
-};
-
-const OAUTH_ERROR_MESSAGE: Record<string, string> = {
-  state_invalid: "Sign-in expired or invalid. Try again.",
-  state_expired: "Sign-in expired. Try again.",
-  code_exchange_failed: "Couldn't reach the provider. Try again.",
-  profile_fetch_failed: "Couldn't read your profile. Try again.",
-  email_missing: "The provider didn't return an email address.",
-  email_unverified:
-    "The provider hasn't verified your email yet. Verify it there, then try again.",
-  domain_not_allowed:
-    "Your email domain isn't on the allowlist. Ask an administrator to add it.",
-  account_disabled: "That account is disabled.",
-  registration_closed:
-    "OAuth signup is unavailable until an admin has finished setup.",
-  provider_not_configured: "That provider isn't configured.",
 };
 
 const loginSearchSchema = v.object({
@@ -101,10 +86,7 @@ function LoginRoute(): ReactNode {
     signIn.mutate({ email: email || undefined });
   });
 
-  const oauthErrorCode = search.oauth_error;
-  const oauthErrorMessage = oauthErrorCode
-    ? (OAUTH_ERROR_MESSAGE[oauthErrorCode] ?? "Couldn't sign in. Try again.")
-    : null;
+  const oauthErrorMessage = getOAuthErrorMessage(search.oauth_error);
 
   return (
     <Card>
