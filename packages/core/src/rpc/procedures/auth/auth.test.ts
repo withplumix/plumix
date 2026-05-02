@@ -97,3 +97,106 @@ describe("auth.session", () => {
     expect(populatedResult).toEqual({ user: null, needsBootstrap: false });
   });
 });
+
+describe("auth.oauthProviders", () => {
+  test("empty by default — passkey-only deploy", async () => {
+    const h = await createRpcHarness();
+    const result = await h.client.auth.oauthProviders({});
+    expect(result).toEqual([]);
+  });
+
+  test("returns enabled provider keys", async () => {
+    const h = await createRpcHarness({ oauthProviders: ["github"] });
+    const result = await h.client.auth.oauthProviders({});
+    expect(result).toEqual(["github"]);
+  });
+
+  test("returns multiple providers in declared order", async () => {
+    const h = await createRpcHarness({ oauthProviders: ["github", "google"] });
+    const result = await h.client.auth.oauthProviders({});
+    expect(result).toEqual(["github", "google"]);
+  });
+});
+
+describe("auth.allowedDomains", () => {
+  test("list rejects an unauthenticated caller", async () => {
+    const h = await createRpcHarness();
+    await expect(h.client.auth.allowedDomains.list({})).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+  });
+
+  test("list rejects a non-admin caller", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await expect(h.client.auth.allowedDomains.list({})).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+  });
+
+  test("admin can create, update, delete a domain", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+
+    const created = await h.client.auth.allowedDomains.create({
+      domain: "example.com",
+      defaultRole: "author",
+    });
+    expect(created).toMatchObject({
+      domain: "example.com",
+      defaultRole: "author",
+      isEnabled: true,
+    });
+
+    const list = await h.client.auth.allowedDomains.list({});
+    expect(list).toHaveLength(1);
+
+    const updated = await h.client.auth.allowedDomains.update({
+      domain: "example.com",
+      isEnabled: false,
+    });
+    expect(updated.isEnabled).toBe(false);
+
+    const removed = await h.client.auth.allowedDomains.delete({
+      domain: "example.com",
+    });
+    expect(removed.domain).toBe("example.com");
+
+    const after = await h.client.auth.allowedDomains.list({});
+    expect(after).toEqual([]);
+  });
+
+  test("create rejects a duplicate domain with CONFLICT/domain_exists", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    await h.client.auth.allowedDomains.create({ domain: "example.com" });
+    await expect(
+      h.client.auth.allowedDomains.create({ domain: "example.com" }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "domain_exists" },
+    });
+  });
+
+  test("update rejects an unknown domain with NOT_FOUND", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    await expect(
+      h.client.auth.allowedDomains.update({
+        domain: "nope.example",
+        isEnabled: true,
+      }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  test("update rejects an empty patch", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    await h.client.auth.allowedDomains.create({ domain: "example.com" });
+    await expect(
+      h.client.auth.allowedDomains.update({ domain: "example.com" }),
+    ).rejects.toMatchObject({ data: { reason: "empty_patch" } });
+  });
+
+  test("create rejects a malformed domain at the input layer", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    await expect(
+      h.client.auth.allowedDomains.create({ domain: "not a domain" }),
+    ).rejects.toBeDefined();
+  });
+});
