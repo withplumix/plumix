@@ -4,6 +4,11 @@ import type { PlumixApp } from "./app.js";
 import { readSessionCookie } from "../auth/cookies.js";
 import { hasCsrfHeader, hasMatchingOrigin } from "../auth/csrf.js";
 import {
+  handleOAuthCallback,
+  handleOAuthStart,
+  parseOAuthPath,
+} from "../auth/oauth/routes.js";
+import {
   handleInviteRegisterOptions,
   handleInviteRegisterVerify,
   handlePasskeyLoginOptions,
@@ -97,6 +102,18 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   if (authHandler) {
     if (ctx.request.method !== "POST") return methodNotAllowed(["POST"]);
     return authHandler(ctx, app);
+  }
+
+  // OAuth endpoints are top-level GET navigations from the browser, so they
+  // can't carry the X-Plumix-Request header. The CSRF gate already lets
+  // safe methods through, and the state token is the per-request CSRF
+  // anchor for the callback. Match the path *and* enforce GET here.
+  const oauth = parseOAuthPath(pathname);
+  if (oauth) {
+    if (ctx.request.method !== "GET") return methodNotAllowed(["GET"]);
+    return oauth.tail === "start"
+      ? handleOAuthStart(ctx, app, oauth.params.provider)
+      : handleOAuthCallback(ctx, app, oauth.params.provider);
   }
 
   if (pathname === ADMIN_PREFIX || pathname.startsWith(`${ADMIN_PREFIX}/`)) {

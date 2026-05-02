@@ -992,6 +992,16 @@ const CORE_NAV_ITEMS: readonly { groupId: string; item: AdminNavItem }[] = [
   {
     groupId: "management",
     item: {
+      to: "/allowed-domains",
+      label: "Allowed domains",
+      coreIcon: "users",
+      order: 150,
+      capability: "settings:manage",
+    },
+  },
+  {
+    groupId: "management",
+    item: {
       to: "/settings",
       label: "Settings",
       coreIcon: "settings",

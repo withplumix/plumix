@@ -10,6 +10,7 @@ export const AUTH_TOKEN_TYPES = [
   "email_verification",
   "password_reset",
   "invite",
+  "oauth_state",
 ] as const;
 
 export type AuthTokenType = (typeof AUTH_TOKEN_TYPES)[number];
@@ -23,6 +24,10 @@ export const authTokens = sqliteTable(
     type: t.text({ enum: AUTH_TOKEN_TYPES }).notNull(),
     role: t.text({ enum: USER_ROLES }),
     invitedBy: t.integer().references(() => users.id, { onDelete: "set null" }),
+    // Free-form per-type payload. Today only `oauth_state` populates this
+    // (PKCE verifier + provider key + return path); kept nullable so the
+    // existing token types keep their narrow column footprint.
+    payload: t.text({ mode: "json" }).$type<Record<string, unknown>>(),
     expiresAt: t.integer({ mode: "timestamp" }).notNull(),
     createdAt: t
       .integer({ mode: "timestamp" })

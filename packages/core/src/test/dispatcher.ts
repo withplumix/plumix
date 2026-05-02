@@ -1,3 +1,4 @@
+import type { OAuthProvidersConfig } from "../auth/oauth/types.js";
 import type { AnyPluginDescriptor } from "../config.js";
 import type { AppContext } from "../context/app.js";
 import type { User, UserRole } from "../db/schema/users.js";
@@ -70,6 +71,12 @@ export interface CreateDispatcherHarnessOptions {
    * `memoryStorage().connect({})` for a working in-memory backend.
    */
   readonly storage?: ConnectedObjectStorage;
+  /**
+   * OAuth provider credentials to expose on `app.config.auth.oauth`. Tests
+   * exercising the OAuth start/callback routes pass dummy clientId/secret
+   * here; passkey-only deployments leave it undefined.
+   */
+  readonly oauth?: OAuthProvidersConfig;
 }
 
 export interface DispatcherHarness {
@@ -143,6 +150,7 @@ function withRequest(
     assets,
     storage,
     imageDelivery: app.config.imageDelivery,
+    oauthProviders: app.oauthProviders,
   });
 }
 
@@ -160,6 +168,7 @@ export async function createDispatcherHarness(
         rpId: "cms.example",
         origin: "https://cms.example",
       },
+      oauth: options.oauth ? { providers: options.oauth } : undefined,
     }),
     plugins: options.plugins,
     imageDelivery: options.imageDelivery,

@@ -1,17 +1,24 @@
 import * as v from "valibot";
 
+import type { OAuthProvidersConfig } from "./oauth/types.js";
 import type { PasskeyConfig } from "./passkey/config.js";
 import type { SessionPolicy } from "./sessions.js";
+
+export interface PlumixOAuthConfig {
+  readonly providers: OAuthProvidersConfig;
+}
 
 export interface PlumixAuthInput {
   readonly passkey: PasskeyConfig;
   readonly sessions?: SessionPolicy;
+  readonly oauth?: PlumixOAuthConfig;
 }
 
 export interface PlumixAuthConfig {
   readonly kind: "plumix";
   readonly passkey: PasskeyConfig;
   readonly sessions?: SessionPolicy;
+  readonly oauth?: PlumixOAuthConfig;
 }
 
 export interface PlumixConfigIssue {
@@ -59,9 +66,35 @@ const sessionPolicySchema = v.pipe(
   ),
 );
 
+const oauthClientSchema = v.object({
+  clientId: v.pipe(
+    v.string(),
+    v.nonEmpty("clientId must be a non-empty string"),
+  ),
+  clientSecret: v.pipe(
+    v.string(),
+    v.nonEmpty("clientSecret must be a non-empty string"),
+  ),
+});
+
+const oauthSchema = v.pipe(
+  v.object({
+    providers: v.object({
+      github: v.optional(oauthClientSchema),
+      google: v.optional(oauthClientSchema),
+    }),
+  }),
+  v.check(
+    (cfg) =>
+      cfg.providers.github !== undefined || cfg.providers.google !== undefined,
+    "oauth.providers must declare at least one provider",
+  ),
+);
+
 const authInputSchema = v.object({
   passkey: passkeySchema,
   sessions: v.optional(sessionPolicySchema),
+  oauth: v.optional(oauthSchema),
 });
 
 function toIssues(
@@ -86,5 +119,6 @@ export function auth(input: PlumixAuthInput): PlumixAuthConfig {
     kind: "plumix",
     passkey: input.passkey,
     sessions: input.sessions,
+    oauth: input.oauth,
   };
 }

@@ -1,5 +1,6 @@
 import { RPCHandler } from "@orpc/server/fetch";
 
+import type { OAuthProviderKey } from "../auth/oauth/types.js";
 import type { ResolvedPasskeyConfig } from "../auth/passkey/config.js";
 import type { CapabilityResolver } from "../auth/rbac.js";
 import type { SessionPolicy } from "../auth/sessions.js";
@@ -7,6 +8,7 @@ import type { PlumixConfig } from "../config.js";
 import type { AppContext } from "../context/app.js";
 import type { PluginRegistry, RegisteredRawRoute } from "../plugin/manifest.js";
 import type { RouteRule } from "../route/intent.js";
+import { OAUTH_PROVIDER_KEYS } from "../auth/oauth/types.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
 import { DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
@@ -31,6 +33,8 @@ export interface PlumixApp {
   readonly origin: string;
   readonly passkey: ResolvedPasskeyConfig;
   readonly sessionPolicy: SessionPolicy;
+  /** Provider keys with credentials configured. Empty when oauth() wasn't passed. */
+  readonly oauthProviders: readonly OAuthProviderKey[];
   readonly schema: Record<string, unknown>;
   /**
    * Sorted route map compiled once at `buildApp` from the plugin registry.
@@ -83,6 +87,10 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
   }
 
   const passkey = resolvePasskeyConfig(config.auth.passkey);
+  const oauth = config.auth.oauth;
+  const oauthProviders = oauth
+    ? OAUTH_PROVIDER_KEYS.filter((key) => oauth.providers[key])
+    : [];
   return {
     config,
     hooks,
@@ -91,6 +99,7 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     origin: passkey.origin,
     passkey,
     sessionPolicy: config.auth.sessions ?? DEFAULT_SESSION_POLICY,
+    oauthProviders,
     schema,
     routeMap: compileRouteMap(registry),
     rawRoutes: registry.rawRoutes,

@@ -212,6 +212,7 @@ function buildFetch(app: PlumixApp): FetchHandler {
         assets: readAssetsBinding(env),
         storage,
         imageDelivery: app.config.imageDelivery,
+        oauthProviders: app.oauthProviders,
       });
       const response = await requestStore.run(appCtx, () => dispatcher(appCtx));
       return finalize(response);
