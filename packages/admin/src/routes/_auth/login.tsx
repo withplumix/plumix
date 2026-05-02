@@ -20,7 +20,10 @@ import {
 import { Input } from "@/components/ui/input.js";
 import { Separator } from "@/components/ui/separator.js";
 import { getMagicLinkErrorMessage } from "@/lib/magic-link-errors.js";
-import { MagicLinkRequestError, requestMagicLink } from "@/lib/magic-link.js";
+import {
+  getMagicLinkRequestErrorMessage,
+  requestMagicLink,
+} from "@/lib/magic-link.js";
 import { getOAuthErrorMessage } from "@/lib/oauth-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { getPasskeyErrorMessage, PasskeyError } from "@/lib/passkey-errors.js";
@@ -83,19 +86,7 @@ function LoginRoute(): ReactNode {
       setMagicLinkSent(false);
     },
     onSuccess: () => setMagicLinkSent(true),
-    onError: (err) => {
-      if (err instanceof MagicLinkRequestError) {
-        setMagicLinkError(
-          err.code === "not_configured"
-            ? "Magic-link sign-in isn't configured on this site."
-            : err.code === "invalid_input"
-              ? "Enter a valid email address."
-              : "Couldn't send the link. Try again.",
-        );
-        return;
-      }
-      setMagicLinkError("Couldn't send the link. Try again.");
-    },
+    onError: (err) => setMagicLinkError(getMagicLinkRequestErrorMessage(err)),
   });
 
   const form = useForm({

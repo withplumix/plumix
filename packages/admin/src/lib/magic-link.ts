@@ -45,3 +45,16 @@ export class MagicLinkRequestError extends Error {
     this.code = code;
   }
 }
+
+const REQUEST_ERROR_MESSAGES: Record<MagicLinkRequestErrorCode, string> = {
+  not_configured: "Magic-link sign-in isn't configured on this site.",
+  invalid_input: "Enter a valid email address.",
+  network: "Couldn't send the link. Try again.",
+};
+
+export function getMagicLinkRequestErrorMessage(error: unknown): string {
+  if (error instanceof MagicLinkRequestError) {
+    return REQUEST_ERROR_MESSAGES[error.code];
+  }
+  return REQUEST_ERROR_MESSAGES.network;
+}
