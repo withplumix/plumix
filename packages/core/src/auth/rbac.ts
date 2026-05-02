@@ -199,8 +199,8 @@ export function capabilitiesForRole(
   plugins: PluginRegistry,
 ): readonly string[] {
   const level = roleLevel(role);
-  // Set — a plugin registering a post type with `capabilityType: 'post'`
-  // duplicates the derived `post:read` etc. caps into `plugins.capabilities`
+  // Set — a plugin registering an entry type with `capabilityType: 'post'`
+  // duplicates the derived `entry:post:read` etc. caps into `plugins.capabilities`
   // on top of the entries already present in CORE_CAPABILITIES. Dedupe so
   // the wire payload doesn't carry `["entry:post:read", "entry:post:read", ...]`.
   const granted = new Set<string>();

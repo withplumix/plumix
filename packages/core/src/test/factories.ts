@@ -193,7 +193,7 @@ export const settingFactory = Factory.define<NewSetting, DbTransient, Setting>(
   },
 );
 
-// post_term join row. Caller passes entryId + termId; sortOrder defaults to 0.
+// entry_term join row. Caller passes entryId + termId; sortOrder defaults to 0.
 export const entryTermFactory = Factory.define<
   NewEntryTerm,
   DbTransient,

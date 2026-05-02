@@ -69,7 +69,7 @@ export const list = base
         filtered.termTaxonomies,
       )) {
         if (slugs.length === 0) continue;
-        // Correlated subquery: post.id must appear in `post_term` joined
+        // Correlated subquery: entries.id must appear in `entry_term` joined
         // to `terms` filtered by this termTaxonomy + listed slugs. One clause
         // per termTaxonomy; multiple clauses AND together — matching WP's
         // default `tax_query` relation.

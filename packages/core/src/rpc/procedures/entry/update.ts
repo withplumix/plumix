@@ -67,7 +67,7 @@ function assertCanPublishTransition(
 }
 
 // Reparenting: caller may only point at entries they can see, and the
-// parent must share the current post's type. Undistinguished 404 on
+// parent must share the current entry's type. Undistinguished 404 on
 // any failure — don't leak whether the parent exists. Also walk the
 // chain upward to reject cycles of any depth (self-parent, A→B→A, …) —
 // admin UI tree renders will infinite-loop on any cycle in the DB.

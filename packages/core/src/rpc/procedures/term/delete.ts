@@ -21,7 +21,7 @@ export const del = base
       throw errors.FORBIDDEN({ data: { capability: deleteCap } });
     }
 
-    // post_term cascades via the FK; children terms get parentId = null via
+    // entry_term cascades via the FK; children terms get parentId = null via
     // the terms.parentId self-reference `onDelete: set null`.
     const [deleted] = await context.db
       .delete(terms)

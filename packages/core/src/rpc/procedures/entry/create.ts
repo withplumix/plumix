@@ -61,7 +61,7 @@ export const create = base
 
     assertContentWithinByteCap(filtered.content, errors);
 
-    // Validate meta up-front so a bad key fails before the post insert —
+    // Validate meta up-front so a bad key fails before the entry insert —
     // keeps the DB clean when the client sends a typo in a meta key.
     const metaPatch = sanitizeMetaForRpc(
       context.plugins,

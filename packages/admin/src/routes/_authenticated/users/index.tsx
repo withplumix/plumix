@@ -150,7 +150,7 @@ function UsersListRoute(): ReactNode {
   const rows: readonly User[] = query.data ?? [];
   const canPrev = search.page > 1;
   // Heuristic "next page exists": full page came back. `user.list` doesn't
-  // return a total, same tradeoff as `post.list` — accept the occasional
+  // return a total, same tradeoff as `entry.list` — accept the occasional
   // empty-next-page when total is an exact multiple of PAGE_SIZE.
   const canNext = rows.length === PAGE_SIZE;
 
