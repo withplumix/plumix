@@ -1,3 +1,4 @@
+import type { PlumixMagicLinkConfig } from "../auth/config.js";
 import type { OAuthProviderClient } from "../auth/oauth/types.js";
 import type { AnyPluginDescriptor } from "../config.js";
 import type { AppContext } from "../context/app.js";
@@ -77,6 +78,12 @@ export interface CreateDispatcherHarnessOptions {
    * google(...) }`. Passkey-only deployments leave undefined.
    */
   readonly oauth?: Readonly<Record<string, OAuthProviderClient>>;
+  /**
+   * Magic-link config for tests exercising the request/verify routes.
+   * The `mailer` field is required; pass `consoleMailer({ logger })` or
+   * a mock to assert sends.
+   */
+  readonly magicLink?: PlumixMagicLinkConfig;
 }
 
 export interface DispatcherHarness {
@@ -169,6 +176,7 @@ export async function createDispatcherHarness(
         origin: "https://cms.example",
       },
       oauth: options.oauth ? { providers: options.oauth } : undefined,
+      magicLink: options.magicLink,
     }),
     plugins: options.plugins,
     imageDelivery: options.imageDelivery,

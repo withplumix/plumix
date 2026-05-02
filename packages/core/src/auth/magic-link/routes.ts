@@ -1,0 +1,138 @@
+import * as v from "valibot";
+
+import type { AppContext } from "../../context/app.js";
+import type { PlumixApp } from "../../runtime/app.js";
+import type { MagicLinkErrorCode } from "./errors.js";
+import { jsonResponse } from "../../runtime/http.js";
+import { buildSessionCookie, isSecureRequest } from "../cookies.js";
+import { createSession } from "../sessions.js";
+import { MagicLinkError } from "./errors.js";
+import { requestMagicLink } from "./request.js";
+import { verifyMagicLink } from "./verify.js";
+
+const ADMIN_PATH = "/_plumix/admin";
+const LOGIN_PATH = "/_plumix/admin/login";
+
+// Defensive bound on the inbound `token` query param. Our generator
+// emits 192-bit base64url (32 chars); 256 chars is generous for
+// future-proofing while bounding malformed-callback amplification.
+const MAX_TOKEN_LENGTH = 256;
+
+const requestInputSchema = v.object({
+  email: v.pipe(
+    v.string(),
+    v.trim(),
+    v.toLowerCase(),
+    v.email(),
+    v.maxLength(255),
+  ),
+});
+
+/**
+ * POST /_plumix/auth/magic-link/request — JSON body `{ email }`.
+ *
+ * Always responds with 200 and a generic "If an account exists…"
+ * message regardless of whether the recipient is registered. The
+ * dispatcher's CSRF gate fires before this handler (custom header +
+ * Origin check); we don't need additional CSRF here.
+ */
+export async function handleMagicLinkRequest(
+  ctx: AppContext,
+  app: PlumixApp,
+): Promise<Response> {
+  if (!app.config.auth.magicLink) {
+    return jsonResponse(
+      { error: "magic_link_not_configured" },
+      { status: 503 },
+    );
+  }
+
+  let body: unknown;
+  try {
+    body = await ctx.request.json();
+  } catch {
+    return invalidInput();
+  }
+  const parsed = v.safeParse(requestInputSchema, body);
+  if (!parsed.success) return invalidInput();
+
+  try {
+    await requestMagicLink(ctx.db, {
+      email: parsed.output.email,
+      origin: app.origin,
+      mailer: app.config.auth.magicLink.mailer,
+      siteName: app.config.auth.magicLink.siteName ?? app.passkey.rpName,
+      ttlSeconds: app.config.auth.magicLink.ttlSeconds,
+    });
+  } catch (error) {
+    // requestMagicLink swallows mailer errors internally; anything that
+    // reaches here is a programming error (DB failure, etc.). Log but
+    // still respond identically to keep the always-success contract.
+    ctx.logger.error("magic_link_request_failed", { error });
+  }
+
+  return jsonResponse({
+    ok: true,
+    message: "If an account exists for this email, we sent a sign-in link.",
+  });
+}
+
+/**
+ * GET /_plumix/auth/magic-link/verify?token=…
+ *
+ * Top-level navigation from the user's email client; consumes the
+ * single-use token, mints a session, redirects to /admin. Errors
+ * redirect to /admin/login with a typed `magic_link_error=<code>`.
+ */
+export async function handleMagicLinkVerify(
+  ctx: AppContext,
+  app: PlumixApp,
+): Promise<Response> {
+  if (!app.config.auth.magicLink) {
+    return loginError("token_invalid");
+  }
+
+  const url = new URL(ctx.request.url);
+  const token = url.searchParams.get("token");
+  if (!token) return loginError("missing_token");
+  if (token.length > MAX_TOKEN_LENGTH) return loginError("token_invalid");
+
+  try {
+    const user = await verifyMagicLink(ctx.db, token);
+    const { token: sessionToken } = await createSession(
+      ctx.db,
+      { userId: user.id },
+      app.sessionPolicy,
+    );
+    const cookie = buildSessionCookie(sessionToken, {
+      maxAgeSeconds: app.sessionPolicy.maxAgeSeconds,
+      secure: isSecureRequest(ctx.request),
+      sameSite: "Lax",
+    });
+    return redirectTo(ADMIN_PATH, { "set-cookie": cookie });
+  } catch (error) {
+    if (error instanceof MagicLinkError) {
+      ctx.logger.warn("magic_link_verify_rejected", { code: error.code });
+      return loginError(error.code);
+    }
+    ctx.logger.error("magic_link_verify_failed", { error });
+    return loginError("token_invalid");
+  }
+}
+
+function invalidInput(): Response {
+  return jsonResponse({ error: "invalid_input" }, { status: 400 });
+}
+
+function redirectTo(
+  location: string,
+  extraHeaders: Record<string, string> = {},
+): Response {
+  const headers = new Headers({ Location: location, ...extraHeaders });
+  return new Response(null, { status: 302, headers });
+}
+
+function loginError(code: MagicLinkErrorCode): Response {
+  const params = new URLSearchParams({ magic_link_error: code });
+  return redirectTo(`${LOGIN_PATH}?${params.toString()}`);
+}

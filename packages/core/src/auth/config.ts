@@ -1,9 +1,28 @@
 import * as v from "valibot";
 
+import type { Mailer } from "./mailer/types.js";
 import type { OAuthProviderClient } from "./oauth/types.js";
 import type { PasskeyConfig } from "./passkey/config.js";
 import type { SessionPolicy } from "./sessions.js";
 import { OAUTH_PROVIDER_KEY_PATTERN } from "./oauth/types.js";
+
+export interface PlumixMagicLinkConfig {
+  /**
+   * Required when magic-link sign-in is enabled. Implementations must
+   * conform to the `Mailer` interface; ship `consoleMailer()` for dev.
+   */
+  readonly mailer: Mailer;
+  /**
+   * Site name shown in the email subject + body ("Sign in to {siteName}").
+   * Defaults to `passkey.rpName` when omitted.
+   */
+  readonly siteName?: string;
+  /**
+   * Token lifetime in seconds. Defaults to 15 minutes (900) — the
+   * Copenhagen Book / emdash convention. Lower for paranoid deploys.
+   */
+  readonly ttlSeconds?: number;
+}
 
 export interface PlumixOAuthConfig {
   /**
@@ -21,6 +40,7 @@ export interface PlumixAuthInput {
   readonly passkey: PasskeyConfig;
   readonly sessions?: SessionPolicy;
   readonly oauth?: PlumixOAuthConfig;
+  readonly magicLink?: PlumixMagicLinkConfig;
 }
 
 export interface PlumixAuthConfig {
@@ -28,6 +48,7 @@ export interface PlumixAuthConfig {
   readonly passkey: PasskeyConfig;
   readonly sessions?: SessionPolicy;
   readonly oauth?: PlumixOAuthConfig;
+  readonly magicLink?: PlumixMagicLinkConfig;
 }
 
 export interface PlumixConfigIssue {
@@ -139,10 +160,36 @@ const oauthSchema = v.pipe(
   ),
 );
 
+const magicLinkSchema = v.object({
+  mailer: v.pipe(
+    v.unknown(),
+    v.check(
+      (val) =>
+        typeof val === "object" &&
+        val !== null &&
+        "send" in val &&
+        typeof val.send === "function",
+      "magicLink.mailer must implement `send(message)`",
+    ),
+  ),
+  siteName: v.optional(
+    v.pipe(v.string(), v.nonEmpty("siteName must be non-empty")),
+  ),
+  ttlSeconds: v.optional(
+    v.pipe(
+      v.number(),
+      v.integer("ttlSeconds must be an integer"),
+      v.minValue(60, "ttlSeconds must be ≥ 60"),
+      v.maxValue(60 * 60, "ttlSeconds must be ≤ 3600"),
+    ),
+  ),
+});
+
 const authInputSchema = v.object({
   passkey: passkeySchema,
   sessions: v.optional(sessionPolicySchema),
   oauth: v.optional(oauthSchema),
+  magicLink: v.optional(magicLinkSchema),
 });
 
 function toIssues(
@@ -168,5 +215,6 @@ export function auth(input: PlumixAuthInput): PlumixAuthConfig {
     passkey: input.passkey,
     sessions: input.sessions,
     oauth: input.oauth,
+    magicLink: input.magicLink,
   };
 }

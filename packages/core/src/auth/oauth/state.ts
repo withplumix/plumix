@@ -3,7 +3,7 @@ import { and, eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { generateToken, hashToken } from "../tokens.js";
 
-export const OAUTH_STATE_TTL_SECONDS = 10 * 60;
+const OAUTH_STATE_TTL_SECONDS = 10 * 60;
 
 interface OAuthStatePayload {
   readonly provider: string;
