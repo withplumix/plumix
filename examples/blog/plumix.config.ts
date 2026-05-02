@@ -8,7 +8,7 @@ import {
   images,
   r2,
 } from "@plumix/runtime-cloudflare";
-import { auth, plumix } from "plumix";
+import { auth, consoleMailer, plumix } from "plumix";
 
 // Derives `rpId` + `origin` from the Workers Builds env (`WORKERS_CI`,
 // `WORKERS_CI_BRANCH`): production deploys → `<worker>.<account>.workers.dev`,
@@ -46,6 +46,30 @@ export default plumix({
       rpName: "Plumix — Blog",
       rpId,
       origin,
+    },
+    // Magic-link sign-in / signup. The default `consoleMailer()` logs
+    // the message instead of sending — fine for dev / `wrangler tail`,
+    // not fine for production. Swap in your own factory for Resend /
+    // Postmark / SES / SMTP — the `Mailer` interface is one method:
+    //
+    //   const mailer = {
+    //     async send(message) {
+    //       await fetch("https://api.resend.com/emails", {
+    //         method: "POST",
+    //         headers: {
+    //           Authorization: `Bearer ${env.RESEND_API_KEY}`,
+    //           "Content-Type": "application/json",
+    //         },
+    //         body: JSON.stringify({
+    //           from: "noreply@plumix.test",
+    //           ...message,
+    //         }),
+    //       });
+    //     },
+    //   };
+    magicLink: {
+      siteName: "Plumix — Blog",
+      mailer: consoleMailer(),
     },
   }),
   plugins: [blog, pages, media()],

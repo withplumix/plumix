@@ -1,6 +1,7 @@
 import type { Db, Logger } from "../../context/app.js";
 import type { Mailer } from "../mailer/types.js";
 import { eq } from "../../db/index.js";
+import { allowedDomains } from "../../db/schema/allowed_domains.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { users } from "../../db/schema/users.js";
 import { generateToken, hashToken } from "../tokens.js";
@@ -35,17 +36,25 @@ interface RequestMagicLinkInput {
 }
 
 /**
- * Issue a magic-link if (and only if) a user with this email exists.
- * Always behaves identically from the caller's perspective regardless of
- * whether the recipient is registered — the route layer turns this into
- * an "If an account exists, we sent you a link" response. Per Copenhagen
- * Book / emdash: don't reveal email existence via response timing or
- * shape; honour that here at the function boundary.
+ * Issue a magic-link for sign-in or domain-gated signup.
  *
- * Errors from the mailer are swallowed (logged at the route layer if
- * the caller wires logging in). The function never throws; it returns
- * normally regardless of outcome. Sign-in only — does not provision new
- * users; an unknown email is a silent no-op.
+ *   sign-in (existing user)        → token row carries `userId = user.id`.
+ *   signup (allowed-domain match)  → token row carries `userId = null`,
+ *                                    role omitted (resolved at verify).
+ *   neither                        → silent no-op + timing delay.
+ *
+ * Always behaves identically from the caller's perspective regardless of
+ * which branch fired — the route layer turns this into an "If an
+ * account exists or self-signup is open, we sent you a link" response.
+ * Per Copenhagen Book / emdash: don't reveal email existence via
+ * response timing or shape; honour that here at the function boundary.
+ *
+ * Bootstrap rail: signup is refused when the system has zero users
+ * (matches OAuth — first-admin must enrol via passkey).
+ *
+ * Errors from the mailer are swallowed (logged via input.logger when
+ * present). The function never throws; it returns normally regardless
+ * of outcome.
  */
 export async function requestMagicLink(
   db: Db,
@@ -58,19 +67,63 @@ export async function requestMagicLink(
     where: eq(users.email, email),
   });
 
-  if (!user || user.disabledAt) {
+  // Sign-in path — existing active user.
+  if (user && !user.disabledAt) {
+    await issueAndSend(db, input, ttlSeconds, {
+      userId: user.id,
+      email: user.email,
+    });
+    return;
+  }
+  if (user?.disabledAt) {
+    // Disabled user: no signup attempt, silent no-op + jitter.
     await timingDelay();
     return;
   }
 
+  // Signup path — no user yet. Gate on allowed_domains + non-zero
+  // user count so the bootstrap-via-passkey rule holds.
+  const domain = extractDomain(email);
+  if (!domain) {
+    await timingDelay();
+    return;
+  }
+  const allowed = await db.query.allowedDomains.findFirst({
+    where: eq(allowedDomains.domain, domain),
+  });
+  if (!allowed?.isEnabled) {
+    await timingDelay();
+    return;
+  }
+  const userCount = await db.$count(users);
+  if (userCount === 0) {
+    // Refuse signup before bootstrap completes. Same rail OAuth uses.
+    await timingDelay();
+    return;
+  }
+
+  await issueAndSend(db, input, ttlSeconds, { userId: null, email });
+}
+
+interface IssueAndSendInput {
+  readonly userId: number | null;
+  readonly email: string;
+}
+
+async function issueAndSend(
+  db: Db,
+  input: RequestMagicLinkInput,
+  ttlSeconds: number,
+  target: IssueAndSendInput,
+): Promise<void> {
   const token = generateToken();
   const hash = await hashToken(token);
   const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
 
   await db.insert(authTokens).values({
     hash,
-    userId: user.id,
-    email: user.email,
+    userId: target.userId,
+    email: target.email,
     type: "magic_link",
     expiresAt,
   });
@@ -79,11 +132,13 @@ export async function requestMagicLink(
   verifyUrl.searchParams.set("token", token);
 
   try {
+    // Plain-text body only. Branded HTML / template rendering is the
+    // operator's call — they wrap their `Mailer` adapter and template
+    // however they like. Plumix is not in the email-design business.
     await input.mailer.send({
-      to: user.email,
+      to: target.email,
       subject: `Sign in to ${input.siteName}`,
-      text: composeText(input.siteName, verifyUrl.toString()),
-      html: composeHtml(input.siteName, verifyUrl.toString()),
+      text: composeText(input.siteName, verifyUrl.toString(), ttlSeconds),
     });
   } catch (error) {
     // Swallow toward the caller — surfacing this would leak that the
@@ -93,43 +148,26 @@ export async function requestMagicLink(
   }
 }
 
-function composeText(siteName: string, url: string): string {
+function extractDomain(email: string): string | null {
+  const at = email.lastIndexOf("@");
+  if (at < 0 || at === email.length - 1) return null;
+  return email.slice(at + 1).toLowerCase();
+}
+
+function composeText(
+  siteName: string,
+  url: string,
+  ttlSeconds: number,
+): string {
   return [
     `Sign in to ${siteName} by opening this link:`,
     "",
     url,
     "",
-    `The link expires in ${MAGIC_LINK_TTL_SECONDS / 60} minutes.`,
+    `The link expires in ${Math.round(ttlSeconds / 60)} minutes.`,
     "",
     "If you didn't request this, you can ignore this email.",
   ].join("\n");
-}
-
-function composeHtml(siteName: string, url: string): string {
-  const safeName = escapeHtml(siteName);
-  // The URL is server-generated (origin from app.origin + token from our
-  // crypto-random generator), so it's already HTML-safe. Still, route it
-  // through escapeHtml for defense-in-depth.
-  const safeUrl = escapeHtml(url);
-  return `<!doctype html>
-<html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.5;color:#333;max-width:600px;margin:0 auto;padding:24px">
-<h1 style="font-size:20px;margin:0 0 16px">Sign in to ${safeName}</h1>
-<p>Click the button below to sign in:</p>
-<p style="margin:24px 0">
-  <a href="${safeUrl}" style="background:#0f172a;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;display:inline-block">Sign in</a>
-</p>
-<p style="color:#666;font-size:14px">The link expires in ${MAGIC_LINK_TTL_SECONDS / 60} minutes.</p>
-<p style="color:#666;font-size:14px">If you didn't request this, you can ignore this email.</p>
-</body></html>`;
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }
 
 function timingDelay(): Promise<void> {

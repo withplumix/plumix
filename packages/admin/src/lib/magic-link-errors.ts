@@ -7,6 +7,10 @@ const MESSAGES: Record<MagicLinkErrorCode, string> = {
     "That sign-in link isn't valid. It may have already been used. Request a new one.",
   token_expired: "That sign-in link expired. Request a new one.",
   account_disabled: "That account is disabled.",
+  domain_not_allowed:
+    "Your email domain isn't on the allowlist anymore. Ask an administrator to add it.",
+  registration_closed:
+    "Self-signup is unavailable until an administrator has finished setup.",
 };
 
 const FALLBACK = "Couldn't sign in. Try again.";

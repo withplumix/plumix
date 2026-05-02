@@ -3,7 +3,7 @@ import { describe, expect, test, vi } from "vitest";
 import type { Mailer } from "../mailer/types.js";
 import { eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
-import { userFactory } from "../../test/factories.js";
+import { allowedDomainFactory, userFactory } from "../../test/factories.js";
 import { createTestDb } from "../../test/harness.js";
 import { hashToken } from "../tokens.js";
 import { requestMagicLink } from "./request.js";
@@ -51,7 +51,9 @@ describe("requestMagicLink", () => {
     expect(message?.text).toContain(
       "https://cms.example/_plumix/auth/magic-link/verify?token=",
     );
-    expect(message?.html).toContain("Test Site");
+    // Plumix doesn't ship HTML — operators template in their own mailer
+    // wrapper if they want it. The text body alone is the contract.
+    expect(message?.html).toBeUndefined();
 
     // The DB row exists, keyed by SHA-256(token), pointing at the user.
     // Recover the token from the URL and verify hash storage.
@@ -118,6 +120,95 @@ describe("requestMagicLink", () => {
     });
 
     expect(sent).toHaveLength(1);
+  });
+
+  test("signup: allowed domain → token issued with userId=null + email sent", async () => {
+    const db = await createTestDb();
+    // Need at least one user so the bootstrap rail is satisfied.
+    await userFactory.transient({ db }).create({ role: "admin" });
+    await allowedDomainFactory.transient({ db }).create({
+      domain: "example.com",
+      defaultRole: "subscriber",
+      isEnabled: true,
+    });
+    const { mailer, sent } = captureMailer();
+
+    await requestMagicLink(db, {
+      email: "newcomer@example.com",
+      origin: "https://cms.example",
+      mailer,
+      siteName: "Test",
+    });
+
+    expect(sent).toHaveLength(1);
+    const tokenMatch = /token=([A-Za-z0-9_-]+)/.exec(sent[0]?.text ?? "");
+    const tokenInUrl = tokenMatch?.[1];
+    if (!tokenInUrl) throw new Error("expected token in email URL");
+    const hash = await hashToken(tokenInUrl);
+    const row = await db.query.authTokens.findFirst({
+      where: eq(authTokens.hash, hash),
+    });
+    expect(row?.type).toBe("magic_link");
+    expect(row?.userId).toBeNull();
+    expect(row?.email).toBe("newcomer@example.com");
+  });
+
+  test("signup: disabled allowed-domains row silently no-ops", async () => {
+    const db = await createTestDb();
+    await userFactory.transient({ db }).create({ role: "admin" });
+    await allowedDomainFactory.transient({ db }).create({
+      domain: "example.com",
+      defaultRole: "subscriber",
+      isEnabled: false,
+    });
+    const { mailer, sent } = captureMailer();
+
+    await requestMagicLink(db, {
+      email: "newcomer@example.com",
+      origin: "https://cms.example",
+      mailer,
+      siteName: "Test",
+    });
+
+    expect(sent).toHaveLength(0);
+    const tokens = await db.select().from(authTokens);
+    expect(tokens).toHaveLength(0);
+  });
+
+  test("signup: missing allowed-domains row silently no-ops", async () => {
+    const db = await createTestDb();
+    await userFactory.transient({ db }).create({ role: "admin" });
+    const { mailer, sent } = captureMailer();
+
+    await requestMagicLink(db, {
+      email: "stranger@unknown.com",
+      origin: "https://cms.example",
+      mailer,
+      siteName: "Test",
+    });
+
+    expect(sent).toHaveLength(0);
+  });
+
+  test("signup: zero-user system refuses signup (bootstrap is passkey-only)", async () => {
+    const db = await createTestDb();
+    await allowedDomainFactory.transient({ db }).create({
+      domain: "example.com",
+      defaultRole: "admin",
+      isEnabled: true,
+    });
+    const { mailer, sent } = captureMailer();
+
+    await requestMagicLink(db, {
+      email: "first@example.com",
+      origin: "https://cms.example",
+      mailer,
+      siteName: "Test",
+    });
+
+    expect(sent).toHaveLength(0);
+    const tokens = await db.select().from(authTokens);
+    expect(tokens).toHaveLength(0);
   });
 
   test("swallows mailer errors so the response shape never leaks success", async () => {

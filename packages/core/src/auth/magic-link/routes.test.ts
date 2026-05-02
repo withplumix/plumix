@@ -2,8 +2,10 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { Mailer } from "../mailer/types.js";
 import { eq } from "../../db/index.js";
+import { allowedDomains } from "../../db/schema/allowed_domains.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { sessions } from "../../db/schema/sessions.js";
+import { users } from "../../db/schema/users.js";
 import { createDispatcherHarness } from "../../test/dispatcher.js";
 import { generateToken, hashToken } from "../tokens.js";
 
@@ -306,6 +308,93 @@ describe("magic-link verify route", () => {
     expect(sessionRows).toHaveLength(2);
     // Both belong to the same user.
     for (const row of sessionRows) expect(row.userId).toBe(user.id);
+  });
+
+  test("end-to-end signup: request → verify provisions user with the domain's role", async () => {
+    const { mailer, sent } = captureMailer();
+    const h = await createDispatcherHarness({
+      magicLink: { mailer, siteName: "Plumix Test" },
+    });
+    await h.factory.user.create({ role: "admin" });
+    await h.factory.allowedDomain.create({
+      domain: "example.com",
+      defaultRole: "contributor",
+      isEnabled: true,
+    });
+
+    // Step 1: request the link.
+    const requestResp = await h.dispatch(
+      postRequest("/_plumix/auth/magic-link/request", {
+        email: "newcomer@example.com",
+      }),
+    );
+    expect(requestResp.status).toBe(200);
+    expect(sent).toHaveLength(1);
+
+    // Step 2: parse the token from the emailed URL and click it.
+    const tokenMatch = /token=([A-Za-z0-9_-]+)/.exec(sent[0]?.text ?? "");
+    const token = tokenMatch?.[1];
+    if (!token) throw new Error("expected token in email");
+
+    const verifyResp = await h.dispatch(
+      getRequest(`/_plumix/auth/magic-link/verify?token=${token}`),
+    );
+    expect(verifyResp.status).toBe(302);
+    expect(verifyResp.headers.get("location")).toBe("/_plumix/admin");
+    expect(verifyResp.headers.get("set-cookie")).toContain("plumix_session=");
+
+    // The user was provisioned with the right role + email-verified mark.
+    const created = await h.db.query.users.findFirst({
+      where: eq(users.email, "newcomer@example.com"),
+    });
+    expect(created?.role).toBe("contributor");
+    expect(created?.emailVerifiedAt).not.toBeNull();
+    // A session was minted for them.
+    const sessionRows = await h.db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.userId, created?.id ?? 0));
+    expect(sessionRows).toHaveLength(1);
+  });
+
+  test("signup verify rejects with domain_not_allowed if admin disables the domain mid-flight", async () => {
+    const { mailer, sent } = captureMailer();
+    const h = await createDispatcherHarness({
+      magicLink: { mailer, siteName: "Plumix Test" },
+    });
+    await h.factory.user.create({ role: "admin" });
+    const allowed = await h.factory.allowedDomain.create({
+      domain: "example.com",
+      defaultRole: "contributor",
+      isEnabled: true,
+    });
+
+    // Request issues a signup token while the domain is enabled.
+    await h.dispatch(
+      postRequest("/_plumix/auth/magic-link/request", {
+        email: "newcomer@example.com",
+      }),
+    );
+    const tokenMatch = /token=([A-Za-z0-9_-]+)/.exec(sent[0]?.text ?? "");
+    const token = tokenMatch?.[1];
+    if (!token) throw new Error("expected token in email");
+
+    // Admin disables the domain before the user clicks.
+    await h.db
+      .update(allowedDomains)
+      .set({ isEnabled: false })
+      .where(eq(allowedDomains.domain, allowed.domain));
+
+    const verifyResp = await h.dispatch(
+      getRequest(`/_plumix/auth/magic-link/verify?token=${token}`),
+    );
+    expect(verifyResp.headers.get("location")).toContain(
+      "magic_link_error=domain_not_allowed",
+    );
+    const created = await h.db.query.users.findFirst({
+      where: eq(users.email, "newcomer@example.com"),
+    });
+    expect(created).toBeUndefined();
   });
 
   test("returns 405 on POST", async () => {
