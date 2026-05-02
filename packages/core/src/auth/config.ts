@@ -14,9 +14,11 @@ export interface PlumixMagicLinkConfig {
   readonly mailer: Mailer;
   /**
    * Site name shown in the email subject + body ("Sign in to {siteName}").
-   * Defaults to `passkey.rpName` when omitted.
+   * Required so the operator picks the user-visible string explicitly —
+   * the alternative (silently falling back to `passkey.rpName`) couples
+   * config blocks in a non-obvious way.
    */
-  readonly siteName?: string;
+  readonly siteName: string;
   /**
    * Token lifetime in seconds. Defaults to 15 minutes (900) — the
    * Copenhagen Book / emdash convention. Lower for paranoid deploys.
@@ -172,8 +174,14 @@ const magicLinkSchema = v.object({
       "magicLink.mailer must implement `send(message)`",
     ),
   ),
-  siteName: v.optional(
-    v.pipe(v.string(), v.nonEmpty("siteName must be non-empty")),
+  siteName: v.pipe(
+    v.string(),
+    v.nonEmpty("siteName must be non-empty"),
+    // Defense-in-depth: siteName flows into the email Subject header. Today
+    // it's operator config (not request input) so safe, but if a future
+    // settings UI ever lets it become user-input, blocking CR/LF here
+    // prevents header injection at the boundary.
+    v.regex(/^[^\r\n]+$/, "siteName must not contain newlines"),
   ),
   ttlSeconds: v.optional(
     v.pipe(

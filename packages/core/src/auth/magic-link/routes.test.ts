@@ -53,7 +53,9 @@ describe("magic-link request route", () => {
 
   test("returns 200 with generic message and sends mail when user exists", async () => {
     const { mailer, sent } = captureMailer();
-    const h = await createDispatcherHarness({ magicLink: { mailer } });
+    const h = await createDispatcherHarness({
+      magicLink: { mailer, siteName: "Plumix Test" },
+    });
     await h.factory.user.create({
       email: "alice@example.com",
       role: "editor",
@@ -76,7 +78,9 @@ describe("magic-link request route", () => {
 
   test("returns the same shape when user does not exist (no enumeration)", async () => {
     const { mailer, sent } = captureMailer();
-    const h = await createDispatcherHarness({ magicLink: { mailer } });
+    const h = await createDispatcherHarness({
+      magicLink: { mailer, siteName: "Plumix Test" },
+    });
 
     const response = await h.dispatch(
       postRequest("/_plumix/auth/magic-link/request", {
@@ -92,7 +96,9 @@ describe("magic-link request route", () => {
 
   test("rejects malformed input with 400", async () => {
     const { mailer } = captureMailer();
-    const h = await createDispatcherHarness({ magicLink: { mailer } });
+    const h = await createDispatcherHarness({
+      magicLink: { mailer, siteName: "Plumix Test" },
+    });
 
     const response = await h.dispatch(
       postRequest("/_plumix/auth/magic-link/request", {
@@ -104,7 +110,9 @@ describe("magic-link request route", () => {
 
   test("rejects missing CSRF header", async () => {
     const { mailer } = captureMailer();
-    const h = await createDispatcherHarness({ magicLink: { mailer } });
+    const h = await createDispatcherHarness({
+      magicLink: { mailer, siteName: "Plumix Test" },
+    });
 
     const response = await h.dispatch(
       new Request("https://cms.example/_plumix/auth/magic-link/request", {
@@ -138,7 +146,9 @@ describe("magic-link verify route", () => {
 
   test("missing token redirects with magic_link_error=missing_token", async () => {
     const { mailer } = captureMailer();
-    const h = await createDispatcherHarness({ magicLink: { mailer } });
+    const h = await createDispatcherHarness({
+      magicLink: { mailer, siteName: "Plumix Test" },
+    });
     const response = await h.dispatch(
       getRequest("/_plumix/auth/magic-link/verify"),
     );
@@ -150,7 +160,9 @@ describe("magic-link verify route", () => {
 
   test("happy path mints session, sets cookie, redirects to admin", async () => {
     const { mailer } = captureMailer();
-    const h = await createDispatcherHarness({ magicLink: { mailer } });
+    const h = await createDispatcherHarness({
+      magicLink: { mailer, siteName: "Plumix Test" },
+    });
     const user = await h.factory.user.create({
       email: "alice@example.com",
       role: "editor",
@@ -171,7 +183,9 @@ describe("magic-link verify route", () => {
 
   test("rejects an unknown token with token_invalid", async () => {
     const { mailer } = captureMailer();
-    const h = await createDispatcherHarness({ magicLink: { mailer } });
+    const h = await createDispatcherHarness({
+      magicLink: { mailer, siteName: "Plumix Test" },
+    });
 
     const response = await h.dispatch(
       getRequest("/_plumix/auth/magic-link/verify?token=not-a-real-token"),
@@ -184,7 +198,9 @@ describe("magic-link verify route", () => {
 
   test("rejects an expired token with token_expired", async () => {
     const { mailer } = captureMailer();
-    const h = await createDispatcherHarness({ magicLink: { mailer } });
+    const h = await createDispatcherHarness({
+      magicLink: { mailer, siteName: "Plumix Test" },
+    });
     const user = await h.factory.user.create({ role: "editor" });
     const token = await seedToken(h, user.id, user.email, -1);
 
@@ -198,7 +214,9 @@ describe("magic-link verify route", () => {
 
   test("rejects when the linked user is disabled", async () => {
     const { mailer } = captureMailer();
-    const h = await createDispatcherHarness({ magicLink: { mailer } });
+    const h = await createDispatcherHarness({
+      magicLink: { mailer, siteName: "Plumix Test" },
+    });
     const user = await h.factory.user.create({
       role: "editor",
       disabledAt: new Date(),
@@ -215,7 +233,9 @@ describe("magic-link verify route", () => {
 
   test("oversized token is rejected as token_invalid", async () => {
     const { mailer } = captureMailer();
-    const h = await createDispatcherHarness({ magicLink: { mailer } });
+    const h = await createDispatcherHarness({
+      magicLink: { mailer, siteName: "Plumix Test" },
+    });
     const huge = "x".repeat(512);
 
     const response = await h.dispatch(
@@ -228,7 +248,9 @@ describe("magic-link verify route", () => {
 
   test("replay of a single-use token fails on second use", async () => {
     const { mailer } = captureMailer();
-    const h = await createDispatcherHarness({ magicLink: { mailer } });
+    const h = await createDispatcherHarness({
+      magicLink: { mailer, siteName: "Plumix Test" },
+    });
     const user = await h.factory.user.create({
       email: "alice@example.com",
       role: "editor",
@@ -248,9 +270,49 @@ describe("magic-link verify route", () => {
     );
   });
 
+  test("signed-in user clicking a magic-link mints a fresh session", async () => {
+    // Already-authenticated browser clicks the email link. The verify
+    // route mints a NEW session row and overwrites the cookie. The old
+    // row stays in the DB until its own TTL — that matches every other
+    // sign-in path (passkey, oauth) and the Copenhagen Book "always
+    // create a new session when the user signs in" rule.
+    const { mailer } = captureMailer();
+    const h = await createDispatcherHarness({
+      magicLink: { mailer, siteName: "Plumix Test" },
+    });
+    const user = await h.factory.user.create({
+      email: "alice@example.com",
+      role: "editor",
+    });
+    const existingSessioned = await h.authenticateRequest(
+      getRequest("/_plumix/auth/magic-link/verify"),
+      user.id,
+    );
+    const beforeCount = (await h.db.select().from(sessions)).length;
+    expect(beforeCount).toBe(1);
+
+    const token = await seedToken(h, user.id, "alice@example.com");
+    const cookie = existingSessioned.headers.get("cookie");
+    const response = await h.dispatch(
+      new Request(
+        `https://cms.example/_plumix/auth/magic-link/verify?token=${token}`,
+        { headers: cookie ? { cookie } : undefined },
+      ),
+    );
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/_plumix/admin");
+
+    const sessionRows = await h.db.select().from(sessions);
+    expect(sessionRows).toHaveLength(2);
+    // Both belong to the same user.
+    for (const row of sessionRows) expect(row.userId).toBe(user.id);
+  });
+
   test("returns 405 on POST", async () => {
     const { mailer } = captureMailer();
-    const h = await createDispatcherHarness({ magicLink: { mailer } });
+    const h = await createDispatcherHarness({
+      magicLink: { mailer, siteName: "Plumix Test" },
+    });
     const response = await h.dispatch(
       new Request("https://cms.example/_plumix/auth/magic-link/verify", {
         method: "POST",
@@ -266,7 +328,9 @@ describe("magic-link verify route", () => {
     // "not found" branch which surfaces as token_invalid. Already
     // covered above; this test is the explicit "unknown error" symbol.
     const { mailer } = captureMailer();
-    const h = await createDispatcherHarness({ magicLink: { mailer } });
+    const h = await createDispatcherHarness({
+      magicLink: { mailer, siteName: "Plumix Test" },
+    });
     const verifySpy = vi
       .spyOn(console, "info")
       .mockImplementation(() => undefined);

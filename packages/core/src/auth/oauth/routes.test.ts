@@ -143,6 +143,22 @@ describe("oauth start route", () => {
     );
     expect(response.status).toBe(404);
   });
+
+  test("rejects `constructor` (prototype-chain key) as not configured", async () => {
+    // The path regex accepts `constructor` (lowercase letters only), but
+    // a direct `providers[key]` lookup would walk the prototype chain
+    // and return `Object`. `Object.hasOwn` keeps the lookup confined to
+    // the operator's config map.
+    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    await h.seedUser("admin");
+    const response = await h.dispatch(
+      new Request("https://cms.example/_plumix/auth/oauth/constructor/start"),
+    );
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toContain(
+      "oauth_error=provider_not_configured",
+    );
+  });
 });
 
 describe("oauth callback route", () => {

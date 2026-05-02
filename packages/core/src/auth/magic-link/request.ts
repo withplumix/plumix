@@ -1,10 +1,14 @@
-import type { Db } from "../../context/app.js";
+import type { Db, Logger } from "../../context/app.js";
 import type { Mailer } from "../mailer/types.js";
 import { eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { users } from "../../db/schema/users.js";
 import { generateToken, hashToken } from "../tokens.js";
 
+// 15-minute default — the Copenhagen Book / emdash convention for
+// passwordless sign-in tokens. Long enough to survive normal email
+// delivery, short enough that a stolen / leaked link is mostly stale.
+// Operators can lower via `auth.magicLink.ttlSeconds` (60–3600).
 const MAGIC_LINK_TTL_SECONDS = 15 * 60;
 
 // Artificial delay range when the recipient is unknown — adds enough
@@ -21,6 +25,13 @@ interface RequestMagicLinkInput {
   readonly mailer: Mailer;
   readonly siteName: string;
   readonly ttlSeconds?: number;
+  /**
+   * Optional logger for swallowed mailer errors. The function never
+   * throws (so the response can stay shape-identical on every code
+   * path), but a transport failure is still operator-visible signal —
+   * route this through the request logger when one is available.
+   */
+  readonly logger?: Pick<Logger, "warn">;
 }
 
 /**
@@ -74,10 +85,11 @@ export async function requestMagicLink(
       text: composeText(input.siteName, verifyUrl.toString()),
       html: composeHtml(input.siteName, verifyUrl.toString()),
     });
-  } catch {
-    // Swallow — we already issued the token (next attempt will replace
-    // it). Surfacing the failure to the caller would leak that the
-    // recipient is registered. Route layer logs from its own catch.
+  } catch (error) {
+    // Swallow toward the caller — surfacing this would leak that the
+    // recipient is registered. Log it server-side so the operator sees
+    // the failure (otherwise broken mail config would be silent).
+    input.logger?.warn("magic_link_mailer_failed", { error });
   }
 }
 

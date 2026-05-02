@@ -148,7 +148,14 @@ export async function handleOAuthCallback(
 }
 
 function pickProvider(app: PlumixApp, key: string): OAuthProviderClient | null {
-  return app.config.auth.oauth?.providers[key] ?? null;
+  // `OAUTH_PROVIDER_KEY_PATTERN` rejects most prototype-chain keys at the
+  // path layer (`__proto__`, `hasOwnProperty`, …), but `constructor`
+  // matches the regex. `Object.hasOwn` keeps the lookup confined to the
+  // operator's `auth.oauth.providers` object instead of walking the
+  // prototype chain.
+  const providers = app.config.auth.oauth?.providers;
+  if (!providers || !Object.hasOwn(providers, key)) return null;
+  return providers[key] ?? null;
 }
 
 // `app.origin` is the canonical site origin from passkey config — pinning

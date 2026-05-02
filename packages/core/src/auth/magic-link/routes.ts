@@ -40,6 +40,9 @@ export async function handleMagicLinkRequest(
   ctx: AppContext,
   app: PlumixApp,
 ): Promise<Response> {
+  // 503 distinguishes "plumix doesn't have magic-link wired up" (operator
+  // omission, should fail loudly) from "this email isn't registered"
+  // (always-success contract, intentionally silent). Don't fold them.
   if (!app.config.auth.magicLink) {
     return jsonResponse(
       { error: "magic_link_not_configured" },
@@ -61,13 +64,17 @@ export async function handleMagicLinkRequest(
       email: parsed.output.email,
       origin: app.origin,
       mailer: app.config.auth.magicLink.mailer,
-      siteName: app.config.auth.magicLink.siteName ?? app.passkey.rpName,
+      siteName: app.config.auth.magicLink.siteName,
       ttlSeconds: app.config.auth.magicLink.ttlSeconds,
+      logger: ctx.logger,
     });
   } catch (error) {
     // requestMagicLink swallows mailer errors internally; anything that
-    // reaches here is a programming error (DB failure, etc.). Log but
-    // still respond identically to keep the always-success contract.
+    // reaches here is a programming error (DB outage, etc.). The
+    // always-success contract is non-negotiable — distinguishing
+    // success from "DB blew up while looking up your email" would let
+    // an attacker fingerprint the registered set via response codes.
+    // Log server-side; respond identically.
     ctx.logger.error("magic_link_request_failed", { error });
   }
 
