@@ -50,6 +50,13 @@ export interface PlumixApp {
   /** True when the operator overrode the default session authenticator. */
   readonly externalAuthenticator: boolean;
   /**
+   * Resolved boolean form of `auth.bootstrapVia`. True when external
+   * sign-in flows (magic-link, OAuth, custom guard) may mint the very
+   * first admin on a fresh deploy; false (default) keeps the bootstrap
+   * rail passkey-only.
+   */
+  readonly bootstrapAllowed: boolean;
+  /**
    * Public summary of configured OAuth providers — `{ key, label }` per
    * entry, derived from the user's `oauth.providers` map at app build
    * time. The login screen reads this verbatim through the
@@ -117,6 +124,7 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     : [];
   const externalAuthenticator = config.auth.authenticator !== undefined;
   const authenticator = config.auth.authenticator ?? sessionAuthenticator();
+  const bootstrapAllowed = config.auth.bootstrapVia === "first-method-wins";
   return {
     config,
     hooks,
@@ -127,6 +135,7 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     sessionPolicy: config.auth.sessions ?? DEFAULT_SESSION_POLICY,
     authenticator,
     externalAuthenticator,
+    bootstrapAllowed,
     oauthProviders,
     schema,
     routeMap: compileRouteMap(registry),

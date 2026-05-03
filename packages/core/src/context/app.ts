@@ -63,6 +63,12 @@ export interface AppContext<
    */
   readonly authenticator: RequestAuthenticator;
   /**
+   * Whether external signup flows (magic-link, OAuth, custom guards)
+   * are allowed to mint the very first admin. Derived from
+   * `auth.bootstrapVia`; defaults to false (passkey-only rail).
+   */
+  readonly bootstrapAllowed: boolean;
+  /**
    * Configured OAuth providers — `{ key, label }` per entry. Empty when
    * the deploy is passkey-only. Read by the login screen (via the
    * `auth.oauthProviders` RPC) to render provider buttons; client
@@ -129,6 +135,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly mailer?: Mailer;
   readonly oauthProviders?: readonly OAuthProviderSummary[];
   readonly authenticator?: RequestAuthenticator;
+  readonly bootstrapAllowed?: boolean;
 }
 
 const dropPromise: AfterResponse = () => undefined;
@@ -157,6 +164,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     mailer: args.mailer,
     oauthProviders: args.oauthProviders ?? [],
     authenticator: args.authenticator ?? sessionAuthenticator(),
+    bootstrapAllowed: args.bootstrapAllowed ?? false,
   };
 }
 

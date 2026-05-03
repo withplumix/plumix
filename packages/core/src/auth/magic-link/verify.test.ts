@@ -190,6 +190,21 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
     });
   });
 
+  test("bootstrapAllowed=true mints the first admin via magic-link", async () => {
+    const db = await createTestDb();
+    await allowedDomainFactory.transient({ db }).create({
+      domain: "example.com",
+      defaultRole: "subscriber",
+      isEnabled: true,
+    });
+    const token = await seedToken(db, null, "first@example.com");
+
+    const user = await verifyMagicLink(db, token, { bootstrapAllowed: true });
+    // provisionUser auto-promotes the very first user to admin.
+    expect(user.role).toBe("admin");
+    expect(user.email).toBe("first@example.com");
+  });
+
   test("falls through to sign-in if a user with this email exists at verify time", async () => {
     // Race: two paths created the same user during the 15-min window —
     // OAuth signup completed while the magic-link signup token was

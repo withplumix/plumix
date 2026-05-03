@@ -33,6 +33,13 @@ interface RequestMagicLinkInput {
    * route this through the request logger when one is available.
    */
   readonly logger?: Pick<Logger, "warn">;
+  /**
+   * When true, allow this magic-link request to issue a signup token
+   * even when zero users exist. The route reads this from
+   * `ctx.bootstrapAllowed` (derived from `auth.bootstrapVia`); default
+   * false keeps the bootstrap rail passkey-only.
+   */
+  readonly bootstrapAllowed?: boolean;
 }
 
 /**
@@ -95,11 +102,13 @@ export async function requestMagicLink(
     await timingDelay();
     return;
   }
-  const userCount = await db.$count(users);
-  if (userCount === 0) {
-    // Refuse signup before bootstrap completes. Same rail OAuth uses.
-    await timingDelay();
-    return;
+  if (!input.bootstrapAllowed) {
+    const userCount = await db.$count(users);
+    if (userCount === 0) {
+      // Refuse signup before bootstrap completes. Same rail OAuth uses.
+      await timingDelay();
+      return;
+    }
   }
 
   await issueAndSend(db, input, ttlSeconds, { userId: null, email });

@@ -211,6 +211,30 @@ describe("requestMagicLink", () => {
     expect(tokens).toHaveLength(0);
   });
 
+  test("signup: bootstrapAllowed=true issues a token even with zero users", async () => {
+    const db = await createTestDb();
+    await allowedDomainFactory.transient({ db }).create({
+      domain: "example.com",
+      defaultRole: "subscriber",
+      isEnabled: true,
+    });
+    const { mailer, sent } = captureMailer();
+
+    await requestMagicLink(db, {
+      email: "first@example.com",
+      origin: "https://cms.example",
+      mailer,
+      siteName: "Test",
+      bootstrapAllowed: true,
+    });
+
+    expect(sent).toHaveLength(1);
+    const tokens = await db.select().from(authTokens);
+    expect(tokens).toHaveLength(1);
+    expect(tokens[0]?.email).toBe("first@example.com");
+    expect(tokens[0]?.userId).toBeNull();
+  });
+
   test("swallows mailer errors so the response shape never leaks success", async () => {
     const db = await createTestDb();
     await userFactory.transient({ db }).create({

@@ -1,5 +1,5 @@
 import type { RequestAuthenticator } from "../auth/authenticator.js";
-import type { PlumixMagicLinkConfig } from "../auth/config.js";
+import type { BootstrapVia, PlumixMagicLinkConfig } from "../auth/config.js";
 import type { Mailer } from "../auth/mailer/types.js";
 import type { OAuthProviderClient } from "../auth/oauth/types.js";
 import type { AnyPluginDescriptor } from "../config.js";
@@ -97,6 +97,13 @@ export interface CreateDispatcherHarnessOptions {
    * here; the dispatcher and RPC middleware both delegate to it.
    */
   readonly authenticator?: RequestAuthenticator;
+  /**
+   * Bootstrap-rail policy for tests exercising fresh-deploy signup
+   * paths. `"first-method-wins"` opts the harness app into letting the
+   * first OAuth/magic-link signup mint the admin (instead of the
+   * default passkey-only rail).
+   */
+  readonly bootstrapVia?: BootstrapVia;
 }
 
 export interface DispatcherHarness {
@@ -173,6 +180,7 @@ function withRequest(
     mailer: app.config.mailer,
     oauthProviders: app.oauthProviders,
     authenticator: app.authenticator,
+    bootstrapAllowed: app.bootstrapAllowed,
   });
 }
 
@@ -193,6 +201,7 @@ export async function createDispatcherHarness(
       oauth: options.oauth ? { providers: options.oauth } : undefined,
       magicLink: options.magicLink,
       authenticator: options.authenticator,
+      bootstrapVia: options.bootstrapVia,
     }),
     plugins: options.plugins,
     imageDelivery: options.imageDelivery,

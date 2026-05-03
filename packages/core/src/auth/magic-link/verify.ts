@@ -7,6 +7,17 @@ import { ExternalIdentityError, resolveExternalIdentity } from "../identity.js";
 import { hashToken } from "../tokens.js";
 import { MagicLinkError } from "./errors.js";
 
+interface VerifyMagicLinkOptions {
+  /**
+   * When true, allow this magic-link verify to mint the very first
+   * admin (forwarded to `resolveExternalIdentity`). The route handler
+   * reads this from `ctx.bootstrapAllowed`, derived from
+   * `auth.bootstrapVia`. Default false keeps the bootstrap rail
+   * passkey-only.
+   */
+  readonly bootstrapAllowed?: boolean;
+}
+
 /**
  * Consume a magic-link token and return the matching user.
  *
@@ -23,7 +34,11 @@ import { MagicLinkError } from "./errors.js";
  * The link click implicitly verifies that the user has access to the
  * email's inbox — we always pass `emailVerified: true` to the helper.
  */
-export async function verifyMagicLink(db: Db, rawToken: string): Promise<User> {
+export async function verifyMagicLink(
+  db: Db,
+  rawToken: string,
+  options: VerifyMagicLinkOptions = {},
+): Promise<User> {
   const hash = await hashToken(rawToken);
 
   const [row] = await db
@@ -49,8 +64,7 @@ export async function verifyMagicLink(db: Db, rawToken: string): Promise<User> {
     const { user } = await resolveExternalIdentity(db, {
       email: row.email,
       emailVerified: true, // link click is the verification
-      // Defaults: allowed-domains gate, bootstrap rail (refuse signup
-      // when zero users — first admin must enrol via passkey).
+      bootstrapAllowed: options.bootstrapAllowed,
     });
     return user;
   } catch (error) {

@@ -215,6 +215,7 @@ function buildFetch(app: PlumixApp): FetchHandler {
         mailer: app.config.mailer,
         oauthProviders: app.oauthProviders,
         authenticator: app.authenticator,
+        bootstrapAllowed: app.bootstrapAllowed,
       });
       const response = await requestStore.run(appCtx, () => dispatcher(appCtx));
       return finalize(response);

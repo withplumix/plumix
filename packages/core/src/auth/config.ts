@@ -33,6 +33,8 @@ export interface PlumixOAuthConfig {
   readonly providers: Readonly<Record<string, OAuthProviderClient>>;
 }
 
+export type BootstrapVia = "passkey" | "first-method-wins";
+
 export interface PlumixAuthInput {
   readonly passkey: PasskeyConfig;
   readonly sessions?: SessionPolicy;
@@ -49,6 +51,22 @@ export interface PlumixAuthInput {
    * plumix doesn't show a login page.
    */
   readonly authenticator?: RequestAuthenticator;
+  /**
+   * How the very first admin enrols on a fresh deploy.
+   *
+   * - `"passkey"` (default) — magic-link and OAuth signup are refused
+   *   while the users table is empty. The first admin must enrol via
+   *   the dedicated passkey bootstrap rail. Phishing-resistant; no
+   *   external dependency.
+   *
+   * - `"first-method-wins"` — any verified external flow (magic-link,
+   *   OAuth, custom authenticator) can mint the first admin via the
+   *   atomic CASE-WHEN-COUNT election in `provisionUser`. Use when the
+   *   runtime layer already gates who reaches plumix (Cloudflare Access
+   *   in front, SAML at the edge, internal-only deploy) — the gate is
+   *   "can the JWT be issued at all", not "can plumix see any user".
+   */
+  readonly bootstrapVia?: BootstrapVia;
 }
 
 export interface PlumixAuthConfig {
@@ -58,6 +76,7 @@ export interface PlumixAuthConfig {
   readonly oauth?: PlumixOAuthConfig;
   readonly magicLink?: PlumixMagicLinkConfig;
   readonly authenticator?: RequestAuthenticator;
+  readonly bootstrapVia?: BootstrapVia;
 }
 
 export interface PlumixConfigIssue {
@@ -194,6 +213,7 @@ const authInputSchema = v.object({
   sessions: v.optional(sessionPolicySchema),
   oauth: v.optional(oauthSchema),
   magicLink: v.optional(magicLinkSchema),
+  bootstrapVia: v.optional(v.picklist(["passkey", "first-method-wins"])),
 });
 
 function toIssues(
@@ -221,5 +241,6 @@ export function auth(input: PlumixAuthInput): PlumixAuthConfig {
     oauth: input.oauth,
     magicLink: input.magicLink,
     authenticator: input.authenticator,
+    bootstrapVia: input.bootstrapVia,
   };
 }

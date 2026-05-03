@@ -54,13 +54,17 @@ export async function handleOAuthStart(
   const provider = pickProvider(app, providerKey);
   if (!provider) return loginError("provider_not_configured");
 
-  // Block OAuth on a fresh deploy. Bootstrap is passkey-only; an OAuth
-  // signup before any user exists would either fail with a confusing
-  // domain_not_allowed (no rows) or — if domains were pre-seeded — mint
-  // a non-admin who can't actually do anything. Send to /bootstrap.
-  const userCount = await ctx.db.$count(users);
-  if (userCount === 0) {
-    return redirectTo(BOOTSTRAP_PATH);
+  // Block OAuth on a fresh deploy when the operator left bootstrap on
+  // the passkey rail. An OAuth signup before any user exists would
+  // either fail with a confusing domain_not_allowed (no rows) or — if
+  // domains were pre-seeded — mint a non-admin who can't do anything.
+  // Send to /bootstrap. With `bootstrapVia: "first-method-wins"` the
+  // OAuth flow is the bootstrap; let it through.
+  if (!ctx.bootstrapAllowed) {
+    const userCount = await ctx.db.$count(users);
+    if (userCount === 0) {
+      return redirectTo(BOOTSTRAP_PATH);
+    }
   }
 
   const redirectUri = oauthCallbackUrl(app, providerKey);
@@ -119,6 +123,7 @@ export async function handleOAuthCallback(
     const { user } = await resolveOAuthUser(ctx.db, {
       provider: providerKey,
       profile,
+      bootstrapAllowed: ctx.bootstrapAllowed,
     });
 
     const { token } = await createSession(

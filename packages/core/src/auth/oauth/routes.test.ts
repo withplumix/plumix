@@ -74,6 +74,19 @@ describe("oauth start route", () => {
     expect(response.headers.get("location")).toBe("/_plumix/admin/bootstrap");
   });
 
+  test("bootstrapVia=first-method-wins lets the OAuth flow start with zero users", async () => {
+    const h = await createDispatcherHarness({
+      oauth: TEST_OAUTH,
+      bootstrapVia: "first-method-wins",
+    });
+    const response = await h.dispatch(
+      new Request("https://cms.example/_plumix/auth/oauth/github/start"),
+    );
+    expect(response.status).toBe(302);
+    const location = response.headers.get("location");
+    expect(location).toContain("github.com/login/oauth/authorize");
+  });
+
   test("redirects to provider authorize URL with PKCE + state", async () => {
     const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
     await h.seedUser("admin");

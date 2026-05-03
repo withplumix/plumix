@@ -10,6 +10,14 @@ import { OAuthError } from "./errors.js";
 interface ResolveOAuthUserInput {
   readonly provider: string;
   readonly profile: OAuthProfile;
+  /**
+   * When true, allow this OAuth callback to mint the very first admin
+   * (forwarded to `resolveExternalIdentity`). The route handler reads
+   * this from `ctx.bootstrapAllowed`, which is derived from
+   * `auth.bootstrapVia`. Default false keeps the bootstrap rail
+   * passkey-only.
+   */
+  readonly bootstrapAllowed?: boolean;
 }
 
 interface ResolvedOAuthUser {
@@ -67,10 +75,10 @@ export async function resolveOAuthUser(
       emailVerified: profile.emailVerified,
       name: profile.name,
       avatarUrl: profile.avatarUrl,
-      // Defaults: allowed_domains gates signup, bootstrap stays
-      // passkey-only. The `oauth_accounts` link row is OAuth-specific
-      // and written below regardless of whether the user existed or
-      // was just provisioned.
+      bootstrapAllowed: input.bootstrapAllowed,
+      // allowed_domains still gates signup; the `oauth_accounts` link
+      // row is OAuth-specific and written below regardless of whether
+      // the user existed or was just provisioned.
     });
   } catch (error) {
     if (error instanceof ExternalIdentityError) {
