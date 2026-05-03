@@ -6,12 +6,14 @@ import { buildManifest } from "../manifest.js";
 import { installPlugins } from "../register.js";
 import {
   checkbox,
+  color,
   date,
   datetime,
   email,
   number,
   password,
   radio,
+  range,
   select,
   textarea,
   time,
@@ -226,6 +228,93 @@ describe("time() builder", () => {
       label: "t",
       // @ts-expect-error — `min` for `time` is a string.
       min: 0,
+    });
+  });
+});
+
+describe("color() builder", () => {
+  test("pins inputType + type and ships a default hex sanitizer", () => {
+    const field = color({ key: "brand", label: "Brand color" });
+    expect(field.inputType).toBe("color");
+    expect(field.type).toBe("string");
+    expect(field.sanitize).toBeTypeOf("function");
+  });
+
+  test("default sanitizer accepts hex shorthand and full form, lowercases", () => {
+    const field = color({ key: "brand", label: "Brand color" });
+    expect(field.sanitize?.("#FFA500")).toBe("#ffa500");
+    expect(field.sanitize?.("#abc")).toBe("#abc");
+  });
+
+  test("default sanitizer rejects non-hex values", () => {
+    const field = color({ key: "brand", label: "Brand color" });
+    expect(() => field.sanitize?.("not-a-color")).toThrow();
+    expect(() => field.sanitize?.("#xyz123")).toThrow();
+    expect(() => field.sanitize?.(123)).toThrow();
+    expect(() => field.sanitize?.(null)).toThrow();
+  });
+
+  test("custom sanitize replaces the default", () => {
+    const custom = (v: unknown): unknown => `wrapped:${String(v)}`;
+    const field = color({
+      key: "brand",
+      label: "Brand color",
+      sanitize: custom,
+    });
+    expect(field.sanitize).toBe(custom);
+  });
+
+  test("rejects non-applicable options at the type level", () => {
+    color({
+      key: "c",
+      label: "c",
+      // @ts-expect-error — `min` doesn't apply to color.
+      min: 0,
+    });
+  });
+});
+
+describe("range() builder", () => {
+  test("pins inputType + type and carries bounds", () => {
+    const field = range({
+      key: "rating",
+      label: "Rating",
+      min: 1,
+      max: 5,
+      step: 0.5,
+      default: 3,
+    });
+    expect(field.inputType).toBe("range");
+    expect(field.type).toBe("number");
+    expect(field.min).toBe(1);
+    expect(field.max).toBe(5);
+    expect(field.step).toBe(0.5);
+    expect(field.default).toBe(3);
+  });
+
+  test("rejects min > max at registration time", () => {
+    expect(() =>
+      range({ key: "r", label: "r", min: 10, max: 5 }),
+    ).toThrowError(/min .* must be <= max/);
+  });
+
+  test("default sanitizer enforces bounds and rejects NaN", () => {
+    const field = range({ key: "r", label: "r", min: 0, max: 100 });
+    expect(field.sanitize?.(50)).toBe(50);
+    expect(() => field.sanitize?.(-1)).toThrow();
+    expect(() => field.sanitize?.(101)).toThrow();
+    expect(() => field.sanitize?.(Number.NaN)).toThrow();
+    expect(() => field.sanitize?.("50")).toThrow();
+  });
+
+  test("rejects non-applicable options at the type level", () => {
+    range({
+      key: "r",
+      label: "r",
+      min: 0,
+      max: 10,
+      // @ts-expect-error — `placeholder` doesn't apply to range.
+      placeholder: "go",
     });
   });
 });
