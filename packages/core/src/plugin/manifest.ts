@@ -273,6 +273,31 @@ export interface TimeMetaBoxField extends MetaBoxFieldBase {
   readonly max?: string;
 }
 
+/**
+ * Hex color picker. Stored as a `#xxxxxx` string (the format the
+ * native `<input type="color">` produces). The builder injects a
+ * default sanitizer that rejects values that don't match the hex
+ * shape on write.
+ */
+export interface ColorMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "color";
+  readonly type: "string";
+}
+
+/**
+ * Bounded numeric slider. Renders as `<input type="range">`. `min` /
+ * `max` are required so the slider has a concrete range; `step`
+ * defaults to `1`. The builder injects a default sanitizer that
+ * enforces the bounds on write.
+ */
+export interface RangeMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "range";
+  readonly type: "number";
+  readonly min: number;
+  readonly max: number;
+  readonly step?: number;
+}
+
 /** Single-value dropdown picker; `options` is required. */
 export interface SelectMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "select";
@@ -334,6 +359,8 @@ export type MetaBoxField =
   | DateMetaBoxField
   | DateTimeMetaBoxField
   | TimeMetaBoxField
+  | ColorMetaBoxField
+  | RangeMetaBoxField
   | SelectMetaBoxField
   | RadioMetaBoxField
   | CheckboxMetaBoxField
@@ -388,6 +415,8 @@ export type EntryMetaBoxField =
   | Omit<DateMetaBoxField, "span">
   | Omit<DateTimeMetaBoxField, "span">
   | Omit<TimeMetaBoxField, "span">
+  | Omit<ColorMetaBoxField, "span">
+  | Omit<RangeMetaBoxField, "span">
   | Omit<SelectMetaBoxField, "span">
   | Omit<RadioMetaBoxField, "span">
   | Omit<CheckboxMetaBoxField, "span">

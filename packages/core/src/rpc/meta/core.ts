@@ -96,11 +96,44 @@ export function sanitizeMetaInput(
       continue;
     }
     const coerced = coerceToType(field.type, key, rawValue);
-    const sanitized = field.sanitize ? field.sanitize(coerced) : coerced;
+    const sanitized = field.sanitize
+      ? runSanitize(field.sanitize, key, coerced)
+      : coerced;
     assertEncodedSize(key, sanitized);
     upserts.set(key, sanitized);
   }
   return { upserts, deletes };
+}
+
+/**
+ * Run a field's sanitize callback inside a try/catch — any thrown
+ * `MetaSanitizationError` propagates as-is (so callbacks that already
+ * use the precise error type can opt into specific reasons), but
+ * generic errors (including plain `Error("invalid_value")` thrown
+ * from builder-injected default sanitizers) are translated into a
+ * uniform `invalid_value` failure. Callbacks therefore stay free to
+ * throw vanilla errors without importing the package-internal error
+ * class.
+ */
+function runSanitize(
+  sanitize: (value: unknown) => unknown,
+  key: string,
+  value: unknown,
+): unknown {
+  try {
+    return sanitize(value);
+  } catch (error) {
+    if (error instanceof MetaSanitizationError) throw error;
+    // Buggy sanitize callbacks otherwise round to a generic
+    // `invalid_value` envelope, which is fine for the editor's UX
+    // but loses the underlying stack. Log it before translating so
+    // server logs preserve the diagnostic trail.
+    console.error(
+      `[plumix] sanitize callback for meta key "${key}" threw:`,
+      error,
+    );
+    throw new MetaSanitizationError(key, "invalid_value");
+  }
 }
 
 /**

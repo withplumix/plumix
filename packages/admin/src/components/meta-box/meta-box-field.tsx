@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
+import { ColorPicker } from "@/components/ui/color-picker.js";
 import {
   FormControl,
   FormDescription,
@@ -9,6 +10,7 @@ import {
   FormMessage,
 } from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
+import { Slider } from "@/components/ui/slider.js";
 import { cn } from "@/lib/utils";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
@@ -174,6 +176,57 @@ function renderNativeInput({
     );
   }
 
+  if (field.inputType === "color") {
+    return (
+      <ColorPicker
+        value={asString(rhf.value)}
+        onChange={(next) => {
+          rhf.onChange(next);
+        }}
+        disabled={disabled}
+        required={field.required}
+        name={rhf.name}
+        testId={testId}
+      />
+    );
+  }
+
+  if (field.inputType === "range") {
+    const num = typeof rhf.value === "number" ? rhf.value : Number(rhf.value);
+    const minNum = toFiniteNumber(field.min, 0);
+    const maxNum = toFiniteNumber(field.max, 100);
+    const sliderValue = Number.isFinite(num) ? num : minNum;
+    return (
+      <div className="flex items-center gap-3" data-testid={testId}>
+        <Slider
+          name={rhf.name}
+          min={minNum}
+          max={maxNum}
+          step={field.step ?? 1}
+          value={[sliderValue]}
+          disabled={disabled}
+          onValueChange={(values) => {
+            const next = values[0];
+            if (typeof next === "number" && Number.isFinite(next)) {
+              rhf.onChange(next);
+            }
+          }}
+          onBlur={rhf.onBlur}
+          aria-label={field.label}
+          aria-required={field.required}
+          data-testid={`${testId}-slider`}
+          className="flex-1"
+        />
+        <span
+          className="text-muted-foreground min-w-[3ch] text-right text-sm tabular-nums"
+          data-testid={`${testId}-display`}
+        >
+          {Number.isFinite(num) ? num : "–"}
+        </span>
+      </div>
+    );
+  }
+
   if (
     field.inputType === "date" ||
     field.inputType === "datetime" ||
@@ -264,7 +317,7 @@ function renderNativeInput({
     // dev tools. A future `customRenderers` seam will hook in here
     // before the fallback.
     console.warn(
-      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/date/datetime/time/select/radio/checkbox).`,
+      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/date/datetime/time/color/range/select/radio/checkbox).`,
     );
   }
 
@@ -310,4 +363,22 @@ function asString(value: unknown): string {
 function asNumberInputValue(value: unknown): number | string {
   if (typeof value === "number" && !Number.isNaN(value)) return value;
   return "";
+}
+
+// Coerce a manifest min/max bound (which the wire shape carries as
+// `number | string | undefined`) to a finite number suitable for the
+// slider's `min`/`max` props. Unset bounds fall back to the supplied
+// default. ISO-string bounds shouldn't reach this branch — `range`
+// is numeric-only — but the cast makes it impossible to surface
+// `string` to a `number`-only prop.
+function toFiniteNumber(
+  value: number | string | undefined,
+  fallback: number,
+): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
 }
