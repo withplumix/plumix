@@ -1,8 +1,10 @@
 import { describe, expect, test } from "vitest";
 
 import type { RequestAuthenticator } from "../../../auth/authenticator.js";
+import type { Mailer } from "../../../auth/mailer/types.js";
 import { SESSION_COOKIE_NAME } from "../../../auth/cookies.js";
 import { createSession } from "../../../auth/sessions.js";
+import { hashToken } from "../../../auth/tokens.js";
 import { eq } from "../../../db/index.js";
 import { sessions } from "../../../db/schema/sessions.js";
 import { HookRegistry } from "../../../hooks/registry.js";
@@ -526,9 +528,18 @@ describe("auth.sessions.list", () => {
 
     const result = await h.client.auth.sessions.list({});
     expect(result).toHaveLength(3);
-    // Exactly one row is the current session.
+    // Exactly one row is the current session — and it must be the one
+    // matching the harness request's cookie token, not just any row.
+    // Pull the cookie value off the harness context, hash it, and
+    // assert the flag landed on that specific id.
+    const cookie = h.context.request.headers.get("cookie") ?? "";
+    const cookieMatch = /plumix_session=([^;]+)/.exec(cookie);
+    if (!cookieMatch?.[1])
+      throw new Error("expected session cookie on harness");
+    const expectedId = await hashToken(cookieMatch[1]);
     const currents = result.filter((s) => s.current);
     expect(currents).toHaveLength(1);
+    expect(currents[0]?.id).toBe(expectedId);
   });
 
   test("doesn't leak other users' sessions", async () => {
@@ -602,6 +613,41 @@ describe("auth.mailer.testSend", () => {
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "mailer_not_configured" },
+    });
+  });
+
+  test("delivers a fixed test message via the configured mailer", async () => {
+    const sent: { to: string; subject: string; text: string }[] = [];
+    const mailer: Mailer = {
+      send(message) {
+        sent.push({ ...message });
+        return Promise.resolve();
+      },
+    };
+    const h = await createRpcHarness({ authAs: "admin", mailer });
+
+    const result = await h.client.auth.mailer.testSend({
+      to: "ops@example.com",
+    });
+    expect(result).toEqual({ ok: true });
+    expect(sent).toHaveLength(1);
+    const [message] = sent;
+    expect(message?.to).toBe("ops@example.com");
+    expect(message?.subject).toBe("Plumix mailer test");
+    expect(message?.text).toMatch(/test message from Plumix/);
+  });
+
+  test("surfaces mailer adapter failures as CONFLICT/mailer_send_failed", async () => {
+    const mailer: Mailer = {
+      send: () => Promise.reject(new Error("smtp boom")),
+    };
+    const h = await createRpcHarness({ authAs: "admin", mailer });
+
+    await expect(
+      h.client.auth.mailer.testSend({ to: "ops@example.com" }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "mailer_send_failed" },
     });
   });
 });

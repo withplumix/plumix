@@ -20,7 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.js";
-import { toDate } from "@/lib/dates.js";
+import { formatRelative, toDate } from "@/lib/dates.js";
 import { extractCode, extractReason } from "@/lib/orpc-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { parseUserAgent } from "@/lib/user-agent.js";
@@ -81,45 +81,12 @@ export function SessionsCard(): ReactNode {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        {list.isPending ? (
-          <p className="text-muted-foreground text-sm">Loading…</p>
-        ) : list.error ? (
-          <Alert variant="destructive">
-            <AlertDescription>
-              Couldn't load your sessions. Refresh and try again.
-            </AlertDescription>
-          </Alert>
-        ) : sessions.length === 0 ? (
-          // External authenticators (cfAccess) don't mint plumix
-          // session rows; the IdP owns that. Surface explicitly so
-          // the operator doesn't think the page is broken.
-          <p className="text-muted-foreground text-sm">
-            No plumix-managed sessions. Your sign-in is handled by an external
-            identity provider.
-          </p>
-        ) : (
-          <ul
-            className="divide-border divide-y"
-            data-testid="profile-sessions-list"
-          >
-            {sessions.map((session) => (
-              <SessionRow
-                key={session.id}
-                session={session}
-                onChanged={invalidateList}
-              />
-            ))}
-          </ul>
-        )}
+        {renderSessionsBody(list, sessions, invalidateList)}
 
         {revokeAllFeedback?.kind === "ok" ? (
           <Alert data-testid="profile-sessions-revoke-feedback">
             <AlertDescription>
-              {revokeAllFeedback.revoked === 0
-                ? "No other sessions to sign out."
-                : revokeAllFeedback.revoked === 1
-                  ? "Signed out 1 other session."
-                  : `Signed out ${revokeAllFeedback.revoked} other sessions.`}
+              {formatRevokedCount(revokeAllFeedback.revoked)}
             </AlertDescription>
           </Alert>
         ) : null}
@@ -200,7 +167,7 @@ function SessionRow({ session, onChanged }: SessionRowProps): ReactNode {
         </div>
         <div className="text-muted-foreground flex flex-wrap gap-2 text-xs">
           {session.ipAddress ? <span>{session.ipAddress}</span> : null}
-          <span>Signed in {formatDate(createdAt)}</span>
+          <span>Signed in {formatRelative(createdAt)}</span>
         </div>
       </div>
       {!session.current ? (
@@ -231,7 +198,7 @@ function SessionRow({ session, onChanged }: SessionRowProps): ReactNode {
           <AlertDialogHeader>
             <AlertDialogTitle>Sign out this device?</AlertDialogTitle>
             <AlertDialogDescription>
-              {ua.label} signed in {formatDate(createdAt)}
+              {ua.label} signed in {formatRelative(createdAt)}
               {session.ipAddress ? ` from ${session.ipAddress}` : ""}. The
               device will need to sign in again next time.
             </AlertDialogDescription>
@@ -265,23 +232,54 @@ function SessionRow({ session, onChanged }: SessionRowProps): ReactNode {
   );
 }
 
-function formatDate(date: Date): string {
-  // Relative for recent activity, absolute for older — same shape as
-  // the existing users list. Keep it short for the list view.
-  const now = Date.now();
-  const elapsed = now - date.getTime();
-  const minute = 60_000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-  if (elapsed < minute) return "just now";
-  if (elapsed < hour) return `${Math.floor(elapsed / minute)}m ago`;
-  if (elapsed < day) return `${Math.floor(elapsed / hour)}h ago`;
-  if (elapsed < 7 * day) return `${Math.floor(elapsed / day)}d ago`;
-  return new Intl.DateTimeFormat(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  }).format(date);
+// Pending → error → empty → list. Promoted to a helper because the
+// inline JSX nesting is the kind of nested-ternary the project rule
+// flags; one early-return chain is easier to scan.
+function renderSessionsBody(
+  list: ReturnType<typeof useQuery<readonly SessionWire[]>>,
+  sessions: readonly SessionWire[],
+  invalidateList: () => Promise<void>,
+): ReactNode {
+  if (list.isPending) {
+    return <p className="text-muted-foreground text-sm">Loading…</p>;
+  }
+  if (list.error) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>
+          Couldn't load your sessions. Refresh and try again.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+  if (sessions.length === 0) {
+    // External authenticators (cfAccess) don't mint plumix session
+    // rows; the IdP owns that. Surface explicitly so the operator
+    // doesn't think the page is broken.
+    return (
+      <p className="text-muted-foreground text-sm">
+        No plumix-managed sessions. Your sign-in is handled by an external
+        identity provider.
+      </p>
+    );
+  }
+  return (
+    <ul className="divide-border divide-y" data-testid="profile-sessions-list">
+      {sessions.map((session) => (
+        <SessionRow
+          key={session.id}
+          session={session}
+          onChanged={invalidateList}
+        />
+      ))}
+    </ul>
+  );
+}
+
+function formatRevokedCount(revoked: number): string {
+  if (revoked === 0) return "No other sessions to sign out.";
+  if (revoked === 1) return "Signed out 1 other session.";
+  return `Signed out ${revoked} other sessions.`;
 }
 
 function formatRevokeError(err: unknown): string {

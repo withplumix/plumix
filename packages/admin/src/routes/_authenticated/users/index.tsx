@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select.js";
 import { hasCap } from "@/lib/caps.js";
-import { toDate } from "@/lib/dates.js";
+import { formatRelative, toDate } from "@/lib/dates.js";
 import { orpc } from "@/lib/orpc.js";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
@@ -321,22 +321,6 @@ function buildColumns({
       ),
     },
   ];
-}
-
-// Compact "8m ago" / "2h ago" / "3d ago" / absolute date for older.
-// Same shape used by the SessionsCard — keeping it inline (rather than
-// extracting a shared helper) since the formatting decision is taste-
-// driven and the two surfaces may diverge over time.
-function formatRelative(date: Date): string {
-  const elapsed = Date.now() - date.getTime();
-  const minute = 60_000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-  if (elapsed < minute) return "just now";
-  if (elapsed < hour) return `${Math.floor(elapsed / minute)}m ago`;
-  if (elapsed < day) return `${Math.floor(elapsed / hour)}h ago`;
-  if (elapsed < 7 * day) return `${Math.floor(elapsed / day)}d ago`;
-  return dateFormatter.format(date);
 }
 
 function RoleFilter({

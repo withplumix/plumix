@@ -1,6 +1,6 @@
 import { readSessionCookie } from "../../../../auth/cookies.js";
 import { hashToken } from "../../../../auth/tokens.js";
-import { asc, eq } from "../../../../db/index.js";
+import { and, asc, eq, gt } from "../../../../db/index.js";
 import { sessions } from "../../../../db/schema/sessions.js";
 import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
@@ -12,6 +12,12 @@ import { sessionsListInputSchema } from "./schemas.js";
 // can label "this device" and disable the per-row revoke for it (the
 // dispatcher would 401 the next request anyway, but visual affordance
 // matters).
+//
+// Filters out rows whose `expiresAt` is in the past — those would 401
+// on first use anyway and `pruneExpiredSessions` reaps them on cadence,
+// but they'd briefly show as "Active" in the UI before then. The
+// filter is cheap (covered by `sessions_expires_at_idx`) and removes
+// the misleading affordance.
 //
 // External authenticators (cfAccess, custom guards) don't mint plumix
 // `sessions` rows for the request user; the list will be empty in that
@@ -33,7 +39,12 @@ export const list = base
         expiresAt: sessions.expiresAt,
       })
       .from(sessions)
-      .where(eq(sessions.userId, context.user.id))
+      .where(
+        and(
+          eq(sessions.userId, context.user.id),
+          gt(sessions.expiresAt, new Date()),
+        ),
+      )
       .orderBy(asc(sessions.createdAt));
 
     return rows.map((row) => ({
