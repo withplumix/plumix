@@ -298,6 +298,29 @@ export interface RangeMetaBoxField extends MetaBoxFieldBase {
   readonly step?: number;
 }
 
+/**
+ * Multi-value picker over a fixed option list. Storage is a JSON
+ * array of option `value` strings. Renders as a toggle group in the
+ * admin so authors see all options at once. The builder ships a
+ * default sanitizer that rejects values outside the declared
+ * options.
+ */
+export interface MultiselectMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "multiselect";
+  readonly type: "json";
+  readonly options: readonly MetaBoxFieldOption[];
+}
+
+/**
+ * Free-form JSON value. Storage round-trips through the JSON
+ * serializer so any structure that survives `JSON.stringify`
+ * survives the wire.
+ */
+export interface JsonMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "json";
+  readonly type: "json";
+}
+
 /** Single-value dropdown picker; `options` is required. */
 export interface SelectMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "select";
@@ -361,6 +384,8 @@ export type MetaBoxField =
   | TimeMetaBoxField
   | ColorMetaBoxField
   | RangeMetaBoxField
+  | MultiselectMetaBoxField
+  | JsonMetaBoxField
   | SelectMetaBoxField
   | RadioMetaBoxField
   | CheckboxMetaBoxField
@@ -417,6 +442,8 @@ export type EntryMetaBoxField =
   | Omit<TimeMetaBoxField, "span">
   | Omit<ColorMetaBoxField, "span">
   | Omit<RangeMetaBoxField, "span">
+  | Omit<MultiselectMetaBoxField, "span">
+  | Omit<JsonMetaBoxField, "span">
   | Omit<SelectMetaBoxField, "span">
   | Omit<RadioMetaBoxField, "span">
   | Omit<CheckboxMetaBoxField, "span">

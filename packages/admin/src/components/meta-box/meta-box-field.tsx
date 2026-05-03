@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
+import { useState } from "react";
 import { ColorPicker } from "@/components/ui/color-picker.js";
 import {
   FormControl,
@@ -11,6 +12,7 @@ import {
 } from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
 import { Slider } from "@/components/ui/slider.js";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group.js";
 import { cn } from "@/lib/utils";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
@@ -227,6 +229,50 @@ function renderNativeInput({
     );
   }
 
+  if (field.inputType === "multiselect") {
+    const selected = Array.isArray(rhf.value)
+      ? rhf.value.filter((v): v is string => typeof v === "string")
+      : [];
+    return (
+      <ToggleGroup
+        type="multiple"
+        variant="outline"
+        spacing={1}
+        value={selected}
+        disabled={disabled}
+        onValueChange={(next) => {
+          rhf.onChange(next);
+        }}
+        onBlur={rhf.onBlur}
+        aria-label={field.label}
+        data-testid={testId}
+      >
+        {(field.options ?? []).map((opt) => (
+          <ToggleGroupItem
+            key={opt.value}
+            value={opt.value}
+            data-testid={`${testId}-${opt.value}`}
+          >
+            {opt.label}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+    );
+  }
+
+  if (field.inputType === "json") {
+    return (
+      <JsonControl
+        value={rhf.value as unknown}
+        onChange={rhf.onChange}
+        onBlur={rhf.onBlur}
+        name={rhf.name}
+        disabled={disabled}
+        testId={testId}
+      />
+    );
+  }
+
   if (
     field.inputType === "date" ||
     field.inputType === "datetime" ||
@@ -317,7 +363,7 @@ function renderNativeInput({
     // dev tools. A future `customRenderers` seam will hook in here
     // before the fallback.
     console.warn(
-      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/date/datetime/time/color/range/select/radio/checkbox).`,
+      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/date/datetime/time/color/range/multiselect/json/select/radio/checkbox).`,
     );
   }
 
@@ -381,4 +427,89 @@ function toFiniteNumber(
     if (Number.isFinite(parsed)) return parsed;
   }
   return fallback;
+}
+
+// JSON field renderer. Holds a local "draft" string so the user can
+// type intermediate state without re-stringifying form state on every
+// keystroke; valid drafts propagate the parsed value upward, invalid
+// drafts surface a parse error inline and leave the previous valid
+// form value untouched. An empty draft is treated as `null`.
+function JsonControl({
+  value,
+  onChange,
+  onBlur,
+  name,
+  disabled,
+  testId,
+}: {
+  value: unknown;
+  onChange: (next: unknown) => void;
+  onBlur: () => void;
+  name: string;
+  disabled: boolean;
+  testId: string;
+}): React.ReactNode {
+  const initialFormatted = formatInitial(value);
+  const [draft, setDraft] = useState(initialFormatted);
+  const [error, setError] = useState<string | null>(null);
+  // Detect external resyncs (e.g. `form.reset()` post-save) by
+  // comparing the formatted shape of the incoming `value` against
+  // a state-tracked snapshot. State-during-render is React's
+  // sanctioned pattern for "deriving state from props" — setState
+  // here is a no-op when nothing changed, so it doesn't loop.
+  const [lastValueSnapshot, setLastValueSnapshot] = useState(initialFormatted);
+  if (initialFormatted !== lastValueSnapshot) {
+    setLastValueSnapshot(initialFormatted);
+    setDraft(initialFormatted);
+    setError(null);
+  }
+
+  return (
+    <div className="flex flex-col gap-1" data-testid={`${testId}-shell`}>
+      <textarea
+        name={name}
+        value={draft}
+        disabled={disabled}
+        onBlur={onBlur}
+        onChange={(e) => {
+          const raw = e.target.value;
+          setDraft(raw);
+          if (raw.trim() === "") {
+            setError(null);
+            onChange(null);
+            return;
+          }
+          try {
+            const parsed: unknown = JSON.parse(raw);
+            setError(null);
+            onChange(parsed);
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Invalid JSON");
+          }
+        }}
+        rows={6}
+        spellCheck={false}
+        data-testid={testId}
+        className={cn(
+          CONTROL_BASE_CLASS,
+          "min-h-32 w-full px-3 py-2 font-mono text-xs",
+          error ? "border-destructive" : "",
+        )}
+      />
+      {error ? (
+        <p className="text-destructive text-xs" data-testid={`${testId}-error`}>
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function formatInitial(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return "";
+  }
 }
