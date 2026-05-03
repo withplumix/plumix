@@ -227,7 +227,8 @@ function renderNativeInput({
   if (
     field.inputType !== "text" &&
     field.inputType !== "email" &&
-    field.inputType !== "url"
+    field.inputType !== "url" &&
+    field.inputType !== "password"
   ) {
     // Forward-compat fallback: unknown inputType renders as a plain
     // text input so a plugin-specific type doesn't crash the editor.
@@ -235,13 +236,17 @@ function renderNativeInput({
     // dev tools. A future `customRenderers` seam will hook in here
     // before the fallback.
     console.warn(
-      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/select/radio/checkbox).`,
+      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/select/radio/checkbox).`,
     );
   }
 
-  // Shared shape for `text` / `email` / `url` / unknown fallback.
+  // Shared shape for `text` / `email` / `url` / `password` / unknown
+  // fallback. The native `type` attribute drives both browser
+  // validation (email / url) and visual masking (password).
   const htmlType =
-    field.inputType === "email" || field.inputType === "url"
+    field.inputType === "email" ||
+    field.inputType === "url" ||
+    field.inputType === "password"
       ? field.inputType
       : "text";
   return (

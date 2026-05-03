@@ -20,6 +20,8 @@ export { email } from "./email.js";
 export type { EmailFieldOptions } from "./email.js";
 export { url } from "./url.js";
 export type { UrlFieldOptions } from "./url.js";
+export { password } from "./password.js";
+export type { PasswordFieldOptions } from "./password.js";
 export { select } from "./select.js";
 export type { SelectFieldOptions } from "./select.js";
 export { radio } from "./radio.js";

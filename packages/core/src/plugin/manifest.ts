@@ -219,6 +219,18 @@ export interface UrlMetaBoxField extends MetaBoxFieldBase {
   readonly maxLength?: number;
 }
 
+/**
+ * Masked-input password field. Visually hides characters in the admin
+ * so values aren't shoulder-surfable in shared sessions; storage
+ * shape mirrors `text`.
+ */
+export interface PasswordMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "password";
+  readonly type: "string";
+  readonly placeholder?: string;
+  readonly maxLength?: number;
+}
+
 /** Single-value dropdown picker; `options` is required. */
 export interface SelectMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "select";
@@ -276,6 +288,7 @@ export type MetaBoxField =
   | NumberMetaBoxField
   | EmailMetaBoxField
   | UrlMetaBoxField
+  | PasswordMetaBoxField
   | SelectMetaBoxField
   | RadioMetaBoxField
   | CheckboxMetaBoxField
@@ -326,6 +339,7 @@ export type EntryMetaBoxField =
   | Omit<NumberMetaBoxField, "span">
   | Omit<EmailMetaBoxField, "span">
   | Omit<UrlMetaBoxField, "span">
+  | Omit<PasswordMetaBoxField, "span">
   | Omit<SelectMetaBoxField, "span">
   | Omit<RadioMetaBoxField, "span">
   | Omit<CheckboxMetaBoxField, "span">
