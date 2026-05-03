@@ -120,3 +120,109 @@ describe("auth()", () => {
     expect(paths).toContain("passkey.rpName");
   });
 });
+
+describe("auth() — oauth schema", () => {
+  const stubProvider = {
+    label: "Stub",
+    authorizeUrl: "https://example.com/authorize",
+    tokenUrl: "https://example.com/token",
+    userInfoUrl: "https://example.com/userinfo",
+    scopes: ["openid"],
+    client: { clientId: "id", clientSecret: "secret" },
+    parseProfile: () => ({
+      providerAccountId: "x",
+      email: null,
+      emailVerified: false,
+      name: null,
+      avatarUrl: null,
+    }),
+  };
+
+  test("accepts a single configured provider", () => {
+    const config = auth({
+      passkey: validPasskey,
+      oauth: { providers: { acme: stubProvider } },
+    });
+    expect(config.oauth?.providers.acme).toBeDefined();
+  });
+
+  test("rejects an empty providers map", () => {
+    const error = rejected({
+      passkey: validPasskey,
+      oauth: { providers: {} },
+    });
+    expect(error.issues[0]?.message).toMatch(/at least one provider/);
+  });
+
+  test("rejects a provider key with invalid characters", () => {
+    const error = rejected({
+      passkey: validPasskey,
+      oauth: { providers: { "Bad-Key!": stubProvider } },
+    });
+    expect(error.issues[0]?.message).toMatch(/lowercase alphanum/);
+  });
+
+  test("rejects a provider with non-URL authorizeUrl", () => {
+    const error = rejected({
+      passkey: validPasskey,
+      oauth: {
+        providers: { acme: { ...stubProvider, authorizeUrl: "not-a-url" } },
+      },
+    });
+    expect(error.issues[0]?.message).toMatch(/authorizeUrl/);
+  });
+
+  test("rejects a provider missing the parseProfile function", () => {
+    const error = rejected({
+      passkey: validPasskey,
+      oauth: {
+        providers: {
+          acme: { ...stubProvider, parseProfile: "not-a-function" },
+        },
+      } as unknown as PlumixAuthInput["oauth"],
+    });
+    expect(error.issues[0]?.message).toMatch(/parseProfile/);
+  });
+});
+
+describe("auth() — magicLink schema", () => {
+  test("accepts a minimal valid magicLink config", () => {
+    const config = auth({
+      passkey: validPasskey,
+      magicLink: { siteName: "Plumix" },
+    });
+    expect(config.magicLink?.siteName).toBe("Plumix");
+  });
+
+  test("rejects a missing siteName", () => {
+    const error = rejected({
+      passkey: validPasskey,
+      magicLink: {} as unknown as PlumixAuthInput["magicLink"],
+    });
+    expect(error.issues[0]?.path).toContain("magicLink.siteName");
+  });
+
+  test("rejects a siteName with newline (CR/LF defense)", () => {
+    const error = rejected({
+      passkey: validPasskey,
+      magicLink: { siteName: "bad\r\nSubject: x" },
+    });
+    expect(error.issues[0]?.message).toMatch(/newlines/);
+  });
+
+  test("rejects ttlSeconds below 60", () => {
+    const error = rejected({
+      passkey: validPasskey,
+      magicLink: { siteName: "Plumix", ttlSeconds: 30 },
+    });
+    expect(error.issues[0]?.message).toMatch(/ttlSeconds/);
+  });
+
+  test("rejects ttlSeconds above 3600", () => {
+    const error = rejected({
+      passkey: validPasskey,
+      magicLink: { siteName: "Plumix", ttlSeconds: 7200 },
+    });
+    expect(error.issues[0]?.message).toMatch(/ttlSeconds/);
+  });
+});

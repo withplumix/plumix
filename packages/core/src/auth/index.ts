@@ -2,6 +2,8 @@ export * from "./bootstrap.js";
 export * from "./config.js";
 export * from "./cookies.js";
 export * from "./csrf.js";
+export * from "./magic-link/index.js";
+export * from "./mailer/index.js";
 export * from "./oauth/index.js";
 export * from "./passkey/index.js";
 export * from "./rbac.js";

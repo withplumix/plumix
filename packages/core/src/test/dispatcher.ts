@@ -1,4 +1,6 @@
-import type { OAuthProvidersConfig } from "../auth/oauth/types.js";
+import type { PlumixMagicLinkConfig } from "../auth/config.js";
+import type { Mailer } from "../auth/mailer/types.js";
+import type { OAuthProviderClient } from "../auth/oauth/types.js";
 import type { AnyPluginDescriptor } from "../config.js";
 import type { AppContext } from "../context/app.js";
 import type { User, UserRole } from "../db/schema/users.js";
@@ -72,11 +74,22 @@ export interface CreateDispatcherHarnessOptions {
    */
   readonly storage?: ConnectedObjectStorage;
   /**
-   * OAuth provider credentials to expose on `app.config.auth.oauth`. Tests
-   * exercising the OAuth start/callback routes pass dummy clientId/secret
-   * here; passkey-only deployments leave it undefined.
+   * Configured OAuth providers for tests exercising the start/callback
+   * routes. Pass `{ github: github({ clientId, clientSecret }), google:
+   * google(...) }`. Passkey-only deployments leave undefined.
    */
-  readonly oauth?: OAuthProvidersConfig;
+  readonly oauth?: Readonly<Record<string, OAuthProviderClient>>;
+  /**
+   * Magic-link config for tests exercising the request/verify routes.
+   * Pair with `mailer` at the top level (the request route requires
+   * both — same cross-field invariant `plumix()` enforces).
+   */
+  readonly magicLink?: PlumixMagicLinkConfig;
+  /**
+   * Top-level outbound email transport. Tests that exercise magic-link
+   * pass a capturing `Mailer` here so they can assert what was sent.
+   */
+  readonly mailer?: Mailer;
 }
 
 export interface DispatcherHarness {
@@ -150,6 +163,7 @@ function withRequest(
     assets,
     storage,
     imageDelivery: app.config.imageDelivery,
+    mailer: app.config.mailer,
     oauthProviders: app.oauthProviders,
   });
 }
@@ -169,9 +183,11 @@ export async function createDispatcherHarness(
         origin: "https://cms.example",
       },
       oauth: options.oauth ? { providers: options.oauth } : undefined,
+      magicLink: options.magicLink,
     }),
     plugins: options.plugins,
     imageDelivery: options.imageDelivery,
+    mailer: options.mailer,
   });
   const app = await buildApp(config);
   const dispatcher = createPlumixDispatcher(app);
