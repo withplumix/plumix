@@ -86,7 +86,13 @@ export async function exchangeAndFetchProfile(
 
   return {
     providerAccountId: profile.providerAccountId,
-    email: email.toLowerCase(),
+    // Trim before lowercasing — a provider returning whitespace-padded
+    // values (or `email: " alice@example.com "`) would otherwise miss
+    // the `users.email` lookup at lookup time, fall into the signup
+    // path, hit the UNIQUE constraint at insert, and surface as a
+    // confusing OAuthError. Mirrors the normalisation magic-link does
+    // at `request.ts` and cfAccess at `extractEmail`.
+    email: email.trim().toLowerCase(),
     emailVerified,
     name: profile.name,
     avatarUrl: profile.avatarUrl,

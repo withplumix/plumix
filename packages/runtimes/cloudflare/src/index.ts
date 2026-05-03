@@ -1,6 +1,8 @@
 import "./env.js";
 
 export { cloudflare } from "./adapter.js";
+export { cfAccess, cfAccessLogoutUrl } from "./cf-access.js";
+export type { CfAccessConfig } from "./cf-access.js";
 export { d1 } from "./d1.js";
 export type { D1Config, D1DatabaseAdapter } from "./d1.js";
 export { cloudflareDeployOrigin } from "./deploy-origin.js";

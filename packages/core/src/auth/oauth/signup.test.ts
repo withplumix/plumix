@@ -208,6 +208,23 @@ describe("resolveOAuthUser — domain-gated signup", () => {
     ).rejects.toMatchObject({ code: "registration_closed" });
     expect(await db.$count(users)).toBe(0);
   });
+
+  test("bootstrapAllowed=true mints the first admin via OAuth", async () => {
+    const db = await createTestDb();
+    await allowedDomainFactory.transient({ db }).create({
+      domain: "example.com",
+      defaultRole: "subscriber",
+      isEnabled: true,
+    });
+    const result = await resolveOAuthUser(db, {
+      provider: "github",
+      profile: PROFILE,
+      bootstrapAllowed: true,
+    });
+    expect(result.created).toBe(true);
+    // provisionUser auto-promotes the very first user to admin.
+    expect(result.user.role).toBe("admin");
+  });
 });
 
 describe("resolveOAuthUser — error type", () => {

@@ -19,6 +19,7 @@ import type {
   EntryMetaBoxOptions,
   EntryTypeOptions,
   FieldTypeOptions,
+  LoginLinkOptions,
   MetaBoxField,
   MutablePluginRegistry,
   PluginRouteAuth,
@@ -180,6 +181,17 @@ export interface PluginSetupContextBase {
   registerAdminPage(options: AdminPageOptions): void;
   registerBlock(options: BlockOptions): void;
   registerFieldType(options: FieldTypeOptions): void;
+
+  /**
+   * Surface a button on the standard login screen pointing at this
+   * plugin's sign-in flow. The actual flow lives in routes the plugin
+   * registers separately (`registerRoute("/start", …)`,
+   * `registerRoute("/callback", …)`); this just gives the existing
+   * login UI a button to render. Mirrors how `auth.oauth.providers`
+   * surfaces OAuth buttons, but for plugin-shipped flows that aren't
+   * OAuth-shaped (SAML, custom SSO).
+   */
+  registerLoginLink(options: LoginLinkOptions): void;
 }
 
 export type PluginSetupContext = PluginSetupContextBase &
@@ -504,6 +516,25 @@ export function createPluginSetupContext({
         registeredBy: pluginId,
       });
     },
+
+    registerLoginLink: (options) => {
+      assertValidLoginLink(pluginId, options);
+      for (const existing of registry.loginLinks) {
+        if (
+          existing.registeredBy === pluginId &&
+          existing.key === options.key
+        ) {
+          throw new DuplicateRegistrationError(
+            "login link",
+            `${pluginId}:${options.key}`,
+          );
+        }
+      }
+      registry.loginLinks.push({
+        ...options,
+        registeredBy: pluginId,
+      });
+    },
   };
 
   if (extensions && extensions.size > 0) {
@@ -576,6 +607,54 @@ function assertValidFieldTypeName(pluginId: string, type: string): void {
       `Plugin "${pluginId}" registered meta-box field type with invalid ` +
         `name "${type}" — must match ${BLOCK_NAME_RE} and be at most 64 ` +
         `characters.`,
+    );
+  }
+}
+
+// Lowercase alphanum + dash/underscore, 1–32 chars, must start with a
+// letter. Matches `OAUTH_PROVIDER_KEY_PATTERN` exactly so keys read
+// consistently across login-button surfaces. Leading-letter constraint
+// keeps the wire id `${pluginId}:${key}` from looking like an opaque
+// numeric identifier in logs.
+const LOGIN_LINK_KEY_RE = /^[a-z][a-z0-9_-]{0,31}$/;
+
+function assertValidLoginLink(
+  pluginId: string,
+  options: LoginLinkOptions,
+): void {
+  if (!LOGIN_LINK_KEY_RE.test(options.key)) {
+    throw new Error(
+      `Plugin "${pluginId}" registered a login link with invalid key ` +
+        `"${options.key}" — must be lowercase alphanum + dash/underscore, ` +
+        `1..32 chars.`,
+    );
+  }
+  if (options.label.length === 0) {
+    throw new Error(
+      `Plugin "${pluginId}" registered login link "${options.key}" with ` +
+        `an empty label.`,
+    );
+  }
+  // CR/LF defense: label is rendered into HTML by the admin, but a
+  // future logger / audit-trail consumer might splice it into a
+  // line-oriented format. Block at the boundary.
+  if (/[\r\n]/.test(options.label)) {
+    throw new Error(
+      `Plugin "${pluginId}" registered login link "${options.key}" with ` +
+        `a label containing CR/LF.`,
+    );
+  }
+  // href must be a same-origin path or an https:// URL — block
+  // `javascript:`, `data:`, protocol-relative `//`, and other schemes
+  // a misconfigured or hostile plugin might surface.
+  const isSameOriginPath =
+    options.href.startsWith("/") && !options.href.startsWith("//");
+  const isHttps = options.href.startsWith("https://");
+  if (!isSameOriginPath && !isHttps) {
+    throw new Error(
+      `Plugin "${pluginId}" registered login link "${options.key}" with ` +
+        `href "${options.href}" — must start with "/" (same-origin path) ` +
+        `or "https://".`,
     );
   }
 }

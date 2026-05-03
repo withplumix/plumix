@@ -4,6 +4,7 @@ import { eq } from "../../db/index.js";
 import { allowedDomains } from "../../db/schema/allowed_domains.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { users } from "../../db/schema/users.js";
+import { extractDomain } from "../identity.js";
 import { generateToken, hashToken } from "../tokens.js";
 
 // 15-minute default — the Copenhagen Book / emdash convention for
@@ -33,6 +34,13 @@ interface RequestMagicLinkInput {
    * route this through the request logger when one is available.
    */
   readonly logger?: Pick<Logger, "warn">;
+  /**
+   * When true, allow this magic-link request to issue a signup token
+   * even when zero users exist. The route reads this from
+   * `ctx.bootstrapAllowed` (derived from `auth.bootstrapVia`); default
+   * false keeps the bootstrap rail passkey-only.
+   */
+  readonly bootstrapAllowed?: boolean;
 }
 
 /**
@@ -95,11 +103,13 @@ export async function requestMagicLink(
     await timingDelay();
     return;
   }
-  const userCount = await db.$count(users);
-  if (userCount === 0) {
-    // Refuse signup before bootstrap completes. Same rail OAuth uses.
-    await timingDelay();
-    return;
+  if (!input.bootstrapAllowed) {
+    const userCount = await db.$count(users);
+    if (userCount === 0) {
+      // Refuse signup before bootstrap completes. Same rail OAuth uses.
+      await timingDelay();
+      return;
+    }
   }
 
   await issueAndSend(db, input, ttlSeconds, { userId: null, email });
@@ -146,12 +156,6 @@ async function issueAndSend(
     // the failure (otherwise broken mail config would be silent).
     input.logger?.warn("magic_link_mailer_failed", { error });
   }
-}
-
-function extractDomain(email: string): string | null {
-  const at = email.lastIndexOf("@");
-  if (at < 0 || at === email.length - 1) return null;
-  return email.slice(at + 1).toLowerCase();
 }
 
 function composeText(

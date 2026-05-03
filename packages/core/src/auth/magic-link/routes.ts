@@ -70,6 +70,7 @@ export async function handleMagicLinkRequest(
       siteName: app.config.auth.magicLink.siteName,
       ttlSeconds: app.config.auth.magicLink.ttlSeconds,
       logger: ctx.logger,
+      bootstrapAllowed: ctx.bootstrapAllowed,
     });
   } catch (error) {
     // requestMagicLink swallows mailer errors internally; anything that
@@ -108,7 +109,9 @@ export async function handleMagicLinkVerify(
   if (token.length > MAX_TOKEN_LENGTH) return loginError("token_invalid");
 
   try {
-    const user = await verifyMagicLink(ctx.db, token);
+    const user = await verifyMagicLink(ctx.db, token, {
+      bootstrapAllowed: ctx.bootstrapAllowed,
+    });
     const { token: sessionToken } = await createSession(
       ctx.db,
       { userId: user.id },

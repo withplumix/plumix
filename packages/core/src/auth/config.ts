@@ -1,5 +1,6 @@
 import * as v from "valibot";
 
+import type { RequestAuthenticator } from "./authenticator.js";
 import type { OAuthProviderClient } from "./oauth/types.js";
 import type { PasskeyConfig } from "./passkey/config.js";
 import type { SessionPolicy } from "./sessions.js";
@@ -32,11 +33,43 @@ export interface PlumixOAuthConfig {
   readonly providers: Readonly<Record<string, OAuthProviderClient>>;
 }
 
+export type BootstrapVia = "passkey" | "first-method-wins";
+
 export interface PlumixAuthInput {
   readonly passkey: PasskeyConfig;
   readonly sessions?: SessionPolicy;
   readonly oauth?: PlumixOAuthConfig;
   readonly magicLink?: PlumixMagicLinkConfig;
+  /**
+   * Request-level guard. Decides "who is this user" on every request.
+   * Defaults to the session-cookie authenticator (`sessionAuthenticator()`).
+   *
+   * Override for transparent SSO — e.g. `cfAccess({ teamDomain })` from
+   * `@plumix/runtime-cloudflare`, where the edge sets a JWT header on
+   * every request. The built-in login routes (passkey / oauth /
+   * magic-link) remain mounted regardless: operators that want them
+   * disabled when an external authenticator owns the session should
+   * firewall `/_plumix/auth/*` at the edge (e.g. a Cloudflare Access
+   * policy on those paths). Leaving them live by default supports
+   * deploys that mix transparent SSO with passkey-as-backup.
+   */
+  readonly authenticator?: RequestAuthenticator;
+  /**
+   * How the very first admin enrols on a fresh deploy.
+   *
+   * - `"passkey"` (default) — magic-link and OAuth signup are refused
+   *   while the users table is empty. The first admin must enrol via
+   *   the dedicated passkey bootstrap rail. Phishing-resistant; no
+   *   external dependency.
+   *
+   * - `"first-method-wins"` — any verified external flow (magic-link,
+   *   OAuth, custom authenticator) can mint the first admin via the
+   *   atomic CASE-WHEN-COUNT election in `provisionUser`. Use when the
+   *   runtime layer already gates who reaches plumix (Cloudflare Access
+   *   in front, SAML at the edge, internal-only deploy) — the gate is
+   *   "can the JWT be issued at all", not "can plumix see any user".
+   */
+  readonly bootstrapVia?: BootstrapVia;
 }
 
 export interface PlumixAuthConfig {
@@ -45,6 +78,8 @@ export interface PlumixAuthConfig {
   readonly sessions?: SessionPolicy;
   readonly oauth?: PlumixOAuthConfig;
   readonly magicLink?: PlumixMagicLinkConfig;
+  readonly authenticator?: RequestAuthenticator;
+  readonly bootstrapVia?: BootstrapVia;
 }
 
 export interface PlumixConfigIssue {
@@ -181,6 +216,7 @@ const authInputSchema = v.object({
   sessions: v.optional(sessionPolicySchema),
   oauth: v.optional(oauthSchema),
   magicLink: v.optional(magicLinkSchema),
+  bootstrapVia: v.optional(v.picklist(["passkey", "first-method-wins"])),
 });
 
 function toIssues(
@@ -207,5 +243,7 @@ export function auth(input: PlumixAuthInput): PlumixAuthConfig {
     sessions: input.sessions,
     oauth: input.oauth,
     magicLink: input.magicLink,
+    authenticator: input.authenticator,
+    bootstrapVia: input.bootstrapVia,
   };
 }

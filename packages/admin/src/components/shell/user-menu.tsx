@@ -29,13 +29,22 @@ export function UserMenu({ user }: { user: UserIdentity }): ReactNode {
 
   const signOutMutation = useMutation({
     mutationFn: signOut,
-    onSettled: async () => {
+    onSettled: async (result) => {
       // Drop every cached query on sign-out: the next authed session might be
       // a different user, and permission-gated data must not leak across.
       await router.invalidate();
       router.options.context.queryClient.removeQueries({
         queryKey: SESSION_QUERY_KEY,
       });
+      // External-IdP authenticators (Cloudflare Access, SAML SP-initiated)
+      // surface a redirectTo that bounces the user through the IdP's
+      // logout endpoint — without it, the next request would carry the
+      // IdP credential and silently re-auth. Server pre-validates the
+      // URL shape; the client also re-validates inside `signOut()`.
+      if (result?.redirectTo) {
+        window.location.assign(result.redirectTo);
+        return;
+      }
       await router.navigate({ to: "/login" });
     },
   });

@@ -128,6 +128,37 @@ describe("auth.oauthProviders", () => {
   });
 });
 
+describe("auth.loginLinks", () => {
+  test("empty by default", async () => {
+    const h = await createRpcHarness();
+    const result = await h.client.auth.loginLinks({});
+    expect(result).toEqual([]);
+  });
+
+  test("surfaces plugin-registered links with namespaced ids", async () => {
+    const plugin = definePlugin("saml-microsoft", (ctx) => {
+      ctx.registerLoginLink({
+        key: "default",
+        label: "Sign in with Microsoft",
+        href: "/_plumix/saml-microsoft/start",
+      });
+    });
+    const { registry } = await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [plugin],
+    });
+    const h = await createRpcHarness({ plugins: registry });
+    const result = await h.client.auth.loginLinks({});
+    expect(result).toEqual([
+      {
+        id: "saml-microsoft:default",
+        label: "Sign in with Microsoft",
+        href: "/_plumix/saml-microsoft/start",
+      },
+    ]);
+  });
+});
+
 describe("auth.allowedDomains", () => {
   test("list rejects an unauthenticated caller", async () => {
     const h = await createRpcHarness();

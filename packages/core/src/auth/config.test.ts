@@ -226,3 +226,32 @@ describe("auth() — magicLink schema", () => {
     expect(error.issues[0]?.message).toMatch(/ttlSeconds/);
   });
 });
+
+describe("auth() — bootstrapVia", () => {
+  test("defaults to undefined (passkey-only bootstrap rail)", () => {
+    const config = auth({ passkey: validPasskey });
+    expect(config.bootstrapVia).toBeUndefined();
+  });
+
+  test('accepts "passkey"', () => {
+    const config = auth({ passkey: validPasskey, bootstrapVia: "passkey" });
+    expect(config.bootstrapVia).toBe("passkey");
+  });
+
+  test('accepts "first-method-wins"', () => {
+    const config = auth({
+      passkey: validPasskey,
+      bootstrapVia: "first-method-wins",
+    });
+    expect(config.bootstrapVia).toBe("first-method-wins");
+  });
+
+  test("rejects an unknown value", () => {
+    const error = rejected({
+      passkey: validPasskey,
+      // @ts-expect-error — exercising runtime validation
+      bootstrapVia: "anything-goes",
+    });
+    expect(error.issues[0]?.path).toBe("bootstrapVia");
+  });
+});

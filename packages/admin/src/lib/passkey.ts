@@ -71,9 +71,10 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   return (await response.json()) as T;
 }
 
-async function postJsonVoid(path: string): Promise<void> {
+async function postJsonNoBody<T>(path: string): Promise<T> {
+  let response: Response;
   try {
-    await fetch(path, {
+    response = await fetch(path, {
       method: "POST",
       credentials: "same-origin",
       headers: PLUMIX_CSRF_HEADER,
@@ -81,6 +82,7 @@ async function postJsonVoid(path: string): Promise<void> {
   } catch {
     throw new PasskeyError("network_error");
   }
+  return (await response.json()) as T;
 }
 
 // navigator.credentials.get/create throws a DOMException on user cancellation
@@ -274,6 +276,37 @@ export async function signInWithPasskey(
   );
 }
 
-export async function signOut(): Promise<void> {
-  await postJsonVoid("/_plumix/auth/signout");
+interface SignOutResponse {
+  readonly ok: boolean;
+  readonly redirectTo: string | null;
+}
+
+/**
+ * Result of a sign-out call. When `redirectTo` is set, the calling
+ * component should `window.location.assign(redirectTo)` instead of
+ * navigating to /login — required for external-IdP authenticators
+ * (Cloudflare Access, SAML SP-initiated) where the local cookie clear
+ * isn't enough; the next page load would silently re-auth via the IdP
+ * unless the user is bounced through the IdP's logout endpoint.
+ */
+interface SignOutResult {
+  readonly redirectTo: string | null;
+}
+
+export async function signOut(): Promise<SignOutResult> {
+  const response = await postJsonNoBody<SignOutResponse>(
+    "/_plumix/auth/signout",
+  );
+  // Server-side sanitises the URL before sending it (https:// or
+  // same-origin path, no CR/LF), but trust-but-verify here too — a
+  // future server bug shouldn't turn into client-side open-redirect.
+  return { redirectTo: sanitiseRedirect(response.redirectTo) };
+}
+
+function sanitiseRedirect(value: string | null | undefined): string | null {
+  if (typeof value !== "string" || value.length === 0) return null;
+  if (/[\r\n]/.test(value)) return null;
+  const sameOriginPath = value.startsWith("/") && !value.startsWith("//");
+  const httpsAbsolute = value.startsWith("https://");
+  return sameOriginPath || httpsAbsolute ? value : null;
 }

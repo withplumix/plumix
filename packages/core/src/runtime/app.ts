@@ -1,5 +1,6 @@
 import { RPCHandler } from "@orpc/server/fetch";
 
+import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { ResolvedPasskeyConfig } from "../auth/passkey/config.js";
 import type { CapabilityResolver } from "../auth/rbac.js";
 import type { SessionPolicy } from "../auth/sessions.js";
@@ -7,6 +8,7 @@ import type { PlumixConfig } from "../config.js";
 import type { AppContext } from "../context/app.js";
 import type { PluginRegistry, RegisteredRawRoute } from "../plugin/manifest.js";
 import type { RouteRule } from "../route/intent.js";
+import { sessionAuthenticator } from "../auth/authenticator.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
 import { DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
@@ -38,6 +40,20 @@ export interface PlumixApp {
   readonly origin: string;
   readonly passkey: ResolvedPasskeyConfig;
   readonly sessionPolicy: SessionPolicy;
+  /**
+   * Resolved request authenticator. Defaults to the session-cookie
+   * guard; an operator override (e.g. `cfAccess()`) replaces it. The
+   * dispatcher and RPC middleware both call this on every authed
+   * request to map request → user.
+   */
+  readonly authenticator: RequestAuthenticator;
+  /**
+   * Resolved boolean form of `auth.bootstrapVia`. True when external
+   * sign-in flows (magic-link, OAuth, custom guard) may mint the very
+   * first admin on a fresh deploy; false (default) keeps the bootstrap
+   * rail passkey-only.
+   */
+  readonly bootstrapAllowed: boolean;
   /**
    * Public summary of configured OAuth providers — `{ key, label }` per
    * entry, derived from the user's `oauth.providers` map at app build
@@ -104,6 +120,8 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
         label: provider.label,
       }))
     : [];
+  const authenticator = config.auth.authenticator ?? sessionAuthenticator();
+  const bootstrapAllowed = config.auth.bootstrapVia === "first-method-wins";
   return {
     config,
     hooks,
@@ -112,6 +130,8 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     origin: passkey.origin,
     passkey,
     sessionPolicy: config.auth.sessions ?? DEFAULT_SESSION_POLICY,
+    authenticator,
+    bootstrapAllowed,
     oauthProviders,
     schema,
     routeMap: compileRouteMap(registry),
