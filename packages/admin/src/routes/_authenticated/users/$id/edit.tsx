@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
 import { MetaBoxCard } from "@/components/meta-box/meta-box.js";
+import { PasskeysCard } from "@/components/profile/passkeys-card.js";
+import { SessionsCard } from "@/components/profile/sessions-card.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Badge } from "@/components/ui/badge.js";
 import { Button } from "@/components/ui/button.js";
@@ -415,6 +417,14 @@ function UserEditForm({
 
       {canDisable ? <StatusCard target={target} /> : null}
       {canDelete ? <DeleteCard target={target} /> : null}
+
+      {/* Self-service auth surface — only the user themselves manages
+          their own credentials and signs out their other devices.
+          Cross-user passkey/session management is intentionally not
+          available, even to admins, since both surfaces are second-
+          factor security primitives. */}
+      {isSelf ? <PasskeysCard userEmail={target.email} /> : null}
+      {isSelf ? <SessionsCard /> : null}
     </div>
   );
 }
