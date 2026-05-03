@@ -43,6 +43,41 @@ async function mintJwt(
     .sign(privateKey);
 }
 
+describe("cfAccess — config validation", () => {
+  test.each([
+    ["bare domain", "example.com"],
+    ["protocol-prefixed", "https://yourteam.cloudflareaccess.com"],
+    ["with path", "yourteam.cloudflareaccess.com/path"],
+    ["wrong suffix", "yourteam.cloudflare.com"],
+    ["empty", ""],
+    ["uppercase", "YOURTEAM.cloudflareaccess.com"],
+  ])("rejects malformed teamDomain (%s)", (_name, teamDomain) => {
+    expect(() =>
+      cfAccess({ teamDomain, audience: AUDIENCE, defaultRole: "editor" }),
+    ).toThrow(/teamDomain/);
+  });
+
+  test("rejects empty audience (would silently bypass per-app binding)", () => {
+    expect(() =>
+      cfAccess({
+        teamDomain: TEAM_DOMAIN,
+        audience: "",
+        defaultRole: "editor",
+      }),
+    ).toThrow(/audience/);
+  });
+
+  test("accepts a valid teamDomain + audience pair", () => {
+    expect(() =>
+      cfAccess({
+        teamDomain: TEAM_DOMAIN,
+        audience: AUDIENCE,
+        defaultRole: "editor",
+      }),
+    ).not.toThrow();
+  });
+});
+
 describe("cfAccess — signOutUrl", () => {
   test("returns the team's CF Access logout endpoint", () => {
     const guard = cfAccess({
@@ -191,6 +226,42 @@ describe("cfAccess.authenticate — full crypto path", () => {
       db,
     );
     expect(user).toBeNull();
+  });
+
+  test("JWKS is fetched once across many authenticate calls (cache contract)", async () => {
+    const { createTestDb } = await import("@plumix/core/test");
+    const db = await createTestDb();
+
+    const guard = cfAccess({
+      teamDomain: TEAM_DOMAIN,
+      audience: AUDIENCE,
+      defaultRole: "editor",
+      bootstrapAllowed: true,
+    });
+
+    for (let i = 0; i < 5; i++) {
+      const jwt = await mintJwt(material.privateKey, material.kid, {
+        email: `user-${i}@enterprise.example`,
+      });
+      await guard.authenticate(
+        new Request("https://cms.example/", {
+          headers: { "cf-access-jwt-assertion": jwt },
+        }),
+        db,
+      );
+    }
+
+    const fetchSpy = globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
+    const jwksFetches = fetchSpy.mock.calls.filter((call: unknown[]) => {
+      const arg = call[0];
+      const url = typeof arg === "string" ? arg : (arg as Request).url;
+      return url.includes("/cdn-cgi/access/certs");
+    });
+    // jose's createRemoteJWKSet caches the keyset per construction, so
+    // a single guard instance should hit the JWKS endpoint exactly
+    // once across many authenticate calls. Regression here = perf
+    // disaster (one round-trip per request).
+    expect(jwksFetches).toHaveLength(1);
   });
 
   test("returns null when the email claim is missing", async () => {
