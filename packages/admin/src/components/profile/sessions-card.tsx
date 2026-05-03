@@ -1,6 +1,17 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
+import { Badge } from "@/components/ui/badge.js";
 import { Button } from "@/components/ui/button.js";
 import {
   Card,
@@ -9,24 +20,45 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.js";
+import { toDate } from "@/lib/dates.js";
+import { extractCode, extractReason } from "@/lib/orpc-errors.js";
 import { orpc } from "@/lib/orpc.js";
-import { useMutation } from "@tanstack/react-query";
+import { parseUserAgent } from "@/lib/user-agent.js";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+interface SessionWire {
+  readonly id: string;
+  readonly ipAddress: string | null;
+  readonly userAgent: string | null;
+  readonly createdAt: Date | string;
+  readonly expiresAt: Date | string;
+  readonly current: boolean;
+}
 
 export function SessionsCard(): ReactNode {
-  const [feedback, setFeedback] = useState<
+  const queryClient = useQueryClient();
+  const [revokeAllFeedback, setRevokeAllFeedback] = useState<
     { kind: "ok"; revoked: number } | { kind: "error"; message: string } | null
   >(null);
+
+  const list = useQuery(orpc.auth.sessions.list.queryOptions({ input: {} }));
+
+  const invalidateList = (): Promise<void> =>
+    queryClient.invalidateQueries({
+      queryKey: orpc.auth.sessions.list.key(),
+    });
 
   const revokeOthers = useMutation({
     mutationFn: () => orpc.auth.sessions.revokeOthers.call({}),
     onMutate: () => {
-      setFeedback(null);
+      setRevokeAllFeedback(null);
     },
-    onSuccess: (result) => {
-      setFeedback({ kind: "ok", revoked: result.revoked });
+    onSuccess: async (result) => {
+      setRevokeAllFeedback({ kind: "ok", revoked: result.revoked });
+      await invalidateList();
     },
     onError: (err) => {
-      setFeedback({
+      setRevokeAllFeedback({
         kind: "error",
         message:
           err instanceof Error
@@ -36,46 +68,229 @@ export function SessionsCard(): ReactNode {
     },
   });
 
+  const sessions = list.data ?? [];
+  const otherCount = sessions.filter((s) => !s.current).length;
+
   return (
     <Card data-testid="profile-sessions-card">
       <CardHeader>
         <CardTitle>Active sessions</CardTitle>
         <CardDescription>
-          Sign out everywhere except this browser. Use this if you suspect a
-          device has been lost or your session was used somewhere unexpected.
+          Devices signed in to this account. Revoke any you don't recognise, or
+          sign out everywhere except this browser if you suspect a leak.
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        {feedback?.kind === "ok" ? (
-          <Alert data-testid="profile-sessions-feedback">
+      <CardContent className="flex flex-col gap-4">
+        {list.isPending ? (
+          <p className="text-muted-foreground text-sm">Loading…</p>
+        ) : list.error ? (
+          <Alert variant="destructive">
             <AlertDescription>
-              {feedback.revoked === 0
+              Couldn't load your sessions. Refresh and try again.
+            </AlertDescription>
+          </Alert>
+        ) : sessions.length === 0 ? (
+          // External authenticators (cfAccess) don't mint plumix
+          // session rows; the IdP owns that. Surface explicitly so
+          // the operator doesn't think the page is broken.
+          <p className="text-muted-foreground text-sm">
+            No plumix-managed sessions. Your sign-in is handled by an external
+            identity provider.
+          </p>
+        ) : (
+          <ul
+            className="divide-border divide-y"
+            data-testid="profile-sessions-list"
+          >
+            {sessions.map((session) => (
+              <SessionRow
+                key={session.id}
+                session={session}
+                onChanged={invalidateList}
+              />
+            ))}
+          </ul>
+        )}
+
+        {revokeAllFeedback?.kind === "ok" ? (
+          <Alert data-testid="profile-sessions-revoke-feedback">
+            <AlertDescription>
+              {revokeAllFeedback.revoked === 0
                 ? "No other sessions to sign out."
-                : feedback.revoked === 1
+                : revokeAllFeedback.revoked === 1
                   ? "Signed out 1 other session."
-                  : `Signed out ${feedback.revoked} other sessions.`}
+                  : `Signed out ${revokeAllFeedback.revoked} other sessions.`}
             </AlertDescription>
           </Alert>
         ) : null}
-        {feedback?.kind === "error" ? (
+        {revokeAllFeedback?.kind === "error" ? (
           <Alert variant="destructive" data-testid="profile-sessions-error">
-            <AlertDescription>{feedback.message}</AlertDescription>
+            <AlertDescription>{revokeAllFeedback.message}</AlertDescription>
           </Alert>
         ) : null}
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              revokeOthers.mutate();
-            }}
-            disabled={revokeOthers.isPending}
-            data-testid="profile-sessions-revoke-button"
-          >
-            {revokeOthers.isPending ? "Signing out…" : "Sign out other devices"}
-          </Button>
-        </div>
+
+        {otherCount > 0 ? (
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                revokeOthers.mutate();
+              }}
+              disabled={revokeOthers.isPending}
+              data-testid="profile-sessions-revoke-button"
+            >
+              {revokeOthers.isPending
+                ? "Signing out…"
+                : "Sign out other devices"}
+            </Button>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );
+}
+
+interface SessionRowProps {
+  readonly session: SessionWire;
+  readonly onChanged: () => Promise<void> | void;
+}
+
+function SessionRow({ session, onChanged }: SessionRowProps): ReactNode {
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const ua = parseUserAgent(session.userAgent);
+  const Icon = ua.icon;
+  const createdAt = toDate(session.createdAt);
+
+  const revoke = useMutation({
+    mutationFn: () => orpc.auth.sessions.revoke.call({ id: session.id }),
+    onMutate: () => {
+      setError(null);
+    },
+    onSuccess: async () => {
+      setConfirming(false);
+      await onChanged();
+    },
+    onError: (err) => {
+      setError(formatRevokeError(err));
+    },
+  });
+
+  return (
+    <li
+      className="flex items-start gap-3 py-3"
+      data-testid="profile-session-row"
+    >
+      <Icon
+        aria-hidden
+        className="text-muted-foreground mt-0.5 size-5 shrink-0"
+      />
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className="text-sm font-medium"
+            data-testid="profile-session-label"
+          >
+            {ua.label}
+          </span>
+          {session.current ? (
+            <Badge variant="secondary">This device</Badge>
+          ) : null}
+        </div>
+        <div className="text-muted-foreground flex flex-wrap gap-2 text-xs">
+          {session.ipAddress ? <span>{session.ipAddress}</span> : null}
+          <span>Signed in {formatDate(createdAt)}</span>
+        </div>
+      </div>
+      {!session.current ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="text-destructive hover:text-destructive shrink-0"
+          onClick={() => {
+            setConfirming(true);
+          }}
+          data-testid="profile-session-revoke-button"
+        >
+          Revoke
+        </Button>
+      ) : null}
+
+      <AlertDialog
+        open={confirming}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirming(false);
+            setError(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sign out this device?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {ua.label} signed in {formatDate(createdAt)}
+              {session.ipAddress ? ` from ${session.ipAddress}` : ""}. The
+              device will need to sign in again next time.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {error ? (
+            <Alert
+              variant="destructive"
+              data-testid="profile-session-revoke-error"
+            >
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={revoke.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="profile-session-revoke-confirm"
+              disabled={revoke.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                revoke.mutate();
+              }}
+            >
+              {revoke.isPending ? "Signing out…" : "Sign out device"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </li>
+  );
+}
+
+function formatDate(date: Date): string {
+  // Relative for recent activity, absolute for older — same shape as
+  // the existing users list. Keep it short for the list view.
+  const now = Date.now();
+  const elapsed = now - date.getTime();
+  const minute = 60_000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  if (elapsed < minute) return "just now";
+  if (elapsed < hour) return `${Math.floor(elapsed / minute)}m ago`;
+  if (elapsed < day) return `${Math.floor(elapsed / hour)}h ago`;
+  if (elapsed < 7 * day) return `${Math.floor(elapsed / day)}d ago`;
+  return new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
+
+function formatRevokeError(err: unknown): string {
+  if (extractReason(err) === "current_session") {
+    return "You can't revoke the session you're using right now.";
+  }
+  if (extractCode(err) === "NOT_FOUND") {
+    return "This session no longer exists. Refresh the list.";
+  }
+  if (err instanceof Error) return err.message;
+  return "Couldn't revoke the session. Try again.";
 }
