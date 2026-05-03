@@ -8,6 +8,7 @@ import {
   checkbox,
   email,
   number,
+  password,
   radio,
   select,
   textarea,
@@ -111,6 +112,39 @@ describe("url() builder", () => {
     const field = url({ key: "website", label: "Website" });
     expect(field.inputType).toBe("url");
     expect(field.type).toBe("string");
+  });
+});
+
+describe("password() builder", () => {
+  test("pins inputType + type and carries text-shaped options", () => {
+    const field = password({
+      key: "pin",
+      label: "Display PIN",
+      placeholder: "••••",
+      maxLength: 32,
+      required: true,
+    });
+    expect(field.inputType).toBe("password");
+    expect(field.type).toBe("string");
+    expect(field.placeholder).toBe("••••");
+    expect(field.maxLength).toBe(32);
+    expect(field.required).toBe(true);
+  });
+
+  test("rejects non-text-shaped options at the type level", () => {
+    password({
+      key: "p",
+      label: "p",
+      // @ts-expect-error — `min` belongs to `number` fields.
+      min: 1,
+    });
+
+    password({
+      key: "p",
+      label: "p",
+      // @ts-expect-error — `options` belongs to select/radio.
+      options: [{ value: "a", label: "A" }],
+    });
   });
 });
 

@@ -160,6 +160,36 @@ describe("MetaBoxField dispatcher", () => {
     );
   });
 
+  test("password: renders masked input, value propagates without warnings", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {
+      // would-be unknown-inputType warning; should not fire
+    });
+    const onChange = vi.fn();
+    render(
+      <Harness
+        fieldDef={field({
+          inputType: "password",
+          placeholder: "••••••",
+          maxLength: 64,
+        })}
+        initial=""
+        onChangeSpy={onChange}
+      />,
+    );
+    const input = screen.getByTestId("meta-box-field-k-input");
+    expect(input.tagName).toBe("INPUT");
+    expect(input).toHaveAttribute("type", "password");
+    expect(input).toHaveAttribute("placeholder", "••••••");
+    expect(input).toHaveAttribute("maxLength", "64");
+
+    await userEvent.type(input, "hunter2");
+    expect(onChange).toHaveBeenLastCalledWith("hunter2");
+    // `password` is a recognised builtin — no fallback warning should
+    // fire even though the dispatcher's switch-case routes it through
+    // the shared text-input branch.
+    expect(warn).not.toHaveBeenCalled();
+  });
+
   test("select: renders settings, selection fires onChange with the value", async () => {
     const onChange = vi.fn();
     render(
