@@ -5,7 +5,7 @@ import type { PlumixApp } from "../../runtime/app.js";
 import type { MagicLinkErrorCode } from "./errors.js";
 import { jsonResponse } from "../../runtime/http.js";
 import { buildSessionCookie, isSecureRequest } from "../cookies.js";
-import { createSession } from "../sessions.js";
+import { createSession, readRequestMeta } from "../sessions.js";
 import { MagicLinkError } from "./errors.js";
 import { requestMagicLink } from "./request.js";
 import { verifyMagicLink } from "./verify.js";
@@ -114,7 +114,7 @@ export async function handleMagicLinkVerify(
     });
     const { token: sessionToken } = await createSession(
       ctx.db,
-      { userId: user.id },
+      { userId: user.id, ...readRequestMeta(ctx.request) },
       app.sessionPolicy,
     );
     const cookie = buildSessionCookie(sessionToken, {

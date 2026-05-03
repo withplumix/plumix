@@ -30,6 +30,52 @@ export interface CreateSessionInput {
   readonly userAgent?: string | null;
 }
 
+// Bounds for the values we persist. Real-world UA strings are typically
+// 100-400 chars; 1024 leaves headroom while bounding row width on
+// hostile / malformed input. IPs are at most 45 chars (IPv6) — 64 gives
+// space for IPv6 zone IDs without going wild.
+const MAX_IP_LENGTH = 64;
+const MAX_UA_LENGTH = 1024;
+
+/**
+ * Pull the client IP + user-agent off a request for `sessions.ipAddress`
+ * / `sessions.userAgent`. Prefers `cf-connecting-ip` (set by Cloudflare
+ * Access / Workers / CDN) over `x-forwarded-for` (which can be a chain
+ * — pick the first hop). Falls back to null when neither header is
+ * present. Truncates aggressively so a misconfigured upstream can't
+ * blow up the row width.
+ *
+ * Used at every `createSession` call site so the per-session admin UI
+ * can surface meaningful "what device / where from" context for the
+ * "is this me?" workflow. The values are advisory: an attacker who
+ * controls the request can spoof both, so policy decisions still flow
+ * through the session id (hash-keyed, server-issued).
+ */
+export function readRequestMeta(request: Request): {
+  readonly ipAddress: string | null;
+  readonly userAgent: string | null;
+} {
+  const cfIp = request.headers.get("cf-connecting-ip");
+  const xff = request.headers.get("x-forwarded-for");
+  // x-forwarded-for is comma-separated when multiple proxies appended;
+  // the leftmost entry is the original client (per RFC 7239 / common
+  // proxy convention).
+  const fallback = xff?.split(",")[0]?.trim() ?? null;
+  const rawIp = cfIp ?? fallback ?? null;
+  const rawUa = request.headers.get("user-agent");
+  return {
+    ipAddress: clip(rawIp, MAX_IP_LENGTH),
+    userAgent: clip(rawUa, MAX_UA_LENGTH),
+  };
+}
+
+function clip(value: string | null, max: number): string | null {
+  if (value === null) return null;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+  return trimmed.length > max ? trimmed.slice(0, max) : trimmed;
+}
+
 export interface CreatedSession {
   /** Raw token to send to the client as a cookie value. Never stored. */
   readonly token: string;
