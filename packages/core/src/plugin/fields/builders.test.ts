@@ -6,12 +6,15 @@ import { buildManifest } from "../manifest.js";
 import { installPlugins } from "../register.js";
 import {
   checkbox,
+  date,
+  datetime,
   email,
   number,
   password,
   radio,
   select,
   textarea,
+  time,
   url,
 } from "./index.js";
 
@@ -135,7 +138,7 @@ describe("password() builder", () => {
     password({
       key: "p",
       label: "p",
-      // @ts-expect-error — `min` belongs to `number` fields.
+      // @ts-expect-error — `min` is a number-bound, not a text option.
       min: 1,
     });
 
@@ -144,6 +147,85 @@ describe("password() builder", () => {
       label: "p",
       // @ts-expect-error — `options` belongs to select/radio.
       options: [{ value: "a", label: "A" }],
+    });
+  });
+});
+
+describe("date() builder", () => {
+  test("pins inputType + type and accepts ISO date bounds", () => {
+    const field = date({
+      key: "publishedOn",
+      label: "Publish date",
+      min: "2024-01-01",
+      max: "2030-12-31",
+      default: "2026-05-03",
+    });
+    expect(field.inputType).toBe("date");
+    expect(field.type).toBe("string");
+    expect(field.min).toBe("2024-01-01");
+    expect(field.max).toBe("2030-12-31");
+    expect(field.default).toBe("2026-05-03");
+  });
+
+  test("rejects numeric bounds at the type level", () => {
+    date({
+      key: "d",
+      label: "d",
+      // @ts-expect-error — date bounds are ISO strings, not numbers.
+      min: 0,
+    });
+
+    date({
+      key: "d",
+      label: "d",
+      // @ts-expect-error — `step` doesn't apply to date.
+      step: 1,
+    });
+  });
+});
+
+describe("datetime() builder", () => {
+  test("pins inputType + type and carries ISO bounds", () => {
+    const field = datetime({
+      key: "startsAt",
+      label: "Starts at",
+      min: "2026-01-01T00:00",
+    });
+    expect(field.inputType).toBe("datetime");
+    expect(field.type).toBe("string");
+    expect(field.min).toBe("2026-01-01T00:00");
+  });
+
+  test("rejects placeholder / maxLength at the type level", () => {
+    datetime({
+      key: "d",
+      label: "d",
+      // @ts-expect-error — text-shaped option, not datetime.
+      placeholder: "soon",
+    });
+  });
+});
+
+describe("time() builder", () => {
+  test("pins inputType + type and carries HH:MM bounds", () => {
+    const field = time({
+      key: "opensAt",
+      label: "Opens at",
+      min: "06:00",
+      max: "23:00",
+    });
+    expect(field.inputType).toBe("time");
+    expect(field.type).toBe("string");
+    expect(field.min).toBe("06:00");
+    expect(field.max).toBe("23:00");
+  });
+
+  test("rejects numeric bounds at the type level", () => {
+    time({
+      key: "t",
+      label: "t",
+      // @ts-expect-error — `min` for `time` is a string.
+      min: 0,
     });
   });
 });

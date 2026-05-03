@@ -160,6 +160,58 @@ describe("MetaBoxField dispatcher", () => {
     );
   });
 
+  test("date / datetime / time: emit the matching native HTML5 input type", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {
+      // would-be unknown-inputType warning; should not fire for builtins
+    });
+
+    const onDateChange = vi.fn();
+    const { rerender } = render(
+      <Harness
+        fieldDef={field({
+          inputType: "date",
+          min: "2024-01-01",
+          max: "2030-12-31",
+        })}
+        initial=""
+        onChangeSpy={onDateChange}
+      />,
+    );
+    let input = screen.getByTestId("meta-box-field-k-input");
+    expect(input).toHaveAttribute("type", "date");
+    expect(input).toHaveAttribute("min", "2024-01-01");
+    expect(input).toHaveAttribute("max", "2030-12-31");
+
+    rerender(
+      <Harness fieldDef={field({ inputType: "datetime" })} initial="" />,
+    );
+    input = screen.getByTestId("meta-box-field-k-input");
+    // `datetime` field maps to the native `datetime-local` input type.
+    expect(input).toHaveAttribute("type", "datetime-local");
+
+    rerender(<Harness fieldDef={field({ inputType: "time" })} initial="" />);
+    input = screen.getByTestId("meta-box-field-k-input");
+    expect(input).toHaveAttribute("type", "time");
+
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  test("date: empty input clears the value to null, otherwise propagates the ISO string", async () => {
+    const onChange = vi.fn();
+    render(
+      <Harness
+        fieldDef={field({ inputType: "date" })}
+        initial="2026-05-03"
+        onChangeSpy={onChange}
+      />,
+    );
+    const input = screen.getByTestId("meta-box-field-k-input");
+    expect(input).toHaveValue("2026-05-03");
+
+    await userEvent.clear(input);
+    expect(onChange).toHaveBeenLastCalledWith(null);
+  });
+
   test("password: renders masked input, value propagates without warnings", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {
       // would-be unknown-inputType warning; should not fire
