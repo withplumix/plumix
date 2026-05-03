@@ -1,5 +1,6 @@
 import * as v from "valibot";
 
+import type { RequestAuthenticator } from "./authenticator.js";
 import type { OAuthProviderClient } from "./oauth/types.js";
 import type { PasskeyConfig } from "./passkey/config.js";
 import type { SessionPolicy } from "./sessions.js";
@@ -37,6 +38,17 @@ export interface PlumixAuthInput {
   readonly sessions?: SessionPolicy;
   readonly oauth?: PlumixOAuthConfig;
   readonly magicLink?: PlumixMagicLinkConfig;
+  /**
+   * Request-level guard. Decides "who is this user" on every request.
+   * Defaults to the session-cookie authenticator (`sessionAuthenticator()`).
+   *
+   * Override for transparent SSO — e.g. `cfAccess({ teamDomain })` from
+   * `@plumix/runtime-cloudflare`, where the edge sets a JWT header on
+   * every request. When overridden, the built-in login routes
+   * (passkey / oauth / magic-link) return 404: edge-handled SSO means
+   * plumix doesn't show a login page.
+   */
+  readonly authenticator?: RequestAuthenticator;
 }
 
 export interface PlumixAuthConfig {
@@ -45,6 +57,7 @@ export interface PlumixAuthConfig {
   readonly sessions?: SessionPolicy;
   readonly oauth?: PlumixOAuthConfig;
   readonly magicLink?: PlumixMagicLinkConfig;
+  readonly authenticator?: RequestAuthenticator;
 }
 
 export interface PlumixConfigIssue {
@@ -207,5 +220,6 @@ export function auth(input: PlumixAuthInput): PlumixAuthConfig {
     sessions: input.sessions,
     oauth: input.oauth,
     magicLink: input.magicLink,
+    authenticator: input.authenticator,
   };
 }

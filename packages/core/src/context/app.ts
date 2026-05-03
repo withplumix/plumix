@@ -1,5 +1,6 @@
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 
+import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { Mailer } from "../auth/mailer/types.js";
 import type { KnownCapability } from "../auth/rbac.js";
 import type * as coreSchema from "../db/schema/index.js";
@@ -13,6 +14,7 @@ import type {
   ConnectedObjectStorage,
   ImageDelivery,
 } from "../runtime/slots.js";
+import { sessionAuthenticator } from "../auth/authenticator.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
 
 export type CoreSchema = typeof coreSchema;
@@ -53,6 +55,13 @@ export interface AppContext<
   readonly plugins: PluginRegistry;
   readonly logger: Logger;
   readonly auth: AuthNamespace;
+  /**
+   * Resolved request authenticator — same instance the dispatcher
+   * uses. RPC middleware (`authenticated`) reads it from here so a
+   * custom guard (e.g. CF Access JWT) gates RPC calls the same way it
+   * gates routes. Plugin route handlers read it for the same reason.
+   */
+  readonly authenticator: RequestAuthenticator;
   /**
    * Configured OAuth providers — `{ key, label }` per entry. Empty when
    * the deploy is passkey-only. Read by the login screen (via the
@@ -119,6 +128,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly imageDelivery?: ImageDelivery;
   readonly mailer?: Mailer;
   readonly oauthProviders?: readonly OAuthProviderSummary[];
+  readonly authenticator?: RequestAuthenticator;
 }
 
 const dropPromise: AfterResponse = () => undefined;
@@ -146,6 +156,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     imageDelivery: args.imageDelivery,
     mailer: args.mailer,
     oauthProviders: args.oauthProviders ?? [],
+    authenticator: args.authenticator ?? sessionAuthenticator(),
   };
 }
 

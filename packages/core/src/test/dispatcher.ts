@@ -1,3 +1,4 @@
+import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { PlumixMagicLinkConfig } from "../auth/config.js";
 import type { Mailer } from "../auth/mailer/types.js";
 import type { OAuthProviderClient } from "../auth/oauth/types.js";
@@ -90,6 +91,12 @@ export interface CreateDispatcherHarnessOptions {
    * pass a capturing `Mailer` here so they can assert what was sent.
    */
   readonly mailer?: Mailer;
+  /**
+   * Override the default session-cookie authenticator. Tests for
+   * external-SSO flows (cfAccess, custom guards) pass an instance
+   * here; the dispatcher and RPC middleware both delegate to it.
+   */
+  readonly authenticator?: RequestAuthenticator;
 }
 
 export interface DispatcherHarness {
@@ -165,6 +172,7 @@ function withRequest(
     imageDelivery: app.config.imageDelivery,
     mailer: app.config.mailer,
     oauthProviders: app.oauthProviders,
+    authenticator: app.authenticator,
   });
 }
 
@@ -184,6 +192,7 @@ export async function createDispatcherHarness(
       },
       oauth: options.oauth ? { providers: options.oauth } : undefined,
       magicLink: options.magicLink,
+      authenticator: options.authenticator,
     }),
     plugins: options.plugins,
     imageDelivery: options.imageDelivery,

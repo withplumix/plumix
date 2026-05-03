@@ -1,7 +1,6 @@
 import type { AppContext } from "../context/app.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { PlumixApp } from "./app.js";
-import { readSessionCookie } from "../auth/cookies.js";
 import { hasCsrfHeader, hasMatchingOrigin } from "../auth/csrf.js";
 import {
   handleMagicLinkRequest,
@@ -21,7 +20,6 @@ import {
   handlePasskeyRegisterVerify,
   handleSignout,
 } from "../auth/passkey/routes.js";
-import { validateSession } from "../auth/sessions.js";
 import { withUser } from "../context/app.js";
 import { matchRoute } from "../route/match.js";
 import { resolvePublicRoute } from "../route/resolve.js";
@@ -202,13 +200,14 @@ async function dispatchPluginRawRoute(
     return route.handler(ctx.request, ctx);
   }
 
-  const token = readSessionCookie(ctx.request);
-  if (!token) return jsonResponse({ error: "unauthorized" }, { status: 401 });
-  const validated = await validateSession(ctx.db, token);
-  if (!validated)
-    return jsonResponse({ error: "unauthorized" }, { status: 401 });
+  // Same authenticator the RPC layer uses — session cookie by default,
+  // operator override (e.g. `cfAccess()`) when configured. Plugin
+  // route handlers don't need to know which guard is active; they just
+  // declare `auth: "authenticated"` and the dispatcher delegates.
+  const user = await ctx.authenticator.authenticate(ctx.request, ctx.db);
+  if (!user) return jsonResponse({ error: "unauthorized" }, { status: 401 });
 
-  const { id, email, role } = validated.user;
+  const { id, email, role } = user;
   const authedCtx = withUser(ctx, { id, email, role });
 
   if (gate === "authenticated") {
