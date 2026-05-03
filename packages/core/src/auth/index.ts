@@ -3,6 +3,7 @@ export * from "./bootstrap.js";
 export * from "./config.js";
 export * from "./cookies.js";
 export * from "./csrf.js";
+export * from "./email-change/index.js";
 export * from "./identity.js";
 export * from "./magic-link/index.js";
 export * from "./mailer/index.js";

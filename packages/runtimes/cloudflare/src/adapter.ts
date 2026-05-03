@@ -216,6 +216,8 @@ function buildFetch(app: PlumixApp): FetchHandler {
         oauthProviders: app.oauthProviders,
         authenticator: app.authenticator,
         bootstrapAllowed: app.bootstrapAllowed,
+        origin: app.origin,
+        siteName: app.config.auth.magicLink?.siteName,
       });
       const response = await requestStore.run(appCtx, () => dispatcher(appCtx));
       return finalize(response);

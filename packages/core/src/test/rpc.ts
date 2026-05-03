@@ -58,6 +58,14 @@ export interface BaseRpcHarnessOptions {
    * they can assert what was sent.
    */
   readonly mailer?: Mailer;
+  /**
+   * Site name surfaced as `ctx.siteName` — used by email-composing
+   * procedures (email change, magic-link RPC paths) to brand the
+   * outgoing message. Mirrors the operator-set
+   * `auth.magicLink.siteName`. Default undefined; tests that
+   * exercise email composition pass a fixture name here.
+   */
+  readonly siteName?: string;
 }
 
 export interface AuthenticatedHarnessOptions extends BaseRpcHarnessOptions {
@@ -110,6 +118,7 @@ function buildContext(
   oauthProviders: readonly OAuthProviderSummary[],
   authenticator: RequestAuthenticator | undefined,
   mailer: Mailer | undefined,
+  siteName: string | undefined,
 ): AppContext {
   return createAppContext({
     db,
@@ -121,6 +130,7 @@ function buildContext(
     oauthProviders,
     authenticator,
     mailer,
+    siteName,
   });
 }
 
@@ -149,6 +159,7 @@ function assemble<TUser extends User | null>(
   oauthProviders: readonly OAuthProviderSummary[],
   authenticator: RequestAuthenticator | undefined,
   mailer: Mailer | undefined,
+  siteName: string | undefined,
 ): RpcHarnessBase<TUser> {
   const context = buildContext(
     db,
@@ -159,6 +170,7 @@ function assemble<TUser extends User | null>(
     oauthProviders,
     authenticator,
     mailer,
+    siteName,
   );
   const client = createRouterClient(appRouter, { context });
 
@@ -189,6 +201,7 @@ function assemble<TUser extends User | null>(
         oauthProviders,
         authenticator,
         mailer,
+        siteName,
       );
     },
   };
@@ -225,6 +238,7 @@ export async function createRpcHarness(
       oauthProviders,
       options.authenticator,
       options.mailer,
+      options.siteName,
     );
   }
 
@@ -239,5 +253,6 @@ export async function createRpcHarness(
     oauthProviders,
     options.authenticator,
     options.mailer,
+    options.siteName,
   );
 }

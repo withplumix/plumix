@@ -6,6 +6,7 @@ import {
   handleDeviceCodeRequest,
   handleDeviceTokenExchange,
 } from "../auth/device-flow-routes.js";
+import { handleEmailChangeVerify } from "../auth/email-change/routes.js";
 import {
   handleMagicLinkRequest,
   handleMagicLinkVerify,
@@ -54,6 +55,7 @@ const POST_AUTH_ROUTES = new Map<string, RouteHandler>([
 ]);
 
 const MAGIC_LINK_VERIFY_PATH = "/_plumix/auth/magic-link/verify";
+const EMAIL_CHANGE_VERIFY_PATH = "/_plumix/auth/verify-email";
 
 export type PlumixDispatcher = (ctx: AppContext) => Promise<Response>;
 
@@ -133,6 +135,14 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   if (pathname === MAGIC_LINK_VERIFY_PATH) {
     if (ctx.request.method !== "GET") return methodNotAllowed(["GET"]);
     return handleMagicLinkVerify(ctx, app);
+  }
+
+  // Email-change verify — same anchor model. The link goes to the
+  // user's *new* mailbox (proves they own it); clicking commits the
+  // change atomically + invalidates every session for that user.
+  if (pathname === EMAIL_CHANGE_VERIFY_PATH) {
+    if (ctx.request.method !== "GET") return methodNotAllowed(["GET"]);
+    return handleEmailChangeVerify(ctx, app);
   }
 
   if (pathname === ADMIN_PREFIX || pathname.startsWith(`${ADMIN_PREFIX}/`)) {

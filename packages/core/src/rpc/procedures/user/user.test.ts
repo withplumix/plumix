@@ -199,17 +199,10 @@ describe("user.update", () => {
     expect(updated.role).toBe("editor");
   });
 
-  test("duplicate email on update → CONFLICT", async () => {
-    const h = await createRpcHarness({ authAs: "admin" });
-    const a = await h.factory.user.create({ email: "a@example.test" });
-    await h.factory.user.create({ email: "b@example.test" });
-    await expect(
-      h.client.user.update({ id: a.id, email: "b@example.test" }),
-    ).rejects.toMatchObject({
-      code: "CONFLICT",
-      data: { reason: "email_taken" },
-    });
-  });
+  // `email` is intentionally NOT in `user.update`'s schema — silent
+  // email changes would let a hijacked admin / self session redirect
+  // a user's recovery address. The `email_taken` CONFLICT lives on
+  // `user.requestEmailChange` instead (see request-email-change.ts).
 });
 
 describe("user.disable", () => {

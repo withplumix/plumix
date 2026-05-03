@@ -9,6 +9,7 @@ import {
 } from "@/components/profile/api-tokens-card.js";
 import { PasskeysCard } from "@/components/profile/passkeys-card.js";
 import { SessionsCard } from "@/components/profile/sessions-card.js";
+import { UserEmailField } from "@/components/profile/user-email-field.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Badge } from "@/components/ui/badge.js";
 import { Button } from "@/components/ui/button.js";
@@ -301,18 +302,11 @@ function UserEditForm({
         <CardContent>
           <Form {...form}>
             <form className="flex flex-col gap-4" onSubmit={onSubmit}>
-              <div className="flex flex-col gap-2">
-                <Label>Email</Label>
-                <p
-                  className="text-muted-foreground font-mono text-sm"
-                  data-testid="user-edit-email"
-                >
-                  {target.email}
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  Email changes aren't supported yet — it's the account key.
-                </p>
-              </div>
+              <UserEmailField
+                userId={target.id}
+                email={target.email}
+                canEdit={canSave}
+              />
 
               <FormField
                 control={form.control}

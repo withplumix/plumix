@@ -121,6 +121,22 @@ export interface AppContext<
    * degrade if mail is optional for their feature.
    */
   readonly mailer?: Mailer;
+  /**
+   * Canonical site origin (`https://cms.example.com`). Sourced from
+   * `auth.passkey.origin` at app build time. Magic-link, email-change,
+   * and any future flow that composes a verification URL reads this
+   * so URLs are stable across the deployment regardless of which
+   * worker / region serves the inbound request.
+   */
+  readonly origin: string;
+  /**
+   * Operator-set site name from `auth.magicLink.siteName`, used as
+   * the human-friendly label in mailer subjects ("Confirm your email
+   * for {siteName}"). Undefined when magic-link isn't configured —
+   * RPC procedures that compose user-facing mail should refuse with
+   * a config-missing reason in that case.
+   */
+  readonly siteName?: string;
 }
 
 export type AuthenticatedAppContext<
@@ -137,6 +153,8 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly plugins: PluginRegistry;
   readonly user?: AuthenticatedUser | null;
   readonly tokenScopes?: readonly string[] | null;
+  readonly origin?: string;
+  readonly siteName?: string;
   readonly logger?: Logger;
   readonly after?: AfterResponse;
   readonly assets?: AssetsBinding;
@@ -193,6 +211,12 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     oauthProviders: args.oauthProviders ?? [],
     authenticator: args.authenticator ?? defaultAuthenticator(),
     bootstrapAllowed: args.bootstrapAllowed ?? false,
+    // Best-effort fallback for tests / runtimes that don't pass an
+    // explicit origin: derive from the inbound request URL. Production
+    // always passes the canonical operator-set origin so URLs in
+    // outgoing email are stable across worker geos.
+    origin: args.origin ?? new URL(args.request.url).origin,
+    siteName: args.siteName,
   };
 }
 
