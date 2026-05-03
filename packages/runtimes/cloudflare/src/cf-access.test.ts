@@ -192,16 +192,16 @@ describe("cfAccess.authenticate — full crypto path", () => {
       email: "first-admin@enterprise.example",
     });
 
-    const user = await guard.authenticate(
+    const result = await guard.authenticate(
       new Request("https://cms.example/", {
         headers: { "cf-access-jwt-assertion": jwt },
       }),
       db,
     );
-    expect(user).not.toBeNull();
-    expect(user?.email).toBe("first-admin@enterprise.example");
+    expect(result).not.toBeNull();
+    expect(result?.user.email).toBe("first-admin@enterprise.example");
     // bootstrapAllowed=true on a zero-user system → first user is admin.
-    expect(user?.role).toBe("admin");
+    expect(result?.user.role).toBe("admin");
   });
 
   test("returns null when bootstrap is disabled and zero users exist", async () => {

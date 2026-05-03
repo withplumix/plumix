@@ -201,6 +201,7 @@ export const AUTHED_ADMIN: AuthSessionOutput = {
       "user:edit",
       "user:edit_own",
       "user:list",
+      "user:manage_tokens",
       "user:promote",
     ],
   },

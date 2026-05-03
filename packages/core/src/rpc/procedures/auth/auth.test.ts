@@ -2,10 +2,16 @@ import { describe, expect, test } from "vitest";
 
 import type { RequestAuthenticator } from "../../../auth/authenticator.js";
 import type { Mailer } from "../../../auth/mailer/types.js";
+import { API_TOKEN_PREFIX, createApiToken } from "../../../auth/api-tokens.js";
 import { SESSION_COOKIE_NAME } from "../../../auth/cookies.js";
+import {
+  lookupDeviceCodeByUserCode,
+  requestDeviceCode,
+} from "../../../auth/device-flow.js";
 import { createSession } from "../../../auth/sessions.js";
 import { hashToken } from "../../../auth/tokens.js";
 import { eq } from "../../../db/index.js";
+import { apiTokens } from "../../../db/schema/api_tokens.js";
 import { sessions } from "../../../db/schema/sessions.js";
 import { HookRegistry } from "../../../hooks/registry.js";
 import { definePlugin } from "../../../plugin/define.js";
@@ -481,7 +487,7 @@ describe("auth.sessions.revokeOthers", () => {
     await createSession(db, { userId: user.id });
 
     const headerAuth: RequestAuthenticator = {
-      authenticate: () => Promise.resolve(user),
+      authenticate: () => Promise.resolve({ user }),
     };
     // Build a request *without* the session cookie — the cfAccess case.
     const request = new Request("https://cms.example/_plumix/rpc", {
@@ -718,5 +724,561 @@ describe("auth.credentials.delete — race safety", () => {
 
     const after = await h.client.auth.credentials.list({});
     expect(after).toHaveLength(1);
+  });
+});
+
+describe("auth.apiTokens", () => {
+  test("list / create / revoke reject unauthenticated callers", async () => {
+    const h = await createRpcHarness();
+    await expect(h.client.auth.apiTokens.list({})).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+    await expect(
+      h.client.auth.apiTokens.create({ name: "x" }),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(
+      h.client.auth.apiTokens.revoke({ id: "x" }),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  test("create returns the secret once, list never includes it", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+
+    const created = await h.client.auth.apiTokens.create({
+      name: "ci-bot",
+      expiresInDays: 30,
+    });
+    expect(created.secret.startsWith(API_TOKEN_PREFIX)).toBe(true);
+    expect(created.token.prefix.startsWith(API_TOKEN_PREFIX)).toBe(true);
+    expect(created.token.id).not.toBe(created.secret);
+
+    const list = await h.client.auth.apiTokens.list({});
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ id: created.token.id, name: "ci-bot" });
+    expect(JSON.stringify(list[0])).not.toContain(created.secret);
+  });
+
+  test("create with expiresInDays: null persists a never-expiring token", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const created = await h.client.auth.apiTokens.create({
+      name: "long-lived",
+      expiresInDays: null,
+    });
+    expect(created.token.expiresAt).toBeNull();
+  });
+
+  test("list scopes to the calling user", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const otherUser = await h.factory.user.create({});
+    await createApiToken(h.db, {
+      userId: otherUser.id,
+      name: "other-user-token",
+      expiresAt: null,
+    });
+    await h.client.auth.apiTokens.create({ name: "mine" });
+
+    const list = await h.client.auth.apiTokens.list({});
+    expect(list).toHaveLength(1);
+    expect(list[0]?.name).toBe("mine");
+  });
+
+  test("revoke soft-deletes the user's own token", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const created = await h.client.auth.apiTokens.create({ name: "t" });
+
+    const result = await h.client.auth.apiTokens.revoke({
+      id: created.token.id,
+    });
+    expect(result).toEqual({ id: created.token.id });
+
+    const list = await h.client.auth.apiTokens.list({});
+    expect(list).toEqual([]);
+
+    // Row is still in the DB, just with revokedAt set (audit-log readiness).
+    const stored = await h.db
+      .select()
+      .from(apiTokens)
+      .where(eq(apiTokens.id, created.token.id))
+      .get();
+    expect(stored?.revokedAt).not.toBeNull();
+  });
+
+  test("revoke refuses cross-user attempts with NOT_FOUND (no oracle)", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const otherUser = await h.factory.user.create({});
+    const otherToken = await createApiToken(h.db, {
+      userId: otherUser.id,
+      name: "their-token",
+      expiresAt: null,
+    });
+
+    await expect(
+      h.client.auth.apiTokens.revoke({ id: otherToken.row.id }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  test("create persists scopes, list surfaces them", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const created = await h.client.auth.apiTokens.create({
+      name: "scoped",
+      scopes: ["entry:post:read", "settings:manage"],
+    });
+    expect(created.token.scopes).toEqual([
+      "entry:post:read",
+      "settings:manage",
+    ]);
+
+    const list = await h.client.auth.apiTokens.list({});
+    expect(list[0]?.scopes).toEqual(["entry:post:read", "settings:manage"]);
+  });
+
+  test("create rejects malformed scope strings at the input layer", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await expect(
+      h.client.auth.apiTokens.create({
+        name: "bogus",
+        scopes: ["bad scope"],
+      }),
+    ).rejects.toBeDefined();
+  });
+
+  test("create with scopes: null is unrestricted (inherit role caps)", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const created = await h.client.auth.apiTokens.create({
+      name: "unrestricted",
+      scopes: null,
+    });
+    expect(created.token.scopes).toBeNull();
+  });
+});
+
+describe("auth.apiTokens admin (cross-user)", () => {
+  test("adminList rejects callers without user:manage_tokens", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await expect(h.client.auth.apiTokens.adminList({})).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { capability: "user:manage_tokens" },
+    });
+  });
+
+  test("adminList returns paginated tokens across users with owner metadata", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const userA = await h.factory.user.create({ email: "a@example.test" });
+    const userB = await h.factory.user.create({ email: "b@example.test" });
+
+    await createApiToken(h.db, {
+      userId: userA.id,
+      name: "a-1",
+      expiresAt: null,
+    });
+    await createApiToken(h.db, {
+      userId: userB.id,
+      name: "b-1",
+      expiresAt: null,
+    });
+    await createApiToken(h.db, {
+      userId: userB.id,
+      name: "b-2",
+      expiresAt: null,
+    });
+
+    const all = await h.client.auth.apiTokens.adminList({});
+    expect(all.total).toBe(3);
+    expect(all.items).toHaveLength(3);
+    // All three tokens surface across both users.
+    const names = new Set(all.items.map((row) => row.name));
+    expect(names).toEqual(new Set(["a-1", "b-1", "b-2"]));
+    // User metadata is joined in.
+    const ownerEmails = new Set(all.items.map((row) => row.user.email));
+    expect(ownerEmails).toEqual(new Set(["a@example.test", "b@example.test"]));
+  });
+
+  test("adminList honours userId filter", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const userA = await h.factory.user.create({});
+    const userB = await h.factory.user.create({});
+    await createApiToken(h.db, {
+      userId: userA.id,
+      name: "a-1",
+      expiresAt: null,
+    });
+    await createApiToken(h.db, {
+      userId: userB.id,
+      name: "b-1",
+      expiresAt: null,
+    });
+
+    const filtered = await h.client.auth.apiTokens.adminList({
+      userId: userA.id,
+    });
+    expect(filtered.total).toBe(1);
+    expect(filtered.items[0]?.name).toBe("a-1");
+  });
+
+  test("adminList excludes revoked rows by default; includeRevoked surfaces them", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const target = await h.factory.user.create({});
+    const tokenA = await createApiToken(h.db, {
+      userId: target.id,
+      name: "active",
+      expiresAt: null,
+    });
+    const tokenB = await createApiToken(h.db, {
+      userId: target.id,
+      name: "revoked",
+      expiresAt: null,
+    });
+    await h.client.auth.apiTokens.adminRevoke({ id: tokenB.row.id });
+
+    const active = await h.client.auth.apiTokens.adminList({
+      userId: target.id,
+    });
+    expect(active.total).toBe(1);
+    expect(active.items[0]?.id).toBe(tokenA.row.id);
+
+    const auditView = await h.client.auth.apiTokens.adminList({
+      userId: target.id,
+      includeRevoked: true,
+    });
+    expect(auditView.total).toBe(2);
+  });
+
+  test("adminList respects limit + offset", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const target = await h.factory.user.create({});
+    for (let i = 0; i < 5; i += 1) {
+      await createApiToken(h.db, {
+        userId: target.id,
+        name: `t-${i}`,
+        expiresAt: null,
+      });
+    }
+
+    const page1 = await h.client.auth.apiTokens.adminList({
+      userId: target.id,
+      limit: 2,
+      offset: 0,
+    });
+    const page2 = await h.client.auth.apiTokens.adminList({
+      userId: target.id,
+      limit: 2,
+      offset: 2,
+    });
+    expect(page1.items).toHaveLength(2);
+    expect(page2.items).toHaveLength(2);
+    expect(page1.total).toBe(5);
+    expect(page1.items[0]?.id).not.toBe(page2.items[0]?.id);
+  });
+
+  test("adminRevoke soft-deletes any user's token", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const target = await h.factory.user.create({});
+    const token = await createApiToken(h.db, {
+      userId: target.id,
+      name: "leaked",
+      expiresAt: null,
+    });
+
+    const result = await h.client.auth.apiTokens.adminRevoke({
+      id: token.row.id,
+    });
+    expect(result).toEqual({ id: token.row.id });
+
+    const stored = await h.db
+      .select()
+      .from(apiTokens)
+      .where(eq(apiTokens.id, token.row.id))
+      .get();
+    expect(stored?.revokedAt).not.toBeNull();
+  });
+
+  test("adminRevoke rejects callers without user:manage_tokens", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const target = await h.factory.user.create({});
+    const token = await createApiToken(h.db, {
+      userId: target.id,
+      name: "x",
+      expiresAt: null,
+    });
+
+    await expect(
+      h.client.auth.apiTokens.adminRevoke({ id: token.row.id }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { capability: "user:manage_tokens" },
+    });
+  });
+
+  test("adminRevoke returns NOT_FOUND for unknown id (idempotent on already-revoked)", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const target = await h.factory.user.create({});
+    const token = await createApiToken(h.db, {
+      userId: target.id,
+      name: "x",
+      expiresAt: null,
+    });
+    await h.client.auth.apiTokens.adminRevoke({ id: token.row.id });
+
+    await expect(
+      h.client.auth.apiTokens.adminRevoke({ id: token.row.id }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(
+      h.client.auth.apiTokens.adminRevoke({ id: "ghost-id" }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+});
+
+describe("auth.deviceFlow", () => {
+  test("lookup / approve reject unauthenticated callers", async () => {
+    const h = await createRpcHarness();
+    await expect(
+      h.client.auth.deviceFlow.lookup({ userCode: "AAAA-AAAA" }),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(
+      h.client.auth.deviceFlow.approve({
+        userCode: "AAAA-AAAA",
+        tokenName: "x",
+      }),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  test("lookup returns ok for a pending user_code", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const { userCode } = await requestDeviceCode(h.db);
+
+    const result = await h.client.auth.deviceFlow.lookup({ userCode });
+    expect(result).toEqual({ ok: true });
+  });
+
+  test("lookup accepts paste-friendly forms (lowercase, no dash)", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const { userCode } = await requestDeviceCode(h.db);
+    // userCode is "ABCD-EFGH"; transform input to lowercase + no-dash.
+    const variant = userCode.replace("-", "").toLowerCase();
+
+    const result = await h.client.auth.deviceFlow.lookup({ userCode: variant });
+    expect(result).toEqual({ ok: true });
+  });
+
+  test("lookup returns NOT_FOUND for an unknown user_code", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await expect(
+      h.client.auth.deviceFlow.lookup({ userCode: "ZZZZ-ZZZZ" }),
+    ).rejects.toMatchObject({
+      code: "NOT_FOUND",
+      data: { kind: "device_code" },
+    });
+  });
+
+  test("lookup returns CONFLICT/already_approved once approved", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const { userCode } = await requestDeviceCode(h.db);
+    await h.client.auth.deviceFlow.approve({ userCode, tokenName: "cli" });
+
+    await expect(
+      h.client.auth.deviceFlow.lookup({ userCode }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "already_approved" },
+    });
+  });
+
+  test("approve binds the row to the calling user", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const { userCode } = await requestDeviceCode(h.db);
+
+    const result = await h.client.auth.deviceFlow.approve({
+      userCode,
+      tokenName: "claude-code",
+    });
+    expect(result).toEqual({ ok: true });
+
+    // The row's payload now reports approved + the chosen tokenName.
+    const lookup = await lookupDeviceCodeByUserCode(h.db, userCode);
+    expect(lookup.outcome).toBe("already_approved");
+  });
+
+  test("approve rejects an empty tokenName at the input layer", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const { userCode } = await requestDeviceCode(h.db);
+    await expect(
+      h.client.auth.deviceFlow.approve({ userCode, tokenName: "   " }),
+    ).rejects.toBeDefined();
+  });
+
+  test("approve surfaces CONFLICT/already_approved when called twice on the same code", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const { userCode } = await requestDeviceCode(h.db);
+
+    await h.client.auth.deviceFlow.approve({ userCode, tokenName: "cli" });
+    await expect(
+      h.client.auth.deviceFlow.approve({ userCode, tokenName: "cli2" }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "already_approved" },
+    });
+  });
+
+  test("approve surfaces NOT_FOUND for an unknown user_code", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await expect(
+      h.client.auth.deviceFlow.approve({
+        userCode: "ZZZZ-ZZZZ",
+        tokenName: "cli",
+      }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  test("end-to-end: approve via RPC, then exchange via primitives mints a token bound to the approver", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const { deviceCode, userCode } = await requestDeviceCode(h.db);
+
+    await h.client.auth.deviceFlow.approve({
+      userCode,
+      tokenName: "ci",
+    });
+
+    const { exchangeDeviceCode } = await import("../../../auth/device-flow.js");
+    const exchanged = await exchangeDeviceCode(h.db, deviceCode, "fallback");
+    expect(exchanged.outcome).toBe("approved");
+    if (exchanged.outcome !== "approved") return;
+
+    expect(exchanged.userId).toBe(h.user.id);
+    expect(exchanged.secret.startsWith(API_TOKEN_PREFIX)).toBe(true);
+
+    const minted = await h.db
+      .select()
+      .from(apiTokens)
+      .where(eq(apiTokens.userId, h.user.id))
+      .get();
+    expect(minted?.name).toBe("ci");
+  });
+
+  test("approve passes scopes through to the minted token", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const { deviceCode, userCode } = await requestDeviceCode(h.db);
+
+    await h.client.auth.deviceFlow.approve({
+      userCode,
+      tokenName: "scoped-cli",
+      scopes: ["entry:post:read"],
+    });
+
+    const { exchangeDeviceCode } = await import("../../../auth/device-flow.js");
+    const exchanged = await exchangeDeviceCode(h.db, deviceCode, "fallback");
+    if (exchanged.outcome !== "approved") throw new Error("expected approved");
+
+    const minted = await h.db
+      .select()
+      .from(apiTokens)
+      .where(eq(apiTokens.userId, h.user.id))
+      .get();
+    expect(minted?.scopes).toEqual(["entry:post:read"]);
+  });
+
+  test("deny flips status; subsequent lookup surfaces already_denied", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const { userCode } = await requestDeviceCode(h.db);
+
+    const result = await h.client.auth.deviceFlow.deny({ userCode });
+    expect(result).toEqual({ ok: true });
+
+    await expect(
+      h.client.auth.deviceFlow.lookup({ userCode }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "already_denied" },
+    });
+  });
+
+  test("deny rejects unauthenticated callers", async () => {
+    const h = await createRpcHarness();
+    await expect(
+      h.client.auth.deviceFlow.deny({ userCode: "AAAA-AAAA" }),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  test("deny on already-approved row → CONFLICT/already_approved", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const { userCode } = await requestDeviceCode(h.db);
+    await h.client.auth.deviceFlow.approve({ userCode, tokenName: "x" });
+
+    await expect(
+      h.client.auth.deviceFlow.deny({ userCode }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "already_approved" },
+    });
+  });
+
+  test("approve on already-denied row → CONFLICT/already_denied", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const { userCode } = await requestDeviceCode(h.db);
+    await h.client.auth.deviceFlow.deny({ userCode });
+
+    await expect(
+      h.client.auth.deviceFlow.approve({ userCode, tokenName: "x" }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "already_denied" },
+    });
+  });
+
+  test("approve on an expired row → CONFLICT/expired", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const { userCode } = await requestDeviceCode(h.db);
+    const { deviceCodes } = await import("../../../db/schema/device_codes.js");
+    await h.db
+      .update(deviceCodes)
+      .set({ expiresAt: new Date(Date.now() - 1000) });
+
+    await expect(
+      h.client.auth.deviceFlow.approve({ userCode, tokenName: "x" }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "expired" },
+    });
+  });
+
+  test("deny on an expired row → CONFLICT/expired", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const { userCode } = await requestDeviceCode(h.db);
+    const { deviceCodes } = await import("../../../db/schema/device_codes.js");
+    await h.db
+      .update(deviceCodes)
+      .set({ expiresAt: new Date(Date.now() - 1000) });
+
+    await expect(
+      h.client.auth.deviceFlow.deny({ userCode }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "expired" },
+    });
+  });
+
+  test("deny on already-denied row → CONFLICT/already_denied", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const { userCode } = await requestDeviceCode(h.db);
+    await h.client.auth.deviceFlow.deny({ userCode });
+
+    await expect(
+      h.client.auth.deviceFlow.deny({ userCode }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "already_denied" },
+    });
+  });
+
+  test("deny on already-approved row → CONFLICT/already_approved", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    const { userCode } = await requestDeviceCode(h.db);
+    await h.client.auth.deviceFlow.approve({ userCode, tokenName: "x" });
+
+    await expect(
+      h.client.auth.deviceFlow.deny({ userCode }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "already_approved" },
+    });
   });
 });

@@ -8,7 +8,7 @@ import type { PlumixConfig } from "../config.js";
 import type { AppContext } from "../context/app.js";
 import type { PluginRegistry, RegisteredRawRoute } from "../plugin/manifest.js";
 import type { RouteRule } from "../route/intent.js";
-import { sessionAuthenticator } from "../auth/authenticator.js";
+import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
 import { DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
@@ -120,7 +120,7 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
         label: provider.label,
       }))
     : [];
-  const authenticator = config.auth.authenticator ?? sessionAuthenticator();
+  const authenticator = config.auth.authenticator ?? defaultAuthenticator();
   const bootstrapAllowed = config.auth.bootstrapVia === "first-method-wins";
   return {
     config,
