@@ -24,6 +24,7 @@ import {
 import {
   createSession,
   invalidateSession,
+  readRequestMeta,
   validateSession,
 } from "../sessions.js";
 import { beginAuthentication, finishAuthentication } from "./authenticate.js";
@@ -256,7 +257,7 @@ export async function handlePasskeyRegisterVerify(
 
     const { token } = await createSession(
       ctx.db,
-      { userId: verified.userId },
+      { userId: verified.userId, ...readRequestMeta(ctx.request) },
       app.sessionPolicy,
     );
     return jsonResponse(
@@ -317,7 +318,10 @@ export async function handlePasskeyLoginVerify(
 
     const { token } = await createSession(
       ctx.db,
-      { userId: verified.credential.userId },
+      {
+        userId: verified.credential.userId,
+        ...readRequestMeta(ctx.request),
+      },
       app.sessionPolicy,
     );
 
@@ -448,7 +452,7 @@ export async function handleInviteRegisterVerify(
     await consumeInviteToken(ctx.db, invite.tokenHash);
     const { token } = await createSession(
       ctx.db,
-      { userId: user.id },
+      { userId: user.id, ...readRequestMeta(ctx.request) },
       app.sessionPolicy,
     );
     // User is fully enrolled (credential persisted, token consumed,

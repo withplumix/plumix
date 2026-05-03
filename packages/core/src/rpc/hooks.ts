@@ -30,6 +30,13 @@ type EntryWithTerms = Entry & {
   readonly terms: Record<string, readonly number[]>;
 };
 
+// `user.list` decorates each row with `lastSignInAt` (max session
+// createdAt per user), so the admin's users table can show "Active 2d
+// ago" / "Never". Plugin filters see the same shape.
+type UserListRow = User & {
+  readonly lastSignInAt: Date | null;
+};
+
 declare module "../hooks/types.js" {
   interface FilterRegistry {
     "rpc:entry.list:input": (input: EntryListInput) => EntryListInput;
@@ -48,7 +55,9 @@ declare module "../hooks/types.js" {
     "rpc:entry.trash:output": (output: Entry) => Entry;
 
     "rpc:user.list:input": (input: UserListInput) => UserListInput;
-    "rpc:user.list:output": (output: readonly User[]) => readonly User[];
+    "rpc:user.list:output": (
+      output: readonly UserListRow[],
+    ) => readonly UserListRow[];
 
     "rpc:user.get:output": (output: User) => User;
 

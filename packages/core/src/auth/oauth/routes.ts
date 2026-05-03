@@ -4,7 +4,7 @@ import type { OAuthErrorCode } from "./errors.js";
 import type { OAuthProviderClient } from "./types.js";
 import { users } from "../../db/schema/users.js";
 import { buildSessionCookie, isSecureRequest } from "../cookies.js";
-import { createSession } from "../sessions.js";
+import { createSession, readRequestMeta } from "../sessions.js";
 import { buildAuthorizeUrl, exchangeAndFetchProfile } from "./consumer.js";
 import { OAuthError } from "./errors.js";
 import { resolveOAuthUser } from "./signup.js";
@@ -128,7 +128,7 @@ export async function handleOAuthCallback(
 
     const { token } = await createSession(
       ctx.db,
-      { userId: user.id },
+      { userId: user.id, ...readRequestMeta(ctx.request) },
       app.sessionPolicy,
     );
 

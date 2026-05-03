@@ -2,6 +2,7 @@ import type { RouterClient } from "@orpc/server";
 import { createRouterClient } from "@orpc/server";
 
 import type { RequestAuthenticator } from "../auth/authenticator.js";
+import type { Mailer } from "../auth/mailer/types.js";
 import type { AppContext, Db } from "../context/app.js";
 import type { User, UserRole } from "../db/schema/users.js";
 import type { HookExecutor, HookRegistry } from "../hooks/registry.js";
@@ -50,6 +51,13 @@ export interface BaseRpcHarnessOptions {
    * instance here; the RPC `authenticated` middleware delegates to it.
    */
   readonly authenticator?: RequestAuthenticator;
+  /**
+   * Outbound email transport surfaced as `ctx.mailer`. Procedures that
+   * touch mail (auth.mailer.testSend, future invite-email, etc.)
+   * read from there; tests pass a capturing implementation here so
+   * they can assert what was sent.
+   */
+  readonly mailer?: Mailer;
 }
 
 export interface AuthenticatedHarnessOptions extends BaseRpcHarnessOptions {
@@ -101,6 +109,7 @@ function buildContext(
   request: Request,
   oauthProviders: readonly OAuthProviderSummary[],
   authenticator: RequestAuthenticator | undefined,
+  mailer: Mailer | undefined,
 ): AppContext {
   return createAppContext({
     db,
@@ -111,6 +120,7 @@ function buildContext(
     logger: silentLogger,
     oauthProviders,
     authenticator,
+    mailer,
   });
 }
 
@@ -138,6 +148,7 @@ function assemble<TUser extends User | null>(
   user: TUser,
   oauthProviders: readonly OAuthProviderSummary[],
   authenticator: RequestAuthenticator | undefined,
+  mailer: Mailer | undefined,
 ): RpcHarnessBase<TUser> {
   const context = buildContext(
     db,
@@ -147,6 +158,7 @@ function assemble<TUser extends User | null>(
     request,
     oauthProviders,
     authenticator,
+    mailer,
   );
   const client = createRouterClient(appRouter, { context });
 
@@ -176,6 +188,7 @@ function assemble<TUser extends User | null>(
         targetUser,
         oauthProviders,
         authenticator,
+        mailer,
       );
     },
   };
@@ -211,6 +224,7 @@ export async function createRpcHarness(
       user,
       oauthProviders,
       options.authenticator,
+      options.mailer,
     );
   }
 
@@ -224,5 +238,6 @@ export async function createRpcHarness(
     null,
     oauthProviders,
     options.authenticator,
+    options.mailer,
   );
 }

@@ -408,7 +408,8 @@ export type CoreIconName =
   | "folder"
   | "users"
   | "settings"
-  | "puzzle";
+  | "puzzle"
+  | "mail";
 
 // Subset of `CoreIconName` plugins may emit on `EntryTypeOptions.menuIcon`
 // or `TermTaxonomyOptions.menuIcon`. Names outside this set fall back to
@@ -1036,6 +1037,16 @@ const CORE_NAV_ITEMS: readonly { groupId: string; item: AdminNavItem }[] = [
       label: "Allowed domains",
       coreIcon: "users",
       order: 150,
+      capability: "settings:manage",
+    },
+  },
+  {
+    groupId: "management",
+    item: {
+      to: "/mailer",
+      label: "Mailer",
+      coreIcon: "mail",
+      order: 175,
       capability: "settings:manage",
     },
   },

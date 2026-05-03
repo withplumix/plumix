@@ -30,14 +30,15 @@ describe("buildManifest", () => {
     expect(manifest.blocks).toEqual([]);
     expect(manifest.fieldTypes).toEqual([]);
     // Overview always carries Dashboard; Management carries Users +
-    // Allowed domains + Settings. Capability filtering happens admin-side
-    // at render time — the projection ships every item.
+    // Allowed domains + Mailer + Settings. Capability filtering happens
+    // admin-side at render time — the projection ships every item.
     const overview = manifest.adminNav.find((g) => g.id === "overview");
     expect(overview?.items.map((i) => i.to)).toEqual(["/"]);
     const management = manifest.adminNav.find((g) => g.id === "management");
     expect(management?.items.map((i) => i.to)).toEqual([
       "/users",
       "/allowed-domains",
+      "/mailer",
       "/settings",
     ]);
   });

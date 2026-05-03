@@ -20,6 +20,7 @@ import {
   Image,
   Layout,
   LayoutDashboard,
+  Mail,
   Puzzle,
   Settings,
   Tag,
@@ -43,6 +44,7 @@ const CORE_ICON: Record<CoreIconName, LucideIcon> = {
   users: Users,
   settings: Settings,
   puzzle: Puzzle,
+  mail: Mail,
 };
 
 export function AppSidebar({
