@@ -6,6 +6,8 @@ import type { AppContext } from "../context/app.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { RouteIntent } from "../route/intent.js";
 
+import type { RegisteredLookupAdapter } from "./lookup.js";
+
 export interface EntryTypeOptions {
   readonly label: string;
   /**
@@ -787,6 +789,7 @@ export interface PluginRegistry {
   readonly adminPages: ReadonlyMap<string, RegisteredAdminPage>;
   readonly blocks: ReadonlyMap<string, RegisteredBlock>;
   readonly fieldTypes: ReadonlyMap<string, RegisteredFieldType>;
+  readonly lookupAdapters: ReadonlyMap<string, RegisteredLookupAdapter>;
 }
 
 export interface MutablePluginRegistry extends PluginRegistry {
@@ -805,6 +808,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly adminPages: Map<string, RegisteredAdminPage>;
   readonly blocks: Map<string, RegisteredBlock>;
   readonly fieldTypes: Map<string, RegisteredFieldType>;
+  readonly lookupAdapters: Map<string, RegisteredLookupAdapter>;
 }
 
 export function createPluginRegistry(): MutablePluginRegistry {
@@ -824,6 +828,7 @@ export function createPluginRegistry(): MutablePluginRegistry {
     adminPages: new Map(),
     blocks: new Map(),
     fieldTypes: new Map(),
+    lookupAdapters: new Map(),
   };
 }
 
