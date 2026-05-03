@@ -341,8 +341,14 @@ export async function handleSignout(ctx: AppContext): Promise<Response> {
     secure: isSecureRequest(ctx.request),
     sameSite: "Lax",
   });
+  // If the configured authenticator runs an external session (CF
+  // Access, SAML), surface the IdP logout URL so the admin client can
+  // navigate there after clearing the local cookie. Without this, the
+  // next request would carry the same IdP credential and silently
+  // re-auth the user.
+  const redirectTo = ctx.authenticator.signOutUrl?.(ctx.request) ?? null;
   return jsonResponse(
-    { ok: true },
+    { ok: true, redirectTo },
     { status: 200, headers: { "set-cookie": cookie } },
   );
 }

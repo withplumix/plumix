@@ -5,7 +5,7 @@ import { allowedDomains } from "../db/schema/allowed_domains.js";
 import { users } from "../db/schema/users.js";
 import { provisionUser } from "./bootstrap.js";
 
-type ExternalIdentityErrorCode =
+export type ExternalIdentityErrorCode =
   | "email_unverified"
   | "account_disabled"
   | "domain_not_allowed"
@@ -21,7 +21,7 @@ export class ExternalIdentityError extends Error {
   }
 }
 
-interface ExternalIdentityInput {
+export interface ExternalIdentityInput {
   /** Lowercased + normalised in advance by the caller. */
   readonly email: string;
   /**
@@ -58,7 +58,7 @@ interface ExternalIdentityInput {
   readonly bootstrapAllowed?: boolean;
 }
 
-interface ResolvedExternalUser {
+export interface ResolvedExternalUser {
   readonly user: User;
   /** True when this call provisioned a new user row. */
   readonly created: boolean;

@@ -26,6 +26,19 @@ import { validateSession } from "./sessions.js";
  */
 export interface RequestAuthenticator {
   authenticate(request: Request, db: Db): Promise<User | null>;
+  /**
+   * Optional. Where the user should land after signing out — surfaced
+   * to the admin client by `/_plumix/auth/signout` as `redirectTo`.
+   * Returning null (or omitting the method) keeps the default
+   * behaviour: clear the local session cookie and let the admin
+   * navigate to the login screen.
+   *
+   * Required for IdPs that maintain their own session (Cloudflare
+   * Access, SAML SP-initiated flows) — without redirecting to the
+   * IdP's logout endpoint, the next request still carries the IdP
+   * cookie/JWT and the user is silently re-signed-in.
+   */
+  signOutUrl?(request: Request): string | null;
 }
 
 /**
