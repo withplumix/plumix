@@ -4,6 +4,7 @@ import { eq } from "../../db/index.js";
 import { allowedDomains } from "../../db/schema/allowed_domains.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { users } from "../../db/schema/users.js";
+import { extractDomain } from "../identity.js";
 import { generateToken, hashToken } from "../tokens.js";
 
 // 15-minute default — the Copenhagen Book / emdash convention for
@@ -155,12 +156,6 @@ async function issueAndSend(
     // the failure (otherwise broken mail config would be silent).
     input.logger?.warn("magic_link_mailer_failed", { error });
   }
-}
-
-function extractDomain(email: string): string | null {
-  const at = email.lastIndexOf("@");
-  if (at < 0 || at === email.length - 1) return null;
-  return email.slice(at + 1).toLowerCase();
 }
 
 function composeText(

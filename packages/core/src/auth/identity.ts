@@ -176,8 +176,18 @@ async function roleFromAllowedDomain(db: Db, email: string): Promise<UserRole> {
   return allowed.defaultRole;
 }
 
-function extractDomain(email: string): string | null {
+/**
+ * Extract the (lowercased) domain part of an email. Returns null when
+ * the value isn't shaped like `local@domain` — empty local part,
+ * empty domain part, or no `@` at all.
+ *
+ * Defensive: callers higher up usually validate via valibot's
+ * `v.email()` before calling, but this is the boundary helper for
+ * `allowed_domains` lookups across every external auth flow, so
+ * tolerate malformed input rather than throw.
+ */
+export function extractDomain(email: string): string | null {
   const at = email.lastIndexOf("@");
-  if (at < 0 || at === email.length - 1) return null;
+  if (at <= 0 || at === email.length - 1) return null;
   return email.slice(at + 1).toLowerCase();
 }

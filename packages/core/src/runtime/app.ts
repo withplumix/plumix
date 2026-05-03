@@ -47,8 +47,6 @@ export interface PlumixApp {
    * request to map request → user.
    */
   readonly authenticator: RequestAuthenticator;
-  /** True when the operator overrode the default session authenticator. */
-  readonly externalAuthenticator: boolean;
   /**
    * Resolved boolean form of `auth.bootstrapVia`. True when external
    * sign-in flows (magic-link, OAuth, custom guard) may mint the very
@@ -122,7 +120,6 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
         label: provider.label,
       }))
     : [];
-  const externalAuthenticator = config.auth.authenticator !== undefined;
   const authenticator = config.auth.authenticator ?? sessionAuthenticator();
   const bootstrapAllowed = config.auth.bootstrapVia === "first-method-wins";
   return {
@@ -134,7 +131,6 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     passkey,
     sessionPolicy: config.auth.sessions ?? DEFAULT_SESSION_POLICY,
     authenticator,
-    externalAuthenticator,
     bootstrapAllowed,
     oauthProviders,
     schema,

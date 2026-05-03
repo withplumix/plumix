@@ -46,9 +46,12 @@ export interface PlumixAuthInput {
    *
    * Override for transparent SSO — e.g. `cfAccess({ teamDomain })` from
    * `@plumix/runtime-cloudflare`, where the edge sets a JWT header on
-   * every request. When overridden, the built-in login routes
-   * (passkey / oauth / magic-link) return 404: edge-handled SSO means
-   * plumix doesn't show a login page.
+   * every request. The built-in login routes (passkey / oauth /
+   * magic-link) remain mounted regardless: operators that want them
+   * disabled when an external authenticator owns the session should
+   * firewall `/_plumix/auth/*` at the edge (e.g. a Cloudflare Access
+   * policy on those paths). Leaving them live by default supports
+   * deploys that mix transparent SSO with passkey-as-backup.
    */
   readonly authenticator?: RequestAuthenticator;
   /**

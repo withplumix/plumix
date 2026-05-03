@@ -45,18 +45,6 @@ describe("RequestAuthenticator — dispatcher integration", () => {
     );
     expect(user?.id).toBe(seeded.id);
   });
-
-  test("externalAuthenticator flag is true when overridden", async () => {
-    const h = await createDispatcherHarness({
-      authenticator: customHeaderAuth(),
-    });
-    expect(h.app.externalAuthenticator).toBe(true);
-  });
-
-  test("externalAuthenticator flag is false on default", async () => {
-    const h = await createDispatcherHarness();
-    expect(h.app.externalAuthenticator).toBe(false);
-  });
 });
 
 // Test fixture — a minimal authenticator that resolves a user by an

@@ -37,8 +37,14 @@ export interface RequestAuthenticator {
    * Access, SAML SP-initiated flows) — without redirecting to the
    * IdP's logout endpoint, the next request still carries the IdP
    * cookie/JWT and the user is silently re-signed-in.
+   *
+   * The returned URL must be either an absolute `https://` URL or a
+   * same-origin path beginning with `/`. Invalid or unsafe values are
+   * silently dropped at the dispatcher boundary so a malicious
+   * authenticator can't inject `javascript:` or protocol-relative
+   * redirect targets into the admin client.
    */
-  signOutUrl?(request: Request): string | null;
+  signOutUrl?(): string | null;
 }
 
 /**

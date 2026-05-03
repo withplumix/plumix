@@ -346,11 +346,25 @@ export async function handleSignout(ctx: AppContext): Promise<Response> {
   // navigate there after clearing the local cookie. Without this, the
   // next request would carry the same IdP credential and silently
   // re-auth the user.
-  const redirectTo = ctx.authenticator.signOutUrl?.(ctx.request) ?? null;
+  const redirectTo = sanitiseSignOutUrl(ctx.authenticator.signOutUrl?.());
   return jsonResponse(
     { ok: true, redirectTo },
     { status: 200, headers: { "set-cookie": cookie } },
   );
+}
+
+// Defense-in-depth: the authenticator interface is operator-trusted
+// (set at config time, never request-injected), but we still validate
+// the URL shape before shipping it to the admin client. A buggy or
+// malicious authenticator returning `javascript:`, a protocol-relative
+// URL, or a string with embedded CR/LF would otherwise become a
+// trusted navigation target.
+function sanitiseSignOutUrl(value: string | null | undefined): string | null {
+  if (typeof value !== "string" || value.length === 0) return null;
+  if (/[\r\n]/.test(value)) return null;
+  const sameOriginPath = value.startsWith("/") && !value.startsWith("//");
+  const httpsAbsolute = value.startsWith("https://");
+  return sameOriginPath || httpsAbsolute ? value : null;
 }
 
 // Invite acceptance — two routes paired with the passkey register flow.

@@ -483,6 +483,45 @@ describe("passkey signout", () => {
     const setCookie = response.headers.get("set-cookie");
     expect(setCookie).toContain("Max-Age=0");
   });
+
+  test.each([
+    ["javascript scheme", "javascript:alert(1)"],
+    ["data scheme", "data:text/html,<script>"],
+    ["protocol-relative", "//attacker.example/logout"],
+    ["plain http", "http://insecure.example/logout"],
+    ["relative path", "logout"],
+    ["CR injection", "https://idp.example/logout\r\nset-cookie: x=y"],
+    ["empty string", ""],
+  ])(
+    "drops unsafe signOutUrl values (%s) and surfaces null instead",
+    async (_name, badUrl) => {
+      const h = await createDispatcherHarness({
+        authenticator: {
+          authenticate: () => Promise.resolve(null),
+          signOutUrl: () => badUrl,
+        },
+      });
+      const response = await h.dispatch(
+        plumixRequest("/_plumix/auth/signout", { method: "POST" }),
+      );
+      const body = (await response.json()) as { redirectTo: string | null };
+      expect(body.redirectTo).toBeNull();
+    },
+  );
+
+  test("accepts a same-origin path as signOutUrl", async () => {
+    const h = await createDispatcherHarness({
+      authenticator: {
+        authenticate: () => Promise.resolve(null),
+        signOutUrl: () => "/_plumix/admin/login",
+      },
+    });
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/auth/signout", { method: "POST" }),
+    );
+    const body = (await response.json()) as { redirectTo: string | null };
+    expect(body.redirectTo).toBe("/_plumix/admin/login");
+  });
 });
 
 // Full end-to-end happy path exercising every /_plumix/auth/* POST: bootstrap

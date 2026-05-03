@@ -50,7 +50,7 @@ describe("cfAccess — signOutUrl", () => {
       audience: AUDIENCE,
       defaultRole: "editor",
     });
-    expect(guard.signOutUrl?.(new Request("https://cms.example/"))).toBe(
+    expect(guard.signOutUrl?.()).toBe(
       `https://${TEAM_DOMAIN}/cdn-cgi/access/logout`,
     );
   });
