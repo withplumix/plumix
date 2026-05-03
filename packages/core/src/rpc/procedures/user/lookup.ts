@@ -1,24 +1,10 @@
 import type { SQL } from "drizzle-orm";
 
 import type { UserRole } from "../../../db/schema/users.js";
+import type { UserFieldScope } from "../../../plugin/fields/user.js";
 import type { LookupAdapter, LookupResult } from "../../../plugin/lookup.js";
 import { and, eq, inArray, isNull, like, or, sql } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
-
-// Pluggable scope config for the `user` reference field. Carried on
-// the field's `referenceTarget.scope` and passed verbatim into each
-// adapter call. Keeping this as a public type lets future variants
-// (`userList`) reuse the same shape unchanged.
-export interface UserLookupScope {
-  /** Restrict matches to these roles. Empty/absent → any role. */
-  readonly roles?: readonly UserRole[];
-  /**
-   * Whether to surface disabled accounts. Default `false` — disabled
-   * users are usually invalid reference targets even though the row
-   * still exists.
-   */
-  readonly includeDisabled?: boolean;
-}
 
 const DEFAULT_LIST_LIMIT = 20;
 const MAX_LIST_LIMIT = 100;
@@ -30,7 +16,7 @@ const USER_ROW_COLUMNS = {
   role: users.role,
 } as const;
 
-export const userLookupAdapter: LookupAdapter<UserLookupScope> = {
+export const userLookupAdapter: LookupAdapter<UserFieldScope> = {
   async exists(ctx, id, scope) {
     const numericId = parseUserId(id);
     if (numericId === null) return false;
@@ -81,11 +67,11 @@ function parseUserId(id: string): number | null {
   return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
-function buildUserWhere(numericId: number, scope: UserLookupScope | undefined) {
+function buildUserWhere(numericId: number, scope: UserFieldScope | undefined) {
   return and(eq(users.id, numericId), ...scopeConditions(scope));
 }
 
-function scopeConditions(scope: UserLookupScope | undefined): SQL[] {
+function scopeConditions(scope: UserFieldScope | undefined): SQL[] {
   const conditions: SQL[] = [];
   if (scope?.roles && scope.roles.length > 0) {
     conditions.push(inArray(users.role, scope.roles as UserRole[]));

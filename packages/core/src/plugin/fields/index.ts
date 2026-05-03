@@ -43,3 +43,5 @@ export { radio } from "./radio.js";
 export type { RadioFieldOptions } from "./radio.js";
 export { checkbox } from "./checkbox.js";
 export type { CheckboxFieldOptions } from "./checkbox.js";
+export { user } from "./user.js";
+export type { UserFieldOptions, UserFieldScope } from "./user.js";

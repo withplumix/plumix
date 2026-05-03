@@ -5,7 +5,6 @@ import type {
 import type { AppContext } from "../context/app.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { RouteIntent } from "../route/intent.js";
-
 import type { RegisteredLookupAdapter } from "./lookup.js";
 
 export interface EntryTypeOptions {
@@ -323,6 +322,33 @@ export interface JsonMetaBoxField extends MetaBoxFieldBase {
   readonly type: "json";
 }
 
+/**
+ * Reference target descriptor carried on every reference field
+ * variant (`user`, `entry`, `term`, `media`, plugin-registered
+ * custom kinds). The `kind` matches a registered `LookupAdapter`;
+ * the adapter interprets `scope` according to its own contract.
+ *
+ * Reading the manifest, the admin dispatches to a generic picker
+ * that calls the lookup RPC with `{ kind, scope }` — picker UI is
+ * one component, target-specific knowledge lives in the adapter.
+ */
+export interface ReferenceTarget<TScope = unknown> {
+  readonly kind: string;
+  readonly scope?: TScope;
+}
+
+/**
+ * Single user reference. Storage is the bare user id as a string
+ * (`"42"` → `users.id = 42`); reads return `null` when the user is
+ * gone or no longer matches scope. The `referenceTarget.scope`
+ * accepts the user adapter's scope shape (roles + disabled-state).
+ */
+export interface UserMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "user";
+  readonly type: "string";
+  readonly referenceTarget: ReferenceTarget;
+}
+
 /** Single-value dropdown picker; `options` is required. */
 export interface SelectMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "select";
@@ -388,6 +414,7 @@ export type MetaBoxField =
   | RangeMetaBoxField
   | MultiselectMetaBoxField
   | JsonMetaBoxField
+  | UserMetaBoxField
   | SelectMetaBoxField
   | RadioMetaBoxField
   | CheckboxMetaBoxField
@@ -446,6 +473,7 @@ export type EntryMetaBoxField =
   | Omit<RangeMetaBoxField, "span">
   | Omit<MultiselectMetaBoxField, "span">
   | Omit<JsonMetaBoxField, "span">
+  | Omit<UserMetaBoxField, "span">
   | Omit<SelectMetaBoxField, "span">
   | Omit<RadioMetaBoxField, "span">
   | Omit<CheckboxMetaBoxField, "span">
@@ -958,6 +986,13 @@ export interface MetaBoxFieldManifestEntry {
   readonly options?: readonly MetaBoxFieldOption[];
   readonly default?: unknown;
   readonly span?: MetaBoxFieldSpan;
+  /**
+   * Carried for reference field variants (`user`, `entry`, `term`,
+   * `media`, plugin-registered kinds). The admin's generic picker
+   * dispatches on `referenceTarget.kind` to call the matching
+   * lookup RPC; `scope` rides along untouched.
+   */
+  readonly referenceTarget?: ReferenceTarget;
 }
 
 /**
@@ -1851,6 +1886,7 @@ interface MetaBoxFieldOptionView {
   readonly max?: number | string;
   readonly step?: number;
   readonly options?: readonly MetaBoxFieldOption[];
+  readonly referenceTarget?: ReferenceTarget;
 }
 
 function toEntryMetaBoxFieldEntry(
@@ -1871,6 +1907,7 @@ function toEntryMetaBoxFieldEntry(
     step: view.step,
     options: view.options,
     default: field.default,
+    referenceTarget: view.referenceTarget,
   };
 }
 
