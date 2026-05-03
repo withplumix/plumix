@@ -1,10 +1,10 @@
 import type { Db } from "../../context/app.js";
-import type { User, UserRole } from "../../db/schema/users.js";
+import type { User } from "../../db/schema/users.js";
 import type { OAuthProfile } from "./types.js";
 import { and, eq, isUniqueConstraintError } from "../../db/index.js";
-import { allowedDomains } from "../../db/schema/allowed_domains.js";
 import { oauthAccounts } from "../../db/schema/oauth_accounts.js";
 import { users } from "../../db/schema/users.js";
+import { ExternalIdentityError, resolveExternalIdentity } from "../identity.js";
 import { OAuthError } from "./errors.js";
 
 interface ResolveOAuthUserInput {
@@ -22,36 +22,20 @@ interface ResolvedOAuthUser {
 
 /**
  * Decide who an OAuth callback maps to:
- *   1. If `oauth_accounts(provider, providerAccountId)` already points to a
- *      user, that's the answer (modulo disabled check). Pure sign-in.
- *   2. Else if a user exists with the same email AND the provider verified
- *      that email, link the OAuth account into the existing user row.
- *      Refusing the unverified case prevents takeover via a third-party
- *      account that controls the email string but not the inbox.
- *   3. Else look up `allowed_domains` for the email's domain. If enabled,
- *      provision a new user with the domain's `defaultRole`. Otherwise
- *      reject — bootstrap remains passkey-only, so we never create an
- *      admin via OAuth here even on a fresh deploy.
  *
- * Concurrent callbacks for the same email or the same `(provider,
- * providerAccountId)` race on the underlying UNIQUE constraints. We retry
- * the whole resolution exactly once on a unique-violation: by then the
- * winner's row is durable, and the second attempt falls into branch 1 or
- * 2 deterministically.
+ *   1. If `oauth_accounts(provider, providerAccountId)` already points
+ *      at a user, that's the answer (modulo disabled / dangling-link).
+ *   2. Else delegate to `resolveExternalIdentity` for the lookup-or-
+ *      provision dance shared with magic-link signup. On success, write
+ *      the `oauth_accounts` link row.
+ *
+ * OAuth-specific concerns (link table, dangling-link detection) stay
+ * here. The generic identity-resolution logic (verified-email gate,
+ * disabled-account gate, allowed-domains gate, bootstrap rail, race-on-
+ * insert retry) lives in `auth/identity.ts` and is shared with every
+ * external flow.
  */
 export async function resolveOAuthUser(
-  db: Db,
-  input: ResolveOAuthUserInput,
-): Promise<ResolvedOAuthUser> {
-  try {
-    return await resolveOnce(db, input);
-  } catch (error) {
-    if (!isUniqueConstraintError(error)) throw error;
-    return resolveOnce(db, input);
-  }
-}
-
-async function resolveOnce(
   db: Db,
   input: ResolveOAuthUserInput,
 ): Promise<ResolvedOAuthUser> {
@@ -76,70 +60,45 @@ async function resolveOnce(
     return { user: linked, created: false, linked: false };
   }
 
-  const existingByEmail = await db.query.users.findFirst({
-    where: eq(users.email, profile.email),
-  });
-  if (existingByEmail) {
-    if (!profile.emailVerified) {
-      // Provider didn't assert verification of this email. Auto-linking
-      // here would let an attacker who registers $victim@gmail.com on a
-      // throwaway provider take over the local account.
-      throw new OAuthError("email_unverified");
+  let resolved;
+  try {
+    resolved = await resolveExternalIdentity(db, {
+      email: profile.email,
+      emailVerified: profile.emailVerified,
+      name: profile.name,
+      avatarUrl: profile.avatarUrl,
+      // Defaults: allowed_domains gates signup, bootstrap stays
+      // passkey-only. The `oauth_accounts` link row is OAuth-specific
+      // and written below regardless of whether the user existed or
+      // was just provisioned.
+    });
+  } catch (error) {
+    if (error instanceof ExternalIdentityError) {
+      throw new OAuthError(error.code);
     }
-    if (existingByEmail.disabledAt) throw new OAuthError("account_disabled");
+    throw error;
+  }
+
+  // Write the OAuth link row. Race retry is its own concern: a
+  // concurrent OAuth callback for the same `(provider, providerAccountId)`
+  // could fire between our `existingLink` check and this insert.
+  try {
     await db.insert(oauthAccounts).values({
       provider,
       providerAccountId: profile.providerAccountId,
-      userId: existingByEmail.id,
+      userId: resolved.user.id,
     });
-    return { user: existingByEmail, created: false, linked: true };
+  } catch (error) {
+    if (!isUniqueConstraintError(error)) throw error;
+    // Another callback won the race; the link already exists pointing
+    // at the same userId (provider + providerAccountId is the PK and
+    // resolveExternalIdentity returned the same email-keyed user).
+    // Fall through — sign-in succeeds.
   }
 
-  if (!profile.emailVerified) {
-    throw new OAuthError("email_unverified");
-  }
-
-  const domain = extractDomain(profile.email);
-  if (!domain) throw new OAuthError("domain_not_allowed");
-
-  const allowed = await db.query.allowedDomains.findFirst({
-    where: eq(allowedDomains.domain, domain),
-  });
-  if (!allowed?.isEnabled) {
-    throw new OAuthError("domain_not_allowed");
-  }
-
-  // Bootstrap path is passkey-only. Refuse OAuth signup when the system
-  // has no users — otherwise a misconfigured `allowed_domains` row would
-  // mint an admin via a third-party provider. This is a soft rail; the
-  // route layer also pre-checks user count to render a friendlier flow.
-  const userCount = await db.$count(users);
-  if (userCount === 0) throw new OAuthError("registration_closed");
-
-  const role: UserRole = allowed.defaultRole;
-  const [user] = await db
-    .insert(users)
-    .values({
-      email: profile.email,
-      name: profile.name,
-      avatarUrl: profile.avatarUrl,
-      role,
-      emailVerifiedAt: new Date(),
-    })
-    .returning();
-  if (!user) throw new Error("resolveOAuthUser: insert returned no row");
-
-  await db.insert(oauthAccounts).values({
-    provider,
-    providerAccountId: profile.providerAccountId,
-    userId: user.id,
-  });
-
-  return { user, created: true, linked: false };
-}
-
-function extractDomain(email: string): string | null {
-  const at = email.lastIndexOf("@");
-  if (at < 0 || at === email.length - 1) return null;
-  return email.slice(at + 1).toLowerCase();
+  return {
+    user: resolved.user,
+    created: resolved.created,
+    linked: !resolved.created,
+  };
 }
