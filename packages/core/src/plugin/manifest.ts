@@ -508,9 +508,13 @@ export interface RegisteredRawRoute {
  */
 export interface LoginLinkOptions {
   /**
-   * Stable key, scoped per-plugin. Surfaces as the React key on the
-   * login screen and as a UTM-friendly identifier in logs. Lowercase
-   * alphanum + dash, 1–32 chars — same shape as `OAUTH_PROVIDER_KEY_PATTERN`.
+   * Stable key, scoped per-plugin. The wire id surfaced to the admin
+   * (and used as its React key) is `${pluginId}:${key}`, so the bare
+   * `key` you pass only needs to be unique within your own plugin —
+   * two different plugins can both register a `key: "default"`.
+   *
+   * Lowercase alphanum + dash/underscore, must start with a letter,
+   * 1–32 chars total. Same shape as `OAUTH_PROVIDER_KEY_PATTERN`.
    */
   readonly key: string;
   /**

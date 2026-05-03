@@ -611,9 +611,12 @@ function assertValidFieldTypeName(pluginId: string, type: string): void {
   }
 }
 
-// Lowercase alphanum + dash, 1–32 chars. Mirrors `OAUTH_PROVIDER_KEY_PATTERN`
-// so keys read consistently across login-button surfaces.
-const LOGIN_LINK_KEY_RE = /^[a-z0-9][a-z0-9_-]{0,31}$/;
+// Lowercase alphanum + dash/underscore, 1–32 chars, must start with a
+// letter. Matches `OAUTH_PROVIDER_KEY_PATTERN` exactly so keys read
+// consistently across login-button surfaces. Leading-letter constraint
+// keeps the wire id `${pluginId}:${key}` from looking like an opaque
+// numeric identifier in logs.
+const LOGIN_LINK_KEY_RE = /^[a-z][a-z0-9_-]{0,31}$/;
 
 function assertValidLoginLink(
   pluginId: string,

@@ -801,6 +801,7 @@ describe("registerLoginLink", () => {
     ["empty key", ""],
     ["over 32 chars", "x".repeat(33)],
     ["dot in key", "default.alt"],
+    ["digit start", "1auth"],
   ])("rejects invalid key: %s", async (_name, key) => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("acme", (ctx) => {
