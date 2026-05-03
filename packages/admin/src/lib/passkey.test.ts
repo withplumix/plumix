@@ -229,15 +229,48 @@ describe("signInWithPasskey", () => {
 
 describe("signOut", () => {
   test("POSTs to /_plumix/auth/signout with the CSRF header", async () => {
-    fetchMock.mockResolvedValue(new Response(null, { status: 200 }));
-    await signOut();
+    fetchMock.mockResolvedValue(jsonResponse({ ok: true, redirectTo: null }));
+    const result = await signOut();
     const call = callAt(fetchMock, 0);
     expect(call[0]).toBe("/_plumix/auth/signout");
     expect(call[1]?.method).toBe("POST");
     expect(
       (call[1]?.headers as Record<string, string>)["x-plumix-request"],
     ).toBe("1");
+    expect(result.redirectTo).toBeNull();
   });
+
+  test("surfaces a server-supplied redirectTo for external IdP signout", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        ok: true,
+        redirectTo:
+          "https://yourteam.cloudflareaccess.com/cdn-cgi/access/logout",
+      }),
+    );
+    const result = await signOut();
+    expect(result.redirectTo).toBe(
+      "https://yourteam.cloudflareaccess.com/cdn-cgi/access/logout",
+    );
+  });
+
+  test.each([
+    ["javascript scheme", "javascript:alert(1)"],
+    ["data scheme", "data:text/html,<script>"],
+    ["protocol-relative", "//attacker.example/logout"],
+    ["plain http", "http://insecure.example/logout"],
+    ["relative path", "logout"],
+    ["CR injection", "https://idp.example/logout\r\nset-cookie: x=y"],
+  ])(
+    "drops unsafe redirectTo (%s) — defense in depth on top of server sanitisation",
+    async (_name, badUrl) => {
+      fetchMock.mockResolvedValue(
+        jsonResponse({ ok: true, redirectTo: badUrl }),
+      );
+      const result = await signOut();
+      expect(result.redirectTo).toBeNull();
+    },
+  );
 });
 
 describe("acceptInviteWithPasskey", () => {
