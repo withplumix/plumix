@@ -10,6 +10,8 @@ import {
   date,
   datetime,
   email,
+  json,
+  multiselect,
   number,
   password,
   radio,
@@ -274,6 +276,83 @@ describe("color() builder", () => {
   });
 });
 
+describe("multiselect() builder", () => {
+  test("pins inputType + json type and carries options", () => {
+    const field = multiselect({
+      key: "tags",
+      label: "Tags",
+      options: [
+        { value: "news", label: "News" },
+        { value: "sport", label: "Sport" },
+      ],
+    });
+    expect(field.inputType).toBe("multiselect");
+    expect(field.type).toBe("json");
+    expect(field.options).toHaveLength(2);
+    expect(field.sanitize).toBeTypeOf("function");
+  });
+
+  test("default sanitizer accepts subset of declared options and de-dupes", () => {
+    const field = multiselect({
+      key: "t",
+      label: "t",
+      options: [
+        { value: "a", label: "A" },
+        { value: "b", label: "B" },
+        { value: "c", label: "C" },
+      ],
+    });
+    expect(field.sanitize?.([])).toEqual([]);
+    expect(field.sanitize?.(["a", "c"])).toEqual(["a", "c"]);
+    expect(field.sanitize?.(["a", "a", "b"])).toEqual(["a", "b"]);
+  });
+
+  test("default sanitizer rejects values outside the option list", () => {
+    const field = multiselect({
+      key: "t",
+      label: "t",
+      options: [{ value: "a", label: "A" }],
+    });
+    expect(() => field.sanitize?.(["a", "z"])).toThrow();
+    expect(() => field.sanitize?.([1])).toThrow();
+    expect(() => field.sanitize?.("a")).toThrow();
+    expect(() => field.sanitize?.(null)).toThrow();
+  });
+
+  test("rejects non-applicable options at the type level", () => {
+    multiselect({
+      key: "t",
+      label: "t",
+      options: [{ value: "a", label: "A" }],
+      // @ts-expect-error — `placeholder` doesn't apply to multiselect.
+      placeholder: "pick",
+    });
+  });
+});
+
+describe("json() builder", () => {
+  test("pins inputType + json type", () => {
+    const field = json({ key: "config", label: "Config" });
+    expect(field.inputType).toBe("json");
+    expect(field.type).toBe("json");
+  });
+
+  test("forwards a custom sanitize", () => {
+    const sanitize = (v: unknown): unknown => v;
+    const field = json({ key: "x", label: "x", sanitize });
+    expect(field.sanitize).toBe(sanitize);
+  });
+
+  test("rejects non-json options at the type level", () => {
+    json({
+      key: "x",
+      label: "x",
+      // @ts-expect-error — `options` doesn't apply to json.
+      options: [{ value: "a", label: "A" }],
+    });
+  });
+});
+
 describe("range() builder", () => {
   test("pins inputType + type and carries bounds", () => {
     const field = range({
@@ -293,9 +372,9 @@ describe("range() builder", () => {
   });
 
   test("rejects min > max at registration time", () => {
-    expect(() =>
-      range({ key: "r", label: "r", min: 10, max: 5 }),
-    ).toThrowError(/min .* must be <= max/);
+    expect(() => range({ key: "r", label: "r", min: 10, max: 5 })).toThrowError(
+      /min .* must be <= max/,
+    );
   });
 
   test("default sanitizer enforces bounds and rejects NaN", () => {

@@ -212,6 +212,58 @@ describe("MetaBoxField dispatcher", () => {
     expect(onChange).toHaveBeenLastCalledWith(null);
   });
 
+  test("multiselect: clicking a toggle item emits the updated array", async () => {
+    const onChange = vi.fn();
+    render(
+      <Harness
+        fieldDef={field({
+          inputType: "multiselect",
+          options: [
+            { value: "news", label: "News" },
+            { value: "sport", label: "Sport" },
+            { value: "music", label: "Music" },
+          ],
+        })}
+        initial={["news"]}
+        onChangeSpy={onChange}
+      />,
+    );
+    const sport = screen.getByTestId("meta-box-field-k-input-sport");
+    await userEvent.click(sport);
+    expect(onChange).toHaveBeenCalledWith(["news", "sport"]);
+  });
+
+  test("json: parses textarea on change, surfaces parse errors inline", async () => {
+    const onChange = vi.fn();
+    render(
+      <Harness
+        fieldDef={field({ inputType: "json", type: "json" })}
+        initial={{ a: 1 }}
+        onChangeSpy={onChange}
+      />,
+    );
+    const textarea = screen.getByTestId("meta-box-field-k-input");
+    expect(textarea.tagName).toBe("TEXTAREA");
+    expect(textarea).toHaveValue('{\n  "a": 1\n}');
+
+    // Replace with invalid JSON — error surfaces, form value untouched.
+    // userEvent.type treats `{` as a kbd shortcut delimiter; paste
+    // ensures the literal characters land in the textarea.
+    await userEvent.clear(textarea);
+    textarea.focus();
+    await userEvent.paste("{not-json");
+    expect(
+      screen.getByTestId("meta-box-field-k-input-error"),
+    ).toBeInTheDocument();
+
+    // Replace with valid JSON — error clears, value propagates.
+    await userEvent.clear(textarea);
+    // userEvent.type interprets `{` and `[` as kbd shortcuts; pass
+    // them through paste to type literal characters.
+    await userEvent.paste('{"b":2}');
+    expect(onChange).toHaveBeenLastCalledWith({ b: 2 });
+  });
+
   test("color: swatch + hex input share the same value via react-colorful", async () => {
     const onChange = vi.fn();
     render(
