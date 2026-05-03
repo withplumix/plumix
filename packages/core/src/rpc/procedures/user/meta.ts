@@ -6,9 +6,11 @@ import { findUserMetaField } from "../../../plugin/manifest.js";
 import {
   applyMetaPatch,
   decodeMetaBag as decodeMetaBagCore,
+  filterMetaOrphans as filterMetaOrphansCore,
   isEmptyMetaPatch,
   loadMeta,
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
+  validateMetaReferencesForRpc,
 } from "../../meta/core.js";
 
 export type { MetaChanges as UserMetaChanges } from "../../meta/core.js";
@@ -27,6 +29,19 @@ export function sanitizeMetaForRpc(
   );
 }
 
+export async function validateUserMetaReferences(
+  ctx: AppContext,
+  patch: MetaPatch,
+  errors: Parameters<typeof sanitizeMetaForRpcCore>[2],
+): Promise<void> {
+  await validateMetaReferencesForRpc(
+    ctx,
+    (key) => findUserMetaField(ctx.plugins, key),
+    patch,
+    errors,
+  );
+}
+
 export function decodeMetaBag(
   registry: PluginRegistry,
   raw: Readonly<Record<string, unknown>> | null | undefined,
@@ -38,8 +53,13 @@ export async function loadUserMeta(
   ctx: AppContext,
   user: { readonly id: number },
 ): Promise<Record<string, unknown>> {
-  return loadMeta(ctx, users, users.id, user.id, (key) =>
+  const decoded = await loadMeta(ctx, users, users.id, user.id, (key) =>
     findUserMetaField(ctx.plugins, key),
+  );
+  return filterMetaOrphansCore(
+    ctx,
+    (key) => findUserMetaField(ctx.plugins, key),
+    decoded,
   );
 }
 

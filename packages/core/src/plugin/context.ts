@@ -13,6 +13,7 @@ import type {
   HookOptions,
 } from "../hooks/types.js";
 import type { RouteIntent } from "../route/intent.js";
+import type { LookupAdapterOptions } from "./lookup.js";
 import type {
   AdminPageOptions,
   BlockOptions,
@@ -181,6 +182,15 @@ export interface PluginSetupContextBase {
   registerAdminPage(options: AdminPageOptions): void;
   registerBlock(options: BlockOptions): void;
   registerFieldType(options: FieldTypeOptions): void;
+  /**
+   * Register a `LookupAdapter` for a reference target kind. The
+   * `kind` matches the `referenceTarget.kind` carried on a reference
+   * field's manifest entry; core ships adapters for `entry` /
+   * `term` / `user`, and plugins can add more (`media` from
+   * `@plumix/plugin-media`, future `comment` from a comments plugin,
+   * etc.). Duplicate kinds throw.
+   */
+  registerLookupAdapter(options: LookupAdapterOptions): void;
 
   /**
    * Surface a button on the standard login screen pointing at this
@@ -517,6 +527,19 @@ export function createPluginSetupContext({
       });
     },
 
+    registerLookupAdapter: (options) => {
+      assertValidLookupAdapterKind(pluginId, options.kind);
+      if (registry.lookupAdapters.has(options.kind)) {
+        throw new DuplicateRegistrationError("lookup adapter", options.kind);
+      }
+      registry.lookupAdapters.set(options.kind, {
+        kind: options.kind,
+        adapter: options.adapter,
+        capability: options.capability ?? null,
+        registeredBy: pluginId,
+      });
+    },
+
     registerLoginLink: (options) => {
       assertValidLoginLink(pluginId, options);
       for (const existing of registry.loginLinks) {
@@ -606,6 +629,16 @@ function assertValidFieldTypeName(pluginId: string, type: string): void {
     throw new Error(
       `Plugin "${pluginId}" registered meta-box field type with invalid ` +
         `name "${type}" — must match ${BLOCK_NAME_RE} and be at most 64 ` +
+        `characters.`,
+    );
+  }
+}
+
+function assertValidLookupAdapterKind(pluginId: string, kind: string): void {
+  if (!BLOCK_NAME_RE.test(kind) || kind.length > 64) {
+    throw new Error(
+      `Plugin "${pluginId}" registered lookup adapter with invalid ` +
+        `kind "${kind}" — must match ${BLOCK_NAME_RE} and be at most 64 ` +
         `characters.`,
     );
   }

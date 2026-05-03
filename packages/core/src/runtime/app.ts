@@ -14,9 +14,13 @@ import { createCapabilityResolver } from "../auth/rbac.js";
 import { DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
 import * as coreSchema from "../db/schema/index.js";
 import { HookRegistry } from "../hooks/registry.js";
-import { CORE_RPC_NAMESPACES } from "../plugin/manifest.js";
+import {
+  CORE_RPC_NAMESPACES,
+  createPluginRegistry,
+} from "../plugin/manifest.js";
 import { installPlugins } from "../plugin/register.js";
 import { compileRouteMap } from "../route/compile.js";
+import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
 import { appRouter } from "../rpc/router.js";
 
 export interface OAuthProviderSummary {
@@ -74,7 +78,13 @@ export interface PlumixApp {
 
 export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
   const hooks = new HookRegistry();
-  const { registry } = await installPlugins({ hooks, plugins: config.plugins });
+  const seededRegistry = createPluginRegistry();
+  registerCoreLookupAdapters(seededRegistry);
+  const { registry } = await installPlugins({
+    hooks,
+    plugins: config.plugins,
+    registry: seededRegistry,
+  });
 
   const schema: Record<string, unknown> = { ...coreSchema };
   const origin = new Map<string, string>();

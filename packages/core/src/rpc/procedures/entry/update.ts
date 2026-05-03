@@ -20,6 +20,7 @@ import {
   decodeMetaBag,
   loadEntryMeta,
   sanitizeMetaForRpc,
+  validateEntryMetaReferences,
   writeEntryMeta,
 } from "./meta.js";
 import { entryUpdateInputSchema } from "./schemas.js";
@@ -189,6 +190,14 @@ export const update = base
       metaInput,
       errors,
     );
+    if (metaPatch) {
+      await validateEntryMetaReferences(
+        context,
+        existing.type,
+        metaPatch,
+        errors,
+      );
+    }
     if (termsPatch !== undefined) {
       await assertTermsPatchValid(
         context,

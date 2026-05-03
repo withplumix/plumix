@@ -7,6 +7,7 @@ import {
   decodeMetaBag,
   loadTermMeta,
   sanitizeMetaForRpc,
+  validateTermMetaReferences,
   writeTermMeta,
 } from "./meta.js";
 import { termCreateInputSchema } from "./schemas.js";
@@ -51,6 +52,14 @@ export const create = base
       filtered.meta,
       errors,
     );
+    if (metaPatch) {
+      await validateTermMetaReferences(
+        context,
+        filtered.taxonomy,
+        metaPatch,
+        errors,
+      );
+    }
 
     let created;
     try {

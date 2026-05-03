@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { Form } from "@/components/ui/form.js";
+import { createQueryClient } from "@/providers/query-client.js";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useForm, useWatch } from "react-hook-form";
@@ -43,11 +45,21 @@ function Harness({
   const form = useForm<Record<string, unknown>>({
     defaultValues: { [fieldDef.key]: initial },
   });
+  // Reference fields call `useQuery`; provide a fresh QueryClient
+  // per-test so the surrounding tests stay independent. No fetcher
+  // is wired here — the smoke tests only assert dispatch + initial
+  // state, not query results (those are covered by the lookup RPC
+  // tests in core).
+  const queryClient = createQueryClient();
   return (
-    <Form {...form}>
-      <MetaBoxField field={fieldDef} name={fieldDef.key} />
-      {onChangeSpy ? <Spy name={fieldDef.key} onChange={onChangeSpy} /> : null}
-    </Form>
+    <QueryClientProvider client={queryClient}>
+      <Form {...form}>
+        <MetaBoxField field={fieldDef} name={fieldDef.key} />
+        {onChangeSpy ? (
+          <Spy name={fieldDef.key} onChange={onChangeSpy} />
+        ) : null}
+      </Form>
+    </QueryClientProvider>
   );
 }
 
@@ -210,6 +222,42 @@ describe("MetaBoxField dispatcher", () => {
 
     await userEvent.clear(input);
     expect(onChange).toHaveBeenLastCalledWith(null);
+  });
+
+  test("user reference: empty state shows 'None selected' + 'Select' button", () => {
+    render(
+      <Harness
+        fieldDef={field({
+          inputType: "user",
+          referenceTarget: { kind: "user", scope: { roles: ["admin"] } },
+        })}
+        initial={null}
+      />,
+    );
+    expect(screen.getByTestId("meta-box-field-k-input")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("meta-box-field-k-input-empty"),
+    ).toHaveTextContent("None selected");
+    expect(screen.getByTestId("meta-box-field-k-input-open")).toHaveTextContent(
+      "Select",
+    );
+  });
+
+  test("user reference: required fields hide the Clear button when populated", () => {
+    render(
+      <Harness
+        fieldDef={field({
+          inputType: "user",
+          required: true,
+          referenceTarget: { kind: "user" },
+        })}
+        initial="42"
+      />,
+    );
+    // No clear button while required + populated.
+    expect(
+      screen.queryByTestId("meta-box-field-k-input-clear"),
+    ).not.toBeInTheDocument();
   });
 
   test("multiselect: clicking a toggle item emits the updated array", async () => {

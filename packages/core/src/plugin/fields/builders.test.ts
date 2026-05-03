@@ -20,6 +20,7 @@ import {
   textarea,
   time,
   url,
+  user,
 } from "./index.js";
 
 // One combined suite for the seven straightforward variants whose
@@ -539,5 +540,72 @@ describe("manifest round-trip across all built-in builders", () => {
     expect(fields[1]).toMatchObject({ min: 0, max: 120 });
     expect(fields[4]?.options).toEqual([{ value: "m", label: "M" }]);
     expect(fields[6]).toMatchObject({ default: false });
+  });
+});
+
+describe("user() builder", () => {
+  test("pins inputType + type and emits a user-kind referenceTarget", () => {
+    const field = user({
+      key: "owner",
+      label: "Owner",
+      roles: ["editor", "admin"],
+    });
+    expect(field.inputType).toBe("user");
+    expect(field.type).toBe("string");
+    expect(field.referenceTarget).toEqual({
+      kind: "user",
+      scope: { roles: ["editor", "admin"], includeDisabled: undefined },
+    });
+  });
+
+  test("packages includeDisabled into the scope", () => {
+    const field = user({
+      key: "owner",
+      label: "Owner",
+      includeDisabled: true,
+    });
+    expect(field.referenceTarget.scope).toEqual({
+      roles: undefined,
+      includeDisabled: true,
+    });
+  });
+
+  test("rejects non-applicable options at the type level", () => {
+    user({
+      key: "u",
+      label: "u",
+      // @ts-expect-error — `placeholder` doesn't apply to a reference field.
+      placeholder: "pick",
+    });
+
+    user({
+      key: "u",
+      label: "u",
+      // @ts-expect-error — `options` belongs to select/radio.
+      options: [{ value: "a", label: "A" }],
+    });
+  });
+
+  test("manifest round-trip preserves referenceTarget on the wire shape", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("test", (ctx) => {
+      ctx.registerSettingsGroup("identity", {
+        label: "Site identity",
+        fields: [user({ key: "owner", label: "Owner", roles: ["admin"] })],
+      });
+    });
+
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    const projected = manifest.settingsGroups[0]?.fields[0];
+    expect(projected).toMatchObject({
+      key: "owner",
+      inputType: "user",
+      type: "string",
+      referenceTarget: {
+        kind: "user",
+        scope: { roles: ["admin"] },
+      },
+    });
   });
 });

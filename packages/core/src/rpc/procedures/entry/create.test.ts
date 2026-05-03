@@ -4,6 +4,7 @@ import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { createRpcHarness } from "../../../test/rpc.js";
+import { registerCoreLookupAdapters } from "../lookup-adapters.js";
 
 describe("entry.create", () => {
   test("contributor can create a draft", async () => {
@@ -281,6 +282,43 @@ describe("entry.create", () => {
     ).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "meta_not_registered", key: "mystery" },
+    });
+  });
+
+  test("meta: reference field rejects an upsert pointing at a missing user", async () => {
+    // Smoke test for the validateEntryMetaReferences wiring in
+    // create.ts — confirms the LookupAdapter pipeline runs before the
+    // entity insert and surfaces missing references through the same
+    // `meta_invalid_value` envelope as a sanitize rejection. The
+    // term + user wrappers share the same machinery; covering entry
+    // is enough for regression detection.
+    const plugins = createPluginRegistry();
+    registerCoreLookupAdapters(plugins);
+    plugins.entryMetaBoxes.set("ownership", {
+      id: "ownership",
+      label: "Ownership",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "owner",
+          label: "Owner",
+          type: "string",
+          inputType: "user",
+          referenceTarget: { kind: "user" },
+        },
+      ],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    await expect(
+      h.client.entry.create({
+        title: "missing-ref",
+        slug: "missing-ref",
+        meta: { owner: "999999" },
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "meta_invalid_value", key: "owner" },
     });
   });
 
