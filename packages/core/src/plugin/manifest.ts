@@ -138,12 +138,11 @@ export type MetaBoxFieldSpan =
     };
 
 /**
- * A field inside a meta box — the single source of truth for both the
- * admin UI renderer and the server-side storage contract. Declaring a
- * meta box is the only way to register a meta key; there is no separate
- * `registerMeta` step.
+ * Shared shape for every meta-box field variant — properties carried
+ * regardless of `inputType`. Each narrowed variant of `MetaBoxField`
+ * extends this with input-specific options.
  */
-export interface MetaBoxField {
+export interface MetaBoxFieldBase {
   readonly key: string;
   readonly label: string;
   /**
@@ -153,14 +152,6 @@ export interface MetaBoxField {
    * JSON-serialisable value.
    */
   readonly type: MetaScalarType;
-  /**
-   * Drives the admin sidebar's input renderer. Built-in dispatcher
-   * handles `text` / `textarea` / `number` / `email` / `url` /
-   * `select` / `radio` / `checkbox`. Plugins may use custom values —
-   * the renderer falls back to `<input type="text">` for unknown
-   * types with a dev-mode console warning.
-   */
-  readonly inputType: string;
   /**
    * Applied after type coercion, before persistence. Returning a
    * sanitized value replaces the caller's input — ideal for trimming,
@@ -173,24 +164,232 @@ export interface MetaBoxField {
   readonly description?: string;
   /** Renders `required` on the native input; server validation is separate. */
   readonly required?: boolean;
-  /** Text-shaped inputs (`text` / `textarea` / `email` / `url` / `number`). */
-  readonly placeholder?: string;
-  /** Text-shaped inputs — `text` / `textarea` / `email` / `url`. */
-  readonly maxLength?: number;
-  /** `number` input only. */
-  readonly min?: number;
-  /** `number` input only. */
-  readonly max?: number;
-  /** `number` input only; defaults to 1 (integer) when omitted. */
-  readonly step?: number;
-  /** Required for `select` and `radio`; ignored otherwise. */
-  readonly options?: readonly MetaBoxFieldOption[];
   /**
    * Column span within the meta box's 12-column grid. Defaults to full
    * width. See `MetaBoxFieldSpan` for the responsive object form.
    */
   readonly span?: MetaBoxFieldSpan;
 }
+
+/**
+ * The narrowed `text` field variant produced by the `text()` builder
+ * helper exported from `plumix/fields`. The builder rejects options
+ * that don't apply to a text input (e.g. `min`, `step`, `options`) at
+ * the type level; downstream consumers can rely on the narrowed shape
+ * via the `inputType` discriminator.
+ */
+export interface TextMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "text";
+  readonly type: "string";
+  readonly placeholder?: string;
+  readonly maxLength?: number;
+}
+
+/** Multi-line text input. Storage shape mirrors `text`. */
+export interface TextareaMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "textarea";
+  readonly type: "string";
+  readonly placeholder?: string;
+  readonly maxLength?: number;
+}
+
+/** Numeric input with optional `min` / `max` / `step` bounds. */
+export interface NumberMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "number";
+  readonly type: "number";
+  readonly placeholder?: string;
+  readonly min?: number;
+  readonly max?: number;
+  readonly step?: number;
+}
+
+/** RFC-5322-shaped email input. */
+export interface EmailMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "email";
+  readonly type: "string";
+  readonly placeholder?: string;
+  readonly maxLength?: number;
+}
+
+/** URL input. */
+export interface UrlMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "url";
+  readonly type: "string";
+  readonly placeholder?: string;
+  readonly maxLength?: number;
+}
+
+/**
+ * Masked-input password field. Visually hides characters in the admin
+ * so values aren't shoulder-surfable in shared sessions; storage
+ * shape mirrors `text`.
+ */
+export interface PasswordMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "password";
+  readonly type: "string";
+  readonly placeholder?: string;
+  readonly maxLength?: number;
+}
+
+/**
+ * Date-only field. Stored as `YYYY-MM-DD` (ISO 8601 calendar date,
+ * no time, no timezone). Optional `min` / `max` bounds use the same
+ * format and are enforced as registration-time validation only —
+ * server-side bound enforcement is deferred to a later release.
+ */
+export interface DateMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "date";
+  readonly type: "string";
+  readonly min?: string;
+  readonly max?: string;
+}
+
+/**
+ * Date + time field. Stored as a partial ISO 8601 string
+ * (`YYYY-MM-DDTHH:MM` with optional `:SS`) reflecting whatever the
+ * author's browser produced via `<input type="datetime-local">`. A
+ * future iteration may bake in the browser's timezone offset so the
+ * wall-clock semantics survive cross-region reads; today's storage is
+ * naive local time and consumers anchor to a timezone explicitly via
+ * `parseMetaDate` + their own `Temporal.ZonedDateTime` shaping if
+ * needed.
+ */
+export interface DateTimeMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "datetime";
+  readonly type: "string";
+  readonly min?: string;
+  readonly max?: string;
+}
+
+/**
+ * Time-only field. Stored as `HH:MM` (with optional `:SS`). No date
+ * anchor, no timezone — useful for "open at 09:00" style values where
+ * the calendar date is supplied separately.
+ */
+export interface TimeMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "time";
+  readonly type: "string";
+  readonly min?: string;
+  readonly max?: string;
+}
+
+/**
+ * Hex color picker. Stored as a `#xxxxxx` string (the format the
+ * native `<input type="color">` produces). The builder injects a
+ * default sanitizer that rejects values that don't match the hex
+ * shape on write.
+ */
+export interface ColorMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "color";
+  readonly type: "string";
+}
+
+/**
+ * Bounded numeric slider. Renders as `<input type="range">`. `min` /
+ * `max` are required so the slider has a concrete range; `step`
+ * defaults to `1`. The builder injects a default sanitizer that
+ * enforces the bounds on write.
+ */
+export interface RangeMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "range";
+  readonly type: "number";
+  readonly min: number;
+  readonly max: number;
+  readonly step?: number;
+}
+
+/**
+ * Multi-value picker over a fixed option list. Storage is a JSON
+ * array of option `value` strings. Renders as a toggle group in the
+ * admin so authors see all options at once. The builder ships a
+ * default sanitizer that rejects values outside the declared
+ * options.
+ */
+export interface MultiselectMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "multiselect";
+  readonly type: "json";
+  readonly options: readonly MetaBoxFieldOption[];
+}
+
+/**
+ * Free-form JSON value. Storage round-trips through the JSON
+ * serializer so any structure that survives `JSON.stringify`
+ * survives the wire.
+ */
+export interface JsonMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "json";
+  readonly type: "json";
+}
+
+/** Single-value dropdown picker; `options` is required. */
+export interface SelectMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "select";
+  readonly type: "string";
+  readonly options: readonly MetaBoxFieldOption[];
+}
+
+/** Single-value radio group; `options` is required. */
+export interface RadioMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "radio";
+  readonly type: "string";
+  readonly options: readonly MetaBoxFieldOption[];
+}
+
+/** Boolean checkbox — storage type pinned to `boolean`. */
+export interface CheckboxMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "checkbox";
+  readonly type: "boolean";
+}
+
+/**
+ * Catch-all variant for any `inputType` not narrowed into a dedicated
+ * variant above — primarily plugin-registered custom types arriving via
+ * `registerFieldType`. Object-literal registrations using built-in
+ * input-type strings (e.g. `inputType: "text"`) still type-check
+ * against the narrowed variant when their option shape matches; this
+ * variant exists so authoring patterns and plugin extensions don't
+ * regress.
+ */
+export interface LegacyMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: string;
+  readonly placeholder?: string;
+  readonly maxLength?: number;
+  readonly min?: number;
+  readonly max?: number;
+  readonly step?: number;
+  readonly options?: readonly MetaBoxFieldOption[];
+}
+
+/**
+ * A field inside a meta box — the single source of truth for both the
+ * admin UI renderer and the server-side storage contract. Declaring a
+ * meta box is the only way to register a meta key; there is no separate
+ * `registerMeta` step.
+ *
+ * Modelled as a discriminated union keyed on `inputType`. Each built-in
+ * input type has its own narrowed variant produced by a builder helper
+ * exported from `plumix/fields`; `LegacyMetaBoxField` keeps custom
+ * `registerFieldType` registrations and broad object-literal authoring
+ * compiling unchanged.
+ */
+export type MetaBoxField =
+  | TextMetaBoxField
+  | TextareaMetaBoxField
+  | NumberMetaBoxField
+  | EmailMetaBoxField
+  | UrlMetaBoxField
+  | PasswordMetaBoxField
+  | DateMetaBoxField
+  | DateTimeMetaBoxField
+  | TimeMetaBoxField
+  | ColorMetaBoxField
+  | RangeMetaBoxField
+  | MultiselectMetaBoxField
+  | JsonMetaBoxField
+  | SelectMetaBoxField
+  | RadioMetaBoxField
+  | CheckboxMetaBoxField
+  | LegacyMetaBoxField;
 
 /**
  * Shared base for every "card of fields" registration surface — entry
@@ -224,8 +423,31 @@ export interface MetaBoxBaseOptions {
  * so side-by-side layouts can't fit legibly. Compile-time signal to
  * plugin authors that spans are a page-width affordance only (term,
  * user, settings).
+ *
+ * `Omit<MetaBoxField, "span">` would normally distribute over the
+ * union, but TS's excess-property check across a many-variant
+ * distributed `Omit` gets pessimistic and starts rejecting options
+ * that exist only on a subset of variants. The explicit per-variant
+ * union below preserves the same shape with stable inference.
  */
-export type EntryMetaBoxField = Omit<MetaBoxField, "span">;
+export type EntryMetaBoxField =
+  | Omit<TextMetaBoxField, "span">
+  | Omit<TextareaMetaBoxField, "span">
+  | Omit<NumberMetaBoxField, "span">
+  | Omit<EmailMetaBoxField, "span">
+  | Omit<UrlMetaBoxField, "span">
+  | Omit<PasswordMetaBoxField, "span">
+  | Omit<DateMetaBoxField, "span">
+  | Omit<DateTimeMetaBoxField, "span">
+  | Omit<TimeMetaBoxField, "span">
+  | Omit<ColorMetaBoxField, "span">
+  | Omit<RangeMetaBoxField, "span">
+  | Omit<MultiselectMetaBoxField, "span">
+  | Omit<JsonMetaBoxField, "span">
+  | Omit<SelectMetaBoxField, "span">
+  | Omit<RadioMetaBoxField, "span">
+  | Omit<CheckboxMetaBoxField, "span">
+  | Omit<LegacyMetaBoxField, "span">;
 
 /**
  * Meta box shown on the entry editor. Scoped by `entryTypes`. Renders
@@ -719,8 +941,14 @@ export interface MetaBoxFieldManifestEntry {
   readonly required?: boolean;
   readonly placeholder?: string;
   readonly maxLength?: number;
-  readonly min?: number;
-  readonly max?: number;
+  /**
+   * Lower bound. `number` carries it as a number; `date` / `datetime`
+   * / `time` carry it as the matching ISO string. Renderers branch on
+   * `inputType` to pick the right interpretation.
+   */
+  readonly min?: number | string;
+  /** Upper bound — see `min`. */
+  readonly max?: number | string;
   readonly step?: number;
   readonly options?: readonly MetaBoxFieldOption[];
   readonly default?: unknown;
@@ -1603,75 +1831,46 @@ function toFieldTypeEntry(
   return { type, component };
 }
 
-function toMetaBoxFieldEntry(field: MetaBoxField): MetaBoxFieldManifestEntry {
-  const {
-    key,
-    label,
-    type,
-    inputType,
-    description,
-    required,
-    placeholder,
-    maxLength,
-    min,
-    max,
-    step,
-    options,
-    default: defaultValue,
-    span,
-  } = field;
-  return {
-    key,
-    label,
-    type,
-    inputType,
-    description,
-    required,
-    placeholder,
-    maxLength,
-    min,
-    max,
-    step,
-    options,
-    default: defaultValue,
-    span,
-  };
+// Per-variant options live on each narrowed variant of `MetaBoxField`.
+// Reading via this explicit projection lets the serializer stay
+// variant-agnostic — narrowed variants that don't carry a given
+// option read back `undefined`, and the wire shape stays uniform
+// regardless of which variant produced the field. `min` / `max` widen
+// to `number | string` because date / datetime / time variants store
+// ISO-string bounds while `number` stores numeric bounds; the wire
+// shape mirrors that union and renderers branch on `inputType`.
+interface MetaBoxFieldOptionView {
+  readonly placeholder?: string;
+  readonly maxLength?: number;
+  readonly min?: number | string;
+  readonly max?: number | string;
+  readonly step?: number;
+  readonly options?: readonly MetaBoxFieldOption[];
 }
 
-// Entry meta fields ship without `span` — see `EntryMetaBoxField`.
 function toEntryMetaBoxFieldEntry(
   field: EntryMetaBoxField,
 ): EntryMetaBoxFieldManifestEntry {
-  const {
-    key,
-    label,
-    type,
-    inputType,
-    description,
-    required,
-    placeholder,
-    maxLength,
-    min,
-    max,
-    step,
-    options,
-    default: defaultValue,
-  } = field;
+  const view = field as MetaBoxFieldOptionView;
   return {
-    key,
-    label,
-    type,
-    inputType,
-    description,
-    required,
-    placeholder,
-    maxLength,
-    min,
-    max,
-    step,
-    options,
-    default: defaultValue,
+    key: field.key,
+    label: field.label,
+    type: field.type,
+    inputType: field.inputType,
+    description: field.description,
+    required: field.required,
+    placeholder: view.placeholder,
+    maxLength: view.maxLength,
+    min: view.min,
+    max: view.max,
+    step: view.step,
+    options: view.options,
+    default: field.default,
   };
+}
+
+function toMetaBoxFieldEntry(field: MetaBoxField): MetaBoxFieldManifestEntry {
+  return { ...toEntryMetaBoxFieldEntry(field), span: field.span };
 }
 
 /**

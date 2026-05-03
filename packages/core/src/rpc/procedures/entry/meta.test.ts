@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import type {
   MetaBoxField,
@@ -204,6 +204,69 @@ describe("sanitizeMetaInput", () => {
       slug: "HELLO",
     });
     expect(patch?.upserts.get("slug")).toBe("hello");
+  });
+
+  test("MetaSanitizationError from sanitize propagates with the original key + reason", () => {
+    const registry = registryWithMeta({
+      tag: {
+        type: "string",
+        sanitize: () => {
+          throw new MetaSanitizationError("tag", "value_too_large");
+        },
+      },
+    });
+    expect(() =>
+      sanitizeMetaInput(findField(registry, "post"), { tag: "x" }),
+    ).toThrow(
+      expect.objectContaining({ key: "tag", reason: "value_too_large" }),
+    );
+  });
+
+  test("plain Error from sanitize translates into a generic invalid_value envelope and logs", () => {
+    const registry = registryWithMeta({
+      tag: {
+        type: "string",
+        sanitize: () => {
+          throw new Error("custom check failed");
+        },
+      },
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      // silence the diagnostic log we expect runSanitize to emit
+    });
+    try {
+      expect(() =>
+        sanitizeMetaInput(findField(registry, "post"), { tag: "x" }),
+      ).toThrow(
+        expect.objectContaining({ key: "tag", reason: "invalid_value" }),
+      );
+      expect(errorSpy).toHaveBeenCalled();
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  test("non-Error throw (e.g. string) from sanitize still translates to invalid_value", () => {
+    const registry = registryWithMeta({
+      tag: {
+        type: "string",
+        sanitize: () => {
+          throw "boom"; // eslint-disable-line @typescript-eslint/only-throw-error
+        },
+      },
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      // silence the diagnostic log
+    });
+    try {
+      expect(() =>
+        sanitizeMetaInput(findField(registry, "post"), { tag: "x" }),
+      ).toThrow(
+        expect.objectContaining({ key: "tag", reason: "invalid_value" }),
+      );
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 });
 

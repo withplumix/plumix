@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
+import { useState } from "react";
+import { ColorPicker } from "@/components/ui/color-picker.js";
 import {
   FormControl,
   FormDescription,
@@ -9,6 +11,8 @@ import {
   FormMessage,
 } from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
+import { Slider } from "@/components/ui/slider.js";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group.js";
 import { cn } from "@/lib/utils";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
@@ -174,6 +178,129 @@ function renderNativeInput({
     );
   }
 
+  if (field.inputType === "color") {
+    return (
+      <ColorPicker
+        value={asString(rhf.value)}
+        onChange={(next) => {
+          rhf.onChange(next);
+        }}
+        disabled={disabled}
+        required={field.required}
+        name={rhf.name}
+        testId={testId}
+      />
+    );
+  }
+
+  if (field.inputType === "range") {
+    const num = typeof rhf.value === "number" ? rhf.value : Number(rhf.value);
+    const minNum = toFiniteNumber(field.min, 0);
+    const maxNum = toFiniteNumber(field.max, 100);
+    const sliderValue = Number.isFinite(num) ? num : minNum;
+    return (
+      <div className="flex items-center gap-3" data-testid={testId}>
+        <Slider
+          name={rhf.name}
+          min={minNum}
+          max={maxNum}
+          step={field.step ?? 1}
+          value={[sliderValue]}
+          disabled={disabled}
+          onValueChange={(values) => {
+            const next = values[0];
+            if (typeof next === "number" && Number.isFinite(next)) {
+              rhf.onChange(next);
+            }
+          }}
+          onBlur={rhf.onBlur}
+          aria-label={field.label}
+          aria-required={field.required}
+          data-testid={`${testId}-slider`}
+          className="flex-1"
+        />
+        <span
+          className="text-muted-foreground min-w-[3ch] text-right text-sm tabular-nums"
+          data-testid={`${testId}-display`}
+        >
+          {Number.isFinite(num) ? num : "–"}
+        </span>
+      </div>
+    );
+  }
+
+  if (field.inputType === "multiselect") {
+    const selected = Array.isArray(rhf.value)
+      ? rhf.value.filter((v): v is string => typeof v === "string")
+      : [];
+    return (
+      <ToggleGroup
+        type="multiple"
+        variant="outline"
+        spacing={1}
+        value={selected}
+        disabled={disabled}
+        onValueChange={(next) => {
+          rhf.onChange(next);
+        }}
+        onBlur={rhf.onBlur}
+        aria-label={field.label}
+        data-testid={testId}
+      >
+        {(field.options ?? []).map((opt) => (
+          <ToggleGroupItem
+            key={opt.value}
+            value={opt.value}
+            data-testid={`${testId}-${opt.value}`}
+          >
+            {opt.label}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+    );
+  }
+
+  if (field.inputType === "json") {
+    return (
+      <JsonControl
+        value={rhf.value as unknown}
+        onChange={rhf.onChange}
+        onBlur={rhf.onBlur}
+        name={rhf.name}
+        disabled={disabled}
+        testId={testId}
+      />
+    );
+  }
+
+  if (
+    field.inputType === "date" ||
+    field.inputType === "datetime" ||
+    field.inputType === "time"
+  ) {
+    // Native HTML5 date / datetime-local / time inputs. They emit
+    // ISO-shaped strings (`YYYY-MM-DD`, `YYYY-MM-DDTHH:MM`, `HH:MM`)
+    // which Plumix stores as-is; consumers parse via `parseMetaDate`
+    // when they need a JS `Date`. A future iteration may swap in the
+    // shadcn `Calendar` primitive without changing the field-type
+    // contract.
+    const htmlType =
+      field.inputType === "datetime" ? "datetime-local" : field.inputType;
+    return (
+      <Input
+        {...common}
+        type={htmlType}
+        value={asString(rhf.value)}
+        min={field.min}
+        max={field.max}
+        onChange={(e) => {
+          const raw = e.target.value;
+          rhf.onChange(raw === "" ? null : raw);
+        }}
+      />
+    );
+  }
+
   if (field.inputType === "select") {
     return (
       <select
@@ -227,7 +354,8 @@ function renderNativeInput({
   if (
     field.inputType !== "text" &&
     field.inputType !== "email" &&
-    field.inputType !== "url"
+    field.inputType !== "url" &&
+    field.inputType !== "password"
   ) {
     // Forward-compat fallback: unknown inputType renders as a plain
     // text input so a plugin-specific type doesn't crash the editor.
@@ -235,13 +363,17 @@ function renderNativeInput({
     // dev tools. A future `customRenderers` seam will hook in here
     // before the fallback.
     console.warn(
-      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/select/radio/checkbox).`,
+      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/date/datetime/time/color/range/multiselect/json/select/radio/checkbox).`,
     );
   }
 
-  // Shared shape for `text` / `email` / `url` / unknown fallback.
+  // Shared shape for `text` / `email` / `url` / `password` / unknown
+  // fallback. The native `type` attribute drives both browser
+  // validation (email / url) and visual masking (password).
   const htmlType =
-    field.inputType === "email" || field.inputType === "url"
+    field.inputType === "email" ||
+    field.inputType === "url" ||
+    field.inputType === "password"
       ? field.inputType
       : "text";
   return (
@@ -277,4 +409,107 @@ function asString(value: unknown): string {
 function asNumberInputValue(value: unknown): number | string {
   if (typeof value === "number" && !Number.isNaN(value)) return value;
   return "";
+}
+
+// Coerce a manifest min/max bound (which the wire shape carries as
+// `number | string | undefined`) to a finite number suitable for the
+// slider's `min`/`max` props. Unset bounds fall back to the supplied
+// default. ISO-string bounds shouldn't reach this branch — `range`
+// is numeric-only — but the cast makes it impossible to surface
+// `string` to a `number`-only prop.
+function toFiniteNumber(
+  value: number | string | undefined,
+  fallback: number,
+): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+}
+
+// JSON field renderer. Holds a local "draft" string so the user can
+// type intermediate state without re-stringifying form state on every
+// keystroke; valid drafts propagate the parsed value upward, invalid
+// drafts surface a parse error inline and leave the previous valid
+// form value untouched. An empty draft is treated as `null`.
+function JsonControl({
+  value,
+  onChange,
+  onBlur,
+  name,
+  disabled,
+  testId,
+}: {
+  value: unknown;
+  onChange: (next: unknown) => void;
+  onBlur: () => void;
+  name: string;
+  disabled: boolean;
+  testId: string;
+}): React.ReactNode {
+  const initialFormatted = formatInitial(value);
+  const [draft, setDraft] = useState(initialFormatted);
+  const [error, setError] = useState<string | null>(null);
+  // Detect external resyncs (e.g. `form.reset()` post-save) by
+  // comparing the formatted shape of the incoming `value` against
+  // a state-tracked snapshot. State-during-render is React's
+  // sanctioned pattern for "deriving state from props" — setState
+  // here is a no-op when nothing changed, so it doesn't loop.
+  const [lastValueSnapshot, setLastValueSnapshot] = useState(initialFormatted);
+  if (initialFormatted !== lastValueSnapshot) {
+    setLastValueSnapshot(initialFormatted);
+    setDraft(initialFormatted);
+    setError(null);
+  }
+
+  return (
+    <div className="flex flex-col gap-1" data-testid={`${testId}-shell`}>
+      <textarea
+        name={name}
+        value={draft}
+        disabled={disabled}
+        onBlur={onBlur}
+        onChange={(e) => {
+          const raw = e.target.value;
+          setDraft(raw);
+          if (raw.trim() === "") {
+            setError(null);
+            onChange(null);
+            return;
+          }
+          try {
+            const parsed: unknown = JSON.parse(raw);
+            setError(null);
+            onChange(parsed);
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Invalid JSON");
+          }
+        }}
+        rows={6}
+        spellCheck={false}
+        data-testid={testId}
+        className={cn(
+          CONTROL_BASE_CLASS,
+          "min-h-32 w-full px-3 py-2 font-mono text-xs",
+          error ? "border-destructive" : "",
+        )}
+      />
+      {error ? (
+        <p className="text-destructive text-xs" data-testid={`${testId}-error`}>
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function formatInitial(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return "";
+  }
 }

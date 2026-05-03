@@ -32,6 +32,10 @@
       "types": "./dist/plugin/manifest.d.ts",
       "default": "./dist/plugin/manifest.js"
     },
+    "./fields": {
+      "types": "./dist/plugin/fields/index.d.ts",
+      "default": "./dist/plugin/fields/index.js"
+    },
     "./slugify": {
       "types": "./dist/slugify.d.ts",
       "default": "./dist/slugify.js"

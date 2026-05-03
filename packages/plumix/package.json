@@ -91,6 +91,10 @@
       "types": "./dist/schema/index.d.ts",
       "default": "./dist/schema/index.js"
     },
+    "./fields": {
+      "types": "./dist/fields/index.d.ts",
+      "default": "./dist/fields/index.js"
+    },
     "./i18n": {
       "types": "./dist/i18n/index.d.ts",
       "default": "./dist/i18n/index.js"

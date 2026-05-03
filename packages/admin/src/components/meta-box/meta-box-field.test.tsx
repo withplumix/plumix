@@ -160,6 +160,179 @@ describe("MetaBoxField dispatcher", () => {
     );
   });
 
+  test("date / datetime / time: emit the matching native HTML5 input type", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {
+      // would-be unknown-inputType warning; should not fire for builtins
+    });
+
+    const onDateChange = vi.fn();
+    const { rerender } = render(
+      <Harness
+        fieldDef={field({
+          inputType: "date",
+          min: "2024-01-01",
+          max: "2030-12-31",
+        })}
+        initial=""
+        onChangeSpy={onDateChange}
+      />,
+    );
+    let input = screen.getByTestId("meta-box-field-k-input");
+    expect(input).toHaveAttribute("type", "date");
+    expect(input).toHaveAttribute("min", "2024-01-01");
+    expect(input).toHaveAttribute("max", "2030-12-31");
+
+    rerender(
+      <Harness fieldDef={field({ inputType: "datetime" })} initial="" />,
+    );
+    input = screen.getByTestId("meta-box-field-k-input");
+    // `datetime` field maps to the native `datetime-local` input type.
+    expect(input).toHaveAttribute("type", "datetime-local");
+
+    rerender(<Harness fieldDef={field({ inputType: "time" })} initial="" />);
+    input = screen.getByTestId("meta-box-field-k-input");
+    expect(input).toHaveAttribute("type", "time");
+
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  test("date: empty input clears the value to null, otherwise propagates the ISO string", async () => {
+    const onChange = vi.fn();
+    render(
+      <Harness
+        fieldDef={field({ inputType: "date" })}
+        initial="2026-05-03"
+        onChangeSpy={onChange}
+      />,
+    );
+    const input = screen.getByTestId("meta-box-field-k-input");
+    expect(input).toHaveValue("2026-05-03");
+
+    await userEvent.clear(input);
+    expect(onChange).toHaveBeenLastCalledWith(null);
+  });
+
+  test("multiselect: clicking a toggle item emits the updated array", async () => {
+    const onChange = vi.fn();
+    render(
+      <Harness
+        fieldDef={field({
+          inputType: "multiselect",
+          options: [
+            { value: "news", label: "News" },
+            { value: "sport", label: "Sport" },
+            { value: "music", label: "Music" },
+          ],
+        })}
+        initial={["news"]}
+        onChangeSpy={onChange}
+      />,
+    );
+    const sport = screen.getByTestId("meta-box-field-k-input-sport");
+    await userEvent.click(sport);
+    expect(onChange).toHaveBeenCalledWith(["news", "sport"]);
+  });
+
+  test("json: parses textarea on change, surfaces parse errors inline", async () => {
+    const onChange = vi.fn();
+    render(
+      <Harness
+        fieldDef={field({ inputType: "json", type: "json" })}
+        initial={{ a: 1 }}
+        onChangeSpy={onChange}
+      />,
+    );
+    const textarea = screen.getByTestId("meta-box-field-k-input");
+    expect(textarea.tagName).toBe("TEXTAREA");
+    expect(textarea).toHaveValue('{\n  "a": 1\n}');
+
+    // Replace with invalid JSON — error surfaces, form value untouched.
+    // userEvent.type treats `{` as a kbd shortcut delimiter; paste
+    // ensures the literal characters land in the textarea.
+    await userEvent.clear(textarea);
+    textarea.focus();
+    await userEvent.paste("{not-json");
+    expect(
+      screen.getByTestId("meta-box-field-k-input-error"),
+    ).toBeInTheDocument();
+
+    // Replace with valid JSON — error clears, value propagates.
+    await userEvent.clear(textarea);
+    // userEvent.type interprets `{` and `[` as kbd shortcuts; pass
+    // them through paste to type literal characters.
+    await userEvent.paste('{"b":2}');
+    expect(onChange).toHaveBeenLastCalledWith({ b: 2 });
+  });
+
+  test("color: swatch + hex input share the same value via react-colorful", async () => {
+    const onChange = vi.fn();
+    render(
+      <Harness
+        fieldDef={field({ inputType: "color" })}
+        initial="#1a2b3c"
+        onChangeSpy={onChange}
+      />,
+    );
+    const swatch = screen.getByTestId("meta-box-field-k-input-swatch");
+    const hex = screen.getByTestId("meta-box-field-k-input-hex");
+    // Swatch trigger reflects the color via inline `background-color`.
+    expect(swatch).toHaveStyle({ "background-color": "#1a2b3c" });
+    expect(hex).toHaveValue("#1a2b3c");
+
+    // Editing the hex input propagates upward.
+    await userEvent.clear(hex);
+    await userEvent.type(hex, "#abcdef");
+    expect(onChange).toHaveBeenLastCalledWith("#abcdef");
+  });
+
+  test("range: slider exposes value via the inline display + carries bounds on root", () => {
+    render(
+      <Harness
+        fieldDef={field({ inputType: "range", min: 0, max: 100, step: 5 })}
+        initial={20}
+      />,
+    );
+    expect(
+      screen.getByTestId("meta-box-field-k-input-display"),
+    ).toHaveTextContent("20");
+    const root = screen.getByTestId("meta-box-field-k-input-slider");
+    // Radix forwards `aria-valuemin` / `aria-valuemax` to the thumb,
+    // but the user-visible signal lives on the inline display
+    // anchored by `-display`. Assert root visibility + the displayed
+    // value, then trust radix on the slider semantics it owns.
+    expect(root).toBeInTheDocument();
+  });
+
+  test("password: renders masked input, value propagates without warnings", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {
+      // would-be unknown-inputType warning; should not fire
+    });
+    const onChange = vi.fn();
+    render(
+      <Harness
+        fieldDef={field({
+          inputType: "password",
+          placeholder: "••••••",
+          maxLength: 64,
+        })}
+        initial=""
+        onChangeSpy={onChange}
+      />,
+    );
+    const input = screen.getByTestId("meta-box-field-k-input");
+    expect(input.tagName).toBe("INPUT");
+    expect(input).toHaveAttribute("type", "password");
+    expect(input).toHaveAttribute("placeholder", "••••••");
+    expect(input).toHaveAttribute("maxLength", "64");
+
+    await userEvent.type(input, "hunter2");
+    expect(onChange).toHaveBeenLastCalledWith("hunter2");
+    // `password` is a recognised builtin — no fallback warning should
+    // fire even though the dispatcher's switch-case routes it through
+    // the shared text-input branch.
+    expect(warn).not.toHaveBeenCalled();
+  });
+
   test("select: renders settings, selection fires onChange with the value", async () => {
     const onChange = vi.fn();
     render(

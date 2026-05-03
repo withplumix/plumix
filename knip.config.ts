@@ -58,6 +58,7 @@ const config: KnipConfig = {
         "src/admin/theme.css",
         "src/blocks/index.ts",
         "src/cli/index.ts",
+        "src/fields/index.ts",
         "src/i18n/index.ts",
         "src/schema/index.ts",
         "src/test/index.ts",
