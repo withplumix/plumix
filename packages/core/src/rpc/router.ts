@@ -2,6 +2,7 @@ import type { RouterClient } from "@orpc/server";
 
 import { authRouter } from "./procedures/auth/index.js";
 import { entryRouter } from "./procedures/entry/index.js";
+import { lookupRouter } from "./procedures/lookup/index.js";
 import { settingsRouter } from "./procedures/settings/index.js";
 import { termRouter } from "./procedures/term/index.js";
 import { userRouter } from "./procedures/user/index.js";
@@ -11,6 +12,7 @@ export const appRouter = {
   entry: entryRouter,
   term: termRouter,
   user: userRouter,
+  lookup: lookupRouter,
   settings: settingsRouter,
 } as const;
 

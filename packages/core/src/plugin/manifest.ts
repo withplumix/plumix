@@ -798,6 +798,7 @@ export const CORE_RPC_NAMESPACES: ReadonlySet<string> = new Set([
   "entry",
   "term",
   "user",
+  "lookup",
   "settings",
 ]);
 
