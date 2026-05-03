@@ -185,17 +185,68 @@ export interface TextMetaBoxField extends MetaBoxFieldBase {
   readonly maxLength?: number;
 }
 
+/** Multi-line text input. Storage shape mirrors `text`. */
+export interface TextareaMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "textarea";
+  readonly type: "string";
+  readonly placeholder?: string;
+  readonly maxLength?: number;
+}
+
+/** Numeric input with optional `min` / `max` / `step` bounds. */
+export interface NumberMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "number";
+  readonly type: "number";
+  readonly placeholder?: string;
+  readonly min?: number;
+  readonly max?: number;
+  readonly step?: number;
+}
+
+/** RFC-5322-shaped email input. */
+export interface EmailMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "email";
+  readonly type: "string";
+  readonly placeholder?: string;
+  readonly maxLength?: number;
+}
+
+/** URL input. */
+export interface UrlMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "url";
+  readonly type: "string";
+  readonly placeholder?: string;
+  readonly maxLength?: number;
+}
+
+/** Single-value dropdown picker; `options` is required. */
+export interface SelectMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "select";
+  readonly type: "string";
+  readonly options: readonly MetaBoxFieldOption[];
+}
+
+/** Single-value radio group; `options` is required. */
+export interface RadioMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "radio";
+  readonly type: "string";
+  readonly options: readonly MetaBoxFieldOption[];
+}
+
+/** Boolean checkbox — storage type pinned to `boolean`. */
+export interface CheckboxMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "checkbox";
+  readonly type: "boolean";
+}
+
 /**
- * Catch-all variant for every `inputType` not yet narrowed into a
- * dedicated builder helper — covers the seven other built-in types
- * (`textarea` / `number` / `email` / `url` / `select` / `radio` /
- * `checkbox`) plus any custom `inputType` registered via
- * `registerFieldType`. As more types migrate to typed builders this
- * variant shrinks.
- *
- * Object-literal registrations land here for the un-migrated types.
- * The shape stays broad on purpose so existing callers compile
- * unchanged — the narrowed variants are additive.
+ * Catch-all variant for any `inputType` not narrowed into a dedicated
+ * variant above — primarily plugin-registered custom types arriving via
+ * `registerFieldType`. Object-literal registrations using built-in
+ * input-type strings (e.g. `inputType: "text"`) still type-check
+ * against the narrowed variant when their option shape matches; this
+ * variant exists so authoring patterns and plugin extensions don't
+ * regress.
  */
 export interface LegacyMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: string;
@@ -213,12 +264,22 @@ export interface LegacyMetaBoxField extends MetaBoxFieldBase {
  * meta box is the only way to register a meta key; there is no separate
  * `registerMeta` step.
  *
- * Modelled as a discriminated union keyed on `inputType`. The `text`
- * variant comes from the `text()` builder in `plumix/fields`;
- * `LegacyMetaBoxField` keeps every un-migrated and custom input type
- * working on the shared broad shape so the union is additive over time.
+ * Modelled as a discriminated union keyed on `inputType`. Each built-in
+ * input type has its own narrowed variant produced by a builder helper
+ * exported from `plumix/fields`; `LegacyMetaBoxField` keeps custom
+ * `registerFieldType` registrations and broad object-literal authoring
+ * compiling unchanged.
  */
-export type MetaBoxField = TextMetaBoxField | LegacyMetaBoxField;
+export type MetaBoxField =
+  | TextMetaBoxField
+  | TextareaMetaBoxField
+  | NumberMetaBoxField
+  | EmailMetaBoxField
+  | UrlMetaBoxField
+  | SelectMetaBoxField
+  | RadioMetaBoxField
+  | CheckboxMetaBoxField
+  | LegacyMetaBoxField;
 
 /**
  * Shared base for every "card of fields" registration surface — entry
@@ -252,8 +313,23 @@ export interface MetaBoxBaseOptions {
  * so side-by-side layouts can't fit legibly. Compile-time signal to
  * plugin authors that spans are a page-width affordance only (term,
  * user, settings).
+ *
+ * `Omit<MetaBoxField, "span">` would normally distribute over the
+ * union, but TS's excess-property check across a many-variant
+ * distributed `Omit` gets pessimistic and starts rejecting options
+ * that exist only on a subset of variants. The explicit per-variant
+ * union below preserves the same shape with stable inference.
  */
-export type EntryMetaBoxField = Omit<MetaBoxField, "span">;
+export type EntryMetaBoxField =
+  | Omit<TextMetaBoxField, "span">
+  | Omit<TextareaMetaBoxField, "span">
+  | Omit<NumberMetaBoxField, "span">
+  | Omit<EmailMetaBoxField, "span">
+  | Omit<UrlMetaBoxField, "span">
+  | Omit<SelectMetaBoxField, "span">
+  | Omit<RadioMetaBoxField, "span">
+  | Omit<CheckboxMetaBoxField, "span">
+  | Omit<LegacyMetaBoxField, "span">;
 
 /**
  * Meta box shown on the entry editor. Scoped by `entryTypes`. Renders

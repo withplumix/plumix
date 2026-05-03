@@ -12,3 +12,17 @@
 
 export { text } from "./text.js";
 export type { TextFieldOptions } from "./text.js";
+export { textarea } from "./textarea.js";
+export type { TextareaFieldOptions } from "./textarea.js";
+export { number } from "./number.js";
+export type { NumberFieldOptions } from "./number.js";
+export { email } from "./email.js";
+export type { EmailFieldOptions } from "./email.js";
+export { url } from "./url.js";
+export type { UrlFieldOptions } from "./url.js";
+export { select } from "./select.js";
+export type { SelectFieldOptions } from "./select.js";
+export { radio } from "./radio.js";
+export type { RadioFieldOptions } from "./radio.js";
+export { checkbox } from "./checkbox.js";
+export type { CheckboxFieldOptions } from "./checkbox.js";
