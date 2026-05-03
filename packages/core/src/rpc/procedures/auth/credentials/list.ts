@@ -16,7 +16,6 @@ export const list = base
       .select({
         id: credentials.id,
         name: credentials.name,
-        deviceType: credentials.deviceType,
         isBackedUp: credentials.isBackedUp,
         transports: credentials.transports,
         createdAt: credentials.createdAt,
