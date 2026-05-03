@@ -732,3 +732,149 @@ describe("registerRoute", () => {
     ).rejects.toThrow();
   });
 });
+
+describe("registerLoginLink", () => {
+  test("stores entries with the plugin id attached", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("saml-microsoft", (ctx) => {
+      ctx.registerLoginLink({
+        key: "default",
+        label: "Sign in with Microsoft",
+        href: "/_plumix/saml-microsoft/start",
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    expect(registry.loginLinks).toEqual([
+      expect.objectContaining({
+        registeredBy: "saml-microsoft",
+        key: "default",
+        label: "Sign in with Microsoft",
+        href: "/_plumix/saml-microsoft/start",
+      }),
+    ]);
+  });
+
+  test("two plugins can each contribute one button", async () => {
+    const hooks = new HookRegistry();
+    const a = definePlugin("plugin-a", (ctx) => {
+      ctx.registerLoginLink({
+        key: "default",
+        label: "A",
+        href: "/_plumix/plugin-a/start",
+      });
+    });
+    const b = definePlugin("plugin-b", (ctx) => {
+      ctx.registerLoginLink({
+        key: "default",
+        label: "B",
+        href: "/_plumix/plugin-b/start",
+      });
+    });
+    const { registry } = await installPlugins({
+      hooks,
+      plugins: [a, b],
+    });
+    expect(registry.loginLinks).toHaveLength(2);
+  });
+
+  test("rejects duplicate key from the same plugin", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("acme", (ctx) => {
+      ctx.registerLoginLink({
+        key: "default",
+        label: "First",
+        href: "/_plumix/acme/start",
+      });
+      ctx.registerLoginLink({
+        key: "default",
+        label: "Second",
+        href: "/_plumix/acme/start",
+      });
+    });
+    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
+      /already registered/,
+    );
+  });
+
+  test.each([
+    ["uppercase key", "Default"],
+    ["empty key", ""],
+    ["over 32 chars", "x".repeat(33)],
+    ["dot in key", "default.alt"],
+  ])("rejects invalid key: %s", async (_name, key) => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("acme", (ctx) => {
+      ctx.registerLoginLink({
+        key,
+        label: "x",
+        href: "/_plumix/acme/start",
+      });
+    });
+    await expect(
+      installPlugins({ hooks, plugins: [plugin] }),
+    ).rejects.toThrow();
+  });
+
+  test("rejects an empty label", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("acme", (ctx) => {
+      ctx.registerLoginLink({
+        key: "default",
+        label: "",
+        href: "/_plumix/acme/start",
+      });
+    });
+    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
+      /empty label/,
+    );
+  });
+
+  test("rejects a label with CR/LF (header-injection defense)", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("acme", (ctx) => {
+      ctx.registerLoginLink({
+        key: "default",
+        label: "Sign in\r\nwith something",
+        href: "/_plumix/acme/start",
+      });
+    });
+    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
+      /CR\/LF/,
+    );
+  });
+
+  test.each([
+    ["javascript scheme", "javascript:alert(1)"],
+    ["data scheme", "data:text/html,<script>"],
+    ["bare http", "http://insecure.example/start"],
+    ["protocol-relative", "//evil.example/start"],
+    ["relative without leading slash", "_plumix/acme/start"],
+  ])("rejects unsafe href: %s", async (_name, href) => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("acme", (ctx) => {
+      ctx.registerLoginLink({
+        key: "default",
+        label: "x",
+        href,
+      });
+    });
+    await expect(
+      installPlugins({ hooks, plugins: [plugin] }),
+    ).rejects.toThrow();
+  });
+
+  test("accepts an https:// absolute href", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("acme", (ctx) => {
+      ctx.registerLoginLink({
+        key: "default",
+        label: "x",
+        href: "https://idp.example.com/saml/login",
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    expect(registry.loginLinks[0]?.href).toBe(
+      "https://idp.example.com/saml/login",
+    );
+  });
+});

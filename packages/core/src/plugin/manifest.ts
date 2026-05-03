@@ -499,6 +499,39 @@ export interface RegisteredRawRoute {
   ) => Response | Promise<Response>;
 }
 
+/**
+ * Tiny `{ key, label, href }` blob a plugin attaches so the standard
+ * login screen can render a button for the sign-in flow it ships. The
+ * actual flow (start route, callback route, identity resolution) is
+ * registered separately via `registerRoute` + `resolveExternalIdentity`;
+ * this is purely the UI affordance that points the user at it.
+ */
+export interface LoginLinkOptions {
+  /**
+   * Stable key, scoped per-plugin. Surfaces as the React key on the
+   * login screen and as a UTM-friendly identifier in logs. Lowercase
+   * alphanum + dash, 1–32 chars — same shape as `OAUTH_PROVIDER_KEY_PATTERN`.
+   */
+  readonly key: string;
+  /**
+   * Button text shown on the login screen ("Sign in with Microsoft",
+   * "Continue with Okta"). No CR/LF — see `siteName` for rationale.
+   */
+  readonly label: string;
+  /**
+   * URL the button points at — typically the plugin's own start route,
+   * e.g. `/_plumix/saml-microsoft/start`. Must be a relative path
+   * starting with `/` or an `https://` absolute URL; arbitrary schemes
+   * are rejected so a malicious or misconfigured plugin can't surface
+   * a `javascript:` link.
+   */
+  readonly href: string;
+}
+
+export interface RegisteredLoginLink extends LoginLinkOptions {
+  readonly registeredBy: string;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type PluginRpcRouter = Record<string, any>;
 
@@ -522,6 +555,7 @@ export interface PluginRegistry {
   readonly rewriteRules: readonly RegisteredRewriteRule[];
   readonly rpcRouters: ReadonlyMap<string, PluginRpcRouter>;
   readonly rawRoutes: readonly RegisteredRawRoute[];
+  readonly loginLinks: readonly RegisteredLoginLink[];
   readonly adminPages: ReadonlyMap<string, RegisteredAdminPage>;
   readonly blocks: ReadonlyMap<string, RegisteredBlock>;
   readonly fieldTypes: ReadonlyMap<string, RegisteredFieldType>;
@@ -539,6 +573,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly rewriteRules: RegisteredRewriteRule[];
   readonly rpcRouters: Map<string, PluginRpcRouter>;
   readonly rawRoutes: RegisteredRawRoute[];
+  readonly loginLinks: RegisteredLoginLink[];
   readonly adminPages: Map<string, RegisteredAdminPage>;
   readonly blocks: Map<string, RegisteredBlock>;
   readonly fieldTypes: Map<string, RegisteredFieldType>;
@@ -557,6 +592,7 @@ export function createPluginRegistry(): MutablePluginRegistry {
     rewriteRules: [],
     rpcRouters: new Map(),
     rawRoutes: [],
+    loginLinks: [],
     adminPages: new Map(),
     blocks: new Map(),
     fieldTypes: new Map(),
