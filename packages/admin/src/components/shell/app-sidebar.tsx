@@ -18,6 +18,7 @@ import {
   FileText,
   Folder,
   Image,
+  Key,
   Layout,
   LayoutDashboard,
   Mail,
@@ -45,6 +46,7 @@ const CORE_ICON: Record<CoreIconName, LucideIcon> = {
   settings: Settings,
   puzzle: Puzzle,
   mail: Mail,
+  key: Key,
 };
 
 export function AppSidebar({

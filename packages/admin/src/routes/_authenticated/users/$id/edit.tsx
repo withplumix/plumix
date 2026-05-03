@@ -3,6 +3,10 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
 import { MetaBoxCard } from "@/components/meta-box/meta-box.js";
+import {
+  AdminApiTokensCard,
+  SelfApiTokensCard,
+} from "@/components/profile/api-tokens-card.js";
 import { PasskeysCard } from "@/components/profile/passkeys-card.js";
 import { SessionsCard } from "@/components/profile/sessions-card.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
@@ -141,6 +145,7 @@ function UserEditRoute(): ReactNode {
   const canPromote = otherUserCap("user:promote");
   const canDisable = otherUserCap("user:edit");
   const canDelete = otherUserCap("user:delete");
+  const canManageOtherTokens = otherUserCap("user:manage_tokens");
   // Match the server's actual write permission — editors can view the
   // edit screen (via `user:list`) but don't get `user:edit`, so we
   // disable Save / Name input instead of letting them hit a server 403.
@@ -167,6 +172,7 @@ function UserEditRoute(): ReactNode {
       canSave={canSave}
       canDisable={canDisable}
       canDelete={canDelete}
+      canManageOtherTokens={canManageOtherTokens}
       metaBoxes={metaBoxes}
     />
   );
@@ -230,6 +236,7 @@ function UserEditForm({
   canSave,
   canDisable,
   canDelete,
+  canManageOtherTokens,
   metaBoxes,
 }: {
   target: User;
@@ -238,6 +245,7 @@ function UserEditForm({
   canSave: boolean;
   canDisable: boolean;
   canDelete: boolean;
+  canManageOtherTokens: boolean;
   metaBoxes: readonly UserMetaBoxManifestEntry[];
 }): ReactNode {
   const navigate = useNavigate();
@@ -425,6 +433,14 @@ function UserEditForm({
           factor security primitives. */}
       {isSelf ? <PasskeysCard userEmail={target.email} /> : null}
       {isSelf ? <SessionsCard /> : null}
+
+      {/* API tokens — self can mint + revoke own; admins with
+          `user:manage_tokens` see + revoke (not mint, by design)
+          another user's. */}
+      {isSelf ? <SelfApiTokensCard /> : null}
+      {!isSelf && canManageOtherTokens ? (
+        <AdminApiTokensCard userId={target.id} />
+      ) : null}
     </div>
   );
 }
