@@ -37,7 +37,8 @@ describe("verifyMagicLink", () => {
     const token = await seedToken(db, user.id, "alice@example.com");
 
     const result = await verifyMagicLink(db, token);
-    expect(result.id).toBe(user.id);
+    expect(result.user.id).toBe(user.id);
+    expect(result.created).toBe(false);
 
     // Row gone — replay rejects.
     const remaining = await db.select().from(authTokens);
@@ -129,9 +130,11 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
     const token = await seedToken(db, null, "newcomer@example.com");
 
     const result = await verifyMagicLink(db, token);
-    expect(result.email).toBe("newcomer@example.com");
-    expect(result.role).toBe("author");
-    expect(result.emailVerifiedAt).not.toBeNull();
+    expect(result.user.email).toBe("newcomer@example.com");
+    expect(result.user.role).toBe("author");
+    expect(result.user.emailVerifiedAt).not.toBeNull();
+    // Fresh provision — first sign-in for this user.
+    expect(result.created).toBe(true);
 
     // The token row is gone (single-use).
     const remaining = await db.select().from(authTokens);
@@ -199,10 +202,13 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
     });
     const token = await seedToken(db, null, "first@example.com");
 
-    const user = await verifyMagicLink(db, token, { bootstrapAllowed: true });
+    const result = await verifyMagicLink(db, token, {
+      bootstrapAllowed: true,
+    });
     // provisionUser auto-promotes the very first user to admin.
-    expect(user.role).toBe("admin");
-    expect(user.email).toBe("first@example.com");
+    expect(result.user.role).toBe("admin");
+    expect(result.user.email).toBe("first@example.com");
+    expect(result.created).toBe(true);
   });
 
   test("falls through to sign-in if a user with this email exists at verify time", async () => {
@@ -219,8 +225,10 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
     const token = await seedToken(db, null, "newcomer@example.com");
 
     const result = await verifyMagicLink(db, token);
-    expect(result.id).toBe(raced.id);
-    expect(result.role).toBe("subscriber");
+    expect(result.user.id).toBe(raced.id);
+    expect(result.user.role).toBe("subscriber");
+    // The race-retry path links an existing user, not a fresh provision.
+    expect(result.created).toBe(false);
   });
 
   test("rejects when the raced existing user is disabled", async () => {

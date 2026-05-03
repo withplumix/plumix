@@ -181,6 +181,8 @@ function withRequest(
     oauthProviders: app.oauthProviders,
     authenticator: app.authenticator,
     bootstrapAllowed: app.bootstrapAllowed,
+    origin: app.origin,
+    siteName: app.config.auth.magicLink?.siteName,
   });
 }
 

@@ -18,13 +18,26 @@ interface VerifyMagicLinkOptions {
   readonly bootstrapAllowed?: boolean;
 }
 
+interface VerifyMagicLinkResult {
+  readonly user: User;
+  /**
+   * True when the click provisioned a brand-new user (signup path);
+   * false when the token bound to an existing user (sign-in path).
+   * The caller forwards this to `user:signed_in`'s `firstSignIn`
+   * field so audit logs and onboarding handlers can branch on
+   * first-vs-returning. Mirrors `resolveOAuthUser`'s `created`.
+   */
+  readonly created: boolean;
+}
+
 /**
- * Consume a magic-link token and return the matching user.
+ * Consume a magic-link token and return the matching user + whether
+ * it was just created (signup) or pre-existing (sign-in).
  *
- *   userId set in the token row → sign-in (existing user).
- *   userId null in the token row → signup. Delegated to the shared
- *     `resolveExternalIdentity` helper for the verified-email +
- *     allowed-domains + bootstrap-rail + race-retry dance.
+ *   userId set in the token row → sign-in; created=false.
+ *   userId null in the token row → signup; created comes from
+ *     `resolveExternalIdentity` (true on a fresh row, false when the
+ *     helper linked an existing user via verified-email match).
  *
  * Atomic compare-and-delete via `DELETE … RETURNING` — a concurrent
  * second verify of the same token sees an empty result, never the same
@@ -38,7 +51,7 @@ export async function verifyMagicLink(
   db: Db,
   rawToken: string,
   options: VerifyMagicLinkOptions = {},
-): Promise<User> {
+): Promise<VerifyMagicLinkResult> {
   const hash = await hashToken(rawToken);
 
   const [row] = await db
@@ -57,16 +70,17 @@ export async function verifyMagicLink(
   }
 
   if (row.userId !== null) {
-    return resolveExistingUser(db, row.userId);
+    const user = await resolveExistingUser(db, row.userId);
+    return { user, created: false };
   }
 
   try {
-    const { user } = await resolveExternalIdentity(db, {
+    const { user, created } = await resolveExternalIdentity(db, {
       email: row.email,
       emailVerified: true, // link click is the verification
       bootstrapAllowed: options.bootstrapAllowed,
     });
-    return user;
+    return { user, created };
   } catch (error) {
     if (error instanceof ExternalIdentityError) {
       // `email_unverified` can't fire here (we always pass true);

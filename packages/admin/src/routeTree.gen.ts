@@ -23,6 +23,7 @@ import { Route as AuthenticatedAllowedDomainsIndexRouteImport } from "./routes/_
 import { Route as AuthenticatedUsersCreateRouteImport } from "./routes/_authenticated/users/create";
 import { Route as AuthenticatedSettingsPageRouteImport } from "./routes/_authenticated/settings/$page";
 import { Route as AuthenticatedPagesSplatRouteImport } from "./routes/_authenticated/pages/$";
+import { Route as AuthenticatedAuthDeviceRouteImport } from "./routes/_authenticated/auth/device";
 import { Route as AuthAcceptInviteTokenRouteImport } from "./routes/_auth/accept-invite/$token";
 import { Route as AuthenticatedTermsNameIndexRouteImport } from "./routes/_authenticated/terms/$name/index";
 import { Route as AuthenticatedEntriesSlugIndexRouteImport } from "./routes/_authenticated/entries/$slug/index";
@@ -104,6 +105,11 @@ const AuthenticatedPagesSplatRoute = AuthenticatedPagesSplatRouteImport.update({
   path: "/pages/$",
   getParentRoute: () => AuthenticatedRoute,
 } as any);
+const AuthenticatedAuthDeviceRoute = AuthenticatedAuthDeviceRouteImport.update({
+  id: "/auth/device",
+  path: "/auth/device",
+  getParentRoute: () => AuthenticatedRoute,
+} as any);
 const AuthAcceptInviteTokenRoute = AuthAcceptInviteTokenRouteImport.update({
   id: "/accept-invite/$token",
   path: "/accept-invite/$token",
@@ -156,6 +162,7 @@ export interface FileRoutesByFullPath {
   "/login": typeof AuthLoginRoute;
   "/profile": typeof AuthenticatedProfileRoute;
   "/accept-invite/$token": typeof AuthAcceptInviteTokenRoute;
+  "/auth/device": typeof AuthenticatedAuthDeviceRoute;
   "/pages/$": typeof AuthenticatedPagesSplatRoute;
   "/settings/$page": typeof AuthenticatedSettingsPageRoute;
   "/users/create": typeof AuthenticatedUsersCreateRoute;
@@ -177,6 +184,7 @@ export interface FileRoutesByTo {
   "/login": typeof AuthLoginRoute;
   "/profile": typeof AuthenticatedProfileRoute;
   "/accept-invite/$token": typeof AuthAcceptInviteTokenRoute;
+  "/auth/device": typeof AuthenticatedAuthDeviceRoute;
   "/pages/$": typeof AuthenticatedPagesSplatRoute;
   "/settings/$page": typeof AuthenticatedSettingsPageRoute;
   "/users/create": typeof AuthenticatedUsersCreateRoute;
@@ -202,6 +210,7 @@ export interface FileRoutesById {
   "/_authenticated/profile": typeof AuthenticatedProfileRoute;
   "/_authenticated/": typeof AuthenticatedIndexRoute;
   "/_auth/accept-invite/$token": typeof AuthAcceptInviteTokenRoute;
+  "/_authenticated/auth/device": typeof AuthenticatedAuthDeviceRoute;
   "/_authenticated/pages/$": typeof AuthenticatedPagesSplatRoute;
   "/_authenticated/settings/$page": typeof AuthenticatedSettingsPageRoute;
   "/_authenticated/users/create": typeof AuthenticatedUsersCreateRoute;
@@ -225,6 +234,7 @@ export interface FileRouteTypes {
     | "/login"
     | "/profile"
     | "/accept-invite/$token"
+    | "/auth/device"
     | "/pages/$"
     | "/settings/$page"
     | "/users/create"
@@ -246,6 +256,7 @@ export interface FileRouteTypes {
     | "/login"
     | "/profile"
     | "/accept-invite/$token"
+    | "/auth/device"
     | "/pages/$"
     | "/settings/$page"
     | "/users/create"
@@ -270,6 +281,7 @@ export interface FileRouteTypes {
     | "/_authenticated/profile"
     | "/_authenticated/"
     | "/_auth/accept-invite/$token"
+    | "/_authenticated/auth/device"
     | "/_authenticated/pages/$"
     | "/_authenticated/settings/$page"
     | "/_authenticated/users/create"
@@ -392,6 +404,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedPagesSplatRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
+    "/_authenticated/auth/device": {
+      id: "/_authenticated/auth/device";
+      path: "/auth/device";
+      fullPath: "/auth/device";
+      preLoaderRoute: typeof AuthenticatedAuthDeviceRouteImport;
+      parentRoute: typeof AuthenticatedRoute;
+    };
     "/_auth/accept-invite/$token": {
       id: "/_auth/accept-invite/$token";
       path: "/accept-invite/$token";
@@ -468,6 +487,7 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren);
 interface AuthenticatedRouteChildren {
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute;
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute;
+  AuthenticatedAuthDeviceRoute: typeof AuthenticatedAuthDeviceRoute;
   AuthenticatedPagesSplatRoute: typeof AuthenticatedPagesSplatRoute;
   AuthenticatedSettingsPageRoute: typeof AuthenticatedSettingsPageRoute;
   AuthenticatedUsersCreateRoute: typeof AuthenticatedUsersCreateRoute;
@@ -485,6 +505,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedAuthDeviceRoute: AuthenticatedAuthDeviceRoute,
   AuthenticatedPagesSplatRoute: AuthenticatedPagesSplatRoute,
   AuthenticatedSettingsPageRoute: AuthenticatedSettingsPageRoute,
   AuthenticatedUsersCreateRoute: AuthenticatedUsersCreateRoute,

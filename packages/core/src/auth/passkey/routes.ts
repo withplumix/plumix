@@ -249,10 +249,17 @@ export async function handlePasskeyRegisterVerify(
       );
     }
 
-    await persistCredential(ctx.db, {
+    const credential = await persistCredential(ctx.db, {
       userId: verified.userId,
       verified,
       maxPerUser: app.passkey.maxCredentialsPerUser,
+    });
+
+    // Look up the full user row for the hook payload (createSession
+    // doesn't return one). Cheap PK lookup on a path that's already
+    // doing several writes.
+    const user = await ctx.db.query.users.findFirst({
+      where: eq(users.id, verified.userId),
     });
 
     const { token } = await createSession(
@@ -260,6 +267,33 @@ export async function handlePasskeyRegisterVerify(
       { userId: verified.userId, ...readRequestMeta(ctx.request) },
       app.sessionPolicy,
     );
+
+    if (user) {
+      const userCount = await ctx.db.$count(
+        credentials,
+        eq(credentials.userId, user.id),
+      );
+      // First credential ever → this is the bootstrap path; subsequent
+      // verifies are "add another device". Audit-log subscribers branch
+      // on `firstSignIn` to render onboarding-specific copy.
+      const firstSignIn = userCount === 1;
+      await ctx.hooks.doAction(
+        "credential:created",
+        {
+          id: credential.id,
+          userId: credential.userId,
+          name: credential.name,
+          deviceType: credential.deviceType,
+          isBackedUp: credential.isBackedUp,
+        },
+        { actor: { id: user.id, email: user.email, role: user.role } },
+      );
+      await ctx.hooks.doAction("user:signed_in", user, {
+        method: "passkey",
+        firstSignIn,
+      });
+    }
+
     return jsonResponse(
       { userId: verified.userId },
       {
@@ -325,6 +359,16 @@ export async function handlePasskeyLoginVerify(
       app.sessionPolicy,
     );
 
+    const user = await ctx.db.query.users.findFirst({
+      where: eq(users.id, verified.credential.userId),
+    });
+    if (user) {
+      await ctx.hooks.doAction("user:signed_in", user, {
+        method: "passkey",
+        firstSignIn: false,
+      });
+    }
+
     return jsonResponse(
       { userId: verified.credential.userId },
       {
@@ -340,7 +384,15 @@ export async function handlePasskeyLoginVerify(
 
 export async function handleSignout(ctx: AppContext): Promise<Response> {
   const token = readSessionCookie(ctx.request);
-  if (token) await invalidateSession(ctx.db, token);
+  if (token) {
+    // Resolve the user before invalidating so the hook payload carries
+    // the row that was just signed out (for audit attribution).
+    const validated = await validateSession(ctx.db, token, undefined);
+    await invalidateSession(ctx.db, token);
+    if (validated) {
+      await ctx.hooks.doAction("user:signed_out", validated.user);
+    }
+  }
   const cookie = buildSessionDeletionCookie({
     secure: isSecureRequest(ctx.request),
     sameSite: "Lax",
@@ -444,7 +496,7 @@ export async function handleInviteRegisterVerify(
     if (verified.userId === null || verified.userId !== user.id) {
       return jsonResponse({ error: "challenge_mismatch" }, { status: 400 });
     }
-    await persistCredential(ctx.db, {
+    const credential = await persistCredential(ctx.db, {
       userId: user.id,
       verified,
       maxPerUser: app.passkey.maxCredentialsPerUser,
@@ -460,6 +512,21 @@ export async function handleInviteRegisterVerify(
     // hit the DB can rely on the user being in a stable post-invite
     // state — matches WP's `user_register` firing post-save.
     await ctx.hooks.doAction("user:registered", user);
+    await ctx.hooks.doAction(
+      "credential:created",
+      {
+        id: credential.id,
+        userId: credential.userId,
+        name: credential.name,
+        deviceType: credential.deviceType,
+        isBackedUp: credential.isBackedUp,
+      },
+      { actor: { id: user.id, email: user.email, role: user.role } },
+    );
+    await ctx.hooks.doAction("user:signed_in", user, {
+      method: "invite",
+      firstSignIn: true,
+    });
     return jsonResponse(
       { userId: user.id },
       {

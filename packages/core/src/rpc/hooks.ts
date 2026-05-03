@@ -1,3 +1,6 @@
+import type { AuthenticatedUser } from "../context/app.js";
+import type { ApiToken } from "../db/schema/api_tokens.js";
+import type { Credential } from "../db/schema/credentials.js";
 import type { Entry, EntryStatus, NewEntry } from "../db/schema/entries.js";
 import type { Term } from "../db/schema/terms.js";
 import type { User } from "../db/schema/users.js";
@@ -293,6 +296,182 @@ declare module "../hooks/types.js" {
       readonly set: Readonly<Record<string, unknown>>;
       readonly removed: readonly string[];
     }) => void | Promise<void>;
+
+    // ──────────────────────────────────────────────────────────────────
+    // Auth / sign-in events.
+    //
+    // These mirror the WP `wp_login` / `wp_logout` surface but adopt
+    // the plumix `entity:event` shape and split sign-in by `method`
+    // so an audit-log plugin can attribute "via passkey" vs "via
+    // OAuth (github)" without sniffing call paths.
+    //
+    // The audit-log story: subscribe to `auth:*`, `session:*`,
+    // `credential:*`, `api_token:*`, `device_code:*` and write one
+    // row per emission. No `revoked_by` columns anywhere — the actor
+    // travels in `context.actor`. Avoids schema bloat that becomes
+    // dead weight once the audit table lands.
+    // ──────────────────────────────────────────────────────────────────
+
+    /**
+     * A user just signed in. Fires from every sign-in path:
+     * passkey, magic-link, OAuth callback, invite-accept, and any
+     * external IdP authenticator (cfAccess, etc.) on its first
+     * authenticated request.
+     *
+     * `method` distinguishes the surface; `provider` is set only for
+     * `oauth` so subscribers can branch on `github` vs `google` etc.
+     * `firstSignIn` is true when this is the user's first session
+     * ever (signup-then-signin paths set it once, subsequent logins
+     * are false).
+     */
+    "user:signed_in": (
+      user: User,
+      context: {
+        readonly method:
+          | "passkey"
+          | "magic_link"
+          | "oauth"
+          | "invite"
+          | "external";
+        readonly provider?: string;
+        readonly firstSignIn: boolean;
+      },
+    ) => void | Promise<void>;
+
+    /**
+     * A user signed out via the dedicated `/auth/signout` route. The
+     * session row is already deleted by the time this fires.
+     */
+    "user:signed_out": (user: User) => void | Promise<void>;
+
+    /**
+     * Fires after `user.requestEmailChange` writes the verification
+     * token + sends the confirmation mail. `actor` may differ from
+     * `user` when an admin requests the change for another user.
+     * Email is NOT changed yet — see `user:email_changed`.
+     */
+    "user:email_change_requested": (
+      user: User,
+      context: {
+        readonly actor: AuthenticatedUser;
+        readonly newEmail: string;
+        readonly expiresAt: Date;
+      },
+    ) => void | Promise<void>;
+
+    /**
+     * Fires after the verification link is clicked and the email
+     * commit lands. Payload has the post-write user (with new
+     * email + reset `emailVerifiedAt`) and the previous email for
+     * diff. Sessions for this user are invalidated by the time this
+     * fires — subscribers should not assume the actor's session
+     * still exists.
+     */
+    "user:email_changed": (
+      user: User,
+      context: { readonly previousEmail: string },
+    ) => void | Promise<void>;
+
+    /**
+     * A passkey was registered. Fires on first signup, invite-accept,
+     * and the "add another passkey" flow. Payload omits the public-key
+     * blob to keep wire-friendly subscribers small; pull from `context.db`
+     * if you need the full row.
+     */
+    "credential:created": (
+      credential: Pick<
+        Credential,
+        "id" | "userId" | "name" | "deviceType" | "isBackedUp"
+      >,
+      context: { readonly actor: AuthenticatedUser },
+    ) => void | Promise<void>;
+
+    /**
+     * A passkey was revoked via `auth.credentials.delete`. Self-only —
+     * cross-user passkey deletion is intentionally not a feature, so
+     * `actor.id === credential.userId` always.
+     */
+    "credential:revoked": (
+      credential: { readonly id: string; readonly userId: number },
+      context: { readonly actor: AuthenticatedUser },
+    ) => void | Promise<void>;
+
+    /**
+     * A passkey was renamed via `auth.credentials.rename`. Same
+     * self-only contract as `credential:revoked`.
+     */
+    "credential:renamed": (
+      credential: { readonly id: string; readonly userId: number },
+      context: { readonly actor: AuthenticatedUser; readonly name: string },
+    ) => void | Promise<void>;
+
+    /**
+     * A browser session was explicitly revoked via `auth.sessions.revoke`
+     * or `auth.sessions.revokeOthers`. `mode` distinguishes single-row
+     * revoke from "everywhere except this browser" so the audit log
+     * can render either as one event or N. Cross-user revocation isn't
+     * exposed — sessions are second-factor security primitives.
+     */
+    "session:revoked": (
+      session: { readonly id: string; readonly userId: number },
+      context: {
+        readonly actor: AuthenticatedUser;
+        readonly mode: "single" | "all_others";
+      },
+    ) => void | Promise<void>;
+
+    /**
+     * A personal access token was minted via `auth.apiTokens.create`.
+     * Token row is shipped sans secret (PK = SHA-256 hash). Mint is
+     * always self-action — you can't mint for another user — so
+     * `actor.id === token.userId`.
+     */
+    "api_token:created": (
+      token: Pick<
+        ApiToken,
+        "id" | "userId" | "name" | "prefix" | "scopes" | "expiresAt"
+      >,
+      context: { readonly actor: AuthenticatedUser },
+    ) => void | Promise<void>;
+
+    /**
+     * A personal access token was revoked. `mode: "self"` for the
+     * owner using `auth.apiTokens.revoke`; `mode: "admin"` for an
+     * admin-with-`user:manage_tokens` using `adminRevoke`. Audit log
+     * uses `mode` to pick copy ("you revoked" vs "admin X revoked").
+     */
+    "api_token:revoked": (
+      token: { readonly id: string; readonly userId: number },
+      context: {
+        readonly actor: AuthenticatedUser;
+        readonly mode: "self" | "admin";
+      },
+    ) => void | Promise<void>;
+
+    /**
+     * A device-flow session was approved via `auth.deviceFlow.approve`.
+     * The polling client's next exchange will mint the API token; this
+     * fires at approval time so the audit log captures the human's
+     * decision separately from the token mint.
+     */
+    "device_code:approved": (
+      deviceCode: {
+        readonly id: string;
+        readonly userCode: string;
+        readonly tokenName: string;
+        readonly scopes: readonly string[] | null;
+      },
+      context: { readonly actor: AuthenticatedUser },
+    ) => void | Promise<void>;
+
+    /**
+     * A device-flow session was denied via `auth.deviceFlow.deny`.
+     * Polling client gets `access_denied` on the next exchange.
+     */
+    "device_code:denied": (
+      deviceCode: { readonly id: string; readonly userCode: string },
+      context: { readonly actor: AuthenticatedUser },
+    ) => void | Promise<void>;
   }
 }
 

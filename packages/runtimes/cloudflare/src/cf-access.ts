@@ -1,6 +1,6 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
-import type { Db, RequestAuthenticator, User, UserRole } from "@plumix/core";
+import type { Db, RequestAuthenticator, UserRole } from "@plumix/core";
 import { ExternalIdentityError, resolveExternalIdentity } from "@plumix/core";
 
 // Header CF Access sets on every request that passed the application's
@@ -125,7 +125,7 @@ export function cfAccess(config: CfAccessConfig): RequestAuthenticator {
     signOutUrl(): string {
       return cfAccessLogoutUrl(config.teamDomain);
     },
-    async authenticate(request: Request, db: Db): Promise<User | null> {
+    async authenticate(request: Request, db: Db) {
       const token = request.headers.get(CF_ACCESS_HEADER);
       if (!token) return null;
 
@@ -157,7 +157,9 @@ export function cfAccess(config: CfAccessConfig): RequestAuthenticator {
           defaultRole: config.defaultRole,
           bootstrapAllowed: config.bootstrapAllowed,
         });
-        return user;
+        // No tokenScopes — CF Access carries the user's role caps
+        // unrestricted; PAT-style scoping doesn't apply here.
+        return { user };
       } catch (error) {
         if (error instanceof ExternalIdentityError) {
           // `account_disabled` and `registration_closed` (when

@@ -14,7 +14,7 @@ import type {
   ConnectedObjectStorage,
   ImageDelivery,
 } from "../runtime/slots.js";
-import { sessionAuthenticator } from "../auth/authenticator.js";
+import { defaultAuthenticator } from "../auth/authenticator.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
 
 export type CoreSchema = typeof coreSchema;
@@ -51,6 +51,15 @@ export interface AppContext<
   readonly env: PlumixEnv;
   readonly request: Request;
   readonly user: AuthenticatedUser | null;
+  /**
+   * Per-request capability whitelist when the active authenticator
+   * narrowed it (e.g. an API token with `scopes: [...]`). null =
+   * unrestricted, the user's role caps apply verbatim. `auth.can()`
+   * intersects this with the role caps; every capability check in
+   * core + plugins reads through `auth.can`, so nothing escapes the
+   * narrowing.
+   */
+  readonly tokenScopes: readonly string[] | null;
   readonly hooks: HookExecutor;
   readonly plugins: PluginRegistry;
   readonly logger: Logger;
@@ -112,6 +121,22 @@ export interface AppContext<
    * degrade if mail is optional for their feature.
    */
   readonly mailer?: Mailer;
+  /**
+   * Canonical site origin (`https://cms.example.com`). Sourced from
+   * `auth.passkey.origin` at app build time. Magic-link, email-change,
+   * and any future flow that composes a verification URL reads this
+   * so URLs are stable across the deployment regardless of which
+   * worker / region serves the inbound request.
+   */
+  readonly origin: string;
+  /**
+   * Operator-set site name from `auth.magicLink.siteName`, used as
+   * the human-friendly label in mailer subjects ("Confirm your email
+   * for {siteName}"). Undefined when magic-link isn't configured —
+   * RPC procedures that compose user-facing mail should refuse with
+   * a config-missing reason in that case.
+   */
+  readonly siteName?: string;
 }
 
 export type AuthenticatedAppContext<
@@ -127,6 +152,9 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly hooks: HookExecutor;
   readonly plugins: PluginRegistry;
   readonly user?: AuthenticatedUser | null;
+  readonly tokenScopes?: readonly string[] | null;
+  readonly origin?: string;
+  readonly siteName?: string;
   readonly logger?: Logger;
   readonly after?: AfterResponse;
   readonly assets?: AssetsBinding;
@@ -140,22 +168,40 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
 
 const dropPromise: AfterResponse = () => undefined;
 
+function makeAuthCan(
+  resolver: ReturnType<typeof createCapabilityResolver>,
+  user: AuthenticatedUser | null,
+  tokenScopes: readonly string[] | null,
+): (capability: string) => boolean {
+  if (user === null) return () => false;
+  if (tokenScopes === null) {
+    return (capability) => resolver.hasCapability(user.role, capability);
+  }
+  // Pre-build the Set so each can() call is O(1) instead of O(scopes).
+  // Token-authed requests are the hot path; the Set is per-request,
+  // tiny, and sees ≥1 lookups per request typically.
+  const scopeSet = new Set(tokenScopes);
+  return (capability) =>
+    scopeSet.has(capability) && resolver.hasCapability(user.role, capability);
+}
+
 export function createAppContext<TSchema extends Record<string, unknown>>(
   args: CreateAppContextArgs<TSchema>,
 ): AppContext<TSchema> {
   const resolver = createCapabilityResolver(args.plugins);
   const user = args.user ?? null;
+  const tokenScopes = args.tokenScopes ?? null;
   return {
     db: args.db,
     env: args.env,
     request: args.request,
     user,
+    tokenScopes,
     hooks: args.hooks,
     plugins: args.plugins,
     logger: args.logger ?? consoleLogger,
     auth: {
-      can: (capability) =>
-        user !== null && resolver.hasCapability(user.role, capability),
+      can: makeAuthCan(resolver, user, tokenScopes),
     },
     after: args.after ?? dropPromise,
     assets: args.assets,
@@ -163,21 +209,29 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     imageDelivery: args.imageDelivery,
     mailer: args.mailer,
     oauthProviders: args.oauthProviders ?? [],
-    authenticator: args.authenticator ?? sessionAuthenticator(),
+    authenticator: args.authenticator ?? defaultAuthenticator(),
     bootstrapAllowed: args.bootstrapAllowed ?? false,
+    // Best-effort fallback for tests / runtimes that don't pass an
+    // explicit origin: derive from the inbound request URL. Production
+    // always passes the canonical operator-set origin so URLs in
+    // outgoing email are stable across worker geos.
+    origin: args.origin ?? new URL(args.request.url).origin,
+    siteName: args.siteName,
   };
 }
 
 export function withUser<TSchema extends Record<string, unknown>>(
   ctx: AppContext<TSchema>,
   user: AuthenticatedUser,
+  tokenScopes: readonly string[] | null = null,
 ): AuthenticatedAppContext<TSchema> {
   const resolver = createCapabilityResolver(ctx.plugins);
   return {
     ...ctx,
     user,
+    tokenScopes,
     auth: {
-      can: (capability) => resolver.hasCapability(user.role, capability),
+      can: makeAuthCan(resolver, user, tokenScopes),
     },
     oauthProviders: ctx.oauthProviders,
   };

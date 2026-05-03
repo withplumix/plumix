@@ -1,7 +1,9 @@
 import { describe, expect, test } from "vitest";
 
 import type { RequestAuthenticator } from "./authenticator.js";
+import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness, plumixRequest } from "../test/dispatcher.js";
+import { createApiToken } from "./api-tokens.js";
 
 describe("RequestAuthenticator — dispatcher integration", () => {
   test("default (session cookie) gates plugin authed routes", async () => {
@@ -37,13 +39,59 @@ describe("RequestAuthenticator — dispatcher integration", () => {
     // every authed surface. We exercise this through a plugin route in
     // a separate test (here we only confirm the override is wired —
     // running app.authenticator directly via the harness's app handle).
-    const user = await h.app.authenticator.authenticate(
+    const result = await h.app.authenticator.authenticate(
       new Request("https://cms.example/", {
         headers: { "x-trusted-email": "trusted@enterprise.example" },
       }),
       h.db,
     );
-    expect(user?.id).toBe(seeded.id);
+    expect(result?.user.id).toBe(seeded.id);
+  });
+
+  test("API-token scoping gates plugin routes via auth.can()", async () => {
+    // End-to-end: a scoped PAT hits a capability-gated plugin route.
+    // Cap in scope → 200; cap not in scope → 403, even when the user's
+    // role would grant it. Locks in the intersection invariant past
+    // the dispatcher boundary.
+    const tokenProbePlugin = definePlugin("token-probe", (ctx) => {
+      ctx.registerRoute({
+        method: "GET",
+        path: "/probe",
+        auth: { capability: "entry:post:edit_any" },
+        handler: () => new Response("ok", { status: 200 }),
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [tokenProbePlugin] });
+    const editor = await h.factory.user.create({ role: "editor" });
+
+    // Token A: scoped to `entry:post:edit_any` — should pass.
+    const tokenA = await createApiToken(h.db, {
+      userId: editor.id,
+      name: "scoped-allow",
+      expiresAt: null,
+      scopes: ["entry:post:edit_any"],
+    });
+    const responseA = await h.dispatch(
+      new Request("https://cms.example/_plumix/token-probe/probe", {
+        headers: { authorization: `Bearer ${tokenA.secret}` },
+      }),
+    );
+    expect(responseA.status).toBe(200);
+
+    // Token B: scoped to `entry:post:read` only — same user role, but
+    // the cap-on-route isn't in scope. Must 403.
+    const tokenB = await createApiToken(h.db, {
+      userId: editor.id,
+      name: "scoped-deny",
+      expiresAt: null,
+      scopes: ["entry:post:read"],
+    });
+    const responseB = await h.dispatch(
+      new Request("https://cms.example/_plumix/token-probe/probe", {
+        headers: { authorization: `Bearer ${tokenB.secret}` },
+      }),
+    );
+    expect(responseB.status).toBe(403);
   });
 });
 
@@ -61,7 +109,7 @@ function customHeaderAuth(): RequestAuthenticator {
       const user = await db.query.users.findFirst({
         where: eq(users.email, email),
       });
-      return user ?? null;
+      return user ? { user } : null;
     },
   };
 }

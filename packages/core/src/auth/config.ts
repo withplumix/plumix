@@ -42,7 +42,11 @@ export interface PlumixAuthInput {
   readonly magicLink?: PlumixMagicLinkConfig;
   /**
    * Request-level guard. Decides "who is this user" on every request.
-   * Defaults to the session-cookie authenticator (`sessionAuthenticator()`).
+   * Defaults to `defaultAuthenticator()` — a chain of
+   * `sessionAuthenticator()` (cookie) followed by
+   * `apiTokenAuthenticator()` (Authorization: Bearer pl_pat_…).
+   * Browser admins and CLI / MCP clients both authenticate out of
+   * the box without operator config.
    *
    * Override for transparent SSO — e.g. `cfAccess({ teamDomain })` from
    * `@plumix/runtime-cloudflare`, where the edge sets a JWT header on
@@ -52,6 +56,9 @@ export interface PlumixAuthInput {
    * firewall `/_plumix/auth/*` at the edge (e.g. a Cloudflare Access
    * policy on those paths). Leaving them live by default supports
    * deploys that mix transparent SSO with passkey-as-backup.
+   *
+   * If you override and still want bearer-token auth alongside, wrap
+   * yours in `chainAuthenticators(yourGuard, apiTokenAuthenticator())`.
    */
   readonly authenticator?: RequestAuthenticator;
   /**

@@ -53,9 +53,13 @@ export const userInviteInputSchema = v.object({
   name: v.optional(v.nullable(nameField)),
 });
 
+// `email` is intentionally NOT in this schema. Email changes go
+// through the dedicated `user.requestEmailChange` flow which sends
+// a confirmation link to the new address — silently committing
+// would let an admin (or hijacked self-session) redirect a user's
+// recovery email without their consent.
 export const userUpdateInputSchema = v.object({
   id: idParam,
-  email: v.optional(emailField),
   name: v.optional(v.nullable(nameField)),
   avatarUrl: v.optional(v.nullable(avatarUrlSchema)),
   role: v.optional(roleSchema),
@@ -71,6 +75,15 @@ export const userDeleteInputSchema = v.object({
   /** Reassign this user's authored entries to the given user id before deletion. */
   reassignTo: v.optional(idParam),
 });
+
+export const userRequestEmailChangeInputSchema = v.object({
+  id: idParam,
+  newEmail: emailField,
+});
+
+export const userCancelEmailChangeInputSchema = v.object({ id: idParam });
+
+export const userPendingEmailChangeInputSchema = v.object({ id: idParam });
 
 export type UserListInput = v.InferOutput<typeof userListInputSchema>;
 export type UserGetInput = v.InferOutput<typeof userGetInputSchema>;

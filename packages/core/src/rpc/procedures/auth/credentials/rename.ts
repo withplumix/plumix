@@ -27,5 +27,10 @@ export const rename = base
     if (!row) {
       throw errors.NOT_FOUND({ data: { kind: "credential", id: input.id } });
     }
+    await context.hooks.doAction(
+      "credential:renamed",
+      { id: row.id, userId: context.user.id },
+      { actor: context.user, name: row.name ?? "" },
+    );
     return row;
   });

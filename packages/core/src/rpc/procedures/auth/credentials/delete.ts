@@ -31,7 +31,14 @@ export const del = base
         ),
       )
       .returning({ id: credentials.id });
-    if (row) return row;
+    if (row) {
+      await context.hooks.doAction(
+        "credential:revoked",
+        { id: row.id, userId },
+        { actor: context.user },
+      );
+      return row;
+    }
 
     // No row deleted — disambiguate the two failure modes so the
     // client gets the right error code. NOT_FOUND if the target

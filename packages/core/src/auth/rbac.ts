@@ -56,6 +56,12 @@ export const CORE_CAPABILITIES: Readonly<Record<string, UserRole>> =
     "user:edit": "admin",
     "user:promote": "admin",
     "user:delete": "admin",
+    // Cross-user PAT oversight: list/revoke any user's API tokens.
+    // Distinct from `user:edit` so an audit policy can grant "edit
+    // profiles but not nuke tokens" or vice-versa. Self-management
+    // doesn't need this cap — every authed user manages their own
+    // via the self-scoped procedures.
+    "user:manage_tokens": "admin",
     "plugin:manage": "admin",
     "settings:manage": "admin",
   });

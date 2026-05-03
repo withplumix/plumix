@@ -109,7 +109,7 @@ export async function handleMagicLinkVerify(
   if (token.length > MAX_TOKEN_LENGTH) return loginError("token_invalid");
 
   try {
-    const user = await verifyMagicLink(ctx.db, token, {
+    const { user, created } = await verifyMagicLink(ctx.db, token, {
       bootstrapAllowed: ctx.bootstrapAllowed,
     });
     const { token: sessionToken } = await createSession(
@@ -117,6 +117,10 @@ export async function handleMagicLinkVerify(
       { userId: user.id, ...readRequestMeta(ctx.request) },
       app.sessionPolicy,
     );
+    await ctx.hooks.doAction("user:signed_in", user, {
+      method: "magic_link",
+      firstSignIn: created,
+    });
     const cookie = buildSessionCookie(sessionToken, {
       maxAgeSeconds: app.sessionPolicy.maxAgeSeconds,
       secure: isSecureRequest(ctx.request),

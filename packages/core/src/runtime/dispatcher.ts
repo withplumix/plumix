@@ -3,6 +3,11 @@ import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { PlumixApp } from "./app.js";
 import { hasCsrfHeader, hasMatchingOrigin } from "../auth/csrf.js";
 import {
+  handleDeviceCodeRequest,
+  handleDeviceTokenExchange,
+} from "../auth/device-flow-routes.js";
+import { handleEmailChangeVerify } from "../auth/email-change/routes.js";
+import {
   handleMagicLinkRequest,
   handleMagicLinkVerify,
 } from "../auth/magic-link/routes.js";
@@ -44,10 +49,13 @@ const POST_AUTH_ROUTES = new Map<string, RouteHandler>([
   ["/_plumix/auth/invite/register/options", handleInviteRegisterOptions],
   ["/_plumix/auth/invite/register/verify", handleInviteRegisterVerify],
   ["/_plumix/auth/magic-link/request", handleMagicLinkRequest],
+  ["/_plumix/auth/device/code", handleDeviceCodeRequest],
+  ["/_plumix/auth/device/token", (ctx) => handleDeviceTokenExchange(ctx)],
   ["/_plumix/auth/signout", (ctx) => handleSignout(ctx)],
 ]);
 
 const MAGIC_LINK_VERIFY_PATH = "/_plumix/auth/magic-link/verify";
+const EMAIL_CHANGE_VERIFY_PATH = "/_plumix/auth/verify-email";
 
 export type PlumixDispatcher = (ctx: AppContext) => Promise<Response>;
 
@@ -129,6 +137,14 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
     return handleMagicLinkVerify(ctx, app);
   }
 
+  // Email-change verify — same anchor model. The link goes to the
+  // user's *new* mailbox (proves they own it); clicking commits the
+  // change atomically + invalidates every session for that user.
+  if (pathname === EMAIL_CHANGE_VERIFY_PATH) {
+    if (ctx.request.method !== "GET") return methodNotAllowed(["GET"]);
+    return handleEmailChangeVerify(ctx, app);
+  }
+
   if (pathname === ADMIN_PREFIX || pathname.startsWith(`${ADMIN_PREFIX}/`)) {
     return serveAdmin(ctx);
   }
@@ -140,7 +156,7 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
       ctx.request.method,
     );
     if (pluginMatch !== null) {
-      return dispatchPluginRawRoute(pluginMatch.route, ctx, app);
+      return dispatchPluginRawRoute(pluginMatch.route, ctx);
     }
     // Method-allowed-but-path-unmatched falls through to the 404 below;
     // a plugin that registered only GET wouldn't want POST to 405 here
@@ -193,7 +209,6 @@ export function matchPluginRawRoute(
 async function dispatchPluginRawRoute(
   route: RegisteredRawRoute,
   ctx: AppContext,
-  app: PlumixApp,
 ): Promise<Response> {
   const gate = route.auth;
   if (gate === "public") {
@@ -204,17 +219,23 @@ async function dispatchPluginRawRoute(
   // operator override (e.g. `cfAccess()`) when configured. Plugin
   // route handlers don't need to know which guard is active; they just
   // declare `auth: "authenticated"` and the dispatcher delegates.
-  const user = await ctx.authenticator.authenticate(ctx.request, ctx.db);
-  if (!user) return jsonResponse({ error: "unauthorized" }, { status: 401 });
+  const result = await ctx.authenticator.authenticate(ctx.request, ctx.db);
+  if (!result) return jsonResponse({ error: "unauthorized" }, { status: 401 });
 
-  const { id, email, role } = user;
-  const authedCtx = withUser(ctx, { id, email, role });
+  const { id, email, role } = result.user;
+  const tokenScopes = result.tokenScopes ?? null;
+  const authedCtx = withUser(ctx, { id, email, role }, tokenScopes);
 
   if (gate === "authenticated") {
     return route.handler(authedCtx.request, authedCtx);
   }
   const capability = gate.capability;
-  if (!app.capabilityResolver.hasCapability(role, capability)) {
+  // Read through `authedCtx.auth.can()` so tokenScopes (PAT-style
+  // narrowing) gates plugin routes the same way it gates RPC. Going
+  // direct to `app.capabilityResolver.hasCapability` would bypass the
+  // intersection check and let a token with `scopes: ["entry:post:read"]`
+  // hit a plugin route gated on `entry:post:edit_any`.
+  if (!authedCtx.auth.can(capability)) {
     return jsonResponse({ error: "forbidden", capability }, { status: 403 });
   }
   return route.handler(authedCtx.request, authedCtx);

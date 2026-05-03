@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
 import { Separator } from "@/components/ui/separator.js";
+import { getEmailChangeErrorMessage } from "@/lib/email-change-errors.js";
 import { getMagicLinkErrorMessage } from "@/lib/magic-link-errors.js";
 import {
   getMagicLinkRequestErrorMessage,
@@ -40,6 +41,13 @@ import { loginSchema } from "./-schemas.js";
 const loginSearchSchema = v.object({
   oauth_error: v.optional(v.string()),
   magic_link_error: v.optional(v.string()),
+  email_change_error: v.optional(v.string()),
+  // TanStack Router's default search-parser JSON-decodes values, so
+  // `?email_change_success=1` arrives as the *number* 1, not a
+  // string. Accept either shape and let the render logic coerce to
+  // a boolean — pinning to `v.string()` here would error the route
+  // when the verify route emits a numeric-looking flag.
+  email_change_success: v.optional(v.union([v.string(), v.number()])),
 });
 
 export const Route = createFileRoute("/_auth/login")({
@@ -110,6 +118,15 @@ function LoginRoute(): ReactNode {
 
   const oauthErrorMessage = getOAuthErrorMessage(search.oauth_error);
   const magicLinkUrlError = getMagicLinkErrorMessage(search.magic_link_error);
+  const emailChangeUrlError = getEmailChangeErrorMessage(
+    search.email_change_error,
+  );
+  // Treat any non-empty value as success. The verify route emits
+  // `?email_change_success=1`, but TanStack Router can serialize a
+  // round-tripped search through other routes — e.g. an OAuth start
+  // that preserves search — so being liberal here is safer than
+  // pinning the literal "1".
+  const emailChangeSuccess = Boolean(search.email_change_success);
 
   if (magicLinkSent) {
     return (
@@ -196,6 +213,23 @@ function LoginRoute(): ReactNode {
             {magicLinkError ? (
               <Alert variant="destructive" data-testid="login-magic-link-error">
                 <AlertDescription>{magicLinkError}</AlertDescription>
+              </Alert>
+            ) : null}
+
+            {emailChangeSuccess ? (
+              <Alert data-testid="login-email-change-success">
+                <AlertDescription>
+                  Email confirmed. Sign in with the new address.
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
+            {emailChangeUrlError ? (
+              <Alert
+                variant="destructive"
+                data-testid="login-email-change-error"
+              >
+                <AlertDescription>{emailChangeUrlError}</AlertDescription>
               </Alert>
             ) : null}
 

@@ -409,7 +409,8 @@ export type CoreIconName =
   | "users"
   | "settings"
   | "puzzle"
-  | "mail";
+  | "mail"
+  | "key";
 
 // Subset of `CoreIconName` plugins may emit on `EntryTypeOptions.menuIcon`
 // or `TermTaxonomyOptions.menuIcon`. Names outside this set fall back to
