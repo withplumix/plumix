@@ -10,6 +10,7 @@ import {
   decodeMetaBag,
   loadTermMeta,
   sanitizeMetaForRpc,
+  validateTermMetaReferences,
   writeTermMeta,
 } from "./meta.js";
 import { termUpdateInputSchema } from "./schemas.js";
@@ -66,6 +67,14 @@ export const update = base
       metaInput,
       errors,
     );
+    if (metaPatch) {
+      await validateTermMetaReferences(
+        context,
+        existing.taxonomy,
+        metaPatch,
+        errors,
+      );
+    }
 
     const patch: Partial<NewTerm> = stripUndefined(changes);
 

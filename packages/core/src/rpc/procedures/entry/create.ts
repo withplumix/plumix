@@ -14,6 +14,7 @@ import {
   decodeMetaBag,
   loadEntryMeta,
   sanitizeMetaForRpc,
+  validateEntryMetaReferences,
   writeEntryMeta,
 } from "./meta.js";
 import { entryCreateInputSchema } from "./schemas.js";
@@ -69,6 +70,14 @@ export const create = base
       filtered.meta,
       errors,
     );
+    if (metaPatch) {
+      await validateEntryMetaReferences(
+        context,
+        filtered.type,
+        metaPatch,
+        errors,
+      );
+    }
 
     // Same up-front validation: a bad term reference shouldn't leave a
     // half-created entry behind.

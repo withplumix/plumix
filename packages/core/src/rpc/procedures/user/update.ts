@@ -12,6 +12,7 @@ import {
   decodeMetaBag,
   loadUserMeta,
   sanitizeMetaForRpc,
+  validateUserMetaReferences,
   writeUserMeta,
 } from "./meta.js";
 import { userUpdateInputSchema } from "./schemas.js";
@@ -120,6 +121,9 @@ export const update = base
     // front so a bad key fails before any write.
     const { id: _id, meta: metaInput, ...changes } = filtered;
     const metaPatch = sanitizeMetaForRpc(context.plugins, metaInput, errors);
+    if (metaPatch) {
+      await validateUserMetaReferences(context, metaPatch, errors);
+    }
     const patch: Partial<NewUser> = stripUndefined(changes);
 
     // Nothing to write anywhere? Return the existing row with its

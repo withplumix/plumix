@@ -3,7 +3,11 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 import type { AppContext } from "../../context/app.js";
-import type { MetaBoxField, MetaScalarType } from "../../plugin/manifest.js";
+import type {
+  MetaBoxField,
+  MetaScalarType,
+  ReferenceTarget,
+} from "../../plugin/manifest.js";
 import { eq } from "../../db/index.js";
 
 // Shared meta plumbing for every entity that stores a `meta` JSON
@@ -155,6 +159,105 @@ export function sanitizeMetaForRpc(
     }
     throw error;
   }
+}
+
+/**
+ * Walk a sanitized patch and call each reference field's
+ * `LookupAdapter.exists` to confirm the upserted ID is real and in
+ * scope. Sync `sanitize` callbacks can't run DB queries, so this is
+ * a separate async step the RPC procedures invoke between
+ * sanitisation and `applyMetaPatch`. Missing adapters are treated
+ * the same as missing targets — both surface `invalid_value`.
+ */
+export async function validateMetaReferences(
+  ctx: AppContext,
+  findField: (key: string) => MetaBoxField | undefined,
+  patch: MetaPatch,
+): Promise<void> {
+  for (const [key, value] of patch.upserts) {
+    const target = referenceTargetOf(findField(key));
+    if (!target) continue;
+    if (typeof value !== "string") {
+      throw new MetaSanitizationError(key, "invalid_value");
+    }
+    const registered = ctx.plugins.lookupAdapters.get(target.kind);
+    if (!registered) {
+      throw new MetaSanitizationError(key, "invalid_value");
+    }
+    const exists = await registered.adapter.exists(ctx, value, target.scope);
+    if (!exists) {
+      throw new MetaSanitizationError(key, "invalid_value");
+    }
+  }
+}
+
+/**
+ * RPC-shaped wrapper around `validateMetaReferences` — same envelope
+ * translation as `sanitizeMetaForRpc`. Procedures call this right
+ * after `sanitizeMetaForRpc` so reference validation rides on the
+ * same `meta_invalid_value` error surface authors already match on.
+ */
+export async function validateMetaReferencesForRpc(
+  ctx: AppContext,
+  findField: (key: string) => MetaBoxField | undefined,
+  patch: MetaPatch,
+  errors: RpcErrorsForMeta,
+): Promise<void> {
+  try {
+    await validateMetaReferences(ctx, findField, patch);
+  } catch (error) {
+    if (error instanceof MetaSanitizationError) {
+      throw errors.CONFLICT({
+        data: { reason: `meta_${error.reason}`, key: error.key },
+      });
+    }
+    throw error;
+  }
+}
+
+/**
+ * Resolve reference fields in a decoded meta bag, replacing any
+ * stored ID whose target is gone (or no longer matches scope) with
+ * `null`. Caller passes a freshly-decoded bag (e.g. from
+ * `decodeMetaBag`); the returned bag is a shallow copy with orphan
+ * keys nulled. Non-reference keys pass through untouched.
+ *
+ * Optional — call this from RPC handlers that surface meta to the
+ * admin/UI; internal callers that don't need orphan filtering can
+ * skip the extra round-trips.
+ *
+ * Perf: each reference key issues one `adapter.resolve` round-trip,
+ * so this scales O(refs) per entity load. Fine for single-entity
+ * `*.get` reads; list endpoints rendering many entities should
+ * either skip the filter (orphan IDs render as raw strings, the
+ * caller absorbs the staleness) or batch-resolve via a future
+ * `LookupAdapter.resolveMany(ids)` helper. Today's reference set
+ * is small enough that the per-entity cost is acceptable.
+ */
+export async function filterMetaOrphans(
+  ctx: AppContext,
+  findField: (key: string) => MetaBoxField | undefined,
+  decoded: MetaMap,
+): Promise<MetaMap> {
+  const out: MetaMap = { ...decoded };
+  for (const [key, value] of Object.entries(decoded)) {
+    if (typeof value !== "string") continue;
+    const target = referenceTargetOf(findField(key));
+    if (!target) continue;
+    const registered = ctx.plugins.lookupAdapters.get(target.kind);
+    if (!registered) continue;
+    const resolved = await registered.adapter.resolve(ctx, value, target.scope);
+    if (resolved === null) out[key] = null;
+  }
+  return out;
+}
+
+function referenceTargetOf(
+  field: MetaBoxField | undefined,
+): ReferenceTarget | undefined {
+  if (!field) return undefined;
+  return (field as { readonly referenceTarget?: ReferenceTarget })
+    .referenceTarget;
 }
 
 /**

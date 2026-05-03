@@ -6,9 +6,11 @@ import { findTermMetaField } from "../../../plugin/manifest.js";
 import {
   applyMetaPatch,
   decodeMetaBag as decodeMetaBagCore,
+  filterMetaOrphans as filterMetaOrphansCore,
   isEmptyMetaPatch,
   loadMeta,
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
+  validateMetaReferencesForRpc,
 } from "../../meta/core.js";
 
 export type { MetaChanges as TermMetaChanges } from "../../meta/core.js";
@@ -23,6 +25,20 @@ export function sanitizeMetaForRpc(
   return sanitizeMetaForRpcCore(
     (key) => findTermMetaField(registry, taxonomy, key),
     input,
+    errors,
+  );
+}
+
+export async function validateTermMetaReferences(
+  ctx: AppContext,
+  taxonomy: string,
+  patch: MetaPatch,
+  errors: Parameters<typeof sanitizeMetaForRpcCore>[2],
+): Promise<void> {
+  await validateMetaReferencesForRpc(
+    ctx,
+    (key) => findTermMetaField(ctx.plugins, taxonomy, key),
+    patch,
     errors,
   );
 }
@@ -42,8 +58,13 @@ export async function loadTermMeta(
   ctx: AppContext,
   term: { readonly id: number; readonly taxonomy: string },
 ): Promise<Record<string, unknown>> {
-  return loadMeta(ctx, terms, terms.id, term.id, (key) =>
+  const decoded = await loadMeta(ctx, terms, terms.id, term.id, (key) =>
     findTermMetaField(ctx.plugins, term.taxonomy, key),
+  );
+  return filterMetaOrphansCore(
+    ctx,
+    (key) => findTermMetaField(ctx.plugins, term.taxonomy, key),
+    decoded,
   );
 }
 
