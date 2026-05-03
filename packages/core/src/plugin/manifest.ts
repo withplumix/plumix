@@ -138,12 +138,11 @@ export type MetaBoxFieldSpan =
     };
 
 /**
- * A field inside a meta box — the single source of truth for both the
- * admin UI renderer and the server-side storage contract. Declaring a
- * meta box is the only way to register a meta key; there is no separate
- * `registerMeta` step.
+ * Shared shape for every meta-box field variant — properties carried
+ * regardless of `inputType`. Each narrowed variant of `MetaBoxField`
+ * extends this with input-specific options.
  */
-export interface MetaBoxField {
+export interface MetaBoxFieldBase {
   readonly key: string;
   readonly label: string;
   /**
@@ -153,14 +152,6 @@ export interface MetaBoxField {
    * JSON-serialisable value.
    */
   readonly type: MetaScalarType;
-  /**
-   * Drives the admin sidebar's input renderer. Built-in dispatcher
-   * handles `text` / `textarea` / `number` / `email` / `url` /
-   * `select` / `radio` / `checkbox`. Plugins may use custom values —
-   * the renderer falls back to `<input type="text">` for unknown
-   * types with a dev-mode console warning.
-   */
-  readonly inputType: string;
   /**
    * Applied after type coercion, before persistence. Returning a
    * sanitized value replaces the caller's input — ideal for trimming,
@@ -173,24 +164,61 @@ export interface MetaBoxField {
   readonly description?: string;
   /** Renders `required` on the native input; server validation is separate. */
   readonly required?: boolean;
-  /** Text-shaped inputs (`text` / `textarea` / `email` / `url` / `number`). */
-  readonly placeholder?: string;
-  /** Text-shaped inputs — `text` / `textarea` / `email` / `url`. */
-  readonly maxLength?: number;
-  /** `number` input only. */
-  readonly min?: number;
-  /** `number` input only. */
-  readonly max?: number;
-  /** `number` input only; defaults to 1 (integer) when omitted. */
-  readonly step?: number;
-  /** Required for `select` and `radio`; ignored otherwise. */
-  readonly options?: readonly MetaBoxFieldOption[];
   /**
    * Column span within the meta box's 12-column grid. Defaults to full
    * width. See `MetaBoxFieldSpan` for the responsive object form.
    */
   readonly span?: MetaBoxFieldSpan;
 }
+
+/**
+ * The narrowed `text` field variant produced by the `text()` builder
+ * helper exported from `plumix/fields`. The builder rejects options
+ * that don't apply to a text input (e.g. `min`, `step`, `options`) at
+ * the type level; downstream consumers can rely on the narrowed shape
+ * via the `inputType` discriminator.
+ */
+export interface TextMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "text";
+  readonly type: "string";
+  readonly placeholder?: string;
+  readonly maxLength?: number;
+}
+
+/**
+ * Catch-all variant for every `inputType` not yet narrowed into a
+ * dedicated builder helper — covers the seven other built-in types
+ * (`textarea` / `number` / `email` / `url` / `select` / `radio` /
+ * `checkbox`) plus any custom `inputType` registered via
+ * `registerFieldType`. As more types migrate to typed builders this
+ * variant shrinks.
+ *
+ * Object-literal registrations land here for the un-migrated types.
+ * The shape stays broad on purpose so existing callers compile
+ * unchanged — the narrowed variants are additive.
+ */
+export interface LegacyMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: string;
+  readonly placeholder?: string;
+  readonly maxLength?: number;
+  readonly min?: number;
+  readonly max?: number;
+  readonly step?: number;
+  readonly options?: readonly MetaBoxFieldOption[];
+}
+
+/**
+ * A field inside a meta box — the single source of truth for both the
+ * admin UI renderer and the server-side storage contract. Declaring a
+ * meta box is the only way to register a meta key; there is no separate
+ * `registerMeta` step.
+ *
+ * Modelled as a discriminated union keyed on `inputType`. The `text`
+ * variant comes from the `text()` builder in `plumix/fields`;
+ * `LegacyMetaBoxField` keeps every un-migrated and custom input type
+ * working on the shared broad shape so the union is additive over time.
+ */
+export type MetaBoxField = TextMetaBoxField | LegacyMetaBoxField;
 
 /**
  * Shared base for every "card of fields" registration surface — entry
@@ -1603,75 +1631,37 @@ function toFieldTypeEntry(
   return { type, component };
 }
 
-function toMetaBoxFieldEntry(field: MetaBoxField): MetaBoxFieldManifestEntry {
-  const {
-    key,
-    label,
-    type,
-    inputType,
-    description,
-    required,
-    placeholder,
-    maxLength,
-    min,
-    max,
-    step,
-    options,
-    default: defaultValue,
-    span,
-  } = field;
-  return {
-    key,
-    label,
-    type,
-    inputType,
-    description,
-    required,
-    placeholder,
-    maxLength,
-    min,
-    max,
-    step,
-    options,
-    default: defaultValue,
-    span,
-  };
-}
+// Per-variant options live on `LegacyMetaBoxField` and (going forward)
+// each narrowed variant. Reading via a `Partial` view lets the serializer
+// stay variant-agnostic — narrowed variants that don't carry a given
+// option simply read back `undefined`, and the wire shape stays the
+// same uniform projection regardless of which variant produced the
+// field.
+type MetaBoxFieldOptionView = Partial<LegacyMetaBoxField>;
 
-// Entry meta fields ship without `span` — see `EntryMetaBoxField`.
 function toEntryMetaBoxFieldEntry(
   field: EntryMetaBoxField,
 ): EntryMetaBoxFieldManifestEntry {
-  const {
-    key,
-    label,
-    type,
-    inputType,
-    description,
-    required,
-    placeholder,
-    maxLength,
-    min,
-    max,
-    step,
-    options,
-    default: defaultValue,
-  } = field;
+  const view = field as MetaBoxFieldOptionView;
   return {
-    key,
-    label,
-    type,
-    inputType,
-    description,
-    required,
-    placeholder,
-    maxLength,
-    min,
-    max,
-    step,
-    options,
-    default: defaultValue,
+    key: field.key,
+    label: field.label,
+    type: field.type,
+    inputType: field.inputType,
+    description: field.description,
+    required: field.required,
+    placeholder: view.placeholder,
+    maxLength: view.maxLength,
+    min: view.min,
+    max: view.max,
+    step: view.step,
+    options: view.options,
+    default: field.default,
   };
+}
+
+function toMetaBoxFieldEntry(field: MetaBoxField): MetaBoxFieldManifestEntry {
+  return { ...toEntryMetaBoxFieldEntry(field), span: field.span };
 }
 
 /**
