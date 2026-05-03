@@ -231,6 +231,48 @@ export interface PasswordMetaBoxField extends MetaBoxFieldBase {
   readonly maxLength?: number;
 }
 
+/**
+ * Date-only field. Stored as `YYYY-MM-DD` (ISO 8601 calendar date,
+ * no time, no timezone). Optional `min` / `max` bounds use the same
+ * format and are enforced as registration-time validation only —
+ * server-side bound enforcement is deferred to a later release.
+ */
+export interface DateMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "date";
+  readonly type: "string";
+  readonly min?: string;
+  readonly max?: string;
+}
+
+/**
+ * Date + time field. Stored as a partial ISO 8601 string
+ * (`YYYY-MM-DDTHH:MM` with optional `:SS`) reflecting whatever the
+ * author's browser produced via `<input type="datetime-local">`. A
+ * future iteration may bake in the browser's timezone offset so the
+ * wall-clock semantics survive cross-region reads; today's storage is
+ * naive local time and consumers anchor to a timezone explicitly via
+ * `parseMetaDate` + their own `Temporal.ZonedDateTime` shaping if
+ * needed.
+ */
+export interface DateTimeMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "datetime";
+  readonly type: "string";
+  readonly min?: string;
+  readonly max?: string;
+}
+
+/**
+ * Time-only field. Stored as `HH:MM` (with optional `:SS`). No date
+ * anchor, no timezone — useful for "open at 09:00" style values where
+ * the calendar date is supplied separately.
+ */
+export interface TimeMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "time";
+  readonly type: "string";
+  readonly min?: string;
+  readonly max?: string;
+}
+
 /** Single-value dropdown picker; `options` is required. */
 export interface SelectMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "select";
@@ -289,6 +331,9 @@ export type MetaBoxField =
   | EmailMetaBoxField
   | UrlMetaBoxField
   | PasswordMetaBoxField
+  | DateMetaBoxField
+  | DateTimeMetaBoxField
+  | TimeMetaBoxField
   | SelectMetaBoxField
   | RadioMetaBoxField
   | CheckboxMetaBoxField
@@ -340,6 +385,9 @@ export type EntryMetaBoxField =
   | Omit<EmailMetaBoxField, "span">
   | Omit<UrlMetaBoxField, "span">
   | Omit<PasswordMetaBoxField, "span">
+  | Omit<DateMetaBoxField, "span">
+  | Omit<DateTimeMetaBoxField, "span">
+  | Omit<TimeMetaBoxField, "span">
   | Omit<SelectMetaBoxField, "span">
   | Omit<RadioMetaBoxField, "span">
   | Omit<CheckboxMetaBoxField, "span">
@@ -837,8 +885,14 @@ export interface MetaBoxFieldManifestEntry {
   readonly required?: boolean;
   readonly placeholder?: string;
   readonly maxLength?: number;
-  readonly min?: number;
-  readonly max?: number;
+  /**
+   * Lower bound. `number` carries it as a number; `date` / `datetime`
+   * / `time` carry it as the matching ISO string. Renderers branch on
+   * `inputType` to pick the right interpretation.
+   */
+  readonly min?: number | string;
+  /** Upper bound — see `min`. */
+  readonly max?: number | string;
   readonly step?: number;
   readonly options?: readonly MetaBoxFieldOption[];
   readonly default?: unknown;
@@ -1721,13 +1775,22 @@ function toFieldTypeEntry(
   return { type, component };
 }
 
-// Per-variant options live on `LegacyMetaBoxField` and (going forward)
-// each narrowed variant. Reading via a `Partial` view lets the serializer
-// stay variant-agnostic — narrowed variants that don't carry a given
-// option simply read back `undefined`, and the wire shape stays the
-// same uniform projection regardless of which variant produced the
-// field.
-type MetaBoxFieldOptionView = Partial<LegacyMetaBoxField>;
+// Per-variant options live on each narrowed variant of `MetaBoxField`.
+// Reading via this explicit projection lets the serializer stay
+// variant-agnostic — narrowed variants that don't carry a given
+// option read back `undefined`, and the wire shape stays uniform
+// regardless of which variant produced the field. `min` / `max` widen
+// to `number | string` because date / datetime / time variants store
+// ISO-string bounds while `number` stores numeric bounds; the wire
+// shape mirrors that union and renderers branch on `inputType`.
+interface MetaBoxFieldOptionView {
+  readonly placeholder?: string;
+  readonly maxLength?: number;
+  readonly min?: number | string;
+  readonly max?: number | string;
+  readonly step?: number;
+  readonly options?: readonly MetaBoxFieldOption[];
+}
 
 function toEntryMetaBoxFieldEntry(
   field: EntryMetaBoxField,

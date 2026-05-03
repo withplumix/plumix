@@ -174,6 +174,34 @@ function renderNativeInput({
     );
   }
 
+  if (
+    field.inputType === "date" ||
+    field.inputType === "datetime" ||
+    field.inputType === "time"
+  ) {
+    // Native HTML5 date / datetime-local / time inputs. They emit
+    // ISO-shaped strings (`YYYY-MM-DD`, `YYYY-MM-DDTHH:MM`, `HH:MM`)
+    // which Plumix stores as-is; consumers parse via `parseMetaDate`
+    // when they need a JS `Date`. A future iteration may swap in the
+    // shadcn `Calendar` primitive without changing the field-type
+    // contract.
+    const htmlType =
+      field.inputType === "datetime" ? "datetime-local" : field.inputType;
+    return (
+      <Input
+        {...common}
+        type={htmlType}
+        value={asString(rhf.value)}
+        min={field.min}
+        max={field.max}
+        onChange={(e) => {
+          const raw = e.target.value;
+          rhf.onChange(raw === "" ? null : raw);
+        }}
+      />
+    );
+  }
+
   if (field.inputType === "select") {
     return (
       <select
@@ -236,7 +264,7 @@ function renderNativeInput({
     // dev tools. A future `customRenderers` seam will hook in here
     // before the fallback.
     console.warn(
-      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/select/radio/checkbox).`,
+      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/date/datetime/time/select/radio/checkbox).`,
     );
   }
 
