@@ -30,6 +30,19 @@ export const create = base
       scopes: input.scopes,
     });
 
+    await context.hooks.doAction(
+      "api_token:created",
+      {
+        id: minted.row.id,
+        userId: minted.row.userId,
+        name: minted.row.name,
+        prefix: minted.row.prefix,
+        scopes: minted.row.scopes,
+        expiresAt: minted.row.expiresAt,
+      },
+      { actor: context.user },
+    );
+
     return {
       // The full secret — show once, never recoverable.
       secret: minted.secret,

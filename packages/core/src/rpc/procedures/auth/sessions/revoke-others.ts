@@ -40,5 +40,15 @@ export const revokeOthers = base
         and(eq(sessions.userId, context.user.id), ne(sessions.id, currentId)),
       )
       .returning({ id: sessions.id });
+    // Emit one hook per revoked row so the audit log captures each
+    // device individually — better UX than a single "N revoked" entry
+    // for forensic timelines.
+    for (const row of rows) {
+      await context.hooks.doAction(
+        "session:revoked",
+        { id: row.id, userId: context.user.id },
+        { actor: context.user, mode: "all_others" },
+      );
+    }
     return { revoked: rows.length };
   });

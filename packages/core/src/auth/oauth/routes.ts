@@ -120,7 +120,7 @@ export async function handleOAuthCallback(
       codeVerifier: stored.codeVerifier,
     });
 
-    const { user } = await resolveOAuthUser(ctx.db, {
+    const { user, created } = await resolveOAuthUser(ctx.db, {
       provider: providerKey,
       profile,
       bootstrapAllowed: ctx.bootstrapAllowed,
@@ -131,6 +131,12 @@ export async function handleOAuthCallback(
       { userId: user.id, ...readRequestMeta(ctx.request) },
       app.sessionPolicy,
     );
+
+    await ctx.hooks.doAction("user:signed_in", user, {
+      method: "oauth",
+      provider: providerKey,
+      firstSignIn: created,
+    });
 
     const cookie = buildSessionCookie(token, {
       maxAgeSeconds: app.sessionPolicy.maxAgeSeconds,

@@ -37,5 +37,10 @@ export const revoke = base
     if (!row) {
       throw errors.NOT_FOUND({ data: { kind: "session", id: input.id } });
     }
+    await context.hooks.doAction(
+      "session:revoked",
+      { id: row.id, userId: context.user.id },
+      { actor: context.user, mode: "single" },
+    );
     return row;
   });

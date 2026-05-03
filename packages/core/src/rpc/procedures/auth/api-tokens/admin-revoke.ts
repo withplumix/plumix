@@ -27,10 +27,16 @@ export const adminRevoke = base
       .update(apiTokens)
       .set({ revokedAt: new Date() })
       .where(and(eq(apiTokens.id, input.id), isNull(apiTokens.revokedAt)))
-      .returning({ id: apiTokens.id });
+      .returning({ id: apiTokens.id, userId: apiTokens.userId });
 
-    if (result.length === 0) {
+    const row = result[0];
+    if (!row) {
       throw errors.NOT_FOUND({ data: { kind: "api_token", id: input.id } });
     }
+    await context.hooks.doAction(
+      "api_token:revoked",
+      { id: row.id, userId: row.userId },
+      { actor: context.user, mode: "admin" },
+    );
     return { id: input.id };
   });

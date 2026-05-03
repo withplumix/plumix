@@ -36,5 +36,15 @@ export const approve = base
       tokenName: input.tokenName,
       scopes: input.scopes,
     });
+    await context.hooks.doAction(
+      "device_code:approved",
+      {
+        id: ok.id,
+        userCode: input.userCode,
+        tokenName: input.tokenName,
+        scopes: input.scopes ?? null,
+      },
+      { actor: context.user },
+    );
     return { ok: true as const };
   });

@@ -26,5 +26,10 @@ export const deny = base
     const ok = assertLookupOk(found, input.userCode, errors);
 
     await denyDeviceCode(context.db, { id: ok.id });
+    await context.hooks.doAction(
+      "device_code:denied",
+      { id: ok.id, userCode: input.userCode },
+      { actor: context.user },
+    );
     return { ok: true as const };
   });
