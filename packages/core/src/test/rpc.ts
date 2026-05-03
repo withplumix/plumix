@@ -1,6 +1,7 @@
 import type { RouterClient } from "@orpc/server";
 import { createRouterClient } from "@orpc/server";
 
+import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { AppContext, Db } from "../context/app.js";
 import type { User, UserRole } from "../db/schema/users.js";
 import type { HookExecutor, HookRegistry } from "../hooks/registry.js";
@@ -43,6 +44,12 @@ export interface BaseRpcHarnessOptions {
    * default `[]` matches a passkey-only deploy.
    */
   readonly oauthProviders?: readonly OAuthProviderSummary[];
+  /**
+   * Override the default session-cookie authenticator. Tests for
+   * external-IdP-style flows (cfAccess, custom guards) pass an
+   * instance here; the RPC `authenticated` middleware delegates to it.
+   */
+  readonly authenticator?: RequestAuthenticator;
 }
 
 export interface AuthenticatedHarnessOptions extends BaseRpcHarnessOptions {
@@ -93,6 +100,7 @@ function buildContext(
   plugins: PluginRegistry,
   request: Request,
   oauthProviders: readonly OAuthProviderSummary[],
+  authenticator: RequestAuthenticator | undefined,
 ): AppContext {
   return createAppContext({
     db,
@@ -102,6 +110,7 @@ function buildContext(
     plugins,
     logger: silentLogger,
     oauthProviders,
+    authenticator,
   });
 }
 
@@ -128,6 +137,7 @@ function assemble<TUser extends User | null>(
   request: Request,
   user: TUser,
   oauthProviders: readonly OAuthProviderSummary[],
+  authenticator: RequestAuthenticator | undefined,
 ): RpcHarnessBase<TUser> {
   const context = buildContext(
     db,
@@ -136,6 +146,7 @@ function assemble<TUser extends User | null>(
     plugins,
     request,
     oauthProviders,
+    authenticator,
   );
   const client = createRouterClient(appRouter, { context });
 
@@ -156,7 +167,16 @@ function assemble<TUser extends User | null>(
           ? await userFactory.transient({ db }).create({ role: userOrRole })
           : userOrRole;
       const req = await authenticatedRequest(db, targetUser.id);
-      return assemble(db, env, hooks, plugins, req, targetUser, oauthProviders);
+      return assemble(
+        db,
+        env,
+        hooks,
+        plugins,
+        req,
+        targetUser,
+        oauthProviders,
+        authenticator,
+      );
     },
   };
   return harness;
@@ -182,7 +202,16 @@ export async function createRpcHarness(
       .transient({ db })
       .create({ role: options.authAs });
     const request = await authenticatedRequest(db, user.id);
-    return assemble(db, env, hooks, plugins, request, user, oauthProviders);
+    return assemble(
+      db,
+      env,
+      hooks,
+      plugins,
+      request,
+      user,
+      oauthProviders,
+      options.authenticator,
+    );
   }
 
   const request = options.request ?? unauthenticatedRequest();
@@ -194,5 +223,6 @@ export async function createRpcHarness(
     request,
     null,
     oauthProviders,
+    options.authenticator,
   );
 }
