@@ -22,22 +22,33 @@ import {
 } from "@/components/ui/card.js";
 import { Input } from "@/components/ui/input.js";
 import { Label } from "@/components/ui/label.js";
+import { toDate } from "@/lib/dates.js";
+import { extractCode, extractReason } from "@/lib/orpc-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { PasskeyError } from "@/lib/passkey-errors.js";
 import { registerWithPasskey } from "@/lib/passkey.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-interface PasskeySummary {
+// Wire shape from `auth.credentials.list`. Mirrors the columns the RPC
+// handler picks — keep in sync if the projection there changes. Dates
+// arrive as ISO strings or Date depending on cache state, so the
+// display sites coerce via `toDate`.
+interface PasskeyWire {
   readonly id: string;
   readonly name: string | null;
-  readonly deviceType: "single_device" | "multi_device";
   readonly isBackedUp: boolean;
   readonly transports: readonly string[] | null;
-  readonly createdAt: Date;
-  readonly lastUsedAt: Date;
+  readonly createdAt: Date | string;
+  readonly lastUsedAt: Date | string;
 }
 
 interface PasskeysCardProps {
+  /**
+   * The viewer's email — required by `registerWithPasskey` for the
+   * add-device WebAuthn challenge. The server enforces
+   * `authed.email === input.email` so passing `target.email` from a
+   * self-edit screen is the contract.
+   */
   readonly userEmail: string;
 }
 
@@ -89,7 +100,7 @@ export function PasskeysCard({ userEmail }: PasskeysCardProps): ReactNode {
             {list.data.map((cred) => (
               <PasskeyRow
                 key={cred.id}
-                cred={normaliseCred(cred)}
+                cred={cred}
                 isLast={list.data.length === 1}
                 onChanged={invalidateList}
               />
@@ -129,12 +140,14 @@ export function PasskeysCard({ userEmail }: PasskeysCardProps): ReactNode {
 }
 
 interface PasskeyRowProps {
-  readonly cred: PasskeySummary;
+  readonly cred: PasskeyWire;
   readonly isLast: boolean;
   readonly onChanged: () => Promise<void> | void;
 }
 
 function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
+  const createdAt = toDate(cred.createdAt);
+  const lastUsedAt = toDate(cred.lastUsedAt);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(cred.name ?? "");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -251,9 +264,9 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
                 {cred.isBackedUp ? (
                   <Badge variant="secondary">Synced</Badge>
                 ) : null}
-                <span>Added {formatDate(cred.createdAt)}</span>
-                {cred.lastUsedAt.getTime() !== cred.createdAt.getTime() ? (
-                  <span>Last used {formatDate(cred.lastUsedAt)}</span>
+                <span>Added {formatDate(createdAt)}</span>
+                {lastUsedAt.getTime() !== createdAt.getTime() ? (
+                  <span>Last used {formatDate(lastUsedAt)}</span>
                 ) : null}
               </div>
             </>
@@ -351,68 +364,33 @@ function formatDate(date: Date): string {
   }).format(date);
 }
 
-function formatTransport(cred: PasskeySummary): string | null {
+function formatTransport(cred: PasskeyWire): string | null {
   const transports = cred.transports;
   if (!transports || transports.length === 0) return null;
   // Map WebAuthn transport tokens to readable copy. "internal" = platform
-  // authenticator (Touch ID / Windows Hello); the others are roaming.
+  // authenticator (Touch ID / Windows Hello); "hybrid" = QR-paired phone
+  // ceremony; everything else (`usb`, `nfc`, `ble`) is some flavour of
+  // hardware security key — collapse to one bucket rather than expose
+  // raw transport tokens to end users.
   if (transports.includes("internal")) return "This device";
   if (transports.includes("hybrid")) return "Cross-device";
-  if (transports.includes("usb")) return "Security key";
-  return transports[0] ?? null;
-}
-
-// The list query infers wire types from the RPC handler — coerce createdAt /
-// lastUsedAt to Date for display logic. The wire form is ISO strings (oRPC
-// preserves Dates via valibot serialisers but TanStack Query may surface
-// them as either depending on cache state).
-function normaliseCred(raw: {
-  readonly id: string;
-  readonly name: string | null;
-  readonly deviceType: "single_device" | "multi_device";
-  readonly isBackedUp: boolean;
-  readonly transports: readonly string[] | null;
-  readonly createdAt: Date | string;
-  readonly lastUsedAt: Date | string;
-}): PasskeySummary {
-  return {
-    id: raw.id,
-    name: raw.name,
-    deviceType: raw.deviceType,
-    isBackedUp: raw.isBackedUp,
-    transports: raw.transports,
-    createdAt:
-      raw.createdAt instanceof Date ? raw.createdAt : new Date(raw.createdAt),
-    lastUsedAt:
-      raw.lastUsedAt instanceof Date
-        ? raw.lastUsedAt
-        : new Date(raw.lastUsedAt),
-  };
+  return "Security key";
 }
 
 function formatRenameError(err: unknown): string {
-  if (err && typeof err === "object" && "code" in err) {
-    const code = (err as { code?: string }).code;
-    if (code === "NOT_FOUND") {
-      return "This passkey no longer exists. Refresh the list.";
-    }
+  if (extractCode(err) === "NOT_FOUND") {
+    return "This passkey no longer exists. Refresh the list.";
   }
   if (err instanceof Error) return err.message;
   return "Couldn't rename the passkey. Try again.";
 }
 
 function formatDeleteError(err: unknown): string {
-  if (err && typeof err === "object" && "data" in err) {
-    const data = (err as { data?: { reason?: string } }).data;
-    if (data?.reason === "last_credential") {
-      return "You can't delete your last passkey. Add another one first.";
-    }
+  if (extractReason(err) === "last_credential") {
+    return "You can't delete your last passkey. Add another one first.";
   }
-  if (err && typeof err === "object" && "code" in err) {
-    const code = (err as { code?: string }).code;
-    if (code === "NOT_FOUND") {
-      return "This passkey no longer exists. Refresh the list.";
-    }
+  if (extractCode(err) === "NOT_FOUND") {
+    return "This passkey no longer exists. Refresh the list.";
   }
   if (err instanceof Error) return err.message;
   return "Couldn't delete the passkey. Try again.";
@@ -436,9 +414,9 @@ function formatPasskeyEnrollError(err: unknown): string {
         return "Network error. Check your connection and try again.";
       case "email_mismatch":
         return "Couldn't enrol — re-sign-in and try again.";
-      default:
-        return "Couldn't enrol the passkey. Try again.";
     }
+    // Unknown PasskeyError code → fall through to err.message below for
+    // a slightly more informative message than a generic fallback.
   }
   if (err instanceof Error) return err.message;
   return "Couldn't enrol the passkey. Try again.";

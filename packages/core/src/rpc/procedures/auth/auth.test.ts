@@ -529,7 +529,9 @@ describe("auth.credentials.delete — race safety", () => {
     expect(rejected).toHaveLength(1);
     // The losing call must be a CONFLICT/last_credential — not
     // NOT_FOUND or anything else.
-    expect(rejected[0]!.reason).toMatchObject({
+    const losing = rejected[0];
+    if (!losing) throw new Error("expected a rejected result");
+    expect(losing.reason).toMatchObject({
       code: "CONFLICT",
       data: { reason: "last_credential" },
     });
