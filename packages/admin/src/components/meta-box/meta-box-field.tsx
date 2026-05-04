@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 
+import { TiptapEditor } from "../editor/tiptap-editor.js";
 import { MultiReferencePicker } from "./multi-reference-picker.js";
 import { PluginFieldErrorBoundary } from "./plugin-field-error-boundary.js";
 import { ReferencePicker } from "./reference-picker.js";
@@ -354,6 +355,27 @@ function renderNativeInput({
         name={rhf.name}
         disabled={disabled}
         testId={testId}
+      />
+    );
+  }
+
+  if (field.inputType === "richtext") {
+    // The field's allowlist arrives via the manifest entry; pass it
+    // straight through to the editor + toolbar. Server-side validator
+    // (`walkRichtextDoc`, auto-injected via `richtext()` builder) is
+    // the trust boundary; the toolbar filtering here is the
+    // affordance-side mirror.
+    return (
+      <TiptapEditor
+        value={rhf.value as Parameters<typeof TiptapEditor>[0]["value"]}
+        onChange={(json) => {
+          rhf.onChange(json);
+        }}
+        disabled={disabled}
+        ariaLabel={field.label}
+        marks={field.marks}
+        nodes={field.nodes}
+        blocks={field.blocks}
       />
     );
   }
