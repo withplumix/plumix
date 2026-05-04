@@ -389,6 +389,21 @@ export interface EntryReferenceMetaBoxField extends MetaBoxFieldBase {
 }
 
 /**
+ * Multi entry reference. Storage is a JSON array of bare entry ids;
+ * reads filter out orphans (the array stays dense — missing IDs are
+ * dropped, not nulled). `referenceTarget.multiple` is `true`; `max`
+ * caps the array length at write time. Scope rules match
+ * `EntryReferenceMetaBoxField` — `entryTypes` is required.
+ */
+export interface EntryListMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "entryList";
+  readonly type: "json";
+  readonly referenceTarget: ReferenceTarget;
+  /** Max items allowed in the array. Omitted = unbounded. */
+  readonly max?: number;
+}
+
+/**
  * Single term reference. Storage is the bare term id as a string;
  * reads return `null` for orphans / scope mismatches.
  * `referenceTarget.scope` carries `termTaxonomies` (the taxonomy
@@ -398,6 +413,21 @@ export interface TermReferenceMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "term";
   readonly type: "string";
   readonly referenceTarget: ReferenceTarget;
+}
+
+/**
+ * Multi term reference. Storage is a JSON array of bare term ids;
+ * reads filter out orphans the same way `EntryListMetaBoxField`
+ * does. `referenceTarget.multiple` is `true`; `max` caps array
+ * length. Scope rules match `TermReferenceMetaBoxField` —
+ * `termTaxonomies` is required.
+ */
+export interface TermListMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "termList";
+  readonly type: "json";
+  readonly referenceTarget: ReferenceTarget;
+  /** Max items allowed in the array. Omitted = unbounded. */
+  readonly max?: number;
 }
 
 /** Single-value dropdown picker; `options` is required. */
@@ -468,7 +498,9 @@ export type MetaBoxField =
   | UserMetaBoxField
   | UserListMetaBoxField
   | EntryReferenceMetaBoxField
+  | EntryListMetaBoxField
   | TermReferenceMetaBoxField
+  | TermListMetaBoxField
   | SelectMetaBoxField
   | RadioMetaBoxField
   | CheckboxMetaBoxField
@@ -530,7 +562,9 @@ export type EntryMetaBoxField =
   | Omit<UserMetaBoxField, "span">
   | Omit<UserListMetaBoxField, "span">
   | Omit<EntryReferenceMetaBoxField, "span">
+  | Omit<EntryListMetaBoxField, "span">
   | Omit<TermReferenceMetaBoxField, "span">
+  | Omit<TermListMetaBoxField, "span">
   | Omit<SelectMetaBoxField, "span">
   | Omit<RadioMetaBoxField, "span">
   | Omit<CheckboxMetaBoxField, "span">

@@ -5,7 +5,13 @@ import type {
   MutablePluginRegistry,
 } from "../../plugin/manifest.js";
 import { createPluginRegistry } from "../../plugin/manifest.js";
-import { adminUser, userFactory } from "../../test/factories.js";
+import {
+  adminUser,
+  categoryTerm,
+  entryFactory,
+  tagTerm,
+  userFactory,
+} from "../../test/factories.js";
 import { createRpcHarness } from "../../test/rpc.js";
 import { registerCoreLookupAdapters } from "../procedures/lookup-adapters.js";
 import {
@@ -372,5 +378,273 @@ describe("filterMetaOrphans (multi)", () => {
       owners: "not-an-array",
     });
     expect(filtered.owners).toBe("not-an-array");
+  });
+});
+
+// `entryList` and `termList` ride the same multi-reference pipeline
+// as `userList`. These tests cover the kind-routing + scope-required
+// guards on the entry/term adapters specifically — adding a new kind
+// shouldn't bypass either.
+function registryWithEntryListRef(
+  field: Partial<MetaBoxField & { readonly max?: number }> = {},
+) {
+  const registry: MutablePluginRegistry = createPluginRegistry();
+  registerCoreLookupAdapters(registry);
+  const fullField = {
+    key: "related",
+    label: "Related",
+    type: "json",
+    inputType: "entryList",
+    referenceTarget: {
+      kind: "entry",
+      scope: { entryTypes: ["post"] },
+      multiple: true,
+    },
+    ...field,
+  } as MetaBoxField;
+  registry.userMetaBoxes.set("relations", {
+    id: "relations",
+    label: "Relations",
+    fields: [fullField],
+    registeredBy: null,
+  });
+  return {
+    registry,
+    findField: (key: string) => (key === fullField.key ? fullField : undefined),
+  };
+}
+
+function registryWithTermListRef(
+  field: Partial<MetaBoxField & { readonly max?: number }> = {},
+) {
+  const registry: MutablePluginRegistry = createPluginRegistry();
+  registerCoreLookupAdapters(registry);
+  const fullField = {
+    key: "tags",
+    label: "Tags",
+    type: "json",
+    inputType: "termList",
+    referenceTarget: {
+      kind: "term",
+      scope: { termTaxonomies: ["category"] },
+      multiple: true,
+    },
+    ...field,
+  } as MetaBoxField;
+  registry.userMetaBoxes.set("tagging", {
+    id: "tagging",
+    label: "Tagging",
+    fields: [fullField],
+    registeredBy: null,
+  });
+  return {
+    registry,
+    findField: (key: string) => (key === fullField.key ? fullField : undefined),
+  };
+}
+
+describe("entryList / termList multi-reference pipeline", () => {
+  test("entryList: validateMetaReferences accepts an array of in-scope entry ids", async () => {
+    const { registry, findField } = registryWithEntryListRef();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const a = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "post" });
+    const b = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "post" });
+    const patch = sanitizeMetaInput(findField, {
+      related: [String(a.id), String(b.id)],
+    });
+    if (!patch) throw new Error("patch should not be null");
+    await expect(
+      validateMetaReferences(h.context, findField, patch),
+    ).resolves.toBeUndefined();
+  });
+
+  test("entryList: rejects when an id falls outside the declared entryTypes", async () => {
+    const { registry, findField } = registryWithEntryListRef();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const post = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "post" });
+    const page = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "page" });
+    const patch = sanitizeMetaInput(findField, {
+      related: [String(post.id), String(page.id)],
+    });
+    if (!patch) throw new Error("patch should not be null");
+    await expect(
+      validateMetaReferences(h.context, findField, patch),
+    ).rejects.toBeInstanceOf(MetaSanitizationError);
+  });
+
+  test("entryList: enforces field max", async () => {
+    const { registry, findField } = registryWithEntryListRef({ max: 1 });
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const a = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "post" });
+    const b = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "post" });
+    const patch = sanitizeMetaInput(findField, {
+      related: [String(a.id), String(b.id)],
+    });
+    if (!patch) throw new Error("patch should not be null");
+    await expect(
+      validateMetaReferences(h.context, findField, patch),
+    ).rejects.toBeInstanceOf(MetaSanitizationError);
+  });
+
+  test("entryList: filterMetaOrphans drops out-of-type entries from the array", async () => {
+    const { registry, findField } = registryWithEntryListRef();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const post = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "post" });
+    const page = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "page" });
+    const filtered = await filterMetaOrphans(h.context, findField, {
+      related: [String(post.id), String(page.id), "999999"],
+    });
+    expect(filtered.related).toEqual([String(post.id)]);
+  });
+
+  test("termList: validateMetaReferences accepts an array of in-scope term ids", async () => {
+    const { registry, findField } = registryWithTermListRef();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const a = await categoryTerm.transient({ db: h.context.db }).create();
+    const b = await categoryTerm.transient({ db: h.context.db }).create();
+    const patch = sanitizeMetaInput(findField, {
+      tags: [String(a.id), String(b.id)],
+    });
+    if (!patch) throw new Error("patch should not be null");
+    await expect(
+      validateMetaReferences(h.context, findField, patch),
+    ).resolves.toBeUndefined();
+  });
+
+  test("termList: rejects when an id falls outside the declared termTaxonomies", async () => {
+    const { registry, findField } = registryWithTermListRef();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const cat = await categoryTerm.transient({ db: h.context.db }).create();
+    const tag = await tagTerm.transient({ db: h.context.db }).create();
+    const patch = sanitizeMetaInput(findField, {
+      tags: [String(cat.id), String(tag.id)],
+    });
+    if (!patch) throw new Error("patch should not be null");
+    await expect(
+      validateMetaReferences(h.context, findField, patch),
+    ).rejects.toBeInstanceOf(MetaSanitizationError);
+  });
+
+  test("termList: filterMetaOrphans drops out-of-taxonomy term ids", async () => {
+    const { registry, findField } = registryWithTermListRef();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const cat = await categoryTerm.transient({ db: h.context.db }).create();
+    const tag = await tagTerm.transient({ db: h.context.db }).create();
+    const filtered = await filterMetaOrphans(h.context, findField, {
+      tags: [String(cat.id), String(tag.id)],
+    });
+    expect(filtered.tags).toEqual([String(cat.id)]);
+  });
+
+  test("termList: enforces field max", async () => {
+    const { registry, findField } = registryWithTermListRef({ max: 1 });
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const a = await categoryTerm.transient({ db: h.context.db }).create();
+    const b = await categoryTerm.transient({ db: h.context.db }).create();
+    const patch = sanitizeMetaInput(findField, {
+      tags: [String(a.id), String(b.id)],
+    });
+    if (!patch) throw new Error("patch should not be null");
+    await expect(
+      validateMetaReferences(h.context, findField, patch),
+    ).rejects.toBeInstanceOf(MetaSanitizationError);
+  });
+
+  // Locks in the kind-grouped batch architecture from PR #137 against
+  // the new variants: a meta patch mixing two reference kinds (user +
+  // entry) calls each adapter exactly once, regardless of how many
+  // fields target that kind. Different kinds = different groups.
+  test("cross-kind batching: a userList + entryList patch makes one call per kind", async () => {
+    const registry = createPluginRegistry();
+    registerCoreLookupAdapters(registry);
+    const userEntry = registry.lookupAdapters.get("user");
+    const entryEntry = registry.lookupAdapters.get("entry");
+    if (!userEntry || !entryEntry) {
+      throw new Error("user + entry adapters should be registered");
+    }
+    let userListCalls = 0;
+    let entryListCalls = 0;
+    registry.lookupAdapters.set("user", {
+      ...userEntry,
+      adapter: {
+        list: (ctx, options) => {
+          userListCalls += 1;
+          return userEntry.adapter.list(ctx, options);
+        },
+        resolve: (ctx, id, scope) => userEntry.adapter.resolve(ctx, id, scope),
+      },
+    });
+    registry.lookupAdapters.set("entry", {
+      ...entryEntry,
+      adapter: {
+        list: (ctx, options) => {
+          entryListCalls += 1;
+          return entryEntry.adapter.list(ctx, options);
+        },
+        resolve: (ctx, id, scope) => entryEntry.adapter.resolve(ctx, id, scope),
+      },
+    });
+    const ownersField = {
+      key: "owners",
+      label: "Owners",
+      type: "json",
+      inputType: "userList",
+      referenceTarget: { kind: "user", multiple: true },
+    } as MetaBoxField;
+    const relatedField = {
+      key: "related",
+      label: "Related",
+      type: "json",
+      inputType: "entryList",
+      referenceTarget: {
+        kind: "entry",
+        scope: { entryTypes: ["post"] },
+        multiple: true,
+      },
+    } as MetaBoxField;
+    registry.userMetaBoxes.set("ownership", {
+      id: "ownership",
+      label: "Ownership",
+      fields: [ownersField, relatedField],
+      registeredBy: null,
+    });
+    const findField = (key: string): MetaBoxField | undefined =>
+      key === ownersField.key
+        ? ownersField
+        : key === relatedField.key
+          ? relatedField
+          : undefined;
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const u1 = await userFactory.transient({ db: h.context.db }).create();
+    const u2 = await userFactory.transient({ db: h.context.db }).create();
+    const e1 = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "post" });
+    const patch = sanitizeMetaInput(findField, {
+      owners: [String(u1.id), String(u2.id)],
+      related: [String(e1.id)],
+    });
+    if (!patch) throw new Error("patch should not be null");
+    await expect(
+      validateMetaReferences(h.context, findField, patch),
+    ).resolves.toBeUndefined();
+    expect(userListCalls).toBe(1);
+    expect(entryListCalls).toBe(1);
   });
 });
