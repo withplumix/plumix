@@ -18,6 +18,23 @@ const querySchema = v.pipe(v.string(), v.trim(), v.maxLength(200));
 // shape isn't an array or scalar.
 const scopeSchema = v.optional(v.record(v.string(), v.unknown()));
 
+// Realistic upper bound on a single id string. UUIDs are 36 chars;
+// `Number.MAX_SAFE_INTEGER` is 16 digits. 64 covers both with room
+// for plugin-supplied id formats (slug-like, prefixed) while
+// preventing CPU amplification on the regex parsers each adapter
+// runs against incoming ids.
+const ID_MAX_LENGTH = 64;
+
+// `ids` is the resolve-by-id batch path: when set, the adapter
+// returns rows matching any of these ids (still scope-filtered) in
+// a single query. Capped at 100 to match the meta pipeline's
+// `HARD_MULTI_REFERENCE_LIMIT` — the picker can't ship a wider
+// selection through to the validator anyway.
+const lookupListIdsSchema = v.pipe(
+  v.array(v.pipe(v.string(), v.maxLength(ID_MAX_LENGTH))),
+  v.maxLength(100),
+);
+
 export const lookupListInputSchema = v.object({
   kind: kindSchema,
   query: v.optional(querySchema),
@@ -25,11 +42,12 @@ export const lookupListInputSchema = v.object({
   limit: v.optional(
     v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)),
   ),
+  ids: v.optional(lookupListIdsSchema),
 });
 
 export const lookupResolveInputSchema = v.object({
   kind: kindSchema,
-  id: v.pipe(v.string(), v.maxLength(256)),
+  id: v.pipe(v.string(), v.maxLength(ID_MAX_LENGTH)),
   scope: scopeSchema,
 });
 

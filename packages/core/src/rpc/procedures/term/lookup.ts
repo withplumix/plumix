@@ -16,34 +16,40 @@ const TERM_ROW_COLUMNS = {
 } as const;
 
 export const termLookupAdapter: LookupAdapter<TermFieldScope> = {
-  async exists(ctx, id, scope) {
-    const numericId = parseTermId(id);
-    if (numericId === null) return false;
-    const row = await ctx.db
-      .select({ id: terms.id })
-      .from(terms)
-      .where(buildTermWhere(numericId, scope))
-      .limit(1);
-    return row.length > 0;
-  },
-
   async list(ctx, options) {
     const conditions = scopeConditions(options.scope);
-    const trimmedQuery = options.query?.trim();
-    if (trimmedQuery) {
-      const pattern = `%${trimmedQuery}%`;
-      const queryMatch = or(
-        like(terms.name, pattern),
-        like(terms.slug, pattern),
-      );
-      if (queryMatch) conditions.push(queryMatch);
+    let limit: number;
+    if (options.ids !== undefined) {
+      // Resolve-by-id batch path: ignore `query`, return only the
+      // requested ids (still subject to scope). Invalid ids are
+      // silently dropped — they read as orphans on the caller's side.
+      // Limit tracks `numericIds.length` (not `MAX_LIST_LIMIT`) since
+      // the meta pipeline aggregates ids across same-`(kind,scope)`
+      // fields and may legitimately request >100 in one call.
+      const numericIds = options.ids
+        .map((id) => parseTermId(id))
+        .filter((id): id is number => id !== null);
+      if (numericIds.length === 0) return [];
+      conditions.push(inArray(terms.id, numericIds));
+      limit = numericIds.length;
+    } else {
+      const trimmedQuery = options.query?.trim();
+      if (trimmedQuery) {
+        const pattern = `%${trimmedQuery}%`;
+        const queryMatch = or(
+          like(terms.name, pattern),
+          like(terms.slug, pattern),
+        );
+        if (queryMatch) conditions.push(queryMatch);
+      }
+      limit = clampLimit(options.limit);
     }
     const rows = await ctx.db
       .select(TERM_ROW_COLUMNS)
       .from(terms)
       .where(conditions.length === 0 ? undefined : and(...conditions))
       .orderBy(terms.name)
-      .limit(clampLimit(options.limit));
+      .limit(limit);
     return rows.map(toLookupResult);
   },
 

@@ -3,6 +3,7 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 import type { AppContext } from "../../context/app.js";
+import type { LookupAdapter } from "../../plugin/lookup.js";
 import type {
   MetaBoxField,
   MetaScalarType,
@@ -162,33 +163,180 @@ export function sanitizeMetaForRpc(
 }
 
 /**
- * Walk a sanitized patch and call each reference field's
- * `LookupAdapter.exists` to confirm the upserted ID is real and in
- * scope. Sync `sanitize` callbacks can't run DB queries, so this is
- * a separate async step the RPC procedures invoke between
- * sanitisation and `applyMetaPatch`. Missing adapters are treated
- * the same as missing targets — both surface `invalid_value`.
+ * Walk a sanitized patch, group every reference upsert by
+ * `(kind, scope)`, and issue one `LookupAdapter.list({ ids })`
+ * query per group to confirm all upserted IDs are real and in
+ * scope **at validation time**. Throws `invalid_value` for any id
+ * missing from its group's live-id set — same surface whether the
+ * adapter is unregistered, the target is gone, or scope rejected
+ * it. Sync `sanitize` callbacks can't run DB queries, so this is a
+ * separate async step the RPC procedures invoke between
+ * sanitisation and `applyMetaPatch`.
+ *
+ * TOCTOU note: validate runs in a separate query from the eventual
+ * `applyMetaPatch`, and callers don't share a transaction. A
+ * concurrent delete between validate and apply leaves an orphan id
+ * in the meta bag; `filterMetaOrphans` masks it on read. Wrap the
+ * validate/apply pair in `ctx.db.transaction()` if a caller needs
+ * serializable consistency.
  */
 export async function validateMetaReferences(
   ctx: AppContext,
   findField: (key: string) => MetaBoxField | undefined,
   patch: MetaPatch,
 ): Promise<void> {
+  const groups = new Map<string, ReferenceGroup>();
   for (const [key, value] of patch.upserts) {
-    const target = referenceTargetOf(findField(key));
+    const field = findField(key);
+    const target = referenceTargetOf(field);
     if (!target) continue;
-    if (typeof value !== "string") {
-      throw new MetaSanitizationError(key, "invalid_value");
-    }
     const registered = ctx.plugins.lookupAdapters.get(target.kind);
     if (!registered) {
       throw new MetaSanitizationError(key, "invalid_value");
     }
-    const exists = await registered.adapter.exists(ctx, value, target.scope);
-    if (!exists) {
-      throw new MetaSanitizationError(key, "invalid_value");
+    const ids = referenceIdsForValidation(key, value, target, fieldMax(field));
+    const groupKey = referenceGroupKey(target);
+    let group = groups.get(groupKey);
+    if (!group) {
+      group = { registered, scope: target.scope, ids: new Set(), keys: [] };
+      groups.set(groupKey, group);
+    }
+    for (const id of ids) group.ids.add(id);
+    group.keys.push({ key, ids });
+  }
+  for (const group of groups.values()) {
+    if (group.ids.size === 0) continue;
+    const liveIds = await fetchLiveIds(
+      ctx,
+      group.registered,
+      group.scope,
+      group.ids,
+      "validateMetaReferences",
+    );
+    for (const upsert of group.keys) {
+      for (const id of upsert.ids) {
+        if (!liveIds.has(id)) {
+          throw new MetaSanitizationError(upsert.key, "invalid_value");
+        }
+      }
     }
   }
+}
+
+interface ReferenceGroup {
+  readonly registered: { readonly adapter: LookupAdapter };
+  readonly scope: unknown;
+  // De-duped ids across every field in this group — one query
+  // resolves them all regardless of how many fields reference them.
+  readonly ids: Set<string>;
+  // Upsert-side: which keys contributed which ids, so a missing
+  // live-id can be attributed back to the field that supplied it.
+  readonly keys: { readonly key: string; readonly ids: readonly string[] }[];
+}
+
+// Defense-in-depth ceiling on the internal-aggregated id-batch size.
+// Above this, the live-id fetch throws rather than silently truncating.
+// The wire cap (100) and per-field cap (`HARD_MULTI_REFERENCE_LIMIT`,
+// 100) keep external + per-field batches small; this ceiling only
+// kicks in if many fields share `(kind, scope)` and aggregate.
+const MAX_REFERENCE_GROUP_BATCH = 1000;
+
+// Same kind + same scope = same SQL filter, so they batch into one
+// `list({ ids })` call. JSON.stringify is good enough for the scope
+// shapes we ship (`UserFieldScope`, `EntryFieldScope`,
+// `TermFieldScope` are all simple objects with stable key order at
+// build time). Plugin authors who construct scopes with non-stable
+// key order get separate groups — extra query, no correctness issue.
+//
+// `::` separator is collision-safe by construction: `kind` is
+// constrained to `[a-z][a-z0-9_-]{0,63}` (no colons) by the lookup
+// RPC schema, and core registers `user`/`entry`/`term` directly.
+//
+// `LookupAdapter` requires JSON-serializable scope; rethrow with a
+// clear message if `JSON.stringify` rejects (BigInt, cycle, function)
+// rather than letting the downstream read crash with a generic.
+function referenceGroupKey(target: ReferenceTarget): string {
+  try {
+    return `${target.kind}::${JSON.stringify(target.scope ?? null)}`;
+  } catch (cause) {
+    throw new Error(
+      `lookup adapter scope for kind "${target.kind}" must be JSON-serializable`,
+      { cause },
+    );
+  }
+}
+
+// Run one `list({ ids })` per group, throwing if the aggregated batch
+// blew past `MAX_REFERENCE_GROUP_BATCH`. The wire schema caps `ids` at
+// 100 per-request and `HARD_MULTI_REFERENCE_LIMIT` caps each field at
+// 100, so we only hit the ceiling when many fields share `(kind, scope)`
+// and aggregate — at which point throwing beats silent truncation
+// (truncation would either reject valid writes or hide live targets).
+async function fetchLiveIds(
+  ctx: AppContext,
+  registered: { readonly adapter: LookupAdapter },
+  scope: unknown,
+  ids: ReadonlySet<string>,
+  callsite: string,
+): Promise<ReadonlySet<string>> {
+  if (ids.size > MAX_REFERENCE_GROUP_BATCH) {
+    throw new Error(
+      `${callsite}: aggregated batch size ${ids.size} exceeds MAX_REFERENCE_GROUP_BATCH (${MAX_REFERENCE_GROUP_BATCH})`,
+    );
+  }
+  const idList = [...ids];
+  const rows = await registered.adapter.list(ctx, {
+    ids: idList,
+    scope,
+    limit: idList.length,
+  });
+  return new Set(rows.map((row) => row.id));
+}
+
+// Defensive upper bound on multi-reference array length, applied
+// per-field before grouping. Even with the batched `list({ ids })`
+// path, an unbounded array still pulls 10k rows in one query — the
+// cap protects the wire / response size. 100 covers any realistic
+// multi-reference field (authors, tags, related entries); fields
+// can declare a lower `max` and the validator picks the smaller.
+const HARD_MULTI_REFERENCE_LIMIT = 100;
+
+// Multi-reference (`userList` / `entryList` / etc.): value must be a
+// string array of non-empty strings, capped by both the hard limit
+// above and the field's optional `max`. Single-reference: value
+// must be a string. Returns the IDs that feed the group's batched
+// `list({ ids })` call in `validateMetaReferences`.
+function referenceIdsForValidation(
+  key: string,
+  value: unknown,
+  target: ReferenceTarget,
+  max: number | undefined,
+): readonly string[] {
+  if (target.multiple) {
+    if (!Array.isArray(value)) {
+      throw new MetaSanitizationError(key, "invalid_value");
+    }
+    if (value.length > HARD_MULTI_REFERENCE_LIMIT) {
+      throw new MetaSanitizationError(key, "value_too_large");
+    }
+    if (max !== undefined && value.length > max) {
+      throw new MetaSanitizationError(key, "invalid_value");
+    }
+    for (const item of value) {
+      if (typeof item !== "string" || item === "") {
+        throw new MetaSanitizationError(key, "invalid_value");
+      }
+    }
+    return value as readonly string[];
+  }
+  if (typeof value !== "string") {
+    throw new MetaSanitizationError(key, "invalid_value");
+  }
+  return [value];
+}
+
+function fieldMax(field: MetaBoxField | undefined): number | undefined {
+  return (field as { readonly max?: number } | undefined)?.max;
 }
 
 /**
@@ -216,40 +364,107 @@ export async function validateMetaReferencesForRpc(
 }
 
 /**
- * Resolve reference fields in a decoded meta bag, replacing any
- * stored ID whose target is gone (or no longer matches scope) with
- * `null`. Caller passes a freshly-decoded bag (e.g. from
- * `decodeMetaBag`); the returned bag is a shallow copy with orphan
- * keys nulled. Non-reference keys pass through untouched.
+ * Resolve reference fields in a decoded meta bag, dropping any
+ * stored ID whose target is gone (or no longer matches scope).
+ * Single-reference orphans become `null`; multi-reference orphans
+ * are removed from the array (which stays dense, in order). Caller
+ * passes a freshly-decoded bag (e.g. from `decodeMetaBag`); the
+ * returned bag is a shallow copy with orphans handled. Non-reference
+ * keys pass through untouched.
  *
- * Optional — call this from RPC handlers that surface meta to the
- * admin/UI; internal callers that don't need orphan filtering can
- * skip the extra round-trips.
- *
- * Perf: each reference key issues one `adapter.resolve` round-trip,
- * so this scales O(refs) per entity load. Fine for single-entity
- * `*.get` reads; list endpoints rendering many entities should
- * either skip the filter (orphan IDs render as raw strings, the
- * caller absorbs the staleness) or batch-resolve via a future
- * `LookupAdapter.resolveMany(ids)` helper. Today's reference set
- * is small enough that the per-entity cost is acceptable.
+ * Two-pass: first walk groups every reference key by `(kind, scope)`
+ * and issues one `LookupAdapter.list({ ids })` per group; second
+ * walk applies the live-id sets. So a meta bag with five user-refs,
+ * three entry-refs, and two term-refs costs three queries total —
+ * not ten. Adapter `list` honours `scope` (`entryTypes`,
+ * `termTaxonomies`, `roles`, …) so out-of-scope ids fall out of the
+ * result naturally and read as orphans.
  */
 export async function filterMetaOrphans(
   ctx: AppContext,
   findField: (key: string) => MetaBoxField | undefined,
   decoded: MetaMap,
 ): Promise<MetaMap> {
-  const out: MetaMap = { ...decoded };
+  // Pass 1: classify each reference key, cache the per-key triple, and
+  // accumulate ids per `(kind, scope)` group. Pass 3 walks the cache
+  // directly so it doesn't redo the findField / registry lookups.
+  interface Candidate {
+    readonly key: string;
+    readonly multiple: boolean;
+    readonly groupKey: string;
+    readonly ids: readonly string[];
+  }
+  const candidates: Candidate[] = [];
+  const groups = new Map<
+    string,
+    {
+      readonly registered: { readonly adapter: LookupAdapter };
+      readonly scope: unknown;
+      readonly ids: Set<string>;
+    }
+  >();
   for (const [key, value] of Object.entries(decoded)) {
-    if (typeof value !== "string") continue;
     const target = referenceTargetOf(findField(key));
     if (!target) continue;
     const registered = ctx.plugins.lookupAdapters.get(target.kind);
     if (!registered) continue;
-    const resolved = await registered.adapter.resolve(ctx, value, target.scope);
-    if (resolved === null) out[key] = null;
+    const ids = orphanCandidateIds(target, value);
+    if (ids === null) continue; // non-array multi / non-string single — leave untouched
+    const groupKey = referenceGroupKey(target);
+    candidates.push({ key, multiple: target.multiple === true, groupKey, ids });
+    if (ids.length === 0) continue; // empty array — apply step still runs, no group work
+    let group = groups.get(groupKey);
+    if (!group) {
+      group = { registered, scope: target.scope, ids: new Set() };
+      groups.set(groupKey, group);
+    }
+    for (const id of ids) group.ids.add(id);
+  }
+
+  // Pass 2: one `list({ ids })` per group, keyed for O(1) apply lookup.
+  const liveIdsByGroup = new Map<string, ReadonlySet<string>>();
+  for (const [groupKey, group] of groups) {
+    liveIdsByGroup.set(
+      groupKey,
+      await fetchLiveIds(
+        ctx,
+        group.registered,
+        group.scope,
+        group.ids,
+        "filterMetaOrphans",
+      ),
+    );
+  }
+
+  // Pass 3: apply the filter. Orphan handling differs single vs multi.
+  const out: MetaMap = { ...decoded };
+  const empty: ReadonlySet<string> = new Set();
+  for (const { key, multiple, groupKey, ids } of candidates) {
+    const liveIds = liveIdsByGroup.get(groupKey) ?? empty;
+    if (multiple) {
+      out[key] = ids.filter((id) => liveIds.has(id));
+      continue;
+    }
+    const [singleId] = ids;
+    if (singleId === undefined) continue; // single non-string already filtered upstream
+    if (!liveIds.has(singleId)) out[key] = null;
   }
   return out;
+}
+
+// Returns `null` to mean "no candidates from this key" (skip), or
+// the ids to feed into the group's batch query. Mirrors the storage-
+// shape guards in the apply step so we don't enqueue work that's
+// going to be skipped.
+function orphanCandidateIds(
+  target: ReferenceTarget,
+  value: unknown,
+): readonly string[] | null {
+  if (target.multiple) {
+    if (!Array.isArray(value)) return null;
+    return value.filter((id): id is string => typeof id === "string");
+  }
+  return typeof value === "string" ? [value] : null;
 }
 
 function referenceTargetOf(

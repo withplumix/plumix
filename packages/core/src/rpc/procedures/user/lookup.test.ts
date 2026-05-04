@@ -4,55 +4,90 @@ import { adminUser, userFactory } from "../../../test/factories.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 import { userLookupAdapter } from "./lookup.js";
 
+// Existence checks now ride the `list({ ids })` batch path — same
+// scope rules, single query. These tests mirror the semantics that
+// used to live on `adapter.exists`: id present in result ⇔ exists.
+async function existsViaList(
+  h: Awaited<ReturnType<typeof createRpcHarness>>,
+  id: string,
+  scope?: {
+    roles?: readonly ("admin" | "editor" | "author")[];
+    includeDisabled?: boolean;
+  },
+): Promise<boolean> {
+  const rows = await userLookupAdapter.list(h.context, {
+    ids: [id],
+    scope,
+    limit: 1,
+  });
+  return rows.some((row) => row.id === id);
+}
+
 describe("userLookupAdapter", () => {
-  test("exists() returns true for an active user", async () => {
+  test("list({ ids }) returns a row for an active user", async () => {
     const h = await createRpcHarness();
     const u = await userFactory.transient({ db: h.context.db }).create();
-    expect(await userLookupAdapter.exists(h.context, String(u.id))).toBe(true);
+    expect(await existsViaList(h, String(u.id))).toBe(true);
   });
 
-  test("exists() returns false for a non-existent id", async () => {
+  test("list({ ids }) returns nothing for a non-existent id", async () => {
     const h = await createRpcHarness();
-    expect(await userLookupAdapter.exists(h.context, "999999")).toBe(false);
+    expect(await existsViaList(h, "999999")).toBe(false);
   });
 
-  test("exists() rejects malformed ids without hitting the DB", async () => {
+  test("list({ ids }) drops malformed ids before querying", async () => {
     const h = await createRpcHarness();
-    expect(await userLookupAdapter.exists(h.context, "")).toBe(false);
-    expect(await userLookupAdapter.exists(h.context, "abc")).toBe(false);
-    expect(await userLookupAdapter.exists(h.context, "0")).toBe(false);
-    expect(await userLookupAdapter.exists(h.context, "-1")).toBe(false);
-    expect(await userLookupAdapter.exists(h.context, "1.5")).toBe(false);
+    expect(await existsViaList(h, "")).toBe(false);
+    expect(await existsViaList(h, "abc")).toBe(false);
+    expect(await existsViaList(h, "0")).toBe(false);
+    expect(await existsViaList(h, "-1")).toBe(false);
+    expect(await existsViaList(h, "1.5")).toBe(false);
   });
 
-  test("exists() honours the roles scope filter", async () => {
+  test("list({ ids }) honours the roles scope filter", async () => {
     const h = await createRpcHarness();
     const author = await userFactory
       .transient({ db: h.context.db })
       .create({ role: "author" });
     expect(
-      await userLookupAdapter.exists(h.context, String(author.id), {
+      await existsViaList(h, String(author.id), {
         roles: ["editor", "admin"],
       }),
     ).toBe(false);
     expect(
-      await userLookupAdapter.exists(h.context, String(author.id), {
-        roles: ["author"],
-      }),
+      await existsViaList(h, String(author.id), { roles: ["author"] }),
     ).toBe(true);
   });
 
-  test("exists() excludes disabled users by default", async () => {
+  test("list({ ids }) excludes disabled users by default", async () => {
     const h = await createRpcHarness();
     const u = await userFactory
       .transient({ db: h.context.db })
       .create({ disabledAt: new Date() });
-    expect(await userLookupAdapter.exists(h.context, String(u.id))).toBe(false);
+    expect(await existsViaList(h, String(u.id))).toBe(false);
     expect(
-      await userLookupAdapter.exists(h.context, String(u.id), {
-        includeDisabled: true,
-      }),
+      await existsViaList(h, String(u.id), { includeDisabled: true }),
     ).toBe(true);
+  });
+
+  test("list({ ids }) returns multiple rows in one query (batch path)", async () => {
+    const h = await createRpcHarness();
+    const a = await userFactory.transient({ db: h.context.db }).create();
+    const b = await userFactory.transient({ db: h.context.db }).create();
+    const rows = await userLookupAdapter.list(h.context, {
+      ids: [String(a.id), String(b.id), "999999"],
+      limit: 3,
+    });
+    const idSet = new Set(rows.map((r) => r.id));
+    expect(idSet.has(String(a.id))).toBe(true);
+    expect(idSet.has(String(b.id))).toBe(true);
+    expect(idSet.has("999999")).toBe(false);
+  });
+
+  test("list({ ids: [] }) short-circuits without querying", async () => {
+    const h = await createRpcHarness();
+    const rows = await userLookupAdapter.list(h.context, { ids: [], limit: 1 });
+    expect(rows).toEqual([]);
   });
 
   test("list() searches by email and name (case-insensitive substring)", async () => {

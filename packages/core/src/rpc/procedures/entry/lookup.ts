@@ -16,29 +16,35 @@ const ENTRY_ROW_COLUMNS = {
 } as const;
 
 export const entryLookupAdapter: LookupAdapter<EntryFieldScope> = {
-  async exists(ctx, id, scope) {
-    const numericId = parseEntryId(id);
-    if (numericId === null) return false;
-    const row = await ctx.db
-      .select({ id: entries.id })
-      .from(entries)
-      .where(buildEntryWhere(numericId, scope))
-      .limit(1);
-    return row.length > 0;
-  },
-
   async list(ctx, options) {
     const conditions = scopeConditions(options.scope);
-    const trimmedQuery = options.query?.trim();
-    if (trimmedQuery) {
-      conditions.push(like(entries.title, `%${trimmedQuery}%`));
+    let limit: number;
+    if (options.ids !== undefined) {
+      // Resolve-by-id batch path: ignore `query`, return only the
+      // requested ids (still subject to scope). Invalid ids are
+      // silently dropped — they read as orphans on the caller's side.
+      // Limit tracks `numericIds.length` (not `MAX_LIST_LIMIT`) since
+      // the meta pipeline aggregates ids across same-`(kind,scope)`
+      // fields and may legitimately request >100 in one call.
+      const numericIds = options.ids
+        .map((id) => parseEntryId(id))
+        .filter((id): id is number => id !== null);
+      if (numericIds.length === 0) return [];
+      conditions.push(inArray(entries.id, numericIds));
+      limit = numericIds.length;
+    } else {
+      const trimmedQuery = options.query?.trim();
+      if (trimmedQuery) {
+        conditions.push(like(entries.title, `%${trimmedQuery}%`));
+      }
+      limit = clampLimit(options.limit);
     }
     const rows = await ctx.db
       .select(ENTRY_ROW_COLUMNS)
       .from(entries)
       .where(conditions.length === 0 ? undefined : and(...conditions))
       .orderBy(entries.title)
-      .limit(clampLimit(options.limit));
+      .limit(limit);
     return rows.map(toLookupResult);
   },
 

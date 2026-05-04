@@ -260,6 +260,49 @@ describe("MetaBoxField dispatcher", () => {
     ).not.toBeInTheDocument();
   });
 
+  test("multi reference (userList): empty state + Add button + max counter", () => {
+    render(
+      <Harness
+        fieldDef={field({
+          inputType: "userList",
+          type: "json",
+          referenceTarget: { kind: "user", multiple: true },
+          max: 3,
+        })}
+        initial={[]}
+      />,
+    );
+    expect(
+      screen.getByTestId("meta-box-field-k-input-empty"),
+    ).toHaveTextContent("None selected");
+    expect(screen.getByTestId("meta-box-field-k-input-add")).toHaveTextContent(
+      "Select",
+    );
+    expect(
+      screen.getByTestId("meta-box-field-k-input-count"),
+    ).toHaveTextContent("0 / 3");
+  });
+
+  test("multi reference: Add button switches label + disables at max", () => {
+    render(
+      <Harness
+        fieldDef={field({
+          inputType: "userList",
+          type: "json",
+          referenceTarget: { kind: "user", multiple: true },
+          max: 2,
+        })}
+        initial={["1", "2"]}
+      />,
+    );
+    const addBtn = screen.getByTestId("meta-box-field-k-input-add");
+    expect(addBtn).toHaveTextContent("Add");
+    expect(addBtn).toBeDisabled();
+    expect(
+      screen.getByTestId("meta-box-field-k-input-count"),
+    ).toHaveTextContent("2 / 2");
+  });
+
   test("multiselect: clicking a toggle item emits the updated array", async () => {
     const onChange = vi.fn();
     render(

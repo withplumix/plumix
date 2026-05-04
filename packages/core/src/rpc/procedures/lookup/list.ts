@@ -18,6 +18,7 @@ export const list = base
       query: input.query,
       scope: input.scope,
       limit: input.limit,
+      ids: input.ids,
     });
     return { items };
   });

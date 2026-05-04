@@ -23,6 +23,7 @@ import {
   time,
   url,
   user,
+  userList,
 } from "./index.js";
 
 // One combined suite for the seven straightforward variants whose
@@ -731,6 +732,84 @@ describe("term() builder", () => {
       referenceTarget: {
         kind: "term",
         scope: { termTaxonomies: ["category"] },
+      },
+    });
+  });
+});
+
+describe("userList() builder", () => {
+  test("pins inputType + json type and emits a multi user-kind referenceTarget", () => {
+    const field = userList({
+      key: "owners",
+      label: "Owners",
+      roles: ["editor", "admin"],
+      max: 5,
+    });
+    expect(field.inputType).toBe("userList");
+    expect(field.type).toBe("json");
+    expect(field.max).toBe(5);
+    expect(field.referenceTarget).toEqual({
+      kind: "user",
+      scope: { roles: ["editor", "admin"], includeDisabled: undefined },
+      multiple: true,
+    });
+  });
+
+  test("packages includeDisabled into the scope and supports unbounded max", () => {
+    const field = userList({
+      key: "owners",
+      label: "Owners",
+      includeDisabled: true,
+    });
+    expect(field.max).toBeUndefined();
+    expect(field.referenceTarget.scope).toEqual({
+      roles: undefined,
+      includeDisabled: true,
+    });
+  });
+
+  test("rejects non-applicable options at the type level", () => {
+    userList({
+      key: "u",
+      label: "u",
+      // @ts-expect-error — `placeholder` doesn't apply to a reference field.
+      placeholder: "pick",
+    });
+
+    userList({
+      key: "u",
+      label: "u",
+      // @ts-expect-error — `options` belongs to select/radio.
+      options: [{ value: "a", label: "A" }],
+    });
+  });
+
+  test("manifest round-trip preserves multi referenceTarget + max on the wire shape", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("test", (ctx) => {
+      ctx.registerSettingsGroup("identity", {
+        label: "Site identity",
+        fields: [
+          userList({
+            key: "owners",
+            label: "Owners",
+            roles: ["admin"],
+            max: 3,
+          }),
+        ],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    expect(manifest.settingsGroups[0]?.fields[0]).toMatchObject({
+      key: "owners",
+      inputType: "userList",
+      type: "json",
+      max: 3,
+      referenceTarget: {
+        kind: "user",
+        scope: { roles: ["admin"] },
+        multiple: true,
       },
     });
   });

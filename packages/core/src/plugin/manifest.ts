@@ -335,6 +335,14 @@ export interface JsonMetaBoxField extends MetaBoxFieldBase {
 export interface ReferenceTarget<TScope = unknown> {
   readonly kind: string;
   readonly scope?: TScope;
+  /**
+   * Storage cardinality. `false`/absent → single ID stored as a
+   * string (e.g. `user`, `entry`, `term`). `true` → array of IDs
+   * stored as JSON (e.g. `userList`, `entryList`, `mediaList`).
+   * The server-side write validator and read-side orphan filter
+   * dispatch on this flag to handle both shapes uniformly.
+   */
+  readonly multiple?: boolean;
 }
 
 /**
@@ -347,6 +355,21 @@ export interface UserMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "user";
   readonly type: "string";
   readonly referenceTarget: ReferenceTarget;
+}
+
+/**
+ * Multi user reference. Storage is a JSON array of bare user ids
+ * (`["42", "43"]`); reads filter out orphans (the bag's array stays
+ * dense — missing IDs are dropped, not nulled, so consumers iterate
+ * without branching). `referenceTarget.multiple` is `true`; `max`
+ * caps the array length at write time.
+ */
+export interface UserListMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "userList";
+  readonly type: "json";
+  readonly referenceTarget: ReferenceTarget;
+  /** Max items allowed in the array. Omitted = unbounded. */
+  readonly max?: number;
 }
 
 /**
@@ -443,6 +466,7 @@ export type MetaBoxField =
   | MultiselectMetaBoxField
   | JsonMetaBoxField
   | UserMetaBoxField
+  | UserListMetaBoxField
   | EntryReferenceMetaBoxField
   | TermReferenceMetaBoxField
   | SelectMetaBoxField
@@ -504,6 +528,7 @@ export type EntryMetaBoxField =
   | Omit<MultiselectMetaBoxField, "span">
   | Omit<JsonMetaBoxField, "span">
   | Omit<UserMetaBoxField, "span">
+  | Omit<UserListMetaBoxField, "span">
   | Omit<EntryReferenceMetaBoxField, "span">
   | Omit<TermReferenceMetaBoxField, "span">
   | Omit<SelectMetaBoxField, "span">

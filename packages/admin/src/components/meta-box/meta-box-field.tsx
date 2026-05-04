@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 
+import { MultiReferencePicker } from "./multi-reference-picker.js";
 import { ReferencePicker } from "./reference-picker.js";
 
 // Schema-driven field renderer wired to react-hook-form. Each meta-box
@@ -231,6 +232,29 @@ function renderNativeInput({
     );
   }
 
+  if (field.referenceTarget?.multiple === true) {
+    const value = Array.isArray(rhf.value)
+      ? rhf.value.filter((v): v is string => typeof v === "string")
+      : [];
+    return (
+      <MultiReferencePicker
+        value={value}
+        onChange={(next) => {
+          rhf.onChange(next);
+        }}
+        kind={field.referenceTarget.kind}
+        scope={
+          field.referenceTarget.scope as Record<string, unknown> | undefined
+        }
+        max={typeof field.max === "number" ? field.max : undefined}
+        disabled={disabled}
+        required={field.required}
+        label={field.label}
+        testId={testId}
+      />
+    );
+  }
+
   if (
     field.referenceTarget &&
     (field.inputType === "user" ||
@@ -391,7 +415,7 @@ function renderNativeInput({
     // dev tools. A future `customRenderers` seam will hook in here
     // before the fallback.
     console.warn(
-      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/date/datetime/time/color/range/multiselect/json/user/entry/term/select/radio/checkbox).`,
+      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/date/datetime/time/color/range/multiselect/json/user/userList/entry/term/select/radio/checkbox).`,
     );
   }
 
