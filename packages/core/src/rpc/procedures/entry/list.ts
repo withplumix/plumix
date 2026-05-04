@@ -109,7 +109,7 @@ const ORDER_COLUMNS: Record<EntryListOrderColumn, AnySQLiteColumn> = {
   updated_at: entries.updatedAt,
   published_at: entries.publishedAt,
   title: entries.title,
-  menu_order: entries.menuOrder,
+  sort_order: entries.sortOrder,
 };
 
 const TRASH_STATUS: EntryStatus = "trash";

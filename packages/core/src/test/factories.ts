@@ -85,7 +85,7 @@ export const entryFactory = Factory.define<NewEntry, DbTransient, Entry>(
       excerpt: params.excerpt ?? null,
       status,
       parentId: params.parentId ?? null,
-      menuOrder: params.menuOrder ?? 0,
+      sortOrder: params.sortOrder ?? 0,
       publishedAt:
         params.publishedAt ?? (status === "published" ? new Date() : null),
       authorId,

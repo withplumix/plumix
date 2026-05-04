@@ -71,7 +71,7 @@ const ORDER_BY_VALUES = [
   "updated_at",
   "published_at",
   "title",
-  "menu_order",
+  "sort_order",
 ] as const;
 type OrderBy = (typeof ORDER_BY_VALUES)[number];
 

@@ -39,7 +39,7 @@ export const entries = sqliteTable(
       .integer()
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
-    menuOrder: t.integer().notNull().default(0),
+    sortOrder: t.integer().notNull().default(0),
     meta: t
       .text({ mode: "json" })
       .$type<Record<string, unknown>>()
@@ -64,7 +64,13 @@ export const entries = sqliteTable(
       table.publishedAt,
     ),
     index("entries_author_id_idx").on(table.authorId),
-    index("entries_parent_id_idx").on(table.parentId),
+    // Composite covers both `WHERE parent_id = ?` lookups (prefix scan) and
+    // the menu/page-tree resolver's `ORDER BY parent_id, sort_order`. A
+    // separate single-column index on parent_id would be redundant.
+    index("entries_parent_id_sort_order_idx").on(
+      table.parentId,
+      table.sortOrder,
+    ),
   ],
 );
 

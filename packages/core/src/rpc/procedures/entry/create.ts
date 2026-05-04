@@ -98,7 +98,7 @@ export const create = base
       excerpt: filtered.excerpt ?? null,
       status: filtered.status,
       parentId: filtered.parentId ?? null,
-      menuOrder: filtered.menuOrder,
+      sortOrder: filtered.sortOrder,
       authorId: context.user.id,
       publishedAt: filtered.status === "published" ? new Date() : null,
     };
