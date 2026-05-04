@@ -10,6 +10,7 @@ import {
   date,
   datetime,
   email,
+  entry,
   json,
   multiselect,
   number,
@@ -17,6 +18,7 @@ import {
   radio,
   range,
   select,
+  term,
   textarea,
   time,
   url,
@@ -605,6 +607,130 @@ describe("user() builder", () => {
       referenceTarget: {
         kind: "user",
         scope: { roles: ["admin"] },
+      },
+    });
+  });
+});
+
+describe("entry() builder", () => {
+  test("pins inputType + type and emits an entry-kind referenceTarget", () => {
+    const field = entry({
+      key: "related",
+      label: "Related post",
+      entryTypes: ["post"],
+    });
+    expect(field.inputType).toBe("entry");
+    expect(field.type).toBe("string");
+    expect(field.referenceTarget).toEqual({
+      kind: "entry",
+      scope: { entryTypes: ["post"], includeTrashed: undefined },
+    });
+  });
+
+  test("packages includeTrashed into the scope", () => {
+    const field = entry({
+      key: "related",
+      label: "Related post",
+      entryTypes: ["post"],
+      includeTrashed: true,
+    });
+    expect(field.referenceTarget.scope).toEqual({
+      entryTypes: ["post"],
+      includeTrashed: true,
+    });
+  });
+
+  test("rejects non-applicable options at the type level", () => {
+    entry({
+      key: "e",
+      label: "e",
+      entryTypes: ["post"],
+      // @ts-expect-error — `placeholder` doesn't apply to a reference field.
+      placeholder: "pick",
+    });
+
+    entry({
+      key: "e",
+      label: "e",
+      entryTypes: ["post"],
+      // @ts-expect-error — `options` belongs to select/radio.
+      options: [{ value: "a", label: "A" }],
+    });
+  });
+
+  test("manifest round-trip preserves referenceTarget on the wire shape", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("test", (ctx) => {
+      ctx.registerSettingsGroup("blog", {
+        label: "Blog",
+        fields: [
+          entry({
+            key: "homepage",
+            label: "Homepage",
+            entryTypes: ["page"],
+          }),
+        ],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    expect(manifest.settingsGroups[0]?.fields[0]).toMatchObject({
+      key: "homepage",
+      inputType: "entry",
+      type: "string",
+      referenceTarget: { kind: "entry", scope: { entryTypes: ["page"] } },
+    });
+  });
+});
+
+describe("term() builder", () => {
+  test("pins inputType + type and emits a term-kind referenceTarget", () => {
+    const field = term({
+      key: "primary",
+      label: "Primary category",
+      termTaxonomies: ["category"],
+    });
+    expect(field.inputType).toBe("term");
+    expect(field.type).toBe("string");
+    expect(field.referenceTarget).toEqual({
+      kind: "term",
+      scope: { termTaxonomies: ["category"] },
+    });
+  });
+
+  test("rejects non-applicable options at the type level", () => {
+    term({
+      key: "t",
+      label: "t",
+      termTaxonomies: ["category"],
+      // @ts-expect-error — `placeholder` doesn't apply to a reference field.
+      placeholder: "pick",
+    });
+  });
+
+  test("manifest round-trip preserves referenceTarget on the wire shape", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("test", (ctx) => {
+      ctx.registerSettingsGroup("classification", {
+        label: "Classification",
+        fields: [
+          term({
+            key: "section",
+            label: "Section",
+            termTaxonomies: ["category"],
+          }),
+        ],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    expect(manifest.settingsGroups[0]?.fields[0]).toMatchObject({
+      key: "section",
+      inputType: "term",
+      type: "string",
+      referenceTarget: {
+        kind: "term",
+        scope: { termTaxonomies: ["category"] },
       },
     });
   });
