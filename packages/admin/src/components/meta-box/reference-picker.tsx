@@ -8,6 +8,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command.js";
+import { Skeleton } from "@/components/ui/skeleton.js";
 import { orpc } from "@/lib/orpc.js";
 import { useQuery } from "@tanstack/react-query";
 
@@ -170,7 +171,19 @@ function renderDisplay({
     );
   }
   if (isResolving) {
-    return <p className="text-muted-foreground text-sm">Resolving…</p>;
+    // Loading state distinct from orphan — without this skeleton the
+    // brief gap between "value set" and "resolve returns" would
+    // render as "Reference missing", which reads as an actual error.
+    return (
+      <div
+        className="flex flex-col gap-1.5"
+        data-testid={`${testId}-resolving`}
+        aria-busy="true"
+      >
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-3 w-20" />
+      </div>
+    );
   }
   return (
     <p className="text-destructive text-sm" data-testid={`${testId}-orphan`}>

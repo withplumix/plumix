@@ -1,7 +1,17 @@
 import * as v from "valibot";
 
-import type { AppContext, AuthenticatedAppContext } from "@plumix/core";
-import { and, authenticated, base, desc, entries, eq } from "@plumix/core";
+import type { AppContext, AuthenticatedAppContext, SQL } from "@plumix/core";
+import {
+  and,
+  authenticated,
+  base,
+  desc,
+  entries,
+  eq,
+  inArray,
+  like,
+  sql,
+} from "@plumix/core";
 
 import { looksLikeMime, MAGIC_BYTE_SAMPLE_SIZE } from "./magic-bytes.js";
 import { parseMediaMeta } from "./meta.js";
@@ -344,23 +354,39 @@ export function createMediaRouter(
           DEFAULT_PAGE_SIZE,
         ),
         offset: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0)), 0),
+        // MIME filter for picker mode. String form (`"image/"`) does
+        // a `LIKE 'image/%'` prefix match; array form does an exact
+        // match against the supplied MIMEs. Pushed into SQL so the
+        // `limit` clause counts only matching rows — JS post-filter
+        // would silently under-fill the picker grid for a field whose
+        // accept rejects a chunk of recent uploads.
+        accept: v.optional(
+          v.union([
+            v.pipe(v.string(), v.maxLength(64)),
+            v.pipe(
+              v.array(v.pipe(v.string(), v.maxLength(64))),
+              v.maxLength(32),
+            ),
+          ]),
+        ),
       }),
     )
     .handler(async ({ input, context, errors }): Promise<MediaListResponse> => {
       if (!context.auth.can("entry:media:read")) {
         throw errors.FORBIDDEN({ data: { capability: "entry:media:read" } });
       }
+      const conditions: SQL[] = [
+        eq(entries.type, MEDIA_ENTRY_TYPE),
+        eq(entries.status, "published"),
+      ];
+      const acceptCondition = buildAcceptCondition(input.accept);
+      if (acceptCondition) conditions.push(acceptCondition);
       // Fetch one extra row so we can report `hasMore` without a
       // separate COUNT(*) query.
       const rows = await context.db
         .select()
         .from(entries)
-        .where(
-          and(
-            eq(entries.type, MEDIA_ENTRY_TYPE),
-            eq(entries.status, "published"),
-          ),
-        )
+        .where(and(...conditions))
         .orderBy(desc(entries.updatedAt), desc(entries.id))
         .limit(input.limit + 1)
         .offset(input.offset);
@@ -534,4 +560,23 @@ function sanitizeExtension(filename: string): string | undefined {
   if (ext.length > MAX_EXT_LEN) return undefined;
   if (!SAFE_EXT_RE.test(ext)) return undefined;
   return ext;
+}
+
+// Translate the `accept` input into a SQL predicate against the
+// extracted JSON `mime` field. Mirrors the `mediaLookupAdapter`'s
+// approach (see lookup.ts) so the picker grid and the lookup adapter
+// apply identical filtering. Real MIME strings don't contain `%`/`_`
+// and the accept input is plugin-supplied (or omitted), so no LIKE
+// escaping is needed.
+function buildAcceptCondition(
+  accept: string | readonly string[] | undefined,
+): SQL | undefined {
+  if (accept === undefined) return undefined;
+  const mimeExpr = sql<string>`json_extract(${entries.meta}, '$.mime')`;
+  if (typeof accept === "string") {
+    if (accept === "") return undefined;
+    return like(mimeExpr, `${accept}%`);
+  }
+  if (accept.length === 0) return undefined;
+  return inArray(mimeExpr, accept as string[]);
 }
