@@ -162,3 +162,154 @@ describe("filterMetaOrphans", () => {
     expect(filtered).toEqual({ title: "Hello", count: 7 });
   });
 });
+
+// Multi-value reference shape (`userList` and friends). The pipeline
+// dispatches on `referenceTarget.multiple` — array values get
+// per-item existence checks + a `max` length guard, while orphan
+// filtering drops missing IDs and keeps the array dense.
+function registryWithUserListRef(
+  field: Partial<MetaBoxField & { readonly max?: number }> = {},
+) {
+  const registry: MutablePluginRegistry = createPluginRegistry();
+  registerCoreLookupAdapters(registry);
+  const fullField = {
+    key: "owners",
+    label: "Owners",
+    type: "json",
+    inputType: "userList",
+    referenceTarget: { kind: "user", multiple: true },
+    ...field,
+  } as MetaBoxField;
+  registry.userMetaBoxes.set("ownership", {
+    id: "ownership",
+    label: "Ownership",
+    fields: [fullField],
+    registeredBy: null,
+  });
+  return {
+    registry,
+    findField: (key: string) => (key === fullField.key ? fullField : undefined),
+  };
+}
+
+describe("validateMetaReferences (multi)", () => {
+  test("accepts an array of in-scope ids", async () => {
+    const { registry, findField } = registryWithUserListRef();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const a = await userFactory.transient({ db: h.context.db }).create();
+    const b = await userFactory.transient({ db: h.context.db }).create();
+    const patch = sanitizeMetaInput(findField, {
+      owners: [String(a.id), String(b.id)],
+    });
+    if (!patch) throw new Error("patch should not be null");
+    await expect(
+      validateMetaReferences(h.context, findField, patch),
+    ).resolves.toBeUndefined();
+  });
+
+  test("rejects when any single id in the array is missing", async () => {
+    const { registry, findField } = registryWithUserListRef();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const a = await userFactory.transient({ db: h.context.db }).create();
+    const patch = sanitizeMetaInput(findField, {
+      owners: [String(a.id), "999999"],
+    });
+    if (!patch) throw new Error("patch should not be null");
+    await expect(
+      validateMetaReferences(h.context, findField, patch),
+    ).rejects.toBeInstanceOf(MetaSanitizationError);
+  });
+
+  test("rejects a non-array value for a multi field", async () => {
+    const { registry, findField } = registryWithUserListRef();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const patch = sanitizeMetaInput(findField, { owners: "1" });
+    if (!patch) throw new Error("patch should not be null");
+    await expect(
+      validateMetaReferences(h.context, findField, patch),
+    ).rejects.toBeInstanceOf(MetaSanitizationError);
+  });
+
+  test("rejects an array containing non-string entries", async () => {
+    const { registry, findField } = registryWithUserListRef();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const patch = sanitizeMetaInput(findField, {
+      owners: ["1", 2 as unknown as string],
+    });
+    if (!patch) throw new Error("patch should not be null");
+    await expect(
+      validateMetaReferences(h.context, findField, patch),
+    ).rejects.toBeInstanceOf(MetaSanitizationError);
+  });
+
+  test("enforces the field's max length cap", async () => {
+    const { registry, findField } = registryWithUserListRef({ max: 1 });
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const a = await userFactory.transient({ db: h.context.db }).create();
+    const b = await userFactory.transient({ db: h.context.db }).create();
+    const patch = sanitizeMetaInput(findField, {
+      owners: [String(a.id), String(b.id)],
+    });
+    if (!patch) throw new Error("patch should not be null");
+    await expect(
+      validateMetaReferences(h.context, findField, patch),
+    ).rejects.toBeInstanceOf(MetaSanitizationError);
+  });
+
+  test("accepts an empty array", async () => {
+    const { registry, findField } = registryWithUserListRef();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const patch = sanitizeMetaInput(findField, { owners: [] });
+    if (!patch) throw new Error("patch should not be null");
+    await expect(
+      validateMetaReferences(h.context, findField, patch),
+    ).resolves.toBeUndefined();
+  });
+
+  test("rejects oversized arrays as value_too_large, even without a field-level max", async () => {
+    // Defensive cap: a multi field that doesn't declare `max` still
+    // can't be coerced into N+ sequential `adapter.exists` round-trips
+    // in one request. Surfaces as `value_too_large` rather than
+    // `invalid_value` so the caller can distinguish "your shape is
+    // wrong" from "this is too big".
+    const { registry, findField } = registryWithUserListRef();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const oversized = Array.from({ length: 101 }, (_, i) => String(i + 1));
+    const patch = sanitizeMetaInput(findField, { owners: oversized });
+    if (!patch) throw new Error("patch should not be null");
+    await expect(
+      validateMetaReferences(h.context, findField, patch),
+    ).rejects.toMatchObject({ reason: "value_too_large", key: "owners" });
+  });
+});
+
+describe("filterMetaOrphans (multi)", () => {
+  test("drops missing IDs from the array, keeping the rest in order", async () => {
+    const { registry, findField } = registryWithUserListRef();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const a = await adminUser.transient({ db: h.context.db }).create();
+    const b = await adminUser.transient({ db: h.context.db }).create();
+    const filtered = await filterMetaOrphans(h.context, findField, {
+      owners: [String(a.id), "999999", String(b.id)],
+    });
+    expect(filtered.owners).toEqual([String(a.id), String(b.id)]);
+  });
+
+  test("returns an empty array when every entry is orphaned", async () => {
+    const { registry, findField } = registryWithUserListRef();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const filtered = await filterMetaOrphans(h.context, findField, {
+      owners: ["999999", "888888"],
+    });
+    expect(filtered.owners).toEqual([]);
+  });
+
+  test("leaves non-array storage untouched (read forgiveness)", async () => {
+    const { registry, findField } = registryWithUserListRef();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const filtered = await filterMetaOrphans(h.context, findField, {
+      owners: "not-an-array",
+    });
+    expect(filtered.owners).toBe("not-an-array");
+  });
+});
