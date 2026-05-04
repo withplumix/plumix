@@ -45,3 +45,7 @@ export { checkbox } from "./checkbox.js";
 export type { CheckboxFieldOptions } from "./checkbox.js";
 export { user } from "./user.js";
 export type { UserFieldOptions, UserFieldScope } from "./user.js";
+export { entry } from "./entry.js";
+export type { EntryFieldOptions, EntryFieldScope } from "./entry.js";
+export { term } from "./term.js";
+export type { TermFieldOptions, TermFieldScope } from "./term.js";
