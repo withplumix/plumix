@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button.js";
 import {
   CommandDialog,
@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/command.js";
 import { SortableList } from "@/components/ui/sortable.js";
 import { orpc } from "@/lib/orpc.js";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 // Multi-value counterpart to `ReferencePicker`. Shares the same
 // `kind` / `scope` dispatch shape — same lookup RPC, same adapter
@@ -47,14 +47,27 @@ export function MultiReferencePicker({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
-  // Resolve every selected ID in parallel. `useQueries` keeps each
-  // resolution independent so a single missing target shows up as
-  // an orphan row without poisoning its neighbours.
-  const resolved = useQueries({
-    queries: value.map((id) =>
-      orpc.lookup.resolve.queryOptions({ input: { kind, id, scope } }),
-    ),
+  // Single batch round-trip to resolve every selected ID. The
+  // adapter's `list` honours the `ids` filter and returns one row
+  // per live target — orphans simply don't come back. We map by id
+  // below so the sortable list still iterates `value` in order.
+  // `limit` is omitted: the adapter sizes the result to the parsed-id
+  // count for the `ids` path. Spread to drop `readonly` — the wire
+  // schema produces a mutable `string[]` and TS won't narrow.
+  const resolveQuery = useQuery({
+    ...orpc.lookup.list.queryOptions({
+      input: { kind, scope, ids: [...value] },
+    }),
+    enabled: value.length > 0,
   });
+  const resolvedById = useMemo(() => {
+    const map = new Map<
+      string,
+      { id: string; label: string; subtitle?: string }
+    >();
+    for (const row of resolveQuery.data?.items ?? []) map.set(row.id, row);
+    return map;
+  }, [resolveQuery.data]);
 
   const listQuery = useQuery({
     ...orpc.lookup.list.queryOptions({
@@ -81,13 +94,24 @@ export function MultiReferencePicker({
     onChange(next.map((row) => row.id));
   };
 
-  const sortableItems = value.map((id, index) => {
-    const result = resolved[index]?.data?.result ?? null;
-    return { id, result };
-  });
+  const sortableItems = value.map((id) => ({
+    id,
+    result: resolvedById.get(id) ?? null,
+  }));
 
   return (
     <div className="flex flex-col gap-2" data-testid={testId}>
+      {resolveQuery.isError ? (
+        // Don't conflate "fetch failed" with "every selected id is an
+        // orphan" — without this banner, a transient network error
+        // would render every row as `Reference missing`.
+        <p
+          className="text-destructive text-sm"
+          data-testid={`${testId}-resolve-error`}
+        >
+          Couldn&rsquo;t load selected items — refresh to retry.
+        </p>
+      ) : null}
       {value.length === 0 ? (
         <p
           className="text-muted-foreground text-sm"

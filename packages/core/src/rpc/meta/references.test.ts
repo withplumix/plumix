@@ -266,6 +266,67 @@ describe("validateMetaReferences (multi)", () => {
     ).resolves.toBeUndefined();
   });
 
+  test("two same-(kind,scope) reference fields batch into one adapter.list call", async () => {
+    // Headline guarantee of kind-grouped batching: a meta patch with
+    // multiple reference upserts targeting the same `(kind, scope)`
+    // costs exactly one adapter call, not one per key. Wrap the core
+    // user adapter with a counting proxy and confirm.
+    const registry = createPluginRegistry();
+    registerCoreLookupAdapters(registry);
+    const userEntry = registry.lookupAdapters.get("user");
+    if (!userEntry) throw new Error("user adapter should be registered");
+    let listCalls = 0;
+    registry.lookupAdapters.set("user", {
+      ...userEntry,
+      adapter: {
+        list: (ctx, options) => {
+          listCalls += 1;
+          return userEntry.adapter.list(ctx, options);
+        },
+        resolve: (ctx, id, scope) => userEntry.adapter.resolve(ctx, id, scope),
+      },
+    });
+    const ownerField: MetaBoxField = {
+      key: "owner",
+      label: "Owner",
+      type: "string",
+      inputType: "user",
+      referenceTarget: { kind: "user" },
+    };
+    const reviewerField: MetaBoxField = {
+      key: "reviewer",
+      label: "Reviewer",
+      type: "string",
+      inputType: "user",
+      referenceTarget: { kind: "user" },
+    };
+    registry.userMetaBoxes.set("ownership", {
+      id: "ownership",
+      label: "Ownership",
+      fields: [ownerField, reviewerField],
+      registeredBy: null,
+    });
+    const findField = (key: string): MetaBoxField | undefined =>
+      key === ownerField.key
+        ? ownerField
+        : key === reviewerField.key
+          ? reviewerField
+          : undefined;
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const owner = await userFactory.transient({ db: h.context.db }).create();
+    const reviewer = await userFactory.transient({ db: h.context.db }).create();
+    const patch = sanitizeMetaInput(findField, {
+      owner: String(owner.id),
+      reviewer: String(reviewer.id),
+    });
+    if (!patch) throw new Error("patch should not be null");
+
+    await expect(
+      validateMetaReferences(h.context, findField, patch),
+    ).resolves.toBeUndefined();
+    expect(listCalls).toBe(1);
+  });
+
   test("rejects oversized arrays as value_too_large, even without a field-level max", async () => {
     // Defensive cap: a multi field that doesn't declare `max` still
     // can't be coerced into N+ sequential `adapter.exists` round-trips

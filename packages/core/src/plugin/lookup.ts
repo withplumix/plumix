@@ -17,19 +17,36 @@ export interface LookupListOptions<TScope = unknown> {
   readonly query?: string;
   readonly scope?: TScope;
   readonly limit?: number;
+  /**
+   * Resolve-by-id batch: when set, the adapter ignores `query` and
+   * returns rows whose id matches any in this list (still subject to
+   * `scope`). Result order is up to the adapter — callers expecting
+   * positional access should map to a `{ id -> result }` Map. Used
+   * by the multi-reference orphan filter and the admin's
+   * `MultiReferencePicker` so a 50-item field renders as one query
+   * (single `WHERE id IN (...)`) rather than 50.
+   */
+  readonly ids?: readonly string[];
 }
 
 /**
  * `TScope` is the shape carried on the field's `referenceTarget.scope`
  * — e.g. `{ roles: UserRole[] }` for `user`. Adapters interpret it
- * however makes sense for their target. All methods are async so
- * future implementations can hit the database without a contract
- * break.
+ * however makes sense for their target.
+ *
+ * Two methods, one round-trip per call regardless of selection size:
+ *  - `list` covers search/browse (no `ids`, optional `query`) and
+ *    resolve-by-id batch (`ids` set, `query` ignored). The meta
+ *    pipeline (`validateMetaReferences` + `filterMetaOrphans`)
+ *    groups all reference fields by `(kind, scope)` and issues one
+ *    `list({ ids })` per group, eliminating per-field N+1 on both
+ *    reads and writes. The `MultiReferencePicker` batches the same
+ *    way for label rendering.
+ *  - `resolve` powers the single-reference admin picker (`lookup.
+ *    resolve` RPC). One id per call but each picker on the page is
+ *    its own component, so this stays simple.
  */
 export interface LookupAdapter<TScope = unknown> {
-  /** Returning `false` surfaces as `invalid_value` in the meta write pipeline. */
-  exists(ctx: AppContext, id: string, scope?: TScope): Promise<boolean>;
-
   list(
     ctx: AppContext,
     options: LookupListOptions<TScope>,

@@ -7,55 +7,69 @@ import { termLookupAdapter } from "./lookup.js";
 const CATEGORY = { termTaxonomies: ["category"] } as const;
 const TAG = { termTaxonomies: ["tag"] } as const;
 
+async function existsViaList(
+  h: Awaited<ReturnType<typeof createRpcHarness>>,
+  id: string,
+  scope: { termTaxonomies: readonly string[] },
+): Promise<boolean> {
+  const rows = await termLookupAdapter.list(h.context, {
+    ids: [id],
+    scope,
+    limit: 1,
+  });
+  return rows.some((row) => row.id === id);
+}
+
 describe("termLookupAdapter", () => {
-  test("exists() returns true for a real term in the matching scope", async () => {
+  test("list({ ids }) returns a row for a real term in the matching scope", async () => {
     const h = await createRpcHarness();
     const t = await termFactory.transient({ db: h.context.db }).create();
-    expect(
-      await termLookupAdapter.exists(h.context, String(t.id), CATEGORY),
-    ).toBe(true);
+    expect(await existsViaList(h, String(t.id), CATEGORY)).toBe(true);
   });
 
-  test("exists() returns false for a non-existent id", async () => {
+  test("list({ ids }) returns nothing for a non-existent id", async () => {
     const h = await createRpcHarness();
-    expect(await termLookupAdapter.exists(h.context, "999999", CATEGORY)).toBe(
-      false,
-    );
+    expect(await existsViaList(h, "999999", CATEGORY)).toBe(false);
   });
 
-  test("exists() rejects malformed ids without hitting the DB", async () => {
+  test("list({ ids }) drops malformed ids before querying", async () => {
     const h = await createRpcHarness();
-    expect(await termLookupAdapter.exists(h.context, "", CATEGORY)).toBe(false);
-    expect(await termLookupAdapter.exists(h.context, "abc", CATEGORY)).toBe(
-      false,
-    );
-    expect(await termLookupAdapter.exists(h.context, "0", CATEGORY)).toBe(
-      false,
-    );
-    expect(await termLookupAdapter.exists(h.context, "-1", CATEGORY)).toBe(
-      false,
-    );
+    expect(await existsViaList(h, "", CATEGORY)).toBe(false);
+    expect(await existsViaList(h, "abc", CATEGORY)).toBe(false);
+    expect(await existsViaList(h, "0", CATEGORY)).toBe(false);
+    expect(await existsViaList(h, "-1", CATEGORY)).toBe(false);
   });
 
-  test("exists() honours the termTaxonomies scope filter", async () => {
+  test("list({ ids }) honours the termTaxonomies scope filter", async () => {
     const h = await createRpcHarness();
     const cat = await categoryTerm.transient({ db: h.context.db }).create();
-    expect(await termLookupAdapter.exists(h.context, String(cat.id), TAG)).toBe(
-      false,
-    );
-    expect(
-      await termLookupAdapter.exists(h.context, String(cat.id), CATEGORY),
-    ).toBe(true);
+    expect(await existsViaList(h, String(cat.id), TAG)).toBe(false);
+    expect(await existsViaList(h, String(cat.id), CATEGORY)).toBe(true);
+  });
+
+  test("list({ ids }) batches multiple ids in one query", async () => {
+    const h = await createRpcHarness();
+    const a = await categoryTerm.transient({ db: h.context.db }).create();
+    const b = await categoryTerm.transient({ db: h.context.db }).create();
+    const rows = await termLookupAdapter.list(h.context, {
+      ids: [String(a.id), String(b.id), "999999"],
+      scope: CATEGORY,
+      limit: 3,
+    });
+    const idSet = new Set(rows.map((r) => r.id));
+    expect(idSet.has(String(a.id))).toBe(true);
+    expect(idSet.has(String(b.id))).toBe(true);
+    expect(idSet.has("999999")).toBe(false);
   });
 
   test("rejects calls without scope (would otherwise expose every taxonomy)", async () => {
     const h = await createRpcHarness();
-    await expect(termLookupAdapter.exists(h.context, "1")).rejects.toThrow(
-      /termTaxonomies is required/,
-    );
     await expect(termLookupAdapter.list(h.context, {})).rejects.toThrow(
       /termTaxonomies is required/,
     );
+    await expect(
+      termLookupAdapter.list(h.context, { ids: ["1"] }),
+    ).rejects.toThrow(/termTaxonomies is required/);
     await expect(termLookupAdapter.resolve(h.context, "1")).rejects.toThrow(
       /termTaxonomies is required/,
     );

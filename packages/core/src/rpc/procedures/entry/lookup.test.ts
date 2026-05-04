@@ -7,70 +7,94 @@ import { entryLookupAdapter } from "./lookup.js";
 const POST = { entryTypes: ["post"] } as const;
 const PAGE = { entryTypes: ["page"] } as const;
 
+// Existence checks now ride the `list({ ids })` batch path — same
+// scope rules, single query.
+async function existsViaList(
+  h: Awaited<ReturnType<typeof createRpcHarness>>,
+  id: string,
+  scope: { entryTypes: readonly string[]; includeTrashed?: boolean },
+): Promise<boolean> {
+  const rows = await entryLookupAdapter.list(h.context, {
+    ids: [id],
+    scope,
+    limit: 1,
+  });
+  return rows.some((row) => row.id === id);
+}
+
 describe("entryLookupAdapter", () => {
-  test("exists() returns true for an active entry under the matching scope", async () => {
+  test("list({ ids }) returns a row for an active entry under matching scope", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const e = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id });
-    expect(await entryLookupAdapter.exists(h.context, String(e.id), POST)).toBe(
-      true,
-    );
+    expect(await existsViaList(h, String(e.id), POST)).toBe(true);
   });
 
-  test("exists() returns false for a non-existent id", async () => {
+  test("list({ ids }) returns nothing for a non-existent id", async () => {
     const h = await createRpcHarness();
-    expect(await entryLookupAdapter.exists(h.context, "999999", POST)).toBe(
-      false,
-    );
+    expect(await existsViaList(h, "999999", POST)).toBe(false);
   });
 
-  test("exists() rejects malformed ids without hitting the DB", async () => {
+  test("list({ ids }) drops malformed ids before querying", async () => {
     const h = await createRpcHarness();
-    expect(await entryLookupAdapter.exists(h.context, "", POST)).toBe(false);
-    expect(await entryLookupAdapter.exists(h.context, "abc", POST)).toBe(false);
-    expect(await entryLookupAdapter.exists(h.context, "0", POST)).toBe(false);
-    expect(await entryLookupAdapter.exists(h.context, "-1", POST)).toBe(false);
-    expect(await entryLookupAdapter.exists(h.context, "1.5", POST)).toBe(false);
+    expect(await existsViaList(h, "", POST)).toBe(false);
+    expect(await existsViaList(h, "abc", POST)).toBe(false);
+    expect(await existsViaList(h, "0", POST)).toBe(false);
+    expect(await existsViaList(h, "-1", POST)).toBe(false);
+    expect(await existsViaList(h, "1.5", POST)).toBe(false);
   });
 
-  test("exists() honours the entryTypes scope filter", async () => {
+  test("list({ ids }) honours the entryTypes scope filter", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const post = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, type: "post" });
-    expect(
-      await entryLookupAdapter.exists(h.context, String(post.id), PAGE),
-    ).toBe(false);
-    expect(
-      await entryLookupAdapter.exists(h.context, String(post.id), POST),
-    ).toBe(true);
+    expect(await existsViaList(h, String(post.id), PAGE)).toBe(false);
+    expect(await existsViaList(h, String(post.id), POST)).toBe(true);
   });
 
-  test("exists() excludes trashed entries by default", async () => {
+  test("list({ ids }) excludes trashed entries by default", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const trashed = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, status: "trash" });
+    expect(await existsViaList(h, String(trashed.id), POST)).toBe(false);
     expect(
-      await entryLookupAdapter.exists(h.context, String(trashed.id), POST),
-    ).toBe(false);
-    expect(
-      await entryLookupAdapter.exists(h.context, String(trashed.id), {
+      await existsViaList(h, String(trashed.id), {
         ...POST,
         includeTrashed: true,
       }),
     ).toBe(true);
   });
 
+  test("list({ ids }) batches multiple ids in one query", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const a = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id });
+    const b = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id });
+    const rows = await entryLookupAdapter.list(h.context, {
+      ids: [String(a.id), String(b.id), "999999"],
+      scope: POST,
+      limit: 3,
+    });
+    const idSet = new Set(rows.map((r) => r.id));
+    expect(idSet.has(String(a.id))).toBe(true);
+    expect(idSet.has(String(b.id))).toBe(true);
+    expect(idSet.has("999999")).toBe(false);
+  });
+
   test("rejects calls without scope (would otherwise expose every type)", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    await expect(entryLookupAdapter.exists(h.context, "1")).rejects.toThrow(
-      /entryTypes is required/,
-    );
     await expect(entryLookupAdapter.list(h.context, {})).rejects.toThrow(
       /entryTypes is required/,
     );
+    await expect(
+      entryLookupAdapter.list(h.context, { ids: ["1"] }),
+    ).rejects.toThrow(/entryTypes is required/);
     await expect(entryLookupAdapter.resolve(h.context, "1")).rejects.toThrow(
       /entryTypes is required/,
     );
