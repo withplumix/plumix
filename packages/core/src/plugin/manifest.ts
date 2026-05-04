@@ -349,6 +349,34 @@ export interface UserMetaBoxField extends MetaBoxFieldBase {
   readonly referenceTarget: ReferenceTarget;
 }
 
+/**
+ * Single entry reference. Storage is the bare entry id as a string;
+ * reads return `null` when the entry is gone, scope-mismatched, or
+ * trashed. `referenceTarget.scope` carries `entryTypes` (the only
+ * entry-type names this field accepts).
+ *
+ * Naming note: the `Reference` infix avoids the collision with
+ * `EntryMetaBoxField` further down — the latter is the per-variant
+ * Omit-distributive union for fields inside an entry meta box.
+ */
+export interface EntryReferenceMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "entry";
+  readonly type: "string";
+  readonly referenceTarget: ReferenceTarget;
+}
+
+/**
+ * Single term reference. Storage is the bare term id as a string;
+ * reads return `null` for orphans / scope mismatches.
+ * `referenceTarget.scope` carries `termTaxonomies` (the taxonomy
+ * names this field accepts).
+ */
+export interface TermReferenceMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "term";
+  readonly type: "string";
+  readonly referenceTarget: ReferenceTarget;
+}
+
 /** Single-value dropdown picker; `options` is required. */
 export interface SelectMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "select";
@@ -415,6 +443,8 @@ export type MetaBoxField =
   | MultiselectMetaBoxField
   | JsonMetaBoxField
   | UserMetaBoxField
+  | EntryReferenceMetaBoxField
+  | TermReferenceMetaBoxField
   | SelectMetaBoxField
   | RadioMetaBoxField
   | CheckboxMetaBoxField
@@ -474,6 +504,8 @@ export type EntryMetaBoxField =
   | Omit<MultiselectMetaBoxField, "span">
   | Omit<JsonMetaBoxField, "span">
   | Omit<UserMetaBoxField, "span">
+  | Omit<EntryReferenceMetaBoxField, "span">
+  | Omit<TermReferenceMetaBoxField, "span">
   | Omit<SelectMetaBoxField, "span">
   | Omit<RadioMetaBoxField, "span">
   | Omit<CheckboxMetaBoxField, "span">
