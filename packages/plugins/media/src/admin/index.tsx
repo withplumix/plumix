@@ -13,6 +13,7 @@
 
 import type { ComponentType } from "react";
 
+import { MediaListPickerField } from "./MediaListPickerField.js";
 import { MediaPickerField } from "./MediaPickerField.js";
 
 // Minimal structural shape of the host admin's `window.plumix` —
@@ -37,19 +38,24 @@ if (typeof window !== "undefined") {
       "media",
       MediaPickerField as ComponentType<never>,
     );
+    window.plumix.registerPluginFieldType(
+      "mediaList",
+      MediaListPickerField as ComponentType<never>,
+    );
   } else {
-    // Silent no-op would leave the `media` field renderer unregistered
-    // for the whole session — every media field would fall through to
-    // the legacy text-input fallback with no error visible. Surface the
-    // misconfiguration so a deployment with a broken load-order is
-    // diagnosable instead of silently degraded.
+    // Silent no-op would leave the `media`/`mediaList` field renderers
+    // unregistered for the whole session — every media field would fall
+    // through to the legacy text-input fallback with no error visible.
+    // Surface the misconfiguration so a deployment with a broken
+    // load-order is diagnosable instead of silently degraded.
     console.warn(
-      "[plumix-plugin-media] window.plumix not initialized — `media` " +
-        "field renderer not registered. Verify the host admin has booted " +
+      "[plumix-plugin-media] window.plumix not initialized — media " +
+        "field renderers not registered. Verify the host admin has booted " +
         "plumix-globals before the plugin chunk loads.",
     );
   }
 }
 
 export { MediaLibrary } from "./MediaLibrary.js";
+export { MediaListPickerField } from "./MediaListPickerField.js";
 export { MediaPickerField } from "./MediaPickerField.js";
