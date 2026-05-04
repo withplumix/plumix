@@ -13,11 +13,13 @@ import {
 import { Input } from "@/components/ui/input.js";
 import { Slider } from "@/components/ui/slider.js";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group.js";
+import { getPluginFieldType } from "@/lib/plugin-registry.js";
 import { cn } from "@/lib/utils";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 
 import { MultiReferencePicker } from "./multi-reference-picker.js";
+import { PluginFieldErrorBoundary } from "./plugin-field-error-boundary.js";
 import { ReferencePicker } from "./reference-picker.js";
 
 // Schema-driven field renderer wired to react-hook-form. Each meta-box
@@ -129,6 +131,37 @@ function renderNativeInput({
   disabled: boolean;
   testId: string;
 }): ReactNode {
+  // Plugin-supplied field renderers slot in here, BEFORE the built-in
+  // switch. A plugin's admin chunk calls `window.plumix.
+  // registerPluginFieldType(inputType, Component)` at module load —
+  // this dispatch consults the registry on every render. Wrapped in
+  // `PluginFieldErrorBoundary` so a thrown render doesn't take down
+  // the whole entry editor; the boundary surfaces a static "couldn't
+  // render" placeholder and logs to the dev console.
+  const PluginRenderer = getPluginFieldType(field.inputType);
+  if (PluginRenderer) {
+    return (
+      <PluginFieldErrorBoundary
+        fieldKey={field.key}
+        inputType={field.inputType}
+        testId={testId}
+        // Resetting on value change lets the boundary recover after a
+        // bad render — a user who picks a different (valid) value
+        // re-attempts instead of staying stuck on the placeholder.
+        // String coercion handles both bare-id (string) and cached-
+        // object (object) shapes via JSON.stringify.
+        resetKey={stringifyForResetKey(rhf.value)}
+      >
+        <PluginRenderer
+          field={field}
+          rhf={rhf}
+          disabled={disabled}
+          testId={testId}
+        />
+      </PluginFieldErrorBoundary>
+    );
+  }
+
   const common = {
     name: rhf.name,
     ref: rhf.ref,
@@ -563,5 +596,19 @@ function formatInitial(value: unknown): string {
     return JSON.stringify(value, null, 2);
   } catch {
     return "";
+  }
+}
+
+// Stable string for the error boundary's `resetKey`. Bare-id (string)
+// values pass through; object/array values JSON-stringify; primitives
+// coerce. Cycles or BigInts (very rare for meta values) fall back to
+// a constant — the boundary just won't reset on those, which is fine.
+function stringifyForResetKey(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value === null || value === undefined) return "";
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return "__unserializable__";
   }
 }

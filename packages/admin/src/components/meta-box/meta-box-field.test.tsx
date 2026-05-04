@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { Form } from "@/components/ui/form.js";
+import {
+  _resetPluginRegistry,
+  registerPluginFieldType,
+} from "@/lib/plugin-registry.js";
 import { createQueryClient } from "@/providers/query-client.js";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
@@ -15,6 +19,7 @@ import { MetaBoxField } from "./meta-box-field.js";
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  _resetPluginRegistry();
 });
 
 function field(
@@ -528,5 +533,102 @@ describe("MetaBoxField dispatcher", () => {
       />,
     );
     expect(screen.getByTestId("meta-box-field-k-input")).toBeRequired();
+  });
+
+  test("plugin renderer: registered inputType dispatches to the plugin component", () => {
+    registerPluginFieldType("custom-stub", ({ field, testId }) => (
+      <span data-testid={`${testId}-plugin`}>plugin:{field.inputType}</span>
+    ));
+    render(
+      <Harness
+        fieldDef={field({ inputType: "custom-stub" })}
+        initial="value"
+      />,
+    );
+    expect(
+      screen.getByTestId("meta-box-field-k-input-plugin"),
+    ).toHaveTextContent("plugin:custom-stub");
+  });
+
+  test("plugin renderer: a thrown render is caught by the error boundary, not the form", () => {
+    // Suppress the React error logs the boundary's catch path produces;
+    // the test asserts the visible fallback, not the console output.
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    registerPluginFieldType("crashy", () => {
+      throw new Error("boom");
+    });
+    render(
+      <Harness fieldDef={field({ inputType: "crashy" })} initial="value" />,
+    );
+    expect(
+      screen.getByTestId("meta-box-field-k-input-plugin-error"),
+    ).toBeInTheDocument();
+    consoleError.mockRestore();
+  });
+
+  test("plugin renderer: unknown inputType falls through to the legacy text fallback", () => {
+    // No plugin registered — exercising the existing dev-mode warning
+    // path. The fallback renders an `<input type="text">`.
+    const consoleWarn = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined);
+    render(<Harness fieldDef={field({ inputType: "unknown" })} initial="" />);
+    expect(screen.getByTestId("meta-box-field-k-input")).toBeInTheDocument();
+    consoleWarn.mockRestore();
+  });
+
+  test("plugin renderer: error boundary resets when the field value changes", async () => {
+    // Boundary recovery path: an initial render with `value === "bad"`
+    // throws, then a sibling button flips the form value to "good" via
+    // `form.setValue`. The same MetaBoxField instance stays mounted —
+    // only the field value changes. Without `resetKey` wired to
+    // rhf.value the boundary would stay stuck on the error placeholder.
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    registerPluginFieldType("conditional-crashy", ({ rhf, testId }) => {
+      if (rhf.value === "bad") throw new Error("boom");
+      return <span data-testid={`${testId}-ok`}>ok:{String(rhf.value)}</span>;
+    });
+
+    function ResetHarness(): ReactNode {
+      const fieldDef = field({ inputType: "conditional-crashy" });
+      const form = useForm<Record<string, unknown>>({
+        defaultValues: { [fieldDef.key]: "bad" },
+      });
+      const queryClient = createQueryClient();
+      return (
+        <QueryClientProvider client={queryClient}>
+          <Form {...form}>
+            <MetaBoxField field={fieldDef} name={fieldDef.key} />
+            <button
+              type="button"
+              data-testid="flip"
+              onClick={() => form.setValue(fieldDef.key, "good")}
+            >
+              flip
+            </button>
+          </Form>
+        </QueryClientProvider>
+      );
+    }
+
+    render(<ResetHarness />);
+    // Initial render with "bad" → boundary catches the throw.
+    expect(
+      screen.getByTestId("meta-box-field-k-input-plugin-error"),
+    ).toBeInTheDocument();
+    // Flip the value — same boundary instance, new props.
+    await userEvent.click(screen.getByTestId("flip"));
+    // Boundary resets on resetKey change, plugin renders successfully.
+    expect(screen.getByTestId("meta-box-field-k-input-ok")).toHaveTextContent(
+      "ok:good",
+    );
+    expect(
+      screen.queryByTestId("meta-box-field-k-input-plugin-error"),
+    ).not.toBeInTheDocument();
+    consoleError.mockRestore();
   });
 });

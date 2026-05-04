@@ -55,8 +55,29 @@ describe("plugin field-type registry", () => {
   });
 
   test("rejects duplicates", () => {
-    registerPluginFieldType("color", Stub);
-    expect(() => registerPluginFieldType("color", Stub)).toThrow(
+    registerPluginFieldType("custom_field", Stub);
+    expect(() => registerPluginFieldType("custom_field", Stub)).toThrow(
+      /already registered/,
+    );
+  });
+
+  test("rejects built-in inputType names (reservation guards both accidental + malicious overrides)", () => {
+    expect(() => registerPluginFieldType("text", Stub)).toThrow(/reserved/);
+    expect(() => registerPluginFieldType("number", Stub)).toThrow(/reserved/);
+    expect(() => registerPluginFieldType("checkbox", Stub)).toThrow(/reserved/);
+    expect(() => registerPluginFieldType("user", Stub)).toThrow(/reserved/);
+    expect(() => registerPluginFieldType("entry", Stub)).toThrow(/reserved/);
+    expect(() => registerPluginFieldType("term", Stub)).toThrow(/reserved/);
+    expect(() => registerPluginFieldType("userList", Stub)).toThrow(/reserved/);
+  });
+
+  test("plugin-shipped reference types (media) are not reserved — duplicate detection is enough", () => {
+    // `media` is plugin-shipped (`@plumix/plugin-media`); reserving it
+    // would block the very plugin that owns it. Two media plugins
+    // would still conflict via `already registered`.
+    registerPluginFieldType("media", Stub);
+    expect(getPluginFieldType("media")).toBe(Stub);
+    expect(() => registerPluginFieldType("media", Stub)).toThrow(
       /already registered/,
     );
   });
