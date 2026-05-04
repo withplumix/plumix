@@ -175,20 +175,68 @@ export async function validateMetaReferences(
   patch: MetaPatch,
 ): Promise<void> {
   for (const [key, value] of patch.upserts) {
-    const target = referenceTargetOf(findField(key));
+    const field = findField(key);
+    const target = referenceTargetOf(field);
     if (!target) continue;
-    if (typeof value !== "string") {
-      throw new MetaSanitizationError(key, "invalid_value");
-    }
     const registered = ctx.plugins.lookupAdapters.get(target.kind);
     if (!registered) {
       throw new MetaSanitizationError(key, "invalid_value");
     }
-    const exists = await registered.adapter.exists(ctx, value, target.scope);
-    if (!exists) {
-      throw new MetaSanitizationError(key, "invalid_value");
+    const ids = referenceIdsForValidation(key, value, target, fieldMax(field));
+    for (const id of ids) {
+      const exists = await registered.adapter.exists(ctx, id, target.scope);
+      if (!exists) {
+        throw new MetaSanitizationError(key, "invalid_value");
+      }
     }
   }
+}
+
+// Defensive upper bound on multi-reference array length, applied
+// before any per-id adapter call. `LookupAdapter.exists` is a per-id
+// round-trip today (no `existsMany` batch path), so without this guard
+// a caller could ship `meta: { owners: [<10k strings>] }` and force
+// the validator into 10k sequential queries. 100 covers any realistic
+// multi-reference field (authors, tags, related entries) — fields can
+// declare a lower `max` and the validator picks the smaller of the two.
+const HARD_MULTI_REFERENCE_LIMIT = 100;
+
+// Multi-reference (`userList` / `entryList` / etc.): value must be a
+// string array of non-empty strings, capped by both the hard limit
+// above and the field's optional `max`. Single-reference: value
+// must be a string. Returns the IDs to validate individually — the
+// per-ID adapter call happens in the caller.
+function referenceIdsForValidation(
+  key: string,
+  value: unknown,
+  target: ReferenceTarget,
+  max: number | undefined,
+): readonly string[] {
+  if (target.multiple) {
+    if (!Array.isArray(value)) {
+      throw new MetaSanitizationError(key, "invalid_value");
+    }
+    if (value.length > HARD_MULTI_REFERENCE_LIMIT) {
+      throw new MetaSanitizationError(key, "value_too_large");
+    }
+    if (max !== undefined && value.length > max) {
+      throw new MetaSanitizationError(key, "invalid_value");
+    }
+    for (const item of value) {
+      if (typeof item !== "string" || item === "") {
+        throw new MetaSanitizationError(key, "invalid_value");
+      }
+    }
+    return value as readonly string[];
+  }
+  if (typeof value !== "string") {
+    throw new MetaSanitizationError(key, "invalid_value");
+  }
+  return [value];
+}
+
+function fieldMax(field: MetaBoxField | undefined): number | undefined {
+  return (field as { readonly max?: number } | undefined)?.max;
 }
 
 /**
@@ -241,11 +289,31 @@ export async function filterMetaOrphans(
 ): Promise<MetaMap> {
   const out: MetaMap = { ...decoded };
   for (const [key, value] of Object.entries(decoded)) {
-    if (typeof value !== "string") continue;
     const target = referenceTargetOf(findField(key));
     if (!target) continue;
     const registered = ctx.plugins.lookupAdapters.get(target.kind);
     if (!registered) continue;
+    if (target.multiple) {
+      // Multi: drop orphan IDs from the array, keeping order. The
+      // bag stays dense — consumers iterate without branching.
+      // Non-array storage shape is tolerated as unknown garbage and
+      // left untouched (the write validator should have rejected it
+      // upstream, but reads are forgiving).
+      if (!Array.isArray(value)) continue;
+      const kept: string[] = [];
+      for (const id of value) {
+        if (typeof id !== "string") continue;
+        const resolved = await registered.adapter.resolve(
+          ctx,
+          id,
+          target.scope,
+        );
+        if (resolved !== null) kept.push(id);
+      }
+      out[key] = kept;
+      continue;
+    }
+    if (typeof value !== "string") continue;
     const resolved = await registered.adapter.resolve(ctx, value, target.scope);
     if (resolved === null) out[key] = null;
   }
