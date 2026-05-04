@@ -231,7 +231,12 @@ function renderNativeInput({
     );
   }
 
-  if (field.referenceTarget && field.inputType === "user") {
+  if (
+    field.referenceTarget &&
+    (field.inputType === "user" ||
+      field.inputType === "entry" ||
+      field.inputType === "term")
+  ) {
     const value =
       typeof rhf.value === "string" && rhf.value !== "" ? rhf.value : null;
     return (
@@ -386,7 +391,7 @@ function renderNativeInput({
     // dev tools. A future `customRenderers` seam will hook in here
     // before the fallback.
     console.warn(
-      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/date/datetime/time/color/range/multiselect/json/user/select/radio/checkbox).`,
+      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/date/datetime/time/color/range/multiselect/json/user/entry/term/select/radio/checkbox).`,
     );
   }
 
