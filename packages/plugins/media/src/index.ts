@@ -1,10 +1,13 @@
 import type { PluginDescriptor } from "@plumix/core";
 import { definePlugin } from "@plumix/core";
 
+import { mediaLookupAdapter } from "./lookup.js";
 import { DEFAULT_ACCEPTED_TYPES } from "./mime.js";
 import { createMediaRouter } from "./rpc.js";
 import { handleMediaServe } from "./serve-route.js";
 import { handleWorkerUpload } from "./upload-route.js";
+
+export type { MediaFieldScope } from "./lookup.js";
 
 export { DEFAULT_ACCEPTED_TYPES };
 
@@ -103,6 +106,17 @@ export function media(
       ctx.registerRpcRouter(
         createMediaRouter({ acceptedTypes, maxUploadSize }),
       );
+
+      // Reference-field surface: any `media({ ... })` field calls
+      // through `lookup.list({ kind: "media", ids })` for write
+      // validation + read-time orphan filter, and through the same
+      // RPC for picker label resolution. Capability matches the
+      // existing media library page gate.
+      ctx.registerLookupAdapter({
+        kind: "media",
+        adapter: mediaLookupAdapter,
+        capability: "entry:media:read",
+      });
 
       // Worker-routed upload fallback. `media.createUploadUrl` returns
       // this URL when `storage.presignPut` isn't configured (e.g. the

@@ -648,3 +648,135 @@ describe("entryList / termList multi-reference pipeline", () => {
     expect(entryListCalls).toBe(1);
   });
 });
+
+// Cached-object reference fields (`referenceTarget.valueShape ===
+// "object"`): the validator merges adapter-supplied cached fields
+// into the stored value on write. The user-submitted shape can be
+// either a bare id string or an `{ id, ... }` object — both rewrite
+// to the canonical `{ id, ...cached }` shape.
+describe("validateMetaReferences (cached-object shape)", () => {
+  function registryWithCachedRef(
+    cached: Readonly<Record<string, unknown>>,
+    options: { liveIds?: ReadonlySet<string> } = {},
+  ) {
+    const registry: MutablePluginRegistry = createPluginRegistry();
+    const fullField = {
+      key: "hero",
+      label: "Hero",
+      type: "json",
+      inputType: "media",
+      referenceTarget: { kind: "stub", valueShape: "object" },
+    } as MetaBoxField;
+    registry.userMetaBoxes.set("hero", {
+      id: "hero",
+      label: "Hero",
+      fields: [fullField],
+      registeredBy: null,
+    });
+    const isLive = (id: string) =>
+      options.liveIds === undefined || options.liveIds.has(id);
+    registry.lookupAdapters.set("stub", {
+      kind: "stub",
+      capability: null,
+      registeredBy: null,
+      adapter: {
+        list: (_ctx, opts) =>
+          Promise.resolve(
+            (opts.ids ?? [])
+              .filter(isLive)
+              .map((id) => ({ id, label: `stub-${id}`, cached })),
+          ),
+        resolve: (_ctx, id) =>
+          Promise.resolve(
+            isLive(id) ? { id, label: `stub-${id}`, cached } : null,
+          ),
+      },
+    });
+    return {
+      registry,
+      findField: (key: string) =>
+        key === fullField.key ? fullField : undefined,
+    };
+  }
+
+  test("rewrites a bare-id input to the canonical { id, ...cached } shape", async () => {
+    const { registry, findField } = registryWithCachedRef({
+      mime: "image/png",
+      filename: "cat.png",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const patch = sanitizeMetaInput(findField, { hero: "42" });
+    if (!patch) throw new Error("patch should not be null");
+    await validateMetaReferences(h.context, findField, patch);
+    expect(patch.upserts.get("hero")).toEqual({
+      id: "42",
+      mime: "image/png",
+      filename: "cat.png",
+    });
+  });
+
+  test("rewrites an { id } object input to include cached fields, dropping spoofed extras", async () => {
+    const { registry, findField } = registryWithCachedRef({
+      mime: "image/png",
+      filename: "cat.png",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const patch = sanitizeMetaInput(findField, {
+      // `mime` here is a lie — the adapter is authoritative and overwrites.
+      hero: { id: "42", mime: "image/jpeg", spoofed: "ignored" },
+    });
+    if (!patch) throw new Error("patch should not be null");
+    await validateMetaReferences(h.context, findField, patch);
+    expect(patch.upserts.get("hero")).toEqual({
+      id: "42",
+      mime: "image/png",
+      filename: "cat.png",
+    });
+  });
+
+  test("rejects a missing id under the cached-object shape", async () => {
+    // Empty live-id set — every input looks like an orphan.
+    const { registry, findField } = registryWithCachedRef(
+      {},
+      { liveIds: new Set() },
+    );
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const patch = sanitizeMetaInput(findField, {
+      hero: { id: "999999" },
+    });
+    if (!patch) throw new Error("patch should not be null");
+    await expect(
+      validateMetaReferences(h.context, findField, patch),
+    ).rejects.toBeInstanceOf(MetaSanitizationError);
+  });
+
+  test("filterMetaOrphans nulls out a cached-object whose id is gone", async () => {
+    const { registry, findField } = registryWithCachedRef(
+      {},
+      { liveIds: new Set() },
+    );
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const filtered = await filterMetaOrphans(h.context, findField, {
+      hero: { id: "999999", mime: "image/png", filename: "cat.png" },
+    });
+    expect(filtered.hero).toBeNull();
+  });
+
+  test("filterMetaOrphans keeps a cached-object whose id is live without refreshing cache", async () => {
+    // v0.1 contract: read-time orphan filter checks existence only;
+    // the stored cached fields are NOT refreshed. Re-saving the entry
+    // refreshes via the validator's normalize step.
+    const { registry, findField } = registryWithCachedRef({
+      // Adapter would tell us the canonical mime is image/jpeg, but
+      // the stored value already has image/png. Reads keep the stored
+      // snapshot intact.
+      mime: "image/jpeg",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const stored = { id: "42", mime: "image/png", filename: "cat.png" };
+    const filtered = await filterMetaOrphans(h.context, findField, {
+      hero: stored,
+    });
+    expect(filtered.hero).toEqual(stored);
+  });
+});
