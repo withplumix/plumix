@@ -3,7 +3,7 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 import type { AppContext } from "../../context/app.js";
-import type { LookupAdapter } from "../../plugin/lookup.js";
+import type { LookupAdapter, LookupResult } from "../../plugin/lookup.js";
 import type {
   MetaBoxField,
   MetaScalarType,
@@ -31,9 +31,14 @@ type MetaMap = Record<string, unknown>;
  * see this shape, so keeping decoded values here means a plugin
  * doesn't have to double-parse. `applyMetaPatch` JSON-encodes at the
  * last moment, before the UPDATE.
+ *
+ * `upserts` is mutable: `validateMetaReferences` rewrites values for
+ * cached-object reference fields (`referenceTarget.valueShape ===
+ * "object"`) to merge adapter-supplied cached fields into the
+ * stored shape. Other callers should treat it as read-only.
  */
 export interface MetaPatch {
-  readonly upserts: ReadonlyMap<string, unknown>;
+  readonly upserts: Map<string, unknown>;
   readonly deletes: readonly string[];
 }
 
@@ -202,25 +207,54 @@ export async function validateMetaReferences(
       groups.set(groupKey, group);
     }
     for (const id of ids) group.ids.add(id);
-    group.keys.push({ key, ids });
+    group.keys.push({ key, ids, target });
   }
   for (const group of groups.values()) {
     if (group.ids.size === 0) continue;
-    const liveIds = await fetchLiveIds(
+    const liveRows = await fetchLiveRows(
       ctx,
       group.registered,
       group.scope,
       group.ids,
       "validateMetaReferences",
     );
+    const rowsById = new Map(liveRows.map((r) => [r.id, r]));
     for (const upsert of group.keys) {
       for (const id of upsert.ids) {
-        if (!liveIds.has(id)) {
+        if (!rowsById.has(id)) {
           throw new MetaSanitizationError(upsert.key, "invalid_value");
         }
       }
+      // Cached-object normalize step: replace user-supplied value
+      // with `{ id, ...adapterRow.cached }`. Adapter is authoritative
+      // for cached fields (mime/filename); user-supplied non-id keys
+      // are dropped to prevent spoofed metadata. v0.1 covers single
+      // refs only; multi + object (`mediaList`) lands in slice #132
+      // alongside the array-of-objects shape support in
+      // `referenceIdsForValidation`.
+      if (upsert.target.valueShape !== "object" || upsert.target.multiple) {
+        continue;
+      }
+      const [id] = upsert.ids;
+      if (id !== undefined) {
+        patch.upserts.set(upsert.key, buildCachedReference(id, rowsById));
+      }
     }
   }
+}
+
+// Adapter cached fields override anything; user-supplied non-id keys
+// don't survive. Per-usage user fields (e.g. alt overrides) are a
+// post-v0.1 feature — when added, this is where they'd merge in.
+function buildCachedReference(
+  id: string,
+  rowsById: ReadonlyMap<
+    string,
+    { readonly cached?: Readonly<Record<string, unknown>> }
+  >,
+): Readonly<Record<string, unknown>> {
+  const row = rowsById.get(id);
+  return { id, ...(row?.cached ?? {}) };
 }
 
 interface ReferenceGroup {
@@ -229,9 +263,15 @@ interface ReferenceGroup {
   // De-duped ids across every field in this group — one query
   // resolves them all regardless of how many fields reference them.
   readonly ids: Set<string>;
-  // Upsert-side: which keys contributed which ids, so a missing
-  // live-id can be attributed back to the field that supplied it.
-  readonly keys: { readonly key: string; readonly ids: readonly string[] }[];
+  // Upsert-side: which keys contributed which ids + the field's
+  // target so the validator can dispatch on `valueShape` for the
+  // normalize step. Per-key error attribution still works on
+  // `key`.
+  readonly keys: {
+    readonly key: string;
+    readonly ids: readonly string[];
+    readonly target: ReferenceTarget;
+  }[];
 }
 
 // Defense-in-depth ceiling on the internal-aggregated id-batch size.
@@ -272,25 +312,28 @@ function referenceGroupKey(target: ReferenceTarget): string {
 // 100, so we only hit the ceiling when many fields share `(kind, scope)`
 // and aggregate — at which point throwing beats silent truncation
 // (truncation would either reject valid writes or hide live targets).
-async function fetchLiveIds(
+//
+// Returns `LookupResult[]` rather than just live ids so the validator
+// can read `cached` for the cached-object normalize step. Callers that
+// only care about presence build a `Set` from the row ids.
+async function fetchLiveRows(
   ctx: AppContext,
   registered: { readonly adapter: LookupAdapter },
   scope: unknown,
   ids: ReadonlySet<string>,
   callsite: string,
-): Promise<ReadonlySet<string>> {
+): Promise<readonly LookupResult[]> {
   if (ids.size > MAX_REFERENCE_GROUP_BATCH) {
     throw new Error(
       `${callsite}: aggregated batch size ${ids.size} exceeds MAX_REFERENCE_GROUP_BATCH (${MAX_REFERENCE_GROUP_BATCH})`,
     );
   }
   const idList = [...ids];
-  const rows = await registered.adapter.list(ctx, {
+  return registered.adapter.list(ctx, {
     ids: idList,
     scope,
     limit: idList.length,
   });
-  return new Set(rows.map((row) => row.id));
 }
 
 // Defensive upper bound on multi-reference array length, applied
@@ -301,11 +344,17 @@ async function fetchLiveIds(
 // can declare a lower `max` and the validator picks the smaller.
 const HARD_MULTI_REFERENCE_LIMIT = 100;
 
-// Multi-reference (`userList` / `entryList` / etc.): value must be a
-// string array of non-empty strings, capped by both the hard limit
-// above and the field's optional `max`. Single-reference: value
-// must be a string. Returns the IDs that feed the group's batched
-// `list({ ids })` call in `validateMetaReferences`.
+// Validates the wire shape of a reference value and returns the ids
+// to feed into the group's batched `list({ ids })` call. Three shapes
+// are accepted, dispatching on `target.multiple` + `target.valueShape`:
+//
+//  - multi=true,  valueShape="id"  (default): string[] of non-empty ids
+//  - multi=false, valueShape="id"  (default): bare string id
+//  - multi=false, valueShape="object":        `{ id: string, ... }`
+//                                             (or a bare string for
+//                                             leniency on first write)
+//
+// Multi + object (mediaList) is reserved for slice #132.
 function referenceIdsForValidation(
   key: string,
   value: unknown,
@@ -329,10 +378,29 @@ function referenceIdsForValidation(
     }
     return value as readonly string[];
   }
+  if (target.valueShape === "object") {
+    // Lenient on input: accept either `"42"` (first-write convenience)
+    // or `{ id: "42", ... }`. Always rewritten to the canonical
+    // `{ id, ...cached }` shape after the live-id check.
+    if (typeof value === "string" && value !== "") return [value];
+    const id = extractStringId(value);
+    if (id !== null && id !== "") return [id];
+    throw new MetaSanitizationError(key, "invalid_value");
+  }
   if (typeof value !== "string") {
     throw new MetaSanitizationError(key, "invalid_value");
   }
   return [value];
+}
+
+// Returns the `id` string of a `{ id: string, ... }` object, or null
+// for any other shape (string, array, null, primitive, missing key).
+function extractStringId(value: unknown): string | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+  const id = (value as { readonly id?: unknown }).id;
+  return typeof id === "string" ? id : null;
 }
 
 function fieldMax(field: MetaBoxField | undefined): number | undefined {
@@ -391,6 +459,7 @@ export async function filterMetaOrphans(
   interface Candidate {
     readonly key: string;
     readonly multiple: boolean;
+    readonly valueShape: "id" | "object";
     readonly groupKey: string;
     readonly ids: readonly string[];
   }
@@ -411,7 +480,13 @@ export async function filterMetaOrphans(
     const ids = orphanCandidateIds(target, value);
     if (ids === null) continue; // non-array multi / non-string single — leave untouched
     const groupKey = referenceGroupKey(target);
-    candidates.push({ key, multiple: target.multiple === true, groupKey, ids });
+    candidates.push({
+      key,
+      multiple: target.multiple === true,
+      valueShape: target.valueShape ?? "id",
+      groupKey,
+      ids,
+    });
     if (ids.length === 0) continue; // empty array — apply step still runs, no group work
     let group = groups.get(groupKey);
     if (!group) {
@@ -424,24 +499,35 @@ export async function filterMetaOrphans(
   // Pass 2: one `list({ ids })` per group, keyed for O(1) apply lookup.
   const liveIdsByGroup = new Map<string, ReadonlySet<string>>();
   for (const [groupKey, group] of groups) {
-    liveIdsByGroup.set(
-      groupKey,
-      await fetchLiveIds(
-        ctx,
-        group.registered,
-        group.scope,
-        group.ids,
-        "filterMetaOrphans",
-      ),
+    const rows = await fetchLiveRows(
+      ctx,
+      group.registered,
+      group.scope,
+      group.ids,
+      "filterMetaOrphans",
     );
+    liveIdsByGroup.set(groupKey, new Set(rows.map((row) => row.id)));
   }
 
-  // Pass 3: apply the filter. Orphan handling differs single vs multi.
+  // Pass 3: apply the filter. Orphan handling differs by shape:
+  //  - multi + id: filter the string[] in place, dropping missing
+  //  - multi + object: filter the object[] preserving order
+  //  - single + id: null on missing
+  //  - single + object: null on missing; otherwise keep the stored
+  //    cached value as-is (no read-time refresh — write rewrites)
   const out: MetaMap = { ...decoded };
   const empty: ReadonlySet<string> = new Set();
-  for (const { key, multiple, groupKey, ids } of candidates) {
+  for (const { key, multiple, valueShape, groupKey, ids } of candidates) {
     const liveIds = liveIdsByGroup.get(groupKey) ?? empty;
     if (multiple) {
+      if (valueShape === "object") {
+        const stored = decoded[key] as readonly unknown[];
+        out[key] = stored.filter((item) => {
+          const id = extractStringId(item);
+          return id !== null && liveIds.has(id);
+        });
+        continue;
+      }
       out[key] = ids.filter((id) => liveIds.has(id));
       continue;
     }
@@ -455,14 +541,29 @@ export async function filterMetaOrphans(
 // Returns `null` to mean "no candidates from this key" (skip), or
 // the ids to feed into the group's batch query. Mirrors the storage-
 // shape guards in the apply step so we don't enqueue work that's
-// going to be skipped.
+// going to be skipped. Cached-object values (`valueShape === "object"`)
+// extract `id` from the object — the rest of the cached fields are
+// trusted on read (refresh happens on next write via the validator's
+// normalize step, not on every render).
 function orphanCandidateIds(
   target: ReferenceTarget,
   value: unknown,
 ): readonly string[] | null {
   if (target.multiple) {
     if (!Array.isArray(value)) return null;
+    if (target.valueShape === "object") {
+      const ids: string[] = [];
+      for (const item of value) {
+        const id = extractStringId(item);
+        if (id !== null) ids.push(id);
+      }
+      return ids;
+    }
     return value.filter((id): id is string => typeof id === "string");
+  }
+  if (target.valueShape === "object") {
+    const id = extractStringId(value);
+    return id !== null ? [id] : null;
   }
   return typeof value === "string" ? [value] : null;
 }

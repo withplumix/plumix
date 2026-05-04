@@ -11,6 +11,17 @@ export interface LookupResult {
   readonly id: string;
   readonly label: string;
   readonly subtitle?: string;
+  /**
+   * Adapter-provided cached fields. When the field's
+   * `referenceTarget.valueShape === "object"`, the meta pipeline
+   * merges these into the stored value on every write so reads can
+   * render without a resolve round-trip. Examples: `mime`,
+   * `filename` for media; could be `width`/`height` later.
+   *
+   * Picker UIs may also read `cached` to render preview thumbnails
+   * (e.g. `cached.mime` to decide image vs file icon).
+   */
+  readonly cached?: Readonly<Record<string, unknown>>;
 }
 
 export interface LookupListOptions<TScope = unknown> {

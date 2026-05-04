@@ -336,13 +336,26 @@ export interface ReferenceTarget<TScope = unknown> {
   readonly kind: string;
   readonly scope?: TScope;
   /**
-   * Storage cardinality. `false`/absent → single ID stored as a
-   * string (e.g. `user`, `entry`, `term`). `true` → array of IDs
-   * stored as JSON (e.g. `userList`, `entryList`, `mediaList`).
+   * Storage cardinality. `false`/absent → single value (string or
+   * cached object). `true` → array (of strings or cached objects).
    * The server-side write validator and read-side orphan filter
    * dispatch on this flag to handle both shapes uniformly.
    */
   readonly multiple?: boolean;
+  /**
+   * Storage shape per item. `"id"` (default) → bare id string —
+   * every read needs a join/resolve to get a label. `"object"` →
+   * `{ id, ...cachedFields, ...userFields }` — the meta pipeline
+   * normalizes cached fields from the adapter on every write so
+   * reads can render without a join. Used by `media` (where the
+   * thumbnail/mime/filename are needed on every render and a
+   * resolve per render is wasteful on the edge).
+   *
+   * The cached fields come from `LookupResult.cached` returned by
+   * the adapter; user-supplied keys (e.g. per-usage `alt`) survive
+   * the merge so editors can override per-usage metadata.
+   */
+  readonly valueShape?: "id" | "object";
 }
 
 /**
@@ -430,6 +443,25 @@ export interface TermListMetaBoxField extends MetaBoxFieldBase {
   readonly max?: number;
 }
 
+/**
+ * Single media reference with cached metadata. Storage is the
+ * `MediaValue` object — `{ id, mime?, filename?, alt? }` — not a
+ * bare id, so admin renders show a thumbnail + filename without an
+ * extra resolve round-trip per render. `referenceTarget.valueShape`
+ * is `"object"`; the meta pipeline overwrites the cached fields
+ * (mime/filename) from the lookup adapter on every write but lets
+ * user-supplied keys (e.g. per-usage `alt`) survive the merge.
+ *
+ * Lives in core so the typed builder narrows correctly at call
+ * sites — same convention as `entry` / `term`. The actual builder
+ * + adapter are in `@plumix/plugin-media`.
+ */
+export interface MediaMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "media";
+  readonly type: "json";
+  readonly referenceTarget: ReferenceTarget;
+}
+
 /** Single-value dropdown picker; `options` is required. */
 export interface SelectMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "select";
@@ -501,6 +533,7 @@ export type MetaBoxField =
   | EntryListMetaBoxField
   | TermReferenceMetaBoxField
   | TermListMetaBoxField
+  | MediaMetaBoxField
   | SelectMetaBoxField
   | RadioMetaBoxField
   | CheckboxMetaBoxField
@@ -565,6 +598,7 @@ export type EntryMetaBoxField =
   | Omit<EntryListMetaBoxField, "span">
   | Omit<TermReferenceMetaBoxField, "span">
   | Omit<TermListMetaBoxField, "span">
+  | Omit<MediaMetaBoxField, "span">
   | Omit<SelectMetaBoxField, "span">
   | Omit<RadioMetaBoxField, "span">
   | Omit<CheckboxMetaBoxField, "span">
