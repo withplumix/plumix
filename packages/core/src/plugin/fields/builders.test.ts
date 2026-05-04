@@ -18,6 +18,7 @@ import {
   password,
   radio,
   range,
+  richtext,
   select,
   term,
   termList,
@@ -973,6 +974,74 @@ describe("termList() builder", () => {
         scope: { termTaxonomies: ["tag"] },
         multiple: true,
       },
+    });
+  });
+});
+
+describe("richtext() builder", () => {
+  test("pins inputType + json type and carries the allowlist arrays", () => {
+    const field = richtext({
+      key: "body",
+      label: "Body",
+      marks: ["bold", "italic", "link"],
+      nodes: ["heading", "bulletList", "orderedList"],
+      blocks: ["my-callout"],
+    });
+    expect(field.inputType).toBe("richtext");
+    expect(field.type).toBe("json");
+    expect(field.marks).toEqual(["bold", "italic", "link"]);
+    expect(field.nodes).toEqual(["heading", "bulletList", "orderedList"]);
+    expect(field.blocks).toEqual(["my-callout"]);
+  });
+
+  test("supports omitted allowlists (strict — denies everything except the implicit doc/paragraph/text)", () => {
+    const field = richtext({ key: "body", label: "Body" });
+    expect(field.marks).toBeUndefined();
+    expect(field.nodes).toBeUndefined();
+    expect(field.blocks).toBeUndefined();
+  });
+
+  test("rejects non-applicable options at the type level", () => {
+    richtext({
+      key: "b",
+      label: "b",
+      // @ts-expect-error — `placeholder` is a text-shaped option.
+      placeholder: "type here",
+    });
+
+    richtext({
+      key: "b",
+      label: "b",
+      // @ts-expect-error — `options` belongs to select/radio.
+      options: [{ value: "a", label: "A" }],
+    });
+  });
+
+  test("manifest round-trip preserves all three allowlist arrays on the wire", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("test", (ctx) => {
+      ctx.registerSettingsGroup("blog", {
+        label: "Blog",
+        fields: [
+          richtext({
+            key: "summary",
+            label: "Summary",
+            marks: ["bold", "italic"],
+            nodes: ["heading"],
+            blocks: ["my-block"],
+          }),
+        ],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    expect(manifest.settingsGroups[0]?.fields[0]).toMatchObject({
+      key: "summary",
+      inputType: "richtext",
+      type: "json",
+      marks: ["bold", "italic"],
+      nodes: ["heading"],
+      blocks: ["my-block"],
     });
   });
 });
