@@ -510,6 +510,29 @@ export interface RichtextMetaBoxField extends MetaBoxFieldBase {
   readonly blocks?: readonly string[];
 }
 
+/**
+ * Flat list of structured rows. Each row carries the same fixed schema
+ * declared via `subFields`; mixed-row "flexible content" is explicitly
+ * out of scope (`registerBlock` covers that authoring need). Subfields
+ * may be any registered field type *except* another repeater — nesting
+ * is rejected at registration time so v0.1 doesn't ship recursive UX
+ * (lift later non-breakingly if a real use case appears).
+ *
+ * Storage rides on the `json` primitive so any JSON-serialisable row
+ * shape survives the wire. The auto-injected sanitizer drops rows
+ * where every subfield value is empty (`null` / `undefined` / `""`),
+ * then enforces optional `min` / `max` row counts. "Empty" is strictly
+ * those three: a row whose only populated subfield is `0` (number) or
+ * `false` (checkbox) survives — those are real values.
+ */
+export interface RepeaterMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "repeater";
+  readonly type: "json";
+  readonly subFields: readonly MetaBoxField[];
+  readonly min?: number;
+  readonly max?: number;
+}
+
 /** Single-value dropdown picker; `options` is required. */
 export interface SelectMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "select";
@@ -584,6 +607,7 @@ export type MetaBoxField =
   | MediaMetaBoxField
   | MediaListMetaBoxField
   | RichtextMetaBoxField
+  | RepeaterMetaBoxField
   | SelectMetaBoxField
   | RadioMetaBoxField
   | CheckboxMetaBoxField
@@ -651,6 +675,7 @@ export type EntryMetaBoxField =
   | Omit<MediaMetaBoxField, "span">
   | Omit<MediaListMetaBoxField, "span">
   | Omit<RichtextMetaBoxField, "span">
+  | Omit<RepeaterMetaBoxField, "span">
   | Omit<SelectMetaBoxField, "span">
   | Omit<RadioMetaBoxField, "span">
   | Omit<CheckboxMetaBoxField, "span">
@@ -1182,6 +1207,13 @@ export interface MetaBoxFieldManifestEntry {
   readonly marks?: readonly string[];
   readonly nodes?: readonly string[];
   readonly blocks?: readonly string[];
+  /**
+   * Repeater subfield manifest, keyed positionally — same shape as a
+   * top-level field minus `span` (rows are full-width). Sanitize
+   * callbacks are stripped from the wire shape; the admin recurses
+   * through this list when rendering each row.
+   */
+  readonly subFields?: readonly EntryMetaBoxFieldManifestEntry[];
 }
 
 /**
@@ -2079,6 +2111,7 @@ interface MetaBoxFieldOptionView {
   readonly marks?: readonly string[];
   readonly nodes?: readonly string[];
   readonly blocks?: readonly string[];
+  readonly subFields?: readonly MetaBoxField[];
 }
 
 function toEntryMetaBoxFieldEntry(
@@ -2103,6 +2136,10 @@ function toEntryMetaBoxFieldEntry(
     marks: view.marks,
     nodes: view.nodes,
     blocks: view.blocks,
+    // Repeater subfields recurse through the same projection — the
+    // wire shape is uniform end to end, span dropped (rows are
+    // full-width), sanitize callbacks stripped (server-only).
+    subFields: view.subFields?.map((sf) => toEntryMetaBoxFieldEntry(sf)),
   };
 }
 

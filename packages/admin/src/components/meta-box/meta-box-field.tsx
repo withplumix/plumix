@@ -22,6 +22,7 @@ import { TiptapEditor } from "../editor/tiptap-editor.js";
 import { MultiReferencePicker } from "./multi-reference-picker.js";
 import { PluginFieldErrorBoundary } from "./plugin-field-error-boundary.js";
 import { ReferencePicker } from "./reference-picker.js";
+import { RepeaterField } from "./repeater-field.js";
 
 // Schema-driven field renderer wired to react-hook-form. Each meta-box
 // field becomes a shadcn `FormField` under the supplied `name` path so
@@ -266,6 +267,20 @@ function renderNativeInput({
     );
   }
 
+  if (field.inputType === "repeater") {
+    // Repeater check ahead of reference-target branches: a hand-rolled
+    // manifest literal that smuggled both `inputType: "repeater"` and
+    // `referenceTarget` would otherwise route to MultiReferencePicker.
+    return (
+      <RepeaterField
+        field={field}
+        rhf={rhf}
+        disabled={disabled}
+        testId={testId}
+      />
+    );
+  }
+
   if (field.referenceTarget?.multiple === true) {
     const value = Array.isArray(rhf.value)
       ? rhf.value.filter((v): v is string => typeof v === "string")
@@ -470,7 +485,7 @@ function renderNativeInput({
     // dev tools. A future `customRenderers` seam will hook in here
     // before the fallback.
     console.warn(
-      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/date/datetime/time/color/range/multiselect/json/richtext/user/userList/entry/entryList/term/termList/select/radio/checkbox).`,
+      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/date/datetime/time/color/range/multiselect/json/richtext/repeater/user/userList/entry/entryList/term/termList/select/radio/checkbox).`,
     );
   }
 

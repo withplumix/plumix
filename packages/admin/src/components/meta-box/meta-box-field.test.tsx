@@ -632,3 +632,98 @@ describe("MetaBoxField dispatcher", () => {
     consoleError.mockRestore();
   });
 });
+
+describe("MetaBoxField — repeater dispatch", () => {
+  function repeaterField(
+    overrides?: Partial<MetaBoxFieldManifestEntry>,
+  ): MetaBoxFieldManifestEntry {
+    return field({
+      key: "links",
+      label: "Links",
+      type: "json",
+      inputType: "repeater",
+      subFields: [
+        { key: "label", label: "Label", type: "string", inputType: "text" },
+        { key: "href", label: "URL", type: "string", inputType: "url" },
+      ],
+      ...overrides,
+    });
+  }
+
+  test("renders empty placeholder + Add row button when value is missing", () => {
+    render(<Harness fieldDef={repeaterField()} initial={undefined} />);
+    expect(
+      screen.getByTestId("meta-box-field-links-input-empty"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("meta-box-field-links-input-add"),
+    ).toBeInTheDocument();
+  });
+
+  test("Add row appends a row whose subfields render via the same dispatcher", async () => {
+    const onChange = vi.fn();
+    render(
+      <Harness
+        fieldDef={repeaterField()}
+        initial={[]}
+        onChangeSpy={onChange}
+      />,
+    );
+    await userEvent.click(screen.getByTestId("meta-box-field-links-input-add"));
+    // Row 0's subfields render with dot-pathed names through the
+    // recursive dispatcher.
+    expect(
+      screen.getByTestId("meta-box-field-label-input"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("meta-box-field-href-input")).toBeInTheDocument();
+    expect(onChange).toHaveBeenLastCalledWith([{ label: null, href: null }]);
+  });
+
+  test("typing into a subfield writes to the form's nested path", async () => {
+    const onChange = vi.fn();
+    render(
+      <Harness
+        fieldDef={repeaterField()}
+        initial={[{ label: "", href: "" }]}
+        onChangeSpy={onChange}
+      />,
+    );
+    await userEvent.type(
+      screen.getByTestId("meta-box-field-label-input"),
+      "Home",
+    );
+    expect(onChange).toHaveBeenLastCalledWith([{ label: "Home", href: "" }]);
+  });
+
+  test("max bound disables Add row at capacity", () => {
+    render(
+      <Harness
+        fieldDef={repeaterField({ max: 1 })}
+        initial={[{ label: "", href: "" }]}
+      />,
+    );
+    expect(screen.getByTestId("meta-box-field-links-input-add")).toBeDisabled();
+  });
+
+  test("count display shows current / min / max", () => {
+    render(
+      <Harness
+        fieldDef={repeaterField({ min: 1, max: 3 })}
+        initial={[
+          { label: "", href: "" },
+          { label: "", href: "" },
+        ]}
+      />,
+    );
+    expect(
+      screen.getByTestId("meta-box-field-links-input-count"),
+    ).toHaveTextContent("2 / min 1 / max 3");
+  });
+
+  test("non-array initial value renders empty (defensive normalize)", () => {
+    render(<Harness fieldDef={repeaterField()} initial="not an array" />);
+    expect(
+      screen.getByTestId("meta-box-field-links-input-empty"),
+    ).toBeInTheDocument();
+  });
+});

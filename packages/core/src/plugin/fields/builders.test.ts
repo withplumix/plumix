@@ -18,10 +18,12 @@ import {
   password,
   radio,
   range,
+  repeater,
   richtext,
   select,
   term,
   termList,
+  text,
   textarea,
   time,
   url,
@@ -1043,5 +1045,128 @@ describe("richtext() builder", () => {
       nodes: ["heading"],
       blocks: ["my-block"],
     });
+  });
+});
+
+describe("repeater() builder", () => {
+  test("pins inputType + json type and carries subFields, min, max", () => {
+    const field = repeater({
+      key: "links",
+      label: "Links",
+      min: 1,
+      max: 5,
+      subFields: [
+        text({ key: "label", label: "Label" }),
+        text({ key: "href", label: "URL" }),
+      ],
+    });
+    expect(field.inputType).toBe("repeater");
+    expect(field.type).toBe("json");
+    expect(field.min).toBe(1);
+    expect(field.max).toBe(5);
+    expect(field.subFields).toHaveLength(2);
+    expect(field.subFields[0]).toMatchObject({
+      key: "label",
+      inputType: "text",
+    });
+    expect(field.subFields[1]).toMatchObject({
+      key: "href",
+      inputType: "text",
+    });
+  });
+
+  test("rejects subField keys that risk prototype pollution", () => {
+    expect(() =>
+      repeater({
+        key: "rows",
+        label: "Rows",
+        subFields: [text({ key: "__proto__", label: "Bad" })],
+      }),
+    ).toThrow(/forbidden/);
+    expect(() =>
+      repeater({
+        key: "rows",
+        label: "Rows",
+        subFields: [text({ key: "constructor", label: "Bad" })],
+      }),
+    ).toThrow(/forbidden/);
+  });
+
+  test("rejects a subField key that doesn't match the meta-key shape", () => {
+    expect(() =>
+      repeater({
+        key: "rows",
+        label: "Rows",
+        subFields: [text({ key: "with space", label: "Bad" })],
+      }),
+    ).toThrow(/must match/);
+  });
+
+  test("rejects duplicate subField keys at registration time", () => {
+    expect(() =>
+      repeater({
+        key: "rows",
+        label: "Rows",
+        subFields: [
+          text({ key: "label", label: "Label" }),
+          text({ key: "label", label: "Other" }),
+        ],
+      }),
+    ).toThrow(/declares subField "label" more than once/);
+  });
+
+  test("rejects a nested repeater at registration time", () => {
+    expect(() =>
+      repeater({
+        key: "outer",
+        label: "Outer",
+        subFields: [
+          repeater({
+            key: "inner",
+            label: "Inner",
+            subFields: [text({ key: "v", label: "Value" })],
+          }),
+        ],
+      }),
+    ).toThrow(/nested repeater/i);
+  });
+
+  test("manifest round-trip recurses subFields with sanitize stripped + span dropped", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("test", (ctx) => {
+      ctx.registerSettingsGroup("blog", {
+        label: "Blog",
+        fields: [
+          repeater({
+            key: "links",
+            label: "Links",
+            subFields: [
+              text({ key: "label", label: "Label", maxLength: 80 }),
+              text({ key: "href", label: "URL" }),
+            ],
+          }),
+        ],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    const entry = manifest.settingsGroups[0]?.fields[0];
+    expect(entry).toMatchObject({
+      key: "links",
+      inputType: "repeater",
+      type: "json",
+    });
+    expect(entry?.subFields).toHaveLength(2);
+    expect(entry?.subFields?.[0]).toMatchObject({
+      key: "label",
+      inputType: "text",
+      maxLength: 80,
+    });
+    // Sanitize callbacks (and any function values) are not on the wire.
+    for (const sf of entry?.subFields ?? []) {
+      for (const v of Object.values(sf)) {
+        expect(typeof v).not.toBe("function");
+      }
+    }
   });
 });
