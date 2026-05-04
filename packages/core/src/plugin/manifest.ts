@@ -462,6 +462,23 @@ export interface MediaMetaBoxField extends MetaBoxFieldBase {
   readonly referenceTarget: ReferenceTarget;
 }
 
+/**
+ * Multi media reference. Storage is a JSON array of `MediaValue`
+ * objects — `[{ id, mime?, filename? }, ...]` — extending the cached-
+ * object pattern from `MediaMetaBoxField` to the array shape. The
+ * meta pipeline rewrites each entry's cached fields on every write,
+ * so admin renders thumbnails for every item without a per-item
+ * resolve. `referenceTarget.multiple` is `true`, `valueShape` is
+ * `"object"`; `max` caps the array length at write time.
+ */
+export interface MediaListMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "mediaList";
+  readonly type: "json";
+  readonly referenceTarget: ReferenceTarget;
+  /** Max items allowed in the array. Omitted = unbounded. */
+  readonly max?: number;
+}
+
 /** Single-value dropdown picker; `options` is required. */
 export interface SelectMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "select";
@@ -534,6 +551,7 @@ export type MetaBoxField =
   | TermReferenceMetaBoxField
   | TermListMetaBoxField
   | MediaMetaBoxField
+  | MediaListMetaBoxField
   | SelectMetaBoxField
   | RadioMetaBoxField
   | CheckboxMetaBoxField
@@ -599,6 +617,7 @@ export type EntryMetaBoxField =
   | Omit<TermReferenceMetaBoxField, "span">
   | Omit<TermListMetaBoxField, "span">
   | Omit<MediaMetaBoxField, "span">
+  | Omit<MediaListMetaBoxField, "span">
   | Omit<SelectMetaBoxField, "span">
   | Omit<RadioMetaBoxField, "span">
   | Omit<CheckboxMetaBoxField, "span">

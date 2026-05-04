@@ -1,4 +1,8 @@
-import type { MediaMetaBoxField, MetaBoxFieldSpan } from "@plumix/core";
+import type {
+  MediaListMetaBoxField,
+  MediaMetaBoxField,
+  MetaBoxFieldSpan,
+} from "@plumix/core";
 
 import type { MediaFieldScope } from "./lookup.js";
 
@@ -59,6 +63,59 @@ export function media(options: MediaFieldOptions): MediaMetaBoxField {
     type: "json",
     inputType: "media",
     referenceTarget: { kind: "media", scope, valueShape: "object" },
+    required: options.required,
+    description: options.description,
+    default: options.default,
+    span: options.span,
+  };
+}
+
+/**
+ * Per-field options for the `mediaList()` builder. Multi-value
+ * counterpart to `media()` — same `accept` semantics, plus a `max`
+ * length cap. Storage is `MediaValue[]`.
+ */
+export interface MediaListFieldOptions {
+  readonly key: string;
+  readonly label: string;
+  readonly required?: boolean;
+  readonly description?: string;
+  readonly default?: readonly MediaValue[];
+  readonly span?: MetaBoxFieldSpan;
+  readonly accept?: string | readonly string[];
+  /** Max items allowed in the array. Omitted = unbounded. */
+  readonly max?: number;
+}
+
+/**
+ * Build a typed `mediaList` reference field — the multi-value
+ * counterpart to `media()`. Storage is `MediaValue[]` —
+ * `[{ id, mime?, filename? }, ...]`. The meta pipeline rewrites
+ * each entry's cached fields on every write so reads can render
+ * thumbnails without a per-item resolve round-trip.
+ *
+ * Picker stays open across selections (so authors can pick several
+ * without re-opening) and auto-stops when `max` is reached.
+ * Selected items render as a vertical list with up/down reorder
+ * and per-item removal; drag-reorder is deferred to a follow-up
+ * (see `MediaListPickerField`).
+ */
+export function mediaList(
+  options: MediaListFieldOptions,
+): MediaListMetaBoxField {
+  const scope: MediaFieldScope = { accept: options.accept };
+  return {
+    key: options.key,
+    label: options.label,
+    type: "json",
+    inputType: "mediaList",
+    referenceTarget: {
+      kind: "media",
+      scope,
+      valueShape: "object",
+      multiple: true,
+    },
+    max: options.max,
     required: options.required,
     description: options.description,
     default: options.default,
