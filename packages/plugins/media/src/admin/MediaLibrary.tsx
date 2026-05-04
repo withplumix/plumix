@@ -7,8 +7,16 @@ import {
 } from "@tanstack/react-query";
 
 const PAGE_SIZE = 24;
-const MEDIA_LIST_KEY = ["media", "list"] as const;
 const UPLOAD_CONCURRENCY = 4;
+
+// `MEDIA_LIST_KEY` is parametric over `accept` so the picker grid
+// stays in its own cache slot — the page-mode library and a picker
+// scoped to `accept: "image/"` never poison each other's data.
+function mediaListKey(
+  accept: string | readonly string[] | undefined,
+): readonly unknown[] {
+  return ["media", "list", accept ?? null] as const;
+}
 
 // Resolve a media URL to absolute form for copy/display. The plugin
 // emits relative `/_plumix/media/serve/<id>` URLs in binding-only
@@ -242,18 +250,55 @@ function useInfiniteScrollSentinel(
   }, [sentinelRef, hasNextPage, isFetchingNextPage, fetchNextPage, dataLength]);
 }
 
-export function MediaLibrary(): ReactNode {
+/**
+ * `MediaLibrary` is dual-mode: a full-page browser + uploader at
+ * `/media`, or an in-modal picker that emits a selection back to a
+ * meta-box field renderer. Page mode (default) preserves every
+ * existing behavior — the picker mode swaps the detail drawer for
+ * a footer "Use selection" CTA, accepts a hybrid card click (single
+ * = select, double = confirm + close), and applies a server-side
+ * `accept` MIME filter to the grid.
+ */
+export interface MediaLibraryProps {
+  readonly mode?: "page" | "picker";
+  /**
+   * Server-side MIME filter forwarded to `media.list`. String form is
+   * a prefix match (`"image/"` → every `image/*` MIME); array form is
+   * an exact whitelist. Picker-mode only — page mode ignores it.
+   */
+  readonly accept?: string | readonly string[];
+  /**
+   * Picker-mode only: called with the bare media id (`"42"`) when the
+   * user confirms a selection. Single-pick semantics — caller is
+   * responsible for closing the modal.
+   */
+  readonly onSelect?: (id: string) => void;
+  /** Picker-mode only: called when the user clicks Cancel. */
+  readonly onCancel?: () => void;
+}
+
+export function MediaLibrary({
+  mode = "page",
+  accept,
+  onSelect,
+  onCancel,
+}: MediaLibraryProps = {}): ReactNode {
   const queryClient = useQueryClient();
   const [dragging, setDragging] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const isPicker = mode === "picker";
 
+  const queryKey = mediaListKey(accept);
   const list = useInfiniteQuery({
-    queryKey: MEDIA_LIST_KEY,
+    queryKey,
     initialPageParam: 0,
     queryFn: ({ pageParam }: { pageParam: number }) =>
       rpcCall<MediaListResponse>("media/list", {
         limit: PAGE_SIZE,
         offset: pageParam,
+        // `accept` only flows through in picker mode. Page mode shows
+        // the full library regardless.
+        ...(isPicker && accept !== undefined ? { accept } : {}),
       }),
     getNextPageParam: (last, allPages) =>
       last.hasMore ? allPages.length * PAGE_SIZE : undefined,
@@ -265,8 +310,8 @@ export function MediaLibrary(): ReactNode {
   );
 
   const invalidateList = useCallback((): void => {
-    void queryClient.invalidateQueries({ queryKey: MEDIA_LIST_KEY });
-  }, [queryClient]);
+    void queryClient.invalidateQueries({ queryKey });
+  }, [queryClient, queryKey]);
 
   // `list.fetchNextPage` is a stable React Query callback. Passing it
   // directly (rather than wrapping it in a fresh arrow each render)
@@ -338,6 +383,29 @@ export function MediaLibrary(): ReactNode {
     }
   }, [items, list.status, list.isFetching, selectedItem]);
 
+  // Picker-mode selection (single-pick). Hybrid click model:
+  //   - single click → set this id as the picked one (footer enables)
+  //   - double click → confirm + close (auto-close)
+  // Footer "Use selection" is the keyboard-friendly confirmation.
+  const [pickerSelectedId, setPickerSelectedId] = useState<number | null>(null);
+  const handleCardActivate = useCallback(
+    (item: MediaItem): void => {
+      if (isPicker) {
+        setPickerSelectedId(item.id);
+        return;
+      }
+      setSelectedItem(item);
+    },
+    [isPicker],
+  );
+  const handleCardConfirm = useCallback(
+    (item: MediaItem): void => {
+      if (!isPicker) return;
+      onSelect?.(String(item.id));
+    },
+    [isPicker, onSelect],
+  );
+
   // ESC closes the detail drawer. Depend on the boolean `open` flag
   // (primitive) so the listener doesn't tear down/rebind on every
   // refresh of `selectedItem`.
@@ -354,6 +422,7 @@ export function MediaLibrary(): ReactNode {
   return (
     <div
       data-testid="media-library"
+      data-mode={mode}
       className="relative flex min-h-full gap-6"
       {...dropProps}
     >
@@ -361,9 +430,9 @@ export function MediaLibrary(): ReactNode {
         <header className="flex items-center justify-between">
           <h1
             data-testid="media-library-title"
-            className="text-3xl font-semibold tracking-tight"
+            className={`${isPicker ? "text-xl" : "text-3xl"} font-semibold tracking-tight`}
           >
-            Media Library
+            {isPicker ? "Select media" : "Media Library"}
           </h1>
           <UploadButton onSelect={(files) => void startUpload(files)} />
         </header>
@@ -393,14 +462,31 @@ export function MediaLibrary(): ReactNode {
             data-testid="media-library-grid"
             className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4"
           >
-            {items.map((item) => (
-              <MediaCard
-                key={item.id}
-                item={item}
-                selected={selectedItem?.id === item.id}
-                onOpen={() => setSelectedItem(item)}
-              />
-            ))}
+            {items.map((item) => {
+              const selected = isPicker
+                ? pickerSelectedId === item.id
+                : selectedItem?.id === item.id;
+              return (
+                <MediaCard
+                  key={item.id}
+                  item={item}
+                  selected={selected}
+                  onActivate={() => handleCardActivate(item)}
+                  // Page mode: double-click is idempotent with single-
+                  // click (open detail). Picker mode: confirm + close.
+                  onConfirm={
+                    isPicker
+                      ? () => handleCardConfirm(item)
+                      : () => handleCardActivate(item)
+                  }
+                  ariaActionLabel={
+                    isPicker
+                      ? `Pick ${item.title}`
+                      : `Open details for ${item.title}`
+                  }
+                />
+              );
+            })}
           </div>
         )}
 
@@ -425,9 +511,38 @@ export function MediaLibrary(): ReactNode {
             className="border-primary pointer-events-none absolute inset-4 rounded-lg border-2 border-dashed bg-white/5"
           />
         )}
+
+        {isPicker && (
+          <footer
+            data-testid="media-library-picker-footer"
+            className="bg-background sticky bottom-0 -mx-2 flex items-center justify-end gap-2 border-t px-2 py-3"
+          >
+            <button
+              type="button"
+              className="hover:bg-muted rounded px-3 py-1.5 text-sm"
+              onClick={() => onCancel?.()}
+              data-testid="media-library-picker-cancel"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={pickerSelectedId === null}
+              onClick={() => {
+                if (pickerSelectedId !== null) {
+                  onSelect?.(String(pickerSelectedId));
+                }
+              }}
+              data-testid="media-library-picker-confirm"
+            >
+              Use selection
+            </button>
+          </footer>
+        )}
       </div>
 
-      {selectedItem && (
+      {!isPicker && selectedItem && (
         <MediaDetailDrawer
           item={selectedItem}
           onClose={() => setSelectedItem(null)}
@@ -646,11 +761,19 @@ function UploadProgressBar({
 function MediaCard({
   item,
   selected,
-  onOpen,
+  onActivate,
+  onConfirm,
+  ariaActionLabel,
 }: {
   item: MediaItem;
   selected: boolean;
-  onOpen: () => void;
+  // Single-click action — opens the drawer (page mode) OR sets the
+  // picker selection (picker mode).
+  onActivate: () => void;
+  // Double-click action — only meaningful in picker mode (confirm +
+  // close). Page mode passes an empty fn.
+  onConfirm?: () => void;
+  ariaActionLabel: string;
   // onDelete + onAltChange removed from card — both belong to the
   // detail drawer now (matches the WP/screenshot pattern: card is
   // the index, drawer is the detail editor).
@@ -664,16 +787,17 @@ function MediaCard({
       className={`border-border bg-card relative flex cursor-pointer flex-col gap-2 rounded-lg border p-3 ${
         selected ? "outline-primary outline-2 outline-offset-1" : ""
       }`}
-      onClick={onOpen}
+      onClick={onActivate}
+      onDoubleClick={onConfirm}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          onOpen();
+          onActivate();
         }
       }}
       role="button"
       tabIndex={0}
-      aria-label={`Open details for ${item.title}`}
+      aria-label={ariaActionLabel}
     >
       <div className="bg-muted relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-sm">
         {isImage ? (
