@@ -8,6 +8,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command.js";
+import { Skeleton } from "@/components/ui/skeleton.js";
 import { SortableList } from "@/components/ui/sortable.js";
 import { orpc } from "@/lib/orpc.js";
 import { useQuery } from "@tanstack/react-query";
@@ -94,10 +95,23 @@ export function MultiReferencePicker({
     onChange(next.map((row) => row.id));
   };
 
-  const sortableItems = value.map((id) => ({
-    id,
-    result: resolvedById.get(id) ?? null,
-  }));
+  // Three states per row: `found` (result in cache), `orphan` (resolve
+  // settled, no result — really gone), `pending` (resolve still in
+  // flight). The pending case renders as a skeleton so the brief gap
+  // between mount and the first resolve doesn't flash "Reference
+  // missing" for every row.
+  const isResolvePending =
+    value.length > 0 &&
+    resolveQuery.data === undefined &&
+    !resolveQuery.isError;
+  const sortableItems = value.map((id) => {
+    const result = resolvedById.get(id) ?? null;
+    return {
+      id,
+      result,
+      pending: result === null && isResolvePending,
+    };
+  });
 
   return (
     <div className="flex flex-col gap-2" data-testid={testId}>
@@ -124,25 +138,40 @@ export function MultiReferencePicker({
           items={sortableItems}
           onReorder={handleReorder}
           onRemove={required && value.length === 1 ? undefined : handleRemove}
-          renderItem={(item) =>
-            item.result ? (
-              <div className="text-sm">
-                <p className="truncate font-medium">{item.result.label}</p>
-                {item.result.subtitle ? (
-                  <p className="text-muted-foreground truncate text-xs">
-                    {item.result.subtitle}
-                  </p>
-                ) : null}
-              </div>
-            ) : (
+          renderItem={(item) => {
+            if (item.result) {
+              return (
+                <div className="text-sm">
+                  <p className="truncate font-medium">{item.result.label}</p>
+                  {item.result.subtitle ? (
+                    <p className="text-muted-foreground truncate text-xs">
+                      {item.result.subtitle}
+                    </p>
+                  ) : null}
+                </div>
+              );
+            }
+            if (item.pending) {
+              return (
+                <div
+                  className="flex flex-col gap-1.5"
+                  data-testid={`${testId}-resolving-${item.id}`}
+                  aria-busy="true"
+                >
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              );
+            }
+            return (
               <p
                 className="text-destructive text-sm"
                 data-testid={`${testId}-orphan-${item.id}`}
               >
                 Reference missing — remove or re-pick
               </p>
-            )
-          }
+            );
+          }}
           disabled={disabled}
           testId={`${testId}-list`}
         />
