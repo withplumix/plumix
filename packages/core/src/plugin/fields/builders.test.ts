@@ -11,6 +11,7 @@ import {
   datetime,
   email,
   entry,
+  entryList,
   json,
   multiselect,
   number,
@@ -19,6 +20,7 @@ import {
   range,
   select,
   term,
+  termList,
   textarea,
   time,
   url,
@@ -809,6 +811,166 @@ describe("userList() builder", () => {
       referenceTarget: {
         kind: "user",
         scope: { roles: ["admin"] },
+        multiple: true,
+      },
+    });
+  });
+});
+
+describe("entryList() builder", () => {
+  test("pins inputType + json type and emits a multi entry-kind referenceTarget", () => {
+    const field = entryList({
+      key: "related",
+      label: "Related",
+      entryTypes: ["post"],
+      max: 5,
+    });
+    expect(field.inputType).toBe("entryList");
+    expect(field.type).toBe("json");
+    expect(field.max).toBe(5);
+    expect(field.referenceTarget).toEqual({
+      kind: "entry",
+      scope: { entryTypes: ["post"], includeTrashed: undefined },
+      multiple: true,
+    });
+  });
+
+  test("packages includeTrashed into the scope and supports unbounded max", () => {
+    const field = entryList({
+      key: "related",
+      label: "Related",
+      entryTypes: ["post", "page"],
+      includeTrashed: true,
+    });
+    expect(field.max).toBeUndefined();
+    expect(field.referenceTarget.scope).toEqual({
+      entryTypes: ["post", "page"],
+      includeTrashed: true,
+    });
+  });
+
+  test("rejects non-applicable options at the type level", () => {
+    entryList({
+      key: "x",
+      label: "x",
+      entryTypes: ["post"],
+      // @ts-expect-error — `placeholder` doesn't apply to a reference field.
+      placeholder: "pick",
+    });
+
+    entryList({
+      key: "x",
+      label: "x",
+      entryTypes: ["post"],
+      // @ts-expect-error — `options` belongs to select/radio.
+      options: [{ value: "a", label: "A" }],
+    });
+  });
+
+  test("manifest round-trip preserves multi referenceTarget + max on the wire shape", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("test", (ctx) => {
+      ctx.registerSettingsGroup("blog", {
+        label: "Blog",
+        fields: [
+          entryList({
+            key: "related",
+            label: "Related",
+            entryTypes: ["post"],
+            max: 4,
+          }),
+        ],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    expect(manifest.settingsGroups[0]?.fields[0]).toMatchObject({
+      key: "related",
+      inputType: "entryList",
+      type: "json",
+      max: 4,
+      referenceTarget: {
+        kind: "entry",
+        scope: { entryTypes: ["post"] },
+        multiple: true,
+      },
+    });
+  });
+});
+
+describe("termList() builder", () => {
+  test("pins inputType + json type and emits a multi term-kind referenceTarget", () => {
+    const field = termList({
+      key: "tags",
+      label: "Tags",
+      termTaxonomies: ["tag"],
+      max: 10,
+    });
+    expect(field.inputType).toBe("termList");
+    expect(field.type).toBe("json");
+    expect(field.max).toBe(10);
+    expect(field.referenceTarget).toEqual({
+      kind: "term",
+      scope: { termTaxonomies: ["tag"] },
+      multiple: true,
+    });
+  });
+
+  test("supports unbounded max", () => {
+    const field = termList({
+      key: "tags",
+      label: "Tags",
+      termTaxonomies: ["tag", "category"],
+    });
+    expect(field.max).toBeUndefined();
+    expect(field.referenceTarget.scope).toEqual({
+      termTaxonomies: ["tag", "category"],
+    });
+  });
+
+  test("rejects non-applicable options at the type level", () => {
+    termList({
+      key: "x",
+      label: "x",
+      termTaxonomies: ["tag"],
+      // @ts-expect-error — `placeholder` doesn't apply to a reference field.
+      placeholder: "pick",
+    });
+
+    termList({
+      key: "x",
+      label: "x",
+      termTaxonomies: ["tag"],
+      // @ts-expect-error — `options` belongs to select/radio.
+      options: [{ value: "a", label: "A" }],
+    });
+  });
+
+  test("manifest round-trip preserves multi referenceTarget + max on the wire shape", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("test", (ctx) => {
+      ctx.registerSettingsGroup("blog", {
+        label: "Blog",
+        fields: [
+          termList({
+            key: "tags",
+            label: "Tags",
+            termTaxonomies: ["tag"],
+            max: 6,
+          }),
+        ],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    expect(manifest.settingsGroups[0]?.fields[0]).toMatchObject({
+      key: "tags",
+      inputType: "termList",
+      type: "json",
+      max: 6,
+      referenceTarget: {
+        kind: "term",
+        scope: { termTaxonomies: ["tag"] },
         multiple: true,
       },
     });
