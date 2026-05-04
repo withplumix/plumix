@@ -1,24 +1,7 @@
 import type { MetaBoxFieldSpan, RichtextMetaBoxField } from "../manifest.js";
+import { walkRichtextDoc } from "./richtext-validate.js";
 
-/**
- * Per-field options for `richtext()`. The three allowlists are strict:
- * a Tiptap mark/node/block whose name isn't listed is rejected by the
- * server-side validator and hidden from the admin's toolbar. Omit to
- * deny everything in that category (still allows the implicit
- * `doc` / `paragraph` / `text` baseline ProseMirror requires).
- *
- * `marks` are inline formatters (`bold`, `italic`, `link`, …).
- * `nodes` are block-level Tiptap nodes (`heading`, `bulletList`,
- * `codeBlock`, `image`, …).
- * `blocks` are plumix-registered custom Tiptap nodes/marks declared
- * via `ctx.registerBlock` on the server, with React components
- * registered via `window.plumix.registerPluginBlock` on the admin.
- *
- * Replaces the dropped `markdown` / `code` standalone field types:
- *  - `richtext({ nodes: ["codeBlock"] })` → code-only
- *  - `richtext({ marks: ["bold","italic","link"], nodes: ["bulletList","orderedList"] })`
- *    → markdown-shaped formatting
- */
+/** Per-field options for `richtext()`. See `RichtextMetaBoxField`. */
 export interface RichtextFieldOptions {
   readonly key: string;
   readonly label: string;
@@ -33,15 +16,11 @@ export interface RichtextFieldOptions {
 
 /**
  * Build a typed `richtext` meta-box field. Storage is Tiptap's
- * ProseMirror JSON shape (`{ type, content?, marks?, attrs? }`)
- * round-tripped through the existing `json` storage primitive.
- *
- * The `sanitize` validator (added in a follow-up commit) walks the
- * stored doc against the field's allowlist and rejects disallowed
- * names with a precise location pointer. The admin's TiptapEditor
- * projects the same allowlist onto its StarterKit configuration +
- * plugin block registry so the toolbar surfaces only the allowed
- * affordances.
+ * ProseMirror JSON shape, round-tripped through the `json` storage
+ * primitive. The `sanitize` validator is auto-injected so the meta
+ * pipeline rejects nodes/marks/blocks outside the allowlist (and
+ * unsafe link hrefs) without the consumer wiring anything — errors
+ * surface as `meta_invalid_value` via `runSanitize`.
  */
 export function richtext(options: RichtextFieldOptions): RichtextMetaBoxField {
   return {
@@ -56,5 +35,10 @@ export function richtext(options: RichtextFieldOptions): RichtextMetaBoxField {
     description: options.description,
     default: options.default,
     span: options.span,
+    sanitize: walkRichtextDoc({
+      marks: options.marks,
+      nodes: options.nodes,
+      blocks: options.blocks,
+    }),
   };
 }
