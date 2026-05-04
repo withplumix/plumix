@@ -780,3 +780,150 @@ describe("validateMetaReferences (cached-object shape)", () => {
     expect(filtered.hero).toEqual(stored);
   });
 });
+
+// Multi + cached-object shape (`mediaList`). Same architecture as
+// single + cached-object — adapter-supplied cached fields are merged
+// into each entry on write; read keeps the stored snapshot dense by
+// dropping orphans.
+describe("validateMetaReferences (multi cached-object shape)", () => {
+  function registryWithCachedListRef(
+    cached: Readonly<Record<string, unknown>>,
+    options: { liveIds?: ReadonlySet<string>; max?: number } = {},
+  ) {
+    const registry: MutablePluginRegistry = createPluginRegistry();
+    const fullField = {
+      key: "gallery",
+      label: "Gallery",
+      type: "json",
+      inputType: "mediaList",
+      referenceTarget: {
+        kind: "stub",
+        valueShape: "object",
+        multiple: true,
+      },
+      max: options.max,
+    } as MetaBoxField;
+    registry.userMetaBoxes.set("gallery", {
+      id: "gallery",
+      label: "Gallery",
+      fields: [fullField],
+      registeredBy: null,
+    });
+    const isLive = (id: string) =>
+      options.liveIds === undefined || options.liveIds.has(id);
+    registry.lookupAdapters.set("stub", {
+      kind: "stub",
+      capability: null,
+      registeredBy: null,
+      adapter: {
+        list: (_ctx, opts) =>
+          Promise.resolve(
+            (opts.ids ?? [])
+              .filter(isLive)
+              .map((id) => ({ id, label: `stub-${id}`, cached })),
+          ),
+        resolve: (_ctx, id) =>
+          Promise.resolve(
+            isLive(id) ? { id, label: `stub-${id}`, cached } : null,
+          ),
+      },
+    });
+    return {
+      registry,
+      findField: (key: string) =>
+        key === fullField.key ? fullField : undefined,
+    };
+  }
+
+  test("rewrites an array of bare-id strings to canonical { id, ...cached }[] shape", async () => {
+    const { registry, findField } = registryWithCachedListRef({
+      mime: "image/png",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const patch = sanitizeMetaInput(findField, { gallery: ["42", "43"] });
+    if (!patch) throw new Error("patch should not be null");
+    await validateMetaReferences(h.context, findField, patch);
+    expect(patch.upserts.get("gallery")).toEqual([
+      { id: "42", mime: "image/png" },
+      { id: "43", mime: "image/png" },
+    ]);
+  });
+
+  test("rewrites an array of { id } objects, dropping spoofed extras", async () => {
+    const { registry, findField } = registryWithCachedListRef({
+      mime: "image/png",
+      filename: "shared.png",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const patch = sanitizeMetaInput(findField, {
+      gallery: [
+        { id: "42", spoofed: "ignored" },
+        { id: "43", mime: "image/jpeg" },
+      ],
+    });
+    if (!patch) throw new Error("patch should not be null");
+    await validateMetaReferences(h.context, findField, patch);
+    expect(patch.upserts.get("gallery")).toEqual([
+      { id: "42", mime: "image/png", filename: "shared.png" },
+      { id: "43", mime: "image/png", filename: "shared.png" },
+    ]);
+  });
+
+  test("rejects when any item id is missing from live results", async () => {
+    const { registry, findField } = registryWithCachedListRef(
+      {},
+      { liveIds: new Set(["42"]) },
+    );
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const patch = sanitizeMetaInput(findField, {
+      gallery: ["42", "999"],
+    });
+    if (!patch) throw new Error("patch should not be null");
+    await expect(
+      validateMetaReferences(h.context, findField, patch),
+    ).rejects.toBeInstanceOf(MetaSanitizationError);
+  });
+
+  test("enforces the field's max length cap on the multi-object shape", async () => {
+    const { registry, findField } = registryWithCachedListRef({}, { max: 2 });
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const patch = sanitizeMetaInput(findField, {
+      gallery: ["1", "2", "3"],
+    });
+    if (!patch) throw new Error("patch should not be null");
+    await expect(
+      validateMetaReferences(h.context, findField, patch),
+    ).rejects.toBeInstanceOf(MetaSanitizationError);
+  });
+
+  test("filterMetaOrphans drops missing entries from the array, keeping order", async () => {
+    const { registry, findField } = registryWithCachedListRef(
+      {},
+      { liveIds: new Set(["42", "44"]) },
+    );
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const filtered = await filterMetaOrphans(h.context, findField, {
+      gallery: [
+        { id: "42", mime: "image/png", filename: "a.png" },
+        { id: "43", mime: "image/png", filename: "b.png" }, // orphan
+        { id: "44", mime: "image/png", filename: "c.png" },
+      ],
+    });
+    expect(filtered.gallery).toEqual([
+      { id: "42", mime: "image/png", filename: "a.png" },
+      { id: "44", mime: "image/png", filename: "c.png" },
+    ]);
+  });
+
+  test("filterMetaOrphans returns an empty array when every entry is gone", async () => {
+    const { registry, findField } = registryWithCachedListRef(
+      {},
+      { liveIds: new Set() },
+    );
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const filtered = await filterMetaOrphans(h.context, findField, {
+      gallery: [{ id: "42" }, { id: "43" }],
+    });
+    expect(filtered.gallery).toEqual([]);
+  });
+});

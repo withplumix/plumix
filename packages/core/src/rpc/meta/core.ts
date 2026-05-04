@@ -226,13 +226,16 @@ export async function validateMetaReferences(
         }
       }
       // Cached-object normalize step: replace user-supplied value
-      // with `{ id, ...adapterRow.cached }`. Adapter is authoritative
-      // for cached fields (mime/filename); user-supplied non-id keys
-      // are dropped to prevent spoofed metadata. v0.1 covers single
-      // refs only; multi + object (`mediaList`) lands in slice #132
-      // alongside the array-of-objects shape support in
-      // `referenceIdsForValidation`.
-      if (upsert.target.valueShape !== "object" || upsert.target.multiple) {
+      // with `{ id, ...adapterRow.cached }` (single) or an array
+      // thereof (multi). Adapter is authoritative for cached fields
+      // (mime/filename); user-supplied non-id keys are dropped to
+      // prevent spoofed metadata.
+      if (upsert.target.valueShape !== "object") continue;
+      if (upsert.target.multiple) {
+        patch.upserts.set(
+          upsert.key,
+          upsert.ids.map((id) => buildCachedReference(id, rowsById)),
+        );
         continue;
       }
       const [id] = upsert.ids;
@@ -345,16 +348,18 @@ async function fetchLiveRows(
 const HARD_MULTI_REFERENCE_LIMIT = 100;
 
 // Validates the wire shape of a reference value and returns the ids
-// to feed into the group's batched `list({ ids })` call. Three shapes
+// to feed into the group's batched `list({ ids })` call. Four shapes
 // are accepted, dispatching on `target.multiple` + `target.valueShape`:
 //
 //  - multi=true,  valueShape="id"  (default): string[] of non-empty ids
+//  - multi=true,  valueShape="object":        `{ id }[]` — each item a
+//                                             cached-object reference
+//                                             (or bare strings for
+//                                             leniency on first write)
 //  - multi=false, valueShape="id"  (default): bare string id
 //  - multi=false, valueShape="object":        `{ id: string, ... }`
 //                                             (or a bare string for
 //                                             leniency on first write)
-//
-// Multi + object (mediaList) is reserved for slice #132.
 function referenceIdsForValidation(
   key: string,
   value: unknown,
@@ -370,6 +375,25 @@ function referenceIdsForValidation(
     }
     if (max !== undefined && value.length > max) {
       throw new MetaSanitizationError(key, "invalid_value");
+    }
+    if (target.valueShape === "object") {
+      // Lenient on input: each item can be `"42"` (first-write
+      // convenience) or `{ id: "42", ... }`. Always rewritten to the
+      // canonical `{ id, ...cached }` shape after the live-id check.
+      const ids: string[] = [];
+      for (const item of value) {
+        if (typeof item === "string" && item !== "") {
+          ids.push(item);
+          continue;
+        }
+        const id = extractStringId(item);
+        if (id !== null && id !== "") {
+          ids.push(id);
+          continue;
+        }
+        throw new MetaSanitizationError(key, "invalid_value");
+      }
+      return ids;
     }
     for (const item of value) {
       if (typeof item !== "string" || item === "") {
