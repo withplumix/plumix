@@ -10,15 +10,20 @@ import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
  * manifest entry plus a react-hook-form controller binding. The
  * renderer must return a single element — shadcn's `<FormControl>`
  * uses Radix `Slot` to forward id/aria-* onto it.
+ *
+ * Internal — plugin authors register components against
+ * `window.plumix.registerPluginFieldType` at runtime; the host
+ * exposes that bridge from `plumix-globals.ts`. Plugins type their
+ * own props inline.
  */
-export interface PluginFieldRendererProps {
+interface PluginFieldRendererProps {
   readonly field: MetaBoxFieldManifestEntry;
   readonly rhf: ControllerRenderProps<FieldValues, string>;
   readonly disabled: boolean;
   readonly testId: string;
 }
 
-export type PluginFieldComponent = ComponentType<PluginFieldRendererProps>;
+type PluginFieldComponent = ComponentType<PluginFieldRendererProps>;
 
 interface PluginRegistryEntry<TComponent> {
   readonly map: Map<string, TComponent>;
