@@ -263,7 +263,7 @@ test.describe("/entries/$slug/create", () => {
 
     // Toolbar renders.
     await expect(page.getByTestId("post-editor-toolbar")).toBeVisible();
-    await expect(page.getByTestId("post-editor-toolbar-bold")).toBeVisible();
+    await expect(page.getByTestId("tiptap-toolbar-bold")).toBeVisible();
 
     // Submit → post.create fires with the form values.
     await page.getByTestId("post-editor-submit").click();

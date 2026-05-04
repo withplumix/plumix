@@ -37,6 +37,8 @@ export { multiselect } from "./multiselect.js";
 export type { MultiselectFieldOptions } from "./multiselect.js";
 export { json } from "./json.js";
 export type { JsonFieldOptions } from "./json.js";
+export { richtext } from "./richtext.js";
+export type { RichtextFieldOptions } from "./richtext.js";
 export { select } from "./select.js";
 export type { SelectFieldOptions } from "./select.js";
 export { radio } from "./radio.js";

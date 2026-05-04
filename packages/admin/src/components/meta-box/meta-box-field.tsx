@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 
+import { TiptapEditor } from "../editor/tiptap-editor.js";
 import { MultiReferencePicker } from "./multi-reference-picker.js";
 import { PluginFieldErrorBoundary } from "./plugin-field-error-boundary.js";
 import { ReferencePicker } from "./reference-picker.js";
@@ -358,6 +359,27 @@ function renderNativeInput({
     );
   }
 
+  if (field.inputType === "richtext") {
+    // The field's allowlist arrives via the manifest entry; pass it
+    // straight through to the editor + toolbar. Server-side validator
+    // (`walkRichtextDoc`, auto-injected via `richtext()` builder) is
+    // the trust boundary; the toolbar filtering here is the
+    // affordance-side mirror.
+    return (
+      <TiptapEditor
+        value={rhf.value as Parameters<typeof TiptapEditor>[0]["value"]}
+        onChange={(json) => {
+          rhf.onChange(json);
+        }}
+        disabled={disabled}
+        ariaLabel={field.label}
+        marks={field.marks}
+        nodes={field.nodes}
+        blocks={field.blocks}
+      />
+    );
+  }
+
   if (
     field.inputType === "date" ||
     field.inputType === "datetime" ||
@@ -448,7 +470,7 @@ function renderNativeInput({
     // dev tools. A future `customRenderers` seam will hook in here
     // before the fallback.
     console.warn(
-      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/date/datetime/time/color/range/multiselect/json/user/userList/entry/entryList/term/termList/select/radio/checkbox).`,
+      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/date/datetime/time/color/range/multiselect/json/richtext/user/userList/entry/entryList/term/termList/select/radio/checkbox).`,
     );
   }
 

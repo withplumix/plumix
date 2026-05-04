@@ -479,6 +479,37 @@ export interface MediaListMetaBoxField extends MetaBoxFieldBase {
   readonly max?: number;
 }
 
+/**
+ * Richtext field — Tiptap ProseMirror JSON storage. `marks`, `nodes`,
+ * and `blocks` are strict allowlists: omitted entries are denied even
+ * if they're standard Tiptap extensions. `doc`/`paragraph`/`text` are
+ * always included implicitly because ProseMirror requires them for
+ * any document to parse.
+ *
+ * `marks` are inline formatters (`bold`, `italic`, `link`, …).
+ * `nodes` are block-level Tiptap nodes (`heading`, `bulletList`,
+ * `codeBlock`, …). `blocks` are plumix-registered custom nodes/marks
+ * — names declared via `ctx.registerBlock` on the server, with React
+ * components registered via `window.plumix.registerPluginBlock` on
+ * the admin.
+ *
+ * Server-side validator (`walkRichtextDoc`) walks the saved doc and
+ * rejects any node/mark/block name outside the allowlist. The admin
+ * toolbar surfaces only the buttons that match the allowlist.
+ *
+ * Replaces the dropped `markdown` and `code` standalone field types —
+ * `richtext({ nodes: ["codeBlock"] })` covers code-in-meta;
+ * `richtext({ marks: ["bold","italic","link"], nodes: ["bulletList","orderedList"] })`
+ * covers markdown-shaped formatting.
+ */
+export interface RichtextMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "richtext";
+  readonly type: "json";
+  readonly marks?: readonly string[];
+  readonly nodes?: readonly string[];
+  readonly blocks?: readonly string[];
+}
+
 /** Single-value dropdown picker; `options` is required. */
 export interface SelectMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "select";
@@ -552,6 +583,7 @@ export type MetaBoxField =
   | TermListMetaBoxField
   | MediaMetaBoxField
   | MediaListMetaBoxField
+  | RichtextMetaBoxField
   | SelectMetaBoxField
   | RadioMetaBoxField
   | CheckboxMetaBoxField
@@ -618,6 +650,7 @@ export type EntryMetaBoxField =
   | Omit<TermListMetaBoxField, "span">
   | Omit<MediaMetaBoxField, "span">
   | Omit<MediaListMetaBoxField, "span">
+  | Omit<RichtextMetaBoxField, "span">
   | Omit<SelectMetaBoxField, "span">
   | Omit<RadioMetaBoxField, "span">
   | Omit<CheckboxMetaBoxField, "span">
@@ -1138,6 +1171,17 @@ export interface MetaBoxFieldManifestEntry {
    * lookup RPC; `scope` rides along untouched.
    */
   readonly referenceTarget?: ReferenceTarget;
+  /**
+   * Richtext field allowlists. `marks` are inline formatters; `nodes`
+   * are block-level Tiptap nodes; `blocks` are plumix-registered
+   * custom node/mark names. Strict allowlist — omitted entries are
+   * denied. The admin's TiptapEditor projects these onto its
+   * StarterKit configuration + plugin block registry; the server-
+   * side validator walks the saved doc against the same allowlist.
+   */
+  readonly marks?: readonly string[];
+  readonly nodes?: readonly string[];
+  readonly blocks?: readonly string[];
 }
 
 /**
@@ -2032,6 +2076,9 @@ interface MetaBoxFieldOptionView {
   readonly step?: number;
   readonly options?: readonly MetaBoxFieldOption[];
   readonly referenceTarget?: ReferenceTarget;
+  readonly marks?: readonly string[];
+  readonly nodes?: readonly string[];
+  readonly blocks?: readonly string[];
 }
 
 function toEntryMetaBoxFieldEntry(
@@ -2053,6 +2100,9 @@ function toEntryMetaBoxFieldEntry(
     options: view.options,
     default: field.default,
     referenceTarget: view.referenceTarget,
+    marks: view.marks,
+    nodes: view.nodes,
+    blocks: view.blocks,
   };
 }
 
