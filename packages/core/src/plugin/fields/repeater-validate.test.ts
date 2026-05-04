@@ -131,22 +131,22 @@ describe("walkRepeaterRows — subfield sanitize dispatch", () => {
   test("subfield sanitize throw → subfield_invalid with row+key path", () => {
     const validate = walkRepeaterRows([
       stubField({
-        key: "href",
+        key: "rating",
         sanitize: (v) => {
-          if (typeof v === "string" && v.startsWith("javascript:")) {
-            throw new Error("unsafe scheme");
+          if (typeof v === "number" && (v < 0 || v > 5)) {
+            throw new Error("out of range");
           }
           return v;
         },
       }),
     ]);
     try {
-      validate([{ href: "https://ok" }, { href: "javascript:alert(1)" }]);
+      validate([{ rating: 3 }, { rating: 99 }]);
     } catch (err) {
       const e = err as RepeaterValidationError;
       expect(e.reason).toBe("subfield_invalid");
-      expect(e.path).toBe("[1].href");
-      expect(e.message).toContain("unsafe scheme");
+      expect(e.path).toBe("[1].rating");
+      expect(e.message).toContain("out of range");
       return;
     }
     throw new Error("expected throw");
