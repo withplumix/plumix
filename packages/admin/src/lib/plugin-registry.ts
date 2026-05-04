@@ -104,6 +104,7 @@ const RESERVED_INPUT_TYPES: ReadonlySet<string> = new Set([
   "multiselect",
   "json",
   "richtext",
+  "repeater",
   "select",
   "radio",
   "checkbox",

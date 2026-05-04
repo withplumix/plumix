@@ -39,6 +39,8 @@ export { json } from "./json.js";
 export type { JsonFieldOptions } from "./json.js";
 export { richtext } from "./richtext.js";
 export type { RichtextFieldOptions } from "./richtext.js";
+export { repeater } from "./repeater.js";
+export type { RepeaterFieldOptions } from "./repeater.js";
 export { select } from "./select.js";
 export type { SelectFieldOptions } from "./select.js";
 export { radio } from "./radio.js";
