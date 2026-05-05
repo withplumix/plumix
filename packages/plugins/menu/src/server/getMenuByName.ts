@@ -32,10 +32,17 @@ interface ResolvedRef {
  * ref fails to resolve (deleted, unpublished, scope-excluded) drop
  * silently along with their descendants — mirrors how broken refs will
  * be surfaced in admin from slice 11.
+ *
+ * Hook ordering: `menu:item` filter runs once per resolved item during
+ * tree assembly (per-item transforms see already-transformed children),
+ * then `menu:tree` runs once on the final array. `location` is
+ * forwarded from `getMenuForLocation` when the resolution started from
+ * a registered slot, otherwise `null`.
  */
 export async function getMenuByName(
   ctx: AppContext,
   name: string,
+  options?: { readonly location?: string | null },
 ): Promise<ResolvedMenu | null> {
   const [term] = await ctx.db
     .select({ id: terms.id, name: terms.name, slug: terms.slug })
@@ -73,11 +80,24 @@ export async function getMenuByName(
 
   const refs = await resolveRefs(ctx, rows);
   const { tree } = buildTree(rows);
-  const items = tree
-    .map((node) => toResolvedItem(ctx, node, refs))
-    .filter((item): item is ResolvedMenuItem => item !== null);
+  const resolved = await Promise.all(
+    tree.map((node) => toResolvedItem(ctx, node, refs)),
+  );
+  const items = resolved.filter(
+    (item): item is ResolvedMenuItem => item !== null,
+  );
 
-  return { termId: term.id, name: term.name, slug: term.slug, items };
+  const filtered = await ctx.hooks.applyFilter("menu:tree", items, {
+    location: options?.location ?? null,
+    termId: term.id,
+  });
+
+  return {
+    termId: term.id,
+    name: term.name,
+    slug: term.slug,
+    items: filtered,
+  };
 }
 
 interface ResolvedRefs {
@@ -174,19 +194,22 @@ function refMapFromResults(
   return map;
 }
 
-function toResolvedItem(
+async function toResolvedItem(
   ctx: AppContext,
   node: TreeNode<MenuItemRow>,
   refs: ResolvedRefs,
-): ResolvedMenuItem | null {
+): Promise<ResolvedMenuItem | null> {
   const meta = parseMenuItemMeta(node.meta);
   if (!meta) return null;
   const resolved = resolveByKind(ctx, node, meta, refs);
   if (!resolved) return null;
 
-  const children = node.children
-    .map((child) => toResolvedItem(ctx, child, refs))
-    .filter((child): child is ResolvedMenuItem => child !== null);
+  const childResults = await Promise.all(
+    node.children.map((child) => toResolvedItem(ctx, child, refs)),
+  );
+  const children = childResults.filter(
+    (child): child is ResolvedMenuItem => child !== null,
+  );
 
   // Menu-tree ancestor: any descendant is current. Pure JS walk over
   // the children we just built. Entity-tree ancestry (linked entry is
@@ -197,7 +220,14 @@ function toResolvedItem(
     (child) => child.isCurrent || child.isAncestor,
   );
 
-  return { ...resolved, isAncestor, children };
+  // Per-item filter runs after children resolve so subscribers see the
+  // already-transformed subtree. Tree-level filter still runs once on
+  // the full assembled array in `getMenuByName`.
+  return ctx.hooks.applyFilter("menu:item", {
+    ...resolved,
+    isAncestor,
+    children,
+  });
 }
 
 type ResolvedNoChildren = Omit<ResolvedMenuItem, "children" | "isAncestor">;

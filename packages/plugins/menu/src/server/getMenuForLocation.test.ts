@@ -33,21 +33,27 @@ function testAuth() {
   });
 }
 
-async function buildTestRegistry(): Promise<PluginRegistry> {
+interface TestRegistryBundle {
+  readonly registry: PluginRegistry;
+  readonly hooks: HookRegistry;
+}
+
+async function buildTestRegistry(): Promise<TestRegistryBundle> {
   const hooks = new HookRegistry();
   const registry = createPluginRegistry();
   registerCoreLookupAdapters(registry);
   await installPlugins({ hooks, plugins: [menu], registry });
-  return registry;
+  return { registry, hooks };
 }
 
 function ctxFor(
   db: Awaited<ReturnType<typeof createTestDb>>,
-  registry: PluginRegistry,
+  bundle: TestRegistryBundle,
 ): AppContext {
   return {
     db,
-    plugins: registry,
+    plugins: bundle.registry,
+    hooks: bundle.hooks,
     request: new Request("https://test.example/"),
     resolvedEntity: null,
   } as unknown as AppContext;
@@ -57,13 +63,14 @@ describe("getMenuForLocation", () => {
   let db: Awaited<ReturnType<typeof createTestDb>>;
   let factories: ReturnType<typeof factoriesFor>;
   let ctx: AppContext;
+  let bundle: TestRegistryBundle;
   let authorId: number;
 
   beforeEach(async () => {
     db = await createTestDb();
     factories = factoriesFor(db);
-    const registry = await buildTestRegistry();
-    ctx = ctxFor(db, registry);
+    bundle = await buildTestRegistry();
+    ctx = ctxFor(db, bundle);
     const author = await adminUser
       .transient({ db })
       .create({ email: "menu-loc-author@example.test" });
@@ -157,7 +164,7 @@ describe("getMenuForLocation", () => {
     await bind("primary", "main");
 
     const a = await getMenuForLocation(ctx, "primary");
-    const otherCtx = ctxFor(db, ctx.plugins);
+    const otherCtx = ctxFor(db, bundle);
     const b = await getMenuForLocation(otherCtx, "primary");
     expect(a).not.toBe(b);
     expect(a?.slug).toBe(b?.slug);
