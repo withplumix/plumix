@@ -6,8 +6,10 @@ import type { CapabilityResolver } from "../auth/rbac.js";
 import type { SessionPolicy } from "../auth/sessions.js";
 import type { PlumixConfig } from "../config.js";
 import type { AppContext } from "../context/app.js";
+import type { ContextExtensionEntry } from "../plugin/context.js";
 import type { PluginRegistry, RegisteredRawRoute } from "../plugin/manifest.js";
 import type { RouteRule } from "../route/intent.js";
+import type { ThemeSetupContext, ThemeSetupContextBase } from "../theme.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
@@ -80,11 +82,28 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
   const hooks = new HookRegistry();
   const seededRegistry = createPluginRegistry();
   registerCoreLookupAdapters(seededRegistry);
-  const { registry } = await installPlugins({
+  const { registry, themeExtensions } = await installPlugins({
     hooks,
     plugins: config.plugins,
     registry: seededRegistry,
   });
+
+  // Themes run after plugins so plugins' `provides` callbacks have already
+  // populated `themeExtensions`. Each theme's setup runs in declared
+  // order; ids are unique across `config.themes`.
+  const themeIds = new Set<string>();
+  for (const theme of config.themes) {
+    if (themeIds.has(theme.id)) {
+      throw new Error(
+        `Theme id "${theme.id}" appears more than once in config.themes`,
+      );
+    }
+    themeIds.add(theme.id);
+    if (theme.setup) {
+      const ctx = buildThemeSetupContext(theme.id, themeExtensions);
+      await theme.setup(ctx);
+    }
+  }
 
   const schema: Record<string, unknown> = { ...coreSchema };
   const origin = new Map<string, string>();
@@ -148,4 +167,19 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     rawRoutes: registry.rawRoutes,
     capabilityResolver: createCapabilityResolver(registry),
   };
+}
+
+function buildThemeSetupContext(
+  id: string,
+  themeExtensions: ReadonlyMap<string, ContextExtensionEntry>,
+): ThemeSetupContext {
+  // `satisfies` so adding a field to `ThemeSetupContextBase` later forces
+  // this builder to update — a plain `Record<string, unknown>` cast would
+  // silently produce a context missing the new field.
+  const base = { id } satisfies ThemeSetupContextBase;
+  const ctx: Record<string, unknown> = { ...base };
+  for (const [key, entry] of themeExtensions) {
+    ctx[key] = entry.value;
+  }
+  return ctx as unknown as ThemeSetupContext;
 }

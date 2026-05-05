@@ -56,3 +56,16 @@ export interface ResolvedMenu {
   readonly slug: string;
   readonly items: readonly ResolvedMenuItem[];
 }
+
+/**
+ * Theme-side input for `registerMenuLocation`. The label appears in the
+ * admin Locations panel (slice 7+); description is optional helper text.
+ */
+export interface MenuLocationOptions {
+  readonly label: string;
+  readonly description?: string;
+}
+
+export interface RegisteredMenuLocation extends MenuLocationOptions {
+  readonly id: string;
+}

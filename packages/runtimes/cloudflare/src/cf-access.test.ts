@@ -178,31 +178,39 @@ describe("cfAccess.authenticate — full crypto path", () => {
     expect(result).toBeNull();
   });
 
-  test("provisions and returns the user when the JWT is valid", async () => {
-    const { createTestDb } = await import("@plumix/core/test");
-    const db = await createTestDb();
+  // Vitest's default 5s timeout flakes intermittently on shared CI
+  // runners — the test exercises a real WebCrypto JWK sign + verify
+  // round-trip plus an in-memory libsql migration, both of which can
+  // exceed 5s under runner contention. Locally completes in ~1.7s.
+  test(
+    "provisions and returns the user when the JWT is valid",
+    { timeout: 30_000 },
+    async () => {
+      const { createTestDb } = await import("@plumix/core/test");
+      const db = await createTestDb();
 
-    const guard = cfAccess({
-      teamDomain: TEAM_DOMAIN,
-      audience: AUDIENCE,
-      defaultRole: "editor",
-      bootstrapAllowed: true,
-    });
-    const jwt = await mintJwt(material.privateKey, material.kid, {
-      email: "first-admin@enterprise.example",
-    });
+      const guard = cfAccess({
+        teamDomain: TEAM_DOMAIN,
+        audience: AUDIENCE,
+        defaultRole: "editor",
+        bootstrapAllowed: true,
+      });
+      const jwt = await mintJwt(material.privateKey, material.kid, {
+        email: "first-admin@enterprise.example",
+      });
 
-    const result = await guard.authenticate(
-      new Request("https://cms.example/", {
-        headers: { "cf-access-jwt-assertion": jwt },
-      }),
-      db,
-    );
-    expect(result).not.toBeNull();
-    expect(result?.user.email).toBe("first-admin@enterprise.example");
-    // bootstrapAllowed=true on a zero-user system → first user is admin.
-    expect(result?.user.role).toBe("admin");
-  });
+      const result = await guard.authenticate(
+        new Request("https://cms.example/", {
+          headers: { "cf-access-jwt-assertion": jwt },
+        }),
+        db,
+      );
+      expect(result).not.toBeNull();
+      expect(result?.user.email).toBe("first-admin@enterprise.example");
+      // bootstrapAllowed=true on a zero-user system → first user is admin.
+      expect(result?.user.role).toBe("admin");
+    },
+  );
 
   test("returns null when bootstrap is disabled and zero users exist", async () => {
     const { createTestDb } = await import("@plumix/core/test");

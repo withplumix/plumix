@@ -8,10 +8,14 @@ import type {
   KV,
   ObjectStorage,
 } from "./runtime/slots.js";
+import type { ThemeDescriptor } from "./theme.js";
 
-export interface Theme {
-  readonly id: string;
-}
+/**
+ * Re-exported from `./theme.js` so existing `import { Theme } from
+ * "@plumix/core"` call sites keep working. Prefer `ThemeDescriptor`
+ * directly in new code.
+ */
+export type Theme = ThemeDescriptor;
 
 // Heterogeneous arrays of plugins/adapters need the framework-side slot typed
 // with `any` so each caller's concrete generic is accepted via bivariance.
@@ -37,7 +41,7 @@ export interface PlumixConfigInput {
    * is the dev default.
    */
   readonly mailer?: Mailer;
-  readonly themes?: readonly Theme[];
+  readonly themes?: readonly ThemeDescriptor[];
   readonly plugins?: readonly AnyPluginDescriptor[];
 }
 
@@ -49,7 +53,7 @@ export interface PlumixConfig {
   readonly imageDelivery?: ImageDelivery;
   readonly kv?: KV;
   readonly mailer?: Mailer;
-  readonly themes: readonly Theme[];
+  readonly themes: readonly ThemeDescriptor[];
   readonly plugins: readonly AnyPluginDescriptor[];
 }
 
