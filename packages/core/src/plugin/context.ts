@@ -532,9 +532,11 @@ export function createPluginSetupContext({
       if (registry.lookupAdapters.has(options.kind)) {
         throw new DuplicateRegistrationError("lookup adapter", options.kind);
       }
+      // Spread to preserve plugin-contributed option fields (e.g. the
+      // `menuPicker` field that @plumix/plugin-menu adds via declaration
+      // merging).
       registry.lookupAdapters.set(options.kind, {
-        kind: options.kind,
-        adapter: options.adapter,
+        ...options,
         capability: options.capability ?? null,
         registeredBy: pluginId,
       });
