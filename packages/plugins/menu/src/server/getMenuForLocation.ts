@@ -48,7 +48,7 @@ async function resolveLocation(
   if (!row) return null;
   const slug = parseTermSlug(row.value);
   if (slug === null) return null;
-  return getMenuByName(ctx, slug);
+  return getMenuByName(ctx, slug, { location });
 }
 
 function parseTermSlug(value: unknown): string | null {

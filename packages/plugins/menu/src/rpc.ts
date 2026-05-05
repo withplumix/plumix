@@ -444,12 +444,27 @@ export function createMenuRouter(): Record<string, unknown> {
 
       // Reuse `removedIds` — `removed` in the response IS what we
       // deleted. Recomputing risks divergence after a refactor.
+      const itemIdSet = new Set(itemIds);
+      const removed = [...priorIds].filter((id) => !itemIdSet.has(id));
+
+      // `menu:saved` fires after every successful save (including
+      // no-op saves where added/removed/modified are all empty), so
+      // cache invalidators can run unconditionally without sniffing
+      // the payload. Failures in subscribers don't roll back the
+      // commit (Promise.allSettled inside doAction).
+      await context.hooks.doAction("menu:saved", {
+        termId: term.id,
+        addedIds: added,
+        removedIds: removed,
+        modifiedIds: modified,
+      });
+
       return {
         termId: term.id,
         version: term.version + 1,
         itemIds,
         added,
-        removed: [...priorIds].filter((id) => !new Set(itemIds).has(id)),
+        removed,
         modified,
       };
     });

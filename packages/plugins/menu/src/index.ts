@@ -1,6 +1,6 @@
 import { definePlugin } from "@plumix/core";
 
-import type { MenuLocationOptions } from "./server/types.js";
+import type { MenuLocationOptions, ResolvedMenuItem } from "./server/types.js";
 import { createMenuRouter } from "./rpc.js";
 import { recordLocation } from "./server/locations.js";
 
@@ -19,11 +19,13 @@ export type {
 
 // `@plumix/plugin-menu` augments the theme setup context with
 // `registerMenuLocation`, plus three core option shapes with
-// menu-eligibility flags. TypeScript surfaces all of these only when
-// this plugin is in the project's `node_modules`. The runtime
-// implementation of `registerMenuLocation` is wired via
-// `extendThemeContext` below; the eligibility flags are read at admin
-// time by the eligibility resolver (`getEligibleMenuKinds`).
+// menu-eligibility flags, plus the hook registries with three menu
+// hooks. TypeScript surfaces all of these only when this plugin is
+// in the project's `node_modules`. The runtime implementation of
+// `registerMenuLocation` is wired via `extendThemeContext` below;
+// the eligibility flags are read at admin time by the eligibility
+// resolver (`getEligibleMenuKinds`); the hooks are fired by
+// `getMenuByName` and `menu.save`.
 declare module "@plumix/core" {
   interface ThemeContextExtensions {
     registerMenuLocation: (id: string, options: MenuLocationOptions) => void;
@@ -50,6 +52,39 @@ declare module "@plumix/core" {
      * this is set.
      */
     readonly menuPicker?: { readonly tabLabel: string };
+  }
+
+  /**
+   * Hook surface. `menu:item` runs per resolved item during tree
+   * assembly (children resolve first, so subscribers see the
+   * already-transformed subtree). `menu:tree` runs once after
+   * assembly with `{ location, termId }` so a single subscriber can
+   * branch by slot. `menu:saved` fires after every successful
+   * `menu.save` commit — including no-op saves — so cache
+   * invalidators don't need to sniff the payload to decide whether
+   * to run.
+   */
+  interface FilterRegistry {
+    "menu:tree": (
+      items: readonly ResolvedMenuItem[],
+      context: {
+        readonly location: string | null;
+        readonly termId: number;
+      },
+    ) => readonly ResolvedMenuItem[] | Promise<readonly ResolvedMenuItem[]>;
+
+    "menu:item": (
+      item: ResolvedMenuItem,
+    ) => ResolvedMenuItem | Promise<ResolvedMenuItem>;
+  }
+
+  interface ActionRegistry {
+    "menu:saved": (payload: {
+      readonly termId: number;
+      readonly addedIds: readonly number[];
+      readonly removedIds: readonly number[];
+      readonly modifiedIds: readonly number[];
+    }) => void | Promise<void>;
   }
 }
 

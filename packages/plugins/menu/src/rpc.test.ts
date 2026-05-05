@@ -3,7 +3,6 @@ import { and, eq } from "drizzle-orm";
 import { afterEach, describe, expect, test } from "vitest";
 
 import type {
-  AppContext,
   PluginRegistry,
   RequestAuthenticator,
   User,
@@ -40,6 +39,7 @@ interface Harness {
   readonly db: Db;
   readonly factories: Factories;
   readonly registry: PluginRegistry;
+  readonly hooks: HookRegistry;
   readonly user: User;
   readonly client: {
     readonly menu: {
@@ -80,10 +80,7 @@ async function buildHarness(role: UserRole = "editor"): Promise<Harness> {
     db,
     env: {},
     request: new Request("https://cms.example/_plumix/rpc", { method: "POST" }),
-    hooks: {
-      applyFilter: (_name: string, value: unknown) => Promise.resolve(value),
-      doAction: () => Promise.resolve(),
-    } as unknown as AppContext["hooks"],
+    hooks,
     plugins: registry,
     user: { id: user.id, email: user.email, role: user.role },
     authenticator: stubAuthenticator(user),
@@ -97,7 +94,7 @@ async function buildHarness(role: UserRole = "editor"): Promise<Harness> {
   const client = createRouterClient(router, {
     context: ctx,
   }) as unknown as Harness["client"];
-  return { db, factories, registry, user, client };
+  return { db, factories, registry, hooks, user, client };
 }
 
 async function seedMenu(

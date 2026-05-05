@@ -21,25 +21,31 @@ import {
 import type { MenuItemMeta } from "./types.js";
 import { getMenuByName } from "./getMenuByName.js";
 
+interface TestBundle {
+  readonly registry: PluginRegistry;
+  readonly hooks: HookRegistry;
+}
+
 async function buildRegistry(
   plugins: ReturnType<typeof definePlugin>[],
-): Promise<PluginRegistry> {
+): Promise<TestBundle> {
   const hooks = new HookRegistry();
   const registry = createPluginRegistry();
   // Mirror runtime/app.ts: core adapters seed the registry before plugins
   // install so the menu resolver can dispatch to `entry`/`term` adapters.
   registerCoreLookupAdapters(registry);
   await installPlugins({ hooks, plugins, registry });
-  return registry;
+  return { registry, hooks };
 }
 
 function ctxFor(
   db: Awaited<ReturnType<typeof createTestDb>>,
-  registry: PluginRegistry,
+  bundle: TestBundle,
 ): AppContext {
   return {
     db,
-    plugins: registry,
+    plugins: bundle.registry,
+    hooks: bundle.hooks,
     request: new Request("https://test.example/"),
     resolvedEntity: null,
   } as unknown as AppContext;
@@ -56,7 +62,7 @@ interface SeedItemInput {
 // A registry that registers `menu` taxonomy plus a public `post` entry type
 // and `category` term taxonomy — the latter two so the entry/term lookup
 // adapters report results within scope. Built once per test for isolation.
-async function defaultRegistry(): Promise<PluginRegistry> {
+async function defaultRegistry(): Promise<TestBundle> {
   return buildRegistry([
     definePlugin("menu-test-host", (ctx) => {
       ctx.registerEntryType("menu_item", {
@@ -394,6 +400,7 @@ describe("getMenuByName", () => {
       return {
         db,
         plugins: ctx.plugins,
+        hooks: ctx.hooks,
         request: new Request(url),
         resolvedEntity: resolved,
       } as unknown as AppContext;
