@@ -1,3 +1,5 @@
+export { getEligibleMenuKinds } from "./eligibility.js";
+export type { PickerTab } from "./eligibility.js";
 export { getMenuByName } from "./getMenuByName.js";
 export { getMenuForLocation } from "./getMenuForLocation.js";
 export {
