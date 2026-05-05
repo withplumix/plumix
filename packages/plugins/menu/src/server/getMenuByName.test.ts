@@ -37,7 +37,12 @@ function ctxFor(
   db: Awaited<ReturnType<typeof createTestDb>>,
   registry: PluginRegistry,
 ): AppContext {
-  return { db, plugins: registry } as unknown as AppContext;
+  return {
+    db,
+    plugins: registry,
+    request: new Request("https://test.example/"),
+    resolvedEntity: null,
+  } as unknown as AppContext;
 }
 
 interface SeedItemInput {
@@ -382,6 +387,92 @@ describe("getMenuByName", () => {
 
     const menu = await getMenuByName(ctx, "unpublished");
     expect(menu?.items).toHaveLength(0);
+  });
+
+  describe("isCurrent / isAncestor", () => {
+    function ctxAtUrl(url: string, resolved: unknown): AppContext {
+      return {
+        db,
+        plugins: ctx.plugins,
+        request: new Request(url),
+        resolvedEntity: resolved,
+      } as unknown as AppContext;
+    }
+
+    test("entry-kind item is current when resolvedEntity matches its id", async () => {
+      const post = await factories.entry.create({
+        type: "post",
+        slug: "active",
+        title: "Active",
+        status: "published",
+        authorId,
+      });
+      const termId = await seedMenu("active");
+      await seedItems(termId, [
+        { title: "Other", meta: { kind: "custom", url: "/other" } },
+        { title: "Linked", meta: { kind: "entry", entryId: post.id } },
+      ]);
+
+      const localCtx = ctxAtUrl("https://test.example/post/active", {
+        kind: "entry",
+        id: post.id,
+      });
+      const menu = await getMenuByName(localCtx, "active");
+      const items = menu?.items ?? [];
+      // Entry-kind items render the linked entry's title — "Linked" is
+      // the menu item's stored title; "Active" is the post's live title.
+      expect(items.find((i) => i.label === "Active")?.isCurrent).toBe(true);
+      expect(items.find((i) => i.label === "Other")?.isCurrent).toBe(false);
+    });
+
+    test("custom-URL item is current when its href matches the request pathname", async () => {
+      const termId = await seedMenu("paths");
+      await seedItems(termId, [
+        { title: "Home", meta: { kind: "custom", url: "/" } },
+        { title: "About", meta: { kind: "custom", url: "/about" } },
+      ]);
+
+      const localCtx = ctxAtUrl("https://test.example/about", null);
+      const items = (await getMenuByName(localCtx, "paths"))?.items ?? [];
+      expect(items.find((i) => i.label === "About")?.isCurrent).toBe(true);
+      expect(items.find((i) => i.label === "Home")?.isCurrent).toBe(false);
+    });
+
+    test("isAncestor is true on a parent whose descendant is current", async () => {
+      const termId = await seedMenu("nested-current");
+      const [rootId] = await seedItems(termId, [
+        { title: "Docs", meta: { kind: "custom", url: "/docs" } },
+      ]);
+      await seedItems(termId, [
+        {
+          title: "API",
+          meta: { kind: "custom", url: "/docs/api" },
+          parentId: rootId,
+        },
+      ]);
+
+      const localCtx = ctxAtUrl("https://test.example/docs/api", null);
+      const items = (await getMenuByName(localCtx, "nested-current"))?.items;
+      const docs = items?.[0];
+      expect(docs?.label).toBe("Docs");
+      expect(docs?.isCurrent).toBe(false);
+      expect(docs?.isAncestor).toBe(true);
+      expect(docs?.children[0]?.label).toBe("API");
+      expect(docs?.children[0]?.isCurrent).toBe(true);
+      expect(docs?.children[0]?.isAncestor).toBe(false);
+    });
+
+    test("isCurrent and isAncestor are both false when nothing in the menu matches", async () => {
+      const termId = await seedMenu("none-current");
+      await seedItems(termId, [
+        { title: "Home", meta: { kind: "custom", url: "/" } },
+      ]);
+
+      const localCtx = ctxAtUrl("https://test.example/elsewhere", null);
+      const items = (await getMenuByName(localCtx, "none-current"))?.items;
+      expect(items?.[0]?.isCurrent).toBe(false);
+      expect(items?.[0]?.isAncestor).toBe(false);
+    });
   });
 
   test("drops entry items linked to isPublic: false types", async () => {
