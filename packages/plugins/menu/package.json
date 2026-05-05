@@ -1,0 +1,71 @@
+{
+  "name": "@plumix/plugin-menu",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Menu plugin for Plumix — navigation menus assembled from entries, terms, and custom URLs",
+  "license": "MIT",
+  "author": "Plumix Contributors",
+  "homepage": "https://github.com/withplumix/plumix#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/withplumix/plumix.git",
+    "directory": "packages/plugins/menu"
+  },
+  "bugs": {
+    "url": "https://github.com/withplumix/plumix/issues"
+  },
+  "keywords": [
+    "plumix",
+    "plugin",
+    "menu",
+    "navigation"
+  ],
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "default": "./dist/server/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "attw": "attw --pack . --profile esm-only",
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "format": "prettier --check . --ignore-path ../../../.gitignore",
+    "lint": "eslint",
+    "publint": "publint",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+  },
+  "dependencies": {
+    "@plumix/core": "workspace:*",
+    "drizzle-orm": "catalog:"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "catalog:",
+    "@plumix/eslint-config": "workspace:*",
+    "@plumix/prettier-config": "workspace:*",
+    "@plumix/typescript-config": "workspace:*",
+    "@plumix/vitest-config": "workspace:*",
+    "@vitest/coverage-v8": "catalog:",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "publint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "prettier": "@plumix/prettier-config"
+}

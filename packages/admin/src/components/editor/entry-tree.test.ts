@@ -21,7 +21,7 @@ function entry(
     excerpt: null,
     status: "published",
     authorId: 1,
-    menuOrder: 0,
+    sortOrder: 0,
     meta: {},
     publishedAt: now,
     createdAt: now,

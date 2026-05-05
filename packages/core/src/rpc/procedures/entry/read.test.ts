@@ -480,26 +480,26 @@ describe("entry.list", () => {
     expect(rows.map((r) => r.slug)).toEqual(["a", "b", "c"]);
   });
 
-  test("orderBy=menu_order respects explicit order values", async () => {
+  test("orderBy=sort_order respects explicit order values", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     await h.factory.published.create({
       authorId: h.user.id,
       slug: "third",
-      menuOrder: 30,
+      sortOrder: 30,
     });
     await h.factory.published.create({
       authorId: h.user.id,
       slug: "first",
-      menuOrder: 10,
+      sortOrder: 10,
     });
     await h.factory.published.create({
       authorId: h.user.id,
       slug: "second",
-      menuOrder: 20,
+      sortOrder: 20,
     });
 
     const rows = await h.client.entry.list({
-      orderBy: "menu_order",
+      orderBy: "sort_order",
       order: "asc",
     });
     expect(rows.map((r) => r.slug)).toEqual(["first", "second", "third"]);

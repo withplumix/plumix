@@ -25,7 +25,7 @@ const examplePost = (overrides: Partial<NewEntry> = {}): NewEntry => ({
   excerpt: null,
   status: "draft",
   parentId: null,
-  menuOrder: 0,
+  sortOrder: 0,
   authorId: 1,
   publishedAt: null,
   ...overrides,

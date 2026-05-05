@@ -78,7 +78,7 @@ export const entryCreateInputSchema = v.object({
   excerpt: v.optional(excerptSchema),
   status: v.optional(userSuppliableFields.entries.status, "draft"),
   parentId: v.optional(v.nullable(idParam)),
-  menuOrder: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0)), 0),
+  sortOrder: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0)), 0),
   terms: v.optional(postTermsSchema),
   meta: v.optional(entryMetaInputSchema),
 });
@@ -91,7 +91,7 @@ export const entryUpdateInputSchema = v.object({
   excerpt: v.optional(excerptSchema),
   status: v.optional(userSuppliableFields.entries.status),
   parentId: v.optional(v.nullable(idParam)),
-  menuOrder: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
+  sortOrder: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
   terms: v.optional(postTermsSchema),
   meta: v.optional(entryMetaInputSchema),
 });
@@ -125,7 +125,7 @@ export const ENTRY_LIST_ORDER_COLUMNS = [
   "updated_at",
   "published_at",
   "title",
-  "menu_order",
+  "sort_order",
 ] as const;
 export type EntryListOrderColumn = (typeof ENTRY_LIST_ORDER_COLUMNS)[number];
 
