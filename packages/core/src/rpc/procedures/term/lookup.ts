@@ -1,9 +1,11 @@
 import type { SQL } from "drizzle-orm";
 
+import type { AppContext } from "../../../context/app.js";
 import type { TermFieldScope } from "../../../plugin/fields/term.js";
 import type { LookupAdapter, LookupResult } from "../../../plugin/lookup.js";
 import { and, eq, inArray, like, or } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
+import { buildTermArchiveUrl } from "../../../route/permalink.js";
 
 const DEFAULT_LIST_LIMIT = 20;
 const MAX_LIST_LIMIT = 100;
@@ -13,7 +15,16 @@ const TERM_ROW_COLUMNS = {
   taxonomy: terms.taxonomy,
   name: terms.name,
   slug: terms.slug,
+  parentId: terms.parentId,
 } as const;
+
+interface TermLookupRow {
+  readonly id: number;
+  readonly taxonomy: string;
+  readonly name: string;
+  readonly slug: string;
+  readonly parentId: number | null;
+}
 
 export const termLookupAdapter: LookupAdapter<TermFieldScope> = {
   async list(ctx, options) {
@@ -50,7 +61,7 @@ export const termLookupAdapter: LookupAdapter<TermFieldScope> = {
       .where(conditions.length === 0 ? undefined : and(...conditions))
       .orderBy(terms.name)
       .limit(limit);
-    return rows.map(toLookupResult);
+    return Promise.all(rows.map((row) => toLookupResult(ctx, row)));
   },
 
   async resolve(ctx, id, scope) {
@@ -61,7 +72,7 @@ export const termLookupAdapter: LookupAdapter<TermFieldScope> = {
       .from(terms)
       .where(buildTermWhere(numericId, scope))
       .limit(1);
-    return row ? toLookupResult(row) : null;
+    return row ? toLookupResult(ctx, row) : null;
   },
 };
 
@@ -95,15 +106,25 @@ function clampLimit(requested: number | undefined): number {
   return Math.min(Math.floor(requested), MAX_LIST_LIMIT);
 }
 
-function toLookupResult(row: {
-  readonly id: number;
-  readonly taxonomy: string;
-  readonly name: string;
-  readonly slug: string;
-}): LookupResult {
+async function toLookupResult(
+  ctx: AppContext,
+  row: TermLookupRow,
+): Promise<LookupResult> {
+  // Same `cached.{label,href}` contract as the entry adapter — the meta
+  // pipeline merges these into stored meta on every write, giving menu
+  // items + reference fields a last-known fallback when the linked term
+  // is later deleted.
+  const href = await buildTermArchiveUrl(ctx, {
+    taxonomy: row.taxonomy,
+    slug: row.slug,
+    parentId: row.parentId,
+  });
+  const cached: Record<string, unknown> = { label: row.name };
+  if (href !== null) cached.href = href;
   return {
     id: String(row.id),
     label: row.name,
     subtitle: `${row.taxonomy} · ${row.slug}`,
+    cached,
   };
 }

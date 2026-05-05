@@ -1,6 +1,7 @@
 import "./hooks.js";
 
 export { authenticated } from "./authenticated.js";
+export { registerCoreLookupAdapters } from "./procedures/lookup-adapters.js";
 export { base } from "./base.js";
 export type { Base } from "./base.js";
 export { RPC_ERRORS } from "./errors.js";
