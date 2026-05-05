@@ -51,7 +51,7 @@
     "@plumix/typescript-config": "workspace:*",
     "@plumix/vitest-config": "workspace:*",
     "@tailwindcss/vite": "4.2.4",
-    "@tanstack/react-query-devtools": "^5.99.2",
+    "@tanstack/react-query-devtools": "^5.100.9",
     "@tanstack/react-router-devtools": "^1.166.13",
     "@tanstack/router-plugin": "^1.167.28",
     "@testing-library/jest-dom": "^6.9.1",
