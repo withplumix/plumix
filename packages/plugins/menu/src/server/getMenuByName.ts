@@ -1,7 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 
 import type { AppContext, LookupResult } from "@plumix/core";
-import { entries, entryTerm, terms } from "@plumix/core";
+import { entries, entryTerm, isCurrentSource, terms } from "@plumix/core";
 
 import type { TreeNode } from "./buildTree.js";
 import type { MenuItemMeta, ResolvedMenu, ResolvedMenuItem } from "./types.js";
@@ -74,7 +74,7 @@ export async function getMenuByName(
   const refs = await resolveRefs(ctx, rows);
   const { tree } = buildTree(rows);
   const items = tree
-    .map((node) => toResolvedItem(node, refs))
+    .map((node) => toResolvedItem(ctx, node, refs))
     .filter((item): item is ResolvedMenuItem => item !== null);
 
   return { termId: term.id, name: term.name, slug: term.slug, items };
@@ -175,30 +175,42 @@ function refMapFromResults(
 }
 
 function toResolvedItem(
+  ctx: AppContext,
   node: TreeNode<MenuItemRow>,
   refs: ResolvedRefs,
 ): ResolvedMenuItem | null {
   const meta = parseMenuItemMeta(node.meta);
   if (!meta) return null;
-  const resolved = resolveByKind(node, meta, refs);
+  const resolved = resolveByKind(ctx, node, meta, refs);
   if (!resolved) return null;
 
   const children = node.children
-    .map((child) => toResolvedItem(child, refs))
+    .map((child) => toResolvedItem(ctx, child, refs))
     .filter((child): child is ResolvedMenuItem => child !== null);
 
-  return { ...resolved, children };
+  // Menu-tree ancestor: any descendant is current. Pure JS walk over
+  // the children we just built. Entity-tree ancestry (linked entry is
+  // ancestor of current entry) is deliberately not built-in — it
+  // requires walking the entries.parent_id chain at render time and
+  // is a `menu:item` filter consumer's job when needed.
+  const isAncestor = children.some(
+    (child) => child.isCurrent || child.isAncestor,
+  );
+
+  return { ...resolved, isAncestor, children };
 }
 
-type ResolvedNoChildren = Omit<ResolvedMenuItem, "children">;
+type ResolvedNoChildren = Omit<ResolvedMenuItem, "children" | "isAncestor">;
 
 function resolveByKind(
+  ctx: AppContext,
   node: TreeNode<MenuItemRow>,
   meta: MenuItemMeta,
   refs: ResolvedRefs,
 ): ResolvedNoChildren | null {
   const resolved = resolveLabelHrefSource(node, meta, refs);
   if (!resolved) return null;
+  const isCurrent = isCurrentSource(ctx, currentSourceFor(resolved));
   return {
     id: node.id,
     parentId: node.parentId,
@@ -208,7 +220,20 @@ function resolveByKind(
     rel: meta.rel,
     cssClasses: meta.cssClasses ?? [],
     source: resolved.source,
+    isCurrent,
   };
+}
+
+function currentSourceFor(
+  resolved: LabelHrefSource,
+):
+  | { readonly kind: "entry"; readonly id: number }
+  | { readonly kind: "term"; readonly id: number }
+  | { readonly kind: "custom"; readonly url: string } {
+  if (resolved.source.kind === "custom") {
+    return { kind: "custom", url: resolved.href };
+  }
+  return { kind: resolved.source.kind, id: resolved.source.id };
 }
 
 interface LabelHrefSource {

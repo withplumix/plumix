@@ -45,7 +45,12 @@ function ctxFor(
   db: Awaited<ReturnType<typeof createTestDb>>,
   registry: PluginRegistry,
 ): AppContext {
-  return { db, plugins: registry } as unknown as AppContext;
+  return {
+    db,
+    plugins: registry,
+    request: new Request("https://test.example/"),
+    resolvedEntity: null,
+  } as unknown as AppContext;
 }
 
 describe("getMenuForLocation", () => {

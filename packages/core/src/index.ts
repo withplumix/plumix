@@ -7,6 +7,8 @@ export * from "./db/index.js";
 export * from "./db/schema/index.js";
 export * from "./hooks/index.js";
 export * from "./plugin/index.js";
+export { isCurrentSource } from "./route/current.js";
+export type { CurrentSource, ResolvedEntity } from "./route/current.js";
 export type { RouteIntent, RouteRule } from "./route/intent.js";
 export * from "./rpc/index.js";
 export type * from "./runtime/adapter.js";

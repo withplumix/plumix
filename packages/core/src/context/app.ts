@@ -7,6 +7,7 @@ import type * as coreSchema from "../db/schema/index.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
+import type { ResolvedEntity } from "../route/current.js";
 import type { OAuthProviderSummary } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
 import type {
@@ -137,6 +138,15 @@ export interface AppContext<
    * a config-missing reason in that case.
    */
   readonly siteName?: string;
+  /**
+   * Set by the public-route resolver after URL → entity matching;
+   * `null` for non-public routes (admin, RPC, etc.) and on cold-start.
+   * Consumers (breadcrumbs, canonical tags, menu plugin's `isCurrent`)
+   * read this to answer "is this the entity we're currently rendering."
+   * Mutable by design — the resolver writes once between cookie auth
+   * and response rendering, and read paths see the populated value.
+   */
+  resolvedEntity: ResolvedEntity | null;
 }
 
 export type AuthenticatedAppContext<
@@ -211,6 +221,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     oauthProviders: args.oauthProviders ?? [],
     authenticator: args.authenticator ?? defaultAuthenticator(),
     bootstrapAllowed: args.bootstrapAllowed ?? false,
+    resolvedEntity: null,
     // Best-effort fallback for tests / runtimes that don't pass an
     // explicit origin: derive from the inbound request URL. Production
     // always passes the canonical operator-set origin so URLs in

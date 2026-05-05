@@ -47,6 +47,19 @@ export interface ResolvedMenuItem {
   readonly rel?: string;
   readonly cssClasses: readonly string[];
   readonly source: ResolvedMenuItemSource;
+  /**
+   * True iff this item identifies the request's current entity (or
+   * matches its pathname for `kind: 'custom'`). Computed via core's
+   * `isCurrentSource(ctx, source)` helper at render time.
+   */
+  readonly isCurrent: boolean;
+  /**
+   * True iff any descendant in this menu's tree has `isCurrent: true`.
+   * Menu-tree ancestry only — entity-tree ancestry (item links to a
+   * page that's an ancestor of the current page in the entries tree)
+   * is a `menu:item` filter consumer's job, not built-in.
+   */
+  readonly isAncestor: boolean;
   readonly children: readonly ResolvedMenuItem[];
 }
 
