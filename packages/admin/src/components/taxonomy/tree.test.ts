@@ -16,6 +16,7 @@ function term(overrides: Partial<Term> & { id: number; name: string }): Term {
     description: null,
     parentId: null,
     meta: {},
+    version: 0,
     ...overrides,
   };
 }

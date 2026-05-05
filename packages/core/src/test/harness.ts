@@ -16,6 +16,7 @@ let cachedStatements: string[] | null = null;
 
 // drizzle-kit's `api` surface is loosely typed (`SQLiteSchema` is opaque);
 // we treat it as a black-box snapshot blob and only read its `id` field.
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access */
 async function compileSchemaSql(): Promise<string[]> {
   if (cachedStatements) return cachedStatements;
   // Empty ↔ current snapshot diff yields the full create-from-scratch SQL.
@@ -29,6 +30,7 @@ async function compileSchemaSql(): Promise<string[]> {
   cachedStatements = await generateSQLiteMigration(empty, current);
   return cachedStatements;
 }
+/* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access */
 
 /**
  * Per-test in-memory libsql database with the full core schema applied.

@@ -1,6 +1,7 @@
 import { definePlugin } from "@plumix/core";
 
 import type { MenuLocationOptions } from "./server/types.js";
+import { createMenuRouter } from "./rpc.js";
 import { recordLocation } from "./server/locations.js";
 
 export type {
@@ -84,5 +85,7 @@ export const menu = definePlugin("menu", {
       entryTypes: ["menu_item"],
       isPublic: false,
     });
+
+    ctx.registerRpcRouter(createMenuRouter());
   },
 });
