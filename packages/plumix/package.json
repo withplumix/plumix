@@ -176,8 +176,8 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
-    "@orpc/client": "^1.14.0",
-    "@orpc/tanstack-query": "^1.14.0",
+    "@orpc/client": "^1.14.1",
+    "@orpc/tanstack-query": "^1.14.1",
     "@playwright/test": "^1.59.1",
     "@plumix/admin": "workspace:*",
     "@plumix/eslint-config": "workspace:*",
