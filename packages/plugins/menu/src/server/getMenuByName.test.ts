@@ -1,6 +1,15 @@
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { AppContext } from "@plumix/core";
+import type { AppContext, PluginRegistry } from "@plumix/core";
+import {
+  createPluginRegistry,
+  definePlugin,
+  entries as entriesTable,
+  HookRegistry,
+  installPlugins,
+  registerCoreLookupAdapters,
+} from "@plumix/core";
 import {
   adminUser,
   createTestDb,
@@ -12,10 +21,23 @@ import {
 import type { MenuItemMeta } from "./types.js";
 import { getMenuByName } from "./getMenuByName.js";
 
-// The resolver only reads `ctx.db`. Cast a partial test ctx since wiring
-// up a full AppContext is overkill for a pure-data integration test.
-function ctxFor(db: Awaited<ReturnType<typeof createTestDb>>): AppContext {
-  return { db } as unknown as AppContext;
+async function buildRegistry(
+  plugins: ReturnType<typeof definePlugin>[],
+): Promise<PluginRegistry> {
+  const hooks = new HookRegistry();
+  const registry = createPluginRegistry();
+  // Mirror runtime/app.ts: core adapters seed the registry before plugins
+  // install so the menu resolver can dispatch to `entry`/`term` adapters.
+  registerCoreLookupAdapters(registry);
+  await installPlugins({ hooks, plugins, registry });
+  return registry;
+}
+
+function ctxFor(
+  db: Awaited<ReturnType<typeof createTestDb>>,
+  registry: PluginRegistry,
+): AppContext {
+  return { db, plugins: registry } as unknown as AppContext;
 }
 
 interface SeedItemInput {
@@ -24,6 +46,32 @@ interface SeedItemInput {
   readonly sortOrder?: number;
   readonly parentId?: number | null;
   readonly status?: "draft" | "published" | "scheduled" | "trash";
+}
+
+// A registry that registers `menu` taxonomy plus a public `post` entry type
+// and `category` term taxonomy — the latter two so the entry/term lookup
+// adapters report results within scope. Built once per test for isolation.
+async function defaultRegistry(): Promise<PluginRegistry> {
+  return buildRegistry([
+    definePlugin("menu-test-host", (ctx) => {
+      ctx.registerEntryType("menu_item", {
+        label: "Menu items",
+        isHierarchical: true,
+        isPublic: false,
+        termTaxonomies: ["menu"],
+      });
+      ctx.registerTermTaxonomy("menu", {
+        label: "Menus",
+        isPublic: false,
+        entryTypes: ["menu_item"],
+      });
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerTermTaxonomy("category", {
+        label: "Categories",
+        isPublic: true,
+      });
+    }),
+  ]);
 }
 
 describe("getMenuByName", () => {
@@ -35,7 +83,8 @@ describe("getMenuByName", () => {
   beforeEach(async () => {
     db = await createTestDb();
     factories = factoriesFor(db);
-    ctx = ctxFor(db);
+    const registry = await defaultRegistry();
+    ctx = ctxFor(db, registry);
     const author = await adminUser
       .transient({ db })
       .create({ email: "menu-author@example.test" });
@@ -215,16 +264,191 @@ describe("getMenuByName", () => {
     expect(menu?.items.map((i) => i.label)).toEqual(["Healthy"]);
   });
 
-  test("drops kind='entry' and kind='term' items in slice 1 (deferred)", async () => {
+  test("resolves kind='entry' items via the entry lookup adapter", async () => {
+    const post = await factories.entry.create({
+      type: "post",
+      slug: "hello-world",
+      title: "Hello, world",
+      status: "published",
+      authorId,
+    });
+    const termId = await seedMenu("entry-kind");
+    await seedItems(termId, [
+      { title: "Stored title", meta: { kind: "entry", entryId: post.id } },
+    ]);
+
+    const menu = await getMenuByName(ctx, "entry-kind");
+    expect(menu?.items[0]).toMatchObject({
+      label: "Hello, world",
+      href: "/post/hello-world",
+      source: { kind: "entry", id: post.id },
+    });
+  });
+
+  test("renaming the linked entry propagates to the menu output without re-saving", async () => {
+    const post = await factories.entry.create({
+      type: "post",
+      slug: "first",
+      title: "First name",
+      status: "published",
+      authorId,
+    });
+    const termId = await seedMenu("rename");
+    await seedItems(termId, [
+      { title: "snapshot", meta: { kind: "entry", entryId: post.id } },
+    ]);
+
+    const before = await getMenuByName(ctx, "rename");
+    expect(before?.items[0]?.label).toBe("First name");
+
+    // Rename the source entry — no menu save in between.
+    await db
+      .update(entriesTable)
+      .set({ title: "New name", slug: "second" })
+      .where(eq(entriesTable.id, post.id));
+
+    const after = await getMenuByName(ctx, "rename");
+    expect(after?.items[0]?.label).toBe("New name");
+    expect(after?.items[0]?.href).toBe("/post/second");
+  });
+
+  test("resolves kind='term' items via the term lookup adapter", async () => {
+    const category = await factories.term.create({
+      taxonomy: "category",
+      slug: "news",
+      name: "News",
+    });
+    const termId = await seedMenu("term-kind");
+    await seedItems(termId, [
+      { title: "ignored", meta: { kind: "term", termId: category.id } },
+    ]);
+
+    const menu = await getMenuByName(ctx, "term-kind");
+    expect(menu?.items[0]).toMatchObject({
+      label: "News",
+      href: "/category/news",
+      source: { kind: "term", id: category.id },
+    });
+  });
+
+  test("drops entry items whose linked entry is deleted (broken ref)", async () => {
+    const termId = await seedMenu("broken-entry");
+    await seedItems(termId, [
+      { title: "Healthy", meta: { kind: "custom", url: "/h" } },
+      { title: "Dangling", meta: { kind: "entry", entryId: 999_999 } },
+    ]);
+
+    const menu = await getMenuByName(ctx, "broken-entry");
+    expect(menu?.items.map((i) => i.label)).toEqual(["Healthy"]);
+  });
+
+  test("drops entry items in trash status (excluded by adapter scope)", async () => {
+    const post = await factories.entry.create({
+      type: "post",
+      slug: "trashed-post",
+      title: "Trashed",
+      status: "trash",
+      authorId,
+    });
+    const termId = await seedMenu("trashed");
+    await seedItems(termId, [
+      { title: "ignored", meta: { kind: "entry", entryId: post.id } },
+    ]);
+
+    const menu = await getMenuByName(ctx, "trashed");
+    expect(menu?.items).toHaveLength(0);
+  });
+
+  test("drops entry items in draft / scheduled status (public-nav published-only filter)", async () => {
+    const draft = await factories.entry.create({
+      type: "post",
+      slug: "draft-post",
+      title: "Draft",
+      status: "draft",
+      authorId,
+    });
+    const scheduled = await factories.entry.create({
+      type: "post",
+      slug: "scheduled-post",
+      title: "Scheduled",
+      status: "scheduled",
+      authorId,
+    });
+    const termId = await seedMenu("unpublished");
+    await seedItems(termId, [
+      { title: "Draft", meta: { kind: "entry", entryId: draft.id } },
+      { title: "Scheduled", meta: { kind: "entry", entryId: scheduled.id } },
+    ]);
+
+    const menu = await getMenuByName(ctx, "unpublished");
+    expect(menu?.items).toHaveLength(0);
+  });
+
+  test("drops entry items linked to isPublic: false types", async () => {
+    // Register a private type via a one-off registry; menu_item itself is
+    // private so we link to one of those by id.
+    const privateRegistry = await buildRegistry([
+      definePlugin("private-host", (ctx) => {
+        ctx.registerEntryType("menu_item", {
+          label: "Menu items",
+          isHierarchical: true,
+          isPublic: false,
+          termTaxonomies: ["menu"],
+        });
+        ctx.registerTermTaxonomy("menu", {
+          label: "Menus",
+          isPublic: false,
+          entryTypes: ["menu_item"],
+        });
+      }),
+    ]);
+    const localCtx = ctxFor(db, privateRegistry);
+
+    // Seed a menu_item entry (private type) directly and then link to it.
+    const privateEntry = await factories.entry.create({
+      type: "menu_item",
+      slug: "x",
+      title: "private-target",
+      status: "published",
+      authorId,
+      meta: { kind: "custom", url: "/x" } as unknown as Record<string, unknown>,
+    });
+    const termId = await seedMenu("private-link");
+    await seedItems(termId, [
+      { title: "ignored", meta: { kind: "entry", entryId: privateEntry.id } },
+    ]);
+
+    const menu = await getMenuByName(localCtx, "private-link");
+    expect(menu?.items).toHaveLength(0);
+  });
+
+  test("mixed-kind menu: custom + entry + term resolve together in one render", async () => {
+    const post = await factories.entry.create({
+      type: "post",
+      slug: "p",
+      title: "Post",
+      status: "published",
+      authorId,
+    });
+    const tag = await factories.term.create({
+      taxonomy: "category",
+      slug: "t",
+      name: "Tag",
+    });
     const termId = await seedMenu("mixed");
     await seedItems(termId, [
-      { title: "Custom item", meta: { kind: "custom", url: "/c" } },
-      { title: "Entry item", meta: { kind: "entry", entryId: 999 } },
-      { title: "Term item", meta: { kind: "term", termId: 999 } },
+      { title: "Custom", meta: { kind: "custom", url: "/c" } },
+      { title: "ignored", meta: { kind: "entry", entryId: post.id } },
+      { title: "ignored", meta: { kind: "term", termId: tag.id } },
     ]);
 
     const menu = await getMenuByName(ctx, "mixed");
-    expect(menu?.items.map((i) => i.label)).toEqual(["Custom item"]);
+    expect(menu?.items.map((i) => i.label)).toEqual(["Custom", "Post", "Tag"]);
+    expect(menu?.items.map((i) => i.href)).toEqual([
+      "/c",
+      "/post/p",
+      "/category/t",
+    ]);
   });
 
   test("ignores entries of other types linked to the same term", async () => {

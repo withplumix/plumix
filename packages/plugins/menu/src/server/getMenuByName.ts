@@ -1,6 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 
-import type { AppContext } from "@plumix/core";
+import type { AppContext, LookupResult } from "@plumix/core";
 import { entries, entryTerm, terms } from "@plumix/core";
 
 import type { TreeNode } from "./buildTree.js";
@@ -17,14 +17,21 @@ interface MenuItemRow {
   readonly meta: Record<string, unknown>;
 }
 
+interface ResolvedRef {
+  readonly label: string;
+  readonly href: string;
+}
+
 /**
  * `name` is matched against `terms.slug` (NOT `terms.name`) — the parameter
  * name mirrors WordPress's `wp_get_nav_menu_object()`.
  *
- * Slice 1: only `kind: 'custom'` items resolve; `entry` and `term` items
- * (and their descendants) are dropped until slice 2 lands the permalink
- * helpers they depend on. Items with unparseable meta or unsafe URLs are
- * dropped the same way.
+ * Resolution at render time is live: entry/term refs go through the
+ * registered `LookupAdapter` per kind, batched by id, so a renamed page or
+ * retitled category propagates without re-saving the menu. Items whose
+ * ref fails to resolve (deleted, unpublished, scope-excluded) drop
+ * silently along with their descendants — mirrors how broken refs will
+ * be surfaced in admin from slice 11.
  */
 export async function getMenuByName(
   ctx: AppContext,
@@ -64,22 +71,120 @@ export async function getMenuByName(
     )
     .orderBy(entries.parentId, entries.sortOrder, entries.id);
 
+  const refs = await resolveRefs(ctx, rows);
   const { tree } = buildTree(rows);
   const items = tree
-    .map(toResolvedItem)
+    .map((node) => toResolvedItem(node, refs))
     .filter((item): item is ResolvedMenuItem => item !== null);
 
   return { termId: term.id, name: term.name, slug: term.slug, items };
 }
 
-function toResolvedItem(node: TreeNode<MenuItemRow>): ResolvedMenuItem | null {
+interface ResolvedRefs {
+  readonly entries: ReadonlyMap<number, ResolvedRef>;
+  readonly terms: ReadonlyMap<number, ResolvedRef>;
+}
+
+async function resolveRefs(
+  ctx: AppContext,
+  rows: readonly MenuItemRow[],
+): Promise<ResolvedRefs> {
+  const entryIds = new Set<number>();
+  const termIds = new Set<number>();
+  for (const row of rows) {
+    const meta = parseMenuItemMeta(row.meta);
+    if (meta?.kind === "entry") entryIds.add(meta.entryId);
+    else if (meta?.kind === "term") termIds.add(meta.termId);
+  }
+
+  const [entryRefs, termRefs] = await Promise.all([
+    entryIds.size === 0 ? new Map() : resolveEntryRefs(ctx, entryIds),
+    termIds.size === 0 ? new Map() : resolveTermRefs(ctx, termIds),
+  ]);
+  return { entries: entryRefs, terms: termRefs };
+}
+
+async function resolveEntryRefs(
+  ctx: AppContext,
+  ids: ReadonlySet<number>,
+): Promise<Map<number, ResolvedRef>> {
+  const adapter = ctx.plugins.lookupAdapters.get("entry")?.adapter;
+  if (!adapter) return new Map();
+
+  const eligibleTypes = [...ctx.plugins.entryTypes.values()]
+    .filter((t) => t.isPublic === true)
+    .map((t) => t.name);
+  if (eligibleTypes.length === 0) return new Map();
+
+  // The entry adapter excludes trash by default but admits drafts and
+  // scheduled — fine for the picker (editors want to link to drafts), wrong
+  // for public nav. Pre-filter to published ids so a draft that was added
+  // to a menu doesn't render until it ships.
+  const publishedIds = await ctx.db
+    .select({ id: entries.id })
+    .from(entries)
+    .where(and(inArray(entries.id, [...ids]), eq(entries.status, "published")));
+  if (publishedIds.length === 0) return new Map();
+
+  const results = await adapter.list(ctx, {
+    scope: { entryTypes: eligibleTypes },
+    ids: publishedIds.map((r) => String(r.id)),
+  });
+  return refMapFromResults(results);
+}
+
+async function resolveTermRefs(
+  ctx: AppContext,
+  ids: ReadonlySet<number>,
+): Promise<Map<number, ResolvedRef>> {
+  const adapter = ctx.plugins.lookupAdapters.get("term")?.adapter;
+  if (!adapter) return new Map();
+
+  const eligibleTaxonomies = [...ctx.plugins.termTaxonomies.values()]
+    .filter((t) => t.isPublic === true)
+    .map((t) => t.name);
+  if (eligibleTaxonomies.length === 0) return new Map();
+
+  const results = await adapter.list(ctx, {
+    scope: { termTaxonomies: eligibleTaxonomies },
+    ids: [...ids].map(String),
+  });
+  return refMapFromResults(results);
+}
+
+function refMapFromResults(
+  results: readonly LookupResult[],
+): Map<number, ResolvedRef> {
+  const map = new Map<number, ResolvedRef>();
+  for (const result of results) {
+    const numericId = Number(result.id);
+    if (!Number.isFinite(numericId)) continue;
+    const cached = (result.cached ?? {}) as {
+      readonly label?: unknown;
+      readonly href?: unknown;
+    };
+    const href = typeof cached.href === "string" ? cached.href : null;
+    if (!href) continue; // No public URL → can't render in nav
+    const label =
+      typeof cached.label === "string" && cached.label.length > 0
+        ? cached.label
+        : result.label;
+    map.set(numericId, { label, href });
+  }
+  return map;
+}
+
+function toResolvedItem(
+  node: TreeNode<MenuItemRow>,
+  refs: ResolvedRefs,
+): ResolvedMenuItem | null {
   const meta = parseMenuItemMeta(node.meta);
   if (!meta) return null;
-  const resolved = resolveByKind(node, meta);
+  const resolved = resolveByKind(node, meta, refs);
   if (!resolved) return null;
 
   const children = node.children
-    .map(toResolvedItem)
+    .map((child) => toResolvedItem(child, refs))
     .filter((child): child is ResolvedMenuItem => child !== null);
 
   return { ...resolved, children };
@@ -90,22 +195,44 @@ type ResolvedNoChildren = Omit<ResolvedMenuItem, "children">;
 function resolveByKind(
   node: TreeNode<MenuItemRow>,
   meta: MenuItemMeta,
+  refs: ResolvedRefs,
 ): ResolvedNoChildren | null {
-  // Entry / term resolution lands in slice 2 (needs permalink helpers).
-  // Drop silently so mixed menus stay partially functional in the meantime.
-  if (meta.kind !== "custom") return null;
-
-  const href = sanitizeMenuHref(meta.url);
-  if (!href) return null;
-
+  const resolved = resolveLabelHrefSource(node, meta, refs);
+  if (!resolved) return null;
   return {
     id: node.id,
     parentId: node.parentId,
-    label: node.title,
-    href,
+    label: resolved.label,
+    href: resolved.href,
     target: meta.target,
     rel: meta.rel,
     cssClasses: meta.cssClasses ?? [],
-    source: { kind: "custom" },
+    source: resolved.source,
   };
+}
+
+interface LabelHrefSource {
+  readonly label: string;
+  readonly href: string;
+  readonly source: ResolvedMenuItem["source"];
+}
+
+function resolveLabelHrefSource(
+  node: TreeNode<MenuItemRow>,
+  meta: MenuItemMeta,
+  refs: ResolvedRefs,
+): LabelHrefSource | null {
+  if (meta.kind === "custom") {
+    const href = sanitizeMenuHref(meta.url);
+    if (!href) return null;
+    return { label: node.title, href, source: { kind: "custom" } };
+  }
+  if (meta.kind === "entry") {
+    const ref = refs.entries.get(meta.entryId);
+    if (!ref) return null;
+    return { ...ref, source: { kind: "entry", id: meta.entryId } };
+  }
+  const ref = refs.terms.get(meta.termId);
+  if (!ref) return null;
+  return { ...ref, source: { kind: "term", id: meta.termId } };
 }
