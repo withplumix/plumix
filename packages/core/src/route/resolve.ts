@@ -45,6 +45,11 @@ async function resolveSingle(
   });
   if (!row) return notFound("public-post-not-found");
 
+  // Stash the matched entity so render-side helpers (menu plugin's
+  // `isCurrent`, breadcrumbs, canonical tags) can identify the
+  // current page without re-running URL matching.
+  ctx.resolvedEntity = { kind: "entry", id: row.id };
+
   const body = `<article><h1>${escapeHtml(row.title)}</h1>${renderTiptapContent(row.content)}</article>`;
   return htmlResponse(row.title, body);
 }
@@ -61,6 +66,11 @@ async function resolveArchive(
     )
     .orderBy(desc(entries.publishedAt), desc(entries.id))
     .limit(ARCHIVE_LIMIT);
+
+  // Set after the query so a thrown query doesn't leave a stale entity
+  // on ctx for any downstream middleware (logging, error pages) that
+  // reads it. Mirrors `resolveSingle`.
+  ctx.resolvedEntity = { kind: "archive", entryType: intent.entryType };
 
   const registered = ctx.plugins.entryTypes.get(intent.entryType);
   const title =
