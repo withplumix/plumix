@@ -1,9 +1,11 @@
 import type { SQL } from "drizzle-orm";
 
+import type { AppContext } from "../../../context/app.js";
 import type { EntryFieldScope } from "../../../plugin/fields/entry.js";
 import type { LookupAdapter, LookupResult } from "../../../plugin/lookup.js";
 import { and, eq, inArray, like, ne } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import { buildEntryPermalink } from "../../../route/permalink.js";
 
 const DEFAULT_LIST_LIMIT = 20;
 const MAX_LIST_LIMIT = 100;
@@ -13,7 +15,18 @@ const ENTRY_ROW_COLUMNS = {
   type: entries.type,
   title: entries.title,
   status: entries.status,
+  slug: entries.slug,
+  parentId: entries.parentId,
 } as const;
+
+interface EntryLookupRow {
+  readonly id: number;
+  readonly type: string;
+  readonly title: string;
+  readonly status: string;
+  readonly slug: string;
+  readonly parentId: number | null;
+}
 
 export const entryLookupAdapter: LookupAdapter<EntryFieldScope> = {
   async list(ctx, options) {
@@ -45,7 +58,7 @@ export const entryLookupAdapter: LookupAdapter<EntryFieldScope> = {
       .where(conditions.length === 0 ? undefined : and(...conditions))
       .orderBy(entries.title)
       .limit(limit);
-    return rows.map(toLookupResult);
+    return Promise.all(rows.map((row) => toLookupResult(ctx, row)));
   },
 
   async resolve(ctx, id, scope) {
@@ -56,7 +69,7 @@ export const entryLookupAdapter: LookupAdapter<EntryFieldScope> = {
       .from(entries)
       .where(buildEntryWhere(numericId, scope))
       .limit(1);
-    return row ? toLookupResult(row) : null;
+    return row ? toLookupResult(ctx, row) : null;
   },
 };
 
@@ -100,16 +113,28 @@ function clampLimit(requested: number | undefined): number {
   return Math.min(Math.floor(requested), MAX_LIST_LIMIT);
 }
 
-function toLookupResult(row: {
-  readonly id: number;
-  readonly type: string;
-  readonly title: string;
-  readonly status: string;
-}): LookupResult {
+async function toLookupResult(
+  ctx: AppContext,
+  row: EntryLookupRow,
+): Promise<LookupResult> {
   const trimmedTitle = row.title.trim();
+  const label = trimmedTitle !== "" ? trimmedTitle : `Untitled ${row.type}`;
+  // Resolve the public URL when the type has one; falls back to omitted
+  // `cached.href` for `isPublic: false` types (e.g. `menu_item`). The meta
+  // pipeline merges `cached.{label,href}` into stored meta on every write
+  // so consumers (menu plugin, reference fields) have last-known fallbacks
+  // when the linked entity is later deleted.
+  const href = await buildEntryPermalink(ctx, {
+    type: row.type,
+    slug: row.slug,
+    parentId: row.parentId,
+  });
+  const cached: Record<string, unknown> = { label };
+  if (href !== null) cached.href = href;
   return {
     id: String(row.id),
-    label: trimmedTitle !== "" ? trimmedTitle : `Untitled ${row.type}`,
+    label,
     subtitle: `${row.type} · ${row.status}`,
+    cached,
   };
 }
