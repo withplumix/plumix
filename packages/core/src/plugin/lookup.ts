@@ -71,7 +71,13 @@ export interface LookupAdapter<TScope = unknown> {
   ): Promise<LookupResult | null>;
 }
 
-export interface RegisteredLookupAdapter<TScope = unknown> {
+// `RegisteredLookupAdapter` extends `LookupAdapterOptions` so plugin-
+// contributed fields (declaration-merged via TypeScript module
+// augmentation) survive into the manifest. The `registerLookupAdapter`
+// implementation spreads `options` to preserve them.
+export interface RegisteredLookupAdapter<
+  TScope = unknown,
+> extends LookupAdapterOptions<TScope> {
   readonly kind: string;
   readonly adapter: LookupAdapter<TScope>;
   /**

@@ -17,13 +17,38 @@ export type {
 } from "./server/types.js";
 
 // `@plumix/plugin-menu` augments the theme setup context with
-// `registerMenuLocation`. TypeScript surfaces the method only when this
-// plugin is in the project's `node_modules`; the implementation is wired
-// at install time via `extendThemeContext` from the plugin's `provides`
-// callback below.
+// `registerMenuLocation`, plus three core option shapes with
+// menu-eligibility flags. TypeScript surfaces all of these only when
+// this plugin is in the project's `node_modules`. The runtime
+// implementation of `registerMenuLocation` is wired via
+// `extendThemeContext` below; the eligibility flags are read at admin
+// time by the eligibility resolver (`getEligibleMenuKinds`).
 declare module "@plumix/core" {
   interface ThemeContextExtensions {
     registerMenuLocation: (id: string, options: MenuLocationOptions) => void;
+  }
+  interface EntryTypeOptions {
+    /**
+     * Whether this entry type appears in the menu plugin's item picker.
+     * Defaults to `isPublic`. Mirrors WordPress's `show_in_nav_menus`.
+     */
+    readonly isShownInMenus?: boolean;
+    /** Override the picker tab label. Defaults to `labels.plural`. */
+    readonly menuPickerLabel?: string;
+  }
+  interface TermTaxonomyOptions {
+    readonly isShownInMenus?: boolean;
+    readonly menuPickerLabel?: string;
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface LookupAdapterOptions<TScope = unknown> {
+    /**
+     * Opt-in for non-default kinds (`media`, `user`, future custom
+     * kinds) to appear in the menu picker. Default kinds (`entry`,
+     * `term`) follow `isShownInMenus`; other adapters are off unless
+     * this is set.
+     */
+    readonly menuPicker?: { readonly tabLabel: string };
   }
 }
 
