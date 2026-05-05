@@ -63,7 +63,7 @@
     "@vitest/coverage-v8": "catalog:",
     "esbuild": "0.27.7",
     "eslint": "catalog:",
-    "jsdom": "^29.1.0",
+    "jsdom": "^29.1.1",
     "prettier": "catalog:",
     "tailwindcss": "4.2.4",
     "tsx": "4.21.0",
