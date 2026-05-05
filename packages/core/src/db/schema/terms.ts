@@ -18,6 +18,11 @@ export const terms = sqliteTable(
     parentId: t.integer().references((): AnySQLiteColumn => terms.id, {
       onDelete: "set null",
     }),
+    // Optimistic-concurrency revision counter. Bumped by the menu
+    // plugin's `menu.save` (and any future term-mutating RPC that
+    // wants concurrency protection); read-only callers ignore it.
+    // Default 0 so the first save reads `version: 0` and writes 1.
+    version: t.integer().notNull().default(0),
   }),
   (table) => [
     uniqueIndex("terms_taxonomy_slug_idx").on(table.taxonomy, table.slug),
