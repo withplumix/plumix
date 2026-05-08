@@ -4,6 +4,8 @@ import { HookRegistry, installPlugins } from "@plumix/core";
 
 import { menu } from "./index.js";
 
+const ADMIN_ENTRY_PATH = "node_modules/@plumix/plugin-menu/dist/admin/index.js";
+
 async function install() {
   return installPlugins({ hooks: new HookRegistry(), plugins: [menu] });
 }
@@ -33,5 +35,25 @@ describe("@plumix/plugin-menu", () => {
     const { registry } = await install();
     expect(registry.capabilities.get("entry:menu_item:create")).toBeDefined();
     expect(registry.capabilities.get("entry:menu_item:edit_any")).toBeDefined();
+  });
+
+  test("registers the Menus admin page in the Appearance nav group", async () => {
+    const { registry } = await install();
+    const page = registry.adminPages.get("/menus");
+    expect(page).toBeDefined();
+    expect(page?.title).toBe("Menus");
+    expect(page?.capability).toBe("term:menu:manage");
+    expect(page?.nav?.group).toEqual({
+      id: "appearance",
+      label: "Appearance",
+      priority: 175,
+    });
+    expect(page?.nav?.label).toBe("Menus");
+    expect(page?.nav?.order).toBe(10);
+    expect(page?.component).toBe("MenusShell");
+  });
+
+  test("declares the adminEntry chunk path the plumix vite plugin loads", () => {
+    expect(menu.adminEntry).toBe(ADMIN_ENTRY_PATH);
   });
 });

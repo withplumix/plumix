@@ -1,4 +1,10 @@
 {
   "extends": "@plumix/typescript-config/library.json",
-  "include": ["src"]
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "rootDir": ".",
+    "types": ["node", "@testing-library/jest-dom"]
+  },
+  "include": ["src", "e2e", "test"]
 }

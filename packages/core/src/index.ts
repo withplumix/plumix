@@ -26,6 +26,7 @@ export {
 export { memoryStorage } from "./runtime/memory-storage.js";
 export type { MemoryStorageConfig } from "./runtime/memory-storage.js";
 export type * from "./runtime/slots.js";
+export { slugify } from "./slugify.js";
 export { defineTheme } from "./theme.js";
 export type {
   ThemeDescriptor,

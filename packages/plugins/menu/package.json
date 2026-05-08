@@ -43,11 +43,12 @@
   "scripts": {
     "attw": "attw --pack . --profile esm-only",
     "build": "tsc -p tsconfig.build.json",
-    "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "clean": "git clean -xdf .cache .turbo dist node_modules e2e/playwright-report e2e/test-results",
     "format": "prettier --check . --ignore-path ../../../.gitignore",
     "lint": "eslint",
     "publint": "publint",
     "test": "vitest run",
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
@@ -55,17 +56,33 @@
     "drizzle-orm": "catalog:",
     "valibot": "catalog:"
   },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.99.2",
+    "react": "catalog:"
+  },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
     "@orpc/server": "^1.14.1",
+    "@playwright/test": "^1.59.1",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
     "@plumix/vitest-config": "workspace:*",
+    "@tanstack/react-query": "^5.99.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "esbuild": "0.27.7",
     "eslint": "catalog:",
+    "jsdom": "^29.1.1",
     "prettier": "catalog:",
     "publint": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
