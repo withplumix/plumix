@@ -13,7 +13,7 @@ import type { PluginRegistry } from "@plumix/core";
  * - other      — plugin-contributed lookup adapter kinds (`media`,
  *                `user`, etc.) that opted in via `menuPicker`
  */
-export interface PickerTab {
+interface PickerTab {
   readonly kind: string;
   readonly tabLabel: string;
   /** For entry/term tabs, the underlying type/taxonomy name. */

@@ -4,19 +4,6 @@ import type { MenuLocationOptions, ResolvedMenuItem } from "./server/types.js";
 import { createMenuRouter } from "./rpc.js";
 import { recordLocation } from "./server/locations.js";
 
-export type {
-  MenuItemMeta,
-  MenuItemCustomMeta,
-  MenuItemEntryMeta,
-  MenuItemTermMeta,
-  MenuItemDisplayAttrs,
-  MenuLocationOptions,
-  RegisteredMenuLocation,
-  ResolvedMenu,
-  ResolvedMenuItem,
-  ResolvedMenuItemSource,
-} from "./server/types.js";
-
 // `@plumix/plugin-menu` augments the theme setup context with
 // `registerMenuLocation`, plus three core option shapes with
 // menu-eligibility flags, plus the hook registries with three menu
@@ -88,6 +75,8 @@ declare module "@plumix/core" {
   }
 }
 
+const ADMIN_ENTRY_PATH = "node_modules/@plumix/plugin-menu/dist/admin/index.js";
+
 /**
  * `@plumix/plugin-menu` — menus reuse the entries/terms/entry_term substrate
  * rather than adding tables: a menu is a `terms` row (`taxonomy = 'menu'`),
@@ -96,6 +85,7 @@ declare module "@plumix/core" {
  * the generic Entries/Terms admin; the plugin owns its own admin (slices 7+).
  */
 export const menu = definePlugin("menu", {
+  adminEntry: ADMIN_ENTRY_PATH,
   provides: (ctx) => {
     ctx.extendThemeContext("registerMenuLocation", (id, options) => {
       recordLocation(id, options);
@@ -122,5 +112,17 @@ export const menu = definePlugin("menu", {
     });
 
     ctx.registerRpcRouter(createMenuRouter());
+
+    ctx.registerAdminPage({
+      path: "/menus",
+      title: "Menus",
+      capability: "term:menu:manage",
+      nav: {
+        group: { id: "appearance", label: "Appearance", priority: 175 },
+        label: "Menus",
+        order: 10,
+      },
+      component: "MenusShell",
+    });
   },
 });

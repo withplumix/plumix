@@ -10,6 +10,7 @@ import {
   eq,
   inArray,
   settings,
+  slugify,
   sql,
   terms,
 } from "@plumix/core";
@@ -523,6 +524,72 @@ export function createMenuRouter(): Record<string, unknown> {
       return { id: input.termId };
     });
 
+  const create = base
+    .use(authenticated)
+    .input(
+      v.object({
+        name: v.pipe(
+          v.string(),
+          v.transform((s) => s.trim()),
+          v.minLength(1),
+          v.maxLength(MAX_TITLE_LENGTH),
+        ),
+      }),
+    )
+    .handler(
+      async ({
+        input,
+        context,
+        errors,
+      }): Promise<{
+        readonly termId: number;
+        readonly slug: string;
+        readonly version: number;
+      }> => {
+        if (!context.auth.can(MENU_MANAGE_CAPABILITY)) {
+          throw errors.FORBIDDEN({
+            data: { capability: MENU_MANAGE_CAPABILITY },
+          });
+        }
+        const baseSlug = slugify(input.name) || `menu-${cryptoRandom()}`;
+        let slug = baseSlug;
+        let attempt = 0;
+        // Probe-then-insert keeps the typical case to one query and
+        // resolves contention with a deterministic numeric suffix.
+        while (true) {
+          const [conflict] = await context.db
+            .select({ id: terms.id })
+            .from(terms)
+            .where(and(eq(terms.taxonomy, MENU_TAXONOMY), eq(terms.slug, slug)))
+            .limit(1);
+          if (!conflict) break;
+          attempt += 1;
+          if (attempt > 50) {
+            throw errors.CONFLICT({
+              data: { reason: "slug_exhausted", key: baseSlug },
+            });
+          }
+          slug = `${baseSlug}-${String(attempt + 1)}`;
+        }
+        const [row] = await context.db
+          .insert(terms)
+          .values({
+            taxonomy: MENU_TAXONOMY,
+            slug,
+            name: input.name,
+          })
+          .returning({ id: terms.id, version: terms.version });
+        if (!row) {
+          // Defensive: `.returning()` on an INSERT that just succeeded
+          // returning the affected row is contractually non-empty for
+          // SQLite/D1. Surface as a plain error (mapped to 500 by the
+          // RPC layer) rather than papering over a driver regression.
+          throw new Error("menu.create: insert returned no row");
+        }
+        return { termId: row.id, slug, version: row.version };
+      },
+    );
+
   const assignLocation = base
     .use(authenticated)
     .input(
@@ -591,7 +658,83 @@ export function createMenuRouter(): Record<string, unknown> {
       return { location: input.location, termSlug: input.termSlug };
     });
 
-  return { list, get, save, delete: remove, assignLocation };
+  const locationsList = base
+    .use(authenticated)
+    .handler(async ({ context, errors }): Promise<readonly LocationRow[]> => {
+      if (!context.auth.can(MENU_MANAGE_CAPABILITY)) {
+        throw errors.FORBIDDEN({
+          data: { capability: MENU_MANAGE_CAPABILITY },
+        });
+      }
+      const registered = getRegisteredLocations();
+      if (registered.size === 0) return [];
+
+      // settings.value is a JSON-encoded text column, so a SQL-level
+      // join against terms.slug would compare `"main"` (quoted) with
+      // `main` (unquoted). Two small queries are clearer than reaching
+      // for json_extract, and the rowcount is bounded by the number of
+      // theme-registered locations.
+      const settingRows = await context.db
+        .select({ key: settings.key, value: settings.value })
+        .from(settings)
+        .where(
+          and(
+            eq(settings.group, MENU_LOCATIONS_GROUP),
+            inArray(settings.key, [...registered.keys()]),
+          ),
+        );
+      const slugToLocation = new Map<string, string>();
+      for (const row of settingRows) {
+        if (typeof row.value === "string")
+          slugToLocation.set(row.value, row.key);
+      }
+      const bindings = new Map<string, number>();
+      if (slugToLocation.size > 0) {
+        const termRows = await context.db
+          .select({ id: terms.id, slug: terms.slug })
+          .from(terms)
+          .where(
+            and(
+              eq(terms.taxonomy, MENU_TAXONOMY),
+              inArray(terms.slug, [...slugToLocation.keys()]),
+            ),
+          );
+        for (const row of termRows) {
+          const locationId = slugToLocation.get(row.slug);
+          if (locationId) bindings.set(locationId, row.id);
+        }
+      }
+
+      return [...registered.values()]
+        .sort((a, b) => a.id.localeCompare(b.id))
+        .map((location) => {
+          const result: LocationRow = {
+            id: location.id,
+            label: location.label,
+            boundTermId: bindings.get(location.id) ?? null,
+          };
+          return location.description === undefined
+            ? result
+            : { ...result, description: location.description };
+        });
+    });
+
+  return {
+    list,
+    get,
+    save,
+    create,
+    delete: remove,
+    assignLocation,
+    locations: { list: locationsList },
+  };
+}
+
+interface LocationRow {
+  readonly id: string;
+  readonly label: string;
+  readonly description?: string;
+  readonly boundTermId: number | null;
 }
 
 function readMaxDepth(meta: Record<string, unknown>): number {

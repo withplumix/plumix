@@ -47,12 +47,27 @@ interface Harness {
       readonly get: (input: { termId: number }) => Promise<unknown>;
       readonly save: (input: unknown) => Promise<unknown>;
       readonly delete: (input: { termId: number }) => Promise<unknown>;
+      readonly create: (input: { name: string }) => Promise<{
+        readonly termId: number;
+        readonly slug: string;
+        readonly version: number;
+      }>;
       readonly assignLocation: (input: {
         location: string;
         termSlug: string | null;
       }) => Promise<unknown>;
+      readonly locations: {
+        readonly list: () => Promise<readonly LocationRow[]>;
+      };
     };
   };
+}
+
+interface LocationRow {
+  readonly id: string;
+  readonly label: string;
+  readonly description?: string;
+  readonly boundTermId: number | null;
 }
 
 function stubAuthenticator(user: User): RequestAuthenticator {
@@ -489,10 +504,101 @@ describe("menu RPC", () => {
     });
   });
 
+  describe("menu.create", () => {
+    test("mints a new menu term with a slug derived from the name", async () => {
+      const h = await buildHarness();
+
+      const result = await h.client.menu.create({ name: "Header Nav" });
+
+      expect(result.slug).toBe("header-nav");
+      expect(result.version).toBe(0);
+      const [row] = await h.db
+        .select()
+        .from(terms)
+        .where(and(eq(terms.id, result.termId), eq(terms.taxonomy, "menu")));
+      expect(row?.name).toBe("Header Nav");
+      expect(row?.slug).toBe("header-nav");
+    });
+
+    test("appends a numeric suffix when the derived slug is taken", async () => {
+      const h = await buildHarness();
+      await seedMenu(h.db, h.factories, "header-nav", "Header Nav");
+
+      const result = await h.client.menu.create({ name: "Header Nav" });
+
+      expect(result.slug).toMatch(/^header-nav-\d+$/);
+    });
+
+    test("rejects empty / whitespace-only names", async () => {
+      const h = await buildHarness();
+      await expect(h.client.menu.create({ name: "   " })).rejects.toThrow();
+      await expect(h.client.menu.create({ name: "" })).rejects.toThrow();
+    });
+
+    test("subscriber cannot create", async () => {
+      const h = await buildHarness("subscriber");
+      await expect(h.client.menu.create({ name: "Nope" })).rejects.toThrow();
+    });
+  });
+
+  describe("menu.locations.list", () => {
+    test("returns each registered location with its current binding", async () => {
+      const h = await buildHarness();
+      recordLocation("primary", { label: "Primary", description: "Header" });
+      recordLocation("footer", { label: "Footer" });
+      const main = await seedMenu(h.db, h.factories, "main");
+      await h.client.menu.assignLocation({
+        location: "primary",
+        termSlug: "main",
+      });
+
+      const rows = await h.client.menu.locations.list();
+      expect(rows).toEqual([
+        {
+          id: "footer",
+          label: "Footer",
+          boundTermId: null,
+        },
+        {
+          id: "primary",
+          label: "Primary",
+          description: "Header",
+          boundTermId: main.id,
+        },
+      ]);
+    });
+
+    test("returns an empty array when no locations are registered", async () => {
+      const h = await buildHarness();
+      const rows = await h.client.menu.locations.list();
+      expect(rows).toEqual([]);
+    });
+
+    test("ignores stale settings rows for unregistered locations", async () => {
+      const h = await buildHarness();
+      recordLocation("primary", { label: "Primary" });
+      await seedMenu(h.db, h.factories, "main");
+      await h.db.insert(settings).values({
+        group: "menu_locations",
+        key: "ghost",
+        value: "main",
+      });
+
+      const rows = await h.client.menu.locations.list();
+      expect(rows.map((r) => r.id)).toEqual(["primary"]);
+    });
+  });
+
   describe("authorization", () => {
     test("subscriber cannot list / save / delete / assign", async () => {
       const h = await buildHarness("subscriber");
       await expect(h.client.menu.list()).rejects.toThrow();
+    });
+
+    test("subscriber cannot list locations", async () => {
+      const h = await buildHarness("subscriber");
+      recordLocation("primary", { label: "Primary" });
+      await expect(h.client.menu.locations.list()).rejects.toThrow();
     });
   });
 });

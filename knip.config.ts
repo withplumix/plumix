@@ -104,6 +104,20 @@ const config: KnipConfig = {
         "e2e/*.spec.ts",
       ],
     },
+    // Same shape as plugin-media: admin chunk loaded via `adminEntry`
+    // at consumer build time; playwright rig invokes build-chunk via
+    // tsx and the spec via the playwright CLI — none are static
+    // imports knip can follow. The `./server` subpath is consumer-
+    // facing (themes import server-only helpers from there); listed
+    // so knip auto-discovery doesn't miss the subdir-index layout.
+    "packages/plugins/menu": {
+      entry: [
+        "src/admin/index.tsx",
+        "src/server/index.ts",
+        "e2e/build-chunk.ts",
+        "e2e/*.spec.ts",
+      ],
+    },
   },
 };
 
