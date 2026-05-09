@@ -34,7 +34,7 @@ interface AssignLocationInput {
   readonly termSlug: string | null;
 }
 
-export interface MenuItemRow {
+interface MenuItemRow {
   readonly id: number;
   readonly parentId: number | null;
   readonly sortOrder: number;
@@ -42,7 +42,7 @@ export interface MenuItemRow {
   readonly meta: Record<string, unknown>;
 }
 
-export interface MenuGetResponse {
+interface MenuGetResponse {
   readonly id: number;
   readonly slug: string;
   readonly name: string;
@@ -81,14 +81,14 @@ export async function rpcCall<TOutput>(
   return envelope?.json as TOutput;
 }
 
-export interface SaveMenuInput {
+interface SaveMenuInput {
   readonly termId: number;
   readonly version: number;
   readonly maxDepth?: number;
   readonly items: readonly SaveItemPayload[];
 }
 
-export interface SaveMenuResult {
+interface SaveMenuResult {
   readonly termId: number;
   readonly version: number;
   readonly itemIds: readonly number[];
