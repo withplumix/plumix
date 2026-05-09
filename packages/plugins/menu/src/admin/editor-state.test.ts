@@ -111,204 +111,6 @@ describe("editorReducer", () => {
     });
   });
 
-  describe("moveUp", () => {
-    test("swaps an item with its previous sibling and updates sortOrder accordingly", () => {
-      const loaded = editorReducer(initialEditorState, {
-        type: "loadFromServer",
-        response: {
-          id: 1,
-          slug: "main",
-          name: "Main",
-          version: 1,
-          maxDepth: 5,
-          items: [
-            {
-              id: 10,
-              parentId: null,
-              sortOrder: 0,
-              title: "First",
-              meta: { kind: "custom", url: "/1" },
-            },
-            {
-              id: 11,
-              parentId: null,
-              sortOrder: 1,
-              title: "Second",
-              meta: { kind: "custom", url: "/2" },
-            },
-          ],
-        },
-      });
-      const next = editorReducer(loaded, {
-        type: "moveUp",
-        key: "id-11",
-      });
-
-      expect(next.items.map((item) => item.id)).toEqual([11, 10]);
-      // sortOrder reflects the new position so the next save round-trip
-      // sends the order the user sees, not the order the server saw.
-      expect(next.items[0]?.sortOrder).toBe(0);
-      expect(next.items[1]?.sortOrder).toBe(1);
-      expect(next.dirty).toBe(true);
-    });
-
-    test("moves a sibling's subtree along with it so DFS order survives", () => {
-      // Regression: `[A, A.child, B]` → moveUp(B) used to leave
-      // A.child stranded between B and A in the array, which then
-      // produced a `forward_parent_reference` on save (A.child's
-      // resolved parentIndex pointed past its own index).
-      const loaded = editorReducer(initialEditorState, {
-        type: "loadFromServer",
-        response: {
-          id: 1,
-          slug: "main",
-          name: "Main",
-          version: 1,
-          maxDepth: 5,
-          items: [
-            {
-              id: 10,
-              parentId: null,
-              sortOrder: 0,
-              title: "A",
-              meta: { kind: "custom", url: "/a" },
-            },
-            {
-              id: 20,
-              parentId: 10,
-              sortOrder: 0,
-              title: "A.child",
-              meta: { kind: "custom", url: "/a/c" },
-            },
-            {
-              id: 11,
-              parentId: null,
-              sortOrder: 1,
-              title: "B",
-              meta: { kind: "custom", url: "/b" },
-            },
-          ],
-        },
-      });
-
-      const next = editorReducer(loaded, { type: "moveUp", key: "id-11" });
-
-      // Order must be: B (root), A (root), A.child (under A).
-      expect(next.items.map((item) => item.id)).toEqual([11, 10, 20]);
-      // Every payload entry's parentIndex must reference an earlier
-      // entry — that's the contract `flattenSaveItems` enforces.
-      const payload = buildSavePayload(next);
-      payload.forEach((entry, index) => {
-        if (entry.parentIndex !== null) {
-          expect(entry.parentIndex).toBeLessThan(index);
-        }
-      });
-    });
-
-    test("is a no-op when the item is already first among its siblings", () => {
-      const loaded = editorReducer(initialEditorState, {
-        type: "loadFromServer",
-        response: {
-          id: 1,
-          slug: "main",
-          name: "Main",
-          version: 1,
-          maxDepth: 5,
-          items: [
-            {
-              id: 10,
-              parentId: null,
-              sortOrder: 0,
-              title: "First",
-              meta: { kind: "custom", url: "/1" },
-            },
-            {
-              id: 11,
-              parentId: null,
-              sortOrder: 1,
-              title: "Second",
-              meta: { kind: "custom", url: "/2" },
-            },
-          ],
-        },
-      });
-      const next = editorReducer(loaded, {
-        type: "moveUp",
-        key: "id-10",
-      });
-
-      expect(next.items.map((item) => item.id)).toEqual([10, 11]);
-      expect(next.dirty).toBe(false);
-    });
-  });
-
-  describe("moveDown", () => {
-    test("swaps an item with its next sibling", () => {
-      const loaded = editorReducer(initialEditorState, {
-        type: "loadFromServer",
-        response: {
-          id: 1,
-          slug: "main",
-          name: "Main",
-          version: 1,
-          maxDepth: 5,
-          items: [
-            {
-              id: 10,
-              parentId: null,
-              sortOrder: 0,
-              title: "First",
-              meta: { kind: "custom", url: "/1" },
-            },
-            {
-              id: 11,
-              parentId: null,
-              sortOrder: 1,
-              title: "Second",
-              meta: { kind: "custom", url: "/2" },
-            },
-          ],
-        },
-      });
-      const next = editorReducer(loaded, {
-        type: "moveDown",
-        key: "id-10",
-      });
-
-      expect(next.items.map((item) => item.id)).toEqual([11, 10]);
-      expect(next.dirty).toBe(true);
-    });
-
-    test("is a no-op when the item is already last among its siblings", () => {
-      const loaded = editorReducer(initialEditorState, {
-        type: "loadFromServer",
-        response: {
-          id: 1,
-          slug: "main",
-          name: "Main",
-          version: 1,
-          maxDepth: 5,
-          items: [
-            {
-              id: 10,
-              parentId: null,
-              sortOrder: 0,
-              title: "Only",
-              meta: { kind: "custom", url: "/" },
-            },
-          ],
-        },
-      });
-      const next = editorReducer(loaded, {
-        type: "moveDown",
-        key: "id-10",
-      });
-
-      expect(next.items.map((item) => item.id)).toEqual([10]);
-      expect(next.dirty).toBe(false);
-    });
-  });
-
   describe("applySaveResult", () => {
     test("assigns returned ids to new items in payload order and bumps the version", () => {
       // After save, the editor must rekey new items from `tmp-*` to
@@ -402,9 +204,12 @@ describe("editorReducer", () => {
         meta: { kind: "custom", url: "/p/c" },
       });
       const childKey = child.items[1]?.key ?? "";
+      const parentKey = child.items[0]?.key ?? null;
       const reparented = editorReducer(child, {
-        type: "demote",
+        type: "moveItem",
         key: childKey,
+        newParentKey: parentKey,
+        newSortOrder: 0,
       });
 
       const next = editorReducer(reparented, {
@@ -415,148 +220,6 @@ describe("editorReducer", () => {
       expect(next.items[0]?.key).toBe("id-50");
       expect(next.items[1]?.key).toBe("id-51");
       expect(next.items[1]?.parentKey).toBe("id-50");
-    });
-  });
-
-  describe("demote", () => {
-    test("nests an item under its immediately-prior sibling", () => {
-      // Acceptance: "promote/demote affordance moves an item between
-      // parent groups". Demote = pop down a level — the item becomes
-      // the last child of the sibling immediately above it.
-      const loaded = editorReducer(initialEditorState, {
-        type: "loadFromServer",
-        response: {
-          id: 1,
-          slug: "main",
-          name: "Main",
-          version: 1,
-          maxDepth: 5,
-          items: [
-            {
-              id: 10,
-              parentId: null,
-              sortOrder: 0,
-              title: "A",
-              meta: { kind: "custom", url: "/a" },
-            },
-            {
-              id: 11,
-              parentId: null,
-              sortOrder: 1,
-              title: "B",
-              meta: { kind: "custom", url: "/b" },
-            },
-          ],
-        },
-      });
-
-      const next = editorReducer(loaded, {
-        type: "demote",
-        key: "id-11",
-      });
-
-      expect(next.items[1]?.parentKey).toBe("id-10");
-      expect(next.items[1]?.sortOrder).toBe(0);
-      expect(next.dirty).toBe(true);
-    });
-
-    test("is a no-op when the item is the first among its siblings (no parent to nest under)", () => {
-      const loaded = editorReducer(initialEditorState, {
-        type: "loadFromServer",
-        response: {
-          id: 1,
-          slug: "main",
-          name: "Main",
-          version: 1,
-          maxDepth: 5,
-          items: [
-            {
-              id: 10,
-              parentId: null,
-              sortOrder: 0,
-              title: "A",
-              meta: { kind: "custom", url: "/a" },
-            },
-          ],
-        },
-      });
-      const next = editorReducer(loaded, {
-        type: "demote",
-        key: "id-10",
-      });
-
-      expect(next).toEqual(loaded);
-    });
-  });
-
-  describe("promote", () => {
-    test("pops a child up one level so its parent becomes a sibling", () => {
-      // Inverse of demote — promote moves the item out of its current
-      // parent's child list and into the grandparent's, positioned
-      // immediately after the old parent.
-      const loaded = editorReducer(initialEditorState, {
-        type: "loadFromServer",
-        response: {
-          id: 1,
-          slug: "main",
-          name: "Main",
-          version: 1,
-          maxDepth: 5,
-          items: [
-            {
-              id: 10,
-              parentId: null,
-              sortOrder: 0,
-              title: "A",
-              meta: { kind: "custom", url: "/a" },
-            },
-            {
-              id: 20,
-              parentId: 10,
-              sortOrder: 0,
-              title: "A.child",
-              meta: { kind: "custom", url: "/a/child" },
-            },
-          ],
-        },
-      });
-
-      const next = editorReducer(loaded, {
-        type: "promote",
-        key: "id-20",
-      });
-
-      expect(next.items[1]?.parentKey).toBeNull();
-      expect(next.dirty).toBe(true);
-    });
-
-    test("is a no-op when the item is already at root", () => {
-      const loaded = editorReducer(initialEditorState, {
-        type: "loadFromServer",
-        response: {
-          id: 1,
-          slug: "main",
-          name: "Main",
-          version: 1,
-          maxDepth: 5,
-          items: [
-            {
-              id: 10,
-              parentId: null,
-              sortOrder: 0,
-              title: "A",
-              meta: { kind: "custom", url: "/a" },
-            },
-          ],
-        },
-      });
-
-      const next = editorReducer(loaded, {
-        type: "promote",
-        key: "id-10",
-      });
-
-      expect(next).toEqual(loaded);
     });
   });
 
@@ -865,6 +528,225 @@ describe("editorReducer", () => {
       expect(next.items).toHaveLength(2);
       expect(next.items[1]?.sortOrder).toBe(1);
       expect(next.items[1]?.parentKey).toBeNull();
+    });
+  });
+
+  describe("moveItem", () => {
+    test("reorders an item among same-parent siblings using newSortOrder", () => {
+      // Drop the third sibling into position 0 — siblings re-number
+      // 0..n in DFS order. dnd-kit's onDragEnd hands us the projected
+      // (parentKey, sortOrder); the reducer is responsible for
+      // re-flowing the rest of the parent's children.
+      const loaded = editorReducer(initialEditorState, {
+        type: "loadFromServer",
+        response: {
+          id: 1,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 10,
+              parentId: null,
+              sortOrder: 0,
+              title: "First",
+              meta: { kind: "custom", url: "/1" },
+            },
+            {
+              id: 11,
+              parentId: null,
+              sortOrder: 1,
+              title: "Second",
+              meta: { kind: "custom", url: "/2" },
+            },
+            {
+              id: 12,
+              parentId: null,
+              sortOrder: 2,
+              title: "Third",
+              meta: { kind: "custom", url: "/3" },
+            },
+          ],
+        },
+      });
+
+      const next = editorReducer(loaded, {
+        type: "moveItem",
+        key: "id-12",
+        newParentKey: null,
+        newSortOrder: 0,
+      });
+
+      expect(next.items.map((item) => item.id)).toEqual([12, 10, 11]);
+      expect(next.items.map((item) => item.sortOrder)).toEqual([0, 1, 2]);
+      expect(next.dirty).toBe(true);
+    });
+
+    test("reparents and the target's descendants follow into DFS order under the new parent", () => {
+      // Move A under B; A still owns A.child, so DFS pre-order becomes
+      // [B, A, A.child] without any explicit handling of descendants.
+      const loaded = editorReducer(initialEditorState, {
+        type: "loadFromServer",
+        response: {
+          id: 1,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 10,
+              parentId: null,
+              sortOrder: 0,
+              title: "A",
+              meta: { kind: "custom", url: "/a" },
+            },
+            {
+              id: 20,
+              parentId: 10,
+              sortOrder: 0,
+              title: "A.child",
+              meta: { kind: "custom", url: "/a/child" },
+            },
+            {
+              id: 11,
+              parentId: null,
+              sortOrder: 1,
+              title: "B",
+              meta: { kind: "custom", url: "/b" },
+            },
+          ],
+        },
+      });
+
+      const next = editorReducer(loaded, {
+        type: "moveItem",
+        key: "id-10",
+        newParentKey: "id-11",
+        newSortOrder: 0,
+      });
+
+      expect(next.items.map((item) => item.id)).toEqual([11, 10, 20]);
+      expect(next.items.map((item) => item.parentKey)).toEqual([
+        null,
+        "id-11",
+        "id-10",
+      ]);
+    });
+
+    test("is a no-op when the move would push the target's subtree past maxDepth", () => {
+      // maxDepth=2 means depth values 0..2 are allowed. Moving B under A
+      // pushes B.grandchild from depth 2 to depth 3, exceeding the cap.
+      // The reducer should return the input state unchanged so dnd-kit's
+      // drop preview can render disabled feedback without the editor
+      // committing the move.
+      const loaded = editorReducer(initialEditorState, {
+        type: "loadFromServer",
+        response: {
+          id: 1,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 2,
+          items: [
+            {
+              id: 10,
+              parentId: null,
+              sortOrder: 0,
+              title: "A",
+              meta: { kind: "custom", url: "/a" },
+            },
+            {
+              id: 11,
+              parentId: null,
+              sortOrder: 1,
+              title: "B",
+              meta: { kind: "custom", url: "/b" },
+            },
+            {
+              id: 20,
+              parentId: 11,
+              sortOrder: 0,
+              title: "B.child",
+              meta: { kind: "custom", url: "/b/child" },
+            },
+            {
+              id: 30,
+              parentId: 20,
+              sortOrder: 0,
+              title: "B.grandchild",
+              meta: { kind: "custom", url: "/b/child/grand" },
+            },
+          ],
+        },
+      });
+
+      const next = editorReducer(loaded, {
+        type: "moveItem",
+        key: "id-11",
+        newParentKey: "id-10",
+        newSortOrder: 0,
+      });
+
+      expect(next).toBe(loaded);
+    });
+  });
+
+  describe("updateMaxDepth", () => {
+    test("updates state.maxDepth and flips dirty", () => {
+      const loaded = editorReducer(initialEditorState, {
+        type: "loadFromServer",
+        response: {
+          id: 1,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 3,
+          items: [],
+        },
+      });
+
+      const next = editorReducer(loaded, { type: "updateMaxDepth", value: 7 });
+
+      expect(next.maxDepth).toBe(7);
+      expect(next.dirty).toBe(true);
+    });
+
+    test("is a no-op when the new value is below the deepest existing item", () => {
+      // Items already nest 2 deep (B.child at depth 1). Lowering maxDepth
+      // to 0 would invalidate existing state, so the action is rejected
+      // — the user has to remove/move items before tightening the cap.
+      const loaded = editorReducer(initialEditorState, {
+        type: "loadFromServer",
+        response: {
+          id: 1,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 10,
+              parentId: null,
+              sortOrder: 0,
+              title: "A",
+              meta: { kind: "custom", url: "/a" },
+            },
+            {
+              id: 20,
+              parentId: 10,
+              sortOrder: 0,
+              title: "A.child",
+              meta: { kind: "custom", url: "/a/child" },
+            },
+          ],
+        },
+      });
+
+      const next = editorReducer(loaded, { type: "updateMaxDepth", value: 0 });
+
+      expect(next).toBe(loaded);
     });
   });
 });

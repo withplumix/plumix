@@ -1,5 +1,21 @@
-import type { Dispatch, ReactNode } from "react";
+import type { DragEndEvent, DragMoveEvent } from "@dnd-kit/core";
+import type { CSSProperties, Dispatch, ReactNode } from "react";
 import { useEffect, useReducer, useState } from "react";
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useQueryClient } from "@tanstack/react-query";
 
 import type {
@@ -22,6 +38,9 @@ import {
   usePickerTabs,
   useSaveMenu,
 } from "./rpc.js";
+import { dragEndToAction, getProjection } from "./tree-state.js";
+
+const INDENTATION_WIDTH = 24;
 
 export function MenuItemEditor({
   termId,
@@ -53,7 +72,7 @@ export function MenuItemEditor({
       {state.items.length === 0 ? (
         <div data-testid="menu-item-list-empty">No items yet.</div>
       ) : (
-        <MenuItemList state={state} dispatch={dispatch} />
+        <MenuTree state={state} dispatch={dispatch} />
       )}
       <ItemDetailPanel state={state} dispatch={dispatch} />
       <MenuSettingsPanel state={state} dispatch={dispatch} />
@@ -119,6 +138,7 @@ function MenuSettingsPanel({
   return (
     <div data-testid="menu-settings-panel">
       <LocationsBindings termId={state.termId} slug={state.slug} />
+      <MaxDepthField state={state} dispatch={dispatch} />
       {conflict ? (
         <div data-testid="menu-conflict-banner" role="alert">
           Another editor saved changes since you loaded this menu.
@@ -150,6 +170,7 @@ function MenuSettingsPanel({
             {
               termId: state.termId,
               version: state.version,
+              maxDepth: state.maxDepth,
               items: buildSavePayload(state),
             },
             {
@@ -171,6 +192,42 @@ function MenuSettingsPanel({
       </button>
       <DeleteMenuButton termId={state.termId} />
     </div>
+  );
+}
+
+function MaxDepthField({
+  state,
+  dispatch,
+}: {
+  readonly state: EditorState;
+  readonly dispatch: Dispatch<EditorAction>;
+}): ReactNode {
+  // A local draft buys the user a transient empty string while editing —
+  // without it, controlled-input + reject-on-NaN traps the field on the
+  // last valid value. The reducer is still the source of truth: when
+  // state.maxDepth changes (load, undo, etc.) the draft snaps back.
+  const [draft, setDraft] = useState(String(state.maxDepth));
+  useEffect(() => {
+    setDraft(String(state.maxDepth));
+  }, [state.maxDepth]);
+  return (
+    <label data-testid="menu-settings-max-depth-row">
+      Max depth
+      <input
+        type="number"
+        data-testid="menu-settings-max-depth"
+        min={0}
+        value={draft}
+        onChange={(event) => {
+          const next = event.target.value;
+          setDraft(next);
+          const parsed = Number.parseInt(next, 10);
+          if (Number.isFinite(parsed)) {
+            dispatch({ type: "updateMaxDepth", value: parsed });
+          }
+        }}
+      />
+    </label>
   );
 }
 
@@ -273,30 +330,105 @@ function CustomUrlPickerPanel({
   );
 }
 
-function MenuItemList({
+function MenuTree({
   state,
   dispatch,
 }: {
   readonly state: EditorState;
   readonly dispatch: Dispatch<EditorAction>;
 }): ReactNode {
+  const sensors = useSensors(
+    // A small distance unblocks plain clicks (selectItem) without
+    // accidentally entering a drag the moment the user puts their
+    // finger down on a row.
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+  const [activeKey, setActiveKey] = useState<ItemKey | null>(null);
+  const [overKey, setOverKey] = useState<ItemKey | null>(null);
+  const [dragOffsetX, setDragOffsetX] = useState(0);
+
+  const projection =
+    activeKey !== null && overKey !== null
+      ? getProjection(
+          state.items,
+          activeKey,
+          overKey,
+          dragOffsetX,
+          INDENTATION_WIDTH,
+          state.maxDepth,
+        )
+      : null;
+
   const depths = computeDepths(state);
+  const itemKeys = state.items.map((item) => item.key);
+
+  function reset(): void {
+    setActiveKey(null);
+    setOverKey(null);
+    setDragOffsetX(0);
+  }
+
+  function handleDragMove(event: DragMoveEvent): void {
+    setDragOffsetX(event.delta.x);
+    if (event.over) setOverKey(String(event.over.id));
+  }
+
+  function handleDragEnd(event: DragEndEvent): void {
+    const targetActive = String(event.active.id);
+    const targetOver = event.over ? String(event.over.id) : null;
+    if (targetOver !== null) {
+      // Pull the offset from the event rather than React state — handlers
+      // share a render closure and the latest setDragOffsetX may not be
+      // committed by the time onDragEnd fires.
+      const action = dragEndToAction(
+        state.items,
+        targetActive,
+        targetOver,
+        event.delta.x,
+        INDENTATION_WIDTH,
+        state.maxDepth,
+      );
+      if (action) dispatch(action);
+    }
+    reset();
+  }
+
   return (
-    <ol data-testid="menu-item-list">
-      {state.items.map((item) => (
-        <MenuItemRow
-          key={item.key}
-          item={item}
-          depth={depths.get(item.key) ?? 0}
-          selected={state.selectedKey === item.key}
-          dispatch={dispatch}
-        />
-      ))}
-    </ol>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={(event) => {
+        setActiveKey(String(event.active.id));
+      }}
+      onDragMove={handleDragMove}
+      onDragEnd={handleDragEnd}
+      onDragCancel={reset}
+    >
+      <SortableContext items={itemKeys} strategy={verticalListSortingStrategy}>
+        <div data-testid="menu-tree">
+          {state.items.map((item) => (
+            <SortableTreeRow
+              key={item.key}
+              item={item}
+              depth={
+                projection !== null && item.key === activeKey
+                  ? projection.depth
+                  : (depths.get(item.key) ?? 0)
+              }
+              selected={state.selectedKey === item.key}
+              dispatch={dispatch}
+            />
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
   );
 }
 
-function MenuItemRow({
+function SortableTreeRow({
   item,
   depth,
   selected,
@@ -307,58 +439,38 @@ function MenuItemRow({
   readonly selected: boolean;
   readonly dispatch: Dispatch<EditorAction>;
 }): ReactNode {
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({ id: item.key });
   const id = item.id ?? item.key;
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    paddingLeft: `${String(depth * INDENTATION_WIDTH)}px`,
+  };
   return (
-    <li
+    <div
+      ref={setNodeRef}
+      style={style}
       data-testid={`menu-item-row-${String(id)}`}
       data-depth={String(depth)}
       data-selected={selected ? "true" : "false"}
-      style={{ paddingLeft: `${String(depth * 16)}px` }}
       onClick={() => {
         dispatch({ type: "selectItem", key: item.key });
       }}
     >
+      <button
+        type="button"
+        data-testid={`menu-item-drag-${String(id)}`}
+        aria-label={`Reorder ${item.title ?? "item"}`}
+        {...attributes}
+        {...listeners}
+        onClick={(event) => {
+          event.stopPropagation();
+        }}
+      >
+        ⋮⋮
+      </button>
       <span>{item.title ?? "(unnamed)"}</span>
-      <button
-        type="button"
-        data-testid={`menu-item-up-${String(id)}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          dispatch({ type: "moveUp", key: item.key });
-        }}
-      >
-        Up
-      </button>
-      <button
-        type="button"
-        data-testid={`menu-item-down-${String(id)}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          dispatch({ type: "moveDown", key: item.key });
-        }}
-      >
-        Down
-      </button>
-      <button
-        type="button"
-        data-testid={`menu-item-promote-${String(id)}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          dispatch({ type: "promote", key: item.key });
-        }}
-      >
-        Promote
-      </button>
-      <button
-        type="button"
-        data-testid={`menu-item-demote-${String(id)}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          dispatch({ type: "demote", key: item.key });
-        }}
-      >
-        Demote
-      </button>
       <button
         type="button"
         data-testid={`menu-item-remove-${String(id)}`}
@@ -369,7 +481,7 @@ function MenuItemRow({
       >
         Remove
       </button>
-    </li>
+    </div>
   );
 }
 

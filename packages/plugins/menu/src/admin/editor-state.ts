@@ -69,14 +69,6 @@ export type EditorAction =
       readonly meta: MenuItemMeta;
     }
   | {
-      readonly type: "moveUp";
-      readonly key: ItemKey;
-    }
-  | {
-      readonly type: "moveDown";
-      readonly key: ItemKey;
-    }
-  | {
       readonly type: "updateField";
       readonly key: ItemKey;
       readonly patch: {
@@ -109,12 +101,14 @@ export type EditorAction =
       };
     }
   | {
-      readonly type: "demote";
+      readonly type: "moveItem";
       readonly key: ItemKey;
+      readonly newParentKey: ItemKey | null;
+      readonly newSortOrder: number;
     }
   | {
-      readonly type: "promote";
-      readonly key: ItemKey;
+      readonly type: "updateMaxDepth";
+      readonly value: number;
     };
 
 export function editorReducer(
@@ -139,10 +133,6 @@ export function editorReducer(
         nextTmpId: 0,
       };
     }
-    case "moveUp":
-      return swapWithSibling(state, action.key, "previous");
-    case "moveDown":
-      return swapWithSibling(state, action.key, "next");
     case "updateField": {
       const items = state.items.map((item) =>
         item.key === action.key
@@ -170,60 +160,6 @@ export function editorReducer(
     }
     case "selectItem":
       return { ...state, selectedKey: action.key };
-    case "promote": {
-      const target = state.items.find((item) => item.key === action.key);
-      if (target?.parentKey == null) return state;
-      const oldParent = state.items.find(
-        (item) => item.key === target.parentKey,
-      );
-      if (!oldParent) return state;
-      const newParentKey = oldParent.parentKey;
-      // Slot the promoted item right after the old parent in its
-      // grandparent's child list. Bumping later sortOrder values keeps
-      // the relative order stable without reflowing the whole array.
-      const insertAfterSortOrder = oldParent.sortOrder;
-      const items = state.items.map((item) => {
-        if (item.key === target.key) {
-          return {
-            ...item,
-            parentKey: newParentKey,
-            sortOrder: insertAfterSortOrder + 1,
-          };
-        }
-        if (
-          item.parentKey === newParentKey &&
-          item.key !== target.key &&
-          item.sortOrder > insertAfterSortOrder
-        ) {
-          return { ...item, sortOrder: item.sortOrder + 1 };
-        }
-        return item;
-      });
-      return { ...state, items, dirty: true };
-    }
-    case "demote": {
-      const target = state.items.find((item) => item.key === action.key);
-      if (!target) return state;
-      const siblings = state.items
-        .filter((item) => item.parentKey === target.parentKey)
-        .sort((a, b) => a.sortOrder - b.sortOrder);
-      const idx = siblings.findIndex((s) => s.key === target.key);
-      const newParent = siblings[idx - 1];
-      if (!newParent) return state;
-      const lastChildSortOrder = state.items
-        .filter((item) => item.parentKey === newParent.key)
-        .reduce((max, item) => Math.max(max, item.sortOrder), -1);
-      const items = state.items.map((item) =>
-        item.key === action.key
-          ? {
-              ...item,
-              parentKey: newParent.key,
-              sortOrder: lastChildSortOrder + 1,
-            }
-          : item,
-      );
-      return { ...state, items, dirty: true };
-    }
     case "applySaveResult": {
       const { version, itemIds } = action.result;
       const snapshotKeys =
@@ -257,6 +193,50 @@ export function editorReducer(
         selectedKey,
         dirty: false,
       };
+    }
+    case "moveItem": {
+      const target = state.items.find((item) => item.key === action.key);
+      if (!target) return state;
+      const updated = state.items.map((item) =>
+        item.key === action.key
+          ? {
+              ...item,
+              parentKey: action.newParentKey,
+              sortOrder: action.newSortOrder,
+            }
+          : item,
+      );
+      // Re-flow newParentKey's children: drop target out, splice it in at
+      // the desired index, renumber 0..n. Anyone else whose order changed
+      // gets a fresh sortOrder; the rest stay put.
+      const targetUpdated = updated.find((item) => item.key === action.key);
+      if (!targetUpdated) return state;
+      const siblings = updated
+        .filter(
+          (item) =>
+            item.parentKey === action.newParentKey && item.key !== action.key,
+        )
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+      siblings.splice(action.newSortOrder, 0, targetUpdated);
+      const newOrderByKey = new Map<ItemKey, number>();
+      siblings.forEach((child, index) => {
+        newOrderByKey.set(child.key, index);
+      });
+      const items = updated.map((item) =>
+        newOrderByKey.has(item.key)
+          ? {
+              ...item,
+              sortOrder: newOrderByKey.get(item.key) ?? item.sortOrder,
+            }
+          : item,
+      );
+      const rebuilt = rebuildDfsOrder(items);
+      if (deepestDepth(rebuilt) > state.maxDepth) return state;
+      return { ...state, items: rebuilt, dirty: true };
+    }
+    case "updateMaxDepth": {
+      if (action.value < deepestDepth(state.items)) return state;
+      return { ...state, maxDepth: action.value, dirty: true };
     }
     case "addItem": {
       const rootSiblings = state.items.filter(
@@ -329,33 +309,18 @@ function collectSubtreeKeys(
   return out;
 }
 
-function swapWithSibling(
-  state: EditorState,
-  key: ItemKey,
-  direction: "previous" | "next",
-): EditorState {
-  const target = state.items.find((item) => item.key === key);
-  if (!target) return state;
-  // Pick the sibling adjacent in `(parentKey, sortOrder)` order rather
-  // than adjacent in the array — there may be a different subtree
-  // sitting between the two siblings (e.g. `[A, A.child, B]`), and
-  // that's not who we want to swap with.
-  const siblings = state.items
-    .filter((item) => item.parentKey === target.parentKey)
-    .sort((a, b) => a.sortOrder - b.sortOrder);
-  const idx = siblings.findIndex((s) => s.key === key);
-  const adj = direction === "previous" ? siblings[idx - 1] : siblings[idx + 1];
-  if (!adj) return state;
-  const swapped = state.items.map((item) => {
-    if (item.key === target.key) return { ...item, sortOrder: adj.sortOrder };
-    if (item.key === adj.key) return { ...item, sortOrder: target.sortOrder };
-    return item;
-  });
-  // Rebuild the array in DFS pre-order so descendants follow their
-  // parent. `flattenSaveItems` enforces `parentIndex < itemIndex`;
-  // an array-level swap leaves children stranded before the moved
-  // parent and trips that check.
-  return { ...state, items: rebuildDfsOrder(swapped), dirty: true };
+function deepestDepth(items: readonly EditorItem[]): number {
+  // Items are in DFS pre-order, so each parent's depth is already set
+  // by the time we reach its children — no second pass needed.
+  const depthByKey = new Map<ItemKey, number>();
+  let max = 0;
+  for (const item of items) {
+    const depth =
+      item.parentKey === null ? 0 : (depthByKey.get(item.parentKey) ?? 0) + 1;
+    depthByKey.set(item.key, depth);
+    if (depth > max) max = depth;
+  }
+  return max;
 }
 
 function rebuildDfsOrder(items: readonly EditorItem[]): EditorItem[] {
