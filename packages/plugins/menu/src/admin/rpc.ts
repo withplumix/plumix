@@ -6,6 +6,8 @@
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import type { SaveItemPayload } from "./editor-state.js";
+
 export interface MenuListItem {
   readonly id: number;
   readonly slug: string;
@@ -30,6 +32,23 @@ export interface MenuLocationRow {
 interface AssignLocationInput {
   readonly location: string;
   readonly termSlug: string | null;
+}
+
+interface MenuItemRow {
+  readonly id: number;
+  readonly parentId: number | null;
+  readonly sortOrder: number;
+  readonly title: string;
+  readonly meta: Record<string, unknown>;
+}
+
+interface MenuGetResponse {
+  readonly id: number;
+  readonly slug: string;
+  readonly name: string;
+  readonly version: number;
+  readonly maxDepth: number;
+  readonly items: readonly MenuItemRow[];
 }
 
 const MENU_LIST_KEY = ["menu", "list"] as const;
@@ -60,6 +79,77 @@ export async function rpcCall<TOutput>(
     throw new Error(reason);
   }
   return envelope?.json as TOutput;
+}
+
+interface SaveMenuInput {
+  readonly termId: number;
+  readonly version: number;
+  readonly maxDepth?: number;
+  readonly items: readonly SaveItemPayload[];
+}
+
+interface SaveMenuResult {
+  readonly termId: number;
+  readonly version: number;
+  readonly itemIds: readonly number[];
+  readonly added: readonly number[];
+  readonly removed: readonly number[];
+  readonly modified: readonly number[];
+}
+
+export function useDeleteMenu(): UseMutationResult<
+  { readonly id: number },
+  Error,
+  { readonly termId: number }
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input) =>
+      rpcCall<{ readonly id: number }>("menu/delete", input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: MENU_LIST_KEY });
+    },
+  });
+}
+
+export function useSaveMenu(): UseMutationResult<
+  SaveMenuResult,
+  Error,
+  SaveMenuInput
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input) => rpcCall<SaveMenuResult>("menu/save", input),
+    onSuccess: (_, input) => {
+      void queryClient.invalidateQueries({ queryKey: MENU_LIST_KEY });
+      void queryClient.invalidateQueries({
+        queryKey: ["menu", "get", input.termId] as const,
+      });
+    },
+  });
+}
+
+export interface PickerTab {
+  readonly kind: string;
+  readonly tabLabel: string;
+  readonly target?: string;
+}
+
+export function usePickerTabs(): UseQueryResult<readonly PickerTab[]> {
+  return useQuery({
+    queryKey: ["menu", "pickerTabs"] as const,
+    queryFn: () => rpcCall<readonly PickerTab[]>("menu/pickerTabs"),
+  });
+}
+
+export function useMenuGet(
+  termId: number | null,
+): UseQueryResult<MenuGetResponse> {
+  return useQuery({
+    queryKey: ["menu", "get", termId] as const,
+    queryFn: () => rpcCall<MenuGetResponse>("menu/get", { termId }),
+    enabled: termId !== null,
+  });
 }
 
 export function useMenuList(): UseQueryResult<readonly MenuListItem[]> {

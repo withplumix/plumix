@@ -23,3 +23,7 @@ export function getSelectedTab(): TabId {
   const value = new URL(window.location.href).searchParams.get("tab");
   return value === "locations" ? "locations" : "edit";
 }
+
+export function getSelectedMenuSlug(): string | null {
+  return new URL(window.location.href).searchParams.get("menu");
+}
