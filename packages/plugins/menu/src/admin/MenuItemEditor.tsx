@@ -69,7 +69,11 @@ export function MenuItemEditor({
   }
   return (
     <div data-testid="menu-item-editor">
-      <ItemsPicker tabs={pickerTabs.data ?? []} dispatch={dispatch} />
+      <ItemsPicker
+        tabs={pickerTabs.data ?? []}
+        state={state}
+        dispatch={dispatch}
+      />
       {state.items.length === 0 ? (
         <div data-testid="menu-item-list-empty">No items yet.</div>
       ) : (
@@ -267,14 +271,35 @@ function DeleteMenuButton({ termId }: { readonly termId: number }): ReactNode {
 
 function ItemsPicker({
   tabs,
+  state,
   dispatch,
 }: {
   readonly tabs: readonly PickerTab[];
+  readonly state: EditorState;
   readonly dispatch: Dispatch<EditorAction>;
 }): ReactNode {
   const [activeTab, setActiveTab] = useState<string | null>(null);
+  const relinkTarget =
+    state.relinkTargetKey === null
+      ? null
+      : (state.items.find((item) => item.key === state.relinkTargetKey) ??
+        null);
   return (
     <div data-testid="menu-items-picker">
+      {relinkTarget !== null ? (
+        <div data-testid="menu-picker-relink-banner">
+          <span>Pick replacement for {relinkTarget.resolvedLabel}</span>
+          <button
+            type="button"
+            data-testid="menu-picker-relink-cancel"
+            onClick={() => {
+              dispatch({ type: "cancelRelink" });
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      ) : null}
       <div data-testid="menu-picker-tabs">
         {tabs.map((tab) => (
           <button
@@ -291,19 +316,25 @@ function ItemsPicker({
         ))}
       </div>
       {activeTab === "custom" ? (
-        <CustomUrlPickerPanel dispatch={dispatch} />
+        <CustomUrlPickerPanel
+          relinkTargetKey={state.relinkTargetKey}
+          dispatch={dispatch}
+        />
       ) : null}
     </div>
   );
 }
 
 function CustomUrlPickerPanel({
+  relinkTargetKey,
   dispatch,
 }: {
+  readonly relinkTargetKey: ItemKey | null;
   readonly dispatch: Dispatch<EditorAction>;
 }): ReactNode {
   const [url, setUrl] = useState("");
   const [label, setLabel] = useState("");
+  const isRelink = relinkTargetKey !== null;
   return (
     <div data-testid="menu-picker-custom-panel">
       <input
@@ -327,16 +358,24 @@ function CustomUrlPickerPanel({
         data-testid="menu-picker-custom-add"
         onClick={() => {
           if (url.trim() === "") return;
-          dispatch({
-            type: "addItem",
-            title: label.trim() === "" ? null : label.trim(),
-            meta: { kind: "custom", url: url.trim() },
-          });
+          if (relinkTargetKey !== null) {
+            dispatch({
+              type: "relinkItem",
+              key: relinkTargetKey,
+              newMeta: { kind: "custom", url: url.trim() },
+            });
+          } else {
+            dispatch({
+              type: "addItem",
+              title: label.trim() === "" ? null : label.trim(),
+              meta: { kind: "custom", url: url.trim() },
+            });
+          }
           setUrl("");
           setLabel("");
         }}
       >
-        Add to menu
+        {isRelink ? "Replace link" : "Add to menu"}
       </button>
     </div>
   );
@@ -454,11 +493,15 @@ function SortableTreeRow({
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: item.key });
   const id = item.id ?? item.key;
+  const isBroken = item.state === "broken";
+  const isUnauthorized = item.state === "unauthorized";
   const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     paddingLeft: `${String(depth * INDENTATION_WIDTH)}px`,
+    opacity: isUnauthorized ? 0.5 : undefined,
   };
+  const displayLabel = item.title ?? item.resolvedLabel;
   return (
     <div
       ref={setNodeRef}
@@ -466,6 +509,7 @@ function SortableTreeRow({
       data-testid={`menu-item-row-${String(id)}`}
       data-depth={String(depth)}
       data-selected={selected ? "true" : "false"}
+      data-state={item.state}
       onClick={() => {
         dispatch({ type: "selectItem", key: item.key });
       }}
@@ -474,18 +518,55 @@ function SortableTreeRow({
         type="button"
         data-testid={`menu-item-drag-${String(id)}`}
         aria-label={`Reorder ${item.title ?? "item"}`}
-        {...attributes}
-        {...listeners}
+        disabled={isUnauthorized}
+        // dnd-kit's listeners attach pointerdown handlers; omitting
+        // them when unauthorized prevents drag activation on a row
+        // the viewer can't act on.
+        {...(isUnauthorized ? {} : attributes)}
+        {...(isUnauthorized ? {} : listeners)}
         onClick={(event) => {
           event.stopPropagation();
         }}
       >
         ⋮⋮
       </button>
-      <span>{item.title ?? "(unnamed)"}</span>
+      {isBroken ? (
+        <span
+          data-testid={`menu-item-warning-${String(id)}`}
+          aria-label="broken link"
+        >
+          ⚠
+        </span>
+      ) : null}
+      <span>{displayLabel}</span>
+      {isBroken ? (
+        <>
+          <button
+            type="button"
+            data-testid={`menu-item-relink-${String(id)}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              dispatch({ type: "startRelink", key: item.key });
+            }}
+          >
+            Re-link…
+          </button>
+          <button
+            type="button"
+            data-testid={`menu-item-convert-${String(id)}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              dispatch({ type: "convertToCustom", key: item.key });
+            }}
+          >
+            Convert to Custom URL
+          </button>
+        </>
+      ) : null}
       <button
         type="button"
         data-testid={`menu-item-remove-${String(id)}`}
+        disabled={isUnauthorized}
         onClick={(event) => {
           event.stopPropagation();
           dispatch({ type: "removeItem", key: item.key });

@@ -22,11 +22,22 @@ export interface MenuItemCustomMeta extends MenuItemDisplayAttrs {
 export interface MenuItemEntryMeta extends MenuItemDisplayAttrs {
   readonly kind: "entry";
   readonly entryId: number;
+  /**
+   * Snapshot of the linked entry's label/href at last sync (entered on
+   * save and refreshed by the `entry:trashed` subscriber). Survives
+   * source deletion so the admin can render broken items with their
+   * last-known label and "Convert to Custom URL" can seed `meta.url`.
+   */
+  readonly lastLabel?: string;
+  readonly lastHref?: string;
 }
 
 export interface MenuItemTermMeta extends MenuItemDisplayAttrs {
   readonly kind: "term";
   readonly termId: number;
+  /** See `MenuItemEntryMeta.lastLabel` / `lastHref`. */
+  readonly lastLabel?: string;
+  readonly lastHref?: string;
 }
 
 /**

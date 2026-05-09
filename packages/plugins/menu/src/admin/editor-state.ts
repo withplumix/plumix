@@ -1,4 +1,5 @@
 import type { MenuItemMeta } from "../server/types.js";
+import type { ItemState } from "./item-state.js";
 
 export type ItemKey = string;
 
@@ -9,6 +10,14 @@ export interface EditorItem {
   readonly sortOrder: number;
   readonly title: string | null;
   readonly meta: MenuItemMeta;
+  /**
+   * Per-item state from the server resolver (slice 11). New items
+   * created client-side default to `'ok'` until they round-trip
+   * through save → reload.
+   */
+  readonly state: ItemState;
+  /** Server-resolved display label — picks the right fallback chain. */
+  readonly resolvedLabel: string;
 }
 
 export interface EditorState {
@@ -19,6 +28,12 @@ export interface EditorState {
   readonly maxDepth: number;
   readonly items: readonly EditorItem[];
   readonly selectedKey: ItemKey | null;
+  /**
+   * When non-null, the picker is in re-link mode for that item.
+   * Custom URL panel's primary action becomes "Replace link" instead
+   * of "Add to menu" and dispatches `relinkItem` on the named key.
+   */
+  readonly relinkTargetKey: ItemKey | null;
   readonly dirty: boolean;
   /**
    * Monotonic counter for new-item keys. `state.items.length` would
@@ -37,6 +52,7 @@ export const initialEditorState: EditorState = {
   maxDepth: 5,
   items: [],
   selectedKey: null,
+  relinkTargetKey: null,
   dirty: false,
   nextTmpId: 0,
 };
@@ -47,6 +63,12 @@ interface ServerItemRow {
   readonly sortOrder: number;
   readonly title: string;
   readonly meta: Record<string, unknown>;
+  readonly resolved?: {
+    readonly state: ItemState;
+    readonly label: string;
+    readonly href: string | null;
+    readonly lastHref: string | null;
+  };
 }
 
 interface ServerMenuResponse {
@@ -109,6 +131,22 @@ export type EditorAction =
   | {
       readonly type: "updateMaxDepth";
       readonly value: number;
+    }
+  | {
+      readonly type: "convertToCustom";
+      readonly key: ItemKey;
+    }
+  | {
+      readonly type: "relinkItem";
+      readonly key: ItemKey;
+      readonly newMeta: MenuItemMeta;
+    }
+  | {
+      readonly type: "startRelink";
+      readonly key: ItemKey;
+    }
+  | {
+      readonly type: "cancelRelink";
     };
 
 export function editorReducer(
@@ -126,6 +164,7 @@ export function editorReducer(
         maxDepth: action.response.maxDepth,
         items,
         selectedKey: null,
+        relinkTargetKey: null,
         dirty: false,
         // Reset tmp counter — server-loaded items use `id-N` keys
         // exclusively, so there are no `tmp-*` collisions to worry
@@ -156,7 +195,11 @@ export function editorReducer(
         state.selectedKey !== null && removed.has(state.selectedKey)
           ? null
           : state.selectedKey;
-      return { ...state, items, selectedKey, dirty: true };
+      const relinkTargetKey =
+        state.relinkTargetKey !== null && removed.has(state.relinkTargetKey)
+          ? null
+          : state.relinkTargetKey;
+      return { ...state, items, selectedKey, relinkTargetKey, dirty: true };
     }
     case "selectItem":
       return { ...state, selectedKey: action.key };
@@ -197,6 +240,10 @@ export function editorReducer(
     case "moveItem": {
       const target = state.items.find((item) => item.key === action.key);
       if (!target) return state;
+      // Defense in depth: unauthorized items shouldn't be reorderable.
+      // The drag handle is hidden in the UI, but dnd-kit's pointer
+      // listeners can still fire on the row, so we also reject here.
+      if (target.state === "unauthorized") return state;
       // Guard against cycles: dragging an item onto itself or onto one
       // of its descendants would write a parent chain that has no path
       // to root. `rebuildDfsOrder` walks from null and would produce []
@@ -245,6 +292,38 @@ export function editorReducer(
       if (action.value < deepestDepth(state.items)) return state;
       return { ...state, maxDepth: action.value, dirty: true };
     }
+    case "convertToCustom": {
+      const target = state.items.find((item) => item.key === action.key);
+      if (!target) return state;
+      if (target.meta.kind === "custom") return state;
+      // Seed `meta.url` with the last-known href so the user keeps
+      // the destination context — they can edit from there. Empty
+      // string when no snapshot exists; the user fixes it manually.
+      const lastHref = target.meta.lastHref ?? "";
+      const items = state.items.map((item) =>
+        item.key === action.key
+          ? { ...item, meta: { kind: "custom" as const, url: lastHref } }
+          : item,
+      );
+      return { ...state, items, dirty: true };
+    }
+    case "relinkItem": {
+      const target = state.items.find((item) => item.key === action.key);
+      if (!target) return state;
+      const items = state.items.map((item) =>
+        item.key === action.key ? { ...item, meta: action.newMeta } : item,
+      );
+      // Exiting re-link mode is part of "I picked a replacement"; UI
+      // doesn't have to issue a separate `cancelRelink` afterward.
+      return { ...state, items, relinkTargetKey: null, dirty: true };
+    }
+    case "startRelink": {
+      const target = state.items.find((item) => item.key === action.key);
+      if (!target) return state;
+      return { ...state, relinkTargetKey: action.key };
+    }
+    case "cancelRelink":
+      return { ...state, relinkTargetKey: null };
     case "addItem": {
       const rootSiblings = state.items.filter(
         (item) => item.parentKey === null,
@@ -260,6 +339,9 @@ export function editorReducer(
         sortOrder: lastRootSortOrder + 1,
         title: action.title,
         meta: action.meta,
+        state: "ok",
+        resolvedLabel:
+          action.title ?? labelFromMeta(action.meta) ?? "(unnamed)",
       };
       return {
         ...state,
@@ -380,6 +462,11 @@ function rebuildDfsOrder(items: readonly EditorItem[]): EditorItem[] {
   return out;
 }
 
+function labelFromMeta(meta: MenuItemMeta): string | null {
+  if (meta.kind === "custom") return meta.url || null;
+  return meta.lastLabel ?? null;
+}
+
 function flattenServerItems(rows: readonly ServerItemRow[]): EditorItem[] {
   const childrenByParent = new Map<number | null, ServerItemRow[]>();
   for (const row of rows) {
@@ -403,6 +490,9 @@ function flattenServerItems(rows: readonly ServerItemRow[]): EditorItem[] {
         sortOrder: row.sortOrder,
         title: row.title === "" ? null : row.title,
         meta: row.meta as unknown as MenuItemMeta,
+        state: row.resolved?.state ?? "ok",
+        resolvedLabel:
+          row.resolved?.label ?? (row.title === "" ? "(unnamed)" : row.title),
       });
       walk(row.id, key);
     }

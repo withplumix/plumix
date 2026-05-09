@@ -208,6 +208,94 @@ describe("menu RPC", () => {
       });
       await expect(h.client.menu.get({ termId: cat.id })).rejects.toThrow();
     });
+
+    test("returns each item with a per-item resolved.state — custom URLs are always ok", async () => {
+      // Slice 11: admin RPC enriches each item with state/label/href so
+      // the editor can render broken/unauthorized rows. Custom URL items
+      // never go through a lookup, so they resolve to ok with the meta
+      // url as href.
+      const h = await buildHarness();
+      const m = await seedMenu(h.db, h.factories, "primary", "Primary");
+      const author = await adminUser
+        .transient({ db: h.db })
+        .create({ email: "menuowner@example.test" });
+      const item = await entryFactory.transient({ db: h.db }).create({
+        type: "menu_item",
+        title: "Contact",
+        slug: `mi-custom-${Date.now()}`,
+        status: "published",
+        authorId: author.id,
+        meta: { kind: "custom", url: "/contact" } as unknown as Record<
+          string,
+          unknown
+        >,
+      });
+      await entryTermFactory
+        .transient({ db: h.db })
+        .create({ entryId: item.id, termId: m.id, sortOrder: 0 });
+
+      const result = (await h.client.menu.get({ termId: m.id })) as {
+        items: readonly {
+          id: number;
+          resolved: {
+            state: string;
+            label: string;
+            href: string | null;
+          };
+        }[];
+      };
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0]?.resolved).toEqual({
+        state: "ok",
+        label: "Contact",
+        href: "/contact",
+        lastHref: null,
+      });
+    });
+
+    test("entry-kind item pointing at a non-existent entry resolves to broken with last-known label", async () => {
+      // The entry adapter returns nothing for the dead id, so
+      // mapItemState sees a null lookup → broken. The admin still
+      // surfaces a label by falling through to `meta.lastLabel`
+      // (snapshot from the entry's last sync) rather than a numeric id.
+      const h = await buildHarness();
+      const m = await seedMenu(h.db, h.factories, "primary", "Primary");
+      const author = await adminUser
+        .transient({ db: h.db })
+        .create({ email: "broken@example.test" });
+      const item = await entryFactory.transient({ db: h.db }).create({
+        type: "menu_item",
+        title: "",
+        slug: `mi-broken-${Date.now()}`,
+        status: "published",
+        authorId: author.id,
+        meta: {
+          kind: "entry",
+          entryId: 99999,
+          lastLabel: "Old About",
+          lastHref: "/about-old",
+        } as unknown as Record<string, unknown>,
+      });
+      await entryTermFactory
+        .transient({ db: h.db })
+        .create({ entryId: item.id, termId: m.id, sortOrder: 0 });
+
+      const result = (await h.client.menu.get({ termId: m.id })) as {
+        items: readonly {
+          resolved: {
+            state: string;
+            label: string;
+            href: string | null;
+            lastHref: string | null;
+          };
+        }[];
+      };
+
+      expect(result.items[0]?.resolved.state).toBe("broken");
+      expect(result.items[0]?.resolved.label).toBe("Old About");
+      expect(result.items[0]?.resolved.lastHref).toBe("/about-old");
+    });
   });
 
   describe("menu.save", () => {
