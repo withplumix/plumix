@@ -15,6 +15,7 @@ import {
   terms,
 } from "@plumix/core";
 
+import { getEligibleMenuKinds } from "./server/eligibility.js";
 import { getRegisteredLocations } from "./server/locations.js";
 import { flattenSaveItems, resolveParentIds } from "./server/save.js";
 import { sanitizeMenuHref } from "./server/url.js";
@@ -658,6 +659,26 @@ export function createMenuRouter(): Record<string, unknown> {
       return { location: input.location, termSlug: input.termSlug };
     });
 
+  const pickerTabs = base.use(authenticated).handler(
+    async ({
+      context,
+      errors,
+    }): Promise<
+      readonly {
+        readonly kind: string;
+        readonly tabLabel: string;
+        readonly target?: string;
+      }[]
+    > => {
+      if (!context.auth.can(MENU_MANAGE_CAPABILITY)) {
+        throw errors.FORBIDDEN({
+          data: { capability: MENU_MANAGE_CAPABILITY },
+        });
+      }
+      return Promise.resolve(getEligibleMenuKinds(context.plugins));
+    },
+  );
+
   const locationsList = base
     .use(authenticated)
     .handler(async ({ context, errors }): Promise<readonly LocationRow[]> => {
@@ -726,6 +747,7 @@ export function createMenuRouter(): Record<string, unknown> {
     create,
     delete: remove,
     assignLocation,
+    pickerTabs,
     locations: { list: locationsList },
   };
 }

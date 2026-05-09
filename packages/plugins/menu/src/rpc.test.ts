@@ -168,6 +168,23 @@ describe("menu RPC", () => {
     });
   });
 
+  describe("menu.pickerTabs", () => {
+    test("returns an ordered tab list from the eligibility resolver", async () => {
+      // The admin's left rail builds picker tabs from this list. With
+      // only the menu plugin installed, no entry type or taxonomy is
+      // menu-eligible (`menu_item` and `menu` are both `isPublic: false`)
+      // and the only registered non-built-in lookup adapter is none —
+      // so the response is just the always-present Custom URL tab.
+      const h = await buildHarness();
+      const tabs = (await (
+        h.client.menu as unknown as {
+          pickerTabs: () => Promise<readonly { kind: string }[]>;
+        }
+      ).pickerTabs()) as readonly { kind: string; tabLabel: string }[];
+      expect(tabs.at(-1)).toEqual({ kind: "custom", tabLabel: "Custom URL" });
+    });
+  });
+
   describe("menu.get", () => {
     test("returns a menu's items when found", async () => {
       const h = await buildHarness();

@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import type { MenuListItem, MenuLocationRow } from "./rpc.js";
 import type { TabId } from "./url-state.js";
+import { MenuItemEditor } from "./MenuItemEditor.js";
 import {
   useAssignLocation,
   useCreateMenu,
@@ -10,6 +11,7 @@ import {
   useMenuList,
 } from "./rpc.js";
 import {
+  getSelectedMenuSlug,
   getSelectedTab,
   setSelectedMenu,
   setSelectedTab,
@@ -24,13 +26,19 @@ export function MenusShell(): ReactNode {
   const menus = useMenuList();
   const createMenu = useCreateMenu();
   const [tab, setTab] = useState<TabId>(getSelectedTab());
+  const [slug, setSlug] = useState<string | null>(getSelectedMenuSlug());
 
   function handleCreate(): void {
     const name = window.prompt("Menu name")?.trim();
     if (!name) return;
     createMenu.mutate(
       { name },
-      { onSuccess: (result) => setSelectedMenu(result.slug) },
+      {
+        onSuccess: (result) => {
+          setSelectedMenu(result.slug);
+          setSlug(result.slug);
+        },
+      },
     );
   }
 
@@ -39,15 +47,30 @@ export function MenusShell(): ReactNode {
     setTab(next);
   }
 
+  function handleSelectMenu(next: string): void {
+    setSelectedMenu(next);
+    setSlug(next);
+  }
+
   if (menus.isLoading) {
     return <div data-testid="menus-shell-loading" />;
   }
   const menuList = menus.data ?? [];
+  const selectedMenu =
+    slug === null ? null : (menuList.find((m) => m.slug === slug) ?? null);
   return (
     <div data-testid="menus-shell">
-      <MenuSelector menus={menuList} onCreate={handleCreate} />
+      <MenuSelector
+        menus={menuList}
+        onCreate={handleCreate}
+        onSelect={handleSelectMenu}
+      />
       <Tabs activeTab={tab} onChange={handleTabChange} />
-      {tab === "edit" ? <EditPanel /> : <LocationsPanel menus={menuList} />}
+      {tab === "edit" ? (
+        <EditPanel selectedMenu={selectedMenu} />
+      ) : (
+        <LocationsPanel menus={menuList} />
+      )}
       {menuList.length === 0 ? (
         <div data-testid="menus-empty-cta">
           No menus yet. Create your first menu to get started.
@@ -60,9 +83,11 @@ export function MenusShell(): ReactNode {
 function MenuSelector({
   menus,
   onCreate,
+  onSelect,
 }: {
   readonly menus: readonly MenuListItem[];
   readonly onCreate: () => void;
+  readonly onSelect: (slug: string) => void;
 }): ReactNode {
   return (
     <div data-testid="menus-selector">
@@ -71,6 +96,9 @@ function MenuSelector({
           key={menu.id}
           type="button"
           data-testid={`menus-selector-option-${menu.slug}`}
+          onClick={() => {
+            onSelect(menu.slug);
+          }}
         >
           {menu.name}
         </button>
@@ -112,9 +140,22 @@ function Tabs({
   );
 }
 
-function EditPanel(): ReactNode {
-  // Item editor lands in slice 8.
-  return <div data-testid="menus-tab-edit-panel" />;
+function EditPanel({
+  selectedMenu,
+}: {
+  readonly selectedMenu: MenuListItem | null;
+}): ReactNode {
+  return (
+    <div data-testid="menus-tab-edit-panel">
+      {selectedMenu === null ? (
+        <p data-testid="menus-edit-no-selection">
+          Select a menu to start editing.
+        </p>
+      ) : (
+        <MenuItemEditor termId={selectedMenu.id} />
+      )}
+    </div>
+  );
 }
 
 function LocationsPanel({
