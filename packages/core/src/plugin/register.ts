@@ -13,6 +13,14 @@ export interface PluginInstallResult {
   readonly hooks: HookRegistry;
   readonly registry: PluginRegistry;
   readonly themeExtensions: ReadonlyMap<string, ContextExtensionEntry>;
+  /**
+   * Plugin-contributed AppContext helpers from
+   * `provides(ctx).extendAppContext(...)`. Runtime adapters merge these
+   * onto each per-request `AppContext` so any handler — RPC, route,
+   * scheduled, or hook listener via `requestStore.getStore()` — reads
+   * them as `ctx.<key>`.
+   */
+  readonly appContextExtensions: ReadonlyMap<string, ContextExtensionEntry>;
 }
 
 interface InstallPluginsArgs {
@@ -41,12 +49,14 @@ export async function installPlugins({
 
   const pluginExtensions = new Map<string, ContextExtensionEntry>();
   const themeExtensions = new Map<string, ContextExtensionEntry>();
+  const appContextExtensions = new Map<string, ContextExtensionEntry>();
   for (const descriptor of plugins) {
     if (!descriptor.provides) continue;
     const providesCtx = createPluginProvidesContext({
       pluginId: descriptor.id,
       pluginExtensions,
       themeExtensions,
+      appExtensions: appContextExtensions,
     });
     await descriptor.provides(providesCtx);
   }
@@ -66,5 +76,5 @@ export async function installPlugins({
     await descriptor.setup(ctx, undefined);
   }
 
-  return { hooks, registry, themeExtensions };
+  return { hooks, registry, themeExtensions, appContextExtensions };
 }
