@@ -278,6 +278,43 @@ describe("editorReducer", () => {
       expect(next.dirty).toBe(true);
     });
 
+    test("clears relinkTargetKey if the relinked item was removed", () => {
+      // Otherwise the picker still treats the panel as in re-link mode
+      // for a phantom target — clicking "Replace link" no-ops and
+      // resets the user's typed input.
+      const loaded = editorReducer(initialEditorState, {
+        type: "loadFromServer",
+        response: {
+          id: 1,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 10,
+              parentId: null,
+              sortOrder: 0,
+              title: "Broken",
+              meta: { kind: "entry", entryId: 99999 },
+            },
+          ],
+        },
+      });
+      const relinking = editorReducer(loaded, {
+        type: "startRelink",
+        key: "id-10",
+      });
+      expect(relinking.relinkTargetKey).toBe("id-10");
+
+      const removed = editorReducer(relinking, {
+        type: "removeItem",
+        key: "id-10",
+      });
+
+      expect(removed.relinkTargetKey).toBeNull();
+    });
+
     test("clears selectedKey if the selected item was removed", () => {
       const loaded = editorReducer(initialEditorState, {
         type: "loadFromServer",
@@ -713,6 +750,59 @@ describe("editorReducer", () => {
       expect(next).toBe(loaded);
     });
 
+    test("rejects (no-op) when the targeted item is in unauthorized state", () => {
+      // Defense-in-depth: even if the UI's drag-handle disable slips
+      // and a drag-end fires for an unauthorized row, the reducer
+      // should not write the move into state.
+      const loaded = editorReducer(initialEditorState, {
+        type: "loadFromServer",
+        response: {
+          id: 1,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 10,
+              parentId: null,
+              sortOrder: 0,
+              title: "A",
+              meta: { kind: "entry", entryId: 5 },
+              resolved: {
+                state: "unauthorized",
+                label: "A",
+                href: null,
+                lastHref: null,
+              },
+            },
+            {
+              id: 11,
+              parentId: null,
+              sortOrder: 1,
+              title: "B",
+              meta: { kind: "custom", url: "/b" },
+              resolved: {
+                state: "ok",
+                label: "B",
+                href: "/b",
+                lastHref: null,
+              },
+            },
+          ],
+        },
+      });
+
+      const next = editorReducer(loaded, {
+        type: "moveItem",
+        key: "id-10",
+        newParentKey: null,
+        newSortOrder: 1,
+      });
+
+      expect(next).toBe(loaded);
+    });
+
     test("preserves dirty=false when the projection lands at the item's current position", () => {
       // dnd-kit can fire onDragEnd even for a click-then-release at the
       // same row. The reducer should treat that as a no-op rather than
@@ -810,6 +900,159 @@ describe("editorReducer", () => {
       });
 
       expect(next).toBe(loaded);
+    });
+  });
+
+  describe("convertToCustom", () => {
+    test("rewrites a broken entry-kind item's meta into a custom URL using lastHref", () => {
+      // Slice 11 acceptance: \"Convert to Custom URL action rewrites
+      // meta.kind to 'custom' and seeds meta.url with the last-known
+      // href (so editor doesn't lose the destination context)\".
+      const loaded = editorReducer(initialEditorState, {
+        type: "loadFromServer",
+        response: {
+          id: 1,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 10,
+              parentId: null,
+              sortOrder: 0,
+              title: "About",
+              meta: {
+                kind: "entry",
+                entryId: 99999,
+                lastLabel: "About",
+                lastHref: "/about",
+              },
+            },
+          ],
+        },
+      });
+
+      const next = editorReducer(loaded, {
+        type: "convertToCustom",
+        key: "id-10",
+      });
+
+      expect(next.items[0]?.meta).toEqual({ kind: "custom", url: "/about" });
+      expect(next.dirty).toBe(true);
+    });
+
+    test("is a no-op when the targeted item already has kind=custom", () => {
+      const loaded = editorReducer(initialEditorState, {
+        type: "loadFromServer",
+        response: {
+          id: 1,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 10,
+              parentId: null,
+              sortOrder: 0,
+              title: "Home",
+              meta: { kind: "custom", url: "/" },
+            },
+          ],
+        },
+      });
+
+      const next = editorReducer(loaded, {
+        type: "convertToCustom",
+        key: "id-10",
+      });
+
+      expect(next).toBe(loaded);
+    });
+
+    test("falls back to the empty string when no lastHref is present", () => {
+      // Edge case: item was added before slice 11 so meta.lastHref is
+      // missing. The conversion still runs — Convert is a destructive
+      // affordance the user invokes intentionally — and seeds an empty
+      // url for them to fix.
+      const loaded = editorReducer(initialEditorState, {
+        type: "loadFromServer",
+        response: {
+          id: 1,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 10,
+              parentId: null,
+              sortOrder: 0,
+              title: "Old",
+              meta: { kind: "entry", entryId: 99999 },
+            },
+          ],
+        },
+      });
+
+      const next = editorReducer(loaded, {
+        type: "convertToCustom",
+        key: "id-10",
+      });
+
+      expect(next.items[0]?.meta).toEqual({ kind: "custom", url: "" });
+    });
+  });
+
+  describe("relinkItem", () => {
+    test("replaces meta with the supplied newMeta and marks dirty", () => {
+      // \"Re-link\" hands the user the picker to choose a replacement;
+      // the picker hands the reducer a complete new meta object. The
+      // reducer just swaps it in.
+      const loaded = editorReducer(initialEditorState, {
+        type: "loadFromServer",
+        response: {
+          id: 1,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 10,
+              parentId: null,
+              sortOrder: 0,
+              title: "About",
+              meta: {
+                kind: "entry",
+                entryId: 99999,
+                lastLabel: "About",
+                lastHref: "/about",
+              },
+            },
+          ],
+        },
+      });
+
+      const next = editorReducer(loaded, {
+        type: "relinkItem",
+        key: "id-10",
+        newMeta: {
+          kind: "entry",
+          entryId: 42,
+          lastLabel: "About v2",
+          lastHref: "/about-v2",
+        },
+      });
+
+      expect(next.items[0]?.meta).toEqual({
+        kind: "entry",
+        entryId: 42,
+        lastLabel: "About v2",
+        lastHref: "/about-v2",
+      });
+      expect(next.dirty).toBe(true);
     });
   });
 

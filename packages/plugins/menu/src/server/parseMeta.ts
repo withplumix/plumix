@@ -24,15 +24,39 @@ export function parseMenuItemMeta(raw: unknown): MenuItemMeta | null {
       if (typeof obj.entryId !== "number" || !Number.isFinite(obj.entryId)) {
         return null;
       }
-      return { kind: "entry", entryId: obj.entryId, ...display };
+      return {
+        kind: "entry",
+        entryId: obj.entryId,
+        ...parseSnapshot(obj),
+        ...display,
+      };
     case "term":
       if (typeof obj.termId !== "number" || !Number.isFinite(obj.termId)) {
         return null;
       }
-      return { kind: "term", termId: obj.termId, ...display };
+      return {
+        kind: "term",
+        termId: obj.termId,
+        ...parseSnapshot(obj),
+        ...display,
+      };
     default:
       return null;
   }
+}
+
+function parseSnapshot(obj: Record<string, unknown>): {
+  readonly lastLabel?: string;
+  readonly lastHref?: string;
+} {
+  const out: { lastLabel?: string; lastHref?: string } = {};
+  if (typeof obj.lastLabel === "string" && obj.lastLabel.length > 0) {
+    out.lastLabel = obj.lastLabel;
+  }
+  if (typeof obj.lastHref === "string" && obj.lastHref.length > 0) {
+    out.lastHref = obj.lastHref;
+  }
+  return out;
 }
 
 function parseDisplayAttrs(obj: Record<string, unknown>): MenuItemDisplayAttrs {

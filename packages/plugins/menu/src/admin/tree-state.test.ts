@@ -17,6 +17,8 @@ function row(
     sortOrder,
     title: key,
     meta: { kind: "custom", url: `/${key}` },
+    state: "ok",
+    resolvedLabel: key,
   };
 }
 

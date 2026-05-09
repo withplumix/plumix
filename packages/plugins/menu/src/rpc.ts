@@ -15,8 +15,10 @@ import {
   terms,
 } from "@plumix/core";
 
+import type { ResolvedRow } from "./server/resolveItemStates.js";
 import { getEligibleMenuKinds } from "./server/eligibility.js";
 import { getRegisteredLocations } from "./server/locations.js";
+import { resolveItemStates } from "./server/resolveItemStates.js";
 import { flattenSaveItems, resolveParentIds } from "./server/save.js";
 import { sanitizeMenuHref } from "./server/url.js";
 
@@ -105,21 +107,13 @@ interface MenuListItem {
   readonly itemCount: number;
 }
 
-interface MenuItemRow {
-  readonly id: number;
-  readonly parentId: number | null;
-  readonly sortOrder: number;
-  readonly title: string;
-  readonly meta: Record<string, unknown>;
-}
-
 interface MenuGetResponse {
   readonly id: number;
   readonly slug: string;
   readonly name: string;
   readonly version: number;
   readonly maxDepth: number;
-  readonly items: readonly MenuItemRow[];
+  readonly items: readonly ResolvedRow[];
 }
 
 interface SaveResponse {
@@ -203,13 +197,14 @@ export function createMenuRouter(): Record<string, unknown> {
           ),
         )
         .orderBy(entries.parentId, entries.sortOrder, entries.id);
+      const items = await resolveItemStates(context, rows);
       return {
         id: term.id,
         slug: term.slug,
         name: term.name,
         version: term.version,
         maxDepth: readMaxDepth(term.meta),
-        items: rows,
+        items,
       };
     });
 

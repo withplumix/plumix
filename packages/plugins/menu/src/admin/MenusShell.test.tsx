@@ -801,6 +801,172 @@ describe("MenusShell", () => {
     });
   });
 
+  describe("broken-ref handling", () => {
+    test("renders broken items with a warning, Re-link, and Convert-to-Custom buttons", async () => {
+      // Slice 11: server enriches each item with `resolved.state`. The
+      // editor renders broken rows distinctly and offers inline actions
+      // — Re-link opens the picker in re-link mode, Convert rewrites
+      // meta.kind to 'custom' seeded with the last-known href.
+      window.history.replaceState(
+        {},
+        "",
+        "/_plumix/admin/pages/menus?menu=main",
+      );
+      mockRpc({
+        "/menu/list": [
+          { id: 7, slug: "main", name: "Main", version: 1, itemCount: 1 },
+        ],
+        "/menu/locations/list": [],
+        "/menu/pickerTabs": [{ kind: "custom", tabLabel: "Custom URL" }],
+        "/menu/get": {
+          id: 7,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 30,
+              parentId: null,
+              sortOrder: 0,
+              title: "",
+              meta: {
+                kind: "entry",
+                entryId: 99999,
+                lastLabel: "Old About",
+                lastHref: "/about-old",
+              },
+              resolved: {
+                state: "broken",
+                label: "Old About",
+                href: "/about-old",
+                lastHref: "/about-old",
+              },
+            },
+          ],
+        },
+        "/menu/save": {
+          termId: 7,
+          version: 2,
+          itemIds: [30],
+          added: [],
+          removed: [],
+          modified: [30],
+        },
+      });
+
+      renderShell();
+      const user = userEvent.setup();
+
+      const row = await screen.findByTestId("menu-item-row-30");
+      expect(row.dataset.state).toBe("broken");
+      expect(
+        await screen.findByTestId("menu-item-warning-30"),
+      ).toBeInTheDocument();
+      expect(row).toHaveTextContent("Old About");
+
+      // Convert action seeds custom URL with the last-known href.
+      await user.click(await screen.findByTestId("menu-item-convert-30"));
+      await user.click(await screen.findByTestId("menu-save-button"));
+
+      const call = await vi.waitFor(() => {
+        const found = findRpcCall("/menu/save");
+        if (!found) throw new Error("menu.save not called");
+        return found;
+      });
+      const payload = parseRpcInput<{
+        items: readonly { meta: { kind: string; url?: string } }[];
+      }>(call);
+      expect(payload.items[0]?.meta).toEqual({
+        kind: "custom",
+        url: "/about-old",
+      });
+    });
+
+    test("Re-link opens the picker in re-link mode and replacing dispatches relinkItem", async () => {
+      window.history.replaceState(
+        {},
+        "",
+        "/_plumix/admin/pages/menus?menu=main",
+      );
+      mockRpc({
+        "/menu/list": [
+          { id: 7, slug: "main", name: "Main", version: 1, itemCount: 1 },
+        ],
+        "/menu/locations/list": [],
+        "/menu/pickerTabs": [{ kind: "custom", tabLabel: "Custom URL" }],
+        "/menu/get": {
+          id: 7,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 30,
+              parentId: null,
+              sortOrder: 0,
+              title: "",
+              meta: {
+                kind: "entry",
+                entryId: 99999,
+                lastLabel: "Old About",
+                lastHref: "/about-old",
+              },
+              resolved: {
+                state: "broken",
+                label: "Old About",
+                href: "/about-old",
+                lastHref: "/about-old",
+              },
+            },
+          ],
+        },
+        "/menu/save": {
+          termId: 7,
+          version: 2,
+          itemIds: [30],
+          added: [],
+          removed: [],
+          modified: [30],
+        },
+      });
+
+      renderShell();
+      const user = userEvent.setup();
+
+      await screen.findByTestId("menu-item-row-30");
+      await user.click(await screen.findByTestId("menu-item-relink-30"));
+      // Banner appears with the broken item's last-known label.
+      const banner = await screen.findByTestId("menu-picker-relink-banner");
+      expect(banner).toHaveTextContent("Old About");
+
+      // The Custom URL panel's primary button now reads "Replace link".
+      await user.click(await screen.findByTestId("menu-picker-tab-custom"));
+      await user.type(
+        await screen.findByTestId("menu-picker-custom-url"),
+        "/about-new",
+      );
+      await user.click(await screen.findByTestId("menu-picker-custom-add"));
+
+      // Save and assert the payload carries the new URL on the same id.
+      await user.click(await screen.findByTestId("menu-save-button"));
+      const call = await vi.waitFor(() => {
+        const found = findRpcCall("/menu/save");
+        if (!found) throw new Error("menu.save not called");
+        return found;
+      });
+      const payload = parseRpcInput<{
+        items: readonly { id?: number; meta: { kind: string; url?: string } }[];
+      }>(call);
+      expect(payload.items[0]?.id).toBe(30);
+      expect(payload.items[0]?.meta).toEqual({
+        kind: "custom",
+        url: "/about-new",
+      });
+    });
+  });
+
   describe("max-depth setting", () => {
     test("typing in the max-depth input updates the value the next save sends", async () => {
       // Acceptance: per-menu maxDepth surfaces in the settings panel and

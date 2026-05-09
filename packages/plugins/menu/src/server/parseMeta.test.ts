@@ -30,6 +30,49 @@ describe("parseMenuItemMeta", () => {
     expect(parseMenuItemMeta({ kind: "term" })).toBeNull();
   });
 
+  test("preserves optional lastLabel/lastHref snapshots on entry/term kinds", () => {
+    // Survives source deletion: subscribers refresh these fields
+    // before the entry/term goes away so broken items can render
+    // their last-known label and seed `meta.url` on Convert-to-Custom.
+    expect(
+      parseMenuItemMeta({
+        kind: "entry",
+        entryId: 5,
+        lastLabel: "About",
+        lastHref: "/about",
+      }),
+    ).toEqual({
+      kind: "entry",
+      entryId: 5,
+      lastLabel: "About",
+      lastHref: "/about",
+    });
+    expect(
+      parseMenuItemMeta({
+        kind: "term",
+        termId: 9,
+        lastLabel: "Tag",
+        lastHref: "/tag/x",
+      }),
+    ).toEqual({
+      kind: "term",
+      termId: 9,
+      lastLabel: "Tag",
+      lastHref: "/tag/x",
+    });
+  });
+
+  test("drops invalid lastLabel/lastHref types", () => {
+    expect(
+      parseMenuItemMeta({
+        kind: "entry",
+        entryId: 5,
+        lastLabel: 42,
+        lastHref: { not: "string" },
+      }),
+    ).toEqual({ kind: "entry", entryId: 5 });
+  });
+
   test("rejects unknown kinds and bad shapes", () => {
     expect(parseMenuItemMeta(null)).toBeNull();
     expect(parseMenuItemMeta(undefined)).toBeNull();
