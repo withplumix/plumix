@@ -600,68 +600,6 @@ describe("MenusShell", () => {
       expect(input).toEqual({ location: "footer", termSlug: "main" });
     });
 
-    test("up button on second item swaps it with the first; save sends the new order", async () => {
-      window.history.replaceState(
-        {},
-        "",
-        "/_plumix/admin/pages/menus?menu=main",
-      );
-      mockRpc({
-        "/menu/list": [
-          { id: 7, slug: "main", name: "Main", version: 1, itemCount: 2 },
-        ],
-        "/menu/locations/list": [],
-        "/menu/pickerTabs": [{ kind: "custom", tabLabel: "Custom URL" }],
-        "/menu/get": {
-          id: 7,
-          slug: "main",
-          name: "Main",
-          version: 1,
-          maxDepth: 5,
-          items: [
-            {
-              id: 10,
-              parentId: null,
-              sortOrder: 0,
-              title: "First",
-              meta: { kind: "custom", url: "/1" },
-            },
-            {
-              id: 11,
-              parentId: null,
-              sortOrder: 1,
-              title: "Second",
-              meta: { kind: "custom", url: "/2" },
-            },
-          ],
-        },
-        "/menu/save": {
-          termId: 7,
-          version: 2,
-          itemIds: [11, 10],
-          added: [],
-          removed: [],
-          modified: [10, 11],
-        },
-      });
-
-      renderShell();
-      const user = userEvent.setup();
-      await screen.findByTestId("menu-item-row-11");
-      await user.click(await screen.findByTestId("menu-item-up-11"));
-      await user.click(await screen.findByTestId("menu-save-button"));
-
-      const call = await vi.waitFor(() => {
-        const found = findRpcCall("/menu/save");
-        if (!found) throw new Error("menu.save not called");
-        return found;
-      });
-      const input = parseRpcInput<{
-        items: readonly { id?: number }[];
-      }>(call);
-      expect(input.items.map((i) => i.id)).toEqual([11, 10]);
-    });
-
     test("clicking a row opens a detail panel; clearing the label override saves as title null", async () => {
       window.history.replaceState(
         {},
@@ -765,8 +703,8 @@ describe("MenusShell", () => {
       // The new item appears in the list with the typed label and no
       // RPC has been called yet (acceptance: "ready to save (no
       // immediate persistence)").
-      const list = await screen.findByTestId("menu-item-list");
-      expect(list).toHaveTextContent("Contact");
+      const tree = await screen.findByTestId("menu-tree");
+      expect(tree).toHaveTextContent("Contact");
       expect(findRpcCall("/menu/save")).toBeUndefined();
     });
 
@@ -860,6 +798,147 @@ describe("MenusShell", () => {
       expect(
         await screen.findByTestId("menu-item-list-empty"),
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("max-depth setting", () => {
+    test("typing in the max-depth input updates the value the next save sends", async () => {
+      // Acceptance: per-menu maxDepth surfaces in the settings panel and
+      // round-trips through save. The reducer guards against lowering
+      // below the deepest current item — fixture sits at depth 1 so a
+      // bump to 3 is accepted.
+      window.history.replaceState(
+        {},
+        "",
+        "/_plumix/admin/pages/menus?menu=main",
+      );
+      mockRpc({
+        "/menu/list": [
+          { id: 7, slug: "main", name: "Main", version: 1, itemCount: 2 },
+        ],
+        "/menu/locations/list": [],
+        "/menu/pickerTabs": [{ kind: "custom", tabLabel: "Custom URL" }],
+        "/menu/get": {
+          id: 7,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 10,
+              parentId: null,
+              sortOrder: 0,
+              title: "Parent",
+              meta: { kind: "custom", url: "/p" },
+            },
+            {
+              id: 20,
+              parentId: 10,
+              sortOrder: 0,
+              title: "Child",
+              meta: { kind: "custom", url: "/p/c" },
+            },
+          ],
+        },
+        "/menu/save": {
+          termId: 7,
+          version: 2,
+          itemIds: [10, 20],
+          added: [],
+          removed: [],
+          modified: [],
+        },
+      });
+
+      renderShell();
+      const user = userEvent.setup();
+      const input = await screen.findByTestId<HTMLInputElement>(
+        "menu-settings-max-depth",
+      );
+      expect(input.value).toBe("5");
+      await user.clear(input);
+      await user.type(input, "3");
+      await user.click(await screen.findByTestId("menu-save-button"));
+
+      const call = await vi.waitFor(() => {
+        const found = findRpcCall("/menu/save");
+        if (!found) throw new Error("menu.save not called");
+        return found;
+      });
+      const payload = parseRpcInput<{ maxDepth?: number }>(call);
+      expect(payload.maxDepth).toBe(3);
+    });
+
+    test("typing a value below the deepest item shows an inline error and saves the accepted value", async () => {
+      // Regression: the reducer no-ops `updateMaxDepth` below the
+      // deepest-existing depth. Without an inline error the component
+      // silently kept showing the rejected draft and let the user think
+      // the change took — the save then sent the still-accepted value.
+      window.history.replaceState(
+        {},
+        "",
+        "/_plumix/admin/pages/menus?menu=main",
+      );
+      mockRpc({
+        "/menu/list": [
+          { id: 7, slug: "main", name: "Main", version: 1, itemCount: 2 },
+        ],
+        "/menu/locations/list": [],
+        "/menu/pickerTabs": [{ kind: "custom", tabLabel: "Custom URL" }],
+        "/menu/get": {
+          id: 7,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 10,
+              parentId: null,
+              sortOrder: 0,
+              title: "Parent",
+              meta: { kind: "custom", url: "/p" },
+            },
+            {
+              id: 20,
+              parentId: 10,
+              sortOrder: 0,
+              title: "Child",
+              meta: { kind: "custom", url: "/p/c" },
+            },
+          ],
+        },
+        "/menu/save": {
+          termId: 7,
+          version: 2,
+          itemIds: [10, 20],
+          added: [],
+          removed: [],
+          modified: [],
+        },
+      });
+
+      renderShell();
+      const user = userEvent.setup();
+      const input = await screen.findByTestId<HTMLInputElement>(
+        "menu-settings-max-depth",
+      );
+      await user.clear(input);
+      await user.type(input, "0");
+      // Items have a depth-1 child, so 0 is rejected by the reducer.
+      const error = await screen.findByTestId("menu-settings-max-depth-error");
+      expect(error).toBeInTheDocument();
+
+      await user.click(await screen.findByTestId("menu-save-button"));
+
+      const call = await vi.waitFor(() => {
+        const found = findRpcCall("/menu/save");
+        if (!found) throw new Error("menu.save not called");
+        return found;
+      });
+      const payload = parseRpcInput<{ maxDepth?: number }>(call);
+      expect(payload.maxDepth).toBe(5);
     });
   });
 
