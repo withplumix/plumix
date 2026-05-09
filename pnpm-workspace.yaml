@@ -1,5 +1,7 @@
 packages:
   - "packages/*"
+  - "!packages/plugins"
+  - "!packages/runtimes"
   - "packages/runtimes/*"
   - "packages/plugins/*"
   - "packages/plugins/*/playground"

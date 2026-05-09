@@ -19,7 +19,7 @@
     "knip": "knip",
     "lint": "turbo run lint --continue -- --cache --cache-location .cache/.eslintcache",
     "lint:fix": "turbo run lint --continue -- --fix --cache --cache-location .cache/.eslintcache",
-    "postinstall": "pnpm dlx sherif@latest -r packages-without-package-json",
+    "postinstall": "pnpm dlx sherif@latest -r packages-without-package-json -r non-existant-packages",
     "publint": "turbo run publint",
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
