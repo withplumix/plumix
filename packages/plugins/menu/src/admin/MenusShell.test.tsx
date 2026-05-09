@@ -869,6 +869,77 @@ describe("MenusShell", () => {
       const payload = parseRpcInput<{ maxDepth?: number }>(call);
       expect(payload.maxDepth).toBe(3);
     });
+
+    test("typing a value below the deepest item shows an inline error and saves the accepted value", async () => {
+      // Regression: the reducer no-ops `updateMaxDepth` below the
+      // deepest-existing depth. Without an inline error the component
+      // silently kept showing the rejected draft and let the user think
+      // the change took — the save then sent the still-accepted value.
+      window.history.replaceState(
+        {},
+        "",
+        "/_plumix/admin/pages/menus?menu=main",
+      );
+      mockRpc({
+        "/menu/list": [
+          { id: 7, slug: "main", name: "Main", version: 1, itemCount: 2 },
+        ],
+        "/menu/locations/list": [],
+        "/menu/pickerTabs": [{ kind: "custom", tabLabel: "Custom URL" }],
+        "/menu/get": {
+          id: 7,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 10,
+              parentId: null,
+              sortOrder: 0,
+              title: "Parent",
+              meta: { kind: "custom", url: "/p" },
+            },
+            {
+              id: 20,
+              parentId: 10,
+              sortOrder: 0,
+              title: "Child",
+              meta: { kind: "custom", url: "/p/c" },
+            },
+          ],
+        },
+        "/menu/save": {
+          termId: 7,
+          version: 2,
+          itemIds: [10, 20],
+          added: [],
+          removed: [],
+          modified: [],
+        },
+      });
+
+      renderShell();
+      const user = userEvent.setup();
+      const input = await screen.findByTestId<HTMLInputElement>(
+        "menu-settings-max-depth",
+      );
+      await user.clear(input);
+      await user.type(input, "0");
+      // Items have a depth-1 child, so 0 is rejected by the reducer.
+      const error = await screen.findByTestId("menu-settings-max-depth-error");
+      expect(error).toBeInTheDocument();
+
+      await user.click(await screen.findByTestId("menu-save-button"));
+
+      const call = await vi.waitFor(() => {
+        const found = findRpcCall("/menu/save");
+        if (!found) throw new Error("menu.save not called");
+        return found;
+      });
+      const payload = parseRpcInput<{ maxDepth?: number }>(call);
+      expect(payload.maxDepth).toBe(5);
+    });
   });
 
   describe("menu selector", () => {

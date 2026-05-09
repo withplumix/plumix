@@ -5,6 +5,7 @@
 // `moveItem(parentKey, sortOrder)`.
 
 import type { EditorAction, EditorItem, ItemKey } from "./editor-state.js";
+import { collectSubtreeKeys, computeDepths } from "./editor-state.js";
 
 interface Projection {
   readonly parentKey: ItemKey | null;
@@ -81,6 +82,13 @@ export function getProjection(
   );
 
   const parentKey = resolveParentAtDepth(items, previousItem, depth, depths);
+  // Reject projections that would form a cycle (parent is active itself
+  // or any descendant). The reducer also guards, but null here keeps
+  // the live drop indicator honest.
+  if (parentKey !== null) {
+    const subtree = collectSubtreeKeys(items, activeKey);
+    if (subtree.has(parentKey)) return null;
+  }
   const sortOrder = indexAmongSiblingsAfterMove(
     reordered,
     activeKey,
@@ -112,18 +120,6 @@ function clamp(value: number, min: number, max: number): number {
   if (value < min) return min;
   if (value > max) return max;
   return value;
-}
-
-function computeDepths(items: readonly EditorItem[]): Map<ItemKey, number> {
-  // Items are stored in DFS pre-order, so parents always come before
-  // children — one forward pass is enough.
-  const out = new Map<ItemKey, number>();
-  for (const item of items) {
-    const depth =
-      item.parentKey === null ? 0 : (out.get(item.parentKey) ?? 0) + 1;
-    out.set(item.key, depth);
-  }
-  return out;
 }
 
 function resolveParentAtDepth(

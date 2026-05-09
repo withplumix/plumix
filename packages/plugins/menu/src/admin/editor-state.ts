@@ -197,20 +197,25 @@ export function editorReducer(
     case "moveItem": {
       const target = state.items.find((item) => item.key === action.key);
       if (!target) return state;
+      // Guard against cycles: dragging an item onto itself or onto one
+      // of its descendants would write a parent chain that has no path
+      // to root. `rebuildDfsOrder` walks from null and would produce []
+      // — the entire menu silently disappears.
+      if (action.newParentKey !== null) {
+        const subtree = collectSubtreeKeys(state.items, action.key);
+        if (subtree.has(action.newParentKey)) return state;
+      }
+      const targetUpdated: EditorItem = {
+        ...target,
+        parentKey: action.newParentKey,
+        sortOrder: action.newSortOrder,
+      };
       const updated = state.items.map((item) =>
-        item.key === action.key
-          ? {
-              ...item,
-              parentKey: action.newParentKey,
-              sortOrder: action.newSortOrder,
-            }
-          : item,
+        item.key === action.key ? targetUpdated : item,
       );
       // Re-flow newParentKey's children: drop target out, splice it in at
       // the desired index, renumber 0..n. Anyone else whose order changed
       // gets a fresh sortOrder; the rest stay put.
-      const targetUpdated = updated.find((item) => item.key === action.key);
-      if (!targetUpdated) return state;
       const siblings = updated
         .filter(
           (item) =>
@@ -218,23 +223,25 @@ export function editorReducer(
         )
         .sort((a, b) => a.sortOrder - b.sortOrder);
       siblings.splice(action.newSortOrder, 0, targetUpdated);
-      const newOrderByKey = new Map<ItemKey, number>();
-      siblings.forEach((child, index) => {
-        newOrderByKey.set(child.key, index);
-      });
-      const items = updated.map((item) =>
-        newOrderByKey.has(item.key)
-          ? {
-              ...item,
-              sortOrder: newOrderByKey.get(item.key) ?? item.sortOrder,
-            }
-          : item,
+      const newOrderByKey = new Map(
+        siblings.map((child, index) => [child.key, index]),
       );
+      const items = updated.map((item) => {
+        const nextOrder = newOrderByKey.get(item.key);
+        return nextOrder === undefined
+          ? item
+          : { ...item, sortOrder: nextOrder };
+      });
       const rebuilt = rebuildDfsOrder(items);
       if (deepestDepth(rebuilt) > state.maxDepth) return state;
+      // No-op short-circuit: a drag that ends where it started would
+      // otherwise renumber siblings into identical values and flip
+      // `dirty`, fooling the editor into thinking the menu changed.
+      if (itemsAreEquivalent(state.items, rebuilt)) return state;
       return { ...state, items: rebuilt, dirty: true };
     }
     case "updateMaxDepth": {
+      if (action.value === state.maxDepth) return state;
       if (action.value < deepestDepth(state.items)) return state;
       return { ...state, maxDepth: action.value, dirty: true };
     }
@@ -292,7 +299,7 @@ export function buildSavePayload(
   });
 }
 
-function collectSubtreeKeys(
+export function collectSubtreeKeys(
   items: readonly EditorItem[],
   rootKey: ItemKey,
 ): Set<ItemKey> {
@@ -309,15 +316,42 @@ function collectSubtreeKeys(
   return out;
 }
 
-function deepestDepth(items: readonly EditorItem[]): number {
+function itemsAreEquivalent(
+  a: readonly EditorItem[],
+  b: readonly EditorItem[],
+): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    const x = a[i];
+    const y = b[i];
+    if (
+      x?.key !== y?.key ||
+      x?.parentKey !== y?.parentKey ||
+      x?.sortOrder !== y?.sortOrder
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export function computeDepths(
+  items: readonly EditorItem[],
+): Map<ItemKey, number> {
   // Items are in DFS pre-order, so each parent's depth is already set
   // by the time we reach its children — no second pass needed.
-  const depthByKey = new Map<ItemKey, number>();
-  let max = 0;
+  const out = new Map<ItemKey, number>();
   for (const item of items) {
     const depth =
-      item.parentKey === null ? 0 : (depthByKey.get(item.parentKey) ?? 0) + 1;
-    depthByKey.set(item.key, depth);
+      item.parentKey === null ? 0 : (out.get(item.parentKey) ?? 0) + 1;
+    out.set(item.key, depth);
+  }
+  return out;
+}
+
+function deepestDepth(items: readonly EditorItem[]): number {
+  let max = 0;
+  for (const depth of computeDepths(items).values()) {
     if (depth > max) max = depth;
   }
   return max;

@@ -67,6 +67,18 @@ describe("getProjection", () => {
     });
   });
 
+  test("returns null when the resolved parent is the active item or one of its descendants", () => {
+    // Dragging A onto its own child A.child with rightward offset would
+    // resolve to parentKey === A.child (or even A itself). Releasing
+    // there forms a cycle — the reducer also guards, but failing fast
+    // here means the live drop indicator never lies.
+    const items = [row("a", null, 0), row("achild", "a", 0)];
+
+    const projection = getProjection(items, "a", "achild", 99, 24, 5);
+
+    expect(projection).toBeNull();
+  });
+
   test("caps depth so the active item's subtree stays within maxDepth", () => {
     // Active A has a child at depth 1. Dragging A right behind B would
     // try to nest A under B (depth 1), pushing A.child to depth 2.

@@ -27,6 +27,7 @@ import type {
 import type { PickerTab } from "./rpc.js";
 import {
   buildSavePayload,
+  computeDepths,
   editorReducer,
   initialEditorState,
 } from "./editor-state.js";
@@ -210,6 +211,12 @@ function MaxDepthField({
   useEffect(() => {
     setDraft(String(state.maxDepth));
   }, [state.maxDepth]);
+  // The reducer no-ops `updateMaxDepth` below the deepest-existing
+  // depth. Surface that explicitly so the user can tell their value
+  // didn't take — without this the input keeps showing a number that
+  // never made it into state and the next save sends the old value.
+  const parsed = Number.parseInt(draft, 10);
+  const rejected = Number.isFinite(parsed) && parsed !== state.maxDepth;
   return (
     <label data-testid="menu-settings-max-depth-row">
       Max depth
@@ -221,12 +228,17 @@ function MaxDepthField({
         onChange={(event) => {
           const next = event.target.value;
           setDraft(next);
-          const parsed = Number.parseInt(next, 10);
-          if (Number.isFinite(parsed)) {
-            dispatch({ type: "updateMaxDepth", value: parsed });
+          const nextParsed = Number.parseInt(next, 10);
+          if (Number.isFinite(nextParsed)) {
+            dispatch({ type: "updateMaxDepth", value: nextParsed });
           }
         }}
       />
+      {rejected ? (
+        <span data-testid="menu-settings-max-depth-error">
+          Cannot set below the current deepest item.
+        </span>
+      ) : null}
     </label>
   );
 }
@@ -362,7 +374,7 @@ function MenuTree({
         )
       : null;
 
-  const depths = computeDepths(state);
+  const depths = computeDepths(state.items);
   const itemKeys = state.items.map((item) => item.key);
 
   function reset(): void {
@@ -373,7 +385,7 @@ function MenuTree({
 
   function handleDragMove(event: DragMoveEvent): void {
     setDragOffsetX(event.delta.x);
-    if (event.over) setOverKey(String(event.over.id));
+    setOverKey(event.over ? String(event.over.id) : null);
   }
 
   function handleDragEnd(event: DragEndEvent): void {
@@ -514,17 +526,4 @@ function ItemDetailPanel({
       />
     </div>
   );
-}
-
-function computeDepths(state: EditorState): Map<ItemKey, number> {
-  const depthByKey = new Map<ItemKey, number>();
-  for (const item of state.items) {
-    if (item.parentKey === null) {
-      depthByKey.set(item.key, 0);
-    } else {
-      const parentDepth = depthByKey.get(item.parentKey) ?? 0;
-      depthByKey.set(item.key, parentDepth + 1);
-    }
-  }
-  return depthByKey;
 }

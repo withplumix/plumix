@@ -635,6 +635,126 @@ describe("editorReducer", () => {
       ]);
     });
 
+    test("is a no-op when the new parent is the target itself (no self-cycle)", () => {
+      // Regression: dnd-kit's projection helper can land on a parent
+      // chain that resolves to the active item itself. Without this
+      // guard the reducer happily writes target.parentKey = target.key,
+      // and the next rebuildDfsOrder finds no roots — every entry's
+      // parent chain dead-ends in a cycle, so the walk returns [] and
+      // the entire menu disappears.
+      const loaded = editorReducer(initialEditorState, {
+        type: "loadFromServer",
+        response: {
+          id: 1,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 10,
+              parentId: null,
+              sortOrder: 0,
+              title: "A",
+              meta: { kind: "custom", url: "/a" },
+            },
+          ],
+        },
+      });
+
+      const next = editorReducer(loaded, {
+        type: "moveItem",
+        key: "id-10",
+        newParentKey: "id-10",
+        newSortOrder: 0,
+      });
+
+      expect(next).toBe(loaded);
+    });
+
+    test("is a no-op when the new parent is a descendant of the target (would cycle)", () => {
+      // Same family of bug as the self-parent check above — dragging A
+      // onto its own child A.child can resolve to parentKey=A.child.
+      // The cycle wipes items if accepted.
+      const loaded = editorReducer(initialEditorState, {
+        type: "loadFromServer",
+        response: {
+          id: 1,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 10,
+              parentId: null,
+              sortOrder: 0,
+              title: "A",
+              meta: { kind: "custom", url: "/a" },
+            },
+            {
+              id: 20,
+              parentId: 10,
+              sortOrder: 0,
+              title: "A.child",
+              meta: { kind: "custom", url: "/a/c" },
+            },
+          ],
+        },
+      });
+
+      const next = editorReducer(loaded, {
+        type: "moveItem",
+        key: "id-10",
+        newParentKey: "id-20",
+        newSortOrder: 0,
+      });
+
+      expect(next).toBe(loaded);
+    });
+
+    test("preserves dirty=false when the projection lands at the item's current position", () => {
+      // dnd-kit can fire onDragEnd even for a click-then-release at the
+      // same row. The reducer should treat that as a no-op rather than
+      // re-flowing the same shape and flipping dirty — otherwise just
+      // tapping a row makes the editor think it has unsaved changes.
+      const loaded = editorReducer(initialEditorState, {
+        type: "loadFromServer",
+        response: {
+          id: 1,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 10,
+              parentId: null,
+              sortOrder: 0,
+              title: "A",
+              meta: { kind: "custom", url: "/a" },
+            },
+            {
+              id: 11,
+              parentId: null,
+              sortOrder: 1,
+              title: "B",
+              meta: { kind: "custom", url: "/b" },
+            },
+          ],
+        },
+      });
+
+      const next = editorReducer(loaded, {
+        type: "moveItem",
+        key: "id-10",
+        newParentKey: null,
+        newSortOrder: 0,
+      });
+
+      expect(next).toBe(loaded);
+    });
+
     test("is a no-op when the move would push the target's subtree past maxDepth", () => {
       // maxDepth=2 means depth values 0..2 are allowed. Moving B under A
       // pushes B.grandchild from depth 2 to depth 3, exceeding the cap.
@@ -711,6 +831,27 @@ describe("editorReducer", () => {
 
       expect(next.maxDepth).toBe(7);
       expect(next.dirty).toBe(true);
+    });
+
+    test("preserves dirty=false when the new value equals the current maxDepth", () => {
+      // Symmetric with the no-op short-circuit on `moveItem`. Re-typing
+      // the same number into the field shouldn't flip `dirty` and arm
+      // the save button — there's no observable change.
+      const loaded = editorReducer(initialEditorState, {
+        type: "loadFromServer",
+        response: {
+          id: 1,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [],
+        },
+      });
+
+      const next = editorReducer(loaded, { type: "updateMaxDepth", value: 5 });
+
+      expect(next).toBe(loaded);
     });
 
     test("is a no-op when the new value is below the deepest existing item", () => {
