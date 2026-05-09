@@ -1,5 +1,5 @@
 import type { DerivedCapability } from "../auth/rbac.js";
-import type { AppContext } from "../context/app.js";
+import type { AppContext, AppContextExtensions } from "../context/app.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import type {
@@ -60,6 +60,16 @@ export interface PluginProvidesContext {
   extendThemeContext<TKey extends keyof ThemeContextExtensions>(
     key: TKey,
     value: ThemeContextExtensions[TKey],
+  ): void;
+  /**
+   * Register a runtime helper on every per-request `AppContext`. Reads
+   * are typed via the `AppContextExtensions` declaration-merge target —
+   * a plugin augments it once and `ctx.<key>` is autocompleted in
+   * every RPC/route/hook handler. Duplicate keys throw.
+   */
+  extendAppContext<TKey extends keyof AppContextExtensions>(
+    key: TKey,
+    value: AppContextExtensions[TKey],
   ): void;
 }
 
@@ -218,16 +228,55 @@ interface CreateProvidesContextArgs {
   readonly pluginId: string;
   readonly pluginExtensions: Map<string, ContextExtensionEntry>;
   readonly themeExtensions: Map<string, ContextExtensionEntry>;
+  readonly appExtensions: Map<string, ContextExtensionEntry>;
 }
+
+// Names that would corrupt the per-request `AppContext` if a plugin
+// tried to register them. `__proto__` triggers the Object.prototype
+// setter and reparents the ctx; `constructor` / `prototype` shadow
+// inherited members and confuse downstream introspection.
+const RESERVED_EXTENSION_KEYS: ReadonlySet<string> = new Set([
+  "__proto__",
+  "constructor",
+  "prototype",
+]);
+
+// Built-in `AppContextBase` members. extendAppContext rejects these so
+// a plugin can't silently replace `db`, `auth`, etc. at request time.
+// Mirrors the `key in target` shadow check `extendPluginContext`
+// runs against the constructed PluginSetupContext at install.
+const APP_CONTEXT_BASE_KEYS: ReadonlySet<string> = new Set([
+  "db",
+  "env",
+  "request",
+  "user",
+  "tokenScopes",
+  "hooks",
+  "plugins",
+  "logger",
+  "auth",
+  "authenticator",
+  "bootstrapAllowed",
+  "oauthProviders",
+  "after",
+  "assets",
+  "storage",
+  "imageDelivery",
+  "mailer",
+  "origin",
+  "siteName",
+  "resolvedEntity",
+]);
 
 export function createPluginProvidesContext({
   pluginId,
   pluginExtensions,
   themeExtensions,
+  appExtensions,
 }: CreateProvidesContextArgs): PluginProvidesContext {
   const stash = (
     target: Map<string, ContextExtensionEntry>,
-    kind: "Plugin" | "Theme",
+    kind: "Plugin" | "Theme" | "App",
     key: string,
     value: unknown,
   ): void => {
@@ -235,6 +284,22 @@ export function createPluginProvidesContext({
       throw new Error(
         `Plugin "${pluginId}" called extend${kind}Context with an ` +
           `invalid key — must be a non-empty string.`,
+      );
+    }
+    if (RESERVED_EXTENSION_KEYS.has(key)) {
+      throw new Error(
+        `Plugin "${pluginId}" called extend${kind}Context with the ` +
+          `reserved name "${key}". JS-builtins (\`__proto__\`, ` +
+          `\`constructor\`, \`prototype\`) can't be used as extension ` +
+          `keys — they would corrupt the per-request context object.`,
+      );
+    }
+    if (kind === "App" && APP_CONTEXT_BASE_KEYS.has(key)) {
+      throw new Error(
+        `Plugin "${pluginId}" called extendAppContext with "${key}", ` +
+          `which collides with a built-in AppContext member. The ` +
+          `dispatcher would overwrite the runtime field on every ` +
+          `request — rename the extension to a plugin-scoped key.`,
       );
     }
     const existing = target.get(key);
@@ -255,6 +320,9 @@ export function createPluginProvidesContext({
     },
     extendThemeContext: (key, value) => {
       stash(themeExtensions, "Theme", key, value);
+    },
+    extendAppContext: (key, value) => {
+      stash(appExtensions, "App", key, value);
     },
   };
 }

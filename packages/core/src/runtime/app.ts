@@ -76,17 +76,24 @@ export interface PlumixApp {
   readonly routeMap: readonly RouteRule[];
   readonly rawRoutes: readonly RegisteredRawRoute[];
   readonly capabilityResolver: CapabilityResolver;
+  /**
+   * Plugin-contributed AppContext entries from `extendAppContext`.
+   * Runtime adapters spread these onto every per-request `AppContext`
+   * via `createAppContext({ appContextExtensions })`.
+   */
+  readonly appContextExtensions: ReadonlyMap<string, ContextExtensionEntry>;
 }
 
 export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
   const hooks = new HookRegistry();
   const seededRegistry = createPluginRegistry();
   registerCoreLookupAdapters(seededRegistry);
-  const { registry, themeExtensions } = await installPlugins({
-    hooks,
-    plugins: config.plugins,
-    registry: seededRegistry,
-  });
+  const { registry, themeExtensions, appContextExtensions } =
+    await installPlugins({
+      hooks,
+      plugins: config.plugins,
+      registry: seededRegistry,
+    });
 
   // Themes run after plugins so plugins' `provides` callbacks have already
   // populated `themeExtensions`. Each theme's setup runs in declared
@@ -166,6 +173,7 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     routeMap: compileRouteMap(registry),
     rawRoutes: registry.rawRoutes,
     capabilityResolver: createCapabilityResolver(registry),
+    appContextExtensions,
   };
 }
 

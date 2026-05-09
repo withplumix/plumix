@@ -1,5 +1,8 @@
 import { describe, expect, test } from "vitest";
 
+import type { AppContext } from "../context/app.js";
+import { createAppContext } from "../context/app.js";
+import { getContext, requestStore } from "../context/stores.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "./define.js";
 import { installPlugins } from "./register.js";
@@ -13,6 +16,13 @@ declare module "./context.js" {
   }
   interface ThemeContextExtensions {
     registerMenuLocation(id: string, opts: { readonly label: string }): void;
+  }
+}
+
+declare module "../context/app.js" {
+  interface AppContextExtensions {
+    audit: { readonly log: (message: string) => void };
+    metrics: { readonly inc: (name: string) => void };
   }
 }
 
@@ -169,6 +179,234 @@ describe("provides phase", () => {
     ).rejects.toThrow(
       /Plugin "b" extended.*"registerMenuLocation".*"a" already registered/s,
     );
+  });
+
+  test("app-context extensions are collected and surfaced on the install result", async () => {
+    // Slice 11 deferred subscribers because action handlers couldn't
+    // reach AppContext from the test harness; this opens the door —
+    // a plugin registers a helper, the install result hands it to the
+    // dispatcher, the dispatcher merges it into each per-request ctx.
+    const audit = definePlugin("audit", {
+      provides: (ctx) => {
+        ctx.extendAppContext("audit", {
+          log: (message: string) => `logged:${message}`,
+        });
+      },
+      setup: () => undefined,
+    });
+
+    const result = await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [audit],
+    });
+
+    const entry = result.appContextExtensions.get("audit");
+    expect(entry?.pluginId).toBe("audit");
+    expect(typeof entry?.value).toBe("object");
+  });
+
+  test("createAppContext merges install-result app extensions onto ctx", async () => {
+    // Surface contract: a plugin's extendAppContext entry shows up at
+    // `ctx.<key>` after installPlugins → createAppContext. This is what
+    // RPC handlers, route handlers, and (cycle 4) hook listeners read.
+    const audit = definePlugin("audit", {
+      provides: (ctx) => {
+        ctx.extendAppContext("audit", {
+          log: (m: string) => `audit:${m}`,
+        });
+      },
+      setup: () => undefined,
+    });
+
+    const result = await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [audit],
+    });
+
+    // Stub Db typed as the default CoreSchema so AppContext doesn't
+    // resolve to a non-default generic that breaks requestStore.run().
+    const stubDb = {} as Parameters<typeof createAppContext>[0]["db"];
+    const ctx = createAppContext({
+      db: stubDb,
+      env: {},
+      request: new Request("https://x.example/"),
+      hooks: result.hooks,
+      plugins: result.registry,
+      appContextExtensions: result.appContextExtensions,
+    });
+
+    expect(ctx.audit.log("hello")).toBe("audit:hello");
+  });
+
+  test("createAppContext refuses to overwrite a base field via a malformed extensions map", () => {
+    // Belt-and-braces: even when the registration-time guard is bypassed
+    // (a test or dev tool builds an extensions map by hand), the
+    // dispatcher won't let an entry shadow `db` etc. on the per-request
+    // ctx — fail fast rather than silently corrupt every request.
+    const stubDb = {} as Parameters<typeof createAppContext>[0]["db"];
+    const malformed = new Map<string, { readonly value: unknown }>([
+      ["db", { value: { broken: true } }],
+    ]);
+
+    expect(() =>
+      createAppContext({
+        db: stubDb,
+        env: {},
+        request: new Request("https://x.example/"),
+        hooks: new HookRegistry(),
+        plugins: { entryTypes: new Map() } as never,
+        appContextExtensions: malformed,
+      }),
+    ).toThrow(/"db".*built-in AppContext field/);
+  });
+
+  test("two plugins extending different app-context keys both land on ctx", async () => {
+    const audit = definePlugin("audit", {
+      provides: (ctx) => {
+        ctx.extendAppContext("audit", { log: () => "audit-ok" });
+      },
+      setup: () => undefined,
+    });
+    const metrics = definePlugin("metrics", {
+      provides: (ctx) => {
+        ctx.extendAppContext("metrics", { inc: () => undefined });
+      },
+      setup: () => undefined,
+    });
+
+    const result = await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [audit, metrics],
+    });
+
+    // Stub Db typed as the default CoreSchema so AppContext doesn't
+    // resolve to a non-default generic that breaks requestStore.run().
+    const stubDb = {} as Parameters<typeof createAppContext>[0]["db"];
+    const ctx = createAppContext({
+      db: stubDb,
+      env: {},
+      request: new Request("https://x.example/"),
+      hooks: result.hooks,
+      plugins: result.registry,
+      appContextExtensions: result.appContextExtensions,
+    });
+
+    expect(ctx.audit.log("x")).toBe("audit-ok");
+    expect(typeof ctx.metrics.inc).toBe("function");
+  });
+
+  test("hook listener reads extensions via requestStore.getStore() at fire-time", async () => {
+    // The motivating use case from slice 11 deferred subscribers: a
+    // plugin's `addAction` listener can't take an AppContext arg
+    // because the action signature is fixed, so it pulls ctx out of
+    // the requestStore. Once that ctx carries plugin-contributed
+    // extensions, the listener gets cross-plugin helpers for free.
+    const captured: string[] = [];
+
+    const auditProvider = definePlugin("audit", {
+      provides: (ctx) => {
+        ctx.extendAppContext("audit", {
+          log: (m: string) => {
+            captured.push(m);
+          },
+        });
+      },
+      setup: () => undefined,
+    });
+
+    const consumer = definePlugin("consumer", {
+      setup: (ctx) => {
+        ctx.registerAction("ping", () => {
+          getContext().audit.log("from-listener");
+        });
+      },
+    });
+
+    const result = await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [auditProvider, consumer],
+    });
+
+    // Stub Db typed as the default CoreSchema so AppContext doesn't
+    // resolve to a non-default generic that breaks requestStore.run().
+    const stubDb = {} as Parameters<typeof createAppContext>[0]["db"];
+    const ctx = createAppContext({
+      db: stubDb,
+      env: {},
+      request: new Request("https://x.example/"),
+      hooks: result.hooks,
+      plugins: result.registry,
+      appContextExtensions: result.appContextExtensions,
+    });
+
+    // The hook is registered as a plugin-prefixed dynamic action — its
+    // name isn't in the ActionRegistry, so loosen the call type.
+    const doAction = (name: string): Promise<void> =>
+      (result.hooks.doAction as (name: string) => Promise<void>)(name);
+    await requestStore.run(ctx as AppContext, async () => {
+      await doAction("consumer:ping");
+    });
+
+    expect(captured).toEqual(["from-listener"]);
+  });
+
+  test("extending with a key that shadows a built-in AppContext field throws", async () => {
+    // Without this guard, a plugin calling extendAppContext("db", ...)
+    // would silently overwrite the real database connection on every
+    // request — same hazard the extendPluginContext shadow check
+    // already protects against for setup-time members.
+    const evil = definePlugin("evil", {
+      provides: (ctx) => {
+        (
+          ctx.extendAppContext as unknown as (
+            key: string,
+            value: unknown,
+          ) => void
+        )("db", { broken: true });
+      },
+      setup: () => undefined,
+    });
+
+    await expect(
+      installPlugins({ hooks: new HookRegistry(), plugins: [evil] }),
+    ).rejects.toThrow(/"db".*collides with a built-in AppContext member/s);
+  });
+
+  test("extending with a reserved name like __proto__ throws (no prototype pollution)", async () => {
+    const evil = definePlugin("evil", {
+      provides: (ctx) => {
+        (
+          ctx.extendAppContext as unknown as (
+            key: string,
+            value: unknown,
+          ) => void
+        )("__proto__", { polluted: true });
+      },
+      setup: () => undefined,
+    });
+
+    await expect(
+      installPlugins({ hooks: new HookRegistry(), plugins: [evil] }),
+    ).rejects.toThrow(/reserved name "__proto__"/);
+  });
+
+  test("two plugins extending the same app-context key throw with both ids", async () => {
+    const a = definePlugin("a", {
+      provides: (ctx) => {
+        ctx.extendAppContext("audit", { log: () => undefined });
+      },
+      setup: () => undefined,
+    });
+    const b = definePlugin("b", {
+      provides: (ctx) => {
+        ctx.extendAppContext("audit", { log: () => undefined });
+      },
+      setup: () => undefined,
+    });
+
+    await expect(
+      installPlugins({ hooks: new HookRegistry(), plugins: [a, b] }),
+    ).rejects.toThrow(/Plugin "b" extended.*"audit".*"a" already registered/s);
   });
 
   test("plugin without provides still installs (back-compat)", async () => {

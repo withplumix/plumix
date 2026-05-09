@@ -45,7 +45,19 @@ export interface AuthNamespace {
 
 export type AfterResponse = (promise: Promise<unknown>) => void;
 
-export interface AppContext<
+/**
+ * Declaration-merge target for plugin-contributed AppContext helpers.
+ * `extendAppContext(key, value)` registers an entry; the dispatcher
+ * merges entries onto each per-request `AppContext` so handlers (RPC,
+ * route, hook listeners) read them via `ctx.<key>`.
+ *
+ * Empty by default — plugins augment via TypeScript module merging,
+ * mirroring `PluginContextExtensions` / `ThemeContextExtensions`.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface AppContextExtensions {}
+
+export interface AppContextBase<
   TSchema extends Record<string, unknown> = CoreSchema,
 > {
   readonly db: Db<TSchema>;
@@ -149,6 +161,9 @@ export interface AppContext<
   resolvedEntity: ResolvedEntity | null;
 }
 
+export type AppContext<TSchema extends Record<string, unknown> = CoreSchema> =
+  AppContextBase<TSchema> & AppContextExtensions;
+
 export type AuthenticatedAppContext<
   TSchema extends Record<string, unknown> = CoreSchema,
 > = Omit<AppContext<TSchema>, "user"> & {
@@ -174,6 +189,16 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly oauthProviders?: readonly OAuthProviderSummary[];
   readonly authenticator?: RequestAuthenticator;
   readonly bootstrapAllowed?: boolean;
+  /**
+   * Plugin-contributed `extendAppContext` entries — usually piped
+   * directly from `installPlugins(...).appContextExtensions`. Each
+   * entry's `value` lands at `ctx[key]` so handlers and hook
+   * listeners read them as `ctx.<key>`.
+   */
+  readonly appContextExtensions?: ReadonlyMap<
+    string,
+    { readonly value: unknown }
+  >;
 }
 
 const dropPromise: AfterResponse = () => undefined;
@@ -201,7 +226,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
   const resolver = createCapabilityResolver(args.plugins);
   const user = args.user ?? null;
   const tokenScopes = args.tokenScopes ?? null;
-  return {
+  const base: AppContextBase<TSchema> = {
     db: args.db,
     env: args.env,
     request: args.request,
@@ -229,6 +254,29 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     origin: args.origin ?? new URL(args.request.url).origin,
     siteName: args.siteName,
   };
+  // Spread plugin-contributed entries onto the base. The cast is the
+  // unavoidable seam between an open `Record`-of-unknown registry and
+  // the `AppContextExtensions` declaration-merge type — plugin authors
+  // augment the latter, the dispatcher feeds the former.
+  if (args.appContextExtensions !== undefined) {
+    const target = base as unknown as Record<string, unknown>;
+    for (const [key, entry] of args.appContextExtensions) {
+      // Defense in depth — `extendAppContext` already rejects these at
+      // registration time. Throwing here means a malformed map (built
+      // by a test or dev tool that bypasses the registration guard)
+      // fails fast on the first request rather than silently
+      // corrupting `db` / `auth` / etc. for the rest of the process.
+      if (key in target) {
+        throw new Error(
+          `appContextExtensions entry "${key}" shadows a built-in ` +
+            `AppContext field. Reserve plugin-scoped names; built-in ` +
+            `members like \`db\` and \`auth\` aren't extendable.`,
+        );
+      }
+      target[key] = entry.value;
+    }
+  }
+  return base as AppContext<TSchema>;
 }
 
 export function withUser<TSchema extends Record<string, unknown>>(
