@@ -4,7 +4,7 @@ import type { AuditLogStorage } from "./types.js";
 import * as schema from "./db/schema.js";
 import { createAuditLogRouter } from "./rpc.js";
 import { createAuditService } from "./server/auditService.js";
-import { registerEntryHooks } from "./server/hooks.js";
+import { registerHooks } from "./server/hooks.js";
 import { sqlite } from "./server/storage-sqlite.js";
 
 export type {
@@ -65,7 +65,7 @@ export function auditLog(options: AuditLogPluginOptions = {}) {
 
       ctx.registerRpcRouter(router);
 
-      registerEntryHooks(ctx, service);
+      registerHooks(ctx, service);
 
       ctx.registerAdminPage({
         path: "/audit-log",
