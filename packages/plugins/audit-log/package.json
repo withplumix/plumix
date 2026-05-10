@@ -1,0 +1,86 @@
+{
+  "name": "@plumix/plugin-audit-log",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Activity-feed audit log plugin for Plumix — captures entry, user, term, and settings events to a queryable feed.",
+  "license": "MIT",
+  "author": "Plumix Contributors",
+  "homepage": "https://github.com/withplumix/plumix#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/withplumix/plumix.git",
+    "directory": "packages/plugins/audit-log"
+  },
+  "bugs": {
+    "url": "https://github.com/withplumix/plumix/issues"
+  },
+  "keywords": [
+    "plumix",
+    "plugin",
+    "audit-log",
+    "activity-feed"
+  ],
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "default": "./dist/server/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "attw": "attw --pack . --profile esm-only",
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "format": "prettier --check . --ignore-path ../../../.gitignore",
+    "lint": "eslint",
+    "publint": "publint",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+  },
+  "dependencies": {
+    "@plumix/core": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "valibot": "catalog:"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.99.2",
+    "react": "catalog:"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "catalog:",
+    "@plumix/eslint-config": "workspace:*",
+    "@plumix/prettier-config": "workspace:*",
+    "@plumix/typescript-config": "workspace:*",
+    "@plumix/vitest-config": "workspace:*",
+    "@tanstack/react-query": "^5.99.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "esbuild": "0.27.7",
+    "eslint": "catalog:",
+    "jsdom": "^29.1.1",
+    "prettier": "catalog:",
+    "publint": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "prettier": "@plumix/prettier-config"
+}

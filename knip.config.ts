@@ -118,6 +118,16 @@ const config: KnipConfig = {
         "e2e/*.spec.ts",
       ],
     },
+    // Same shape as plugin-menu: admin chunk loaded via `adminEntry`
+    // at consumer build time; `./server` subpath is consumer-facing
+    // for themes that need server-only helpers.
+    "packages/plugins/audit-log": {
+      entry: [
+        "src/index.ts",
+        "src/admin/index.tsx",
+        "src/server/index.ts",
+      ],
+    },
   },
 };
 
