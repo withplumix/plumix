@@ -139,7 +139,7 @@ function runSanitize(
     // but loses the underlying stack. Log it before translating so
     // server logs preserve the diagnostic trail.
     console.error(
-      `[plumix] sanitize callback for meta key "${key}" threw:`,
+      `[plumix] sanitize callback for meta key ${JSON.stringify(key)} threw:`,
       error,
     );
     throw new MetaSanitizationError(key, "invalid_value");
@@ -194,20 +194,48 @@ export async function validateMetaReferences(
   for (const [key, value] of patch.upserts) {
     const field = findField(key);
     const target = referenceTargetOf(field);
-    if (!target) continue;
-    const registered = ctx.plugins.lookupAdapters.get(target.kind);
-    if (!registered) {
-      throw new MetaSanitizationError(key, "invalid_value");
+    if (target) {
+      const registered = ctx.plugins.lookupAdapters.get(target.kind);
+      if (!registered) {
+        throw new MetaSanitizationError(key, "invalid_value");
+      }
+      const ids = referenceIdsForValidation(
+        key,
+        value,
+        target,
+        fieldMax(field),
+      );
+      const group = upsertGroup(groups, target, registered);
+      for (const id of ids) group.ids.add(id);
+      group.contributions.push({
+        errorKey: key,
+        ids,
+        applyNormalize: (rowsById) => {
+          if (target.valueShape !== "object") return;
+          if (target.multiple) {
+            patch.upserts.set(
+              key,
+              ids.map((id) => buildCachedReference(id, rowsById)),
+            );
+            return;
+          }
+          const [singleId] = ids;
+          if (singleId !== undefined) {
+            patch.upserts.set(key, buildCachedReference(singleId, rowsById));
+          }
+        },
+      });
+      continue;
     }
-    const ids = referenceIdsForValidation(key, value, target, fieldMax(field));
-    const groupKey = referenceGroupKey(target);
-    let group = groups.get(groupKey);
-    if (!group) {
-      group = { registered, scope: target.scope, ids: new Set(), keys: [] };
-      groups.set(groupKey, group);
-    }
-    for (const id of ids) group.ids.add(id);
-    group.keys.push({ key, ids, target });
+    // Repeater fields don't carry a `referenceTarget` themselves but
+    // their rows can. Walk into rows so nested `entry` / `term` /
+    // `user` / `media` refs flow through the same `(kind, scope)`
+    // batch as top-level fields. Errors attribute to the top-level
+    // repeater key — the row index + subKey live in the developer
+    // log, not the wire response (per slice acceptance).
+    if (!isRepeaterField(field)) continue;
+    if (!Array.isArray(value)) continue;
+    collectRepeaterReferences(ctx, key, field, value, groups);
   }
   for (const group of groups.values()) {
     if (group.ids.size === 0) continue;
@@ -219,31 +247,122 @@ export async function validateMetaReferences(
       "validateMetaReferences",
     );
     const rowsById = new Map(liveRows.map((r) => [r.id, r]));
-    for (const upsert of group.keys) {
-      for (const id of upsert.ids) {
+    for (const contribution of group.contributions) {
+      for (const id of contribution.ids) {
         if (!rowsById.has(id)) {
-          throw new MetaSanitizationError(upsert.key, "invalid_value");
+          if (contribution.diagnostic !== undefined) {
+            // Wire error keys on the top-level field; this log line
+            // is the only place the row index + subKey surface, so
+            // an engineer debugging a `meta_invalid_value` on a
+            // repeater can locate the offending subField without
+            // bisecting the saved bag. `JSON.stringify(id)` escapes
+            // control characters so a user-supplied id with newlines
+            // can't poison the log stream.
+            console.error(
+              `[plumix] meta repeater ${JSON.stringify(contribution.errorKey)} ` +
+                `row ${String(contribution.diagnostic.rowIdx)} ` +
+                `subField ${JSON.stringify(contribution.diagnostic.subKey)} ` +
+                `references missing id ${JSON.stringify(id)}`,
+            );
+          }
+          throw new MetaSanitizationError(
+            contribution.errorKey,
+            "invalid_value",
+          );
         }
       }
-      // Cached-object normalize step: replace user-supplied value
-      // with `{ id, ...adapterRow.cached }` (single) or an array
-      // thereof (multi). Adapter is authoritative for cached fields
-      // (mime/filename); user-supplied non-id keys are dropped to
-      // prevent spoofed metadata.
-      if (upsert.target.valueShape !== "object") continue;
-      if (upsert.target.multiple) {
-        patch.upserts.set(
-          upsert.key,
-          upsert.ids.map((id) => buildCachedReference(id, rowsById)),
-        );
-        continue;
-      }
-      const [id] = upsert.ids;
-      if (id !== undefined) {
-        patch.upserts.set(upsert.key, buildCachedReference(id, rowsById));
-      }
+      contribution.applyNormalize(rowsById);
     }
   }
+}
+
+interface RepeaterFieldShape {
+  readonly inputType: "repeater";
+  readonly subFields: readonly MetaBoxField[];
+}
+
+function isRepeaterField(
+  field: MetaBoxField | undefined,
+): field is MetaBoxField & RepeaterFieldShape {
+  if (!field) return false;
+  return (field as { readonly inputType?: unknown }).inputType === "repeater";
+}
+
+function collectRepeaterReferences(
+  ctx: AppContext,
+  topKey: string,
+  field: MetaBoxField & RepeaterFieldShape,
+  rows: readonly unknown[],
+  groups: Map<string, ReferenceGroup>,
+): void {
+  // Nested repeaters are rejected at registration by `repeater()`, so
+  // any subField that's itself a repeater wouldn't get here in
+  // practice. We don't recurse into subField repeaters either way —
+  // single-source-of-truth on the registration guard.
+  for (const [rowIdx, row] of rows.entries()) {
+    if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+    const rowObj = row as Record<string, unknown>;
+    for (const subField of field.subFields) {
+      const target = referenceTargetOf(subField);
+      if (!target) continue;
+      const subValue = rowObj[subField.key];
+      if (subValue === undefined || subValue === null) continue;
+      const registered = ctx.plugins.lookupAdapters.get(target.kind);
+      if (!registered) {
+        throw new MetaSanitizationError(topKey, "invalid_value");
+      }
+      const ids = referenceIdsForValidation(
+        topKey,
+        subValue,
+        target,
+        fieldMax(subField),
+      );
+      const group = upsertGroup(groups, target, registered);
+      for (const id of ids) group.ids.add(id);
+      const subKey = subField.key;
+      group.contributions.push({
+        errorKey: topKey,
+        ids,
+        diagnostic: { rowIdx, subKey },
+        applyNormalize: (rowsById) => {
+          if (target.valueShape !== "object") return;
+          // Rewrite the row's cached-object value in place — the
+          // top-level upsert array is the live storage shape, so
+          // mutating an object inside it is what the caller will
+          // serialize.
+          if (target.multiple) {
+            rowObj[subKey] = ids.map((id) =>
+              buildCachedReference(id, rowsById),
+            );
+            return;
+          }
+          const [singleId] = ids;
+          if (singleId !== undefined) {
+            rowObj[subKey] = buildCachedReference(singleId, rowsById);
+          }
+        },
+      });
+    }
+  }
+}
+
+function upsertGroup(
+  groups: Map<string, ReferenceGroup>,
+  target: ReferenceTarget,
+  registered: { readonly adapter: LookupAdapter },
+): ReferenceGroup {
+  const groupKey = referenceGroupKey(target);
+  let group = groups.get(groupKey);
+  if (!group) {
+    group = {
+      registered,
+      scope: target.scope,
+      ids: new Set(),
+      contributions: [],
+    };
+    groups.set(groupKey, group);
+  }
+  return group;
 }
 
 // Adapter cached fields override anything; user-supplied non-id keys
@@ -266,15 +385,31 @@ interface ReferenceGroup {
   // De-duped ids across every field in this group — one query
   // resolves them all regardless of how many fields reference them.
   readonly ids: Set<string>;
-  // Upsert-side: which keys contributed which ids + the field's
-  // target so the validator can dispatch on `valueShape` for the
-  // normalize step. Per-key error attribution still works on
-  // `key`.
-  readonly keys: {
-    readonly key: string;
-    readonly ids: readonly string[];
-    readonly target: ReferenceTarget;
-  }[];
+  // Per-contribution error attribution + normalize callback. Top-level
+  // and nested-in-repeater contributions share this shape; the
+  // callback closes over the storage location so the validator
+  // doesn't need to rebranch on shape during apply.
+  readonly contributions: ReferenceContribution[];
+}
+
+interface ReferenceContribution {
+  /** The top-level key surfaced in `MetaSanitizationError`. */
+  readonly errorKey: string;
+  readonly ids: readonly string[];
+  /** Rewrite the storage location for cached-object refs. No-op for id-shape. */
+  readonly applyNormalize: (
+    rowsById: ReadonlyMap<string, LookupResult>,
+  ) => void;
+  /**
+   * Diagnostic only — set for nested-in-repeater contributions so
+   * server logs identify the offending row/subField. The wire error
+   * always keys on the top-level field per slice acceptance, but
+   * engineers debugging a save need to know which row.
+   */
+  readonly diagnostic?: {
+    readonly rowIdx: number;
+    readonly subKey: string;
+  };
 }
 
 // Defense-in-depth ceiling on the internal-aggregated id-batch size.
@@ -481,11 +616,17 @@ export async function filterMetaOrphans(
   // accumulate ids per `(kind, scope)` group. Pass 3 walks the cache
   // directly so it doesn't redo the findField / registry lookups.
   interface Candidate {
+    /** Top-level meta key — the storage location for top-level refs. */
     readonly key: string;
     readonly multiple: boolean;
     readonly valueShape: "id" | "object";
     readonly groupKey: string;
     readonly ids: readonly string[];
+    /** When set, the candidate is a reference subField inside a repeater row. */
+    readonly nested?: {
+      readonly rowIdx: number;
+      readonly subKey: string;
+    };
   }
   const candidates: Candidate[] = [];
   const groups = new Map<
@@ -497,27 +638,65 @@ export async function filterMetaOrphans(
     }
   >();
   for (const [key, value] of Object.entries(decoded)) {
-    const target = referenceTargetOf(findField(key));
-    if (!target) continue;
-    const registered = ctx.plugins.lookupAdapters.get(target.kind);
-    if (!registered) continue;
-    const ids = orphanCandidateIds(target, value);
-    if (ids === null) continue; // non-array multi / non-string single — leave untouched
-    const groupKey = referenceGroupKey(target);
-    candidates.push({
-      key,
-      multiple: target.multiple === true,
-      valueShape: target.valueShape ?? "id",
-      groupKey,
-      ids,
-    });
-    if (ids.length === 0) continue; // empty array — apply step still runs, no group work
-    let group = groups.get(groupKey);
-    if (!group) {
-      group = { registered, scope: target.scope, ids: new Set() };
-      groups.set(groupKey, group);
+    const field = findField(key);
+    const target = referenceTargetOf(field);
+    if (target) {
+      const registered = ctx.plugins.lookupAdapters.get(target.kind);
+      if (!registered) continue;
+      const ids = orphanCandidateIds(target, value);
+      if (ids === null) continue; // non-array multi / non-string single — leave untouched
+      const groupKey = referenceGroupKey(target);
+      candidates.push({
+        key,
+        multiple: target.multiple === true,
+        valueShape: target.valueShape ?? "id",
+        groupKey,
+        ids,
+      });
+      if (ids.length === 0) continue;
+      let group = groups.get(groupKey);
+      if (!group) {
+        group = { registered, scope: target.scope, ids: new Set() };
+        groups.set(groupKey, group);
+      }
+      for (const id of ids) group.ids.add(id);
+      continue;
     }
-    for (const id of ids) group.ids.add(id);
+    if (!isRepeaterField(field)) continue;
+    if (!Array.isArray(value)) continue;
+    // Repeater rows: each row's reference subField gets the same
+    // orphan-strip treatment top-level refs receive — caller passes
+    // `decoded` as a freshly-decoded bag, so we mutate the row
+    // objects in place inside the eventual shallow-copy below.
+    for (const [rowIdx, row] of value.entries()) {
+      if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+      const rowObj = row as Record<string, unknown>;
+      for (const subField of field.subFields) {
+        const subTarget = referenceTargetOf(subField);
+        if (!subTarget) continue;
+        const registered = ctx.plugins.lookupAdapters.get(subTarget.kind);
+        if (!registered) continue;
+        const subValue = rowObj[subField.key];
+        const ids = orphanCandidateIds(subTarget, subValue);
+        if (ids === null) continue;
+        const groupKey = referenceGroupKey(subTarget);
+        candidates.push({
+          key,
+          multiple: subTarget.multiple === true,
+          valueShape: subTarget.valueShape ?? "id",
+          groupKey,
+          ids,
+          nested: { rowIdx, subKey: subField.key },
+        });
+        if (ids.length === 0) continue;
+        let group = groups.get(groupKey);
+        if (!group) {
+          group = { registered, scope: subTarget.scope, ids: new Set() };
+          groups.set(groupKey, group);
+        }
+        for (const id of ids) group.ids.add(id);
+      }
+    }
   }
 
   // Pass 2: one `list({ ids })` per group, keyed for O(1) apply lookup.
@@ -539,10 +718,26 @@ export async function filterMetaOrphans(
   //  - single + id: null on missing
   //  - single + object: null on missing; otherwise keep the stored
   //    cached value as-is (no read-time refresh — write rewrites)
+  // Nested-in-repeater candidates rewrite the row's subField slot in
+  // a per-key cloned array so the input bag stays untouched.
   const out: MetaMap = { ...decoded };
   const empty: ReadonlySet<string> = new Set();
-  for (const { key, multiple, valueShape, groupKey, ids } of candidates) {
+  for (const candidate of candidates) {
+    const { key, multiple, valueShape, groupKey, ids, nested } = candidate;
     const liveIds = liveIdsByGroup.get(groupKey) ?? empty;
+    if (nested !== undefined) {
+      const rowObj = takeWritableRow(out, decoded, key, nested.rowIdx);
+      if (!rowObj) continue;
+      applyOrphanToSlot(
+        rowObj,
+        nested.subKey,
+        multiple,
+        valueShape,
+        ids,
+        liveIds,
+      );
+      continue;
+    }
     if (multiple) {
       if (valueShape === "object") {
         const stored = decoded[key] as readonly unknown[];
@@ -560,6 +755,57 @@ export async function filterMetaOrphans(
     if (!liveIds.has(singleId)) out[key] = null;
   }
   return out;
+}
+
+function takeWritableRow(
+  out: MetaMap,
+  decoded: MetaMap,
+  key: string,
+  rowIdx: number,
+): Record<string, unknown> | null {
+  // Lazily clone the rows array (and the targeted row inside it) on
+  // first nested write so the caller's `decoded` bag stays untouched.
+  // Subsequent nested writes hit the same cloned array.
+  let arr: unknown = out[key];
+  if (arr === decoded[key]) {
+    if (!Array.isArray(arr)) return null;
+    const cloned: unknown[] = arr.map((row: unknown) =>
+      row && typeof row === "object" && !Array.isArray(row)
+        ? { ...(row as Record<string, unknown>) }
+        : row,
+    );
+    out[key] = cloned;
+    arr = cloned;
+  }
+  if (!Array.isArray(arr)) return null;
+  const row: unknown = arr[rowIdx];
+  if (!row || typeof row !== "object" || Array.isArray(row)) return null;
+  return row as Record<string, unknown>;
+}
+
+function applyOrphanToSlot(
+  rowObj: Record<string, unknown>,
+  subKey: string,
+  multiple: boolean,
+  valueShape: "id" | "object",
+  ids: readonly string[],
+  liveIds: ReadonlySet<string>,
+): void {
+  if (multiple) {
+    if (valueShape === "object") {
+      const stored = rowObj[subKey] as readonly unknown[];
+      rowObj[subKey] = stored.filter((item) => {
+        const id = extractStringId(item);
+        return id !== null && liveIds.has(id);
+      });
+      return;
+    }
+    rowObj[subKey] = ids.filter((id) => liveIds.has(id));
+    return;
+  }
+  const [singleId] = ids;
+  if (singleId === undefined) return;
+  if (!liveIds.has(singleId)) rowObj[subKey] = null;
 }
 
 // Returns `null` to mean "no candidates from this key" (skip), or

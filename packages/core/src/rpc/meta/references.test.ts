@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import type {
   MetaBoxField,
@@ -925,5 +925,294 @@ describe("validateMetaReferences (multi cached-object shape)", () => {
       gallery: [{ id: "42" }, { id: "43" }],
     });
     expect(filtered.gallery).toEqual([]);
+  });
+});
+
+describe("validateMetaReferences (repeater subFields)", () => {
+  // Repeater rows can contain reference subFields (entry/term/user/media).
+  // v0.1 wrote them through without the live-id check or the cached-
+  // object normalize pass — orphan ids landed in the bag silently.
+  // These tests pin the v0.2 contract: walk into rows, group nested
+  // refs into the same `(kind, scope)` batch as top-level fields, and
+  // surface failures keyed on the top-level repeater key.
+
+  function repeaterWithUserSubField(): {
+    readonly registry: MutablePluginRegistry;
+    readonly findField: (key: string) => MetaBoxField | undefined;
+  } {
+    const registry: MutablePluginRegistry = createPluginRegistry();
+    registerCoreLookupAdapters(registry);
+    const userSubField: MetaBoxField = {
+      key: "owner",
+      label: "Owner",
+      type: "string",
+      inputType: "user",
+      referenceTarget: { kind: "user" },
+    };
+    const repeaterField: MetaBoxField = {
+      key: "rows",
+      label: "Rows",
+      type: "json",
+      inputType: "repeater",
+      subFields: [userSubField],
+    };
+    registry.userMetaBoxes.set("ownership", {
+      id: "ownership",
+      label: "Ownership",
+      fields: [repeaterField],
+      registeredBy: null,
+    });
+    return {
+      registry,
+      findField: (key) =>
+        key === repeaterField.key ? repeaterField : undefined,
+    };
+  }
+
+  test("rejects with meta_invalid_value when a nested ref id is dead", async () => {
+    const { findField, registry } = repeaterWithUserSubField();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+
+    const patch = {
+      upserts: new Map<string, unknown>([["rows", [{ owner: "999999" }]]]),
+      deletes: [] as readonly string[],
+    };
+
+    await expect(
+      validateMetaReferences(h.context, findField, patch),
+    ).rejects.toMatchObject({ reason: "invalid_value", key: "rows" });
+  });
+
+  test("logs row index and subKey on nested rejection so debug logs aren't blind", async () => {
+    // The wire error keys on the top-level repeater field per the
+    // slice's acceptance, so engineers reading server logs would
+    // otherwise have no idea which row or which subField rejected.
+    const { findField, registry } = repeaterWithUserSubField();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+
+    const patch = {
+      upserts: new Map<string, unknown>([
+        [
+          "rows",
+          [
+            { owner: "1" },
+            { owner: "999999" }, // ← the dead one
+          ],
+        ],
+      ]),
+      deletes: [] as readonly string[],
+    };
+
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      // swallow — the test asserts on the captured calls instead.
+    });
+    try {
+      await expect(
+        validateMetaReferences(h.context, findField, patch),
+      ).rejects.toBeInstanceOf(MetaSanitizationError);
+      const lines = errorSpy.mock.calls.map((args) =>
+        args.map(String).join(" "),
+      );
+      const matched = lines.find(
+        (line) =>
+          line.includes("rows") &&
+          line.includes("999999") &&
+          line.includes("owner") &&
+          /row\s*1/.test(line),
+      );
+      expect(matched).toBeDefined();
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  test("rewrites a nested cached-object subField with the adapter's cached snapshot", async () => {
+    // Media-shaped (`valueShape: "object"`) refs inside repeater rows
+    // weren't normalized before — they round-tripped as the user's raw
+    // input, with no `mime` / `filename` snapshot. The new walk applies
+    // the same merge top-level fields receive: spoofed extras drop,
+    // adapter-supplied cached fields land.
+    const registry: MutablePluginRegistry = createPluginRegistry();
+    registry.lookupAdapters.set("stub", {
+      kind: "stub",
+      capability: null,
+      registeredBy: null,
+      adapter: {
+        list: (_ctx, opts) =>
+          Promise.resolve(
+            (opts.ids ?? []).map((id) => ({
+              id,
+              label: `stub-${id}`,
+              cached: { mime: "image/png", filename: "cat.png" },
+            })),
+          ),
+        resolve: () => Promise.resolve(null),
+      },
+    });
+    const heroSubField: MetaBoxField = {
+      key: "hero",
+      label: "Hero",
+      type: "json",
+      inputType: "media",
+      referenceTarget: { kind: "stub", valueShape: "object" },
+    };
+    const repeaterField: MetaBoxField = {
+      key: "rows",
+      label: "Rows",
+      type: "json",
+      inputType: "repeater",
+      subFields: [heroSubField],
+    };
+    registry.userMetaBoxes.set("hero", {
+      id: "hero",
+      label: "Hero",
+      fields: [repeaterField],
+      registeredBy: null,
+    });
+    const findField = (key: string) =>
+      key === "rows" ? repeaterField : undefined;
+
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const rows: { hero: unknown }[] = [
+      // Lenient input: bare id string.
+      { hero: "1" },
+      // Spoofed extras must drop after normalize.
+      { hero: { id: "2", mime: "image/jpeg", spoofed: "ignored" } },
+    ];
+    const patch = {
+      upserts: new Map<string, unknown>([["rows", rows]]),
+      deletes: [] as readonly string[],
+    };
+
+    await validateMetaReferences(h.context, findField, patch);
+
+    expect(rows[0]?.hero).toEqual({
+      id: "1",
+      mime: "image/png",
+      filename: "cat.png",
+    });
+    expect(rows[1]?.hero).toEqual({
+      id: "2",
+      mime: "image/png",
+      filename: "cat.png",
+    });
+  });
+
+  test("groups top-level and nested refs of the same (kind, scope) into one adapter.list call", async () => {
+    // Headline guarantee that mirrors the existing top-level batching
+    // test — the nested walk feeds into the same `(kind, scope)` group,
+    // so a patch with one top-level user field + N user-ref subFields
+    // across M repeater rows still costs exactly one adapter call.
+    const registry = createPluginRegistry();
+    registerCoreLookupAdapters(registry);
+    const userEntry = registry.lookupAdapters.get("user");
+    if (!userEntry) throw new Error("user adapter should be registered");
+    let listCalls = 0;
+    registry.lookupAdapters.set("user", {
+      ...userEntry,
+      adapter: {
+        list: (ctx, options) => {
+          listCalls += 1;
+          return userEntry.adapter.list(ctx, options);
+        },
+        resolve: (ctx, id, scope) => userEntry.adapter.resolve(ctx, id, scope),
+      },
+    });
+    const ownerField: MetaBoxField = {
+      key: "owner",
+      label: "Owner",
+      type: "string",
+      inputType: "user",
+      referenceTarget: { kind: "user" },
+    };
+    const reviewerSubField: MetaBoxField = {
+      key: "reviewer",
+      label: "Reviewer",
+      type: "string",
+      inputType: "user",
+      referenceTarget: { kind: "user" },
+    };
+    const reviewersRepeater: MetaBoxField = {
+      key: "reviewers",
+      label: "Reviewers",
+      type: "json",
+      inputType: "repeater",
+      subFields: [reviewerSubField],
+    };
+    registry.userMetaBoxes.set("ownership", {
+      id: "ownership",
+      label: "Ownership",
+      fields: [ownerField, reviewersRepeater],
+      registeredBy: null,
+    });
+    const findField = (key: string): MetaBoxField | undefined =>
+      key === "owner"
+        ? ownerField
+        : key === "reviewers"
+          ? reviewersRepeater
+          : undefined;
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const owner = await userFactory.transient({ db: h.context.db }).create();
+    const r1 = await userFactory.transient({ db: h.context.db }).create();
+    const r2 = await userFactory.transient({ db: h.context.db }).create();
+
+    const patch = {
+      upserts: new Map<string, unknown>([
+        ["owner", String(owner.id)],
+        [
+          "reviewers",
+          [{ reviewer: String(r1.id) }, { reviewer: String(r2.id) }],
+        ],
+      ]),
+      deletes: [] as readonly string[],
+    };
+
+    await validateMetaReferences(h.context, findField, patch);
+    expect(listCalls).toBe(1);
+  });
+});
+
+describe("filterMetaOrphans (repeater subFields)", () => {
+  test("nulls out a nested orphan single ref on read", async () => {
+    // A concurrent delete between save and read can leave a dead id in
+    // the meta bag. Top-level refs already null-out on read; nested
+    // refs need the same treatment so a stale row doesn't leak through
+    // the resolved view.
+    const registry: MutablePluginRegistry = createPluginRegistry();
+    registerCoreLookupAdapters(registry);
+    const ownerSubField: MetaBoxField = {
+      key: "owner",
+      label: "Owner",
+      type: "string",
+      inputType: "user",
+      referenceTarget: { kind: "user" },
+    };
+    const repeaterField: MetaBoxField = {
+      key: "rows",
+      label: "Rows",
+      type: "json",
+      inputType: "repeater",
+      subFields: [ownerSubField],
+    };
+    registry.userMetaBoxes.set("ownership", {
+      id: "ownership",
+      label: "Ownership",
+      fields: [repeaterField],
+      registeredBy: null,
+    });
+    const findField = (key: string) =>
+      key === "rows" ? repeaterField : undefined;
+
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const live = await userFactory.transient({ db: h.context.db }).create();
+
+    const filtered = await filterMetaOrphans(h.context, findField, {
+      rows: [{ owner: String(live.id) }, { owner: "999999" }],
+    });
+
+    const rows = filtered.rows as readonly { readonly owner: unknown }[];
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.owner).toBe(String(live.id));
+    expect(rows[1]?.owner).toBeNull();
   });
 });
