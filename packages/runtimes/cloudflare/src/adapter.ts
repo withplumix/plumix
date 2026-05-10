@@ -175,8 +175,14 @@ function buildFetch(app: PlumixApp): FetchHandler {
       const workerCtx = isExecutionContext(executionCtx)
         ? executionCtx
         : undefined;
-      const after = workerCtx
-        ? (promise: Promise<unknown>) => workerCtx.waitUntil(promise)
+      // Route fire-and-forget work through `waitUntil` so the isolate
+      // stays alive past the response. `createAppContext` wraps this
+      // with a `.catch` that logs through the configured logger, so
+      // a rejected deferred promise can't surface as an
+      // `unhandledRejection` (which the platform would otherwise mark
+      // as a failed request in the dashboard).
+      const defer = workerCtx
+        ? (promise: Promise<unknown>): void => workerCtx.waitUntil(promise)
         : undefined;
 
       const { database } = app.config;
@@ -208,7 +214,7 @@ function buildFetch(app: PlumixApp): FetchHandler {
         request,
         hooks: app.hooks,
         plugins: app.plugins,
-        after,
+        defer,
         assets: readAssetsBinding(env),
         storage,
         imageDelivery: app.config.imageDelivery,

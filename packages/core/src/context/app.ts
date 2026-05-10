@@ -43,7 +43,26 @@ export interface AuthNamespace {
   can(capability: KnownCapability | (string & {})): boolean;
 }
 
-export type AfterResponse = (promise: Promise<unknown>) => void;
+/**
+ * Schedule fire-and-forget work whose result the caller doesn't await.
+ * Runtime adapters bind this to their platform primitive:
+ *
+ * - Cloudflare Workers: `executionCtx.waitUntil(promise)` — extends
+ *   the worker's lifetime past the response so background work
+ *   completes before the isolate is recycled.
+ * - Long-lived runtimes (Node, Bun): the default `void p.catch(...)`
+ *   shim in `createAppContext` — the event loop holds the promise;
+ *   rejections are caught and logged so an unhandled rejection
+ *   doesn't crash the process.
+ * - Test runtimes: a queue + `drainDeferred()` helper for harness
+ *   assertions on background work.
+ *
+ * `defer` itself never throws — pass any promise, log-and-forget is
+ * the contract. Rejection logging always routes through `ctx.logger`
+ * so an operator-wired logger sees deferred rejections regardless of
+ * which runtime is underneath.
+ */
+export type DeferFn = (promise: Promise<unknown>) => void;
 
 /**
  * Declaration-merge target for plugin-contributed AppContext helpers.
@@ -98,12 +117,13 @@ export interface AppContextBase<
    */
   readonly oauthProviders: readonly OAuthProviderSummary[];
   /**
-   * Extend work past the returned Response. Runtime adapters bind this
-   * to their platform primitive (CF Workers: `ExecutionContext.waitUntil`).
-   * Default: fire-and-forget — handlers must tolerate the promise being
-   * dropped on runtimes that opt out.
+   * Extend work past the returned Response — see `DeferFn` for the
+   * full per-runtime contract. Default fallback (long-lived runtimes,
+   * tests with no adapter wired) catches rejections and logs them
+   * via `ctx.logger.error` so a fire-and-forget plugin task can't
+   * crash the process on an unhandled rejection.
    */
-  readonly after: AfterResponse;
+  readonly defer: DeferFn;
   /**
    * Platform asset serving, when the runtime exposes one. Populated by
    * the CF adapter from `env.ASSETS`; undefined on runtimes without an
@@ -181,7 +201,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly origin?: string;
   readonly siteName?: string;
   readonly logger?: Logger;
-  readonly after?: AfterResponse;
+  readonly defer?: DeferFn;
   readonly assets?: AssetsBinding;
   readonly storage?: ConnectedObjectStorage;
   readonly imageDelivery?: ImageDelivery;
@@ -201,7 +221,46 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   >;
 }
 
-const dropPromise: AfterResponse = () => undefined;
+function logRejection(logger: Logger, error: unknown): void {
+  // Both the error message and the raw value land in the log — the
+  // message is the grep-friendly bit; the raw value (with stack) goes
+  // through the logger's `meta` channel for structured backends.
+  // Wrapped in try/catch because a custom logger backend can throw
+  // (broken transport, fs full, etc.); a fire-and-forget task must
+  // not surface a downstream rejection just because logging failed.
+  const message = errorMessage(error);
+  try {
+    logger.error(`[plumix] deferred promise rejected: ${message}`, {
+      error,
+    });
+  } catch {
+    // Best-effort logging — swallow.
+  }
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return String(error);
+}
+
+function wrapDefer(logger: Logger, target: DeferFn | undefined): DeferFn {
+  // Wrap the caller's `defer` so the inner promise's rejection is
+  // logged through the configured logger before the runtime sees it.
+  // Runtimes (cloudflare, tests) only handle the success path —
+  // logging is centralised here so an operator's structured logger
+  // always wins.
+  return (promise) => {
+    const handled = promise.catch((error: unknown) => {
+      logRejection(logger, error);
+    });
+    if (target === undefined) {
+      void handled;
+      return;
+    }
+    target(handled);
+  };
+}
 
 function makeAuthCan(
   resolver: ReturnType<typeof createCapabilityResolver>,
@@ -238,7 +297,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     auth: {
       can: makeAuthCan(resolver, user, tokenScopes),
     },
-    after: args.after ?? dropPromise,
+    defer: wrapDefer(args.logger ?? consoleLogger, args.defer),
     assets: args.assets,
     storage: args.storage,
     imageDelivery: args.imageDelivery,
