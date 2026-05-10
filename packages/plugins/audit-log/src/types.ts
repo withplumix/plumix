@@ -17,6 +17,26 @@ export interface AuditLogRow {
 export interface AuditLogQueryFilter {
   /** Result cap. Defaults to 50; storage adapters clamp at their own ceiling. */
   readonly limit?: number;
+  /** Restrict to rows whose `actor_id` matches. */
+  readonly actorId?: number;
+  /** Restrict to a subject kind (`entry`, `user`, …). */
+  readonly subjectType?: string;
+  /** Restrict to a single subject row (usually combined with `subjectType`). */
+  readonly subjectId?: string;
+  /** Indexed prefix range scan over `event` — `entry:`, `user:`, etc. */
+  readonly eventPrefix?: string;
+  /** Inclusive lower bound, epoch seconds. */
+  readonly occurredAfter?: number;
+  /** Inclusive upper bound, epoch seconds. */
+  readonly occurredBefore?: number;
+  /** Opaque cursor from a previous page's `nextCursor`. */
+  readonly cursor?: string;
+}
+
+export interface AuditLogQueryResult {
+  readonly rows: readonly AuditLogRow[];
+  /** Opaque cursor for the next page; `null` when the current page is the last. */
+  readonly nextCursor: string | null;
 }
 
 /**
@@ -31,11 +51,11 @@ export interface AuditLogStorage {
   readonly schemaModule?: Record<string, unknown>;
   /** Batch insert. The audit-log service buffers per-request and calls this once. */
   write(ctx: AppContext, rows: readonly NewAuditLogRow[]): Promise<void>;
-  /** Latest-first read for the admin feed. */
+  /** Latest-first read for the admin feed; honors filter + cursor pagination. */
   query(
     ctx: AppContext,
     filter: AuditLogQueryFilter,
-  ): Promise<readonly AuditLogRow[]>;
+  ): Promise<AuditLogQueryResult>;
 }
 
 export type AuditLogActor =
