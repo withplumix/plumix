@@ -34,6 +34,9 @@ export type {
   CreateDispatcherHarnessOptions,
 } from "./dispatcher.js";
 
+export { createDeferQueue } from "./defer.js";
+export type { DeferQueue } from "./defer.js";
+
 export { createRpcHarness } from "./rpc.js";
 export type {
   RpcHarness,
