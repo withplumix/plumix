@@ -1,12 +1,14 @@
 import { definePlugin } from "plumix/plugin";
 
 import type { AuditExtension } from "./server/auditExtension.js";
+import type { AuditLogRetentionConfig } from "./server/retention.js";
 import type { AuditLogStorage } from "./types.js";
 import * as schema from "./db/schema.js";
 import { createAuditLogRouter } from "./rpc.js";
 import { createAuditExtension } from "./server/auditExtension.js";
 import { createAuditService } from "./server/auditService.js";
 import { registerHooks } from "./server/hooks.js";
+import { assertValidRetention, DEFAULT_RETENTION } from "./server/retention.js";
 import { sqlite } from "./server/storage-sqlite.js";
 
 export type {
@@ -15,6 +17,17 @@ export type {
   AuditLogQueryFilter,
 } from "./types.js";
 export type { AuditExtension, AuditLogInput } from "./server/auditExtension.js";
+export type {
+  AuditLogRetentionConfig,
+  AuditLogRetentionPolicy,
+  RunRetentionPurgeArgs,
+  RunRetentionPurgeResult,
+} from "./server/retention.js";
+export {
+  assertValidRetention,
+  DEFAULT_RETENTION,
+  runRetentionPurge,
+} from "./server/retention.js";
 export { sqlite } from "./server/storage-sqlite.js";
 
 // Declaration-merge contribution. Declared optional so consumers that
@@ -34,6 +47,13 @@ export interface AuditLogPluginOptions {
    * BigQuery, ...) without touching the plugin's write pipeline.
    */
   readonly storage?: AuditLogStorage;
+  /**
+   * How long rows are kept. Defaults to `{ maxAgeDays: 90 }`. Pass
+   * `retention: false` to keep rows forever. Triggering the purge is
+   * a separate concern — call `runRetentionPurge(ctx, ...)` from your
+   * ops script or a scheduled handler.
+   */
+  readonly retention?: AuditLogRetentionConfig;
 }
 
 const ADMIN_ENTRY_PATH =
@@ -89,6 +109,8 @@ const AUDIT_LOG_READ_CAPABILITY = "audit_log:read";
  */
 export function auditLog(options: AuditLogPluginOptions = {}) {
   const storage = options.storage ?? sqlite();
+  // Fail fast on misconfigured retention — see assertValidRetention.
+  assertValidRetention(options.retention ?? DEFAULT_RETENTION);
   const service = createAuditService(storage);
   const router = createAuditLogRouter(storage);
   const extension = createAuditExtension(service);

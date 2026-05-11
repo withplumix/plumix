@@ -20,6 +20,9 @@ const schemaImports = schema as unknown as Record<string, unknown>;
 
 let cachedStatements: string[] | null = null;
 
+// drizzle-kit's `api` surface is loosely typed (`SQLiteSchema` is opaque);
+// we treat it as a black-box snapshot blob and only read its `id` field.
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access */
 async function compileSchemaSql(): Promise<string[]> {
   if (cachedStatements) return cachedStatements;
   const empty = await generateSQLiteDrizzleJson({}, undefined, "snake_case");
@@ -31,6 +34,7 @@ async function compileSchemaSql(): Promise<string[]> {
   cachedStatements = await generateSQLiteMigration(empty, current);
   return cachedStatements;
 }
+/* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access */
 
 async function createDb(): Promise<TestDb> {
   const client = createClient({ url: ":memory:" });
@@ -298,5 +302,69 @@ describe("sqlite() storage adapter — filter + cursor pagination", () => {
       eventPrefix: "entry:",
     });
     expect(result.rows.map((r) => r.subjectId)).toEqual(["c", "a"]);
+  });
+});
+
+describe("sqlite() storage adapter — purge", () => {
+  let db: TestDb;
+  let ctx: AppContext;
+  let adapter: ReturnType<typeof sqlite>;
+
+  beforeEach(async () => {
+    db = await createDb();
+    ctx = ctxFor(db);
+    adapter = sqlite();
+  });
+
+  async function runPurge(cutoff: Date) {
+    if (!adapter.purge) {
+      throw new Error("sqlite() adapter must implement purge");
+    }
+    return adapter.purge(ctx, { cutoff });
+  }
+
+  test("deletes rows strictly older than the cutoff and reports the count", async () => {
+    await db.insert(auditLog).values([
+      row({ occurredAt: new Date("2026-01-01T00:00:00Z"), subjectId: "old-1" }),
+      row({ occurredAt: new Date("2026-02-01T00:00:00Z"), subjectId: "old-2" }),
+      row({
+        occurredAt: new Date("2026-04-11T00:00:00Z"),
+        subjectId: "boundary",
+      }),
+      row({
+        occurredAt: new Date("2026-04-15T00:00:00Z"),
+        subjectId: "kept-1",
+      }),
+      row({
+        occurredAt: new Date("2026-05-11T00:00:00Z"),
+        subjectId: "kept-2",
+      }),
+    ]);
+
+    const result = await runPurge(new Date("2026-04-11T00:00:00Z"));
+
+    expect(result.deleted).toBe(2);
+
+    const remaining = await adapter.query(ctx, {});
+    expect(remaining.rows.map((r) => r.subjectId).sort()).toEqual([
+      "boundary",
+      "kept-1",
+      "kept-2",
+    ]);
+  });
+
+  test("returns deleted: 0 when no rows match the cutoff", async () => {
+    await db
+      .insert(auditLog)
+      .values([row({ occurredAt: new Date("2026-05-11T00:00:00Z") })]);
+
+    const result = await runPurge(new Date("2026-01-01T00:00:00Z"));
+
+    expect(result.deleted).toBe(0);
+  });
+
+  test("empty table — deleted: 0", async () => {
+    const result = await runPurge(new Date("2026-05-11T00:00:00Z"));
+    expect(result.deleted).toBe(0);
   });
 });

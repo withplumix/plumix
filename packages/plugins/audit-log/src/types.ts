@@ -56,6 +56,15 @@ export interface AuditLogStorage {
     ctx: AppContext,
     filter: AuditLogQueryFilter,
   ): Promise<AuditLogQueryResult>;
+  /**
+   * Delete rows older than `cutoff`. Optional — adapters that can't
+   * express this (e.g. append-only analytics sinks) omit it and the
+   * retention runner short-circuits with a warning.
+   */
+  purge?(
+    ctx: AppContext,
+    args: { readonly cutoff: Date },
+  ): Promise<{ readonly deleted: number }>;
 }
 
 export type AuditLogActor =
