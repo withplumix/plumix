@@ -29,6 +29,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
+import { TEMPLATE_DEP_OVERRIDES } from "./template-deps.mjs";
 import {
   addWorkspacePath,
   rewriteTemplatePackageJson,
@@ -48,22 +49,6 @@ const LOCKFILE_BACKUP = `${LOCKFILE}.template-typecheck-backup`;
 const TEMPLATE_PKG_BACKUP = `${TEMPLATE_PKG}.template-typecheck-backup`;
 
 const WORKSPACE_PATH = "packages/create-plumix-app/templates/*";
-const DEP_OVERRIDES = {
-  plumix: "workspace:*",
-  "@plumix/runtime-cloudflare": "workspace:*",
-  "@plumix/plugin-blog": "workspace:*",
-  "@plumix/plugin-pages": "workspace:*",
-  "drizzle-orm": "catalog:",
-  react: "catalog:",
-  "react-dom": "catalog:",
-  "@cloudflare/workers-types": "catalog:",
-  "@types/node": "catalog:",
-  "@types/react": "catalog:",
-  "@types/react-dom": "catalog:",
-  "drizzle-kit": "catalog:",
-  typescript: "catalog:",
-  wrangler: "catalog:",
-};
 
 let restored = false;
 
@@ -141,7 +126,7 @@ try {
     TEMPLATE_PKG,
     rewriteTemplatePackageJson(
       readFileSync(TEMPLATE_PKG, "utf-8"),
-      DEP_OVERRIDES,
+      TEMPLATE_DEP_OVERRIDES,
     ),
   );
 

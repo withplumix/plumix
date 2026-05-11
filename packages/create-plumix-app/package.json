@@ -41,6 +41,7 @@
     "publint": "publint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false",
+    "verify:scaffold": "node scripts/verify-scaffold.mjs",
     "verify:template": "node scripts/typecheck-template.mjs"
   },
   "devDependencies": {
