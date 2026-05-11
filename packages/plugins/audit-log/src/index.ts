@@ -1,8 +1,10 @@
 import { definePlugin } from "@plumix/core";
 
+import type { AuditExtension } from "./server/auditExtension.js";
 import type { AuditLogStorage } from "./types.js";
 import * as schema from "./db/schema.js";
 import { createAuditLogRouter } from "./rpc.js";
+import { createAuditExtension } from "./server/auditExtension.js";
 import { createAuditService } from "./server/auditService.js";
 import { registerHooks } from "./server/hooks.js";
 import { sqlite } from "./server/storage-sqlite.js";
@@ -12,7 +14,18 @@ export type {
   AuditLogRow,
   AuditLogQueryFilter,
 } from "./types.js";
+export type { AuditExtension, AuditLogInput } from "./server/auditExtension.js";
 export { sqlite } from "./server/storage-sqlite.js";
+
+// Declaration-merge contribution. Declared optional so consumers that
+// don't install the plugin can still write `ctx.audit?.log(...)` and
+// have it compile + no-op at runtime. The augmentation is picked up
+// automatically when any module imports from `@plumix/plugin-audit-log`.
+declare module "@plumix/core" {
+  interface AppContextExtensions {
+    readonly audit?: AuditExtension;
+  }
+}
 
 export interface AuditLogPluginOptions {
   /**
@@ -51,15 +64,41 @@ const AUDIT_LOG_READ_CAPABILITY = "audit_log:read";
  * - **RPC** `auditLog.list` is gated on the `audit_log:read`
  *   capability (admin-only by default); slice #180 adds filter +
  *   cursor pagination.
+ * - **Public API** `ctx.audit.log({ event, subject, properties })`
+ *   from #181 — third-party plugins emit their own events through
+ *   the same buffered flush. Drops the call when `ctx.user` is null
+ *   so frontend / anonymous events can't leak into the admin feed.
+ *
+ * Example — a comments plugin records moderation actions:
+ *
+ *     definePlugin("comments", {
+ *       setup: (ctx) => {
+ *         ctx.addAction("comment:approved", (comment) => {
+ *           // `tryGetContext()` returns the current AppContext, which
+ *           // carries `ctx.audit` when the audit-log plugin is also
+ *           // installed; the optional chain makes this a no-op when
+ *           // it isn't.
+ *           tryGetContext()?.audit?.log({
+ *             event: "comment:approved",
+ *             subject: { type: "comment", id: comment.id, label: comment.body.slice(0, 40) },
+ *             properties: { postId: comment.postId },
+ *           });
+ *         });
+ *       },
+ *     });
  */
 export function auditLog(options: AuditLogPluginOptions = {}) {
   const storage = options.storage ?? sqlite();
   const service = createAuditService(storage);
   const router = createAuditLogRouter(storage);
+  const extension = createAuditExtension(service);
 
   return definePlugin("audit_log", {
     adminEntry: ADMIN_ENTRY_PATH,
     schema: storage.schemaModule ?? schema,
+    provides: (ctx) => {
+      ctx.extendAppContext("audit", extension);
+    },
     setup: (ctx) => {
       ctx.registerCapability(AUDIT_LOG_READ_CAPABILITY, "admin");
 
