@@ -26,6 +26,7 @@ import type {
   PluginRouteAuth,
   PluginRouteMethod,
   PluginRpcRouter,
+  ScheduledTask,
   SettingsGroupOptions,
   SettingsPageOptions,
   TermMetaBoxOptions,
@@ -212,6 +213,19 @@ export interface PluginSetupContextBase {
    * OAuth-shaped (SAML, custom SSO).
    */
   registerLoginLink(options: LoginLinkOptions): void;
+
+  /**
+   * Register periodic work that fires on the runtime's scheduled
+   * trigger (Cloudflare cron). The handler receives a synthetic-
+   * request `AppContext` — `user` is `null`, `request` is an internal
+   * marker, all other fields (`db`, `hooks`, `logger`, `defer`) match
+   * a normal request.
+   *
+   * `id` must be unique within the plugin. v1 dispatch fires ALL
+   * registered tasks on every scheduled invocation regardless of
+   * `cron`; per-task cron filtering is a follow-up.
+   */
+  registerScheduledTask(task: ScheduledTask): void;
 }
 
 export type PluginSetupContext = PluginSetupContextBase &
@@ -628,6 +642,22 @@ export function createPluginSetupContext({
         registeredBy: pluginId,
       });
     },
+
+    registerScheduledTask: (task) => {
+      assertValidScheduledTask(pluginId, task);
+      for (const existing of registry.scheduledTasks) {
+        if (existing.registeredBy === pluginId && existing.id === task.id) {
+          throw new DuplicateRegistrationError(
+            "scheduled task",
+            `${pluginId}:${task.id}`,
+          );
+        }
+      }
+      registry.scheduledTasks.push({
+        ...task,
+        registeredBy: pluginId,
+      });
+    },
   };
 
   if (extensions && extensions.size > 0) {
@@ -720,6 +750,23 @@ function assertValidLookupAdapterKind(pluginId: string, kind: string): void {
 // keeps the wire id `${pluginId}:${key}` from looking like an opaque
 // numeric identifier in logs.
 const LOGIN_LINK_KEY_RE = /^[a-z][a-z0-9_-]{0,31}$/;
+
+const SCHEDULED_TASK_ID_RE = /^[a-z0-9][a-z0-9_/-]{0,63}$/i;
+
+function assertValidScheduledTask(pluginId: string, task: ScheduledTask): void {
+  if (!SCHEDULED_TASK_ID_RE.test(task.id)) {
+    throw new Error(
+      `Plugin "${pluginId}" registered a scheduled task with invalid id ` +
+        `"${task.id}" — must be alphanum + dash/underscore/slash, 1..64 chars.`,
+    );
+  }
+  if (typeof task.handler !== "function") {
+    throw new Error(
+      `Plugin "${pluginId}" registered scheduled task "${task.id}" without ` +
+        `a handler function.`,
+    );
+  }
+}
 
 function assertValidLoginLink(
   pluginId: string,

@@ -992,6 +992,28 @@ export interface RegisteredLoginLink extends LoginLinkOptions {
   readonly registeredBy: string;
 }
 
+/**
+ * Plugin-registered work that fires on the runtime's scheduled trigger
+ * (Cloudflare cron, future Node/Bun timers). The handler receives a
+ * synthetic-request `AppContext` — same `db` / `hooks` / `logger` /
+ * `defer` as a normal request, but `user` is `null` and `request` is
+ * an internal marker.
+ *
+ * v1 dispatch fires every registered task on every scheduled
+ * invocation regardless of `cron`. Operators are responsible for
+ * configuring `wrangler.toml [triggers] crons` to match the intended
+ * cadence; per-task cron filtering is a follow-up.
+ */
+export interface ScheduledTask {
+  readonly id: string;
+  readonly cron?: string;
+  readonly handler: (ctx: AppContext) => void | Promise<void>;
+}
+
+export interface RegisteredScheduledTask extends ScheduledTask {
+  readonly registeredBy: string;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type PluginRpcRouter = Record<string, any>;
 
@@ -1021,6 +1043,7 @@ export interface PluginRegistry {
   readonly blocks: ReadonlyMap<string, RegisteredBlock>;
   readonly fieldTypes: ReadonlyMap<string, RegisteredFieldType>;
   readonly lookupAdapters: ReadonlyMap<string, RegisteredLookupAdapter>;
+  readonly scheduledTasks: readonly RegisteredScheduledTask[];
 }
 
 export interface MutablePluginRegistry extends PluginRegistry {
@@ -1040,6 +1063,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly blocks: Map<string, RegisteredBlock>;
   readonly fieldTypes: Map<string, RegisteredFieldType>;
   readonly lookupAdapters: Map<string, RegisteredLookupAdapter>;
+  readonly scheduledTasks: RegisteredScheduledTask[];
 }
 
 export function createPluginRegistry(): MutablePluginRegistry {
@@ -1060,6 +1084,7 @@ export function createPluginRegistry(): MutablePluginRegistry {
     blocks: new Map(),
     fieldTypes: new Map(),
     lookupAdapters: new Map(),
+    scheduledTasks: [],
   };
 }
 

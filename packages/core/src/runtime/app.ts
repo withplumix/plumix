@@ -7,7 +7,11 @@ import type { SessionPolicy } from "../auth/sessions.js";
 import type { PlumixConfig } from "../config.js";
 import type { AppContext } from "../context/app.js";
 import type { ContextExtensionEntry } from "../plugin/context.js";
-import type { PluginRegistry, RegisteredRawRoute } from "../plugin/manifest.js";
+import type {
+  PluginRegistry,
+  RegisteredRawRoute,
+  RegisteredScheduledTask,
+} from "../plugin/manifest.js";
 import type { RouteRule } from "../route/intent.js";
 import type { ThemeSetupContext, ThemeSetupContextBase } from "../theme.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
@@ -82,6 +86,13 @@ export interface PlumixApp {
    * via `createAppContext({ appContextExtensions })`.
    */
   readonly appContextExtensions: ReadonlyMap<string, ContextExtensionEntry>;
+  /**
+   * Plugin-contributed scheduled tasks from `registerScheduledTask`.
+   * Runtime adapters' `buildScheduledHandler` iterates this list on
+   * every scheduled invocation; `runScheduledTasks(app, ctx)` is the
+   * shared dispatch helper.
+   */
+  readonly scheduledTasks: readonly RegisteredScheduledTask[];
 }
 
 export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
@@ -174,6 +185,7 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     rawRoutes: registry.rawRoutes,
     capabilityResolver: createCapabilityResolver(registry),
     appContextExtensions,
+    scheduledTasks: registry.scheduledTasks,
   };
 }
 

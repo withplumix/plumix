@@ -879,3 +879,90 @@ describe("registerLoginLink", () => {
     );
   });
 });
+
+describe("registerScheduledTask", () => {
+  test("stores entries with the plugin id attached", async () => {
+    const hooks = new HookRegistry();
+    const handler = () => undefined;
+    const plugin = definePlugin("audit-log", (ctx) => {
+      ctx.registerScheduledTask({
+        id: "retention-purge",
+        cron: "0 3 * * *",
+        handler,
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    expect(registry.scheduledTasks).toEqual([
+      {
+        id: "retention-purge",
+        cron: "0 3 * * *",
+        handler,
+        registeredBy: "audit-log",
+      },
+    ]);
+  });
+
+  test("two plugins can each contribute one task", async () => {
+    const hooks = new HookRegistry();
+    const a = definePlugin("plugin-a", (ctx) => {
+      ctx.registerScheduledTask({ id: "t", handler: () => undefined });
+    });
+    const b = definePlugin("plugin-b", (ctx) => {
+      ctx.registerScheduledTask({ id: "t", handler: () => undefined });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [a, b] });
+    expect(registry.scheduledTasks).toHaveLength(2);
+    expect(registry.scheduledTasks.map((task) => task.registeredBy)).toEqual([
+      "plugin-a",
+      "plugin-b",
+    ]);
+  });
+
+  test("rejects duplicate id from the same plugin", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("acme", (ctx) => {
+      ctx.registerScheduledTask({ id: "purge", handler: () => undefined });
+      ctx.registerScheduledTask({ id: "purge", handler: () => undefined });
+    });
+    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
+      /already registered/,
+    );
+  });
+
+  test.each([
+    ["empty id", ""],
+    ["over 64 chars", "x".repeat(65)],
+    ["space in id", "bad id"],
+    ["dot in id", "audit.log"],
+    ["leading dash", "-cleanup"],
+  ])("rejects invalid id: %s", async (_name, id) => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("acme", (ctx) => {
+      ctx.registerScheduledTask({ id, handler: () => undefined });
+    });
+    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
+      /invalid id/,
+    );
+  });
+
+  test("accepts compound ids with slashes and underscores", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("audit-log", (ctx) => {
+      ctx.registerScheduledTask({
+        id: "retention/daily_purge",
+        handler: () => undefined,
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    expect(registry.scheduledTasks[0]?.id).toBe("retention/daily_purge");
+  });
+
+  test("cron is optional — task without one still registers", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("p", (ctx) => {
+      ctx.registerScheduledTask({ id: "t", handler: () => undefined });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    expect(registry.scheduledTasks[0]?.cron).toBeUndefined();
+  });
+});

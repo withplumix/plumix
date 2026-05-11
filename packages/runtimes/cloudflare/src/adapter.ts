@@ -6,6 +6,7 @@ import type {
   PlumixApp,
   PlumixEnv,
   RuntimeAdapter,
+  ScheduledHandler,
 } from "plumix";
 import {
   createAppContext,
@@ -13,6 +14,7 @@ import {
   jsonResponse,
   readSessionCookie,
   requestStore,
+  runScheduledTasks,
 } from "plumix";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
@@ -137,6 +139,7 @@ export function cloudflare(): RuntimeAdapter {
   return {
     name: "cloudflare",
     buildFetchHandler: buildFetch,
+    buildScheduledHandler: buildScheduled,
     commandsModule: "@plumix/runtime-cloudflare/commands",
   };
 }
@@ -229,6 +232,85 @@ function buildFetch(app: PlumixApp): FetchHandler {
       return finalize(response);
     } catch (error) {
       return handleAdapterFailure(error);
+    }
+  };
+}
+
+function buildScheduled(app: PlumixApp): ScheduledHandler {
+  if (typeof AsyncLocalStorage !== "function") {
+    throw new Error(
+      '@plumix/runtime-cloudflare requires AsyncLocalStorage. Add `compatibility_flags = ["nodejs_compat"]` to wrangler.toml.',
+    );
+  }
+
+  let bindingsValidated = false;
+
+  return async (event, env, executionCtx): Promise<void> => {
+    if (!bindingsValidated) {
+      validateBindings(app, env);
+      bindingsValidated = true;
+    }
+
+    const workerCtx = isExecutionContext(executionCtx)
+      ? executionCtx
+      : undefined;
+    const defer = workerCtx
+      ? (promise: Promise<unknown>): void => workerCtx.waitUntil(promise)
+      : undefined;
+
+    // Synthetic request representing the cron invocation. Anything that
+    // reads `ctx.request.url` from a scheduled task sees an internal
+    // marker rather than a real inbound request.
+    const syntheticRequest = new Request(
+      `${app.origin}/_plumix/internal/scheduled?cron=${encodeURIComponent(event.cron)}`,
+      { method: "POST" },
+    );
+
+    const { database } = app.config;
+    // Scheduled invocations are always treated as writes (purges
+    // mutate state); pass through `database.connectRequest` so deploys
+    // that route writes to a primary D1 do so for scheduled work too.
+    const scoped = database.connectRequest?.({
+      env,
+      request: syntheticRequest,
+      schema: app.schema,
+      isAuthenticated: false,
+      isWrite: true,
+    });
+    const db = scoped
+      ? scoped.db
+      : database.connect(env, syntheticRequest, app.schema).db;
+
+    const storage = app.config.storage?.connect(env);
+
+    const appCtx = createAppContext({
+      db: db as Db,
+      env: env as PlumixEnv,
+      request: syntheticRequest,
+      hooks: app.hooks,
+      plugins: app.plugins,
+      defer,
+      assets: readAssetsBinding(env),
+      storage,
+      imageDelivery: app.config.imageDelivery,
+      mailer: app.config.mailer,
+      oauthProviders: app.oauthProviders,
+      authenticator: app.authenticator,
+      bootstrapAllowed: app.bootstrapAllowed,
+      origin: app.origin,
+      siteName: app.config.auth.magicLink?.siteName,
+      appContextExtensions: app.appContextExtensions,
+    });
+
+    try {
+      await requestStore.run(appCtx, () => runScheduledTasks(app, appCtx));
+      // `commit` finalizes the scoped write (e.g. flushing the D1 batch).
+      // Synchronous return — same shape as buildFetch's `finalize`.
+      if (scoped) scoped.commit(new Response(null));
+    } catch (error) {
+      if (typeof console !== "undefined") {
+        console.error("[plumix/runtime-cloudflare] scheduled_failure", error);
+      }
     }
   };
 }
