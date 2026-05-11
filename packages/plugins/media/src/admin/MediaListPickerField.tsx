@@ -1,7 +1,6 @@
+import type { MetaBoxFieldManifestEntry } from "plumix/plugin";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-
-import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 
 import { MediaLibrary } from "./MediaLibrary.js";
 

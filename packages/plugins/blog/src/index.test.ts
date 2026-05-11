@@ -1,6 +1,5 @@
+import { HookRegistry, installPlugins } from "plumix/plugin";
 import { describe, expect, test } from "vitest";
-
-import { HookRegistry, installPlugins } from "@plumix/core";
 
 import { blog } from "./index.js";
 

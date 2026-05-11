@@ -1,11 +1,10 @@
-import { describe, expect, test } from "vitest";
-
 import {
   buildManifest,
   definePlugin,
   HookRegistry,
   installPlugins,
-} from "@plumix/core";
+} from "plumix/plugin";
+import { describe, expect, test } from "vitest";
 
 import type {
   MediaFieldOptions,

@@ -10,9 +10,8 @@
 // - Tampered cursors decode-fail in storage and surface as a typed
 //   `BAD_REQUEST` (`reason: "invalid_cursor"`), never a 5xx.
 
+import { authenticated, base } from "plumix/plugin";
 import * as v from "valibot";
-
-import { authenticated, base } from "@plumix/core";
 
 import type { AuditLogQueryResult, AuditLogStorage } from "./types.js";
 import { CursorError } from "./server/cursor.js";

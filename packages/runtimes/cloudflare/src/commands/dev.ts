@@ -1,4 +1,4 @@
-import type { CommandDefinition } from "@plumix/core";
+import type { CommandDefinition } from "plumix";
 
 import { createCloudflareVite } from "./vite.js";
 

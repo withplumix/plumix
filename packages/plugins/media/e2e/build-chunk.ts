@@ -6,8 +6,7 @@
 
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-
-import { buildAdminPluginChunkForE2E } from "@plumix/core/test/playwright";
+import { buildAdminPluginChunkForE2E } from "plumix/test/playwright";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PLUGIN_ROOT = resolve(HERE, "..");

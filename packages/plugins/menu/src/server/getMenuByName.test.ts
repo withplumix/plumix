@@ -1,7 +1,5 @@
+import type { AppContext, PluginRegistry } from "plumix/plugin";
 import { eq } from "drizzle-orm";
-import { beforeEach, describe, expect, test } from "vitest";
-
-import type { AppContext, PluginRegistry } from "@plumix/core";
 import {
   createPluginRegistry,
   definePlugin,
@@ -9,14 +7,15 @@ import {
   HookRegistry,
   installPlugins,
   registerCoreLookupAdapters,
-} from "@plumix/core";
+} from "plumix/plugin";
 import {
   adminUser,
   createTestDb,
   entryFactory,
   entryTermFactory,
   factoriesFor,
-} from "@plumix/core/test";
+} from "plumix/test";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import type { MenuItemMeta } from "./types.js";
 import { getMenuByName } from "./getMenuByName.js";

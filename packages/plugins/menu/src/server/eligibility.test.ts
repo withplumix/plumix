@@ -1,13 +1,12 @@
-import { describe, expect, test } from "vitest";
-
-import type { PluginRegistry } from "@plumix/core";
+import type { PluginRegistry } from "plumix/plugin";
 import {
   createPluginRegistry,
   definePlugin,
   HookRegistry,
   installPlugins,
   registerCoreLookupAdapters,
-} from "@plumix/core";
+} from "plumix/plugin";
+import { describe, expect, test } from "vitest";
 
 import { getEligibleMenuKinds } from "./eligibility.js";
 

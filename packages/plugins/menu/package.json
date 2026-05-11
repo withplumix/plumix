@@ -55,12 +55,12 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "@plumix/core": "workspace:*",
     "drizzle-orm": "catalog:",
     "valibot": "catalog:"
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.99.2",
+    "plumix": "workspace:*",
     "react": "catalog:"
   },
   "devDependencies": {
@@ -79,9 +79,9 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitest/coverage-v8": "catalog:",
-    "esbuild": "0.27.7",
     "eslint": "catalog:",
     "jsdom": "^29.1.1",
+    "plumix": "workspace:*",
     "prettier": "catalog:",
     "publint": "catalog:",
     "react": "catalog:",

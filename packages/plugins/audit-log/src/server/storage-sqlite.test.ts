@@ -1,3 +1,4 @@
+import type { AppContext } from "plumix/plugin";
 import { createClient } from "@libsql/client";
 import {
   generateSQLiteDrizzleJson,
@@ -6,8 +7,6 @@ import {
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 import { beforeEach, describe, expect, test } from "vitest";
-
-import type { AppContext } from "@plumix/core";
 
 import type { NewAuditLogRow } from "../db/schema.js";
 import * as schema from "../db/schema.js";

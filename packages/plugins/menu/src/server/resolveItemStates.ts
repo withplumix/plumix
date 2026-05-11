@@ -7,7 +7,7 @@
 // broken items silently for public output. This one keeps them so the
 // editor can surface them with a warning + Re-link affordances.
 
-import type { AppContext, LookupResult } from "@plumix/core";
+import type { AppContext, LookupResult } from "plumix/plugin";
 
 import type { ItemState } from "../admin/item-state.js";
 import type { MenuItemMeta } from "./types.js";

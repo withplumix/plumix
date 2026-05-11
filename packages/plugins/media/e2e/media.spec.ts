@@ -1,5 +1,5 @@
 // Plugin E2E. Mocks the manifest + session + RPC layer using
-// `@plumix/core/test/playwright` so we exercise the real built admin
+// `plumix/test/playwright` so we exercise the real built admin
 // chunk against a deterministic backend — no D1/R2 needed for CI.
 // (Manual end-to-end against a real worker lives in `playground/`,
 // run via `pnpm --filter @plumix/plugin-media-playground dev`.)
@@ -12,16 +12,15 @@
 //   4. Delete removes the card after confirmation.
 
 import type { Page, Route } from "@playwright/test";
+import type { PlumixManifest } from "plumix/plugin";
 import { expect, test } from "@playwright/test";
-
-import type { PlumixManifest } from "@plumix/core/manifest";
-import { emptyManifest } from "@plumix/core/manifest";
+import { emptyManifest } from "plumix/plugin";
 import {
   AUTHED_ADMIN,
   mockManifest,
   rpcOkBody,
   withCapabilities,
-} from "@plumix/core/test/playwright";
+} from "plumix/test/playwright";
 
 const MEDIA_NAV_LABEL = "Media Library";
 

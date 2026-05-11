@@ -1,7 +1,6 @@
+import { entries, HookRegistry, installPlugins } from "plumix/plugin";
+import { createRpcHarness } from "plumix/test";
 import { describe, expect, test } from "vitest";
-
-import { entries, HookRegistry, installPlugins } from "@plumix/core";
-import { createRpcHarness } from "@plumix/core/test";
 
 import { media } from "./index.js";
 import { mediaLookupAdapter } from "./lookup.js";

@@ -1,17 +1,16 @@
-import { createRouterClient } from "@orpc/server";
-import { describe, expect, test } from "vitest";
-
 import type {
   AppContext,
   RequestAuthenticator,
   User,
   UserRole,
-} from "@plumix/core";
+} from "plumix/plugin";
+import { createRouterClient } from "@orpc/server";
 import {
   createAppContext,
   createPluginRegistry,
   HookRegistry,
-} from "@plumix/core";
+} from "plumix/plugin";
+import { describe, expect, test } from "vitest";
 
 import type {
   AuditLogQueryFilter,

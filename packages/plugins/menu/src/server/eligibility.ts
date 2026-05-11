@@ -1,4 +1,4 @@
-import type { PluginRegistry } from "@plumix/core";
+import type { PluginRegistry } from "plumix/plugin";
 
 /**
  * One picker tab in the admin's "Add menu items" rail. The tab label

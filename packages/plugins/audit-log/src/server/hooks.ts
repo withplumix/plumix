@@ -19,8 +19,8 @@ import type {
   PluginSetupContext,
   Term,
   User,
-} from "@plumix/core";
-import { tryGetContext } from "@plumix/core";
+} from "plumix/plugin";
+import { tryGetContext } from "plumix/plugin";
 
 import type { NewAuditLogRow } from "../db/schema.js";
 import type { AuditLogActor } from "../types.js";

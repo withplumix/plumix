@@ -46,8 +46,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
-  "dependencies": {
-    "@plumix/core": "workspace:*"
+  "peerDependencies": {
+    "plumix": "workspace:*"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
@@ -57,6 +57,7 @@
     "@plumix/vitest-config": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
     "eslint": "catalog:",
+    "plumix": "workspace:*",
     "prettier": "catalog:",
     "publint": "catalog:",
     "typescript": "catalog:",

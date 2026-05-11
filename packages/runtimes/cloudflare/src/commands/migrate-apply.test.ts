@@ -1,6 +1,5 @@
+import type { CommandContext, PlumixApp } from "plumix";
 import { afterEach, describe, expect, test, vi } from "vitest";
-
-import type { CommandContext, PlumixApp } from "@plumix/core";
 
 import { migrateApplyCommand, migrateApplyDeps } from "./migrate-apply.js";
 

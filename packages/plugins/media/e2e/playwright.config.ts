@@ -1,4 +1,4 @@
-import { definePlumixE2EConfig } from "@plumix/core/test/playwright";
+import { definePlumixE2EConfig } from "plumix/test/playwright";
 
 const E2E_PORT = 5181;
 const ADMIN_BASE = "/_plumix/admin";

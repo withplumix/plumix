@@ -51,12 +51,12 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@plumix/core": "workspace:*",
     "drizzle-orm": "catalog:",
     "valibot": "catalog:"
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.99.2",
+    "plumix": "workspace:*",
     "react": "catalog:"
   },
   "devDependencies": {
@@ -75,9 +75,9 @@
     "@types/react-dom": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "drizzle-kit": "catalog:",
-    "esbuild": "0.27.7",
     "eslint": "catalog:",
     "jsdom": "^29.1.1",
+    "plumix": "workspace:*",
     "prettier": "catalog:",
     "publint": "catalog:",
     "react": "catalog:",

@@ -1,11 +1,10 @@
-import { drizzle } from "drizzle-orm/d1";
-
 import type {
   DatabaseAdapter,
   RequestScopedDb,
   RequestScopedDbArgs,
-} from "@plumix/core";
-import { isSecureRequest, readSessionCookie } from "@plumix/core";
+} from "plumix";
+import { drizzle } from "drizzle-orm/d1";
+import { isSecureRequest, readSessionCookie } from "plumix";
 
 import {
   buildBookmarkCookie,

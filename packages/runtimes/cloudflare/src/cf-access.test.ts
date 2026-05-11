@@ -1,7 +1,6 @@
+import type { Db } from "plumix";
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-
-import type { Db } from "@plumix/core";
 
 import { cfAccess, cfAccessLogoutUrl } from "./cf-access.js";
 
@@ -186,7 +185,7 @@ describe("cfAccess.authenticate — full crypto path", () => {
     "provisions and returns the user when the JWT is valid",
     { timeout: 30_000 },
     async () => {
-      const { createTestDb } = await import("@plumix/core/test");
+      const { createTestDb } = await import("plumix/test");
       const db = await createTestDb();
 
       const guard = cfAccess({
@@ -213,7 +212,7 @@ describe("cfAccess.authenticate — full crypto path", () => {
   );
 
   test("returns null when bootstrap is disabled and zero users exist", async () => {
-    const { createTestDb } = await import("@plumix/core/test");
+    const { createTestDb } = await import("plumix/test");
     const db = await createTestDb();
 
     const guard = cfAccess({
@@ -237,7 +236,7 @@ describe("cfAccess.authenticate — full crypto path", () => {
   });
 
   test("JWKS is fetched once across many authenticate calls (cache contract)", async () => {
-    const { createTestDb } = await import("@plumix/core/test");
+    const { createTestDb } = await import("plumix/test");
     const db = await createTestDb();
 
     const guard = cfAccess({
@@ -273,7 +272,7 @@ describe("cfAccess.authenticate — full crypto path", () => {
   });
 
   test("returns null when the email claim is missing", async () => {
-    const { createTestDb } = await import("@plumix/core/test");
+    const { createTestDb } = await import("plumix/test");
     const db = await createTestDb();
 
     const guard = cfAccess({

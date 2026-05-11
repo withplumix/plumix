@@ -1,6 +1,8 @@
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
-
-import type { AppContext, PluginRegistry, ThemeDescriptor } from "@plumix/core";
+import type {
+  AppContext,
+  PluginRegistry,
+  ThemeDescriptor,
+} from "plumix/plugin";
 import {
   auth,
   buildApp,
@@ -10,14 +12,15 @@ import {
   installPlugins,
   registerCoreLookupAdapters,
   settings,
-} from "@plumix/core";
+} from "plumix/plugin";
 import {
   adminUser,
   createTestDb,
   entryFactory,
   entryTermFactory,
   factoriesFor,
-} from "@plumix/core/test";
+} from "plumix/test";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { menu } from "../index.js";
 import { getMenuForLocation } from "./getMenuForLocation.js";
