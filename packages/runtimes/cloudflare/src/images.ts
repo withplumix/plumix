@@ -1,4 +1,4 @@
-import type { ImageDelivery, TransformOpts } from "@plumix/core";
+import type { ImageDelivery, TransformOpts } from "plumix";
 
 export interface ImagesConfig {
   /**

@@ -1,7 +1,6 @@
+import type { Db, RequestAuthenticator, UserRole } from "plumix";
 import { createRemoteJWKSet, jwtVerify } from "jose";
-
-import type { Db, RequestAuthenticator, UserRole } from "@plumix/core";
-import { ExternalIdentityError, resolveExternalIdentity } from "@plumix/core";
+import { ExternalIdentityError, resolveExternalIdentity } from "plumix";
 
 // Header CF Access sets on every request that passed the application's
 // policy. Documented in `https://developers.cloudflare.com/cloudflare-one/identity/authorization-cookie/application-token/`.

@@ -1,5 +1,4 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-
 import type {
   AssetsBinding,
   Db,
@@ -7,14 +6,14 @@ import type {
   PlumixApp,
   PlumixEnv,
   RuntimeAdapter,
-} from "@plumix/core";
+} from "plumix";
 import {
   createAppContext,
   createPlumixDispatcher,
   jsonResponse,
   readSessionCookie,
   requestStore,
-} from "@plumix/core";
+} from "plumix";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 

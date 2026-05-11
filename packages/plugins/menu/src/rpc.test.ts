@@ -1,13 +1,11 @@
-import { createRouterClient } from "@orpc/server";
-import { and, eq } from "drizzle-orm";
-import { afterEach, describe, expect, test } from "vitest";
-
 import type {
   PluginRegistry,
   RequestAuthenticator,
   User,
   UserRole,
-} from "@plumix/core";
+} from "plumix/plugin";
+import { createRouterClient } from "@orpc/server";
+import { and, eq } from "drizzle-orm";
 import {
   createAppContext,
   createPluginRegistry,
@@ -16,7 +14,7 @@ import {
   registerCoreLookupAdapters,
   settings,
   terms,
-} from "@plumix/core";
+} from "plumix/plugin";
 import {
   adminUser,
   createTestDb,
@@ -24,7 +22,8 @@ import {
   entryFactory,
   entryTermFactory,
   factoriesFor,
-} from "@plumix/core/test";
+} from "plumix/test";
+import { afterEach, describe, expect, test } from "vitest";
 
 import { menu } from "./index.js";
 import {

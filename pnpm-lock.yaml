@@ -445,9 +445,6 @@ importers:
 
   packages/plugins/audit-log:
     dependencies:
-      '@plumix/core':
-        specifier: workspace:*
-        version: link:../../core
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@cloudflare/workers-types@4.20260421.1)(@libsql/client@0.17.3)
@@ -500,15 +497,15 @@ importers:
       drizzle-kit:
         specifier: 'catalog:'
         version: 0.31.10
-      esbuild:
-        specifier: 0.27.7
-        version: 0.27.7
       eslint:
         specifier: 'catalog:'
         version: 10.3.0(jiti@2.6.1)
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1
+      plumix:
+        specifier: workspace:*
+        version: link:../../plumix
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -529,10 +526,6 @@ importers:
         version: 4.1.5(@types/node@24.12.2)(@vitest/coverage-v8@4.1.5)(jsdom@29.1.1)(vite@8.0.9(@types/node@24.12.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/plugins/blog:
-    dependencies:
-      '@plumix/core':
-        specifier: workspace:*
-        version: link:../../core
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
@@ -555,6 +548,9 @@ importers:
       eslint:
         specifier: 'catalog:'
         version: 10.3.0(jiti@2.6.1)
+      plumix:
+        specifier: workspace:*
+        version: link:../../plumix
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -570,9 +566,6 @@ importers:
 
   packages/plugins/media:
     dependencies:
-      '@plumix/core':
-        specifier: workspace:*
-        version: link:../../core
       valibot:
         specifier: 'catalog:'
         version: 1.3.1(typescript@6.0.3)
@@ -607,12 +600,12 @@ importers:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.5(vitest@4.1.5)
-      esbuild:
-        specifier: 0.27.7
-        version: 0.27.7
       eslint:
         specifier: 'catalog:'
         version: 10.3.0(jiti@2.6.1)
+      plumix:
+        specifier: workspace:*
+        version: link:../../plumix
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -668,9 +661,6 @@ importers:
       '@dnd-kit/utilities':
         specifier: ^3.2.2
         version: 3.2.2(react@19.2.5)
-      '@plumix/core':
-        specifier: workspace:*
-        version: link:../../core
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@cloudflare/workers-types@4.20260421.1)(@libsql/client@0.17.3)
@@ -723,15 +713,15 @@ importers:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.5(vitest@4.1.5)
-      esbuild:
-        specifier: 0.27.7
-        version: 0.27.7
       eslint:
         specifier: 'catalog:'
         version: 10.3.0(jiti@2.6.1)
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1
+      plumix:
+        specifier: workspace:*
+        version: link:../../plumix
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -752,10 +742,6 @@ importers:
         version: 4.1.5(@types/node@24.12.2)(@vitest/coverage-v8@4.1.5)(jsdom@29.1.1)(vite@8.0.9(@types/node@24.12.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/plugins/pages:
-    dependencies:
-      '@plumix/core':
-        specifier: workspace:*
-        version: link:../../core
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
@@ -778,6 +764,9 @@ importers:
       eslint:
         specifier: 'catalog:'
         version: 10.3.0(jiti@2.6.1)
+      plumix:
+        specifier: workspace:*
+        version: link:../../plumix
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -896,9 +885,6 @@ importers:
       '@cloudflare/vite-plugin':
         specifier: ^1.33.0
         version: 1.33.0(vite@8.0.9(@types/node@24.12.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))(workerd@1.20260426.1)(wrangler@4.86.0(@cloudflare/workers-types@4.20260421.1))
-      '@plumix/core':
-        specifier: workspace:*
-        version: link:../../core
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@cloudflare/workers-types@4.20260421.1)(@libsql/client@0.17.3)
@@ -908,9 +894,6 @@ importers:
       jsonc-parser:
         specifier: ^3.3.1
         version: 3.3.1
-      plumix:
-        specifier: workspace:*
-        version: link:../../plumix
       smol-toml:
         specifier: ^1.6.1
         version: 1.6.1
@@ -945,6 +928,9 @@ importers:
       eslint:
         specifier: 'catalog:'
         version: 10.3.0(jiti@2.6.1)
+      plumix:
+        specifier: workspace:*
+        version: link:../../plumix
       prettier:
         specifier: 'catalog:'
         version: 3.8.3

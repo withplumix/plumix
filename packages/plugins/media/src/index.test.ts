@@ -1,7 +1,6 @@
+import { HookRegistry, installPlugins, memoryStorage } from "plumix/plugin";
+import { createDispatcherHarness, plumixRequest } from "plumix/test";
 import { describe, expect, test } from "vitest";
-
-import { HookRegistry, installPlugins, memoryStorage } from "@plumix/core";
-import { createDispatcherHarness, plumixRequest } from "@plumix/core/test";
 
 import { DEFAULT_ACCEPTED_TYPES, media } from "./index.js";
 

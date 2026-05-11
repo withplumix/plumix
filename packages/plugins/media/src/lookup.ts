@@ -1,5 +1,5 @@
-import type { LookupAdapter, LookupResult, SQL } from "@plumix/core";
-import { and, desc, entries, eq, inArray, like, sql } from "@plumix/core";
+import type { LookupAdapter, LookupResult, SQL } from "plumix/plugin";
+import { and, desc, entries, eq, inArray, like, sql } from "plumix/plugin";
 
 import { parseMediaMeta } from "./meta.js";
 

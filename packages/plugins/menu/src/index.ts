@@ -1,4 +1,4 @@
-import { definePlugin } from "@plumix/core";
+import { definePlugin } from "plumix/plugin";
 
 import type { MenuLocationOptions, ResolvedMenuItem } from "./server/types.js";
 import { createMenuRouter } from "./rpc.js";
@@ -13,7 +13,7 @@ import { recordLocation } from "./server/locations.js";
 // the eligibility flags are read at admin time by the eligibility
 // resolver (`getEligibleMenuKinds`); the hooks are fired by
 // `getMenuByName` and `menu.save`.
-declare module "@plumix/core" {
+declare module "plumix/plugin" {
   interface ThemeContextExtensions {
     registerMenuLocation: (id: string, options: MenuLocationOptions) => void;
   }

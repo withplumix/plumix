@@ -1,5 +1,3 @@
-import * as v from "valibot";
-
 import {
   and,
   authenticated,
@@ -13,7 +11,8 @@ import {
   slugify,
   sql,
   terms,
-} from "@plumix/core";
+} from "plumix/plugin";
+import * as v from "valibot";
 
 import type { ResolvedRow } from "./server/resolveItemStates.js";
 import { getEligibleMenuKinds } from "./server/eligibility.js";

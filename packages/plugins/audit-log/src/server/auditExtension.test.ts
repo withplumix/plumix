@@ -3,16 +3,15 @@
 // chokepoint (ctx resolve → actor gate → service.record) without
 // touching a real DB.
 
-import { describe, expect, test, vi } from "vitest";
-
 import type {
   AppContext,
   AuthenticatedUser,
   Entry,
   HookOptions,
   PluginSetupContext,
-} from "@plumix/core";
-import { HookRegistry, requestStore } from "@plumix/core";
+} from "plumix/plugin";
+import { HookRegistry, requestStore } from "plumix/plugin";
+import { describe, expect, test, vi } from "vitest";
 
 import type { NewAuditLogRow } from "../db/schema.js";
 import type { AuditLogStorage } from "../types.js";

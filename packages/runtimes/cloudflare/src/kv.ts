@@ -1,4 +1,4 @@
-import type { KV } from "@plumix/core";
+import type { KV } from "plumix";
 
 export interface KVConfig {
   readonly binding: string;

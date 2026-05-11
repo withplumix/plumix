@@ -1,7 +1,6 @@
+import type { AppContext, LookupResult } from "plumix/plugin";
 import { and, eq, inArray } from "drizzle-orm";
-
-import type { AppContext, LookupResult } from "@plumix/core";
-import { entries, entryTerm, isCurrentSource, terms } from "@plumix/core";
+import { entries, entryTerm, isCurrentSource, terms } from "plumix/plugin";
 
 import type { TreeNode } from "./buildTree.js";
 import type { MenuItemMeta, ResolvedMenu, ResolvedMenuItem } from "./types.js";

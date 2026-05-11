@@ -9,7 +9,7 @@ import type {
   PresignPutOptions,
   PutOptions,
   UrlOptions,
-} from "@plumix/core";
+} from "plumix";
 
 import { presignPutUrl } from "./sigv4.js";
 

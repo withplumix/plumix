@@ -1,4 +1,4 @@
-import { definePlugin } from "@plumix/core";
+import { definePlugin } from "plumix/plugin";
 
 import type { AuditExtension } from "./server/auditExtension.js";
 import type { AuditLogStorage } from "./types.js";
@@ -21,7 +21,7 @@ export { sqlite } from "./server/storage-sqlite.js";
 // don't install the plugin can still write `ctx.audit?.log(...)` and
 // have it compile + no-op at runtime. The augmentation is picked up
 // automatically when any module imports from `@plumix/plugin-audit-log`.
-declare module "@plumix/core" {
+declare module "plumix/plugin" {
   interface AppContextExtensions {
     readonly audit?: AuditExtension;
   }

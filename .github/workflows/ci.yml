@@ -61,9 +61,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
-      # @plumix/admin's vite.config.ts now imports from @plumix/core, so
-      # core's dist must exist before knip's config-file scan runs.
-      - run: pnpm --filter @plumix/core build
+      # `pnpm knip` builds plumix first (via turbo) so dist files
+      # referenced from plugin e2e configs and admin's vite.config.ts
+      # resolve during knip's config-file scan.
       - run: pnpm knip
 
   test:

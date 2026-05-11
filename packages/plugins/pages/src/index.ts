@@ -1,4 +1,4 @@
-import { definePlugin } from "@plumix/core";
+import { definePlugin } from "plumix/plugin";
 
 export const pages = definePlugin("pages", (ctx) => {
   ctx.registerEntryType("page", {

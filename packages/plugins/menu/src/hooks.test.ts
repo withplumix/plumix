@@ -1,12 +1,10 @@
-import { createRouterClient } from "@orpc/server";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
-
 import type {
   AppContext,
   PluginRegistry,
   RequestAuthenticator,
   User,
-} from "@plumix/core";
+} from "plumix/plugin";
+import { createRouterClient } from "@orpc/server";
 import {
   createAppContext,
   createPluginRegistry,
@@ -14,14 +12,15 @@ import {
   installPlugins,
   registerCoreLookupAdapters,
   settings,
-} from "@plumix/core";
+} from "plumix/plugin";
 import {
   adminUser,
   createTestDb,
   entryFactory,
   entryTermFactory,
   factoriesFor,
-} from "@plumix/core/test";
+} from "plumix/test";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import type { ResolvedMenuItem } from "./server/types.js";
 import { menu } from "./index.js";

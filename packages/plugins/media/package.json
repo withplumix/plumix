@@ -52,11 +52,11 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@plumix/core": "workspace:*",
     "valibot": "catalog:"
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.99.2",
+    "plumix": "workspace:*",
     "react": "catalog:"
   },
   "devDependencies": {
@@ -70,8 +70,8 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@vitest/coverage-v8": "catalog:",
-    "esbuild": "0.27.7",
     "eslint": "catalog:",
+    "plumix": "workspace:*",
     "prettier": "catalog:",
     "publint": "catalog:",
     "react": "catalog:",

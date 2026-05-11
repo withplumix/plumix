@@ -1,7 +1,6 @@
+import type { AppContext } from "plumix/plugin";
 import { and, eq } from "drizzle-orm";
-
-import type { AppContext } from "@plumix/core";
-import { settings } from "@plumix/core";
+import { settings } from "plumix/plugin";
 
 import type { ResolvedMenu } from "./types.js";
 import { getMenuByName } from "./getMenuByName.js";

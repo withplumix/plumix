@@ -1,6 +1,5 @@
+import type { CommandContext } from "plumix";
 import type { Plugin } from "vite";
-
-import type { CommandContext } from "@plumix/core";
 
 export async function createCloudflareVite(
   ctx: CommandContext,

@@ -1,6 +1,5 @@
+import type { AppContext } from "plumix/plugin";
 import { describe, expect, test, vi } from "vitest";
-
-import type { AppContext } from "@plumix/core";
 
 import type { NewAuditLogRow } from "../db/schema.js";
 import type { AuditLogStorage } from "../types.js";

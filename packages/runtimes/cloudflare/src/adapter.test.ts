@@ -1,18 +1,17 @@
-import { describe, expect, test } from "vitest";
-
 import type {
   DatabaseAdapter,
   RequestScopedDb,
   RequestScopedDbArgs,
-} from "@plumix/core";
+} from "plumix";
 import {
+  auth as authConfig,
   buildApp,
   definePlugin,
   plumix,
   requestStore,
   SESSION_COOKIE_NAME,
-} from "@plumix/core";
-import { auth as authConfig } from "@plumix/core/auth";
+} from "plumix";
+import { describe, expect, test } from "vitest";
 
 import { cloudflare } from "./adapter.js";
 import { d1 } from "./d1.js";

@@ -1,10 +1,9 @@
-import { describe, expect, test } from "vitest";
-
 import type {
   DatabaseAdapter,
   RequestScopedDb,
   RequestScopedDbArgs,
-} from "@plumix/core";
+} from "plumix";
+import { describe, expect, test } from "vitest";
 
 import { d1 } from "./d1.js";
 

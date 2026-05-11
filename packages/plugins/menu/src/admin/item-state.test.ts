@@ -1,6 +1,5 @@
+import type { LookupResult } from "plumix/plugin";
 import { describe, expect, test } from "vitest";
-
-import type { LookupResult } from "@plumix/core";
 
 import { mapItemState } from "./item-state.js";
 

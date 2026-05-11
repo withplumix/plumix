@@ -2,7 +2,7 @@ import type {
   MediaListMetaBoxField,
   MediaMetaBoxField,
   MetaBoxFieldSpan,
-} from "@plumix/core";
+} from "plumix/plugin";
 
 import type { MediaFieldScope } from "./lookup.js";
 

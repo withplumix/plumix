@@ -1,6 +1,4 @@
-import * as v from "valibot";
-
-import type { AppContext, AuthenticatedAppContext, SQL } from "@plumix/core";
+import type { AppContext, AuthenticatedAppContext, SQL } from "plumix/plugin";
 import {
   and,
   authenticated,
@@ -11,7 +9,8 @@ import {
   inArray,
   like,
   sql,
-} from "@plumix/core";
+} from "plumix/plugin";
+import * as v from "valibot";
 
 import { looksLikeMime, MAGIC_BYTE_SAMPLE_SIZE } from "./magic-bytes.js";
 import { parseMediaMeta } from "./meta.js";

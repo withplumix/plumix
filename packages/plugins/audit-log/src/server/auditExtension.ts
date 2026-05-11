@@ -17,7 +17,7 @@
 //   - Multiple calls in one request batch into the same flush as the
 //     internal hook listeners (same WeakMap key, same `ctx.defer`).
 
-import { tryGetContext } from "@plumix/core";
+import { tryGetContext } from "plumix/plugin";
 
 import type { AuditService } from "./auditService.js";
 import { buildAuditRow } from "./buildAuditRow.js";

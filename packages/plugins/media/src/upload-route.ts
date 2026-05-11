@@ -1,5 +1,5 @@
-import type { AppContext } from "@plumix/core";
-import { and, entries, eq } from "@plumix/core";
+import type { AppContext } from "plumix/plugin";
+import { and, entries, eq } from "plumix/plugin";
 
 import { parseMediaMeta } from "./meta.js";
 

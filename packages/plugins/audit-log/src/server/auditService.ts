@@ -4,7 +4,7 @@
 // to the same WeakMap-keyed buffer. One INSERT runs after the response
 // — six entry events from a single update RPC become one audit write.
 
-import type { AppContext, Logger } from "@plumix/core";
+import type { AppContext, Logger } from "plumix/plugin";
 
 import type { NewAuditLogRow } from "../db/schema.js";
 import type { AuditLogStorage } from "../types.js";

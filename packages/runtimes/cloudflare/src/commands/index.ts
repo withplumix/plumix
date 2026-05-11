@@ -1,4 +1,4 @@
-import type { CommandRegistry } from "@plumix/core";
+import type { CommandRegistry } from "plumix";
 
 import { buildCommand } from "./build.js";
 import { deployCommand } from "./deploy.js";

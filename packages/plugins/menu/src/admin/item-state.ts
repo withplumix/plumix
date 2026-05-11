@@ -1,4 +1,4 @@
-import type { LookupResult } from "@plumix/core";
+import type { LookupResult } from "plumix/plugin";
 
 import type { MenuItemMeta } from "../server/types.js";
 

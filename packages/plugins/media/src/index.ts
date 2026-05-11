@@ -1,5 +1,5 @@
-import type { PluginDescriptor } from "@plumix/core";
-import { definePlugin } from "@plumix/core";
+import type { PluginDescriptor } from "plumix/plugin";
+import { definePlugin } from "plumix/plugin";
 
 import { mediaLookupAdapter } from "./lookup.js";
 import { DEFAULT_ACCEPTED_TYPES } from "./mime.js";
