@@ -8,7 +8,12 @@ import { createAuditLogRouter } from "./rpc.js";
 import { createAuditExtension } from "./server/auditExtension.js";
 import { createAuditService } from "./server/auditService.js";
 import { registerHooks } from "./server/hooks.js";
-import { assertValidRetention, DEFAULT_RETENTION } from "./server/retention.js";
+import {
+  assertValidRetention,
+  DEFAULT_PURGE_CRON,
+  DEFAULT_RETENTION,
+  runRetentionPurge,
+} from "./server/retention.js";
 import { sqlite } from "./server/storage-sqlite.js";
 
 export type {
@@ -109,8 +114,9 @@ const AUDIT_LOG_READ_CAPABILITY = "audit_log:read";
  */
 export function auditLog(options: AuditLogPluginOptions = {}) {
   const storage = options.storage ?? sqlite();
+  const retention = options.retention ?? DEFAULT_RETENTION;
   // Fail fast on misconfigured retention — see assertValidRetention.
-  assertValidRetention(options.retention ?? DEFAULT_RETENTION);
+  assertValidRetention(retention);
   const service = createAuditService(storage);
   const router = createAuditLogRouter(storage);
   const extension = createAuditExtension(service);
@@ -139,6 +145,24 @@ export function auditLog(options: AuditLogPluginOptions = {}) {
         },
         component: "AuditLogShell",
       });
+
+      if (retention !== false) {
+        ctx.registerScheduledTask({
+          id: "retention-purge",
+          cron: retention.purgeAt ?? DEFAULT_PURGE_CRON,
+          handler: async (appCtx) => {
+            const result = await runRetentionPurge(appCtx, {
+              storage,
+              retention,
+            });
+            appCtx.logger.info(
+              `[plumix/plugin-audit-log] retention purge deleted ${result.deleted} row${
+                result.deleted === 1 ? "" : "s"
+              }`,
+            );
+          },
+        });
+      }
     },
   });
 }

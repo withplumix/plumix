@@ -1,4 +1,5 @@
 import type { AppContext } from "plumix/plugin";
+import { HookRegistry, installPlugins } from "plumix/plugin";
 import { describe, expect, test, vi } from "vitest";
 
 import type { AuditLogStorage } from "../types.js";
@@ -6,6 +7,7 @@ import { auditLog } from "../index.js";
 import {
   assertValidRetention,
   computeRetentionCutoff,
+  DEFAULT_PURGE_CRON,
   DEFAULT_RETENTION,
   runRetentionPurge,
 } from "./retention.js";
@@ -204,5 +206,91 @@ describe("runRetentionPurge", () => {
     const message = String(ctx.logger.warn.mock.calls[0]?.[0]);
     expect(message).toContain("fake-no-purge");
     expect(message).toContain("retention skipped");
+  });
+});
+
+describe("auditLog() factory registers the retention scheduled task", () => {
+  test("default retention registers one task with the default cron", async () => {
+    const { registry } = await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [auditLog()],
+    });
+    expect(registry.scheduledTasks).toHaveLength(1);
+    const task = registry.scheduledTasks[0];
+    expect(task?.id).toBe("retention-purge");
+    expect(task?.cron).toBe(DEFAULT_PURGE_CRON);
+    expect(task?.registeredBy).toBe("audit_log");
+  });
+
+  test("custom purgeAt plumbs through to the registered task's cron", async () => {
+    const { registry } = await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [
+        auditLog({ retention: { maxAgeDays: 30, purgeAt: "0 0 * * 0" } }),
+      ],
+    });
+    expect(registry.scheduledTasks[0]?.cron).toBe("0 0 * * 0");
+  });
+
+  test("retention: false skips registration entirely", async () => {
+    const { registry } = await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [auditLog({ retention: false })],
+    });
+    expect(registry.scheduledTasks).toHaveLength(0);
+  });
+
+  test("handler invokes storage.purge with the cutoff and logs the deleted count", async () => {
+    const storageStub = fakeStorage({ withPurge: true });
+    storageStub.purgeReturn.deleted = 7;
+    const { registry } = await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [
+        auditLog({
+          storage: storageStub.storage,
+          retention: { maxAgeDays: 14 },
+        }),
+      ],
+    });
+    const task = registry.scheduledTasks[0];
+    if (!task) throw new Error("expected one scheduled task");
+
+    const logger = {
+      debug: () => undefined,
+      info: vi.fn(),
+      warn: () => undefined,
+      error: () => undefined,
+    };
+    await task.handler({ logger } as unknown as AppContext);
+
+    expect(storageStub.purgeCalls).toHaveLength(1);
+    // Cutoff sits in the past by `maxAgeDays`; just check it's a Date
+    // (clock is `new Date()` inside runRetentionPurge — exact value
+    // doesn't matter for this test, the math is covered above).
+    expect(storageStub.purgeCalls[0]?.cutoff).toBeInstanceOf(Date);
+    expect(logger.info).toHaveBeenCalledTimes(1);
+    expect(String(logger.info.mock.calls[0]?.[0])).toContain("deleted 7 rows");
+  });
+
+  test("handler renders the singular row count correctly", async () => {
+    const storageStub = fakeStorage({ withPurge: true });
+    storageStub.purgeReturn.deleted = 1;
+    const { registry } = await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [auditLog({ storage: storageStub.storage })],
+    });
+    const task = registry.scheduledTasks[0];
+    if (!task) throw new Error("expected one scheduled task");
+
+    const logger = {
+      debug: () => undefined,
+      info: vi.fn(),
+      warn: () => undefined,
+      error: () => undefined,
+    };
+    await task.handler({ logger } as unknown as AppContext);
+
+    expect(String(logger.info.mock.calls[0]?.[0])).toContain("deleted 1 row");
+    expect(String(logger.info.mock.calls[0]?.[0])).not.toContain("1 rows");
   });
 });
