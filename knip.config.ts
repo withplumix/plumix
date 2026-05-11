@@ -85,7 +85,19 @@ const config: KnipConfig = {
         // knip's static analysis on fixtures doesn't resolve the .js→
         // .tsx extension swap; list explicitly.
         "e2e/fixtures/runtime-proof-plugin/src/MediaLibrary.tsx",
+        // With knip's playwright plugin disabled below, list the
+        // playwright config + spec/support files explicitly so they
+        // aren't flagged as unused.
+        "playwright.config.ts",
+        "e2e/*.spec.ts",
+        "e2e/support/*.ts",
       ],
+      // playwright.config.ts imports `@plumix/core/test/playwright` whose
+      // dist may not exist on a fresh clone. Knip's playwright plugin
+      // would import() the config (via jiti) and crash at resolve time.
+      // Disabling it lets `pnpm knip` run cold without a prior build.
+      // Pattern follows sanity-io/sdk's knip.config.ts.
+      playwright: false,
     },
     // The admin chunk is loaded by the plumix vite plugin at consumer
     // build time via `adminEntry` — knip can't follow that runtime path.
@@ -103,6 +115,8 @@ const config: KnipConfig = {
         "e2e/build-chunk.ts",
         "e2e/*.spec.ts",
       ],
+      // See packages/admin above for why the playwright plugin is off.
+      playwright: false,
     },
     // Same shape as plugin-media: admin chunk loaded via `adminEntry`
     // at consumer build time; playwright rig invokes build-chunk via
@@ -117,6 +131,7 @@ const config: KnipConfig = {
         "e2e/build-chunk.ts",
         "e2e/*.spec.ts",
       ],
+      playwright: false,
     },
     // Same shape as plugin-menu: admin chunk loaded via `adminEntry`
     // at consumer build time; `./server` subpath is consumer-facing

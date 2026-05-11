@@ -61,10 +61,15 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
-      # `pnpm knip` builds plumix first (via turbo) so dist files
-      # referenced from plugin e2e configs and admin's vite.config.ts
-      # resolve during knip's config-file scan.
       - run: pnpm knip
+
+  boundaries:
+    name: Boundaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+      - run: pnpm boundaries
 
   test:
     name: Test

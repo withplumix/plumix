@@ -12,11 +12,12 @@
     "build": "turbo run build",
     "clean": "git clean -xdf node_modules",
     "clean:workspaces": "turbo run clean",
+    "boundaries": "depcruise --config .dependency-cruiser.cjs packages examples",
     "commitlint": "commitlint",
     "dev": "turbo watch dev --continue",
     "format": "turbo run format --continue -- --cache --cache-location .cache/.prettiercache",
     "format:fix": "turbo run format --continue -- --write --cache --cache-location .cache/.prettiercache",
-    "knip": "turbo run build --filter=plumix && knip",
+    "knip": "knip",
     "lint": "turbo run lint --continue -- --cache --cache-location .cache/.eslintcache",
     "lint:fix": "turbo run lint --continue -- --fix --cache --cache-location .cache/.eslintcache",
     "postinstall": "pnpm dlx sherif@latest -r packages-without-package-json -r non-existant-packages",
@@ -30,6 +31,7 @@
     "@commitlint/config-conventional": "^20.5.3",
     "@commitlint/config-pnpm-scopes": "^20.5.2",
     "@commitlint/types": "^20.5.0",
+    "dependency-cruiser": "^17.4.0",
     "knip": "^6.6.0",
     "turbo": "^2.9.9"
   }
