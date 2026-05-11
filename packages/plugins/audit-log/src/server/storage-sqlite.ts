@@ -57,6 +57,14 @@ export function sqlite(): AuditLogStorage {
 
       return { rows: sliced.map(toAuditLogRow), nextCursor };
     },
+
+    async purge(ctx, { cutoff }) {
+      const deleted = await ctx.db
+        .delete(auditLog)
+        .where(lt(auditLog.occurredAt, cutoff))
+        .returning({ id: auditLog.id });
+      return { deleted: deleted.length };
+    },
   };
 }
 
