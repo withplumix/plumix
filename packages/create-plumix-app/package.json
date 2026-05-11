@@ -40,7 +40,8 @@
     "lint": "eslint",
     "publint": "publint",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false",
+    "verify:template": "node scripts/typecheck-template.mjs"
   },
   "devDependencies": {
     "@plumix/eslint-config": "workspace:*",

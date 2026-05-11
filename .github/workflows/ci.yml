@@ -55,6 +55,18 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm typecheck
 
+  template-typecheck:
+    name: Template typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+      # Drift detection: temp-wires `templates/starter` into the workspace
+      # with `workspace:*` deps, runs `tsc --noEmit` against the live
+      # plumix sources, restores the workspace. Catches the case where a
+      # future PR renames a plumix API the template uses.
+      - run: pnpm --filter create-plumix-app verify:template
+
   knip:
     name: Knip
     runs-on: ubuntu-latest
