@@ -25,8 +25,27 @@ describe("generateWorkerSource", () => {
     expect(source).toContain("async fetch(request, env, ctx)");
   });
 
-  test("reuses a single handler across invocations", () => {
+  test("reuses a single fetch handler across invocations", () => {
     const source = generateWorkerSource({ configModule: "./config.ts" });
-    expect(source).toContain("handler ??=");
+    expect(source).toContain("fetchHandler ??=");
+  });
+
+  test("exports a scheduled handler that delegates to runtime.buildScheduledHandler", () => {
+    const source = generateWorkerSource({ configModule: "./config.ts" });
+    expect(source).toContain("async scheduled(event, env, ctx)");
+    // Optional-chain so runtimes without scheduled support are a no-op.
+    expect(source).toContain("config.runtime.buildScheduledHandler?.(app)");
+  });
+
+  test("reuses a single scheduled handler across invocations", () => {
+    const source = generateWorkerSource({ configModule: "./config.ts" });
+    expect(source).toContain("scheduledHandler ??=");
+  });
+
+  test("no-ops cleanly when the runtime omits buildScheduledHandler", () => {
+    const source = generateWorkerSource({ configModule: "./config.ts" });
+    // The generated code guards the call so a runtime that returns
+    // undefined here doesn't blow up the scheduled invocation.
+    expect(source).toContain("if (scheduledHandler) await scheduledHandler");
   });
 });
