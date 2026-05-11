@@ -75,6 +75,7 @@
     "prettier": "catalog:",
     "publint": "catalog:",
     "react": "catalog:",
+    "tsx": "4.21.0",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },

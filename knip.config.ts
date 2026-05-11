@@ -117,6 +117,11 @@ const config: KnipConfig = {
       ],
       // See packages/admin above for why the playwright plugin is off.
       playwright: false,
+      // `tsx` is invoked as `pnpm exec tsx ./build-chunk.ts` inside
+      // the playwright webServer string — knip's static analysis
+      // can't see that. Declared as a direct devDep so the bin
+      // resolves on a fresh CI install.
+      ignoreDependencies: ["tsx"],
     },
     // Same shape as plugin-media: admin chunk loaded via `adminEntry`
     // at consumer build time; playwright rig invokes build-chunk via
@@ -132,6 +137,8 @@ const config: KnipConfig = {
         "e2e/*.spec.ts",
       ],
       playwright: false,
+      // See packages/plugins/media for the rationale.
+      ignoreDependencies: ["tsx"],
     },
     // Same shape as plugin-menu: admin chunk loaded via `adminEntry`
     // at consumer build time; `./server` subpath is consumer-facing

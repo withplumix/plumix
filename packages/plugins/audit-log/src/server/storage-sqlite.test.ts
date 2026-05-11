@@ -20,6 +20,9 @@ const schemaImports = schema as unknown as Record<string, unknown>;
 
 let cachedStatements: string[] | null = null;
 
+// drizzle-kit's `api` surface is loosely typed (`SQLiteSchema` is opaque);
+// treat it as a black-box snapshot blob and only read its `id` field.
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access */
 async function compileSchemaSql(): Promise<string[]> {
   if (cachedStatements) return cachedStatements;
   const empty = await generateSQLiteDrizzleJson({}, undefined, "snake_case");
@@ -31,6 +34,7 @@ async function compileSchemaSql(): Promise<string[]> {
   cachedStatements = await generateSQLiteMigration(empty, current);
   return cachedStatements;
 }
+/* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access */
 
 async function createDb(): Promise<TestDb> {
   const client = createClient({ url: ":memory:" });
