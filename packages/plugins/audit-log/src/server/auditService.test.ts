@@ -40,7 +40,7 @@ function fakeStorage(): {
         writes.push([...rows]);
         return Promise.resolve();
       },
-      query: () => Promise.resolve([]),
+      query: () => Promise.resolve({ rows: [], nextCursor: null }),
     },
     writes,
   };
@@ -101,7 +101,7 @@ describe("createAuditService", () => {
     const failingStorage: AuditLogStorage = {
       kind: "fake",
       write: () => Promise.reject(new Error("disk full")),
-      query: () => Promise.resolve([]),
+      query: () => Promise.resolve({ rows: [], nextCursor: null }),
     };
     const service = createAuditService(failingStorage);
 

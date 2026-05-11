@@ -4,6 +4,12 @@ export const RPC_ERRORS = {
   UNAUTHORIZED: {
     message: "Authentication required",
   },
+  BAD_REQUEST: {
+    message: "Invalid input",
+    data: v.object({
+      reason: v.string(),
+    }),
+  },
   FORBIDDEN: {
     message: "Permission denied",
     data: v.object({
