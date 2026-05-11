@@ -4,11 +4,25 @@ import type { AuditLogStorage } from "../types.js";
 
 export interface AuditLogRetentionPolicy {
   readonly maxAgeDays: number;
+  /**
+   * Cron expression metadata for the registered scheduled task.
+   * Informational in v1 — runtime dispatch fires every registered
+   * task on each scheduled invocation regardless of this value (see
+   * `registerScheduledTask` docs). Operators set the actual cadence
+   * via `wrangler.toml [triggers] crons`. Defaults to `"0 3 * * *"`
+   * (daily at 03:00 UTC).
+   */
+  readonly purgeAt?: string;
 }
 
 export type AuditLogRetentionConfig = AuditLogRetentionPolicy | false;
 
-export const DEFAULT_RETENTION: AuditLogRetentionPolicy = { maxAgeDays: 90 };
+export const DEFAULT_PURGE_CRON = "0 3 * * *";
+
+export const DEFAULT_RETENTION: AuditLogRetentionPolicy = {
+  maxAgeDays: 90,
+  purgeAt: DEFAULT_PURGE_CRON,
+};
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
