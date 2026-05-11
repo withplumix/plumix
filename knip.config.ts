@@ -8,6 +8,10 @@ const config: KnipConfig = {
   // by splitting vendor UI into its own package, or tag-based filtering
   // via `@internal` JSDoc once that convention is in place.
   exclude: ["exports"],
+  // `templates/` ships ready-to-copy seed files for `create-plumix-app`,
+  // not a workspace package — the files have no workspace-side
+  // consumers (by design), so knip's reachability scan can't see them.
+  ignore: ["templates/**"],
   workspaces: {
     "tooling/typescript": {
       entry: ["*.json"],
@@ -137,11 +141,7 @@ const config: KnipConfig = {
     // at consumer build time; `./server` subpath is consumer-facing
     // for themes that need server-only helpers.
     "packages/plugins/audit-log": {
-      entry: [
-        "src/index.ts",
-        "src/admin/index.tsx",
-        "src/server/index.ts",
-      ],
+      entry: ["src/index.ts", "src/admin/index.tsx", "src/server/index.ts"],
     },
   },
 };
