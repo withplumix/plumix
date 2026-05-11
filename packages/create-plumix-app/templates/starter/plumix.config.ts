@@ -1,3 +1,5 @@
+import { auth, consoleMailer, plumix } from "plumix";
+
 import { blog } from "@plumix/plugin-blog";
 import { pages } from "@plumix/plugin-pages";
 import {
@@ -5,7 +7,6 @@ import {
   cloudflareDeployOrigin,
   d1,
 } from "@plumix/runtime-cloudflare";
-import { auth, consoleMailer, plumix } from "plumix";
 
 // Derives `rpId` + `origin` from the Workers Builds env (`WORKERS_CI`,
 // `WORKERS_CI_BRANCH`): production deploys → `<worker>.<account>.workers.dev`,
