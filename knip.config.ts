@@ -8,10 +8,10 @@ const config: KnipConfig = {
   // by splitting vendor UI into its own package, or tag-based filtering
   // via `@internal` JSDoc once that convention is in place.
   exclude: ["exports"],
-  // `templates/` ships ready-to-copy seed files for `create-plumix-app`,
-  // not a workspace package — the files have no workspace-side
-  // consumers (by design), so knip's reachability scan can't see them.
-  ignore: ["templates/**"],
+  // `packages/create-plumix-app/templates/` ships ready-to-copy seed
+  // files — read at runtime by the scaffolder, not statically imported,
+  // so knip's reachability scan can't see them.
+  ignore: ["packages/create-plumix-app/templates/**"],
   workspaces: {
     "tooling/typescript": {
       entry: ["*.json"],
