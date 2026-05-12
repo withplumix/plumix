@@ -39,14 +39,69 @@ interface ScaffoldResult {
   readonly name: string;
 }
 
-// Templates live alongside the package's `dist/` (when published) or
-// `src/` (during vitest). Both resolve to `<package-root>/templates/`
-// via `../templates/` from the source-or-built file.
-const TEMPLATES_ROOT = join(
-  dirname(fileURLToPath(import.meta.url)),
+const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+// Single source of truth: inside the plumix workspace we copy directly
+// from the `examples/minimal` package so the scaffolder output can
+// never drift from the canonical example. Published builds carry a
+// snapshot under `templates/starter/` (written at `prepack` time)
+// that's used when the workspace example isn't reachable.
+const WORKSPACE_TEMPLATE = join(
+  PACKAGE_ROOT,
   "..",
-  "templates",
+  "..",
+  "examples",
+  "minimal",
 );
+const PUBLISHED_TEMPLATE = join(PACKAGE_ROOT, "templates", "starter");
+
+export function resolveTemplateRoot(): string {
+  return existsSync(WORKSPACE_TEMPLATE)
+    ? WORKSPACE_TEMPLATE
+    : PUBLISHED_TEMPLATE;
+}
+
+// The example's `package.json` uses pnpm's `workspace:*` and `catalog:`
+// protocols, which only resolve inside the plumix monorepo. End-user
+// projects need concrete SemVer ranges, so we rewrite at copy time.
+// Bump these together with the corresponding workspace catalog
+// (`pnpm-workspace.yaml`) and the next plumix release.
+const PLUMIX_PACKAGE_VERSION = "^0.1.0";
+const CATALOG_RESOLUTIONS: Record<string, string> = {
+  "@cloudflare/workers-types": "^4.20260421.1",
+  "@types/node": "^24.12.2",
+  typescript: "^6.0.3",
+  wrangler: "^4.86.0",
+};
+
+// `@plumix/typescript-config` is a private dev-only workspace package,
+// not published to npm. The example's tsconfig `extends` it; the
+// scaffolded project gets a self-contained equivalent instead.
+const TYPESCRIPT_CONFIG_PKG = "@plumix/typescript-config";
+
+const SCAFFOLDED_TSCONFIG = {
+  $schema: "https://json.schemastore.org/tsconfig",
+  compilerOptions: {
+    esModuleInterop: true,
+    skipLibCheck: true,
+    target: "ES2022",
+    lib: ["ES2022", "WebWorker"],
+    allowJs: true,
+    resolveJsonModule: true,
+    moduleDetection: "force",
+    isolatedModules: true,
+    verbatimModuleSyntax: true,
+    strict: true,
+    noUncheckedIndexedAccess: true,
+    noImplicitOverride: true,
+    module: "Preserve",
+    moduleResolution: "Bundler",
+    noEmit: true,
+    types: ["node", "@cloudflare/workers-types"],
+  },
+  include: ["plumix.config.ts", ".plumix"],
+  exclude: ["node_modules", "dist"],
+};
 
 export async function scaffold(
   options: ScaffoldOptions,
@@ -75,26 +130,73 @@ export async function scaffold(
     await mkdir(targetDir);
   }
 
-  const source = join(TEMPLATES_ROOT, "starter");
+  const source = resolveTemplateRoot();
   await cp(source, targetDir, {
     recursive: true,
     filter: (srcPath) => shouldCopyTemplateEntry(srcPath, source),
   });
 
   const name = basename(targetDir);
-  await rewritePackageName(targetDir, name);
+  await rewritePackageJson(targetDir, name);
+  await writeScaffoldedTsconfig(targetDir);
 
   return { targetDir, name };
 }
 
-async function rewritePackageName(dir: string, name: string): Promise<void> {
+interface PackageJsonShape {
+  name: string;
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+  [key: string]: unknown;
+}
+
+export function rewriteDeps(
+  deps: Record<string, string> | undefined,
+): Record<string, string> | undefined {
+  if (!deps) return deps;
+  const out: Record<string, string> = {};
+  for (const [name, range] of Object.entries(deps)) {
+    if (name === TYPESCRIPT_CONFIG_PKG) continue;
+    if (range.startsWith("workspace:")) {
+      out[name] = PLUMIX_PACKAGE_VERSION;
+      continue;
+    }
+    if (range.startsWith("catalog:")) {
+      const resolved = CATALOG_RESOLUTIONS[name];
+      if (!resolved) {
+        throw new Error(
+          `No catalog resolution for "${name}" — add it to CATALOG_RESOLUTIONS in scaffold.ts.`,
+        );
+      }
+      out[name] = resolved;
+      continue;
+    }
+    out[name] = range;
+  }
+  return out;
+}
+
+async function rewritePackageJson(dir: string, name: string): Promise<void> {
   const pkgPath = join(dir, "package.json");
   const raw = await readFile(pkgPath, "utf-8");
-  const pkg = JSON.parse(raw) as Record<string, unknown>;
+  const pkg = JSON.parse(raw) as PackageJsonShape;
   pkg.name = name;
-  // 2-space indent + trailing newline to match the rest of the
+  const deps = rewriteDeps(pkg.dependencies);
+  const devDeps = rewriteDeps(pkg.devDependencies);
+  if (deps) pkg.dependencies = deps;
+  if (devDeps) pkg.devDependencies = devDeps;
+  // 2-space indent + trailing newline matches the rest of the
   // template's JSON files. JSON.stringify rewrites the whole file —
   // fine because the template's package.json is plain JSON we control,
   // no comments or custom key ordering to lose.
   await writeFile(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`, "utf-8");
+}
+
+async function writeScaffoldedTsconfig(dir: string): Promise<void> {
+  const tsconfigPath = join(dir, "tsconfig.json");
+  await writeFile(
+    tsconfigPath,
+    `${JSON.stringify(SCAFFOLDED_TSCONFIG, null, 2)}\n`,
+    "utf-8",
+  );
 }

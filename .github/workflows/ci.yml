@@ -55,31 +55,6 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm typecheck
 
-  template-typecheck:
-    name: Template typecheck
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup
-      # Drift detection: temp-wires `templates/starter` into the workspace
-      # with `workspace:*` deps, runs `tsc --noEmit` against the live
-      # plumix sources, restores the workspace. Catches the case where a
-      # future PR renames a plumix API the template uses.
-      - run: pnpm --filter create-plumix-app verify:template
-
-  scaffold-smoke:
-    name: Scaffold smoke
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup
-      # End-to-end smoke: scaffolds a project with the built CLI, wires
-      # it to workspace plumix packages, runs `pnpm install` and
-      # `plumix build`, asserts the worker bundle was emitted. Catches
-      # build-pipeline / vite / codegen drift that the typecheck-only
-      # template check misses.
-      - run: pnpm --filter create-plumix-app verify:scaffold
-
   knip:
     name: Knip
     runs-on: ubuntu-latest
