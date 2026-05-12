@@ -35,14 +35,13 @@
   },
   "scripts": {
     "build": "tsc",
-    "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "clean": "git clean -xdf .cache .turbo dist node_modules templates",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
+    "prepack": "node scripts/sync-template.mjs",
     "publint": "publint",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit --emitDeclarationOnly false",
-    "verify:scaffold": "node scripts/verify-scaffold.mjs",
-    "verify:template": "node scripts/typecheck-template.mjs"
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "devDependencies": {
     "@plumix/eslint-config": "workspace:*",
