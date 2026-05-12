@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -1023,8 +1023,11 @@ describe("MenusShell", () => {
         "menu-settings-max-depth",
       );
       expect(input.value).toBe("5");
-      await user.clear(input);
-      await user.type(input, "3");
+      // `<input type="number">` rejects setSelectionRange, which makes
+      // userEvent's clear() racy under CI load — fall back to fireEvent
+      // for the value swap so the typed digit replaces "5" instead of
+      // appending to it.
+      fireEvent.change(input, { target: { value: "3" } });
       await user.click(await screen.findByTestId("menu-save-button"));
 
       const call = await vi.waitFor(() => {
@@ -1090,8 +1093,7 @@ describe("MenusShell", () => {
       const input = await screen.findByTestId<HTMLInputElement>(
         "menu-settings-max-depth",
       );
-      await user.clear(input);
-      await user.type(input, "0");
+      fireEvent.change(input, { target: { value: "0" } });
       // Items have a depth-1 child, so 0 is rejected by the reducer.
       const error = await screen.findByTestId("menu-settings-max-depth-error");
       expect(error).toBeInTheDocument();
