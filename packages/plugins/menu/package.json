@@ -65,7 +65,7 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
-    "@orpc/server": "^1.14.1",
+    "@orpc/server": "^1.14.3",
     "@playwright/test": "^1.59.1",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
