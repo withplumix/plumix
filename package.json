@@ -27,10 +27,10 @@
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.5.3",
-    "@commitlint/config-conventional": "^20.5.3",
-    "@commitlint/config-pnpm-scopes": "^20.5.2",
-    "@commitlint/types": "^20.5.0",
+    "@commitlint/cli": "^21.0.0",
+    "@commitlint/config-conventional": "^21.0.0",
+    "@commitlint/config-pnpm-scopes": "^21.0.0",
+    "@commitlint/types": "^21.0.0",
     "dependency-cruiser": "^17.4.0",
     "knip": "^6.6.0",
     "turbo": "^2.9.12"
