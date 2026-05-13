@@ -63,10 +63,10 @@ describe("paginate", () => {
     expect(paginate({ page: 1.5, perPage: 10, total: 25 })).toMatchObject({
       outOfRange: true,
     });
-    expect(paginate({ page: Number.NaN, perPage: 10, total: 25 })).toMatchObject(
-      {
-        outOfRange: true,
-      },
-    );
+    expect(
+      paginate({ page: Number.NaN, perPage: 10, total: 25 }),
+    ).toMatchObject({
+      outOfRange: true,
+    });
   });
 });

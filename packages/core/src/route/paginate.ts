@@ -10,13 +10,13 @@
  * tagged with it.
  */
 
-export interface PaginateInput {
+interface PaginateInput {
   readonly page: number;
   readonly perPage: number;
   readonly total: number;
 }
 
-export interface PaginateResult {
+interface PaginateResult {
   readonly offset: number;
   readonly limit: number;
   readonly totalPages: number;

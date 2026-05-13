@@ -56,7 +56,10 @@ describe("compileRouteMap", () => {
       }),
     ]);
     const map = compileRouteMap(registry);
-    expect(map.map((r) => r.rawPattern)).toEqual(["/r/:term/page/:page", "/r/:term"]);
+    expect(map.map((r) => r.rawPattern)).toEqual([
+      "/r/:term/page/:page",
+      "/r/:term",
+    ]);
     const bare = map.find((r) => r.rawPattern === "/r/:term");
     expect(bare?.intent).toEqual({ kind: "taxonomy", taxonomy: "region" });
   });
