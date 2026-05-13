@@ -1,5 +1,5 @@
 /**
- * Two-layered CSRF protection per ARCHITECTURE.md §"CSRF protection":
+ * Two-layered CSRF protection per docs/reference/architecture/09-packages/03-core/02-auth.md §"CSRF protection":
  *
  * 1. RPC + auth endpoints: require a custom `X-Plumix-Request: 1` header.
  *    Browsers cannot set custom headers on cross-origin requests without a

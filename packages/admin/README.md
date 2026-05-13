@@ -148,4 +148,4 @@ those assets into the consumer's `dist/_plumix/admin/` and the active
 runtime adapter serves them (see `packages/core/src/runtime/dispatcher.ts`
 for the runtime-agnostic request pipeline). Plugin-contributed admin
 chunks + the manifest that wires them are planned for a later phase —
-see ARCHITECTURE.md §Admin for the full design.
+see docs/reference/architecture/09-packages/05-admin.md for the full design.
