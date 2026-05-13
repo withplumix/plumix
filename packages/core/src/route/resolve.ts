@@ -1,9 +1,12 @@
 import type { AppContext } from "../context/app.js";
 import type { Entry } from "../db/schema/entries.js";
+import type { Term } from "../db/schema/terms.js";
 import type { RouteIntent } from "./intent.js";
 import type { RouteMatch } from "./match.js";
-import { and, desc, eq } from "../db/index.js";
+import { and, desc, eq, inArray } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
+import { entryTerm } from "../db/schema/entry_term.js";
+import { terms } from "../db/schema/terms.js";
 import { notFound } from "../runtime/http.js";
 import {
   escapeAttr,
@@ -11,6 +14,20 @@ import {
   renderDefaultDocument,
 } from "./render/document.js";
 import { renderTiptapContent } from "./render/tiptap.js";
+
+interface ResolvedTaxonomyData {
+  readonly taxonomy: string;
+  readonly term: Term;
+  readonly entries: readonly Entry[];
+}
+
+declare module "../hooks/types.js" {
+  interface FilterRegistry {
+    "resolve:taxonomy:data": (
+      data: ResolvedTaxonomyData,
+    ) => ResolvedTaxonomyData | Promise<ResolvedTaxonomyData>;
+  }
+}
 
 const ARCHIVE_LIMIT = 20;
 
@@ -23,7 +40,78 @@ export async function resolvePublicRoute(
       return resolveSingle(ctx, match.intent, match.params);
     case "archive":
       return resolveArchive(ctx, match.intent);
+    case "taxonomy":
+      return resolveTaxonomy(ctx, match.intent, match.params);
   }
+}
+
+async function resolveTaxonomy(
+  ctx: AppContext,
+  intent: Extract<RouteIntent, { kind: "taxonomy" }>,
+  params: Record<string, string>,
+): Promise<Response> {
+  const slug = params.term;
+  if (typeof slug !== "string" || slug === "") {
+    return notFound("public-route-term-missing");
+  }
+
+  const term = await ctx.db.query.terms.findFirst({
+    where: and(eq(terms.taxonomy, intent.taxonomy), eq(terms.slug, slug)),
+  });
+  if (!term) return notFound("public-term-not-found");
+
+  ctx.resolvedEntity = { kind: "term", id: term.id };
+
+  const taxonomy = ctx.plugins.termTaxonomies.get(intent.taxonomy);
+  const allowedTypes = taxonomy?.entryTypes ?? [];
+
+  // Empty `allowedTypes` short-circuits — a taxonomy registered without
+  // any attached entry types yields an empty archive.
+  const rows =
+    allowedTypes.length === 0
+      ? []
+      : await ctx.db
+          .select()
+          .from(entries)
+          .where(
+            and(
+              eq(entries.status, "published"),
+              inArray(entries.type, allowedTypes),
+              inArray(
+                entries.id,
+                ctx.db
+                  .select({ id: entryTerm.entryId })
+                  .from(entryTerm)
+                  .where(eq(entryTerm.termId, term.id)),
+              ),
+            ),
+          )
+          .orderBy(desc(entries.publishedAt), desc(entries.id))
+          .limit(ARCHIVE_LIMIT);
+
+  // Run plugin filters before render so plugins can mutate the resolved
+  // shape (drop entries, append plugin-contributed fields, etc.) without
+  // forking the resolver. Mirrors WP's `pre_get_posts` ergonomics.
+  const data = await ctx.hooks.applyFilter("resolve:taxonomy:data", {
+    taxonomy: intent.taxonomy,
+    term,
+    entries: rows,
+  });
+
+  const title = taxonomy?.labels?.singular ?? taxonomy?.label ?? data.term.name;
+  const heading = escapeHtml(data.term.name);
+  const body =
+    data.entries.length === 0
+      ? `<h1>${heading}</h1><p>No entries yet.</p>`
+      : `<h1>${heading}</h1><ul>${data.entries.map(renderTaxonomyItem).join("")}</ul>`;
+  return htmlResponse(title, body);
+}
+
+function renderTaxonomyItem(row: Entry): string {
+  // Reuse the entry-type's permalink base — taxonomy archives can mix
+  // multiple entry types, so each item needs its own type-specific URL.
+  const href = `/${row.type}/${row.slug}`;
+  return `<li><a href="${escapeAttr(href)}">${escapeHtml(row.title)}</a></li>`;
 }
 
 async function resolveSingle(
