@@ -1207,14 +1207,9 @@ export interface MetaBoxFieldManifestEntry {
    */
   readonly referenceTarget?: ReferenceTarget;
   /**
-   * Richtext field allowlists. `marks` are inline formatters; `nodes`
-   * are block-level Tiptap nodes; `blocks` is a forward-compatible
-   * allowlist of custom node names — the validator accepts them,
-   * leaving the theme-side block render registry (planned) to draw
-   * them. Strict allowlist — omitted entries are denied. The admin's
-   * TiptapEditor projects these onto its StarterKit configuration;
-   * the server-side validator walks the saved doc against the same
-   * allowlist.
+   * Richtext field allowlists — wire projection of
+   * `RichtextMetaBoxField`'s `marks` / `nodes` / `blocks`. See that
+   * type for semantics.
    */
   readonly marks?: readonly string[];
   readonly nodes?: readonly string[];
