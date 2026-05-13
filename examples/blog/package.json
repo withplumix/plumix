@@ -9,6 +9,7 @@
     "build": "plumix build",
     "clean": "git clean -xdf .plumix .wrangler dist node_modules",
     "dev": "plumix dev",
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",
+    "@playwright/test": "^1.59.1",
     "@plumix/typescript-config": "workspace:*",
     "@types/node": "catalog:",
     "typescript": "catalog:",
