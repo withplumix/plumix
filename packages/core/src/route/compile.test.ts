@@ -14,6 +14,76 @@ async function buildRegistry(plugins: ReturnType<typeof definePlugin>[]) {
 }
 
 describe("compileRouteMap", () => {
+  test("auto-generates /{taxonomy}/:term from a registered term taxonomy", async () => {
+    const registry = await buildRegistry([
+      definePlugin("blog", (ctx) => {
+        ctx.registerTermTaxonomy("category", { label: "Categories" });
+      }),
+    ]);
+    const map = compileRouteMap(registry);
+    expect(map).toHaveLength(1);
+    expect(map[0]?.rawPattern).toBe("/category/:term");
+    expect(map[0]?.intent).toEqual({ kind: "taxonomy", taxonomy: "category" });
+    expect(map[0]?.priority).toBe(50);
+  });
+
+  test("honors taxonomy rewrite.slug on the term-archive pattern", async () => {
+    const registry = await buildRegistry([
+      definePlugin("regions", (ctx) => {
+        ctx.registerTermTaxonomy("region", {
+          label: "Regions",
+          rewrite: { slug: "r" },
+        });
+      }),
+    ]);
+    const map = compileRouteMap(registry);
+    expect(map.map((r) => r.rawPattern)).toEqual(["/r/:term"]);
+    expect(map[0]?.intent).toEqual({ kind: "taxonomy", taxonomy: "region" });
+  });
+
+  test("taxonomy isPublic defaults to true — omitting it still generates a route", async () => {
+    const registry = await buildRegistry([
+      definePlugin("default", (ctx) => {
+        ctx.registerTermTaxonomy("topic", { label: "Topics" });
+      }),
+    ]);
+    expect(compileRouteMap(registry).map((r) => r.rawPattern)).toEqual([
+      "/topic/:term",
+    ]);
+  });
+
+  test("skips taxonomies with isPublic:false", async () => {
+    const registry = await buildRegistry([
+      definePlugin("internal", (ctx) => {
+        ctx.registerTermTaxonomy("workflow_state", {
+          label: "Workflow",
+          isPublic: false,
+        });
+      }),
+    ]);
+    expect(compileRouteMap(registry)).toHaveLength(0);
+  });
+
+  test("taxonomy rule beats colliding entry-type single on slug match (WP-faithful)", async () => {
+    const registry = await buildRegistry([
+      definePlugin("shop", (ctx) => {
+        ctx.registerEntryType("category-page", {
+          label: "Category Pages",
+          isPublic: true,
+          rewrite: { slug: "category" },
+        });
+        ctx.registerTermTaxonomy("category", { label: "Categories" });
+      }),
+    ]);
+    const map = compileRouteMap(registry);
+    const patterns = map.map((r) => r.rawPattern);
+    const termIdx = patterns.indexOf("/category/:term");
+    const singleIdx = patterns.indexOf("/category/:slug");
+    expect(termIdx).toBeGreaterThanOrEqual(0);
+    expect(singleIdx).toBeGreaterThanOrEqual(0);
+    expect(termIdx).toBeLessThan(singleIdx);
+  });
+
   test("auto-generates /{type}/:slug from a registered post type", async () => {
     const registry = await buildRegistry([
       definePlugin("blog", (ctx) => {
