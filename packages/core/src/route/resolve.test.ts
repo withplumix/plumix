@@ -147,6 +147,94 @@ describe("resolvePublicRoute — archive", () => {
     expect(body).not.toContain("Draft One");
   });
 
+  test("page=2 returns the offset slice of entries", async () => {
+    const h = await createDispatcherHarness({ plugins: [shopPlugin] });
+    const author = await h.seedUser("admin");
+    // Seed 25 entries — perPage=20 means page 2 has 5 entries.
+    for (let i = 1; i <= 25; i++) {
+      await h.factory.entry.create({
+        type: "product",
+        slug: `p-${String(i).padStart(2, "0")}`,
+        title: `Product ${String(i).padStart(2, "0")}`,
+        content: null,
+        status: "published",
+        authorId: author.id,
+        publishedAt: new Date(`2026-04-${String(i).padStart(2, "0")}`),
+      });
+    }
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/shop/page/2"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    // perPage=20, page 2 shows entries 1..5 (oldest, since newest are on page 1)
+    expect(body).toContain("Product 05");
+    expect(body).toContain("Product 01");
+    expect(body).not.toContain("Product 25");
+    expect(body).not.toContain("Product 06");
+  });
+
+  test("page > totalPages returns 404", async () => {
+    const h = await createDispatcherHarness({ plugins: [shopPlugin] });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "product",
+      slug: "only-one",
+      title: "Only One",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/shop/page/99"),
+    );
+    expect(response.status).toBe(404);
+  });
+
+  test("non-numeric :page param returns 404", async () => {
+    const h = await createDispatcherHarness({ plugins: [shopPlugin] });
+    const response = await h.dispatch(
+      new Request("https://cms.example/shop/page/abc"),
+    );
+    expect(response.status).toBe(404);
+  });
+
+  test("explicit /page/1 resolves the same content as the bare archive", async () => {
+    const h = await createDispatcherHarness({ plugins: [shopPlugin] });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "product",
+      slug: "thing",
+      title: "Thing",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    const bare = await h.dispatch(new Request("https://cms.example/shop"));
+    const paginated = await h.dispatch(
+      new Request("https://cms.example/shop/page/1"),
+    );
+    expect(bare.status).toBe(200);
+    expect(paginated.status).toBe(200);
+    const bareBody = await bare.text();
+    const paginatedBody = await paginated.text();
+    expect(paginatedBody).toBe(bareBody);
+  });
+
+  test("empty archive on page=1 still returns 200 (regression from #224)", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/page/1"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("No entries yet.");
+  });
+
   test("archive title falls back label → entryType when labels.plural is absent", async () => {
     const plugin = definePlugin("docs", (ctx) => {
       ctx.registerEntryType("doc", {
@@ -326,6 +414,73 @@ describe("resolvePublicRoute — taxonomy", () => {
     const body = await response.text();
     expect(body).toContain("Shown");
     expect(body).not.toContain("Hidden");
+  });
+
+  test("taxonomy page=2 returns the offset slice of tagged entries", async () => {
+    const h = await createDispatcherHarness({ plugins: [taxonomyPlugin] });
+    const author = await h.seedUser("admin");
+    const term = await h.factory.category.create({
+      slug: "news",
+      name: "News",
+    });
+    for (let i = 1; i <= 25; i++) {
+      const post = await h.factory.entry.create({
+        type: "post",
+        slug: `p-${String(i).padStart(2, "0")}`,
+        title: `Tagged ${String(i).padStart(2, "0")}`,
+        content: null,
+        status: "published",
+        authorId: author.id,
+        publishedAt: new Date(`2026-04-${String(i).padStart(2, "0")}`),
+      });
+      await h.factory.entryTerm.create({ entryId: post.id, termId: term.id });
+    }
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/category/news/page/2"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    // perPage=20, page 2 shows the oldest 5 entries (newest 20 on page 1).
+    expect(body).toContain("Tagged 05");
+    expect(body).toContain("Tagged 01");
+    expect(body).not.toContain("Tagged 25");
+    expect(body).not.toContain("Tagged 06");
+  });
+
+  test("taxonomy page > totalPages returns 404", async () => {
+    const h = await createDispatcherHarness({ plugins: [taxonomyPlugin] });
+    const author = await h.seedUser("admin");
+    const term = await h.factory.category.create({
+      slug: "news",
+      name: "News",
+    });
+    const post = await h.factory.entry.create({
+      type: "post",
+      slug: "only",
+      title: "Only",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.factory.entryTerm.create({ entryId: post.id, termId: term.id });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/category/news/page/99"),
+    );
+    expect(response.status).toBe(404);
+  });
+
+  test("empty term on page=1 still returns 200 (regression from #224)", async () => {
+    const h = await createDispatcherHarness({ plugins: [taxonomyPlugin] });
+    await h.factory.category.create({ slug: "empty", name: "Empty" });
+    const response = await h.dispatch(
+      new Request("https://cms.example/category/empty/page/1"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("No entries yet.");
   });
 
   test("draft entries tagged with the term are excluded", async () => {

@@ -1,3 +1,6 @@
+import type { SQL } from "drizzle-orm";
+import { count } from "drizzle-orm";
+
 import type { AppContext } from "../context/app.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { Term } from "../db/schema/terms.js";
@@ -8,6 +11,7 @@ import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
 import { notFound } from "../runtime/http.js";
+import { paginate } from "./paginate.js";
 import {
   escapeAttr,
   escapeHtml,
@@ -39,7 +43,7 @@ export async function resolvePublicRoute(
     case "single":
       return resolveSingle(ctx, match.intent, match.params);
     case "archive":
-      return resolveArchive(ctx, match.intent);
+      return resolveArchive(ctx, match.intent, match.params);
     case "taxonomy":
       return resolveTaxonomy(ctx, match.intent, match.params);
   }
@@ -64,30 +68,28 @@ async function resolveTaxonomy(
 
   const taxonomy = ctx.plugins.termTaxonomies.get(intent.taxonomy);
   const allowedTypes = taxonomy?.entryTypes ?? [];
+  const page = parsePageParam(params.page);
 
   // Empty `allowedTypes` short-circuits — a taxonomy registered without
   // any attached entry types yields an empty archive.
-  const rows =
+  const where =
     allowedTypes.length === 0
-      ? []
-      : await ctx.db
-          .select()
-          .from(entries)
-          .where(
-            and(
-              eq(entries.status, "published"),
-              inArray(entries.type, allowedTypes),
-              inArray(
-                entries.id,
-                ctx.db
-                  .select({ id: entryTerm.entryId })
-                  .from(entryTerm)
-                  .where(eq(entryTerm.termId, term.id)),
-              ),
-            ),
-          )
-          .orderBy(desc(entries.publishedAt), desc(entries.id))
-          .limit(ARCHIVE_LIMIT);
+      ? null
+      : and(
+          eq(entries.status, "published"),
+          inArray(entries.type, allowedTypes),
+          inArray(
+            entries.id,
+            ctx.db
+              .select({ id: entryTerm.entryId })
+              .from(entryTerm)
+              .where(eq(entryTerm.termId, term.id)),
+          ),
+        );
+
+  const result = await paginatedEntries(ctx, where, page);
+  if (result.outOfRange) return notFound("public-term-page-out-of-range");
+  const rows = result.rows;
 
   // Run plugin filters before render so plugins can mutate the resolved
   // shape (drop entries, append plugin-contributed fields, etc.) without
@@ -145,15 +147,17 @@ async function resolveSingle(
 async function resolveArchive(
   ctx: AppContext,
   intent: Extract<RouteIntent, { kind: "archive" }>,
+  params: Record<string, string>,
 ): Promise<Response> {
-  const rows = await ctx.db
-    .select()
-    .from(entries)
-    .where(
-      and(eq(entries.type, intent.entryType), eq(entries.status, "published")),
-    )
-    .orderBy(desc(entries.publishedAt), desc(entries.id))
-    .limit(ARCHIVE_LIMIT);
+  const page = parsePageParam(params.page);
+  const where = and(
+    eq(entries.type, intent.entryType),
+    eq(entries.status, "published"),
+  );
+
+  const result = await paginatedEntries(ctx, where, page);
+  if (result.outOfRange) return notFound("public-archive-page-out-of-range");
+  const rows = result.rows;
 
   // Set after the query so a thrown query doesn't leave a stale entity
   // on ctx for any downstream middleware (logging, error pages) that
@@ -169,6 +173,50 @@ async function resolveArchive(
       ? `<h1>${escapeHtml(title)}</h1><p>No entries yet.</p>`
       : `<h1>${escapeHtml(title)}</h1><ul>${rows.map((row) => renderArchiveItem(row, baseSlug)).join("")}</ul>`;
   return htmlResponse(title, body);
+}
+
+// URL :page captures are always strings; invalid input (non-numeric,
+// negative, zero) coerces to NaN/<1 and flows into paginate() which
+// marks it out-of-range and triggers a 404. Default 1 when the bare
+// archive matched (no /page/N).
+function parsePageParam(raw: string | undefined): number {
+  return raw === undefined ? 1 : Number(raw);
+}
+
+/**
+ * Shared paginated-entries query used by archive and taxonomy
+ * resolvers. Returns `{ outOfRange: true }` so the caller can pick the
+ * 404 reason. `where === null` short-circuits to an empty result with
+ * no DB round-trip — used by the taxonomy resolver when a taxonomy is
+ * registered without any attached entry types.
+ */
+async function paginatedEntries(
+  ctx: AppContext,
+  where: SQL | null | undefined,
+  page: number,
+): Promise<{ readonly rows: readonly Entry[]; readonly outOfRange: boolean }> {
+  if (where == null) {
+    const slice = paginate({ page, perPage: ARCHIVE_LIMIT, total: 0 });
+    return { rows: [], outOfRange: slice.outOfRange };
+  }
+
+  const totalRow = await ctx.db
+    .select({ total: count() })
+    .from(entries)
+    .where(where);
+  const total = totalRow[0]?.total ?? 0;
+
+  const slice = paginate({ page, perPage: ARCHIVE_LIMIT, total });
+  if (slice.outOfRange) return { rows: [], outOfRange: true };
+
+  const rows = await ctx.db
+    .select()
+    .from(entries)
+    .where(where)
+    .orderBy(desc(entries.publishedAt), desc(entries.id))
+    .limit(slice.limit)
+    .offset(slice.offset);
+  return { rows, outOfRange: false };
 }
 
 function renderArchiveItem(row: Entry, baseSlug: string): string {

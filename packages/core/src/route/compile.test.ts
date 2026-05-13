@@ -21,10 +21,29 @@ describe("compileRouteMap", () => {
       }),
     ]);
     const map = compileRouteMap(registry);
-    expect(map).toHaveLength(1);
-    expect(map[0]?.rawPattern).toBe("/category/:term");
-    expect(map[0]?.intent).toEqual({ kind: "taxonomy", taxonomy: "category" });
-    expect(map[0]?.priority).toBe(50);
+    const bare = map.find((r) => r.rawPattern === "/category/:term");
+    expect(bare?.intent).toEqual({ kind: "taxonomy", taxonomy: "category" });
+    expect(bare?.priority).toBe(50);
+  });
+
+  test("emits /<base>/:term/page/:page paginated rule alongside the bare term archive", async () => {
+    const registry = await buildRegistry([
+      definePlugin("blog", (ctx) => {
+        ctx.registerTermTaxonomy("category", { label: "Categories" });
+      }),
+    ]);
+    const map = compileRouteMap(registry);
+    const patterns = map.map((r) => r.rawPattern);
+    expect(patterns).toContain("/category/:term");
+    expect(patterns).toContain("/category/:term/page/:page");
+    const paginated = map.find(
+      (r) => r.rawPattern === "/category/:term/page/:page",
+    );
+    expect(paginated?.intent).toEqual({
+      kind: "taxonomy",
+      taxonomy: "category",
+    });
+    expect(paginated?.priority).toBe(50);
   });
 
   test("honors taxonomy rewrite.slug on the term-archive pattern", async () => {
@@ -37,8 +56,12 @@ describe("compileRouteMap", () => {
       }),
     ]);
     const map = compileRouteMap(registry);
-    expect(map.map((r) => r.rawPattern)).toEqual(["/r/:term"]);
-    expect(map[0]?.intent).toEqual({ kind: "taxonomy", taxonomy: "region" });
+    expect(map.map((r) => r.rawPattern)).toEqual([
+      "/r/:term/page/:page",
+      "/r/:term",
+    ]);
+    const bare = map.find((r) => r.rawPattern === "/r/:term");
+    expect(bare?.intent).toEqual({ kind: "taxonomy", taxonomy: "region" });
   });
 
   test("taxonomy isPublic defaults to true — omitting it still generates a route", async () => {
@@ -48,6 +71,7 @@ describe("compileRouteMap", () => {
       }),
     ]);
     expect(compileRouteMap(registry).map((r) => r.rawPattern)).toEqual([
+      "/topic/:term/page/:page",
       "/topic/:term",
     ]);
   });
@@ -97,6 +121,29 @@ describe("compileRouteMap", () => {
     expect(map[0]?.priority).toBe(50);
   });
 
+  test("emits /<archive>/page/:page paginated rule alongside the bare archive", async () => {
+    const registry = await buildRegistry([
+      definePlugin("shop", (ctx) => {
+        ctx.registerEntryType("product", {
+          label: "Products",
+          isPublic: true,
+          hasArchive: true,
+          rewrite: { slug: "shop" },
+        });
+      }),
+    ]);
+    const map = compileRouteMap(registry);
+    const patterns = map.map((r) => r.rawPattern);
+    expect(patterns).toContain("/shop");
+    expect(patterns).toContain("/shop/page/:page");
+    const paginated = map.find((r) => r.rawPattern === "/shop/page/:page");
+    expect(paginated?.intent).toEqual({
+      kind: "archive",
+      entryType: "product",
+    });
+    expect(paginated?.priority).toBe(50);
+  });
+
   test("honors rewrite.slug for both single and archive patterns", async () => {
     const registry = await buildRegistry([
       definePlugin("shop", (ctx) => {
@@ -110,9 +157,10 @@ describe("compileRouteMap", () => {
     ]);
     const map = compileRouteMap(registry);
     const patterns = map.map((r) => r.rawPattern);
-    expect(patterns).toEqual(["/shop", "/shop/:slug"]);
+    expect(patterns).toEqual(["/shop/page/:page", "/shop", "/shop/:slug"]);
     expect(map[0]?.intent).toEqual({ kind: "archive", entryType: "product" });
-    expect(map[1]?.intent).toEqual({ kind: "single", entryType: "product" });
+    expect(map[1]?.intent).toEqual({ kind: "archive", entryType: "product" });
+    expect(map[2]?.intent).toEqual({ kind: "single", entryType: "product" });
   });
 
   test("hasArchive: string overrides the auto archive slug", async () => {
@@ -127,7 +175,11 @@ describe("compileRouteMap", () => {
       }),
     ]);
     const map = compileRouteMap(registry);
-    expect(map.map((r) => r.rawPattern)).toEqual(["/store", "/p/:slug"]);
+    expect(map.map((r) => r.rawPattern)).toEqual([
+      "/store/page/:page",
+      "/store",
+      "/p/:slug",
+    ]);
   });
 
   test("skips private post types entirely", async () => {

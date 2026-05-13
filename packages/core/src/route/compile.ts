@@ -3,7 +3,7 @@ import type {
   RegisteredEntryType,
   RegisteredTermTaxonomy,
 } from "../plugin/manifest.js";
-import type { RouteRule } from "./intent.js";
+import type { RouteIntent, RouteRule } from "./intent.js";
 
 const AUTO_ROUTE_PRIORITY = 50;
 export const DEFAULT_REWRITE_RULE_PRIORITY = 10;
@@ -59,11 +59,26 @@ function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
   const rules: CompiledRule[] = [];
 
   if (archiveSlug !== null) {
-    const pattern = `/${archiveSlug}`;
+    const basePattern = `/${archiveSlug}`;
+    const paginatedPattern = `${basePattern}/page/:page`;
+    const intent: RouteIntent = {
+      kind: "archive",
+      entryType: entryType.name,
+    };
+    // Paginated variant goes first so /shop/page/2 doesn't accidentally
+    // match the bare archive's URLPattern (it wouldn't today, but keep
+    // the more-specific rule earlier as a defensive ordering invariant).
     rules.push({
-      pattern: new URLPattern({ pathname: pattern }),
-      rawPattern: pattern,
-      intent: { kind: "archive", entryType: entryType.name },
+      pattern: new URLPattern({ pathname: paginatedPattern }),
+      rawPattern: paginatedPattern,
+      intent,
+      priority: AUTO_ROUTE_PRIORITY,
+      registeredBy: entryType.registeredBy,
+    });
+    rules.push({
+      pattern: new URLPattern({ pathname: basePattern }),
+      rawPattern: basePattern,
+      intent,
       priority: AUTO_ROUTE_PRIORITY,
       registeredBy: entryType.registeredBy,
     });
@@ -85,12 +100,21 @@ function autoRulesForTermTaxonomy(
   taxonomy: RegisteredTermTaxonomy,
 ): CompiledRule[] {
   const baseSlug = taxonomy.rewrite?.slug ?? taxonomy.name;
-  const pattern = `/${baseSlug}/:term`;
+  const basePattern = `/${baseSlug}/:term`;
+  const paginatedPattern = `${basePattern}/page/:page`;
+  const intent: RouteIntent = { kind: "taxonomy", taxonomy: taxonomy.name };
   return [
     {
-      pattern: new URLPattern({ pathname: pattern }),
-      rawPattern: pattern,
-      intent: { kind: "taxonomy", taxonomy: taxonomy.name },
+      pattern: new URLPattern({ pathname: paginatedPattern }),
+      rawPattern: paginatedPattern,
+      intent,
+      priority: AUTO_ROUTE_PRIORITY,
+      registeredBy: taxonomy.registeredBy,
+    },
+    {
+      pattern: new URLPattern({ pathname: basePattern }),
+      rawPattern: basePattern,
+      intent,
       priority: AUTO_ROUTE_PRIORITY,
       registeredBy: taxonomy.registeredBy,
     },
