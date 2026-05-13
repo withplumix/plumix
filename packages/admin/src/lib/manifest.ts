@@ -42,7 +42,6 @@ const KNOWN_ARRAY_FIELDS = [
   "settingsGroups",
   "settingsPages",
   "adminNav",
-  "blocks",
   "fieldTypes",
 ] as const satisfies readonly (keyof PlumixManifest)[];
 

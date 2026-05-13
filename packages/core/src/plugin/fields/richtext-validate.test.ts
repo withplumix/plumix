@@ -60,7 +60,7 @@ describe("walkRichtextDoc — node allowlist", () => {
     }
   });
 
-  test("blocks contributes to the allowed node set (plugin-registered nodes)", () => {
+  test("blocks contributes to the allowed node set (forward-compat allowlist names)", () => {
     const validate = walkRichtextDoc({ blocks: ["my-callout"] });
     expect(() =>
       validate({

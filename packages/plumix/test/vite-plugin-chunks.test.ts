@@ -112,19 +112,12 @@ describe("plugin-host acceptance — end-to-end primitive coverage", () => {
           capability: "hello:manage",
           component: "HelloPage",
         });
-        // 8. Editor block.
-        ctx.registerBlock({
-          name: "hello_callout",
-          kind: "node",
-          schema: { group: "block", atom: false },
-          component: "HelloCalloutView",
-        });
-        // 9. Custom meta-box field type.
+        // 8. Custom meta-box field type.
         ctx.registerFieldType({
           type: "hello_picker",
           component: "HelloPickerField",
         });
-        // 10. Plugin-owned settings (reusing the existing settings-group API).
+        // 9. Plugin-owned settings (reusing the existing settings-group API).
         ctx.registerSettingsGroup("hello", {
           label: "Hello settings",
           fields: [
@@ -160,7 +153,6 @@ describe("plugin-host acceptance — end-to-end primitive coverage", () => {
     expect(registry.capabilities.get("hello:manage")?.minRole).toBe("admin");
     expect(registry.adminPages.get("/hello")?.capability).toBe("hello:manage");
     expect(registry.adminPages.get("/hello")?.nav?.label).toBe("Hello");
-    expect(registry.blocks.get("hello_callout")?.kind).toBe("node");
     expect(registry.fieldTypes.get("hello_picker")).toBeDefined();
     expect(registry.settingsGroups.get("hello")).toBeDefined();
     expect(registry.settingsPages.get("hello")).toBeDefined();
@@ -190,7 +182,6 @@ describe("plugin-host acceptance — end-to-end primitive coverage", () => {
     expect(parsed.termTaxonomies.map((t) => t.name)).toContain("hello_menu");
     const appearance = parsed.adminNav.find((g) => g.id === "appearance");
     expect(appearance?.items.map((i) => i.to)).toEqual(["/pages/hello"]);
-    expect(parsed.blocks.map((b) => b.name)).toEqual(["hello_callout"]);
     expect(parsed.fieldTypes.map((f) => f.type)).toEqual(["hello_picker"]);
   });
 
@@ -233,7 +224,7 @@ describe("plugin-host acceptance — end-to-end primitive coverage", () => {
     expect(roundTrip).toContain(
       '<script type="module" data-plumix-plugin="hello-world" src="/_plumix/admin/plugins/hello-world.js"></script>',
     );
-    // Manifest still present alongside the plugin block.
+    // Manifest still present alongside the plugin chunk tags.
     expect(roundTrip).toContain('<script id="plumix-manifest"');
     // CSS link comes before script so styles parse before the plugin
     // chunk's React components mount.

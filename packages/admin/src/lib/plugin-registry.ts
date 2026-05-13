@@ -37,7 +37,6 @@ function makeRegistry<TComponent>(
 }
 
 const pages = makeRegistry<ComponentType>("registerPluginPage");
-const blocks = makeRegistry<ComponentType>("registerPluginBlock");
 const fieldTypes = makeRegistry<PluginFieldComponent>(
   "registerPluginFieldType",
 );
@@ -65,17 +64,6 @@ export function registerPluginPage(
 
 export function getPluginPage(path: string): ComponentType | undefined {
   return pages.map.get(path);
-}
-
-export function registerPluginBlock(
-  name: string,
-  component: ComponentType,
-): void {
-  register(blocks, name, component);
-}
-
-export function getPluginBlock(name: string): ComponentType | undefined {
-  return blocks.map.get(name);
 }
 
 // Built-in `inputType` names handled by the host's meta-box-field
@@ -139,6 +127,5 @@ export function getPluginFieldType(
 /** @internal Test-only. */
 export function _resetPluginRegistry(): void {
   pages.map.clear();
-  blocks.map.clear();
   fieldTypes.map.clear();
 }

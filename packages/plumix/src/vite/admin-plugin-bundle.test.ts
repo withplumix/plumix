@@ -192,14 +192,13 @@ describe("assemblePluginAdminBundle", () => {
     expect(css).toContain(".border-dashed");
   });
 
-  test("auto-emits register* calls for ctx-registered admin pages, blocks, and field types", async () => {
+  test("auto-emits register* calls for ctx-registered admin pages and field types", async () => {
     // Plugin authors used to write a `window.plumix.registerPluginPage`
     // call inside their admin chunk in addition to `ctx.registerAdmin
     // Page({ component: { package, export } })`. The bundler now
     // namespace-imports each plugin's adminEntry and emits the matching
     // register call from the registry — verifying both the admin page
-    // and the block + field-type variants here so the three surfaces
-    // stay in lockstep.
+    // and the field-type variant here so the surfaces stay in lockstep.
     const pkgDir = resolve(workspace, "node_modules/@fixture/plugin-auto");
     await mkdir(pkgDir, { recursive: true });
     await writeFile(
@@ -215,7 +214,6 @@ describe("assemblePluginAdminBundle", () => {
       resolve(pkgDir, "entry.js"),
       `
         export const MediaLibrary = () => null;
-        export const ImageBlock = () => null;
         export const MediaPicker = () => null;
       `,
     );
@@ -227,12 +225,6 @@ describe("assemblePluginAdminBundle", () => {
           path: "/auto",
           title: "Auto",
           component: "MediaLibrary",
-        });
-        ctx.registerBlock({
-          name: "image",
-          kind: "node",
-          schema: {},
-          component: "ImageBlock",
         });
         ctx.registerFieldType({
           type: "media_picker",
@@ -263,11 +255,9 @@ describe("assemblePluginAdminBundle", () => {
       "utf8",
     );
     // Minified output preserves the registration verbs as method names
-    // and the path / name / type strings as literals.
+    // and the path / type strings as literals.
     expect(bundle).toContain("registerPluginPage");
     expect(bundle).toContain('"/auto"');
-    expect(bundle).toContain("registerPluginBlock");
-    expect(bundle).toContain('"image"');
     expect(bundle).toContain("registerPluginFieldType");
     expect(bundle).toContain('"media_picker"');
   });

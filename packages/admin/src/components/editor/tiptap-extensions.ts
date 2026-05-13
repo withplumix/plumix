@@ -5,10 +5,10 @@ import StarterKit from "@tiptap/starter-kit";
 // strict richtext-field mode where StarterKit extensions are gated
 // by the field's `marks` / `nodes`.
 //
-// `blocks` (plugin-registered nodes via `ctx.registerBlock`) are
-// validated server-side but NOT auto-instantiated as Tiptap
-// extensions in v0.1 — that integration (NodeView wiring from
-// `getPluginBlock`) is post-0.1. Plugin authors needing editor-side
+// `blocks` is a forward-compatible allowlist of node names — the
+// server-side validator accepts them, but they're not yet auto-
+// instantiated as Tiptap extensions. The theme-side block render
+// registry covers that integration. Plugins needing editor-side
 // rendering today use `registerPluginFieldType` instead.
 
 interface RichtextAllowlistInput {

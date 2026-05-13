@@ -2,10 +2,8 @@ import { afterEach, describe, expect, test } from "vitest";
 
 import {
   _resetPluginRegistry,
-  getPluginBlock,
   getPluginFieldType,
   getPluginPage,
-  registerPluginBlock,
   registerPluginFieldType,
   registerPluginPage,
 } from "./plugin-registry.js";
@@ -29,20 +27,6 @@ describe("plugin page registry", () => {
   test("throws when registering the same path twice", () => {
     registerPluginPage("/menus", Stub);
     expect(() => registerPluginPage("/menus", Stub)).toThrow(
-      /already registered/,
-    );
-  });
-});
-
-describe("plugin block registry", () => {
-  test("round-trips a block component", () => {
-    registerPluginBlock("image", Stub);
-    expect(getPluginBlock("image")).toBe(Stub);
-  });
-
-  test("rejects duplicates", () => {
-    registerPluginBlock("image", Stub);
-    expect(() => registerPluginBlock("image", Stub)).toThrow(
       /already registered/,
     );
   });
