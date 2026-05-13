@@ -14,8 +14,14 @@ const config: KnipConfig = {
     },
     // plumix.config.ts is the consumer's entry — knip can't infer it
     // from package.json's exports because examples don't publish.
+    // e2e/*.spec.ts files are invoked by the playwright CLI (no static
+    // import); knip's playwright plugin is off for the same reason it
+    // is in every other e2e workspace — `plumix/test/playwright`'s
+    // dist may not exist on a fresh clone, and the plugin would
+    // crash at resolve time.
     "examples/blog": {
-      entry: ["plumix.config.ts"],
+      entry: ["plumix.config.ts", "e2e/*.spec.ts"],
+      playwright: false,
     },
     "examples/minimal": {
       entry: ["plumix.config.ts"],
