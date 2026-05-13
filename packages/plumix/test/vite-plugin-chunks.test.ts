@@ -224,7 +224,7 @@ describe("plugin-host acceptance — end-to-end primitive coverage", () => {
     expect(roundTrip).toContain(
       '<script type="module" data-plumix-plugin="hello-world" src="/_plumix/admin/plugins/hello-world.js"></script>',
     );
-    // Manifest still present alongside the plugin block.
+    // Manifest still present alongside the plugin chunk tags.
     expect(roundTrip).toContain('<script id="plumix-manifest"');
     // CSS link comes before script so styles parse before the plugin
     // chunk's React components mount.

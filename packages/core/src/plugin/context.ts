@@ -682,23 +682,23 @@ function assertComponentRef(
   }
 }
 
-const BLOCK_NAME_RE = /^[a-z][a-z0-9_-]*$/;
+const IDENTIFIER_NAME_RE = /^[a-z][a-z0-9_-]*$/;
 
 function assertValidFieldTypeName(pluginId: string, type: string): void {
-  if (!BLOCK_NAME_RE.test(type) || type.length > 64) {
+  if (!IDENTIFIER_NAME_RE.test(type) || type.length > 64) {
     throw new Error(
       `Plugin "${pluginId}" registered meta-box field type with invalid ` +
-        `name "${type}" — must match ${BLOCK_NAME_RE} and be at most 64 ` +
+        `name "${type}" — must match ${IDENTIFIER_NAME_RE} and be at most 64 ` +
         `characters.`,
     );
   }
 }
 
 function assertValidLookupAdapterKind(pluginId: string, kind: string): void {
-  if (!BLOCK_NAME_RE.test(kind) || kind.length > 64) {
+  if (!IDENTIFIER_NAME_RE.test(kind) || kind.length > 64) {
     throw new Error(
       `Plugin "${pluginId}" registered lookup adapter with invalid ` +
-        `kind "${kind}" — must match ${BLOCK_NAME_RE} and be at most 64 ` +
+        `kind "${kind}" — must match ${IDENTIFIER_NAME_RE} and be at most 64 ` +
         `characters.`,
     );
   }
