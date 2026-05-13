@@ -8,6 +8,14 @@ export interface PlumixE2EConfigOptions {
   readonly baseURL: string;
   /** Shell command(s) run before the suite — typically build + preview. */
   readonly webServerCommand: string;
+  /**
+   * Optional. When set, the webServer readiness check waits for the
+   * TCP port to open instead of polling `baseURL` for a 2xx/3xx
+   * response. Use this when the dev server starts but `/` returns
+   * 404 (e.g. a public-route example whose front page isn't wired) —
+   * waiting on the URL would otherwise time out forever.
+   */
+  readonly webServerPort?: number;
 }
 
 /**
@@ -37,7 +45,9 @@ export function definePlumixE2EConfig(
     projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
     webServer: {
       command: options.webServerCommand,
-      url: options.baseURL,
+      ...(options.webServerPort !== undefined
+        ? { port: options.webServerPort }
+        : { url: options.baseURL }),
       reuseExistingServer: !process.env.CI,
       stdout: "pipe",
       stderr: "pipe",
