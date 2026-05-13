@@ -1,12 +1,16 @@
 /**
  * Discriminated union describing what a matched URL represents. Resolved
- * into a Response by the public-route resolver. Kept narrow for now — the
- * arch doc specs `taxonomy` / `search` / `front-page` / `handler` /
- * `redirect`; those land when a plugin actually needs them.
+ * into a Response by the public-route resolver. URL params (slug, term,
+ * page) live on `RouteMatch.params`, not on the intent itself — the
+ * intent describes the *route shape*, the match carries the request.
+ *
+ * `search` / `front-page` / `handler` / `redirect` land when a plugin
+ * actually needs them.
  */
 export type RouteIntent =
   | { readonly kind: "single"; readonly entryType: string }
-  | { readonly kind: "archive"; readonly entryType: string };
+  | { readonly kind: "archive"; readonly entryType: string }
+  | { readonly kind: "taxonomy"; readonly taxonomy: string };
 
 /**
  * Compiled rule. `priority` preserves arch-doc ordering semantics — lower

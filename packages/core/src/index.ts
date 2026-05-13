@@ -10,6 +10,14 @@ export * from "./plugin/index.js";
 export { isCurrentSource } from "./route/current.js";
 export type { CurrentSource, ResolvedEntity } from "./route/current.js";
 export type { RouteIntent, RouteRule } from "./route/intent.js";
+export { isEntryArchive, isTaxonomy } from "./route/render/archive-props.js";
+export type {
+  ArchiveEntry,
+  ArchiveProps,
+  EntryArchiveProps,
+  TaxonomyArchiveProps,
+} from "./route/render/archive-props.js";
+export type { ResolvedNode } from "./route/render/template-hierarchy.js";
 export * from "./rpc/index.js";
 export type * from "./runtime/adapter.js";
 export { buildApp } from "./runtime/app.js";

@@ -1,6 +1,7 @@
 import type {
   PluginRegistry,
   RegisteredEntryType,
+  RegisteredTermTaxonomy,
 } from "../plugin/manifest.js";
 import type { RouteRule } from "./intent.js";
 
@@ -21,6 +22,16 @@ export function compileRouteMap(
   registry: PluginRegistry,
 ): readonly RouteRule[] {
   const rules: CompiledRule[] = [];
+
+  // Taxonomies emit before entry types so that a slug collision (e.g. a
+  // post type with `rewrite.slug: 'category'` shadowing a `category`
+  // taxonomy) resolves taxonomy-first under the stable-sort tie-break.
+  // WP-faithful: `\$wp_rewrite->rules` orders taxonomy archives ahead of
+  // post-type singles.
+  for (const taxonomy of registry.termTaxonomies.values()) {
+    if (taxonomy.isPublic === false) continue;
+    for (const rule of autoRulesForTermTaxonomy(taxonomy)) rules.push(rule);
+  }
 
   for (const entryType of registry.entryTypes.values()) {
     if (entryType.isPublic === false) continue;
@@ -68,6 +79,22 @@ function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
   });
 
   return rules;
+}
+
+function autoRulesForTermTaxonomy(
+  taxonomy: RegisteredTermTaxonomy,
+): CompiledRule[] {
+  const baseSlug = taxonomy.rewrite?.slug ?? taxonomy.name;
+  const pattern = `/${baseSlug}/:term`;
+  return [
+    {
+      pattern: new URLPattern({ pathname: pattern }),
+      rawPattern: pattern,
+      intent: { kind: "taxonomy", taxonomy: taxonomy.name },
+      priority: AUTO_ROUTE_PRIORITY,
+      registeredBy: taxonomy.registeredBy,
+    },
+  ];
 }
 
 // Archive slugs need to be a single path segment — slashes would let a

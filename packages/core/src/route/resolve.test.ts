@@ -161,3 +161,195 @@ describe("resolvePublicRoute — archive", () => {
     expect(body).toContain("<title>Docs</title>");
   });
 });
+
+const taxonomyPlugin = definePlugin("blog", (ctx) => {
+  ctx.registerEntryType("post", {
+    label: "Posts",
+    isPublic: true,
+    hasArchive: true,
+  });
+  ctx.registerTermTaxonomy("category", {
+    label: "Categories",
+    entryTypes: ["post"],
+  });
+});
+
+describe("resolvePublicRoute — taxonomy", () => {
+  test("returns 404 when the term slug doesn't exist", async () => {
+    const h = await createDispatcherHarness({ plugins: [taxonomyPlugin] });
+    const response = await h.dispatch(
+      new Request("https://cms.example/category/missing"),
+    );
+    expect(response.status).toBe(404);
+  });
+
+  test("renders a 200 empty archive when the term exists but has no entries", async () => {
+    const h = await createDispatcherHarness({ plugins: [taxonomyPlugin] });
+    await h.factory.category.create({ slug: "news", name: "News" });
+    const response = await h.dispatch(
+      new Request("https://cms.example/category/news"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("<h1>News</h1>");
+    expect(body).toContain("No entries yet.");
+  });
+
+  test("lists published entries tagged with the term, newest first", async () => {
+    const h = await createDispatcherHarness({ plugins: [taxonomyPlugin] });
+    const author = await h.seedUser("admin");
+    const term = await h.factory.category.create({
+      slug: "news",
+      name: "News",
+    });
+    const older = await h.factory.entry.create({
+      type: "post",
+      slug: "older",
+      title: "Older",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date("2026-04-01"),
+    });
+    const newer = await h.factory.entry.create({
+      type: "post",
+      slug: "newer",
+      title: "Newer",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date("2026-04-20"),
+    });
+    await h.factory.entryTerm.create({ entryId: older.id, termId: term.id });
+    await h.factory.entryTerm.create({ entryId: newer.id, termId: term.id });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/category/news"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("Newer");
+    expect(body).toContain("Older");
+    expect(body.indexOf("Newer")).toBeLessThan(body.indexOf("Older"));
+  });
+
+  test("cross-entry-type taxonomy includes entries from every attached type", async () => {
+    const multiTypePlugin = definePlugin("multi", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerEntryType("doc", { label: "Docs", isPublic: true });
+      ctx.registerTermTaxonomy("topic", {
+        label: "Topics",
+        entryTypes: ["post", "doc"],
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [multiTypePlugin] });
+    const author = await h.seedUser("admin");
+    const term = await h.factory.term.create({
+      taxonomy: "topic",
+      slug: "edge",
+      name: "Edge",
+    });
+    const post = await h.factory.entry.create({
+      type: "post",
+      slug: "p",
+      title: "Post P",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date("2026-04-10"),
+    });
+    const doc = await h.factory.entry.create({
+      type: "doc",
+      slug: "d",
+      title: "Doc D",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date("2026-04-20"),
+    });
+    await h.factory.entryTerm.create({ entryId: post.id, termId: term.id });
+    await h.factory.entryTerm.create({ entryId: doc.id, termId: term.id });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/topic/edge"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain('<a href="/post/p">Post P</a>');
+    expect(body).toContain('<a href="/doc/d">Doc D</a>');
+  });
+
+  test("resolve:taxonomy:data filter can drop entries before rendering", async () => {
+    const filterPlugin = definePlugin("hide", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerTermTaxonomy("category", {
+        label: "Categories",
+        entryTypes: ["post"],
+      });
+      ctx.addFilter("resolve:taxonomy:data", (data) => {
+        return {
+          ...data,
+          entries: data.entries.filter((e) => e.slug !== "hidden"),
+        };
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [filterPlugin] });
+    const author = await h.seedUser("admin");
+    const term = await h.factory.category.create({
+      slug: "news",
+      name: "News",
+    });
+    const shown = await h.factory.entry.create({
+      type: "post",
+      slug: "shown",
+      title: "Shown",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date("2026-04-10"),
+    });
+    const hidden = await h.factory.entry.create({
+      type: "post",
+      slug: "hidden",
+      title: "Hidden",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date("2026-04-20"),
+    });
+    await h.factory.entryTerm.create({ entryId: shown.id, termId: term.id });
+    await h.factory.entryTerm.create({ entryId: hidden.id, termId: term.id });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/category/news"),
+    );
+    const body = await response.text();
+    expect(body).toContain("Shown");
+    expect(body).not.toContain("Hidden");
+  });
+
+  test("draft entries tagged with the term are excluded", async () => {
+    const h = await createDispatcherHarness({ plugins: [taxonomyPlugin] });
+    const author = await h.seedUser("admin");
+    const term = await h.factory.category.create({
+      slug: "news",
+      name: "News",
+    });
+    const draft = await h.factory.entry.create({
+      type: "post",
+      slug: "draft",
+      title: "Draft",
+      content: null,
+      status: "draft",
+      authorId: author.id,
+    });
+    await h.factory.entryTerm.create({ entryId: draft.id, termId: term.id });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/category/news"),
+    );
+    const body = await response.text();
+    expect(body).toContain("No entries yet.");
+    expect(body).not.toContain("Draft");
+  });
+});
