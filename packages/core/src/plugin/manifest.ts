@@ -488,10 +488,10 @@ export interface MediaListMetaBoxField extends MetaBoxFieldBase {
  *
  * `marks` are inline formatters (`bold`, `italic`, `link`, …).
  * `nodes` are block-level Tiptap nodes (`heading`, `bulletList`,
- * `codeBlock`, …). `blocks` are plumix-registered custom nodes/marks
- * — names declared via `ctx.registerBlock` on the server, with React
- * components registered via `window.plumix.registerPluginBlock` on
- * the admin.
+ * `codeBlock`, …). `blocks` is a forward-compatible allowlist of
+ * custom node names — the validator accepts documents containing them,
+ * leaving the theme-side block render registry (planned) responsible
+ * for actually drawing them.
  *
  * Server-side validator (`walkRichtextDoc`) walks the saved doc and
  * rejects any node/mark/block name outside the allowlist. The admin
@@ -513,10 +513,10 @@ export interface RichtextMetaBoxField extends MetaBoxFieldBase {
 /**
  * Flat list of structured rows. Each row carries the same fixed schema
  * declared via `subFields`; mixed-row "flexible content" is explicitly
- * out of scope (`registerBlock` covers that authoring need). Subfields
- * may be any registered field type *except* another repeater — nesting
- * is rejected at registration time so v0.1 doesn't ship recursive UX
- * (lift later non-breakingly if a real use case appears).
+ * out of scope. Subfields may be any registered field type *except*
+ * another repeater — nesting is rejected at registration time so v0.1
+ * doesn't ship recursive UX (lift later non-breakingly if a real use
+ * case appears).
  *
  * Storage rides on the `json` primitive so any JSON-serialisable row
  * shape survives the wire. The auto-injected sanitizer drops rows
@@ -801,7 +801,7 @@ export interface RegisteredRewriteRule {
  * Reference to a React component contributed by a plugin. The string is
  * the export name on the plugin's `adminEntry` module — the plumix vite
  * pipeline namespace-imports each plugin's entry and emits the matching
- * `window.plumix.registerPlugin{Page,Block,FieldType}` calls into the
+ * `window.plumix.registerPlugin{Page,FieldType}` calls into the
  * synthesised admin chunk, so plugin authors only need `export const
  * MyComponent = ...` and a single registration call to `ctx.register*`.
  *
@@ -897,14 +897,6 @@ export const CORE_NAV_GROUPS: readonly {
   { id: "management", label: "Management", priority: 1000 },
 ];
 
-export interface BlockOptions {
-  readonly name: string;
-  readonly kind: "node" | "mark";
-  /** Opaque Tiptap spec passed to `Node.create` / `Mark.create`. */
-  readonly schema: Readonly<Record<string, unknown>>;
-  readonly component?: PluginComponentRef;
-}
-
 /**
  * Plugin-contributed form field renderer. The admin's form dispatcher
  * falls through to a plain text input on unknown `inputType` values
@@ -919,10 +911,6 @@ export interface BlockOptions {
 export interface FieldTypeOptions {
   readonly type: string;
   readonly component: PluginComponentRef;
-}
-
-export interface RegisteredBlock extends BlockOptions {
-  readonly registeredBy: string | null;
 }
 
 export interface RegisteredFieldType extends FieldTypeOptions {
@@ -1040,7 +1028,6 @@ export interface PluginRegistry {
   readonly rawRoutes: readonly RegisteredRawRoute[];
   readonly loginLinks: readonly RegisteredLoginLink[];
   readonly adminPages: ReadonlyMap<string, RegisteredAdminPage>;
-  readonly blocks: ReadonlyMap<string, RegisteredBlock>;
   readonly fieldTypes: ReadonlyMap<string, RegisteredFieldType>;
   readonly lookupAdapters: ReadonlyMap<string, RegisteredLookupAdapter>;
   readonly scheduledTasks: readonly RegisteredScheduledTask[];
@@ -1060,7 +1047,6 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly rawRoutes: RegisteredRawRoute[];
   readonly loginLinks: RegisteredLoginLink[];
   readonly adminPages: Map<string, RegisteredAdminPage>;
-  readonly blocks: Map<string, RegisteredBlock>;
   readonly fieldTypes: Map<string, RegisteredFieldType>;
   readonly lookupAdapters: Map<string, RegisteredLookupAdapter>;
   readonly scheduledTasks: RegisteredScheduledTask[];
@@ -1081,7 +1067,6 @@ export function createPluginRegistry(): MutablePluginRegistry {
     rawRoutes: [],
     loginLinks: [],
     adminPages: new Map(),
-    blocks: new Map(),
     fieldTypes: new Map(),
     lookupAdapters: new Map(),
     scheduledTasks: [],
@@ -1223,11 +1208,13 @@ export interface MetaBoxFieldManifestEntry {
   readonly referenceTarget?: ReferenceTarget;
   /**
    * Richtext field allowlists. `marks` are inline formatters; `nodes`
-   * are block-level Tiptap nodes; `blocks` are plumix-registered
-   * custom node/mark names. Strict allowlist — omitted entries are
-   * denied. The admin's TiptapEditor projects these onto its
-   * StarterKit configuration + plugin block registry; the server-
-   * side validator walks the saved doc against the same allowlist.
+   * are block-level Tiptap nodes; `blocks` is a forward-compatible
+   * allowlist of custom node names — the validator accepts them,
+   * leaving the theme-side block render registry (planned) to draw
+   * them. Strict allowlist — omitted entries are denied. The admin's
+   * TiptapEditor projects these onto its StarterKit configuration;
+   * the server-side validator walks the saved doc against the same
+   * allowlist.
    */
   readonly marks?: readonly string[];
   readonly nodes?: readonly string[];
@@ -1368,13 +1355,6 @@ export interface AdminNavGroup {
   readonly items: readonly AdminNavItem[];
 }
 
-export interface BlockManifestEntry {
-  readonly name: string;
-  readonly kind: "node" | "mark";
-  readonly schema: Readonly<Record<string, unknown>>;
-  readonly component?: PluginComponentRef;
-}
-
 export interface FieldTypeManifestEntry {
   readonly type: string;
   readonly component: PluginComponentRef;
@@ -1395,7 +1375,6 @@ export interface PlumixManifest {
   readonly settingsGroups?: readonly SettingsGroupManifestEntry[];
   readonly settingsPages?: readonly SettingsPageManifestEntry[];
   readonly adminNav?: readonly AdminNavGroup[];
-  readonly blocks?: readonly BlockManifestEntry[];
   readonly fieldTypes?: readonly FieldTypeManifestEntry[];
 }
 
@@ -1422,7 +1401,6 @@ export function emptyManifest(): PlumixManifest {
     settingsGroups: [],
     settingsPages: [],
     adminNav: [],
-    blocks: [],
     fieldTypes: [],
   };
 }
@@ -1491,9 +1469,6 @@ export function buildManifest(registry: PluginRegistry): BuiltManifest {
     .sort(byPriorityThen((p) => p.name));
   assertSettingsPageGroupsExist(settingsPages, registry.settingsGroups);
   const adminNav = projectAdminNav(registry, entries, termTaxonomies);
-  const blocks = Array.from(registry.blocks.values())
-    .map(toBlockEntry)
-    .sort((a, b) => a.name.localeCompare(b.name));
   const fieldTypes = Array.from(registry.fieldTypes.values())
     .map(toFieldTypeEntry)
     .sort((a, b) => a.type.localeCompare(b.type));
@@ -1506,7 +1481,6 @@ export function buildManifest(registry: PluginRegistry): BuiltManifest {
     settingsGroups,
     settingsPages,
     adminNav,
-    blocks,
     fieldTypes,
   };
 }
@@ -2103,11 +2077,6 @@ function toSettingsPageEntry(
 ): SettingsPageManifestEntry {
   const { name, label, description, groups, priority } = page;
   return { name, label, description, groups, priority };
-}
-
-function toBlockEntry(block: RegisteredBlock): BlockManifestEntry {
-  const { name, kind, schema, component } = block;
-  return { name, kind, schema, component };
 }
 
 function toFieldTypeEntry(

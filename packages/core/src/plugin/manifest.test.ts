@@ -27,7 +27,6 @@ describe("buildManifest", () => {
     expect(manifest.userMetaBoxes).toEqual([]);
     expect(manifest.settingsGroups).toEqual([]);
     expect(manifest.settingsPages).toEqual([]);
-    expect(manifest.blocks).toEqual([]);
     expect(manifest.fieldTypes).toEqual([]);
     // Overview always carries Dashboard; Management carries Users +
     // Allowed domains + Mailer + Settings. Capability filtering happens

@@ -9,7 +9,6 @@ import * as ReactDomNs from "react-dom";
 import * as ReactDomClientNs from "react-dom/client";
 
 import {
-  registerPluginBlock,
   registerPluginFieldType,
   registerPluginPage,
 } from "./plugin-registry.js";
@@ -32,7 +31,6 @@ declare global {
   interface Window {
     plumix?: {
       readonly registerPluginPage: typeof registerPluginPage;
-      readonly registerPluginBlock: typeof registerPluginBlock;
       readonly registerPluginFieldType: typeof registerPluginFieldType;
       readonly runtime: typeof runtime;
     };
@@ -44,7 +42,6 @@ export function bootPlumixGlobals(): void {
   if (window.plumix) return;
   window.plumix = {
     registerPluginPage,
-    registerPluginBlock,
     registerPluginFieldType,
     runtime,
   };

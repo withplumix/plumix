@@ -16,7 +16,6 @@ import type { RouteIntent } from "../route/intent.js";
 import type { LookupAdapterOptions } from "./lookup.js";
 import type {
   AdminPageOptions,
-  BlockOptions,
   EntryMetaBoxOptions,
   EntryTypeOptions,
   FieldTypeOptions,
@@ -191,7 +190,6 @@ export interface PluginSetupContextBase {
   }): void;
 
   registerAdminPage(options: AdminPageOptions): void;
-  registerBlock(options: BlockOptions): void;
   registerFieldType(options: FieldTypeOptions): void;
   /**
    * Register a `LookupAdapter` for a reference target kind. The
@@ -564,35 +562,6 @@ export function createPluginSetupContext({
       });
     },
 
-    registerBlock: (options) => {
-      assertValidBlockName(pluginId, options.name);
-      if (registry.blocks.has(options.name)) {
-        throw new DuplicateRegistrationError("block", options.name);
-      }
-      // Defense against loose `any` casts at the call site.
-      const kind = options.kind as unknown;
-      if (kind !== "node" && kind !== "mark") {
-        throw new Error(
-          `Plugin "${pluginId}" registered block "${options.name}" with ` +
-            `invalid kind "${String(kind)}" — must be "node" or "mark".`,
-        );
-      }
-      if (options.component !== undefined) {
-        // Validate any explicit value, including empty string — `if
-        // (options.component)` would silently accept `component: ""`,
-        // which serializes to a manifest entry the admin can't resolve.
-        assertComponentRef(
-          pluginId,
-          `block "${options.name}"`,
-          options.component,
-        );
-      }
-      registry.blocks.set(options.name, {
-        ...options,
-        registeredBy: pluginId,
-      });
-    },
-
     registerFieldType: (options) => {
       assertValidFieldTypeName(pluginId, options.type);
       if (registry.fieldTypes.has(options.type)) {
@@ -714,15 +683,6 @@ function assertComponentRef(
 }
 
 const BLOCK_NAME_RE = /^[a-z][a-z0-9_-]*$/;
-
-function assertValidBlockName(pluginId: string, name: string): void {
-  if (!BLOCK_NAME_RE.test(name) || name.length > 64) {
-    throw new Error(
-      `Plugin "${pluginId}" registered block with invalid name "${name}" ` +
-        `— must match ${BLOCK_NAME_RE} and be at most 64 characters.`,
-    );
-  }
-}
 
 function assertValidFieldTypeName(pluginId: string, type: string): void {
   if (!BLOCK_NAME_RE.test(type) || type.length > 64) {

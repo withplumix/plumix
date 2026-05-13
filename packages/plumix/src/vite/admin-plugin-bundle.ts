@@ -79,7 +79,7 @@ export async function assemblePluginAdminBundle({
   await mkdir(cacheDir, { recursive: true });
 
   // Synthesised entry: namespace-import each plugin's adminEntry, then
-  // emit `window.plumix.registerPlugin{Page,Block,FieldType}` calls for
+  // emit `window.plumix.registerPlugin{Page,FieldType}` calls for
   // every surface the plugin's `setup()` registered. The plugin author
   // exports `MediaLibrary` (etc.) and writes one `ctx.registerAdminPage
   // ({ component: "MediaLibrary" })` line — the boilerplate that used to
@@ -175,13 +175,6 @@ function buildSynthesisedEntry({
       registerLines.push(
         `  __plumix.registerPluginPage(${JSON.stringify(page.path)}, ` +
           `${ns}[${JSON.stringify(page.component)}]);`,
-      );
-    }
-    for (const block of registry.blocks.values()) {
-      if (block.registeredBy !== plugin.id || !block.component) continue;
-      registerLines.push(
-        `  __plumix.registerPluginBlock(${JSON.stringify(block.name)}, ` +
-          `${ns}[${JSON.stringify(block.component)}]);`,
       );
     }
     for (const fieldType of registry.fieldTypes.values()) {
