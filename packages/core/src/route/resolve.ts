@@ -12,6 +12,7 @@ import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
 import { notFound } from "../runtime/http.js";
 import { paginate } from "./paginate.js";
+import { findEntryByPath, findTermByPath } from "./path-chain.js";
 import {
   escapeAttr,
   escapeHtml,
@@ -54,14 +55,9 @@ async function resolveTaxonomy(
   intent: Extract<RouteIntent, { kind: "taxonomy" }>,
   params: Record<string, string>,
 ): Promise<Response> {
-  const slug = params.term;
-  if (typeof slug !== "string" || slug === "") {
-    return notFound("public-route-term-missing");
-  }
-
-  const term = await ctx.db.query.terms.findFirst({
-    where: and(eq(terms.taxonomy, intent.taxonomy), eq(terms.slug, slug)),
-  });
+  // Same dispatch as resolveSingle: `:path+` rules surface params.path
+  // (multi-segment), flat `:term` rules surface params.term.
+  const term = await findTermForTaxonomy(ctx, intent.taxonomy, params);
   if (!term) return notFound("public-term-not-found");
 
   ctx.resolvedEntity = { kind: "term", id: term.id };
@@ -121,18 +117,11 @@ async function resolveSingle(
   intent: Extract<RouteIntent, { kind: "single" }>,
   params: Record<string, string>,
 ): Promise<Response> {
-  const slug = params.slug;
-  if (typeof slug !== "string" || slug === "") {
-    return notFound("public-route-slug-missing");
-  }
-
-  const row = await ctx.db.query.entries.findFirst({
-    where: and(
-      eq(entries.type, intent.entryType),
-      eq(entries.slug, slug),
-      eq(entries.status, "published"),
-    ),
-  });
+  // `:path+` rules surface their capture as `params.path` (multi-segment);
+  // flat `:slug` rules surface a single segment as `params.slug`. The
+  // route compiler picks the capture name based on rewrite.isHierarchical
+  // — the resolver dispatches off whichever one was set.
+  const row = await findEntryForSingle(ctx, intent.entryType, params);
   if (!row) return notFound("public-post-not-found");
 
   // Stash the matched entity so render-side helpers (menu plugin's
@@ -181,6 +170,46 @@ async function resolveArchive(
 // archive matched (no /page/N).
 function parsePageParam(raw: string | undefined): number {
   return raw === undefined ? 1 : Number(raw);
+}
+
+async function findEntryForSingle(
+  ctx: AppContext,
+  entryType: string,
+  params: Record<string, string>,
+): Promise<Entry | null> {
+  const path = params.path;
+  if (typeof path === "string" && path !== "") {
+    return findEntryByPath(ctx, entryType, path.split("/"));
+  }
+  const slug = params.slug;
+  if (typeof slug !== "string" || slug === "") return null;
+  return (
+    (await ctx.db.query.entries.findFirst({
+      where: and(
+        eq(entries.type, entryType),
+        eq(entries.slug, slug),
+        eq(entries.status, "published"),
+      ),
+    })) ?? null
+  );
+}
+
+async function findTermForTaxonomy(
+  ctx: AppContext,
+  taxonomy: string,
+  params: Record<string, string>,
+): Promise<Term | null> {
+  const path = params.path;
+  if (typeof path === "string" && path !== "") {
+    return findTermByPath(ctx, taxonomy, path.split("/"));
+  }
+  const slug = params.term;
+  if (typeof slug !== "string" || slug === "") return null;
+  return (
+    (await ctx.db.query.terms.findFirst({
+      where: and(eq(terms.taxonomy, taxonomy), eq(terms.slug, slug)),
+    })) ?? null
+  );
 }
 
 /**
