@@ -46,6 +46,40 @@ describe("compileRouteMap", () => {
     expect(paginated?.priority).toBe(50);
   });
 
+  test("hierarchical taxonomy emits /<base>/:path+ and /<base>/:path+/page/:page", async () => {
+    const registry = await buildRegistry([
+      definePlugin("geo", (ctx) => {
+        ctx.registerTermTaxonomy("region", {
+          label: "Regions",
+          isHierarchical: true,
+        });
+      }),
+    ]);
+    const map = compileRouteMap(registry);
+    const patterns = map.map((r) => r.rawPattern);
+    expect(patterns).toContain("/region/:path+");
+    expect(patterns).toContain("/region/:path+/page/:page");
+    expect(patterns).not.toContain("/region/:term");
+    expect(patterns).not.toContain("/region/:term/page/:page");
+  });
+
+  test("taxonomy with rewrite.isHierarchical:false keeps flat :term even when isHierarchical:true", async () => {
+    const registry = await buildRegistry([
+      definePlugin("geo", (ctx) => {
+        ctx.registerTermTaxonomy("region", {
+          label: "Regions",
+          isHierarchical: true,
+          rewrite: { isHierarchical: false },
+        });
+      }),
+    ]);
+    const map = compileRouteMap(registry);
+    const patterns = map.map((r) => r.rawPattern);
+    expect(patterns).toContain("/region/:term");
+    expect(patterns).toContain("/region/:term/page/:page");
+    expect(patterns).not.toContain("/region/:path+");
+  });
+
   test("honors taxonomy rewrite.slug on the term-archive pattern", async () => {
     const registry = await buildRegistry([
       definePlugin("regions", (ctx) => {
@@ -106,6 +140,41 @@ describe("compileRouteMap", () => {
     expect(termIdx).toBeGreaterThanOrEqual(0);
     expect(singleIdx).toBeGreaterThanOrEqual(0);
     expect(termIdx).toBeLessThan(singleIdx);
+  });
+
+  test("hierarchical entry type emits /<base>/:path+ instead of /<base>/:slug", async () => {
+    const registry = await buildRegistry([
+      definePlugin("pages", (ctx) => {
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          isHierarchical: true,
+        });
+      }),
+    ]);
+    const map = compileRouteMap(registry);
+    const patterns = map.map((r) => r.rawPattern);
+    expect(patterns).toContain("/page/:path+");
+    expect(patterns).not.toContain("/page/:slug");
+    const single = map.find((r) => r.rawPattern === "/page/:path+");
+    expect(single?.intent).toEqual({ kind: "single", entryType: "page" });
+  });
+
+  test("entry type with rewrite.isHierarchical:false keeps flat :slug even when data is hierarchical", async () => {
+    const registry = await buildRegistry([
+      definePlugin("docs", (ctx) => {
+        ctx.registerEntryType("doc", {
+          label: "Docs",
+          isPublic: true,
+          isHierarchical: true,
+          rewrite: { isHierarchical: false },
+        });
+      }),
+    ]);
+    const map = compileRouteMap(registry);
+    const patterns = map.map((r) => r.rawPattern);
+    expect(patterns).toContain("/doc/:slug");
+    expect(patterns).not.toContain("/doc/:path+");
   });
 
   test("auto-generates /{type}/:slug from a registered post type", async () => {

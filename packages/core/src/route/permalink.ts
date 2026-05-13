@@ -18,13 +18,6 @@ import type {
  * `ancestorSlugs` to skip the CTE when the caller already has the chain
  * loaded (e.g. a breadcrumb renderer that just walked it).
  *
- * Known gap: `compileRouteMap` currently emits `/<baseSlug>/:slug` (single
- * segment) for every entry type, including hierarchical ones. The nested
- * URLs this helper produces for hierarchical types won't match against
- * the route map until that's updated to support a `:path+` capture for
- * hierarchical types. Tracked as follow-up; non-hierarchical paths are
- * symmetric today.
- *
  * Returns `null` when the entry type is `isPublic: false` (no public
  * surface exists) or when the type isn't registered.
  */
@@ -146,7 +139,12 @@ const MAX_ANCESTOR_DEPTH = 50;
  * `entries.parent_id` chain starting from `leafParentId`, returning slugs
  * ordered root-first.
  */
-async function loadAncestorSlugs(
+/**
+ * Exported for the path-chain matcher (`path-chain.ts`) so the inbound
+ * `URL → entity` resolver can reuse the same CTE the outbound permalink
+ * helper uses. Walks ancestors root-first; one round-trip; depth-capped.
+ */
+export async function loadAncestorSlugs(
   ctx: AppContext,
   leafParentId: number,
 ): Promise<string[]> {
@@ -165,7 +163,7 @@ async function loadAncestorSlugs(
   return rows.map((r) => r.slug);
 }
 
-async function loadTermAncestorSlugs(
+export async function loadTermAncestorSlugs(
   ctx: AppContext,
   leafParentId: number,
 ): Promise<string[]> {

@@ -1,7 +1,9 @@
 import { describe, expect, test } from "vitest";
 
+import type { AppContext } from "../context/app.js";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
+import { buildEntryPermalink, buildTermArchiveUrl } from "./permalink.js";
 
 const blogPlugin = definePlugin("blog", (ctx) => {
   ctx.registerEntryType("post", {
@@ -24,6 +26,178 @@ const TIPTAP_BODY = {
   type: "doc",
   content: [{ type: "paragraph", content: [{ type: "text", text: "Body." }] }],
 };
+
+const hierarchicalPagesPlugin = definePlugin("pages", (ctx) => {
+  ctx.registerEntryType("page", {
+    label: "Pages",
+    isPublic: true,
+    isHierarchical: true,
+  });
+});
+
+describe("resolvePublicRoute — hierarchical single", () => {
+  test("top-level /<base>/leaf resolves the entry with no parent", async () => {
+    const h = await createDispatcherHarness({
+      plugins: [hierarchicalPagesPlugin],
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "page",
+      slug: "about",
+      title: "About",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      parentId: null,
+    });
+    const response = await h.dispatch(
+      new Request("https://cms.example/page/about"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("<h1>About</h1>");
+  });
+
+  test("nested /<base>/parent/leaf resolves the entry by walking the chain", async () => {
+    const h = await createDispatcherHarness({
+      plugins: [hierarchicalPagesPlugin],
+    });
+    const author = await h.seedUser("admin");
+    const about = await h.factory.entry.create({
+      type: "page",
+      slug: "about",
+      title: "About",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      parentId: null,
+    });
+    const team = await h.factory.entry.create({
+      type: "page",
+      slug: "team",
+      title: "Team",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      parentId: about.id,
+    });
+    await h.factory.entry.create({
+      type: "page",
+      slug: "leadership",
+      title: "Leadership",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      parentId: team.id,
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/page/about/team/leadership"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("<h1>Leadership</h1>");
+  });
+
+  test("URL with mismatched ancestor returns 404", async () => {
+    const h = await createDispatcherHarness({
+      plugins: [hierarchicalPagesPlugin],
+    });
+    const author = await h.seedUser("admin");
+    const about = await h.factory.entry.create({
+      type: "page",
+      slug: "about",
+      title: "About",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      parentId: null,
+    });
+    await h.factory.entry.create({
+      type: "page",
+      slug: "team",
+      title: "Team",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      parentId: about.id,
+    });
+    // "team" exists under "about", not under "wrong" — chain mismatch.
+    const response = await h.dispatch(
+      new Request("https://cms.example/page/wrong/team"),
+    );
+    expect(response.status).toBe(404);
+  });
+
+  test("buildEntryPermalink round-trips through the route map (closes permalink.ts:21-26 gap)", async () => {
+    const h = await createDispatcherHarness({
+      plugins: [hierarchicalPagesPlugin],
+    });
+    const author = await h.seedUser("admin");
+    const about = await h.factory.entry.create({
+      type: "page",
+      slug: "about",
+      title: "About",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      parentId: null,
+    });
+    const team = await h.factory.entry.create({
+      type: "page",
+      slug: "team",
+      title: "Team",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      parentId: about.id,
+    });
+    const leadership = await h.factory.entry.create({
+      type: "page",
+      slug: "leadership",
+      title: "Leadership",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      parentId: team.id,
+    });
+
+    const ctx = { db: h.db, plugins: h.app.plugins } as unknown as AppContext;
+    const url = await buildEntryPermalink(ctx, {
+      type: "page",
+      slug: leadership.slug,
+      parentId: leadership.parentId,
+    });
+    expect(url).toBe("/page/about/team/leadership");
+
+    const response = await h.dispatch(new Request(`https://cms.example${url}`));
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("<h1>Leadership</h1>");
+  });
+
+  test("top-level URL with extra ancestor segments returns 404", async () => {
+    const h = await createDispatcherHarness({
+      plugins: [hierarchicalPagesPlugin],
+    });
+    const author = await h.seedUser("admin");
+    // "about" is top-level (no parent). /page/foo/about should 404 —
+    // it claims "about" has parent "foo", which is wrong.
+    await h.factory.entry.create({
+      type: "page",
+      slug: "about",
+      title: "About",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      parentId: null,
+    });
+    const response = await h.dispatch(
+      new Request("https://cms.example/page/foo/about"),
+    );
+    expect(response.status).toBe(404);
+  });
+});
 
 describe("resolvePublicRoute — single", () => {
   test("renders title + walked content for a published post", async () => {
@@ -481,6 +655,171 @@ describe("resolvePublicRoute — taxonomy", () => {
     expect(response.status).toBe(200);
     const body = await response.text();
     expect(body).toContain("No entries yet.");
+  });
+
+  test("hierarchical taxonomy /<base>/parent/leaf resolves the nested term", async () => {
+    const hierarchicalTaxPlugin = definePlugin("geo", (ctx) => {
+      ctx.registerEntryType("post", {
+        label: "Posts",
+        isPublic: true,
+        hasArchive: true,
+      });
+      ctx.registerTermTaxonomy("region", {
+        label: "Regions",
+        isHierarchical: true,
+        entryTypes: ["post"],
+      });
+    });
+    const h = await createDispatcherHarness({
+      plugins: [hierarchicalTaxPlugin],
+    });
+    const author = await h.seedUser("admin");
+    const europe = await h.factory.term.create({
+      taxonomy: "region",
+      slug: "europe",
+      name: "Europe",
+    });
+    const france = await h.factory.term.create({
+      taxonomy: "region",
+      slug: "france",
+      name: "France",
+      parentId: europe.id,
+    });
+    const post = await h.factory.entry.create({
+      type: "post",
+      slug: "wine",
+      title: "Wine",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.factory.entryTerm.create({ entryId: post.id, termId: france.id });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/region/europe/france"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("<h1>France</h1>");
+    expect(body).toContain("Wine");
+  });
+
+  test("buildTermArchiveUrl round-trips through the route map", async () => {
+    const hierarchicalTaxPlugin = definePlugin("geo", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerTermTaxonomy("region", {
+        label: "Regions",
+        isHierarchical: true,
+        entryTypes: ["post"],
+      });
+    });
+    const h = await createDispatcherHarness({
+      plugins: [hierarchicalTaxPlugin],
+    });
+    const europe = await h.factory.term.create({
+      taxonomy: "region",
+      slug: "europe",
+      name: "Europe",
+    });
+    const france = await h.factory.term.create({
+      taxonomy: "region",
+      slug: "france",
+      name: "France",
+      parentId: europe.id,
+    });
+
+    const ctx = { db: h.db, plugins: h.app.plugins } as unknown as AppContext;
+    const url = await buildTermArchiveUrl(ctx, {
+      taxonomy: "region",
+      slug: france.slug,
+      parentId: france.parentId,
+    });
+    expect(url).toBe("/region/europe/france");
+
+    const response = await h.dispatch(new Request(`https://cms.example${url}`));
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("<h1>France</h1>");
+  });
+
+  test("paginated hierarchical taxonomy resolves /region/europe/france/page/2", async () => {
+    const hierarchicalTaxPlugin = definePlugin("geo", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerTermTaxonomy("region", {
+        label: "Regions",
+        isHierarchical: true,
+        entryTypes: ["post"],
+      });
+    });
+    const h = await createDispatcherHarness({
+      plugins: [hierarchicalTaxPlugin],
+    });
+    const author = await h.seedUser("admin");
+    const europe = await h.factory.term.create({
+      taxonomy: "region",
+      slug: "europe",
+      name: "Europe",
+    });
+    const france = await h.factory.term.create({
+      taxonomy: "region",
+      slug: "france",
+      name: "France",
+      parentId: europe.id,
+    });
+    for (let i = 1; i <= 25; i++) {
+      const post = await h.factory.entry.create({
+        type: "post",
+        slug: `p-${String(i).padStart(2, "0")}`,
+        title: `Wine ${String(i).padStart(2, "0")}`,
+        content: null,
+        status: "published",
+        authorId: author.id,
+        publishedAt: new Date(`2026-04-${String(i).padStart(2, "0")}`),
+      });
+      await h.factory.entryTerm.create({ entryId: post.id, termId: france.id });
+    }
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/region/europe/france/page/2"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    // perPage=20, page 2 shows the oldest 5.
+    expect(body).toContain("Wine 05");
+    expect(body).toContain("Wine 01");
+    expect(body).not.toContain("Wine 25");
+    expect(body).not.toContain("Wine 06");
+  });
+
+  test("hierarchical taxonomy with mismatched ancestor returns 404", async () => {
+    const hierarchicalTaxPlugin = definePlugin("geo", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerTermTaxonomy("region", {
+        label: "Regions",
+        isHierarchical: true,
+        entryTypes: ["post"],
+      });
+    });
+    const h = await createDispatcherHarness({
+      plugins: [hierarchicalTaxPlugin],
+    });
+    const europe = await h.factory.term.create({
+      taxonomy: "region",
+      slug: "europe",
+      name: "Europe",
+    });
+    await h.factory.term.create({
+      taxonomy: "region",
+      slug: "france",
+      name: "France",
+      parentId: europe.id,
+    });
+    // /region/asia/france — "france" exists under "europe", not "asia".
+    const response = await h.dispatch(
+      new Request("https://cms.example/region/asia/france"),
+    );
+    expect(response.status).toBe(404);
   });
 
   test("draft entries tagged with the term are excluded", async () => {

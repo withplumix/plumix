@@ -84,7 +84,14 @@ function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
     });
   }
 
-  const singlePattern = baseSlug === "" ? "/:slug" : `/${baseSlug}/:slug`;
+  // Hierarchical entry types match nested URLs like /about/team/leadership
+  // via URLPattern's `:path+` catch-all. Plugins can opt out per-type
+  // (rewrite.isHierarchical: false), which keeps the flat `:slug` pattern
+  // even when the data is hierarchical — same opt-out semantics
+  // `buildEntryPermalink` honors via `shouldNestUnderEntryParent`.
+  const capture = exposesHierarchicalUrls(entryType) ? ":path+" : ":slug";
+  const singlePattern =
+    baseSlug === "" ? `/${capture}` : `/${baseSlug}/${capture}`;
   rules.push({
     pattern: new URLPattern({ pathname: singlePattern }),
     rawPattern: singlePattern,
@@ -96,11 +103,31 @@ function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
   return rules;
 }
 
+/**
+ * True when a registered entry type or taxonomy exposes nested URLs via
+ * `:path+`. `isHierarchical: true` is the data flag (the tree exists);
+ * `rewrite.isHierarchical: false` opts URLs back to the flat single-
+ * segment pattern even when the data is hierarchical — same opt-out the
+ * outbound permalink helpers honor.
+ */
+function exposesHierarchicalUrls(spec: {
+  readonly isHierarchical?: boolean;
+  readonly rewrite?: { readonly isHierarchical?: boolean };
+}): boolean {
+  if (spec.isHierarchical !== true) return false;
+  return spec.rewrite?.isHierarchical !== false;
+}
+
 function autoRulesForTermTaxonomy(
   taxonomy: RegisteredTermTaxonomy,
 ): CompiledRule[] {
   const baseSlug = taxonomy.rewrite?.slug ?? taxonomy.name;
-  const basePattern = `/${baseSlug}/:term`;
+  // Mirror the entry-type branch: hierarchical taxonomies expose nested
+  // term URLs via `:path+` (e.g. /region/europe/france); the
+  // rewrite.isHierarchical:false override keeps the flat `:term` shape
+  // even when the term tree itself is hierarchical.
+  const capture = exposesHierarchicalUrls(taxonomy) ? ":path+" : ":term";
+  const basePattern = `/${baseSlug}/${capture}`;
   const paginatedPattern = `${basePattern}/page/:page`;
   const intent: RouteIntent = { kind: "taxonomy", taxonomy: taxonomy.name };
   return [
