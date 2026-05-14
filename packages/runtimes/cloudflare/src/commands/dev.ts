@@ -2,7 +2,7 @@ import type { CommandDefinition } from "plumix";
 
 import { createCloudflareVite } from "./vite.js";
 
-export interface DevArgs {
+interface DevArgs {
   readonly port?: number;
 }
 
