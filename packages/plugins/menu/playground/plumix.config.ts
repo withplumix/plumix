@@ -29,11 +29,12 @@ const playgroundTheme = defineTheme({
 const { rpId, origin } = cloudflareDeployOrigin({
   workerName: "plumix-menu-playground",
   accountSubdomain: "local",
-  // `plumix dev` binds the worker to vite's port (5173); the CSRF
-  // origin-allowlist must match what the browser actually sends.
-  // Default would be 8787 (wrangler dev), which mismatches and 403s
-  // every POST.
-  localOrigin: "http://localhost:5173",
+  // CSRF origin-allowlist must match what the browser actually sends.
+  // The e2e harness boots `plumix dev --port 3040` (see
+  // `e2e/playwright.config.ts`), so this matches that port. If you
+  // boot the playground manually with a different `--port`, override
+  // this constant accordingly.
+  localOrigin: "http://localhost:3040",
 });
 
 export default plumix({

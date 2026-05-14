@@ -4,13 +4,11 @@ import { defineConfig, devices } from "@playwright/test";
 export interface PlumixE2EConfigOptions {
   /**
    * Port the worker / preview listens on. Used to derive `baseURL`
-   * when not explicitly set.
-   *
-   * Defaults to `5173` — the cloudflare-vite-plugin's vite port. Once
-   * `plumix dev` exposes a `--port` knob, this value will be honored
-   * end-to-end and plugin authors can override per-suite. Until then,
-   * any value other than `5173` will leave playwright polling a port
-   * the worker isn't bound to.
+   * when not explicitly set, and passed through to the baked
+   * `plumix dev --port <port>` so the worker binds where playwright
+   * polls. Suites should pick distinct ports so they can run in
+   * parallel under turbo without colliding. Defaults to `5173`
+   * (vite's default) for back-compat.
    */
   readonly port?: number;
   /**
@@ -66,6 +64,7 @@ const DEFAULT_PORT = 5173;
 
 function bakePlaygroundCommand(
   playground: string,
+  port: number,
   extraSetup: string | undefined,
 ): string {
   const steps = [
@@ -75,7 +74,7 @@ function bakePlaygroundCommand(
     `pnpm exec wrangler d1 migrations apply ${DEFAULT_BINDING} --local`,
   ];
   if (extraSetup) steps.push(extraSetup);
-  steps.push("pnpm exec plumix dev");
+  steps.push(`pnpm exec plumix dev --port ${String(port)}`);
   return steps.join(" && ");
 }
 
@@ -123,7 +122,7 @@ export function definePlumixE2EConfig(
   const webServerCommand =
     options.webServerCommand ??
     (options.playground !== undefined
-      ? bakePlaygroundCommand(options.playground, options.extraSetup)
+      ? bakePlaygroundCommand(options.playground, port, options.extraSetup)
       : "");
 
   return defineConfig({
