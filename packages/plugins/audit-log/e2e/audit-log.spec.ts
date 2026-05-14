@@ -6,39 +6,55 @@
 
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
+import { drizzle } from "drizzle-orm/libsql";
 import { openPlaygroundDb } from "plumix/test/playwright";
+
+import { auditLog } from "@plumix/plugin-audit-log/schema";
 
 // Seed audit_log rows directly via D1. Audit-log hooks only fire when
 // the worker handles an action through the request pipeline; for e2e
-// rendering coverage we go around them with raw SQL so the table has
-// something to render + filter against without depending on
-// additional admin UI flows that aren't this plugin's responsibility.
-// The hook→record path is exercised by `hooks.test.ts` against an
-// in-memory db.
+// rendering coverage we go around them so the table has something to
+// render + filter against without depending on additional admin UI
+// flows that aren't this plugin's responsibility. The hook→record
+// path is exercised by `hooks.test.ts` against an in-memory db.
+//
+// Insert through drizzle's typed builder against the audit-log
+// plugin's own schema so column renames / new NOT NULL fields surface
+// as a TypeScript error here, not a runtime SqliteError mid-test.
 async function seedAuditRows(): Promise<void> {
-  const db = await openPlaygroundDb({
+  const playgroundDb = await openPlaygroundDb({
     cwd: resolve(process.cwd(), "playground"),
   });
-  const stmt = `INSERT INTO audit_log (event, subject_type, subject_id, subject_label, actor_id, actor_label, properties) VALUES (?, ?, ?, ?, ?, ?, ?)`;
-  const seeds: readonly (readonly [string, string, string, string])[] = [
-    ["user:created", "user", "2", "alpha@example.test"],
-    ["user:updated", "user", "2", "alpha@example.test"],
-    ["entry:published", "entry", "10", "Hello world"],
-  ];
-  for (const [event, subjectType, subjectId, subjectLabel] of seeds) {
-    await db.$client.execute({
-      sql: stmt,
-      args: [
-        event,
-        subjectType,
-        subjectId,
-        subjectLabel,
-        1,
-        "user-1@example.test",
-        "{}",
-      ],
-    });
-  }
+  const db = drizzle(playgroundDb.$client, {
+    schema: { auditLog },
+    casing: "snake_case",
+  });
+  await db.insert(auditLog).values([
+    {
+      event: "user:created",
+      subjectType: "user",
+      subjectId: "2",
+      subjectLabel: "alpha@example.test",
+      actorId: 1,
+      actorLabel: "user-1@example.test",
+    },
+    {
+      event: "user:updated",
+      subjectType: "user",
+      subjectId: "2",
+      subjectLabel: "alpha@example.test",
+      actorId: 1,
+      actorLabel: "user-1@example.test",
+    },
+    {
+      event: "entry:published",
+      subjectType: "entry",
+      subjectId: "10",
+      subjectLabel: "Hello world",
+      actorId: 1,
+      actorLabel: "user-1@example.test",
+    },
+  ]);
 }
 
 test.describe
