@@ -155,7 +155,7 @@ function EditPostRoute(): ReactNode {
     );
   }
 
-  const initialValues: PostEditorValues = toEditorValues(post);
+  const initialValues: PostEditorValues = toEditorValues(post, entryType);
 
   return (
     <PostEditorForm
@@ -202,7 +202,21 @@ function EditPostRoute(): ReactNode {
 
 function toEditorValues(
   post: Entry & { terms?: Record<string, readonly number[]> },
+  entryType: { readonly termTaxonomies?: readonly string[] },
 ): PostEditorValues {
+  // Seed an empty array slot per registered taxonomy first, then
+  // override with the post's existing assignments. Same rationale as
+  // create.tsx: the form's valibot schema validates `terms` as
+  // `Record<string, number[]>` and the per-taxonomy FormField
+  // registers `terms.<taxonomy>` at mount; un-seeded slots end up
+  // `undefined` and submit fails with "Invalid type: Expected Array
+  // but received undefined".
+  const seededTerms = Object.fromEntries(
+    (entryType.termTaxonomies ?? []).map((tax) => [tax, [] as number[]]),
+  );
+  const postTerms = Object.fromEntries(
+    Object.entries(post.terms ?? {}).map(([k, v]) => [k, [...v]]),
+  );
   return {
     title: post.title,
     slug: post.slug,
@@ -210,9 +224,7 @@ function toEditorValues(
     excerpt: post.excerpt ?? "",
     status: post.status,
     meta: post.meta,
-    terms: Object.fromEntries(
-      Object.entries(post.terms ?? {}).map(([k, v]) => [k, [...v]]),
-    ),
+    terms: { ...seededTerms, ...postTerms },
     parentId: post.parentId,
   };
 }

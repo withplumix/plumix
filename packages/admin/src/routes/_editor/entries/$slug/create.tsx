@@ -101,7 +101,16 @@ function NewPostRoute(): ReactNode {
     excerpt: "",
     status: "draft",
     meta: {},
-    terms: {},
+    // Seed an empty array slot per registered taxonomy. The form's
+    // valibot schema validates `terms` as
+    // `Record<string, number[]>` and the per-taxonomy FormField
+    // registers `terms.<taxonomy>` at mount — if those slots aren't
+    // pre-seeded they end up as `undefined`, and submit fails with
+    // "Invalid type: Expected Array but received undefined" before
+    // the create RPC is reached.
+    terms: Object.fromEntries(
+      (entryType.termTaxonomies ?? []).map((tax) => [tax, [] as number[]]),
+    ),
     parentId: null,
   };
 
