@@ -6,5 +6,5 @@
     "rootDir": ".",
     "types": ["node", "@testing-library/jest-dom"]
   },
-  "include": ["src", "test"]
+  "include": ["src", "e2e", "test"]
 }

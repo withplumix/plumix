@@ -29,6 +29,10 @@
     "./server": {
       "types": "./dist/server/index.d.ts",
       "default": "./dist/server/index.js"
+    },
+    "./schema": {
+      "types": "./dist/db/schema.d.ts",
+      "default": "./dist/db/schema.js"
     }
   },
   "files": [
@@ -48,6 +52,7 @@
     "lint": "eslint",
     "publint": "publint",
     "test": "vitest run",
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
@@ -63,6 +68,7 @@
     "@arethetypeswrong/cli": "catalog:",
     "@libsql/client": "^0.17.3",
     "@orpc/server": "^1.14.3",
+    "@playwright/test": "^1.59.1",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",

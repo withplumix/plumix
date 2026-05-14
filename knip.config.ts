@@ -35,6 +35,9 @@ const config: KnipConfig = {
     "packages/plugins/menu/playground": {
       entry: ["plumix.config.ts"],
     },
+    "packages/plugins/audit-log/playground": {
+      entry: ["plumix.config.ts"],
+    },
     // @plumix/core is a dependency but has no real imports yet (empty skeleton).
     // Remove these once packages have actual code importing from core.
     "packages/blocks": {
@@ -146,7 +149,15 @@ const config: KnipConfig = {
     // at consumer build time; `./server` subpath is consumer-facing
     // for themes that need server-only helpers.
     "packages/plugins/audit-log": {
-      entry: ["src/index.ts", "src/admin/index.tsx", "src/server/index.ts"],
+      entry: [
+        "src/index.ts",
+        "src/admin/index.tsx",
+        "src/server/index.ts",
+        "e2e/globalSetup.ts",
+        "e2e/*.spec.ts",
+      ],
+      // See packages/admin above for why the playwright plugin is off.
+      playwright: false,
     },
   },
 };

@@ -74,7 +74,7 @@ export function useAuditLogList(
         pageParam === undefined
           ? { ...filter }
           : { ...filter, cursor: pageParam };
-      return rpcCall<AuditLogPage>("auditLog/list", input);
+      return rpcCall<AuditLogPage>("audit_log/list", input);
     },
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
