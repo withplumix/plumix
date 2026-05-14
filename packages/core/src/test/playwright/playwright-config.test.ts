@@ -42,7 +42,7 @@ describe("definePlumixE2EConfig", () => {
     expect(cmd).toContain("rm -rf .wrangler/state");
     expect(cmd).toContain("plumix migrate generate");
     expect(cmd).toContain("wrangler d1 migrations apply DB --local");
-    expect(cmd).toContain("plumix dev");
+    expect(cmd).toContain("plumix dev --port 3040");
   });
 
   test("extraSetup injects an additional step between migrations apply and plumix dev", () => {
@@ -57,7 +57,7 @@ describe("definePlumixE2EConfig", () => {
         ? config.webServer.command
         : "";
     expect(cmd).toMatch(
-      /wrangler d1 migrations apply DB --local && pnpm exec wrangler d1 execute plumix_blog --local --file=e2e\/seed\.sql && pnpm exec plumix dev/,
+      /wrangler d1 migrations apply DB --local && pnpm exec wrangler d1 execute plumix_blog --local --file=e2e\/seed\.sql && pnpm exec plumix dev --port \d+/,
     );
   });
 
