@@ -9,7 +9,13 @@ import { expect, test } from "@playwright/test";
 import { drizzle } from "drizzle-orm/libsql";
 import { openPlaygroundDb } from "plumix/test/playwright";
 
-import { auditLog } from "@plumix/plugin-audit-log/schema";
+// Import the schema via the relative source path, not the
+// `@plumix/plugin-audit-log/schema` package-export. The export points
+// at `./dist/db/schema` which doesn't exist when CI runs lint (turbo
+// `^build` builds upstream deps but never builds the package being
+// linted), so the import would resolve to nothing and trip
+// `no-unsafe-assignment`. The source path always exists.
+import { auditLog } from "../src/db/schema.js";
 
 // Seed audit_log rows directly via D1. Audit-log hooks only fire when
 // the worker handles an action through the request pipeline; for e2e
