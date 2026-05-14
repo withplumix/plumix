@@ -41,6 +41,9 @@ const config: KnipConfig = {
     "packages/plugins/blog/playground": {
       entry: ["plumix.config.ts"],
     },
+    "packages/plugins/pages/playground": {
+      entry: ["plumix.config.ts"],
+    },
     // @plumix/core is a dependency but has no real imports yet (empty skeleton).
     // Remove these once packages have actual code importing from core.
     "packages/blocks": {
@@ -155,6 +158,13 @@ const config: KnipConfig = {
     // RPC) — its package.json already declares the entry. The e2e
     // rig follows the same shape as the other plugin suites.
     "packages/plugins/blog": {
+      entry: ["src/index.ts", "e2e/globalSetup.ts", "e2e/*.spec.ts"],
+      playwright: false,
+    },
+    // Same shape as plugin-blog: declarative plugin (no admin chunk,
+    // no schema, no RPC). The e2e rig follows the same pattern as
+    // the other plugin suites.
+    "packages/plugins/pages": {
       entry: ["src/index.ts", "e2e/globalSetup.ts", "e2e/*.spec.ts"],
       playwright: false,
     },

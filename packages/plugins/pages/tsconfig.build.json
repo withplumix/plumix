@@ -1,7 +1,14 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    // tsconfig.json overrides rootDir to `.` so eslint can type-aware
+    // lint the e2e/ tree. The build must constrain back to src/ —
+    // otherwise dist/ inherits the wider rootDir and emits files
+    // under `dist/src/` instead of `dist/`, breaking the
+    // package.json exports entry.
+    "rootDir": "src",
     "stripInternal": true
   },
+  "include": ["src"],
   "exclude": ["src/**/*.test.ts"]
 }
