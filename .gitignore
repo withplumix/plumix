@@ -39,6 +39,14 @@ yarn-error.log*
 # drizzle-kit generated migrations (committed under packages once a release flow is in place)
 .drizzle/
 .output/
+# `plumix migrate generate` output in playgrounds + examples — generated
+# fresh on every e2e run, never committed.
+drizzle/
+
+# worker-driven plugin e2e: storageState.json is written by globalSetup
+# at the package root; playwright traces / reports land in test-results/
+# + playwright-report/ (already covered above).
+storageState.json
 
 # plumix generated
 .plumix/
