@@ -579,6 +579,9 @@ importers:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
         version: 0.18.2
+      '@playwright/test':
+        specifier: ^1.59.1
+        version: 1.59.1
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
@@ -591,6 +594,9 @@ importers:
       '@plumix/vitest-config':
         specifier: workspace:*
         version: link:../../../tooling/vitest
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.12.2
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.5(vitest@4.1.5)
@@ -611,7 +617,35 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 'catalog:'
-        version: 4.1.5(@types/node@25.6.0)(@vitest/coverage-v8@4.1.5)(jsdom@29.1.1)(vite@8.0.9(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
+        version: 4.1.5(@types/node@24.12.2)(@vitest/coverage-v8@4.1.5)(jsdom@29.1.1)(vite@8.0.9(@types/node@24.12.2)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
+
+  packages/plugins/blog/playground:
+    dependencies:
+      '@plumix/plugin-blog':
+        specifier: workspace:*
+        version: link:..
+      '@plumix/runtime-cloudflare':
+        specifier: workspace:*
+        version: link:../../../runtimes/cloudflare
+      plumix:
+        specifier: workspace:*
+        version: link:../../../plumix
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: 'catalog:'
+        version: 4.20260421.1
+      '@plumix/typescript-config':
+        specifier: workspace:*
+        version: link:../../../../tooling/typescript
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.12.2
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      wrangler:
+        specifier: 'catalog:'
+        version: 4.86.0(@cloudflare/workers-types@4.20260421.1)
 
   packages/plugins/media:
     dependencies:

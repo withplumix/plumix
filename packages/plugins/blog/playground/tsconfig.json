@@ -1,0 +1,17 @@
+{
+  "extends": "@plumix/typescript-config/base.json",
+  "compilerOptions": {
+    "types": ["node", "@cloudflare/workers-types"],
+    // Resolve workspace packages from `src/` (not `dist/`) — see the
+    // comment in `packages/plugins/media/playground/tsconfig.json` for
+    // the full rationale.
+    "paths": {
+      "plumix": ["../../../plumix/src/index.ts"],
+      "@plumix/plugin-blog": ["../src/index.ts"],
+      "@plumix/runtime-cloudflare": [
+        "../../../runtimes/cloudflare/src/index.ts"
+      ]
+    }
+  },
+  "include": ["plumix.config.ts", ".plumix"]
+}

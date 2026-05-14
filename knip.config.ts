@@ -38,6 +38,9 @@ const config: KnipConfig = {
     "packages/plugins/audit-log/playground": {
       entry: ["plumix.config.ts"],
     },
+    "packages/plugins/blog/playground": {
+      entry: ["plumix.config.ts"],
+    },
     // @plumix/core is a dependency but has no real imports yet (empty skeleton).
     // Remove these once packages have actual code importing from core.
     "packages/blocks": {
@@ -148,6 +151,13 @@ const config: KnipConfig = {
     // Same shape as plugin-menu: admin chunk loaded via `adminEntry`
     // at consumer build time; `./server` subpath is consumer-facing
     // for themes that need server-only helpers.
+    // blog is a declarative plugin (no admin chunk, no schema, no
+    // RPC) — its package.json already declares the entry. The e2e
+    // rig follows the same shape as the other plugin suites.
+    "packages/plugins/blog": {
+      entry: ["src/index.ts", "e2e/globalSetup.ts", "e2e/*.spec.ts"],
+      playwright: false,
+    },
     "packages/plugins/audit-log": {
       entry: [
         "src/index.ts",
