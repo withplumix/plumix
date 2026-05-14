@@ -41,7 +41,8 @@ async function seedAuditRows(): Promise<void> {
   }
 }
 
-test.describe.serial("@plumix/plugin-audit-log — worker-driven happy path", () => {
+test.describe
+  .serial("@plumix/plugin-audit-log — worker-driven happy path", () => {
   test.beforeAll(seedAuditRows);
 
   test("audit log table renders the seeded rows", async ({ page }) => {
