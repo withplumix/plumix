@@ -1,4 +1,12 @@
 {
   "extends": "@plumix/typescript-config/library.json",
-  "include": ["src"]
+  "compilerOptions": {
+    // Override the library default (`${configDir}/src`) so `e2e/`
+    // sits inside the project rootDir and ts-eslint resolves
+    // `plumix/test/playwright` imports through package.json exports
+    // rather than falling back to `any`.
+    "rootDir": ".",
+    "types": ["node"]
+  },
+  "include": ["src", "e2e"]
 }
