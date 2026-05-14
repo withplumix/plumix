@@ -83,6 +83,7 @@ export function definePlugin<TConfig = undefined>(
 ): PluginDescriptor<TConfig> {
   assertValidPluginId(id);
   if (typeof setupOrInput === "function") {
+    warnIfSchemaWithoutSchemaModule(id, legacyOptions);
     return {
       id,
       version: legacyOptions?.version,
@@ -102,6 +103,7 @@ export function definePlugin<TConfig = undefined>(
         `legacy third argument.`,
     );
   }
+  warnIfSchemaWithoutSchemaModule(id, setupOrInput);
   return {
     id,
     version: setupOrInput.version,
@@ -114,4 +116,26 @@ export function definePlugin<TConfig = undefined>(
     adminCss: setupOrInput.adminCss,
     adminPeerVersion: setupOrInput.adminPeerVersion,
   };
+}
+
+// Per-id dedup so a plugin defined twice (re-imports, HMR, repeat
+// build entries) only emits the warning once.
+const warnedIds = new Set<string>();
+
+function warnIfSchemaWithoutSchemaModule(
+  id: string,
+  opts: { readonly schema?: unknown; readonly schemaModule?: unknown } | undefined,
+): void {
+  if (!opts?.schema || opts.schemaModule) return;
+  if (warnedIds.has(id)) return;
+  warnedIds.add(id);
+  console.warn(
+    `[plumix] plugin "${id}" declares \`schema\` but not ` +
+      `\`schemaModule\`. Runtime queries will work, but ` +
+      `\`plumix migrate generate\` won't include this plugin's tables ` +
+      `in the generated migrations — you'll hit "no such table" the ` +
+      `first time a query runs. Add ` +
+      `\`schemaModule: "<package>/schema"\` and export the matching ` +
+      `subpath.`,
+  );
 }
