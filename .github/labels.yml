@@ -33,12 +33,26 @@
   description: Dependency updates
 
 # Status
-- name: needs-repro
-  color: "fbca04"
-  description: Needs a minimal reproduction
 - name: "good first issue"
   color: "7057ff"
   description: Good for newcomers
+
+# Triage (mapped to the five canonical roles in docs/agents/triage-labels.md)
+- name: needs-triage
+  color: "fbca04"
+  description: Maintainer needs to evaluate
+- name: needs-info
+  color: "fbca04"
+  description: Waiting on reporter for more information
+- name: ready-for-agent
+  color: "0e8a16"
+  description: Fully specified, ready for an AFK agent
+- name: ready-for-human
+  color: "0e8a16"
+  description: Requires human implementation
+- name: wontfix
+  color: "ffffff"
+  description: Will not be actioned
 
 # CI gate
 - name: run-e2e
