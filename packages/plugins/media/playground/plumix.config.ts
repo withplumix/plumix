@@ -27,6 +27,11 @@ import {
 const { rpId, origin } = cloudflareDeployOrigin({
   workerName: "plumix-media-playground",
   accountSubdomain: "local",
+  // `plumix dev` binds the worker to vite's port (5173); the CSRF
+  // origin-allowlist must match what the browser actually sends.
+  // Default would be 8787 (wrangler dev), which mismatches and 403s
+  // every POST.
+  localOrigin: "http://localhost:5173",
 });
 
 const s3 = resolveS3Credentials();

@@ -4,8 +4,12 @@ import type { PlumixManifest } from "../../plugin/manifest.js";
 import type { AuthSessionOutput } from "../../rpc/procedures/auth/schemas.js";
 import { emptyManifest } from "../../plugin/manifest.js";
 
+export type { ActingAsResult } from "./acting-as.js";
+export { actingAs } from "./acting-as.js";
 export type { BuildAdminPluginChunkOptions } from "./build-admin-chunk.js";
 export { buildAdminPluginChunkForE2E } from "./build-admin-chunk.js";
+export type { OpenPlaygroundDbOptions } from "./open-playground-db.js";
+export { openPlaygroundDb } from "./open-playground-db.js";
 export type { PlumixE2EConfigOptions } from "./playwright-config.js";
 export { definePlumixE2EConfig } from "./playwright-config.js";
 

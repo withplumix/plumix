@@ -9,6 +9,7 @@ const E2E_PORT = 5180;
 const BASE_URL = `http://localhost:${String(E2E_PORT)}${ADMIN_BASE_PATH}/`;
 
 export default definePlumixE2EConfig({
+  port: E2E_PORT,
   testDir: "./e2e",
   baseURL: BASE_URL,
   // Build admin → assemble the runtime-proof fixture plugin via
