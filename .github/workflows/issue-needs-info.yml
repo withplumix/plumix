@@ -1,4 +1,4 @@
-name: Needs Reproduction
+name: Needs Info
 
 on:
   issues:
@@ -10,9 +10,9 @@ permissions:
   issues: write
 
 jobs:
-  needs-repro:
-    if: github.event_name == 'schedule' || github.event.label.name == 'needs-repro'
-    name: Request reproduction
+  needs-info:
+    if: github.event_name == 'schedule' || github.event.label.name == 'needs-info'
+    name: Request additional info
     runs-on: ubuntu-latest
     steps:
       - name: Comment on labeled issues
@@ -24,10 +24,10 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.issue.number,
-              body: `Thanks for the report! We need a minimal reproduction to investigate this issue.\n\nPlease provide a link to a minimal repo, CodeSandbox, or StackBlitz that reproduces the problem. Without a reproduction, we can't debug effectively.\n\nIf we don't hear back within 3 days, this issue will be closed automatically.`
+              body: `Thanks for the report! A maintainer has marked this as needing more information to investigate. Please reply with the details requested above. If no specifics were given, a minimal reproduction (link to a repo, CodeSandbox, or StackBlitz) is the most useful starting point.\n\nIf we don't hear back within 3 days, this issue will be closed automatically.`
             });
 
-      - name: Close stale needs-repro issues
+      - name: Close stale needs-info issues
         if: github.event_name == 'schedule'
         uses: actions/github-script@v9
         with:
@@ -35,7 +35,7 @@ jobs:
             const issues = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              labels: 'needs-repro',
+              labels: 'needs-info',
               state: 'open',
               per_page: 50,
             });
@@ -51,7 +51,7 @@ jobs:
               });
 
               const labeledEvent = events.data
-                .filter(e => e.event === 'labeled' && e.label?.name === 'needs-repro')
+                .filter(e => e.event === 'labeled' && e.label?.name === 'needs-info')
                 .pop();
 
               if (labeledEvent && new Date(labeledEvent.created_at) < threeDaysAgo) {
@@ -59,7 +59,7 @@ jobs:
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: issue.number,
-                  body: 'Closing due to lack of reproduction. Feel free to reopen with a minimal repro link.'
+                  body: 'Closing due to lack of response. Feel free to reopen with the requested information.'
                 });
                 await github.rest.issues.update({
                   owner: context.repo.owner,
