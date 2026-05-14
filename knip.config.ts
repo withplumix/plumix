@@ -133,6 +133,11 @@ const config: KnipConfig = {
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
       ],
+      // @plumix/runtime-cloudflare is consumed by the plugin's playground
+      // (a sibling workspace), not by `src/`. Declared as a devDep so
+      // turbo's `^build` pulls its dist into the cold-CI graph before
+      // `test:e2e` runs.
+      ignoreDependencies: ["@plumix/runtime-cloudflare"],
       // See packages/admin above for why the playwright plugin is off.
       playwright: false,
     },
@@ -149,6 +154,7 @@ const config: KnipConfig = {
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
       ],
+      ignoreDependencies: ["@plumix/runtime-cloudflare"],
       playwright: false,
     },
     // Same shape as plugin-menu: admin chunk loaded via `adminEntry`
@@ -159,6 +165,7 @@ const config: KnipConfig = {
     // rig follows the same shape as the other plugin suites.
     "packages/plugins/blog": {
       entry: ["src/index.ts", "e2e/globalSetup.ts", "e2e/*.spec.ts"],
+      ignoreDependencies: ["@plumix/runtime-cloudflare"],
       playwright: false,
     },
     // Same shape as plugin-blog: declarative plugin (no admin chunk,
@@ -166,6 +173,7 @@ const config: KnipConfig = {
     // the other plugin suites.
     "packages/plugins/pages": {
       entry: ["src/index.ts", "e2e/globalSetup.ts", "e2e/*.spec.ts"],
+      ignoreDependencies: ["@plumix/runtime-cloudflare"],
       playwright: false,
     },
     "packages/plugins/audit-log": {
@@ -176,6 +184,7 @@ const config: KnipConfig = {
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
       ],
+      ignoreDependencies: ["@plumix/runtime-cloudflare"],
       // See packages/admin above for why the playwright plugin is off.
       playwright: false,
     },

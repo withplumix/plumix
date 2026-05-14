@@ -69,6 +69,7 @@
     "@playwright/test": "^1.59.1",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
+    "@plumix/runtime-cloudflare": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
     "@plumix/vitest-config": "workspace:*",
     "@tanstack/react-query": "^5.99.2",
