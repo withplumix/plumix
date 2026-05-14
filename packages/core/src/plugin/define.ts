@@ -124,7 +124,9 @@ const warnedIds = new Set<string>();
 
 function warnIfSchemaWithoutSchemaModule(
   id: string,
-  opts: { readonly schema?: unknown; readonly schemaModule?: unknown } | undefined,
+  opts:
+    | { readonly schema?: unknown; readonly schemaModule?: unknown }
+    | undefined,
 ): void {
   if (!opts?.schema || opts.schemaModule) return;
   if (warnedIds.has(id)) return;
