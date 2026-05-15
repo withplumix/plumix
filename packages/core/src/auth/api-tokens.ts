@@ -81,6 +81,7 @@ export async function createApiToken(
       scopes: input.scopes ?? null,
     })
     .returning();
+  // eslint-disable-next-line no-restricted-syntax -- defensive driver-regression guard; migrate alongside auth errors in PR 2 (#234)
   if (!row) throw new Error("createApiToken: insert returned no row");
 
   return { secret, row };

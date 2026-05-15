@@ -17,6 +17,7 @@ import "./styles/globals.css";
 bootPlumixGlobals();
 
 const rootElement = document.getElementById("root");
+// eslint-disable-next-line no-restricted-syntax -- React boot guard; convention exception per umbrella #232
 if (!rootElement) throw new Error("Missing #root element");
 
 void waitForPluginChunks().then(() => {

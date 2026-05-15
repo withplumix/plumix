@@ -437,6 +437,7 @@ function referenceGroupKey(target: ReferenceTarget): string {
   try {
     return `${target.kind}::${JSON.stringify(target.scope ?? null)}`;
   } catch (cause) {
+    // eslint-disable-next-line no-restricted-syntax -- TODO migrate to a named factory in a follow-up slice
     throw new Error(
       `lookup adapter scope for kind "${target.kind}" must be JSON-serializable`,
       { cause },
@@ -462,6 +463,7 @@ async function fetchLiveRows(
   callsite: string,
 ): Promise<readonly LookupResult[]> {
   if (ids.size > MAX_REFERENCE_GROUP_BATCH) {
+    // eslint-disable-next-line no-restricted-syntax -- TODO migrate to a named factory in a follow-up slice
     throw new Error(
       `${callsite}: aggregated batch size ${ids.size} exceeds MAX_REFERENCE_GROUP_BATCH (${MAX_REFERENCE_GROUP_BATCH})`,
     );
@@ -1046,6 +1048,7 @@ function coerceOnRead(type: MetaScalarType, value: unknown): unknown {
 // via a crafted path.
 function metaJsonPath(key: string): string {
   if (/["\\]/.test(key)) {
+    // eslint-disable-next-line no-restricted-syntax -- TODO migrate to a named factory in a follow-up slice
     throw new Error(
       `meta key "${key}" contains characters forbidden in a JSON path`,
     );

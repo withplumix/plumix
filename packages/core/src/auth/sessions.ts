@@ -114,6 +114,7 @@ export async function createSession(
     })
     .returning();
 
+  // eslint-disable-next-line no-restricted-syntax -- defensive driver-regression guard; migrate alongside auth errors in PR 2 (#234)
   if (!session) throw new Error("createSession: insert returned no row");
   return { token, session, expiresAt };
 }

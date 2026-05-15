@@ -228,6 +228,7 @@ export async function persistCredential(
     })
     .returning();
 
+  // eslint-disable-next-line no-restricted-syntax -- defensive driver-regression guard; migrate alongside auth errors in PR 2 (#234)
   if (!row) throw new Error("persistCredential: insert returned no row");
   return row;
 }

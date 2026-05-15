@@ -149,6 +149,7 @@ async function resolveOnce(
     // Falling through with `undefined` would silently default the
     // user to "subscriber" via the schema default — surfacing as a
     // config bug instead.
+    // eslint-disable-next-line no-restricted-syntax -- TODO migrate to a named factory in a follow-up slice
     throw new Error(
       "resolveExternalIdentity: allowedDomainsGate=false requires an explicit defaultRole",
     );

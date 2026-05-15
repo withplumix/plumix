@@ -1,13 +1,5 @@
 import { defineConfig } from "eslint/config";
 
-import { baseConfig, noBareThrowErrorFor } from "@plumix/eslint-config/base";
+import { baseConfig, noBareThrowError } from "@plumix/eslint-config/base";
 
-export default defineConfig(
-  baseConfig,
-  // Migrated areas per umbrella #232. Subsequent slices extend this list.
-  noBareThrowErrorFor([
-    "src/vite/**/*.ts",
-    "src/admin/runtime.ts",
-    "src/errors.ts",
-  ]),
-);
+export default defineConfig(baseConfig, noBareThrowError);

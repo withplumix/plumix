@@ -326,6 +326,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
       // fails fast on the first request rather than silently
       // corrupting `db` / `auth` / etc. for the rest of the process.
       if (key in target) {
+        // eslint-disable-next-line no-restricted-syntax -- TODO migrate to a named factory in a follow-up slice
         throw new Error(
           `appContextExtensions entry "${key}" shadows a built-in ` +
             `AppContext field. Reserve plugin-scoped names; built-in ` +

@@ -35,6 +35,7 @@ export async function provisionUser(
     })
     .returning();
 
+  // eslint-disable-next-line no-restricted-syntax -- defensive driver-regression guard; migrate alongside auth errors in PR 2 (#234)
   if (!user) throw new Error("provisionUser: insert returned no row");
   return {
     user,
