@@ -47,15 +47,15 @@ export async function verifyEmailChange(
     )
     .returning();
 
-  if (!tokenRow) throw new EmailChangeError("token_invalid");
+  if (!tokenRow) throw EmailChangeError.tokenInvalid();
   if (tokenRow.expiresAt.getTime() < Date.now()) {
-    throw new EmailChangeError("token_expired");
+    throw EmailChangeError.tokenExpired();
   }
   if (tokenRow.userId === null || tokenRow.email === null) {
     // Defensive: every email_verification row written by
     // `requestEmailChange` sets both. A null here means hand-rolled
     // DB state.
-    throw new EmailChangeError("token_invalid");
+    throw EmailChangeError.tokenInvalid();
   }
 
   // Look up the previous email for the hook payload. The atomic
@@ -63,7 +63,7 @@ export async function verifyEmailChange(
   const target = await db.query.users.findFirst({
     where: eq(users.id, tokenRow.userId),
   });
-  if (!target) throw new EmailChangeError("user_not_found");
+  if (!target) throw EmailChangeError.userNotFound();
 
   let updated: User;
   try {
@@ -78,11 +78,11 @@ export async function verifyEmailChange(
       .set({ email: tokenRow.email, emailVerifiedAt: new Date() })
       .where(and(eq(users.id, target.id), isNull(users.disabledAt)))
       .returning();
-    if (!row) throw new EmailChangeError("account_disabled");
+    if (!row) throw EmailChangeError.accountDisabled();
     updated = row;
   } catch (error) {
     if (isUniqueConstraintError(error)) {
-      throw new EmailChangeError("email_taken");
+      throw EmailChangeError.emailTaken();
     }
     throw error;
   }

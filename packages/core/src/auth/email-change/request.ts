@@ -70,19 +70,19 @@ export async function requestEmailChange(
   const user = await db.query.users.findFirst({
     where: eq(users.id, input.userId),
   });
-  if (!user) throw new EmailChangeError("user_not_found");
-  if (user.disabledAt) throw new EmailChangeError("account_disabled");
+  if (!user) throw EmailChangeError.userNotFound();
+  if (user.disabledAt) throw EmailChangeError.accountDisabled();
 
   // Pre-check uniqueness against any *other* user's email. Same-self
   // re-request (newEmail === current) is rejected as `email_taken`
   // for symmetry — there's nothing to verify.
   if (newEmail === user.email) {
-    throw new EmailChangeError("email_taken");
+    throw EmailChangeError.emailTaken();
   }
   const collision = await db.query.users.findFirst({
     where: and(eq(users.email, newEmail), ne(users.id, user.id)),
   });
-  if (collision) throw new EmailChangeError("email_taken");
+  if (collision) throw EmailChangeError.emailTaken();
 
   // Single in-flight request per user — purge any prior pending
   // change before issuing the new one. Caller's previous link

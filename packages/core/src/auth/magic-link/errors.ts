@@ -13,11 +13,38 @@ export const MAGIC_LINK_ERROR_CODES = [
 export type MagicLinkErrorCode = (typeof MAGIC_LINK_ERROR_CODES)[number];
 
 export class MagicLinkError extends Error {
+  static {
+    MagicLinkError.prototype.name = "MagicLinkError";
+  }
+
   readonly code: MagicLinkErrorCode;
 
-  constructor(code: MagicLinkErrorCode, message?: string) {
-    super(message ?? code);
-    this.name = "MagicLinkError";
+  private constructor(code: MagicLinkErrorCode, message: string) {
+    super(message);
     this.code = code;
+  }
+
+  static missingToken(): MagicLinkError {
+    return new MagicLinkError("missing_token", "missing_token");
+  }
+
+  static tokenInvalid(): MagicLinkError {
+    return new MagicLinkError("token_invalid", "token_invalid");
+  }
+
+  static tokenExpired(): MagicLinkError {
+    return new MagicLinkError("token_expired", "token_expired");
+  }
+
+  static accountDisabled(): MagicLinkError {
+    return new MagicLinkError("account_disabled", "account_disabled");
+  }
+
+  static domainNotAllowed(): MagicLinkError {
+    return new MagicLinkError("domain_not_allowed", "domain_not_allowed");
+  }
+
+  static registrationClosed(): MagicLinkError {
+    return new MagicLinkError("registration_closed", "registration_closed");
   }
 }

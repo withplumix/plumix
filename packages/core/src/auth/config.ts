@@ -95,12 +95,34 @@ export interface PlumixConfigIssue {
 }
 
 export class PlumixConfigError extends Error {
+  static {
+    PlumixConfigError.prototype.name = "PlumixConfigError";
+  }
+
+  readonly code: "invalid_auth_config";
   readonly issues: readonly PlumixConfigIssue[];
 
-  constructor(message: string, issues: readonly PlumixConfigIssue[]) {
+  private constructor(
+    code: "invalid_auth_config",
+    message: string,
+    issues: readonly PlumixConfigIssue[],
+  ) {
     super(message);
-    this.name = "PlumixConfigError";
+    this.code = code;
     this.issues = issues;
+  }
+
+  static invalidAuthConfig(ctx: {
+    issues: readonly PlumixConfigIssue[];
+  }): PlumixConfigError {
+    const summary = ctx.issues
+      .map((i) => (i.path ? `${i.path}: ${i.message}` : i.message))
+      .join("; ");
+    return new PlumixConfigError(
+      "invalid_auth_config",
+      `Invalid auth() config — ${summary}`,
+      ctx.issues,
+    );
   }
 }
 
@@ -239,10 +261,7 @@ export function auth(input: PlumixAuthInput): PlumixAuthConfig {
   const result = v.safeParse(authInputSchema, input);
   if (!result.success) {
     const issues = toIssues(result.issues);
-    const summary = issues
-      .map((i) => (i.path ? `${i.path}: ${i.message}` : i.message))
-      .join("; ");
-    throw new PlumixConfigError(`Invalid auth() config — ${summary}`, issues);
+    throw PlumixConfigError.invalidAuthConfig({ issues });
   }
   return {
     kind: "plumix",
