@@ -2,6 +2,8 @@ import type { Db, RequestAuthenticator, UserRole } from "plumix";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { ExternalIdentityError, resolveExternalIdentity } from "plumix";
 
+import { CfAccessError } from "./errors.js";
+
 // Header CF Access sets on every request that passed the application's
 // policy. Documented in `https://developers.cloudflare.com/cloudflare-one/identity/authorization-cookie/application-token/`.
 const CF_ACCESS_HEADER = "cf-access-jwt-assertion";
@@ -175,11 +177,7 @@ export function cfAccess(config: CfAccessConfig): RequestAuthenticator {
 
 function validateConfig(config: CfAccessConfig): void {
   if (!CF_TEAM_DOMAIN_RE.test(config.teamDomain)) {
-    throw new Error(
-      `cfAccess: teamDomain must match "<team>.cloudflareaccess.com" — ` +
-        `got "${config.teamDomain}". Strip any "https://" prefix or path; ` +
-        `the helper composes the full URL.`,
-    );
+    throw CfAccessError.invalidTeamDomain({ teamDomain: config.teamDomain });
   }
   // Empty audience silently disables jose's audience equality check
   // (truthy guard at jwt_claims_set.js): every JWT for the team domain
@@ -187,11 +185,7 @@ function validateConfig(config: CfAccessConfig): void {
   // applications. Fail-fast on missing config (e.g.
   // `audience: env.CF_ACCESS_AUD ?? ""` after a missing binding).
   if (config.audience.length === 0) {
-    throw new Error(
-      `cfAccess: audience must be non-empty (the AUD tag from the ` +
-        `application's CF Access dashboard). An empty value would ` +
-        `disable per-application audience binding.`,
-    );
+    throw CfAccessError.audienceEmpty();
   }
 }
 

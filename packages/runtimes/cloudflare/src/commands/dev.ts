@@ -12,6 +12,7 @@ export function parseDevArgs(argv: readonly string[]): DevArgs {
     if (token === "--port") {
       const raw = argv[i + 1];
       if (raw === undefined) {
+        // eslint-disable-next-line no-restricted-syntax -- DevCommandError factory to land in a follow-up CLI-errors slice
         throw new Error(
           "plumix dev: --port requires a value (e.g. --port 3030)",
         );
@@ -28,6 +29,7 @@ export function parseDevArgs(argv: readonly string[]): DevArgs {
 function parsePort(raw: string): number {
   const port = Number(raw);
   if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+    // eslint-disable-next-line no-restricted-syntax -- DevCommandError factory to land in a follow-up CLI-errors slice
     throw new Error(
       `plumix dev: --port value "${raw}" must be a number between 1 and 65535`,
     );

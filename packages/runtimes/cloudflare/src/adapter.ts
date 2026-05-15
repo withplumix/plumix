@@ -150,6 +150,7 @@ function buildFetch(app: PlumixApp): FetchHandler {
   // stubbed symbol (some edge-runtime shims do) the cryptic error bubbles up
   // from the first AsyncLocalStorage.run() call. Fail fast with a useful hint.
   if (typeof AsyncLocalStorage !== "function") {
+    // eslint-disable-next-line no-restricted-syntax -- migrated alongside PlumixRuntimeConfigError in PR 2 (#234)
     throw new Error(
       '@plumix/runtime-cloudflare requires AsyncLocalStorage. Add `compatibility_flags = ["nodejs_compat"]` to wrangler.toml.',
     );
@@ -238,6 +239,7 @@ function buildFetch(app: PlumixApp): FetchHandler {
 
 function buildScheduled(app: PlumixApp): ScheduledHandler {
   if (typeof AsyncLocalStorage !== "function") {
+    // eslint-disable-next-line no-restricted-syntax -- migrated alongside PlumixRuntimeConfigError in PR 2 (#234)
     throw new Error(
       '@plumix/runtime-cloudflare requires AsyncLocalStorage. Add `compatibility_flags = ["nodejs_compat"]` to wrangler.toml.',
     );

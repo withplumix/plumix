@@ -11,6 +11,7 @@ import {
   DEFAULT_BOOKMARK_COOKIE,
   isValidBookmark,
 } from "./d1-session.js";
+import { D1Error } from "./errors.js";
 
 type D1SessionMode = "disabled" | "auto" | "primary-first";
 
@@ -119,9 +120,7 @@ function getBinding(env: unknown, name: string): D1Database {
   const bindings = env as Record<string, D1Database | undefined>;
   const binding = bindings[name];
   if (!binding) {
-    throw new Error(
-      `@plumix/runtime-cloudflare: D1 binding "${name}" missing from env`,
-    );
+    throw D1Error.bindingMissing({ binding: name });
   }
   return binding;
 }
