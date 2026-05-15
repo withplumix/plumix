@@ -20,7 +20,7 @@ describe("D1Error.bindingMissing", () => {
 
   test("message interpolates the binding name", () => {
     const err = D1Error.bindingMissing({ binding: "DB" });
-    expect(err.message).toContain("D1 binding \"DB\" missing from env");
+    expect(err.message).toContain('D1 binding "DB" missing from env');
   });
 });
 
@@ -50,7 +50,7 @@ describe("R2Error.bindingMissing", () => {
 
   test("message interpolates binding and mentions R2 bucket shape", () => {
     const err = R2Error.bindingMissing({ binding: "MEDIA" });
-    expect(err.message).toContain("binding \"MEDIA\" is missing");
+    expect(err.message).toContain('binding "MEDIA" is missing');
     expect(err.message).toContain("not an R2 bucket");
   });
 });
@@ -67,7 +67,7 @@ describe("CfAccessError.invalidTeamDomain", () => {
   test("message mentions teamDomain and the bad value", () => {
     const err = CfAccessError.invalidTeamDomain({ teamDomain: "bogus" });
     expect(err.message).toContain("teamDomain");
-    expect(err.message).toContain("\"bogus\"");
+    expect(err.message).toContain('"bogus"');
   });
 });
 
