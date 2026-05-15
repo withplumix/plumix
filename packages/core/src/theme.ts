@@ -1,4 +1,5 @@
 import type { ThemeContextExtensions } from "./plugin/context.js";
+import { ThemeError } from "./theme-errors.js";
 
 export interface ThemeSetupContextBase {
   readonly id: string;
@@ -33,18 +34,17 @@ export function defineTheme(descriptor: ThemeDescriptor): ThemeDescriptor {
     descriptor.id.length > MAX_THEME_ID_LENGTH ||
     !THEME_ID_RE.test(descriptor.id)
   ) {
-    throw new Error(
-      `defineTheme: id "${descriptor.id}" is invalid. Theme ids must ` +
-        `match /${THEME_ID_RE.source}/ and be 1–${MAX_THEME_ID_LENGTH} chars.`,
-    );
+    throw ThemeError.invalidThemeId({
+      themeId: String(descriptor.id),
+      pattern: THEME_ID_RE.source,
+      maxLength: MAX_THEME_ID_LENGTH,
+    });
   }
   if (
     descriptor.setup !== undefined &&
     typeof descriptor.setup !== "function"
   ) {
-    throw new Error(
-      `defineTheme("${descriptor.id}"): \`setup\` must be a function when provided.`,
-    );
+    throw ThemeError.setupNotAFunction({ themeId: descriptor.id });
   }
   return descriptor;
 }
