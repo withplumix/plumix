@@ -3,6 +3,8 @@ import { cp, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { ScaffoldError } from "./errors.js";
+
 const EXCLUDED_SEGMENTS: ReadonlySet<string> = new Set([
   "node_modules",
   ".cache",
@@ -109,22 +111,16 @@ export async function scaffold(
   const { targetDir } = options;
   const parent = dirname(targetDir);
   if (!existsSync(parent)) {
-    throw new Error(
-      `Target parent directory does not exist: ${parent}. Create the parent first, or pick a target inside an existing directory.`,
-    );
+    throw ScaffoldError.targetParentMissing({ parent });
   }
 
   if (existsSync(targetDir)) {
     if (!statSync(targetDir).isDirectory()) {
-      throw new Error(
-        `Target path exists but is not a directory: ${targetDir}. Pick a target that is either a fresh path or an empty directory.`,
-      );
+      throw ScaffoldError.targetNotDirectory({ targetDir });
     }
     const entries = await readdir(targetDir);
     if (entries.length > 0) {
-      throw new Error(
-        `Target directory is not empty: ${targetDir}. Pick a fresh path, or empty the existing one first.`,
-      );
+      throw ScaffoldError.targetDirectoryNotEmpty({ targetDir });
     }
   } else {
     await mkdir(targetDir);
@@ -164,9 +160,7 @@ export function rewriteDeps(
     if (range.startsWith("catalog:")) {
       const resolved = CATALOG_RESOLUTIONS[name];
       if (!resolved) {
-        throw new Error(
-          `No catalog resolution for "${name}" — add it to CATALOG_RESOLUTIONS in scaffold.ts.`,
-        );
+        throw ScaffoldError.catalogResolutionMissing({ catalogName: name });
       }
       out[name] = resolved;
       continue;

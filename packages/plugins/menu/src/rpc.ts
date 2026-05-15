@@ -15,6 +15,7 @@ import {
 import * as v from "valibot";
 
 import type { ResolvedRow } from "./server/resolveItemStates.js";
+import { MenuPluginError } from "./errors.js";
 import { getEligibleMenuKinds } from "./server/eligibility.js";
 import { getRegisteredLocations } from "./server/locations.js";
 import { resolveItemStates } from "./server/resolveItemStates.js";
@@ -579,7 +580,7 @@ export function createMenuRouter(): Record<string, unknown> {
           // returning the affected row is contractually non-empty for
           // SQLite/D1. Surface as a plain error (mapped to 500 by the
           // RPC layer) rather than papering over a driver regression.
-          throw new Error("menu.create: insert returned no row");
+          throw MenuPluginError.menuCreateNoRowReturned();
         }
         return { termId: row.id, slug, version: row.version };
       },

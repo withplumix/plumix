@@ -3,6 +3,8 @@ import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 
+import { AdminPluginRegistryError } from "./errors.js";
+
 /**
  * Contract for plugin-supplied field renderers. The admin's
  * `MetaBoxField` dispatcher resolves the renderer via
@@ -47,10 +49,10 @@ function register<TComponent>(
   component: TComponent,
 ): void {
   if (registry.map.has(key)) {
-    throw new Error(
-      `${registry.registerName}: "${key}" is already registered. ` +
-        `Two plugins are claiming the same key; rename one.`,
-    );
+    throw AdminPluginRegistryError.duplicateKey({
+      registerName: registry.registerName,
+      key,
+    });
   }
   registry.map.set(key, component);
 }
@@ -109,11 +111,7 @@ export function registerPluginFieldType(
   component: PluginFieldComponent,
 ): void {
   if (RESERVED_INPUT_TYPES.has(type)) {
-    throw new Error(
-      `registerPluginFieldType: "${type}" is reserved for built-in renderers. ` +
-        `Pick a different inputType for your custom field — see the host's ` +
-        `RESERVED_INPUT_TYPES list.`,
-    );
+    throw AdminPluginRegistryError.inputTypeReserved({ type });
   }
   register(fieldTypes, type, component);
 }

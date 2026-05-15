@@ -1,4 +1,5 @@
 import type { MenuItemMeta } from "./types.js";
+import { MenuPluginError } from "../errors.js";
 
 /**
  * Save-protocol input for a single menu item. `parentIndex` references
@@ -140,9 +141,10 @@ export function resolveParentIds(
   resolvedIds: readonly number[],
 ): readonly (number | null)[] {
   if (items.length !== resolvedIds.length) {
-    throw new Error(
-      `resolveParentIds: items.length (${items.length}) does not match resolvedIds.length (${resolvedIds.length})`,
-    );
+    throw MenuPluginError.resolveParentIdsLengthMismatch({
+      itemsLength: items.length,
+      resolvedIdsLength: resolvedIds.length,
+    });
   }
   return items.map((item) => {
     if (item.resolvedParentIndex === null) return null;
