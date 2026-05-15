@@ -81,19 +81,18 @@ export async function finishAuthentication(
     );
     signatureBytes = decodeBase64urlIgnorePadding(response.response.signature);
   } catch {
-    throw new PasskeyError(
-      "invalid_response",
-      "Malformed base64url in authentication response",
-    );
+    throw PasskeyError.invalidResponse({
+      reason: "Malformed base64url in authentication response",
+    });
   }
 
   const clientData = parseClientDataJSON(clientDataBytes);
   if (clientData.type !== ClientDataType.Get) {
-    throw new PasskeyError("invalid_client_data", "Expected webauthn.get");
+    throw PasskeyError.invalidClientData({ expectedType: "get" });
   }
 
   if (clientData.origin !== config.origin) {
-    throw new PasskeyError("invalid_origin", undefined, {
+    throw PasskeyError.invalidOrigin({
       expected: config.origin,
       actual: clientData.origin,
     });
@@ -101,12 +100,12 @@ export async function finishAuthentication(
 
   const authenticatorData = parseAuthenticatorData(authenticatorDataBytes);
   if (!authenticatorData.verifyRelyingPartyIdHash(config.rpId)) {
-    throw new PasskeyError("invalid_rp_id");
+    throw PasskeyError.invalidRpId();
   }
 
   const challengeString = encodeBase64urlNoPadding(clientData.challenge);
   const challenge = await consumeChallenge(db, challengeString);
-  if (!challenge) throw new PasskeyError("challenge_not_found");
+  if (!challenge) throw PasskeyError.challengeNotFound();
   void challenge;
 
   const credential = await db
@@ -114,9 +113,8 @@ export async function finishAuthentication(
     .from(credentials)
     .where(eq(credentials.id, response.id))
     .get();
-  if (!credential) throw new PasskeyError("credential_not_found");
-  if (!authenticatorData.userPresent)
-    throw new PasskeyError("user_presence_missing");
+  if (!credential) throw PasskeyError.credentialNotFound();
+  if (!authenticatorData.userPresent) throw PasskeyError.userPresenceMissing();
 
   // Counter == 0 is "authenticator doesn't track" — accept; otherwise it must
   // strictly increase. A non-increasing counter signals a cloned authenticator.
@@ -124,7 +122,7 @@ export async function finishAuthentication(
     authenticatorData.signatureCounter !== 0 &&
     authenticatorData.signatureCounter <= credential.counter
   ) {
-    throw new PasskeyError("counter_replay");
+    throw PasskeyError.counterReplay();
   }
 
   const signedMessage = createAssertionSignatureMessage(
@@ -139,7 +137,7 @@ export async function finishAuthentication(
   const signature = decodePKIXECDSASignature(signatureBytes);
 
   if (!verifyECDSASignature(publicKey, messageHash, signature)) {
-    throw new PasskeyError("invalid_signature");
+    throw PasskeyError.invalidSignature();
   }
 
   await db
@@ -173,8 +171,7 @@ export async function finishAuthentication(
 export function ensureUint8Array(value: unknown): Uint8Array {
   if (value instanceof Uint8Array) return value;
   if (value instanceof ArrayBuffer) return new Uint8Array(value);
-  throw new PasskeyError(
-    "credential_storage_corrupt",
-    "Stored public key has unexpected type",
-  );
+  throw PasskeyError.credentialStorageCorrupt({
+    reason: "Stored public key has unexpected type",
+  });
 }
