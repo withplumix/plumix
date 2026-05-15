@@ -102,19 +102,18 @@ export async function finishRegistration(
       response.response.attestationObject,
     );
   } catch {
-    throw new PasskeyError(
-      "invalid_response",
-      "Malformed base64url in registration response",
-    );
+    throw PasskeyError.invalidResponse({
+      reason: "Malformed base64url in registration response",
+    });
   }
 
   const clientData = parseClientDataJSON(clientDataBytes);
   if (clientData.type !== ClientDataType.Create) {
-    throw new PasskeyError("invalid_client_data", "Expected webauthn.create");
+    throw PasskeyError.invalidClientData({ expectedType: "create" });
   }
 
   if (clientData.origin !== config.origin) {
-    throw new PasskeyError("invalid_origin", undefined, {
+    throw PasskeyError.invalidOrigin({
       expected: config.origin,
       actual: clientData.origin,
     });
@@ -124,25 +123,25 @@ export async function finishRegistration(
   if (
     attestation.attestationStatement.format !== AttestationStatementFormat.None
   ) {
-    throw new PasskeyError("unsupported_attestation_format");
+    throw PasskeyError.unsupportedAttestationFormat({
+      format: String(attestation.attestationStatement.format),
+    });
   }
 
   const { authenticatorData } = attestation;
   if (!authenticatorData.verifyRelyingPartyIdHash(config.rpId)) {
-    throw new PasskeyError("invalid_rp_id");
+    throw PasskeyError.invalidRpId();
   }
 
   const challengeString = encodeBase64urlNoPadding(clientData.challenge);
   const challenge = await consumeChallenge(db, challengeString);
-  if (!challenge) throw new PasskeyError("challenge_not_found");
-  if (!authenticatorData.userPresent)
-    throw new PasskeyError("user_presence_missing");
+  if (!challenge) throw PasskeyError.challengeNotFound();
+  if (!authenticatorData.userPresent) throw PasskeyError.userPresenceMissing();
 
   if (!authenticatorData.credential) {
-    throw new PasskeyError(
-      "invalid_response",
-      "No credential data in attestation",
-    );
+    throw PasskeyError.invalidResponse({
+      reason: "No credential data in attestation",
+    });
   }
   const { credential } = authenticatorData;
 
@@ -150,17 +149,20 @@ export async function finishRegistration(
   if (algorithm !== coseAlgorithmES256) {
     // RS256 was advertised for compatibility but we deliberately don't
     // implement RSA verify in v1 — ES256 covers ~all real-world authenticators.
-    throw new PasskeyError("unsupported_algorithm", `algorithm ${algorithm}`);
+    throw PasskeyError.unsupportedAlgorithm({
+      reason: `algorithm ${algorithm}`,
+    });
   }
   if (credential.publicKey.type() !== COSEKeyType.EC2) {
-    throw new PasskeyError(
-      "unsupported_algorithm",
-      "Expected EC2 key for ES256",
-    );
+    throw PasskeyError.unsupportedAlgorithm({
+      reason: "Expected EC2 key for ES256",
+    });
   }
   const cose = credential.publicKey.ec2();
   if (cose.curve !== coseEllipticCurveP256) {
-    throw new PasskeyError("unsupported_algorithm", "Expected P-256 curve");
+    throw PasskeyError.unsupportedAlgorithm({
+      reason: "Expected P-256 curve",
+    });
   }
   const publicKey = new ECDSAPublicKey(
     p256,
@@ -197,7 +199,7 @@ export async function persistCredential(
     eq(credentials.userId, input.userId),
   );
   if (userCount >= input.maxPerUser) {
-    throw new PasskeyError("credential_limit_reached");
+    throw PasskeyError.credentialLimitReached();
   }
 
   const collision = await db
@@ -205,7 +207,7 @@ export async function persistCredential(
     .from(credentials)
     .where(eq(credentials.id, input.verified.credentialId))
     .get();
-  if (collision) throw new PasskeyError("credential_already_registered");
+  if (collision) throw PasskeyError.credentialAlreadyRegistered();
 
   const [row] = await db
     .insert(credentials)

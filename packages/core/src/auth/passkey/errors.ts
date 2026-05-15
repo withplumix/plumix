@@ -28,17 +28,100 @@ interface PasskeyErrorDetail {
 }
 
 export class PasskeyError extends Error {
+  static {
+    PasskeyError.prototype.name = "PasskeyError";
+  }
+
   readonly code: PasskeyErrorCode;
   readonly detail: PasskeyErrorDetail;
 
-  constructor(
+  private constructor(
     code: PasskeyErrorCode,
-    message?: string,
+    message: string,
     detail: PasskeyErrorDetail = {},
   ) {
-    super(message ?? code);
-    this.name = "PasskeyError";
+    super(message);
     this.code = code;
     this.detail = detail;
+  }
+
+  static challengeNotFound(): PasskeyError {
+    return new PasskeyError("challenge_not_found", "challenge_not_found");
+  }
+
+  static invalidClientData(ctx: {
+    expectedType: "get" | "create";
+  }): PasskeyError {
+    return new PasskeyError(
+      "invalid_client_data",
+      `Expected webauthn.${ctx.expectedType}`,
+    );
+  }
+
+  static invalidOrigin(ctx: {
+    expected: string;
+    actual: string;
+  }): PasskeyError {
+    return new PasskeyError("invalid_origin", "invalid_origin", {
+      expected: ctx.expected,
+      actual: ctx.actual,
+    });
+  }
+
+  static invalidRpId(): PasskeyError {
+    return new PasskeyError("invalid_rp_id", "invalid_rp_id");
+  }
+
+  static userPresenceMissing(): PasskeyError {
+    return new PasskeyError("user_presence_missing", "user_presence_missing");
+  }
+
+  static unsupportedAttestationFormat(ctx: { format: string }): PasskeyError {
+    return new PasskeyError(
+      "unsupported_attestation_format",
+      `Unsupported attestation format: ${ctx.format}`,
+    );
+  }
+
+  static unsupportedAlgorithm(ctx: { reason: string }): PasskeyError {
+    return new PasskeyError("unsupported_algorithm", ctx.reason);
+  }
+
+  static credentialAlreadyRegistered(): PasskeyError {
+    return new PasskeyError(
+      "credential_already_registered",
+      "credential_already_registered",
+    );
+  }
+
+  static credentialLimitReached(): PasskeyError {
+    return new PasskeyError(
+      "credential_limit_reached",
+      "credential_limit_reached",
+    );
+  }
+
+  static credentialNotFound(): PasskeyError {
+    return new PasskeyError("credential_not_found", "credential_not_found");
+  }
+
+  static credentialStorageCorrupt(ctx: { reason: string }): PasskeyError {
+    return new PasskeyError("credential_storage_corrupt", ctx.reason);
+  }
+
+  static invalidSignature(): PasskeyError {
+    return new PasskeyError("invalid_signature", "invalid_signature");
+  }
+
+  static counterReplay(): PasskeyError {
+    return new PasskeyError("counter_replay", "counter_replay");
+  }
+
+  static userNotFound(): PasskeyError {
+    return new PasskeyError("user_not_found", "user_not_found");
+  }
+
+  static invalidResponse(ctx: { reason: string }): PasskeyError {
+    return new PasskeyError("invalid_response", ctx.reason);
   }
 }

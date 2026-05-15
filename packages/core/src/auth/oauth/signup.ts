@@ -63,8 +63,8 @@ export async function resolveOAuthUser(
     // fire (FK enforcement off, or hand-rolled SQL). Surface a distinct
     // code so the friendly-message map can say "support" rather than
     // "your account is disabled" — the row is gone, not paused.
-    if (!linked) throw new OAuthError("link_broken");
-    if (linked.disabledAt) throw new OAuthError("account_disabled");
+    if (!linked) throw OAuthError.linkBroken();
+    if (linked.disabledAt) throw OAuthError.accountDisabled();
     return { user: linked, created: false, linked: false };
   }
 
@@ -82,7 +82,16 @@ export async function resolveOAuthUser(
     });
   } catch (error) {
     if (error instanceof ExternalIdentityError) {
-      throw new OAuthError(error.code);
+      switch (error.code) {
+        case "email_unverified":
+          throw OAuthError.emailUnverified();
+        case "account_disabled":
+          throw OAuthError.accountDisabled();
+        case "domain_not_allowed":
+          throw OAuthError.domainNotAllowed();
+        case "registration_closed":
+          throw OAuthError.registrationClosed();
+      }
     }
     throw error;
   }

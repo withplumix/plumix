@@ -81,7 +81,7 @@ export async function exchangeAndFetchProfile(
   }
 
   if (!email) {
-    throw new OAuthError("email_missing");
+    throw OAuthError.emailMissing();
   }
 
   return {
@@ -130,18 +130,20 @@ async function exchangeCode(
       body,
     });
   } catch {
-    throw new OAuthError("code_exchange_failed", "network error");
+    throw OAuthError.codeExchangeFailed({ reason: "network error" });
   }
 
   if (!response.ok) {
-    throw new OAuthError("code_exchange_failed", `status ${response.status}`);
+    throw OAuthError.codeExchangeFailed({
+      reason: `status ${response.status}`,
+    });
   }
 
   let json: unknown;
   try {
     json = await response.json();
   } catch {
-    throw new OAuthError("code_exchange_failed", "non-json response");
+    throw OAuthError.codeExchangeFailed({ reason: "non-json response" });
   }
 
   if (
@@ -150,7 +152,7 @@ async function exchangeCode(
     !("access_token" in json) ||
     typeof json.access_token !== "string"
   ) {
-    throw new OAuthError("code_exchange_failed", "missing access_token");
+    throw OAuthError.codeExchangeFailed({ reason: "missing access_token" });
   }
   return json as TokenResponse;
 }
@@ -169,11 +171,13 @@ async function fetchProfile(
       },
     });
   } catch {
-    throw new OAuthError("profile_fetch_failed", "network error");
+    throw OAuthError.profileFetchFailed({ reason: "network error" });
   }
 
   if (!response.ok) {
-    throw new OAuthError("profile_fetch_failed", `status ${response.status}`);
+    throw OAuthError.profileFetchFailed({
+      reason: `status ${response.status}`,
+    });
   }
   const raw: unknown = await response.json();
   return provider.parseProfile(raw);
