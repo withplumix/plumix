@@ -59,14 +59,14 @@ export async function verifyMagicLink(
     .where(and(eq(authTokens.hash, hash), eq(authTokens.type, "magic_link")))
     .returning();
 
-  if (!row) throw new MagicLinkError("token_invalid");
+  if (!row) throw MagicLinkError.tokenInvalid();
   if (row.expiresAt.getTime() < Date.now()) {
-    throw new MagicLinkError("token_expired");
+    throw MagicLinkError.tokenExpired();
   }
   if (row.email === null) {
     // Defensive: every magic_link row written by `requestMagicLink`
     // sets email. A null here means hand-rolled DB state.
-    throw new MagicLinkError("token_invalid");
+    throw MagicLinkError.tokenInvalid();
   }
 
   if (row.userId !== null) {
@@ -83,11 +83,18 @@ export async function verifyMagicLink(
     return { user, created };
   } catch (error) {
     if (error instanceof ExternalIdentityError) {
-      // `email_unverified` can't fire here (we always pass true);
-      // re-throw as-is to surface the programming error if it ever
-      // does. Other codes map directly to MagicLinkError.
-      if (error.code === "email_unverified") throw error;
-      throw new MagicLinkError(error.code);
+      switch (error.code) {
+        case "email_unverified":
+          // Can't fire here (we always pass emailVerified: true);
+          // re-throw as-is to surface the programming error if it ever does.
+          throw error;
+        case "account_disabled":
+          throw MagicLinkError.accountDisabled();
+        case "domain_not_allowed":
+          throw MagicLinkError.domainNotAllowed();
+        case "registration_closed":
+          throw MagicLinkError.registrationClosed();
+      }
     }
     throw error;
   }
@@ -97,7 +104,7 @@ async function resolveExistingUser(db: Db, userId: number): Promise<User> {
   const user = await db.query.users.findFirst({
     where: eq(users.id, userId),
   });
-  if (!user) throw new MagicLinkError("token_invalid");
-  if (user.disabledAt) throw new MagicLinkError("account_disabled");
+  if (!user) throw MagicLinkError.tokenInvalid();
+  if (user.disabledAt) throw MagicLinkError.accountDisabled();
   return user;
 }

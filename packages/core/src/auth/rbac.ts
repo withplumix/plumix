@@ -175,18 +175,37 @@ export function createCapabilityResolver(
 }
 
 export class CapabilityError extends Error {
+  static {
+    CapabilityError.prototype.name = "CapabilityError";
+  }
+
   readonly code: "unauthorized" | "forbidden";
   readonly capability: string;
 
-  constructor(
+  private constructor(
     code: "unauthorized" | "forbidden",
     capability: string,
-    message?: string,
+    message: string,
   ) {
-    super(message ?? `${code}: ${capability}`);
-    this.name = "CapabilityError";
+    super(message);
     this.code = code;
     this.capability = capability;
+  }
+
+  static unauthorized(ctx: { capability: string }): CapabilityError {
+    return new CapabilityError(
+      "unauthorized",
+      ctx.capability,
+      "Authentication required",
+    );
+  }
+
+  static forbidden(ctx: { capability: string }): CapabilityError {
+    return new CapabilityError(
+      "forbidden",
+      ctx.capability,
+      `Missing capability: ${ctx.capability}`,
+    );
   }
 }
 
@@ -226,17 +245,8 @@ export function requireCapability(
   user: { role: UserRole } | null,
   capability: string,
 ): void {
-  if (!user)
-    throw new CapabilityError(
-      "unauthorized",
-      capability,
-      "Authentication required",
-    );
+  if (!user) throw CapabilityError.unauthorized({ capability });
   if (!resolver.hasCapability(user.role, capability)) {
-    throw new CapabilityError(
-      "forbidden",
-      capability,
-      `Missing capability: ${capability}`,
-    );
+    throw CapabilityError.forbidden({ capability });
   }
 }

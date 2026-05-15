@@ -9,15 +9,48 @@ export type ExternalIdentityErrorCode =
   | "email_unverified"
   | "account_disabled"
   | "domain_not_allowed"
-  | "registration_closed";
+  | "registration_closed"
+  | "default_role_required";
 
 export class ExternalIdentityError extends Error {
+  static {
+    ExternalIdentityError.prototype.name = "ExternalIdentityError";
+  }
+
   readonly code: ExternalIdentityErrorCode;
 
-  constructor(code: ExternalIdentityErrorCode, message?: string) {
-    super(message ?? code);
-    this.name = "ExternalIdentityError";
+  private constructor(code: ExternalIdentityErrorCode, message: string) {
+    super(message);
     this.code = code;
+  }
+
+  static emailUnverified(): ExternalIdentityError {
+    return new ExternalIdentityError("email_unverified", "email_unverified");
+  }
+
+  static accountDisabled(): ExternalIdentityError {
+    return new ExternalIdentityError("account_disabled", "account_disabled");
+  }
+
+  static domainNotAllowed(): ExternalIdentityError {
+    return new ExternalIdentityError(
+      "domain_not_allowed",
+      "domain_not_allowed",
+    );
+  }
+
+  static registrationClosed(): ExternalIdentityError {
+    return new ExternalIdentityError(
+      "registration_closed",
+      "registration_closed",
+    );
+  }
+
+  static defaultRoleRequired(): ExternalIdentityError {
+    return new ExternalIdentityError(
+      "default_role_required",
+      "resolveExternalIdentity: allowedDomainsGate=false requires an explicit defaultRole",
+    );
   }
 }
 
@@ -121,23 +154,23 @@ async function resolveOnce(
       // Auto-linking an unverified email to an existing local user
       // would let an attacker who controls a third-party account that
       // claims `victim@gmail.com` take over the local row. Refuse.
-      throw new ExternalIdentityError("email_unverified");
+      throw ExternalIdentityError.emailUnverified();
     }
     if (existing.disabledAt) {
-      throw new ExternalIdentityError("account_disabled");
+      throw ExternalIdentityError.accountDisabled();
     }
     return { user: existing, created: false };
   }
 
   // No existing user — provision via the configured gate.
   if (!input.emailVerified) {
-    throw new ExternalIdentityError("email_unverified");
+    throw ExternalIdentityError.emailUnverified();
   }
 
   if (!bootstrapAllowed) {
     const userCount = await db.$count(users);
     if (userCount === 0) {
-      throw new ExternalIdentityError("registration_closed");
+      throw ExternalIdentityError.registrationClosed();
     }
   }
 
@@ -149,10 +182,7 @@ async function resolveOnce(
     // Falling through with `undefined` would silently default the
     // user to "subscriber" via the schema default — surfacing as a
     // config bug instead.
-    // eslint-disable-next-line no-restricted-syntax -- TODO migrate to a named factory in a follow-up slice
-    throw new Error(
-      "resolveExternalIdentity: allowedDomainsGate=false requires an explicit defaultRole",
-    );
+    throw ExternalIdentityError.defaultRoleRequired();
   }
 
   const { user } = await provisionUser(db, {
@@ -167,12 +197,12 @@ async function resolveOnce(
 
 async function roleFromAllowedDomain(db: Db, email: string): Promise<UserRole> {
   const domain = extractDomain(email);
-  if (!domain) throw new ExternalIdentityError("domain_not_allowed");
+  if (!domain) throw ExternalIdentityError.domainNotAllowed();
   const allowed = await db.query.allowedDomains.findFirst({
     where: eq(allowedDomains.domain, domain),
   });
   if (!allowed?.isEnabled) {
-    throw new ExternalIdentityError("domain_not_allowed");
+    throw ExternalIdentityError.domainNotAllowed();
   }
   return allowed.defaultRole;
 }

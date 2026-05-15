@@ -62,17 +62,38 @@ export function hasMatchingOrigin(
 }
 
 export class CsrfError extends Error {
-  constructor(message = "CSRF check failed") {
+  static {
+    CsrfError.prototype.name = "CsrfError";
+  }
+
+  readonly code: "missing_header" | "origin_mismatch";
+
+  private constructor(
+    code: "missing_header" | "origin_mismatch",
+    message: string,
+  ) {
     super(message);
-    this.name = "CsrfError";
+    this.code = code;
+  }
+
+  static missingHeader(): CsrfError {
+    return new CsrfError(
+      "missing_header",
+      `Missing required header ${CSRF_HEADER_NAME}: ${CSRF_HEADER_VALUE}`,
+    );
+  }
+
+  static originMismatch(): CsrfError {
+    return new CsrfError(
+      "origin_mismatch",
+      "Origin / Referer does not match site",
+    );
   }
 }
 
 export function requireCsrf(request: Request): void {
   if (!hasCsrfHeader(request)) {
-    throw new CsrfError(
-      `Missing required header ${CSRF_HEADER_NAME}: ${CSRF_HEADER_VALUE}`,
-    );
+    throw CsrfError.missingHeader();
   }
 }
 
@@ -81,6 +102,6 @@ export function requireMatchingOrigin(
   options: OriginCheckOptions,
 ): void {
   if (!hasMatchingOrigin(request, options)) {
-    throw new CsrfError("Origin / Referer does not match site");
+    throw CsrfError.originMismatch();
   }
 }

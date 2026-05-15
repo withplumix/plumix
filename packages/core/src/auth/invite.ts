@@ -5,12 +5,23 @@ import { authTokens } from "../db/schema/auth_tokens.js";
 import { hashToken } from "./tokens.js";
 
 export class InviteError extends Error {
+  static {
+    InviteError.prototype.name = "InviteError";
+  }
+
   readonly code: "invalid_token" | "token_expired";
 
-  constructor(code: InviteError["code"], message?: string) {
-    super(message ?? code);
-    this.name = "InviteError";
+  private constructor(code: InviteError["code"], message: string) {
+    super(message);
     this.code = code;
+  }
+
+  static invalidToken(): InviteError {
+    return new InviteError("invalid_token", "invalid_token");
+  }
+
+  static tokenExpired(): InviteError {
+    return new InviteError("token_expired", "token_expired");
   }
 }
 
@@ -39,13 +50,13 @@ export async function validateInviteToken(
   // Treat a non-invite token, a token with missing fields, and a missing
   // token as the same "invalid" outcome — don't leak which rows exist.
   if (row?.type !== "invite") {
-    throw new InviteError("invalid_token");
+    throw InviteError.invalidToken();
   }
   if (row.userId === null || row.email === null || row.role === null) {
-    throw new InviteError("invalid_token");
+    throw InviteError.invalidToken();
   }
   if (row.expiresAt.getTime() < Date.now()) {
-    throw new InviteError("token_expired");
+    throw InviteError.tokenExpired();
   }
   return {
     tokenHash,

@@ -569,7 +569,7 @@ async function resolveInviteTarget(
     where: eq(users.id, invite.userId),
   });
   if (!user || user.disabledAt) {
-    return inviteErrorResponse(new InviteError("invalid_token"));
+    return inviteErrorResponse(InviteError.invalidToken());
   }
   const existingCreds = await ctx.db.$count(
     credentials,

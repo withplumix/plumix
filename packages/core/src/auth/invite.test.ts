@@ -149,7 +149,7 @@ describe("consumeInviteToken", () => {
 });
 
 test("InviteError carries a structured code", () => {
-  const err = new InviteError("token_expired");
+  const err = InviteError.tokenExpired();
   expect(err).toBeInstanceOf(Error);
   expect(err.name).toBe("InviteError");
   expect(err.code).toBe("token_expired");
