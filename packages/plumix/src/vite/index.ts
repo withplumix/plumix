@@ -31,6 +31,7 @@ import {
   ADMIN_URL_PREFIX,
   assemblePluginAdminBundle,
 } from "./admin-plugin-bundle.js";
+import { VitePluginError } from "./errors.js";
 
 // `import.meta.url` for this module lives at plumix/dist/vite/index.js in
 // consumer installs, so the pre-compiled admin artifact is a sibling at
@@ -285,11 +286,12 @@ async function resolvePluginAsset(
   try {
     await stat(source);
   } catch {
-    throw new Error(
-      `[plumix] plugin "${pluginId}" declares ${field} "${relOrAbs}" but ` +
-        `the file was not found at ${source}. Build the plugin's admin ` +
-        `assets before running \`plumix build\`.`,
-    );
+    throw VitePluginError.adminAssetNotFound({
+      pluginId,
+      field,
+      declared: relOrAbs,
+      resolved: source,
+    });
   }
   return source;
 }

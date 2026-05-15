@@ -16,6 +16,8 @@ import {
   SHARED_ADMIN_RUNTIME_SPECIFIERS,
 } from "@plumix/core";
 
+import { VitePluginError } from "./errors.js";
+
 // Bare imports of `react` etc. in the plugin source get aliased to
 // `plumix/admin/<lib>` shims that read from `window.plumix.runtime.*`
 // — single React instance across host + plugin.
@@ -68,10 +70,7 @@ export async function assemblePluginAdminBundle({
 
   for (const p of withEntry) {
     if (p.adminChunk) {
-      throw new Error(
-        `[plumix] plugin "${p.id}" sets both adminEntry and adminChunk. ` +
-          `Pick one — adminEntry (TS source) is preferred.`,
-      );
+      throw VitePluginError.adminEntryAndChunkBothSet({ pluginId: p.id });
     }
   }
 
@@ -278,20 +277,21 @@ export async function resolveAndValidateEntry(
   // or buggy `adminEntry` values pulling in arbitrary files.
   const rel = relative(projectRoot, resolved);
   if (rel.startsWith("..") || isAbsolute(rel)) {
-    throw new Error(
-      `[plumix] plugin "${plugin.id}" adminEntry "${plugin.adminEntry}" ` +
-        `resolves outside the project root (${resolved}). Plugin admin ` +
-        `entries must live inside the consumer site's directory tree.`,
-    );
+    throw VitePluginError.adminEntryOutsideProjectRoot({
+      pluginId: plugin.id,
+      adminEntry: plugin.adminEntry,
+      resolved,
+    });
   }
 
   try {
     await stat(resolved);
   } catch {
-    throw new Error(
-      `[plumix] plugin "${plugin.id}" declares adminEntry ` +
-        `"${plugin.adminEntry}" but the file was not found at ${resolved}.`,
-    );
+    throw VitePluginError.adminEntryNotFound({
+      pluginId: plugin.id,
+      adminEntry: plugin.adminEntry,
+      resolved,
+    });
   }
 
   return resolved;

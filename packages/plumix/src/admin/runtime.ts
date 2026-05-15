@@ -13,6 +13,8 @@ import type * as ReactDomNs from "react-dom";
 import type * as ReactDomClientNs from "react-dom/client";
 import type * as ReactJsxRuntimeNs from "react/jsx-runtime";
 
+import { AdminRuntimeError } from "../errors.js";
+
 export interface PlumixAdminRuntime {
   readonly react: typeof ReactNs;
   readonly reactJsxRuntime: typeof ReactJsxRuntimeNs;
@@ -32,9 +34,7 @@ export interface PlumixGlobal {
 export function getRuntime(): PlumixAdminRuntime {
   const rt = (globalThis as { plumix?: PlumixGlobal }).plumix?.runtime;
   if (!rt) {
-    throw new Error(
-      "plumix admin runtime not initialised — plugin chunk loaded before host bundle.",
-    );
+    throw AdminRuntimeError.notInitialised();
   }
   return rt;
 }
