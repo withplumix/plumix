@@ -3,10 +3,10 @@ import { describe, expect, test } from "vitest";
 import { PluginContextError, PluginDefinitionError } from "./errors.js";
 
 describe("PluginContextError.duplicateRoute", () => {
-  test("class identity, code, and exposed fields", () => {
+  test("class identity, code, exposed fields, and message", () => {
     const err = PluginContextError.duplicateRoute({
       pluginId: "blog",
-      method: "GET",
+      method: "POST",
       path: "/api/posts",
     });
     expect(err).toBeInstanceOf(PluginContextError);
@@ -14,16 +14,8 @@ describe("PluginContextError.duplicateRoute", () => {
     expect(err.name).toBe("PluginContextError");
     expect(err.code).toBe("duplicate_route");
     expect(err.pluginId).toBe("blog");
-    expect(err.kind).toBe("GET");
+    expect(err.kind).toBe("POST");
     expect(err.path).toBe("/api/posts");
-  });
-
-  test("message names plugin, method, and path", () => {
-    const err = PluginContextError.duplicateRoute({
-      pluginId: "blog",
-      method: "POST",
-      path: "/api/posts",
-    });
     expect(err.message).toContain(
       'Plugin "blog" already registered a route for POST /api/posts',
     );
