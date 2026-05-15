@@ -38,6 +38,7 @@ import {
 } from "../auth/rbac.js";
 import { DEFAULT_REWRITE_RULE_PRIORITY } from "../route/compile.js";
 import { MAX_PLUGIN_ID_LENGTH, PLUGIN_ID_RE } from "./define.js";
+import { PluginContextError } from "./errors.js";
 import { CORE_RPC_NAMESPACES, DuplicateRegistrationError } from "./manifest.js";
 
 export interface ContextExtensionEntry {
@@ -293,35 +294,29 @@ export function createPluginProvidesContext({
     value: unknown,
   ): void => {
     if (typeof key !== "string" || key.length === 0) {
-      throw new Error(
-        `Plugin "${pluginId}" called extend${kind}Context with an ` +
-          `invalid key — must be a non-empty string.`,
-      );
+      throw PluginContextError.extendContextInvalidKey({ pluginId, kind });
     }
     if (RESERVED_EXTENSION_KEYS.has(key)) {
-      throw new Error(
-        `Plugin "${pluginId}" called extend${kind}Context with the ` +
-          `reserved name "${key}". JS-builtins (\`__proto__\`, ` +
-          `\`constructor\`, \`prototype\`) can't be used as extension ` +
-          `keys — they would corrupt the per-request context object.`,
-      );
+      throw PluginContextError.extendContextReservedKey({
+        pluginId,
+        kind,
+        key,
+      });
     }
     if (kind === "App" && APP_CONTEXT_BASE_KEYS.has(key)) {
-      throw new Error(
-        `Plugin "${pluginId}" called extendAppContext with "${key}", ` +
-          `which collides with a built-in AppContext member. The ` +
-          `dispatcher would overwrite the runtime field on every ` +
-          `request — rename the extension to a plugin-scoped key.`,
-      );
+      throw PluginContextError.extendAppContextBuiltinCollision({
+        pluginId,
+        key,
+      });
     }
     const existing = target.get(key);
     if (existing) {
-      throw new Error(
-        `Plugin "${pluginId}" extended the ${kind.toLowerCase()} context ` +
-          `with "${key}", but "${existing.pluginId}" already registered it. ` +
-          `Each extension key has exactly one provider — rename one or ` +
-          `consolidate the providing plugin.`,
-      );
+      throw PluginContextError.extendContextDuplicate({
+        pluginId,
+        kind,
+        key,
+        existingOwner: existing.pluginId,
+      });
     }
     target.set(key, { value, pluginId });
   };
@@ -353,14 +348,13 @@ export function createPluginSetupContext({
       const existing = registry.capabilities.get(cap.name);
       if (existing) {
         if (existing.minRole !== cap.minRole) {
-          throw new Error(
-            `Plugin "${pluginId}" derived capability "${cap.name}" with ` +
-              `minRole "${cap.minRole}", but it was already registered ` +
-              `with minRole "${existing.minRole}" by ` +
-              `"${existing.registeredBy ?? "<unknown>"}". Two entry types ` +
-              `/ termTaxonomies sharing a capabilityType must agree on any ` +
-              `\`capabilities\` override — the pool has one cap per name.`,
-          );
+          throw PluginContextError.derivedCapabilityMinRoleMismatch({
+            pluginId,
+            capName: cap.name,
+            minRole: cap.minRole,
+            existingMinRole: existing.minRole,
+            existingOwner: existing.registeredBy ?? "<unknown>",
+          });
         }
         continue;
       }
@@ -481,10 +475,7 @@ export function createPluginSetupContext({
         assertValidIdentifier("settings group reference", groupName);
       }
       if (new Set(options.groups).size !== options.groups.length) {
-        throw new Error(
-          `Settings page "${name}" lists a group more than once; ` +
-            `each group may appear at most once per page.`,
-        );
+        throw PluginContextError.settingsPageDuplicateGroup({ name });
       }
       registry.settingsPages.set(name, {
         ...options,
@@ -504,11 +495,10 @@ export function createPluginSetupContext({
 
     registerRpcRouter: (router) => {
       if (CORE_RPC_NAMESPACES.has(pluginId)) {
-        throw new Error(
-          `Plugin id "${pluginId}" collides with core RPC namespace. ` +
-            `Rename the plugin — reserved names are: ` +
-            `${[...CORE_RPC_NAMESPACES].sort().join(", ")}.`,
-        );
+        throw PluginContextError.pluginIdCollidesWithCoreRpcNamespace({
+          pluginId,
+          coreNamespaces: [...CORE_RPC_NAMESPACES],
+        });
       }
       if (registry.rpcRouters.has(pluginId)) {
         throw new DuplicateRegistrationError("plugin RPC router", pluginId);
@@ -524,10 +514,7 @@ export function createPluginSetupContext({
           existing.method === method &&
           existing.path === path
         ) {
-          throw new Error(
-            `Plugin "${pluginId}" already registered a route for ` +
-              `${method} ${path}.`,
-          );
+          throw PluginContextError.duplicateRoute({ pluginId, method, path });
         }
       }
       registry.rawRoutes.push({
@@ -633,11 +620,7 @@ export function createPluginSetupContext({
     const target = ctx as unknown as Record<string, unknown>;
     for (const [key, value] of extensions) {
       if (key in target) {
-        throw new Error(
-          `Plugin context extension key "${key}" collides with a built-in ` +
-            `PluginSetupContext member. Rename the extension to avoid ` +
-            `shadowing core registration APIs.`,
-        );
+        throw PluginContextError.extensionShadowsBuiltin({ key });
       }
       target[key] = value;
     }
@@ -674,11 +657,7 @@ function assertComponentRef(
   ref: unknown,
 ): void {
   if (typeof ref !== "string" || ref.length === 0) {
-    throw new Error(
-      `Plugin "${pluginId}" registered ${descriptor} with an invalid ` +
-        `component ref — must be a non-empty string naming the export on ` +
-        `the plugin's adminEntry module (e.g. "MediaLibrary").`,
-    );
+    throw PluginContextError.invalidComponentRef({ pluginId, descriptor });
   }
 }
 
@@ -686,21 +665,23 @@ const IDENTIFIER_NAME_RE = /^[a-z][a-z0-9_-]*$/;
 
 function assertValidFieldTypeName(pluginId: string, type: string): void {
   if (!IDENTIFIER_NAME_RE.test(type) || type.length > 64) {
-    throw new Error(
-      `Plugin "${pluginId}" registered meta-box field type with invalid ` +
-        `name "${type}" — must match ${IDENTIFIER_NAME_RE} and be at most 64 ` +
-        `characters.`,
-    );
+    throw PluginContextError.invalidFieldTypeName({
+      pluginId,
+      type,
+      pattern: IDENTIFIER_NAME_RE.source,
+      maxLength: 64,
+    });
   }
 }
 
 function assertValidLookupAdapterKind(pluginId: string, kind: string): void {
   if (!IDENTIFIER_NAME_RE.test(kind) || kind.length > 64) {
-    throw new Error(
-      `Plugin "${pluginId}" registered lookup adapter with invalid ` +
-        `kind "${kind}" — must match ${IDENTIFIER_NAME_RE} and be at most 64 ` +
-        `characters.`,
-    );
+    throw PluginContextError.invalidLookupAdapterKind({
+      pluginId,
+      kind,
+      pattern: IDENTIFIER_NAME_RE.source,
+      maxLength: 64,
+    });
   }
 }
 
@@ -715,16 +696,13 @@ const SCHEDULED_TASK_ID_RE = /^[a-z0-9][a-z0-9_/-]{0,63}$/i;
 
 function assertValidScheduledTask(pluginId: string, task: ScheduledTask): void {
   if (!SCHEDULED_TASK_ID_RE.test(task.id)) {
-    throw new Error(
-      `Plugin "${pluginId}" registered a scheduled task with invalid id ` +
-        `"${task.id}" — must be alphanum + dash/underscore/slash, 1..64 chars.`,
-    );
+    throw PluginContextError.invalidScheduledTaskId({ pluginId, id: task.id });
   }
   if (typeof task.handler !== "function") {
-    throw new Error(
-      `Plugin "${pluginId}" registered scheduled task "${task.id}" without ` +
-        `a handler function.`,
-    );
+    throw PluginContextError.scheduledTaskHandlerMissing({
+      pluginId,
+      id: task.id,
+    });
   }
 }
 
@@ -733,26 +711,25 @@ function assertValidLoginLink(
   options: LoginLinkOptions,
 ): void {
   if (!LOGIN_LINK_KEY_RE.test(options.key)) {
-    throw new Error(
-      `Plugin "${pluginId}" registered a login link with invalid key ` +
-        `"${options.key}" — must be lowercase alphanum + dash/underscore, ` +
-        `1..32 chars.`,
-    );
+    throw PluginContextError.invalidLoginLinkKey({
+      pluginId,
+      key: options.key,
+    });
   }
   if (options.label.length === 0) {
-    throw new Error(
-      `Plugin "${pluginId}" registered login link "${options.key}" with ` +
-        `an empty label.`,
-    );
+    throw PluginContextError.loginLinkEmptyLabel({
+      pluginId,
+      key: options.key,
+    });
   }
   // CR/LF defense: label is rendered into HTML by the admin, but a
   // future logger / audit-trail consumer might splice it into a
   // line-oriented format. Block at the boundary.
   if (/[\r\n]/.test(options.label)) {
-    throw new Error(
-      `Plugin "${pluginId}" registered login link "${options.key}" with ` +
-        `a label containing CR/LF.`,
-    );
+    throw PluginContextError.loginLinkLabelHasCrLf({
+      pluginId,
+      key: options.key,
+    });
   }
   // href must be a same-origin path or an https:// URL — block
   // `javascript:`, `data:`, protocol-relative `//`, and other schemes
@@ -761,26 +738,28 @@ function assertValidLoginLink(
     options.href.startsWith("/") && !options.href.startsWith("//");
   const isHttps = options.href.startsWith("https://");
   if (!isSameOriginPath && !isHttps) {
-    throw new Error(
-      `Plugin "${pluginId}" registered login link "${options.key}" with ` +
-        `href "${options.href}" — must start with "/" (same-origin path) ` +
-        `or "https://".`,
-    );
+    throw PluginContextError.invalidLoginLinkHref({
+      pluginId,
+      key: options.key,
+      href: options.href,
+    });
   }
 }
 
 function assertValidNavGroupId(pluginId: string, id: string): void {
   if (id.length === 0 || id.length > MAX_PLUGIN_ID_LENGTH) {
-    throw new Error(
-      `Plugin "${pluginId}" registered admin nav group with invalid id ` +
-        `"${id}" — length must be 1..${MAX_PLUGIN_ID_LENGTH}.`,
-    );
+    throw PluginContextError.invalidNavGroupIdLength({
+      pluginId,
+      id,
+      maxLength: MAX_PLUGIN_ID_LENGTH,
+    });
   }
   if (!PLUGIN_ID_RE.test(id)) {
-    throw new Error(
-      `Plugin "${pluginId}" registered admin nav group with invalid id ` +
-        `"${id}" — must match ${PLUGIN_ID_RE}.`,
-    );
+    throw PluginContextError.invalidNavGroupIdShape({
+      pluginId,
+      id,
+      pattern: PLUGIN_ID_RE.source,
+    });
   }
 }
 
@@ -794,31 +773,24 @@ function assertValidPathPrefix(
   kind: string,
 ): void {
   if (!path.startsWith("/")) {
-    throw new Error(
-      `Plugin "${pluginId}" ${kind} path "${path}" must start with "/".`,
-    );
+    throw PluginContextError.pathMustStartWithSlash({ pluginId, kind, path });
   }
   if (path.includes("//") || path.includes("..")) {
-    throw new Error(
-      `Plugin "${pluginId}" ${kind} path "${path}" contains "//" or "..".`,
-    );
+    throw PluginContextError.pathContainsTraversal({ pluginId, kind, path });
   }
   if (path.includes("?") || path.includes("#")) {
-    throw new Error(
-      `Plugin "${pluginId}" ${kind} path "${path}" must not include a query ` +
-        `string or fragment — match on the pathname only.`,
-    );
+    throw PluginContextError.pathContainsQueryOrFragment({
+      pluginId,
+      kind,
+      path,
+    });
   }
 }
 
 function assertValidAdminPagePath(pluginId: string, path: string): void {
   assertValidPathPrefix(pluginId, path, "admin page");
   if (path.includes("*")) {
-    throw new Error(
-      `Plugin "${pluginId}" admin page path "${path}" must not contain "*" ` +
-        `— register nested routes via TanStack Router children inside the ` +
-        `page component rather than a wildcard suffix.`,
-    );
+    throw PluginContextError.adminPagePathContainsWildcard({ pluginId, path });
   }
 }
 
@@ -827,19 +799,13 @@ function assertValidPluginRoutePath(pluginId: string, path: string): void {
   // Allow exactly `/*` at the very end. Any other `*` is ambiguous.
   const starIndex = path.indexOf("*");
   if (starIndex !== -1 && starIndex !== path.length - 1) {
-    throw new Error(
-      `Plugin "${pluginId}" route path "${path}" may only contain "*" ` +
-        `as a trailing wildcard (e.g. "/storage/*").`,
-    );
+    throw PluginContextError.routePathWildcardNotAtEnd({ pluginId, path });
   }
   if (
     path.endsWith("*") &&
     (path.length < 2 || path[path.length - 2] !== "/")
   ) {
-    throw new Error(
-      `Plugin "${pluginId}" route path "${path}" must place the trailing ` +
-        `wildcard after a "/" ("/prefix/*", not "/prefix*").`,
-    );
+    throw PluginContextError.routePathWildcardNotAfterSlash({ pluginId, path });
   }
 }
 
@@ -855,17 +821,18 @@ const MAX_SETTINGS_IDENTIFIER_LENGTH = 64;
 
 function assertValidIdentifier(kind: string, name: string): void {
   if (name.length > MAX_SETTINGS_IDENTIFIER_LENGTH) {
-    throw new Error(
-      `Invalid ${kind} name "${name}" — names are capped at ` +
-        `${MAX_SETTINGS_IDENTIFIER_LENGTH} characters to match the RPC ` +
-        `input schema.`,
-    );
+    throw PluginContextError.identifierTooLong({
+      kind,
+      name,
+      maxLength: MAX_SETTINGS_IDENTIFIER_LENGTH,
+    });
   }
   if (!SETTINGS_NAME_RE.test(name)) {
-    throw new Error(
-      `Invalid ${kind} name "${name}" — expected lowercase ASCII ` +
-        `[a-z][a-z0-9_]* so storage keys, testids, and URLs stay portable.`,
-    );
+    throw PluginContextError.identifierShapeInvalid({
+      kind,
+      name,
+      pattern: SETTINGS_NAME_RE.source,
+    });
   }
 }
 
@@ -886,23 +853,29 @@ function assertMetaBoxFields(
   fields: readonly MetaBoxField[],
 ): void {
   if (fields.length > MAX_FIELDS_PER_META_BOX) {
-    throw new Error(
-      `${kind} "${id}" declares ${fields.length} fields; the admin caps ` +
-        `a single box at ${MAX_FIELDS_PER_META_BOX}. Split into multiple boxes.`,
-    );
+    throw PluginContextError.metaBoxTooManyFields({
+      kind,
+      id,
+      count: fields.length,
+      maxFields: MAX_FIELDS_PER_META_BOX,
+    });
   }
   const seen = new Set<string>();
   for (const field of fields) {
     if (!META_FIELD_KEY_RE.test(field.key)) {
-      throw new Error(
-        `${kind} "${id}" declares field with invalid key "${field.key}" — ` +
-          `meta keys must match ${META_FIELD_KEY_RE}.`,
-      );
+      throw PluginContextError.metaBoxFieldInvalidKey({
+        kind,
+        id,
+        fieldKey: field.key,
+        pattern: META_FIELD_KEY_RE.source,
+      });
     }
     if (seen.has(field.key)) {
-      throw new Error(
-        `${kind} "${id}" declares field "${field.key}" more than once.`,
-      );
+      throw PluginContextError.metaBoxFieldDuplicateKey({
+        kind,
+        id,
+        fieldKey: field.key,
+      });
     }
     seen.add(field.key);
   }

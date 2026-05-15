@@ -6,6 +6,7 @@ import type { AppContext } from "../context/app.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { RouteIntent } from "../route/intent.js";
 import type { RegisteredLookupAdapter } from "./lookup.js";
+import { PluginDefinitionError } from "./errors.js";
 
 export interface EntryTypeOptions {
   readonly label: string;
@@ -1757,12 +1758,13 @@ function assertUniqueFieldKeysPerScope<
         const scopedKey = `${scope}:${field.key}`;
         const existing = seen.get(scopedKey);
         if (existing !== undefined && existing !== box.id) {
-          throw new Error(
-            `Meta field "${field.key}" is declared by ${kind} meta ` +
-              `boxes "${existing}" and "${box.id}" on the same scope ` +
-              `"${scope}". Each key may appear in at most one box ` +
-              `per scope.`,
-          );
+          throw PluginDefinitionError.metaFieldClashAcrossBoxes({
+            kind,
+            fieldKey: field.key,
+            firstBoxId: existing,
+            secondBoxId: box.id,
+            scope,
+          });
         }
         seen.set(scopedKey, box.id);
       }
@@ -1785,10 +1787,12 @@ function assertMetaBoxScopesExist<TBox extends { readonly id: string }>(
   for (const box of boxes) {
     for (const scope of getScopes(box)) {
       if (!known.has(scope)) {
-        throw new Error(
-          `${boxKind} "${box.id}" references ${scopeKind} "${scope}" ` +
-            `which hasn't been registered.`,
-        );
+        throw PluginDefinitionError.metaBoxReferencesUnknownScope({
+          boxKind,
+          boxId: box.id,
+          scopeKind,
+          scope,
+        });
       }
     }
   }
@@ -1805,11 +1809,10 @@ function assertSettingsPageGroupsExist(
   for (const page of pages) {
     for (const groupName of page.groups) {
       if (!groups.has(groupName)) {
-        throw new Error(
-          `Settings page "${page.name}" references group "${groupName}" ` +
-            `which hasn't been registered. Call ` +
-            `ctx.registerSettingsGroup("${groupName}", {...}) before the page.`,
-        );
+        throw PluginDefinitionError.settingsPageReferencesUnknownGroup({
+          pageName: page.name,
+          groupName,
+        });
       }
     }
   }
@@ -1852,9 +1855,10 @@ export function deriveAdminSlug(name: string, plural?: string): string {
   const slug = slugify(source);
   if (slug.length === 0) {
     const from = plural === undefined ? "its name" : `plural="${plural}"`;
-    throw new Error(
-      `Cannot derive an admin slug for post type "${name}" from ${from} — result was empty.`,
-    );
+    throw PluginDefinitionError.adminSlugDerivationFailed({
+      entryTypeName: name,
+      from,
+    });
   }
   return slug;
 }
@@ -2169,10 +2173,9 @@ export function injectManifestIntoHtml(
   manifest: PlumixManifest,
 ): string {
   if (!MANIFEST_SCRIPT_RE.test(html)) {
-    throw new Error(
-      `Admin index.html is missing the <script id="${MANIFEST_SCRIPT_ID}"> ` +
-        `placeholder. Rebuild @plumix/admin.`,
-    );
+    throw PluginDefinitionError.adminManifestPlaceholderMissing({
+      scriptId: MANIFEST_SCRIPT_ID,
+    });
   }
   return html.replace(MANIFEST_SCRIPT_RE, serializeManifestScript(manifest));
 }

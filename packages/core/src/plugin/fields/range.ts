@@ -1,4 +1,5 @@
 import type { MetaBoxFieldSpan, RangeMetaBoxField } from "../manifest.js";
+import { FieldConfigError } from "./errors.js";
 
 export interface RangeFieldOptions {
   readonly key: string;
@@ -26,9 +27,11 @@ export interface RangeFieldOptions {
  */
 export function range(options: RangeFieldOptions): RangeMetaBoxField {
   if (options.min > options.max) {
-    throw new Error(
-      `range field "${options.key}": min (${options.min}) must be <= max (${options.max})`,
-    );
+    throw FieldConfigError.rangeMinGreaterThanMax({
+      fieldKey: options.key,
+      min: options.min,
+      max: options.max,
+    });
   }
   const { min, max } = options;
   return {
@@ -53,9 +56,11 @@ function buildBoundsSanitizer(
 ): (value: unknown) => number {
   return (value) => {
     if (typeof value !== "number" || !Number.isFinite(value)) {
+      // eslint-disable-next-line no-restricted-syntax -- sanitizer flow-control sentinel; migrated in the field-sanitizer-error slice
       throw new Error("invalid_value");
     }
     if (value < min || value > max) {
+      // eslint-disable-next-line no-restricted-syntax -- sanitizer flow-control sentinel; migrated in the field-sanitizer-error slice
       throw new Error("invalid_value");
     }
     return value;

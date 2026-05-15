@@ -7,6 +7,7 @@ import {
   createPluginSetupContext,
 } from "./context.js";
 import { assertValidPluginId } from "./define.js";
+import { PluginDefinitionError } from "./errors.js";
 import { createPluginRegistry } from "./manifest.js";
 
 export interface PluginInstallResult {
@@ -39,10 +40,9 @@ export async function installPlugins({
     // Re-check in case the descriptor was hand-rolled.
     assertValidPluginId(descriptor.id);
     if (seenIds.has(descriptor.id)) {
-      throw new Error(
-        `Plugin id "${descriptor.id}" appears more than once in ` +
-          `config.plugins — each plugin id must be unique.`,
-      );
+      throw PluginDefinitionError.duplicatePluginIdInConfig({
+        pluginId: descriptor.id,
+      });
     }
     seenIds.add(descriptor.id);
   }

@@ -42,6 +42,7 @@ export function color(options: ColorFieldOptions): ColorMetaBoxField {
 
 function defaultColorSanitize(value: unknown): string {
   if (typeof value !== "string" || !HEX_COLOR.test(value)) {
+    // eslint-disable-next-line no-restricted-syntax -- sanitizer flow-control sentinel; migrated in the field-sanitizer-error slice
     throw new Error("invalid_value");
   }
   return value.toLowerCase();
