@@ -38,7 +38,7 @@ export class RouteCompileError extends Error {
       "invalid_archive_slug",
       `Entry type "${ctx.entryType}" has invalid hasArchive "${ctx.hasArchive}" — ` +
         `expected a single lowercase kebab-case path segment.`,
-      { entryType: ctx.entryType, hasArchive: ctx.hasArchive },
+      ctx,
     );
   }
 
@@ -51,11 +51,7 @@ export class RouteCompileError extends Error {
       "duplicate_rewrite_rule",
       `Rewrite rule "${ctx.rawPattern}" is registered twice ` +
         `(by ${formatOwner(ctx.firstOwner)} and ${formatOwner(ctx.secondOwner)}).`,
-      {
-        rawPattern: ctx.rawPattern,
-        firstOwner: ctx.firstOwner,
-        secondOwner: ctx.secondOwner,
-      },
+      ctx,
     );
   }
 }

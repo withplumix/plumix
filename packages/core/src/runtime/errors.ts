@@ -37,7 +37,7 @@ export class AppBootError extends Error {
     return new AppBootError(
       "duplicate_theme_id",
       `Theme id "${ctx.themeId}" appears more than once in config.themes`,
-      { themeId: ctx.themeId },
+      ctx,
     );
   }
 
@@ -49,11 +49,7 @@ export class AppBootError extends Error {
     return new AppBootError(
       "schema_export_conflict",
       `Plugin "${ctx.pluginId}" redefines schema export "${ctx.schemaKey}" (already defined by "${ctx.previousOwner}")`,
-      {
-        pluginId: ctx.pluginId,
-        schemaKey: ctx.schemaKey,
-        previousOwner: ctx.previousOwner,
-      },
+      ctx,
     );
   }
 
@@ -64,7 +60,7 @@ export class AppBootError extends Error {
       "plugin_id_collides_with_core_rpc_namespace",
       `Plugin id "${ctx.pluginId}" collides with a core RPC namespace ` +
         `at buildApp; rename the plugin.`,
-      { pluginId: ctx.pluginId },
+      ctx,
     );
   }
 
@@ -75,7 +71,7 @@ export class AppBootError extends Error {
       "plugin_id_collides_with_core_rpc_router",
       `Plugin id "${ctx.pluginId}" collides with the core RPC router key ` +
         `at buildApp; rename the plugin.`,
-      { pluginId: ctx.pluginId },
+      ctx,
     );
   }
 }
