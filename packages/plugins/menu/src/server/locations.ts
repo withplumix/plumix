@@ -1,4 +1,5 @@
 import type { MenuLocationOptions, RegisteredMenuLocation } from "./types.js";
+import { MenuPluginError } from "../errors.js";
 
 /**
  * Module-scoped registry of menu locations. Themes call
@@ -24,21 +25,17 @@ export function recordLocation(id: string, options: MenuLocationOptions): void {
     id.length > MAX_LOCATION_ID_LENGTH ||
     !LOCATION_ID_RE.test(id)
   ) {
-    throw new Error(
-      `registerMenuLocation: id "${id}" is invalid. Location ids must ` +
-        `match /${LOCATION_ID_RE.source}/ and be 1–${MAX_LOCATION_ID_LENGTH} chars.`,
-    );
+    throw MenuPluginError.invalidLocationId({
+      id,
+      pattern: LOCATION_ID_RE.source,
+      maxLength: MAX_LOCATION_ID_LENGTH,
+    });
   }
   if (typeof options.label !== "string" || options.label.trim().length === 0) {
-    throw new Error(
-      `registerMenuLocation("${id}"): \`label\` is required and must be a non-empty, non-whitespace string.`,
-    );
+    throw MenuPluginError.locationLabelEmpty({ id });
   }
   if (locations.has(id)) {
-    throw new Error(
-      `registerMenuLocation: location "${id}" is already registered. ` +
-        `Each location id must be unique across themes.`,
-    );
+    throw MenuPluginError.duplicateLocation({ id });
   }
   locations.set(id, {
     id,
