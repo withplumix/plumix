@@ -55,27 +55,32 @@ export const baseConfig = defineConfig(
 );
 
 // Named-errors convention (umbrella #232). Production code in opted-in
-// packages may not `throw new Error(...)` — use a factory from the area's
+// areas may not `throw new Error(...)` — use a factory from the area's
 // errors.ts (e.g. R2Error.bindingMissing({ binding })). Packages opt in
-// by spreading this config alongside baseConfig in their eslint.config.ts.
-// Pilot is packages/runtimes/cloudflare (PR 1 / issue #236); subsequent
-// PRs add the import to more packages.
-export const noBareThrowError = defineConfig({
-  files: ["src/**/*.ts", "src/**/*.tsx"],
-  ignores: [
-    "src/**/*.test.ts",
-    "src/**/*.test.tsx",
-    "src/**/*.spec.ts",
-    "src/**/test/**",
-  ],
-  rules: {
-    "no-restricted-syntax": [
-      "error",
-      {
-        selector: "ThrowStatement > NewExpression[callee.name='Error']",
-        message:
-          "Use a named factory instead of `throw new Error(...)` — see the area's errors.ts for the pattern (umbrella #232).",
-      },
-    ],
-  },
-});
+// by spreading one of these configs alongside baseConfig in their
+// eslint.config.ts. Subsequent PRs broaden the scope by adding the import
+// (or expanding the file globs) on a per-area basis.
+export function noBareThrowErrorFor(filesGlobs: readonly string[]) {
+  return defineConfig({
+    files: [...filesGlobs],
+    ignores: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/test/**"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "ThrowStatement > NewExpression[callee.name='Error']",
+          message:
+            "Use a named factory instead of `throw new Error(...)` — see the area's errors.ts for the pattern (umbrella #232).",
+        },
+      ],
+    },
+  });
+}
+
+// Whole-`src/` opt-in. Suitable for packages where every production-code
+// throw site has already been migrated to a factory. Cloudflare runtime
+// uses this shape (issue #236).
+export const noBareThrowError = noBareThrowErrorFor([
+  "src/**/*.ts",
+  "src/**/*.tsx",
+]);

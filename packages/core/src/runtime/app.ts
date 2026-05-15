@@ -28,6 +28,7 @@ import { installPlugins } from "../plugin/register.js";
 import { compileRouteMap } from "../route/compile.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
 import { appRouter } from "../rpc/router.js";
+import { AppBootError } from "./errors.js";
 
 export interface OAuthProviderSummary {
   /** Map key in `auth.oauth.providers`; the URL path segment. */
@@ -112,9 +113,7 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
   const themeIds = new Set<string>();
   for (const theme of config.themes) {
     if (themeIds.has(theme.id)) {
-      throw new Error(
-        `Theme id "${theme.id}" appears more than once in config.themes`,
-      );
+      throw AppBootError.duplicateThemeId({ themeId: theme.id });
     }
     themeIds.add(theme.id);
     if (theme.setup) {
@@ -131,9 +130,11 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     for (const [key, value] of Object.entries(plugin.schema)) {
       const previous = origin.get(key);
       if (previous !== undefined) {
-        throw new Error(
-          `Plugin "${plugin.id}" redefines schema export "${key}" (already defined by "${previous}")`,
-        );
+        throw AppBootError.schemaExportConflict({
+          pluginId: plugin.id,
+          schemaKey: key,
+          previousOwner: previous,
+        });
       }
       origin.set(key, plugin.id);
       schema[key] = value;
@@ -145,16 +146,10 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
   const mergedRouter = { ...appRouter } as Record<string, unknown>;
   for (const [pluginId, pluginRouter] of registry.rpcRouters) {
     if (CORE_RPC_NAMESPACES.has(pluginId)) {
-      throw new Error(
-        `Plugin id "${pluginId}" collides with a core RPC namespace ` +
-          `at buildApp; rename the plugin.`,
-      );
+      throw AppBootError.pluginIdCollidesWithCoreRpcNamespace({ pluginId });
     }
     if (pluginId in appRouter) {
-      throw new Error(
-        `Plugin id "${pluginId}" collides with the core RPC router key ` +
-          `at buildApp; rename the plugin.`,
-      );
+      throw AppBootError.pluginIdCollidesWithCoreRpcRouter({ pluginId });
     }
     mergedRouter[pluginId] = pluginRouter;
   }

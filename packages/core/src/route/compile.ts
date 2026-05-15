@@ -4,6 +4,7 @@ import type {
   RegisteredTermTaxonomy,
 } from "../plugin/manifest.js";
 import type { RouteIntent, RouteRule } from "./intent.js";
+import { RouteCompileError } from "./errors.js";
 
 const AUTO_ROUTE_PRIORITY = 50;
 export const DEFAULT_REWRITE_RULE_PRIORITY = 10;
@@ -161,10 +162,10 @@ function archiveSlugFor(
   if (!hasArchive) return null;
   if (typeof hasArchive === "string") {
     if (!ARCHIVE_SLUG_RE.test(hasArchive)) {
-      throw new Error(
-        `Entry type "${entryType.name}" has invalid hasArchive "${hasArchive}" — ` +
-          `expected a single lowercase kebab-case path segment.`,
-      );
+      throw RouteCompileError.invalidArchiveSlug({
+        entryType: entryType.name,
+        hasArchive,
+      });
     }
     return hasArchive;
   }
@@ -177,15 +178,12 @@ function assertUniquePatterns(rules: readonly CompiledRule[]): void {
   for (const rule of rules) {
     const existing = first.get(rule.rawPattern);
     if (existing !== undefined) {
-      throw new Error(
-        `Rewrite rule "${rule.rawPattern}" is registered twice ` +
-          `(by ${formatOwner(existing)} and ${formatOwner(rule.registeredBy)}).`,
-      );
+      throw RouteCompileError.duplicateRewriteRule({
+        rawPattern: rule.rawPattern,
+        firstOwner: existing,
+        secondOwner: rule.registeredBy,
+      });
     }
     first.set(rule.rawPattern, rule.registeredBy);
   }
-}
-
-function formatOwner(plugin: string | null): string {
-  return plugin === null ? "core" : `plugin "${plugin}"`;
 }
