@@ -4,6 +4,8 @@ import type { ParseError } from "jsonc-parser";
 import { parse as parseJsonc } from "jsonc-parser";
 import { parse as parseToml } from "smol-toml";
 
+import { WranglerConfigError } from "./errors.js";
+
 interface D1BindingEntry {
   readonly binding?: string;
   readonly database_name?: string;
@@ -61,9 +63,10 @@ function parseJsoncStrict(text: string, filename: string): unknown {
   const errors: ParseError[] = [];
   const value: unknown = parseJsonc(text, errors, { allowTrailingComma: true });
   if (errors.length > 0) {
-    throw new Error(
-      `Failed to parse ${filename}: ${errors.length} syntax error(s)`,
-    );
+    throw WranglerConfigError.parseFailed({
+      filename,
+      errorCount: errors.length,
+    });
   }
   return value;
 }

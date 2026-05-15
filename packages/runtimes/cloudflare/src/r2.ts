@@ -11,6 +11,7 @@ import type {
   UrlOptions,
 } from "plumix";
 
+import { R2Error } from "./errors.js";
 import { presignPutUrl } from "./sigv4.js";
 
 /**
@@ -104,9 +105,7 @@ interface R2ListOutput {
 
 function readR2Binding(env: unknown, bindingName: string): R2Bucket {
   if (env === null || typeof env !== "object") {
-    throw new Error(
-      `r2(): env is not an object — runtime adapter misconfiguration.`,
-    );
+    throw R2Error.envNotObject();
   }
   const bucket = (env as Record<string, unknown>)[bindingName];
   if (
@@ -114,10 +113,7 @@ function readR2Binding(env: unknown, bindingName: string): R2Bucket {
     typeof bucket !== "object" ||
     typeof (bucket as { put?: unknown }).put !== "function"
   ) {
-    throw new Error(
-      `r2(): env binding "${bindingName}" is missing or not an R2 bucket. ` +
-        `Declare it in wrangler.toml and ensure the name matches.`,
-    );
+    throw R2Error.bindingMissing({ binding: bindingName });
   }
   return bucket as unknown as R2Bucket;
 }

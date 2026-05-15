@@ -5,6 +5,8 @@
 // Reference:
 // https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
 
+import { SigV4Error } from "./errors.js";
+
 interface SigV4Credentials {
   readonly accessKeyId: string;
   readonly secretAccessKey: string;
@@ -50,9 +52,7 @@ export async function presignPutUrl(
     input.expiresIn < MIN_EXPIRES_IN ||
     input.expiresIn > MAX_EXPIRES_IN
   ) {
-    throw new Error(
-      `presignPutUrl: expiresIn must be in [${String(MIN_EXPIRES_IN)}..${String(MAX_EXPIRES_IN)}] seconds, got ${String(input.expiresIn)}`,
-    );
+    throw SigV4Error.expiresInOutOfRange({ expiresIn: input.expiresIn });
   }
 
   const region = input.credentials.region ?? "auto";
