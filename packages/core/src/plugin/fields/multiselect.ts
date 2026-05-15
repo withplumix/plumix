@@ -43,11 +43,13 @@ function buildOptionSanitizer(
 ): (value: unknown) => readonly string[] {
   const allowed = new Set(optionList.map((opt) => opt.value));
   return (value) => {
+    // eslint-disable-next-line no-restricted-syntax -- sanitizer flow-control sentinel; migrated in the field-sanitizer-error slice
     if (!Array.isArray(value)) throw new Error("invalid_value");
     const out: string[] = [];
     const seen = new Set<string>();
     for (const item of value) {
       if (typeof item !== "string" || !allowed.has(item)) {
+        // eslint-disable-next-line no-restricted-syntax -- sanitizer flow-control sentinel; migrated in the field-sanitizer-error slice
         throw new Error("invalid_value");
       }
       if (!seen.has(item)) {

@@ -10,5 +10,6 @@ export default defineConfig(
     "src/route/**/*.ts",
     "src/theme.ts",
     "src/theme-errors.ts",
+    "src/plugin/**/*.ts",
   ]),
 );

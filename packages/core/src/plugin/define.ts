@@ -1,4 +1,5 @@
 import type { PluginProvidesContext, PluginSetupContext } from "./context.js";
+import { PluginDefinitionError } from "./errors.js";
 
 export type PluginSetup<TConfig> = (
   ctx: PluginSetupContext,
@@ -54,16 +55,16 @@ export const MAX_PLUGIN_ID_LENGTH = 64;
 
 export function assertValidPluginId(id: string): void {
   if (id.length === 0 || id.length > MAX_PLUGIN_ID_LENGTH) {
-    throw new Error(
-      `Plugin id "${id}" must be between 1 and ${MAX_PLUGIN_ID_LENGTH} ` +
-        `characters.`,
-    );
+    throw PluginDefinitionError.invalidPluginIdLength({
+      pluginId: id,
+      pluginIdMaxLength: MAX_PLUGIN_ID_LENGTH,
+    });
   }
   if (!PLUGIN_ID_RE.test(id)) {
-    throw new Error(
-      `Plugin id "${id}" must match ${PLUGIN_ID_RE} (lowercase ASCII ` +
-        `starting with a letter; alphanumerics, hyphens, and underscores).`,
-    );
+    throw PluginDefinitionError.invalidPluginIdShape({
+      pluginId: id,
+      pattern: PLUGIN_ID_RE.source,
+    });
   }
 }
 
@@ -97,11 +98,7 @@ export function definePlugin<TConfig = undefined>(
     };
   }
   if (legacyOptions !== undefined) {
-    throw new Error(
-      `definePlugin("${id}", input) — pass options inside the input ` +
-        `object (\`setup\`, \`provides\`, \`schema\`, ...) instead of the ` +
-        `legacy third argument.`,
-    );
+    throw PluginDefinitionError.definePluginLegacyThirdArg({ pluginId: id });
   }
   warnIfSchemaWithoutSchemaModule(id, setupOrInput);
   return {

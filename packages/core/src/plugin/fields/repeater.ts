@@ -3,6 +3,7 @@ import type {
   MetaBoxFieldSpan,
   RepeaterMetaBoxField,
 } from "../manifest.js";
+import { FieldConfigError } from "./errors.js";
 import { walkRepeaterRows } from "./repeater-validate.js";
 
 export interface RepeaterFieldOptions {
@@ -39,27 +40,29 @@ export function repeater(options: RepeaterFieldOptions): RepeaterMetaBoxField {
   const seen = new Set<string>();
   for (const sf of options.subFields) {
     if (sf.inputType === "repeater") {
-      throw new Error(
-        `repeater("${options.key}") subFields contains a nested repeater ` +
-          `("${sf.key}"); nested repeaters are not supported in v0.1.`,
-      );
+      throw FieldConfigError.repeaterNestedNotSupported({
+        repeaterKey: options.key,
+        subFieldKey: sf.key,
+      });
     }
     if (FORBIDDEN_SUBFIELD_KEYS.has(sf.key)) {
-      throw new Error(
-        `repeater("${options.key}") subField key "${sf.key}" is forbidden ` +
-          `(prototype-pollution risk).`,
-      );
+      throw FieldConfigError.repeaterSubFieldKeyForbidden({
+        repeaterKey: options.key,
+        subFieldKey: sf.key,
+      });
     }
     if (!REPEATER_SUBFIELD_KEY_RE.test(sf.key)) {
-      throw new Error(
-        `repeater("${options.key}") subField key "${sf.key}" must match ` +
-          `${REPEATER_SUBFIELD_KEY_RE}.`,
-      );
+      throw FieldConfigError.repeaterSubFieldKeyInvalid({
+        repeaterKey: options.key,
+        subFieldKey: sf.key,
+        pattern: REPEATER_SUBFIELD_KEY_RE.source,
+      });
     }
     if (seen.has(sf.key)) {
-      throw new Error(
-        `repeater("${options.key}") declares subField "${sf.key}" more than once.`,
-      );
+      throw FieldConfigError.repeaterSubFieldDuplicate({
+        repeaterKey: options.key,
+        subFieldKey: sf.key,
+      });
     }
     seen.add(sf.key);
   }
