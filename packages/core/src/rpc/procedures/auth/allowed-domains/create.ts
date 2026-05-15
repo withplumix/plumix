@@ -23,6 +23,7 @@ export const create = base
         })
         .returning();
       if (!row)
+        // eslint-disable-next-line no-restricted-syntax -- defensive driver-regression guard; migrate alongside auth errors in PR 2 (#234)
         throw new Error("allowedDomains.create: insert returned no row");
       return row;
     } catch (error) {

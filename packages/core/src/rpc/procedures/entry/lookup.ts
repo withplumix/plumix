@@ -94,6 +94,7 @@ function scopeConditions(scope: EntryFieldScope | undefined): SQL[] {
   // turn the picker into a "list every entry across every type" channel
   // bypassing per-type read scoping.
   if (!scope?.entryTypes || scope.entryTypes.length === 0) {
+    // eslint-disable-next-line no-restricted-syntax -- TODO migrate to a named factory in a follow-up slice
     throw new Error(
       "entry adapter: scope.entryTypes is required and must be non-empty",
     );

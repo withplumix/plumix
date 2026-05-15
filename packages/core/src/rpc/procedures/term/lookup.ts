@@ -93,6 +93,7 @@ function scopeConditions(scope: TermFieldScope | undefined): SQL[] {
   // omit it and would otherwise enumerate every term across every
   // taxonomy.
   if (!scope?.termTaxonomies || scope.termTaxonomies.length === 0) {
+    // eslint-disable-next-line no-restricted-syntax -- TODO migrate to a named factory in a follow-up slice
     throw new Error(
       "term adapter: scope.termTaxonomies is required and must be non-empty",
     );

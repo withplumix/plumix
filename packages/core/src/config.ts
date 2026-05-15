@@ -62,6 +62,7 @@ export function plumix(config: PlumixConfigInput): PlumixConfig {
   // today) need a configured mailer at the top level. Surface this at
   // app build time rather than letting it crash on the first request.
   if (config.auth.magicLink && !config.mailer) {
+    // eslint-disable-next-line no-restricted-syntax -- TODO migrate to a named factory in a follow-up slice
     throw new Error(
       "plumix(): `auth.magicLink` requires a top-level `mailer` " +
         "(use `consoleMailer()` for dev or pass your own `Mailer`).",
