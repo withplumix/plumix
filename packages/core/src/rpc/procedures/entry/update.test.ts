@@ -441,4 +441,87 @@ describe("entry.update", () => {
       _derived: "always-there",
     });
   });
+
+  describe("optimistic concurrency (expectedLiveUpdatedAt)", () => {
+    test("matching token: update succeeds", async () => {
+      const h = await createRpcHarness({ authAs: "author" });
+      const own = await h.factory.draft.create({
+        authorId: h.user.id,
+        slug: "oc-match",
+      });
+      const loaded = await h.client.entry.get({ id: own.id });
+      const updated = await h.client.entry.update({
+        id: own.id,
+        title: "renamed",
+        expectedLiveUpdatedAt: loaded.updatedAt,
+      });
+      expect(updated.title).toBe("renamed");
+    });
+
+    test("stale token: rejects with CONFLICT { stale_expected_updated_at }", async () => {
+      const h = await createRpcHarness({ authAs: "author" });
+      const own = await h.factory.draft.create({
+        authorId: h.user.id,
+        slug: "oc-stale",
+      });
+      await expect(
+        h.client.entry.update({
+          id: own.id,
+          title: "lost-race",
+          expectedLiveUpdatedAt: new Date("2020-01-01T00:00:00Z"),
+        }),
+      ).rejects.toMatchObject({
+        code: "CONFLICT",
+        data: { reason: "stale_expected_updated_at" },
+      });
+    });
+
+    test("absent token: preserves legacy last-write-wins behavior", async () => {
+      const h = await createRpcHarness({ authAs: "author" });
+      const own = await h.factory.draft.create({
+        authorId: h.user.id,
+        slug: "oc-legacy",
+      });
+      const updated = await h.client.entry.update({
+        id: own.id,
+        title: "no-token",
+      });
+      expect(updated.title).toBe("no-token");
+    });
+
+    test("stale token + empty patch: still CONFLICT (no short-circuit bypass)", async () => {
+      const h = await createRpcHarness({ authAs: "author" });
+      const own = await h.factory.draft.create({
+        authorId: h.user.id,
+        slug: "oc-empty",
+      });
+      await expect(
+        h.client.entry.update({
+          id: own.id,
+          expectedLiveUpdatedAt: new Date("2020-01-01T00:00:00Z"),
+        }),
+      ).rejects.toMatchObject({
+        code: "CONFLICT",
+        data: { reason: "stale_expected_updated_at" },
+      });
+    });
+
+    test("unauthorised caller with stale token still gets FORBIDDEN (no CONFLICT oracle)", async () => {
+      const h = await createRpcHarness({ authAs: "subscriber" });
+      const own = await h.factory.draft.create({
+        authorId: h.user.id,
+        slug: "oc-no-oracle",
+      });
+      await expect(
+        h.client.entry.update({
+          id: own.id,
+          title: "x",
+          expectedLiveUpdatedAt: new Date("2020-01-01T00:00:00Z"),
+        }),
+      ).rejects.toMatchObject({
+        code: "FORBIDDEN",
+        data: { capability: "entry:post:edit_any" },
+      });
+    });
+  });
 });

@@ -94,6 +94,13 @@ export const entryUpdateInputSchema = v.object({
   sortOrder: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
   terms: v.optional(postTermsSchema),
   meta: v.optional(entryMetaInputSchema),
+  /**
+   * Optimistic-concurrency token: the live entry's `updatedAt` at the
+   * moment the caller loaded it. When provided, the server rejects
+   * with `CONFLICT { reason: "stale_expected_updated_at" }` if another
+   * write landed in between. Absent ⇒ legacy last-write-wins.
+   */
+  expectedLiveUpdatedAt: v.optional(v.date()),
 });
 
 // Upper bound on the term-slug list per termTaxonomy clause. Mirrors the

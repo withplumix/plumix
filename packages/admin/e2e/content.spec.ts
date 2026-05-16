@@ -409,6 +409,111 @@ test.describe("/entries/$slug/$id/edit", () => {
       .toBe("Edited title");
     expect((updateInputs.at(-1) as { id?: number } | undefined)?.id).toBe(7);
   });
+
+  test("stale-token save raises the conflict dialog and resolves via Compare → Take theirs", async ({
+    page,
+  }) => {
+    const t0 = new Date("2026-04-21T00:00:00Z");
+    const t1 = new Date("2026-04-21T01:00:00Z");
+    let getCalls = 0;
+    const updateInputs: unknown[] = [];
+
+    await page.route("**/_plumix/rpc/**", async (route) => {
+      const url = route.request().url();
+      if (url.endsWith("/auth/session")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: rpcOkBody(AUTHED_ADMIN),
+        });
+      }
+      if (url.endsWith("/entry/get")) {
+        getCalls += 1;
+        // First load: t0 / original title.
+        // Refetch after conflict: t1 / new live title.
+        const isFresh = getCalls > 1;
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            json: {
+              id: 7,
+              type: "post",
+              parentId: null,
+              title: isFresh ? "Their edit" : "Original title",
+              slug: "original",
+              content:
+                '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Body"}]}]}',
+              excerpt: null,
+              status: "draft",
+              authorId: 1,
+              sortOrder: 0,
+              publishedAt: null,
+              createdAt: t0,
+              updatedAt: isFresh ? t1 : t0,
+              meta: {},
+            },
+            meta: [],
+          }),
+        });
+      }
+      if (url.endsWith("/entry/update")) {
+        const body = route.request().postDataJSON() as { json?: unknown };
+        updateInputs.push(body.json);
+        // First save: stale token rejected.
+        return route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: JSON.stringify({
+            json: {
+              defined: true,
+              code: "CONFLICT",
+              status: 409,
+              message: "Resource conflict",
+              data: { reason: "stale_expected_updated_at" },
+            },
+            meta: [],
+          }),
+        });
+      }
+      return route.fulfill({ status: 404, body: "not-mocked" });
+    });
+
+    await page.goto("entries/posts/7/edit");
+    await expect(page.getByTestId("post-editor-title-input")).toHaveValue(
+      "Original title",
+    );
+
+    await page.getByTestId("post-editor-title-input").fill("My edit");
+    await page.getByTestId("post-editor-submit").click();
+
+    const dialog = page.getByTestId("entry-editor-conflict-dialog");
+    await expect(dialog).toBeVisible();
+
+    await page.getByTestId("entry-editor-conflict-compare").click();
+    await expect(
+      page.getByTestId("entry-editor-conflict-mine-title"),
+    ).toHaveText("My edit");
+    await expect(
+      page.getByTestId("entry-editor-conflict-theirs-title"),
+    ).toHaveText("Their edit");
+
+    await page.getByTestId("entry-editor-conflict-take-theirs").click();
+
+    await expect(dialog).toBeHidden();
+    // Form remounts (keyed on updatedAt) with the fresh server values.
+    await expect(page.getByTestId("post-editor-title-input")).toHaveValue(
+      "Their edit",
+    );
+
+    // Sanity: the first save attempt did go out with the stale token, and the
+    // conflict path didn't re-send it.
+    expect(updateInputs).toHaveLength(1);
+    expect(
+      (updateInputs[0] as { expectedLiveUpdatedAt?: unknown })
+        .expectedLiveUpdatedAt,
+    ).toBeDefined();
+  });
 });
 
 test.describe("meta-box sidebar", () => {
