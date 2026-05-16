@@ -107,6 +107,23 @@ describe("definePlumixE2EConfig", () => {
     ).toThrow(/inspectorPort.*webServerCommand/i);
   });
 
+  test("CI reporter writes the html report with open: never", () => {
+    const original = process.env.CI;
+    process.env.CI = "true";
+    try {
+      const config = definePlumixE2EConfig({ playground: "../playground" });
+      const reporters = Array.isArray(config.reporter) ? config.reporter : [];
+      const htmlReporter = reporters.find(
+        (entry): entry is ["html", { open?: string }] =>
+          Array.isArray(entry) && entry[0] === "html",
+      );
+      expect(htmlReporter?.[1]?.open).toBe("never");
+    } finally {
+      if (original === undefined) delete process.env.CI;
+      else process.env.CI = original;
+    }
+  });
+
   test("webServer readiness defaults to URL-based polling against baseURL", () => {
     const config = definePlumixE2EConfig({
       port: 3040,
