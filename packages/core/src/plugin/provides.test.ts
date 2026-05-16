@@ -7,7 +7,7 @@ import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "./define.js";
 import { installPlugins } from "./register.js";
 
-declare module "./context.js" {
+declare module "./provides-context.js" {
   interface PluginContextExtensions {
     registerMenuItemType(type: string, opts: { readonly label: string }): void;
     media: {

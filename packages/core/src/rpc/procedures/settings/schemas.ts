@@ -3,7 +3,7 @@ import * as v from "valibot";
 // Group / page identifiers stay tight — lowercase snake_case ASCII so
 // they're safe in URLs (`/settings/<page>`), testids, and future
 // storage backends that may quote differently. Matches the
-// registration-time `SETTINGS_NAME_RE` in `plugin/context.ts`.
+// registration-time `SETTINGS_NAME_RE` in `plugin/validation/identifiers.ts`.
 const settingsNameSchema = v.pipe(
   v.string(),
   v.trim(),
@@ -15,7 +15,7 @@ const settingsNameSchema = v.pipe(
 // Field-value keys share the permissive meta regex (`og:title`,
 // `my-field`, `2fa_enabled` all valid) so a plugin registering a
 // `MetaBoxField` via `registerSettingsGroup` isn't rejected at the
-// RPC boundary. Matches `META_FIELD_KEY_RE` in `plugin/context.ts`.
+// RPC boundary. Matches `META_FIELD_KEY_RE` in `plugin/validation/meta-box-fields.ts`.
 const settingsValueKeySchema = v.pipe(
   v.string(),
   v.trim(),

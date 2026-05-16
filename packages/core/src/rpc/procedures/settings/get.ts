@@ -7,7 +7,7 @@ import { settingsGetInputSchema } from "./schemas.js";
 const CAPABILITY = "settings:manage";
 // Hard ceiling on rows returned per group. Registered-field count per
 // group is already capped at 200 (`MAX_FIELDS_PER_SETTINGS_GROUP` in
-// plugin/context); doubling it here gives headroom for orphan keys
+// plugin/validation/meta-box-fields); doubling it here gives headroom for orphan keys
 // left by uninstalled plugins while still bounding response size.
 const MAX_GROUP_ROWS_PER_READ = 500;
 

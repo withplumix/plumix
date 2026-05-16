@@ -1,5 +1,5 @@
 import type { DerivedCapability } from "../auth/rbac.js";
-import type { AppContext, AppContextExtensions } from "../context/app.js";
+import type { AppContext } from "../context/app.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import type {
@@ -32,47 +32,26 @@ import type {
   TermTaxonomyOptions,
   UserMetaBoxOptions,
 } from "./manifest.js";
+import type { PluginContextExtensions } from "./provides-context.js";
 import {
   deriveEntryTypeCapabilities,
   deriveTermTaxonomyCapabilities,
 } from "../auth/rbac.js";
 import { DEFAULT_REWRITE_RULE_PRIORITY } from "../route/compile.js";
-import { MAX_PLUGIN_ID_LENGTH, PLUGIN_ID_RE } from "./define.js";
 import { DuplicateRegistrationError, PluginContextError } from "./errors.js";
 import { CORE_RPC_NAMESPACES } from "./manifest.js";
-
-export interface ContextExtensionEntry {
-  readonly value: unknown;
-  readonly pluginId: string;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface PluginContextExtensions {}
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ThemeContextExtensions {}
-
-export interface PluginProvidesContext {
-  readonly id: string;
-  extendPluginContext<TKey extends keyof PluginContextExtensions>(
-    key: TKey,
-    value: PluginContextExtensions[TKey],
-  ): void;
-  extendThemeContext<TKey extends keyof ThemeContextExtensions>(
-    key: TKey,
-    value: ThemeContextExtensions[TKey],
-  ): void;
-  /**
-   * Register a runtime helper on every per-request `AppContext`. Reads
-   * are typed via the `AppContextExtensions` declaration-merge target —
-   * a plugin augments it once and `ctx.<key>` is autocompleted in
-   * every RPC/route/hook handler. Duplicate keys throw.
-   */
-  extendAppContext<TKey extends keyof AppContextExtensions>(
-    key: TKey,
-    value: AppContextExtensions[TKey],
-  ): void;
-}
+import {
+  assertComponentRef,
+  assertMetaBoxFields,
+  assertValidAdminPagePath,
+  assertValidFieldTypeName,
+  assertValidIdentifier,
+  assertValidLoginLink,
+  assertValidLookupAdapterKind,
+  assertValidNavGroupId,
+  assertValidPluginRoutePath,
+  assertValidScheduledTask,
+} from "./validation/index.js";
 
 export interface PluginSetupContextBase {
   readonly id: string;
@@ -235,103 +214,6 @@ interface CreatePluginContextArgs {
   readonly hooks: HookRegistry;
   readonly registry: MutablePluginRegistry;
   readonly extensions?: ReadonlyMap<string, unknown>;
-}
-
-interface CreateProvidesContextArgs {
-  readonly pluginId: string;
-  readonly pluginExtensions: Map<string, ContextExtensionEntry>;
-  readonly themeExtensions: Map<string, ContextExtensionEntry>;
-  readonly appExtensions: Map<string, ContextExtensionEntry>;
-}
-
-// Names that would corrupt the per-request `AppContext` if a plugin
-// tried to register them. `__proto__` triggers the Object.prototype
-// setter and reparents the ctx; `constructor` / `prototype` shadow
-// inherited members and confuse downstream introspection.
-const RESERVED_EXTENSION_KEYS: ReadonlySet<string> = new Set([
-  "__proto__",
-  "constructor",
-  "prototype",
-]);
-
-// Built-in `AppContextBase` members. extendAppContext rejects these so
-// a plugin can't silently replace `db`, `auth`, etc. at request time.
-// Mirrors the `key in target` shadow check `extendPluginContext`
-// runs against the constructed PluginSetupContext at install.
-const APP_CONTEXT_BASE_KEYS: ReadonlySet<string> = new Set([
-  "db",
-  "env",
-  "request",
-  "user",
-  "tokenScopes",
-  "hooks",
-  "plugins",
-  "logger",
-  "auth",
-  "authenticator",
-  "bootstrapAllowed",
-  "oauthProviders",
-  "after",
-  "assets",
-  "storage",
-  "imageDelivery",
-  "mailer",
-  "origin",
-  "siteName",
-  "resolvedEntity",
-]);
-
-export function createPluginProvidesContext({
-  pluginId,
-  pluginExtensions,
-  themeExtensions,
-  appExtensions,
-}: CreateProvidesContextArgs): PluginProvidesContext {
-  const stash = (
-    target: Map<string, ContextExtensionEntry>,
-    kind: "Plugin" | "Theme" | "App",
-    key: string,
-    value: unknown,
-  ): void => {
-    if (typeof key !== "string" || key.length === 0) {
-      throw PluginContextError.extendContextInvalidKey({ pluginId, kind });
-    }
-    if (RESERVED_EXTENSION_KEYS.has(key)) {
-      throw PluginContextError.extendContextReservedKey({
-        pluginId,
-        kind,
-        key,
-      });
-    }
-    if (kind === "App" && APP_CONTEXT_BASE_KEYS.has(key)) {
-      throw PluginContextError.extendAppContextBuiltinCollision({
-        pluginId,
-        key,
-      });
-    }
-    const existing = target.get(key);
-    if (existing) {
-      throw PluginContextError.extendContextDuplicate({
-        pluginId,
-        kind,
-        key,
-        existingOwner: existing.pluginId,
-      });
-    }
-    target.set(key, { value, pluginId });
-  };
-  return {
-    id: pluginId,
-    extendPluginContext: (key, value) => {
-      stash(pluginExtensions, "Plugin", key, value);
-    },
-    extendThemeContext: (key, value) => {
-      stash(themeExtensions, "Theme", key, value);
-    },
-    extendAppContext: (key, value) => {
-      stash(appExtensions, "App", key, value);
-    },
-  };
 }
 
 export function createPluginSetupContext({
@@ -680,236 +562,6 @@ function makeMetaBoxRegistrar<
       registeredBy: pluginId,
     });
   };
-}
-
-function assertComponentRef(
-  pluginId: string,
-  descriptor: string,
-  ref: unknown,
-): void {
-  if (typeof ref !== "string" || ref.length === 0) {
-    throw PluginContextError.invalidComponentRef({ pluginId, descriptor });
-  }
-}
-
-const IDENTIFIER_NAME_RE = /^[a-z][a-z0-9_-]*$/;
-
-function assertValidFieldTypeName(pluginId: string, type: string): void {
-  if (!IDENTIFIER_NAME_RE.test(type) || type.length > 64) {
-    throw PluginContextError.invalidFieldTypeName({
-      pluginId,
-      type,
-      pattern: IDENTIFIER_NAME_RE.source,
-      maxLength: 64,
-    });
-  }
-}
-
-function assertValidLookupAdapterKind(pluginId: string, kind: string): void {
-  if (!IDENTIFIER_NAME_RE.test(kind) || kind.length > 64) {
-    throw PluginContextError.invalidLookupAdapterKind({
-      pluginId,
-      kind,
-      pattern: IDENTIFIER_NAME_RE.source,
-      maxLength: 64,
-    });
-  }
-}
-
-// Lowercase alphanum + dash/underscore, 1–32 chars, must start with a
-// letter. Matches `OAUTH_PROVIDER_KEY_PATTERN` exactly so keys read
-// consistently across login-button surfaces. Leading-letter constraint
-// keeps the wire id `${pluginId}:${key}` from looking like an opaque
-// numeric identifier in logs.
-const LOGIN_LINK_KEY_RE = /^[a-z][a-z0-9_-]{0,31}$/;
-
-const SCHEDULED_TASK_ID_RE = /^[a-z0-9][a-z0-9_/-]{0,63}$/i;
-
-function assertValidScheduledTask(pluginId: string, task: ScheduledTask): void {
-  if (!SCHEDULED_TASK_ID_RE.test(task.id)) {
-    throw PluginContextError.invalidScheduledTaskId({ pluginId, id: task.id });
-  }
-  if (typeof task.handler !== "function") {
-    throw PluginContextError.scheduledTaskHandlerMissing({
-      pluginId,
-      id: task.id,
-    });
-  }
-}
-
-function assertValidLoginLink(
-  pluginId: string,
-  options: LoginLinkOptions,
-): void {
-  if (!LOGIN_LINK_KEY_RE.test(options.key)) {
-    throw PluginContextError.invalidLoginLinkKey({
-      pluginId,
-      key: options.key,
-    });
-  }
-  if (options.label.length === 0) {
-    throw PluginContextError.loginLinkEmptyLabel({
-      pluginId,
-      key: options.key,
-    });
-  }
-  // CR/LF defense: label is rendered into HTML by the admin, but a
-  // future logger / audit-trail consumer might splice it into a
-  // line-oriented format. Block at the boundary.
-  if (/[\r\n]/.test(options.label)) {
-    throw PluginContextError.loginLinkLabelHasCrLf({
-      pluginId,
-      key: options.key,
-    });
-  }
-  // href must be a same-origin path or an https:// URL — block
-  // `javascript:`, `data:`, protocol-relative `//`, and other schemes
-  // a misconfigured or hostile plugin might surface.
-  const isSameOriginPath =
-    options.href.startsWith("/") && !options.href.startsWith("//");
-  const isHttps = options.href.startsWith("https://");
-  if (!isSameOriginPath && !isHttps) {
-    throw PluginContextError.invalidLoginLinkHref({
-      pluginId,
-      key: options.key,
-      href: options.href,
-    });
-  }
-}
-
-function assertValidNavGroupId(pluginId: string, id: string): void {
-  if (id.length === 0 || id.length > MAX_PLUGIN_ID_LENGTH) {
-    throw PluginContextError.invalidNavGroupIdLength({
-      pluginId,
-      id,
-      maxLength: MAX_PLUGIN_ID_LENGTH,
-    });
-  }
-  if (!PLUGIN_ID_RE.test(id)) {
-    throw PluginContextError.invalidNavGroupIdShape({
-      pluginId,
-      id,
-      pattern: PLUGIN_ID_RE.source,
-    });
-  }
-}
-
-// Shared `/`-anchored path validation: must start with /, no `//` or
-// `..` traversal, no `?` / `#` (we match on pathname only). The
-// admin-page and plugin-route validators diverge after this on how
-// they handle `*`, so the wildcard rule stays at each call site.
-function assertValidPathPrefix(
-  pluginId: string,
-  path: string,
-  kind: string,
-): void {
-  if (!path.startsWith("/")) {
-    throw PluginContextError.pathMustStartWithSlash({ pluginId, kind, path });
-  }
-  if (path.includes("//") || path.includes("..")) {
-    throw PluginContextError.pathContainsTraversal({ pluginId, kind, path });
-  }
-  if (path.includes("?") || path.includes("#")) {
-    throw PluginContextError.pathContainsQueryOrFragment({
-      pluginId,
-      kind,
-      path,
-    });
-  }
-}
-
-function assertValidAdminPagePath(pluginId: string, path: string): void {
-  assertValidPathPrefix(pluginId, path, "admin page");
-  if (path.includes("*")) {
-    throw PluginContextError.adminPagePathContainsWildcard({ pluginId, path });
-  }
-}
-
-function assertValidPluginRoutePath(pluginId: string, path: string): void {
-  assertValidPathPrefix(pluginId, path, "route");
-  // Allow exactly `/*` at the very end. Any other `*` is ambiguous.
-  const starIndex = path.indexOf("*");
-  if (starIndex !== -1 && starIndex !== path.length - 1) {
-    throw PluginContextError.routePathWildcardNotAtEnd({ pluginId, path });
-  }
-  if (
-    path.endsWith("*") &&
-    (path.length < 2 || path[path.length - 2] !== "/")
-  ) {
-    throw PluginContextError.routePathWildcardNotAfterSlash({ pluginId, path });
-  }
-}
-
-// Keep page / group / field names portable: ASCII identifier that
-// starts with a letter, then letters/digits/underscores. Hyphens /
-// dots are excluded so testids, URL params, and storage keys stay
-// portable across SQLite / future MySQL without quoting. Length cap
-// mirrors the valibot `settingsIdentifierSchema` on the RPC side so a
-// plugin can't register a name its own `settings.get` / `.upsert`
-// calls would then reject.
-const SETTINGS_NAME_RE = /^[a-z][a-z0-9_]*$/;
-const MAX_SETTINGS_IDENTIFIER_LENGTH = 64;
-
-function assertValidIdentifier(kind: string, name: string): void {
-  if (name.length > MAX_SETTINGS_IDENTIFIER_LENGTH) {
-    throw PluginContextError.identifierTooLong({
-      kind,
-      name,
-      maxLength: MAX_SETTINGS_IDENTIFIER_LENGTH,
-    });
-  }
-  if (!SETTINGS_NAME_RE.test(name)) {
-    throw PluginContextError.identifierShapeInvalid({
-      kind,
-      name,
-      pattern: SETTINGS_NAME_RE.source,
-    });
-  }
-}
-
-// Must match the RPC input-schema regex for meta keys — any key that
-// doesn't match is dead code (the write path rejects it), so catch it
-// at registration instead of letting the admin discover it later.
-const META_FIELD_KEY_RE = /^[a-zA-Z0-9_:-]+$/;
-
-// Cap on fields per box — keeps the admin's per-request payload
-// bounded and signals a modeling problem if a plugin wants to pile
-// hundreds of fields into one card. Matches the RPC input-schema cap
-// on the meta/upsert request surface.
-const MAX_FIELDS_PER_META_BOX = 200;
-
-function assertMetaBoxFields(
-  kind: string,
-  id: string,
-  fields: readonly MetaBoxField[],
-): void {
-  if (fields.length > MAX_FIELDS_PER_META_BOX) {
-    throw PluginContextError.metaBoxTooManyFields({
-      kind,
-      id,
-      count: fields.length,
-      maxFields: MAX_FIELDS_PER_META_BOX,
-    });
-  }
-  const seen = new Set<string>();
-  for (const field of fields) {
-    if (!META_FIELD_KEY_RE.test(field.key)) {
-      throw PluginContextError.metaBoxFieldInvalidKey({
-        kind,
-        id,
-        fieldKey: field.key,
-        pattern: META_FIELD_KEY_RE.source,
-      });
-    }
-    if (seen.has(field.key)) {
-      throw PluginContextError.metaBoxFieldDuplicateKey({
-        kind,
-        id,
-        fieldKey: field.key,
-      });
-    }
-    seen.add(field.key);
-  }
 }
 
 // Re-exported from our local FilterRest helper so the type used by hook wrapper

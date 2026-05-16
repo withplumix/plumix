@@ -1,4 +1,4 @@
-import type { ThemeContextExtensions } from "./plugin/context.js";
+import type { ThemeContextExtensions } from "./plugin/provides-context.js";
 import { ThemeError } from "./theme-errors.js";
 
 export interface ThemeSetupContextBase {

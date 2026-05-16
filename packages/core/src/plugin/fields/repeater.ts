@@ -18,7 +18,7 @@ export interface RepeaterFieldOptions {
   readonly max?: number;
 }
 
-// Mirrors `META_FIELD_KEY_RE` in plugin/context.ts. The top-level
+// Mirrors `META_FIELD_KEY_RE` in plugin/validation/meta-box-fields.ts. The top-level
 // registrar validates field keys against this regex but doesn't
 // recurse into subFields, so the repeater builder enforces it locally
 // — guards row-object shape and protects against duplicate-key clobber.
