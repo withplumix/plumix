@@ -114,6 +114,11 @@ export async function assemblePluginAdminBundle({
     platform: "browser",
     target: "es2022",
     minify: true,
+    // Preserves class identifiers through minification. The error-class
+    // `static {}` blocks already pin `error.name` to a string literal,
+    // but `error.constructor.name` would otherwise surface the mangled
+    // identifier (`class PasskeyError` → `class e`).
+    keepNames: true,
     legalComments: "none",
     logLevel: "warning",
     define: { "process.env.NODE_ENV": '"production"' },
