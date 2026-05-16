@@ -1,5 +1,5 @@
-import { PluginContextError } from "../errors.js";
 import type { LoginLinkOptions } from "../manifest.js";
+import { PluginContextError } from "../errors.js";
 
 // Lowercase alphanum + dash/underscore, 1–32 chars, must start with a
 // letter. Matches `OAUTH_PROVIDER_KEY_PATTERN` exactly so keys read

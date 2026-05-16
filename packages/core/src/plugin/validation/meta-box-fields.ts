@@ -1,5 +1,5 @@
-import { PluginContextError } from "../errors.js";
 import type { MetaBoxField } from "../manifest.js";
+import { PluginContextError } from "../errors.js";
 
 // Must match the RPC input-schema regex for meta keys — any key that
 // doesn't match is dead code (the write path rejects it), so catch it

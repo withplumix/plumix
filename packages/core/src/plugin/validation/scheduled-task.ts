@@ -1,5 +1,5 @@
-import { PluginContextError } from "../errors.js";
 import type { ScheduledTask } from "../manifest.js";
+import { PluginContextError } from "../errors.js";
 
 const SCHEDULED_TASK_ID_RE = /^[a-z0-9][a-z0-9_/-]{0,63}$/i;
 

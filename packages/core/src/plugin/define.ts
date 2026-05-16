@@ -1,6 +1,6 @@
-import { PluginDefinitionError } from "./errors.js";
 import type { PluginProvidesContext } from "./provides-context.js";
 import type { PluginSetupContext } from "./setup-context.js";
+import { PluginDefinitionError } from "./errors.js";
 
 export type PluginSetup<TConfig> = (
   ctx: PluginSetupContext,

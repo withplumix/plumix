@@ -6,12 +6,12 @@ import type { CapabilityResolver } from "../auth/rbac.js";
 import type { SessionPolicy } from "../auth/sessions.js";
 import type { PlumixConfig } from "../config.js";
 import type { AppContext } from "../context/app.js";
-import type { ContextExtensionEntry } from "../plugin/provides-context.js";
 import type {
   PluginRegistry,
   RegisteredRawRoute,
   RegisteredScheduledTask,
 } from "../plugin/manifest.js";
+import type { ContextExtensionEntry } from "../plugin/provides-context.js";
 import type { RouteRule } from "../route/intent.js";
 import type { ThemeSetupContext, ThemeSetupContextBase } from "../theme.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
