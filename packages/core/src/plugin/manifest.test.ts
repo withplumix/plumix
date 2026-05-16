@@ -2,11 +2,11 @@ import { describe, expect, test } from "vitest";
 
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "./define.js";
+import { DuplicateAdminSlugError } from "./errors.js";
 import {
   buildManifest,
   createPluginRegistry,
   deriveAdminSlug,
-  DuplicateAdminSlugError,
   emptyManifest,
   injectManifestIntoHtml,
   MANIFEST_SCRIPT_ID,

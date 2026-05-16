@@ -118,10 +118,7 @@ export async function run(argv: readonly string[]): Promise<void> {
   );
   const command = resolveCommand(runtimeModule.commands, args.command);
   if (!command) {
-    throw new CliError(`Unknown command: ${args.command}`, {
-      code: "UNKNOWN_COMMAND",
-      hint: "Run `plumix help` to see available commands.",
-    });
+    throw CliError.unknownCommand({ command: args.command });
   }
 
   const app = await buildApp(loaded.config);
@@ -185,14 +182,11 @@ async function loadRuntimeCommands(
   try {
     resolved = require.resolve(adapter.commandsModule);
   } catch (cause) {
-    throw new CliError(
-      `Runtime commands module not found: "${adapter.commandsModule}"`,
-      {
-        code: "RUNTIME_COMMANDS_NOT_FOUND",
-        hint: `Install the runtime adapter package in ${cwd}.`,
-        cause,
-      },
-    );
+    throw CliError.runtimeCommandsNotFound({
+      commandsModule: adapter.commandsModule,
+      cwd,
+      cause,
+    });
   }
   try {
     const mod = (await import(pathToFileURL(resolved).href)) as {
@@ -205,14 +199,10 @@ async function loadRuntimeCommands(
       migrate: mod.migrate ?? {},
     };
   } catch (cause) {
-    throw new CliError(
-      `Failed to load runtime commands from "${adapter.commandsModule}"`,
-      {
-        code: "RUNTIME_COMMANDS_LOAD_FAILED",
-        hint: "Check the runtime adapter's commands module for import errors.",
-        cause,
-      },
-    );
+    throw CliError.runtimeCommandsLoadFailed({
+      commandsModule: adapter.commandsModule,
+      cause,
+    });
   }
 }
 

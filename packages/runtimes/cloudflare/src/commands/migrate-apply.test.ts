@@ -72,19 +72,19 @@ describe("migrate apply", () => {
     expect(args).toEqual(["d1", "migrations", "apply", "only-db"]);
   });
 
-  test("throws MIGRATE_APPLY_MISSING_DB when no name and no wrangler config", async () => {
+  test("throws migrate_apply_missing_db when no name and no wrangler config", async () => {
     vi.spyOn(migrateApplyDeps, "spawnInherit").mockResolvedValue();
     vi.spyOn(migrateApplyDeps, "loadWranglerConfig").mockReturnValue(null);
 
     await expect(
       migrateApplyCommand.run(ctx({ argv: [] })),
     ).rejects.toMatchObject({
-      code: "MIGRATE_APPLY_MISSING_DB",
+      code: "migrate_apply_missing_db",
       hint: expect.stringContaining("wrangler.jsonc") as unknown,
     });
   });
 
-  test("throws MIGRATE_APPLY_NO_D1 when config has no d1_databases", async () => {
+  test("throws migrate_apply_no_d1 when config has no d1_databases", async () => {
     vi.spyOn(migrateApplyDeps, "spawnInherit").mockResolvedValue();
     vi.spyOn(migrateApplyDeps, "loadWranglerConfig").mockReturnValue({
       filename: "wrangler.jsonc",
@@ -93,10 +93,10 @@ describe("migrate apply", () => {
 
     await expect(
       migrateApplyCommand.run(ctx({ argv: [] })),
-    ).rejects.toMatchObject({ code: "MIGRATE_APPLY_NO_D1" });
+    ).rejects.toMatchObject({ code: "migrate_apply_no_d1" });
   });
 
-  test("throws MIGRATE_APPLY_AMBIGUOUS_DB when config has multiple D1 dbs", async () => {
+  test("throws migrate_apply_ambiguous_db when config has multiple D1 dbs", async () => {
     vi.spyOn(migrateApplyDeps, "spawnInherit").mockResolvedValue();
     vi.spyOn(migrateApplyDeps, "loadWranglerConfig").mockReturnValue({
       filename: "wrangler.jsonc",
@@ -109,7 +109,7 @@ describe("migrate apply", () => {
     await expect(
       migrateApplyCommand.run(ctx({ argv: [] })),
     ).rejects.toMatchObject({
-      code: "MIGRATE_APPLY_AMBIGUOUS_DB",
+      code: "migrate_apply_ambiguous_db",
       message: expect.stringContaining("alpha") as unknown,
     });
   });

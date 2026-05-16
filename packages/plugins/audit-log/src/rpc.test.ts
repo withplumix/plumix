@@ -171,7 +171,7 @@ describe("auditLog.list RPC", () => {
       query: (_ctx, filter) => {
         calls.push(filter);
         // Storage simulates cursor.decodeCursor() failure.
-        return Promise.reject(new CursorError("malformed cursor"));
+        return Promise.reject(CursorError.malformed());
       },
     };
     const router = createAuditLogRouter(failingStorage);

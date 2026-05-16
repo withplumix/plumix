@@ -6,7 +6,7 @@ import type { AppContext } from "../context/app.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { RouteIntent } from "../route/intent.js";
 import type { RegisteredLookupAdapter } from "./lookup.js";
-import { PluginDefinitionError } from "./errors.js";
+import { DuplicateAdminSlugError, PluginDefinitionError } from "./errors.js";
 
 export interface EntryTypeOptions {
   readonly label: string;
@@ -1127,13 +1127,6 @@ export function findUserMetaField(
   return undefined;
 }
 
-export class DuplicateRegistrationError extends Error {
-  constructor(kind: string, name: string) {
-    super(`${kind} "${name}" is already registered`);
-    this.name = "DuplicateRegistrationError";
-  }
-}
-
 /**
  * Shape serialised into the admin's `<script id="plumix-manifest">` payload.
  * Intentionally a strict subset of `RegisteredEntryType`: drops
@@ -1825,20 +1818,13 @@ function assertUniqueAdminSlugs(
   for (const entry of entries) {
     const existing = seen.get(entry.adminSlug);
     if (existing !== undefined) {
-      throw new DuplicateAdminSlugError(existing, entry.name, entry.adminSlug);
+      throw DuplicateAdminSlugError.slugCollision({
+        firstPostType: existing,
+        secondPostType: entry.name,
+        slug: entry.adminSlug,
+      });
     }
     seen.set(entry.adminSlug, entry.name);
-  }
-}
-
-export class DuplicateAdminSlugError extends Error {
-  constructor(firstPostType: string, secondPostType: string, slug: string) {
-    super(
-      `Entry types "${firstPostType}" and "${secondPostType}" both resolve ` +
-        `to the admin slug "${slug}". Set \`labels.plural\` on one of them ` +
-        `to disambiguate.`,
-    );
-    this.name = "DuplicateAdminSlugError";
   }
 }
 

@@ -79,16 +79,16 @@ describe("migrate dispatch", () => {
         }),
       ),
     ).rejects.toMatchObject({
-      code: "UNKNOWN_SUBCOMMAND",
+      code: "unknown_subcommand",
       hint: expect.stringContaining("plumix migrate apply") as unknown,
     });
   });
 
-  test("inherited prototype names fall through to UNKNOWN_SUBCOMMAND", async () => {
+  test("inherited prototype names fall through to unknown_subcommand", async () => {
     for (const sub of ["__proto__", "constructor", "toString"]) {
       await expect(
         migrateCommand.run(ctx({ cwd: dir, argv: [sub] })),
-      ).rejects.toMatchObject({ code: "UNKNOWN_SUBCOMMAND" });
+      ).rejects.toMatchObject({ code: "unknown_subcommand" });
     }
   });
 });
@@ -157,7 +157,7 @@ describe("migrate generate", () => {
     await expect(
       migrateCommand.run(ctx({ cwd: dir, argv: ["generate"] })),
     ).rejects.toMatchObject({
-      code: "MIGRATE_GENERATE_NO_DRIZZLE_KIT",
+      code: "migrate_generate_no_drizzle_kit",
       hint: expect.stringContaining("ships with plumix") as unknown,
     });
     expect(spawn).not.toHaveBeenCalled();
@@ -169,13 +169,13 @@ describe("migrate generate", () => {
     );
     vi.spyOn(migrateGenerateDeps, "spawnInherit").mockRejectedValue(
       Object.assign(new Error("drizzle-kit exited with code 1"), {
-        code: "SPAWN_NONZERO_EXIT",
+        code: "spawn_nonzero_exit",
       }),
     );
 
     await expect(
       migrateCommand.run(ctx({ cwd: dir, argv: ["generate"] })),
-    ).rejects.toMatchObject({ code: "SPAWN_NONZERO_EXIT" });
+    ).rejects.toMatchObject({ code: "spawn_nonzero_exit" });
   });
 });
 

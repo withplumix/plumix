@@ -347,7 +347,7 @@ describe("cloudflare adapter — binding validation", () => {
     expect(response.status).toBe(500);
     const body: unknown = await response.json();
     expect(body).toMatchObject({
-      error: "plumix_runtime_config_error",
+      error: "bindings_missing",
       missing: ["DB", "CACHE"],
     });
   });
@@ -366,7 +366,7 @@ describe("cloudflare adapter — binding validation", () => {
     expect(response.status).toBe(500);
     const body: unknown = await response.json();
     expect(body).toMatchObject({
-      error: "plumix_runtime_config_error",
+      error: "bindings_missing",
       missing: ["DB"],
     });
   });
@@ -385,7 +385,7 @@ describe("cloudflare adapter — binding validation", () => {
     expect(response.status).toBe(500);
     const body: unknown = await response.json();
     expect(body).toMatchObject({
-      error: "plumix_runtime_config_error",
+      error: "bindings_missing",
       missing: ["DB"],
     });
   });

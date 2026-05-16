@@ -211,7 +211,7 @@ describe("sanitizeMetaInput", () => {
       tag: {
         type: "string",
         sanitize: () => {
-          throw new MetaSanitizationError("tag", "value_too_large");
+          throw MetaSanitizationError.valueTooLarge({ key: "tag" });
         },
       },
     });

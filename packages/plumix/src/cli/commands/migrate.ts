@@ -26,12 +26,10 @@ export const migrateCommand: CommandDefinition = {
         return;
       }
     }
-    const supported = ["generate", ...Object.keys(ctx.runtimeMigrate)]
-      .map((n) => `\`plumix migrate ${n}\``)
-      .join(", ");
-    throw new CliError(`Unknown subcommand: migrate ${sub}`, {
-      code: "UNKNOWN_SUBCOMMAND",
-      hint: `Supported: ${supported}.`,
+    throw CliError.unknownSubcommand({
+      command: "migrate",
+      subcommand: sub,
+      supported: ["generate", ...Object.keys(ctx.runtimeMigrate)],
     });
   },
 };
@@ -42,10 +40,7 @@ async function migrateGenerate(ctx: CommandContext): Promise<void> {
 
   const bin = migrateGenerateDeps.resolveDrizzleKitBin(cwd);
   if (bin === null) {
-    throw new CliError("drizzle-kit could not be resolved", {
-      code: "MIGRATE_GENERATE_NO_DRIZZLE_KIT",
-      hint: "drizzle-kit ships with plumix; rerun `pnpm install` to restore node_modules, or pin a specific version as a devDependency to override.",
-    });
+    throw CliError.migrateGenerateNoDrizzleKit();
   }
 
   report.info("Running drizzle-kit generate…");

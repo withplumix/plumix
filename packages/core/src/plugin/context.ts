@@ -38,8 +38,8 @@ import {
 } from "../auth/rbac.js";
 import { DEFAULT_REWRITE_RULE_PRIORITY } from "../route/compile.js";
 import { MAX_PLUGIN_ID_LENGTH, PLUGIN_ID_RE } from "./define.js";
-import { PluginContextError } from "./errors.js";
-import { CORE_RPC_NAMESPACES, DuplicateRegistrationError } from "./manifest.js";
+import { DuplicateRegistrationError, PluginContextError } from "./errors.js";
+import { CORE_RPC_NAMESPACES } from "./manifest.js";
 
 export interface ContextExtensionEntry {
   readonly value: unknown;
@@ -391,7 +391,10 @@ export function createPluginSetupContext({
 
     registerEntryType: (name, options) => {
       if (registry.entryTypes.has(name))
-        throw new DuplicateRegistrationError("entry type", name);
+        throw DuplicateRegistrationError.alreadyRegistered({
+          kind: "entry type",
+          identifier: name,
+        });
       registry.entryTypes.set(name, {
         ...options,
         name,
@@ -402,7 +405,10 @@ export function createPluginSetupContext({
 
     registerTermTaxonomy: (name, options) => {
       if (registry.termTaxonomies.has(name))
-        throw new DuplicateRegistrationError("termTaxonomy", name);
+        throw DuplicateRegistrationError.alreadyRegistered({
+          kind: "termTaxonomy",
+          identifier: name,
+        });
       registry.termTaxonomies.set(name, {
         ...options,
         name,
@@ -434,7 +440,10 @@ export function createPluginSetupContext({
         | { minRole: UserRole; defaultGrants?: readonly UserRole[] },
     ) => {
       if (registry.capabilities.has(name)) {
-        throw new DuplicateRegistrationError("capability", name);
+        throw DuplicateRegistrationError.alreadyRegistered({
+          kind: "capability",
+          identifier: name,
+        });
       }
       const resolved =
         typeof minRoleOrOptions === "string"
@@ -456,7 +465,10 @@ export function createPluginSetupContext({
     registerSettingsGroup: (name, options) => {
       assertValidIdentifier("settings group", name);
       if (registry.settingsGroups.has(name)) {
-        throw new DuplicateRegistrationError("settings group", name);
+        throw DuplicateRegistrationError.alreadyRegistered({
+          kind: "settings group",
+          identifier: name,
+        });
       }
       assertMetaBoxFields("settings group", name, options.fields);
       registry.settingsGroups.set(name, {
@@ -469,7 +481,10 @@ export function createPluginSetupContext({
     registerSettingsPage: (name, options) => {
       assertValidIdentifier("settings page", name);
       if (registry.settingsPages.has(name)) {
-        throw new DuplicateRegistrationError("settings page", name);
+        throw DuplicateRegistrationError.alreadyRegistered({
+          kind: "settings page",
+          identifier: name,
+        });
       }
       for (const groupName of options.groups) {
         assertValidIdentifier("settings group reference", groupName);
@@ -501,7 +516,10 @@ export function createPluginSetupContext({
         });
       }
       if (registry.rpcRouters.has(pluginId)) {
-        throw new DuplicateRegistrationError("plugin RPC router", pluginId);
+        throw DuplicateRegistrationError.alreadyRegistered({
+          kind: "plugin RPC router",
+          identifier: pluginId,
+        });
       }
       registry.rpcRouters.set(pluginId, router);
     },
@@ -529,7 +547,10 @@ export function createPluginSetupContext({
     registerAdminPage: (options) => {
       assertValidAdminPagePath(pluginId, options.path);
       if (registry.adminPages.has(options.path)) {
-        throw new DuplicateRegistrationError("admin page", options.path);
+        throw DuplicateRegistrationError.alreadyRegistered({
+          kind: "admin page",
+          identifier: options.path,
+        });
       }
       assertComponentRef(
         pluginId,
@@ -552,7 +573,10 @@ export function createPluginSetupContext({
     registerFieldType: (options) => {
       assertValidFieldTypeName(pluginId, options.type);
       if (registry.fieldTypes.has(options.type)) {
-        throw new DuplicateRegistrationError("field type", options.type);
+        throw DuplicateRegistrationError.alreadyRegistered({
+          kind: "field type",
+          identifier: options.type,
+        });
       }
       assertComponentRef(
         pluginId,
@@ -568,7 +592,10 @@ export function createPluginSetupContext({
     registerLookupAdapter: (options) => {
       assertValidLookupAdapterKind(pluginId, options.kind);
       if (registry.lookupAdapters.has(options.kind)) {
-        throw new DuplicateRegistrationError("lookup adapter", options.kind);
+        throw DuplicateRegistrationError.alreadyRegistered({
+          kind: "lookup adapter",
+          identifier: options.kind,
+        });
       }
       // Spread to preserve plugin-contributed option fields (e.g. the
       // `menuPicker` field that @plumix/plugin-menu adds via declaration
@@ -587,10 +614,10 @@ export function createPluginSetupContext({
           existing.registeredBy === pluginId &&
           existing.key === options.key
         ) {
-          throw new DuplicateRegistrationError(
-            "login link",
-            `${pluginId}:${options.key}`,
-          );
+          throw DuplicateRegistrationError.alreadyRegistered({
+            kind: "login link",
+            identifier: `${pluginId}:${options.key}`,
+          });
         }
       }
       registry.loginLinks.push({
@@ -603,10 +630,10 @@ export function createPluginSetupContext({
       assertValidScheduledTask(pluginId, task);
       for (const existing of registry.scheduledTasks) {
         if (existing.registeredBy === pluginId && existing.id === task.id) {
-          throw new DuplicateRegistrationError(
-            "scheduled task",
-            `${pluginId}:${task.id}`,
-          );
+          throw DuplicateRegistrationError.alreadyRegistered({
+            kind: "scheduled task",
+            identifier: `${pluginId}:${task.id}`,
+          });
         }
       }
       registry.scheduledTasks.push({
@@ -641,7 +668,11 @@ function makeMetaBoxRegistrar<
   pluginId: string,
 ): (id: string, options: Omit<T, "id">) => void {
   return (id, options) => {
-    if (map.has(id)) throw new DuplicateRegistrationError(kind, id);
+    if (map.has(id))
+      throw DuplicateRegistrationError.alreadyRegistered({
+        kind,
+        identifier: id,
+      });
     assertMetaBoxFields(kind, id, options.fields);
     map.set(id, {
       ...(options as unknown as T),

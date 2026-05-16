@@ -19,25 +19,14 @@ export function spawnInherit(
       stdio: "inherit",
     });
     child.once("error", (cause) => {
-      reject(
-        new CliError(`Failed to start ${command}`, {
-          code: "SPAWN_FAILED",
-          hint: `Is ${command} installed and on PATH?`,
-          cause,
-        }),
-      );
+      reject(CliError.spawnFailed({ command, cause }));
     });
     child.once("exit", (code, signal) => {
       if (code === 0) {
         resolve();
         return;
       }
-      reject(
-        new CliError(
-          `${command} exited with ${signal ? `signal ${signal}` : `code ${code ?? "unknown"}`}`,
-          { code: "SPAWN_NONZERO_EXIT" },
-        ),
-      );
+      reject(CliError.spawnNonzeroExit({ command, exitCode: code, signal }));
     });
   });
 }

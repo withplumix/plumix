@@ -30,10 +30,7 @@ function resolveDatabaseName(
 
   const config = migrateApplyDeps.loadWranglerConfig(cwd);
   if (config === null) {
-    throw new CliError("Missing D1 database name", {
-      code: "MIGRATE_APPLY_MISSING_DB",
-      hint: "Pass the database name: `plumix migrate apply <database-name>`. Or add a wrangler.jsonc / wrangler.toml with a `d1_databases` entry so Plumix can auto-discover it.",
-    });
+    throw CliError.migrateApplyMissingDb();
   }
 
   const [firstName, ...moreNames] = config.d1Databases
@@ -43,22 +40,13 @@ function resolveDatabaseName(
     );
 
   if (firstName === undefined) {
-    throw new CliError(
-      `No d1_databases entries with a database_name in ${config.filename}`,
-      {
-        code: "MIGRATE_APPLY_NO_D1",
-        hint: "Add a `d1_databases` entry with a `database_name`, or pass the name explicitly: `plumix migrate apply <database-name>`.",
-      },
-    );
+    throw CliError.migrateApplyNoD1({ filename: config.filename });
   }
   if (moreNames.length > 0) {
-    throw new CliError(
-      `Multiple D1 databases found in ${config.filename}: ${[firstName, ...moreNames].join(", ")}`,
-      {
-        code: "MIGRATE_APPLY_AMBIGUOUS_DB",
-        hint: "Pass the name explicitly: `plumix migrate apply <database-name>`.",
-      },
-    );
+    throw CliError.migrateApplyAmbiguousDb({
+      filename: config.filename,
+      names: [firstName, ...moreNames],
+    });
   }
   return { databaseName: firstName, passthroughArgs: argv };
 }
