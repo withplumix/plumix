@@ -67,6 +67,43 @@ describe("paragraph parity against the legacy walker", () => {
     );
   });
 
+  test.each([1, 2, 3, 4, 5, 6])(
+    "heading level=%i renders identically (legacy `type: heading`)",
+    async (level) => {
+      const registry = await mockRegistry({ core: [...coreBlocks] });
+      const doc = {
+        type: "doc",
+        content: [
+          {
+            type: "heading",
+            attrs: { level },
+            content: [{ type: "text", text: "Title" }],
+          },
+        ],
+      };
+      expect(renderBlock({ registry, content: doc })).toBe(
+        renderTiptapContent(doc),
+      );
+    },
+  );
+
+  test("heading with out-of-range level clamps identically", async () => {
+    const registry = await mockRegistry({ core: [...coreBlocks] });
+    const doc = {
+      type: "doc",
+      content: [
+        {
+          type: "heading",
+          attrs: { level: 9 },
+          content: [{ type: "text", text: "Title" }],
+        },
+      ],
+    };
+    expect(renderBlock({ registry, content: doc })).toBe(
+      renderTiptapContent(doc),
+    );
+  });
+
   test("paragraph with a safe link", async () => {
     const registry = await mockRegistry({ core: [...coreBlocks] });
     const doc = {

@@ -26,4 +26,5 @@ export type {
 } from "./types.js";
 
 export { coreBlocks } from "./core-blocks.js";
+export { headingBlock } from "./heading/index.js";
 export { paragraphBlock } from "./paragraph/index.js";
