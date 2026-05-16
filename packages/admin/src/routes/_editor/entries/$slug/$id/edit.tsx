@@ -150,8 +150,12 @@ function EditPostRoute(): ReactNode {
     onError: (err, variables) => {
       if (isStaleConflictError(err)) {
         setConflict({ mine: variables.values, theirs: null });
-        void queryClient
-          .fetchQuery(orpc.entry.get.queryOptions({ input: { id: entryId } }))
+        // Raw client bypasses the React Query cache so the fresh server
+        // state shows up in the Compare panel — `fetchQuery` would
+        // dedupe against the suspense query that loaded the entry on
+        // mount and return the same `post` we already have in memory.
+        void orpc.entry.get
+          .call({ id: entryId })
           .then((fresh) => {
             setConflict((prev) =>
               prev === null ? prev : { ...prev, theirs: fresh },
