@@ -54,7 +54,7 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
       body: JSON.stringify(body),
     });
   } catch {
-    throw new PasskeyError("network_error");
+    throw PasskeyError.networkError();
   }
   if (!response.ok) {
     let code: PasskeyErrorCode = "unknown";
@@ -66,7 +66,7 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
     } catch {
       // body wasn't JSON; fall through with "unknown"
     }
-    throw new PasskeyError(code);
+    throw PasskeyError.ofCode({ code });
   }
   return (await response.json()) as T;
 }
@@ -80,7 +80,7 @@ async function postJsonNoBody<T>(path: string): Promise<T> {
       headers: PLUMIX_CSRF_HEADER,
     });
   } catch {
-    throw new PasskeyError("network_error");
+    throw PasskeyError.networkError();
   }
   return (await response.json()) as T;
 }
@@ -109,9 +109,9 @@ async function callCredentialsApi(
       err instanceof DOMException
         ? (DOM_EXCEPTION_CODE[err.name] ?? "unknown")
         : "unknown";
-    throw new PasskeyError(code);
+    throw PasskeyError.ofCode({ code });
   }
-  if (!raw) throw new PasskeyError("user_cancelled");
+  if (!raw) throw PasskeyError.userCancelled();
   return raw as PublicKeyCredential;
 }
 

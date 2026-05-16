@@ -22,13 +22,13 @@ export async function requestMagicLink(
   });
 
   if (response.status === 503) {
-    throw new MagicLinkRequestError("not_configured");
+    throw MagicLinkRequestError.notConfigured();
   }
   if (response.status === 400) {
-    throw new MagicLinkRequestError("invalid_input");
+    throw MagicLinkRequestError.invalidInput();
   }
   if (!response.ok) {
-    throw new MagicLinkRequestError("network");
+    throw MagicLinkRequestError.network();
   }
 
   return (await response.json()) as MagicLinkRequestResponse;
@@ -37,12 +37,27 @@ export async function requestMagicLink(
 type MagicLinkRequestErrorCode = "not_configured" | "invalid_input" | "network";
 
 export class MagicLinkRequestError extends Error {
+  static {
+    MagicLinkRequestError.prototype.name = "MagicLinkRequestError";
+  }
+
   readonly code: MagicLinkRequestErrorCode;
 
-  constructor(code: MagicLinkRequestErrorCode, message?: string) {
-    super(message ?? code);
-    this.name = "MagicLinkRequestError";
+  private constructor(code: MagicLinkRequestErrorCode) {
+    super(code);
     this.code = code;
+  }
+
+  static notConfigured(): MagicLinkRequestError {
+    return new MagicLinkRequestError("not_configured");
+  }
+
+  static invalidInput(): MagicLinkRequestError {
+    return new MagicLinkRequestError("invalid_input");
+  }
+
+  static network(): MagicLinkRequestError {
+    return new MagicLinkRequestError("network");
   }
 }
 

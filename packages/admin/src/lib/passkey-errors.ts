@@ -36,11 +36,32 @@ type PasskeyClientErrorCode =
 export type PasskeyErrorCode = PasskeyServerErrorCode | PasskeyClientErrorCode;
 
 export class PasskeyError extends Error {
+  static {
+    PasskeyError.prototype.name = "PasskeyError";
+  }
+
   readonly code: PasskeyErrorCode;
-  constructor(code: PasskeyErrorCode, message?: string) {
-    super(message ?? code);
-    this.name = "PasskeyError";
+
+  private constructor(code: PasskeyErrorCode) {
+    super(code);
     this.code = code;
+  }
+
+  static networkError(): PasskeyError {
+    return new PasskeyError("network_error");
+  }
+
+  static userCancelled(): PasskeyError {
+    return new PasskeyError("user_cancelled");
+  }
+
+  // Dispatch entry for codes derived from a server response or DOMException
+  // mapping. The 23 server codes and two browser-side codes
+  // (`no_authenticator`, `unknown`) have no literal admin throw sites — every
+  // one of them arrives via a dispatched path, so a single dispatcher beats
+  // listing 25 unused per-code factories.
+  static ofCode(ctx: { code: PasskeyErrorCode }): PasskeyError {
+    return new PasskeyError(ctx.code);
   }
 }
 
