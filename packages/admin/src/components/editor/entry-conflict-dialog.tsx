@@ -57,7 +57,7 @@ export function EntryConflictDialog({
                 latest, or compare side-by-side first.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:gap-2 sm:space-x-0">
+            <AlertDialogFooter className="flex-col sm:flex-col">
               <Button
                 data-testid="entry-editor-conflict-keep-mine"
                 onClick={onKeepMine}

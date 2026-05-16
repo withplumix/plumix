@@ -32,10 +32,8 @@ interface ConflictState {
   readonly theirs: Entry | null;
 }
 
-// Narrows an unknown thrown value to "the server rejected our save
-// because our expectedLiveUpdatedAt token was stale". oRPC's
-// `ORPCError.data` is typed `any`, so the helper does one cast in
-// one place rather than scattering narrowing logic at the call site.
+// oRPC types `ORPCError.data` as `any`, so the structural cast lives
+// in one place rather than at every call site.
 function isStaleConflictError(err: unknown): boolean {
   if (!(err instanceof ORPCError)) return false;
   if (err.code !== "CONFLICT") return false;
