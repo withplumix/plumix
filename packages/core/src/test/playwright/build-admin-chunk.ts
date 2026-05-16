@@ -54,6 +54,10 @@ export async function buildAdminPluginChunkForE2E(
     target: "es2022",
     jsx: "automatic",
     minify: true,
+    // Match the production plugin-chunk builder (admin-plugin-bundle.ts):
+    // preserve class identifiers so e2e fixtures see the same
+    // `error.constructor.name` value the host build would produce.
+    keepNames: true,
     legalComments: "none",
     logLevel: "warning",
     define: { "process.env.NODE_ENV": '"production"' },
