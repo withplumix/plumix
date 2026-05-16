@@ -6,6 +6,7 @@ import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { isEmptyMetaPatch } from "../../meta/core.js";
 import { assertContentWithinByteCap } from "./content.js";
+import { assertExpectedLiveUpdatedAt } from "./concurrency.js";
 import { stripUndefined } from "./helpers.js";
 import {
   applyEntryBeforeSave,
@@ -153,6 +154,20 @@ export const update = base
     };
     assertCanEditEntry(context, existing, accessGuards);
 
+    // Optimistic-concurrency check sits after auth so an unauthorised
+    // caller with a stale token still gets FORBIDDEN, not CONFLICT.
+    assertExpectedLiveUpdatedAt(
+      filtered.expectedLiveUpdatedAt,
+      existing.updatedAt,
+      {
+        stale: () => {
+          throw errors.CONFLICT({
+            data: { reason: "stale_expected_updated_at" },
+          });
+        },
+      },
+    );
+
     const isPublishTransition =
       filtered.status === "published" && existing.status !== "published";
     if (isPublishTransition) {
@@ -175,13 +190,14 @@ export const update = base
       );
     }
 
-    // `terms` and `meta` aren't entries.* columns — split them out and
-    // validate up front so a bad taxonomy/cap/meta key fails fast,
-    // before any write happens.
+    // `terms`, `meta`, and `expectedLiveUpdatedAt` aren't entries.* columns
+    // — split them out and validate up front so a bad taxonomy/cap/meta key
+    // fails fast, before any write happens.
     const {
       id: _id,
       terms: termsPatch,
       meta: metaInput,
+      expectedLiveUpdatedAt: _expectedLiveUpdatedAt,
       ...changes
     } = filtered;
     const metaPatch = sanitizeMetaForRpc(

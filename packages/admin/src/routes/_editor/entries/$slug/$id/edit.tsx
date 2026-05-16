@@ -1,6 +1,7 @@
 import type { PostEditorValues } from "@/components/editor/entry-editor-form.js";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { EntryConflictDialog } from "@/components/editor/entry-conflict-dialog.js";
 import {
   POST_EDITOR_STATUSES,
   PostEditorForm,
@@ -13,6 +14,7 @@ import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import { findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { filterTermsForEntryType } from "@/lib/terms.js";
+import { ORPCError } from "@orpc/client";
 import {
   useMutation,
   useQueryClient,
@@ -24,6 +26,22 @@ import * as v from "valibot";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import type { Entry } from "@plumix/core/schema";
 import { idPathParam } from "@plumix/core/validation";
+
+interface ConflictState {
+  readonly mine: PostEditorValues;
+  readonly theirs: Entry | null;
+}
+
+// Narrows an unknown thrown value to "the server rejected our save
+// because our expectedLiveUpdatedAt token was stale". oRPC's
+// `ORPCError.data` is typed `any`, so the helper does one cast in
+// one place rather than scattering narrowing logic at the call site.
+function isStaleConflictError(err: unknown): boolean {
+  if (!(err instanceof ORPCError)) return false;
+  if (err.code !== "CONFLICT") return false;
+  const data = err.data as { reason?: unknown };
+  return data.reason === "stale_expected_updated_at";
+}
 
 export const Route = createFileRoute("/_editor/entries/$slug/$id/edit")({
   // Reject invalid ids as a router 404 before `beforeLoad` / `loader`
@@ -86,6 +104,7 @@ function EditPostRoute(): ReactNode {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<ConflictState | null>(null);
 
   const { data: post } = useSuspenseQuery(
     orpc.entry.get.queryOptions({ input: { id: entryId } }),
@@ -94,22 +113,30 @@ function EditPostRoute(): ReactNode {
   const isHierarchical = entryType.isHierarchical === true;
 
   const updatePost = useMutation({
-    mutationFn: (input: PostEditorValues) =>
+    mutationFn: ({
+      values,
+      expectedLiveUpdatedAt,
+    }: {
+      values: PostEditorValues;
+      expectedLiveUpdatedAt: Date | undefined;
+    }) =>
       orpc.entry.update.call({
         id: entryId,
-        title: input.title,
-        slug: input.slug,
-        content: input.content,
-        excerpt: input.excerpt.length > 0 ? input.excerpt : null,
-        status: input.status,
-        meta: input.meta,
-        terms: filterTermsForEntryType(input.terms, entryType.termTaxonomies),
-        ...(isHierarchical ? { parentId: input.parentId } : {}),
+        title: values.title,
+        slug: values.slug,
+        content: values.content,
+        excerpt: values.excerpt.length > 0 ? values.excerpt : null,
+        status: values.status,
+        meta: values.meta,
+        terms: filterTermsForEntryType(values.terms, entryType.termTaxonomies),
+        ...(isHierarchical ? { parentId: values.parentId } : {}),
+        ...(expectedLiveUpdatedAt ? { expectedLiveUpdatedAt } : {}),
       }),
     onMutate: () => {
       setServerError(null);
     },
     onSuccess: async () => {
+      setConflict(null);
       // List variants are scoped by `type` so sibling post types
       // don't needlessly refetch.
       await Promise.all([
@@ -122,10 +149,41 @@ function EditPostRoute(): ReactNode {
         }),
       ]);
     },
-    onError: (err) => {
+    onError: (err, variables) => {
+      if (isStaleConflictError(err)) {
+        setConflict({ mine: variables.values, theirs: null });
+        void queryClient
+          .fetchQuery(orpc.entry.get.queryOptions({ input: { id: entryId } }))
+          .then((fresh) => {
+            setConflict((prev) =>
+              prev === null ? prev : { ...prev, theirs: fresh },
+            );
+          })
+          .catch(() => {
+            // Best-effort: the dialog still works without "theirs"; the
+            // Compare panel renders a Loading state for the missing side.
+          });
+        return;
+      }
       setServerError(err instanceof Error ? err.message : "Couldn't save.");
     },
   });
+
+  function handleKeepMine(): void {
+    if (conflict === null) return;
+    updatePost.mutate({
+      values: conflict.mine,
+      expectedLiveUpdatedAt: undefined,
+    });
+  }
+
+  async function handleTakeTheirs(): Promise<void> {
+    setConflict(null);
+    await queryClient.invalidateQueries({
+      queryKey: orpc.entry.get.queryOptions({ input: { id: entryId } })
+        .queryKey,
+    });
+  }
 
   const singularLower = (
     entryType.labels?.singular ?? entryType.label
@@ -158,45 +216,63 @@ function EditPostRoute(): ReactNode {
   const initialValues: PostEditorValues = toEditorValues(post, entryType);
 
   return (
-    <PostEditorForm
-      // Key on `updatedAt` so a successful update (which bumps the
-      // server's updatedAt and triggers a refetch) remounts the form
-      // with fresh initial values — clears isDirty and re-arms the
-      // blocker cleanly. Switching entries (different id → different
-      // updatedAt) resets state the same way.
-      key={
-        post.updatedAt instanceof Date
-          ? post.updatedAt.toISOString()
-          : String(post.updatedAt)
-      }
-      initialValues={initialValues}
-      slugLocked
-      availableStatuses={POST_EDITOR_STATUSES}
-      supports={entryType.supports}
-      metaBoxes={metaBoxes}
-      taxonomies={taxonomies}
-      isHierarchical={isHierarchical}
-      parentOptions={parentOptions}
-      headline={`Edit ${singularLower}`}
-      submitLabel="Save"
-      // For the edit path, the post-save remount (keyed on
-      // `updatedAt`) resets the form's isDirty to false — so the
-      // blocker naturally stops prompting once the mutation settles.
-      // No need to carry `isSuccess` across, unlike the new-post
-      // route which has a navigation to bridge.
-      isSubmitting={updatePost.isPending}
-      serverError={updatePost.isPending ? null : serverError}
-      onSubmit={(values) => {
-        updatePost.mutate(values);
-      }}
-      onCancel={() => {
-        void navigate({
-          to: "/entries/$slug",
-          params: { slug },
-          search: ENTRIES_LIST_DEFAULT_SEARCH,
-        });
-      }}
-    />
+    <>
+      <PostEditorForm
+        // Key on `updatedAt` so a successful update (which bumps the
+        // server's updatedAt and triggers a refetch) remounts the form
+        // with fresh initial values — clears isDirty and re-arms the
+        // blocker cleanly. Switching entries (different id → different
+        // updatedAt) resets state the same way.
+        key={
+          post.updatedAt instanceof Date
+            ? post.updatedAt.toISOString()
+            : String(post.updatedAt)
+        }
+        initialValues={initialValues}
+        slugLocked
+        availableStatuses={POST_EDITOR_STATUSES}
+        supports={entryType.supports}
+        metaBoxes={metaBoxes}
+        taxonomies={taxonomies}
+        isHierarchical={isHierarchical}
+        parentOptions={parentOptions}
+        headline={`Edit ${singularLower}`}
+        submitLabel="Save"
+        // For the edit path, the post-save remount (keyed on
+        // `updatedAt`) resets the form's isDirty to false — so the
+        // blocker naturally stops prompting once the mutation settles.
+        // No need to carry `isSuccess` across, unlike the new-post
+        // route which has a navigation to bridge.
+        isSubmitting={updatePost.isPending}
+        serverError={updatePost.isPending ? null : serverError}
+        onSubmit={(values) => {
+          updatePost.mutate({
+            values,
+            expectedLiveUpdatedAt: post.updatedAt,
+          });
+        }}
+        onCancel={() => {
+          void navigate({
+            to: "/entries/$slug",
+            params: { slug },
+            search: ENTRIES_LIST_DEFAULT_SEARCH,
+          });
+        }}
+      />
+      <EntryConflictDialog
+        open={conflict !== null}
+        singularLabel={singularLower}
+        mine={conflict?.mine ?? null}
+        theirs={conflict?.theirs ?? null}
+        onKeepMine={handleKeepMine}
+        onTakeTheirs={() => {
+          void handleTakeTheirs();
+        }}
+        onOpenChange={(open) => {
+          if (!open) setConflict(null);
+        }}
+      />
+    </>
   );
 }
 
