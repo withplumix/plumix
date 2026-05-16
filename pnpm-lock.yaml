@@ -329,6 +329,9 @@ importers:
       '@plumix/core':
         specifier: workspace:*
         version: link:../core
+      '@tiptap/core':
+        specifier: ^3.23.1
+        version: 3.23.1(@tiptap/pm@3.23.1)
     devDependencies:
       '@plumix/eslint-config':
         specifier: workspace:*
@@ -339,15 +342,45 @@ importers:
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../../tooling/typescript
+      '@plumix/vitest-config':
+        specifier: workspace:*
+        version: link:../../tooling/vitest
+      '@testing-library/react':
+        specifier: ^16.3.2
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.12.2
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.2.3(@types/react@19.2.14)
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.5(vitest@4.1.5)
       eslint:
         specifier: 'catalog:'
         version: 10.3.0(jiti@2.7.0)
+      jsdom:
+        specifier: ^29.1.1
+        version: 29.1.1
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
+      react:
+        specifier: 'catalog:'
+        version: 19.2.6
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.6(react@19.2.6)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.5(@types/node@24.12.2)(@vitest/coverage-v8@4.1.5)(jsdom@29.1.1)(vite@8.0.9(@types/node@24.12.2)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/core:
     dependencies:
@@ -939,6 +972,9 @@ importers:
 
   packages/plumix:
     dependencies:
+      '@plumix/blocks':
+        specifier: workspace:*
+        version: link:../blocks
       '@plumix/core':
         specifier: workspace:*
         version: link:../core

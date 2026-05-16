@@ -18,6 +18,7 @@ export type {
   TaxonomyArchiveProps,
 } from "./route/render/archive-props.js";
 export type { ResolvedNode } from "./route/render/template-hierarchy.js";
+export { renderTiptapContent } from "./route/render/tiptap.js";
 export * from "./rpc/index.js";
 export type * from "./runtime/adapter.js";
 export { buildApp } from "./runtime/app.js";

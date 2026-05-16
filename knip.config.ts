@@ -38,11 +38,6 @@ const config: KnipConfig = {
     "packages/plugins/pages/playground": {
       entry: ["plumix.config.ts"],
     },
-    // @plumix/core is a dependency but has no real imports yet (empty skeleton).
-    // Remove these once packages have actual code importing from core.
-    "packages/blocks": {
-      ignoreDependencies: ["@plumix/core"],
-    },
     // - drizzle-kit is invoked by consumers as a CLI hint, not imported.
     // - @plumix/admin is consumed via filesystem copy (scripts/copy-admin.mjs)
     //   at build time, not as a TypeScript import.
@@ -69,6 +64,7 @@ const config: KnipConfig = {
         // path is a static import knip can follow.
         "src/admin/theme.css",
         "src/blocks/index.ts",
+        "src/blocks/test.ts",
         "src/cli/index.ts",
         "src/fields/index.ts",
         "src/i18n/index.ts",

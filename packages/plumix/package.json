@@ -87,6 +87,10 @@
       "types": "./dist/blocks/index.d.ts",
       "default": "./dist/blocks/index.js"
     },
+    "./blocks/test": {
+      "types": "./dist/blocks/test.d.ts",
+      "default": "./dist/blocks/test.js"
+    },
     "./schema": {
       "types": "./dist/schema/index.d.ts",
       "default": "./dist/schema/index.js"
@@ -128,6 +132,7 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
+    "@plumix/blocks": "workspace:*",
     "@plumix/core": "workspace:*",
     "@tailwindcss/node": "4.3.0",
     "@tailwindcss/oxide": "4.3.0",
