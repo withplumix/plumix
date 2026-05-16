@@ -6,11 +6,11 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "default": "./src/index.ts"
+      "default": "./dist/index.js"
     },
     "./test": {
       "types": "./dist/test/index.d.ts",
-      "default": "./src/test/index.ts"
+      "default": "./dist/test/index.js"
     }
   },
   "scripts": {
@@ -22,7 +22,6 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@plumix/core": "workspace:*",
     "@tiptap/core": "^3.23.1"
   },
   "peerDependencies": {

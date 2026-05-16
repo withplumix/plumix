@@ -1,18 +1,32 @@
+/**
+ * @vitest-environment jsdom
+ *
+ * jsdom is required only for this file — `@plumix/blocks`'s
+ * `<EntryContent>` walker is React-based and the parity assertions
+ * render via `renderToStaticMarkup`. The rest of `@plumix/core`'s
+ * tests run in the default node environment (jsdom breaks Buffer /
+ * Uint8Array semantics used by the passkey suites).
+ */
 import { describe, expect, test } from "vitest";
 
-import { renderTiptapContent } from "@plumix/core";
+import { coreBlocks } from "@plumix/blocks";
+import { mockRegistry, renderBlock } from "@plumix/blocks/test";
 
-import { coreBlocks } from "./core-blocks.js";
-import { mockRegistry, renderBlock } from "./test/index.js";
+import { renderTiptapContent } from "./route/render/tiptap.js";
 
 /**
  * Parity check: paragraph content authored against the legacy
  * StarterKit schema (`type: "paragraph"`) renders to the same HTML
- * through the new walker as through the existing
- * `renderTiptapContent` walker shipped in `@plumix/core`.
+ * through the new `<EntryContent>` walker as through the existing
+ * `renderTiptapContent` HTML walker shipped in this package.
  *
- * This is the foundation tracer-bullet's load-bearing claim: the new
- * pipeline does not silently break existing entries.
+ * Lives in `@plumix/core` (rather than `@plumix/blocks`) because the
+ * legacy walker is core-owned and `@plumix/blocks` should not depend
+ * on `@plumix/core` — that would create a workspace dependency cycle.
+ *
+ * Load-bearing for the foundation slice: proves the new registry-driven
+ * pipeline does not silently break entries authored before the
+ * namespaced spec system landed.
  */
 describe("paragraph parity against the legacy walker", () => {
   test("plain paragraph", async () => {

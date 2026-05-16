@@ -1,3 +1,5 @@
+import type { BlockSpec } from "@plumix/blocks";
+
 import type { DerivedCapability } from "../auth/rbac.js";
 import type { AppContext } from "../context/app.js";
 import type { UserRole } from "../db/schema/users.js";
@@ -171,6 +173,14 @@ export interface PluginSetupContextBase {
 
   registerAdminPage(options: AdminPageOptions): void;
   registerFieldType(options: FieldTypeOptions): void;
+  /**
+   * Register a `BlockSpec` produced by `defineBlock` from `plumix/blocks`.
+   * Plugin-contributed blocks merge into the per-app block registry at
+   * `buildApp` time with deterministic precedence theme > plugin > core.
+   * Specs using the `core/` namespace are rejected — that namespace is
+   * reserved for `@plumix/blocks`'s built-in primitives.
+   */
+  registerBlock(spec: BlockSpec): void;
   /**
    * Register a `LookupAdapter` for a reference target kind. The
    * `kind` matches the `referenceTarget.kind` carried on a reference
@@ -469,6 +479,16 @@ export function createPluginSetupContext({
         ...options,
         registeredBy: pluginId,
       });
+    },
+
+    registerBlock: (spec) => {
+      if (registry.blockSpecs.has(spec.name)) {
+        throw DuplicateRegistrationError.alreadyRegistered({
+          kind: "block",
+          identifier: spec.name,
+        });
+      }
+      registry.blockSpecs.set(spec.name, { spec, registeredBy: pluginId });
     },
 
     registerLookupAdapter: (options) => {

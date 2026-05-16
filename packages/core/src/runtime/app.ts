@@ -1,5 +1,8 @@
 import { RPCHandler } from "@orpc/server/fetch";
 
+import type { BlockRegistry } from "@plumix/blocks";
+import { coreBlocks, mergeBlockRegistry } from "@plumix/blocks";
+
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { ResolvedPasskeyConfig } from "../auth/passkey/config.js";
 import type { CapabilityResolver } from "../auth/rbac.js";
@@ -94,6 +97,17 @@ export interface PlumixApp {
    * shared dispatch helper.
    */
   readonly scheduledTasks: readonly RegisteredScheduledTask[];
+  /**
+   * Merged block registry: `@plumix/blocks` core specs + plugin
+   * contributions from `ctx.registerBlock`. Component lazy refs on
+   * each spec are awaited once during `buildApp`, so the SSR walker
+   * reads `app.blocks.get(name).component` synchronously per request.
+   *
+   * Theme block overrides are merged in by the (forthcoming) theme
+   * pipeline; v1 of the foundation slice ships the core + plugin
+   * layers only.
+   */
+  readonly blocks: BlockRegistry;
 }
 
 export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
@@ -164,6 +178,24 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     : [];
   const authenticator = config.auth.authenticator ?? defaultAuthenticator();
   const bootstrapAllowed = config.auth.bootstrapVia === "first-method-wins";
+
+  // Seed the per-app block registry from `@plumix/blocks` core specs +
+  // plugin contributions. The block walker reads attribute schemas
+  // referenced by name (`registerFieldType`); pass the resolved field-type
+  // set so `unknown_attribute_type` errors surface here instead of at
+  // render time. Theme block overrides land in a follow-up slice.
+  const pluginBlockContributions = Array.from(registry.blockSpecs.values()).map(
+    ({ spec, registeredBy }) => ({ spec, pluginId: registeredBy }),
+  );
+  const fieldTypeNames = new Set<string>(registry.fieldTypes.keys());
+  const blocks = await mergeBlockRegistry({
+    core: coreBlocks,
+    plugins: pluginBlockContributions,
+    themeOverrides: {},
+    themeId: null,
+    fieldTypes: fieldTypeNames,
+  });
+
   return {
     config,
     hooks,
@@ -181,6 +213,7 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     capabilityResolver: createCapabilityResolver(registry),
     appContextExtensions,
     scheduledTasks: registry.scheduledTasks,
+    blocks,
   };
 }
 

@@ -160,6 +160,99 @@ describe("mergeBlockRegistry", () => {
     expect(reg.get("core/heading")?.registeredBy).toBe(null);
   });
 
+  test("schema name mismatch throws at registry merge", async () => {
+    const spec = defineBlock({
+      name: "core/paragraph",
+      title: "Paragraph",
+      schema: () =>
+        Promise.resolve(
+          TiptapNode.create({
+            name: "paragraph", // wrong — must match spec name
+            group: "block",
+            content: "inline*",
+          }),
+        ),
+      component: () =>
+        Promise.resolve((({ children }) => children) as BlockComponent),
+    });
+    await expect(
+      mergeBlockRegistry({
+        core: [spec],
+        plugins: [],
+        themeOverrides: {},
+        themeId: null,
+      }),
+    ).rejects.toThrow(
+      expect.objectContaining({
+        code: "schema_name_mismatch",
+        blockName: "core/paragraph",
+        schemaName: "paragraph",
+      }),
+    );
+  });
+
+  test("attribute referencing an unregistered field type throws", async () => {
+    const spec = defineBlock({
+      name: "core/paragraph",
+      title: "Paragraph",
+      attributes: {
+        align: { type: "select", default: "left" },
+        weird: { type: "made-up-type" },
+      },
+      schema: () =>
+        Promise.resolve(
+          TiptapNode.create({
+            name: "core/paragraph",
+            group: "block",
+            content: "inline*",
+          }),
+        ),
+      component: () =>
+        Promise.resolve((({ children }) => children) as BlockComponent),
+    });
+    await expect(
+      mergeBlockRegistry({
+        core: [spec],
+        plugins: [],
+        themeOverrides: {},
+        themeId: null,
+        fieldTypes: new Set(["select", "text"]),
+      }),
+    ).rejects.toThrow(
+      expect.objectContaining({
+        code: "unknown_attribute_type",
+        blockName: "core/paragraph",
+        attributeName: "weird",
+        attributeType: "made-up-type",
+      }),
+    );
+  });
+
+  test("attribute validation is skipped when fieldTypes is omitted", async () => {
+    const spec = defineBlock({
+      name: "core/paragraph",
+      title: "Paragraph",
+      attributes: { weird: { type: "anything-goes" } },
+      schema: () =>
+        Promise.resolve(
+          TiptapNode.create({
+            name: "core/paragraph",
+            group: "block",
+            content: "inline*",
+          }),
+        ),
+      component: () =>
+        Promise.resolve((({ children }) => children) as BlockComponent),
+    });
+    const reg = await mergeBlockRegistry({
+      core: [spec],
+      plugins: [],
+      themeOverrides: {},
+      themeId: null,
+    });
+    expect(reg.get("core/paragraph")?.name).toBe("core/paragraph");
+  });
+
   test("ESM-default-export shape is unwrapped during resolution", async () => {
     const Component: BlockComponent = ({ children }) => children as never;
     const spec = defineBlock({
