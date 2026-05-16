@@ -44,6 +44,30 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
   test("edit the draft → publish → status persists across reload", async ({
     page,
   }) => {
+    // DIAGNOSTIC: log every RPC response so the CI log shows what
+    // /entry/update actually returned (status + body). Revert before
+    // merging.
+    page.on("response", async (r) => {
+      const url = r.url();
+      if (url.includes("/_plumix/rpc/")) {
+        const body = await r
+          .text()
+          .then((t) => t.slice(0, 600))
+          .catch(() => "<no body>");
+        console.log(
+          `[diag] ${r.request().method()} ${url} → ${r.status()} ${body}`,
+        );
+      }
+    });
+    page.on("requestfailed", (req) => {
+      const url = req.url();
+      if (url.includes("/_plumix/rpc/")) {
+        console.log(
+          `[diag] requestfailed ${req.method()} ${url}: ${req.failure()?.errorText ?? "?"}`,
+        );
+      }
+    });
+
     await page.goto("entries/posts");
     const rows = page.locator(
       "[data-testid^='content-list-row-']:not([data-testid*='-actions-']):not([data-testid*='-trash-'])",
@@ -58,12 +82,31 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
     await page
       .getByTestId("post-editor-status-select")
       .selectOption("published");
-    await page.getByTestId("post-editor-submit").click();
-
-    // Wait for the update RPC to settle before reload.
-    await page.waitForResponse(
-      (r) => r.url().endsWith("/entry/update") && r.status() === 200,
+    // DIAGNOSTIC: capture the request body so we see what
+    // expectedLiveUpdatedAt was sent.
+    const updateRequest = page.waitForRequest((r) =>
+      r.url().endsWith("/entry/update"),
     );
+    await page.getByTestId("post-editor-submit").click();
+    const req = await updateRequest;
+    console.log(
+      `[diag] /entry/update request body: ${req.postData() ?? "<none>"}`,
+    );
+
+    // DIAGNOSTIC: wait for ANY response to /entry/update (not just 200)
+    // so we can see what status it returned. Then assert separately.
+    const resp = await page.waitForResponse((r) =>
+      r.url().endsWith("/entry/update"),
+    );
+    const respBody = await resp.text().catch(() => "<no body>");
+    console.log(
+      `[diag] /entry/update FINAL status=${resp.status()} body=${respBody.slice(0, 600)}`,
+    );
+    if (resp.status() !== 200) {
+      throw new Error(
+        `Expected /entry/update 200, got ${resp.status()}: ${respBody}`,
+      );
+    }
 
     await page.reload();
     await expect(page.getByTestId("post-editor-form")).toBeVisible();
