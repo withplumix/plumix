@@ -11,4 +11,5 @@ export * from "./oauth/index.js";
 export * from "./passkey/index.js";
 export * from "./rbac.js";
 export * from "./sessions.js";
+export * from "./sign-in.js";
 export * from "./tokens.js";
