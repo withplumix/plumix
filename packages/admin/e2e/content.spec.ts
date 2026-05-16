@@ -491,9 +491,9 @@ test.describe("/entries/$slug/$id/edit", () => {
     await expect(dialog).toBeVisible();
 
     await page.getByTestId("entry-editor-conflict-compare").click();
-    await expect(page.getByTestId("entry-editor-conflict-mine-title")).toHaveText(
-      "My edit",
-    );
+    await expect(
+      page.getByTestId("entry-editor-conflict-mine-title"),
+    ).toHaveText("My edit");
     await expect(
       page.getByTestId("entry-editor-conflict-theirs-title"),
     ).toHaveText("Their edit");

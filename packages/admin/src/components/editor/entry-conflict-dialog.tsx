@@ -53,8 +53,8 @@ export function EntryConflictDialog({
                 Someone else updated this {singularLabel}
               </AlertDialogTitle>
               <AlertDialogDescription>
-                Your version is out of date. Keep your changes, take the
-                latest, or compare side-by-side first.
+                Your version is out of date. Keep your changes, take the latest,
+                or compare side-by-side first.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="flex-col sm:flex-col">
@@ -149,7 +149,7 @@ function ComparePanel({
 }): ReactNode {
   return (
     <section className="flex flex-col gap-2">
-      <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+      <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
         {title}
       </h3>
       {values === null ? (
