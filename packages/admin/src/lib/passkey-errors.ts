@@ -1,8 +1,8 @@
-// Server-side `PasskeyErrorCode` string union, kept in sync with
-// packages/core/src/auth/passkey/errors.ts. We can't import the type — admin
-// is a SPA build and @plumix/core is devDep-only for type-probe purposes —
-// but the string literals are the wire contract.
-type PasskeyServerErrorCode =
+import type { PasskeyErrorCode as CorePasskeyErrorCode } from "@plumix/core";
+
+// Codes thrown from core's `PasskeyError` class. Drift-guarded
+// against core's `PasskeyErrorCode` by the assertion below.
+type PasskeyClassErrorCode =
   | "challenge_not_found"
   | "invalid_client_data"
   | "invalid_origin"
@@ -17,7 +17,14 @@ type PasskeyServerErrorCode =
   | "invalid_signature"
   | "counter_replay"
   | "user_not_found"
-  | "invalid_response"
+  | "invalid_response";
+
+// Wire codes the passkey UI's `postJson` can receive that core does
+// not name in a single union: route-inline strings from
+// `passkey/routes.ts` and sibling-flow codes that arrive when the user
+// came in via an invite or hit RPC input validation. Admin owns this
+// union outright.
+type PasskeyWireExtraErrorCode =
   | "challenge_not_bound_to_user"
   | "challenge_mismatch"
   | "registration_closed"
@@ -25,6 +32,8 @@ type PasskeyServerErrorCode =
   | "invalid_token"
   | "token_expired"
   | "invalid_input";
+
+type PasskeyServerErrorCode = PasskeyClassErrorCode | PasskeyWireExtraErrorCode;
 
 // Browser-side failures we distinguish ourselves before/after the server call.
 type PasskeyClientErrorCode =
@@ -34,6 +43,19 @@ type PasskeyClientErrorCode =
   | "unknown";
 
 export type PasskeyErrorCode = PasskeyServerErrorCode | PasskeyClientErrorCode;
+
+type Equals<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
+    ? true
+    : false;
+type Assert<T extends true> = T;
+
+// If core's `PasskeyErrorCode` adds, removes, or renames a code,
+// `Equals` resolves to `false` and `Assert<false>` fails the
+// constraint here. Purely type-level — no runtime cost.
+type _PasskeyClassErrorCodeSync = Assert<
+  Equals<PasskeyClassErrorCode, CorePasskeyErrorCode>
+>;
 
 export class PasskeyError extends Error {
   static {
@@ -56,10 +78,8 @@ export class PasskeyError extends Error {
   }
 
   // Dispatch entry for codes derived from a server response or DOMException
-  // mapping. The 23 server codes and two browser-side codes
-  // (`no_authenticator`, `unknown`) have no literal admin throw sites — every
-  // one of them arrives via a dispatched path, so a single dispatcher beats
-  // listing 25 unused per-code factories.
+  // mapping. Most codes have no literal throw site — they arrive via
+  // dispatch, so a single entry beats per-code factories.
   static ofCode(ctx: { code: PasskeyErrorCode }): PasskeyError {
     return new PasskeyError(ctx.code);
   }

@@ -1,24 +1,29 @@
 // challenge_expired is folded into challenge_not_found — `consumeChallenge`
 // returns null whether the row was missing or just expired, since the
 // distinction is meaningless to the caller (and leaking it would help
-// timing-distinguish stale from never-issued). Admin maintains its own
-// mirror union (admin/src/lib/passkey-errors.ts) — keep them in sync.
-type PasskeyErrorCode =
-  | "challenge_not_found"
-  | "invalid_client_data"
-  | "invalid_origin"
-  | "invalid_rp_id"
-  | "user_presence_missing"
-  | "unsupported_attestation_format"
-  | "unsupported_algorithm"
-  | "credential_already_registered"
-  | "credential_limit_reached"
-  | "credential_not_found"
-  | "credential_storage_corrupt"
-  | "invalid_signature"
-  | "counter_replay"
-  | "user_not_found"
-  | "invalid_response";
+// timing-distinguish stale from never-issued).
+//
+// Admin's `passkey-errors.ts` mirrors this tuple via a compile-time
+// assertion; changing it will trip an admin typecheck failure.
+export const PASSKEY_ERROR_CODES = [
+  "challenge_not_found",
+  "invalid_client_data",
+  "invalid_origin",
+  "invalid_rp_id",
+  "user_presence_missing",
+  "unsupported_attestation_format",
+  "unsupported_algorithm",
+  "credential_already_registered",
+  "credential_limit_reached",
+  "credential_not_found",
+  "credential_storage_corrupt",
+  "invalid_signature",
+  "counter_replay",
+  "user_not_found",
+  "invalid_response",
+] as const;
+
+export type PasskeyErrorCode = (typeof PASSKEY_ERROR_CODES)[number];
 
 // Structured diagnostic payload. Never returned to clients — the dispatcher
 // pulls it off via `error.detail` for server-side logging only.
