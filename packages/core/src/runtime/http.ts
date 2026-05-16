@@ -25,3 +25,20 @@ export function methodNotAllowed(allowed: readonly string[]): Response {
 export function forbidden(reason: string): Response {
   return jsonResponse({ error: "forbidden", reason }, { status: 403 });
 }
+
+export function redirectTo(
+  location: string,
+  extraHeaders: Record<string, string> = {},
+): Response {
+  const headers = new Headers({ Location: location, ...extraHeaders });
+  return new Response(null, { status: 302, headers });
+}
+
+export function loginErrorRedirect(
+  loginPath: string,
+  paramName: string,
+  code: string,
+): Response {
+  const params = new URLSearchParams({ [paramName]: code });
+  return redirectTo(`${loginPath}?${params.toString()}`);
+}

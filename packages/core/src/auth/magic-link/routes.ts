@@ -3,9 +3,12 @@ import * as v from "valibot";
 import type { AppContext } from "../../context/app.js";
 import type { PlumixApp } from "../../runtime/app.js";
 import type { MagicLinkErrorCode } from "./errors.js";
-import { jsonResponse } from "../../runtime/http.js";
-import { buildSessionCookie, isSecureRequest } from "../cookies.js";
-import { createSession, readRequestMeta } from "../sessions.js";
+import {
+  jsonResponse,
+  loginErrorRedirect,
+  redirectTo,
+} from "../../runtime/http.js";
+import { mintSessionAndCookie } from "../sign-in.js";
 import { MagicLinkError } from "./errors.js";
 import { requestMagicLink } from "./request.js";
 import { verifyMagicLink } from "./verify.js";
@@ -112,21 +115,12 @@ export async function handleMagicLinkVerify(
     const { user, created } = await verifyMagicLink(ctx.db, token, {
       bootstrapAllowed: ctx.bootstrapAllowed,
     });
-    const { token: sessionToken } = await createSession(
-      ctx.db,
-      { userId: user.id, ...readRequestMeta(ctx.request) },
-      app.sessionPolicy,
-    );
+    const { cookieHeader } = await mintSessionAndCookie(ctx, app, user.id);
     await ctx.hooks.doAction("user:signed_in", user, {
       method: "magic_link",
       firstSignIn: created,
     });
-    const cookie = buildSessionCookie(sessionToken, {
-      maxAgeSeconds: app.sessionPolicy.maxAgeSeconds,
-      secure: isSecureRequest(ctx.request),
-      sameSite: "Lax",
-    });
-    return redirectTo(ADMIN_PATH, { "set-cookie": cookie });
+    return redirectTo(ADMIN_PATH, { "set-cookie": cookieHeader });
   } catch (error) {
     if (error instanceof MagicLinkError) {
       ctx.logger.warn("magic_link_verify_rejected", { code: error.code });
@@ -141,15 +135,6 @@ function invalidInput(): Response {
   return jsonResponse({ error: "invalid_input" }, { status: 400 });
 }
 
-function redirectTo(
-  location: string,
-  extraHeaders: Record<string, string> = {},
-): Response {
-  const headers = new Headers({ Location: location, ...extraHeaders });
-  return new Response(null, { status: 302, headers });
-}
-
 function loginError(code: MagicLinkErrorCode): Response {
-  const params = new URLSearchParams({ magic_link_error: code });
-  return redirectTo(`${LOGIN_PATH}?${params.toString()}`);
+  return loginErrorRedirect(LOGIN_PATH, "magic_link_error", code);
 }
