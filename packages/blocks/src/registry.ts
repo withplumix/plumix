@@ -19,6 +19,13 @@ export interface MergeBlockRegistryInput {
   readonly plugins: readonly PluginContribution[];
   readonly themeOverrides: Readonly<Record<string, BlockComponent>>;
   readonly themeId: string | null;
+  /**
+   * Optional set of registered field-type names (from `registerFieldType`).
+   * When present, every block attribute's declared `type` is validated
+   * against this set at merge time. When omitted (e.g. in unit tests
+   * that don't care about field-type wiring), the check is skipped.
+   */
+  readonly fieldTypes?: ReadonlySet<string>;
 }
 
 /**
@@ -42,6 +49,7 @@ export async function mergeBlockRegistry(
   input: MergeBlockRegistryInput,
 ): Promise<BlockRegistry> {
   validateLayerUniqueness(input);
+  validateAttributeTypes(input);
 
   const merged = new Map<string, ResolvedBlockSpec>();
   const aliases = new Map<string, string>();
@@ -117,6 +125,20 @@ async function resolveSpec(
   registeredBy: string | null,
 ): Promise<ResolvedBlockSpec> {
   const component = await unwrapDefault(spec.component);
+  const schema = await unwrapDefault(spec.schema);
+  // `Node.create` instances expose `.name` as the canonical schema name.
+  // The spec's `name` and the Tiptap node's `name` MUST match — the
+  // walker dispatches on `node.type === registry-key`, and the editor
+  // builds Tiptap extensions whose names come from `schema.name`.
+  // Catching the drift here is much friendlier than the walker silently
+  // routing to the unknown-block fallback at render time.
+  const schemaName = (schema as { name?: unknown }).name;
+  if (typeof schemaName === "string" && schemaName !== spec.name) {
+    throw BlockRegistrationError.schemaNameMismatch({
+      specName: spec.name,
+      schemaName,
+    });
+  }
   return Object.freeze({
     name: spec.name,
     title: spec.title,
@@ -131,6 +153,27 @@ async function resolveSpec(
     component,
     registeredBy,
   });
+}
+
+function validateAttributeTypes(input: MergeBlockRegistryInput): void {
+  if (!input.fieldTypes) return;
+  const fieldTypes = input.fieldTypes;
+  const allSpecs: readonly BlockSpec[] = [
+    ...input.core,
+    ...input.plugins.map((p) => p.spec),
+  ];
+  for (const spec of allSpecs) {
+    if (!spec.attributes) continue;
+    for (const [attributeName, schema] of Object.entries(spec.attributes)) {
+      if (!fieldTypes.has(schema.type)) {
+        throw BlockRegistrationError.unknownAttributeType({
+          name: spec.name,
+          attributeName,
+          attributeType: schema.type,
+        });
+      }
+    }
+  }
 }
 
 function indexAliases(spec: BlockSpec, aliases: Map<string, string>): void {

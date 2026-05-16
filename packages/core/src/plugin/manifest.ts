@@ -1,3 +1,5 @@
+import type { BlockSpec } from "@plumix/blocks";
+
 import type {
   EntryTypeCapabilityOverrides,
   TermTaxonomyCapabilityOverrides,
@@ -1015,6 +1017,11 @@ export const CORE_RPC_NAMESPACES: ReadonlySet<string> = new Set([
   "settings",
 ]);
 
+export interface RegisteredBlock {
+  readonly spec: BlockSpec;
+  readonly registeredBy: string;
+}
+
 export interface PluginRegistry {
   readonly entryTypes: ReadonlyMap<string, RegisteredEntryType>;
   readonly termTaxonomies: ReadonlyMap<string, RegisteredTermTaxonomy>;
@@ -1030,6 +1037,7 @@ export interface PluginRegistry {
   readonly loginLinks: readonly RegisteredLoginLink[];
   readonly adminPages: ReadonlyMap<string, RegisteredAdminPage>;
   readonly fieldTypes: ReadonlyMap<string, RegisteredFieldType>;
+  readonly blockSpecs: ReadonlyMap<string, RegisteredBlock>;
   readonly lookupAdapters: ReadonlyMap<string, RegisteredLookupAdapter>;
   readonly scheduledTasks: readonly RegisteredScheduledTask[];
 }
@@ -1049,6 +1057,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly loginLinks: RegisteredLoginLink[];
   readonly adminPages: Map<string, RegisteredAdminPage>;
   readonly fieldTypes: Map<string, RegisteredFieldType>;
+  readonly blockSpecs: Map<string, RegisteredBlock>;
   readonly lookupAdapters: Map<string, RegisteredLookupAdapter>;
   readonly scheduledTasks: RegisteredScheduledTask[];
 }
@@ -1069,6 +1078,7 @@ export function createPluginRegistry(): MutablePluginRegistry {
     loginLinks: [],
     adminPages: new Map(),
     fieldTypes: new Map(),
+    blockSpecs: new Map(),
     lookupAdapters: new Map(),
     scheduledTasks: [],
   };
