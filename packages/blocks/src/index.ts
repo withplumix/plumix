@@ -1,1 +1,29 @@
-export {};
+/**
+ * Public API of `@plumix/blocks`.
+ *
+ * Re-exported from `plumix/blocks` (see `packages/plumix/src/blocks/`).
+ * Consumers should import from `plumix/blocks`, not from this package
+ * directly — `@plumix/blocks` is workspace-internal and unpublished.
+ */
+
+export { defineBlock } from "./define-block.js";
+export { BlockRegistrationError } from "./errors.js";
+export { mergeBlockRegistry } from "./registry.js";
+export type { MergeBlockRegistryInput } from "./registry.js";
+export { EntryContent } from "./walker.js";
+export type { EntryContentProps } from "./walker.js";
+export type {
+  BlockAttributeSchema,
+  BlockComponent,
+  BlockContext,
+  BlockProps,
+  BlockRegistry,
+  BlockSpec,
+  LazyRef,
+  ResolvedBlockSpec,
+  TiptapMark,
+  TiptapNode,
+} from "./types.js";
+
+export { coreBlocks } from "./core-blocks.js";
+export { paragraphBlock } from "./paragraph/index.js";
