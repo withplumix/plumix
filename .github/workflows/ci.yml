@@ -115,12 +115,20 @@ jobs:
 
       - run: pnpm test:e2e
 
-      - name: Upload Playwright reports on failure
+      - name: Upload Playwright reports + traces on failure
         if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: playwright-reports
-          path: "**/playwright-report/"
+          # `playwright-report/` is the HTML report; `test-results/`
+          # carries the per-test artifacts that matter for diagnosing
+          # CI-only flakes — `trace.zip`, `error-context.md`,
+          # screenshots, videos. Globbing both keeps the upload self-
+          # contained per package without enumerating each workspace.
+          path: |
+            **/playwright-report/
+            **/test-results/
+          if-no-files-found: warn
           retention-days: 5
 
   publint:

@@ -158,7 +158,14 @@ export function definePlumixE2EConfig(
     forbidOnly: Boolean(process.env.CI),
     retries: process.env.CI ? 2 : 0,
     workers: process.env.CI ? 1 : undefined,
-    reporter: process.env.CI ? [["list"], ["github"]] : [["list"], ["html"]],
+    // On CI: write the HTML report alongside the inline GitHub annotations
+    // so the failure-artifact upload (which globs `**/playwright-report/`)
+    // has something to capture — without `["html"]` it never gets generated.
+    // `open: "never"` keeps `pnpm test:e2e` from trying to launch a browser
+    // post-run on CI.
+    reporter: process.env.CI
+      ? [["list"], ["github"], ["html", { open: "never" }]]
+      : [["list"], ["html"]],
     ...(seedAdmin ? { globalSetup: "./globalSetup.ts" } : {}),
     use: {
       baseURL,

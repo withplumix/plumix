@@ -12,12 +12,18 @@ export default definePlumixE2EConfig({
   port: E2E_PORT,
   testDir: "./e2e",
   baseURL: BASE_URL,
-  // Build admin → assemble the runtime-proof fixture plugin via
-  // plumix's real assembler → preview the dist. The assembler writes
-  // site-bundle.js into dist/plugins/ and patches the script tag into
-  // index.html.
+  // Turbo's `test:e2e` task has `dependsOn: ["build", "^build"]`, so
+  // `packages/admin/dist/` is already produced by the time this
+  // webServer starts. We do NOT re-run `pnpm run build` here — it
+  // wipes `packages/admin/dist/` mid-flight, racing with the parallel
+  // `plumix:build` step's `copy-admin.mjs` that reads from the same
+  // directory. Assemble the runtime-proof plugin into the existing
+  // dist, then preview it.
+  //
+  // Running e2e standalone (without turbo): `pnpm exec turbo run
+  // test:e2e --filter @plumix/admin` builds first; a bare `pnpm
+  // test:e2e` will 404 until you `pnpm build` once.
   webServerCommand: [
-    "pnpm run build",
     "pnpm exec tsx e2e/fixtures/build-runtime-proof-plugin.ts",
     `pnpm exec vite preview --port ${String(E2E_PORT)} --strictPort`,
   ].join(" && "),
