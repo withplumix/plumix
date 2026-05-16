@@ -53,6 +53,10 @@ type MetaSanitizationReason =
   | "value_too_large";
 
 export class MetaSanitizationError extends Error {
+  static {
+    MetaSanitizationError.prototype.name = "MetaSanitizationError";
+  }
+
   readonly key: string;
   readonly reason: MetaSanitizationReason;
   constructor(key: string, reason: MetaSanitizationReason) {
