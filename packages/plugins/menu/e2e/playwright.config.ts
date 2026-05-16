@@ -1,8 +1,9 @@
 import { definePlumixE2EConfig } from "plumix/test/playwright";
 
 export default definePlumixE2EConfig({
-  // Distinct per-plugin port so the suite can run in parallel with
-  // media (3030) and audit-log (3010) under turbo.
+  // See `packages/plugins/audit-log/e2e/playwright.config.ts` for why
+  // each playground assigns its own HTTP + inspector port.
   port: 3040,
+  inspectorPort: 9340,
   playground: "../playground",
 });
