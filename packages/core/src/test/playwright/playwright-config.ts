@@ -12,6 +12,15 @@ export interface PlumixE2EConfigOptions {
    */
   readonly port?: number;
   /**
+   * Explicit workerd inspector port baked into `plumix dev
+   * --inspector-port <port>`. `@cloudflare/vite-plugin` otherwise
+   * auto-allocates from 9229 upward, which collides when multiple
+   * worker-driven e2e suites boot in parallel under turbo. Suites
+   * should pick distinct ports (convention: mirror the HTTP port —
+   * 3010 ↔ 9310, 3020 ↔ 9320, …). Ignored when `playground` is unset.
+   */
+  readonly inspectorPort?: number;
+  /**
    * Optional path to a playground workspace (relative to the playwright
    * config file). When set, `definePlumixE2EConfig` bakes the standard
    * worker-driven webServer setup: wipe `.wrangler/state` → apply D1
@@ -65,6 +74,7 @@ const DEFAULT_PORT = 5173;
 function bakePlaygroundCommand(
   playground: string,
   port: number,
+  inspectorPort: number | undefined,
   extraSetup: string | undefined,
 ): string {
   const steps = [
@@ -74,7 +84,11 @@ function bakePlaygroundCommand(
     `pnpm exec wrangler d1 migrations apply ${DEFAULT_BINDING} --local`,
   ];
   if (extraSetup) steps.push(extraSetup);
-  steps.push(`pnpm exec plumix dev --port ${String(port)}`);
+  const devFlags = [`--port ${String(port)}`];
+  if (inspectorPort !== undefined) {
+    devFlags.push(`--inspector-port ${String(inspectorPort)}`);
+  }
+  steps.push(`pnpm exec plumix dev ${devFlags.join(" ")}`);
   return steps.join(" && ");
 }
 
@@ -113,6 +127,14 @@ export function definePlumixE2EConfig(
       "definePlumixE2EConfig: must provide either `playground` (worker-driven) or `webServerCommand` (custom).",
     );
   }
+  if (
+    options.inspectorPort !== undefined &&
+    options.webServerCommand !== undefined
+  ) {
+    throw new Error(
+      "definePlumixE2EConfig: `inspectorPort` only affects the baked `plumix dev` command and is incompatible with a custom `webServerCommand`.",
+    );
+  }
 
   const port = options.port ?? DEFAULT_PORT;
   const baseURL =
@@ -122,7 +144,12 @@ export function definePlumixE2EConfig(
   const webServerCommand =
     options.webServerCommand ??
     (options.playground !== undefined
-      ? bakePlaygroundCommand(options.playground, port, options.extraSetup)
+      ? bakePlaygroundCommand(
+          options.playground,
+          port,
+          options.inspectorPort,
+          options.extraSetup,
+        )
       : "");
 
   return defineConfig({

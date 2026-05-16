@@ -97,6 +97,16 @@ describe("definePlumixE2EConfig", () => {
     );
   });
 
+  test("rejects inspectorPort paired with a custom webServerCommand", () => {
+    expect(() =>
+      definePlumixE2EConfig({
+        port: 3040,
+        inspectorPort: 9340,
+        webServerCommand: "custom",
+      }),
+    ).toThrow(/inspectorPort.*webServerCommand/i);
+  });
+
   test("webServer readiness defaults to URL-based polling against baseURL", () => {
     const config = definePlumixE2EConfig({
       port: 3040,
@@ -122,5 +132,32 @@ describe("definePlumixE2EConfig", () => {
         ? config.webServer.port
         : undefined;
     expect(port).toBe(3040);
+  });
+
+  test("inspectorPort threads through as --inspector-port on plumix dev", () => {
+    const config = definePlumixE2EConfig({
+      port: 3020,
+      inspectorPort: 9320,
+      playground: "../playground",
+    });
+
+    const cmd =
+      config.webServer && "command" in config.webServer
+        ? config.webServer.command
+        : "";
+    expect(cmd).toContain("plumix dev --port 3020 --inspector-port 9320");
+  });
+
+  test("inspectorPort omitted leaves the dev command flag-free (auto-allocation default)", () => {
+    const config = definePlumixE2EConfig({
+      port: 3020,
+      playground: "../playground",
+    });
+
+    const cmd =
+      config.webServer && "command" in config.webServer
+        ? config.webServer.command
+        : "";
+    expect(cmd).not.toContain("--inspector-port");
   });
 });
