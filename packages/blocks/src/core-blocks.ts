@@ -1,4 +1,5 @@
 import type { BlockSpec } from "./types.js";
+import { headingBlock } from "./heading/index.js";
 import { paragraphBlock } from "./paragraph/index.js";
 
 /**
@@ -10,4 +11,7 @@ import { paragraphBlock } from "./paragraph/index.js";
  * allowlist; the spec itself stays registered so existing content
  * continues to round-trip losslessly.
  */
-export const coreBlocks: readonly BlockSpec[] = Object.freeze([paragraphBlock]);
+export const coreBlocks: readonly BlockSpec[] = Object.freeze([
+  paragraphBlock,
+  headingBlock,
+]);
