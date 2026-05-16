@@ -34,7 +34,7 @@ export interface PluginProvidesContext {
   ): void;
 }
 
-export interface CreateProvidesContextArgs {
+interface CreateProvidesContextArgs {
   readonly pluginId: string;
   readonly pluginExtensions: Map<string, ContextExtensionEntry>;
   readonly themeExtensions: Map<string, ContextExtensionEntry>;
