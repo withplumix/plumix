@@ -76,9 +76,9 @@ describe("plumix CLI dispatch", () => {
     expect(exitCode).toBeUndefined();
   });
 
-  test("unknown command throws CliError with UNKNOWN_COMMAND", async () => {
+  test("unknown command throws CliError with unknown_command", async () => {
     await expect(run(["--cwd", dir, "nonsense-command"])).rejects.toMatchObject(
-      { code: "UNKNOWN_COMMAND" },
+      { code: "unknown_command" },
     );
   });
 

@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "./define.js";
-import { DuplicateRegistrationError } from "./manifest.js";
+import { DuplicateRegistrationError } from "./errors.js";
 import { installPlugins } from "./register.js";
 
 import "../rpc/hooks.js";

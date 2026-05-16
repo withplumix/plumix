@@ -90,6 +90,12 @@ export function walkRichtextDoc(
   };
 }
 
+type RichtextValidationReason =
+  | "disallowed_node"
+  | "disallowed_mark"
+  | "unsafe_href"
+  | "invalid_shape";
+
 /**
  * Error thrown when the validator encounters a disallowed type or
  * unsafe attribute. Carries the JSON path so the editor (or test
@@ -98,20 +104,99 @@ export function walkRichtextDoc(
  * third paragraph's first text run's second mark.
  */
 export class RichtextValidationError extends Error {
+  static {
+    RichtextValidationError.prototype.name = "RichtextValidationError";
+  }
+
   readonly path: string;
-  readonly reason:
-    | "disallowed_node"
-    | "disallowed_mark"
-    | "unsafe_href"
-    | "invalid_shape";
-  constructor(
-    reason: RichtextValidationError["reason"],
+  readonly reason: RichtextValidationReason;
+
+  private constructor(
+    reason: RichtextValidationReason,
     path: string,
     message: string,
   ) {
     super(message);
     this.path = path;
     this.reason = reason;
+  }
+
+  static nestingExceeded(ctx: {
+    path: string;
+    maxDepth: number;
+  }): RichtextValidationError {
+    return new RichtextValidationError(
+      "invalid_shape",
+      ctx.path,
+      `richtext nesting exceeds ${String(ctx.maxDepth)} levels`,
+    );
+  }
+
+  static nodeNotPlainObject(ctx: { path: string }): RichtextValidationError {
+    return new RichtextValidationError(
+      "invalid_shape",
+      ctx.path,
+      "richtext node must be a plain object",
+    );
+  }
+
+  static nodeMissingType(ctx: { path: string }): RichtextValidationError {
+    return new RichtextValidationError(
+      "invalid_shape",
+      ctx.path,
+      "richtext node missing string `type`",
+    );
+  }
+
+  static disallowedNode(ctx: {
+    path: string;
+    nodeType: string;
+  }): RichtextValidationError {
+    return new RichtextValidationError(
+      "disallowed_node",
+      ctx.path,
+      `richtext node type "${ctx.nodeType}" not in field allowlist`,
+    );
+  }
+
+  static markNotPlainObject(ctx: { path: string }): RichtextValidationError {
+    return new RichtextValidationError(
+      "invalid_shape",
+      ctx.path,
+      "richtext mark must be a plain object",
+    );
+  }
+
+  static markMissingType(ctx: { path: string }): RichtextValidationError {
+    return new RichtextValidationError(
+      "invalid_shape",
+      ctx.path,
+      "richtext mark missing string `type`",
+    );
+  }
+
+  static disallowedMark(ctx: {
+    path: string;
+    markType: string;
+  }): RichtextValidationError {
+    return new RichtextValidationError(
+      "disallowed_mark",
+      ctx.path,
+      `richtext mark type "${ctx.markType}" not in field allowlist`,
+    );
+  }
+
+  static unsafeHref(ctx: {
+    path: string;
+    hrefType: string;
+  }): RichtextValidationError {
+    // `href` shape is unknown; describe by typeof so we don't tempt a
+    // `[object Object]` stringification in the error.
+    return new RichtextValidationError(
+      "unsafe_href",
+      ctx.path,
+      `richtext link mark href (${ctx.hrefType}) is not a safe URL`,
+    );
   }
 }
 
@@ -122,34 +207,25 @@ function walkNode(
   allowedNodeTypes: ReadonlySet<string>,
   allowedMarkTypes: ReadonlySet<string>,
 ): void {
+  const normalizedPath = path === "" ? "<root>" : path;
   if (depth > MAX_RICHTEXT_DEPTH) {
-    throw new RichtextValidationError(
-      "invalid_shape",
-      path === "" ? "<root>" : path,
-      `richtext nesting exceeds ${MAX_RICHTEXT_DEPTH} levels`,
-    );
+    throw RichtextValidationError.nestingExceeded({
+      path: normalizedPath,
+      maxDepth: MAX_RICHTEXT_DEPTH,
+    });
   }
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    throw new RichtextValidationError(
-      "invalid_shape",
-      path === "" ? "<root>" : path,
-      "richtext node must be a plain object",
-    );
+    throw RichtextValidationError.nodeNotPlainObject({ path: normalizedPath });
   }
   const node = value as TiptapNodeShape;
   if (typeof node.type !== "string" || node.type === "") {
-    throw new RichtextValidationError(
-      "invalid_shape",
-      path === "" ? "<root>" : path,
-      "richtext node missing string `type`",
-    );
+    throw RichtextValidationError.nodeMissingType({ path: normalizedPath });
   }
   if (!allowedNodeTypes.has(node.type)) {
-    throw new RichtextValidationError(
-      "disallowed_node",
-      path === "" ? "<root>" : path,
-      `richtext node type "${node.type}" not in field allowlist`,
-    );
+    throw RichtextValidationError.disallowedNode({
+      path: normalizedPath,
+      nodeType: node.type,
+    });
   }
   if (Array.isArray(node.marks)) {
     node.marks.forEach((mark, i) => {
@@ -175,26 +251,17 @@ function walkMark(
   allowedMarkTypes: ReadonlySet<string>,
 ): void {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    throw new RichtextValidationError(
-      "invalid_shape",
-      path,
-      "richtext mark must be a plain object",
-    );
+    throw RichtextValidationError.markNotPlainObject({ path });
   }
   const mark = value as TiptapNodeShape;
   if (typeof mark.type !== "string" || mark.type === "") {
-    throw new RichtextValidationError(
-      "invalid_shape",
-      path,
-      "richtext mark missing string `type`",
-    );
+    throw RichtextValidationError.markMissingType({ path });
   }
   if (!allowedMarkTypes.has(mark.type)) {
-    throw new RichtextValidationError(
-      "disallowed_mark",
+    throw RichtextValidationError.disallowedMark({
       path,
-      `richtext mark type "${mark.type}" not in field allowlist`,
-    );
+      markType: mark.type,
+    });
   }
   // `link` is the only attr we gate at this layer — its `href` is
   // user-supplied and reaches rendered HTML. Unsafe schemes
@@ -206,13 +273,10 @@ function walkMark(
     const href = attrs.href;
     if (href !== undefined && href !== null && href !== "") {
       if (typeof href !== "string" || !SAFE_HREF_RE.test(href.trim())) {
-        // `href` shape is unknown; describe by typeof so we don't
-        // tempt a `[object Object]` stringification in the error.
-        throw new RichtextValidationError(
-          "unsafe_href",
+        throw RichtextValidationError.unsafeHref({
           path,
-          `richtext link mark href (${typeof href}) is not a safe URL`,
-        );
+          hrefType: typeof href,
+        });
       }
     }
   }

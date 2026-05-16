@@ -24,18 +24,10 @@ export function walkRepeaterRows(
   return (value) => {
     if (value === null || value === undefined) return value;
     if (!Array.isArray(value)) {
-      throw new RepeaterValidationError(
-        "invalid_shape",
-        "<root>",
-        "repeater value must be an array of rows",
-      );
+      throw RepeaterValidationError.rootNotArray();
     }
     if (value.length > MAX_REPEATER_ROWS) {
-      throw new RepeaterValidationError(
-        "invalid_shape",
-        "<root>",
-        `repeater input exceeds ${MAX_REPEATER_ROWS} rows`,
-      );
+      throw RepeaterValidationError.tooManyRows({ maxRows: MAX_REPEATER_ROWS });
     }
     const rows: Record<string, unknown>[] = [];
     value.forEach((rawRow, i) => {
@@ -44,11 +36,7 @@ export function walkRepeaterRows(
         typeof rawRow !== "object" ||
         Array.isArray(rawRow)
       ) {
-        throw new RepeaterValidationError(
-          "invalid_shape",
-          `[${i}]`,
-          "repeater row must be a plain object",
-        );
+        throw RepeaterValidationError.rowNotPlainObject({ path: `[${i}]` });
       }
       const inputRow = rawRow as Record<string, unknown>;
       const next: Record<string, unknown> = {};
@@ -66,38 +54,101 @@ export function walkRepeaterRows(
       if (hasValue) rows.push(next);
     });
     if (options.min !== undefined && rows.length < options.min) {
-      throw new RepeaterValidationError(
-        "below_min",
-        "<root>",
-        `repeater requires at least ${options.min} non-empty row(s); got ${rows.length}`,
-      );
+      throw RepeaterValidationError.belowMin({
+        min: options.min,
+        rowCount: rows.length,
+      });
     }
     if (options.max !== undefined && rows.length > options.max) {
-      throw new RepeaterValidationError(
-        "above_max",
-        "<root>",
-        `repeater allows at most ${options.max} row(s); got ${rows.length}`,
-      );
+      throw RepeaterValidationError.aboveMax({
+        max: options.max,
+        rowCount: rows.length,
+      });
     }
     return rows;
   };
 }
 
+type RepeaterValidationReason =
+  | "invalid_shape"
+  | "below_min"
+  | "above_max"
+  | "subfield_invalid";
+
 export class RepeaterValidationError extends Error {
+  static {
+    RepeaterValidationError.prototype.name = "RepeaterValidationError";
+  }
+
   readonly path: string;
-  readonly reason:
-    | "invalid_shape"
-    | "below_min"
-    | "above_max"
-    | "subfield_invalid";
-  constructor(
-    reason: RepeaterValidationError["reason"],
+  readonly reason: RepeaterValidationReason;
+
+  private constructor(
+    reason: RepeaterValidationReason,
     path: string,
     message: string,
   ) {
     super(message);
     this.path = path;
     this.reason = reason;
+  }
+
+  static rootNotArray(): RepeaterValidationError {
+    return new RepeaterValidationError(
+      "invalid_shape",
+      "<root>",
+      "repeater value must be an array of rows",
+    );
+  }
+
+  static tooManyRows(ctx: { maxRows: number }): RepeaterValidationError {
+    return new RepeaterValidationError(
+      "invalid_shape",
+      "<root>",
+      `repeater input exceeds ${String(ctx.maxRows)} rows`,
+    );
+  }
+
+  static rowNotPlainObject(ctx: { path: string }): RepeaterValidationError {
+    return new RepeaterValidationError(
+      "invalid_shape",
+      ctx.path,
+      "repeater row must be a plain object",
+    );
+  }
+
+  static belowMin(ctx: {
+    min: number;
+    rowCount: number;
+  }): RepeaterValidationError {
+    return new RepeaterValidationError(
+      "below_min",
+      "<root>",
+      `repeater requires at least ${String(ctx.min)} non-empty row(s); got ${String(ctx.rowCount)}`,
+    );
+  }
+
+  static aboveMax(ctx: {
+    max: number;
+    rowCount: number;
+  }): RepeaterValidationError {
+    return new RepeaterValidationError(
+      "above_max",
+      "<root>",
+      `repeater allows at most ${String(ctx.max)} row(s); got ${String(ctx.rowCount)}`,
+    );
+  }
+
+  static subfieldInvalid(ctx: {
+    path: string;
+    fieldKey: string;
+    detail: string;
+  }): RepeaterValidationError {
+    return new RepeaterValidationError(
+      "subfield_invalid",
+      ctx.path,
+      `repeater subfield "${ctx.fieldKey}" rejected value: ${ctx.detail}`,
+    );
   }
 }
 
@@ -112,10 +163,10 @@ function runSubSanitize(
     return sanitize(value);
   } catch (cause) {
     const detail = cause instanceof Error ? cause.message : String(cause);
-    throw new RepeaterValidationError(
-      "subfield_invalid",
+    throw RepeaterValidationError.subfieldInvalid({
       path,
-      `repeater subfield "${field.key}" rejected value: ${detail}`,
-    );
+      fieldKey: field.key,
+      detail,
+    });
   }
 }

@@ -712,3 +712,62 @@ export class PluginDefinitionError extends Error {
     );
   }
 }
+
+export class DuplicateRegistrationError extends Error {
+  static {
+    DuplicateRegistrationError.prototype.name = "DuplicateRegistrationError";
+  }
+
+  readonly kind: string;
+  readonly identifier: string;
+
+  private constructor(kind: string, identifier: string) {
+    super(`${kind} "${identifier}" is already registered`);
+    this.kind = kind;
+    this.identifier = identifier;
+  }
+
+  static alreadyRegistered(ctx: {
+    kind: string;
+    identifier: string;
+  }): DuplicateRegistrationError {
+    return new DuplicateRegistrationError(ctx.kind, ctx.identifier);
+  }
+}
+
+export class DuplicateAdminSlugError extends Error {
+  static {
+    DuplicateAdminSlugError.prototype.name = "DuplicateAdminSlugError";
+  }
+
+  readonly firstPostType: string;
+  readonly secondPostType: string;
+  readonly slug: string;
+
+  private constructor(
+    firstPostType: string,
+    secondPostType: string,
+    slug: string,
+  ) {
+    super(
+      `Entry types "${firstPostType}" and "${secondPostType}" both resolve ` +
+        `to the admin slug "${slug}". Set \`labels.plural\` on one of them ` +
+        `to disambiguate.`,
+    );
+    this.firstPostType = firstPostType;
+    this.secondPostType = secondPostType;
+    this.slug = slug;
+  }
+
+  static slugCollision(ctx: {
+    firstPostType: string;
+    secondPostType: string;
+    slug: string;
+  }): DuplicateAdminSlugError {
+    return new DuplicateAdminSlugError(
+      ctx.firstPostType,
+      ctx.secondPostType,
+      ctx.slug,
+    );
+  }
+}

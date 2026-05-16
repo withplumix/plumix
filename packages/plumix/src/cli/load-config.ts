@@ -32,18 +32,11 @@ export async function loadConfig(
   try {
     imported = await jiti.import(configPath, { default: true });
   } catch (cause) {
-    throw new CliError(`Failed to load ${configPath}`, {
-      code: "CONFIG_LOAD_FAILED",
-      hint: "Check the file for syntax errors and ensure every import resolves.",
-      cause,
-    });
+    throw CliError.configLoadFailed({ configPath, cause });
   }
 
   if (!isPlumixConfig(imported)) {
-    throw new CliError(`Invalid config shape in ${configPath}`, {
-      code: "CONFIG_INVALID",
-      hint: "Default export must be the return value of plumix({ ... }) or defineConfig({ ... }).",
-    });
+    throw CliError.configInvalid({ configPath });
   }
 
   return { config: imported, configPath };
@@ -53,10 +46,7 @@ export function resolveConfigPath(cwd: string, explicit?: string): string {
   if (explicit) {
     const absolute = isAbsolute(explicit) ? explicit : resolve(cwd, explicit);
     if (!existsSync(absolute)) {
-      throw new CliError(`Config file not found: ${explicit}`, {
-        code: "CONFIG_NOT_FOUND",
-        hint: `Checked ${absolute}`,
-      });
+      throw CliError.configNotFoundExplicit({ explicit, absolute });
     }
     return absolute;
   }
@@ -66,10 +56,7 @@ export function resolveConfigPath(cwd: string, explicit?: string): string {
     if (existsSync(absolute)) return absolute;
   }
 
-  throw new CliError("No plumix.config.{ts,js,mjs} found", {
-    code: "CONFIG_NOT_FOUND",
-    hint: `Create plumix.config.ts in ${cwd} or pass --config <path>.`,
-  });
+  throw CliError.configNotFoundDefault({ cwd });
 }
 
 function isPlumixConfig(value: unknown): value is PlumixConfig {

@@ -127,6 +127,47 @@ export class SigV4Error extends Error {
   }
 }
 
+type PlumixRuntimeConfigErrorCode =
+  | "bindings_missing"
+  | "async_local_storage_missing";
+
+export class PlumixRuntimeConfigError extends Error {
+  static {
+    PlumixRuntimeConfigError.prototype.name = "PlumixRuntimeConfigError";
+  }
+
+  readonly code: PlumixRuntimeConfigErrorCode;
+  readonly missing: readonly string[];
+
+  private constructor(
+    code: PlumixRuntimeConfigErrorCode,
+    message: string,
+    missing: readonly string[],
+  ) {
+    super(message);
+    this.code = code;
+    this.missing = missing;
+  }
+
+  static bindingsMissing(ctx: {
+    missing: readonly string[];
+  }): PlumixRuntimeConfigError {
+    return new PlumixRuntimeConfigError(
+      "bindings_missing",
+      `@plumix/runtime-cloudflare: missing required env bindings: ${ctx.missing.join(", ")}. Declare them in wrangler.toml and ensure the names match the adapter config.`,
+      ctx.missing,
+    );
+  }
+
+  static asyncLocalStorageMissing(): PlumixRuntimeConfigError {
+    return new PlumixRuntimeConfigError(
+      "async_local_storage_missing",
+      '@plumix/runtime-cloudflare requires AsyncLocalStorage. Add `compatibility_flags = ["nodejs_compat"]` to wrangler.toml.',
+      [],
+    );
+  }
+}
+
 export class WranglerConfigError extends Error {
   static {
     WranglerConfigError.prototype.name = "WranglerConfigError";

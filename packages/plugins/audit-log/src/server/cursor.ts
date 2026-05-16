@@ -10,10 +10,26 @@
 // `CursorError` branch in the RPC layer and surfaces as a typed
 // `INVALID_CURSOR` to the caller.
 
+type CursorErrorCode = "empty" | "malformed";
+
 export class CursorError extends Error {
-  constructor(reason: string) {
-    super(reason);
-    this.name = "CursorError";
+  static {
+    CursorError.prototype.name = "CursorError";
+  }
+
+  readonly code: CursorErrorCode;
+
+  private constructor(code: CursorErrorCode, message: string) {
+    super(message);
+    this.code = code;
+  }
+
+  static empty(): CursorError {
+    return new CursorError("empty", "empty cursor");
+  }
+
+  static malformed(): CursorError {
+    return new CursorError("malformed", "malformed cursor");
   }
 }
 
@@ -28,26 +44,26 @@ export function encodeCursor(position: CursorPosition): string {
 }
 
 export function decodeCursor(encoded: string): CursorPosition {
-  if (encoded === "") throw new CursorError("empty cursor");
+  if (encoded === "") throw CursorError.empty();
   let raw: string;
   try {
     raw = fromUrlSafeBase64(encoded);
   } catch {
-    throw new CursorError("malformed cursor");
+    throw CursorError.malformed();
   }
   const parts = raw.split(".");
-  if (parts.length !== 2) throw new CursorError("malformed cursor");
+  if (parts.length !== 2) throw CursorError.malformed();
   const occurredAt = Number(parts[0]);
   const id = Number(parts[1]);
   if (!Number.isInteger(occurredAt) || !Number.isInteger(id)) {
-    throw new CursorError("malformed cursor");
+    throw CursorError.malformed();
   }
   // Audit rows have positive auto-increment ids and non-negative
   // occurredAt (unix epoch). A cursor outside that range is either
   // tampering or an upstream bug — treat as malformed so the RPC
   // returns a typed BAD_REQUEST instead of silently returning 0 rows.
   if (occurredAt < 0 || id <= 0) {
-    throw new CursorError("malformed cursor");
+    throw CursorError.malformed();
   }
   return { occurredAt, id };
 }

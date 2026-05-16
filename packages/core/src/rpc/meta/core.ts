@@ -59,10 +59,23 @@ export class MetaSanitizationError extends Error {
 
   readonly key: string;
   readonly reason: MetaSanitizationReason;
-  constructor(key: string, reason: MetaSanitizationReason) {
+
+  private constructor(key: string, reason: MetaSanitizationReason) {
     super(`meta key "${key}" failed sanitization: ${reason}`);
     this.key = key;
     this.reason = reason;
+  }
+
+  static notRegistered(ctx: { key: string }): MetaSanitizationError {
+    return new MetaSanitizationError(ctx.key, "not_registered");
+  }
+
+  static invalidValue(ctx: { key: string }): MetaSanitizationError {
+    return new MetaSanitizationError(ctx.key, "invalid_value");
+  }
+
+  static valueTooLarge(ctx: { key: string }): MetaSanitizationError {
+    return new MetaSanitizationError(ctx.key, "value_too_large");
   }
 }
 
@@ -103,7 +116,7 @@ export function sanitizeMetaInput(
   for (const [key, rawValue] of Object.entries(input)) {
     const field = findField(key);
     if (!field) {
-      throw new MetaSanitizationError(key, "not_registered");
+      throw MetaSanitizationError.notRegistered({ key });
     }
     if (rawValue === null || rawValue === undefined) {
       deletes.push(key);
@@ -146,7 +159,7 @@ function runSanitize(
       `[plumix] sanitize callback for meta key ${JSON.stringify(key)} threw:`,
       error,
     );
-    throw new MetaSanitizationError(key, "invalid_value");
+    throw MetaSanitizationError.invalidValue({ key });
   }
 }
 
@@ -201,7 +214,7 @@ export async function validateMetaReferences(
     if (target) {
       const registered = ctx.plugins.lookupAdapters.get(target.kind);
       if (!registered) {
-        throw new MetaSanitizationError(key, "invalid_value");
+        throw MetaSanitizationError.invalidValue({ key });
       }
       const ids = referenceIdsForValidation(
         key,
@@ -269,10 +282,9 @@ export async function validateMetaReferences(
                 `references missing id ${JSON.stringify(id)}`,
             );
           }
-          throw new MetaSanitizationError(
-            contribution.errorKey,
-            "invalid_value",
-          );
+          throw MetaSanitizationError.invalidValue({
+            key: contribution.errorKey,
+          });
         }
       }
       contribution.applyNormalize(rowsById);
@@ -313,7 +325,7 @@ function collectRepeaterReferences(
       if (subValue === undefined || subValue === null) continue;
       const registered = ctx.plugins.lookupAdapters.get(target.kind);
       if (!registered) {
-        throw new MetaSanitizationError(topKey, "invalid_value");
+        throw MetaSanitizationError.invalidValue({ key: topKey });
       }
       const ids = referenceIdsForValidation(
         topKey,
@@ -509,13 +521,13 @@ function referenceIdsForValidation(
 ): readonly string[] {
   if (target.multiple) {
     if (!Array.isArray(value)) {
-      throw new MetaSanitizationError(key, "invalid_value");
+      throw MetaSanitizationError.invalidValue({ key });
     }
     if (value.length > HARD_MULTI_REFERENCE_LIMIT) {
-      throw new MetaSanitizationError(key, "value_too_large");
+      throw MetaSanitizationError.valueTooLarge({ key });
     }
     if (max !== undefined && value.length > max) {
-      throw new MetaSanitizationError(key, "invalid_value");
+      throw MetaSanitizationError.invalidValue({ key });
     }
     if (target.valueShape === "object") {
       // Lenient on input: each item can be `"42"` (first-write
@@ -532,13 +544,13 @@ function referenceIdsForValidation(
           ids.push(id);
           continue;
         }
-        throw new MetaSanitizationError(key, "invalid_value");
+        throw MetaSanitizationError.invalidValue({ key });
       }
       return ids;
     }
     for (const item of value) {
       if (typeof item !== "string" || item === "") {
-        throw new MetaSanitizationError(key, "invalid_value");
+        throw MetaSanitizationError.invalidValue({ key });
       }
     }
     return value as readonly string[];
@@ -550,10 +562,10 @@ function referenceIdsForValidation(
     if (typeof value === "string" && value !== "") return [value];
     const id = extractStringId(value);
     if (id !== null && id !== "") return [id];
-    throw new MetaSanitizationError(key, "invalid_value");
+    throw MetaSanitizationError.invalidValue({ key });
   }
   if (typeof value !== "string") {
-    throw new MetaSanitizationError(key, "invalid_value");
+    throw MetaSanitizationError.invalidValue({ key });
   }
   return [value];
 }
@@ -960,7 +972,7 @@ function coerceString(key: string, value: unknown): string {
   if (typeof value === "string") return value;
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   if (typeof value === "boolean") return String(value);
-  throw new MetaSanitizationError(key, "invalid_value");
+  throw MetaSanitizationError.invalidValue({ key });
 }
 
 function coerceNumber(key: string, value: unknown): number {
@@ -970,20 +982,20 @@ function coerceNumber(key: string, value: unknown): number {
     // already sends `null` for those, but a direct RPC caller might send
     // "" — reject here so we don't silently coerce to 0 (`Number("") === 0`).
     if (value.trim() === "") {
-      throw new MetaSanitizationError(key, "invalid_value");
+      throw MetaSanitizationError.invalidValue({ key });
     }
     const parsed = Number(value);
     if (Number.isFinite(parsed)) return parsed;
   }
   if (typeof value === "boolean") return value ? 1 : 0;
-  throw new MetaSanitizationError(key, "invalid_value");
+  throw MetaSanitizationError.invalidValue({ key });
 }
 
 function coerceBoolean(key: string, value: unknown): boolean {
   if (typeof value === "boolean") return value;
   if (value === 1 || value === "1" || value === "true") return true;
   if (value === 0 || value === "0" || value === "false") return false;
-  throw new MetaSanitizationError(key, "invalid_value");
+  throw MetaSanitizationError.invalidValue({ key });
 }
 
 function coerceJson(key: string, value: unknown): unknown {
@@ -996,11 +1008,11 @@ function coerceJson(key: string, value: unknown): unknown {
   try {
     const encoded = JSON.stringify(value) as string | undefined;
     if (encoded === undefined) {
-      throw new MetaSanitizationError(key, "invalid_value");
+      throw MetaSanitizationError.invalidValue({ key });
     }
     return JSON.parse(encoded);
   } catch {
-    throw new MetaSanitizationError(key, "invalid_value");
+    throw MetaSanitizationError.invalidValue({ key });
   }
 }
 
@@ -1009,7 +1021,7 @@ function assertEncodedSize(key: string, value: unknown): void {
   if (encoded === undefined) return; // already caught in coerceJson
   const byteLength = new TextEncoder().encode(encoded).length;
   if (byteLength > MAX_META_VALUE_BYTES) {
-    throw new MetaSanitizationError(key, "value_too_large");
+    throw MetaSanitizationError.valueTooLarge({ key });
   }
 }
 

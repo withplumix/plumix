@@ -28,11 +28,11 @@ describe("resolveConfigPath", () => {
     expect(resolveConfigPath(dir, "custom.config.ts")).toBe(path);
   });
 
-  test("throws CONFIG_NOT_FOUND when no candidate exists", () => {
+  test("throws config_not_found_default when no candidate exists", () => {
     expect(() => resolveConfigPath(dir)).toThrow(/No plumix\.config/);
   });
 
-  test("throws CONFIG_NOT_FOUND for a missing explicit path", () => {
+  test("throws config_not_found_explicit for a missing explicit path", () => {
     expect(() => resolveConfigPath(dir, "absent.ts")).toThrow(
       /Config file not found/,
     );
@@ -50,25 +50,25 @@ describe("loadConfig", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  test("CONFIG_INVALID when default export lacks required fields", async () => {
+  test("config_invalid when default export lacks required fields", async () => {
     writeFileSync(
       join(dir, "plumix.config.mjs"),
       "export default { runtime: { name: 'x' } };",
       "utf8",
     );
     await expect(loadConfig(dir)).rejects.toMatchObject({
-      code: "CONFIG_INVALID",
+      code: "config_invalid",
     });
   });
 
-  test("CONFIG_LOAD_FAILED when the config throws on import", async () => {
+  test("config_load_failed when the config throws on import", async () => {
     writeFileSync(
       join(dir, "plumix.config.mjs"),
       "throw new Error('boom');",
       "utf8",
     );
     await expect(loadConfig(dir)).rejects.toMatchObject({
-      code: "CONFIG_LOAD_FAILED",
+      code: "config_load_failed",
     });
   });
 });
