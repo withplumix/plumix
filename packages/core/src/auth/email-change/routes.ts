@@ -1,5 +1,7 @@
 import type { AppContext } from "../../context/app.js";
 import type { PlumixApp } from "../../runtime/app.js";
+import type { EmailChangeErrorCode } from "./errors.js";
+import { loginErrorRedirect, redirectTo } from "../../runtime/http.js";
 import { EmailChangeError } from "./errors.js";
 import { verifyEmailChange } from "./verify.js";
 
@@ -62,15 +64,6 @@ export async function handleEmailChangeVerify(
   return redirectTo(`${LOGIN_PATH}?email_change_success=1`);
 }
 
-function redirectTo(
-  location: string,
-  extraHeaders: Record<string, string> = {},
-): Response {
-  const headers = new Headers({ Location: location, ...extraHeaders });
-  return new Response(null, { status: 302, headers });
-}
-
-function loginError(code: string): Response {
-  const params = new URLSearchParams({ email_change_error: code });
-  return redirectTo(`${LOGIN_PATH}?${params.toString()}`);
+function loginError(code: EmailChangeErrorCode): Response {
+  return loginErrorRedirect(LOGIN_PATH, "email_change_error", code);
 }

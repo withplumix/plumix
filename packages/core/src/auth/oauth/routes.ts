@@ -3,8 +3,8 @@ import type { PlumixApp } from "../../runtime/app.js";
 import type { OAuthErrorCode } from "./errors.js";
 import type { OAuthProviderClient } from "./types.js";
 import { users } from "../../db/schema/users.js";
-import { buildSessionCookie, isSecureRequest } from "../cookies.js";
-import { createSession, readRequestMeta } from "../sessions.js";
+import { loginErrorRedirect, redirectTo } from "../../runtime/http.js";
+import { mintSessionAndCookie } from "../sign-in.js";
 import { buildAuthorizeUrl, exchangeAndFetchProfile } from "./consumer.js";
 import { OAuthError } from "./errors.js";
 import { resolveOAuthUser } from "./signup.js";
@@ -126,11 +126,7 @@ export async function handleOAuthCallback(
       bootstrapAllowed: ctx.bootstrapAllowed,
     });
 
-    const { token } = await createSession(
-      ctx.db,
-      { userId: user.id, ...readRequestMeta(ctx.request) },
-      app.sessionPolicy,
-    );
+    const { cookieHeader } = await mintSessionAndCookie(ctx, app, user.id);
 
     await ctx.hooks.doAction("user:signed_in", user, {
       method: "oauth",
@@ -138,13 +134,7 @@ export async function handleOAuthCallback(
       firstSignIn: created,
     });
 
-    const cookie = buildSessionCookie(token, {
-      maxAgeSeconds: app.sessionPolicy.maxAgeSeconds,
-      secure: isSecureRequest(ctx.request),
-      sameSite: "Lax",
-    });
-
-    return redirectTo(ADMIN_PATH, { "set-cookie": cookie });
+    return redirectTo(ADMIN_PATH, { "set-cookie": cookieHeader });
   } catch (error) {
     if (error instanceof OAuthError) {
       ctx.logger.warn("oauth_callback_rejected", {
@@ -178,17 +168,8 @@ function oauthCallbackUrl(app: PlumixApp, providerKey: string): string {
   return `${app.origin}/_plumix/auth/oauth/${providerKey}/callback`;
 }
 
-function redirectTo(
-  location: string,
-  extraHeaders: Record<string, string> = {},
-): Response {
-  const headers = new Headers({ Location: location, ...extraHeaders });
-  return new Response(null, { status: 302, headers });
-}
-
 function loginError(code: OAuthErrorCode): Response {
-  const params = new URLSearchParams({ oauth_error: code });
   // Relative location — keeps the same scheme/host/port the browser
   // already used to reach us, no need to know the canonical origin.
-  return redirectTo(`${LOGIN_PATH}?${params.toString()}`);
+  return loginErrorRedirect(LOGIN_PATH, "oauth_error", code);
 }

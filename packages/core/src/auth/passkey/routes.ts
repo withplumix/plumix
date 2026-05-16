@@ -11,7 +11,6 @@ import { users } from "../../db/schema/users.js";
 import { jsonResponse } from "../../runtime/http.js";
 import { provisionUser } from "../bootstrap.js";
 import {
-  buildSessionCookie,
   buildSessionDeletionCookie,
   isSecureRequest,
   readSessionCookie,
@@ -21,12 +20,8 @@ import {
   InviteError,
   validateInviteToken,
 } from "../invite.js";
-import {
-  createSession,
-  invalidateSession,
-  readRequestMeta,
-  validateSession,
-} from "../sessions.js";
+import { invalidateSession, validateSession } from "../sessions.js";
+import { mintSessionAndCookie } from "../sign-in.js";
 import { beginAuthentication, finishAuthentication } from "./authenticate.js";
 import { PasskeyError } from "./errors.js";
 import {
@@ -118,18 +113,6 @@ async function parseJson<
 
 function invalidInput(): Response {
   return jsonResponse({ error: "invalid_input" }, { status: 400 });
-}
-
-function sessionCookieHeader(
-  ctx: AppContext,
-  app: PlumixApp,
-  token: string,
-): string {
-  return buildSessionCookie(token, {
-    maxAgeSeconds: app.sessionPolicy.maxAgeSeconds,
-    secure: isSecureRequest(ctx.request),
-    sameSite: "Lax",
-  });
 }
 
 function passkeyError(ctx: AppContext, error: PasskeyError): Response {
@@ -262,10 +245,10 @@ export async function handlePasskeyRegisterVerify(
       where: eq(users.id, verified.userId),
     });
 
-    const { token } = await createSession(
-      ctx.db,
-      { userId: verified.userId, ...readRequestMeta(ctx.request) },
-      app.sessionPolicy,
+    const { cookieHeader } = await mintSessionAndCookie(
+      ctx,
+      app,
+      verified.userId,
     );
 
     if (user) {
@@ -298,7 +281,7 @@ export async function handlePasskeyRegisterVerify(
       { userId: verified.userId },
       {
         status: 200,
-        headers: { "set-cookie": sessionCookieHeader(ctx, app, token) },
+        headers: { "set-cookie": cookieHeader },
       },
     );
   } catch (error) {
@@ -350,13 +333,10 @@ export async function handlePasskeyLoginVerify(
       .set({ counter: verified.newSignatureCounter })
       .where(eq(credentials.id, verified.credential.id));
 
-    const { token } = await createSession(
-      ctx.db,
-      {
-        userId: verified.credential.userId,
-        ...readRequestMeta(ctx.request),
-      },
-      app.sessionPolicy,
+    const { cookieHeader } = await mintSessionAndCookie(
+      ctx,
+      app,
+      verified.credential.userId,
     );
 
     const user = await ctx.db.query.users.findFirst({
@@ -373,7 +353,7 @@ export async function handlePasskeyLoginVerify(
       { userId: verified.credential.userId },
       {
         status: 200,
-        headers: { "set-cookie": sessionCookieHeader(ctx, app, token) },
+        headers: { "set-cookie": cookieHeader },
       },
     );
   } catch (error) {
@@ -502,11 +482,7 @@ export async function handleInviteRegisterVerify(
       maxPerUser: app.passkey.maxCredentialsPerUser,
     });
     await consumeInviteToken(ctx.db, invite.tokenHash);
-    const { token } = await createSession(
-      ctx.db,
-      { userId: user.id, ...readRequestMeta(ctx.request) },
-      app.sessionPolicy,
-    );
+    const { cookieHeader } = await mintSessionAndCookie(ctx, app, user.id);
     // User is fully enrolled (credential persisted, token consumed,
     // session created). Fire after the session exists so handlers that
     // hit the DB can rely on the user being in a stable post-invite
@@ -531,7 +507,7 @@ export async function handleInviteRegisterVerify(
       { userId: user.id },
       {
         status: 200,
-        headers: { "set-cookie": sessionCookieHeader(ctx, app, token) },
+        headers: { "set-cookie": cookieHeader },
       },
     );
   } catch (error) {
