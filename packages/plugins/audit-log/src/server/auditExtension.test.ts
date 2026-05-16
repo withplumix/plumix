@@ -16,9 +16,9 @@ import { describe, expect, test, vi } from "vitest";
 import type { NewAuditLogRow } from "../db/schema.js";
 import type { AuditLogStorage } from "../types.js";
 import type { AuditService } from "./auditService.js";
+import { registerAuditEvents } from "./auditEvents.js";
 import { createAuditExtension } from "./auditExtension.js";
 import { createAuditService } from "./auditService.js";
-import { registerHooks } from "./hooks.js";
 
 interface FakeServiceState {
   readonly service: AuditService;
@@ -262,7 +262,7 @@ describe("createAuditExtension — integration with the real AuditService", () =
         hooks.addAction(name as never, fn as never, options);
       },
     } as unknown as PluginSetupContext;
-    registerHooks(setupCtx, service);
+    registerAuditEvents(setupCtx, service);
 
     const { ctx, flush } = realServiceCtx(adminUser);
 

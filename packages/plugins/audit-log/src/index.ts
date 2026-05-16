@@ -5,9 +5,9 @@ import type { AuditLogRetentionConfig } from "./server/retention.js";
 import type { AuditLogStorage } from "./types.js";
 import * as schema from "./db/schema.js";
 import { createAuditLogRouter } from "./rpc.js";
+import { registerAuditEvents } from "./server/auditEvents.js";
 import { createAuditExtension } from "./server/auditExtension.js";
 import { createAuditService } from "./server/auditService.js";
-import { registerHooks } from "./server/hooks.js";
 import {
   assertValidRetention,
   DEFAULT_PURGE_CRON,
@@ -137,7 +137,7 @@ export function auditLog(options: AuditLogPluginOptions = {}) {
 
       ctx.registerRpcRouter(router);
 
-      registerHooks(ctx, service);
+      registerAuditEvents(ctx, service);
 
       ctx.registerAdminPage({
         path: "/audit-log",
