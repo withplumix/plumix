@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 import type { AuditLogFilter, AuditLogRowDTO, DateRangePreset } from "./rpc.js";
 import { presetToRange, useAuditLogList } from "./rpc.js";
@@ -45,6 +45,40 @@ const EMPTY_FILTERS: FilterState = {
   eventPrefix: "",
 };
 
+// Filter state in `window.location.search` enables reload + shared-link
+// hydration. Empty fields are skipped so EMPTY_FILTERS produces a clean URL
+// instead of `?preset=all&actorId=&...`.
+function filtersToSearchParams(state: FilterState): URLSearchParams {
+  const params = new URLSearchParams();
+  if (state.preset !== "all") params.set("preset", state.preset);
+  if (state.actorId !== "") params.set("actorId", state.actorId);
+  if (state.subjectType !== "") params.set("subjectType", state.subjectType);
+  if (state.eventPrefix !== "") params.set("eventPrefix", state.eventPrefix);
+  return params;
+}
+
+function parsePreset(raw: string | null): FilterState["preset"] {
+  switch (raw) {
+    case "today":
+    case "last7":
+    case "last30":
+    case "custom":
+      return raw;
+    default:
+      return "all";
+  }
+}
+
+function filtersFromSearchParams(search: string): FilterState {
+  const params = new URLSearchParams(search);
+  return {
+    preset: parsePreset(params.get("preset")),
+    actorId: params.get("actorId") ?? "",
+    subjectType: params.get("subjectType") ?? "",
+    eventPrefix: params.get("eventPrefix") ?? "",
+  };
+}
+
 function filterToRpcInput(state: FilterState): AuditLogFilter {
   const out: {
     actorId?: number;
@@ -69,8 +103,50 @@ function filterToRpcInput(state: FilterState): AuditLogFilter {
   return out;
 }
 
+// `popstate` covers browser back/forward; for our own writes we dispatch
+// the event explicitly after `replaceState` since neither push/replace fire
+// it natively. Module-scoped so `useSyncExternalStore` sees a stable ref.
+function subscribeToHistory(onChange: () => void): () => void {
+  window.addEventListener("popstate", onChange);
+  return () => {
+    window.removeEventListener("popstate", onChange);
+  };
+}
+
+function readSearchSnapshot(): string {
+  return window.location.search;
+}
+
+function ssrSearchSnapshot(): string {
+  return "";
+}
+
+function useFilterUrlState(): readonly [
+  FilterState,
+  (next: FilterState) => void,
+] {
+  const search = useSyncExternalStore(
+    subscribeToHistory,
+    readSearchSnapshot,
+    ssrSearchSnapshot,
+  );
+  const filters = filtersFromSearchParams(search);
+
+  const setFilters = useCallback((next: FilterState) => {
+    const params = filtersToSearchParams(next);
+    const query = params.toString();
+    const nextUrl = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
+    // `replaceState` not `pushState` — each keystroke / select-change
+    // shouldn't pollute the back-stack with one entry per filter combo.
+    window.history.replaceState(window.history.state, "", nextUrl);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }, []);
+
+  return [filters, setFilters] as const;
+}
+
 export function AuditLogShell(): ReactNode {
-  const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
+  const [filters, setFilters] = useFilterUrlState();
   const list = useAuditLogList(filterToRpcInput(filters));
 
   const rows = list.data?.pages.flatMap((p) => p.rows) ?? [];
@@ -81,7 +157,9 @@ export function AuditLogShell(): ReactNode {
       <FilterRow
         filters={filters}
         onChange={setFilters}
-        onReset={() => setFilters(EMPTY_FILTERS)}
+        onReset={() => {
+          setFilters(EMPTY_FILTERS);
+        }}
       />
       {list.isLoading ? (
         <div data-testid="audit-log-loading" />

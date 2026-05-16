@@ -80,6 +80,10 @@ describe("AuditLogShell", () => {
   beforeEach(() => {
     fetchMock = vi.fn();
     calls = [];
+    // URL-state lives in window.location.search; isolate each test from
+    // bleed-over by resetting the URL to a clean baseline path. Without
+    // this, a filter set in one test would re-hydrate in the next.
+    window.history.replaceState(null, "", "/pages/audit-log");
   });
 
   afterEach(() => {
@@ -225,6 +229,68 @@ describe("AuditLogShell", () => {
 
     await waitFor(() => {
       expect(lastJson()?.subjectType).toBeUndefined();
+    });
+  });
+
+  test("URL search params hydrate the initial filter state on mount", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/pages/audit-log?eventPrefix=user%3A&actorId=7&subjectType=user&preset=last7",
+    );
+    mockListPages([{ rows: [], nextCursor: null }]);
+    renderShell();
+
+    await screen.findByTestId("audit-log-empty");
+
+    const json = lastJson();
+    expect(json).toMatchObject({
+      eventPrefix: "user:",
+      actorId: 7,
+      subjectType: "user",
+    });
+    // The preset translates to an occurredAfter epoch — we don't pin the
+    // exact value (depends on `now`), but it must be set, which proves the
+    // preset survived the URL round-trip.
+    expect(typeof json?.occurredAfter).toBe("number");
+
+    expect(
+      screen.getByTestId<HTMLSelectElement>("audit-log-filter-event-prefix")
+        .value,
+    ).toBe("user:");
+    expect(
+      screen.getByTestId<HTMLInputElement>("audit-log-filter-actor").value,
+    ).toBe("7");
+  });
+
+  test("changing a filter updates the URL search params", async () => {
+    mockListPages([{ rows: [], nextCursor: null }]);
+    renderShell();
+    await screen.findByTestId("audit-log-empty");
+
+    fireEvent.change(screen.getByTestId("audit-log-filter-event-prefix"), {
+      target: { value: "user:" },
+    });
+
+    await waitFor(() => {
+      expect(window.location.search).toContain("eventPrefix=user");
+    });
+  });
+
+  test("reset clears the URL search params", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/pages/audit-log?eventPrefix=user%3A",
+    );
+    mockListPages([{ rows: [], nextCursor: null }]);
+    renderShell();
+    await screen.findByTestId("audit-log-empty");
+
+    fireEvent.click(screen.getByTestId("audit-log-filter-reset"));
+
+    await waitFor(() => {
+      expect(window.location.search).toBe("");
     });
   });
 });

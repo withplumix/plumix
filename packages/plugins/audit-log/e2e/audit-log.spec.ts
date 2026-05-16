@@ -117,4 +117,31 @@ test.describe
       .locator("[data-testid^='audit-log-row-']");
     await expect(rows).toHaveCount(3);
   });
+
+  test("filter state survives a page reload via URL params", async ({
+    page,
+  }) => {
+    await page.goto("pages/audit-log");
+    await page
+      .getByTestId("audit-log-filter-event-prefix")
+      .selectOption("user:");
+    const filtered = page
+      .getByTestId("audit-log-table")
+      .locator("[data-testid^='audit-log-row-']");
+    await expect(filtered).toHaveCount(2);
+
+    // The URL should carry the filter so the next render can rebuild it.
+    await expect(page).toHaveURL(/eventPrefix=user/);
+
+    await page.reload();
+
+    // Same filter applied + same narrowed list. No re-selection needed.
+    await expect(page.getByTestId("audit-log-filter-event-prefix")).toHaveValue(
+      "user:",
+    );
+    const afterReload = page
+      .getByTestId("audit-log-table")
+      .locator("[data-testid^='audit-log-row-']");
+    await expect(afterReload).toHaveCount(2);
+  });
 });
