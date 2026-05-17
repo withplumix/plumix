@@ -153,6 +153,10 @@ async function resolveSpec(
     component,
     registeredBy,
     legacyAliases: spec.legacyAliases,
+    keyboardShortcuts: spec.keyboardShortcuts,
+    markdownShortcuts: spec.markdownShortcuts,
+    parsePaste: spec.parsePaste,
+    transforms: spec.transforms,
   });
 }
 
@@ -183,6 +187,18 @@ function indexAliases(spec: BlockSpec, aliases: Map<string, string>): void {
     aliases.set(alias, spec.name);
   }
 }
+
+/**
+ * Empty `BlockRegistry` for callers that need to satisfy the shape
+ * without paying for the async merge — typically test harnesses that
+ * don't exercise the block path. Frozen + shared; safe to reuse.
+ */
+export const EMPTY_BLOCK_REGISTRY: BlockRegistry = Object.freeze({
+  get: () => undefined,
+  has: () => false,
+  size: 0,
+  [Symbol.iterator]: () => new Map().entries(),
+});
 
 async function unwrapDefault<T>(ref: LazyRef<T>): Promise<T> {
   const resolved = await ref();

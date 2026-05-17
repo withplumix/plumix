@@ -3,10 +3,12 @@ import { RPCHandler } from "@orpc/server/fetch";
 import type {
   BlockComponent,
   BlockRegistry,
+  HtmlAllowlist,
   MarkComponent,
   MarkRegistry,
 } from "@plumix/blocks";
 import {
+  buildHtmlAllowlist,
   coreBlocks,
   coreMarks,
   mergeBlockRegistry,
@@ -129,6 +131,14 @@ export interface PlumixApp {
    * resolution model as `app.blocks`.
    */
   readonly marks: MarkRegistry;
+  /**
+   * Sanitizer allowlist `core/html` reads at render time. Built once
+   * from the intrinsic baseline + `config.blocks.htmlAllowlist`.
+   * Themes thread this through `<EntryContent htmlAllowlist={...}>`
+   * so operator-extended tags / attrs actually reach the rendered
+   * output rather than being silently swapped with the baseline.
+   */
+  readonly htmlAllowlist: HtmlAllowlist;
 }
 
 export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
@@ -235,6 +245,11 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     themeId: markThemeId,
   });
 
+  const htmlAllowlist = buildHtmlAllowlist(
+    blocks,
+    config.blocks?.htmlAllowlist,
+  );
+
   return {
     config,
     hooks,
@@ -254,6 +269,7 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     scheduledTasks: registry.scheduledTasks,
     blocks,
     marks,
+    htmlAllowlist,
   };
 }
 

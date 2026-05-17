@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { createElement, Fragment } from "react";
 
+import type { HtmlAllowlist } from "./html/sanitize.js";
 import type { MarkRegistry } from "./marks/types.js";
 import type {
   BlockContext,
@@ -8,6 +9,7 @@ import type {
   TiptapMark,
   TiptapNode,
 } from "./types.js";
+import { HtmlAllowlistProvider } from "./html/context.js";
 
 export interface EntryContentProps {
   readonly content: TiptapNode | readonly TiptapNode[] | null | undefined;
@@ -22,6 +24,15 @@ export interface EntryContentProps {
    */
   readonly markRegistry: MarkRegistry;
   readonly context: BlockContext;
+  /**
+   * DOMPurify allowlist consumed by `core/html` (and any future
+   * block that opts into sanitized raw output). When supplied the
+   * walker wraps its render tree in `<HtmlAllowlistProvider>` so the
+   * html block reads the operator-configured allowlist rather than
+   * the baseline default. Themes / SSR shells thread `app.htmlAllowlist`
+   * through here.
+   */
+  readonly htmlAllowlist?: HtmlAllowlist;
 }
 
 /**
@@ -44,16 +55,19 @@ export function EntryContent({
   registry,
   markRegistry,
   context,
+  htmlAllowlist,
 }: EntryContentProps): ReactNode {
   if (!content) return null;
   const nodes = Array.isArray(content) ? content : [content];
-  return renderNodes(
+  const tree = renderNodes(
     nodes,
     registry,
     markRegistry,
     context,
     devWarnState(registry),
   );
+  if (htmlAllowlist === undefined) return tree;
+  return createElement(HtmlAllowlistProvider, { value: htmlAllowlist }, tree);
 }
 
 interface DevWarnState {

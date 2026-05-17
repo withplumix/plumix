@@ -1,3 +1,5 @@
+import type { HtmlAllowlistOverride } from "@plumix/blocks";
+
 import type { PlumixAuthConfig } from "./auth/config.js";
 import type { Mailer } from "./auth/mailer/types.js";
 import type { PluginDescriptor } from "./plugin/define.js";
@@ -43,6 +45,14 @@ export interface PlumixConfigInput {
   readonly mailer?: Mailer;
   readonly themes?: readonly ThemeDescriptor[];
   readonly plugins?: readonly AnyPluginDescriptor[];
+  /**
+   * Block-system configuration. Today only exposes the operator-
+   * configurable `core/html` allowlist override; future block-level
+   * settings (per-block disable, etc.) slot in here too.
+   */
+  readonly blocks?: {
+    readonly htmlAllowlist?: HtmlAllowlistOverride;
+  };
 }
 
 export interface PlumixConfig {
@@ -55,6 +65,9 @@ export interface PlumixConfig {
   readonly mailer?: Mailer;
   readonly themes: readonly ThemeDescriptor[];
   readonly plugins: readonly AnyPluginDescriptor[];
+  readonly blocks?: {
+    readonly htmlAllowlist?: HtmlAllowlistOverride;
+  };
 }
 
 export function plumix(config: PlumixConfigInput): PlumixConfig {
@@ -78,6 +91,7 @@ export function plumix(config: PlumixConfigInput): PlumixConfig {
     mailer: config.mailer,
     themes: config.themes ?? [],
     plugins: config.plugins ?? [],
+    blocks: config.blocks,
   };
 }
 

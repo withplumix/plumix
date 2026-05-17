@@ -6,7 +6,10 @@ import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { isEmptyMetaPatch } from "../../meta/core.js";
 import { assertExpectedLiveUpdatedAt } from "./concurrency.js";
-import { assertContentWithinByteCap } from "./content.js";
+import {
+  assertContentValidAgainstRegistries,
+  assertContentWithinByteCap,
+} from "./content.js";
 import { stripUndefined } from "./helpers.js";
 import {
   applyEntryBeforeSave,
@@ -139,6 +142,11 @@ export const update = base
     );
 
     assertContentWithinByteCap(filtered.content, errors);
+    assertContentValidAgainstRegistries(
+      filtered.content,
+      { blocks: context.blocks, marks: context.marks },
+      errors,
+    );
 
     const existing = await context.db.query.entries.findFirst({
       where: eq(entries.id, filtered.id),

@@ -108,6 +108,17 @@ async function resolveSpec(
   return Object.freeze({ ...spec, component, registeredBy });
 }
 
+/**
+ * Empty `MarkRegistry` for callers that need to satisfy the shape
+ * without paying for the async merge. Mirrors `EMPTY_BLOCK_REGISTRY`.
+ */
+export const EMPTY_MARK_REGISTRY: MarkRegistry = Object.freeze({
+  get: () => undefined,
+  has: () => false,
+  size: 0,
+  [Symbol.iterator]: () => new Map().entries(),
+});
+
 async function unwrapDefault<T>(ref: LazyRef<T>): Promise<T> {
   const resolved = await ref();
   if (

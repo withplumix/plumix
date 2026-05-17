@@ -1,60 +1,88 @@
 import sanitize from "sanitize-html";
 
 /**
- * Baseline `core/html` sanitizer. `sanitize-html` is pure-JS
- * (htmlparser2) so it runs on Workers as well as the admin browser.
- * The operator-configurable allowlist lands in #312; this function
- * becomes the default for that config rather than the only option.
+ * Shape consumed by `sanitizeHtml`. Operators extend / replace it
+ * via `defineApp({ blocks: { htmlAllowlist: {...} } })`; the schema-
+ * derived builder produces the same shape from the registry.
  */
-export function sanitizeHtml(raw: unknown): string {
+export interface HtmlAllowlist {
+  readonly allowedTags: readonly string[];
+  readonly allowedAttributes: Readonly<Record<string, readonly string[]>>;
+  readonly allowedSchemes?: readonly string[];
+  readonly allowProtocolRelative?: boolean;
+}
+
+/**
+ * Baseline allowlist — the set every plumix deploy gets when the
+ * operator doesn't override and the schema-derived builder isn't
+ * wired through. `sanitize-html` ships on workers (pure-JS
+ * htmlparser2) so this runs in both admin and SSR.
+ *
+ * Anchors deliberately omit `target` / `rel` (reverse-tabnabbing
+ * surface). Span has no `data-*` wildcard (framework-binding
+ * injection surface). `data:` and `javascript:` schemes blocked.
+ */
+export const BASELINE_HTML_ALLOWLIST: HtmlAllowlist = Object.freeze({
+  allowedTags: [
+    "p",
+    "h2",
+    "h3",
+    "h4",
+    "blockquote",
+    "pre",
+    "code",
+    "hr",
+    "br",
+    "ul",
+    "ol",
+    "li",
+    "figure",
+    "figcaption",
+    "strong",
+    "em",
+    "s",
+    "u",
+    "mark",
+    "sub",
+    "sup",
+    "kbd",
+    "small",
+    "cite",
+    "abbr",
+    "a",
+    "span",
+  ],
+  allowedAttributes: {
+    a: ["href", "title"],
+    abbr: ["title"],
+    code: ["data-language"],
+  },
+  allowedSchemes: ["http", "https", "mailto", "tel"],
+  allowProtocolRelative: false,
+});
+
+/**
+ * Sanitize an HTML string against an allowlist. `raw` non-string
+ * input returns `""`; empty string passes through unchanged. The
+ * allowlist defaults to the baseline so callers that haven't wired
+ * the registry-derived builder still get a safe-by-default render.
+ */
+export function sanitizeHtml(
+  raw: unknown,
+  allowlist: HtmlAllowlist = BASELINE_HTML_ALLOWLIST,
+): string {
   if (typeof raw !== "string" || raw === "") return "";
   return sanitize(raw, {
-    allowedTags: [
-      "p",
-      "h2",
-      "h3",
-      "h4",
-      "blockquote",
-      "pre",
-      "code",
-      "hr",
-      "br",
-      "ul",
-      "ol",
-      "li",
-      "figure",
-      "figcaption",
-      "strong",
-      "em",
-      "s",
-      "u",
-      "mark",
-      "sub",
-      "sup",
-      "kbd",
-      "small",
-      "cite",
-      "abbr",
-      "a",
-      "span",
-    ],
-    allowedAttributes: {
-      // `target` / `rel` deliberately omitted — allowing `target="_blank"`
-      // without forcing `rel="noopener noreferrer"` opens reverse-tabnabbing
-      // on older WebKit and embedded webviews. Authored anchors render
-      // same-tab; the operator-configurable allowlist (#312) can add the
-      // rel-rewriting transform when target is genuinely needed.
-      a: ["href", "title"],
-      abbr: ["title"],
-      code: ["data-language"],
-      // No `data-*` wildcard — a JS framework that treats data-attrs as
-      // event bindings (Stimulus, Alpine, htmx hx-on:* aliases) would
-      // turn authored HTML into a behavior-injection vector. Add specific
-      // attrs explicitly when the editor actually emits them.
-    },
-    // Override default (which includes `ftp`); drop protocol-relative
-    // so `//evil.example` can't smuggle a scheme past the allowlist.
-    allowedSchemes: ["http", "https", "mailto", "tel"],
-    allowProtocolRelative: false,
+    allowedTags: [...allowlist.allowedTags],
+    allowedAttributes: Object.fromEntries(
+      Object.entries(allowlist.allowedAttributes).map(([tag, attrs]) => [
+        tag,
+        [...attrs],
+      ]),
+    ),
+    allowedSchemes: allowlist.allowedSchemes
+      ? [...allowlist.allowedSchemes]
+      : ["http", "https", "mailto", "tel"],
+    allowProtocolRelative: allowlist.allowProtocolRelative ?? false,
   });
 }
