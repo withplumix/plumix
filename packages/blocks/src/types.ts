@@ -123,6 +123,11 @@ export interface BlockSpec<Attrs = Readonly<Record<string, unknown>>> {
    * attrs are extracted.
    */
   readonly parsePaste?: readonly ParsePasteRule[];
+  /**
+   * Declarative block transforms. Surfaces in the BlockMenu's
+   * "Transform to…" submenu via `resolveTransformTargets`.
+   */
+  readonly transforms?: BlockTransforms;
 }
 
 /**
@@ -150,6 +155,44 @@ export interface BlockMarkdownShortcut {
   readonly pattern: string;
   readonly attrs?: Readonly<Record<string, unknown>>;
   readonly mode?: BlockShortcutMode;
+}
+
+/**
+ * Declarative transforms between blocks. The BlockMenu's "Transform
+ * to…" submenu reads each registered block's `transforms.to` plus the
+ * symmetric entries from every other block whose `transforms.from`
+ * names the current block — both sides build the same target list
+ * regardless of which side declared it.
+ *
+ * `priority` orders the resulting entries when the same target name
+ * surfaces twice (e.g. core/paragraph → core/heading vs core/heading
+ * → core/paragraph from the other side); higher priority wins.
+ */
+export interface BlockTransformTo {
+  readonly target: string;
+  readonly mapAttrs?: (
+    currentAttrs: Readonly<Record<string, unknown>>,
+  ) => Readonly<Record<string, unknown>>;
+  /**
+   * Dispatch mode for the transform — same discriminator as
+   * `BlockShortcutMode`. `setNode` (default) for textblock-to-textblock,
+   * `wrap` for list-style containers, `leaf` for atom inserts.
+   */
+  readonly mode?: BlockShortcutMode;
+}
+
+export interface BlockTransformFrom {
+  readonly source: string;
+  readonly mapAttrs?: (
+    sourceAttrs: Readonly<Record<string, unknown>>,
+  ) => Readonly<Record<string, unknown>>;
+  readonly mode?: BlockShortcutMode;
+}
+
+export interface BlockTransforms {
+  readonly priority?: number;
+  readonly to?: readonly BlockTransformTo[];
+  readonly from?: readonly BlockTransformFrom[];
 }
 
 export interface ParsePasteRule {

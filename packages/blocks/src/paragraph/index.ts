@@ -15,6 +15,16 @@ export const paragraphBlock = defineBlock({
   legacyAliases: ["paragraph"],
   keyboardShortcuts: [{ shortcut: "Mod-Alt-0" }],
   parsePaste: [{ selector: "p" }],
+  transforms: {
+    priority: 100,
+    to: [
+      { target: "core/heading", mapAttrs: () => ({ level: 2 }) },
+      { target: "core/quote" },
+      { target: "core/code" },
+      { target: "core/list", mode: "wrap" },
+      { target: "core/list-ordered", mode: "wrap" },
+    ],
+  },
   schema: () => import("./schema.js").then((m) => m.paragraphSchema),
   component: () => import("./Component.js").then((m) => m.ParagraphComponent),
 });

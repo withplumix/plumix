@@ -10,6 +10,7 @@ export { defineBlock } from "./define-block.js";
 export { BlockRegistrationError } from "./errors.js";
 export { mergeBlockRegistry } from "./registry.js";
 export type { MergeBlockRegistryInput } from "./registry.js";
+export { resolveTransformTargets } from "./transforms.js";
 export { EntryContent } from "./walker.js";
 export type { EntryContentProps } from "./walker.js";
 export type {
@@ -22,6 +23,9 @@ export type {
   BlockMarkdownShortcut,
   BlockShortcutMode,
   BlockSpec,
+  BlockTransformFrom,
+  BlockTransformTo,
+  BlockTransforms,
   LazyRef,
   ParsePasteRule,
   ResolvedBlockSpec,

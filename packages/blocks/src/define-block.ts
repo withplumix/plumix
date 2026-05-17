@@ -30,6 +30,15 @@ export function defineBlock<Attrs = Readonly<Record<string, unknown>>>(
       });
     }
   }
+  if (spec.transforms?.priority !== undefined) {
+    const p = spec.transforms.priority;
+    if (!Number.isInteger(p) || p < 0) {
+      throw BlockRegistrationError.invalidTransformPriority({
+        name: spec.name,
+        priority: p,
+      });
+    }
+  }
 
   const attributes = spec.attributes
     ? Object.freeze(
@@ -58,6 +67,13 @@ export function defineBlock<Attrs = Readonly<Record<string, unknown>>>(
     keyboardShortcuts: freezeArrayOfObjects(spec.keyboardShortcuts),
     markdownShortcuts: freezeArrayOfObjects(spec.markdownShortcuts),
     parsePaste: freezeArrayOfObjects(spec.parsePaste),
+    transforms: spec.transforms
+      ? Object.freeze({
+          priority: spec.transforms.priority,
+          to: freezeArrayOfObjects(spec.transforms.to),
+          from: freezeArrayOfObjects(spec.transforms.from),
+        })
+      : undefined,
   });
 }
 

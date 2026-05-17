@@ -1,6 +1,7 @@
 type BlockRegistrationErrorCode =
   | "invalid_name_pattern"
   | "invalid_keyboard_shortcut"
+  | "invalid_transform_priority"
   | "duplicate_name"
   | "core_block_collision"
   | "theme_override_unknown_name"
@@ -17,6 +18,7 @@ interface BlockRegistrationErrorFields {
   attributeName?: string;
   attributeType?: string;
   keyboardShortcut?: string;
+  priority?: number;
 }
 
 const NAME_PATTERN = "^[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$";
@@ -36,6 +38,7 @@ export class BlockRegistrationError extends Error {
   readonly attributeName: string | undefined;
   readonly attributeType: string | undefined;
   readonly keyboardShortcut: string | undefined;
+  readonly priority: number | undefined;
 
   private constructor(
     code: BlockRegistrationErrorCode,
@@ -53,6 +56,7 @@ export class BlockRegistrationError extends Error {
     this.attributeName = fields.attributeName;
     this.attributeType = fields.attributeType;
     this.keyboardShortcut = fields.keyboardShortcut;
+    this.priority = fields.priority;
   }
 
   static invalidNamePattern(ctx: {
@@ -134,6 +138,20 @@ export class BlockRegistrationError extends Error {
         `Cmd, Ctrl, Meta, Opt) followed by a single alphanumeric key, ` +
         `each joined by "-". Examples: "Mod-b", "Mod-Alt-2".`,
       { blockName: ctx.name, keyboardShortcut: ctx.keyboardShortcut },
+    );
+  }
+
+  static invalidTransformPriority(ctx: {
+    name: string;
+    priority: number;
+  }): BlockRegistrationError {
+    return new BlockRegistrationError(
+      "invalid_transform_priority",
+      `Block "${ctx.name}" declared transforms.priority = ${ctx.priority}. ` +
+        `Priority must be a non-negative integer (the BlockMenu's ` +
+        `Transform-to submenu orders entries highest-first, so the value ` +
+        `needs a stable, finite, integer ordering).`,
+      { blockName: ctx.name, priority: ctx.priority },
     );
   }
 

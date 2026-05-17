@@ -9,6 +9,10 @@ export const listOrderedBlock = defineBlock({
   keyboardShortcuts: [{ shortcut: "Mod-Alt-O", mode: "wrap" }],
   markdownShortcuts: [{ pattern: "1. ", mode: "wrap" }],
   parsePaste: [{ selector: "ol" }],
+  transforms: {
+    priority: 20,
+    to: [{ target: "core/paragraph" }],
+  },
   schema: () => import("./schema.js").then((m) => m.listOrderedSchema),
   component: () => import("./Component.js").then((m) => m.ListOrderedComponent),
 });
