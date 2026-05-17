@@ -9,6 +9,7 @@ import type {
   HookOptions,
 } from "./types.js";
 import { hookStore } from "../context/stores.js";
+import { HookExecutionError } from "./errors.js";
 import { DEFAULT_HOOK_PRIORITY } from "./types.js";
 
 interface FilterEntry {
@@ -31,6 +32,19 @@ export interface HookExecutor {
     input: FilterInput<TName>,
     ...rest: FilterRest<TName>
   ): Promise<FilterInput<TName>>;
+  /**
+   * Synchronous filter pipeline for hooks that fire inside React render
+   * (e.g. `block:before_render`). Skips the structured-clone step the
+   * async path performs — React elements are not structured-cloneable —
+   * so handlers must treat the value as read-only by convention. Throws
+   * if a registered handler returns a Promise so async-in-sync misuse
+   * surfaces immediately instead of leaking a rejected value downstream.
+   */
+  applyFilterSync<TName extends FilterName>(
+    name: TName,
+    input: FilterInput<TName>,
+    ...rest: FilterRest<TName>
+  ): FilterInput<TName>;
   doAction<TName extends ActionName>(
     name: TName,
     ...args: ActionArgs<TName>
@@ -115,6 +129,26 @@ export class HookRegistry implements HookExecutor {
     return current as FilterInput<TName>;
   }
 
+  applyFilterSync<TName extends FilterName>(
+    name: TName,
+    input: FilterInput<TName>,
+    ...rest: FilterRest<TName>
+  ): FilterInput<TName> {
+    const entries = this.#filters.get(name);
+    if (!entries || entries.length === 0) return input;
+
+    const sorted = sortEntries(entries);
+    let current: unknown = input;
+    for (const entry of sorted) {
+      const next = entry.fn(current, ...(rest as unknown[]));
+      if (isPromiseLike(next)) {
+        throw HookExecutionError.asyncHandlerInSyncFilter({ name });
+      }
+      current = next;
+    }
+    return current as FilterInput<TName>;
+  }
+
   async doAction<TName extends ActionName>(
     name: TName,
     ...args: ActionArgs<TName>
@@ -144,6 +178,14 @@ export class HookRegistry implements HookExecutor {
       }
     }
   }
+}
+
+function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { then?: unknown }).then === "function"
+  );
 }
 
 function sortEntries<T extends { priority: number; insertOrder: number }>(

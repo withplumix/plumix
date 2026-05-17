@@ -39,6 +39,12 @@ export function defineBlock<Attrs = Readonly<Record<string, unknown>>>(
       });
     }
   }
+  if (spec.client) {
+    validateClientIslandField(spec.name, "src", spec.client.src, true);
+    if (spec.client.export !== undefined) {
+      validateClientIslandField(spec.name, "export", spec.client.export, false);
+    }
+  }
 
   const attributes = spec.attributes
     ? Object.freeze(
@@ -75,6 +81,46 @@ export function defineBlock<Attrs = Readonly<Record<string, unknown>>>(
         })
       : undefined,
   });
+}
+
+// Block characters that could break out of a JSON-embedded
+// `<script type="module">` body emitted by `<PlumixIslandBootstrap>`:
+// - `<` / `>` / `&` close out of `</script>`, `<!--`, HTML entities;
+// - C0 controls and DEL (`\x00`-`\x1f`, `\x7f`) close out of a JS string;
+// - U+2028 / U+2029 are line terminators in JS source even though JSON
+//   leaves them unescaped — historically the prime XSS-via-JSON vector.
+const CLIENT_FIELD_FORBIDDEN_CHARS =
+  // eslint-disable-next-line no-control-regex, no-misleading-character-class
+  /[<>&\u0000-\u001f\u007f\u2028\u2029]/;
+const DANGEROUS_URL_SCHEME = /^\s*(javascript|data|vbscript):/i;
+
+function validateClientIslandField(
+  blockName: string,
+  field: "src" | "export",
+  value: string,
+  isUrl: boolean,
+): void {
+  if (typeof value !== "string" || value.length === 0) {
+    throw BlockRegistrationError.invalidClientIsland({
+      name: blockName,
+      field,
+      value: String(value),
+    });
+  }
+  if (CLIENT_FIELD_FORBIDDEN_CHARS.test(value)) {
+    throw BlockRegistrationError.invalidClientIsland({
+      name: blockName,
+      field,
+      value,
+    });
+  }
+  if (isUrl && DANGEROUS_URL_SCHEME.test(value)) {
+    throw BlockRegistrationError.invalidClientIsland({
+      name: blockName,
+      field,
+      value,
+    });
+  }
 }
 
 function freezeArray<T>(

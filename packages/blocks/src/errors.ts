@@ -2,6 +2,7 @@ type BlockRegistrationErrorCode =
   | "invalid_name_pattern"
   | "invalid_keyboard_shortcut"
   | "invalid_transform_priority"
+  | "invalid_client_island"
   | "duplicate_name"
   | "core_block_collision"
   | "theme_override_unknown_name"
@@ -19,6 +20,8 @@ interface BlockRegistrationErrorFields {
   attributeType?: string;
   keyboardShortcut?: string;
   priority?: number;
+  field?: string;
+  value?: string;
 }
 
 const NAME_PATTERN = "^[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$";
@@ -39,6 +42,8 @@ export class BlockRegistrationError extends Error {
   readonly attributeType: string | undefined;
   readonly keyboardShortcut: string | undefined;
   readonly priority: number | undefined;
+  readonly field: string | undefined;
+  readonly value: string | undefined;
 
   private constructor(
     code: BlockRegistrationErrorCode,
@@ -57,6 +62,8 @@ export class BlockRegistrationError extends Error {
     this.attributeType = fields.attributeType;
     this.keyboardShortcut = fields.keyboardShortcut;
     this.priority = fields.priority;
+    this.field = fields.field;
+    this.value = fields.value;
   }
 
   static invalidNamePattern(ctx: {
@@ -152,6 +159,23 @@ export class BlockRegistrationError extends Error {
         `Transform-to submenu orders entries highest-first, so the value ` +
         `needs a stable, finite, integer ordering).`,
       { blockName: ctx.name, priority: ctx.priority },
+    );
+  }
+
+  static invalidClientIsland(ctx: {
+    name: string;
+    field: "src" | "export";
+    value: string;
+  }): BlockRegistrationError {
+    return new BlockRegistrationError(
+      "invalid_client_island",
+      `Block "${ctx.name}" declared client.${ctx.field} = ${JSON.stringify(ctx.value)}. ` +
+        `The value flows into a server-rendered <script type="module"> body ` +
+        `and must not contain characters that could break out of the script ` +
+        `element (<, >, &, control characters) or use a dangerous scheme ` +
+        `(javascript:, data:). Use a plain module URL — e.g. ` +
+        `"/assets/widget.js" or "https://example.com/widget.mjs".`,
+      { blockName: ctx.name, field: ctx.field, value: ctx.value },
     );
   }
 

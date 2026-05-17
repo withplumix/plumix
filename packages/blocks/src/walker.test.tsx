@@ -1,3 +1,5 @@
+import type { ReactElement } from "react";
+import { createElement } from "react";
 import { render } from "@testing-library/react";
 import { Node as TiptapNode } from "@tiptap/core";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -8,6 +10,7 @@ import type {
   BlockProps,
   TiptapNode as TiptapNodeJson,
 } from "./types.js";
+import type { SyncFilterExecutor } from "./walker.js";
 import { defineBlock } from "./define-block.js";
 import { mergeBlockRegistry } from "./registry.js";
 import { defaultMarkRegistry } from "./test/index.js";
@@ -318,6 +321,237 @@ describe("EntryContent walker", () => {
     expect(receivedContext).toEqual(
       expect.objectContaining({ parent: "core/container", depth: 1 }),
     );
+  });
+
+  test("block:before_render wraps every rendered block element", async () => {
+    const registry = await buildRegistry();
+    const hooks: SyncFilterExecutor = {
+      applyFilterSync<T>(name: string, value: T): T {
+        if (name !== "block:before_render") return value;
+        const element = value as unknown as ReactElement;
+        return createElement(
+          "div",
+          { "data-traced": "" },
+          element,
+        ) as unknown as T;
+      },
+    };
+    const doc: TiptapNodeJson = {
+      type: "doc",
+      content: [
+        { type: "core/paragraph", content: [{ type: "text", text: "one" }] },
+        { type: "core/paragraph", content: [{ type: "text", text: "two" }] },
+        { type: "core/paragraph", content: [{ type: "text", text: "three" }] },
+      ],
+    };
+    const { container } = render(
+      <EntryContent
+        content={doc}
+        registry={registry}
+        context={ROOT_CONTEXT}
+        markRegistry={defaultMarkRegistry}
+        hooks={hooks}
+      />,
+    );
+    expect(container.querySelectorAll("div[data-traced]").length).toBe(3);
+    expect(container.innerHTML).toContain("<p>one</p>");
+  });
+
+  test("block:after_render receives block:before_render's output (order)", async () => {
+    const registry = await buildRegistry();
+    const calls: string[] = [];
+    const hooks: SyncFilterExecutor = {
+      applyFilterSync<T>(name: string, value: T): T {
+        if (name === "block:before_render") {
+          calls.push("before");
+          return createElement(
+            "section",
+            { "data-before": "1" },
+            value as unknown as ReactElement,
+          ) as unknown as T;
+        }
+        if (name === "block:after_render") {
+          calls.push("after");
+          return createElement(
+            "article",
+            { "data-after": "1" },
+            value as unknown as ReactElement,
+          ) as unknown as T;
+        }
+        return value;
+      },
+    };
+    const doc: TiptapNodeJson = {
+      type: "doc",
+      content: [
+        { type: "core/paragraph", content: [{ type: "text", text: "x" }] },
+      ],
+    };
+    const { container } = render(
+      <EntryContent
+        content={doc}
+        registry={registry}
+        context={ROOT_CONTEXT}
+        markRegistry={defaultMarkRegistry}
+        hooks={hooks}
+      />,
+    );
+    expect(calls).toEqual(["before", "after"]);
+    // after wraps the before-wrapped element → article > section > p
+    expect(container.innerHTML).toBe(
+      '<article data-after="1"><section data-before="1"><p>x</p></section></article>',
+    );
+  });
+
+  test("theme block override surfaces on EntryContent output", async () => {
+    const ThemeParagraph: BlockComponent = ({ children }: BlockProps) => (
+      <p className="theme-mark">{children}</p>
+    );
+    const registry = await mergeBlockRegistry({
+      core: [paragraphSpec()],
+      plugins: [],
+      themeOverrides: { "core/paragraph": ThemeParagraph },
+      themeId: "test-theme",
+    });
+    const doc: TiptapNodeJson = {
+      type: "doc",
+      content: [
+        {
+          type: "core/paragraph",
+          content: [{ type: "text", text: "themed" }],
+        },
+      ],
+    };
+    const { container } = render(
+      <EntryContent
+        content={doc}
+        registry={registry}
+        context={ROOT_CONTEXT}
+        markRegistry={defaultMarkRegistry}
+      />,
+    );
+    expect(container.innerHTML).toBe('<p class="theme-mark">themed</p>');
+  });
+
+  test("render hooks also fire for the unknown-block fallback", async () => {
+    const registry = await buildRegistry();
+    const seen: string[] = [];
+    const hooks: SyncFilterExecutor = {
+      applyFilterSync<T>(name: string, value: T, ...rest: unknown[]): T {
+        if (name === "block:before_render") {
+          const [ctx] = rest as [{ node: TiptapNodeJson }];
+          seen.push(ctx.node.type);
+        }
+        return value;
+      },
+    };
+    const doc: TiptapNodeJson = {
+      type: "doc",
+      content: [
+        { type: "core/paragraph", content: [{ type: "text", text: "ok" }] },
+        { type: "missing/x" },
+      ],
+    };
+    render(
+      <EntryContent
+        content={doc}
+        registry={registry}
+        context={ROOT_CONTEXT}
+        markRegistry={defaultMarkRegistry}
+        hooks={hooks}
+      />,
+    );
+    expect(seen).toEqual(["core/paragraph", "missing/x"]);
+  });
+
+  test("client-island block wraps SSR output in data-plumix-island placeholder", async () => {
+    const widgetSpec = defineBlock({
+      name: "demo/widget",
+      title: "Widget",
+      schema: () =>
+        Promise.resolve(
+          TiptapNode.create({ name: "demo/widget", group: "block" }),
+        ),
+      component: () =>
+        Promise.resolve(({ children }: BlockProps) => (
+          <span data-widget="">widget-ssr{children}</span>
+        )),
+      client: { src: "/assets/widget.js" },
+    });
+    const registry = await mergeBlockRegistry({
+      core: [paragraphSpec()],
+      plugins: [{ spec: widgetSpec, pluginId: "demo" }],
+      themeOverrides: {},
+      themeId: null,
+    });
+    const doc: TiptapNodeJson = {
+      type: "doc",
+      content: [{ type: "demo/widget", attrs: { size: 42, title: "Hi" } }],
+    };
+    const { container } = render(
+      <EntryContent
+        content={doc}
+        registry={registry}
+        context={ROOT_CONTEXT}
+        markRegistry={defaultMarkRegistry}
+      />,
+    );
+    const placeholder = container.querySelector(
+      '[data-plumix-island="demo/widget"]',
+    );
+    expect(placeholder).not.toBeNull();
+    const rawAttrs = placeholder?.getAttribute("data-plumix-island-attrs");
+    expect(rawAttrs).not.toBeNull();
+    expect(JSON.parse(rawAttrs ?? "{}")).toEqual({ size: 42, title: "Hi" });
+    expect(placeholder?.querySelector("[data-widget]")).not.toBeNull();
+  });
+
+  test("client-island attrs survive an attribute-breakout attempt via JSON", async () => {
+    // React escapes `"` / `<` / `>` / `&` inside HTML attribute values, so
+    // an attrs payload whose values contain `" onclick="alert(1)` stays
+    // confined inside `data-plumix-island-attrs` and round-trips through
+    // JSON.parse on the client side. The regression here is to ensure
+    // that contract is preserved if we ever swap the wrapper element or
+    // serialisation strategy.
+    const widgetSpec = defineBlock({
+      name: "demo/widget2",
+      title: "Widget",
+      schema: () =>
+        Promise.resolve(
+          TiptapNode.create({ name: "demo/widget2", group: "block" }),
+        ),
+      component: () =>
+        Promise.resolve(({ children }: BlockProps) => <span>{children}</span>),
+      client: { src: "/assets/widget.js" },
+    });
+    const registry = await mergeBlockRegistry({
+      core: [paragraphSpec()],
+      plugins: [{ spec: widgetSpec, pluginId: "demo" }],
+      themeOverrides: {},
+      themeId: null,
+    });
+    const hostile = '" onclick="alert(1)';
+    const doc: TiptapNodeJson = {
+      type: "doc",
+      content: [{ type: "demo/widget2", attrs: { title: hostile } }],
+    };
+    const { container } = render(
+      <EntryContent
+        content={doc}
+        registry={registry}
+        context={ROOT_CONTEXT}
+        markRegistry={defaultMarkRegistry}
+      />,
+    );
+    const placeholder = container.querySelector(
+      '[data-plumix-island="demo/widget2"]',
+    );
+    expect(placeholder).not.toBeNull();
+    expect(placeholder?.hasAttribute("onclick")).toBe(false);
+    const parsed = JSON.parse(
+      placeholder?.getAttribute("data-plumix-island-attrs") ?? "{}",
+    ) as Record<string, unknown>;
+    expect(parsed.title).toBe(hostile);
   });
 
   test("unknown block in dev mode emits one-time warn + template marker", async () => {

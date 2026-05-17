@@ -11,6 +11,22 @@ import type {
 } from "./types.js";
 import { HtmlAllowlistProvider } from "./html/context.js";
 
+/**
+ * Minimum surface the walker needs from a hook executor: a synchronous
+ * filter pipeline keyed by hook name. Defined structurally here so
+ * `@plumix/blocks` stays free of a `@plumix/core` dependency — the core
+ * package augments `FilterRegistry` for typed plugin authoring; the walker
+ * just calls the structural method at render time.
+ */
+export interface SyncFilterExecutor {
+  applyFilterSync<T>(name: string, value: T, ...rest: unknown[]): T;
+}
+
+export interface BlockRenderHookContext {
+  readonly node: TiptapNode;
+  readonly context: BlockContext;
+}
+
 export interface EntryContentProps {
   readonly content: TiptapNode | readonly TiptapNode[] | null | undefined;
   readonly registry: BlockRegistry;
@@ -33,6 +49,15 @@ export interface EntryContentProps {
    * through here.
    */
   readonly htmlAllowlist?: HtmlAllowlist;
+  /**
+   * Optional hook executor invoked around each block render. When supplied
+   * the walker fires `block:before_render` and `block:after_render` filter
+   * hooks per block (in that order), threading
+   * `{ node, context }: BlockRenderHookContext` as the second argument.
+   * Hooks fire for the unknown-block fallback too — plugins can decorate
+   * or replace whatever the walker is about to render.
+   */
+  readonly hooks?: SyncFilterExecutor;
 }
 
 /**
@@ -56,6 +81,7 @@ export function EntryContent({
   markRegistry,
   context,
   htmlAllowlist,
+  hooks,
 }: EntryContentProps): ReactNode {
   if (!content) return null;
   const nodes = Array.isArray(content) ? content : [content];
@@ -65,6 +91,7 @@ export function EntryContent({
     markRegistry,
     context,
     devWarnState(registry),
+    hooks,
   );
   if (htmlAllowlist === undefined) return tree;
   return createElement(HtmlAllowlistProvider, { value: htmlAllowlist }, tree);
@@ -91,13 +118,14 @@ function renderNodes(
   markRegistry: MarkRegistry,
   context: BlockContext,
   devState: DevWarnState,
+  hooks: SyncFilterExecutor | undefined,
 ): ReactNode {
   if (!nodes || nodes.length === 0) return null;
   return nodes.map((child, idx) =>
     createElement(
       Fragment,
       { key: idx },
-      renderNode(child, registry, markRegistry, context, devState),
+      renderNode(child, registry, markRegistry, context, devState, hooks),
     ),
   );
 }
@@ -108,14 +136,29 @@ function renderNode(
   markRegistry: MarkRegistry,
   context: BlockContext,
   devState: DevWarnState,
+  hooks: SyncFilterExecutor | undefined,
 ): ReactNode {
   if (node.type === "text") return renderText(node, markRegistry);
   if (node.type === "doc") {
-    return renderNodes(node.content, registry, markRegistry, context, devState);
+    return renderNodes(
+      node.content,
+      registry,
+      markRegistry,
+      context,
+      devState,
+      hooks,
+    );
   }
 
   const spec = registry.get(node.type);
-  if (!spec) return renderUnknown(node, devState);
+  if (!spec) {
+    return applyRenderHooks(
+      renderUnknown(node, devState),
+      node,
+      context,
+      hooks,
+    );
+  }
 
   const childContext: BlockContext = {
     ...context,
@@ -128,12 +171,40 @@ function renderNode(
     markRegistry,
     childContext,
     devState,
+    hooks,
   );
-  return createElement(
+  const inner = createElement(
     spec.component,
     { attrs: node.attrs ?? {}, node, context, children },
     children,
   );
+  const element = spec.client
+    ? createElement(
+        "div",
+        {
+          "data-plumix-island": spec.name,
+          "data-plumix-island-attrs": JSON.stringify(node.attrs ?? {}),
+        },
+        inner,
+      )
+    : inner;
+  return applyRenderHooks(element, node, context, hooks);
+}
+
+function applyRenderHooks(
+  element: ReactNode,
+  node: TiptapNode,
+  context: BlockContext,
+  hooks: SyncFilterExecutor | undefined,
+): ReactNode {
+  if (!hooks) return element;
+  const ctx: BlockRenderHookContext = { node, context };
+  const before = hooks.applyFilterSync<ReactNode>(
+    "block:before_render",
+    element,
+    ctx,
+  );
+  return hooks.applyFilterSync<ReactNode>("block:after_render", before, ctx);
 }
 
 function renderText(node: TiptapNode, markRegistry: MarkRegistry): ReactNode {
