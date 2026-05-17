@@ -46,4 +46,19 @@ export const RPC_ERRORS = {
       mime: v.string(),
     }),
   },
+  INVALID_BLOCK_CONTENT: {
+    message: "Block content failed registry validation",
+    data: v.object({
+      issues: v.array(
+        v.object({
+          code: v.string(),
+          message: v.string(),
+          path: v.string(),
+          nodeName: v.optional(v.string()),
+          attributeName: v.optional(v.string()),
+          markName: v.optional(v.string()),
+        }),
+      ),
+    }),
+  },
 } as const;

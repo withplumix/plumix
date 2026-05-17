@@ -8,9 +8,21 @@
 
 export { defineBlock } from "./define-block.js";
 export { BlockRegistrationError } from "./errors.js";
-export { mergeBlockRegistry } from "./registry.js";
+export { EMPTY_BLOCK_REGISTRY, mergeBlockRegistry } from "./registry.js";
 export type { MergeBlockRegistryInput } from "./registry.js";
 export { resolveTransformTargets } from "./transforms.js";
+export { unknownBlockSchema } from "./unknown-node.js";
+export { BASELINE_HTML_ALLOWLIST, sanitizeHtml } from "./html/sanitize.js";
+export type { HtmlAllowlist } from "./html/sanitize.js";
+export { buildHtmlAllowlist } from "./html/build-allowlist.js";
+export type { HtmlAllowlistOverride } from "./html/build-allowlist.js";
+export { HtmlAllowlistProvider, useHtmlAllowlist } from "./html/context.js";
+export { validateBlockContent } from "./validate-content.js";
+export type { BlockContentValidationResult } from "./validate-content.js";
+export type {
+  BlockContentValidationCode,
+  BlockContentValidationIssue,
+} from "./validation-errors.js";
 export { EntryContent } from "./walker.js";
 export type { EntryContentProps } from "./walker.js";
 export type {
@@ -35,7 +47,7 @@ export type {
 
 export { defineMark } from "./marks/define-mark.js";
 export { MarkRegistrationError } from "./marks/errors.js";
-export { mergeMarkRegistry } from "./marks/registry.js";
+export { EMPTY_MARK_REGISTRY, mergeMarkRegistry } from "./marks/registry.js";
 export type { MergeMarkRegistryInput } from "./marks/registry.js";
 export type {
   MarkComponent,

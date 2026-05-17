@@ -5,7 +5,7 @@ export const htmlBlock = defineBlock({
   title: "Custom HTML",
   category: "typography",
   description:
-    "Raw HTML escape hatch. Sanitisation lands in #312 — until then, do not enable in fields that accept unauthenticated input.",
+    "Raw HTML escape hatch. Author content is sanitized through the registry-derived allowlist before render — operators extend the allowlist via `defineApp({ blocks: { htmlAllowlist: {...} } })`.",
   schema: () => import("./schema.js").then((m) => m.htmlSchema),
   component: () => import("./Component.js").then((m) => m.HtmlComponent),
 });

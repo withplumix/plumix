@@ -1,5 +1,8 @@
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 
+import type { BlockRegistry, MarkRegistry } from "@plumix/blocks";
+import { EMPTY_BLOCK_REGISTRY, EMPTY_MARK_REGISTRY } from "@plumix/blocks";
+
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { Mailer } from "../auth/mailer/types.js";
 import type { KnownCapability } from "../auth/rbac.js";
@@ -94,6 +97,14 @@ export interface AppContextBase<
   readonly tokenScopes: readonly string[] | null;
   readonly hooks: HookExecutor;
   readonly plugins: PluginRegistry;
+  /**
+   * Merged block / mark registries — same instances `buildApp` built
+   * at boot. RPC procedures consume these for server-side content
+   * validation before persistence. Plugin route handlers can also read
+   * them to render entry content.
+   */
+  readonly blocks: BlockRegistry;
+  readonly marks: MarkRegistry;
   readonly logger: Logger;
   readonly auth: AuthNamespace;
   /**
@@ -196,6 +207,14 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly request: Request;
   readonly hooks: HookExecutor;
   readonly plugins: PluginRegistry;
+  /**
+   * Optional; defaults to `EMPTY_BLOCK_REGISTRY` / `EMPTY_MARK_REGISTRY`
+   * so call sites that don't exercise content validation (defer tests,
+   * narrow utility paths) can omit them. Production callers (`buildApp`
+   * + dispatcher) always pass real merged registries.
+   */
+  readonly blocks?: BlockRegistry;
+  readonly marks?: MarkRegistry;
   readonly user?: AuthenticatedUser | null;
   readonly tokenScopes?: readonly string[] | null;
   readonly origin?: string;
@@ -293,6 +312,8 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     tokenScopes,
     hooks: args.hooks,
     plugins: args.plugins,
+    blocks: args.blocks ?? EMPTY_BLOCK_REGISTRY,
+    marks: args.marks ?? EMPTY_MARK_REGISTRY,
     logger: args.logger ?? consoleLogger,
     auth: {
       can: makeAuthCan(resolver, user, tokenScopes),

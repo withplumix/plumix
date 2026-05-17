@@ -1,6 +1,14 @@
 import type { RouterClient } from "@orpc/server";
 import { createRouterClient } from "@orpc/server";
 
+import type { BlockRegistry, MarkRegistry } from "@plumix/blocks";
+import {
+  coreBlocks,
+  coreMarks,
+  mergeBlockRegistry,
+  mergeMarkRegistry,
+} from "@plumix/blocks";
+
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { Mailer } from "../auth/mailer/types.js";
 import type { AppContext, Db } from "../context/app.js";
@@ -114,6 +122,8 @@ function buildContext(
   env: PlumixEnv,
   hooks: HookExecutor,
   plugins: PluginRegistry,
+  blocks: BlockRegistry,
+  marks: MarkRegistry,
   request: Request,
   oauthProviders: readonly OAuthProviderSummary[],
   authenticator: RequestAuthenticator | undefined,
@@ -126,6 +136,8 @@ function buildContext(
     request,
     hooks,
     plugins,
+    blocks,
+    marks,
     logger: silentLogger,
     oauthProviders,
     authenticator,
@@ -154,6 +166,8 @@ function assemble<TUser extends User | null>(
   env: PlumixEnv,
   hooks: HookRegistry,
   plugins: PluginRegistry,
+  blocks: BlockRegistry,
+  marks: MarkRegistry,
   request: Request,
   user: TUser,
   oauthProviders: readonly OAuthProviderSummary[],
@@ -166,6 +180,8 @@ function assemble<TUser extends User | null>(
     env,
     hooks,
     plugins,
+    blocks,
+    marks,
     request,
     oauthProviders,
     authenticator,
@@ -196,6 +212,8 @@ function assemble<TUser extends User | null>(
         env,
         hooks,
         plugins,
+        blocks,
+        marks,
         req,
         targetUser,
         oauthProviders,
@@ -222,6 +240,20 @@ export async function createRpcHarness(
   const plugins = options.plugins ?? createPluginRegistry();
   const env = options.env ?? {};
   const oauthProviders = options.oauthProviders ?? [];
+  // Build the same default registries `buildApp` would so the RPC
+  // harness exercises validation against the real core specs.
+  const blocks = await mergeBlockRegistry({
+    core: coreBlocks,
+    plugins: [],
+    themeOverrides: {},
+    themeId: null,
+  });
+  const marks = await mergeMarkRegistry({
+    core: coreMarks,
+    plugins: [],
+    themeOverrides: {},
+    themeId: null,
+  });
 
   if (!options.request && options.authAs) {
     const user = await userFactory
@@ -233,6 +265,8 @@ export async function createRpcHarness(
       env,
       hooks,
       plugins,
+      blocks,
+      marks,
       request,
       user,
       oauthProviders,
@@ -248,6 +282,8 @@ export async function createRpcHarness(
     env,
     hooks,
     plugins,
+    blocks,
+    marks,
     request,
     null,
     oauthProviders,

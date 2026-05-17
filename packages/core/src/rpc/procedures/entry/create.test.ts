@@ -18,6 +18,33 @@ describe("entry.create", () => {
     expect(created.publishedAt).toBeNull();
   });
 
+  test("INVALID_BLOCK_CONTENT when content carries an unknown block type", async () => {
+    const h = await createRpcHarness({ authAs: "contributor" });
+    const error = await h.client.entry
+      .create({
+        title: "t",
+        slug: "t",
+        content: {
+          type: "doc",
+          content: [
+            {
+              type: "core/paragraph",
+              content: [{ type: "text", text: "ok" }],
+            },
+            { type: "made-up/block", content: [] },
+          ],
+        },
+      })
+      .catch((rejection: unknown) => rejection);
+    expect(error).toMatchObject({
+      code: "INVALID_BLOCK_CONTENT",
+    });
+    const issues = ((error as { data?: { issues?: unknown[] } }).data?.issues ??
+      []) as { code?: string; nodeName?: string }[];
+    expect(issues.map((i) => i.nodeName)).toContain("made-up/block");
+    expect(issues.map((i) => i.code)).toContain("unknown_block_type");
+  });
+
   test("forbidden for a subscriber (no post:create)", async () => {
     const h = await createRpcHarness({ authAs: "subscriber" });
     await expect(

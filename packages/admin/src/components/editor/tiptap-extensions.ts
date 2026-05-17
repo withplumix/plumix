@@ -1,7 +1,11 @@
 import type { Extensions } from "@tiptap/react";
+import { HtmlBadgeNodeView } from "@/editor/unknown-block/HtmlBadgeNodeView.js";
+import { UnknownBlockNodeView } from "@/editor/unknown-block/UnknownBlockNodeView.js";
+import { ReactNodeViewRenderer } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 
 import type { BlockRegistry } from "@plumix/blocks";
+import { unknownBlockSchema } from "@plumix/blocks";
 
 import { wireBlockSpecExtension } from "./spec-extensions.js";
 
@@ -56,6 +60,11 @@ export function buildTiptapExtensions(
         link: linkOptions(),
       }),
       ...registryNodeExtensions(blockRegistry),
+      unknownBlockSchema.extend({
+        addNodeView() {
+          return ReactNodeViewRenderer(UnknownBlockNodeView);
+        },
+      }),
     ];
   }
   const marks = new Set(allowlist.marks ?? []);
@@ -87,7 +96,18 @@ function registryNodeExtensions(
   if (!registry) return [];
   const exts: Extensions = [];
   for (const [, spec] of registry) {
-    exts.push(wireBlockSpecExtension(spec));
+    const wired = wireBlockSpecExtension(spec);
+    if (spec.name === "core/html") {
+      exts.push(
+        wired.extend({
+          addNodeView() {
+            return ReactNodeViewRenderer(HtmlBadgeNodeView);
+          },
+        }),
+      );
+      continue;
+    }
+    exts.push(wired);
   }
   return exts;
 }

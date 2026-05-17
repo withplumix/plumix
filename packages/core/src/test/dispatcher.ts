@@ -170,6 +170,8 @@ function withRequest(
     request,
     hooks: app.hooks,
     plugins: app.plugins,
+    blocks: app.blocks,
+    marks: app.marks,
     logger: silentLogger,
     user: user
       ? { id: user.id, email: user.email, role: user.role }
