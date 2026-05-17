@@ -18,6 +18,13 @@ import { paragraphBlock } from "./paragraph/index.js";
 import { quoteBlock } from "./quote/index.js";
 import { separatorBlock } from "./separator/index.js";
 import { spacerBlock } from "./spacer/index.js";
+import {
+  tableBlock,
+  tableBodyRowBlock,
+  tableCellBlock,
+  tableHeaderCellBlock,
+  tableHeaderRowBlock,
+} from "./table/index.js";
 
 /**
  * The canonical list of blocks shipped by `@plumix/blocks`.
@@ -59,4 +66,9 @@ export const coreBlocks: readonly BlockSpec[] = Object.freeze([
   buttonBlock,
   detailsBlock,
   calloutBlock,
+  tableBlock,
+  tableHeaderRowBlock,
+  tableBodyRowBlock,
+  tableHeaderCellBlock,
+  tableCellBlock,
 ]);

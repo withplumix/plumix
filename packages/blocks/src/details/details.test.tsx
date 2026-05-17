@@ -73,4 +73,22 @@ describe("core/details", () => {
     expect(html).not.toContain("<script>");
     expect(html).toContain("&lt;script&gt;");
   });
+
+  test("declares summary (text) + open (boolean) attributes for the Inspector", () => {
+    expect(detailsBlock.attributes?.summary).toMatchObject({ type: "text" });
+    expect(detailsBlock.attributes?.open).toMatchObject({
+      type: "boolean",
+      default: false,
+    });
+  });
+
+  test("declares supports for color/spacing/border/anchor/customClassName", () => {
+    expect(detailsBlock.supports).toEqual({
+      color: { background: true },
+      spacing: { padding: true, margin: true },
+      border: { radius: true },
+      anchor: true,
+      customClassName: true,
+    });
+  });
 });

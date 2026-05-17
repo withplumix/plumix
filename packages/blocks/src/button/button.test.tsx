@@ -144,4 +144,27 @@ describe("core/button", () => {
     });
     expect(html).toBe('<a href="/x" data-plumix-block="core/button"></a>');
   });
+
+  test("declares the text/href/variant/size/target attribute schema for the Inspector", () => {
+    expect(buttonBlock.attributes?.text).toMatchObject({ type: "text" });
+    expect(buttonBlock.attributes?.href).toMatchObject({ type: "url" });
+    expect(buttonBlock.attributes?.variant).toMatchObject({
+      type: "select",
+      default: "primary",
+    });
+    expect(buttonBlock.attributes?.size).toMatchObject({
+      type: "select",
+      default: "md",
+    });
+  });
+
+  test("declares supports for color/spacing/border/customClassName/anchor", () => {
+    expect(buttonBlock.supports).toEqual({
+      color: { background: true, text: true },
+      spacing: { padding: true, margin: true },
+      border: { radius: true },
+      anchor: true,
+      customClassName: true,
+    });
+  });
 });

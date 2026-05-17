@@ -148,6 +148,7 @@ async function resolveSpec(
     keywords: spec.keywords,
     attributes: spec.attributes,
     supports: spec.supports,
+    inserter: spec.inserter,
     schema,
     editor: spec.editor,
     client: spec.client,

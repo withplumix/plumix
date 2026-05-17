@@ -88,6 +88,7 @@ export function defineBlock<Attrs = Readonly<Record<string, unknown>>>(
     keywords: freezeArray(spec.keywords),
     attributes,
     supports: freezeSupports(spec.supports),
+    inserter: spec.inserter,
     schema: spec.schema,
     component: spec.component,
     editor: spec.editor,
