@@ -1,6 +1,12 @@
 import type { PluginDescriptor } from "plumix/plugin";
 import { definePlugin } from "plumix/plugin";
 
+import { audioBlock } from "./blocks/audio/index.js";
+import { embedBlock } from "./blocks/embed/index.js";
+import { fileBlock } from "./blocks/file/index.js";
+import { galleryBlock } from "./blocks/gallery/index.js";
+import { imageBlock } from "./blocks/image/index.js";
+import { videoBlock } from "./blocks/video/index.js";
 import { mediaLookupAdapter } from "./lookup.js";
 import { DEFAULT_ACCEPTED_TYPES } from "./mime.js";
 import { createMediaRouter } from "./rpc.js";
@@ -87,6 +93,15 @@ export function media(
   return definePlugin(
     "media",
     (ctx) => {
+      // Six media blocks contributed under the `media/` namespace.
+      // Order is just for readability; the registry is keyed by name.
+      ctx.registerBlock(imageBlock);
+      ctx.registerBlock(galleryBlock);
+      ctx.registerBlock(videoBlock);
+      ctx.registerBlock(audioBlock);
+      ctx.registerBlock(fileBlock);
+      ctx.registerBlock(embedBlock);
+
       ctx.registerEntryType("media", {
         label: "Media",
         labels: { singular: "Asset", plural: "Media" },
