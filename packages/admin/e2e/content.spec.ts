@@ -240,7 +240,7 @@ test.describe("/entries/$slug/create", () => {
     await mockManifest(page, MANIFEST_WITH_POST);
   });
 
-  test("auto-slug, toolbar, submit → creates post and redirects", async ({
+  test("auto-slug, editor canvas, submit → creates post and redirects", async ({
     page,
   }) => {
     const createInputs = await mockRpcWithCapture(page, {
@@ -261,9 +261,9 @@ test.describe("/entries/$slug/create", () => {
       "hello-world",
     );
 
-    // Toolbar renders.
-    await expect(page.getByTestId("post-editor-toolbar")).toBeVisible();
-    await expect(page.getByTestId("tiptap-toolbar-bold")).toBeVisible();
+    // Editor content canvas renders (the flat tiptap-toolbar was replaced
+    // by the slash menu + bubble menu in slice #305).
+    await expect(page.locator(".ProseMirror")).toBeVisible();
 
     // Submit → post.create fires with the form values.
     await page.getByTestId("post-editor-submit").click();

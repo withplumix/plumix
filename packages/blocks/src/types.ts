@@ -117,8 +117,15 @@ export interface BlockSpec<Attrs = Readonly<Record<string, unknown>>> {
  */
 export interface ResolvedBlockSpec<
   Attrs = Readonly<Record<string, unknown>>,
-> extends Omit<BlockSpec<Attrs>, "component"> {
+> extends Omit<BlockSpec<Attrs>, "component" | "schema"> {
   readonly component: BlockComponent<Attrs>;
+  /**
+   * The awaited Tiptap Node instance. Stored sync (not lazy) so the
+   * admin editor can build its extension list synchronously without
+   * a second round of awaits, and so that any caller that already
+   * has the registry doesn't have to await again to inspect it.
+   */
+  readonly schema: ReturnType<typeof TiptapNodeFactory.create>;
   readonly registeredBy: string | null;
 }
 

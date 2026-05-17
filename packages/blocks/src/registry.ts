@@ -147,11 +147,12 @@ async function resolveSpec(
     description: spec.description,
     keywords: spec.keywords,
     attributes: spec.attributes,
-    schema: spec.schema,
+    schema,
     editor: spec.editor,
     client: spec.client,
     component,
     registeredBy,
+    legacyAliases: spec.legacyAliases,
   });
 }
 

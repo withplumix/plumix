@@ -6,15 +6,6 @@ settings:
 
 catalogs:
   default:
-    '@arethetypeswrong/cli':
-      specifier: ^0.18.2
-      version: 0.18.2
-    '@cloudflare/workers-types':
-      specifier: ^4.20260421.1
-      version: 4.20260421.1
-    '@types/node':
-      specifier: ^24.12.2
-      version: 24.12.2
     '@types/react':
       specifier: ^19.2.14
       version: 19.2.14
@@ -27,24 +18,12 @@ catalogs:
     '@vitest/coverage-v8':
       specifier: ^4.1.5
       version: 4.1.5
-    drizzle-kit:
-      specifier: ^0.31.10
-      version: 0.31.10
-    drizzle-orm:
-      specifier: ^0.45.2
-      version: 0.45.2
-    drizzle-valibot:
-      specifier: ^0.4.2
-      version: 0.4.2
     eslint:
       specifier: ^10.3.0
       version: 10.3.0
     prettier:
       specifier: ^3.8.3
       version: 3.8.3
-    publint:
-      specifier: ^0.3.18
-      version: 0.3.18
     react:
       specifier: ^19.2.6
       version: 19.2.6
@@ -63,9 +42,6 @@ catalogs:
     vitest:
       specifier: ^4.1.5
       version: 4.1.5
-    wrangler:
-      specifier: ^4.86.0
-      version: 4.86.0
 
 overrides:
   esbuild@<0.25.0: '>=0.25.0'
@@ -202,6 +178,9 @@ importers:
       '@tiptap/starter-kit':
         specifier: ^3.23.1
         version: 3.23.1
+      '@tiptap/suggestion':
+        specifier: ^3.23.4
+        version: 3.23.4(@tiptap/core@3.23.1(@tiptap/pm@3.23.1))(@tiptap/pm@3.23.1)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -4055,6 +4034,12 @@ packages:
 
   '@tiptap/starter-kit@3.23.1':
     resolution: {integrity: sha512-CURePHQagBaZIDJrHH3of4Nmi0VYGpZ6yBlkdFxFHBxY9aeG2/h5kn+oHo8GbzkSFsRV+9olzRgDTOULVgs8pQ==}
+
+  '@tiptap/suggestion@3.23.4':
+    resolution: {integrity: sha512-KvrHKQcGpEKPPuetH2N4K21kA7hc31n5WDzw3FM+fNpMKdJOToYoNZzS9rmuBBHmNZ9wyK2sWmzi09enmv6wbg==}
+    peerDependencies:
+      '@tiptap/core': 3.23.4
+      '@tiptap/pm': 3.23.4
 
   '@turbo/darwin-64@2.9.12':
     resolution: {integrity: sha512-eu3eFRmE9NjgZ0wPdRJ44l+LGSeIky+tz5ZQd8zQkw/Yqi+BM7wq+8nbabeoiVUcICi/IZweMOKl/MCmkrd1+g==}
@@ -9341,6 +9326,11 @@ snapshots:
       '@tiptap/extension-text': 3.23.1(@tiptap/core@3.23.1(@tiptap/pm@3.23.1))
       '@tiptap/extension-underline': 3.23.1(@tiptap/core@3.23.1(@tiptap/pm@3.23.1))
       '@tiptap/extensions': 3.23.1(@tiptap/core@3.23.1(@tiptap/pm@3.23.1))(@tiptap/pm@3.23.1)
+      '@tiptap/pm': 3.23.1
+
+  '@tiptap/suggestion@3.23.4(@tiptap/core@3.23.1(@tiptap/pm@3.23.1))(@tiptap/pm@3.23.1)':
+    dependencies:
+      '@tiptap/core': 3.23.1(@tiptap/pm@3.23.1)
       '@tiptap/pm': 3.23.1
 
   '@turbo/darwin-64@2.9.12':

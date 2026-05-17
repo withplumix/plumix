@@ -1,6 +1,8 @@
 import type { Extensions } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 
+import type { BlockRegistry } from "@plumix/blocks";
+
 // `undefined` allowlist → canvas mode (full StarterKit). Defined →
 // strict richtext-field mode where StarterKit extensions are gated
 // by the field's `marks` / `nodes`.
@@ -17,6 +19,17 @@ interface RichtextAllowlistInput {
   readonly blocks?: readonly string[];
 }
 
+interface BuildExtensionsInput {
+  readonly allowlist?: RichtextAllowlistInput;
+  /**
+   * Canvas-mode-only. When supplied, every block's resolved Tiptap
+   * Node is appended to the extension list so the slash menu can
+   * insert namespaced types (`core/quote`, `core/code`, …) without
+   * ProseMirror throwing "unknown node type".
+   */
+  readonly blockRegistry?: BlockRegistry;
+}
+
 // Per-call object literal: Tiptap's `LinkOptions` requires mutable
 // arrays, so a top-level `as const` would clash with its types.
 function linkOptions() {
@@ -31,14 +44,16 @@ function linkOptions() {
 }
 
 export function buildTiptapExtensions(
-  allowlist?: RichtextAllowlistInput,
+  input: BuildExtensionsInput = {},
 ): Extensions {
+  const { allowlist, blockRegistry } = input;
   if (allowlist === undefined) {
     return [
       StarterKit.configure({
         heading: { levels: [2, 3] },
         link: linkOptions(),
       }),
+      ...registryNodeExtensions(blockRegistry),
     ];
   }
   const marks = new Set(allowlist.marks ?? []);
@@ -62,4 +77,15 @@ export function buildTiptapExtensions(
       hardBreak: nodes.has("hardBreak") ? {} : false,
     }),
   ];
+}
+
+function registryNodeExtensions(
+  registry: BlockRegistry | undefined,
+): Extensions {
+  if (!registry) return [];
+  const exts: Extensions = [];
+  for (const [, spec] of registry) {
+    exts.push(spec.schema);
+  }
+  return exts;
 }

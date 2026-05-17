@@ -1,20 +1,21 @@
 import type { JSONContent } from "@tiptap/react";
 import type { ReactNode } from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { FloatingInsertMenu } from "@/editor/floating-menu/FloatingInsertMenu.js";
+import { createSlashMenuExtension } from "@/editor/slash-menu/extension.js";
 import { cn } from "@/lib/utils.js";
 import { EditorContent, useEditor } from "@tiptap/react";
 
-import type { MarkRegistry } from "@plumix/blocks";
+import type { BlockRegistry, MarkRegistry } from "@plumix/blocks";
 
 import { BubbleMenu } from "./bubble-menu/index.js";
 import { buildTiptapExtensions } from "./tiptap-extensions.js";
-import { TiptapToolbar } from "./tiptap-toolbar.js";
 
 // Two render modes:
-//   - canvas mode (no allowlist props): legacy entry-content editor —
-//     full StarterKit + every toolbar button
+//   - canvas mode (no allowlist props): full StarterKit + slash menu +
+//     floating insert menu + bubble menu (when registries supplied)
 //   - richtext field mode (allowlist props supplied): StarterKit
-//     extensions and toolbar buttons gated by `marks` / `nodes`
+//     extensions gated by `marks` / `nodes`; no slash/floating menus
 //
 // The server-side validator (`walkRichtextDoc`) re-checks on save —
 // the editor's allowlist is the authoring affordance, the
@@ -30,6 +31,7 @@ export function TiptapEditor({
   nodes,
   blocks,
   markRegistry,
+  blockRegistry,
 }: {
   readonly value: JSONContent | null;
   readonly onChange: (json: JSONContent) => void;
@@ -39,11 +41,15 @@ export function TiptapEditor({
   readonly nodes?: readonly string[];
   readonly blocks?: readonly string[];
   /**
-   * When supplied, a selection-anchored BubbleMenu renders one button
-   * per registered mark. Filtered against the live editor schema so
-   * marks not present as Tiptap extensions are silently skipped.
+   * Selection-anchored BubbleMenu renders one button per registered
+   * mark when supplied. Filtered against the live editor schema.
    */
   readonly markRegistry?: MarkRegistry;
+  /**
+   * Slash menu reads from this registry. Required in canvas mode for
+   * `/` to insert a block; omit in field mode (no slash menu shown).
+   */
+  readonly blockRegistry?: BlockRegistry;
 }): ReactNode {
   // Shields the `value` sync-effect from echoing the editor's own
   // emissions back through the parent's state — would otherwise
@@ -52,13 +58,35 @@ export function TiptapEditor({
 
   // `undefined` → canvas mode (full StarterKit). Any defined entry —
   // including an empty array — flips to strict field mode.
-  const allowlist =
-    marks === undefined && nodes === undefined && blocks === undefined
-      ? undefined
-      : { marks, nodes, blocks };
+  const allowlist = useMemo(
+    () =>
+      marks === undefined && nodes === undefined && blocks === undefined
+        ? undefined
+        : { marks, nodes, blocks },
+    [marks, nodes, blocks],
+  );
+
+  const extensions = useMemo(() => {
+    const base = buildTiptapExtensions({ allowlist, blockRegistry });
+    // Slash menu is canvas-mode-only; in strict field mode the user
+    // already knows what node they're editing.
+    if (allowlist || !blockRegistry) return base;
+    return [
+      ...base,
+      createSlashMenuExtension({
+        blockRegistry,
+        onPick: (item, ed) => {
+          // Minimal default: insert the block as an empty node. Block
+          // authors can extend by supplying a `defaults` template
+          // (wired through in a follow-up slice).
+          ed.chain().focus().insertContent({ type: item.name }).run();
+        },
+      }),
+    ];
+  }, [allowlist, blockRegistry]);
 
   const editor = useEditor({
-    extensions: buildTiptapExtensions(allowlist),
+    extensions,
     content: value,
     editable: !disabled,
     editorProps: {
@@ -89,13 +117,11 @@ export function TiptapEditor({
 
   return (
     <div className={cn("bg-background", disabled && "opacity-60")}>
-      <TiptapToolbar
-        editor={editor}
-        disabled={disabled}
-        allowlist={allowlist}
-      />
       {markRegistry ? (
         <BubbleMenu editor={editor} markRegistry={markRegistry} />
+      ) : null}
+      {!allowlist && blockRegistry ? (
+        <FloatingInsertMenu editor={editor} />
       ) : null}
       <EditorContent editor={editor} />
     </div>

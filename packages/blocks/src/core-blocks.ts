@@ -2,6 +2,7 @@ import type { BlockSpec } from "./types.js";
 import { buttonBlock } from "./button/index.js";
 import { buttonsBlock } from "./buttons/index.js";
 import { calloutBlock } from "./callout/index.js";
+import { codeBlock } from "./code/index.js";
 import { columnBlock } from "./columns/column.js";
 import { columnsBlock } from "./columns/index.js";
 import { descriptionDetailBlock } from "./description-list/description-detail.js";
@@ -14,6 +15,9 @@ import { listItemBlock } from "./list/list-item.js";
 import { listOrderedBlock } from "./list/list-ordered.js";
 import { listBlock } from "./list/list.js";
 import { paragraphBlock } from "./paragraph/index.js";
+import { quoteBlock } from "./quote/index.js";
+import { separatorBlock } from "./separator/index.js";
+import { spacerBlock } from "./spacer/index.js";
 
 /**
  * The canonical list of blocks shipped by `@plumix/blocks`.
@@ -26,10 +30,20 @@ import { paragraphBlock } from "./paragraph/index.js";
  *
  * Order is purely a readability convention: typography → layout →
  * interactive → structured, in the order slices land.
+ *
+ * Note: `htmlBlock` is exported from `./html/index.js` but deliberately
+ * NOT included here — it renders raw HTML via `dangerouslySetInnerHTML`
+ * with no sanitisation (DOMPurify lands in #312). Auto-installing it
+ * would be a stored-XSS regression. Themes / plugins that need the
+ * escape hatch can register it explicitly via `ctx.registerBlock`.
  */
 export const coreBlocks: readonly BlockSpec[] = Object.freeze([
   paragraphBlock,
   headingBlock,
+  quoteBlock,
+  separatorBlock,
+  spacerBlock,
+  codeBlock,
   listBlock,
   listOrderedBlock,
   listItemBlock,
