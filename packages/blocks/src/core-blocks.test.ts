@@ -23,4 +23,19 @@ describe("coreBlocks catalogue", () => {
       expect.arrayContaining(["core/group", "core/columns", "core/column"]),
     );
   });
+
+  test("interactive blocks declare the `interactive` category", () => {
+    const interactiveBlocks = coreBlocks.filter(
+      (b) => b.category === "interactive",
+    );
+    const names = interactiveBlocks.map((b) => b.name);
+    expect(names).toEqual(
+      expect.arrayContaining([
+        "core/buttons",
+        "core/button",
+        "core/details",
+        "core/callout",
+      ]),
+    );
+  });
 });

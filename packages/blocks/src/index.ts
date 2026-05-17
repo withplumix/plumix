@@ -26,8 +26,12 @@ export type {
 } from "./types.js";
 
 export { coreBlocks } from "./core-blocks.js";
+export { buttonBlock } from "./button/index.js";
+export { buttonsBlock } from "./buttons/index.js";
+export { calloutBlock } from "./callout/index.js";
 export { columnBlock } from "./columns/column.js";
 export { columnsBlock } from "./columns/index.js";
+export { detailsBlock } from "./details/index.js";
 export { groupBlock } from "./group/index.js";
 export { headingBlock } from "./heading/index.js";
 export { paragraphBlock } from "./paragraph/index.js";
