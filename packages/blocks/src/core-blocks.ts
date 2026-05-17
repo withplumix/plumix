@@ -32,10 +32,12 @@ import { spacerBlock } from "./spacer/index.js";
  * interactive → structured, in the order slices land.
  *
  * Note: `htmlBlock` is exported from `./html/index.js` but deliberately
- * NOT included here — it renders raw HTML via `dangerouslySetInnerHTML`
- * with no sanitisation (DOMPurify lands in #312). Auto-installing it
- * would be a stored-XSS regression. Themes / plugins that need the
- * escape hatch can register it explicitly via `ctx.registerBlock`.
+ * NOT included here. The renderer applies a baseline `sanitize-html`
+ * allowlist (no script / style / iframe / object / on* handlers; anchors
+ * limited to http(s) / mailto / tel / root-relative), but operators
+ * should still opt in explicitly via `ctx.registerBlock` after deciding
+ * whether they want the escape hatch at all. The operator-configurable
+ * allowlist lands in #312.
  */
 export const coreBlocks: readonly BlockSpec[] = Object.freeze([
   paragraphBlock,

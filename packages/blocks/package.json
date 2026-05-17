@@ -22,7 +22,8 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@tiptap/core": "^3.23.1"
+    "@tiptap/core": "^3.23.1",
+    "sanitize-html": "^2.17.4"
   },
   "peerDependencies": {
     "react": "catalog:",
@@ -37,6 +38,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "@types/sanitize-html": "^2.16.1",
     "@vitest/coverage-v8": "catalog:",
     "eslint": "catalog:",
     "jsdom": "^29.1.1",
