@@ -1,3 +1,4 @@
+import type { SlashMenuItem } from "@/editor/slash-menu/items-from-registry.js";
 import type { Editor, JSONContent } from "@tiptap/react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef } from "react";
@@ -7,10 +8,46 @@ import { createSlashMenuExtension } from "@/editor/slash-menu/extension.js";
 import { cn } from "@/lib/utils.js";
 import { EditorContent, useEditor } from "@tiptap/react";
 
-import type { BlockRegistry, MarkRegistry } from "@plumix/blocks";
+import type {
+  BlockRegistry,
+  BlockVariationInnerBlock,
+  MarkRegistry,
+} from "@plumix/blocks";
 
 import { BubbleMenu } from "./bubble-menu/index.js";
 import { buildTiptapExtensions } from "./tiptap-extensions.js";
+
+/**
+ * Translate a slash-menu item into Tiptap's `insertContent` payload.
+ * Block items insert as a bare empty node of their type; variation
+ * items insert the parent block's node type with the variation's
+ * preset attrs and the variation's `innerBlocks` template materialised
+ * (recursively) as `content`.
+ */
+export function slashMenuItemToContent(item: SlashMenuItem): JSONContent {
+  if (item.parent !== undefined) {
+    return {
+      type: item.parent,
+      ...(item.attributes !== undefined && { attrs: { ...item.attributes } }),
+      ...(item.innerBlocks !== undefined &&
+        item.innerBlocks.length > 0 && {
+          content: item.innerBlocks.map(innerBlockToContent),
+        }),
+    };
+  }
+  return { type: item.name };
+}
+
+function innerBlockToContent(inner: BlockVariationInnerBlock): JSONContent {
+  return {
+    type: inner.name,
+    ...(inner.attributes !== undefined && { attrs: { ...inner.attributes } }),
+    ...(inner.innerBlocks !== undefined &&
+      inner.innerBlocks.length > 0 && {
+        content: inner.innerBlocks.map(innerBlockToContent),
+      }),
+  };
+}
 
 // Two render modes:
 //   - canvas mode (no allowlist props): full StarterKit + slash menu +
@@ -85,10 +122,12 @@ export function TiptapEditor({
       createSlashMenuExtension({
         blockRegistry,
         onPick: (item, ed) => {
-          // Minimal default: insert the block as an empty node. Block
-          // authors can extend by supplying a `defaults` template
-          // (wired through in a follow-up slice).
-          ed.chain().focus().insertContent({ type: item.name }).run();
+          // Variation items carry the parent block's actual Tiptap
+          // node type as `item.parent` — `item.name` is the
+          // `<parent>:<slug>` composite which is NOT a registered node
+          // type. Block items leave `parent` undefined and the block
+          // name IS the node type.
+          ed.chain().focus().insertContent(slashMenuItemToContent(item)).run();
         },
       }),
     ];

@@ -3,6 +3,8 @@ type BlockRegistrationErrorCode =
   | "invalid_keyboard_shortcut"
   | "invalid_transform_priority"
   | "invalid_client_island"
+  | "invalid_variation_name"
+  | "duplicate_variation_name"
   | "duplicate_name"
   | "core_block_collision"
   | "theme_override_unknown_name"
@@ -22,6 +24,7 @@ interface BlockRegistrationErrorFields {
   priority?: number;
   field?: string;
   value?: string;
+  variationName?: string;
 }
 
 const NAME_PATTERN = "^[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$";
@@ -44,6 +47,7 @@ export class BlockRegistrationError extends Error {
   readonly priority: number | undefined;
   readonly field: string | undefined;
   readonly value: string | undefined;
+  readonly variationName: string | undefined;
 
   private constructor(
     code: BlockRegistrationErrorCode,
@@ -64,6 +68,7 @@ export class BlockRegistrationError extends Error {
     this.priority = fields.priority;
     this.field = fields.field;
     this.value = fields.value;
+    this.variationName = fields.variationName;
   }
 
   static invalidNamePattern(ctx: {
@@ -176,6 +181,35 @@ export class BlockRegistrationError extends Error {
         `(javascript:, data:). Use a plain module URL — e.g. ` +
         `"/assets/widget.js" or "https://example.com/widget.mjs".`,
       { blockName: ctx.name, field: ctx.field, value: ctx.value },
+    );
+  }
+
+  static invalidVariationName(ctx: {
+    name: string;
+    variationName: string;
+  }): BlockRegistrationError {
+    return new BlockRegistrationError(
+      "invalid_variation_name",
+      `Block "${ctx.name}" declared variation ${JSON.stringify(
+        ctx.variationName,
+      )}. Variation slugs must be lowercase alphanumerics, optionally ` +
+        `separated by hyphens (e.g. "row", "50-50", "25-50-25") — they ` +
+        `surface as slash-menu item names and may end up in serialized ` +
+        `content.`,
+      { blockName: ctx.name, variationName: ctx.variationName },
+    );
+  }
+
+  static duplicateVariationName(ctx: {
+    name: string;
+    variationName: string;
+  }): BlockRegistrationError {
+    return new BlockRegistrationError(
+      "duplicate_variation_name",
+      `Block "${ctx.name}" declared variation "${ctx.variationName}" twice. ` +
+        `Each variation slug must be unique within its parent block — the ` +
+        `slash menu de-duplicates by slug.`,
+      { blockName: ctx.name, variationName: ctx.variationName },
     );
   }
 

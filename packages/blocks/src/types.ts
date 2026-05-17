@@ -76,6 +76,33 @@ export interface BlockAttributeSchema {
 export type LazyRef<T> = () => Promise<{ default: T } | T>;
 
 /**
+ * Templated child for a variation's `innerBlocks`. Inserted verbatim
+ * as a Tiptap node with the named block type and the supplied attrs
+ * — recursively, so nested templates compose.
+ */
+export interface BlockVariationInnerBlock {
+  readonly name: string;
+  readonly attributes?: Readonly<Record<string, unknown>>;
+  readonly innerBlocks?: readonly BlockVariationInnerBlock[];
+}
+
+/**
+ * Preset insertion entry. The slash menu shows one item per variation
+ * alongside the block itself; selecting an item creates a node of the
+ * parent block's type with the variation's `attributes` preset and
+ * the `innerBlocks` template materialised under it.
+ */
+export interface BlockVariation {
+  readonly name: string;
+  readonly title: string;
+  readonly description?: string;
+  readonly icon?: string;
+  readonly keywords?: readonly string[];
+  readonly attributes?: Readonly<Record<string, unknown>>;
+  readonly innerBlocks?: readonly BlockVariationInnerBlock[];
+}
+
+/**
  * Declarative client-island descriptor. `src` is the public module
  * specifier the bootstrap script imports at hydration time. `export`
  * names the init function within that module (default `"default"`).
@@ -112,6 +139,16 @@ export interface BlockSpec<Attrs = Readonly<Record<string, unknown>>> {
    * carries values for them.
    */
   readonly supports?: BlockSupports;
+  /**
+   * Preset insertion entries for the slash menu / Inserter. Each
+   * variation surfaces as a separate slash-menu item using this
+   * block's schema but with the variation's `attributes` preset and
+   * the variation's optional `innerBlocks` template materialised as
+   * the inserted children. Used for layouts (Row / Stack on group;
+   * 50/50 / 33/67 / 25/50/25 on columns) so authors don't have to
+   * configure attributes after every insert.
+   */
+  readonly variations?: readonly BlockVariation[];
   readonly schema: LazyRef<ReturnType<typeof TiptapNodeFactory.create>>;
   readonly component: LazyRef<BlockComponent<Attrs>>;
   readonly editor?: LazyRef<ComponentType<unknown>>;

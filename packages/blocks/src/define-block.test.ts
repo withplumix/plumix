@@ -182,6 +182,104 @@ describe("defineBlock", () => {
     expect(Object.isFrozen(spec.attributes?.align)).toBe(true);
   });
 
+  test("accepts a variations declaration and freezes it through", () => {
+    const spec = defineBlock({
+      name: "core/group",
+      title: "Group",
+      schema: PARAGRAPH_SCHEMA,
+      component: PARAGRAPH_COMPONENT,
+      variations: [
+        {
+          name: "row",
+          title: "Row",
+          description: "Horizontal flex container.",
+          attributes: { layout: "flex-row" },
+        },
+        {
+          name: "stack",
+          title: "Stack",
+          attributes: { layout: "flex-column" },
+        },
+      ],
+    });
+    expect(spec.variations).toHaveLength(2);
+    expect(spec.variations?.[0]).toMatchObject({
+      name: "row",
+      title: "Row",
+      attributes: { layout: "flex-row" },
+    });
+    expect(Object.isFrozen(spec.variations)).toBe(true);
+    expect(Object.isFrozen(spec.variations?.[0])).toBe(true);
+  });
+
+  test("rejects a variation with a slug containing uppercase or whitespace", () => {
+    expect(() =>
+      defineBlock({
+        name: "core/group",
+        title: "Group",
+        schema: PARAGRAPH_SCHEMA,
+        component: PARAGRAPH_COMPONENT,
+        variations: [{ name: "Bad Slug!", title: "Bad" }],
+      }),
+    ).toThrow(BlockRegistrationError);
+  });
+
+  test("deep-freezes variation innerBlocks so plugins cannot mutate templates after registration", () => {
+    const spec = defineBlock({
+      name: "core/columns",
+      title: "Columns",
+      schema: PARAGRAPH_SCHEMA,
+      component: PARAGRAPH_COMPONENT,
+      variations: [
+        {
+          name: "50-50",
+          title: "Two columns 50/50",
+          innerBlocks: [
+            { name: "core/column" },
+            {
+              name: "core/column",
+              innerBlocks: [{ name: "core/paragraph" }],
+            },
+          ],
+        },
+      ],
+    });
+    const inners = spec.variations?.[0]?.innerBlocks;
+    expect(Object.isFrozen(inners)).toBe(true);
+    expect(Object.isFrozen(inners?.[0])).toBe(true);
+    expect(Object.isFrozen(inners?.[1])).toBe(true);
+    expect(Object.isFrozen(inners?.[1]?.innerBlocks)).toBe(true);
+    expect(Object.isFrozen(inners?.[1]?.innerBlocks?.[0])).toBe(true);
+  });
+
+  test("accepts a variation slug starting with a digit (ratio-style)", () => {
+    // Layout variations commonly encode ratios like "50-50" or "25-50-25";
+    // requiring a leading letter would force ugly slugs like "two-50-50".
+    const spec = defineBlock({
+      name: "core/columns",
+      title: "Columns",
+      schema: PARAGRAPH_SCHEMA,
+      component: PARAGRAPH_COMPONENT,
+      variations: [{ name: "50-50", title: "Two columns 50/50" }],
+    });
+    expect(spec.variations?.[0]?.name).toBe("50-50");
+  });
+
+  test("rejects two variations with the same slug", () => {
+    expect(() =>
+      defineBlock({
+        name: "core/group",
+        title: "Group",
+        schema: PARAGRAPH_SCHEMA,
+        component: PARAGRAPH_COMPONENT,
+        variations: [
+          { name: "row", title: "Row" },
+          { name: "row", title: "Row again" },
+        ],
+      }),
+    ).toThrow(BlockRegistrationError);
+  });
+
   test("accepts a supports declaration and freezes it through", () => {
     const spec = defineBlock({
       name: "core/paragraph",
