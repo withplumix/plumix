@@ -10,6 +10,7 @@ import type {
 } from "./types.js";
 import { defineBlock } from "./define-block.js";
 import { mergeBlockRegistry } from "./registry.js";
+import { defaultMarkRegistry } from "./test/index.js";
 import { EntryContent } from "./walker.js";
 
 const ROOT_CONTEXT: BlockContext = {
@@ -75,6 +76,7 @@ describe("EntryContent walker", () => {
         content={null}
         registry={registry}
         context={ROOT_CONTEXT}
+        markRegistry={defaultMarkRegistry}
       />,
     );
     expect(container.innerHTML).toBe("");
@@ -92,7 +94,12 @@ describe("EntryContent walker", () => {
       ],
     };
     const { container } = render(
-      <EntryContent content={doc} registry={registry} context={ROOT_CONTEXT} />,
+      <EntryContent
+        content={doc}
+        registry={registry}
+        context={ROOT_CONTEXT}
+        markRegistry={defaultMarkRegistry}
+      />,
     );
     expect(container.innerHTML).toBe("<p>Hello</p>");
   });
@@ -109,7 +116,12 @@ describe("EntryContent walker", () => {
       ],
     };
     const { container } = render(
-      <EntryContent content={doc} registry={registry} context={ROOT_CONTEXT} />,
+      <EntryContent
+        content={doc}
+        registry={registry}
+        context={ROOT_CONTEXT}
+        markRegistry={defaultMarkRegistry}
+      />,
     );
     expect(container.innerHTML).toBe("<p>Old content</p>");
   });
@@ -132,7 +144,12 @@ describe("EntryContent walker", () => {
       ],
     };
     const { container } = render(
-      <EntryContent content={doc} registry={registry} context={ROOT_CONTEXT} />,
+      <EntryContent
+        content={doc}
+        registry={registry}
+        context={ROOT_CONTEXT}
+        markRegistry={defaultMarkRegistry}
+      />,
     );
     expect(container.innerHTML).toBe("<p><strong><em>Hi</em></strong></p>");
   });
@@ -155,7 +172,12 @@ describe("EntryContent walker", () => {
       ],
     };
     const { container } = render(
-      <EntryContent content={doc} registry={registry} context={ROOT_CONTEXT} />,
+      <EntryContent
+        content={doc}
+        registry={registry}
+        context={ROOT_CONTEXT}
+        markRegistry={defaultMarkRegistry}
+      />,
     );
     expect(container.innerHTML).toBe(
       '<p><a href="https://example.com" rel="noopener noreferrer nofollow">click</a></p>',
@@ -185,7 +207,12 @@ describe("EntryContent walker", () => {
       ],
     };
     const { container } = render(
-      <EntryContent content={doc} registry={registry} context={ROOT_CONTEXT} />,
+      <EntryContent
+        content={doc}
+        registry={registry}
+        context={ROOT_CONTEXT}
+        markRegistry={defaultMarkRegistry}
+      />,
     );
     expect(container.innerHTML).toContain(expected);
   });
@@ -208,7 +235,12 @@ describe("EntryContent walker", () => {
       ],
     };
     const { container } = render(
-      <EntryContent content={doc} registry={registry} context={ROOT_CONTEXT} />,
+      <EntryContent
+        content={doc}
+        registry={registry}
+        context={ROOT_CONTEXT}
+        markRegistry={defaultMarkRegistry}
+      />,
     );
     expect(container.innerHTML).toBe("<p>no link</p>");
   });
@@ -231,7 +263,12 @@ describe("EntryContent walker", () => {
       ],
     };
     const { container } = render(
-      <EntryContent content={doc} registry={registry} context={ROOT_CONTEXT} />,
+      <EntryContent
+        content={doc}
+        registry={registry}
+        context={ROOT_CONTEXT}
+        markRegistry={defaultMarkRegistry}
+      />,
     );
     expect(container.innerHTML).toBe("<p>evil</p>");
   });
@@ -271,7 +308,12 @@ describe("EntryContent walker", () => {
       ],
     };
     render(
-      <EntryContent content={doc} registry={registry} context={ROOT_CONTEXT} />,
+      <EntryContent
+        content={doc}
+        registry={registry}
+        context={ROOT_CONTEXT}
+        markRegistry={defaultMarkRegistry}
+      />,
     );
     expect(receivedContext).toEqual(
       expect.objectContaining({ parent: "core/container", depth: 1 }),
@@ -290,7 +332,12 @@ describe("EntryContent walker", () => {
       ],
     };
     const { container } = render(
-      <EntryContent content={doc} registry={registry} context={ROOT_CONTEXT} />,
+      <EntryContent
+        content={doc}
+        registry={registry}
+        context={ROOT_CONTEXT}
+        markRegistry={defaultMarkRegistry}
+      />,
     );
     expect(container.querySelectorAll("template").length).toBe(3);
     expect(
@@ -317,6 +364,7 @@ describe("EntryContent walker", () => {
           content={doc}
           registry={registry}
           context={ROOT_CONTEXT}
+          markRegistry={defaultMarkRegistry}
         />,
       );
       expect(container.innerHTML).toBe("");

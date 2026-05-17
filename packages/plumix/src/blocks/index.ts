@@ -13,9 +13,13 @@
 export {
   BlockRegistrationError,
   EntryContent,
+  MarkRegistrationError,
   coreBlocks,
+  coreMarks,
   defineBlock,
+  defineMark,
   mergeBlockRegistry,
+  mergeMarkRegistry,
   paragraphBlock,
 } from "@plumix/blocks";
 export type {
@@ -27,8 +31,14 @@ export type {
   BlockSpec,
   EntryContentProps,
   LazyRef,
+  MarkComponent,
+  MarkProps,
+  MarkRegistry,
+  MarkSpec,
   MergeBlockRegistryInput,
+  MergeMarkRegistryInput,
   ResolvedBlockSpec,
+  ResolvedMarkSpec,
   TiptapMark,
   TiptapNode,
 } from "@plumix/blocks";

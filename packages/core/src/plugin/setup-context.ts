@@ -1,4 +1,4 @@
-import type { BlockSpec } from "@plumix/blocks";
+import type { BlockSpec, MarkSpec } from "@plumix/blocks";
 
 import type { DerivedCapability } from "../auth/rbac.js";
 import type { AppContext } from "../context/app.js";
@@ -181,6 +181,14 @@ export interface PluginSetupContextBase {
    * reserved for `@plumix/blocks`'s built-in primitives.
    */
   registerBlock(spec: BlockSpec): void;
+
+  /**
+   * Register a `MarkSpec` produced by `defineMark` from `plumix/blocks`.
+   * Plugin-contributed marks merge into the per-app mark registry at
+   * `buildApp` time. Names that collide with the core mark set are
+   * rejected; the convention for plugin marks is `pluginId/markName`.
+   */
+  registerMark(spec: MarkSpec): void;
   /**
    * Register a `LookupAdapter` for a reference target kind. The
    * `kind` matches the `referenceTarget.kind` carried on a reference
@@ -489,6 +497,16 @@ export function createPluginSetupContext({
         });
       }
       registry.blockSpecs.set(spec.name, { spec, registeredBy: pluginId });
+    },
+
+    registerMark: (spec) => {
+      if (registry.markSpecs.has(spec.name)) {
+        throw DuplicateRegistrationError.alreadyRegistered({
+          kind: "mark",
+          identifier: spec.name,
+        });
+      }
+      registry.markSpecs.set(spec.name, { spec, registeredBy: pluginId });
     },
 
     registerLookupAdapter: (options) => {
