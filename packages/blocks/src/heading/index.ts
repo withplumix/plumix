@@ -1,4 +1,5 @@
 import { defineBlock } from "../define-block.js";
+import { headingSupports } from "./supports.js";
 
 const HEADING_LEVELS = [1, 2, 3, 4, 5, 6] as const;
 
@@ -7,6 +8,7 @@ export const headingBlock = defineBlock({
   title: "Heading",
   category: "text",
   description: "Section title.",
+  supports: headingSupports,
   legacyAliases: ["heading"],
   attributes: {
     level: {

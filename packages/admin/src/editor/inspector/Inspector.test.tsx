@@ -20,6 +20,7 @@ function spec(
     category: partial.category ?? "typography",
     keywords: partial.keywords,
     attributes: partial.attributes,
+    supports: partial.supports,
     component: () => null,
     legacyAliases: undefined,
     schema: undefined,
@@ -213,5 +214,47 @@ describe("Inspector", () => {
     );
     if (!checkbox) throw new Error("inspector-field-enabled not rendered");
     expect(checkbox.checked).toBe(false);
+  });
+
+  test("hides the Supports section when the spec declares no supports", () => {
+    const noSupports = spec({
+      name: "core/plain",
+      title: "Plain",
+      attributes: { level: { type: "select", label: "Level", default: 1 } },
+    });
+    const registry = fakeRegistry([noSupports]);
+    const { editor } = stubEditor({
+      nodeType: "core/plain",
+      attrs: { level: 1 },
+    });
+    const { queryByTestId } = render(
+      <Inspector editor={editor} blockRegistry={registry} />,
+    );
+    expect(queryByTestId("inspector-supports-section")).toBeNull();
+  });
+
+  test("renders an anchor input when the spec opts into supports.anchor", () => {
+    const withAnchor = spec({
+      name: "core/heading",
+      title: "Heading",
+      attributes: { level: { type: "select", label: "Level", default: 2 } },
+      supports: { anchor: true },
+    });
+    const registry = fakeRegistry([withAnchor]);
+    const { editor, updateAttributes } = stubEditor({
+      nodeType: "core/heading",
+      attrs: { level: 2, style: { anchor: "intro" } },
+    });
+    const { getByTestId } = render(
+      <Inspector editor={editor} blockRegistry={registry} />,
+    );
+    expect(getByTestId("inspector-supports-section")).toBeInTheDocument();
+    const input = getByTestId("inspector-supports-anchor") as HTMLInputElement;
+    expect(input.value).toBe("intro");
+
+    fireEvent.change(input, { target: { value: "section-2" } });
+    expect(updateAttributes).toHaveBeenCalledWith("core/heading", {
+      style: { anchor: "section-2" },
+    });
   });
 });

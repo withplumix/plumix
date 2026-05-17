@@ -1,4 +1,5 @@
 import { defineBlock } from "../define-block.js";
+import { paragraphSupports } from "./supports.js";
 
 /**
  * Spec for the first core block. Lazy refs keep admin-only imports out
@@ -12,6 +13,7 @@ export const paragraphBlock = defineBlock({
   title: "Paragraph",
   category: "text",
   description: "The building block of all narrative.",
+  supports: paragraphSupports,
   legacyAliases: ["paragraph"],
   keyboardShortcuts: [{ shortcut: "Mod-Alt-0" }],
   parsePaste: [{ selector: "p" }],

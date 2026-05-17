@@ -181,4 +181,27 @@ describe("defineBlock", () => {
     expect(Object.isFrozen(spec.attributes)).toBe(true);
     expect(Object.isFrozen(spec.attributes?.align)).toBe(true);
   });
+
+  test("accepts a supports declaration and freezes it through", () => {
+    const spec = defineBlock({
+      name: "core/paragraph",
+      title: "Paragraph",
+      schema: PARAGRAPH_SCHEMA,
+      component: PARAGRAPH_COMPONENT,
+      supports: {
+        color: { background: true, text: true },
+        spacing: { padding: true },
+        anchor: true,
+        customClassName: true,
+      },
+    });
+    expect(spec.supports).toEqual({
+      color: { background: true, text: true },
+      spacing: { padding: true },
+      anchor: true,
+      customClassName: true,
+    });
+    expect(Object.isFrozen(spec.supports)).toBe(true);
+    expect(Object.isFrozen(spec.supports?.color)).toBe(true);
+  });
 });
