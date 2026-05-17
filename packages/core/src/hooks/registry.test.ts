@@ -1,5 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 
+import type { FilterFn } from "./types.js";
+import { HookExecutionError } from "./errors.js";
 import { HookRegistry } from "./registry.js";
 
 // Augment the empty registries with test-only hook names so the real type
@@ -78,6 +80,49 @@ describe("applyFilter", () => {
     registry.addFilter("test:with_rest", (v, mul) => v + mul);
     const out = await registry.applyFilter("test:with_rest", 3, 10);
     expect(out).toBe(40); // (3 * 10) + 10
+  });
+});
+
+describe("applyFilterSync", () => {
+  test("returns input unchanged when no filters are registered", () => {
+    const registry = new HookRegistry();
+    const result = registry.applyFilterSync("test:passthrough", "unchanged");
+    expect(result).toBe("unchanged");
+  });
+
+  test("runs filters in priority order (lower first), stable on ties", () => {
+    const registry = new HookRegistry();
+    registry.addFilter("test:passthrough", (v) => v + "-b", { priority: 100 });
+    registry.addFilter("test:passthrough", (v) => v + "-a", { priority: 50 });
+    registry.addFilter("test:passthrough", (v) => v + "-c", { priority: 100 });
+    const result = registry.applyFilterSync("test:passthrough", "start");
+    expect(result).toBe("start-a-b-c");
+  });
+
+  test("rejects a non-Promise thenable too (anything with `.then`)", () => {
+    const registry = new HookRegistry();
+    const thenable = (() => ({
+      then() {
+        /* never called — sync path must reject before invoking */
+      },
+    })) as unknown as FilterFn<"test:passthrough">;
+    registry.addFilter("test:passthrough", thenable);
+    expect(() => registry.applyFilterSync("test:passthrough", "x")).toThrow(
+      HookExecutionError,
+    );
+  });
+
+  test("rejects an async handler registered against a sync invocation", () => {
+    const registry = new HookRegistry();
+    // The misuse: a filter signature whose return is `string`, but the
+    // registered handler returns `Promise<string>`. Sync path must reject
+    // at the call site instead of leaking a rejected value downstream.
+    const asyncMisuse = ((v: string) =>
+      Promise.resolve(v)) as unknown as FilterFn<"test:passthrough">;
+    registry.addFilter("test:passthrough", asyncMisuse);
+    expect(() => registry.applyFilterSync("test:passthrough", "x")).toThrow(
+      HookExecutionError,
+    );
   });
 });
 

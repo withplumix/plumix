@@ -24,7 +24,15 @@ export type {
   BlockContentValidationIssue,
 } from "./validation-errors.js";
 export { EntryContent } from "./walker.js";
-export type { EntryContentProps } from "./walker.js";
+export type {
+  BlockRenderHookContext,
+  EntryContentProps,
+  SyncFilterExecutor,
+} from "./walker.js";
+export { collectActiveIslands } from "./islands.js";
+export type { ActiveIsland } from "./islands.js";
+export { PlumixIslandBootstrap } from "./island-bootstrap.js";
+export type { PlumixIslandBootstrapProps } from "./island-bootstrap.js";
 export type {
   BlockAttributeSchema,
   BlockComponent,
@@ -38,6 +46,7 @@ export type {
   BlockTransformFrom,
   BlockTransformTo,
   BlockTransforms,
+  ClientIslandRef,
   LazyRef,
   ParsePasteRule,
   ResolvedBlockSpec,

@@ -74,6 +74,18 @@ export interface BlockAttributeSchema {
 export type LazyRef<T> = () => Promise<{ default: T } | T>;
 
 /**
+ * Declarative client-island descriptor. `src` is the public module
+ * specifier the bootstrap script imports at hydration time. `export`
+ * names the init function within that module (default `"default"`).
+ * The init function is invoked once per placeholder element with the
+ * placeholder DOM node and parsed attrs.
+ */
+export interface ClientIslandRef {
+  readonly src: string;
+  readonly export?: string;
+}
+
+/**
  * The unresolved spec returned by `defineBlock`.
  *
  * Editor and Component are lazy refs so the workers bundle can tree-shake
@@ -92,7 +104,20 @@ export interface BlockSpec<Attrs = Readonly<Record<string, unknown>>> {
   readonly schema: LazyRef<ReturnType<typeof TiptapNodeFactory.create>>;
   readonly component: LazyRef<BlockComponent<Attrs>>;
   readonly editor?: LazyRef<ComponentType<unknown>>;
-  readonly client?: LazyRef<unknown>;
+  /**
+   * Marks this block as a client island. SSR emits a wrapper carrying
+   * `data-plumix-island="<spec.name>"` plus a serialised attrs blob; the
+   * island-bootstrap script (`<PlumixIslandBootstrap>`) imports `src`
+   * once per unique island name and invokes the named export
+   * (default `"default"`), passing the placeholder element.
+   *
+   * `src` must be a browser-resolvable module specifier the SSR shell
+   * can stringify into `<script type="module">`. Authors typically pass
+   * the URL their build pipeline produces (e.g. via `new URL(...,
+   * import.meta.url)` rewriting). Closures (`() => import("…")`) hide
+   * the URL from SSR and are deliberately rejected.
+   */
+  readonly client?: ClientIslandRef;
   /**
    * Tiptap-node names this block accepts as input from legacy content.
    * The walker maps these aliases back to the canonical spec `name` when

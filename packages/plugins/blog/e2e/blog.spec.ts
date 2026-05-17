@@ -31,13 +31,13 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
 
     await expect(page.getByTestId("post-editor-form")).toBeVisible();
     await page.getByTestId("post-editor-title-input").fill("Hello world");
+    // Arm the navigation waiter BEFORE the click so we never miss a
+    // fast post-create redirect — playwright's `waitForURL` only matches
+    // navigations that start after it's armed, and the create RPC can
+    // resolve in <10ms against a warm worker.
+    const navigated = page.waitForURL(/\/entries\/posts\/\d+\/edit/);
     await page.getByTestId("post-editor-submit").click();
-
-    // On successful create the editor navigates from
-    // `/entries/posts/create` to `/entries/posts/<id>/edit` — wait for
-    // that URL change before navigating away so we don't race the
-    // create RPC.
-    await page.waitForURL(/\/entries\/posts\/\d+\/edit/);
+    await navigated;
 
     await page.goto("entries/posts");
     // `content-list-row-*` matches the row plus the per-row actions
@@ -67,12 +67,15 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
     await page
       .getByTestId("post-editor-status-select")
       .selectOption("published");
-    await page.getByTestId("post-editor-submit").click();
-
-    // Wait for the update RPC to settle before reload.
-    await page.waitForResponse(
+    // Arm the response waiter BEFORE the click so we never miss a fast
+    // update RPC — `waitForResponse` only matches responses that arrive
+    // after it's armed, and the update can resolve in <10ms against a
+    // warm worker.
+    const updated = page.waitForResponse(
       (r) => r.url().endsWith("/entry/update") && r.status() === 200,
     );
+    await page.getByTestId("post-editor-submit").click();
+    await updated;
 
     await page.reload();
     await expect(page.getByTestId("post-editor-form")).toBeVisible();
