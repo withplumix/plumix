@@ -394,6 +394,17 @@ describe("PluginContextError — identifier + meta-box factories", () => {
       'entry meta box "seo" declares field "title" more than once',
     );
   });
+
+  test("metaBoxFieldReservedKey", () => {
+    const err = PluginContextError.metaBoxFieldReservedKey({
+      kind: "entry meta box",
+      id: "seo",
+      fieldKey: "__plumix_snapshot",
+    });
+    expect(err.code).toBe("meta_box_field_reserved_key");
+    expect(err.fieldKey).toBe("__plumix_snapshot");
+    expect(err.message).toContain("__plumix_");
+  });
 });
 
 describe("PluginDefinitionError", () => {

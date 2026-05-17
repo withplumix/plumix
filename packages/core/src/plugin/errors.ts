@@ -29,7 +29,8 @@ type PluginContextErrorCode =
   | "identifier_shape_invalid"
   | "meta_box_too_many_fields"
   | "meta_box_field_invalid_key"
-  | "meta_box_field_duplicate_key";
+  | "meta_box_field_duplicate_key"
+  | "meta_box_field_reserved_key";
 
 interface PluginContextErrorFields {
   pluginId?: string;
@@ -516,6 +517,20 @@ export class PluginContextError extends Error {
     return new PluginContextError(
       "meta_box_field_duplicate_key",
       `${ctx.kind} "${ctx.id}" declares field "${ctx.fieldKey}" more than once.`,
+      ctx,
+    );
+  }
+
+  static metaBoxFieldReservedKey(ctx: {
+    kind: string;
+    id: string;
+    fieldKey: string;
+  }): PluginContextError {
+    return new PluginContextError(
+      "meta_box_field_reserved_key",
+      `${ctx.kind} "${ctx.id}" declares field "${ctx.fieldKey}" with the ` +
+        `reserved \`__plumix_\` prefix. That namespace is owned by the core ` +
+        `runtime (e.g. revision snapshot envelopes) — rename the field.`,
       ctx,
     );
   }

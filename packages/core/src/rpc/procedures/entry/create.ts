@@ -1,5 +1,6 @@
 import type { NewEntry } from "../../../db/schema/entries.js";
 import { entries } from "../../../db/schema/entries.js";
+import { isRevisionType } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import {
@@ -35,6 +36,13 @@ export const create = base
       "rpc:entry.create:input",
       input,
     );
+
+    // Reserved internal types are written only by the framework's
+    // snapshot path — reject here so a hostile input.type can't
+    // smuggle revision rows into the table.
+    if (isRevisionType(filtered.type)) {
+      throw errors.BAD_REQUEST({ data: { reason: "reserved_type" } });
+    }
 
     const createCapability = entryCapability(filtered.type, "create");
     if (!context.auth.can(createCapability)) {

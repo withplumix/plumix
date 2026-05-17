@@ -9,6 +9,10 @@ import type {
 } from "../../../db/schema/entries.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import {
+  pruneOldRevisions,
+  snapshotAsRevision,
+} from "../../../revisions/repository.js";
 
 // Each lifecycle event fan-outs to two hook names: the type-scoped form
 // `entry:<type>:<event>` (targets one entry type) and the generic
@@ -132,4 +136,41 @@ export async function wouldCreateParentCycle(
     cursor = next?.parentId ?? null;
   }
   return false;
+}
+
+// No-op when the type doesn't opt into `supports: ['revisions']`.
+// Fires `entry:<type>:revision_created` + the generic variant once
+// the snapshot lands; `revision_pruned` only fires when the cap
+// pushed rows past `maxRevisions`.
+export async function captureRevisionIfSupported(
+  ctx: AuthenticatedAppContext,
+  updated: Entry,
+): Promise<void> {
+  const typeEntry = ctx.plugins.entryTypes.get(updated.type);
+  if (!typeEntry?.supports?.includes("revisions")) return;
+  const cap = typeEntry.versioning?.maxRevisions ?? 25;
+  const revision = await snapshotAsRevision(ctx.db, {
+    entry: updated,
+    authorId: ctx.user.id,
+  });
+  // Prune BEFORE the created hook fires so subscribers see the
+  // post-prune list rather than a transient N+1 window.
+  const pruned = await pruneOldRevisions(ctx.db, {
+    entryId: updated.id,
+    maxRevisions: cap,
+  });
+  await ctx.hooks.doAction(
+    `entry:${updated.type}:revision_created`,
+    revision,
+    updated,
+  );
+  await ctx.hooks.doAction("entry:revision_created", revision, updated);
+  if (pruned > 0) {
+    await ctx.hooks.doAction(
+      `entry:${updated.type}:revision_pruned`,
+      updated,
+      pruned,
+    );
+    await ctx.hooks.doAction("entry:revision_pruned", updated, pruned);
+  }
 }

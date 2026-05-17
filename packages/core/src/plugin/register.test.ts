@@ -275,6 +275,27 @@ describe("installPlugins", () => {
     );
   });
 
+  test("registerEntryMetaBox rejects the reserved __plumix_ key prefix", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("rsv", (ctx) => {
+      ctx.registerEntryMetaBox("snap", {
+        label: "Snap",
+        entryTypes: ["post"],
+        fields: [
+          {
+            key: "__plumix_snapshot",
+            label: "Snapshot",
+            type: "string",
+            inputType: "text",
+          },
+        ],
+      });
+    });
+    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
+      /reserved `__plumix_` prefix/,
+    );
+  });
+
   test("registerTermMetaBox rejects a duplicate field key within the same box", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("dupe", (ctx) => {

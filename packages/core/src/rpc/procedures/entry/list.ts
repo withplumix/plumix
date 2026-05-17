@@ -17,6 +17,7 @@ import {
 import { entries } from "../../../db/schema/entries.js";
 import { entryTerm } from "../../../db/schema/entry_term.js";
 import { terms } from "../../../db/schema/terms.js";
+import { isRevisionType } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { entryCapability } from "./lifecycle.js";
@@ -35,6 +36,9 @@ export const list = base
     );
 
     const type = filtered.type ?? "post";
+    if (isRevisionType(type)) {
+      throw errors.BAD_REQUEST({ data: { reason: "reserved_type" } });
+    }
     const readCapability = entryCapability(type, "read");
     if (!context.auth.can(readCapability)) {
       throw errors.FORBIDDEN({ data: { capability: readCapability } });

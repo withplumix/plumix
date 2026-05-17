@@ -42,6 +42,16 @@ export interface EntryTypeOptions {
   readonly capabilities?: EntryTypeCapabilityOverrides;
   readonly priority?: number;
   readonly menuIcon?: string;
+  /**
+   * Per-type versioning policy. Only honored when `supports` includes
+   * `"revisions"`. `maxRevisions` caps how many revision rows are
+   * retained per live entry (default 25); `autosaveIntervalSeconds`
+   * shapes the editor's autosave cadence (default 60).
+   */
+  readonly versioning?: {
+    readonly maxRevisions?: number;
+    readonly autosaveIntervalSeconds?: number;
+  };
 }
 
 export interface TermTaxonomyOptions {
@@ -1183,6 +1193,18 @@ export interface EntryTypeManifestEntry {
   readonly capabilityType?: string;
   readonly priority?: number;
   readonly menuIcon?: string;
+  /**
+   * Per-type versioning policy. Populated when the entry type opts
+   * into `supports: ['revisions']`. `maxRevisions` caps how many
+   * revision rows are retained per live entry — oldest pruned past
+   * the cap on each successful update. `autosaveIntervalSeconds`
+   * shapes the editor's autosave cadence in a later slice; defaults
+   * to 60 here so themes can read it without nil-checking.
+   */
+  readonly versioning?: {
+    readonly maxRevisions: number;
+    readonly autosaveIntervalSeconds: number;
+  };
 }
 
 /**
@@ -1911,7 +1933,10 @@ function toEntryTypeManifest(pt: RegisteredEntryType): EntryTypeManifestEntry {
     capabilityType,
     priority,
     menuIcon,
-  } = pt;
+    versioning,
+  } = pt as RegisteredEntryType & {
+    readonly versioning?: EntryTypeManifestEntry["versioning"];
+  };
   const visibility = resolveEntryTypeVisibility(pt);
   return {
     name,
@@ -1929,6 +1954,22 @@ function toEntryTypeManifest(pt: RegisteredEntryType): EntryTypeManifestEntry {
     capabilityType,
     priority,
     menuIcon,
+    versioning: deriveVersioning(supports, versioning),
+  };
+}
+
+// Versioning is derived: if the type opts into `supports: ['revisions']`,
+// fill in defaults the admin can read without nil-checking. If the
+// type doesn't support revisions, `versioning` stays undefined and
+// the editor knows to skip the Revisions Sheet entirely.
+function deriveVersioning(
+  supports: readonly string[] | undefined,
+  declared: EntryTypeManifestEntry["versioning"] | undefined,
+): EntryTypeManifestEntry["versioning"] | undefined {
+  if (!supports?.includes("revisions")) return undefined;
+  return {
+    maxRevisions: declared?.maxRevisions ?? 25,
+    autosaveIntervalSeconds: declared?.autosaveIntervalSeconds ?? 60,
   };
 }
 

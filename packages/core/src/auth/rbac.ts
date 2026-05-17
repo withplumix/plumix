@@ -50,6 +50,7 @@ export const CORE_CAPABILITIES: Readonly<Record<string, UserRole>> =
     "entry:post:publish": "author",
     "entry:post:edit_any": "editor",
     "entry:post:delete": "editor",
+    "entry:post:read_revisions": "editor",
     "user:list": "editor",
     "user:edit_own": "subscriber",
     "user:create": "admin",
@@ -73,6 +74,10 @@ export const POST_TYPE_CAPABILITY_ACTIONS = {
   publish: "author",
   edit_any: "editor",
   delete: "editor",
+  // Revision history reads are an editor concern — authors don't
+  // ordinarily look at past versions of their own drafts. Matches the
+  // PRD's "editors can see who saved what and when" framing.
+  read_revisions: "editor",
 } as const satisfies Record<string, UserRole>;
 
 export const TERM_TAXONOMY_CAPABILITY_ACTIONS = {
