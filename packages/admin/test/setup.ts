@@ -17,3 +17,10 @@ if (typeof globalThis.ResizeObserver === "undefined") {
     }
   };
 }
+
+// jsdom omits Element.scrollIntoView; cmdk calls it on the active
+// CommandItem during keyboard navigation. Stub so the slash menu
+// (and any other cmdk consumer) doesn't crash in unit tests.
+Element.prototype.scrollIntoView = function scrollIntoView(): void {
+  /* no-op */
+};

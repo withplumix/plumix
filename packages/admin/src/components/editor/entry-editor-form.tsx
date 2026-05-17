@@ -38,6 +38,10 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar.js";
+import {
+  useAdminBlockRegistry,
+  useAdminMarkRegistry,
+} from "@/editor/registries.js";
 import { orpc } from "@/lib/orpc.js";
 import { buildEditorTermOptions } from "@/lib/terms.js";
 import { cn } from "@/lib/utils";
@@ -468,6 +472,32 @@ function TitleField({ disabled }: { readonly disabled: boolean }): ReactNode {
   );
 }
 
+function ContentEditor({
+  value,
+  onChange,
+  disabled,
+}: {
+  readonly value: JSONContent | null;
+  readonly onChange: (json: JSONContent) => void;
+  readonly disabled: boolean;
+}): ReactNode {
+  // Hooks unwrap the lazy registries via React's `use()` + Suspense —
+  // the parent renders a fallback while they resolve (one-shot per
+  // admin session).
+  const blockRegistry = useAdminBlockRegistry();
+  const markRegistry = useAdminMarkRegistry();
+  return (
+    <TiptapEditor
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      ariaLabel="Entry content"
+      blockRegistry={blockRegistry}
+      markRegistry={markRegistry}
+    />
+  );
+}
+
 function ContentField({ disabled }: { readonly disabled: boolean }): ReactNode {
   const { control } = useFormContext<PostEditorValues>();
   return (
@@ -484,13 +514,10 @@ function ContentField({ disabled }: { readonly disabled: boolean }): ReactNode {
               element to target. */}
           <FormControl>
             <div>
-              <TiptapEditor
+              <ContentEditor
                 value={field.value}
-                onChange={(json) => {
-                  field.onChange(json);
-                }}
+                onChange={field.onChange}
                 disabled={disabled}
-                ariaLabel="Entry content"
               />
             </div>
           </FormControl>
