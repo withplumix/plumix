@@ -101,6 +101,63 @@ export interface BlockSpec<Attrs = Readonly<Record<string, unknown>>> {
    * without rewriting the database.
    */
   readonly legacyAliases?: readonly string[];
+  /**
+   * Tiptap modifier expressions (e.g. `"Mod-Alt-2"`). Each entry binds
+   * a key to "convert current block to this type", optionally with
+   * specific attrs. Heading declares six entries (one per level);
+   * simpler blocks usually have one. Validated against the same
+   * syntax `defineMark`'s keyboardShortcut uses.
+   */
+  readonly keyboardShortcuts?: readonly BlockKeyboardShortcut[];
+  /**
+   * Markdown-style input rules that trigger conversion to this block.
+   * Each entry's `pattern` matches at the start of a text block
+   * (e.g. `"# "` for heading-1). Attrs are merged into the resulting
+   * node. Wired into Tiptap's `addInputRules`.
+   */
+  readonly markdownShortcuts?: readonly BlockMarkdownShortcut[];
+  /**
+   * Paste rules: HTML selectors this block absorbs when the editor
+   * receives pasted content. `fromHTML` can map attributes from the
+   * matched DOM element to the block's `attrs`. When omitted, no
+   * attrs are extracted.
+   */
+  readonly parsePaste?: readonly ParsePasteRule[];
+}
+
+/**
+ * How the keyboard / markdown shortcut converts the current selection
+ * into this block:
+ *
+ * - `"setNode"` (default): replaces the current textblock's type
+ *   (heading, quote, code — anything that holds inline content).
+ * - `"wrap"`: wraps the current textblock in a list-style container
+ *   (`core/list`, `core/list-ordered`) — uses Tiptap's wrapInList /
+ *   wrappingInputRule under the hood.
+ * - `"leaf"`: inserts a leaf node that doesn't hold a textblock
+ *   (`core/separator`, `core/spacer`) — uses Tiptap's nodeInputRule
+ *   for markdown triggers.
+ */
+export type BlockShortcutMode = "setNode" | "wrap" | "leaf";
+
+export interface BlockKeyboardShortcut {
+  readonly shortcut: string;
+  readonly attrs?: Readonly<Record<string, unknown>>;
+  readonly mode?: BlockShortcutMode;
+}
+
+export interface BlockMarkdownShortcut {
+  readonly pattern: string;
+  readonly attrs?: Readonly<Record<string, unknown>>;
+  readonly mode?: BlockShortcutMode;
+}
+
+export interface ParsePasteRule {
+  readonly selector: string;
+  readonly fromHTML?: (
+    element: HTMLElement,
+  ) => Readonly<Record<string, unknown>> | undefined;
+  readonly priority?: number;
 }
 
 /**

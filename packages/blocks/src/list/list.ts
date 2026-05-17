@@ -6,6 +6,9 @@ export const listBlock = defineBlock({
   category: "text",
   description: "Unordered list of items.",
   legacyAliases: ["bulletList"],
+  keyboardShortcuts: [{ shortcut: "Mod-Alt-L", mode: "wrap" }],
+  markdownShortcuts: [{ pattern: "- ", mode: "wrap" }],
+  parsePaste: [{ selector: "ul" }],
   schema: () => import("./schema.js").then((m) => m.listSchema),
   component: () => import("./Component.js").then((m) => m.ListComponent),
 });

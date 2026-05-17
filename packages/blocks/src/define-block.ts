@@ -1,5 +1,6 @@
 import type { BlockAttributeSchema, BlockSpec } from "./types.js";
 import { BlockRegistrationError } from "./errors.js";
+import { KEYBOARD_SHORTCUT_PATTERN } from "./keyboard-shortcut.js";
 
 const BLOCK_NAME_PATTERN = /^[a-z][a-z0-9-]*\/[a-z][a-z0-9-]*$/;
 
@@ -18,13 +19,16 @@ const BLOCK_NAME_PATTERN = /^[a-z][a-z0-9-]*\/[a-z][a-z0-9-]*$/;
 export function defineBlock<Attrs = Readonly<Record<string, unknown>>>(
   spec: BlockSpec<Attrs>,
 ): BlockSpec<Attrs> {
-  if (typeof spec.name !== "string" || spec.name.length === 0) {
-    throw BlockRegistrationError.invalidNamePattern({
-      name: String(spec.name),
-    });
-  }
   if (!BLOCK_NAME_PATTERN.test(spec.name)) {
     throw BlockRegistrationError.invalidNamePattern({ name: spec.name });
+  }
+  for (const entry of spec.keyboardShortcuts ?? []) {
+    if (!KEYBOARD_SHORTCUT_PATTERN.test(entry.shortcut)) {
+      throw BlockRegistrationError.invalidKeyboardShortcut({
+        name: spec.name,
+        keyboardShortcut: entry.shortcut,
+      });
+    }
   }
 
   const attributes = spec.attributes
@@ -38,26 +42,35 @@ export function defineBlock<Attrs = Readonly<Record<string, unknown>>>(
       )
     : undefined;
 
-  const keywords = spec.keywords
-    ? Object.freeze([...spec.keywords] as readonly string[])
-    : undefined;
-
-  const legacyAliases = spec.legacyAliases
-    ? Object.freeze([...spec.legacyAliases] as readonly string[])
-    : undefined;
-
   return Object.freeze<BlockSpec<Attrs>>({
     name: spec.name,
     title: spec.title,
     icon: spec.icon,
     category: spec.category,
     description: spec.description,
-    keywords,
+    keywords: freezeArray(spec.keywords),
     attributes,
     schema: spec.schema,
     component: spec.component,
     editor: spec.editor,
     client: spec.client,
-    legacyAliases,
+    legacyAliases: freezeArray(spec.legacyAliases),
+    keyboardShortcuts: freezeArrayOfObjects(spec.keyboardShortcuts),
+    markdownShortcuts: freezeArrayOfObjects(spec.markdownShortcuts),
+    parsePaste: freezeArrayOfObjects(spec.parsePaste),
   });
+}
+
+function freezeArray<T>(
+  items: readonly T[] | undefined,
+): readonly T[] | undefined {
+  return items ? Object.freeze([...items]) : undefined;
+}
+
+function freezeArrayOfObjects<T extends object>(
+  items: readonly T[] | undefined,
+): readonly T[] | undefined {
+  return items
+    ? Object.freeze(items.map((item) => Object.freeze({ ...item })))
+    : undefined;
 }

@@ -13,6 +13,8 @@ export const paragraphBlock = defineBlock({
   category: "text",
   description: "The building block of all narrative.",
   legacyAliases: ["paragraph"],
+  keyboardShortcuts: [{ shortcut: "Mod-Alt-0" }],
+  parsePaste: [{ selector: "p" }],
   schema: () => import("./schema.js").then((m) => m.paragraphSchema),
   component: () => import("./Component.js").then((m) => m.ParagraphComponent),
 });
