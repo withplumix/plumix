@@ -1,6 +1,10 @@
 import type { BlockSpec } from "./types.js";
+import { buttonBlock } from "./button/index.js";
+import { buttonsBlock } from "./buttons/index.js";
+import { calloutBlock } from "./callout/index.js";
 import { columnBlock } from "./columns/column.js";
 import { columnsBlock } from "./columns/index.js";
+import { detailsBlock } from "./details/index.js";
 import { groupBlock } from "./group/index.js";
 import { headingBlock } from "./heading/index.js";
 import { paragraphBlock } from "./paragraph/index.js";
@@ -14,9 +18,8 @@ import { paragraphBlock } from "./paragraph/index.js";
  * allowlist; the spec itself stays registered so existing content
  * continues to round-trip losslessly.
  *
- * Order is purely a readability convention: typography first, then
- * layout primitives, then interactive blocks as they land in
- * subsequent slices.
+ * Order is purely a readability convention: typography → layout →
+ * interactive → structured, in the order slices land.
  */
 export const coreBlocks: readonly BlockSpec[] = Object.freeze([
   paragraphBlock,
@@ -24,4 +27,8 @@ export const coreBlocks: readonly BlockSpec[] = Object.freeze([
   groupBlock,
   columnsBlock,
   columnBlock,
+  buttonsBlock,
+  buttonBlock,
+  detailsBlock,
+  calloutBlock,
 ]);
