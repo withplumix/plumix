@@ -45,6 +45,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.11.2",
     "@playwright/test": "^1.59.1",
+    "@plumix/blocks": "workspace:*",
     "@plumix/core": "workspace:*",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",

@@ -1,7 +1,17 @@
 import { RPCHandler } from "@orpc/server/fetch";
 
-import type { BlockRegistry } from "@plumix/blocks";
-import { coreBlocks, mergeBlockRegistry } from "@plumix/blocks";
+import type {
+  BlockComponent,
+  BlockRegistry,
+  MarkComponent,
+  MarkRegistry,
+} from "@plumix/blocks";
+import {
+  coreBlocks,
+  coreMarks,
+  mergeBlockRegistry,
+  mergeMarkRegistry,
+} from "@plumix/blocks";
 
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { ResolvedPasskeyConfig } from "../auth/passkey/config.js";
@@ -16,7 +26,11 @@ import type {
 } from "../plugin/manifest.js";
 import type { ContextExtensionEntry } from "../plugin/provides-context.js";
 import type { RouteRule } from "../route/intent.js";
-import type { ThemeSetupContext, ThemeSetupContextBase } from "../theme.js";
+import type {
+  ThemeDescriptor,
+  ThemeSetupContext,
+  ThemeSetupContextBase,
+} from "../theme.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
@@ -108,6 +122,12 @@ export interface PlumixApp {
    * layers only.
    */
   readonly blocks: BlockRegistry;
+  /**
+   * Merged mark registry: the 13 core marks from `@plumix/blocks` +
+   * plugin contributions from `ctx.registerMark`. Same shape and
+   * resolution model as `app.blocks`.
+   */
+  readonly marks: MarkRegistry;
 }
 
 export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
@@ -183,17 +203,32 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
   // plugin contributions. The block walker reads attribute schemas
   // referenced by name (`registerFieldType`); pass the resolved field-type
   // set so `unknown_attribute_type` errors surface here instead of at
-  // render time. Theme block overrides land in a follow-up slice.
+  // render time. Theme overrides flatten across `config.themes` with
+  // later themes winning per-name — same precedence as `marks` below.
   const pluginBlockContributions = Array.from(registry.blockSpecs.values()).map(
     ({ spec, registeredBy }) => ({ spec, pluginId: registeredBy }),
   );
   const fieldTypeNames = new Set<string>(registry.fieldTypes.keys());
+  const { overrides: blockOverrides, themeId: blockThemeId } =
+    collectThemeOverrides(config.themes, (theme) => theme.blocks);
   const blocks = await mergeBlockRegistry({
     core: coreBlocks,
     plugins: pluginBlockContributions,
-    themeOverrides: {},
-    themeId: null,
+    themeOverrides: blockOverrides,
+    themeId: blockThemeId,
     fieldTypes: fieldTypeNames,
+  });
+
+  const pluginMarkContributions = Array.from(registry.markSpecs.values()).map(
+    ({ spec, registeredBy }) => ({ spec, pluginId: registeredBy }),
+  );
+  const { overrides: markOverrides, themeId: markThemeId } =
+    collectThemeOverrides(config.themes, (theme) => theme.marks);
+  const marks = await mergeMarkRegistry({
+    core: coreMarks,
+    plugins: pluginMarkContributions,
+    themeOverrides: markOverrides,
+    themeId: markThemeId,
   });
 
   return {
@@ -214,7 +249,33 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     appContextExtensions,
     scheduledTasks: registry.scheduledTasks,
     blocks,
+    marks,
   };
+}
+
+/**
+ * Flatten per-name component overrides from every theme in declaration
+ * order. Later themes win when names collide, mirroring CSS cascade
+ * intuition (the most-recently-applied theme has the final say). The
+ * reported `themeId` is the last theme that contributed any override —
+ * used by `mergeMarkRegistry` / `mergeBlockRegistry` only to attribute
+ * `themeOverrideUnknownName` errors.
+ */
+function collectThemeOverrides<C extends BlockComponent | MarkComponent>(
+  themes: readonly ThemeDescriptor[],
+  pick: (theme: ThemeDescriptor) => Readonly<Record<string, C>> | undefined,
+): { overrides: Record<string, C>; themeId: string | null } {
+  const overrides: Record<string, C> = {};
+  let themeId: string | null = null;
+  for (const theme of themes) {
+    const layer = pick(theme);
+    if (!layer) continue;
+    for (const [name, component] of Object.entries(layer)) {
+      overrides[name] = component;
+      themeId = theme.id;
+    }
+  }
+  return { overrides, themeId };
 }
 
 function buildThemeSetupContext(

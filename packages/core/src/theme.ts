@@ -1,3 +1,5 @@
+import type { BlockComponent, MarkComponent } from "@plumix/blocks";
+
 import type { ThemeContextExtensions } from "./plugin/provides-context.js";
 import { ThemeError } from "./theme-errors.js";
 
@@ -22,6 +24,20 @@ export interface ThemeDescriptor {
    * theme contributes through plugins' theme-context extensions.
    */
   readonly setup?: (ctx: ThemeSetupContext) => void | Promise<void>;
+  /**
+   * Map of block name → React component. Overrides the resolved block's
+   * `component` only; schema/attributes/editor stay author-owned so
+   * stored content keeps validating. `buildApp` flattens overrides from
+   * `config.themes` (later themes win per-name) into a single map and
+   * hands it to `mergeBlockRegistry`.
+   */
+  readonly blocks?: Readonly<Record<string, BlockComponent>>;
+  /**
+   * Map of mark name → React component. Same precedence and override
+   * semantics as `blocks` — `buildApp` flattens across `config.themes`,
+   * later themes win, schema stays author-owned.
+   */
+  readonly marks?: Readonly<Record<string, MarkComponent>>;
 }
 
 const THEME_ID_RE = /^[a-z][a-z0-9-]*$/;

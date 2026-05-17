@@ -25,6 +25,19 @@ export type {
   TiptapNode,
 } from "./types.js";
 
+export { defineMark } from "./marks/define-mark.js";
+export { MarkRegistrationError } from "./marks/errors.js";
+export { mergeMarkRegistry } from "./marks/registry.js";
+export type { MergeMarkRegistryInput } from "./marks/registry.js";
+export type {
+  MarkComponent,
+  MarkProps,
+  MarkRegistry,
+  MarkSpec,
+  ResolvedMarkSpec,
+} from "./marks/types.js";
+export { coreMarks } from "./marks/core/index.js";
+
 export { coreBlocks } from "./core-blocks.js";
 export { buttonBlock } from "./button/index.js";
 export { buttonsBlock } from "./buttons/index.js";

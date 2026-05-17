@@ -4,6 +4,9 @@ import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils.js";
 import { EditorContent, useEditor } from "@tiptap/react";
 
+import type { MarkRegistry } from "@plumix/blocks";
+
+import { BubbleMenu } from "./bubble-menu/index.js";
 import { buildTiptapExtensions } from "./tiptap-extensions.js";
 import { TiptapToolbar } from "./tiptap-toolbar.js";
 
@@ -26,6 +29,7 @@ export function TiptapEditor({
   marks,
   nodes,
   blocks,
+  markRegistry,
 }: {
   readonly value: JSONContent | null;
   readonly onChange: (json: JSONContent) => void;
@@ -34,6 +38,12 @@ export function TiptapEditor({
   readonly marks?: readonly string[];
   readonly nodes?: readonly string[];
   readonly blocks?: readonly string[];
+  /**
+   * When supplied, a selection-anchored BubbleMenu renders one button
+   * per registered mark. Filtered against the live editor schema so
+   * marks not present as Tiptap extensions are silently skipped.
+   */
+  readonly markRegistry?: MarkRegistry;
 }): ReactNode {
   // Shields the `value` sync-effect from echoing the editor's own
   // emissions back through the parent's state — would otherwise
@@ -84,6 +94,9 @@ export function TiptapEditor({
         disabled={disabled}
         allowlist={allowlist}
       />
+      {markRegistry ? (
+        <BubbleMenu editor={editor} markRegistry={markRegistry} />
+      ) : null}
       <EditorContent editor={editor} />
     </div>
   );

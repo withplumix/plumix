@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { createElement, Fragment } from "react";
 
+import type { MarkRegistry } from "./marks/types.js";
 import type {
   BlockContext,
   BlockRegistry,
@@ -11,37 +12,48 @@ import type {
 export interface EntryContentProps {
   readonly content: TiptapNode | readonly TiptapNode[] | null | undefined;
   readonly registry: BlockRegistry;
+  /**
+   * Required. Inline marks render through this registry's resolved
+   * components, with theme overrides already applied. Tests with no
+   * marked text can pass an empty registry built via
+   * `mockMarkRegistry()`; the `renderBlock` helper defaults to a
+   * `coreMarks`-backed registry so most tests don't have to think
+   * about it.
+   */
+  readonly markRegistry: MarkRegistry;
   readonly context: BlockContext;
 }
 
 /**
  * Recursive React SSR walker over a Tiptap doc.
  *
- * Resolves each non-text node through the merged registry, dispatches
- * text + marks through the inline walker, and threads `BlockContext`
+ * Resolves each non-text node through the block registry, dispatches
+ * text + marks through the mark registry, and threads `BlockContext`
  * through the tree. Container blocks just render `{children}`; the
  * framework owns recursion so authors cannot drop content by forgetting
- * to recurse (FaustJS pattern).
+ * to recurse.
  *
  * Unknown nodes:
  * - In development: a `<template>` marker carrying the unknown name plus
  *   a one-time `console.warn` per unique name. Dedup state is keyed on
- *   the registry instance via a `WeakMap`, so the warn fires once per
- *   registry per page render even when the same unknown block appears
- *   many times.
- * - In production: render nothing — no DOM artifact, no log.
- *
- * Stored content is preserved untouched by the persistence layer; the
- * walker only decides what to render.
+ *   the registry instance via a `WeakMap`.
+ * - In production: render nothing.
  */
 export function EntryContent({
   content,
   registry,
+  markRegistry,
   context,
 }: EntryContentProps): ReactNode {
   if (!content) return null;
   const nodes = Array.isArray(content) ? content : [content];
-  return renderNodes(nodes, registry, context, devWarnState(registry));
+  return renderNodes(
+    nodes,
+    registry,
+    markRegistry,
+    context,
+    devWarnState(registry),
+  );
 }
 
 interface DevWarnState {
@@ -62,6 +74,7 @@ function devWarnState(registry: BlockRegistry): DevWarnState {
 function renderNodes(
   nodes: readonly TiptapNode[] | undefined,
   registry: BlockRegistry,
+  markRegistry: MarkRegistry,
   context: BlockContext,
   devState: DevWarnState,
 ): ReactNode {
@@ -70,7 +83,7 @@ function renderNodes(
     createElement(
       Fragment,
       { key: idx },
-      renderNode(child, registry, context, devState),
+      renderNode(child, registry, markRegistry, context, devState),
     ),
   );
 }
@@ -78,12 +91,13 @@ function renderNodes(
 function renderNode(
   node: TiptapNode,
   registry: BlockRegistry,
+  markRegistry: MarkRegistry,
   context: BlockContext,
   devState: DevWarnState,
 ): ReactNode {
-  if (node.type === "text") return renderText(node);
+  if (node.type === "text") return renderText(node, markRegistry);
   if (node.type === "doc") {
-    return renderNodes(node.content, registry, context, devState);
+    return renderNodes(node.content, registry, markRegistry, context, devState);
   }
 
   const spec = registry.get(node.type);
@@ -94,7 +108,13 @@ function renderNode(
     parent: spec.name,
     depth: context.depth + 1,
   };
-  const children = renderNodes(node.content, registry, childContext, devState);
+  const children = renderNodes(
+    node.content,
+    registry,
+    markRegistry,
+    childContext,
+    devState,
+  );
   return createElement(
     spec.component,
     { attrs: node.attrs ?? {}, node, context, children },
@@ -102,7 +122,7 @@ function renderNode(
   );
 }
 
-function renderText(node: TiptapNode): ReactNode {
+function renderText(node: TiptapNode, markRegistry: MarkRegistry): ReactNode {
   const text = node.text ?? "";
   const marks = node.marks ?? [];
   if (marks.length === 0) return text;
@@ -111,7 +131,7 @@ function renderText(node: TiptapNode): ReactNode {
   let element: ReactNode = text;
   for (let i = marks.length - 1; i >= 0; i -= 1) {
     const mark = marks[i];
-    if (mark) element = wrapMark(element, mark, i);
+    if (mark) element = wrapMark(element, mark, i, markRegistry);
   }
   return element;
 }
@@ -120,38 +140,15 @@ function wrapMark(
   content: ReactNode,
   mark: TiptapMark,
   index: number,
+  markRegistry: MarkRegistry,
 ): ReactNode {
-  const key = `mark-${index}-${mark.type}`;
-  switch (mark.type) {
-    case "bold":
-      return createElement("strong", { key }, content);
-    case "italic":
-      return createElement("em", { key }, content);
-    case "strike":
-      return createElement("s", { key }, content);
-    case "code":
-      return createElement("code", { key }, content);
-    case "link": {
-      const href = sanitizeHref(mark.attrs?.href);
-      if (href === null) return content;
-      return createElement(
-        "a",
-        { key, href, rel: "noopener noreferrer nofollow" },
-        content,
-      );
-    }
-    default:
-      return content;
-  }
-}
-
-const SAFE_HREF = /^(https?:\/\/|mailto:|tel:|\/|#|\?|\.\.?\/)/i;
-
-function sanitizeHref(href: unknown): string | null {
-  if (typeof href !== "string") return null;
-  const trimmed = href.trim();
-  if (trimmed === "") return null;
-  return SAFE_HREF.test(trimmed) ? trimmed : null;
+  const spec = markRegistry.get(mark.type);
+  if (!spec) return content;
+  return createElement(spec.component, {
+    key: `mark-${index}-${mark.type}`,
+    attrs: mark.attrs ?? {},
+    children: content,
+  });
 }
 
 function renderUnknown(node: TiptapNode, devState: DevWarnState): ReactNode {
