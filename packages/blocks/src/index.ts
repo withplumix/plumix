@@ -62,6 +62,8 @@ export type {
   BlockTransformFrom,
   BlockTransformTo,
   BlockTransforms,
+  BlockVariation,
+  BlockVariationInnerBlock,
   ClientIslandRef,
   LazyRef,
   ParsePasteRule,

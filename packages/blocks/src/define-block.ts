@@ -3,6 +3,10 @@ import { BlockRegistrationError } from "./errors.js";
 import { KEYBOARD_SHORTCUT_PATTERN } from "./keyboard-shortcut.js";
 
 const BLOCK_NAME_PATTERN = /^[a-z][a-z0-9-]*\/[a-z][a-z0-9-]*$/;
+// Variation slugs may start with a digit because layout variations
+// commonly encode ratios (`50-50`, `33-67`, `25-50-25`). Hyphens
+// inside the slug are still required to be flanked by alphanumerics.
+const VARIATION_NAME_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 
 /**
  * Validates a block spec at registration time and returns a frozen copy.
@@ -45,6 +49,24 @@ export function defineBlock<Attrs = Readonly<Record<string, unknown>>>(
       validateClientIslandField(spec.name, "export", spec.client.export, false);
     }
   }
+  if (spec.variations) {
+    const seenSlugs = new Set<string>();
+    for (const variation of spec.variations) {
+      if (!VARIATION_NAME_PATTERN.test(variation.name)) {
+        throw BlockRegistrationError.invalidVariationName({
+          name: spec.name,
+          variationName: variation.name,
+        });
+      }
+      if (seenSlugs.has(variation.name)) {
+        throw BlockRegistrationError.duplicateVariationName({
+          name: spec.name,
+          variationName: variation.name,
+        });
+      }
+      seenSlugs.add(variation.name);
+    }
+  }
 
   const attributes = spec.attributes
     ? Object.freeze(
@@ -74,6 +96,7 @@ export function defineBlock<Attrs = Readonly<Record<string, unknown>>>(
     keyboardShortcuts: freezeArrayOfObjects(spec.keyboardShortcuts),
     markdownShortcuts: freezeArrayOfObjects(spec.markdownShortcuts),
     parsePaste: freezeArrayOfObjects(spec.parsePaste),
+    variations: freezeVariations(spec.variations),
     transforms: spec.transforms
       ? Object.freeze({
           priority: spec.transforms.priority,
@@ -135,6 +158,64 @@ function freezeSupports<T>(supports: T | undefined): T | undefined {
     }
   }
   return Object.freeze(out) as T;
+}
+
+function freezeVariations<T>(
+  variations: readonly T[] | undefined,
+): readonly T[] | undefined {
+  if (!variations) return undefined;
+  return Object.freeze(
+    variations.map((variation) =>
+      Object.freeze({
+        ...(variation as Record<string, unknown>),
+        ...(hasInnerBlocks(variation) && {
+          innerBlocks: freezeInnerBlocks(variation.innerBlocks),
+        }),
+      }),
+    ),
+  ) as readonly T[];
+}
+
+interface InnerBlockShape {
+  readonly name: string;
+  readonly attributes?: Readonly<Record<string, unknown>>;
+  readonly innerBlocks?: readonly InnerBlockShape[];
+}
+
+function hasInnerBlocks(
+  v: unknown,
+): v is { readonly innerBlocks: readonly InnerBlockShape[] } {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    Array.isArray((v as { innerBlocks?: unknown }).innerBlocks)
+  );
+}
+
+/**
+ * Deep-freezes `innerBlocks` recursively so a plugin holding a registry
+ * reference can't mutate the templated children that `<SlashMenu>` will
+ * materialise on every variation insert. Without this, freezing only
+ * stops at the variation object and the template arrays under it stay
+ * writeable — a misbehaving plugin could rewrite "core/column" to
+ * "core/evil" after registration.
+ */
+function freezeInnerBlocks(
+  inners: readonly InnerBlockShape[],
+): readonly InnerBlockShape[] {
+  return Object.freeze(
+    inners.map((inner) =>
+      Object.freeze({
+        ...inner,
+        ...(inner.attributes !== undefined && {
+          attributes: Object.freeze({ ...inner.attributes }),
+        }),
+        ...(inner.innerBlocks !== undefined && {
+          innerBlocks: freezeInnerBlocks(inner.innerBlocks),
+        }),
+      }),
+    ),
+  );
 }
 
 function freezeArray<T>(

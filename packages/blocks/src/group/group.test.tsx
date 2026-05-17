@@ -66,4 +66,29 @@ describe("core/group", () => {
     });
     expect(html).not.toContain("data-layout");
   });
+
+  test("groupBlock declares Row + Stack variations presetting layout", () => {
+    const slugs = (groupBlock.variations ?? []).map((v) => v.name);
+    expect(slugs).toEqual(["row", "stack"]);
+    const row = groupBlock.variations?.find((v) => v.name === "row");
+    expect(row?.attributes).toEqual({ layout: "flex-row" });
+    const stack = groupBlock.variations?.find((v) => v.name === "stack");
+    expect(stack?.attributes).toEqual({ layout: "flex-column" });
+  });
+
+  test("groupBlock declares a `layout` select attribute with the four canonical options", () => {
+    expect(groupBlock.attributes?.layout).toMatchObject({
+      type: "select",
+      default: "flow",
+    });
+    const options = (groupBlock.attributes?.layout?.options ?? []) as {
+      value: string;
+    }[];
+    expect(options.map((o) => o.value)).toEqual([
+      "flow",
+      "flex-row",
+      "flex-column",
+      "grid",
+    ]);
+  });
 });

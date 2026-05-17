@@ -63,6 +63,39 @@ describe("itemsFromRegistry", () => {
     expect(item?.keywords).toEqual(["blockquote"]);
   });
 
+  test("emits one item per variation in addition to the parent block", () => {
+    const groupSpec = spec({
+      name: "core/group",
+      title: "Group",
+      category: "layout",
+    });
+    (groupSpec as unknown as { variations: unknown }).variations = [
+      {
+        name: "row",
+        title: "Row",
+        description: "Horizontal flex container.",
+        attributes: { layout: "flex-row" },
+      },
+      {
+        name: "stack",
+        title: "Stack",
+        attributes: { layout: "flex-column" },
+      },
+    ];
+    const registry = fakeRegistry([groupSpec]);
+    const items = itemsFromRegistry(registry);
+    expect(items.map((i) => i.name).sort()).toEqual([
+      "core/group",
+      "core/group:row",
+      "core/group:stack",
+    ]);
+    const row = items.find((i) => i.name === "core/group:row");
+    expect(row?.title).toBe("Row");
+    expect(row?.description).toBe("Horizontal flex container.");
+    expect(row?.parent).toBe("core/group");
+    expect(row?.attributes).toEqual({ layout: "flex-row" });
+  });
+
   test("skips blocks that are content-only (children of another block)", () => {
     const child = spec({
       name: "core/column",
