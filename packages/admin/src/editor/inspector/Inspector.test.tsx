@@ -233,6 +233,29 @@ describe("Inspector", () => {
     expect(queryByTestId("inspector-supports-section")).toBeNull();
   });
 
+  test("groups attributes and supports in semantic <fieldset> blocks with <legend>", () => {
+    const withBoth = spec({
+      name: "core/section",
+      title: "Section",
+      attributes: { level: { type: "select", label: "Level", default: 1 } },
+      supports: { anchor: true, color: { background: true } },
+    });
+    const registry = fakeRegistry([withBoth]);
+    const { editor } = stubEditor({
+      nodeType: "core/section",
+      attrs: { level: 1, style: {} },
+    });
+    const { container } = render(
+      <Inspector editor={editor} blockRegistry={registry} />,
+    );
+    const fieldsets = container.querySelectorAll("fieldset");
+    expect(fieldsets.length).toBe(2);
+    const legends = Array.from(container.querySelectorAll("legend")).map(
+      (el) => el.textContent,
+    );
+    expect(legends).toEqual(expect.arrayContaining(["Attributes", "Supports"]));
+  });
+
   test("renders an anchor input when the spec opts into supports.anchor", () => {
     const withAnchor = spec({
       name: "core/heading",

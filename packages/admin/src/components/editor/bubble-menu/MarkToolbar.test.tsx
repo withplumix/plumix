@@ -162,4 +162,33 @@ describe("MarkToolbar", () => {
       expect(screen.queryByTestId(`bubble-menu-${missing}`)).toBeNull();
     }
   });
+
+  test("ArrowRight moves focus to the next button; ArrowLeft moves back; wraps at the ends", async () => {
+    const { editor } = stubEditor({
+      schemaMarks: ["bold", "italic", "strike"],
+    });
+    const markRegistry = await buildRegistry();
+    render(<MarkToolbar editor={editor} markRegistry={markRegistry} />);
+
+    const bold = screen.getByTestId("bubble-menu-bold");
+    const italic = screen.getByTestId("bubble-menu-italic");
+    const strike = screen.getByTestId("bubble-menu-strike");
+
+    bold.focus();
+    expect(document.activeElement).toBe(bold);
+
+    fireEvent.keyDown(bold, { key: "ArrowRight" });
+    expect(document.activeElement).toBe(italic);
+
+    fireEvent.keyDown(italic, { key: "ArrowRight" });
+    expect(document.activeElement).toBe(strike);
+
+    // Wrap forward
+    fireEvent.keyDown(strike, { key: "ArrowRight" });
+    expect(document.activeElement).toBe(bold);
+
+    // Wrap backward
+    fireEvent.keyDown(bold, { key: "ArrowLeft" });
+    expect(document.activeElement).toBe(strike);
+  });
 });

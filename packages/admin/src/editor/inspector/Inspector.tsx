@@ -1,5 +1,5 @@
 import type { Editor } from "@tiptap/react";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { useEffect, useState } from "react";
 
 import type {
@@ -80,35 +80,60 @@ export function Inspector({
   return (
     <div data-plumix-inspector="" aria-label={`${spec.title} attributes`}>
       <h3 data-plumix-inspector-title="">{spec.title}</h3>
-      {attributeEntries.map(([attrName, schema]) => (
-        <InspectorField
-          key={attrName}
-          name={attrName}
-          schema={schema}
-          value={attrName in attrs ? attrs[attrName] : schema.default}
-          onChange={(next) => {
-            editor
-              .chain()
-              .focus()
-              .updateAttributes(spec.name, { [attrName]: next })
-              .run();
-          }}
-        />
-      ))}
+      {attributeEntries.length > 0 ? (
+        <InspectorSection id="attributes" legend="Attributes">
+          {attributeEntries.map(([attrName, schema]) => (
+            <InspectorField
+              key={attrName}
+              name={attrName}
+              schema={schema}
+              value={attrName in attrs ? attrs[attrName] : schema.default}
+              onChange={(next) => {
+                editor
+                  .chain()
+                  .focus()
+                  .updateAttributes(spec.name, { [attrName]: next })
+                  .run();
+              }}
+            />
+          ))}
+        </InspectorSection>
+      ) : null}
       {spec.supports ? (
-        <SupportsSection
-          supports={spec.supports}
-          style={slot}
-          onChange={(nextSlot) => {
-            editor
-              .chain()
-              .focus()
-              .updateAttributes(spec.name, { style: nextSlot })
-              .run();
-          }}
-        />
+        <InspectorSection id="supports" legend="Supports">
+          <SupportsSection
+            supports={spec.supports}
+            style={slot}
+            onChange={(nextSlot) => {
+              editor
+                .chain()
+                .focus()
+                .updateAttributes(spec.name, { style: nextSlot })
+                .run();
+            }}
+          />
+        </InspectorSection>
       ) : null}
     </div>
+  );
+}
+
+interface InspectorSectionProps {
+  readonly id: "attributes" | "supports";
+  readonly legend: string;
+  readonly children: ReactNode;
+}
+
+function InspectorSection({
+  id,
+  legend,
+  children,
+}: InspectorSectionProps): ReactElement {
+  return (
+    <fieldset data-plumix-inspector-section={id}>
+      <legend>{legend}</legend>
+      {children}
+    </fieldset>
   );
 }
 
