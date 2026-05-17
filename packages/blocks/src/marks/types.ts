@@ -1,7 +1,7 @@
 import type { Mark as TiptapMarkExtension } from "@tiptap/core";
 import type { ComponentType, ReactNode } from "react";
 
-import type { LazyRef } from "../types.js";
+import type { LazyRef, ParsePasteRule } from "../types.js";
 
 export interface MarkProps {
   readonly attrs: Readonly<Record<string, unknown>>;
@@ -21,6 +21,12 @@ export interface MarkSpec {
   readonly bubbleMenuIcon?: string;
   readonly schema: LazyRef<ReturnType<typeof TiptapMarkExtension.create>>;
   readonly component: LazyRef<MarkComponent>;
+  /**
+   * Paste rules: HTML selectors this mark absorbs when the editor
+   * receives pasted content. Marks usually need only the selector;
+   * the editor extension wraps matched ranges with this mark.
+   */
+  readonly parsePaste?: readonly ParsePasteRule[];
 }
 
 export interface ResolvedMarkSpec extends Omit<MarkSpec, "component"> {

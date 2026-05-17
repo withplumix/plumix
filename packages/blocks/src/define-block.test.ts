@@ -84,6 +84,29 @@ describe("defineBlock", () => {
     expect(spec.name).toBe("media-extra/full-bleed-image");
   });
 
+  test("accepts a Tiptap-style keyboardShortcut entry", () => {
+    const spec = defineBlock({
+      name: "core/heading",
+      title: "Heading",
+      keyboardShortcuts: [{ shortcut: "Mod-Alt-2", attrs: { level: 2 } }],
+      schema: PARAGRAPH_SCHEMA,
+      component: PARAGRAPH_COMPONENT,
+    });
+    expect(spec.keyboardShortcuts?.[0]?.shortcut).toBe("Mod-Alt-2");
+  });
+
+  test("rejects a malformed keyboardShortcut", () => {
+    expect(() =>
+      defineBlock({
+        name: "core/heading",
+        title: "Heading",
+        keyboardShortcuts: [{ shortcut: "totally bogus" }],
+        schema: PARAGRAPH_SCHEMA,
+        component: PARAGRAPH_COMPONENT,
+      }),
+    ).toThrow(expect.objectContaining({ code: "invalid_keyboard_shortcut" }));
+  });
+
   test("freezes attribute schemas as well", () => {
     const spec = defineBlock({
       name: "core/paragraph",

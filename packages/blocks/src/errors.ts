@@ -1,5 +1,6 @@
 type BlockRegistrationErrorCode =
   | "invalid_name_pattern"
+  | "invalid_keyboard_shortcut"
   | "duplicate_name"
   | "core_block_collision"
   | "theme_override_unknown_name"
@@ -15,6 +16,7 @@ interface BlockRegistrationErrorFields {
   schemaName?: string;
   attributeName?: string;
   attributeType?: string;
+  keyboardShortcut?: string;
 }
 
 const NAME_PATTERN = "^[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$";
@@ -33,6 +35,7 @@ export class BlockRegistrationError extends Error {
   readonly schemaName: string | undefined;
   readonly attributeName: string | undefined;
   readonly attributeType: string | undefined;
+  readonly keyboardShortcut: string | undefined;
 
   private constructor(
     code: BlockRegistrationErrorCode,
@@ -49,6 +52,7 @@ export class BlockRegistrationError extends Error {
     this.schemaName = fields.schemaName;
     this.attributeName = fields.attributeName;
     this.attributeType = fields.attributeType;
+    this.keyboardShortcut = fields.keyboardShortcut;
   }
 
   static invalidNamePattern(ctx: {
@@ -115,6 +119,21 @@ export class BlockRegistrationError extends Error {
         `The spec name and the Tiptap node name must match — otherwise ` +
         `the walker cannot resolve nodes through the registry.`,
       { blockName: ctx.specName, schemaName: ctx.schemaName },
+    );
+  }
+
+  static invalidKeyboardShortcut(ctx: {
+    name: string;
+    keyboardShortcut: string;
+  }): BlockRegistrationError {
+    return new BlockRegistrationError(
+      "invalid_keyboard_shortcut",
+      `Block "${ctx.name}" declared keyboardShortcut "${ctx.keyboardShortcut}", ` +
+        `which is not a valid Tiptap modifier expression. Use the canonical ` +
+        `form: one or more capitalized modifier tokens (Mod, Shift, Alt, ` +
+        `Cmd, Ctrl, Meta, Opt) followed by a single alphanumeric key, ` +
+        `each joined by "-". Examples: "Mod-b", "Mod-Alt-2".`,
+      { blockName: ctx.name, keyboardShortcut: ctx.keyboardShortcut },
     );
   }
 

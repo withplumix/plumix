@@ -5,6 +5,8 @@ export const separatorBlock = defineBlock({
   title: "Separator",
   category: "typography",
   description: "Horizontal rule with named style variants.",
+  markdownShortcuts: [{ pattern: "--- ", mode: "leaf" }],
+  parsePaste: [{ selector: "hr" }],
   schema: () => import("./schema.js").then((m) => m.separatorSchema),
   component: () => import("./Component.js").then((m) => m.SeparatorComponent),
 });

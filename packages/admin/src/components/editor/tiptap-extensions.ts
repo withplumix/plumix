@@ -3,6 +3,8 @@ import StarterKit from "@tiptap/starter-kit";
 
 import type { BlockRegistry } from "@plumix/blocks";
 
+import { wireBlockSpecExtension } from "./spec-extensions.js";
+
 // `undefined` allowlist → canvas mode (full StarterKit). Defined →
 // strict richtext-field mode where StarterKit extensions are gated
 // by the field's `marks` / `nodes`.
@@ -85,7 +87,7 @@ function registryNodeExtensions(
   if (!registry) return [];
   const exts: Extensions = [];
   for (const [, spec] of registry) {
-    exts.push(spec.schema);
+    exts.push(wireBlockSpecExtension(spec));
   }
   return exts;
 }

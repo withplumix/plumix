@@ -5,6 +5,9 @@ export const quoteBlock = defineBlock({
   title: "Quote",
   category: "typography",
   description: "Pull quote with optional citation.",
+  keyboardShortcuts: [{ shortcut: "Mod-Alt-Q" }],
+  markdownShortcuts: [{ pattern: "> " }],
+  parsePaste: [{ selector: "blockquote" }],
   schema: () => import("./schema.js").then((m) => m.quoteSchema),
   component: () => import("./Component.js").then((m) => m.QuoteComponent),
 });
