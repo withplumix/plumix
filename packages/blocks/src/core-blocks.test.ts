@@ -16,6 +16,20 @@ describe("coreBlocks catalogue", () => {
     );
   });
 
+  test("ships the list family and description-list trio", () => {
+    const names = coreBlocks.map((b) => b.name);
+    expect(names).toEqual(
+      expect.arrayContaining([
+        "core/list",
+        "core/list-ordered",
+        "core/list-item",
+        "core/description-list",
+        "core/description-term",
+        "core/description-detail",
+      ]),
+    );
+  });
+
   test("layout blocks declare the `layout` category", () => {
     const layoutBlocks = coreBlocks.filter((b) => b.category === "layout");
     const names = layoutBlocks.map((b) => b.name);

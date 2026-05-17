@@ -12,7 +12,7 @@ import { mergeAttributes, Node } from "@tiptap/core";
 export const columnsSchema = Node.create({
   name: "core/columns",
   group: "block",
-  content: "block*",
+  content: "coreColumn+",
   defining: true,
 
   parseHTML() {
@@ -30,7 +30,7 @@ export const columnsSchema = Node.create({
 
 export const columnSchema = Node.create({
   name: "core/column",
-  group: "block",
+  group: "block coreColumn",
   content: "block*",
   defining: true,
 

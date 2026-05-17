@@ -87,6 +87,56 @@ describe("paragraph parity against the legacy walker", () => {
     },
   );
 
+  test("bulletList legacy content renders identically to <ul>", async () => {
+    const registry = await mockRegistry({ core: [...coreBlocks] });
+    const doc = {
+      type: "doc",
+      content: [
+        {
+          type: "bulletList",
+          content: [
+            {
+              type: "listItem",
+              content: [{ type: "text", text: "a" }],
+            },
+            {
+              type: "listItem",
+              content: [{ type: "text", text: "b" }],
+            },
+          ],
+        },
+      ],
+    };
+    expect(renderBlock({ registry, content: doc })).toBe(
+      renderTiptapContent(doc),
+    );
+  });
+
+  test("orderedList legacy content renders identically to <ol>", async () => {
+    // The legacy walker drops `start` / `reversed` attrs entirely — for
+    // parity we test the shape both walkers agree on (no numbering
+    // attrs). The new walker's start / reversed handling is exercised
+    // in @plumix/blocks's list suite.
+    const registry = await mockRegistry({ core: [...coreBlocks] });
+    const doc = {
+      type: "doc",
+      content: [
+        {
+          type: "orderedList",
+          content: [
+            {
+              type: "listItem",
+              content: [{ type: "text", text: "first" }],
+            },
+          ],
+        },
+      ],
+    };
+    expect(renderBlock({ registry, content: doc })).toBe(
+      renderTiptapContent(doc),
+    );
+  });
+
   test("heading with out-of-range level clamps identically", async () => {
     const registry = await mockRegistry({ core: [...coreBlocks] });
     const doc = {
