@@ -1,4 +1,4 @@
-import type { JSONContent } from "@tiptap/react";
+import type { Editor, JSONContent } from "@tiptap/react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { FloatingInsertMenu } from "@/editor/floating-menu/FloatingInsertMenu.js";
@@ -32,6 +32,7 @@ export function TiptapEditor({
   blocks,
   markRegistry,
   blockRegistry,
+  onEditorReady,
 }: {
   readonly value: JSONContent | null;
   readonly onChange: (json: JSONContent) => void;
@@ -50,6 +51,13 @@ export function TiptapEditor({
    * `/` to insert a block; omit in field mode (no slash menu shown).
    */
   readonly blockRegistry?: BlockRegistry;
+  /**
+   * Called once with the editor instance after mount, and again with
+   * `null` on unmount. Lets the rail Inspector (or future Block menu)
+   * subscribe to selection state without prop-drilling the editor
+   * down the form tree.
+   */
+  readonly onEditorReady?: (editor: Editor | null) => void;
 }): ReactNode {
   // Shields the `value` sync-effect from echoing the editor's own
   // emissions back through the parent's state — would otherwise
@@ -114,6 +122,23 @@ export function TiptapEditor({
   useEffect(() => {
     editor.setEditable(!disabled);
   }, [editor, disabled]);
+
+  // Ref-pin the callback so the publish/unpublish effect only fires
+  // when the editor instance itself changes (mount/unmount) — not on
+  // every parent re-render that might hand us a new inline lambda.
+  // Without this, the Inspector context value would flicker null →
+  // editor on unrelated re-renders.
+  const onEditorReadyRef = useRef(onEditorReady);
+  useEffect(() => {
+    onEditorReadyRef.current = onEditorReady;
+  });
+
+  useEffect(() => {
+    onEditorReadyRef.current?.(editor);
+    return () => {
+      onEditorReadyRef.current?.(null);
+    };
+  }, [editor]);
 
   return (
     <div className={cn("bg-background", disabled && "opacity-60")}>

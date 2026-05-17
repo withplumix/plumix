@@ -37,6 +37,7 @@ import { createCapabilityResolver } from "../auth/rbac.js";
 import { DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
 import * as coreSchema from "../db/schema/index.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { CORE_FIELD_TYPES } from "../plugin/core-field-types.js";
 import {
   CORE_RPC_NAMESPACES,
   createPluginRegistry,
@@ -208,7 +209,10 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
   const pluginBlockContributions = Array.from(registry.blockSpecs.values()).map(
     ({ spec, registeredBy }) => ({ spec, pluginId: registeredBy }),
   );
-  const fieldTypeNames = new Set<string>(registry.fieldTypes.keys());
+  const fieldTypeNames = new Set<string>([
+    ...CORE_FIELD_TYPES,
+    ...registry.fieldTypes.keys(),
+  ]);
   const { overrides: blockOverrides, themeId: blockThemeId } =
     collectThemeOverrides(config.themes, (theme) => theme.blocks);
   const blocks = await mergeBlockRegistry({

@@ -1,4 +1,4 @@
-import type { JSONContent } from "@tiptap/react";
+import type { Editor, JSONContent } from "@tiptap/react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { MultiSelect } from "@/components/form/multi-select.js";
@@ -38,6 +38,8 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar.js";
+import { EditorProvider, useActiveEditor } from "@/editor/editor-context.js";
+import { Inspector } from "@/editor/inspector/Inspector.js";
 import {
   useAdminBlockRegistry,
   useAdminMarkRegistry,
@@ -235,6 +237,11 @@ export function PostEditorForm({
   // from the title. Standard WP auto-slug behavior.
   const [slugLocked, setSlugLocked] = useState(initialSlugLocked);
 
+  // Hoisted so the right-rail Inspector can subscribe to selection
+  // changes without prop-drilling through the FormField tree. Set by
+  // `ContentEditor` via `onEditorReady`, exposed through context.
+  const [activeEditor, setActiveEditor] = useState<Editor | null>(null);
+
   const form = useForm({
     resolver: valibotResolver(postEditorSchema),
     defaultValues: initialValues,
@@ -280,133 +287,141 @@ export function PostEditorForm({
 
   return (
     <Form {...form}>
-      {/* `contents` makes the form invisible in the flex flow so
+      <EditorProvider value={activeEditor}>
+        {/* `contents` makes the form invisible in the flex flow so
           SidebarProvider owns the layout; fields in the rail still
           submit via Controller (rhf state, not DOM form semantics). */}
-      <form
-        id="entry-editor-form"
-        data-testid="post-editor-form"
-        onSubmit={handleSubmit}
-        className="contents"
-      >
-        <SidebarProvider defaultOpen className="flex-1">
-          <SidebarInset className="flex min-w-0 flex-col">
-            <header className="bg-background sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between gap-3 border-b px-4">
-              <div className="flex min-w-0 items-center gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={onCancel}
-                  disabled={isSubmitting}
-                  data-testid="post-editor-cancel"
-                  aria-label="Back"
-                >
-                  <ArrowLeft />
-                </Button>
-                <span
-                  className="truncate text-sm font-medium"
-                  data-testid="post-editor-headline"
-                >
-                  {headline}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  data-testid="post-editor-submit"
-                >
-                  {isSubmitting ? "Saving…" : submitLabel}
-                </Button>
-                {/* `type="button"` is load-bearing: shadcn's `Button`
+        <form
+          id="entry-editor-form"
+          data-testid="post-editor-form"
+          onSubmit={handleSubmit}
+          className="contents"
+        >
+          <SidebarProvider defaultOpen className="flex-1">
+            <SidebarInset className="flex min-w-0 flex-col">
+              <header className="bg-background sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between gap-3 border-b px-4">
+                <div className="flex min-w-0 items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={onCancel}
+                    disabled={isSubmitting}
+                    data-testid="post-editor-cancel"
+                    aria-label="Back"
+                  >
+                    <ArrowLeft />
+                  </Button>
+                  <span
+                    className="truncate text-sm font-medium"
+                    data-testid="post-editor-headline"
+                  >
+                    {headline}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    data-testid="post-editor-submit"
+                  >
+                    {isSubmitting ? "Saving…" : submitLabel}
+                  </Button>
+                  {/* `type="button"` is load-bearing: shadcn's `Button`
                     doesn't default it, and an un-typed button inside
                     `<form>` inherits `submit` — clicking the toggle
                     would otherwise fire the form's onSubmit + mutate. */}
-                <SidebarTrigger type="button" />
-              </div>
-            </header>
+                  <SidebarTrigger type="button" />
+                </div>
+              </header>
 
-            {serverError ? (
-              <div className="border-b px-4 py-2">
-                <Alert variant="destructive">
-                  <AlertDescription>{serverError}</AlertDescription>
-                </Alert>
-              </div>
-            ) : null}
+              {serverError ? (
+                <div className="border-b px-4 py-2">
+                  <Alert variant="destructive">
+                    <AlertDescription>{serverError}</AlertDescription>
+                  </Alert>
+                </div>
+              ) : null}
 
-            <main className="flex-1 overflow-auto">
-              <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-8 py-10">
-                {showTitle ? <TitleField disabled={isSubmitting} /> : null}
-                {showEditor ? <ContentField disabled={isSubmitting} /> : null}
-                {!showTitle && !showEditor ? (
-                  <p
-                    className="text-muted-foreground text-sm"
-                    data-testid="post-editor-empty-canvas"
-                  >
-                    This entry type has no title or editor. Use the panels on
-                    the right to manage its content.
-                  </p>
-                ) : null}
-              </div>
-            </main>
-          </SidebarInset>
+              <main className="flex-1 overflow-auto">
+                <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-8 py-10">
+                  {showTitle ? <TitleField disabled={isSubmitting} /> : null}
+                  {showEditor ? (
+                    <ContentField
+                      disabled={isSubmitting}
+                      onEditorReady={setActiveEditor}
+                    />
+                  ) : null}
+                  {!showTitle && !showEditor ? (
+                    <p
+                      className="text-muted-foreground text-sm"
+                      data-testid="post-editor-empty-canvas"
+                    >
+                      This entry type has no title or editor. Use the panels on
+                      the right to manage its content.
+                    </p>
+                  ) : null}
+                </div>
+              </main>
+            </SidebarInset>
 
-          <Sidebar
-            side="right"
-            collapsible="offcanvas"
-            data-testid="meta-boxes-sidebar"
-          >
-            <SidebarHeader className="flex h-14 shrink-0 flex-row items-center border-b px-4 text-sm font-semibold">
-              Document
-            </SidebarHeader>
-            <SidebarContent>
-              <Accordion
-                type="multiple"
-                defaultValue={openSections}
-                className="divide-y"
-              >
-                {showSlug ? (
-                  <PermalinkSection
-                    disabled={isSubmitting}
-                    onSlugEdit={() => {
-                      setSlugLocked(true);
-                    }}
-                  />
-                ) : null}
-                <StatusSection
-                  availableStatuses={availableStatuses}
-                  disabled={isSubmitting}
-                />
-                {isHierarchical ? (
-                  <ParentSection
-                    parentOptions={parentOptions}
+            <Sidebar
+              side="right"
+              collapsible="offcanvas"
+              data-testid="meta-boxes-sidebar"
+            >
+              <SidebarHeader className="flex h-14 shrink-0 flex-row items-center border-b px-4 text-sm font-semibold">
+                Document
+              </SidebarHeader>
+              <SidebarContent>
+                <InspectorSection />
+                <Accordion
+                  type="multiple"
+                  defaultValue={openSections}
+                  className="divide-y"
+                >
+                  {showSlug ? (
+                    <PermalinkSection
+                      disabled={isSubmitting}
+                      onSlugEdit={() => {
+                        setSlugLocked(true);
+                      }}
+                    />
+                  ) : null}
+                  <StatusSection
+                    availableStatuses={availableStatuses}
                     disabled={isSubmitting}
                   />
-                ) : null}
-                {showExcerpt ? (
-                  <ExcerptSection disabled={isSubmitting} />
-                ) : null}
-                {taxonomies.map((tax) => (
-                  <TaxonomySection
-                    key={tax.name}
-                    taxonomy={tax}
-                    disabled={isSubmitting}
-                  />
-                ))}
-                {metaBoxes.map((box) => (
-                  <MetaBoxAccordionItem
-                    key={box.id}
-                    box={box}
-                    basePath="meta"
-                    disabled={isSubmitting}
-                  />
-                ))}
-              </Accordion>
-            </SidebarContent>
-          </Sidebar>
-        </SidebarProvider>
-      </form>
+                  {isHierarchical ? (
+                    <ParentSection
+                      parentOptions={parentOptions}
+                      disabled={isSubmitting}
+                    />
+                  ) : null}
+                  {showExcerpt ? (
+                    <ExcerptSection disabled={isSubmitting} />
+                  ) : null}
+                  {taxonomies.map((tax) => (
+                    <TaxonomySection
+                      key={tax.name}
+                      taxonomy={tax}
+                      disabled={isSubmitting}
+                    />
+                  ))}
+                  {metaBoxes.map((box) => (
+                    <MetaBoxAccordionItem
+                      key={box.id}
+                      box={box}
+                      basePath="meta"
+                      disabled={isSubmitting}
+                    />
+                  ))}
+                </Accordion>
+              </SidebarContent>
+            </Sidebar>
+          </SidebarProvider>
+        </form>
+      </EditorProvider>
 
       <AlertDialog
         open={blocker.status === "blocked"}
@@ -472,14 +487,23 @@ function TitleField({ disabled }: { readonly disabled: boolean }): ReactNode {
   );
 }
 
+function InspectorSection(): ReactNode {
+  const editor = useActiveEditor();
+  const blockRegistry = useAdminBlockRegistry();
+  if (!editor) return null;
+  return <Inspector editor={editor} blockRegistry={blockRegistry} />;
+}
+
 function ContentEditor({
   value,
   onChange,
   disabled,
+  onEditorReady,
 }: {
   readonly value: JSONContent | null;
   readonly onChange: (json: JSONContent) => void;
   readonly disabled: boolean;
+  readonly onEditorReady: (editor: Editor | null) => void;
 }): ReactNode {
   // Hooks unwrap the lazy registries via React's `use()` + Suspense —
   // the parent renders a fallback while they resolve (one-shot per
@@ -494,11 +518,18 @@ function ContentEditor({
       ariaLabel="Entry content"
       blockRegistry={blockRegistry}
       markRegistry={markRegistry}
+      onEditorReady={onEditorReady}
     />
   );
 }
 
-function ContentField({ disabled }: { readonly disabled: boolean }): ReactNode {
+function ContentField({
+  disabled,
+  onEditorReady,
+}: {
+  readonly disabled: boolean;
+  readonly onEditorReady: (editor: Editor | null) => void;
+}): ReactNode {
   const { control } = useFormContext<PostEditorValues>();
   return (
     <FormField
@@ -518,6 +549,7 @@ function ContentField({ disabled }: { readonly disabled: boolean }): ReactNode {
                 value={field.value}
                 onChange={field.onChange}
                 disabled={disabled}
+                onEditorReady={onEditorReady}
               />
             </div>
           </FormControl>
