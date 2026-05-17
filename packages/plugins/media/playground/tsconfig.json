@@ -1,6 +1,11 @@
 {
   "extends": "@plumix/typescript-config/base.json",
   "compilerOptions": {
+    // Media plugin source includes block Component `.tsx` files,
+    // resolved through the path alias below — TS needs JSX enabled
+    // to typecheck those.
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["node", "@cloudflare/workers-types"],
     // Resolve the workspace packages directly from `src/` rather than
     // their built `dist/`. Otherwise the playground's typecheck
