@@ -106,3 +106,10 @@ export { paragraphBlock } from "./paragraph/index.js";
 export { quoteBlock } from "./quote/index.js";
 export { separatorBlock } from "./separator/index.js";
 export { spacerBlock } from "./spacer/index.js";
+export {
+  tableBlock,
+  tableBodyRowBlock,
+  tableCellBlock,
+  tableHeaderCellBlock,
+  tableHeaderRowBlock,
+} from "./table/index.js";

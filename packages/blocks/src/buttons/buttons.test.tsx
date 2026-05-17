@@ -69,4 +69,21 @@ describe("core/buttons", () => {
     expect(html).toContain('data-gap="12px"');
     expect(html).toContain('data-gap="1rem"');
   });
+
+  test("declares align (select) + gap (text) attributes for the Inspector", () => {
+    expect(buttonsBlock.attributes?.align).toMatchObject({
+      type: "select",
+      default: "start",
+    });
+    expect(buttonsBlock.attributes?.gap).toMatchObject({ type: "text" });
+  });
+
+  test("declares supports for color/spacing/customClassName/anchor", () => {
+    expect(buttonsBlock.supports).toEqual({
+      color: { background: true },
+      spacing: { padding: true, margin: true },
+      anchor: true,
+      customClassName: true,
+    });
+  });
 });

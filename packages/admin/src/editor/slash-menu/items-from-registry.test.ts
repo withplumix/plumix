@@ -96,6 +96,23 @@ describe("itemsFromRegistry", () => {
     expect(row?.attributes).toEqual({ layout: "flex-row" });
   });
 
+  test("skips blocks marked `inserter: false` so content-only children stay out of the slash menu", () => {
+    const tableSpec = spec({
+      name: "core/table",
+      title: "Table",
+      category: "interactive",
+    });
+    const cellSpec = spec({
+      name: "core/table-cell",
+      title: "Table cell",
+      category: "interactive",
+    });
+    (cellSpec as unknown as { inserter: boolean }).inserter = false;
+    const registry = fakeRegistry([tableSpec, cellSpec]);
+    const items = itemsFromRegistry(registry);
+    expect(items.map((i) => i.name)).toEqual(["core/table"]);
+  });
+
   test("skips blocks that are content-only (children of another block)", () => {
     const child = spec({
       name: "core/column",

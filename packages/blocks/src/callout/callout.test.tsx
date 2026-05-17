@@ -83,4 +83,32 @@ describe("core/callout", () => {
     });
     expect(html).not.toContain("data-icon");
   });
+
+  test("declares variant (select) + icon (text) attributes for the Inspector", () => {
+    expect(calloutBlock.attributes?.variant).toMatchObject({
+      type: "select",
+      default: "info",
+    });
+    const options = (calloutBlock.attributes?.variant?.options ?? []) as {
+      value: string;
+    }[];
+    expect(options.map((o) => o.value)).toEqual([
+      "info",
+      "warn",
+      "error",
+      "success",
+      "note",
+    ]);
+    expect(calloutBlock.attributes?.icon).toMatchObject({ type: "text" });
+  });
+
+  test("declares supports for color/spacing/border/anchor/customClassName", () => {
+    expect(calloutBlock.supports).toEqual({
+      color: { background: true, text: true },
+      spacing: { padding: true, margin: true },
+      border: { radius: true },
+      anchor: true,
+      customClassName: true,
+    });
+  });
 });

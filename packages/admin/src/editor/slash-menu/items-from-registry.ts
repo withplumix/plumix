@@ -44,6 +44,10 @@ export function itemsFromRegistry(
   for (const [, spec] of registry) {
     const parent = (spec as unknown as { parent?: unknown }).parent;
     if (typeof parent === "string") continue;
+    // `inserter: false` keeps content-only children (table rows,
+    // table cells) out of the standalone slash menu — they enter
+    // the document through a parent's variation template.
+    if (spec.inserter === false) continue;
     items.push({
       name: spec.name,
       title: spec.title,

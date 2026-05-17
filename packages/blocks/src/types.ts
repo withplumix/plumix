@@ -140,6 +140,13 @@ export interface BlockSpec<Attrs = Readonly<Record<string, unknown>>> {
    */
   readonly supports?: BlockSupports;
   /**
+   * Whether the slash menu / Inserter should surface this block as a
+   * standalone insertable. `false` for content-only children (table
+   * rows, table cells, column children) that the user inserts through
+   * a parent's variation template, not directly. Default `true`.
+   */
+  readonly inserter?: boolean;
+  /**
    * Preset insertion entries for the slash menu / Inserter. Each
    * variation surfaces as a separate slash-menu item using this
    * block's schema but with the variation's `attributes` preset and
