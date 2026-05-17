@@ -2,7 +2,9 @@ import { mergeAttributes, Node } from "@tiptap/core";
 
 export const buttonSchema = Node.create({
   name: "core/button",
-  group: "block",
+  // `coreButton` group is referenced by core/buttons's content
+  // expression to enforce button-only children at the schema level.
+  group: "block coreButton",
   atom: true,
   selectable: true,
   draggable: true,
