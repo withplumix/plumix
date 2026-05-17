@@ -65,6 +65,7 @@ export function defineBlock<Attrs = Readonly<Record<string, unknown>>>(
     description: spec.description,
     keywords: freezeArray(spec.keywords),
     attributes,
+    supports: freezeSupports(spec.supports),
     schema: spec.schema,
     component: spec.component,
     editor: spec.editor,
@@ -90,7 +91,7 @@ export function defineBlock<Attrs = Readonly<Record<string, unknown>>>(
 // - U+2028 / U+2029 are line terminators in JS source even though JSON
 //   leaves them unescaped — historically the prime XSS-via-JSON vector.
 const CLIENT_FIELD_FORBIDDEN_CHARS =
-  // eslint-disable-next-line no-control-regex, no-misleading-character-class
+  // eslint-disable-next-line no-control-regex
   /[<>&\u0000-\u001f\u007f\u2028\u2029]/;
 const DANGEROUS_URL_SCHEME = /^\s*(javascript|data|vbscript):/i;
 
@@ -121,6 +122,19 @@ function validateClientIslandField(
       value,
     });
   }
+}
+
+function freezeSupports<T>(supports: T | undefined): T | undefined {
+  if (supports === undefined) return undefined;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(supports as Record<string, unknown>)) {
+    if (v !== null && typeof v === "object") {
+      out[k] = Object.freeze({ ...(v as Record<string, unknown>) });
+    } else {
+      out[k] = v;
+    }
+  }
+  return Object.freeze(out) as T;
 }
 
 function freezeArray<T>(

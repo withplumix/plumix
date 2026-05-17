@@ -1,7 +1,10 @@
 import type { ReactElement } from "react";
 import { createElement } from "react";
 
+import type { BlockStyleSlot } from "../styles/types.js";
 import type { BlockProps } from "../types.js";
+import { blockElementProps, useBlockStyles } from "../styles/hooks.js";
+import { headingSupports } from "./supports.js";
 
 const DEFAULT_LEVEL = 2;
 
@@ -24,5 +27,7 @@ export function HeadingComponent({
   children,
 }: BlockProps): ReactElement {
   const level = clampHeadingLevel(attrs.level);
-  return createElement(`h${level}`, null, children);
+  const slot = (attrs.style ?? {}) as BlockStyleSlot;
+  const resolved = useBlockStyles(slot, headingSupports);
+  return createElement(`h${level}`, blockElementProps(resolved), children);
 }

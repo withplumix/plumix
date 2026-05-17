@@ -1,6 +1,8 @@
 import type { Node as TiptapNodeFactory } from "@tiptap/core";
 import type { ComponentType, ReactNode } from "react";
 
+import type { BlockSupports } from "./styles/types.js";
+
 /**
  * The persisted ProseMirror JSON shape Tiptap produces.
  *
@@ -101,6 +103,15 @@ export interface BlockSpec<Attrs = Readonly<Record<string, unknown>>> {
   readonly description?: string;
   readonly keywords?: readonly string[];
   readonly attributes?: Readonly<Record<string, BlockAttributeSchema>>;
+  /**
+   * Declarative opt-in for the supports axes (color, spacing,
+   * typography, border, align, anchor, customClassName) the Inspector
+   * should expose and `resolveBlockStyles` should fold into the
+   * rendered output. Axes the spec doesn't opt into are silently
+   * ignored at render time even if the persisted `attrs.style.*` slot
+   * carries values for them.
+   */
+  readonly supports?: BlockSupports;
   readonly schema: LazyRef<ReturnType<typeof TiptapNodeFactory.create>>;
   readonly component: LazyRef<BlockComponent<Attrs>>;
   readonly editor?: LazyRef<ComponentType<unknown>>;

@@ -6,6 +6,7 @@ import type {
   HtmlAllowlist,
   MarkComponent,
   MarkRegistry,
+  ThemeTokens,
 } from "@plumix/blocks";
 import {
   buildHtmlAllowlist,
@@ -139,6 +140,13 @@ export interface PlumixApp {
    * output rather than being silently swapped with the baseline.
    */
   readonly htmlAllowlist: HtmlAllowlist;
+  /**
+   * Active theme's design tokens, flattened across `config.themes`
+   * with later themes winning per-group. `undefined` when no theme
+   * declared `tokens` — the SSR shell skips `<ThemeTokensProvider>`
+   * in that case and `useBlockStyles` degrades to inline `style` only.
+   */
+  readonly themeTokens: ThemeTokens | undefined;
 }
 
 export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
@@ -250,6 +258,12 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     config.blocks?.htmlAllowlist,
   );
 
+  // Per-group merge across themes: a theme that declares only `colors`
+  // doesn't wipe `spacing` / `typography` from an earlier base theme.
+  // Within a group, later themes win per-slug — same precedence as the
+  // block/mark override flatten above.
+  const themeTokens = mergeThemeTokens(config.themes);
+
   return {
     config,
     hooks,
@@ -270,6 +284,7 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     blocks,
     marks,
     htmlAllowlist,
+    themeTokens,
   };
 }
 
@@ -281,6 +296,34 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
  * used by `mergeMarkRegistry` / `mergeBlockRegistry` only to attribute
  * `themeOverrideUnknownName` errors.
  */
+function mergeThemeTokens(
+  themes: readonly ThemeDescriptor[],
+): ThemeTokens | undefined {
+  let merged: ThemeTokens | undefined;
+  for (const theme of themes) {
+    if (!theme.tokens) continue;
+    merged = {
+      ...(merged ?? {}),
+      ...(theme.tokens.colors !== undefined && {
+        colors: { ...(merged?.colors ?? {}), ...theme.tokens.colors },
+      }),
+      ...(theme.tokens.spacing !== undefined && {
+        spacing: { ...(merged?.spacing ?? {}), ...theme.tokens.spacing },
+      }),
+      ...(theme.tokens.typography !== undefined && {
+        typography: {
+          ...(merged?.typography ?? {}),
+          ...theme.tokens.typography,
+        },
+      }),
+      ...(theme.tokens.border !== undefined && {
+        border: { ...(merged?.border ?? {}), ...theme.tokens.border },
+      }),
+    };
+  }
+  return merged;
+}
+
 function collectThemeOverrides<C extends BlockComponent | MarkComponent>(
   themes: readonly ThemeDescriptor[],
   pick: (theme: ThemeDescriptor) => Readonly<Record<string, C>> | undefined,

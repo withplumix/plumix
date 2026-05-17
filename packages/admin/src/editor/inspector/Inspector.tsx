@@ -2,9 +2,14 @@ import type { Editor } from "@tiptap/react";
 import type { ReactElement } from "react";
 import { useEffect, useState } from "react";
 
-import type { BlockRegistry, ResolvedBlockSpec } from "@plumix/blocks";
+import type {
+  BlockRegistry,
+  BlockStyleSlot,
+  ResolvedBlockSpec,
+} from "@plumix/blocks";
 
 import { InspectorField } from "./InspectorField.js";
+import { SupportsSection } from "./SupportsSection.js";
 
 interface InspectorProps {
   readonly editor: Editor;
@@ -64,14 +69,18 @@ export function Inspector({
 
   if (!selected) return null;
   const { spec, attrs } = selected;
-  if (!spec.attributes) return null;
-  const entries = Object.entries(spec.attributes);
-  if (entries.length === 0) return null;
+  const attributeEntries = spec.attributes
+    ? Object.entries(spec.attributes)
+    : [];
+  const hasSupports = Boolean(spec.supports);
+  if (attributeEntries.length === 0 && !hasSupports) return null;
+
+  const slot = (attrs.style ?? {}) as BlockStyleSlot;
 
   return (
     <div data-plumix-inspector="" aria-label={`${spec.title} attributes`}>
       <h3 data-plumix-inspector-title="">{spec.title}</h3>
-      {entries.map(([attrName, schema]) => (
+      {attributeEntries.map(([attrName, schema]) => (
         <InspectorField
           key={attrName}
           name={attrName}
@@ -86,6 +95,19 @@ export function Inspector({
           }}
         />
       ))}
+      {spec.supports ? (
+        <SupportsSection
+          supports={spec.supports}
+          style={slot}
+          onChange={(nextSlot) => {
+            editor
+              .chain()
+              .focus()
+              .updateAttributes(spec.name, { style: nextSlot })
+              .run();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

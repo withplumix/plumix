@@ -147,6 +147,7 @@ async function resolveSpec(
     description: spec.description,
     keywords: spec.keywords,
     attributes: spec.attributes,
+    supports: spec.supports,
     schema,
     editor: spec.editor,
     client: spec.client,

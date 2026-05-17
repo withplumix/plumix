@@ -23,6 +23,22 @@ export type {
   BlockContentValidationCode,
   BlockContentValidationIssue,
 } from "./validation-errors.js";
+export { resolveBlockStyles } from "./styles/resolve-block-styles.js";
+export type { ResolvedBlockStyles } from "./styles/resolve-block-styles.js";
+export {
+  ThemeTokensProvider,
+  useBlockStyles,
+  useThemeTokens,
+} from "./styles/hooks.js";
+export type { ThemeTokensProviderProps } from "./styles/hooks.js";
+export { tokensToCss } from "./styles/tokens-to-css.js";
+export type {
+  BlockStyleSlot,
+  BlockSupports,
+  ThemeTokenEntry,
+  ThemeTokenGroup,
+  ThemeTokens,
+} from "./styles/types.js";
 export { EntryContent } from "./walker.js";
 export type {
   BlockRenderHookContext,

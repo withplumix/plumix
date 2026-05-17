@@ -3,6 +3,7 @@ import { createElement, Fragment } from "react";
 
 import type { HtmlAllowlist } from "./html/sanitize.js";
 import type { MarkRegistry } from "./marks/types.js";
+import type { ThemeTokens } from "./styles/types.js";
 import type {
   BlockContext,
   BlockRegistry,
@@ -10,6 +11,7 @@ import type {
   TiptapNode,
 } from "./types.js";
 import { HtmlAllowlistProvider } from "./html/context.js";
+import { ThemeTokensProvider } from "./styles/hooks.js";
 
 /**
  * Minimum surface the walker needs from a hook executor: a synchronous
@@ -50,6 +52,13 @@ export interface EntryContentProps {
    */
   readonly htmlAllowlist?: HtmlAllowlist;
   /**
+   * Active theme's design tokens. When supplied the walker wraps its
+   * render tree in `<ThemeTokensProvider>` so descendant blocks can
+   * resolve their style slot through `useBlockStyles`. SSR shells
+   * thread `app.themeTokens` through here.
+   */
+  readonly themeTokens?: ThemeTokens;
+  /**
    * Optional hook executor invoked around each block render. When supplied
    * the walker fires `block:before_render` and `block:after_render` filter
    * hooks per block (in that order), threading
@@ -81,11 +90,12 @@ export function EntryContent({
   markRegistry,
   context,
   htmlAllowlist,
+  themeTokens,
   hooks,
 }: EntryContentProps): ReactNode {
   if (!content) return null;
   const nodes = Array.isArray(content) ? content : [content];
-  const tree = renderNodes(
+  let tree: ReactNode = renderNodes(
     nodes,
     registry,
     markRegistry,
@@ -93,8 +103,16 @@ export function EntryContent({
     devWarnState(registry),
     hooks,
   );
-  if (htmlAllowlist === undefined) return tree;
-  return createElement(HtmlAllowlistProvider, { value: htmlAllowlist }, tree);
+  if (htmlAllowlist !== undefined) {
+    tree = createElement(HtmlAllowlistProvider, { value: htmlAllowlist }, tree);
+  }
+  if (themeTokens !== undefined) {
+    tree = createElement(ThemeTokensProvider, {
+      value: themeTokens,
+      children: tree,
+    });
+  }
+  return tree;
 }
 
 interface DevWarnState {
