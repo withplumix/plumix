@@ -31,6 +31,13 @@ export const headingBlock = defineBlock({
     selector: `h${level}`,
     fromHTML: () => ({ level }),
   })),
+  transforms: {
+    priority: 50,
+    // heading → paragraph drops the level attr; the explicit mapAttrs
+    // makes the intent legible to anyone reading the spec rather than
+    // hiding it in the transform engine's default-drop behavior.
+    to: [{ target: "core/paragraph", mapAttrs: () => ({}) }],
+  },
   schema: () => import("./schema.js").then((m) => m.headingSchema),
   component: () => import("./Component.js").then((m) => m.HeadingComponent),
 });

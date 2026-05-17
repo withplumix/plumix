@@ -1,6 +1,7 @@
 import type { Editor, JSONContent } from "@tiptap/react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef } from "react";
+import { PlumixDragHandle } from "@/editor/drag-handle/PlumixDragHandle.js";
 import { FloatingInsertMenu } from "@/editor/floating-menu/FloatingInsertMenu.js";
 import { createSlashMenuExtension } from "@/editor/slash-menu/extension.js";
 import { cn } from "@/lib/utils.js";
@@ -147,6 +148,9 @@ export function TiptapEditor({
       ) : null}
       {!allowlist && blockRegistry ? (
         <FloatingInsertMenu editor={editor} />
+      ) : null}
+      {!allowlist && blockRegistry ? (
+        <PlumixDragHandle editor={editor} blockRegistry={blockRegistry} />
       ) : null}
       <EditorContent editor={editor} />
     </div>

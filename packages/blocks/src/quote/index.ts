@@ -8,6 +8,10 @@ export const quoteBlock = defineBlock({
   keyboardShortcuts: [{ shortcut: "Mod-Alt-Q" }],
   markdownShortcuts: [{ pattern: "> " }],
   parsePaste: [{ selector: "blockquote" }],
+  transforms: {
+    priority: 20,
+    to: [{ target: "core/paragraph" }],
+  },
   schema: () => import("./schema.js").then((m) => m.quoteSchema),
   component: () => import("./Component.js").then((m) => m.QuoteComponent),
 });

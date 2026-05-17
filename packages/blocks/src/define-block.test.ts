@@ -107,6 +107,67 @@ describe("defineBlock", () => {
     ).toThrow(expect.objectContaining({ code: "invalid_keyboard_shortcut" }));
   });
 
+  test("accepts a transforms declaration with to/from/priority", () => {
+    const spec = defineBlock({
+      name: "core/quote",
+      title: "Quote",
+      transforms: {
+        priority: 10,
+        to: [{ target: "core/paragraph" }],
+        from: [{ source: "core/paragraph" }],
+      },
+      schema: PARAGRAPH_SCHEMA,
+      component: PARAGRAPH_COMPONENT,
+    });
+    expect(spec.transforms?.priority).toBe(10);
+    expect(spec.transforms?.to?.[0]?.target).toBe("core/paragraph");
+  });
+
+  test("rejects a negative transforms.priority", () => {
+    expect(() =>
+      defineBlock({
+        name: "core/quote",
+        title: "Quote",
+        transforms: { priority: -1 },
+        schema: PARAGRAPH_SCHEMA,
+        component: PARAGRAPH_COMPONENT,
+      }),
+    ).toThrow(expect.objectContaining({ code: "invalid_transform_priority" }));
+  });
+
+  test("rejects a non-integer transforms.priority", () => {
+    expect(() =>
+      defineBlock({
+        name: "core/quote",
+        title: "Quote",
+        transforms: { priority: 1.5 },
+        schema: PARAGRAPH_SCHEMA,
+        component: PARAGRAPH_COMPONENT,
+      }),
+    ).toThrow(expect.objectContaining({ code: "invalid_transform_priority" }));
+  });
+
+  test.each([
+    { value: Infinity, label: "Infinity" },
+    { value: -Infinity, label: "-Infinity" },
+    { value: NaN, label: "NaN" },
+  ])(
+    "rejects $label as transforms.priority",
+    ({ value }: { value: number }) => {
+      expect(() =>
+        defineBlock({
+          name: "core/quote",
+          title: "Quote",
+          transforms: { priority: value },
+          schema: PARAGRAPH_SCHEMA,
+          component: PARAGRAPH_COMPONENT,
+        }),
+      ).toThrow(
+        expect.objectContaining({ code: "invalid_transform_priority" }),
+      );
+    },
+  );
+
   test("freezes attribute schemas as well", () => {
     const spec = defineBlock({
       name: "core/paragraph",

@@ -8,6 +8,10 @@ export const codeBlock = defineBlock({
   keyboardShortcuts: [{ shortcut: "Mod-Alt-C" }],
   markdownShortcuts: [{ pattern: "``` " }],
   parsePaste: [{ selector: "pre" }],
+  transforms: {
+    priority: 20,
+    to: [{ target: "core/paragraph" }],
+  },
   schema: () => import("./schema.js").then((m) => m.codeSchema),
   component: () => import("./Component.js").then((m) => m.CodeComponent),
 });
