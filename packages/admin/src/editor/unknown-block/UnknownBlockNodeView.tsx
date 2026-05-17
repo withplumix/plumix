@@ -17,6 +17,8 @@ export function UnknownBlockNodeView({ node }: NodeViewProps): ReactElement {
     <NodeViewWrapper
       data-testid="unknown-block"
       data-plumix-unknown-block={originalType}
+      role="region"
+      aria-label={`Unregistered block: ${originalType}`}
       className="border-muted-foreground/40 bg-muted/30 my-2 rounded-md border border-dashed p-3"
     >
       <div className="text-muted-foreground flex items-center gap-2 text-xs font-medium">

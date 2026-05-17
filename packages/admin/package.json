@@ -64,6 +64,7 @@
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "axe-core": "^4.11.3",
     "esbuild": "0.27.7",
     "eslint": "catalog:",
     "jsdom": "^29.1.1",

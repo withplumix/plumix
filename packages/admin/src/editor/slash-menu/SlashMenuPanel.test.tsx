@@ -180,4 +180,62 @@ describe("SlashMenuPanel", () => {
       ref.current?.onKeyDown(new KeyboardEvent("keydown", { key: "a" })),
     ).toBe(false);
   });
+
+  test("renders an aria-live region announcing the filtered count", () => {
+    render(
+      <SlashMenuPanel
+        items={items}
+        query=""
+        onSelect={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    );
+    const live = screen.getByTestId("slash-menu-live-region");
+    expect(live).toHaveAttribute("aria-live", "polite");
+    expect(live.textContent).toMatch(/3 result/);
+  });
+
+  test("live region announces the QUERY-filtered count, not the unfiltered items length", () => {
+    // Reflects what cmdk shows the user. The previous shape announced
+    // the unfiltered count and stayed stuck at "3 results" while the
+    // visible list shrank to 1 on the user's keystroke.
+    render(
+      <SlashMenuPanel
+        items={items}
+        query="quote"
+        onSelect={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("slash-menu-live-region").textContent).toMatch(
+      /1 result/,
+    );
+  });
+
+  test("live region updates when items array shrinks", () => {
+    const { rerender } = render(
+      <SlashMenuPanel
+        items={items}
+        query=""
+        onSelect={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("slash-menu-live-region").textContent).toMatch(
+      /3 result/,
+    );
+    const [firstItem] = items;
+    if (!firstItem) throw new Error("expected at least one fixture item");
+    rerender(
+      <SlashMenuPanel
+        items={[firstItem]}
+        query="head"
+        onSelect={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("slash-menu-live-region").textContent).toMatch(
+      /1 result/,
+    );
+  });
 });

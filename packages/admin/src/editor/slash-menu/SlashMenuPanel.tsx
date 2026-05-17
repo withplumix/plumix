@@ -75,6 +75,21 @@ export const SlashMenuPanel = forwardRef<
     groups[0]?.members[0]?.value ?? "",
   );
 
+  // Mirror the same predicate cmdk uses (`value.includes(search)`)
+  // against the joined value the parent builds. Without this the SR
+  // announces `items.length` while cmdk's filter has already shrunk
+  // the visible list — defeats the live-region's purpose.
+  const visibleCount = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (needle === "") return items.length;
+    return groups.reduce(
+      (total, group) =>
+        total +
+        group.members.filter(({ value }) => value.includes(needle)).length,
+      0,
+    );
+  }, [groups, items.length, query]);
+
   // Scoping the key bridge to this panel's own root prevents cross-talk
   // when two editors (e.g., canvas + meta-box richtext field) are open
   // simultaneously — `document.querySelector` would have returned the
@@ -126,6 +141,14 @@ export const SlashMenuPanel = forwardRef<
         aria-hidden="true"
         tabIndex={-1}
       />
+      <div
+        data-testid="slash-menu-live-region"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {visibleCount} result{visibleCount === 1 ? "" : "s"}
+      </div>
       <CommandList>
         <CommandEmpty data-testid="slash-menu-empty">
           No blocks found

@@ -12,6 +12,8 @@ export function HtmlBadgeNodeView({ node }: NodeViewProps): ReactElement {
     <NodeViewWrapper
       data-testid="html-block-editor"
       data-plumix-block="core/html"
+      role="region"
+      aria-label="Raw HTML block"
       className="my-2 rounded-md border border-amber-500/40 bg-amber-50/40 p-3"
     >
       <div

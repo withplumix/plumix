@@ -1,5 +1,6 @@
 import type { Editor } from "@tiptap/react";
-import type { ReactElement } from "react";
+import type { KeyboardEvent, ReactElement } from "react";
+import { useRef } from "react";
 
 import type { MarkRegistry, ResolvedMarkSpec } from "@plumix/blocks";
 
@@ -7,6 +8,11 @@ interface MarkToolbarProps {
   readonly editor: Editor;
   readonly markRegistry: MarkRegistry;
 }
+
+const ARROW_DELTAS: Record<string, number | undefined> = {
+  ArrowRight: 1,
+  ArrowLeft: -1,
+};
 
 /**
  * Pure rendering layer for the mark bubble menu — one button per
@@ -29,8 +35,34 @@ export function MarkToolbar({
     ([, spec]) => spec,
   ).filter((spec) => spec.name in schemaMarks);
 
+  // Roving-focus arrow navigation: ArrowRight/Left moves focus within
+  // the toolbar, wrapping at the ends. Tab/Shift-Tab still escape to
+  // surrounding focusable elements — standard WAI-ARIA toolbar pattern.
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    const delta = ARROW_DELTAS[event.key];
+    if (delta === undefined) return;
+    const root = rootRef.current;
+    if (!root) return;
+    const buttons = root.querySelectorAll<HTMLButtonElement>(
+      "button[data-testid]",
+    );
+    if (buttons.length === 0) return;
+    const active = root.ownerDocument.activeElement;
+    const current = Array.from(buttons).indexOf(active as HTMLButtonElement);
+    if (current === -1) return;
+    event.preventDefault();
+    const next = (current + delta + buttons.length) % buttons.length;
+    buttons[next]?.focus();
+  };
+
   return (
-    <div data-plumix-mark-toolbar="" role="toolbar">
+    <div
+      ref={rootRef}
+      data-plumix-mark-toolbar=""
+      role="toolbar"
+      onKeyDown={handleKeyDown}
+    >
       {marks.map((mark) => (
         <MarkButton key={mark.name} mark={mark} editor={editor} />
       ))}

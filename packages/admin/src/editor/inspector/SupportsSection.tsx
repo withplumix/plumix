@@ -28,7 +28,6 @@ export function SupportsSection({
   if (rows.length === 0) return null;
   return (
     <div data-testid="inspector-supports-section" data-plumix-supports="">
-      <h3>Supports</h3>
       {rows.map((row) => (
         <label key={row.path} data-plumix-supports-row={row.path}>
           <span>{row.label}</span>
