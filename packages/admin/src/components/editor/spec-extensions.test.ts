@@ -247,8 +247,9 @@ describe("wireMarkSpecExtension", () => {
       parsePaste: [{ selector: "span.warn" }, { selector: "em.warn" }],
     });
     const wired = wireMarkSpecExtension(spec);
-    const rules = (wired.config.parseHTML?.call({ parent: undefined } as never) ??
-      []) as readonly { tag: string }[];
+    const rules = (wired.config.parseHTML?.call({
+      parent: undefined,
+    } as never) ?? []) as readonly { tag: string }[];
     const selectors = rules.map((r) => r.tag);
     expect(selectors).toContain("span.warn");
     expect(selectors).toContain("em.warn");

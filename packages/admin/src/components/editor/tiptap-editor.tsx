@@ -113,7 +113,11 @@ export function TiptapEditor({
   );
 
   const extensions = useMemo(() => {
-    const base = buildTiptapExtensions({ allowlist, blockRegistry, markRegistry });
+    const base = buildTiptapExtensions({
+      allowlist,
+      blockRegistry,
+      markRegistry,
+    });
     // Slash menu is canvas-mode-only; in strict field mode the user
     // already knows what node they're editing.
     if (allowlist || !blockRegistry) return base;

@@ -7,6 +7,8 @@ import type {
   MarkManifestEntry,
 } from "@plumix/core/manifest";
 
+import { AdminPluginRegistryError } from "../lib/errors.js";
+
 interface BlockLookups {
   getBlockSchema(name: string): Node | undefined;
   getBlockEditor(name: string): ComponentType<unknown> | undefined;
@@ -16,12 +18,12 @@ interface MarkLookups {
   getMarkSchema(name: string): Mark | undefined;
 }
 
-export interface PluginBlockContribution {
+interface PluginBlockContribution {
   readonly spec: BlockSpec;
   readonly pluginId: string;
 }
 
-export interface PluginMarkContribution {
+interface PluginMarkContribution {
   readonly spec: MarkSpec;
   readonly pluginId: string;
 }
@@ -33,14 +35,10 @@ const PLUGIN_ID_PLACEHOLDER = "manifest";
 
 // `mergeBlockRegistry` awaits `spec.component` to populate
 // `ResolvedBlockSpec.component` for the SSR walker. Admin never walks
-// (it renders through Tiptap), so a no-op satisfies the contract.
-// Admin-only spec — if `ResolvedBlockSpec.component` is ever invoked,
-// some caller walked the admin's registry on the SSR render path.
-// That's a bug; surface it loudly rather than rendering empty content.
-const SSR_COMPONENT_STUB = () => {
-  throw new Error(
-    "Admin-only plugin block spec rendered on the SSR walker path",
-  );
+// (it renders through Tiptap), so a no-op satisfies the contract — and
+// surfaces loudly if a caller ever does.
+const SSR_COMPONENT_STUB = (): never => {
+  throw AdminPluginRegistryError.ssrWalkedAdminSpec();
 };
 
 /**
@@ -78,8 +76,7 @@ export function buildPluginBlockContributions(
       legacyAliases: entry.legacyAliases,
       schema: () => Promise.resolve(schema),
       component: () => Promise.resolve(SSR_COMPONENT_STUB),
-      editor:
-        editor !== undefined ? () => Promise.resolve(editor) : undefined,
+      editor: editor !== undefined ? () => Promise.resolve(editor) : undefined,
     };
     out.push({ spec, pluginId: PLUGIN_ID_PLACEHOLDER });
   }

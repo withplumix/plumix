@@ -37,7 +37,7 @@ describe("buildTiptapExtensions — markRegistry", () => {
     const exts = buildTiptapExtensions({ markRegistry: registry });
     expect(
       exts.some(
-        (ext) => ext && (ext as { name?: string }).name === "acme/highlight-warning",
+        (ext) => (ext as { name?: string }).name === "acme/highlight-warning",
       ),
     ).toBe(true);
   });

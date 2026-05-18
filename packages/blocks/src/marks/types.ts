@@ -37,7 +37,10 @@ export interface MarkSpec {
   readonly parsePaste?: readonly ParsePasteRule[];
 }
 
-export interface ResolvedMarkSpec extends Omit<MarkSpec, "component" | "schema"> {
+export interface ResolvedMarkSpec extends Omit<
+  MarkSpec,
+  "component" | "schema"
+> {
   readonly component: MarkComponent;
   /**
    * Awaited Tiptap Mark instance. Stored sync (not lazy) so the admin

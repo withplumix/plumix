@@ -29,12 +29,12 @@ describe("buildPluginBlockContributions", () => {
     );
 
     expect(contributions).toHaveLength(1);
-    const entry = contributions[0]!;
-    expect(entry.pluginId).toBe("manifest");
-    expect(entry.spec.name).toBe("acme/callout");
-    expect(entry.spec.title).toBe("Callout");
-    await expect(entry.spec.schema()).resolves.toBe(stubBlockSchema);
-    expect(entry.spec.editor).toBeUndefined();
+    const [entry] = contributions;
+    expect(entry?.pluginId).toBe("manifest");
+    expect(entry?.spec.name).toBe("acme/callout");
+    expect(entry?.spec.title).toBe("Callout");
+    await expect(entry?.spec.schema()).resolves.toBe(stubBlockSchema);
+    expect(entry?.spec.editor).toBeUndefined();
   });
 
   test("attaches the admin editor when both manifest ref + registry entry present", async () => {
@@ -54,9 +54,9 @@ describe("buildPluginBlockContributions", () => {
       },
     );
 
-    const entry = contributions[0]!;
-    expect(entry.spec.editor).toBeDefined();
-    await expect(entry.spec.editor!()).resolves.toBe(StubEditor);
+    const [entry] = contributions;
+    expect(entry?.spec.editor).toBeDefined();
+    await expect(entry?.spec.editor?.()).resolves.toBe(StubEditor);
   });
 
   test("skips entries without an admin schema ref", () => {
@@ -114,7 +114,8 @@ describe("buildPluginBlockContributions", () => {
       },
     );
 
-    expect(contributions[0]!.spec).toMatchObject({
+    const [entry] = contributions;
+    expect(entry?.spec).toMatchObject({
       name: "acme/callout",
       title: "Callout",
       description: "Aside content",
@@ -148,10 +149,10 @@ describe("buildPluginMarkContributions", () => {
     );
 
     expect(contributions).toHaveLength(1);
-    const entry = contributions[0]!;
-    expect(entry.spec.name).toBe("acme/highlight");
-    expect(entry.spec.title).toBe("Highlight");
-    await expect(entry.spec.schema()).resolves.toBe(stubMarkSchema);
+    const [entry] = contributions;
+    expect(entry?.spec.name).toBe("acme/highlight");
+    expect(entry?.spec.title).toBe("Highlight");
+    await expect(entry?.spec.schema()).resolves.toBe(stubMarkSchema);
   });
 
   test("skips entries without an admin schema ref or runtime registration", () => {
