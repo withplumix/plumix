@@ -1,3 +1,5 @@
+import { coreBlocks } from "@plumix/blocks";
+
 // Server-side Tiptap ProseMirror JSON validator. Walks a saved doc
 // against the field's `marks` / `nodes` / `blocks` allowlist and
 // rejects any disallowed type/mark name with a JSON-path pointer to
@@ -21,16 +23,35 @@ interface TiptapNodeShape {
 }
 
 /**
- * Always-allowed type names. ProseMirror requires these for any
- * document to parse, and the editor crashes at mount if they're
- * missing. Treat them as implicit; the field's allowlists declare
- * everything *else*.
+ * Always-allowed type names. ProseMirror requires `doc` / `text`; the
+ * editor mounts an implicit paragraph regardless of the field's
+ * `nodes` allowlist — mirrors `FIELD_MODE_IMPLICIT_BLOCK` in admin's
+ * `tiptap-extensions.ts`. Both `paragraph` and `core/paragraph` are
+ * accepted so docs from either editor era round-trip unchanged.
  */
 const IMPLICIT_NODES: ReadonlySet<string> = new Set([
   "doc",
   "paragraph",
+  "core/paragraph",
   "text",
 ]);
+
+/**
+ * Bi-directional alias map: every core block's canonical name and
+ * its `legacyAliases` resolve to the same equivalence group, so an
+ * allowlist declared in either dialect (`"heading"` or
+ * `"core/heading"`) accepts saved docs in the other.
+ */
+const ALIAS_GROUPS: ReadonlyMap<string, readonly string[]> = new Map(
+  coreBlocks.flatMap((block) => {
+    const names = [block.name, ...(block.legacyAliases ?? [])];
+    return names.map((n) => [n, names] as const);
+  }),
+);
+
+function expandAliases(allowlist: readonly string[]): readonly string[] {
+  return allowlist.flatMap((name) => ALIAS_GROUPS.get(name) ?? [name]);
+}
 
 /**
  * Final href gate. Mirrors the regex in `route/render/tiptap.ts`'s
@@ -76,12 +97,14 @@ export function walkRichtextDoc(
   // them on every node.
   const allowedNodeTypes = new Set<string>([
     ...IMPLICIT_NODES,
-    ...(allowlist.nodes ?? []),
-    ...(allowlist.blocks ?? []),
+    ...expandAliases(allowlist.nodes ?? []),
+    ...expandAliases(allowlist.blocks ?? []),
   ]);
   const allowedMarkTypes = new Set<string>([
-    ...(allowlist.marks ?? []),
-    ...(allowlist.blocks ?? []),
+    // `MarkSpec` has no `legacyAliases` today so `expandAliases` is a
+    // no-op for marks — kept symmetric for the eventual mark namespacing.
+    ...expandAliases(allowlist.marks ?? []),
+    ...expandAliases(allowlist.blocks ?? []),
   ]);
   return (value) => {
     if (value === null || value === undefined) return value;
