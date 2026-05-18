@@ -35,17 +35,17 @@ interface SlashMenuPanelProps {
   readonly onDismiss: () => void;
 }
 
+interface GroupedItem {
+  readonly item: SlashMenuItem;
+  readonly value: string;
+}
+
 /**
  * Slash-menu surface built on the existing shadcn `<Command>` (cmdk)
  * primitives — keeps a11y + styling consistent with `multi-select` and
  * the meta-box reference pickers. cmdk owns filtering (driven by the
  * controlled `value`); the parent owns the editor key bridge.
  */
-interface GroupedItem {
-  readonly item: SlashMenuItem;
-  readonly value: string;
-}
-
 export const SlashMenuPanel = forwardRef<
   SlashMenuPanelHandle,
   SlashMenuPanelProps
@@ -171,17 +171,9 @@ export const SlashMenuPanel = forwardRef<
               >
                 <SlashMenuIcon name={item.icon} />
                 <span className="flex min-w-0 flex-col">
-                  <span
-                    data-plumix-slash-menu-title=""
-                    className="text-sm font-medium"
-                  >
-                    {item.title}
-                  </span>
+                  <span className="text-sm font-medium">{item.title}</span>
                   {item.description ? (
-                    <span
-                      data-plumix-slash-menu-description=""
-                      className="text-muted-foreground text-xs"
-                    >
+                    <span className="text-muted-foreground text-xs">
                       {item.description}
                     </span>
                   ) : null}

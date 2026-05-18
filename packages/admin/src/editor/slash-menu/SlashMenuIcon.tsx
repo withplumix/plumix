@@ -20,9 +20,8 @@ import {
   Type,
 } from "lucide-react";
 
-// Hand-rolled, tree-shakeable mapping. Block specs pass their lucide
-// icon name as a string; plugin blocks with unknown names fall back to
-// the placeholder so the row layout stays consistent.
+// Named imports so lucide-react tree-shakes; a dynamic
+// `lucide-react/<name>` lookup would pull every icon into the bundle.
 const ICONS: Record<string, ComponentType<{ readonly className?: string }>> = {
   ArrowDownUp,
   ChevronDownSquare,

@@ -23,6 +23,7 @@ export const calloutBlock = defineBlock({
     },
     icon: { type: "text", label: "Lucide icon name", default: "" },
   },
+  defaultInnerBlocks: [{ name: "core/paragraph" }],
   supports: {
     color: { background: true, text: true },
     spacing: { padding: true, margin: true },

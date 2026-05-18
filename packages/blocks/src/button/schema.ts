@@ -23,10 +23,16 @@ export const buttonSchema = Node.create({
     return [{ tag: "a[data-plumix-block='core/button']" }];
   },
 
-  renderHTML({ HTMLAttributes }) {
+  renderHTML({ node, HTMLAttributes }) {
+    // `core/button` is `atom: true`, so the schema owns the visible
+    // label rather than relying on inline content (which the parent
+    // `<a>` couldn't carry anyway). The Frontend Component reads the
+    // same `attrs.text` for SSR; we mirror it here so the editor
+    // shows the button label instead of an empty link.
     return [
       "a",
       mergeAttributes(HTMLAttributes, { "data-plumix-block": "core/button" }),
+      typeof node.attrs.text === "string" ? node.attrs.text : "",
     ];
   },
 });

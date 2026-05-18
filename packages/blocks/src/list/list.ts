@@ -10,7 +10,9 @@ export const listBlock = defineBlock({
   keyboardShortcuts: [{ shortcut: "Mod-Alt-L", mode: "wrap" }],
   markdownShortcuts: [{ pattern: "- ", mode: "wrap" }],
   parsePaste: [{ selector: "ul" }],
-  defaultInnerBlocks: [{ name: "core/list-item" }],
+  defaultInnerBlocks: [
+    { name: "core/list-item", innerBlocks: [{ name: "core/paragraph" }] },
+  ],
   transforms: {
     priority: 20,
     to: [{ target: "core/paragraph" }],

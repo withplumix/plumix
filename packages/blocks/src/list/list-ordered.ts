@@ -10,7 +10,9 @@ export const listOrderedBlock = defineBlock({
   keyboardShortcuts: [{ shortcut: "Mod-Alt-O", mode: "wrap" }],
   markdownShortcuts: [{ pattern: "1. ", mode: "wrap" }],
   parsePaste: [{ selector: "ol" }],
-  defaultInnerBlocks: [{ name: "core/list-item" }],
+  defaultInnerBlocks: [
+    { name: "core/list-item", innerBlocks: [{ name: "core/paragraph" }] },
+  ],
   transforms: {
     priority: 20,
     to: [{ target: "core/paragraph" }],

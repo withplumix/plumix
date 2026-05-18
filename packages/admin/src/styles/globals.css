@@ -124,3 +124,121 @@
     @apply bg-background text-foreground font-sans antialiased;
   }
 }
+
+/* Editor canvas typography. Tailwind's `prose` plugin isn't installed
+   in this admin, so we ship a scoped baseline so authors can tell
+   blocks apart while typing. Frontend themes own production styling;
+   these only apply inside `.ProseMirror` (the editor view). */
+.ProseMirror {
+  /* Headings — clear size hierarchy without going as large as
+     a theme would. Keeps the editor compact at prose-sm scale. */
+  h1 {
+    @apply mb-3 text-3xl leading-tight font-bold;
+  }
+  h2 {
+    @apply mt-6 mb-3 text-2xl leading-tight font-bold;
+  }
+  h3 {
+    @apply mt-5 mb-2 text-xl leading-snug font-semibold;
+  }
+  h4 {
+    @apply mt-4 mb-2 text-lg leading-snug font-semibold;
+  }
+  h5,
+  h6 {
+    @apply mt-3 mb-1 text-base font-semibold;
+  }
+
+  /* Body */
+  p {
+    @apply my-2 leading-relaxed;
+  }
+
+  /* Lists — Tailwind preflight zeroes list-style and padding; we
+     opt our editor lists back in so authors see real bullets. */
+  ul[data-plumix-block="core/list"] {
+    @apply my-2 list-disc pl-6;
+  }
+  ol[data-plumix-block="core/list-ordered"] {
+    @apply my-2 list-decimal pl-6;
+  }
+  ul[data-plumix-block="core/list"] li,
+  ol[data-plumix-block="core/list-ordered"] li {
+    @apply my-1;
+  }
+
+  /* Quote */
+  blockquote[data-plumix-block="core/quote"] {
+    @apply border-muted-foreground/30 text-muted-foreground my-3 border-l-4 pl-4 italic;
+  }
+
+  /* Inline code */
+  p code,
+  li code {
+    @apply bg-muted rounded px-1 py-0.5 font-mono text-[0.875em];
+  }
+
+  /* Code block */
+  pre[data-plumix-block="core/code"] {
+    @apply bg-muted my-3 overflow-x-auto rounded-md p-3 font-mono text-sm;
+  }
+
+  /* Separator */
+  hr[data-plumix-block="core/separator"] {
+    @apply border-border my-6 border-t;
+  }
+
+  /* Columns — explicit grid by ratio. The block writes `data-ratio`
+     in the rendered DOM; CSS expands the canonical ratios. Plugin
+     ratios outside this list fall back to equal-width via the
+     default `grid-cols-2`. */
+  div[data-plumix-block="core/columns"] {
+    @apply my-3 grid grid-cols-2 gap-3;
+  }
+  div[data-plumix-block="core/columns"][data-ratio="1:2"] {
+    grid-template-columns: 1fr 2fr;
+  }
+  div[data-plumix-block="core/columns"][data-ratio="2:1"] {
+    grid-template-columns: 2fr 1fr;
+  }
+  div[data-plumix-block="core/columns"][data-ratio="1:1:1"] {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+  div[data-plumix-block="core/columns"][data-ratio="1:2:1"] {
+    grid-template-columns: 1fr 2fr 1fr;
+  }
+  div[data-plumix-block="core/columns"][data-ratio="2:1:2"] {
+    grid-template-columns: 2fr 1fr 2fr;
+  }
+  div[data-plumix-block="core/columns"][data-ratio="1:1:1:1"] {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  div[data-plumix-block="core/column"] {
+    @apply border-border/40 min-h-12 rounded border border-dashed p-2;
+  }
+
+  /* Callout */
+  aside[data-plumix-block="core/callout"] {
+    @apply bg-muted/40 border-muted-foreground/20 my-3 rounded-md border p-3;
+  }
+
+  /* Buttons row */
+  div[data-plumix-block="core/buttons"] {
+    @apply my-3 flex flex-wrap gap-2;
+  }
+  a[data-plumix-block="core/button"] {
+    @apply bg-primary text-primary-foreground inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium no-underline;
+  }
+
+  /* Table */
+  table[data-plumix-block="core/table"] {
+    @apply border-border my-3 w-full border-collapse border;
+  }
+  table[data-plumix-block="core/table"] th,
+  table[data-plumix-block="core/table"] td {
+    @apply border-border border px-2 py-1;
+  }
+  table[data-plumix-block="core/table"] th {
+    @apply bg-muted/50 text-left font-semibold;
+  }
+}

@@ -21,6 +21,7 @@ export const groupBlock = defineBlock({
       options: LAYOUT_OPTIONS,
     },
   },
+  defaultInnerBlocks: [{ name: "core/paragraph" }],
   variations: [
     {
       name: "row",
