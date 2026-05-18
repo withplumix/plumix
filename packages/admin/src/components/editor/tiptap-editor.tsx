@@ -6,6 +6,7 @@ import { createBlockMenuKeyboardExtension } from "@/editor/drag-handle/block-men
 import { PlumixDragHandle } from "@/editor/drag-handle/PlumixDragHandle.js";
 import { FloatingInsertMenu } from "@/editor/floating-menu/FloatingInsertMenu.js";
 import { createSlashMenuExtension } from "@/editor/slash-menu/extension.js";
+import { createLongPressBlockMenuExtension } from "@/editor/touch/long-press-extension.js";
 import { cn } from "@/lib/utils.js";
 import { EditorContent, useEditor } from "@tiptap/react";
 
@@ -137,6 +138,7 @@ export function TiptapEditor({
         },
       }),
       createBlockMenuKeyboardExtension(),
+      createLongPressBlockMenuExtension(),
     ];
   }, [allowlist, blockRegistry, markRegistry]);
 
