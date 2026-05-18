@@ -10,10 +10,10 @@ import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command.js";
+import { Command as CmdkPrimitive } from "cmdk";
 
 import type { SlashMenuItem } from "./items-from-registry.js";
 
@@ -131,8 +131,13 @@ export const SlashMenuPanel = forwardRef<
       filter={(value, search) =>
         value.includes(search.trim().toLowerCase()) ? 1 : 0
       }
+      className="w-72 max-w-full border shadow-md"
     >
-      <CommandInput
+      {/* Use cmdk's primitive directly — shadcn's `CommandInput`
+          wraps the input in a div with a SearchIcon that `sr-only`
+          on the input doesn't hide. We just need cmdk's filter
+          wire-up; the query comes from Tiptap. */}
+      <CmdkPrimitive.Input
         value={query}
         onValueChange={() => {
           /* search is driven by Tiptap's query, not user typing here */

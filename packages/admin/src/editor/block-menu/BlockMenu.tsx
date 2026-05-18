@@ -3,11 +3,11 @@ import { useMemo } from "react";
 import {
   Command,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command.js";
+import { Command as CmdkPrimitive } from "cmdk";
 
 import type { BlockRegistry, BlockTransformTo } from "@plumix/blocks";
 import { resolveTransformTargets } from "@plumix/blocks";
@@ -47,13 +47,11 @@ export function BlockMenu({
   );
   return (
     <Command data-plumix-block-menu="" label="Block actions">
-      {/*
-        Hidden CommandInput exists to give cmdk a focusable surface so
-        keyboard-only authors can drive the menu with ArrowDown / Enter
-        — without it, radix's Popover autoFocus has nothing to land on
-        and the editor keeps focus, swallowing Enter.
-      */}
-      <CommandInput
+      {/* Hidden cmdk input — gives keyboard-only authors a focus
+          target so ArrowDown / Enter route through cmdk. Use the
+          primitive directly: shadcn's `CommandInput` wraps the input
+          in a div with a SearchIcon that `sr-only` doesn't hide. */}
+      <CmdkPrimitive.Input
         className="sr-only"
         tabIndex={-1}
         aria-label="Filter block actions"
