@@ -1,6 +1,6 @@
 import type { Editor } from "@tiptap/react";
 import type { ReactElement } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Popover,
   PopoverContent,
@@ -139,10 +139,31 @@ export function PlumixDragHandle({
     setOpen(false);
   };
 
+  // `openRef` is the source of truth for the `onNodeChange` guard;
+  // setters that open the popover flip it imperatively *before*
+  // scheduling React state so a synchronous `onNodeChange(null)`
+  // following `setOpen(true)` can't clobber `tracked` between the
+  // state update and React's next commit. Closing happens through
+  // Radix → setOpen, which the effect mirrors back into the ref.
+  const openRef = useRef(open);
+  useEffect(() => {
+    openRef.current = open;
+  });
+  const openPopover = useCallback((): void => {
+    openRef.current = true;
+    setOpen(true);
+  }, []);
+
   // Pinned identity: `DragHandle` lists `onNodeChange` in its effect
   // deps, so a fresh callback per render re-registers the ProseMirror
   // plugin and tears down the slash-menu mount mid-typing (#342).
+  // While the popover is open we intentionally freeze the anchor —
+  // matches Notion/Linear behavior where open menus don't re-target
+  // on hover — and also avoids the plugin's `onNodeChange(null)`
+  // (pointer leaves the block area) clobbering a keyboard-set
+  // tracked node before the menu can render.
   const onNodeChange = useCallback(({ node, pos }: OnNodeChangeArgs) => {
+    if (openRef.current) return;
     setTracked(node ? { node, pos } : null);
   }, []);
 
@@ -158,7 +179,7 @@ export function PlumixDragHandle({
       const node = editor.state.doc.nodeAt(pos);
       if (!node) return;
       setTracked({ node, pos });
-      setOpen(true);
+      openPopover();
     };
     const attach = ({ editor: ed }: { editor: typeof editor }): void => {
       if (dom) return;
@@ -189,7 +210,7 @@ export function PlumixDragHandle({
         ) : null}
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
-            <DragHandleButton onOpenMenu={() => setOpen(true)} />
+            <DragHandleButton onOpenMenu={openPopover} />
           </PopoverTrigger>
           <PopoverContent
             side="left"
