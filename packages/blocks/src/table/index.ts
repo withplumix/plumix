@@ -16,6 +16,19 @@ export const tableBlock = defineBlock({
     striped: { type: "boolean", label: "Striped rows", default: false },
     bordered: { type: "boolean", label: "Bordered cells", default: false },
   },
+  defaultInnerBlocks: [
+    {
+      name: "core/table-header-row",
+      innerBlocks: [
+        { name: "core/table-header-cell" },
+        { name: "core/table-header-cell" },
+      ],
+    },
+    {
+      name: "core/table-body-row",
+      innerBlocks: [{ name: "core/table-cell" }, { name: "core/table-cell" }],
+    },
+  ],
   supports: {
     color: { background: true },
     spacing: { padding: true, margin: true },

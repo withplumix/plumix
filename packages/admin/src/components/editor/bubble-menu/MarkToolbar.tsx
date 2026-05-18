@@ -86,7 +86,6 @@ export function MarkToolbar({
   return (
     <div
       ref={rootRef}
-      data-plumix-mark-toolbar=""
       role="toolbar"
       aria-label="Inline formatting"
       onKeyDown={handleKeyDown}

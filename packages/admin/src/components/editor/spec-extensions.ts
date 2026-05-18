@@ -8,10 +8,12 @@ import {
 import type {
   BlockKeyboardShortcut,
   BlockMarkdownShortcut,
+  BlockStyleSlot,
   ParsePasteRule,
   ResolvedBlockSpec,
   ResolvedMarkSpec,
 } from "@plumix/blocks";
+import { resolveBlockStyles } from "@plumix/blocks";
 
 /**
  * Extends a resolved block's Tiptap Node with the editor-side concerns
@@ -32,12 +34,53 @@ export function wireBlockSpecExtension(spec: ResolvedBlockSpec): Node {
   if (
     !spec.keyboardShortcuts?.length &&
     !spec.markdownShortcuts?.length &&
-    !spec.parsePaste?.length
+    !spec.parsePaste?.length &&
+    !spec.supports
   ) {
     return base;
   }
 
   return base.extend({
+    addAttributes() {
+      const inherited = (this.parent?.() ?? {}) as Record<string, unknown>;
+      // Every block that opts into `supports` accepts a structured
+      // `style` slot — the Inspector writes per-axis values here and
+      // the SSR walker reads them back. Without this, `updateAttributes`
+      // calls from the Inspector are no-ops because the schema doesn't
+      // know about the attribute. The per-attribute `renderHTML`
+      // resolves the slot into a CSS string + utility class so the
+      // editor canvas immediately reflects what the author typed.
+      const supports = spec.supports;
+      if (!supports) return inherited;
+      return {
+        ...inherited,
+        style: {
+          default: null,
+          renderHTML: (attrs: { readonly style?: BlockStyleSlot | null }) => {
+            const slot = attrs.style;
+            if (!slot) return {};
+            const resolved = resolveBlockStyles(slot, supports, {});
+            const out: Record<string, string> = {};
+            if (resolved.id !== undefined) out.id = resolved.id;
+            if (resolved.className.length > 0) out.class = resolved.className;
+            const styleEntries = Object.entries(resolved.style);
+            if (styleEntries.length > 0) {
+              out.style = styleEntries
+                .map(([k, v]) => `${camelToKebab(k)}: ${v}`)
+                .join("; ");
+            }
+            return out;
+          },
+          // HTML round-trip intentionally drops the slot: we serialise
+          // it as plain inline `style`/`class` so the editor renders
+          // correctly, but recovering structured slot data from a CSS
+          // string isn't trivial and the JSON path (`getJSON`/
+          // `setContent`) preserves it. Known limitation for copy/paste
+          // *between* editors.
+          parseHTML: () => null,
+        },
+      };
+    },
     addKeyboardShortcuts() {
       const inherited = this.parent?.() ?? {};
       const map = { ...inherited };
@@ -158,6 +201,13 @@ export function wireMarkSpecExtension(spec: ResolvedMarkSpec): Mark {
       return [...inherited, ...spec.parsePaste.map(pasteToParseRule)];
     },
   });
+}
+
+function camelToKebab(input: string): string {
+  // CSS custom properties (`--foo`) are already kebab-case + leading
+  // dashes; the camelCase transform would mangle them.
+  if (input.startsWith("--")) return input;
+  return input.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
 }
 
 function escapeForRegex(input: string): string {

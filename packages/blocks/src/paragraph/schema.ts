@@ -9,7 +9,9 @@ import { mergeAttributes, Node } from "@tiptap/core";
  */
 export const paragraphSchema = Node.create({
   name: "core/paragraph",
-  group: "block",
+  // `coreParagraph` is a slash-free alias so list-items can reference
+  // paragraphs from their content expression (see list/schema.ts).
+  group: "block coreParagraph",
   content: "inline*",
   defining: true,
 

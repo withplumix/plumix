@@ -106,7 +106,10 @@ describe("buildTiptapExtensions — field-mode allowlist is registry-sourced", (
     expect(editor.schema.nodes["core/paragraph"]).toBeDefined();
     expect(editor.getJSON()).toEqual({
       type: "doc",
-      content: [{ type: "core/paragraph" }],
+      // `attrs.style: null` is the default for blocks that opt into
+      // `supports` (paragraph here) — the per-attribute renderHTML
+      // suppresses serialization, but the in-memory shape carries it.
+      content: [{ type: "core/paragraph", attrs: { style: null } }],
     });
   });
 
@@ -184,7 +187,10 @@ describe("buildTiptapExtensions — canvas-mode schema is registry-sourced", () 
     // order. Locks in coreBlocks ordering.
     expect(editor.getJSON()).toEqual({
       type: "doc",
-      content: [{ type: "core/paragraph" }],
+      // `attrs.style: null` is the default for blocks that opt into
+      // `supports` (paragraph here) — the per-attribute renderHTML
+      // suppresses serialization, but the in-memory shape carries it.
+      content: [{ type: "core/paragraph", attrs: { style: null } }],
     });
   });
 });
