@@ -1,3 +1,4 @@
+import type { Mark, Node } from "@tiptap/core";
 import type { ComponentType } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 
@@ -42,6 +43,11 @@ const pages = makeRegistry<ComponentType>("registerPluginPage");
 const fieldTypes = makeRegistry<PluginFieldComponent>(
   "registerPluginFieldType",
 );
+const blockSchemas = makeRegistry<Node>("registerPluginBlockSchema");
+const blockEditors = makeRegistry<ComponentType<unknown>>(
+  "registerPluginBlockEditor",
+);
+const markSchemas = makeRegistry<Mark>("registerPluginMarkSchema");
 
 function register<TComponent>(
   registry: PluginRegistryEntry<TComponent>,
@@ -122,8 +128,40 @@ export function getPluginFieldType(
   return fieldTypes.map.get(type);
 }
 
+export function registerPluginBlockSchema(name: string, schema: Node): void {
+  register(blockSchemas, name, schema);
+}
+
+export function getPluginBlockSchema(name: string): Node | undefined {
+  return blockSchemas.map.get(name);
+}
+
+export function registerPluginBlockEditor(
+  name: string,
+  component: ComponentType<unknown>,
+): void {
+  register(blockEditors, name, component);
+}
+
+export function getPluginBlockEditor(
+  name: string,
+): ComponentType<unknown> | undefined {
+  return blockEditors.map.get(name);
+}
+
+export function registerPluginMarkSchema(name: string, schema: Mark): void {
+  register(markSchemas, name, schema);
+}
+
+export function getPluginMarkSchema(name: string): Mark | undefined {
+  return markSchemas.map.get(name);
+}
+
 /** @internal Test-only. */
 export function _resetPluginRegistry(): void {
   pages.map.clear();
   fieldTypes.map.clear();
+  blockSchemas.map.clear();
+  blockEditors.map.clear();
+  markSchemas.map.clear();
 }

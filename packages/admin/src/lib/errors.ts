@@ -1,4 +1,7 @@
-type AdminPluginRegistryErrorCode = "duplicate_key" | "input_type_reserved";
+type AdminPluginRegistryErrorCode =
+  | "duplicate_key"
+  | "input_type_reserved"
+  | "ssr_walked_admin_spec";
 
 interface AdminPluginRegistryErrorFields {
   registerName?: string;
@@ -47,6 +50,16 @@ export class AdminPluginRegistryError extends Error {
         `Pick a different inputType for your custom field — see the host's ` +
         `RESERVED_INPUT_TYPES list.`,
       ctx,
+    );
+  }
+
+  static ssrWalkedAdminSpec(): AdminPluginRegistryError {
+    return new AdminPluginRegistryError(
+      "ssr_walked_admin_spec",
+      "Admin-only plugin block spec rendered on the SSR walker path. " +
+        "registries.ts contributions are admin-only; the runtime walker " +
+        "must source `component` from `@plumix/blocks` directly.",
+      {},
     );
   }
 }

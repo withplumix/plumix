@@ -2,9 +2,15 @@ import { afterEach, describe, expect, test } from "vitest";
 
 import {
   _resetPluginRegistry,
+  getPluginBlockEditor,
+  getPluginBlockSchema,
   getPluginFieldType,
+  getPluginMarkSchema,
   getPluginPage,
+  registerPluginBlockEditor,
+  registerPluginBlockSchema,
   registerPluginFieldType,
+  registerPluginMarkSchema,
   registerPluginPage,
 } from "./plugin-registry.js";
 
@@ -62,6 +68,43 @@ describe("plugin field-type registry", () => {
     registerPluginFieldType("media", Stub);
     expect(getPluginFieldType("media")).toBe(Stub);
     expect(() => registerPluginFieldType("media", Stub)).toThrow(
+      /already registered/,
+    );
+  });
+});
+
+describe("plugin block + mark registries", () => {
+  const schema = { name: "acme/callout" } as never;
+
+  test("round-trips block schemas + editors + mark schemas", () => {
+    registerPluginBlockSchema("acme/callout", schema);
+    expect(getPluginBlockSchema("acme/callout")).toBe(schema);
+
+    registerPluginBlockEditor("acme/callout", Stub);
+    expect(getPluginBlockEditor("acme/callout")).toBe(Stub);
+
+    const markSchema = { name: "acme/highlight" } as never;
+    registerPluginMarkSchema("acme/highlight", markSchema);
+    expect(getPluginMarkSchema("acme/highlight")).toBe(markSchema);
+  });
+
+  test("returns undefined for unknown names", () => {
+    expect(getPluginBlockSchema("acme/nope")).toBeUndefined();
+    expect(getPluginBlockEditor("acme/nope")).toBeUndefined();
+    expect(getPluginMarkSchema("acme/nope")).toBeUndefined();
+  });
+
+  test("rejects duplicate registrations per registry", () => {
+    registerPluginBlockSchema("acme/callout", schema);
+    expect(() => registerPluginBlockSchema("acme/callout", schema)).toThrow(
+      /already registered/,
+    );
+    registerPluginBlockEditor("acme/callout", Stub);
+    expect(() => registerPluginBlockEditor("acme/callout", Stub)).toThrow(
+      /already registered/,
+    );
+    registerPluginMarkSchema("acme/highlight", schema);
+    expect(() => registerPluginMarkSchema("acme/highlight", schema)).toThrow(
       /already registered/,
     );
   });

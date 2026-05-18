@@ -92,6 +92,8 @@ export function defineBlock<Attrs = Readonly<Record<string, unknown>>>(
     schema: spec.schema,
     component: spec.component,
     editor: spec.editor,
+    adminSchema: spec.adminSchema,
+    adminEditor: spec.adminEditor,
     client: spec.client,
     legacyAliases: freezeArray(spec.legacyAliases),
     keyboardShortcuts: freezeArrayOfObjects(spec.keyboardShortcuts),

@@ -43,6 +43,8 @@ const KNOWN_ARRAY_FIELDS = [
   "settingsPages",
   "adminNav",
   "fieldTypes",
+  "blocks",
+  "marks",
 ] as const satisfies readonly (keyof PlumixManifest)[];
 
 function normalize(value: unknown): PlumixManifest {

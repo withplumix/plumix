@@ -22,6 +22,14 @@ export interface MarkSpec {
   readonly schema: LazyRef<ReturnType<typeof TiptapMarkExtension.create>>;
   readonly component: LazyRef<MarkComponent>;
   /**
+   * Export name on the plugin's `adminEntry` module that resolves to the
+   * Tiptap `Mark.create(...)` instance for this mark. Mirrors
+   * `BlockSpec.adminSchema`: lets the admin chunk synthesizer wire the
+   * mark into the editor's extension list. Core marks leave this unset —
+   * the admin imports `@plumix/blocks` directly.
+   */
+  readonly adminSchema?: string;
+  /**
    * Paste rules: HTML selectors this mark absorbs when the editor
    * receives pasted content. Marks usually need only the selector;
    * the editor extension wraps matched ranges with this mark.
@@ -29,8 +37,17 @@ export interface MarkSpec {
   readonly parsePaste?: readonly ParsePasteRule[];
 }
 
-export interface ResolvedMarkSpec extends Omit<MarkSpec, "component"> {
+export interface ResolvedMarkSpec extends Omit<
+  MarkSpec,
+  "component" | "schema"
+> {
   readonly component: MarkComponent;
+  /**
+   * Awaited Tiptap Mark instance. Stored sync (not lazy) so the admin
+   * editor can build its extension list synchronously — parallel to
+   * `ResolvedBlockSpec.schema`.
+   */
+  readonly schema: ReturnType<typeof TiptapMarkExtension.create>;
   readonly registeredBy: string | null;
 }
 
