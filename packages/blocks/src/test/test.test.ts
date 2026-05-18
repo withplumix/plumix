@@ -1,7 +1,13 @@
 import { describe, expect, test } from "vitest";
 
 import { paragraphBlock } from "../paragraph/index.js";
-import { mockRegistry, renderBlock } from "./index.js";
+import {
+  mockEditor,
+  mockMarkRegistry,
+  mockRegistry,
+  renderBlock,
+  validateContent,
+} from "./index.js";
 
 describe("mockRegistry", () => {
   test("returns an empty registry with no input", async () => {
@@ -49,5 +55,39 @@ describe("renderBlock", () => {
       },
     });
     expect(html).toBe("<p></p>");
+  });
+});
+
+describe("validateContent", () => {
+  test("returns ok for an empty doc against an empty registry", async () => {
+    const blocks = await mockRegistry();
+    const marks = await mockMarkRegistry();
+    const result = validateContent(
+      { type: "doc", content: [] },
+      { blocks, marks },
+    );
+    expect(result).toEqual({ ok: true });
+  });
+
+  test("flags an unknown block type as not ok", async () => {
+    const blocks = await mockRegistry({ core: [paragraphBlock] });
+    const marks = await mockMarkRegistry();
+    const result = validateContent(
+      {
+        type: "doc",
+        content: [{ type: "acme/never-registered", content: [] }],
+      },
+      { blocks, marks },
+    );
+    expect(result.ok).toBe(false);
+  });
+});
+
+describe("mockEditor", () => {
+  test("ships the baseline ProseMirror schema", () => {
+    const editor = mockEditor();
+    expect(editor.schema.nodes.doc).toBeDefined();
+    expect(editor.schema.nodes.paragraph).toBeDefined();
+    editor.destroy();
   });
 });
