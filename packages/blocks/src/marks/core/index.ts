@@ -15,6 +15,7 @@ export const coreMarks: readonly MarkSpec[] = Object.freeze([
     tag: "strong",
     parseTags: ["strong", "b"],
     keyboardShortcut: "Mod-b",
+    bubbleMenuIcon: "Bold",
   }),
   simpleMark({
     name: "italic",
@@ -22,6 +23,7 @@ export const coreMarks: readonly MarkSpec[] = Object.freeze([
     tag: "em",
     parseTags: ["em", "i"],
     keyboardShortcut: "Mod-i",
+    bubbleMenuIcon: "Italic",
   }),
   simpleMark({
     name: "strike",
@@ -29,6 +31,7 @@ export const coreMarks: readonly MarkSpec[] = Object.freeze([
     tag: "s",
     parseTags: ["s", "del", "strike"],
     keyboardShortcut: "Mod-Shift-X",
+    bubbleMenuIcon: "Strikethrough",
   }),
   simpleMark({
     name: "code",
@@ -36,6 +39,7 @@ export const coreMarks: readonly MarkSpec[] = Object.freeze([
     tag: "code",
     parseTags: ["code"],
     keyboardShortcut: "Mod-e",
+    bubbleMenuIcon: "Code",
   }),
   linkMark,
   simpleMark({
@@ -44,30 +48,35 @@ export const coreMarks: readonly MarkSpec[] = Object.freeze([
     tag: "u",
     parseTags: ["u"],
     keyboardShortcut: "Mod-u",
+    bubbleMenuIcon: "Underline",
   }),
   simpleMark({
     name: "subscript",
     title: "Subscript",
     tag: "sub",
     parseTags: ["sub"],
+    bubbleMenuIcon: "Subscript",
   }),
   simpleMark({
     name: "superscript",
     title: "Superscript",
     tag: "sup",
     parseTags: ["sup"],
+    bubbleMenuIcon: "Superscript",
   }),
   simpleMark({
     name: "highlight",
     title: "Highlight",
     tag: "mark",
     parseTags: ["mark"],
+    bubbleMenuIcon: "Highlighter",
   }),
   simpleMark({
     name: "kbd",
     title: "Keyboard",
     tag: "kbd",
     parseTags: ["kbd"],
+    bubbleMenuIcon: "Keyboard",
   }),
   abbrMark,
   simpleMark({
@@ -75,11 +84,13 @@ export const coreMarks: readonly MarkSpec[] = Object.freeze([
     title: "Citation",
     tag: "cite",
     parseTags: ["cite"],
+    bubbleMenuIcon: "Quote",
   }),
   simpleMark({
     name: "small",
     title: "Small print",
     tag: "small",
     parseTags: ["small"],
+    bubbleMenuIcon: "TextQuote",
   }),
 ]);

@@ -1,6 +1,23 @@
 import type { Editor } from "@tiptap/react";
-import type { KeyboardEvent, ReactElement } from "react";
+import type { ComponentType, KeyboardEvent, ReactElement } from "react";
 import { useRef } from "react";
+import { Toggle } from "@/components/ui/toggle.js";
+import { cn } from "@/lib/utils";
+import {
+  Bold,
+  Code,
+  Highlighter,
+  Italic,
+  Keyboard,
+  Link as LinkIcon,
+  Quote,
+  Strikethrough,
+  Subscript,
+  Superscript,
+  TextQuote,
+  Underline,
+  WholeWord,
+} from "lucide-react";
 
 import type { MarkRegistry, ResolvedMarkSpec } from "@plumix/blocks";
 
@@ -14,15 +31,25 @@ const ARROW_DELTAS: Record<string, number | undefined> = {
   ArrowLeft: -1,
 };
 
-/**
- * Pure rendering layer for the mark bubble menu — one button per
- * registered mark, with `aria-pressed` reflecting the editor's active
- * state and onClick dispatching the standard Tiptap toggle chain.
- *
- * Kept separate from the Tiptap `BubbleMenu` positioning wrapper so
- * tests can render this directly against a stub editor without
- * involving floating-ui or selection state.
- */
+// Hand-rolled, tree-shakeable mapping — bundling lucide via dynamic
+// keys would pull every icon in (~1MB). Plugin marks fall back to the
+// title text below when their `bubbleMenuIcon` isn't in this map.
+const ICONS: Record<string, ComponentType<{ readonly className?: string }>> = {
+  Bold,
+  Italic,
+  Strikethrough,
+  Code,
+  Link: LinkIcon,
+  Underline,
+  Subscript,
+  Superscript,
+  Highlighter,
+  Keyboard,
+  Quote,
+  TextQuote,
+  WholeWord,
+};
+
 export function MarkToolbar({
   editor,
   markRegistry,
@@ -61,7 +88,9 @@ export function MarkToolbar({
       ref={rootRef}
       data-plumix-mark-toolbar=""
       role="toolbar"
+      aria-label="Inline formatting"
       onKeyDown={handleKeyDown}
+      className="bg-popover text-popover-foreground flex items-center gap-0.5 rounded-md border p-1 shadow-md"
     >
       {marks.map((mark) => (
         <MarkButton key={mark.name} mark={mark} editor={editor} />
@@ -78,18 +107,20 @@ interface MarkButtonProps {
 function MarkButton({ mark, editor }: MarkButtonProps): ReactElement {
   const label = mark.bubbleMenuLabel ?? mark.title;
   const isActive = editor.isActive(mark.name);
-  const onClick = (): void => {
-    editor.chain().focus().toggleMark(mark.name).run();
-  };
+  const Icon = mark.bubbleMenuIcon ? ICONS[mark.bubbleMenuIcon] : undefined;
   return (
-    <button
-      type="button"
+    <Toggle
       data-testid={`bubble-menu-${mark.name}`}
-      aria-pressed={isActive}
+      size="sm"
+      pressed={isActive}
       aria-label={label}
-      onClick={onClick}
+      title={label}
+      onPressedChange={() => {
+        editor.chain().focus().toggleMark(mark.name).run();
+      }}
+      className={cn(Icon ? "px-1.5" : "px-2 text-xs")}
     >
-      {label}
-    </button>
+      {Icon ? <Icon className="size-4" /> : label}
+    </Toggle>
   );
 }

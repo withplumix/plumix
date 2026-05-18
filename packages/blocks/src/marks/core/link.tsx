@@ -64,6 +64,7 @@ export const linkMark = defineMark({
   name: "link",
   title: "Link",
   description: "Inline hyperlink with safe-href filtering.",
+  bubbleMenuIcon: "Link",
   schema: () => Promise.resolve(linkSchema),
   component: () => Promise.resolve(LinkComponent),
 });
