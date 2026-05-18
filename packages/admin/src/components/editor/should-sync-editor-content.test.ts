@@ -17,7 +17,7 @@ describe("shouldSyncEditorContent", () => {
   test("returns false when current and incoming are structurally equal (fresh ref, same shape)", () => {
     // RHF re-emits the same content as a fresh object reference on
     // every keystroke — the structural compare must catch this.
-    const incoming: JSONContent = JSON.parse(JSON.stringify(docWithSlash));
+    const incoming = structuredClone(docWithSlash);
     expect(shouldSyncEditorContent(docWithSlash, incoming, false)).toBe(false);
   });
 
