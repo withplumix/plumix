@@ -3,6 +3,7 @@ import { defineBlock } from "../define-block.js";
 export const separatorBlock = defineBlock({
   name: "core/separator",
   title: "Separator",
+  icon: "Minus",
   category: "typography",
   description: "Horizontal rule with named style variants.",
   legacyAliases: ["horizontalRule"],

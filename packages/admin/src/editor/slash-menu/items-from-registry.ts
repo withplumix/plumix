@@ -10,6 +10,8 @@ export interface SlashMenuItem {
   readonly description?: string;
   readonly category: string;
   readonly keywords?: readonly string[];
+  /** Lucide icon name resolved at render time. */
+  readonly icon?: string;
   /**
    * When this item is a variation, the parent block's name. The editor
    * uses this to insert a node of `parent`'s type rather than `name`'s
@@ -54,9 +56,17 @@ export function itemsFromRegistry(
       description: spec.description,
       category: spec.category ?? "typography",
       keywords: spec.keywords,
+      icon: spec.icon,
+      // Bare-block items inherit the spec's `defaultInnerBlocks` so
+      // wrapper blocks (list, quote, columns) materialise valid
+      // children — otherwise Tiptap silently degrades the empty
+      // insertion to the default block.
+      innerBlocks: spec.defaultInnerBlocks,
     });
     for (const variation of spec.variations ?? []) {
-      items.push(variationToItem(spec.name, spec.category, variation));
+      items.push(
+        variationToItem(spec.name, spec.category, variation, spec.icon),
+      );
     }
   }
   return items;
@@ -66,6 +76,7 @@ function variationToItem(
   parentName: string,
   parentCategory: string | undefined,
   variation: BlockVariation,
+  parentIcon: string | undefined,
 ): SlashMenuItem {
   return {
     name: `${parentName}:${variation.name}`,
@@ -73,6 +84,7 @@ function variationToItem(
     description: variation.description,
     category: parentCategory ?? "typography",
     keywords: variation.keywords,
+    icon: variation.icon ?? parentIcon,
     parent: parentName,
     attributes: variation.attributes,
     innerBlocks: variation.innerBlocks,

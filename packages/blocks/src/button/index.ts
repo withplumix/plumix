@@ -21,6 +21,7 @@ const TARGET_OPTIONS = [
 export const buttonBlock = defineBlock({
   name: "core/button",
   title: "Button",
+  icon: "MousePointer",
   category: "interactive",
   description: "Call-to-action link styled as a button.",
   attributes: {

@@ -156,6 +156,15 @@ export interface BlockSpec<Attrs = Readonly<Record<string, unknown>>> {
    * configure attributes after every insert.
    */
   readonly variations?: readonly BlockVariation[];
+  /**
+   * Default inner blocks the slash menu materialises when the author
+   * picks the bare block (not a variation). Required for wrapper blocks
+   * whose Tiptap schema has a non-optional content expression — e.g.
+   * `core/list` requires `coreListItem+`, so inserting a bare empty list
+   * silently degrades to a paragraph. Variations override this by
+   * supplying their own `innerBlocks`.
+   */
+  readonly defaultInnerBlocks?: readonly BlockVariationInnerBlock[];
   readonly schema: LazyRef<ReturnType<typeof TiptapNodeFactory.create>>;
   readonly component: LazyRef<BlockComponent<Attrs>>;
   readonly editor?: LazyRef<ComponentType<unknown>>;

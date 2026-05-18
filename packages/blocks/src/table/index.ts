@@ -9,6 +9,7 @@ const ALIGN_OPTIONS = [
 export const tableBlock = defineBlock({
   name: "core/table",
   title: "Table",
+  icon: "Table",
   category: "interactive",
   description: "Tabular data with optional striped + bordered variants.",
   attributes: {

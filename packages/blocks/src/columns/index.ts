@@ -21,6 +21,7 @@ function emptyColumns(count: number): readonly { name: "core/column" }[] {
 export const columnsBlock = defineBlock({
   name: "core/columns",
   title: "Columns",
+  icon: "Columns2",
   category: "layout",
   description: "Multi-column container with explicit ratios.",
   attributes: {
@@ -31,6 +32,7 @@ export const columnsBlock = defineBlock({
       options: RATIO_OPTIONS,
     },
   },
+  defaultInnerBlocks: emptyColumns(2),
   variations: [
     {
       name: "50-50",

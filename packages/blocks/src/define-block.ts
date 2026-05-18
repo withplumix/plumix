@@ -100,6 +100,9 @@ export function defineBlock<Attrs = Readonly<Record<string, unknown>>>(
     markdownShortcuts: freezeArrayOfObjects(spec.markdownShortcuts),
     parsePaste: freezeArrayOfObjects(spec.parsePaste),
     variations: freezeVariations(spec.variations),
+    defaultInnerBlocks: spec.defaultInnerBlocks
+      ? freezeInnerBlocks(spec.defaultInnerBlocks)
+      : undefined,
     transforms: spec.transforms
       ? Object.freeze({
           priority: spec.transforms.priority,

@@ -3,12 +3,14 @@ import { defineBlock } from "../define-block.js";
 export const quoteBlock = defineBlock({
   name: "core/quote",
   title: "Quote",
+  icon: "Quote",
   category: "typography",
   description: "Pull quote with optional citation.",
   legacyAliases: ["blockquote"],
   keyboardShortcuts: [{ shortcut: "Mod-Alt-Q" }],
   markdownShortcuts: [{ pattern: "> " }],
   parsePaste: [{ selector: "blockquote" }],
+  defaultInnerBlocks: [{ name: "core/paragraph" }],
   transforms: {
     priority: 20,
     to: [{ target: "core/paragraph" }],
