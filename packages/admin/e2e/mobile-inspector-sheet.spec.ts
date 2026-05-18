@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import {
   AUTHED_ADMIN,
+  MANIFEST_WITH_META_BOXES,
   MANIFEST_WITH_POST,
   mockManifest,
   rpcOkBody,
@@ -92,5 +93,74 @@ test.describe("Mobile Inspector bottom sheet (#314)", () => {
     await expect(levelSelect).toBeVisible();
     await levelSelect.selectOption({ value: "4" });
     await expect(page.locator(".ProseMirror h4")).toHaveCount(1);
+  });
+
+  test("sheet hosts the document panel — meta boxes + permalink + status live alongside the Inspector", async ({
+    page,
+  }) => {
+    await mockManifest(page, MANIFEST_WITH_META_BOXES);
+    await page.route("**/_plumix/rpc/**", async (route) => {
+      const url = route.request().url();
+      if (url.endsWith("/auth/session")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: rpcOkBody(AUTHED_ADMIN),
+        });
+      }
+      if (url.endsWith("/entry/get")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            json: {
+              id: 22,
+              type: "post",
+              parentId: null,
+              title: "Mobile",
+              slug: "m",
+              content: {
+                type: "doc",
+                content: [
+                  {
+                    type: "core/heading",
+                    attrs: { level: 2 },
+                    content: [{ type: "text", text: "Title" }],
+                  },
+                ],
+              },
+              excerpt: null,
+              status: "draft",
+              authorId: 1,
+              sortOrder: 0,
+              publishedAt: null,
+              createdAt: T0,
+              updatedAt: T0,
+              meta: {},
+            },
+            meta: [],
+          }),
+        });
+      }
+      return route.fulfill({ status: 404, body: "not-mocked" });
+    });
+
+    await page.goto("entries/posts/22/edit");
+    await expect(page.getByTestId("post-editor-form")).toBeVisible();
+
+    // SidebarTrigger is hidden below md — the per-block trigger is
+    // the only entry-point into the document panel on mobile.
+    await page.locator(".ProseMirror h2").click();
+    await page.getByTestId("mobile-inspector-trigger").click();
+
+    const sheet = page.getByTestId("mobile-inspector-sheet");
+    await expect(sheet).toBeVisible();
+
+    // Inspector still resolves the heading's level field.
+    await expect(sheet.getByTestId("inspector-field-level")).toBeVisible();
+    // Meta box from MANIFEST_WITH_META_BOXES — proves the document
+    // panel reached the sheet, not just the Inspector.
+    await expect(sheet.getByTestId("meta-box-seo")).toBeVisible();
+    await expect(sheet.getByTestId("meta-box-featured")).toBeVisible();
   });
 });

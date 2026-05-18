@@ -1,6 +1,6 @@
 import type { Editor } from "@tiptap/react";
 import type { ReactElement, ReactNode } from "react";
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useState } from "react";
 import {
   Sheet,
   SheetContent,
@@ -30,12 +30,8 @@ export function MobileInspectorSheetProvider({
   readonly children: ReactNode;
 }): ReactElement {
   const [open, setOpen] = useState(false);
-  const value = useMemo<MobileInspectorSheetContextValue>(
-    () => ({ open, setOpen }),
-    [open],
-  );
   return (
-    <MobileInspectorSheetContext.Provider value={value}>
+    <MobileInspectorSheetContext.Provider value={{ open, setOpen }}>
       {children}
     </MobileInspectorSheetContext.Provider>
   );
@@ -55,13 +51,22 @@ export function useMobileInspectorSheet(): MobileInspectorSheetContextValue {
 interface MobileInspectorSheetProps {
   readonly editor: Editor | null;
   readonly blockRegistry: BlockRegistry;
+  /**
+   * Rendered below the Inspector. The caller passes the same document
+   * panel sections (permalink, status, taxonomies, meta boxes) the
+   * right-rail Sidebar uses on desktop so mobile authors don't have
+   * to context-switch between two surfaces.
+   */
+  readonly children?: ReactNode;
 }
 
 // Renders nothing on desktop; on mobile (<768px) the bottom Sheet
-// hosts the block Inspector. Trigger lives next to the drag handle.
+// hosts the block Inspector + the document panel. Trigger lives next
+// to the drag handle.
 export function MobileInspectorSheet({
   editor,
   blockRegistry,
+  children,
 }: MobileInspectorSheetProps): ReactElement | null {
   const isMobile = useIsMobile();
   const { open, setOpen } = useMobileInspectorSheet();
@@ -74,14 +79,15 @@ export function MobileInspectorSheet({
         data-testid="mobile-inspector-sheet"
       >
         <SheetHeader>
-          <SheetTitle>Block settings</SheetTitle>
+          <SheetTitle>Document</SheetTitle>
           <SheetDescription className="sr-only">
-            Attributes and styles for the selected block.
+            Block attributes, permalink, status, and meta boxes for this entry.
           </SheetDescription>
         </SheetHeader>
         {editor ? (
           <Inspector editor={editor} blockRegistry={blockRegistry} />
         ) : null}
+        {children}
       </SheetContent>
     </Sheet>
   );
