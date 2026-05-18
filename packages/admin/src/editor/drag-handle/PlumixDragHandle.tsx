@@ -135,12 +135,9 @@ export function PlumixDragHandle({
   // Pinned identity: `DragHandle` lists `onNodeChange` in its effect
   // deps, so a fresh callback per render re-registers the ProseMirror
   // plugin and tears down the slash-menu mount mid-typing (#342).
-  const onNodeChange = useCallback(
-    ({ node, pos }: OnNodeChangeArgs) => {
-      setTracked(node ? { node, pos } : null);
-    },
-    [],
-  );
+  const onNodeChange = useCallback(({ node, pos }: OnNodeChangeArgs) => {
+    setTracked(node ? { node, pos } : null);
+  }, []);
 
   return (
     <DragHandle editor={editor} onNodeChange={onNodeChange}>
