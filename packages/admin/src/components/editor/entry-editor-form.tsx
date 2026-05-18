@@ -292,11 +292,7 @@ export function PostEditorForm({
   });
 
   const documentPanelSections = (
-    <Accordion
-      type="multiple"
-      defaultValue={openSections}
-      className="divide-y"
-    >
+    <Accordion type="multiple" defaultValue={openSections} className="divide-y">
       {showSlug ? (
         <PermalinkSection
           disabled={isSubmitting}
@@ -310,10 +306,7 @@ export function PostEditorForm({
         disabled={isSubmitting}
       />
       {isHierarchical ? (
-        <ParentSection
-          parentOptions={parentOptions}
-          disabled={isSubmitting}
-        />
+        <ParentSection parentOptions={parentOptions} disabled={isSubmitting} />
       ) : null}
       {showExcerpt ? <ExcerptSection disabled={isSubmitting} /> : null}
       {taxonomies.map((tax) => (

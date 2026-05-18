@@ -81,8 +81,7 @@ export function MobileInspectorSheet({
         <SheetHeader>
           <SheetTitle>Document</SheetTitle>
           <SheetDescription className="sr-only">
-            Block attributes, permalink, status, and meta boxes for
-            this entry.
+            Block attributes, permalink, status, and meta boxes for this entry.
           </SheetDescription>
         </SheetHeader>
         {editor ? (
