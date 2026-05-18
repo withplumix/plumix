@@ -64,13 +64,24 @@ export function buildTiptapExtensions(
   const { allowlist, blockRegistry, markRegistry } = input;
   if (allowlist === undefined) {
     return [
+      // StarterKit retained only for primitives ProseMirror requires
+      // (`doc` / `text` / `hardBreak`) + history; every node/mark with
+      // a registry equivalent is disabled so the registry stays the
+      // single source of truth.
       StarterKit.configure({
-        heading: { levels: [2, 3] },
         bold: false,
         italic: false,
         strike: false,
         code: false,
         link: false,
+        heading: false,
+        paragraph: false,
+        bulletList: false,
+        orderedList: false,
+        listItem: false,
+        blockquote: false,
+        codeBlock: false,
+        horizontalRule: false,
       }),
       ...registryNodeExtensions(blockRegistry),
       ...registryMarkExtensions(markRegistry),
@@ -90,7 +101,10 @@ export function buildTiptapExtensions(
       strike: marks.has("strike") ? {} : false,
       code: marks.has("code") ? {} : false,
       link: marks.has("link") ? linkOptions() : false,
-      // `paragraph`, `text`, `doc` are baseline (ProseMirror requires them).
+      // Richtext-field mode keeps StarterKit's `paragraph`/`text`/`doc`
+      // because field content predates the registry namespacing and
+      // gets validated against the legacy allowlist; canvas mode (the
+      // branch above) sources those from the registry instead.
       heading: nodes.has("heading") ? { levels: [2, 3] } : false,
       bulletList: nodes.has("bulletList") ? {} : false,
       orderedList: nodes.has("orderedList") ? {} : false,
