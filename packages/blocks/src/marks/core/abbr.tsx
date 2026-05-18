@@ -33,6 +33,7 @@ export const abbrMark = defineMark({
   name: "abbr",
   title: "Abbreviation",
   description: "Abbreviation with an optional tooltip via the title attr.",
+  bubbleMenuIcon: "WholeWord",
   schema: () => Promise.resolve(abbrSchema),
   component: () => Promise.resolve(AbbrComponent),
 });
