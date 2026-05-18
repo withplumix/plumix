@@ -1,4 +1,12 @@
-import type { BlockSpec, MarkSpec } from "@plumix/blocks";
+import type {
+  BlockAttributeSchema,
+  BlockKeyboardShortcut,
+  BlockMarkdownShortcut,
+  BlockSpec,
+  BlockSupports,
+  BlockVariation,
+  MarkSpec,
+} from "@plumix/blocks";
 
 import type {
   EntryTypeCapabilityOverrides,
@@ -1389,6 +1397,37 @@ export interface FieldTypeManifestEntry {
   readonly component: PluginComponentRef;
 }
 
+export interface BlockManifestEntry {
+  readonly name: string;
+  readonly title: string;
+  readonly category?: string;
+  readonly icon?: string;
+  readonly description?: string;
+  readonly keywords?: readonly string[];
+  readonly inserter?: boolean;
+  readonly attributes?: Readonly<Record<string, BlockAttributeSchema>>;
+  readonly supports?: BlockSupports;
+  readonly variations?: readonly BlockVariation[];
+  readonly keyboardShortcuts?: readonly BlockKeyboardShortcut[];
+  readonly markdownShortcuts?: readonly BlockMarkdownShortcut[];
+  readonly legacyAliases?: readonly string[];
+  /** Export name on the plugin's `adminEntry` module — see `BlockSpec.adminSchema`. */
+  readonly adminSchema?: string;
+  /** Export name on the plugin's `adminEntry` module — see `BlockSpec.adminEditor`. */
+  readonly adminEditor?: string;
+}
+
+export interface MarkManifestEntry {
+  readonly name: string;
+  readonly title: string;
+  readonly description?: string;
+  readonly keyboardShortcut?: string;
+  readonly bubbleMenuLabel?: string;
+  readonly bubbleMenuIcon?: string;
+  /** Export name on the plugin's `adminEntry` module — see `MarkSpec.adminSchema`. */
+  readonly adminSchema?: string;
+}
+
 /**
  * Wire-shipped manifest payload. Every field is optional on the type
  * so test fixtures can declare just the slice they exercise; the
@@ -1405,6 +1444,8 @@ export interface PlumixManifest {
   readonly settingsPages?: readonly SettingsPageManifestEntry[];
   readonly adminNav?: readonly AdminNavGroup[];
   readonly fieldTypes?: readonly FieldTypeManifestEntry[];
+  readonly blocks?: readonly BlockManifestEntry[];
+  readonly marks?: readonly MarkManifestEntry[];
 }
 
 /**
@@ -1431,6 +1472,8 @@ export function emptyManifest(): PlumixManifest {
     settingsPages: [],
     adminNav: [],
     fieldTypes: [],
+    blocks: [],
+    marks: [],
   };
 }
 
@@ -1501,6 +1544,12 @@ export function buildManifest(registry: PluginRegistry): BuiltManifest {
   const fieldTypes = Array.from(registry.fieldTypes.values())
     .map(toFieldTypeEntry)
     .sort((a, b) => a.type.localeCompare(b.type));
+  const blocks = Array.from(registry.blockSpecs.values())
+    .map(toBlockEntry)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const marks = Array.from(registry.markSpecs.values())
+    .map(toMarkEntry)
+    .sort((a, b) => a.name.localeCompare(b.name));
   return {
     entryTypes: entries,
     termTaxonomies,
@@ -1511,6 +1560,8 @@ export function buildManifest(registry: PluginRegistry): BuiltManifest {
     settingsPages,
     adminNav,
     fieldTypes,
+    blocks,
+    marks,
   };
 }
 
@@ -2128,6 +2179,64 @@ function toFieldTypeEntry(
 ): FieldTypeManifestEntry {
   const { type, component } = fieldType;
   return { type, component };
+}
+
+function toBlockEntry(block: RegisteredBlock): BlockManifestEntry {
+  const {
+    name,
+    title,
+    category,
+    icon,
+    description,
+    keywords,
+    inserter,
+    attributes,
+    supports,
+    variations,
+    keyboardShortcuts,
+    markdownShortcuts,
+    legacyAliases,
+    adminSchema,
+    adminEditor,
+  } = block.spec;
+  return {
+    name,
+    title,
+    category,
+    icon,
+    description,
+    keywords,
+    inserter,
+    attributes,
+    supports,
+    variations,
+    keyboardShortcuts,
+    markdownShortcuts,
+    legacyAliases,
+    adminSchema,
+    adminEditor,
+  };
+}
+
+function toMarkEntry(mark: RegisteredMark): MarkManifestEntry {
+  const {
+    name,
+    title,
+    description,
+    keyboardShortcut,
+    bubbleMenuLabel,
+    bubbleMenuIcon,
+    adminSchema,
+  } = mark.spec;
+  return {
+    name,
+    title,
+    description,
+    keyboardShortcut,
+    bubbleMenuLabel,
+    bubbleMenuIcon,
+    adminSchema,
+  };
 }
 
 // Per-variant options live on each narrowed variant of `MetaBoxField`.

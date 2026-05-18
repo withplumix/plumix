@@ -105,7 +105,7 @@ async function resolveSpec(
       schemaName,
     });
   }
-  return Object.freeze({ ...spec, component, registeredBy });
+  return Object.freeze({ ...spec, component, schema, registeredBy });
 }
 
 /**

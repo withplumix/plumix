@@ -1,4 +1,4 @@
-import type { Node } from "@tiptap/core";
+import type { Mark, Node } from "@tiptap/core";
 import {
   nodeInputRule,
   textblockTypeInputRule,
@@ -10,6 +10,7 @@ import type {
   BlockMarkdownShortcut,
   ParsePasteRule,
   ResolvedBlockSpec,
+  ResolvedMarkSpec,
 } from "@plumix/blocks";
 
 /**
@@ -129,13 +130,35 @@ function buildInputRule(
   }
 }
 
-// `wireMarkSpecExtension` is not implemented in this slice because marks
-// aren't loaded into the editor schema yet — that's the broader
-// "editor extension list sources from the registry" deferral tracked
-// in the project memory. The 5 marks StarterKit ships already carry
-// their canonical Cmd-B / Cmd-I / etc. shortcuts; the 8 additional
-// marks shipped by @plumix/blocks don't declare shortcuts. When the
-// mark-schema loader lands, build the symmetric helper here.
+/**
+ * Symmetric to {@link wireBlockSpecExtension} for marks: extends the base
+ * Mark with the editor-side concerns declared on the spec (keyboard
+ * shortcut, paste rules). Marks have no markdown-input-rule surface —
+ * Tiptap's mark input rules attach to surrounding text, not the mark
+ * itself, and would belong on the host block.
+ */
+export function wireMarkSpecExtension(spec: ResolvedMarkSpec): Mark {
+  const base = spec.schema;
+  if (spec.keyboardShortcut === undefined && !spec.parsePaste?.length) {
+    return base;
+  }
+  return base.extend({
+    addKeyboardShortcuts() {
+      const inherited = this.parent?.() ?? {};
+      if (spec.keyboardShortcut === undefined) return inherited;
+      return {
+        ...inherited,
+        [spec.keyboardShortcut]: () =>
+          this.editor.chain().focus().toggleMark(spec.name).run(),
+      };
+    },
+    parseHTML() {
+      const inherited = this.parent?.() ?? [];
+      if (!spec.parsePaste) return inherited;
+      return [...inherited, ...spec.parsePaste.map(pasteToParseRule)];
+    },
+  });
+}
 
 function escapeForRegex(input: string): string {
   return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

@@ -160,6 +160,21 @@ export interface BlockSpec<Attrs = Readonly<Record<string, unknown>>> {
   readonly component: LazyRef<BlockComponent<Attrs>>;
   readonly editor?: LazyRef<ComponentType<unknown>>;
   /**
+   * Export name on the plugin's `adminEntry` module that resolves to the
+   * Tiptap `Node.create(...)` instance for this block. Set by plugin
+   * authors so the admin chunk synthesizer can wire the schema into the
+   * editor without the admin awaiting a runtime `LazyRef` that points at
+   * the plugin's worker-side module. Core blocks leave this unset — the
+   * admin imports `@plumix/blocks` directly.
+   */
+  readonly adminSchema?: string;
+  /**
+   * Export name on the plugin's `adminEntry` module that resolves to the
+   * NodeView Component for this block. Optional; blocks without a bespoke
+   * Editor render through Tiptap's default contenteditable surface.
+   */
+  readonly adminEditor?: string;
+  /**
    * Marks this block as a client island. SSR emits a wrapper carrying
    * `data-plumix-island="<spec.name>"` plus a serialised attrs blob; the
    * island-bootstrap script (`<PlumixIslandBootstrap>`) imports `src`
