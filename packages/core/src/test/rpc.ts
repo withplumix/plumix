@@ -40,6 +40,12 @@ type TestDb = Awaited<ReturnType<typeof createTestDb>>;
 
 export interface BaseRpcHarnessOptions {
   readonly hooks?: HookRegistry;
+  /**
+   * Plugin registry seed. Anything contributed via `ctx.registerBlock` /
+   * `ctx.registerMark` lands in the validator's merged registries —
+   * pass a registry produced by `installPlugins` to exercise plugin
+   * block / mark content end-to-end through `entry.update`.
+   */
   readonly plugins?: PluginRegistry;
   readonly request?: Request;
   /**
@@ -242,15 +248,21 @@ export async function createRpcHarness(
   const oauthProviders = options.oauthProviders ?? [];
   // Build the same default registries `buildApp` would so the RPC
   // harness exercises validation against the real core specs.
+  const pluginBlockContributions = Array.from(plugins.blockSpecs.values()).map(
+    ({ spec, registeredBy }) => ({ spec, pluginId: registeredBy }),
+  );
+  const pluginMarkContributions = Array.from(plugins.markSpecs.values()).map(
+    ({ spec, registeredBy }) => ({ spec, pluginId: registeredBy }),
+  );
   const blocks = await mergeBlockRegistry({
     core: coreBlocks,
-    plugins: [],
+    plugins: pluginBlockContributions,
     themeOverrides: {},
     themeId: null,
   });
   const marks = await mergeMarkRegistry({
     core: coreMarks,
-    plugins: [],
+    plugins: pluginMarkContributions,
     themeOverrides: {},
     themeId: null,
   });
