@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { BlockContentValidationError } from "./validation-error.js";
+import { BlockContentValidationError } from "./validation-errors.js";
 
 const ISSUE = {
   code: "unknown_block_type",

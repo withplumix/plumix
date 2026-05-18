@@ -19,7 +19,7 @@ export type { HtmlAllowlistOverride } from "./html/build-allowlist.js";
 export { HtmlAllowlistProvider, useHtmlAllowlist } from "./html/context.js";
 export { validateBlockContent } from "./validate-content.js";
 export type { BlockContentValidationResult } from "./validate-content.js";
-export { BlockContentValidationError } from "./validation-error.js";
+export { BlockContentValidationError } from "./validation-errors.js";
 export type {
   BlockContentValidationCode,
   BlockContentValidationIssue,
