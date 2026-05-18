@@ -1,6 +1,7 @@
 import { create } from "./create.js";
 import { get } from "./get.js";
 import { list } from "./list.js";
+import { revisionsRouter } from "./revisions.js";
 import { trash } from "./trash.js";
 import { update } from "./update.js";
 
@@ -10,6 +11,7 @@ export const entryRouter = {
   create,
   update,
   trash,
+  revisions: revisionsRouter,
 } as const;
 
 export type EntryRouter = typeof entryRouter;

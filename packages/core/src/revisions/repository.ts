@@ -1,0 +1,172 @@
+import { and, desc, eq, inArray, like, lt } from "drizzle-orm";
+
+import type { Db } from "../context/app.js";
+import type { Entry } from "../db/schema/entries.js";
+import { isUniqueConstraintError } from "../db/errors.js";
+import { entries } from "../db/schema/entries.js";
+import { RevisionRepositoryError } from "./errors.js";
+import { buildRevisionSlug, REVISION_TYPE } from "./slug-codec.js";
+import { encodeSnapshotEnvelope } from "./snapshot-envelope.js";
+
+// 21 chars × 64-char alphabet = 126 bits of entropy — collision-
+// resistant under the `(type, slug)` unique index. URL-safe.
+const NANOID_ALPHABET =
+  "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-";
+
+function generateNanoid(length = 21): string {
+  // crypto.getRandomValues so an attacker who learns one revision slug
+  // can't predict the next one (Math.random is seeded predictably).
+  const bytes = new Uint8Array(length);
+  globalThis.crypto.getRandomValues(bytes);
+  let out = "";
+  for (const byte of bytes) {
+    out += NANOID_ALPHABET.charAt(byte & 63);
+  }
+  return out;
+}
+
+interface SnapshotInput {
+  readonly entry: Entry;
+  readonly authorId: number;
+}
+
+// Stores the live slug + parentId in `meta.__plumix_snapshot` so a
+// future "restore" slice can rehydrate without an extra round-trip.
+// Retries once ONLY on a unique-index collision (nanoid coincidence);
+// any other insert failure bubbles up unchanged so we don't mask
+// schema/FK/NOT NULL bugs as "retry candidates".
+export async function snapshotAsRevision(
+  db: Db,
+  input: SnapshotInput,
+): Promise<Entry> {
+  const { entry, authorId } = input;
+  const meta = {
+    ...entry.meta,
+    ...encodeSnapshotEnvelope({ slug: entry.slug, parentId: entry.parentId }),
+  };
+  async function attempt(): Promise<Entry> {
+    const [row] = await db
+      .insert(entries)
+      .values({
+        type: REVISION_TYPE,
+        parentId: null,
+        title: entry.title,
+        slug: buildRevisionSlug({
+          entryId: entry.id,
+          nanoid: generateNanoid(),
+        }),
+        content: entry.content,
+        excerpt: entry.excerpt,
+        status: entry.status,
+        authorId,
+        sortOrder: 0,
+        meta,
+        publishedAt: entry.publishedAt,
+      })
+      .returning();
+    if (!row) throw RevisionRepositoryError.insertReturnedNoRow();
+    return row;
+  }
+  try {
+    return await attempt();
+  } catch (err) {
+    if (!isUniqueConstraintError(err)) throw err;
+    return attempt();
+  }
+}
+
+interface ListRevisionsInput {
+  readonly entryId: number;
+  readonly limit: number;
+  // Opaque cursor returned by the previous page (last row's id as a
+  // base-10 string). `id` is autoincrement and revisions are insert-
+  // only, so id-ordering is chronological without same-second ties.
+  readonly cursor?: string | null;
+}
+
+interface ListRevisionsPage {
+  readonly revisions: readonly Entry[];
+  readonly nextCursor: string | null;
+}
+
+function decodeCursor(raw: string | null | undefined): number | null {
+  if (!raw) return null;
+  const id = Number.parseInt(raw, 10);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+// Slug shape is `revision:<entryId>:<nanoid>`; the `<entryId>:`
+// segment + leading-anchor `LIKE` gives a deterministic per-entry
+// predicate at the SQL layer. Without this, a JS-level filter after
+// a `type='revision'` query would silently lose rows for any entry
+// other than the most-recently-written one (limit window saturates
+// on noisy neighbours).
+function entryRevisionPrefix(entryId: number): string {
+  return `revision:${String(entryId)}:%`;
+}
+
+export async function listRevisions(
+  db: Db,
+  input: ListRevisionsInput,
+): Promise<ListRevisionsPage> {
+  const cursor = decodeCursor(input.cursor);
+  const baseFilter = and(
+    eq(entries.type, REVISION_TYPE),
+    like(entries.slug, entryRevisionPrefix(input.entryId)),
+  );
+  const rows = await db.query.entries.findMany({
+    where: cursor ? and(baseFilter, lt(entries.id, cursor)) : baseFilter,
+    orderBy: [desc(entries.id)],
+    limit: input.limit + 1,
+  });
+  const trimmed = rows.slice(0, input.limit);
+  const hasMore = rows.length > input.limit;
+  const last = trimmed.at(-1);
+  return {
+    revisions: trimmed,
+    nextCursor: hasMore && last ? String(last.id) : null,
+  };
+}
+
+export async function getRevision(
+  db: Db,
+  input: { readonly revisionId: number },
+): Promise<Entry | undefined> {
+  const row = await db.query.entries.findFirst({
+    where: and(
+      eq(entries.id, input.revisionId),
+      eq(entries.type, REVISION_TYPE),
+    ),
+  });
+  return row;
+}
+
+interface PruneInput {
+  readonly entryId: number;
+  readonly maxRevisions: number;
+}
+
+// Deletes the oldest revisions for `entryId` past `maxRevisions`.
+// Returns the count actually pruned (0 when under the cap).
+export async function pruneOldRevisions(
+  db: Db,
+  input: PruneInput,
+): Promise<number> {
+  const revisions = await db.query.entries.findMany({
+    where: and(
+      eq(entries.type, REVISION_TYPE),
+      like(entries.slug, entryRevisionPrefix(input.entryId)),
+    ),
+    orderBy: [desc(entries.id)],
+    columns: { id: true },
+  });
+  const excess = revisions.slice(input.maxRevisions);
+  if (excess.length === 0) return 0;
+  await db.delete(entries).where(
+    inArray(
+      entries.id,
+      excess.map((r) => r.id),
+    ),
+  );
+  return excess.length;
+}

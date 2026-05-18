@@ -157,6 +157,30 @@ declare module "../hooks/types.js" {
     ) => void | Promise<void>;
 
     /**
+     * Revision lifecycle. Fires after a successful entry.update on a
+     * type with `supports: ['revisions']`. `revision_created` lands
+     * once per update; `revision_pruned` fires only when the new
+     * snapshot pushed past the per-type `maxRevisions` cap and oldest
+     * rows were deleted.
+     */
+    "entry:revision_created": (
+      revision: Entry,
+      live: Entry,
+    ) => void | Promise<void>;
+    "entry:revision_pruned": (
+      live: Entry,
+      prunedCount: number,
+    ) => void | Promise<void>;
+    [K: `entry:${string}:revision_created`]: (
+      revision: Entry,
+      live: Entry,
+    ) => void | Promise<void>;
+    [K: `entry:${string}:revision_pruned`]: (
+      live: Entry,
+      prunedCount: number,
+    ) => void | Promise<void>;
+
+    /**
      * Fires after a successful meta write. Payload carries the decoded
      * upserts + deleted keys — matches WP's `updated_post_meta` /
      * `deleted_post_meta` / `added_post_meta` collapsed into one

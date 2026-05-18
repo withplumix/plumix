@@ -166,6 +166,7 @@ describe("deriveEntryTypeCapabilities", () => {
         publish: "admin",
         edit_any: "admin",
         delete: "admin",
+        read_revisions: "admin",
       },
     });
     for (const cap of caps) {

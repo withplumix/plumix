@@ -1,5 +1,6 @@
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import { isRevisionType } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { entryCapability } from "./lifecycle.js";
@@ -20,6 +21,11 @@ export const get = base
       where: eq(entries.id, filtered.id),
     });
     if (!row) {
+      throw errors.NOT_FOUND({ data: { kind: "entry", id: filtered.id } });
+    }
+    // Revision rows surface through entry.revisions.get only — their
+    // existence here shouldn't be observable, so 404 (not BAD_REQUEST).
+    if (isRevisionType(row.type)) {
       throw errors.NOT_FOUND({ data: { kind: "entry", id: filtered.id } });
     }
 

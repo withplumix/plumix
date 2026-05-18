@@ -6,6 +6,12 @@ import { PluginContextError } from "../errors.js";
 // at registration instead of letting the admin discover it later.
 export const META_FIELD_KEY_RE = /^[a-zA-Z0-9_:-]+$/;
 
+// Reserved namespace for core-owned meta keys (e.g. revision snapshot
+// envelopes at `__plumix_snapshot`). Rejected at registration so a
+// plugin can never shadow a future core key — the matching write
+// path would otherwise have to enforce this on every entry.update.
+export const META_RESERVED_KEY_PREFIX = "__plumix_";
+
 // Cap on fields per box — keeps the admin's per-request payload
 // bounded and signals a modeling problem if a plugin wants to pile
 // hundreds of fields into one card. Matches the RPC input-schema cap
@@ -33,6 +39,13 @@ export function assertMetaBoxFields(
         id,
         fieldKey: field.key,
         pattern: META_FIELD_KEY_RE.source,
+      });
+    }
+    if (field.key.startsWith(META_RESERVED_KEY_PREFIX)) {
+      throw PluginContextError.metaBoxFieldReservedKey({
+        kind,
+        id,
+        fieldKey: field.key,
       });
     }
     if (seen.has(field.key)) {

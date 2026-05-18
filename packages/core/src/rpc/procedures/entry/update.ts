@@ -13,6 +13,7 @@ import {
 import { stripUndefined } from "./helpers.js";
 import {
   applyEntryBeforeSave,
+  captureRevisionIfSupported,
   entryCapability,
   fireEntryPublished,
   fireEntryTransition,
@@ -292,6 +293,10 @@ export const update = base
       if (isPublishTransition) {
         await fireEntryPublished(context, updated);
       }
+      // Snapshot timing mirrors WP's `wp_save_post_revision`: after
+      // the live write commits and after lifecycle hooks fire. No-op
+      // when the type doesn't opt into `supports: ['revisions']`.
+      await captureRevisionIfSupported(context, updated);
     }
 
     return context.hooks.applyFilter("rpc:entry.update:output", {
