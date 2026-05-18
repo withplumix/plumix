@@ -1,4 +1,12 @@
-import type { BlockSpec, MarkSpec } from "@plumix/blocks";
+import type {
+  BlockAttributeSchema,
+  BlockKeyboardShortcut,
+  BlockMarkdownShortcut,
+  BlockSpec,
+  BlockSupports,
+  BlockVariation,
+  MarkSpec,
+} from "@plumix/blocks";
 
 import type {
   EntryTypeCapabilityOverrides,
@@ -1394,12 +1402,23 @@ export interface BlockManifestEntry {
   readonly title: string;
   readonly category?: string;
   readonly icon?: string;
+  readonly description?: string;
+  readonly keywords?: readonly string[];
+  readonly inserter?: boolean;
+  readonly attributes?: Readonly<Record<string, BlockAttributeSchema>>;
+  readonly supports?: BlockSupports;
+  readonly variations?: readonly BlockVariation[];
+  readonly keyboardShortcuts?: readonly BlockKeyboardShortcut[];
+  readonly markdownShortcuts?: readonly BlockMarkdownShortcut[];
+  readonly legacyAliases?: readonly string[];
 }
 
 export interface MarkManifestEntry {
   readonly name: string;
   readonly title: string;
+  readonly description?: string;
   readonly keyboardShortcut?: string;
+  readonly bubbleMenuLabel?: string;
   readonly bubbleMenuIcon?: string;
 }
 
@@ -1519,8 +1538,12 @@ export function buildManifest(registry: PluginRegistry): BuiltManifest {
   const fieldTypes = Array.from(registry.fieldTypes.values())
     .map(toFieldTypeEntry)
     .sort((a, b) => a.type.localeCompare(b.type));
-  const blocks = Array.from(registry.blockSpecs.values()).map(toBlockEntry);
-  const marks = Array.from(registry.markSpecs.values()).map(toMarkEntry);
+  const blocks = Array.from(registry.blockSpecs.values())
+    .map(toBlockEntry)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const marks = Array.from(registry.markSpecs.values())
+    .map(toMarkEntry)
+    .sort((a, b) => a.name.localeCompare(b.name));
   return {
     entryTypes: entries,
     termTaxonomies,
@@ -2153,13 +2176,55 @@ function toFieldTypeEntry(
 }
 
 function toBlockEntry(block: RegisteredBlock): BlockManifestEntry {
-  const { name, title, category, icon } = block.spec;
-  return { name, title, category, icon };
+  const {
+    name,
+    title,
+    category,
+    icon,
+    description,
+    keywords,
+    inserter,
+    attributes,
+    supports,
+    variations,
+    keyboardShortcuts,
+    markdownShortcuts,
+    legacyAliases,
+  } = block.spec;
+  return {
+    name,
+    title,
+    category,
+    icon,
+    description,
+    keywords,
+    inserter,
+    attributes,
+    supports,
+    variations,
+    keyboardShortcuts,
+    markdownShortcuts,
+    legacyAliases,
+  };
 }
 
 function toMarkEntry(mark: RegisteredMark): MarkManifestEntry {
-  const { name, title, keyboardShortcut, bubbleMenuIcon } = mark.spec;
-  return { name, title, keyboardShortcut, bubbleMenuIcon };
+  const {
+    name,
+    title,
+    description,
+    keyboardShortcut,
+    bubbleMenuLabel,
+    bubbleMenuIcon,
+  } = mark.spec;
+  return {
+    name,
+    title,
+    description,
+    keyboardShortcut,
+    bubbleMenuLabel,
+    bubbleMenuIcon,
+  };
 }
 
 // Per-variant options live on each narrowed variant of `MetaBoxField`.
