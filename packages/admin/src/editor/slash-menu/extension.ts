@@ -13,6 +13,7 @@ import type { BlockRegistry } from "@plumix/blocks";
 import type { SlashMenuItem } from "./items-from-registry.js";
 import type { SlashMenuPanelHandle } from "./SlashMenuPanel.js";
 import { itemsFromRegistry } from "./items-from-registry.js";
+import { clampMenuPosition } from "./position.js";
 import { SlashMenuPanel } from "./SlashMenuPanel.js";
 
 interface CreateSlashMenuExtensionOptions {
@@ -133,6 +134,20 @@ function positionMount(
 ): void {
   const rect = props.clientRect?.();
   if (!rect) return;
-  mount.style.top = `${rect.bottom + window.scrollY + 4}px`;
-  mount.style.left = `${rect.left + window.scrollX}px`;
+  // Mount wrapper measures 0×0 on the first onStart before layout;
+  // fall back to the panel child so the clamp has a real width.
+  const child = mount.firstElementChild as HTMLElement | null;
+  const menuRect = (child ?? mount).getBoundingClientRect();
+  const { top, left } = clampMenuPosition({
+    caret: { top: rect.top, bottom: rect.bottom, left: rect.left },
+    viewport: {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+    },
+    menu: { width: menuRect.width, height: menuRect.height },
+  });
+  mount.style.top = `${top}px`;
+  mount.style.left = `${left}px`;
 }
