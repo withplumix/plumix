@@ -6,6 +6,7 @@ const HEADING_LEVELS = [1, 2, 3, 4, 5, 6] as const;
 export const headingBlock = defineBlock({
   name: "core/heading",
   title: "Heading",
+  icon: "Heading",
   category: "text",
   description: "Section title.",
   supports: headingSupports,

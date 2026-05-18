@@ -10,6 +10,7 @@ const ALIGN_OPTIONS = [
 export const buttonsBlock = defineBlock({
   name: "core/buttons",
   title: "Buttons",
+  icon: "MousePointerClick",
   category: "interactive",
   description: "Container for a row of call-to-action buttons.",
   attributes: {

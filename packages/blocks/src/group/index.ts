@@ -10,6 +10,7 @@ const LAYOUT_OPTIONS = [
 export const groupBlock = defineBlock({
   name: "core/group",
   title: "Group",
+  icon: "SquareStack",
   category: "layout",
   description: "Generic container that hosts any block-level children.",
   attributes: {

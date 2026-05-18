@@ -3,6 +3,7 @@ import { defineBlock } from "../define-block.js";
 export const detailsBlock = defineBlock({
   name: "core/details",
   title: "Details",
+  icon: "ChevronDownSquare",
   category: "interactive",
   description: "Native <details>/<summary> collapsible region.",
   attributes: {

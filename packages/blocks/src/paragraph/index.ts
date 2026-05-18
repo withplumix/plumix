@@ -11,6 +11,7 @@ import { paragraphSupports } from "./supports.js";
 export const paragraphBlock = defineBlock({
   name: "core/paragraph",
   title: "Paragraph",
+  icon: "Type",
   category: "text",
   description: "The building block of all narrative.",
   supports: paragraphSupports,

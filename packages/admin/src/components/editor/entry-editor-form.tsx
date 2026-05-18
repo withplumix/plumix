@@ -425,7 +425,15 @@ export function PostEditorForm({
                   Document
                 </SidebarHeader>
                 <SidebarContent>
-                  <InspectorSection />
+                  {/* `border-b` lives on this wrapper (not on the
+                      Inspector itself) so the seam between block
+                      attributes and the document panel is always
+                      visible — Inspector returns `null` when the
+                      selected block has no attributes/supports, and
+                      we still want a divider then. */}
+                  <div className="border-b">
+                    <InspectorSection />
+                  </div>
                   {documentPanelSections}
                 </SidebarContent>
               </Sidebar>

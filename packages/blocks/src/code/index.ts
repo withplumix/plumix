@@ -3,6 +3,7 @@ import { defineBlock } from "../define-block.js";
 export const codeBlock = defineBlock({
   name: "core/code",
   title: "Code",
+  icon: "Code",
   category: "typography",
   description: "Preformatted code block with optional language attribute.",
   legacyAliases: ["codeBlock"],

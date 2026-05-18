@@ -16,6 +16,7 @@ import {
 import { Command as CmdkPrimitive } from "cmdk";
 
 import type { SlashMenuItem } from "./items-from-registry.js";
+import { SlashMenuIcon } from "./SlashMenuIcon.js";
 
 export interface SlashMenuPanelHandle {
   /**
@@ -166,13 +167,25 @@ export const SlashMenuPanel = forwardRef<
                 value={value}
                 data-testid={`slash-menu-item-${item.name}`}
                 onSelect={() => onSelect(item)}
+                className="flex items-start gap-2"
               >
-                <span data-plumix-slash-menu-title="">{item.title}</span>
-                {item.description ? (
-                  <span data-plumix-slash-menu-description="">
-                    {item.description}
+                <SlashMenuIcon name={item.icon} />
+                <span className="flex min-w-0 flex-col">
+                  <span
+                    data-plumix-slash-menu-title=""
+                    className="text-sm font-medium"
+                  >
+                    {item.title}
                   </span>
-                ) : null}
+                  {item.description ? (
+                    <span
+                      data-plumix-slash-menu-description=""
+                      className="text-muted-foreground text-xs"
+                    >
+                      {item.description}
+                    </span>
+                  ) : null}
+                </span>
               </CommandItem>
             ))}
           </CommandGroup>

@@ -3,12 +3,14 @@ import { defineBlock } from "../define-block.js";
 export const listBlock = defineBlock({
   name: "core/list",
   title: "Bulleted list",
+  icon: "List",
   category: "text",
   description: "Unordered list of items.",
   legacyAliases: ["bulletList"],
   keyboardShortcuts: [{ shortcut: "Mod-Alt-L", mode: "wrap" }],
   markdownShortcuts: [{ pattern: "- ", mode: "wrap" }],
   parsePaste: [{ selector: "ul" }],
+  defaultInnerBlocks: [{ name: "core/list-item" }],
   transforms: {
     priority: 20,
     to: [{ target: "core/paragraph" }],

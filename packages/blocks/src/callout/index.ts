@@ -11,6 +11,7 @@ const VARIANT_OPTIONS = [
 export const calloutBlock = defineBlock({
   name: "core/callout",
   title: "Callout",
+  icon: "Info",
   category: "interactive",
   description: "Highlighted aside for info / warning / error / success / note.",
   attributes: {

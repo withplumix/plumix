@@ -159,6 +159,7 @@ async function resolveSpec(
     markdownShortcuts: spec.markdownShortcuts,
     parsePaste: spec.parsePaste,
     variations: spec.variations,
+    defaultInnerBlocks: spec.defaultInnerBlocks,
     transforms: spec.transforms,
   });
 }

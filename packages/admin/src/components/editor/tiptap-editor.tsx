@@ -28,17 +28,15 @@ import { buildTiptapExtensions } from "./tiptap-extensions.js";
  * (recursively) as `content`.
  */
 export function slashMenuItemToContent(item: SlashMenuItem): JSONContent {
-  if (item.parent !== undefined) {
-    return {
-      type: item.parent,
-      ...(item.attributes !== undefined && { attrs: { ...item.attributes } }),
-      ...(item.innerBlocks !== undefined &&
-        item.innerBlocks.length > 0 && {
-          content: item.innerBlocks.map(innerBlockToContent),
-        }),
-    };
-  }
-  return { type: item.name };
+  const type = item.parent ?? item.name;
+  return {
+    type,
+    ...(item.attributes !== undefined && { attrs: { ...item.attributes } }),
+    ...(item.innerBlocks !== undefined &&
+      item.innerBlocks.length > 0 && {
+        content: item.innerBlocks.map(innerBlockToContent),
+      }),
+  };
 }
 
 function innerBlockToContent(inner: BlockVariationInnerBlock): JSONContent {
