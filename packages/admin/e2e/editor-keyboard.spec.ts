@@ -7,13 +7,9 @@ import {
   rpcOkBody,
 } from "./support/rpc-mock.js";
 
-// Keyboard-only flow asserting the a11y promise: an author with no
-// mouse can compose, navigate, and inspect blocks without touching a
-// pointer. The slash-menu spec uses ArrowDown rather than typing a
-// query string — the suggestion plugin still deactivates on the first
-// character of typed input (tracked in #342); the value-sync deep
-// compare added in #344+ is a defensive improvement but doesn't
-// resolve the typed-query path on its own.
+// Keyboard-only flow asserting the a11y promise: compose, navigate,
+// and inspect blocks without a pointer. Slash-menu ArrowDown nav is
+// covered here; typed-query path lives in slash-menu-typed-query.spec.ts.
 
 const NOW = new Date("2026-05-17T00:00:00Z");
 

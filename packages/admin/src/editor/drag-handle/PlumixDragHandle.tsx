@@ -1,6 +1,6 @@
 import type { Editor } from "@tiptap/react";
 import type { ReactElement } from "react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Popover,
   PopoverContent,
@@ -24,6 +24,11 @@ interface TrackedNode {
     readonly nodeSize: number;
     toJSON(): unknown;
   };
+  readonly pos: number;
+}
+
+interface OnNodeChangeArgs {
+  readonly node: TrackedNode["node"] | null;
   readonly pos: number;
 }
 
@@ -127,13 +132,15 @@ export function PlumixDragHandle({
     setOpen(false);
   };
 
+  // Pinned identity: `DragHandle` lists `onNodeChange` in its effect
+  // deps, so a fresh callback per render re-registers the ProseMirror
+  // plugin and tears down the slash-menu mount mid-typing (#342).
+  const onNodeChange = useCallback(({ node, pos }: OnNodeChangeArgs) => {
+    setTracked(node ? { node, pos } : null);
+  }, []);
+
   return (
-    <DragHandle
-      editor={editor}
-      onNodeChange={({ node, pos }) => {
-        setTracked(node ? { node, pos } : null);
-      }}
-    >
+    <DragHandle editor={editor} onNodeChange={onNodeChange}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <DragHandleButton onOpenMenu={() => setOpen(true)} />
