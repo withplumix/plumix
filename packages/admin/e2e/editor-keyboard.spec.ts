@@ -9,11 +9,12 @@ import {
 
 // Keyboard-only flow asserting the a11y promise: an author with no
 // mouse can compose, navigate, and inspect blocks without touching a
-// pointer. The slash-menu insertion path verifies the resolved block
-// registry reaches the editor's `extensions` (the suspense ordering
-// hazard PR #339 punted on) — using ArrowDown + Enter rather than
-// typing a query string sidesteps the orthogonal cmdk filter
-// keystroke-handling tracked in #342.
+// pointer. The slash-menu spec uses ArrowDown rather than typing a
+// query string — the suggestion plugin still deactivates on the first
+// character of typed input (tracked in #342); the `editor.isFocused`
+// guard added in this slice rules out external `setContent` echoes
+// from RHF as the cause, but the underlying interaction remains
+// unresolved.
 
 const NOW = new Date("2026-05-17T00:00:00Z");
 
@@ -142,17 +143,15 @@ test.describe("Keyboard-only editor flow (a11y)", () => {
     await page.keyboard.type("/");
 
     // Slash menu's listbox is rendered to document.body via a portal.
-    // Items are projected from the resolved BlockRegistry — the
-    // presence of every core block proves the registry promise
-    // resolved before the editor's `extensions` were locked in (the
-    // hazard PR #339 punted on).
+    // The presence of every registered item proves the resolved
+    // BlockRegistry reached the editor's `extensions`. ArrowDown
+    // navigates to "Heading" (second item) and Enter dispatches the
+    // suggestion's command — typing the query string itself is
+    // tracked separately in #342.
     await expect(page.locator("[data-plumix-slash-menu-mount]")).toBeVisible();
     await expect(
       page.getByTestId("slash-menu-item-core/heading"),
     ).toBeVisible();
-    // ArrowDown moves to "Heading" (the second item — Paragraph is
-    // first). Enter dispatches the suggestion's `command`, which
-    // inserts the heading node.
     await page.keyboard.press("ArrowDown");
     await page.keyboard.press("Enter");
 
