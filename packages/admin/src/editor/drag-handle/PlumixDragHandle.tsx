@@ -6,14 +6,17 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover.js";
+import { useIsMobile } from "@/hooks/use-mobile.js";
 import { DragHandle } from "@tiptap/extension-drag-handle-react";
 
 import type { BlockRegistry, BlockTransformTo } from "@plumix/blocks";
 
 import type { BlockMenuOpenDetail } from "./block-menu-keyboard.js";
 import { BlockMenu } from "../block-menu/BlockMenu.js";
+import { useMobileInspectorSheet } from "../inspector/mobile-inspector-sheet.js";
 import { BLOCK_MENU_OPEN_EVENT } from "./block-menu-keyboard.js";
 import { DragHandleButton } from "./DragHandleButton.js";
+import { MobileInspectorTrigger } from "./MobileInspectorTrigger.js";
 
 interface PlumixDragHandleProps {
   readonly editor: Editor;
@@ -54,6 +57,8 @@ export function PlumixDragHandle({
   // toJSON) are the only contract this component relies on.
   const [tracked, setTracked] = useState<TrackedNode | null>(null);
   const [open, setOpen] = useState(false);
+  const isMobile = useIsMobile();
+  const mobileSheet = useMobileInspectorSheet();
 
   /**
    * Every BlockMenu action selects the tracked node first so the
@@ -178,41 +183,46 @@ export function PlumixDragHandle({
 
   return (
     <DragHandle editor={editor} onNodeChange={onNodeChange}>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <DragHandleButton onOpenMenu={() => setOpen(true)} />
-        </PopoverTrigger>
-        <PopoverContent
-          side="left"
-          align="start"
-          className="w-56 p-0"
-          onOpenAutoFocus={(event) => {
-            // Radix defaults to focusing the first tab-stop in the
-            // content; BlockMenu has none (cmdk items aren't tabbable).
-            // Route focus onto the hidden cmdk input so it receives
-            // ArrowDown / Enter for keyboard-only authors. The explicit
-            // `data-plumix-block-menu-input` selector survives future
-            // additions of unrelated <input> elements to the popover.
-            event.preventDefault();
-            const content = event.currentTarget as HTMLElement | null;
-            const input = content?.querySelector<HTMLElement>(
-              "[data-plumix-block-menu-input]",
-            );
-            input?.focus();
-          }}
-        >
-          {tracked ? (
-            <BlockMenu
-              sourceName={tracked.node.type.name}
-              blockRegistry={blockRegistry}
-              onTransform={onTransform}
-              onDuplicate={onDuplicate}
-              onDelete={onDelete}
-              onCopyJson={onCopyJson}
-            />
-          ) : null}
-        </PopoverContent>
-      </Popover>
+      <div className="flex items-center gap-0.5">
+        {isMobile ? (
+          <MobileInspectorTrigger onOpen={() => mobileSheet.setOpen(true)} />
+        ) : null}
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <DragHandleButton onOpenMenu={() => setOpen(true)} />
+          </PopoverTrigger>
+          <PopoverContent
+            side="left"
+            align="start"
+            className="w-56 p-0"
+            onOpenAutoFocus={(event) => {
+              // Radix defaults to focusing the first tab-stop in the
+              // content; BlockMenu has none (cmdk items aren't tabbable).
+              // Route focus onto the hidden cmdk input so it receives
+              // ArrowDown / Enter for keyboard-only authors. The explicit
+              // `data-plumix-block-menu-input` selector survives future
+              // additions of unrelated <input> elements to the popover.
+              event.preventDefault();
+              const content = event.currentTarget as HTMLElement | null;
+              const input = content?.querySelector<HTMLElement>(
+                "[data-plumix-block-menu-input]",
+              );
+              input?.focus();
+            }}
+          >
+            {tracked ? (
+              <BlockMenu
+                sourceName={tracked.node.type.name}
+                blockRegistry={blockRegistry}
+                onTransform={onTransform}
+                onDuplicate={onDuplicate}
+                onDelete={onDelete}
+                onCopyJson={onCopyJson}
+              />
+            ) : null}
+          </PopoverContent>
+        </Popover>
+      </div>
     </DragHandle>
   );
 }
