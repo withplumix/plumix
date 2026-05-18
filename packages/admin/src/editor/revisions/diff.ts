@@ -15,7 +15,7 @@ const jsonDiff = createJsonDiff({
   arrays: { detectMove: true },
 });
 
-export interface JsonDiffResult {
+interface JsonDiffResult {
   readonly delta: Delta | undefined;
   readonly hasChanges: boolean;
 }

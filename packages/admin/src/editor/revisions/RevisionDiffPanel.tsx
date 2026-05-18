@@ -17,7 +17,7 @@ interface RevisionDiffSnapshot {
   readonly meta: Readonly<Record<string, unknown>>;
 }
 
-export interface RevisionDiffPanelProps {
+interface RevisionDiffPanelProps {
   readonly revision: RevisionDiffSnapshot;
   readonly current: RevisionDiffSnapshot;
   /** Initial active tab. Exposed for tests + deep-linking. */
