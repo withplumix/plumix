@@ -42,14 +42,14 @@ describe("buildTiptapExtensions — markRegistry", () => {
     ).toBe(true);
   });
 
-  test("skips core marks (registeredBy === null) so StarterKit doesn't collide", () => {
+  test("loads every registered mark — core + plugin — so the registry is the source of truth", () => {
     const registry = fakeMarkRegistry([
       pluginMarkSpec("bold", null),
       pluginMarkSpec("acme/highlight-warning", "acme"),
     ]);
     const exts = buildTiptapExtensions({ markRegistry: registry });
     const names = exts.map((ext) => (ext as { name?: string }).name);
-    expect(names).not.toContain("bold");
+    expect(names).toContain("bold");
     expect(names).toContain("acme/highlight-warning");
   });
 

@@ -38,9 +38,9 @@ interface BuildExtensionsInput {
    */
   readonly blockRegistry?: BlockRegistry;
   /**
-   * Canvas-mode-only. Only plugin-contributed marks (`registeredBy`
-   * truthy) flow through — core marks share StarterKit's unnamespaced
-   * names (`bold`, `italic`, …) and adding them again would collide.
+   * Canvas-mode-only. Every mark in the registry — core + plugin —
+   * lands in the editor schema; StarterKit's duplicate marks are
+   * disabled so the registry stays the single source of truth.
    */
   readonly markRegistry?: MarkRegistry;
 }
@@ -66,7 +66,11 @@ export function buildTiptapExtensions(
     return [
       StarterKit.configure({
         heading: { levels: [2, 3] },
-        link: linkOptions(),
+        bold: false,
+        italic: false,
+        strike: false,
+        code: false,
+        link: false,
       }),
       ...registryNodeExtensions(blockRegistry),
       ...registryMarkExtensions(markRegistry),
@@ -128,7 +132,6 @@ function registryMarkExtensions(
   if (!registry) return [];
   const exts: Extensions = [];
   for (const [, spec] of registry) {
-    if (spec.registeredBy === null) continue;
     exts.push(wireMarkSpecExtension(spec));
   }
   return exts;
