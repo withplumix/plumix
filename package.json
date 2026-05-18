@@ -34,5 +34,10 @@
     "dependency-cruiser": "^17.4.0",
     "knip": "^6.6.0",
     "turbo": "^2.9.12"
+  },
+  "pnpm": {
+    "overrides": {
+      "@tiptap/pm": "3.23.4"
+    }
   }
 }

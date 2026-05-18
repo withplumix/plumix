@@ -1,5 +1,4 @@
 import { Editor, Node } from "@tiptap/core";
-import StarterKit from "@tiptap/starter-kit";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { BlockRegistry, ResolvedBlockSpec } from "@plumix/blocks";
@@ -37,6 +36,19 @@ function fakeRegistry(specs: readonly ResolvedBlockSpec[]): BlockRegistry {
   } satisfies BlockRegistry;
 }
 
+// Minimal schema baseline so `new Editor` mounts without StarterKit —
+// these tests probe the slash-menu extension in isolation, not the
+// canvas-mode wiring.
+const Doc = Node.create({ name: "doc", topNode: true, content: "block+" });
+const TextNode = Node.create({ name: "text", group: "inline" });
+const Paragraph = Node.create({
+  name: "paragraph",
+  group: "block",
+  content: "inline*",
+  parseHTML: () => [{ tag: "p" }],
+  renderHTML: () => ["p", 0],
+});
+
 const editors: Editor[] = [];
 
 afterEach(() => {
@@ -49,7 +61,7 @@ function mountEditor(extension: ReturnType<typeof createSlashMenuExtension>) {
   document.body.appendChild(host);
   const editor = new Editor({
     element: host,
-    extensions: [StarterKit, extension],
+    extensions: [Doc, Paragraph, TextNode, extension],
     content: "<p></p>",
   });
   editors.push(editor);
@@ -113,7 +125,9 @@ describe("slash menu Tiptap extension", () => {
     const editor = new Editor({
       element: host,
       extensions: [
-        StarterKit,
+        Doc,
+        Paragraph,
+        TextNode,
         createSlashMenuExtension({
           blockRegistry: registry,
           onPick: vi.fn(),

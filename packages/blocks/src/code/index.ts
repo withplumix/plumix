@@ -5,6 +5,7 @@ export const codeBlock = defineBlock({
   title: "Code",
   category: "typography",
   description: "Preformatted code block with optional language attribute.",
+  legacyAliases: ["codeBlock"],
   keyboardShortcuts: [{ shortcut: "Mod-Alt-C" }],
   markdownShortcuts: [{ pattern: "``` " }],
   parsePaste: [{ selector: "pre" }],
