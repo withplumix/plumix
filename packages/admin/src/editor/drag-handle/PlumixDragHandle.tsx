@@ -17,6 +17,7 @@ import { useMobileInspectorSheet } from "../inspector/mobile-inspector-sheet.js"
 import { BLOCK_MENU_OPEN_EVENT } from "./block-menu-keyboard.js";
 import { DragHandleButton } from "./DragHandleButton.js";
 import { MobileInspectorTrigger } from "./MobileInspectorTrigger.js";
+import { nextTrackedNode } from "./next-tracked.js";
 
 interface PlumixDragHandleProps {
   readonly editor: Editor;
@@ -154,17 +155,37 @@ export function PlumixDragHandle({
     setOpen(true);
   }, []);
 
+  // Detect coarse pointers (touch). Read inside the callback via a
+  // ref so the stable `useCallback([])` identity survives.
+  const isTouchRef = useRef(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(pointer: coarse)");
+    const sync = (): void => {
+      isTouchRef.current = mql.matches;
+    };
+    sync();
+    mql.addEventListener("change", sync);
+    return () => mql.removeEventListener("change", sync);
+  }, []);
+
   // Pinned identity: `DragHandle` lists `onNodeChange` in its effect
   // deps, so a fresh callback per render re-registers the ProseMirror
   // plugin and tears down the slash-menu mount mid-typing (#342).
-  // While the popover is open we intentionally freeze the anchor —
-  // matches Notion/Linear behavior where open menus don't re-target
-  // on hover — and also avoids the plugin's `onNodeChange(null)`
-  // (pointer leaves the block area) clobbering a keyboard-set
-  // tracked node before the menu can render.
+  // While the popover is open we freeze the anchor (matches
+  // Notion/Linear behavior). Otherwise we route through
+  // `nextTrackedNode`, which on touch suppresses the plugin's
+  // hover-driven `onNodeChange(null)` so the handle stays anchored
+  // to the last-tapped block.
   const onNodeChange = useCallback(({ node, pos }: OnNodeChangeArgs) => {
     if (openRef.current) return;
-    setTracked(node ? { node, pos } : null);
+    setTracked((current) =>
+      nextTrackedNode({
+        isTouch: isTouchRef.current,
+        current,
+        incoming: { node, pos },
+      }),
+    );
   }, []);
 
   // Keyboard-only path: the drag-handle plugin is mouse-driven, so
