@@ -246,6 +246,7 @@ export function PostEditorForm({
   // changes without prop-drilling through the FormField tree. Set by
   // `ContentEditor` via `onEditorReady`, exposed through context.
   const [activeEditor, setActiveEditor] = useState<Editor | null>(null);
+  const blockRegistry = useAdminBlockRegistry();
 
   const form = useForm({
     resolver: valibotResolver(postEditorSchema),
@@ -290,11 +291,59 @@ export function PostEditorForm({
     metaBoxes,
   });
 
+  const documentPanelSections = (
+    <Accordion
+      type="multiple"
+      defaultValue={openSections}
+      className="divide-y"
+    >
+      {showSlug ? (
+        <PermalinkSection
+          disabled={isSubmitting}
+          onSlugEdit={() => {
+            setSlugLocked(true);
+          }}
+        />
+      ) : null}
+      <StatusSection
+        availableStatuses={availableStatuses}
+        disabled={isSubmitting}
+      />
+      {isHierarchical ? (
+        <ParentSection
+          parentOptions={parentOptions}
+          disabled={isSubmitting}
+        />
+      ) : null}
+      {showExcerpt ? <ExcerptSection disabled={isSubmitting} /> : null}
+      {taxonomies.map((tax) => (
+        <TaxonomySection
+          key={tax.name}
+          taxonomy={tax}
+          disabled={isSubmitting}
+        />
+      ))}
+      {metaBoxes.map((box) => (
+        <MetaBoxAccordionItem
+          key={box.id}
+          box={box}
+          basePath="meta"
+          disabled={isSubmitting}
+        />
+      ))}
+    </Accordion>
+  );
+
   return (
     <Form {...form}>
       <EditorProvider value={activeEditor}>
         <MobileInspectorSheetProvider>
-          <MobileInspectorSheetMount editor={activeEditor} />
+          <MobileInspectorSheet
+            editor={activeEditor}
+            blockRegistry={blockRegistry}
+          >
+            {documentPanelSections}
+          </MobileInspectorSheet>
           {/* `contents` makes the form invisible in the flex flow so
             SidebarProvider owns the layout; fields in the rail still
             submit via Controller (rhf state, not DOM form semantics). */}
@@ -337,8 +386,10 @@ export function PostEditorForm({
                     {/* `type="button"` is load-bearing: shadcn's `Button`
                     doesn't default it, and an un-typed button inside
                     `<form>` inherits `submit` — clicking the toggle
-                    would otherwise fire the form's onSubmit + mutate. */}
-                    <SidebarTrigger type="button" />
+                    would otherwise fire the form's onSubmit + mutate.
+                    Hidden below md — the mobile sheet covers the same
+                    content via the per-block trigger. */}
+                    <SidebarTrigger type="button" className="hidden md:flex" />
                   </div>
                 </header>
 
@@ -382,48 +433,7 @@ export function PostEditorForm({
                 </SidebarHeader>
                 <SidebarContent>
                   <InspectorSection />
-                  <Accordion
-                    type="multiple"
-                    defaultValue={openSections}
-                    className="divide-y"
-                  >
-                    {showSlug ? (
-                      <PermalinkSection
-                        disabled={isSubmitting}
-                        onSlugEdit={() => {
-                          setSlugLocked(true);
-                        }}
-                      />
-                    ) : null}
-                    <StatusSection
-                      availableStatuses={availableStatuses}
-                      disabled={isSubmitting}
-                    />
-                    {isHierarchical ? (
-                      <ParentSection
-                        parentOptions={parentOptions}
-                        disabled={isSubmitting}
-                      />
-                    ) : null}
-                    {showExcerpt ? (
-                      <ExcerptSection disabled={isSubmitting} />
-                    ) : null}
-                    {taxonomies.map((tax) => (
-                      <TaxonomySection
-                        key={tax.name}
-                        taxonomy={tax}
-                        disabled={isSubmitting}
-                      />
-                    ))}
-                    {metaBoxes.map((box) => (
-                      <MetaBoxAccordionItem
-                        key={box.id}
-                        box={box}
-                        basePath="meta"
-                        disabled={isSubmitting}
-                      />
-                    ))}
-                  </Accordion>
+                  {documentPanelSections}
                 </SidebarContent>
               </Sidebar>
             </SidebarProvider>
@@ -493,15 +503,6 @@ function TitleField({ disabled }: { readonly disabled: boolean }): ReactNode {
       )}
     />
   );
-}
-
-function MobileInspectorSheetMount({
-  editor,
-}: {
-  readonly editor: Editor | null;
-}): ReactNode {
-  const blockRegistry = useAdminBlockRegistry();
-  return <MobileInspectorSheet editor={editor} blockRegistry={blockRegistry} />;
 }
 
 function InspectorSection(): ReactNode {
