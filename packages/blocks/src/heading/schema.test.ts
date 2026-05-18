@@ -1,3 +1,4 @@
+import type { Content } from "@tiptap/core";
 import { Editor, Node } from "@tiptap/core";
 import { describe, expect, test } from "vitest";
 
@@ -6,12 +7,10 @@ import { headingSchema } from "./schema.js";
 const Doc = Node.create({ name: "doc", topNode: true, content: "block+" });
 const Text = Node.create({ name: "text", group: "inline" });
 
-function bootEditor(
-  json: Parameters<Editor["commands"]["setContent"]>[0],
-): Editor {
+function bootEditor(content: Content): Editor {
   return new Editor({
     extensions: [Doc, Text, headingSchema],
-    content: json,
+    content,
   });
 }
 
