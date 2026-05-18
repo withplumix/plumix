@@ -1411,6 +1411,10 @@ export interface BlockManifestEntry {
   readonly keyboardShortcuts?: readonly BlockKeyboardShortcut[];
   readonly markdownShortcuts?: readonly BlockMarkdownShortcut[];
   readonly legacyAliases?: readonly string[];
+  /** Export name on the plugin's `adminEntry` module — see `BlockSpec.adminSchema`. */
+  readonly adminSchema?: string;
+  /** Export name on the plugin's `adminEntry` module — see `BlockSpec.adminEditor`. */
+  readonly adminEditor?: string;
 }
 
 export interface MarkManifestEntry {
@@ -1420,6 +1424,8 @@ export interface MarkManifestEntry {
   readonly keyboardShortcut?: string;
   readonly bubbleMenuLabel?: string;
   readonly bubbleMenuIcon?: string;
+  /** Export name on the plugin's `adminEntry` module — see `MarkSpec.adminSchema`. */
+  readonly adminSchema?: string;
 }
 
 /**
@@ -2190,6 +2196,8 @@ function toBlockEntry(block: RegisteredBlock): BlockManifestEntry {
     keyboardShortcuts,
     markdownShortcuts,
     legacyAliases,
+    adminSchema,
+    adminEditor,
   } = block.spec;
   return {
     name,
@@ -2205,6 +2213,8 @@ function toBlockEntry(block: RegisteredBlock): BlockManifestEntry {
     keyboardShortcuts,
     markdownShortcuts,
     legacyAliases,
+    adminSchema,
+    adminEditor,
   };
 }
 
@@ -2216,6 +2226,7 @@ function toMarkEntry(mark: RegisteredMark): MarkManifestEntry {
     keyboardShortcut,
     bubbleMenuLabel,
     bubbleMenuIcon,
+    adminSchema,
   } = mark.spec;
   return {
     name,
@@ -2224,6 +2235,7 @@ function toMarkEntry(mark: RegisteredMark): MarkManifestEntry {
     keyboardShortcut,
     bubbleMenuLabel,
     bubbleMenuIcon,
+    adminSchema,
   };
 }
 

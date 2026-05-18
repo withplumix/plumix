@@ -906,6 +906,58 @@ describe("buildManifest", () => {
     });
   });
 
+  test("plugin block entries carry adminSchema + adminEditor refs", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("acme", (ctx) => {
+      ctx.registerBlock(
+        defineBlock({
+          name: "acme/callout",
+          title: "Callout",
+          adminSchema: "calloutSchema",
+          adminEditor: "CalloutEditor",
+          schema: () =>
+            Promise.resolve({
+              name: "acme/callout",
+              parseHTML: () => [],
+              renderHTML: () => ["div", 0],
+            } as never),
+          component: () => Promise.resolve(() => null),
+        }),
+      );
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+
+    expect(buildManifest(registry).blocks[0]).toMatchObject({
+      adminSchema: "calloutSchema",
+      adminEditor: "CalloutEditor",
+    });
+  });
+
+  test("plugin mark entries carry adminSchema ref", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("acme", (ctx) => {
+      ctx.registerMark(
+        defineMark({
+          name: "acme/highlight-warning",
+          title: "Warning highlight",
+          adminSchema: "warningHighlightSchema",
+          schema: () =>
+            Promise.resolve({
+              name: "acme/highlight-warning",
+              parseHTML: () => [],
+              renderHTML: () => ["mark", 0],
+            } as never),
+          component: () => Promise.resolve(() => null),
+        }),
+      );
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+
+    expect(buildManifest(registry).marks[0]).toMatchObject({
+      adminSchema: "warningHighlightSchema",
+    });
+  });
+
   test("blocks and marks are sorted alphabetically by name", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("acme", (ctx) => {

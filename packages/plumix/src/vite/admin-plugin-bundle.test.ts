@@ -261,4 +261,89 @@ describe("assemblePluginAdminBundle", () => {
     expect(bundle).toContain("registerPluginFieldType");
     expect(bundle).toContain('"media_picker"');
   });
+
+  test("auto-emits register* calls for plugin block + mark adminSchema / adminEditor refs", async () => {
+    const pkgDir = resolve(workspace, "node_modules/@fixture/plugin-blocks");
+    await mkdir(pkgDir, { recursive: true });
+    await writeFile(
+      resolve(pkgDir, "package.json"),
+      JSON.stringify({
+        name: "@fixture/plugin-blocks",
+        version: "0.0.0",
+        type: "module",
+        main: "./entry.js",
+      }),
+    );
+    await writeFile(
+      resolve(pkgDir, "entry.js"),
+      `
+        export const calloutSchema = { name: "acme/callout" };
+        export const CalloutEditor = () => null;
+        export const warningHighlightSchema = { name: "acme/highlight-warning" };
+      `,
+    );
+
+    const { defineBlock, defineMark } = await import("@plumix/blocks");
+    const descriptor = definePlugin(
+      "acme",
+      (ctx) => {
+        ctx.registerBlock(
+          defineBlock({
+            name: "acme/callout",
+            title: "Callout",
+            adminSchema: "calloutSchema",
+            adminEditor: "CalloutEditor",
+            schema: () =>
+              Promise.resolve({
+                name: "acme/callout",
+                parseHTML: () => [],
+                renderHTML: () => ["div", 0],
+              } as never),
+            component: () => Promise.resolve(() => null),
+          }),
+        );
+        ctx.registerMark(
+          defineMark({
+            name: "acme/highlight-warning",
+            title: "Warning highlight",
+            adminSchema: "warningHighlightSchema",
+            schema: () =>
+              Promise.resolve({
+                name: "acme/highlight-warning",
+                parseHTML: () => [],
+                renderHTML: () => ["mark", 0],
+              } as never),
+            component: () => Promise.resolve(() => null),
+          }),
+        );
+      },
+      { adminEntry: "./node_modules/@fixture/plugin-blocks/entry.js" },
+    );
+
+    const { registry } = await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [descriptor],
+    });
+
+    const adminDest = resolve(workspace, "dist");
+    await mkdir(adminDest, { recursive: true });
+
+    const result = await assemblePluginAdminBundle({
+      plugins: [descriptor as AssemblerPlugin],
+      registry,
+      adminDest,
+      projectRoot: workspace,
+    });
+
+    expect(result).not.toBeNull();
+    const bundle = await readFile(
+      resolve(adminDest, "plugins/site-bundle.js"),
+      "utf8",
+    );
+    expect(bundle).toContain("registerPluginBlockSchema");
+    expect(bundle).toContain("registerPluginBlockEditor");
+    expect(bundle).toContain("registerPluginMarkSchema");
+    expect(bundle).toContain('"acme/callout"');
+    expect(bundle).toContain('"acme/highlight-warning"');
+  });
 });

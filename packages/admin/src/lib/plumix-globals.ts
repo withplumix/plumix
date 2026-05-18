@@ -9,7 +9,10 @@ import * as ReactDomNs from "react-dom";
 import * as ReactDomClientNs from "react-dom/client";
 
 import {
+  registerPluginBlockEditor,
+  registerPluginBlockSchema,
   registerPluginFieldType,
+  registerPluginMarkSchema,
   registerPluginPage,
 } from "./plugin-registry.js";
 
@@ -32,6 +35,9 @@ declare global {
     plumix?: {
       readonly registerPluginPage: typeof registerPluginPage;
       readonly registerPluginFieldType: typeof registerPluginFieldType;
+      readonly registerPluginBlockSchema: typeof registerPluginBlockSchema;
+      readonly registerPluginBlockEditor: typeof registerPluginBlockEditor;
+      readonly registerPluginMarkSchema: typeof registerPluginMarkSchema;
       readonly runtime: typeof runtime;
     };
   }
@@ -43,6 +49,9 @@ export function bootPlumixGlobals(): void {
   window.plumix = {
     registerPluginPage,
     registerPluginFieldType,
+    registerPluginBlockSchema,
+    registerPluginBlockEditor,
+    registerPluginMarkSchema,
     runtime,
   };
 }
