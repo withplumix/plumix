@@ -68,4 +68,28 @@ describe("createBlockMenuKeyboardExtension", () => {
     );
     editor.destroy();
   });
+
+  test("no-op when the slash-menu mount is already in the DOM", () => {
+    const editor = bootEditor();
+    editor.commands.setTextSelection(10);
+    const captured: BlockMenuOpenDetail[] = [];
+    editor.view.dom.addEventListener(BLOCK_MENU_OPEN_EVENT, (event) => {
+      captured.push((event as CustomEvent<BlockMenuOpenDetail>).detail);
+    });
+
+    // Simulate the slash-menu mount being present (suggestion plugin
+    // has opened it). The shortcut should bow out so we don't stack a
+    // second popover over the first.
+    const slashMount = document.createElement("div");
+    slashMount.setAttribute("data-plumix-slash-menu-mount", "");
+    document.body.appendChild(slashMount);
+    try {
+      const handled = editor.commands.openBlockMenuAtCaret();
+      expect(handled).toBe(false);
+      expect(captured).toHaveLength(0);
+    } finally {
+      slashMount.remove();
+      editor.destroy();
+    }
+  });
 });

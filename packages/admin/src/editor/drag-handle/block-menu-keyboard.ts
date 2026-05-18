@@ -33,6 +33,13 @@ export function createBlockMenuKeyboardExtension(): Extension {
         openBlockMenuAtCaret:
           () =>
           ({ editor }) => {
+            // Suppress while the slash menu is open — the suggestion
+            // plugin's mount lives in the document until onExit fires.
+            // Stacking a second popover over it confuses focus +
+            // dismiss semantics for both surfaces.
+            if (document.querySelector("[data-plumix-slash-menu-mount]")) {
+              return false;
+            }
             const { $from } = editor.state.selection;
             let depth = $from.depth;
             while (depth > 0 && !$from.node(depth).type.isBlock) depth -= 1;
