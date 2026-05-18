@@ -5,6 +5,7 @@ export const quoteBlock = defineBlock({
   title: "Quote",
   category: "typography",
   description: "Pull quote with optional citation.",
+  legacyAliases: ["blockquote"],
   keyboardShortcuts: [{ shortcut: "Mod-Alt-Q" }],
   markdownShortcuts: [{ pattern: "> " }],
   parsePaste: [{ selector: "blockquote" }],

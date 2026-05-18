@@ -73,6 +73,74 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
+describe("buildTiptapExtensions — field-mode allowlist is registry-sourced", () => {
+  test("`nodes: ['heading']` lands `core/heading` in the schema, not the unnamespaced StarterKit duplicate", async () => {
+    const blockRegistry = await mergeBlockRegistry({
+      core: coreBlocks,
+      plugins: [],
+      themeOverrides: {},
+      themeId: null,
+    });
+    const markRegistry = await mergeMarkRegistry({
+      core: coreMarks,
+      plugins: [],
+      themeOverrides: {},
+      themeId: null,
+    });
+    const exts = buildTiptapExtensions({
+      allowlist: { nodes: ["heading"], marks: ["bold"] },
+      blockRegistry,
+      markRegistry,
+    });
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const editor = new Editor({ element: host, extensions: exts });
+    editors.push(editor);
+    expect(editor.schema.nodes.heading).toBeUndefined();
+    expect(editor.schema.nodes["core/heading"]).toBeDefined();
+    expect(editor.schema.marks.bold).toBeDefined();
+    // `core/paragraph` is implicit in field mode (mirrors the
+    // server-side `IMPLICIT_NODES = ["doc","paragraph","text"]`) — the
+    // editor needs a default block-group node to satisfy doc.content
+    // and to split into on Enter regardless of allowlist.
+    expect(editor.schema.nodes["core/paragraph"]).toBeDefined();
+    expect(editor.getJSON()).toEqual({
+      type: "doc",
+      content: [{ type: "core/paragraph" }],
+    });
+  });
+
+  test("`nodes: ['blockquote']` resolves through legacyAliases to core/quote", async () => {
+    const blockRegistry = await mergeBlockRegistry({
+      core: coreBlocks,
+      plugins: [],
+      themeOverrides: {},
+      themeId: null,
+    });
+    const markRegistry = await mergeMarkRegistry({
+      core: coreMarks,
+      plugins: [],
+      themeOverrides: {},
+      themeId: null,
+    });
+    const exts = buildTiptapExtensions({
+      allowlist: { nodes: ["blockquote", "codeBlock", "horizontalRule"] },
+      blockRegistry,
+      markRegistry,
+    });
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const editor = new Editor({ element: host, extensions: exts });
+    editors.push(editor);
+    // Every name advertised in the `RichtextAllowlistInput` contract
+    // (manifest.ts:511-524) must map to its registry block via
+    // legacyAliases. Regression guard for senpai's gap audit.
+    expect(editor.schema.nodes["core/quote"]).toBeDefined();
+    expect(editor.schema.nodes["core/code"]).toBeDefined();
+    expect(editor.schema.nodes["core/separator"]).toBeDefined();
+  });
+});
+
 describe("buildTiptapExtensions — canvas-mode schema is registry-sourced", () => {
   test("StarterKit's node duplicates are dropped; namespaced core blocks remain", async () => {
     const blockRegistry = await mergeBlockRegistry({
