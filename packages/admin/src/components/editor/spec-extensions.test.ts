@@ -1,9 +1,12 @@
-import { Node } from "@tiptap/core";
+import { Mark, Node } from "@tiptap/core";
 import { describe, expect, test, vi } from "vitest";
 
-import type { ResolvedBlockSpec } from "@plumix/blocks";
+import type { ResolvedBlockSpec, ResolvedMarkSpec } from "@plumix/blocks";
 
-import { wireBlockSpecExtension } from "./spec-extensions.js";
+import {
+  wireBlockSpecExtension,
+  wireMarkSpecExtension,
+} from "./spec-extensions.js";
 
 function probeSpec(opts: {
   keyboardShortcuts?: readonly {
@@ -194,5 +197,60 @@ describe("wireBlockSpecExtension — keyboardShortcut", () => {
     shortcuts["Mod-Alt-2"]?.();
     expect(setNode).toHaveBeenCalledWith("core/probe", { level: 1 });
     expect(setNode).toHaveBeenCalledWith("core/probe", { level: 2 });
+  });
+});
+
+function markProbeSpec(opts: {
+  keyboardShortcut?: string;
+  parsePaste?: readonly { selector: string }[];
+}): ResolvedMarkSpec {
+  const spec: Partial<ResolvedMarkSpec> = {
+    name: "core/probe-mark",
+    title: "Probe mark",
+    schema: Mark.create({ name: "core/probe-mark" }),
+    registeredBy: null,
+    keyboardShortcut: opts.keyboardShortcut,
+    parsePaste: opts.parsePaste,
+    component: () => null,
+  };
+  return spec as ResolvedMarkSpec;
+}
+
+describe("wireMarkSpecExtension", () => {
+  test("returns the base mark when no editor-side fields are set", () => {
+    const spec = markProbeSpec({});
+    const wired = wireMarkSpecExtension(spec);
+    expect(wired).toBe(spec.schema);
+  });
+
+  test("binds keyboardShortcut to toggleMark on the registered name", () => {
+    const spec = markProbeSpec({ keyboardShortcut: "Mod-Alt-w" });
+    const wired = wireMarkSpecExtension(spec);
+    const toggleMark = vi.fn();
+    const chain = {
+      focus: () => chain,
+      toggleMark: (name: string) => {
+        toggleMark(name);
+        return chain;
+      },
+      run: () => true,
+    };
+    const shortcuts = (wired.config.addKeyboardShortcuts?.call({
+      editor: { chain: () => chain },
+    } as never) ?? {}) as Record<string, () => boolean>;
+    shortcuts["Mod-Alt-w"]?.();
+    expect(toggleMark).toHaveBeenCalledWith("core/probe-mark");
+  });
+
+  test("attaches parsePaste rules into the mark's parseHTML output", () => {
+    const spec = markProbeSpec({
+      parsePaste: [{ selector: "span.warn" }, { selector: "em.warn" }],
+    });
+    const wired = wireMarkSpecExtension(spec);
+    const rules = (wired.config.parseHTML?.call({ parent: undefined } as never) ??
+      []) as readonly { tag: string }[];
+    const selectors = rules.map((r) => r.tag);
+    expect(selectors).toContain("span.warn");
+    expect(selectors).toContain("em.warn");
   });
 });

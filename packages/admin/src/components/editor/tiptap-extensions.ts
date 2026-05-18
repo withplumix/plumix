@@ -4,10 +4,13 @@ import { UnknownBlockNodeView } from "@/editor/unknown-block/UnknownBlockNodeVie
 import { ReactNodeViewRenderer } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 
-import type { BlockRegistry } from "@plumix/blocks";
+import type { BlockRegistry, MarkRegistry } from "@plumix/blocks";
 import { unknownBlockSchema } from "@plumix/blocks";
 
-import { wireBlockSpecExtension } from "./spec-extensions.js";
+import {
+  wireBlockSpecExtension,
+  wireMarkSpecExtension,
+} from "./spec-extensions.js";
 
 // `undefined` allowlist → canvas mode (full StarterKit). Defined →
 // strict richtext-field mode where StarterKit extensions are gated
@@ -34,6 +37,12 @@ interface BuildExtensionsInput {
    * ProseMirror throwing "unknown node type".
    */
   readonly blockRegistry?: BlockRegistry;
+  /**
+   * Canvas-mode-only. Only plugin-contributed marks (`registeredBy`
+   * truthy) flow through — core marks share StarterKit's unnamespaced
+   * names (`bold`, `italic`, …) and adding them again would collide.
+   */
+  readonly markRegistry?: MarkRegistry;
 }
 
 // Per-call object literal: Tiptap's `LinkOptions` requires mutable
@@ -52,7 +61,7 @@ function linkOptions() {
 export function buildTiptapExtensions(
   input: BuildExtensionsInput = {},
 ): Extensions {
-  const { allowlist, blockRegistry } = input;
+  const { allowlist, blockRegistry, markRegistry } = input;
   if (allowlist === undefined) {
     return [
       StarterKit.configure({
@@ -60,6 +69,7 @@ export function buildTiptapExtensions(
         link: linkOptions(),
       }),
       ...registryNodeExtensions(blockRegistry),
+      ...registryMarkExtensions(markRegistry),
       unknownBlockSchema.extend({
         addNodeView() {
           return ReactNodeViewRenderer(UnknownBlockNodeView);
@@ -108,6 +118,18 @@ function registryNodeExtensions(
       continue;
     }
     exts.push(wired);
+  }
+  return exts;
+}
+
+function registryMarkExtensions(
+  registry: MarkRegistry | undefined,
+): Extensions {
+  if (!registry) return [];
+  const exts: Extensions = [];
+  for (const [, spec] of registry) {
+    if (spec.registeredBy === null) continue;
+    exts.push(wireMarkSpecExtension(spec));
   }
   return exts;
 }
