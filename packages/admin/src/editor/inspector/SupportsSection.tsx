@@ -27,16 +27,25 @@ export function SupportsSection({
   const rows = collectRows(supports, style);
   if (rows.length === 0) return null;
   return (
-    <div data-testid="inspector-supports-section" data-plumix-supports="">
+    <div
+      data-testid="inspector-supports-section"
+      data-plumix-supports=""
+      className="space-y-3"
+    >
       {rows.map((row) => (
-        <label key={row.path} data-plumix-supports-row={row.path}>
-          <span>{row.label}</span>
+        <label
+          key={row.path}
+          data-plumix-supports-row={row.path}
+          className="flex flex-col gap-1.5 text-sm"
+        >
+          <span className="text-foreground font-medium">{row.label}</span>
           <input
             data-testid={`inspector-supports-${row.path}`}
             value={row.value}
             onChange={(e) =>
               onChange(setSlotValue(style, row.path, e.target.value))
             }
+            className="border-input focus-visible:ring-ring h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:ring-1 focus-visible:outline-none"
           />
         </label>
       ))}
