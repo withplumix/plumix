@@ -1,3 +1,5 @@
+import type { Extensions } from "@tiptap/core";
+import { Editor, Node } from "@tiptap/core";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import type { MarkComponent, MarkRegistry, MarkSpec } from "../marks/types.js";
@@ -13,9 +15,11 @@ import { mergeMarkRegistry } from "../marks/registry.js";
 import { mergeBlockRegistry } from "../registry.js";
 import { EntryContent } from "../walker.js";
 
-// Resolved once at module load via top-level await so `renderBlock`
-// can stay synchronous. Mirrors what `buildApp` does at runtime so
-// the default test path renders marks identically to production.
+// PRD-named alias; the underlying function is the canonical impl shared
+// with the server-side validator so there's literally no chance of drift.
+export { validateBlockContent as validateContent } from "../validate-content.js";
+
+// Top-level await keeps `renderBlock` synchronous; mirrors buildApp.
 const DEFAULT_MARK_REGISTRY: MarkRegistry = await mergeMarkRegistry({
   core: coreMarks,
   plugins: [],
@@ -41,13 +45,6 @@ interface MockRegistryInput {
   readonly themeId?: string | null;
 }
 
-/**
- * Build a `BlockRegistry` from optional layer contributions. Defaults
- * everything to empty so callers only supply the layer(s) they need.
- *
- * Returns the same merged registry shape the runtime uses, with the
- * async resolution awaited so test bodies can stay synchronous.
- */
 export async function mockRegistry(
   input: MockRegistryInput = {},
 ): Promise<BlockRegistry> {
@@ -69,11 +66,6 @@ interface MockMarkRegistryInput {
   readonly themeId?: string | null;
 }
 
-/**
- * Build a `MarkRegistry` from optional layer contributions. Mirrors
- * `mockRegistry`'s shape so tests that need both registries can use
- * the same call ergonomics.
- */
 export async function mockMarkRegistry(
   input: MockMarkRegistryInput = {},
 ): Promise<MarkRegistry> {
@@ -87,22 +79,11 @@ export async function mockMarkRegistry(
 
 interface RenderBlockInput {
   readonly registry: BlockRegistry;
-  /**
-   * Mark registry. Omit to use a `coreMarks`-built default — the
-   * common case for block tests that just need standard inline mark
-   * rendering. Pass an explicit registry to exercise plugin marks
-   * or theme overrides.
-   */
   readonly markRegistry?: MarkRegistry;
   readonly content: TiptapNode | readonly TiptapNode[];
   readonly context?: BlockContext;
 }
 
-/**
- * Server-render a Tiptap doc through `<EntryContent>` into an HTML
- * string. Useful for asserting expected output without spinning up a
- * full React testing-library harness.
- */
 export function renderBlock(input: RenderBlockInput): string {
   return renderToStaticMarkup(
     EntryContent({
@@ -112,6 +93,27 @@ export function renderBlock(input: RenderBlockInput): string {
       context: input.context ?? EMPTY_CONTEXT,
     }),
   );
+}
+
+// Minimal ProseMirror baseline so `new Editor` stands up without StarterKit.
+const Doc = Node.create({ name: "doc", topNode: true, content: "block+" });
+const Paragraph = Node.create({
+  name: "paragraph",
+  group: "block",
+  content: "inline*",
+  parseHTML: () => [{ tag: "p" }],
+  renderHTML: () => ["p", 0],
+});
+const Text = Node.create({ name: "text", group: "inline" });
+
+interface MockEditorInput {
+  readonly extensions?: Extensions;
+}
+
+export function mockEditor(input: MockEditorInput = {}): Editor {
+  return new Editor({
+    extensions: [Doc, Paragraph, Text, ...(input.extensions ?? [])],
+  });
 }
 
 export { DEFAULT_MARK_REGISTRY as defaultMarkRegistry, EMPTY_CONTEXT };

@@ -11,6 +11,7 @@
  */
 
 export {
+  BlockContentValidationError,
   BlockRegistrationError,
   EntryContent,
   MarkRegistrationError,
