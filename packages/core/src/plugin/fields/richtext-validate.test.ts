@@ -297,3 +297,54 @@ describe("walkRichtextDoc — shape errors", () => {
     expect(() => validate(root)).not.toThrow();
   });
 });
+
+describe("walkRichtextDoc — registry alias parity", () => {
+  test("`nodes: ['heading']` also accepts the canonical `core/heading` the editor saves", () => {
+    const validate = walkRichtextDoc({ nodes: ["heading"] });
+    expect(() =>
+      validate({
+        type: "doc",
+        content: [
+          {
+            type: "core/heading",
+            attrs: { level: 2 },
+            content: [{ type: "text", text: "ok" }],
+          },
+        ],
+      }),
+    ).not.toThrow();
+  });
+
+  test("core/paragraph is implicit alongside the legacy `paragraph`", () => {
+    // Mirrors `FIELD_MODE_IMPLICIT_BLOCK` in the admin editor wiring —
+    // the editor saves `core/paragraph` even when the field allowlist
+    // declares no nodes.
+    const validate = walkRichtextDoc({});
+    const doc = {
+      type: "doc",
+      content: [
+        { type: "core/paragraph", content: [{ type: "text", text: "hi" }] },
+      ],
+    };
+    expect(validate(doc)).toBe(doc);
+  });
+
+  test("namespaced names declared in the allowlist also accept their legacy aliases", () => {
+    // Symmetric: if a field author migrates to the namespaced contract
+    // by declaring `nodes: ["core/heading"]`, legacy stored content
+    // with `type: "heading"` must still round-trip cleanly.
+    const validate = walkRichtextDoc({ nodes: ["core/heading"] });
+    expect(() =>
+      validate({
+        type: "doc",
+        content: [
+          {
+            type: "heading",
+            attrs: { level: 2 },
+            content: [{ type: "text", text: "ok" }],
+          },
+        ],
+      }),
+    ).not.toThrow();
+  });
+});
