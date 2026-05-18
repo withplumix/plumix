@@ -54,7 +54,7 @@ export function InspectorField({
       // receives the original type.
       const isNumeric = typeof options[0]?.value === "number";
       return (
-        <div data-plumix-inspector-field={name}>
+        <div data-plumix-inspector-field={name} className="space-y-1.5">
           <Label htmlFor={id}>{label}</Label>
           <select
             id={id}
@@ -79,7 +79,7 @@ export function InspectorField({
     case "boolean":
     case "checkbox":
       return (
-        <div data-plumix-inspector-field={name}>
+        <div data-plumix-inspector-field={name} className="space-y-1.5">
           <Label htmlFor={id} className="flex items-center gap-2">
             <input
               id={id}
@@ -96,7 +96,7 @@ export function InspectorField({
     case "link":
     case "url":
       return (
-        <div data-plumix-inspector-field={name}>
+        <div data-plumix-inspector-field={name} className="space-y-1.5">
           <Label htmlFor={id}>{label}</Label>
           <Input
             id={id}

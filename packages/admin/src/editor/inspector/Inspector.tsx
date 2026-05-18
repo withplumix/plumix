@@ -78,8 +78,14 @@ export function Inspector({
   const slot = (attrs.style ?? {}) as BlockStyleSlot;
 
   return (
-    <div data-plumix-inspector="" aria-label={`${spec.title} attributes`}>
-      <h3 data-plumix-inspector-title="">{spec.title}</h3>
+    <div
+      data-plumix-inspector=""
+      aria-label={`${spec.title} attributes`}
+      className="space-y-4 p-4"
+    >
+      <h3 data-plumix-inspector-title="" className="text-sm font-semibold">
+        {spec.title}
+      </h3>
       {attributeEntries.length > 0 ? (
         <InspectorSection id="attributes" legend="Attributes">
           {attributeEntries.map(([attrName, schema]) => (
@@ -130,8 +136,13 @@ function InspectorSection({
   children,
 }: InspectorSectionProps): ReactElement {
   return (
-    <fieldset data-plumix-inspector-section={id}>
-      <legend>{legend}</legend>
+    <fieldset
+      data-plumix-inspector-section={id}
+      className="m-0 space-y-3 border-0 p-0"
+    >
+      <legend className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
+        {legend}
+      </legend>
       {children}
     </fieldset>
   );
