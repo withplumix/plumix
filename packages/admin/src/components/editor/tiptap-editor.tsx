@@ -156,6 +156,14 @@ export function TiptapEditor({
   useEffect(() => {
     if (lastEmittedRef.current === value) return;
     lastEmittedRef.current = value;
+    // While the editor has focus the user is the source of truth; a
+    // `setContent` here resets ProseMirror's selection + decoration
+    // state and notably deactivates the slash-menu suggestion plugin
+    // mid-typing. External sync is only meaningful when focus is
+    // elsewhere (programmatic field reset, form hydrating a different
+    // entry, etc.). RHF re-renders with a fresh `value` reference on
+    // every change so the upstream ref check alone is insufficient.
+    if (editor.isFocused) return;
     editor.commands.setContent(value);
   }, [editor, value]);
 
