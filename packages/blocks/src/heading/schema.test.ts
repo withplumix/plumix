@@ -6,7 +6,9 @@ import { headingSchema } from "./schema.js";
 const Doc = Node.create({ name: "doc", topNode: true, content: "block+" });
 const Text = Node.create({ name: "text", group: "inline" });
 
-function bootEditor(json: Parameters<Editor["commands"]["setContent"]>[0]): Editor {
+function bootEditor(
+  json: Parameters<Editor["commands"]["setContent"]>[0],
+): Editor {
   return new Editor({
     extensions: [Doc, Text, headingSchema],
     content: json,
@@ -28,23 +30,20 @@ describe("core/heading editor schema honors the level attribute", () => {
     editor.destroy();
   });
 
-  test.each([1, 2, 3, 4, 5, 6])(
-    "level=%i renders as <h%i>",
-    (level) => {
-      const editor = bootEditor({
-        type: "doc",
-        content: [
-          {
-            type: "core/heading",
-            attrs: { level },
-            content: [{ type: "text", text: "Hi" }],
-          },
-        ],
-      });
-      expect(editor.getHTML()).toContain(`<h${level}>`);
-      editor.destroy();
-    },
-  );
+  test.each([1, 2, 3, 4, 5, 6])("level=%i renders as <h%i>", (level) => {
+    const editor = bootEditor({
+      type: "doc",
+      content: [
+        {
+          type: "core/heading",
+          attrs: { level },
+          content: [{ type: "text", text: "Hi" }],
+        },
+      ],
+    });
+    expect(editor.getHTML()).toContain(`<h${level}>`);
+    editor.destroy();
+  });
 
   test("parseHTML round-trips the level from h1..h6 tags", () => {
     const editor = bootEditor("<h3>Section</h3>");

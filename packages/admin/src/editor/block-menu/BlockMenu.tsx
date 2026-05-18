@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import {
   Command,
   CommandGroup,
+  CommandInput,
   CommandItem,
   CommandList,
   CommandSeparator,
@@ -46,6 +47,18 @@ export function BlockMenu({
   );
   return (
     <Command data-plumix-block-menu="" label="Block actions">
+      {/*
+        Hidden CommandInput exists to give cmdk a focusable surface so
+        keyboard-only authors can drive the menu with ArrowDown / Enter
+        — without it, radix's Popover autoFocus has nothing to land on
+        and the editor keeps focus, swallowing Enter.
+      */}
+      <CommandInput
+        className="sr-only"
+        tabIndex={-1}
+        aria-label="Filter block actions"
+        data-plumix-block-menu-input=""
+      />
       <CommandList>
         {targets.length > 0 ? (
           <>

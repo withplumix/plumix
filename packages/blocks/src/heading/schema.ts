@@ -35,6 +35,10 @@ export const headingSchema = Node.create({
   },
 
   renderHTML({ node, HTMLAttributes }) {
-    return [`h${clampLevel(node.attrs.level)}`, mergeAttributes(HTMLAttributes), 0];
+    return [
+      `h${clampLevel(node.attrs.level)}`,
+      mergeAttributes(HTMLAttributes),
+      0,
+    ];
   },
 });
