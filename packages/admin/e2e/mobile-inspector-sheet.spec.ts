@@ -89,10 +89,29 @@ test.describe("Mobile Inspector bottom sheet (#314)", () => {
     // The Inspector inside the sheet still drives `updateAttributes`
     // through the same editor — changing level retargets the tag in
     // the live canvas behind the sheet.
+    // The grabber gives the visual "this is a dismissable sheet" cue
+    // alongside the X button shadcn ships at top-right. It carries
+    // aria-hidden (decorative), so assert presence by count rather
+    // than visibility — Playwright treats aria-hidden as hidden.
+    await expect(
+      sheet.getByTestId("mobile-inspector-sheet-grabber"),
+    ).toHaveCount(1);
+    // Verify aria wiring — trigger declares the disclosure target.
+    await expect(trigger).toHaveAttribute(
+      "aria-controls",
+      "plumix-mobile-inspector-sheet",
+    );
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+
     const levelSelect = sheet.getByTestId("inspector-field-level");
     await expect(levelSelect).toBeVisible();
     await levelSelect.selectOption({ value: "4" });
     await expect(page.locator(".ProseMirror h4")).toHaveCount(1);
+
+    // Escape dismisses — Radix dialog default.
+    await page.keyboard.press("Escape");
+    await expect(sheet).toBeHidden();
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 
   test("sheet hosts the document panel — meta boxes + permalink + status live alongside the Inspector", async ({

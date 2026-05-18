@@ -206,7 +206,10 @@ export function PlumixDragHandle({
     <DragHandle editor={editor} onNodeChange={onNodeChange}>
       <div className="flex items-center gap-0.5">
         {isMobile ? (
-          <MobileInspectorTrigger onOpen={() => mobileSheet.setOpen(true)} />
+          <MobileInspectorTrigger
+            open={mobileSheet.open}
+            onOpen={() => mobileSheet.setOpen(true)}
+          />
         ) : null}
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>

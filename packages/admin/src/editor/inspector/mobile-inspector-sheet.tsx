@@ -12,6 +12,7 @@ import { useIsMobile } from "@/hooks/use-mobile.js";
 
 import type { BlockRegistry } from "@plumix/blocks";
 
+import { MOBILE_INSPECTOR_SHEET_ID } from "../drag-handle/MobileInspectorTrigger.js";
 import { Inspector } from "./Inspector.js";
 
 interface MobileInspectorSheetContextValue {
@@ -75,9 +76,18 @@ export function MobileInspectorSheet({
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetContent
         side="bottom"
+        id={MOBILE_INSPECTOR_SHEET_ID}
         className="h-[80vh] overflow-y-auto"
         data-testid="mobile-inspector-sheet"
       >
+        {/* Drag affordance — visual hint that the surface is a sheet.
+            Functional dismiss already happens via Esc, the X button,
+            and overlay tap (Radix defaults via the shadcn Sheet). */}
+        <div
+          aria-hidden="true"
+          data-testid="mobile-inspector-sheet-grabber"
+          className="bg-muted-foreground/30 mx-auto mt-2 h-1.5 w-10 rounded-full"
+        />
         <SheetHeader>
           <SheetTitle>Document</SheetTitle>
           <SheetDescription className="sr-only">
