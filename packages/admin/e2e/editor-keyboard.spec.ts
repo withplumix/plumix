@@ -152,4 +152,65 @@ test.describe("Keyboard-only editor flow (a11y)", () => {
       page.locator(".ProseMirror h1, .ProseMirror h2, .ProseMirror h3"),
     ).toHaveCount(1);
   });
+
+  test("Mod-Alt-ArrowLeft is a no-op while the slash menu is open", async ({
+    page,
+  }) => {
+    await page.route("**/_plumix/rpc/**", async (route) => {
+      const url = route.request().url();
+      if (url.endsWith("/auth/session")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: rpcOkBody(AUTHED_ADMIN),
+        });
+      }
+      if (url.endsWith("/entry/get")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            json: {
+              id: 9,
+              type: "post",
+              parentId: null,
+              title: "Empty",
+              slug: "e",
+              content: {
+                type: "doc",
+                content: [{ type: "core/paragraph", content: [] }],
+              },
+              excerpt: null,
+              status: "draft",
+              authorId: 1,
+              sortOrder: 0,
+              publishedAt: null,
+              createdAt: NOW,
+              updatedAt: NOW,
+              meta: {},
+            },
+            meta: [],
+          }),
+        });
+      }
+      return route.fulfill({ status: 404, body: "not-mocked" });
+    });
+
+    await page.goto("entries/posts/9/edit");
+    await expect(page.getByTestId("post-editor-form")).toBeVisible();
+
+    await page.locator(".ProseMirror").click();
+    await page.keyboard.type("/");
+    const slashMount = page.locator("[data-plumix-slash-menu-mount]");
+    await expect(slashMount).toBeVisible();
+
+    // While the slash menu is open the keyboard extension bails so
+    // it doesn't stack the BlockMenu popover on top. The BlockMenu's
+    // cmdk Command root carries `data-plumix-block-menu` — assert it
+    // never mounts.
+    const isMac = await page.evaluate(() => /Mac/i.test(navigator.platform));
+    await page.keyboard.press(`${isMac ? "Meta" : "Control"}+Alt+ArrowLeft`);
+    await expect(slashMount).toBeVisible();
+    await expect(page.locator("[data-plumix-block-menu]")).toHaveCount(0);
+  });
 });
