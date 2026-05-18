@@ -38,6 +38,8 @@ describe("RevisionsSheet", () => {
           entryId={1}
           fetchPage={vi.fn()}
           relativeTime={(d) => d.toISOString()}
+          fetchRevision={vi.fn()}
+          fetchCurrent={vi.fn()}
         />,
       ),
     );
@@ -78,6 +80,8 @@ describe("RevisionsSheet", () => {
           entryId={42}
           fetchPage={fetchPage}
           relativeTime={() => "just now"}
+          fetchRevision={vi.fn()}
+          fetchCurrent={vi.fn()}
         />,
       ),
     );
@@ -133,6 +137,8 @@ describe("RevisionsSheet", () => {
           entryId={42}
           fetchPage={fetchPage}
           relativeTime={() => "now"}
+          fetchRevision={vi.fn()}
+          fetchCurrent={vi.fn()}
         />,
       ),
     );
@@ -147,5 +153,63 @@ describe("RevisionsSheet", () => {
     expect(
       screen.queryByTestId("revisions-sheet-load-more"),
     ).not.toBeInTheDocument();
+  });
+
+  test("selecting a revision opens the diff panel and fetches both snapshots", async () => {
+    const fetchPage = vi.fn(() =>
+      Promise.resolve({
+        revisions: [
+          {
+            id: 8,
+            title: "Snapshot",
+            updatedAt: new Date("2026-05-17T12:00:00Z"),
+            authorId: 1,
+            authorName: "Ada",
+            authorEmail: "ada@x",
+          },
+        ] satisfies RevisionFixture[],
+        nextCursor: null,
+      }),
+    );
+    const fetchRevision = vi.fn(() =>
+      Promise.resolve({
+        title: "Snapshot",
+        slug: "post",
+        excerpt: null,
+        content: { type: "doc", content: [] },
+        meta: {},
+      }),
+    );
+    const fetchCurrent = vi.fn(() =>
+      Promise.resolve({
+        title: "Snapshot v2",
+        slug: "post",
+        excerpt: null,
+        content: { type: "doc", content: [] },
+        meta: {},
+      }),
+    );
+    render(
+      wrap(
+        <RevisionsSheet
+          entryId={42}
+          fetchPage={fetchPage}
+          relativeTime={() => "now"}
+          fetchRevision={fetchRevision}
+          fetchCurrent={fetchCurrent}
+        />,
+      ),
+    );
+    fireEvent.click(screen.getByTestId("revisions-sheet-trigger"));
+    await waitFor(() => screen.getByTestId("revisions-sheet-item-8-select"));
+    fireEvent.click(screen.getByTestId("revisions-sheet-item-8-select"));
+    await waitFor(() => screen.getByTestId("revisions-sheet-diff"));
+    expect(fetchRevision).toHaveBeenCalledWith(8);
+    expect(fetchCurrent).toHaveBeenCalledWith(42);
+    // The diff renders the title field diff (Snapshot vs Snapshot v2).
+    expect(screen.getByTestId("revision-diff-field-title")).toBeInTheDocument();
+    // Back button returns to the list.
+    fireEvent.click(screen.getByTestId("revisions-sheet-back"));
+    await waitFor(() => screen.getByTestId("revisions-sheet-list"));
   });
 });
