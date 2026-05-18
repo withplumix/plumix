@@ -24,6 +24,7 @@ export const descriptionListSchema = Node.create({
       "dl",
       mergeAttributes(HTMLAttributes, {
         "data-plumix-block": "core/description-list",
+        class: "plumix-descriptionList",
       }),
       0,
     ];
@@ -41,7 +42,11 @@ export const descriptionTermSchema = Node.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ["dt", mergeAttributes(HTMLAttributes), 0];
+    return [
+      "dt",
+      mergeAttributes(HTMLAttributes, { class: "plumix-descriptionTerm" }),
+      0,
+    ];
   },
 });
 
@@ -56,6 +61,10 @@ export const descriptionDetailSchema = Node.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ["dd", mergeAttributes(HTMLAttributes), 0];
+    return [
+      "dd",
+      mergeAttributes(HTMLAttributes, { class: "plumix-descriptionDetail" }),
+      0,
+    ];
   },
 });

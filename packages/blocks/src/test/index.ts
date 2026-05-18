@@ -117,3 +117,13 @@ export function mockEditor(input: MockEditorInput = {}): Editor {
 }
 
 export { DEFAULT_MARK_REGISTRY as defaultMarkRegistry, EMPTY_CONTEXT };
+
+// Block specs now own their CSS Module class + `data-plumix-block`
+// identity attribute, but most assertion fixtures pre-date both. Strip
+// them before comparison so the structural shape stays under test
+// without coupling each fixture to a per-block class name.
+export function stripBlockMarkers(html: string): string {
+  return html
+    .replace(/ class="[^"]*"/g, "")
+    .replace(/ data-plumix-block="[^"]*"/g, "");
+}

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { mockRegistry, renderBlock } from "../test/index.js";
+import { mockRegistry, renderBlock, stripBlockMarkers } from "../test/index.js";
 import { detailsBlock } from "./index.js";
 
 describe("core/details", () => {
@@ -19,8 +19,8 @@ describe("core/details", () => {
         ],
       },
     });
-    expect(html).toBe(
-      '<details data-plumix-block="core/details"><summary>Click to expand</summary></details>',
+    expect(stripBlockMarkers(html)).toBe(
+      '<details><summary>Click to expand</summary></details>',
     );
   });
 
@@ -33,7 +33,7 @@ describe("core/details", () => {
         content: [{ type: "core/details", content: [] }],
       },
     });
-    expect(html).toContain("<summary>Details</summary>");
+    expect(stripBlockMarkers(html)).toContain("<summary>Details</summary>");
   });
 
   test("emits open attribute when open=true", async () => {
@@ -51,8 +51,8 @@ describe("core/details", () => {
         ],
       },
     });
-    expect(html).toContain("<details");
-    expect(html).toContain("open=");
+    expect(stripBlockMarkers(html)).toContain("<details");
+    expect(stripBlockMarkers(html)).toContain("open=");
   });
 
   test("escapes summary HTML — no XSS via summary attr", async () => {
@@ -70,8 +70,8 @@ describe("core/details", () => {
         ],
       },
     });
-    expect(html).not.toContain("<script>");
-    expect(html).toContain("&lt;script&gt;");
+    expect(stripBlockMarkers(html)).not.toContain("<script>");
+    expect(stripBlockMarkers(html)).toContain("&lt;script&gt;");
   });
 
   test("declares summary (text) + open (boolean) attributes for the Inspector", () => {

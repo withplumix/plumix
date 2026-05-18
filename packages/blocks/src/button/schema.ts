@@ -31,7 +31,10 @@ export const buttonSchema = Node.create({
     // shows the button label instead of an empty link.
     return [
       "a",
-      mergeAttributes(HTMLAttributes, { "data-plumix-block": "core/button" }),
+      mergeAttributes(HTMLAttributes, {
+        "data-plumix-block": "core/button",
+        class: "plumix-button",
+      }),
       typeof node.attrs.text === "string" ? node.attrs.text : "",
     ];
   },

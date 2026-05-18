@@ -18,7 +18,10 @@ export const listSchema = Node.create({
   renderHTML({ HTMLAttributes }) {
     return [
       "ul",
-      mergeAttributes(HTMLAttributes, { "data-plumix-block": "core/list" }),
+      mergeAttributes(HTMLAttributes, {
+        "data-plumix-block": "core/list",
+        class: "plumix-list",
+      }),
       0,
     ];
   },
@@ -60,6 +63,7 @@ export const listOrderedSchema = Node.create({
       "ol",
       mergeAttributes(HTMLAttributes, {
         "data-plumix-block": "core/list-ordered",
+        class: "plumix-listOrdered",
       }),
       0,
     ];
@@ -91,6 +95,10 @@ export const listItemSchema = Node.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ["li", mergeAttributes(HTMLAttributes), 0];
+    return [
+      "li",
+      mergeAttributes(HTMLAttributes, { class: "plumix-listItem" }),
+      0,
+    ];
   },
 });

@@ -29,5 +29,9 @@ export function HeadingComponent({
   const level = clampHeadingLevel(attrs.level);
   const slot = (attrs.style ?? {}) as BlockStyleSlot;
   const resolved = useBlockStyles(slot, headingSupports);
-  return createElement(`h${level}`, blockElementProps(resolved), children);
+  const props = blockElementProps(resolved, {
+    name: "core/heading",
+    moduleClass: `plumix-heading plumix-h${level}`,
+  });
+  return createElement(`h${level}`, props, children);
 }

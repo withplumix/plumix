@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { mockRegistry, renderBlock } from "../test/index.js";
+import { mockRegistry, renderBlock, stripBlockMarkers } from "../test/index.js";
 import { columnBlock } from "./column.js";
 import { columnsBlock } from "./index.js";
 
@@ -16,7 +16,7 @@ describe("core/columns", () => {
         content: [{ type: "core/columns", content: [] }],
       },
     });
-    expect(html).toBe('<div data-plumix-block="core/columns"></div>');
+    expect(stripBlockMarkers(html)).toBe('<div></div>');
   });
 
   test.each(["1:1", "1:2", "1:1:1", "2:1:2"])(
@@ -32,8 +32,8 @@ describe("core/columns", () => {
           content: [{ type: "core/columns", attrs: { ratio }, content: [] }],
         },
       });
-      expect(html).toBe(
-        `<div data-plumix-block="core/columns" data-ratio="${ratio}"></div>`,
+      expect(stripBlockMarkers(html)).toBe(
+        `<div data-ratio="${ratio}"></div>`,
       );
     },
   );
@@ -52,7 +52,7 @@ describe("core/columns", () => {
         ],
       },
     });
-    expect(html).not.toContain("data-ratio");
+    expect(stripBlockMarkers(html)).not.toContain("data-ratio");
   });
 });
 
@@ -68,7 +68,7 @@ describe("core/column", () => {
         content: [{ type: "core/column", content: [] }],
       },
     });
-    expect(html).toBe('<div data-plumix-block="core/column"></div>');
+    expect(stripBlockMarkers(html)).toBe('<div></div>');
   });
 
   test.each([
@@ -88,8 +88,8 @@ describe("core/column", () => {
           content: [{ type: "core/column", attrs: { width }, content: [] }],
         },
       });
-      expect(html).toBe(
-        `<div data-plumix-block="core/column" data-width="${expected}"></div>`,
+      expect(stripBlockMarkers(html)).toBe(
+        `<div data-width="${expected}"></div>`,
       );
     },
   );
@@ -105,7 +105,7 @@ describe("core/column", () => {
         content: [{ type: "core/column", content: [] }],
       },
     });
-    expect(html).not.toContain("data-width");
+    expect(stripBlockMarkers(html)).not.toContain("data-width");
   });
 
   test("columnBlock declares a `width` text attribute the Inspector renders", () => {

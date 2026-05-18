@@ -8,7 +8,11 @@ export function QuoteComponent({ attrs, children }: BlockProps): ReactElement {
       ? attrs.citation
       : undefined;
   return (
-    <blockquote data-plumix-block="core/quote" cite={cite}>
+    <blockquote
+      data-plumix-block="core/quote"
+      className="plumix-quote"
+      cite={cite}
+    >
       {children}
     </blockquote>
   );

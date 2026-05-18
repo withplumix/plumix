@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { mockRegistry, renderBlock } from "../test/index.js";
+import { mockRegistry, renderBlock, stripBlockMarkers } from "../test/index.js";
 import { separatorBlock } from "./index.js";
 
 describe("core/separator", () => {
@@ -13,8 +13,8 @@ describe("core/separator", () => {
         content: [{ type: "core/separator" }],
       },
     });
-    expect(html).toBe(
-      '<hr data-plumix-block="core/separator" data-variant="solid"/>',
+    expect(stripBlockMarkers(html)).toBe(
+      '<hr data-variant="solid"/>',
     );
   });
 
@@ -29,7 +29,7 @@ describe("core/separator", () => {
           content: [{ type: "core/separator", attrs: { variant } }],
         },
       });
-      expect(html).toContain(`data-variant="${variant}"`);
+      expect(stripBlockMarkers(html)).toContain(`data-variant="${variant}"`);
     },
   );
 
@@ -42,6 +42,6 @@ describe("core/separator", () => {
         content: [{ type: "core/separator", attrs: { variant: "rainbow" } }],
       },
     });
-    expect(html).toContain('data-variant="solid"');
+    expect(stripBlockMarkers(html)).toContain('data-variant="solid"');
   });
 });

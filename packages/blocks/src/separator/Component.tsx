@@ -16,6 +16,7 @@ export function SeparatorComponent({ attrs }: BlockProps): ReactElement {
   return (
     <hr
       data-plumix-block="core/separator"
+      className="plumix-separator"
       data-variant={pickVariant(attrs.variant)}
     />
   );

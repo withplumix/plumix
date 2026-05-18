@@ -17,5 +17,14 @@ export function ParagraphComponent({
 }: BlockProps): ReactElement {
   const slot = (attrs.style ?? {}) as BlockStyleSlot;
   const resolved = useBlockStyles(slot, paragraphSupports);
-  return <p {...blockElementProps(resolved)}>{children}</p>;
+  return (
+    <p
+      {...blockElementProps(resolved, {
+        name: "core/paragraph",
+        moduleClass: "plumix-paragraph",
+      })}
+    >
+      {children}
+    </p>
+  );
 }

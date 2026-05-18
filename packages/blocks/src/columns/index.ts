@@ -14,8 +14,19 @@ const RATIO_OPTIONS = [
   { value: "1:1:1:1", label: "Four equal columns" },
 ] as const;
 
-function emptyColumns(count: number): readonly { name: "core/column" }[] {
-  return Array.from({ length: count }, () => ({ name: "core/column" }));
+// Each column seeds a paragraph so authors have a textblock to land
+// the caret in. Without inner content the column renders as an empty
+// `<div>` that ProseMirror won't focus, so authors can't type into it.
+function emptyColumns(
+  count: number,
+): readonly {
+  name: "core/column";
+  innerBlocks: readonly [{ name: "core/paragraph" }];
+}[] {
+  return Array.from({ length: count }, () => ({
+    name: "core/column" as const,
+    innerBlocks: [{ name: "core/paragraph" as const }] as const,
+  }));
 }
 
 export const columnsBlock = defineBlock({

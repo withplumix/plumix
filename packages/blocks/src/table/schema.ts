@@ -19,9 +19,21 @@ export const tableSchema = Node.create({
   defining: true,
 
   addAttributes() {
+    // CSS selectors target `data-striped` / `data-bordered`, but
+    // Tiptap's default attribute renderer emits the raw attr name.
+    // Mirror the columns/spacer pattern so the editor canvas styles
+    // the table the same way the SSR Component does.
     return {
-      striped: { default: false },
-      bordered: { default: false },
+      striped: {
+        default: false,
+        renderHTML: (attrs: { readonly striped?: boolean }) =>
+          attrs.striped === true ? { "data-striped": "true" } : {},
+      },
+      bordered: {
+        default: false,
+        renderHTML: (attrs: { readonly bordered?: boolean }) =>
+          attrs.bordered === true ? { "data-bordered": "true" } : {},
+      },
     };
   },
 
@@ -32,7 +44,10 @@ export const tableSchema = Node.create({
   renderHTML({ HTMLAttributes }) {
     return [
       "table",
-      mergeAttributes(HTMLAttributes, { "data-plumix-block": "core/table" }),
+      mergeAttributes(HTMLAttributes, {
+        "data-plumix-block": "core/table",
+        class: "plumix-table",
+      }),
       0,
     ];
   },
@@ -109,6 +124,7 @@ export const tableCellSchema = Node.create({
       "td",
       mergeAttributes(HTMLAttributes, {
         "data-plumix-block": "core/table-cell",
+        class: "plumix-cell",
       }),
       0,
     ];
@@ -130,6 +146,7 @@ export const tableHeaderCellSchema = Node.create({
       mergeAttributes(HTMLAttributes, {
         "data-plumix-block": "core/table-header-cell",
         scope: "col",
+        class: "plumix-headerCell",
       }),
       0,
     ];

@@ -12,7 +12,7 @@ import { describe, expect, test } from "vitest";
 
 import type { BlockContext, TiptapNode } from "@plumix/blocks";
 import { coreBlocks, EntryContent, paragraphBlock } from "@plumix/blocks";
-import { mockRegistry } from "@plumix/blocks/test";
+import { mockRegistry, stripBlockMarkers } from "@plumix/blocks/test";
 
 import { auth } from "./auth/config.js";
 import { plumix } from "./config.js";
@@ -89,7 +89,7 @@ describe("buildApp().marks renders every shipped mark on real docs", () => {
         context: EMPTY_CONTEXT,
       }),
     );
-    expect(html).toBe(expected);
+    expect(stripBlockMarkers(html)).toBe(expected);
   });
 
   test("link renders a safe anchor via app.marks", async () => {
@@ -103,7 +103,7 @@ describe("buildApp().marks renders every shipped mark on real docs", () => {
         context: EMPTY_CONTEXT,
       }),
     );
-    expect(html).toBe(
+    expect(stripBlockMarkers(html)).toBe(
       '<p><a href="https://example.com" rel="noopener noreferrer nofollow">Hi</a></p>',
     );
   });
@@ -119,7 +119,7 @@ describe("buildApp().marks renders every shipped mark on real docs", () => {
         context: EMPTY_CONTEXT,
       }),
     );
-    expect(html).toBe('<p><abbr title="HyperText">Hi</abbr></p>');
+    expect(stripBlockMarkers(html)).toBe('<p><abbr title="HyperText">Hi</abbr></p>');
   });
 
   test("app.marks covers all 13 shipped core marks", async () => {

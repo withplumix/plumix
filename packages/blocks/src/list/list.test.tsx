@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { mockRegistry, renderBlock } from "../test/index.js";
+import { mockRegistry, renderBlock, stripBlockMarkers } from "../test/index.js";
 import { listItemBlock } from "./list-item.js";
 import { listOrderedBlock } from "./list-ordered.js";
 import { listBlock } from "./list.js";
@@ -31,7 +31,7 @@ describe("core/list (bullet)", () => {
         ],
       },
     });
-    expect(html).toBe("<ul><li>one</li><li>two</li></ul>");
+    expect(stripBlockMarkers(html)).toBe("<ul><li>one</li><li>two</li></ul>");
   });
 
   test('legacy `type: "bulletList"` content renders identically', async () => {
@@ -55,7 +55,7 @@ describe("core/list (bullet)", () => {
         ],
       },
     });
-    expect(html).toBe("<ul><li>Legacy</li></ul>");
+    expect(stripBlockMarkers(html)).toBe("<ul><li>Legacy</li></ul>");
   });
 });
 
@@ -81,7 +81,7 @@ describe("core/list-ordered", () => {
         ],
       },
     });
-    expect(html).toBe("<ol><li>one</li></ol>");
+    expect(stripBlockMarkers(html)).toBe("<ol><li>one</li></ol>");
   });
 
   test("propagates start attribute", async () => {
@@ -106,7 +106,7 @@ describe("core/list-ordered", () => {
         ],
       },
     });
-    expect(html).toContain('start="5"');
+    expect(stripBlockMarkers(html)).toContain('start="5"');
   });
 
   test("propagates reversed attribute when true", async () => {
@@ -131,7 +131,7 @@ describe("core/list-ordered", () => {
         ],
       },
     });
-    expect(html).toContain("reversed");
+    expect(stripBlockMarkers(html)).toContain("reversed");
   });
 
   test("omits start attribute when 1 (default)", async () => {
@@ -156,7 +156,7 @@ describe("core/list-ordered", () => {
         ],
       },
     });
-    expect(html).not.toContain("start=");
+    expect(stripBlockMarkers(html)).not.toContain("start=");
   });
 
   test('legacy `type: "orderedList"` content renders identically', async () => {
@@ -181,7 +181,7 @@ describe("core/list-ordered", () => {
         ],
       },
     });
-    expect(html).toBe('<ol start="3"><li>Legacy</li></ol>');
+    expect(stripBlockMarkers(html)).toBe('<ol start="3"><li>Legacy</li></ol>');
   });
 });
 
@@ -202,6 +202,6 @@ describe("core/list-item", () => {
         ],
       },
     });
-    expect(html).toBe("<li>hello</li>");
+    expect(stripBlockMarkers(html)).toBe("<li>hello</li>");
   });
 });

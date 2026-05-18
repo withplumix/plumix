@@ -21,7 +21,10 @@ export const codeSchema = Node.create({
   renderHTML({ HTMLAttributes }) {
     return [
       "pre",
-      mergeAttributes(HTMLAttributes, { "data-plumix-block": "core/code" }),
+      mergeAttributes(HTMLAttributes, {
+        "data-plumix-block": "core/code",
+        class: "plumix-code",
+      }),
       0,
     ];
   },

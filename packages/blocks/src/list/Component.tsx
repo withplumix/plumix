@@ -3,7 +3,11 @@ import type { ReactElement } from "react";
 import type { BlockProps } from "../types.js";
 
 export function ListComponent({ children }: BlockProps): ReactElement {
-  return <ul>{children}</ul>;
+  return (
+    <ul data-plumix-block="core/list" className="plumix-list">
+      {children}
+    </ul>
+  );
 }
 
 export function ListOrderedComponent({
@@ -21,12 +25,17 @@ export function ListOrderedComponent({
       : undefined;
   const reversed = attrs.reversed === true ? true : undefined;
   return (
-    <ol start={start} reversed={reversed}>
+    <ol
+      data-plumix-block="core/list-ordered"
+      className="plumix-listOrdered"
+      start={start}
+      reversed={reversed}
+    >
       {children}
     </ol>
   );
 }
 
 export function ListItemComponent({ children }: BlockProps): ReactElement {
-  return <li>{children}</li>;
+  return <li className="plumix-listItem">{children}</li>;
 }

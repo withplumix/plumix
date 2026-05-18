@@ -19,7 +19,10 @@ export const quoteSchema = Node.create({
   renderHTML({ HTMLAttributes }) {
     return [
       "blockquote",
-      mergeAttributes(HTMLAttributes, { "data-plumix-block": "core/quote" }),
+      mergeAttributes(HTMLAttributes, {
+        "data-plumix-block": "core/quote",
+        class: "plumix-quote",
+      }),
       0,
     ];
   },

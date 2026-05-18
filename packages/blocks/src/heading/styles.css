@@ -1,0 +1,28 @@
+/* Heading visual identity — frontend themes override. */
+.plumix-heading {
+  font-weight: 600;
+  line-height: 1.2;
+}
+.plumix-h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin-block: 0.75rem;
+}
+.plumix-h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-block: 0.75rem 0.5rem;
+}
+.plumix-h3 {
+  font-size: 1.25rem;
+  margin-block: 0.625rem 0.375rem;
+}
+.plumix-h4 {
+  font-size: 1.125rem;
+  margin-block: 0.5rem 0.25rem;
+}
+.plumix-h5,
+.plumix-h6 {
+  font-size: 1rem;
+  margin-block: 0.375rem 0.25rem;
+}

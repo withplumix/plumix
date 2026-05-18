@@ -35,9 +35,13 @@ export const headingSchema = Node.create({
   },
 
   renderHTML({ node, HTMLAttributes }) {
+    const level = clampLevel(node.attrs.level);
     return [
-      `h${clampLevel(node.attrs.level)}`,
-      mergeAttributes(HTMLAttributes),
+      `h${level}`,
+      mergeAttributes(HTMLAttributes, {
+        "data-plumix-block": "core/heading",
+        class: `plumix-heading plumix-h${level}`,
+      }),
       0,
     ];
   },

@@ -16,6 +16,7 @@ export const calloutSchema = Node.create({
       mergeAttributes(HTMLAttributes, {
         role: "note",
         "data-plumix-block": "core/callout",
+        class: "plumix-callout",
       }),
       0,
     ];

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { mockRegistry, renderBlock } from "../test/index.js";
+import { mockRegistry, renderBlock, stripBlockMarkers } from "../test/index.js";
 import { htmlBlock } from "./index.js";
 
 describe("core/html", () => {
@@ -18,8 +18,8 @@ describe("core/html", () => {
         ],
       },
     });
-    expect(html).toBe(
-      '<div data-plumix-block="core/html"><p><strong>Bold</strong></p></div>',
+    expect(stripBlockMarkers(html)).toBe(
+      '<div><p><strong>Bold</strong></p></div>',
     );
   });
 
@@ -37,7 +37,7 @@ describe("core/html", () => {
         ],
       },
     });
-    expect(html).toBe('<div data-plumix-block="core/html"><p>safe</p></div>');
+    expect(stripBlockMarkers(html)).toBe('<div><p>safe</p></div>');
   });
 
   test("renders an empty marker div when html attr is missing or non-string", async () => {
@@ -52,8 +52,8 @@ describe("core/html", () => {
         ],
       },
     });
-    expect(html).toBe(
-      '<div data-plumix-block="core/html"></div><div data-plumix-block="core/html"></div>',
+    expect(stripBlockMarkers(html)).toBe(
+      '<div></div><div></div>',
     );
   });
 });

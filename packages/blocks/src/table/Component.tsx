@@ -17,6 +17,7 @@ export function TableComponent({ attrs, children }: BlockProps): ReactElement {
   return (
     <table
       data-plumix-block="core/table"
+      className="plumix-table"
       data-striped={striped}
       data-bordered={bordered}
     >
@@ -45,7 +46,11 @@ export function TableCellComponent({
 }: BlockProps): ReactElement {
   const align = pickAlign(attrs.align);
   return (
-    <td data-plumix-block="core/table-cell" data-align={align}>
+    <td
+      data-plumix-block="core/table-cell"
+      className="plumix-cell"
+      data-align={align}
+    >
       {children}
     </td>
   );
@@ -60,6 +65,7 @@ export function TableHeaderCellComponent({
     <th
       scope="col"
       data-plumix-block="core/table-header-cell"
+      className="plumix-headerCell"
       data-align={align}
     >
       {children}

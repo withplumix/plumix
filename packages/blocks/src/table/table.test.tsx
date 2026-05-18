@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { mockRegistry, renderBlock } from "../test/index.js";
+import { mockRegistry, renderBlock, stripBlockMarkers } from "../test/index.js";
 import {
   tableBlock,
   tableBodyRowBlock,
@@ -29,7 +29,7 @@ describe("core/table", () => {
         content: [{ type: "core/table", content: [] }],
       },
     });
-    expect(html).toBe('<table data-plumix-block="core/table"></table>');
+    expect(stripBlockMarkers(html)).toBe('<table></table>');
   });
 
   test("renders header row with <th scope='col'> cells and body rows with <td>", async () => {
@@ -75,12 +75,12 @@ describe("core/table", () => {
     });
     expect(html).toContain('<th scope="col"');
     expect(html).toContain('data-plumix-block="core/table-header-cell"');
-    expect(html).toContain("Name");
-    expect(html).toContain("Role");
+    expect(stripBlockMarkers(html)).toContain("Name");
+    expect(stripBlockMarkers(html)).toContain("Role");
     expect(html).toContain('data-plumix-block="core/table-body-row"');
-    expect(html).toContain("<td");
-    expect(html).toContain("Ada");
-    expect(html).toContain("Founder");
+    expect(stripBlockMarkers(html)).toContain("<td");
+    expect(stripBlockMarkers(html)).toContain("Ada");
+    expect(stripBlockMarkers(html)).toContain("Founder");
   });
 
   test("omits data-striped when the attr is false (no leaky empty attribute)", async () => {
@@ -98,8 +98,8 @@ describe("core/table", () => {
         ],
       },
     });
-    expect(html).not.toContain("data-striped");
-    expect(html).not.toContain("data-bordered");
+    expect(stripBlockMarkers(html)).not.toContain("data-striped");
+    expect(stripBlockMarkers(html)).not.toContain("data-bordered");
   });
 
   test("exposes data-striped and data-bordered when attrs are set", async () => {
@@ -117,8 +117,8 @@ describe("core/table", () => {
         ],
       },
     });
-    expect(html).toContain('data-striped="true"');
-    expect(html).toContain('data-bordered="true"');
+    expect(stripBlockMarkers(html)).toContain('data-striped="true"');
+    expect(stripBlockMarkers(html)).toContain('data-bordered="true"');
   });
 
   test("cell exposes data-align from its align attribute", async () => {
@@ -136,8 +136,8 @@ describe("core/table", () => {
         ],
       },
     });
-    expect(html).toContain('data-align="center"');
-    expect(html).toContain("centred");
+    expect(stripBlockMarkers(html)).toContain('data-align="center"');
+    expect(stripBlockMarkers(html)).toContain("centred");
   });
 
   test("rejects invalid align values rather than leaking them", async () => {
@@ -155,8 +155,8 @@ describe("core/table", () => {
         ],
       },
     });
-    expect(html).not.toContain("data-align");
-    expect(html).toContain("x");
+    expect(stripBlockMarkers(html)).not.toContain("data-align");
+    expect(stripBlockMarkers(html)).toContain("x");
   });
 
   test("tableBlock + tableCellBlock declare attributes and supports", () => {

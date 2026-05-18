@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { mockRegistry, renderBlock } from "../test/index.js";
+import { mockRegistry, renderBlock, stripBlockMarkers } from "../test/index.js";
 import { descriptionDetailBlock } from "./description-detail.js";
 import { descriptionTermBlock } from "./description-term.js";
 import { descriptionListBlock } from "./index.js";
@@ -36,7 +36,7 @@ describe("core/description-list", () => {
         ],
       },
     });
-    expect(html).toBe(
+    expect(stripBlockMarkers(html)).toBe(
       "<dl><dt>HTTP</dt><dd>Hypertext Transfer Protocol</dd></dl>",
     );
   });
@@ -68,7 +68,7 @@ describe("core/description-list", () => {
         ],
       },
     });
-    expect(html).toBe(
+    expect(stripBlockMarkers(html)).toBe(
       "<dl><dt>A</dt><dt>B</dt><dd>shared definition</dd></dl>",
     );
   });
@@ -89,7 +89,7 @@ describe("core/description-term", () => {
         ],
       },
     });
-    expect(html).toBe("<dt>Term</dt>");
+    expect(stripBlockMarkers(html)).toBe("<dt>Term</dt>");
   });
 });
 
@@ -108,6 +108,6 @@ describe("core/description-detail", () => {
         ],
       },
     });
-    expect(html).toBe("<dd>Definition</dd>");
+    expect(stripBlockMarkers(html)).toBe("<dd>Definition</dd>");
   });
 });

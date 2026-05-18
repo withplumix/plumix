@@ -20,7 +20,11 @@ function isGroupLayout(value: unknown): value is GroupLayout {
 export function GroupComponent({ attrs, children }: BlockProps): ReactElement {
   const layout = isGroupLayout(attrs.layout) ? attrs.layout : undefined;
   return (
-    <div data-plumix-block="core/group" data-layout={layout}>
+    <div
+      data-plumix-block="core/group"
+      className="plumix-group"
+      data-layout={layout}
+    >
       {children}
     </div>
   );

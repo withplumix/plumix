@@ -15,6 +15,21 @@ export const columnsSchema = Node.create({
   content: "coreColumn+",
   defining: true,
 
+  addAttributes() {
+    return {
+      // `data-ratio` is what the block's CSS module keys off to set
+      // `grid-template-columns`. Without addAttributes the schema
+      // wouldn't accept `ratio` from Inspector updateAttributes, and
+      // the rendered DOM wouldn't carry the attribute the CSS reads.
+      ratio: {
+        default: "1:1",
+        parseHTML: (el) => el.getAttribute("data-ratio") ?? "1:1",
+        renderHTML: (attrs: { ratio?: string }) =>
+          attrs.ratio ? { "data-ratio": attrs.ratio } : {},
+      },
+    };
+  },
+
   parseHTML() {
     return [{ tag: "div[data-plumix-block='core/columns']" }];
   },
@@ -22,7 +37,10 @@ export const columnsSchema = Node.create({
   renderHTML({ HTMLAttributes }) {
     return [
       "div",
-      mergeAttributes(HTMLAttributes, { "data-plumix-block": "core/columns" }),
+      mergeAttributes(HTMLAttributes, {
+        "data-plumix-block": "core/columns",
+        class: "plumix-columns",
+      }),
       0,
     ];
   },

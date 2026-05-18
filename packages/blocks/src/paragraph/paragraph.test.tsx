@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { mockRegistry, renderBlock } from "../test/index.js";
+import { mockRegistry, renderBlock, stripBlockMarkers } from "../test/index.js";
 import { paragraphBlock } from "./index.js";
 
 describe("core/paragraph", () => {
@@ -25,7 +25,7 @@ describe("core/paragraph", () => {
         ],
       },
     });
-    expect(html).toBe("<p>Hello world</p>");
+    expect(stripBlockMarkers(html)).toBe("<p>Hello world</p>");
   });
 
   test("legacy `paragraph` content renders identically", async () => {
@@ -42,6 +42,6 @@ describe("core/paragraph", () => {
         ],
       },
     });
-    expect(html).toBe("<p>Legacy content</p>");
+    expect(stripBlockMarkers(html)).toBe("<p>Legacy content</p>");
   });
 });

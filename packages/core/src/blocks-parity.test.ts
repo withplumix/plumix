@@ -10,7 +10,11 @@
 import { describe, expect, test } from "vitest";
 
 import { coreBlocks } from "@plumix/blocks";
-import { mockRegistry, renderBlock } from "@plumix/blocks/test";
+import {
+  mockRegistry,
+  renderBlock,
+  stripBlockMarkers,
+} from "@plumix/blocks/test";
 
 import { renderTiptapContent } from "./route/render/tiptap.js";
 
@@ -42,7 +46,7 @@ describe("paragraph parity against the legacy walker", () => {
     };
     const legacy = renderTiptapContent(doc);
     const next = renderBlock({ registry, content: doc });
-    expect(next).toBe(legacy);
+    expect(stripBlockMarkers(next)).toBe(legacy);
   });
 
   test("paragraph with bold + italic marks", async () => {
@@ -62,7 +66,7 @@ describe("paragraph parity against the legacy walker", () => {
         },
       ],
     };
-    expect(renderBlock({ registry, content: doc })).toBe(
+    expect(stripBlockMarkers(renderBlock({ registry, content: doc }))).toBe(
       renderTiptapContent(doc),
     );
   });
@@ -81,7 +85,7 @@ describe("paragraph parity against the legacy walker", () => {
           },
         ],
       };
-      expect(renderBlock({ registry, content: doc })).toBe(
+      expect(stripBlockMarkers(renderBlock({ registry, content: doc }))).toBe(
         renderTiptapContent(doc),
       );
     },
@@ -107,7 +111,7 @@ describe("paragraph parity against the legacy walker", () => {
         },
       ],
     };
-    expect(renderBlock({ registry, content: doc })).toBe(
+    expect(stripBlockMarkers(renderBlock({ registry, content: doc }))).toBe(
       renderTiptapContent(doc),
     );
   });
@@ -132,7 +136,7 @@ describe("paragraph parity against the legacy walker", () => {
         },
       ],
     };
-    expect(renderBlock({ registry, content: doc })).toBe(
+    expect(stripBlockMarkers(renderBlock({ registry, content: doc }))).toBe(
       renderTiptapContent(doc),
     );
   });
@@ -149,7 +153,7 @@ describe("paragraph parity against the legacy walker", () => {
         },
       ],
     };
-    expect(renderBlock({ registry, content: doc })).toBe(
+    expect(stripBlockMarkers(renderBlock({ registry, content: doc }))).toBe(
       renderTiptapContent(doc),
     );
   });
@@ -171,7 +175,7 @@ describe("paragraph parity against the legacy walker", () => {
         },
       ],
     };
-    expect(renderBlock({ registry, content: doc })).toBe(
+    expect(stripBlockMarkers(renderBlock({ registry, content: doc }))).toBe(
       renderTiptapContent(doc),
     );
   });

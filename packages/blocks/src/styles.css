@@ -1,0 +1,17 @@
+/* Aggregate CSS for every core block. Consumers (admin + sites)
+   import this single file once; per-block stylesheets co-locate with
+   the block schema/Component so a plugin author can ship the same way. */
+@import "./paragraph/styles.css";
+@import "./heading/styles.css";
+@import "./list/styles.css";
+@import "./quote/styles.css";
+@import "./code/styles.css";
+@import "./separator/styles.css";
+@import "./columns/styles.css";
+@import "./callout/styles.css";
+@import "./table/styles.css";
+@import "./buttons/styles.css";
+@import "./button/styles.css";
+@import "./details/styles.css";
+@import "./group/styles.css";
+@import "./description-list/styles.css";

@@ -1,0 +1,13 @@
+/* Description list — term/detail spacing. Class names are
+   block-specific so the dl doesn't inherit list/ul rules. */
+.plumix-descriptionList {
+  margin-block: 0.75rem;
+}
+.plumix-descriptionTerm {
+  font-weight: 600;
+  margin-block: 0.25rem 0;
+}
+.plumix-descriptionDetail {
+  margin-block: 0 0.375rem;
+  margin-inline-start: 1rem;
+}

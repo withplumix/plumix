@@ -21,6 +21,7 @@ export const separatorSchema = Node.create({
       "hr",
       mergeAttributes(HTMLAttributes, {
         "data-plumix-block": "core/separator",
+        class: "plumix-separator",
       }),
     ];
   },

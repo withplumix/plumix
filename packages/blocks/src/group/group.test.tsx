@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { mockRegistry, renderBlock } from "../test/index.js";
+import { mockRegistry, renderBlock, stripBlockMarkers } from "../test/index.js";
 import { groupBlock } from "./index.js";
 
 describe("core/group", () => {
@@ -15,7 +15,7 @@ describe("core/group", () => {
         content: [{ type: "core/group", content: [] }],
       },
     });
-    expect(html).toBe('<div data-plumix-block="core/group"></div>');
+    expect(stripBlockMarkers(html)).toBe('<div></div>');
   });
 
   test.each(["flow", "flex-row", "flex-column", "grid"])(
@@ -31,8 +31,8 @@ describe("core/group", () => {
           content: [{ type: "core/group", attrs: { layout }, content: [] }],
         },
       });
-      expect(html).toBe(
-        `<div data-plumix-block="core/group" data-layout="${layout}"></div>`,
+      expect(stripBlockMarkers(html)).toBe(
+        `<div data-layout="${layout}"></div>`,
       );
     },
   );
@@ -48,7 +48,7 @@ describe("core/group", () => {
         content: [{ type: "core/group", content: [] }],
       },
     });
-    expect(html).not.toContain("data-layout");
+    expect(stripBlockMarkers(html)).not.toContain("data-layout");
   });
 
   test("ignores unknown layout values rather than leaking them", async () => {
@@ -64,7 +64,7 @@ describe("core/group", () => {
         ],
       },
     });
-    expect(html).not.toContain("data-layout");
+    expect(stripBlockMarkers(html)).not.toContain("data-layout");
   });
 
   test("groupBlock declares Row + Stack variations presetting layout", () => {

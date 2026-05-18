@@ -2,6 +2,7 @@ import type { Content } from "@tiptap/core";
 import { Editor, Node } from "@tiptap/core";
 import { describe, expect, test } from "vitest";
 
+import { stripBlockMarkers } from "../test/index.js";
 import { headingSchema } from "./schema.js";
 
 const Doc = Node.create({ name: "doc", topNode: true, content: "block+" });
@@ -25,7 +26,7 @@ describe("core/heading editor schema honors the level attribute", () => {
         },
       ],
     });
-    expect(editor.getHTML()).toContain("<h2>");
+    expect(stripBlockMarkers(editor.getHTML())).toContain("<h2>");
     editor.destroy();
   });
 
@@ -40,7 +41,7 @@ describe("core/heading editor schema honors the level attribute", () => {
         },
       ],
     });
-    expect(editor.getHTML()).toContain(`<h${level}>`);
+    expect(stripBlockMarkers(editor.getHTML())).toContain(`<h${level}>`);
     editor.destroy();
   });
 
@@ -73,7 +74,7 @@ describe("core/heading editor schema honors the level attribute", () => {
         },
       ],
     });
-    expect(editor.getHTML()).toContain(`<h${expected}>`);
+    expect(stripBlockMarkers(editor.getHTML())).toContain(`<h${expected}>`);
     editor.destroy();
   });
 
@@ -91,7 +92,7 @@ describe("core/heading editor schema honors the level attribute", () => {
     // The level is encoded by the tag itself; serializing it as an
     // attribute would clobber arbitrary HTMLAttributes and confuse the
     // server-side renderer which round-trips via the same DOM.
-    expect(editor.getHTML()).toBe("<h4>Hi</h4>");
+    expect(stripBlockMarkers(editor.getHTML())).toBe("<h4>Hi</h4>");
     editor.destroy();
   });
 });

@@ -20,7 +20,10 @@ export const detailsSchema = Node.create({
   renderHTML({ HTMLAttributes }) {
     return [
       "details",
-      mergeAttributes(HTMLAttributes, { "data-plumix-block": "core/details" }),
+      mergeAttributes(HTMLAttributes, {
+        "data-plumix-block": "core/details",
+        class: "plumix-details",
+      }),
       0,
     ];
   },

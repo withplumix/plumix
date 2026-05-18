@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { mockRegistry, renderBlock } from "../test/index.js";
+import { mockRegistry, renderBlock, stripBlockMarkers } from "../test/index.js";
 import { calloutBlock } from "./index.js";
 
 describe("core/callout", () => {
@@ -13,8 +13,8 @@ describe("core/callout", () => {
         content: [{ type: "core/callout", content: [] }],
       },
     });
-    expect(html).toBe(
-      '<aside role="note" data-plumix-block="core/callout" data-variant="info"></aside>',
+    expect(stripBlockMarkers(html)).toBe(
+      '<aside role="note" data-variant="info"></aside>',
     );
   });
 
@@ -29,7 +29,7 @@ describe("core/callout", () => {
           content: [{ type: "core/callout", attrs: { variant }, content: [] }],
         },
       });
-      expect(html).toContain(`data-variant="${variant}"`);
+      expect(stripBlockMarkers(html)).toContain(`data-variant="${variant}"`);
     },
   );
 
@@ -48,7 +48,7 @@ describe("core/callout", () => {
         ],
       },
     });
-    expect(html).toContain('data-variant="info"');
+    expect(stripBlockMarkers(html)).toContain('data-variant="info"');
   });
 
   test("exposes icon attr as data-icon", async () => {
@@ -66,7 +66,7 @@ describe("core/callout", () => {
         ],
       },
     });
-    expect(html).toContain('data-icon="lightbulb"');
+    expect(stripBlockMarkers(html)).toContain('data-icon="lightbulb"');
   });
 
   test("omits data-icon when icon attr is absent or non-string", async () => {
@@ -81,7 +81,7 @@ describe("core/callout", () => {
         ],
       },
     });
-    expect(html).not.toContain("data-icon");
+    expect(stripBlockMarkers(html)).not.toContain("data-icon");
   });
 
   test("declares variant (select) + icon (text) attributes for the Inspector", () => {

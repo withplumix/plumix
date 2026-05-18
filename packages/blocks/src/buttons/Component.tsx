@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { CSSProperties, ReactElement } from "react";
 
 import type { BlockProps } from "../types.js";
 
@@ -23,7 +23,15 @@ export function ButtonsComponent({
   const align = pickAlign(attrs.align);
   const gap = normalizeGap(attrs.gap);
   return (
-    <div data-plumix-block="core/buttons" data-align={align} data-gap={gap}>
+    <div
+      data-plumix-block="core/buttons"
+      className="plumix-buttons"
+      data-align={align}
+      data-gap={gap}
+      style={
+        gap ? ({ "--plumix-buttons-gap": gap } as CSSProperties) : undefined
+      }
+    >
       {children}
     </div>
   );

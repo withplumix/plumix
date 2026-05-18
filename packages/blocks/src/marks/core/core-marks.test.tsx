@@ -5,6 +5,7 @@ import {
   mockMarkRegistry,
   mockRegistry,
   renderBlock,
+  stripBlockMarkers,
 } from "../../test/index.js";
 import { coreMarks } from "./index.js";
 
@@ -56,14 +57,16 @@ describe("core marks — HTML element mapping", () => {
     { mark: "cite", expected: "<p><cite>Hi</cite></p>" },
     { mark: "small", expected: "<p><small>Hi</small></p>" },
   ])("$mark renders as $expected", async ({ mark, expected }) => {
-    expect(await renderTextWithMark(mark)).toBe(expected);
+    expect(stripBlockMarkers(await renderTextWithMark(mark))).toBe(expected);
   });
 });
 
 describe("core marks — link", () => {
   test("renders <a href> with rel=noopener for safe https hrefs", async () => {
     expect(
-      await renderTextWithMark("link", { href: "https://example.com" }),
+      stripBlockMarkers(
+        await renderTextWithMark("link", { href: "https://example.com" }),
+      ),
     ).toBe(
       '<p><a href="https://example.com" rel="noopener noreferrer nofollow">Hi</a></p>',
     );
@@ -71,7 +74,9 @@ describe("core marks — link", () => {
 
   test("strips unsafe javascript: hrefs", async () => {
     expect(
-      await renderTextWithMark("link", { href: "javascript:alert(1)" }),
+      stripBlockMarkers(
+        await renderTextWithMark("link", { href: "javascript:alert(1)" }),
+      ),
     ).toBe("<p>Hi</p>");
   });
 
@@ -80,23 +85,27 @@ describe("core marks — link", () => {
       href: "https://example.com",
       target: "_blank",
     });
-    expect(html).toContain('target="_blank"');
+    expect(stripBlockMarkers(html)).toContain('target="_blank"');
   });
 
   test("ignores attacker-controlled rel that strips safety tokens", async () => {
     expect(
-      await renderTextWithMark("link", {
-        href: "https://example.com",
-        rel: "",
-      }),
+      stripBlockMarkers(
+        await renderTextWithMark("link", {
+          href: "https://example.com",
+          rel: "",
+        }),
+      ),
     ).toBe(
       '<p><a href="https://example.com" rel="noopener noreferrer nofollow">Hi</a></p>',
     );
     expect(
-      await renderTextWithMark("link", {
-        href: "https://example.com",
-        rel: "opener",
-      }),
+      stripBlockMarkers(
+        await renderTextWithMark("link", {
+          href: "https://example.com",
+          rel: "opener",
+        }),
+      ),
     ).toBe(
       '<p><a href="https://example.com" rel="noopener noreferrer nofollow">Hi</a></p>',
     );
@@ -106,13 +115,17 @@ describe("core marks — link", () => {
 describe("core marks — abbr", () => {
   test("renders <abbr title> with the title attribute", async () => {
     expect(
-      await renderTextWithMark("abbr", { title: "HyperText Markup Language" }),
+      stripBlockMarkers(
+        await renderTextWithMark("abbr", {
+          title: "HyperText Markup Language",
+        }),
+      ),
     ).toBe('<p><abbr title="HyperText Markup Language">Hi</abbr></p>');
   });
 
   test("omits title attribute when empty", async () => {
-    expect(await renderTextWithMark("abbr", { title: "" })).toBe(
-      "<p><abbr>Hi</abbr></p>",
-    );
+    expect(
+      stripBlockMarkers(await renderTextWithMark("abbr", { title: "" })),
+    ).toBe("<p><abbr>Hi</abbr></p>");
   });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { paragraphBlock } from "../paragraph/index.js";
-import { mockRegistry, renderBlock } from "../test/index.js";
+import { mockRegistry, renderBlock, stripBlockMarkers } from "../test/index.js";
 import { quoteBlock } from "./index.js";
 
 describe("core/quote", () => {
@@ -27,7 +27,7 @@ describe("core/quote", () => {
         ],
       },
     });
-    expect(html).toContain('cite="https://example.com/source"');
+    expect(stripBlockMarkers(html)).toContain('cite="https://example.com/source"');
   });
 
   test("omits cite when citation attr is empty or non-string", async () => {
@@ -62,7 +62,7 @@ describe("core/quote", () => {
         ],
       },
     });
-    expect(html).not.toContain("cite=");
+    expect(stripBlockMarkers(html)).not.toContain("cite=");
   });
 
   test("renders as <blockquote> wrapping children", async () => {
@@ -86,8 +86,8 @@ describe("core/quote", () => {
         ],
       },
     });
-    expect(html).toBe(
-      '<blockquote data-plumix-block="core/quote"><p>Wisdom</p></blockquote>',
+    expect(stripBlockMarkers(html)).toBe(
+      "<blockquote><p>Wisdom</p></blockquote>",
     );
   });
 });

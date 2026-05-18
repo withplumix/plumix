@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { mockRegistry, renderBlock } from "../test/index.js";
+import { mockRegistry, renderBlock, stripBlockMarkers } from "../test/index.js";
 import { codeBlock } from "./index.js";
 
 describe("core/code", () => {
@@ -19,8 +19,8 @@ describe("core/code", () => {
         ],
       },
     });
-    expect(html).toBe(
-      '<pre data-plumix-block="core/code" data-language="typescript"><code data-language="typescript">const x = 1;</code></pre>',
+    expect(stripBlockMarkers(html)).toBe(
+      '<pre data-language="typescript"><code data-language="typescript">const x = 1;</code></pre>',
     );
   });
 
@@ -39,7 +39,7 @@ describe("core/code", () => {
         ],
       },
     });
-    expect(html).toBe('<pre data-plumix-block="core/code">raw text</pre>');
+    expect(stripBlockMarkers(html)).toBe('<pre>raw text</pre>');
   });
 
   test("treats non-string language as null (no inner <code>)", async () => {
@@ -57,6 +57,6 @@ describe("core/code", () => {
         ],
       },
     });
-    expect(html).not.toContain("<code");
+    expect(stripBlockMarkers(html)).not.toContain("<code");
   });
 });

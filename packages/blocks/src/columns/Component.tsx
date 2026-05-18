@@ -18,7 +18,11 @@ export function ColumnsComponent({
 }: BlockProps): ReactElement {
   const ratio = isRatio(attrs.ratio) ? attrs.ratio : undefined;
   return (
-    <div data-plumix-block="core/columns" data-ratio={ratio}>
+    <div
+      data-plumix-block="core/columns"
+      className="plumix-columns"
+      data-ratio={ratio}
+    >
       {children}
     </div>
   );

@@ -45,7 +45,7 @@ describe("blocks + supports + tokens end-to-end", () => {
       />,
     );
     const p = container.querySelector("p");
-    expect(p?.className).toBe("has-primary-background-color");
+    expect(p?.className).toContain("has-primary-background-color");
     expect(p?.textContent).toBe("themed");
   });
 

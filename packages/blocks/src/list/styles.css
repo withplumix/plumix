@@ -1,0 +1,13 @@
+.plumix-list {
+  list-style: disc;
+  padding-inline-start: 1.5rem;
+  margin-block: 0.5rem;
+}
+.plumix-listOrdered {
+  list-style: decimal;
+  padding-inline-start: 1.5rem;
+  margin-block: 0.5rem;
+}
+.plumix-listItem {
+  margin-block: 0.25rem;
+}

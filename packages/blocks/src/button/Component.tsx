@@ -40,6 +40,7 @@ export function ButtonComponent({ attrs }: BlockProps): ReactElement {
       target={target}
       rel={rel}
       data-plumix-block="core/button"
+      className="plumix-button"
       data-variant={variant}
       data-size={size}
     >

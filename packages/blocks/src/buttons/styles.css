@@ -1,0 +1,19 @@
+/* Buttons container — flex row with author-controlled alignment + gap. */
+.plumix-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--plumix-buttons-gap, 0.5rem);
+  margin-block: 0.5rem;
+}
+.plumix-buttons[data-align="start"] {
+  justify-content: flex-start;
+}
+.plumix-buttons[data-align="center"] {
+  justify-content: center;
+}
+.plumix-buttons[data-align="end"] {
+  justify-content: flex-end;
+}
+.plumix-buttons[data-align="between"] {
+  justify-content: space-between;
+}

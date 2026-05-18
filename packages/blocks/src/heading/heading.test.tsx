@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { coreBlocks } from "../core-blocks.js";
-import { mockRegistry, renderBlock } from "../test/index.js";
+import { mockRegistry, renderBlock, stripBlockMarkers } from "../test/index.js";
 import { headingBlock } from "./index.js";
 
 describe("core/heading", () => {
@@ -24,7 +24,7 @@ describe("core/heading", () => {
         ],
       },
     });
-    expect(html).toBe("<h2>Title</h2>");
+    expect(stripBlockMarkers(html)).toBe("<h2>Title</h2>");
   });
 
   test.each([1, 2, 3, 4, 5, 6])("respects level=%i as <h%i>", async (level) => {
@@ -42,7 +42,7 @@ describe("core/heading", () => {
         ],
       },
     });
-    expect(html).toBe(`<h${level}>Title</h${level}>`);
+    expect(stripBlockMarkers(html)).toBe(`<h${level}>Title</h${level}>`);
   });
 
   test.each([
@@ -66,7 +66,7 @@ describe("core/heading", () => {
         ],
       },
     });
-    expect(html).toBe(`<h${expected}>T</h${expected}>`);
+    expect(stripBlockMarkers(html)).toBe(`<h${expected}>T</h${expected}>`);
   });
 
   test('legacy `type: "heading"` content renders identically', async () => {
@@ -84,7 +84,7 @@ describe("core/heading", () => {
         ],
       },
     });
-    expect(html).toBe("<h3>Legacy</h3>");
+    expect(stripBlockMarkers(html)).toBe("<h3>Legacy</h3>");
   });
 
   test("falls back to <h2> when level is not a number", async () => {
@@ -102,6 +102,6 @@ describe("core/heading", () => {
         ],
       },
     });
-    expect(html).toBe("<h2>T</h2>");
+    expect(stripBlockMarkers(html)).toBe("<h2>T</h2>");
   });
 });

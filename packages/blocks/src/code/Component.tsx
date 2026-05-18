@@ -8,7 +8,11 @@ export function CodeComponent({ attrs, children }: BlockProps): ReactElement {
       ? attrs.language
       : null;
   return (
-    <pre data-plumix-block="core/code" data-language={language ?? undefined}>
+    <pre
+      data-plumix-block="core/code"
+      className="plumix-code"
+      data-language={language ?? undefined}
+    >
       {language === null ? (
         children
       ) : (

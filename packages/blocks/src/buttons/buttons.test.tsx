@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { buttonBlock } from "../button/index.js";
-import { mockRegistry, renderBlock } from "../test/index.js";
+import { mockRegistry, renderBlock, stripBlockMarkers } from "../test/index.js";
 import { buttonsBlock } from "./index.js";
 
 describe("core/buttons", () => {
@@ -16,7 +16,7 @@ describe("core/buttons", () => {
         content: [{ type: "core/buttons", content: [] }],
       },
     });
-    expect(html).toBe('<div data-plumix-block="core/buttons"></div>');
+    expect(stripBlockMarkers(html)).toBe('<div></div>');
   });
 
   test.each(["start", "center", "end", "between"])(
@@ -32,7 +32,7 @@ describe("core/buttons", () => {
           content: [{ type: "core/buttons", attrs: { align }, content: [] }],
         },
       });
-      expect(html).toContain(`data-align="${align}"`);
+      expect(stripBlockMarkers(html)).toContain(`data-align="${align}"`);
     },
   );
 
@@ -49,7 +49,7 @@ describe("core/buttons", () => {
         ],
       },
     });
-    expect(html).not.toContain("data-align");
+    expect(stripBlockMarkers(html)).not.toContain("data-align");
   });
 
   test("normalises numeric gap to a px string", async () => {
@@ -66,8 +66,8 @@ describe("core/buttons", () => {
         ],
       },
     });
-    expect(html).toContain('data-gap="12px"');
-    expect(html).toContain('data-gap="1rem"');
+    expect(stripBlockMarkers(html)).toContain('data-gap="12px"');
+    expect(stripBlockMarkers(html)).toContain('data-gap="1rem"');
   });
 
   test("declares align (select) + gap (text) attributes for the Inspector", () => {

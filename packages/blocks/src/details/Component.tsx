@@ -14,7 +14,11 @@ export function DetailsComponent({
       : DEFAULT_SUMMARY;
   const open = attrs.open === true;
   return (
-    <details open={open} data-plumix-block="core/details">
+    <details
+      open={open}
+      data-plumix-block="core/details"
+      className="plumix-details"
+    >
       <summary>{summary}</summary>
       {children}
     </details>

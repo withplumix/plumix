@@ -20,6 +20,13 @@ export const paragraphSchema = Node.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ["p", mergeAttributes(HTMLAttributes), 0];
+    return [
+      "p",
+      mergeAttributes(HTMLAttributes, {
+        "data-plumix-block": "core/paragraph",
+        class: "plumix-paragraph",
+      }),
+      0,
+    ];
   },
 });

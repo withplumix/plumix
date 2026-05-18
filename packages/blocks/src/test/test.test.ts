@@ -6,6 +6,7 @@ import {
   mockMarkRegistry,
   mockRegistry,
   renderBlock,
+  stripBlockMarkers,
   validateContent,
 } from "./index.js";
 
@@ -38,7 +39,7 @@ describe("renderBlock", () => {
         ],
       },
     });
-    expect(html).toBe("<p>Hi</p>");
+    expect(stripBlockMarkers(html)).toBe("<p>Hi</p>");
   });
 
   test("accepts a custom context", async () => {
@@ -54,7 +55,7 @@ describe("renderBlock", () => {
         depth: 0,
       },
     });
-    expect(html).toBe("<p></p>");
+    expect(stripBlockMarkers(html)).toBe("<p></p>");
   });
 });
 

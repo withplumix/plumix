@@ -17,7 +17,10 @@ export const buttonsSchema = Node.create({
   renderHTML({ HTMLAttributes }) {
     return [
       "div",
-      mergeAttributes(HTMLAttributes, { "data-plumix-block": "core/buttons" }),
+      mergeAttributes(HTMLAttributes, {
+        "data-plumix-block": "core/buttons",
+        class: "plumix-buttons",
+      }),
       0,
     ];
   },

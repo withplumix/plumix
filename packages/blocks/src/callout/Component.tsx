@@ -22,6 +22,7 @@ export function CalloutComponent({
     <aside
       role="note"
       data-plumix-block="core/callout"
+      className="plumix-callout"
       data-variant={variant}
       data-icon={icon}
     >

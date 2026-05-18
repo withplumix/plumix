@@ -19,7 +19,10 @@ export const groupSchema = Node.create({
   renderHTML({ HTMLAttributes }) {
     return [
       "div",
-      mergeAttributes(HTMLAttributes, { "data-plumix-block": "core/group" }),
+      mergeAttributes(HTMLAttributes, {
+        "data-plumix-block": "core/group",
+        class: "plumix-group",
+      }),
       0,
     ];
   },

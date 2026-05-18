@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { mockRegistry, renderBlock } from "../test/index.js";
+import { mockRegistry, renderBlock, stripBlockMarkers } from "../test/index.js";
 import { buttonBlock } from "./index.js";
 
 describe("core/button", () => {
@@ -19,8 +19,8 @@ describe("core/button", () => {
         ],
       },
     });
-    expect(html).toBe(
-      '<a href="https://example.com" data-plumix-block="core/button">Open</a>',
+    expect(stripBlockMarkers(html)).toBe(
+      '<a href="https://example.com">Open</a>',
     );
   });
 
@@ -41,7 +41,7 @@ describe("core/button", () => {
           ],
         },
       });
-      expect(html).toContain(`data-variant="${variant}"`);
+      expect(stripBlockMarkers(html)).toContain(`data-variant="${variant}"`);
     },
   );
 
@@ -60,7 +60,7 @@ describe("core/button", () => {
         ],
       },
     });
-    expect(html).not.toContain("data-variant");
+    expect(stripBlockMarkers(html)).not.toContain("data-variant");
   });
 
   test.each(["sm", "md", "lg"])(
@@ -80,7 +80,7 @@ describe("core/button", () => {
           ],
         },
       });
-      expect(html).toContain(`data-size="${size}"`);
+      expect(stripBlockMarkers(html)).toContain(`data-size="${size}"`);
     },
   );
 
@@ -103,8 +103,8 @@ describe("core/button", () => {
         ],
       },
     });
-    expect(html).toContain('target="_blank"');
-    expect(html).toContain('rel="noopener noreferrer"');
+    expect(stripBlockMarkers(html)).toContain('target="_blank"');
+    expect(stripBlockMarkers(html)).toContain('rel="noopener noreferrer"');
   });
 
   test("strips unsafe javascript: hrefs", async () => {
@@ -122,9 +122,9 @@ describe("core/button", () => {
         ],
       },
     });
-    expect(html).not.toContain("href=");
-    expect(html).not.toContain("javascript:");
-    expect(html).toContain(">evil</a>");
+    expect(stripBlockMarkers(html)).not.toContain("href=");
+    expect(stripBlockMarkers(html)).not.toContain("javascript:");
+    expect(stripBlockMarkers(html)).toContain(">evil</a>");
   });
 
   test("renders empty text as an empty anchor body", async () => {
@@ -142,7 +142,7 @@ describe("core/button", () => {
         ],
       },
     });
-    expect(html).toBe('<a href="/x" data-plumix-block="core/button"></a>');
+    expect(stripBlockMarkers(html)).toBe('<a href="/x"></a>');
   });
 
   test("declares the text/href/variant/size/target attribute schema for the Inspector", () => {
