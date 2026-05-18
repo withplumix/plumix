@@ -1,6 +1,6 @@
 import type { Editor } from "@tiptap/react";
 import type { ReactElement } from "react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Popover,
   PopoverContent,
@@ -10,7 +10,9 @@ import { DragHandle } from "@tiptap/extension-drag-handle-react";
 
 import type { BlockRegistry, BlockTransformTo } from "@plumix/blocks";
 
+import type { BlockMenuOpenDetail } from "./block-menu-keyboard.js";
 import { BlockMenu } from "../block-menu/BlockMenu.js";
+import { BLOCK_MENU_OPEN_EVENT } from "./block-menu-keyboard.js";
 import { DragHandleButton } from "./DragHandleButton.js";
 
 interface PlumixDragHandleProps {
@@ -139,13 +141,66 @@ export function PlumixDragHandle({
     setTracked(node ? { node, pos } : null);
   }, []);
 
+  // Keyboard-only path: the drag-handle plugin is mouse-driven, so
+  // pressing the keyboard shortcut dispatches a CustomEvent on the
+  // editor's `view.dom`. Scoping to `view.dom` (not `document`)
+  // prevents crosstalk if a second editor mounts on the same page —
+  // each PlumixDragHandle resolves `pos` against its own editor's doc.
+  useEffect(() => {
+    let dom: HTMLElement | null = null;
+    const handler = (event: Event): void => {
+      const { pos } = (event as CustomEvent<BlockMenuOpenDetail>).detail;
+      const node = editor.state.doc.nodeAt(pos);
+      if (!node) return;
+      setTracked({ node, pos });
+      setOpen(true);
+    };
+    const attach = ({ editor: ed }: { editor: typeof editor }): void => {
+      if (dom) return;
+      dom = ed.view.dom;
+      dom.addEventListener(BLOCK_MENU_OPEN_EVENT, handler);
+    };
+    editor.on("create", attach);
+    // Editor may already be mounted when this effect runs (StrictMode
+    // remount, or this effect's first run after the create event has
+    // already fired). The view-access guard in Tiptap throws synchronously
+    // pre-mount, so catch and let `create` handle the attach later.
+    try {
+      attach({ editor });
+    } catch {
+      /* view not ready; the `create` handler covers it */
+    }
+    return () => {
+      editor.off("create", attach);
+      dom?.removeEventListener(BLOCK_MENU_OPEN_EVENT, handler);
+    };
+  }, [editor]);
+
   return (
     <DragHandle editor={editor} onNodeChange={onNodeChange}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <DragHandleButton onOpenMenu={() => setOpen(true)} />
         </PopoverTrigger>
-        <PopoverContent side="left" align="start" className="w-56 p-0">
+        <PopoverContent
+          side="left"
+          align="start"
+          className="w-56 p-0"
+          onOpenAutoFocus={(event) => {
+            // Radix defaults to focusing the first tab-stop in the
+            // content; BlockMenu has none (cmdk items aren't tabbable).
+            // Route focus onto the hidden cmdk input so it receives
+            // ArrowDown / Enter for keyboard-only authors. The explicit
+            // `data-plumix-block-menu-input` selector survives future
+            // additions of unrelated <input> elements to the popover.
+            event.preventDefault();
+            const content = event.currentTarget as HTMLElement | null;
+            const input = content?.querySelector<HTMLElement>(
+              "[data-plumix-block-menu-input]",
+            );
+            input?.focus();
+          }}
+        >
           {tracked ? (
             <BlockMenu
               sourceName={tracked.node.type.name}

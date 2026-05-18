@@ -2,6 +2,7 @@ import type { SlashMenuItem } from "@/editor/slash-menu/items-from-registry.js";
 import type { Editor, JSONContent } from "@tiptap/react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef } from "react";
+import { createBlockMenuKeyboardExtension } from "@/editor/drag-handle/block-menu-keyboard.js";
 import { PlumixDragHandle } from "@/editor/drag-handle/PlumixDragHandle.js";
 import { FloatingInsertMenu } from "@/editor/floating-menu/FloatingInsertMenu.js";
 import { createSlashMenuExtension } from "@/editor/slash-menu/extension.js";
@@ -135,6 +136,7 @@ export function TiptapEditor({
           ed.chain().focus().insertContent(slashMenuItemToContent(item)).run();
         },
       }),
+      createBlockMenuKeyboardExtension(),
     ];
   }, [allowlist, blockRegistry, markRegistry]);
 
