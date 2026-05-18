@@ -1389,6 +1389,20 @@ export interface FieldTypeManifestEntry {
   readonly component: PluginComponentRef;
 }
 
+export interface BlockManifestEntry {
+  readonly name: string;
+  readonly title: string;
+  readonly category?: string;
+  readonly icon?: string;
+}
+
+export interface MarkManifestEntry {
+  readonly name: string;
+  readonly title: string;
+  readonly keyboardShortcut?: string;
+  readonly bubbleMenuIcon?: string;
+}
+
 /**
  * Wire-shipped manifest payload. Every field is optional on the type
  * so test fixtures can declare just the slice they exercise; the
@@ -1405,6 +1419,8 @@ export interface PlumixManifest {
   readonly settingsPages?: readonly SettingsPageManifestEntry[];
   readonly adminNav?: readonly AdminNavGroup[];
   readonly fieldTypes?: readonly FieldTypeManifestEntry[];
+  readonly blocks?: readonly BlockManifestEntry[];
+  readonly marks?: readonly MarkManifestEntry[];
 }
 
 /**
@@ -1431,6 +1447,8 @@ export function emptyManifest(): PlumixManifest {
     settingsPages: [],
     adminNav: [],
     fieldTypes: [],
+    blocks: [],
+    marks: [],
   };
 }
 
@@ -1501,6 +1519,8 @@ export function buildManifest(registry: PluginRegistry): BuiltManifest {
   const fieldTypes = Array.from(registry.fieldTypes.values())
     .map(toFieldTypeEntry)
     .sort((a, b) => a.type.localeCompare(b.type));
+  const blocks = Array.from(registry.blockSpecs.values()).map(toBlockEntry);
+  const marks = Array.from(registry.markSpecs.values()).map(toMarkEntry);
   return {
     entryTypes: entries,
     termTaxonomies,
@@ -1511,6 +1531,8 @@ export function buildManifest(registry: PluginRegistry): BuiltManifest {
     settingsPages,
     adminNav,
     fieldTypes,
+    blocks,
+    marks,
   };
 }
 
@@ -2128,6 +2150,16 @@ function toFieldTypeEntry(
 ): FieldTypeManifestEntry {
   const { type, component } = fieldType;
   return { type, component };
+}
+
+function toBlockEntry(block: RegisteredBlock): BlockManifestEntry {
+  const { name, title, category, icon } = block.spec;
+  return { name, title, category, icon };
+}
+
+function toMarkEntry(mark: RegisteredMark): MarkManifestEntry {
+  const { name, title, keyboardShortcut, bubbleMenuIcon } = mark.spec;
+  return { name, title, keyboardShortcut, bubbleMenuIcon };
 }
 
 // Per-variant options live on each narrowed variant of `MetaBoxField`.

@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
 
+import { defineBlock, defineMark } from "@plumix/blocks";
+
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "./define.js";
 import { DuplicateAdminSlugError } from "./errors.js";
@@ -695,6 +697,68 @@ describe("buildManifest", () => {
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
     expect(buildManifest(registry).termTaxonomies).toEqual([]);
+  });
+
+  test("projects registered plugin blocks into manifest.blocks", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("acme", (ctx) => {
+      ctx.registerBlock(
+        defineBlock({
+          name: "acme/callout",
+          title: "Callout",
+          category: "interactive",
+          icon: "lightbulb",
+          schema: () =>
+            Promise.resolve({
+              name: "acme/callout",
+              parseHTML: () => [],
+              renderHTML: () => ["div", 0],
+            } as never),
+          component: () => Promise.resolve(() => null),
+        }),
+      );
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+
+    const manifest = buildManifest(registry);
+    expect(manifest.blocks).toHaveLength(1);
+    expect(manifest.blocks[0]).toMatchObject({
+      name: "acme/callout",
+      title: "Callout",
+      category: "interactive",
+      icon: "lightbulb",
+    });
+  });
+
+  test("projects registered plugin marks into manifest.marks", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("acme", (ctx) => {
+      ctx.registerMark(
+        defineMark({
+          name: "acme/highlight-warning",
+          title: "Warning highlight",
+          keyboardShortcut: "Mod-Alt-w",
+          bubbleMenuIcon: "alert-triangle",
+          schema: () =>
+            Promise.resolve({
+              name: "acme/highlight-warning",
+              parseHTML: () => [],
+              renderHTML: () => ["mark", 0],
+            } as never),
+          component: () => Promise.resolve(() => null),
+        }),
+      );
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+
+    const manifest = buildManifest(registry);
+    expect(manifest.marks).toHaveLength(1);
+    expect(manifest.marks[0]).toMatchObject({
+      name: "acme/highlight-warning",
+      title: "Warning highlight",
+      keyboardShortcut: "Mod-Alt-w",
+      bubbleMenuIcon: "alert-triangle",
+    });
   });
 });
 
