@@ -11,10 +11,9 @@ import {
 // mouse can compose, navigate, and inspect blocks without touching a
 // pointer. The slash-menu spec uses ArrowDown rather than typing a
 // query string — the suggestion plugin still deactivates on the first
-// character of typed input (tracked in #342); the `editor.isFocused`
-// guard added in this slice rules out external `setContent` echoes
-// from RHF as the cause, but the underlying interaction remains
-// unresolved.
+// character of typed input (tracked in #342); the value-sync deep
+// compare added in #344+ is a defensive improvement but doesn't
+// resolve the typed-query path on its own.
 
 const NOW = new Date("2026-05-17T00:00:00Z");
 
@@ -136,15 +135,10 @@ test.describe("Keyboard-only editor flow (a11y)", () => {
     await page.goto("entries/posts/9/edit");
     await expect(page.getByTestId("post-editor-form")).toBeVisible();
 
-    // Focus the ProseMirror canvas via keyboard — Tab-cycle through
-    // the form until the editable region is reached. The first
-    // editable contenteditable should be the canvas.
     await page.locator(".ProseMirror").click();
     await page.keyboard.type("/");
 
-    // Slash menu's listbox is rendered to document.body via a portal.
-    // The presence of every registered item proves the resolved
-    // BlockRegistry reached the editor's `extensions`. ArrowDown
+    // BlockRegistry reached the editor's extensions. ArrowDown
     // navigates to "Heading" (second item) and Enter dispatches the
     // suggestion's command — typing the query string itself is
     // tracked separately in #342.
