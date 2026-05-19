@@ -1,8 +1,18 @@
 import type { BlockNode, BlockNodeRegistry } from "./render-block-tree.js";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { renderBlockTree } from "./render-block-tree.js";
+
+function withProductionEnv<T>(fn: () => T): T {
+  const previous = process.env.NODE_ENV;
+  process.env.NODE_ENV = "production";
+  try {
+    return fn();
+  } finally {
+    process.env.NODE_ENV = previous;
+  }
+}
 
 const headingRegistry: BlockNodeRegistry = new Map([
   [
@@ -47,15 +57,15 @@ describe("renderBlockTree", () => {
     expect(html).toBe("<h2>First</h2><h3>Second</h3><h2>Third</h2>");
   });
 
-  test("renders nothing for an unknown block name", () => {
+  test("renders nothing for an unknown block name in production", () => {
     const unknown: BlockNode = {
       id: "x",
       name: "acme/missing",
       attrs: { foo: "bar" },
     };
 
-    const html = renderToStaticMarkup(
-      renderBlockTree([unknown], headingRegistry),
+    const html = withProductionEnv(() =>
+      renderToStaticMarkup(renderBlockTree([unknown], headingRegistry)),
     );
 
     expect(html).toBe("");
@@ -67,17 +77,41 @@ describe("renderBlockTree", () => {
     expect(html).toBe("");
   });
 
-  test("known blocks render even when interleaved with unknown blocks", () => {
+  test("known blocks render around unknown blocks in production", () => {
     const blocks: readonly BlockNode[] = [
       { id: "1", name: "core/heading", attrs: { text: "Before", level: 2 } },
       { id: "2", name: "acme/missing", attrs: {} },
       { id: "3", name: "core/heading", attrs: { text: "After", level: 2 } },
     ];
 
-    const html = renderToStaticMarkup(
-      renderBlockTree(blocks, headingRegistry),
+    const html = withProductionEnv(() =>
+      renderToStaticMarkup(renderBlockTree(blocks, headingRegistry)),
     );
 
     expect(html).toBe("<h2>Before</h2><h2>After</h2>");
+  });
+
+  describe("in development", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    test("emits an unknown-block template marker and warns once per name", () => {
+      const warn = vi
+        .spyOn(console, "warn")
+        .mockImplementation(() => undefined);
+      const blocks: readonly BlockNode[] = [
+        { id: "1", name: "acme/missing", attrs: {} },
+        { id: "2", name: "acme/missing", attrs: {} },
+        { id: "3", name: "acme/other", attrs: {} },
+      ];
+      const registry: BlockNodeRegistry = new Map();
+
+      const html = renderToStaticMarkup(renderBlockTree(blocks, registry));
+
+      expect(html).toContain('data-plumix-unknown-block="acme/missing"');
+      expect(html).toContain('data-plumix-unknown-block="acme/other"');
+      expect(warn).toHaveBeenCalledTimes(2);
+    });
   });
 });
