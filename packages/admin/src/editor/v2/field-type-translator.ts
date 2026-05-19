@@ -19,6 +19,8 @@ export function translateField(
           value: opt.value,
         })),
       };
+    case "slot":
+      return { type: "slot", label: input.label };
     default:
       return { type: "text", label: input.label };
   }

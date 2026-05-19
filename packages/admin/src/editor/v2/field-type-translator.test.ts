@@ -40,6 +40,13 @@ describe("translateField", () => {
     });
   });
 
+  test("maps slot to Puck's slot field type", () => {
+    expect(translateField({ name: "content", type: "slot", label: "Body" })).toEqual({
+      type: "slot",
+      label: "Body",
+    });
+  });
+
   test("falls back to text for unknown field types", () => {
     expect(
       translateField({ name: "x", type: "wat", label: "Unknown" }),
