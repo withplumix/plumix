@@ -96,6 +96,11 @@ export {
   tableHeaderCellBlockV2,
   tableHeaderRowBlockV2,
 } from "./table/v2.js";
+export {
+  listBlockV2,
+  listItemBlockV2,
+  listOrderedBlockV2,
+} from "./list/v2.js";
 export { collectActiveIslands } from "./islands.js";
 export type { ActiveIsland } from "./islands.js";
 export { PlumixIslandBootstrap } from "./island-bootstrap.js";
