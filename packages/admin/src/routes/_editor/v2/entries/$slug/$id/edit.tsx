@@ -4,6 +4,8 @@ import { Puck } from "@puckeditor/core";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 
+import { PlumixEditorLayout } from "@/editor/v2/EditorLayout.js";
+
 import "@puckeditor/core/puck.css";
 
 interface HeadingProps {
@@ -53,6 +55,7 @@ function PuckSpikeRoute(): ReactNode {
       data={data}
       onPublish={setData}
       onChange={setData}
+      overrides={{ puck: PlumixEditorLayout }}
     />
   );
 }
