@@ -22,7 +22,7 @@ const PROPERTY_TO_CATEGORY: Readonly<Record<string, TokenCategory>> = {
 
 const SAFE_CSS_TOKEN_RE = /^[A-Za-z0-9_-]+$/;
 
-const VIEWPORT_MAX_PX: Readonly<Record<"medium" | "small", number>> = {
+export const VIEWPORT_MAX_PX: Readonly<Record<"medium" | "small", number>> = {
   medium: 991,
   small: 640,
 };

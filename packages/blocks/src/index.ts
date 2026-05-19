@@ -69,6 +69,7 @@ export type {
 export {
   emitBlockStyleCss,
   tokenIdToCssVar,
+  VIEWPORT_MAX_PX,
 } from "./styles/style-emitter.js";
 export type {
   ResponsiveStyleBucket,
