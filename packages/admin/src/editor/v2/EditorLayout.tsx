@@ -1,5 +1,4 @@
 import type { BlockRegistryV2, ResponsiveStyleSlot, ThemeTokens } from "@plumix/blocks";
-import type { ComponentData } from "@puckeditor/core";
 import type { KeyboardEvent as ReactKeyboardEvent, ReactElement, ReactNode } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { createBlockRegistry } from "@plumix/blocks";
@@ -17,12 +16,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.j
 import type { SlashMenuItem } from "./slash-menu-items.js";
 
 import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
+import { patchStyleAtSelector } from "./patch-style.js";
 import { puckDataToBlockTree } from "./puck-to-block-tree.js";
-import {
-  nextInsertPoint,
-  PUCK_ROOT_ZONE,
-  resolveSlashMenuItems,
-} from "./slash-menu-items.js";
+import { nextInsertPoint, resolveSlashMenuItems } from "./slash-menu-items.js";
 import { SlashMenuPanel } from "./SlashMenuPanel.js";
 import { StyleTab } from "./StyleTab.js";
 import { viewportWidthToBucket } from "./viewport-bucket.js";
@@ -256,23 +252,13 @@ function PlumixStyleTab({ tokens }: PlumixStyleTabProps): ReactElement {
   const handleStyleChange = useCallback(
     (nextStyle: ResponsiveStyleSlot | undefined): void => {
       const { itemSelector } = puck.appState.ui;
-      if (!itemSelector || !selectedItem) return;
-      const baseProps = selectedItem.props as { id: string } & Record<
-        string,
-        unknown
-      >;
-      const data: ComponentData = {
-        type: selectedItem.type,
-        props: { ...baseProps, style: nextStyle },
-      };
+      if (!itemSelector) return;
       puck.dispatch({
-        type: "replace",
-        destinationZone: itemSelector.zone ?? PUCK_ROOT_ZONE,
-        destinationIndex: itemSelector.index,
-        data,
+        type: "setData",
+        data: (previous) => patchStyleAtSelector(previous, itemSelector, nextStyle),
       });
     },
-    [puck, selectedItem],
+    [puck],
   );
 
   return (
