@@ -59,11 +59,42 @@ function isDevMode(): boolean {
   return process.env.NODE_ENV !== "production";
 }
 
-export function renderBlockTree(
+function isBlockNodeArray(value: unknown): value is readonly BlockNode[] {
+  if (!Array.isArray(value)) return false;
+  return value.every(
+    (item) =>
+      typeof item === "object" &&
+      item !== null &&
+      typeof (item as BlockNode).id === "string" &&
+      typeof (item as BlockNode).name === "string",
+  );
+}
+
+function materializeSlots(
+  attrs: Readonly<Record<string, unknown>>,
+  registry: BlockNodeRegistry,
+  devState: DevWarnState,
+  childContext: BlockContext,
+): Readonly<Record<string, unknown>> {
+  let materialized: Record<string, unknown> | undefined;
+  for (const [key, value] of Object.entries(attrs)) {
+    if (isBlockNodeArray(value)) {
+      materialized ??= { ...attrs };
+      const children = value;
+      materialized[key] = function SlotComponent() {
+        return renderNodes(children, registry, devState, childContext);
+      };
+    }
+  }
+  return materialized ?? attrs;
+}
+
+function renderNodes(
   nodes: readonly BlockNode[],
   registry: BlockNodeRegistry,
+  devState: DevWarnState,
+  context: BlockContext,
 ): ReactNode {
-  const devState = devWarnState(registry);
   return nodes.map((node) => {
     const Component = registry.get(node.name);
     if (!Component) {
@@ -73,10 +104,28 @@ export function renderBlockTree(
         renderUnknown(node.name, devState),
       );
     }
+    const childContext: BlockContext = {
+      ...context,
+      parent: node.name,
+      depth: context.depth + 1,
+    };
+    const attrs = materializeSlots(
+      node.attrs ?? {},
+      registry,
+      devState,
+      childContext,
+    );
     return createElement(Component, {
       key: node.id,
-      attrs: node.attrs ?? {},
-      context: DEFAULT_CONTEXT,
+      attrs,
+      context,
     });
   });
+}
+
+export function renderBlockTree(
+  nodes: readonly BlockNode[],
+  registry: BlockNodeRegistry,
+): ReactNode {
+  return renderNodes(nodes, registry, devWarnState(registry), DEFAULT_CONTEXT);
 }

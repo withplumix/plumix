@@ -1,3 +1,4 @@
+import type { BlockContext } from "./types.js";
 import type { BlockNode, BlockNodeRegistry } from "./render-block-tree.js";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -89,6 +90,88 @@ describe("renderBlockTree", () => {
     );
 
     expect(html).toBe("<h2>Before</h2><h2>After</h2>");
+  });
+
+  test("threads BlockContext through slot recursion with parent name and depth", () => {
+    const captured: BlockContext[] = [];
+    const registry: BlockNodeRegistry = new Map([
+      [
+        "acme/probe",
+        ({ context }) => {
+          captured.push(context);
+          return null;
+        },
+      ],
+      [
+        "core/section",
+        ({ attrs }) => {
+          const Content = attrs.content as () => React.ReactNode;
+          return <section><Content /></section>;
+        },
+      ],
+    ]);
+
+    const tree: readonly BlockNode[] = [
+      { id: "1", name: "acme/probe", attrs: {} },
+      {
+        id: "2",
+        name: "core/section",
+        attrs: {
+          content: [{ id: "3", name: "acme/probe", attrs: {} }],
+        },
+      },
+    ];
+
+    renderToStaticMarkup(renderBlockTree(tree, registry));
+
+    expect(captured).toHaveLength(2);
+    expect(captured[0]?.parent).toBe(null);
+    expect(captured[0]?.depth).toBe(0);
+    expect(captured[1]?.parent).toBe("core/section");
+    expect(captured[1]?.depth).toBe(1);
+  });
+
+  test("materializes a slot field in attrs as a Component the block invokes", () => {
+    const registry: BlockNodeRegistry = new Map([
+      [
+        "core/heading",
+        ({ attrs }) => {
+          const { text, level } = attrs as {
+            readonly text: string;
+            readonly level: 1 | 2 | 3 | 4 | 5 | 6;
+          };
+          const Tag = `h${level}` as const;
+          return <Tag>{text}</Tag>;
+        },
+      ],
+      [
+        "core/section",
+        ({ attrs }) => {
+          const Content = attrs.content as () => React.ReactNode;
+          return <section><Content /></section>;
+        },
+      ],
+    ]);
+
+    const tree: readonly BlockNode[] = [
+      {
+        id: "1",
+        name: "core/section",
+        attrs: {
+          content: [
+            {
+              id: "2",
+              name: "core/heading",
+              attrs: { text: "Inside", level: 2 },
+            },
+          ],
+        },
+      },
+    ];
+
+    const html = renderToStaticMarkup(renderBlockTree(tree, registry));
+
+    expect(html).toBe("<section><h2>Inside</h2></section>");
   });
 
   describe("in development", () => {
