@@ -82,6 +82,11 @@ export { calloutBlockV2 } from "./callout/v2.js";
 export { buttonBlockV2 } from "./button/v2.js";
 export { spacerBlockV2 } from "./spacer/v2.js";
 export { htmlBlockV2 } from "./html/v2.js";
+export {
+  descriptionDetailBlockV2,
+  descriptionListBlockV2,
+  descriptionTermBlockV2,
+} from "./description-list/v2.js";
 export { collectActiveIslands } from "./islands.js";
 export type { ActiveIsland } from "./islands.js";
 export { PlumixIslandBootstrap } from "./island-bootstrap.js";
