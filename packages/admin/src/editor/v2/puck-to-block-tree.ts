@@ -1,4 +1,4 @@
-import type { BlockNode } from "@plumix/blocks";
+import type { BlockNode, ResponsiveStyleSlot } from "@plumix/blocks";
 import type { Data } from "@puckeditor/core";
 
 interface PuckComponentDataLike {
@@ -29,7 +29,14 @@ function toBlockNode(
   const id =
     typeof rawId === "string" && rawId.length > 0 ? rawId : fallbackId;
   const attrs: Record<string, unknown> = {};
+  let style: ResponsiveStyleSlot | undefined;
   for (const [key, value] of Object.entries(item.props)) {
+    if (key === "style") {
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        style = value;
+      }
+      continue;
+    }
     if (isPuckComponentDataArray(value)) {
       attrs[key] = value.map((child, idx) =>
         toBlockNode(child, `${id}-${key}-${idx}`),
@@ -38,7 +45,7 @@ function toBlockNode(
       attrs[key] = value;
     }
   }
-  return { id, name: item.type, attrs };
+  return style ? { id, name: item.type, attrs, style } : { id, name: item.type, attrs };
 }
 
 export function puckDataToBlockTree(

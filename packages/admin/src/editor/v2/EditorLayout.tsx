@@ -1,4 +1,5 @@
-import type { BlockRegistryV2 } from "@plumix/blocks";
+import type { BlockRegistryV2, ResponsiveStyleSlot, ThemeTokens } from "@plumix/blocks";
+import type { ComponentData } from "@puckeditor/core";
 import type { KeyboardEvent as ReactKeyboardEvent, ReactElement, ReactNode } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { createBlockRegistry } from "@plumix/blocks";
@@ -19,18 +20,23 @@ import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
 import { puckDataToBlockTree } from "./puck-to-block-tree.js";
 import {
   nextInsertPoint,
+  PUCK_ROOT_ZONE,
   resolveSlashMenuItems,
 } from "./slash-menu-items.js";
 import { SlashMenuPanel } from "./SlashMenuPanel.js";
+import { StyleTab } from "./StyleTab.js";
+import { viewportWidthToBucket } from "./viewport-bucket.js";
 
 interface PlumixEditorLayoutProps {
   readonly registry?: BlockRegistryV2;
   readonly capabilities?: ReadonlySet<string>;
+  readonly tokens?: ThemeTokens;
   readonly children?: ReactNode;
 }
 
 const EMPTY_REGISTRY: BlockRegistryV2 = createBlockRegistry([]);
 const EMPTY_CAPS: ReadonlySet<string> = new Set();
+const EMPTY_TOKENS: ThemeTokens = {};
 
 function PlumixAuditTab(): ReactElement {
   const puck = usePuck();
@@ -49,6 +55,7 @@ function PlumixAuditTab(): ReactElement {
 export function PlumixEditorLayout({
   registry = EMPTY_REGISTRY,
   capabilities = EMPTY_CAPS,
+  tokens = EMPTY_TOKENS,
 }: PlumixEditorLayoutProps): ReactElement {
   return (
     <div className="flex h-dvh flex-col" data-testid="plumix-editor-layout">
@@ -116,7 +123,22 @@ export function PlumixEditorLayout({
           className="overflow-y-auto border-l"
           data-testid="plumix-editor-right"
         >
-          <Puck.Fields />
+          <Tabs defaultValue="block" className="h-full">
+            <TabsList className="w-full">
+              <TabsTrigger value="block" data-testid="plumix-editor-tab-block">
+                Block
+              </TabsTrigger>
+              <TabsTrigger value="style" data-testid="plumix-editor-tab-style">
+                Style
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="block">
+              <Puck.Fields />
+            </TabsContent>
+            <TabsContent value="style">
+              <PlumixStyleTab tokens={tokens} />
+            </TabsContent>
+          </Tabs>
         </aside>
       </div>
     </div>
@@ -219,3 +241,47 @@ function PlumixCanvasWithSlashMenu({
     </>
   );
 }
+
+interface PlumixStyleTabProps {
+  readonly tokens: ThemeTokens;
+}
+
+function PlumixStyleTab({ tokens }: PlumixStyleTabProps): ReactElement {
+  const puck = usePuck();
+  const { selectedItem } = puck;
+  const bucket = viewportWidthToBucket(
+    puck.appState.ui.viewports.current.width,
+  );
+
+  const handleStyleChange = useCallback(
+    (nextStyle: ResponsiveStyleSlot | undefined): void => {
+      const { itemSelector } = puck.appState.ui;
+      if (!itemSelector || !selectedItem) return;
+      const baseProps = selectedItem.props as { id: string } & Record<
+        string,
+        unknown
+      >;
+      const data: ComponentData = {
+        type: selectedItem.type,
+        props: { ...baseProps, style: nextStyle },
+      };
+      puck.dispatch({
+        type: "replace",
+        destinationZone: itemSelector.zone ?? PUCK_ROOT_ZONE,
+        destinationIndex: itemSelector.index,
+        data,
+      });
+    },
+    [puck, selectedItem],
+  );
+
+  return (
+    <StyleTab
+      tokens={tokens}
+      selectedItem={selectedItem}
+      bucket={bucket}
+      onStyleChange={handleStyleChange}
+    />
+  );
+}
+
