@@ -188,6 +188,101 @@ describe("renderBlockTree", () => {
     );
   });
 
+  test("emits per-instance <style> + class when BlockNode has a style slot and tokens are provided", () => {
+    const registry = createBlockRegistry([
+      {
+        name: "core/paragraph",
+        render: ({ attrs }) => {
+          const { text } = attrs as { readonly text?: string };
+          return <p>{text}</p>;
+        },
+      },
+    ]);
+    const tree: readonly BlockNode[] = [
+      {
+        id: "p1",
+        name: "core/paragraph",
+        attrs: { text: "Hello" },
+        style: { large: { padding: "lg" } },
+      },
+    ];
+
+    const html = renderToStaticMarkup(
+      renderBlockTree(tree, registry, {
+        tokens: { spacing: { lg: { value: "24px" } } },
+      }),
+    );
+
+    expect(html).toContain('class="plumix-block-p1"');
+    expect(html).toContain(
+      "<style>.plumix-block-p1 { padding: var(--plumix-spacing-lg, 24px); }</style>",
+    );
+    expect(html).toContain("<p>Hello</p>");
+  });
+
+  test("omits the per-instance class when style is set but tokens are not provided", () => {
+    const registry = createBlockRegistry([
+      {
+        name: "core/paragraph",
+        render: () => <p>x</p>,
+      },
+    ]);
+    const tree: readonly BlockNode[] = [
+      {
+        id: "p1",
+        name: "core/paragraph",
+        attrs: {},
+        style: { large: { padding: "lg" } },
+      },
+    ];
+
+    const html = renderToStaticMarkup(renderBlockTree(tree, registry));
+
+    expect(html).toBe('<div data-plumix-block="core/paragraph"><p>x</p></div>');
+  });
+
+  test("skips style emission when node.id contains unsafe characters", () => {
+    const registry = createBlockRegistry([
+      {
+        name: "core/paragraph",
+        render: () => <p>x</p>,
+      },
+    ]);
+    const tree: readonly BlockNode[] = [
+      {
+        id: "p1</style><script>alert(1)</script>",
+        name: "core/paragraph",
+        attrs: {},
+        style: { large: { padding: "lg" } },
+      },
+    ];
+
+    const html = renderToStaticMarkup(
+      renderBlockTree(tree, registry, {
+        tokens: { spacing: { lg: { value: "24px" } } },
+      }),
+    );
+
+    expect(html).not.toContain("<style>");
+    expect(html).not.toContain("<script>");
+  });
+
+  test("omits the per-instance class when no style slot is declared", () => {
+    const heading: BlockNode = {
+      id: "h1",
+      name: "core/heading",
+      attrs: { text: "No style", level: 2 },
+    };
+
+    const html = renderToStaticMarkup(
+      renderBlockTree([heading], headingRegistry),
+    );
+
+    expect(html).toBe(
+      '<div data-plumix-block="core/heading"><h2>No style</h2></div>',
+    );
+  });
+
   test("skips the universal wrapper for blocks with inline: true", () => {
     const registry = createBlockRegistry([
       {

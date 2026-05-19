@@ -2,12 +2,12 @@ import type { ThemeTokens } from "./types.js";
 
 export type TokenCategory = keyof ThemeTokens;
 
-export type BlockStyleBucket = Readonly<Record<string, string>>;
+export type ResponsiveStyleBucket = Readonly<Record<string, string>>;
 
-export interface BlockStyleSlot {
-  readonly large?: BlockStyleBucket;
-  readonly medium?: BlockStyleBucket;
-  readonly small?: BlockStyleBucket;
+export interface ResponsiveStyleSlot {
+  readonly large?: ResponsiveStyleBucket;
+  readonly medium?: ResponsiveStyleBucket;
+  readonly small?: ResponsiveStyleBucket;
 }
 
 const PROPERTY_TO_CATEGORY: Readonly<Record<string, TokenCategory>> = {
@@ -16,10 +16,11 @@ const PROPERTY_TO_CATEGORY: Readonly<Record<string, TokenCategory>> = {
   gap: "spacing",
   background: "colors",
   color: "colors",
-  borderColor: "colors",
   fontSize: "typography",
   fontFamily: "typography",
 };
+
+const SAFE_CSS_TOKEN_RE = /^[A-Za-z0-9_-]+$/;
 
 const VIEWPORT_MAX_PX: Readonly<Record<"medium" | "small", number>> = {
   medium: 991,
@@ -41,7 +42,7 @@ export function tokenIdToCssVar(
 
 export function emitBlockStyleCss(
   className: string,
-  style: BlockStyleSlot | undefined,
+  style: ResponsiveStyleSlot | undefined,
   tokens: ThemeTokens,
 ): string {
   if (!style) return "";
@@ -63,16 +64,19 @@ export function emitBlockStyleCss(
 }
 
 function bucketToDeclarations(
-  bucket: BlockStyleBucket,
+  bucket: ResponsiveStyleBucket,
   tokens: ThemeTokens,
 ): string {
   const decls: string[] = [];
   for (const [property, tokenId] of Object.entries(bucket)) {
+    if (!SAFE_CSS_TOKEN_RE.test(property) || !SAFE_CSS_TOKEN_RE.test(tokenId)) {
+      continue;
+    }
     const category = PROPERTY_TO_CATEGORY[property];
-    const value = category
-      ? tokenIdToCssVar(tokenId, category, tokens)
-      : tokenId;
-    decls.push(`${propertyToCss(property)}: ${value};`);
+    if (!category) continue;
+    decls.push(
+      `${propertyToCss(property)}: ${tokenIdToCssVar(tokenId, category, tokens)};`,
+    );
   }
   return decls.join(" ");
 }

@@ -2,12 +2,20 @@ import type { ReactNode } from "react";
 import { createElement, Fragment } from "react";
 
 import type { BlockRegistry } from "./block-registry.js";
+import type { ResponsiveStyleSlot } from "./styles/style-emitter.js";
+import type { ThemeTokens } from "./styles/types.js";
 import type { BlockContext } from "./types.js";
+import { emitBlockStyleCss } from "./styles/style-emitter.js";
 
 export interface BlockNode {
   readonly id: string;
   readonly name: string;
   readonly attrs?: Readonly<Record<string, unknown>>;
+  readonly style?: ResponsiveStyleSlot;
+}
+
+export interface RenderBlockTreeOptions {
+  readonly tokens?: ThemeTokens;
 }
 
 export interface BlockNodeRenderProps<
@@ -21,7 +29,7 @@ export type BlockNodeComponent<Attrs = Readonly<Record<string, unknown>>> = (
   props: BlockNodeRenderProps<Attrs>,
 ) => ReactNode;
 
-const DEFAULT_CONTEXT: BlockContext = Object.freeze({
+export const DEFAULT_BLOCK_CONTEXT: BlockContext = Object.freeze({
   entry: null,
   siteSettings: Object.freeze({}),
   theme: null,
@@ -34,6 +42,8 @@ interface DevWarnState {
 }
 
 const devWarnStates = new WeakMap<object, DevWarnState>();
+
+const SAFE_ID_RE = /^[A-Za-z0-9_-]+$/;
 
 function devWarnState(registry: BlockRegistry): DevWarnState {
   let existing = devWarnStates.get(registry);
@@ -74,14 +84,14 @@ function materializeSlots(
   registry: BlockRegistry,
   devState: DevWarnState,
   childContext: BlockContext,
+  tokens: ThemeTokens | undefined,
 ): Readonly<Record<string, unknown>> {
   let materialized: Record<string, unknown> | undefined;
   for (const [key, value] of Object.entries(attrs)) {
     if (isBlockNodeArray(value)) {
       materialized ??= { ...attrs };
-      const children = value;
       materialized[key] = function SlotComponent() {
-        return renderNodes(children, registry, devState, childContext);
+        return renderNodes(value, registry, devState, childContext, tokens);
       };
     }
   }
@@ -93,6 +103,7 @@ function renderNodes(
   registry: BlockRegistry,
   devState: DevWarnState,
   context: BlockContext,
+  tokens: ThemeTokens | undefined,
 ): ReactNode {
   return nodes.map((node) => {
     const spec = registry.get(node.name);
@@ -113,14 +124,29 @@ function renderNodes(
       registry,
       devState,
       childContext,
+      tokens,
     );
     const rendered = createElement(spec.render, { attrs, context });
     if (spec.inline) {
       return createElement(Fragment, { key: node.id }, rendered);
     }
+    const safeId = SAFE_ID_RE.test(node.id) ? node.id : null;
+    const styleCss =
+      safeId && node.style && tokens
+        ? emitBlockStyleCss(`plumix-block-${safeId}`, node.style, tokens)
+        : "";
+    const className = styleCss ? `plumix-block-${safeId ?? ""}` : undefined;
+    const styleTag = styleCss
+      ? createElement("style", { key: "style" }, styleCss)
+      : null;
     return createElement(
       "div",
-      { key: node.id, "data-plumix-block": node.name },
+      {
+        key: node.id,
+        "data-plumix-block": node.name,
+        className,
+      },
+      styleTag,
       rendered,
     );
   });
@@ -129,6 +155,13 @@ function renderNodes(
 export function renderBlockTree(
   nodes: readonly BlockNode[],
   registry: BlockRegistry,
+  options?: RenderBlockTreeOptions,
 ): ReactNode {
-  return renderNodes(nodes, registry, devWarnState(registry), DEFAULT_CONTEXT);
+  return renderNodes(
+    nodes,
+    registry,
+    devWarnState(registry),
+    DEFAULT_BLOCK_CONTEXT,
+    options?.tokens,
+  );
 }

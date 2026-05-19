@@ -1,5 +1,17 @@
 import type { BlockNodeComponent } from "./render-block-tree.js";
 
+export interface BlockInputOption {
+  readonly label: string;
+  readonly value: string | number | boolean;
+}
+
+export interface BlockInput {
+  readonly name: string;
+  readonly type: string;
+  readonly label?: string;
+  readonly options?: readonly BlockInputOption[];
+}
+
 export interface BlockSpec<
   Attrs extends Readonly<Record<string, unknown>> = Readonly<
     Record<string, unknown>
@@ -9,6 +21,7 @@ export interface BlockSpec<
   readonly title?: string;
   readonly icon?: string;
   readonly category?: string;
+  readonly inputs?: readonly BlockInput[];
   readonly render: BlockNodeComponent<Attrs>;
   readonly inline?: boolean;
   readonly defaults?: Readonly<Partial<Attrs>>;

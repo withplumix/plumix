@@ -1,4 +1,4 @@
-import type { BlockStyleSlot } from "./style-emitter.js";
+import type { ResponsiveStyleSlot } from "./style-emitter.js";
 import type { ThemeTokens } from "./types.js";
 import { describe, expect, test } from "vitest";
 
@@ -29,7 +29,7 @@ describe("emitBlockStyleCss", () => {
   };
 
   test("emits base CSS for the large bucket without a media-query wrapper", () => {
-    const style: BlockStyleSlot = { large: { padding: "lg" } };
+    const style: ResponsiveStyleSlot = { large: { padding: "lg" } };
 
     expect(emitBlockStyleCss("block-1", style, tokens)).toBe(
       ".block-1 { padding: var(--plumix-spacing-lg, 24px); }",
@@ -37,19 +37,58 @@ describe("emitBlockStyleCss", () => {
   });
 
   test("emits desktop-first cascade with @media wrappers for medium and small", () => {
-    const style: BlockStyleSlot = {
+    const style: ResponsiveStyleSlot = {
       large: { padding: "lg" },
+      medium: { padding: "md" },
       small: { padding: "sm" },
     };
+    const tokensWithMedium: ThemeTokens = {
+      spacing: {
+        lg: { value: "24px" },
+        md: { value: "16px" },
+        sm: { value: "8px" },
+      },
+    };
 
-    const css = emitBlockStyleCss("block-1", style, tokens);
+    const css = emitBlockStyleCss("block-1", style, tokensWithMedium);
 
     expect(css).toContain(
       ".block-1 { padding: var(--plumix-spacing-lg, 24px); }",
     );
     expect(css).toContain(
+      "@media (max-width: 991px) { .block-1 { padding: var(--plumix-spacing-md, 16px); } }",
+    );
+    expect(css).toContain(
       "@media (max-width: 640px) { .block-1 { padding: var(--plumix-spacing-sm, 8px); } }",
     );
+  });
+
+  test("skips unmapped CSS properties without emitting raw token ids as literal CSS values", () => {
+    const style: ResponsiveStyleSlot = {
+      large: { padding: "lg", width: "lg" },
+    };
+
+    const css = emitBlockStyleCss("block-1", style, tokens);
+
+    expect(css).toContain("padding: var(--plumix-spacing-lg, 24px);");
+    expect(css).not.toContain("width: lg");
+    expect(css).not.toContain("width:");
+  });
+
+  test("skips style emission when the property or token name contains unsafe characters", () => {
+    const style: ResponsiveStyleSlot = {
+      large: {
+        padding: "lg",
+        "<script>": "lg",
+        margin: "</style><script>alert(1)</script>",
+      },
+    };
+
+    const css = emitBlockStyleCss("block-1", style, tokens);
+
+    expect(css).toContain("padding: var(--plumix-spacing-lg, 24px);");
+    expect(css).not.toContain("<script>");
+    expect(css).not.toContain("</style>");
   });
 
   test("returns an empty string for missing or empty style slot", () => {
@@ -58,7 +97,7 @@ describe("emitBlockStyleCss", () => {
   });
 
   test("converts camelCase CSS properties to kebab-case", () => {
-    const style: BlockStyleSlot = { large: { fontSize: "lg" } };
+    const style: ResponsiveStyleSlot = { large: { fontSize: "lg" } };
 
     expect(emitBlockStyleCss("b", style, { typography: { lg: { value: "20px" } } })).toBe(
       ".b { font-size: var(--plumix-typography-lg, 20px); }",
