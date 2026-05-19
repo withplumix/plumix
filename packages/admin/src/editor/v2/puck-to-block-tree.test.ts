@@ -131,12 +131,50 @@ describe("puckDataToBlockTree", () => {
       ]),
     );
 
-    // Walk three levels deep and confirm the innermost block is properly shaped.
     const outerContent = result[0]?.attrs?.content as readonly { attrs: Record<string, unknown> }[];
     const middle = outerContent[0];
     expect(middle).toBeDefined();
     const inner = (middle?.attrs.content as readonly { id: string }[])[0];
     expect(inner?.id).toBe("inner");
+  });
+
+  test("elevates props.style to node.style (separate from attrs)", () => {
+    const result = puckDataToBlockTree(
+      data([
+        {
+          type: "core/heading",
+          props: {
+            id: "h1",
+            text: "Title",
+            style: { large: { padding: "md" } },
+          },
+        },
+      ]),
+    );
+
+    expect(result[0]?.style).toEqual({ large: { padding: "md" } });
+    expect((result[0]?.attrs as Record<string, unknown>).style).toBeUndefined();
+  });
+
+  test("omits node.style when props.style is absent", () => {
+    const result = puckDataToBlockTree(
+      data([{ type: "core/heading", props: { id: "h1", text: "Title" } }]),
+    );
+    expect(result[0]?.style).toBeUndefined();
+  });
+
+  test("drops malformed props.style (null, primitive, array) without polluting attrs", () => {
+    const result = puckDataToBlockTree(
+      data([
+        { type: "core/heading", props: { id: "h1", style: null } },
+        { type: "core/heading", props: { id: "h2", style: "foo" } },
+        { type: "core/heading", props: { id: "h3", style: [] } },
+      ]),
+    );
+    for (const node of result) {
+      expect(node.style).toBeUndefined();
+      expect((node.attrs as Record<string, unknown>).style).toBeUndefined();
+    }
   });
 
   test("leaves non-slot arrays in attrs alone (does not false-positive on plain data lists)", () => {
