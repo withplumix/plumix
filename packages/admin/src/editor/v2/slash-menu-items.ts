@@ -1,5 +1,9 @@
 import type { BlockRegistryV2, BlockSpecV2 } from "@plumix/blocks";
 
+import { PUCK_ROOT_ZONE } from "./puck-zones.js";
+
+export { PUCK_ROOT_ZONE };
+
 export interface SlashMenuItem {
   readonly name: string;
   readonly title: string;
@@ -72,8 +76,6 @@ function matchScore(
   if (spec.name.toLowerCase().includes(needle)) return NAME_MATCH;
   return 0;
 }
-
-export const PUCK_ROOT_ZONE = "root:default-zone";
 
 export interface InsertPointSelector {
   readonly zone?: string;
