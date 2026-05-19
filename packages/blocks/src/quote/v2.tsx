@@ -12,6 +12,10 @@ export const quoteBlockV2 = defineBlock({
     { name: "citation", type: "text", label: "Citation" },
   ],
   defaults: { text: "", citation: "" },
+  transforms: {
+    priority: 50,
+    to: [{ target: "core/paragraph", mapAttrs: (a) => ({ text: a.text }) }],
+  },
   render: ({ attrs }): ReactNode => {
     const { text = "", citation = "" } = attrs as {
       readonly text?: string;

@@ -9,6 +9,10 @@ export const headingBlock = defineBlock({
   icon: "Heading",
   category: "text",
   defaults: { level: 2, text: "" },
+  transforms: {
+    priority: 50,
+    to: [{ target: "core/paragraph", mapAttrs: (a) => ({ text: a.text }) }],
+  },
   render: ({ attrs }): ReactNode => {
     const { level = 2, text = "" } = attrs as {
       readonly level?: number;
