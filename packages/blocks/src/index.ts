@@ -103,6 +103,7 @@ export {
   listItemBlockV2,
   listOrderedBlockV2,
 } from "./list/v2.js";
+export { buttonsBlockV2 } from "./buttons/v2.js";
 export { collectActiveIslands } from "./islands.js";
 export type { ActiveIsland } from "./islands.js";
 export { PlumixIslandBootstrap } from "./island-bootstrap.js";
