@@ -12,7 +12,11 @@ function withProductionEnv<T>(fn: () => T): T {
   try {
     return fn();
   } finally {
-    process.env.NODE_ENV = previous;
+    if (previous === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = previous;
+    }
   }
 }
 
@@ -322,7 +326,7 @@ describe("renderBlockTree", () => {
       );
     });
 
-    test("emits one script per block instance for multiple instances of the same client block", () => {
+    test("dedupes the hydration script when multiple instances share a client.script URL", () => {
       const registry = createBlockRegistry([
         {
           name: "acme/carousel",
@@ -338,7 +342,11 @@ describe("renderBlockTree", () => {
       const html = renderToStaticMarkup(renderBlockTree(tree, registry));
 
       const scriptMatches = html.match(/<script[^>]*src="\/assets\/carousel.js"/g);
-      expect(scriptMatches).toHaveLength(2);
+      expect(scriptMatches).toHaveLength(1);
+      // Each instance still carries the island marker so the bootstrap can
+      // find every DOM anchor by name.
+      const islandMatches = html.match(/data-plumix-island="acme\/carousel"/g);
+      expect(islandMatches).toHaveLength(2);
     });
 
     test("does not emit a script for blocks without spec.client", () => {

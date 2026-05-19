@@ -17,23 +17,19 @@ describe("core/description-list family v2", () => {
     );
   });
 
-  test("renders <dt> with the term text", () => {
+  test("renders <dt> with the term text, no universal wrapper (inline)", () => {
     const html = renderBlockSpecToHtml(descriptionTermBlockV2, { text: "Plumix" });
 
-    expect(html).toBe(
-      '<div data-plumix-block="core/description-term"><dt>Plumix</dt></div>',
-    );
+    expect(html).toBe("<dt>Plumix</dt>");
   });
 
-  test("renders <dd> with the detail text", () => {
+  test("renders <dd> with the detail text, no universal wrapper (inline)", () => {
     const html = renderBlockSpecToHtml(descriptionDetailBlockV2, { text: "A CMS" });
 
-    expect(html).toBe(
-      '<div data-plumix-block="core/description-detail"><dd>A CMS</dd></div>',
-    );
+    expect(html).toBe("<dd>A CMS</dd>");
   });
 
-  test("renders a full dl with term + detail children via the items slot", () => {
+  test("dt + dd nest as direct children of <dl> (preserves HTML content model)", () => {
     const tree: readonly BlockNode[] = [
       {
         id: "dl1",
@@ -52,8 +48,6 @@ describe("core/description-list family v2", () => {
       tree,
     );
 
-    expect(html).toContain("<dt>Plumix</dt>");
-    expect(html).toContain("<dd>A CMS</dd>");
-    expect(html).toContain("<dl>");
+    expect(html).toContain("<dl><dt>Plumix</dt><dd>A CMS</dd></dl>");
   });
 });

@@ -17,14 +17,10 @@ export const codeBlockV2 = defineBlock({
       readonly text?: string;
       readonly language?: string;
     };
-    const trimmed = language.trim();
+    const lang = language.trim() || undefined;
     return (
-      <pre data-language={trimmed.length > 0 ? trimmed : undefined}>
-        {trimmed.length > 0 ? (
-          <code data-language={trimmed}>{text}</code>
-        ) : (
-          text
-        )}
+      <pre data-language={lang}>
+        {lang ? <code data-language={lang}>{text}</code> : text}
       </pre>
     );
   },

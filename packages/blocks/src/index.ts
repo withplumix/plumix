@@ -87,6 +87,13 @@ export {
   descriptionListBlockV2,
   descriptionTermBlockV2,
 } from "./description-list/v2.js";
+export {
+  tableBlockV2,
+  tableBodyRowBlockV2,
+  tableCellBlockV2,
+  tableHeaderCellBlockV2,
+  tableHeaderRowBlockV2,
+} from "./table/v2.js";
 export { collectActiveIslands } from "./islands.js";
 export type { ActiveIsland } from "./islands.js";
 export { PlumixIslandBootstrap } from "./island-bootstrap.js";

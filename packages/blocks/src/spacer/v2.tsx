@@ -15,7 +15,7 @@ export const spacerBlockV2 = defineBlock({
   name: "core/spacer",
   title: "Spacer",
   icon: "Minus",
-  category: "interactive",
+  category: "layout",
   inputs: [{ name: "height", type: "number", label: "Height (px)" }],
   defaults: { height: DEFAULT_HEIGHT },
   render: ({ attrs }): ReactNode => {

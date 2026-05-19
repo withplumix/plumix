@@ -32,6 +32,28 @@ describe("core/button v2", () => {
     expect(html).not.toContain("javascript:");
   });
 
+  test("adds rel='noopener noreferrer' when target='_blank' on a safe href", () => {
+    const html = renderBlockSpecToHtml(buttonBlockV2, {
+      label: "Open",
+      href: "https://example.com",
+      target: "_blank",
+    });
+
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain('rel="noopener noreferrer"');
+  });
+
+  test("omits rel when target='_self' (default)", () => {
+    const html = renderBlockSpecToHtml(buttonBlockV2, {
+      label: "Same",
+      href: "https://example.com",
+      target: "_self",
+    });
+
+    expect(html).toContain('target="_self"');
+    expect(html).not.toContain("rel=");
+  });
+
   test("falls back to primary/md when variant/size are invalid", () => {
     const html = renderBlockSpecToHtml(buttonBlockV2, {
       label: "Click",
