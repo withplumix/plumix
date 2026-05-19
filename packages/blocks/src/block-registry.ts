@@ -12,6 +12,10 @@ export interface BlockInput {
   readonly options?: readonly BlockInputOption[];
 }
 
+export interface ClientIslandDescriptor {
+  readonly script: string;
+}
+
 export interface BlockSpec<
   Attrs extends Readonly<Record<string, unknown>> = Readonly<
     Record<string, unknown>
@@ -27,6 +31,7 @@ export interface BlockSpec<
   readonly defaults?: Readonly<Partial<Attrs>>;
   readonly placeholder?: string;
   readonly capability?: string;
+  readonly client?: ClientIslandDescriptor;
 }
 
 export interface BlockRegistry {

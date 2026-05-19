@@ -60,6 +60,7 @@ export type {
   BlockInputOption,
   BlockRegistry as BlockRegistryV2,
   BlockSpec as BlockSpecV2,
+  ClientIslandDescriptor,
 } from "./block-registry.js";
 export {
   emitBlockStyleCss,
