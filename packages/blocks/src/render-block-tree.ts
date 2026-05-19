@@ -170,6 +170,20 @@ function renderNodes(
       styleTag,
       rendered,
     );
+    if (spec.client) {
+      const hydrationScript = createElement("script", {
+        key: "client-island",
+        type: "module",
+        src: spec.client.script,
+      });
+      hooks?.afterRender?.(node, context);
+      return createElement(
+        Fragment,
+        { key: node.id },
+        wrappedEl,
+        hydrationScript,
+      );
+    }
     hooks?.afterRender?.(node, context);
     return wrappedEl;
   });

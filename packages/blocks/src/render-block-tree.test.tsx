@@ -301,6 +301,61 @@ describe("renderBlockTree", () => {
     expect(html).not.toContain("data-plumix-block");
   });
 
+  describe("client islands", () => {
+    test("emits a <script type='module'> next to the wrapper when spec.client is declared", () => {
+      const registry = createBlockRegistry([
+        {
+          name: "acme/carousel",
+          render: () => <div className="carousel" />,
+          client: { script: "/assets/carousel.js" },
+        },
+      ]);
+      const tree: readonly BlockNode[] = [
+        { id: "c1", name: "acme/carousel", attrs: {} },
+      ];
+
+      const html = renderToStaticMarkup(renderBlockTree(tree, registry));
+
+      expect(html).toContain('data-plumix-block="acme/carousel"');
+      expect(html).toContain(
+        '<script type="module" src="/assets/carousel.js"></script>',
+      );
+    });
+
+    test("emits one script per block instance for multiple instances of the same client block", () => {
+      const registry = createBlockRegistry([
+        {
+          name: "acme/carousel",
+          render: () => <div />,
+          client: { script: "/assets/carousel.js" },
+        },
+      ]);
+      const tree: readonly BlockNode[] = [
+        { id: "c1", name: "acme/carousel", attrs: {} },
+        { id: "c2", name: "acme/carousel", attrs: {} },
+      ];
+
+      const html = renderToStaticMarkup(renderBlockTree(tree, registry));
+
+      const scriptMatches = html.match(/<script[^>]*src="\/assets\/carousel.js"/g);
+      expect(scriptMatches).toHaveLength(2);
+    });
+
+    test("does not emit a script for blocks without spec.client", () => {
+      const heading: BlockNode = {
+        id: "h1",
+        name: "core/heading",
+        attrs: { text: "no js", level: 2 },
+      };
+
+      const html = renderToStaticMarkup(
+        renderBlockTree([heading], headingRegistry),
+      );
+
+      expect(html).not.toContain("<script");
+    });
+  });
+
   describe("render hooks", () => {
     test("fires beforeRender and afterRender around each block render", () => {
       const events: { phase: "before" | "after"; nodeName: string }[] = [];
