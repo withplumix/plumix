@@ -307,11 +307,46 @@ function PlumixBlockActions({ registry }: PlumixBlockActionsProps): ReactElement
     [puck, selectedItem, registry],
   );
 
+  const handleDuplicate = useCallback((): void => {
+    const { itemSelector } = puck.appState.ui;
+    if (!itemSelector) return;
+    puck.dispatch({
+      type: "duplicate",
+      sourceIndex: itemSelector.index,
+      sourceZone: itemSelector.zone ?? PUCK_ROOT_ZONE,
+    });
+  }, [puck]);
+
+  const handleDelete = useCallback((): void => {
+    const { itemSelector } = puck.appState.ui;
+    if (!itemSelector) return;
+    puck.dispatch({
+      type: "remove",
+      index: itemSelector.index,
+      zone: itemSelector.zone ?? PUCK_ROOT_ZONE,
+    });
+  }, [puck]);
+
+  const handleCopyJson = useCallback((): void => {
+    if (!selectedItem) return;
+    navigator.clipboard
+      .writeText(JSON.stringify(selectedItem, null, 2))
+      .catch((error: unknown) => {
+        console.error(
+          "[plumix:block-actions] Copy to clipboard failed:",
+          error,
+        );
+      });
+  }, [selectedItem]);
+
   return (
     <BlockActionsPanel
       specName={selectedItem?.type}
       registry={registry}
       onTransform={handleTransform}
+      onDuplicate={handleDuplicate}
+      onDelete={handleDelete}
+      onCopyJson={handleCopyJson}
     />
   );
 }
