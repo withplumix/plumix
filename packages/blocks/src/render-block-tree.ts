@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { createElement } from "react";
+import { createElement, Fragment } from "react";
 
 import type { BlockContext } from "./types.js";
 
@@ -30,13 +30,49 @@ const DEFAULT_CONTEXT: BlockContext = Object.freeze({
   depth: 0,
 });
 
+interface DevWarnState {
+  readonly seen: Set<string>;
+}
+
+const devWarnStates = new WeakMap<object, DevWarnState>();
+
+function devWarnState(registry: BlockNodeRegistry): DevWarnState {
+  let existing = devWarnStates.get(registry);
+  if (!existing) {
+    existing = { seen: new Set() };
+    devWarnStates.set(registry, existing);
+  }
+  return existing;
+}
+
+function renderUnknown(name: string, devState: DevWarnState): ReactNode {
+  if (!isDevMode()) return null;
+  if (!devState.seen.has(name)) {
+    devState.seen.add(name);
+    console.warn(`[plumix:blocks] Unregistered block name: ${name}`);
+  }
+  return createElement("template", { "data-plumix-unknown-block": name });
+}
+
+function isDevMode(): boolean {
+  if (typeof process === "undefined") return false;
+  return process.env.NODE_ENV !== "production";
+}
+
 export function renderBlockTree(
   nodes: readonly BlockNode[],
   registry: BlockNodeRegistry,
 ): ReactNode {
+  const devState = devWarnState(registry);
   return nodes.map((node) => {
     const Component = registry.get(node.name);
-    if (!Component) return null;
+    if (!Component) {
+      return createElement(
+        Fragment,
+        { key: node.id },
+        renderUnknown(node.name, devState),
+      );
+    }
     return createElement(Component, {
       key: node.id,
       attrs: node.attrs ?? {},
