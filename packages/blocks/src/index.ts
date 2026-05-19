@@ -46,17 +46,30 @@ export type {
   EntryContentProps,
   SyncFilterExecutor,
 } from "./walker.js";
-export { renderBlockTree } from "./render-block-tree.js";
+export { DEFAULT_BLOCK_CONTEXT, renderBlockTree } from "./render-block-tree.js";
 export type {
   BlockNode,
   BlockNodeComponent,
   BlockNodeRenderProps,
+  RenderBlockTreeOptions,
 } from "./render-block-tree.js";
 export { createBlockRegistry, defineBlock as defineBlockSpec } from "./block-registry.js";
 export type {
-  BlockSpec as BlockSpecV2,
+  BlockInput,
+  BlockInputOption,
   BlockRegistry as BlockRegistryV2,
+  BlockSpec as BlockSpecV2,
 } from "./block-registry.js";
+export {
+  emitBlockStyleCss,
+  tokenIdToCssVar,
+} from "./styles/style-emitter.js";
+export type {
+  ResponsiveStyleBucket,
+  ResponsiveStyleSlot,
+  TokenCategory,
+} from "./styles/style-emitter.js";
+export { paragraphBlockV2 } from "./paragraph/v2.js";
 export { collectActiveIslands } from "./islands.js";
 export type { ActiveIsland } from "./islands.js";
 export { PlumixIslandBootstrap } from "./island-bootstrap.js";
