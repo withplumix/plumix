@@ -28,6 +28,7 @@ export interface BlockSpec<
   readonly keywords?: readonly string[];
   readonly icon?: string;
   readonly category?: string;
+  readonly inserter?: boolean;
   readonly inputs?: readonly BlockInput[];
   readonly render: BlockNodeComponent<Attrs>;
   readonly inline?: boolean;

@@ -33,4 +33,29 @@ describe("coreBlocksV2", () => {
     const names = new Set(coreBlocksV2.map((b) => b.name));
     expect(names.has("core/html")).toBe(false);
   });
+
+  test("declares `inserter: false` on every spec that only makes sense inside a parent", () => {
+    const contentOnlyNames = new Set([
+      "core/table-header-row",
+      "core/table-body-row",
+      "core/table-header-cell",
+      "core/table-cell",
+      "core/list-item",
+      "core/description-term",
+      "core/description-detail",
+    ]);
+
+    for (const spec of coreBlocksV2) {
+      if (contentOnlyNames.has(spec.name)) {
+        expect(spec.inserter).toBe(false);
+      } else {
+        expect(spec.inserter).not.toBe(false);
+      }
+    }
+
+    const hidden = new Set(
+      coreBlocksV2.filter((s) => s.inserter === false).map((s) => s.name),
+    );
+    expect(hidden).toEqual(contentOnlyNames);
+  });
 });
