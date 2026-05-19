@@ -5,9 +5,13 @@ import { analyzeHeadingStructure } from "@plumix/blocks";
 
 interface HeadingAuditPanelProps {
   readonly tree: readonly BlockNode[];
+  readonly onSelect?: (nodeId: string) => void;
 }
 
-export function HeadingAuditPanel({ tree }: HeadingAuditPanelProps): ReactNode {
+export function HeadingAuditPanel({
+  tree,
+  onSelect,
+}: HeadingAuditPanelProps): ReactNode {
   const violations = analyzeHeadingStructure(tree);
 
   if (violations.length === 0) {
@@ -24,17 +28,37 @@ export function HeadingAuditPanel({ tree }: HeadingAuditPanelProps): ReactNode {
       className="space-y-2 p-2"
       data-testid="heading-audit-list"
     >
-      {violations.map((violation, index) => (
-        <li
-          key={`${violation.kind}-${index}`}
-          role="listitem"
-          className="rounded border border-amber-200 bg-amber-50 p-2 text-sm"
-          data-testid={`heading-audit-violation-${violation.kind}`}
-          data-node-ids={nodeIdsFor(violation).join(",")}
-        >
-          <strong>Warning:</strong> {describe(violation)}
-        </li>
-      ))}
+      {violations.map((violation, index) => {
+        const nodeIds = nodeIdsFor(violation);
+        const primaryId = nodeIds[0];
+        const message = (
+          <>
+            <strong>Warning:</strong> {describe(violation)}
+          </>
+        );
+        return (
+          <li
+            key={`${violation.kind}-${index}`}
+            role="listitem"
+            className="rounded border border-amber-200 bg-amber-50 p-2 text-sm"
+            data-testid={`heading-audit-violation-${violation.kind}`}
+            data-node-ids={nodeIds.join(",")}
+          >
+            {onSelect && primaryId !== undefined ? (
+              <button
+                type="button"
+                onClick={() => onSelect(primaryId)}
+                className="w-full text-left"
+                data-testid={`heading-audit-jump-${violation.kind}`}
+              >
+                {message}
+              </button>
+            ) : (
+              message
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }
