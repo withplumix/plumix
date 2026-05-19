@@ -55,6 +55,7 @@ function PuckSpikeRoute(): ReactNode {
       data={data}
       onPublish={setData}
       onChange={setData}
+      iframe={{ enabled: false }}
       overrides={{ puck: PlumixEditorLayout }}
     />
   );
