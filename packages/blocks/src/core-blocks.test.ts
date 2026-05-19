@@ -3,12 +3,11 @@ import { describe, expect, test } from "vitest";
 import { coreBlocks } from "./core-blocks.js";
 
 describe("coreBlocks catalogue", () => {
-  test("ships layout primitives alongside paragraph and heading", () => {
+  test("ships layout primitives alongside paragraph", () => {
     const names = coreBlocks.map((b) => b.name);
     expect(names).toEqual(
       expect.arrayContaining([
         "core/paragraph",
-        "core/heading",
         "core/group",
         "core/columns",
         "core/column",

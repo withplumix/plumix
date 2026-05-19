@@ -1,107 +1,41 @@
+import type { BlockNode } from "../render-block-tree.js";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import { coreBlocks } from "../core-blocks.js";
-import { mockRegistry, renderBlock } from "../test/index.js";
+import { createBlockRegistry } from "../block-registry.js";
+import { renderBlockTree } from "../render-block-tree.js";
 import { headingBlock } from "./index.js";
 
-describe("core/heading", () => {
-  test("is shipped in coreBlocks alongside core/paragraph", () => {
-    const names = coreBlocks.map((b) => b.name);
-    expect(names).toContain("core/heading");
+describe("core/heading end-to-end through new defineBlock + flat registry + walker", () => {
+  test("renders the heading tag at the declared level with the wrapper", () => {
+    const registry = createBlockRegistry([headingBlock]);
+    const tree: readonly BlockNode[] = [
+      {
+        id: "1",
+        name: "core/heading",
+        attrs: { text: "Section title", level: 2 },
+      },
+    ];
+
+    const html = renderToStaticMarkup(renderBlockTree(tree, registry));
+
+    expect(html).toBe(
+      '<div data-plumix-block="core/heading"><h2>Section title</h2></div>',
+    );
   });
 
-  test("renders <h2> for the default level", async () => {
-    const registry = await mockRegistry({ core: [headingBlock] });
-    const html = renderBlock({
-      registry,
-      content: {
-        type: "doc",
-        content: [
-          {
-            type: "core/heading",
-            content: [{ type: "text", text: "Title" }],
-          },
-        ],
+  test("falls back to h2 when level is not in attrs", () => {
+    const registry = createBlockRegistry([headingBlock]);
+    const tree: readonly BlockNode[] = [
+      {
+        id: "1",
+        name: "core/heading",
+        attrs: { text: "Defaulted" },
       },
-    });
-    expect(html).toBe("<h2>Title</h2>");
-  });
+    ];
 
-  test.each([1, 2, 3, 4, 5, 6])("respects level=%i as <h%i>", async (level) => {
-    const registry = await mockRegistry({ core: [headingBlock] });
-    const html = renderBlock({
-      registry,
-      content: {
-        type: "doc",
-        content: [
-          {
-            type: "core/heading",
-            attrs: { level },
-            content: [{ type: "text", text: "Title" }],
-          },
-        ],
-      },
-    });
-    expect(html).toBe(`<h${level}>Title</h${level}>`);
-  });
+    const html = renderToStaticMarkup(renderBlockTree(tree, registry));
 
-  test.each([
-    { level: 0, expected: 1 },
-    { level: -3, expected: 1 },
-    { level: 7, expected: 6 },
-    { level: 99, expected: 6 },
-    { level: 2.7, expected: 2 },
-  ])("clamps level=$level to <h$expected>", async ({ level, expected }) => {
-    const registry = await mockRegistry({ core: [headingBlock] });
-    const html = renderBlock({
-      registry,
-      content: {
-        type: "doc",
-        content: [
-          {
-            type: "core/heading",
-            attrs: { level },
-            content: [{ type: "text", text: "T" }],
-          },
-        ],
-      },
-    });
-    expect(html).toBe(`<h${expected}>T</h${expected}>`);
-  });
-
-  test('legacy `type: "heading"` content renders identically', async () => {
-    const registry = await mockRegistry({ core: [headingBlock] });
-    const html = renderBlock({
-      registry,
-      content: {
-        type: "doc",
-        content: [
-          {
-            type: "heading",
-            attrs: { level: 3 },
-            content: [{ type: "text", text: "Legacy" }],
-          },
-        ],
-      },
-    });
-    expect(html).toBe("<h3>Legacy</h3>");
-  });
-
-  test("falls back to <h2> when level is not a number", async () => {
-    const registry = await mockRegistry({ core: [headingBlock] });
-    const html = renderBlock({
-      registry,
-      content: {
-        type: "doc",
-        content: [
-          {
-            type: "core/heading",
-            attrs: { level: "two" },
-            content: [{ type: "text", text: "T" }],
-          },
-        ],
-      },
-    });
-    expect(html).toBe("<h2>T</h2>");
+    expect(html).toContain("<h2>Defaulted</h2>");
   });
 });
