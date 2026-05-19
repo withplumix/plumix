@@ -47,6 +47,8 @@ export type {
   SyncFilterExecutor,
 } from "./walker.js";
 export { DEFAULT_BLOCK_CONTEXT, renderBlockTree } from "./render-block-tree.js";
+export { analyzeHeadingStructure } from "./heading/audit.js";
+export type { HeadingAuditViolation } from "./heading/audit.js";
 export { resolveBlockTransformsV2 } from "./transforms-v2.js";
 export type { ResolvedTransformTarget } from "./transforms-v2.js";
 export type {
