@@ -161,7 +161,7 @@ describe("StyleTab", () => {
     expect(screen.queryByTestId("style-tab-section-background")).toBeNull();
     expect(screen.queryByTestId("style-tab-section-color")).toBeNull();
     expect(screen.queryByTestId("style-tab-section-fontSize")).toBeNull();
-    expect(screen.queryByTestId("style-tab-section-spacing")).toBeDefined();
+    expect(screen.queryByTestId("style-tab-section-padding")).toBeDefined();
   });
 
   test("clicking a background swatch writes the token id to style.<bucket>.background", async () => {
@@ -206,6 +206,25 @@ describe("StyleTab", () => {
     expect(onStyleChange).toHaveBeenCalledWith({
       large: { color: "ink" },
     });
+  });
+
+  test("clicking a section's trigger collapses its inner control", async () => {
+    const onStyleChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <StyleTab
+        tokens={tokens}
+        selectedItem={makeItem()}
+        bucket="large"
+        onStyleChange={onStyleChange}
+      />,
+    );
+
+    expect(screen.getByTestId("style-tab-padding-select")).toBeDefined();
+
+    await user.click(screen.getByTestId("style-tab-section-padding-trigger"));
+
+    expect(screen.queryByTestId("style-tab-padding-select")).toBeNull();
   });
 
   test("selecting a font-size option writes the token id to style.<bucket>.fontSize", async () => {

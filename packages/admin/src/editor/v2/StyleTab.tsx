@@ -3,8 +3,15 @@ import type {
   ThemeTokenGroup,
   ThemeTokens,
 } from "@plumix/blocks";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import type { ComponentData } from "@puckeditor/core";
+
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion.js";
 
 import { setStyleProperty } from "./style-edit.js";
 import { TokenSwatchList } from "./TokenSwatchList.js";
@@ -24,6 +31,8 @@ const BUCKET_LABEL: Readonly<Record<StyleBucket, string>> = {
   medium: "Tablet",
   large: "Desktop",
 };
+
+const SECTION_VALUES = ["background", "color", "fontSize", "padding"] as const;
 
 export function StyleTab({
   tokens,
@@ -58,88 +67,107 @@ export function StyleTab({
       >
         Editing for: {BUCKET_LABEL[bucket]}
       </div>
-      <SwatchSection
-        heading="Background"
-        testId="style-tab-section-background"
-        property="background"
-        tokens={tokens.colors}
-        value={style?.[bucket]?.background ?? ""}
-        onWrite={writeProperty}
-      />
-      <SwatchSection
-        heading="Text color"
-        testId="style-tab-section-color"
-        property="color"
-        tokens={tokens.colors}
-        value={style?.[bucket]?.color ?? ""}
-        onWrite={writeProperty}
-      />
-      <SelectSection
-        heading="Font size"
-        testId="style-tab-section-fontSize"
-        property="fontSize"
-        tokens={tokens.typography}
-        value={style?.[bucket]?.fontSize ?? ""}
-        onWrite={writeProperty}
-      />
-      <SelectSection
-        heading="Padding"
-        testId="style-tab-section-spacing"
-        property="padding"
-        tokens={tokens.spacing}
-        value={style?.[bucket]?.padding ?? ""}
-        onWrite={writeProperty}
-      />
+      <Accordion type="multiple" defaultValue={[...SECTION_VALUES]}>
+        <SwatchSection
+          heading="Background"
+          property="background"
+          tokens={tokens.colors}
+          activeToken={style?.[bucket]?.background ?? ""}
+          onWrite={writeProperty}
+        />
+        <SwatchSection
+          heading="Text color"
+          property="color"
+          tokens={tokens.colors}
+          activeToken={style?.[bucket]?.color ?? ""}
+          onWrite={writeProperty}
+        />
+        <SelectSection
+          heading="Font size"
+          property="fontSize"
+          tokens={tokens.typography}
+          activeToken={style?.[bucket]?.fontSize ?? ""}
+          onWrite={writeProperty}
+        />
+        <SelectSection
+          heading="Padding"
+          property="padding"
+          tokens={tokens.spacing}
+          activeToken={style?.[bucket]?.padding ?? ""}
+          onWrite={writeProperty}
+        />
+      </Accordion>
     </div>
   );
 }
 
 interface SectionProps {
   readonly heading: string;
-  readonly testId: string;
   readonly property: StyleProperty;
   readonly tokens: ThemeTokenGroup | undefined;
-  readonly value: string;
+  readonly activeToken: string;
   readonly onWrite: (property: StyleProperty, tokenId: string | undefined) => void;
+}
+
+interface CollapsibleSectionProps {
+  readonly property: StyleProperty;
+  readonly heading: string;
+  readonly children: ReactNode;
+}
+
+function CollapsibleSection({
+  property,
+  heading,
+  children,
+}: CollapsibleSectionProps): ReactElement {
+  return (
+    <AccordionItem
+      value={property}
+      data-testid={`style-tab-section-${property}`}
+    >
+      <AccordionTrigger
+        data-testid={`style-tab-section-${property}-trigger`}
+      >
+        {heading}
+      </AccordionTrigger>
+      <AccordionContent>{children}</AccordionContent>
+    </AccordionItem>
+  );
 }
 
 function SwatchSection({
   heading,
-  testId,
   property,
   tokens,
-  value,
+  activeToken,
   onWrite,
 }: SectionProps): ReactElement | null {
   if (!tokens) return null;
   return (
-    <section className="space-y-2" data-testid={testId}>
-      <h3 className="text-sm font-medium">{heading}</h3>
+    <CollapsibleSection property={property} heading={heading}>
       <TokenSwatchList
         tokens={tokens}
-        value={value}
+        value={activeToken}
         onChange={(next) => onWrite(property, next)}
         testIdPrefix={`style-tab-${property}`}
         ariaLabel={heading}
       />
-    </section>
+    </CollapsibleSection>
   );
 }
 
 function SelectSection({
   heading,
-  testId,
   property,
   tokens,
-  value,
+  activeToken,
   onWrite,
 }: SectionProps): ReactElement | null {
   if (!tokens) return null;
   return (
-    <section className="space-y-2" data-testid={testId}>
-      <h3 className="text-sm font-medium">{heading}</h3>
+    <CollapsibleSection property={property} heading={heading}>
       <select
-        value={value}
+        value={activeToken}
         onChange={(event) =>
           onWrite(property, event.target.value === "" ? undefined : event.target.value)
         }
@@ -153,6 +181,6 @@ function SelectSection({
           </option>
         ))}
       </select>
-    </section>
+    </CollapsibleSection>
   );
 }
