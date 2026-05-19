@@ -1,10 +1,23 @@
 import type { ReactElement, ReactNode } from "react";
-import { Puck } from "@puckeditor/core";
+import { useMemo } from "react";
+import { Puck, usePuck } from "@puckeditor/core";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.js";
 
+import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
+import { puckDataToBlockTree } from "./puck-to-block-tree.js";
+
 interface PlumixEditorLayoutProps {
   readonly children?: ReactNode;
+}
+
+function PlumixAuditTab(): ReactElement {
+  const puck = usePuck();
+  const tree = useMemo(
+    () => puckDataToBlockTree(puck.appState.data),
+    [puck.appState.data],
+  );
+  return <HeadingAuditPanel tree={tree} />;
 }
 
 export function PlumixEditorLayout(
@@ -53,12 +66,18 @@ export function PlumixEditorLayout(
               <TabsTrigger value="outline" data-testid="plumix-editor-tab-outline">
                 Outline
               </TabsTrigger>
+              <TabsTrigger value="audit" data-testid="plumix-editor-tab-audit">
+                Audit
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="blocks">
               <Puck.Components />
             </TabsContent>
             <TabsContent value="outline">
               <Puck.Outline />
+            </TabsContent>
+            <TabsContent value="audit">
+              <PlumixAuditTab />
             </TabsContent>
           </Tabs>
         </aside>
