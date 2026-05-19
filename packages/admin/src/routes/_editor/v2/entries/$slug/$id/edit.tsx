@@ -6,10 +6,10 @@ import { useState } from "react";
 
 import "@puckeditor/core/puck.css";
 
-type HeadingProps = {
+interface HeadingProps {
   readonly text: string;
   readonly level: 1 | 2 | 3 | 4 | 5 | 6;
-};
+}
 
 const config: Config<{ Heading: HeadingProps }> = {
   components: {
