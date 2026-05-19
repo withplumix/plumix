@@ -14,8 +14,14 @@ export interface BlockNode {
   readonly style?: ResponsiveStyleSlot;
 }
 
+export interface BlockRenderHooks {
+  readonly beforeRender?: (node: BlockNode, context: BlockContext) => void;
+  readonly afterRender?: (node: BlockNode, context: BlockContext) => void;
+}
+
 export interface RenderBlockTreeOptions {
   readonly tokens?: ThemeTokens;
+  readonly hooks?: BlockRenderHooks;
 }
 
 export interface BlockNodeRenderProps<
@@ -85,13 +91,21 @@ function materializeSlots(
   devState: DevWarnState,
   childContext: BlockContext,
   tokens: ThemeTokens | undefined,
+  hooks: BlockRenderHooks | undefined,
 ): Readonly<Record<string, unknown>> {
   let materialized: Record<string, unknown> | undefined;
   for (const [key, value] of Object.entries(attrs)) {
     if (isBlockNodeArray(value)) {
       materialized ??= { ...attrs };
       materialized[key] = function SlotComponent() {
-        return renderNodes(value, registry, devState, childContext, tokens);
+        return renderNodes(
+          value,
+          registry,
+          devState,
+          childContext,
+          tokens,
+          hooks,
+        );
       };
     }
   }
@@ -104,15 +118,19 @@ function renderNodes(
   devState: DevWarnState,
   context: BlockContext,
   tokens: ThemeTokens | undefined,
+  hooks: BlockRenderHooks | undefined,
 ): ReactNode {
   return nodes.map((node) => {
+    hooks?.beforeRender?.(node, context);
     const spec = registry.get(node.name);
     if (!spec) {
-      return createElement(
+      const unknownNode = createElement(
         Fragment,
         { key: node.id },
         renderUnknown(node.name, devState),
       );
+      hooks?.afterRender?.(node, context);
+      return unknownNode;
     }
     const childContext: BlockContext = {
       ...context,
@@ -125,10 +143,13 @@ function renderNodes(
       devState,
       childContext,
       tokens,
+      hooks,
     );
     const rendered = createElement(spec.render, { attrs, context });
     if (spec.inline) {
-      return createElement(Fragment, { key: node.id }, rendered);
+      const inlineEl = createElement(Fragment, { key: node.id }, rendered);
+      hooks?.afterRender?.(node, context);
+      return inlineEl;
     }
     const safeId = SAFE_ID_RE.test(node.id) ? node.id : null;
     const styleCss =
@@ -139,7 +160,7 @@ function renderNodes(
     const styleTag = styleCss
       ? createElement("style", { key: "style" }, styleCss)
       : null;
-    return createElement(
+    const wrappedEl = createElement(
       "div",
       {
         key: node.id,
@@ -149,6 +170,8 @@ function renderNodes(
       styleTag,
       rendered,
     );
+    hooks?.afterRender?.(node, context);
+    return wrappedEl;
   });
 }
 
@@ -163,5 +186,6 @@ export function renderBlockTree(
     devWarnState(registry),
     DEFAULT_BLOCK_CONTEXT,
     options?.tokens,
+    options?.hooks,
   );
 }

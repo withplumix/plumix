@@ -301,6 +301,128 @@ describe("renderBlockTree", () => {
     expect(html).not.toContain("data-plumix-block");
   });
 
+  describe("render hooks", () => {
+    test("fires beforeRender and afterRender around each block render", () => {
+      const events: { phase: "before" | "after"; nodeName: string }[] = [];
+      const tree: readonly BlockNode[] = [
+        { id: "1", name: "core/heading", attrs: { text: "Hi", level: 2 } },
+      ];
+
+      renderToStaticMarkup(
+        renderBlockTree(tree, headingRegistry, {
+          hooks: {
+            beforeRender: (node) =>
+              events.push({ phase: "before", nodeName: node.name }),
+            afterRender: (node) =>
+              events.push({ phase: "after", nodeName: node.name }),
+          },
+        }),
+      );
+
+      expect(events).toEqual([
+        { phase: "before", nodeName: "core/heading" },
+        { phase: "after", nodeName: "core/heading" },
+      ]);
+    });
+
+    test("fires hooks for unknown blocks too", () => {
+      const events: string[] = [];
+      const tree: readonly BlockNode[] = [
+        { id: "1", name: "acme/missing", attrs: {} },
+      ];
+
+      withProductionEnv(() =>
+        renderToStaticMarkup(
+          renderBlockTree(tree, headingRegistry, {
+            hooks: {
+              beforeRender: (node) => events.push(`before:${node.name}`),
+              afterRender: (node) => events.push(`after:${node.name}`),
+            },
+          }),
+        ),
+      );
+
+      expect(events).toEqual(["before:acme/missing", "after:acme/missing"]);
+    });
+
+    test("threads the parent's context into hooks for slot children", () => {
+      const captured: { name: string; parent: string | null; depth: number }[] =
+        [];
+      const registry = createBlockRegistry([
+        {
+          name: "core/section",
+          render: ({ attrs }) => {
+            const Content = attrs.content as () => React.ReactNode;
+            return <section><Content /></section>;
+          },
+        },
+        {
+          name: "core/heading",
+          render: ({ attrs }) => {
+            const { text, level } = attrs as {
+              readonly text: string;
+              readonly level: 1 | 2 | 3 | 4 | 5 | 6;
+            };
+            const Tag = `h${level}` as const;
+            return <Tag>{text}</Tag>;
+          },
+        },
+      ]);
+      const tree: readonly BlockNode[] = [
+        {
+          id: "1",
+          name: "core/section",
+          attrs: {
+            content: [
+              {
+                id: "2",
+                name: "core/heading",
+                attrs: { text: "Inside", level: 2 },
+              },
+            ],
+          },
+        },
+      ];
+
+      renderToStaticMarkup(
+        renderBlockTree(tree, registry, {
+          hooks: {
+            beforeRender: (node, context) => {
+              captured.push({
+                name: node.name,
+                parent: context.parent,
+                depth: context.depth,
+              });
+            },
+          },
+        }),
+      );
+
+      expect(captured).toEqual([
+        { name: "core/section", parent: null, depth: 0 },
+        { name: "core/heading", parent: "core/section", depth: 1 },
+      ]);
+    });
+  });
+
+  describe("BlockNode serialization", () => {
+    test("preserves unknown nodes byte-identical through JSON round-trip", () => {
+      const tree: readonly BlockNode[] = [
+        { id: "1", name: "core/heading", attrs: { text: "Known", level: 2 } },
+        {
+          id: "2",
+          name: "acme/unknown",
+          attrs: { foo: "bar", nested: { x: 1 } },
+        },
+        { id: "3", name: "core/heading", attrs: { text: "After", level: 2 } },
+      ];
+
+      const roundtripped = JSON.parse(JSON.stringify(tree)) as readonly BlockNode[];
+
+      expect(roundtripped).toEqual(tree);
+    });
+  });
+
   describe("in development", () => {
     afterEach(() => {
       vi.restoreAllMocks();

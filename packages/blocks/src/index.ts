@@ -51,6 +51,7 @@ export type {
   BlockNode,
   BlockNodeComponent,
   BlockNodeRenderProps,
+  BlockRenderHooks,
   RenderBlockTreeOptions,
 } from "./render-block-tree.js";
 export { createBlockRegistry, defineBlock as defineBlockSpec } from "./block-registry.js";
