@@ -51,12 +51,8 @@ function PuckSpikeRoute(): ReactNode {
     <Puck
       config={config}
       data={data}
-      onPublish={(next) => {
-        setData(next);
-      }}
-      onChange={(next) => {
-        setData(next);
-      }}
+      onPublish={setData}
+      onChange={setData}
     />
   );
 }
