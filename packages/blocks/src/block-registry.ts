@@ -24,6 +24,8 @@ export interface BlockSpec<
 > {
   readonly name: string;
   readonly title?: string;
+  readonly description?: string;
+  readonly keywords?: readonly string[];
   readonly icon?: string;
   readonly category?: string;
   readonly inputs?: readonly BlockInput[];
