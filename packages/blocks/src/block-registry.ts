@@ -1,4 +1,5 @@
 import type { BlockNodeComponent } from "./render-block-tree.js";
+import type { BlockTransforms } from "./types.js";
 
 export interface BlockInputOption {
   readonly label: string;
@@ -32,6 +33,7 @@ export interface BlockSpec<
   readonly placeholder?: string;
   readonly capability?: string;
   readonly client?: ClientIslandDescriptor;
+  readonly transforms?: BlockTransforms;
 }
 
 export interface BlockRegistry {
