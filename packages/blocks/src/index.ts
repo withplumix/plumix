@@ -71,6 +71,9 @@ export type {
   TokenCategory,
 } from "./styles/style-emitter.js";
 export { paragraphBlockV2 } from "./paragraph/v2.js";
+export { quoteBlockV2 } from "./quote/v2.js";
+export { codeBlockV2 } from "./code/v2.js";
+export { separatorBlockV2 } from "./separator/v2.js";
 export { collectActiveIslands } from "./islands.js";
 export type { ActiveIsland } from "./islands.js";
 export { PlumixIslandBootstrap } from "./island-bootstrap.js";
