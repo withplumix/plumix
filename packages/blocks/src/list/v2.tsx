@@ -44,6 +44,7 @@ export const listItemBlockV2 = defineBlock({
   title: "List item",
   category: "text",
   inline: true,
+  inserter: false,
   inputs: [{ name: "text", type: "text", label: "Item" }],
   defaults: { text: "" },
   render: ({ attrs }): ReactNode => {

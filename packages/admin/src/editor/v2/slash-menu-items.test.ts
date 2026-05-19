@@ -9,16 +9,7 @@ import {
 } from "./slash-menu-items.js";
 
 function spec(partial: Partial<BlockSpecV2> & { name: string }): BlockSpecV2 {
-  return {
-    name: partial.name,
-    title: partial.title,
-    description: partial.description,
-    keywords: partial.keywords,
-    icon: partial.icon,
-    category: partial.category,
-    capability: partial.capability,
-    render: () => null,
-  };
+  return { render: () => null, ...partial };
 }
 
 describe("resolveSlashMenuItems", () => {
@@ -139,6 +130,43 @@ describe("resolveSlashMenuItems", () => {
       "core/spacer",
     );
     expect(items.find((i) => i.name === "core/heading")?.title).toBe("Heading");
+  });
+
+  test("omits specs declared with `inserter: false` so structural-children stay out of the menu", () => {
+    const registry = createBlockRegistry([
+      spec({ name: "core/table", title: "Table" }),
+      spec({
+        name: "core/table-row",
+        title: "Table row",
+        inserter: false,
+      }),
+      spec({
+        name: "core/table-cell",
+        title: "Table cell",
+        inserter: false,
+      }),
+    ]);
+
+    const items = resolveSlashMenuItems(registry, {
+      capabilities: new Set(),
+      query: "",
+    });
+
+    expect(items.map((i) => i.name)).toEqual(["core/table"]);
+  });
+
+  test("keeps specs that omit `inserter` (default shown) and specs that opt in with `inserter: true`", () => {
+    const registry = createBlockRegistry([
+      spec({ name: "a/default", title: "Default" }),
+      spec({ name: "a/opt-in", title: "Opt-in", inserter: true }),
+    ]);
+
+    const items = resolveSlashMenuItems(registry, {
+      capabilities: new Set(),
+      query: "",
+    });
+
+    expect(items.map((i) => i.name).sort()).toEqual(["a/default", "a/opt-in"]);
   });
 
   test("treats whitespace-only queries as empty (no filtering)", () => {

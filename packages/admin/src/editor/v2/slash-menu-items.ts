@@ -25,6 +25,7 @@ export function resolveSlashMenuItems(
   const scored: { item: SlashMenuItem; score: number }[] = [];
 
   for (const spec of registry) {
+    if (spec.inserter === false) continue;
     if (!isInsertableForCapabilities(spec, capabilities)) continue;
     const item = toItem(spec);
     if (needle === "") {
