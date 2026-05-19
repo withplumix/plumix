@@ -77,6 +77,8 @@ export { codeBlockV2 } from "./code/v2.js";
 export { separatorBlockV2 } from "./separator/v2.js";
 export { groupBlockV2 } from "./group/v2.js";
 export { columnsBlockV2 } from "./columns/v2.js";
+export { detailsBlockV2 } from "./details/v2.js";
+export { calloutBlockV2 } from "./callout/v2.js";
 export { collectActiveIslands } from "./islands.js";
 export type { ActiveIsland } from "./islands.js";
 export { PlumixIslandBootstrap } from "./island-bootstrap.js";
