@@ -8,6 +8,22 @@ export const headingBlock = defineBlock({
   title: "Heading",
   icon: "Heading",
   category: "text",
+  inputs: [
+    { name: "text", type: "text", label: "Text" },
+    {
+      name: "level",
+      type: "select",
+      label: "Level",
+      options: [
+        { label: "H1", value: 1 },
+        { label: "H2", value: 2 },
+        { label: "H3", value: 3 },
+        { label: "H4", value: 4 },
+        { label: "H5", value: 5 },
+        { label: "H6", value: 6 },
+      ],
+    },
+  ],
   defaults: { level: 2, text: "" },
   transforms: {
     priority: 50,

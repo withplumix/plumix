@@ -145,6 +145,7 @@ export type {
 export { coreMarks } from "./marks/core/index.js";
 
 export { coreBlocks } from "./core-blocks.js";
+export { coreBlocksV2 } from "./core-blocks-v2.js";
 export { buttonBlock } from "./button/index.js";
 export { buttonsBlock } from "./buttons/index.js";
 export { calloutBlock } from "./callout/index.js";
