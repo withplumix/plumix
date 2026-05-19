@@ -1,45 +1,15 @@
 import type { ThemeTokens } from "@plumix/blocks";
 import type { Config, Data } from "@puckeditor/core";
 import type { ReactElement, ReactNode } from "react";
+import { coreBlocksV2, createBlockRegistry } from "@plumix/blocks";
 import { Puck } from "@puckeditor/core";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 
+import { blockSpecsToPuckComponents } from "@/editor/v2/block-adapter.js";
 import { PlumixEditorLayout } from "@/editor/v2/EditorLayout.js";
 
 import "@puckeditor/core/puck.css";
-
-interface HeadingProps {
-  readonly text: string;
-  readonly level: 1 | 2 | 3 | 4 | 5 | 6;
-}
-
-const config: Config<{ Heading: HeadingProps }> = {
-  components: {
-    Heading: {
-      label: "Heading",
-      fields: {
-        text: { type: "text" },
-        level: {
-          type: "select",
-          options: [
-            { label: "H1", value: 1 },
-            { label: "H2", value: 2 },
-            { label: "H3", value: 3 },
-            { label: "H4", value: 4 },
-            { label: "H5", value: 5 },
-            { label: "H6", value: 6 },
-          ],
-        },
-      },
-      defaultProps: { text: "Hello, Puck", level: 2 },
-      render: ({ text, level }) => {
-        const Tag = `h${level}` as const;
-        return <Tag>{text}</Tag>;
-      },
-    },
-  },
-};
 
 const initialData: Data = { content: [], root: {} };
 
@@ -64,6 +34,11 @@ const sampleTokens: ThemeTokens = {
   },
 };
 
+const registry = createBlockRegistry(coreBlocksV2);
+const config: Config = {
+  components: blockSpecsToPuckComponents(coreBlocksV2),
+};
+
 export const Route = createFileRoute("/_editor/v2/entries/$slug/$id/edit")({
   component: PuckSpikeRoute,
 });
@@ -71,7 +46,9 @@ export const Route = createFileRoute("/_editor/v2/entries/$slug/$id/edit")({
 function PuckSpikeRoute(): ReactNode {
   const [data, setData] = useState<Data>(initialData);
   const Layout = useCallback(
-    (): ReactElement => <PlumixEditorLayout tokens={sampleTokens} />,
+    (): ReactElement => (
+      <PlumixEditorLayout registry={registry} tokens={sampleTokens} />
+    ),
     [],
   );
 
