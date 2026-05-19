@@ -13,11 +13,14 @@ import {
 } from "@/components/ui/dialog.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.js";
 
+import type { TransformOption } from "./available-transforms.js";
 import type { SlashMenuItem } from "./slash-menu-items.js";
 
+import { BlockActionsPanel } from "./BlockActionsPanel.js";
 import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
 import { patchStyleAtSelector } from "./patch-style.js";
 import { puckDataToBlockTree } from "./puck-to-block-tree.js";
+import { PUCK_ROOT_ZONE } from "./puck-zones.js";
 import { nextInsertPoint, resolveSlashMenuItems } from "./slash-menu-items.js";
 import { SlashMenuPanel } from "./SlashMenuPanel.js";
 import { StyleTab } from "./StyleTab.js";
@@ -119,6 +122,7 @@ export function PlumixEditorLayout({
           className="overflow-y-auto border-l"
           data-testid="plumix-editor-right"
         >
+          <PlumixBlockActions registry={registry} />
           <Tabs defaultValue="block" className="h-full">
             <TabsList className="w-full">
               <TabsTrigger value="block" data-testid="plumix-editor-tab-block">
@@ -267,6 +271,47 @@ function PlumixStyleTab({ tokens }: PlumixStyleTabProps): ReactElement {
       selectedItem={selectedItem}
       bucket={bucket}
       onStyleChange={handleStyleChange}
+    />
+  );
+}
+
+interface PlumixBlockActionsProps {
+  readonly registry: BlockRegistryV2;
+}
+
+function PlumixBlockActions({ registry }: PlumixBlockActionsProps): ReactElement {
+  const puck = usePuck();
+  const { selectedItem } = puck;
+
+  const handleTransform = useCallback(
+    (option: TransformOption): void => {
+      const { itemSelector } = puck.appState.ui;
+      if (!itemSelector || !selectedItem) return;
+      const currentAttrs = selectedItem.props as Record<string, unknown>;
+      const targetDefaults = registry.get(option.targetName)?.defaults ?? {};
+      const mappedAttrs = option.mapAttrs?.(currentAttrs) ?? {};
+      puck.dispatch({
+        type: "replace",
+        destinationZone: itemSelector.zone ?? PUCK_ROOT_ZONE,
+        destinationIndex: itemSelector.index,
+        data: {
+          type: option.targetName,
+          props: {
+            ...targetDefaults,
+            ...mappedAttrs,
+            id: currentAttrs.id as string,
+          },
+        },
+      });
+    },
+    [puck, selectedItem, registry],
+  );
+
+  return (
+    <BlockActionsPanel
+      specName={selectedItem?.type}
+      registry={registry}
+      onTransform={handleTransform}
     />
   );
 }
