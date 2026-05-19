@@ -147,4 +147,89 @@ describe("StyleTab", () => {
 
     expect(onStyleChange).toHaveBeenCalledWith(undefined);
   });
+
+  test("omits sections whose token category isn't declared on the theme", () => {
+    render(
+      <StyleTab
+        tokens={tokens}
+        selectedItem={makeItem()}
+        bucket="large"
+        onStyleChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId("style-tab-section-background")).toBeNull();
+    expect(screen.queryByTestId("style-tab-section-color")).toBeNull();
+    expect(screen.queryByTestId("style-tab-section-fontSize")).toBeNull();
+    expect(screen.queryByTestId("style-tab-section-spacing")).toBeDefined();
+  });
+
+  test("clicking a background swatch writes the token id to style.<bucket>.background", async () => {
+    const fullTokens: ThemeTokens = {
+      colors: { brand: { value: "#0070f3", label: "Brand" } },
+    };
+    const onStyleChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <StyleTab
+        tokens={fullTokens}
+        selectedItem={makeItem()}
+        bucket="medium"
+        onStyleChange={onStyleChange}
+      />,
+    );
+
+    await user.click(screen.getByTestId("style-tab-background-token-brand"));
+
+    expect(onStyleChange).toHaveBeenCalledWith({
+      medium: { background: "brand" },
+    });
+  });
+
+  test("clicking a text-color swatch writes the token id to style.<bucket>.color", async () => {
+    const fullTokens: ThemeTokens = {
+      colors: { ink: { value: "#111", label: "Ink" } },
+    };
+    const onStyleChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <StyleTab
+        tokens={fullTokens}
+        selectedItem={makeItem()}
+        bucket="large"
+        onStyleChange={onStyleChange}
+      />,
+    );
+
+    await user.click(screen.getByTestId("style-tab-color-token-ink"));
+
+    expect(onStyleChange).toHaveBeenCalledWith({
+      large: { color: "ink" },
+    });
+  });
+
+  test("selecting a font-size option writes the token id to style.<bucket>.fontSize", async () => {
+    const fullTokens: ThemeTokens = {
+      typography: { xl: { value: "1.5rem", label: "Extra large" } },
+    };
+    const onStyleChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <StyleTab
+        tokens={fullTokens}
+        selectedItem={makeItem()}
+        bucket="large"
+        onStyleChange={onStyleChange}
+      />,
+    );
+
+    await user.selectOptions(
+      screen.getByTestId("style-tab-fontSize-select"),
+      "xl",
+    );
+
+    expect(onStyleChange).toHaveBeenCalledWith({
+      large: { fontSize: "xl" },
+    });
+  });
 });

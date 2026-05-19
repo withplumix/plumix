@@ -1,8 +1,9 @@
+import type { ThemeTokens } from "@plumix/blocks";
 import type { Config, Data } from "@puckeditor/core";
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { Puck } from "@puckeditor/core";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { PlumixEditorLayout } from "@/editor/v2/EditorLayout.js";
 
@@ -42,12 +43,37 @@ const config: Config<{ Heading: HeadingProps }> = {
 
 const initialData: Data = { content: [], root: {} };
 
+const sampleTokens: ThemeTokens = {
+  colors: {
+    background: { value: "#ffffff", label: "Background" },
+    surface: { value: "#f4f4f5", label: "Surface" },
+    brand: { value: "#0070f3", label: "Brand" },
+    ink: { value: "#111111", label: "Ink" },
+  },
+  spacing: {
+    none: { value: "0", label: "None" },
+    sm: { value: "0.5rem", label: "Small" },
+    md: { value: "1rem", label: "Medium" },
+    lg: { value: "2rem", label: "Large" },
+  },
+  typography: {
+    sm: { value: "0.875rem", label: "Small" },
+    md: { value: "1rem", label: "Medium" },
+    lg: { value: "1.25rem", label: "Large" },
+    xl: { value: "1.5rem", label: "Extra large" },
+  },
+};
+
 export const Route = createFileRoute("/_editor/v2/entries/$slug/$id/edit")({
   component: PuckSpikeRoute,
 });
 
 function PuckSpikeRoute(): ReactNode {
   const [data, setData] = useState<Data>(initialData);
+  const Layout = useCallback(
+    (): ReactElement => <PlumixEditorLayout tokens={sampleTokens} />,
+    [],
+  );
 
   return (
     <Puck
@@ -56,7 +82,7 @@ function PuckSpikeRoute(): ReactNode {
       onPublish={setData}
       onChange={setData}
       iframe={{ enabled: false }}
-      overrides={{ puck: PlumixEditorLayout }}
+      overrides={{ puck: Layout }}
     />
   );
 }
