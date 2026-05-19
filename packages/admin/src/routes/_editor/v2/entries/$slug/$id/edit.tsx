@@ -8,6 +8,7 @@ import { useCallback, useState } from "react";
 
 import { blockSpecsToPuckComponents } from "@/editor/v2/block-adapter.js";
 import { PlumixEditorLayout } from "@/editor/v2/EditorLayout.js";
+import { readDraft, writeDraft } from "@/editor/v2/local-draft.js";
 
 import "@puckeditor/core/puck.css";
 
@@ -44,7 +45,24 @@ export const Route = createFileRoute("/_editor/v2/entries/$slug/$id/edit")({
 });
 
 function PuckSpikeRoute(): ReactNode {
-  const [data, setData] = useState<Data>(initialData);
+  const { slug, id } = Route.useParams();
+  const draftKey = `plumix.v2.draft.${slug}.${id}`;
+  return <PuckSpikeRouteInner key={draftKey} draftKey={draftKey} />;
+}
+
+interface PuckSpikeRouteInnerProps {
+  readonly draftKey: string;
+}
+
+function PuckSpikeRouteInner({ draftKey }: PuckSpikeRouteInnerProps): ReactNode {
+  const [data, setData] = useState<Data>(() => readDraft(draftKey) ?? initialData);
+  const handleChange = useCallback(
+    (next: Data): void => {
+      setData(next);
+      writeDraft(draftKey, next);
+    },
+    [draftKey],
+  );
   const Layout = useCallback(
     (): ReactElement => (
       <PlumixEditorLayout registry={registry} tokens={sampleTokens} />
@@ -56,8 +74,8 @@ function PuckSpikeRoute(): ReactNode {
     <Puck
       config={config}
       data={data}
-      onPublish={setData}
-      onChange={setData}
+      onPublish={handleChange}
+      onChange={handleChange}
       iframe={{ enabled: false }}
       overrides={{ puck: Layout }}
     />
