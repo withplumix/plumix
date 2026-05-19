@@ -117,3 +117,45 @@ export function mockEditor(input: MockEditorInput = {}): Editor {
 }
 
 export { DEFAULT_MARK_REGISTRY as defaultMarkRegistry, EMPTY_CONTEXT };
+
+// ─── New-walker helpers (slice #394) ────────────────────────────────────────
+//
+// These wrap the new BlockNode/BlockRegistry surface so block authors can
+// unit-test their `defineBlock` specs in isolation without touching the
+// legacy EntryContent path above. Once the legacy walker is deleted at
+// cutover (#405), the helpers above are removed and these become the
+// sole public surface.
+
+import type { BlockNode, BlockSpecV2, RenderBlockTreeOptions } from "../index.js";
+import { createBlockRegistry, renderBlockTree } from "../index.js";
+
+/**
+ * Render a single block spec in isolation and return its HTML output.
+ * Useful for asserting `defineBlock.render` output against attrs fixtures.
+ */
+export function renderBlockSpecToHtml(
+  spec: BlockSpecV2,
+  attrs?: Readonly<Record<string, unknown>>,
+  options?: RenderBlockTreeOptions,
+): string {
+  const registry = createBlockRegistry([spec]);
+  const node: BlockNode = {
+    id: "test-block",
+    name: spec.name,
+    attrs,
+  };
+  return renderToStaticMarkup(renderBlockTree([node], registry, options));
+}
+
+/**
+ * Render a tree of BlockNodes against a list of specs and return the HTML.
+ * Use for testing multi-block compositions (slots, ordering, context).
+ */
+export function renderBlockTreeToHtml(
+  specs: readonly BlockSpecV2[],
+  tree: readonly BlockNode[],
+  options?: RenderBlockTreeOptions,
+): string {
+  const registry = createBlockRegistry(specs);
+  return renderToStaticMarkup(renderBlockTree(tree, registry, options));
+}
