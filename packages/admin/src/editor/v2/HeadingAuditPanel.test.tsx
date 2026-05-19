@@ -1,5 +1,6 @@
 import type { BlockNode } from "@plumix/blocks";
 import { cleanup, render, screen } from "@testing-library/react";
+import { userEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, test } from "vitest";
 
 import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
@@ -59,6 +60,39 @@ describe("HeadingAuditPanel", () => {
     expect(item.textContent).toContain(
       "Multiple <h1> on the page (2 found).",
     );
+  });
+
+  test("invokes onSelect with the violation's primary node id when the click-to-jump button is pressed", async () => {
+    const calls: string[] = [];
+    const user = userEvent.setup();
+    const tree: readonly BlockNode[] = [
+      { id: "first", name: "core/heading", attrs: { level: 1, text: "A" } },
+      { id: "skip", name: "core/heading", attrs: { level: 4, text: "B" } },
+    ];
+
+    render(
+      <HeadingAuditPanel
+        tree={tree}
+        onSelect={(nodeId) => calls.push(nodeId)}
+      />,
+    );
+
+    await user.click(screen.getByTestId("heading-audit-jump-skipped-level"));
+
+    expect(calls).toEqual(["skip"]);
+  });
+
+  test("renders a plain warning (no button) when onSelect is not provided", () => {
+    const tree: readonly BlockNode[] = [
+      { id: "h", name: "core/heading", attrs: { level: 1, text: "" } },
+    ];
+
+    render(<HeadingAuditPanel tree={tree} />);
+
+    expect(screen.queryByTestId("heading-audit-jump-empty-heading")).toBeNull();
+    expect(
+      screen.getByTestId("heading-audit-violation-empty-heading").textContent,
+    ).toContain("Empty heading.");
   });
 
   test("emits data-node-ids on each list item so the action-bar follow-up can click-to-jump", () => {

@@ -17,7 +17,12 @@ function PlumixAuditTab(): ReactElement {
     () => puckDataToBlockTree(puck.appState.data),
     [puck.appState.data],
   );
-  return <HeadingAuditPanel tree={tree} />;
+  const handleSelect = (nodeId: string): void => {
+    const itemSelector = puck.getSelectorForId(nodeId);
+    if (!itemSelector) return;
+    puck.dispatch({ type: "setUi", ui: { itemSelector } });
+  };
+  return <HeadingAuditPanel tree={tree} onSelect={handleSelect} />;
 }
 
 export function PlumixEditorLayout(
