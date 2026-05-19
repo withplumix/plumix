@@ -46,6 +46,13 @@ export type {
   EntryContentProps,
   SyncFilterExecutor,
 } from "./walker.js";
+export { renderBlockTree } from "./render-block-tree.js";
+export type {
+  BlockNode,
+  BlockNodeComponent,
+  BlockNodeRegistry,
+  BlockNodeRenderProps,
+} from "./render-block-tree.js";
 export { collectActiveIslands } from "./islands.js";
 export type { ActiveIsland } from "./islands.js";
 export { PlumixIslandBootstrap } from "./island-bootstrap.js";
