@@ -20,6 +20,7 @@ export const descriptionTermBlockV2 = defineBlock({
   title: "Term",
   icon: "Type",
   category: "text",
+  inline: true,
   inputs: [{ name: "text", type: "text", label: "Term" }],
   defaults: { text: "" },
   render: ({ attrs }): ReactNode => {
@@ -33,6 +34,7 @@ export const descriptionDetailBlockV2 = defineBlock({
   title: "Detail",
   icon: "AlignLeft",
   category: "text",
+  inline: true,
   inputs: [{ name: "text", type: "textarea", label: "Detail" }],
   defaults: { text: "" },
   render: ({ attrs }): ReactNode => {

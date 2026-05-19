@@ -29,25 +29,22 @@ describe("core/table family v2", () => {
     expect(html).toContain('data-bordered="true"');
   });
 
-  test("renders <th scope=col> for header-cell with align attr", () => {
+  test("renders <th scope=col> for header-cell with align attr, no universal wrapper (inline)", () => {
     const html = renderBlockSpecToHtml(tableHeaderCellBlockV2, {
       text: "Name",
       align: "center",
     });
 
-    expect(html).toContain('<th scope="col"');
-    expect(html).toContain('data-align="center"');
-    expect(html).toContain("Name");
+    expect(html).toBe('<th scope="col" data-align="center">Name</th>');
   });
 
-  test("renders <td> for body cells", () => {
+  test("renders <td> for body cells, no universal wrapper (inline)", () => {
     const html = renderBlockSpecToHtml(tableCellBlockV2, { text: "v1" });
 
-    expect(html).toContain("<td");
-    expect(html).toContain("v1");
+    expect(html).toBe("<td>v1</td>");
   });
 
-  test("renders a full table > header-row > th + body-row > td composition", () => {
+  test("th/td nest as direct children of <tr>, <tr> as direct children of <table> (preserves HTML content model)", () => {
     const tree: readonly BlockNode[] = [
       {
         id: "t1",
@@ -96,10 +93,9 @@ describe("core/table family v2", () => {
       tree,
     );
 
-    expect(html).toContain("<table>");
-    expect(html).toContain('<tr data-header=""');
-    expect(html).toContain("<th");
-    expect(html).toContain("Col 1");
-    expect(html).toContain("val 1");
+    expect(html).toContain(
+      '<table><tr data-header=""><th scope="col">Col 1</th></tr>' +
+        "<tr><td>val 1</td></tr></table>",
+    );
   });
 });

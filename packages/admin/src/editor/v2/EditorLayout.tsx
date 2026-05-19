@@ -19,6 +19,7 @@ export function PlumixEditorLayout(
         <input
           type="text"
           placeholder="Untitled"
+          aria-label="Entry title"
           className="flex-1 bg-transparent outline-none"
           data-testid="plumix-editor-title-input"
         />

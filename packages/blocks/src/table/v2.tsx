@@ -39,6 +39,7 @@ export const tableHeaderRowBlockV2 = defineBlock({
   title: "Header Row",
   icon: "Rows",
   category: "text",
+  inline: true,
   inputs: [{ name: "cells", type: "slot", label: "Cells" }],
   defaults: {},
   render: ({ attrs }): ReactNode => {
@@ -52,6 +53,7 @@ export const tableBodyRowBlockV2 = defineBlock({
   title: "Body Row",
   icon: "Rows",
   category: "text",
+  inline: true,
   inputs: [{ name: "cells", type: "slot", label: "Cells" }],
   defaults: {},
   render: ({ attrs }): ReactNode => {
@@ -65,6 +67,7 @@ export const tableHeaderCellBlockV2 = defineBlock({
   title: "Header Cell",
   icon: "AlignLeft",
   category: "text",
+  inline: true,
   inputs: [
     { name: "text", type: "text", label: "Text" },
     {
@@ -91,6 +94,7 @@ export const tableCellBlockV2 = defineBlock({
   title: "Cell",
   icon: "AlignLeft",
   category: "text",
+  inline: true,
   inputs: [
     { name: "text", type: "text", label: "Text" },
     {
