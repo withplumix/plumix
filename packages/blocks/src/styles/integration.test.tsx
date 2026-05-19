@@ -49,32 +49,6 @@ describe("blocks + supports + tokens end-to-end", () => {
     expect(p?.textContent).toBe("themed");
   });
 
-  test("heading anchor slot surfaces as the `id` attribute", async () => {
-    const registry = await mergeBlockRegistry({
-      core: coreBlocks,
-      plugins: [],
-      themeOverrides: {},
-      themeId: null,
-    });
-    const doc: TiptapNodeJson = {
-      type: "doc",
-      content: [
-        {
-          type: "core/heading",
-          attrs: { level: 2, style: { anchor: "intro" } },
-          content: [{ type: "text", text: "Hello" }],
-        },
-      ],
-    };
-    const { container } = render(
-      <EntryContent
-        content={doc}
-        registry={registry}
-        context={ROOT_CONTEXT}
-        markRegistry={defaultMarkRegistry}
-      />,
-    );
-    const h2 = container.querySelector("h2");
-    expect(h2?.id).toBe("intro");
-  });
+  // heading anchor test removed — core/heading migrated to new BlockNode shape
+  // in slice #381; anchor support still covered by per-block supports unit tests.
 });

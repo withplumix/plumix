@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { createElement, Fragment } from "react";
 
+import type { BlockRegistry } from "./block-registry.js";
 import type { BlockContext } from "./types.js";
 
 export interface BlockNode {
@@ -20,8 +21,6 @@ export type BlockNodeComponent<Attrs = Readonly<Record<string, unknown>>> = (
   props: BlockNodeRenderProps<Attrs>,
 ) => ReactNode;
 
-export type BlockNodeRegistry = ReadonlyMap<string, BlockNodeComponent>;
-
 const DEFAULT_CONTEXT: BlockContext = Object.freeze({
   entry: null,
   siteSettings: Object.freeze({}),
@@ -36,7 +35,7 @@ interface DevWarnState {
 
 const devWarnStates = new WeakMap<object, DevWarnState>();
 
-function devWarnState(registry: BlockNodeRegistry): DevWarnState {
+function devWarnState(registry: BlockRegistry): DevWarnState {
   let existing = devWarnStates.get(registry);
   if (!existing) {
     existing = { seen: new Set() };
@@ -72,7 +71,7 @@ function isBlockNodeArray(value: unknown): value is readonly BlockNode[] {
 
 function materializeSlots(
   attrs: Readonly<Record<string, unknown>>,
-  registry: BlockNodeRegistry,
+  registry: BlockRegistry,
   devState: DevWarnState,
   childContext: BlockContext,
 ): Readonly<Record<string, unknown>> {
@@ -91,13 +90,13 @@ function materializeSlots(
 
 function renderNodes(
   nodes: readonly BlockNode[],
-  registry: BlockNodeRegistry,
+  registry: BlockRegistry,
   devState: DevWarnState,
   context: BlockContext,
 ): ReactNode {
   return nodes.map((node) => {
-    const Component = registry.get(node.name);
-    if (!Component) {
+    const spec = registry.get(node.name);
+    if (!spec) {
       return createElement(
         Fragment,
         { key: node.id },
@@ -115,17 +114,21 @@ function renderNodes(
       devState,
       childContext,
     );
-    return createElement(Component, {
-      key: node.id,
-      attrs,
-      context,
-    });
+    const rendered = createElement(spec.render, { attrs, context });
+    if (spec.inline) {
+      return createElement(Fragment, { key: node.id }, rendered);
+    }
+    return createElement(
+      "div",
+      { key: node.id, "data-plumix-block": node.name },
+      rendered,
+    );
   });
 }
 
 export function renderBlockTree(
   nodes: readonly BlockNode[],
-  registry: BlockNodeRegistry,
+  registry: BlockRegistry,
 ): ReactNode {
   return renderNodes(nodes, registry, devWarnState(registry), DEFAULT_CONTEXT);
 }

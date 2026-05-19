@@ -50,9 +50,13 @@ export { renderBlockTree } from "./render-block-tree.js";
 export type {
   BlockNode,
   BlockNodeComponent,
-  BlockNodeRegistry,
   BlockNodeRenderProps,
 } from "./render-block-tree.js";
+export { createBlockRegistry, defineBlock as defineBlockSpec } from "./block-registry.js";
+export type {
+  BlockSpec as BlockSpecV2,
+  BlockRegistry as BlockRegistryV2,
+} from "./block-registry.js";
 export { collectActiveIslands } from "./islands.js";
 export type { ActiveIsland } from "./islands.js";
 export { PlumixIslandBootstrap } from "./island-bootstrap.js";

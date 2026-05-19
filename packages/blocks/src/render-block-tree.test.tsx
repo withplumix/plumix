@@ -1,8 +1,9 @@
 import type { BlockContext } from "./types.js";
-import type { BlockNode, BlockNodeRegistry } from "./render-block-tree.js";
+import type { BlockNode } from "./render-block-tree.js";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import { createBlockRegistry } from "./block-registry.js";
 import { renderBlockTree } from "./render-block-tree.js";
 
 function withProductionEnv<T>(fn: () => T): T {
@@ -15,10 +16,10 @@ function withProductionEnv<T>(fn: () => T): T {
   }
 }
 
-const headingRegistry: BlockNodeRegistry = new Map([
-  [
-    "core/heading",
-    ({ attrs }) => {
+const headingRegistry = createBlockRegistry([
+  {
+    name: "core/heading",
+    render: ({ attrs }) => {
       const { text, level } = attrs as {
         readonly text: string;
         readonly level: 1 | 2 | 3 | 4 | 5 | 6;
@@ -26,7 +27,7 @@ const headingRegistry: BlockNodeRegistry = new Map([
       const Tag = `h${level}` as const;
       return <Tag>{text}</Tag>;
     },
-  ],
+  },
 ]);
 
 describe("renderBlockTree", () => {
@@ -41,7 +42,9 @@ describe("renderBlockTree", () => {
       renderBlockTree([heading], headingRegistry),
     );
 
-    expect(html).toBe("<h2>Hello, world</h2>");
+    expect(html).toBe(
+      '<div data-plumix-block="core/heading"><h2>Hello, world</h2></div>',
+    );
   });
 
   test("renders multiple sibling blocks in document order", () => {
@@ -55,7 +58,11 @@ describe("renderBlockTree", () => {
       renderBlockTree(blocks, headingRegistry),
     );
 
-    expect(html).toBe("<h2>First</h2><h3>Second</h3><h2>Third</h2>");
+    expect(html).toBe(
+      '<div data-plumix-block="core/heading"><h2>First</h2></div>' +
+        '<div data-plumix-block="core/heading"><h3>Second</h3></div>' +
+        '<div data-plumix-block="core/heading"><h2>Third</h2></div>',
+    );
   });
 
   test("renders nothing for an unknown block name in production", () => {
@@ -89,26 +96,29 @@ describe("renderBlockTree", () => {
       renderToStaticMarkup(renderBlockTree(blocks, headingRegistry)),
     );
 
-    expect(html).toBe("<h2>Before</h2><h2>After</h2>");
+    expect(html).toBe(
+      '<div data-plumix-block="core/heading"><h2>Before</h2></div>' +
+        '<div data-plumix-block="core/heading"><h2>After</h2></div>',
+    );
   });
 
   test("threads BlockContext through slot recursion with parent name and depth", () => {
     const captured: BlockContext[] = [];
-    const registry: BlockNodeRegistry = new Map([
-      [
-        "acme/probe",
-        ({ context }) => {
+    const registry = createBlockRegistry([
+      {
+        name: "acme/probe",
+        render: ({ context }) => {
           captured.push(context);
           return null;
         },
-      ],
-      [
-        "core/section",
-        ({ attrs }) => {
+      },
+      {
+        name: "core/section",
+        render: ({ attrs }) => {
           const Content = attrs.content as () => React.ReactNode;
           return <section><Content /></section>;
         },
-      ],
+      },
     ]);
 
     const tree: readonly BlockNode[] = [
@@ -132,10 +142,10 @@ describe("renderBlockTree", () => {
   });
 
   test("materializes a slot field in attrs as a Component the block invokes", () => {
-    const registry: BlockNodeRegistry = new Map([
-      [
-        "core/heading",
-        ({ attrs }) => {
+    const registry = createBlockRegistry([
+      {
+        name: "core/heading",
+        render: ({ attrs }) => {
           const { text, level } = attrs as {
             readonly text: string;
             readonly level: 1 | 2 | 3 | 4 | 5 | 6;
@@ -143,14 +153,14 @@ describe("renderBlockTree", () => {
           const Tag = `h${level}` as const;
           return <Tag>{text}</Tag>;
         },
-      ],
-      [
-        "core/section",
-        ({ attrs }) => {
+      },
+      {
+        name: "core/section",
+        render: ({ attrs }) => {
           const Content = attrs.content as () => React.ReactNode;
           return <section><Content /></section>;
         },
-      ],
+      },
     ]);
 
     const tree: readonly BlockNode[] = [
@@ -171,7 +181,29 @@ describe("renderBlockTree", () => {
 
     const html = renderToStaticMarkup(renderBlockTree(tree, registry));
 
-    expect(html).toBe("<section><h2>Inside</h2></section>");
+    expect(html).toBe(
+      '<div data-plumix-block="core/section"><section>' +
+        '<div data-plumix-block="core/heading"><h2>Inside</h2></div>' +
+        "</section></div>",
+    );
+  });
+
+  test("skips the universal wrapper for blocks with inline: true", () => {
+    const registry = createBlockRegistry([
+      {
+        name: "acme/carousel",
+        inline: true,
+        render: () => <div className="carousel-root" />,
+      },
+    ]);
+    const tree: readonly BlockNode[] = [
+      { id: "1", name: "acme/carousel", attrs: {} },
+    ];
+
+    const html = renderToStaticMarkup(renderBlockTree(tree, registry));
+
+    expect(html).toBe('<div class="carousel-root"></div>');
+    expect(html).not.toContain("data-plumix-block");
   });
 
   describe("in development", () => {
@@ -188,7 +220,7 @@ describe("renderBlockTree", () => {
         { id: "2", name: "acme/missing", attrs: {} },
         { id: "3", name: "acme/other", attrs: {} },
       ];
-      const registry: BlockNodeRegistry = new Map();
+      const registry = createBlockRegistry();
 
       const html = renderToStaticMarkup(renderBlockTree(blocks, registry));
 

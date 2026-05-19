@@ -74,7 +74,11 @@ afterEach(() => {
 });
 
 describe("buildTiptapExtensions — field-mode allowlist is registry-sourced", () => {
-  test("`nodes: ['heading']` lands `core/heading` in the schema, not the unnamespaced StarterKit duplicate", async () => {
+  test.skip("`nodes: ['heading']` lands `core/heading` in the schema, not the unnamespaced StarterKit duplicate", async () => {
+    // Skipped in slice #381 — core/heading migrated to new defineBlock surface
+    // and no longer registers via the layered mergeBlockRegistry. Re-enable
+    // (or replace with a different namespaced node) once the registry path
+    // for the old Tiptap editor is retired in #405 (cutover).
     const blockRegistry = await mergeBlockRegistry({
       core: coreBlocks,
       plugins: [],
@@ -165,7 +169,7 @@ describe("buildTiptapExtensions — canvas-mode schema is registry-sourced", () 
     editors.push(editor);
     const shadowed = [
       "paragraph",
-      "heading",
+      // "heading" — migrated to new defineBlock in slice #381; not in old registry
       "bulletList",
       "orderedList",
       "listItem",
@@ -177,7 +181,7 @@ describe("buildTiptapExtensions — canvas-mode schema is registry-sourced", () 
       expect(editor.schema.nodes[name]).toBeUndefined();
     }
     expect(editor.schema.nodes["core/paragraph"]).toBeDefined();
-    expect(editor.schema.nodes["core/heading"]).toBeDefined();
+    // expect(editor.schema.nodes["core/heading"]).toBeDefined(); — see above
     expect(editor.schema.nodes.doc).toBeDefined();
     expect(editor.schema.nodes.text).toBeDefined();
     expect(editor.schema.nodes.hardBreak).toBeDefined();
