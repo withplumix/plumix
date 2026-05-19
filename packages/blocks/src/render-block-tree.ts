@@ -22,13 +22,13 @@ export type BlockNodeComponent<Attrs = Readonly<Record<string, unknown>>> = (
 
 export type BlockNodeRegistry = ReadonlyMap<string, BlockNodeComponent>;
 
-const DEFAULT_CONTEXT: BlockContext = {
+const DEFAULT_CONTEXT: BlockContext = Object.freeze({
   entry: null,
-  siteSettings: {},
+  siteSettings: Object.freeze({}),
   theme: null,
   parent: null,
   depth: 0,
-};
+});
 
 export function renderBlockTree(
   nodes: readonly BlockNode[],
