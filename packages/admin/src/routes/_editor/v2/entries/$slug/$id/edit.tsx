@@ -6,6 +6,9 @@ import { Puck } from "@puckeditor/core";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import type { AutosaveStatus } from "@/editor/v2/AutosaveStatus.js";
+
+import { AutosaveStatusContext } from "@/editor/v2/AutosaveStatus.js";
 import { blockSpecsToPuckComponents } from "@/editor/v2/block-adapter.js";
 import { createDebouncer } from "@/editor/v2/debounce.js";
 import { PlumixEditorLayout } from "@/editor/v2/EditorLayout.js";
@@ -57,14 +60,20 @@ interface PuckSpikeRouteInnerProps {
 
 function PuckSpikeRouteInner({ draftKey }: PuckSpikeRouteInnerProps): ReactNode {
   const [data, setData] = useState<Data>(() => readDraft(draftKey) ?? initialData);
+  const [status, setStatus] = useState<AutosaveStatus>("saved");
   const debouncer = useMemo(
-    () => createDebouncer((next: Data) => writeDraft(draftKey, next), 300),
+    () =>
+      createDebouncer((next: Data) => {
+        writeDraft(draftKey, next);
+        setStatus("saved");
+      }, 300),
     [draftKey],
   );
   useEffect(() => () => debouncer.flush(), [debouncer]);
   const handleChange = useCallback(
     (next: Data): void => {
       setData(next);
+      setStatus("saving");
       debouncer.call(next);
     },
     [debouncer],
@@ -77,13 +86,14 @@ function PuckSpikeRouteInner({ draftKey }: PuckSpikeRouteInnerProps): ReactNode 
   );
 
   return (
-    <Puck
-      config={config}
-      data={data}
-      onPublish={handleChange}
-      onChange={handleChange}
-      iframe={{ enabled: false }}
-      overrides={{ puck: Layout }}
-    />
+    <AutosaveStatusContext.Provider value={status}>
+      <Puck
+        config={config}
+        data={data}
+        onChange={handleChange}
+        iframe={{ enabled: false }}
+        overrides={{ puck: Layout }}
+      />
+    </AutosaveStatusContext.Provider>
   );
 }
