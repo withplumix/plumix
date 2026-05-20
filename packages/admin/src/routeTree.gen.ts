@@ -32,7 +32,7 @@ import { Route as AuthenticatedUsersIdEditRouteImport } from "./routes/_authenti
 import { Route as AuthenticatedTermsNameCreateRouteImport } from "./routes/_authenticated/terms/$name/create";
 import { Route as EditorEntriesSlugIdEditRouteImport } from "./routes/_editor/entries/$slug/$id/edit";
 import { Route as AuthenticatedTermsNameIdEditRouteImport } from "./routes/_authenticated/terms/$name/$id/edit";
-import { Route as EditorV2EntriesSlugIdEditRouteImport } from "./routes/_editor/v2/entries/$slug/$id/edit";
+import { Route as EditorV2EntriesSlugIdEditRouteImport } from "./routes/_editor/entries/$slug/$id/edit";
 
 const EditorRoute = EditorRouteImport.update({
   id: "/_editor",
@@ -234,7 +234,7 @@ export interface FileRoutesById {
   "/_authenticated/terms/$name/": typeof AuthenticatedTermsNameIndexRoute;
   "/_authenticated/terms/$name/$id/edit": typeof AuthenticatedTermsNameIdEditRoute;
   "/_editor/entries/$slug/$id/edit": typeof EditorEntriesSlugIdEditRoute;
-  "/_editor/v2/entries/$slug/$id/edit": typeof EditorV2EntriesSlugIdEditRoute;
+  "/_editor/entries/$slug/$id/edit": typeof EditorV2EntriesSlugIdEditRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
@@ -308,7 +308,7 @@ export interface FileRouteTypes {
     | "/_authenticated/terms/$name/"
     | "/_authenticated/terms/$name/$id/edit"
     | "/_editor/entries/$slug/$id/edit"
-    | "/_editor/v2/entries/$slug/$id/edit";
+    | "/_editor/entries/$slug/$id/edit";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
@@ -480,8 +480,8 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedTermsNameIdEditRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
-    "/_editor/v2/entries/$slug/$id/edit": {
-      id: "/_editor/v2/entries/$slug/$id/edit";
+    "/_editor/entries/$slug/$id/edit": {
+      id: "/_editor/entries/$slug/$id/edit";
       path: "/v2/entries/$slug/$id/edit";
       fullPath: "/v2/entries/$slug/$id/edit";
       preLoaderRoute: typeof EditorV2EntriesSlugIdEditRouteImport;

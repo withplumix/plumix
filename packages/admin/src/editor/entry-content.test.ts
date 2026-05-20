@@ -6,7 +6,7 @@ import {
   blockNodesToPuckContent,
   isV2EntryContent,
   seedPuckData,
-} from "./v2-entry-content.js";
+} from "./entry-content.js";
 
 describe("blockNodesToPuckContent", () => {
   test("converts a leaf BlockNode to a ComponentData with type + id-attrs in props", () => {

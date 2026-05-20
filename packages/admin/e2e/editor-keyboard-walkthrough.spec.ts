@@ -56,7 +56,7 @@ test.describe("v2 editor: keyboard-only walkthrough", () => {
   test("/, type, Enter inserts a block via keyboard alone", async ({
     page,
   }) => {
-    await page.goto("v2/entries/posts/1/edit");
+    await page.goto("entries/posts/1/edit");
 
     const canvas = page.getByTestId("plumix-editor-canvas");
     await canvas.focus();
@@ -74,7 +74,7 @@ test.describe("v2 editor: keyboard-only walkthrough", () => {
   });
 
   test("Escape closes the slash menu without inserting", async ({ page }) => {
-    await page.goto("v2/entries/posts/1/edit");
+    await page.goto("entries/posts/1/edit");
 
     await page.getByTestId("plumix-editor-canvas").focus();
     await page.keyboard.press("/");
