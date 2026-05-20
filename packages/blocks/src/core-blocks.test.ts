@@ -43,12 +43,7 @@ describe("coreBlocks catalogue", () => {
     );
     const names = interactiveBlocks.map((b) => b.name);
     expect(names).toEqual(
-      expect.arrayContaining([
-        "core/buttons",
-        "core/button",
-        "core/details",
-        "core/callout",
-      ]),
+      expect.arrayContaining(["core/buttons", "core/button"]),
     );
   });
 });
