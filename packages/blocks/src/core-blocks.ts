@@ -1,12 +1,7 @@
 import type { BlockSpec } from "./types.js";
-import { buttonBlock } from "./button/index.js";
-import { buttonsBlock } from "./buttons/index.js";
 import { codeBlock } from "./code/index.js";
 import { columnBlock } from "./columns/column.js";
 import { columnsBlock } from "./columns/index.js";
-import { descriptionDetailBlock } from "./description-list/description-detail.js";
-import { descriptionTermBlock } from "./description-list/description-term.js";
-import { descriptionListBlock } from "./description-list/index.js";
 import { groupBlock } from "./group/index.js";
 import { listItemBlock } from "./list/list-item.js";
 import { listOrderedBlock } from "./list/list-ordered.js";
@@ -14,14 +9,6 @@ import { listBlock } from "./list/list.js";
 import { paragraphBlock } from "./paragraph/index.js";
 import { quoteBlock } from "./quote/index.js";
 import { separatorBlock } from "./separator/index.js";
-import { spacerBlock } from "./spacer/index.js";
-import {
-  tableBlock,
-  tableBodyRowBlock,
-  tableCellBlock,
-  tableHeaderCellBlock,
-  tableHeaderRowBlock,
-} from "./table/index.js";
 
 /**
  * The canonical list of blocks shipped by `@plumix/blocks`.
@@ -35,14 +22,6 @@ import {
  * Order is purely a readability convention: typography → layout →
  * interactive → structured, in the order slices land.
  *
- * Note: `htmlBlock` is exported from `./html/index.js` but deliberately
- * NOT included here. The renderer applies a baseline `sanitize-html`
- * allowlist (no script / style / iframe / object / on* handlers; anchors
- * limited to http(s) / mailto / tel / root-relative), but operators
- * should still opt in explicitly via `ctx.registerBlock` after deciding
- * whether they want the escape hatch at all. The operator-configurable
- * allowlist lands in #312.
- *
  * Blocks migrated to the new `defineBlock` surface are intentionally
  * absent here. Entries with those `core/*` names do not round-trip
  * through `EntryContent` on this feature branch; round-trip is restored
@@ -52,22 +31,11 @@ export const coreBlocks: readonly BlockSpec[] = Object.freeze([
   paragraphBlock,
   quoteBlock,
   separatorBlock,
-  spacerBlock,
   codeBlock,
   listBlock,
   listOrderedBlock,
   listItemBlock,
-  descriptionListBlock,
-  descriptionTermBlock,
-  descriptionDetailBlock,
   groupBlock,
   columnsBlock,
   columnBlock,
-  buttonsBlock,
-  buttonBlock,
-  tableBlock,
-  tableHeaderRowBlock,
-  tableBodyRowBlock,
-  tableHeaderCellBlock,
-  tableCellBlock,
 ]);

@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 import { expectNoAxeViolations } from "./support/axe.js";
@@ -29,6 +30,12 @@ function emptyEntry(id: number): Record<string, unknown> {
     updatedAt: T0,
     meta: {},
   };
+}
+
+async function insertViaSlash(page: Page, slug: string): Promise<void> {
+  await page.getByTestId("plumix-editor-canvas").focus();
+  await page.keyboard.press("/");
+  await page.getByTestId(`slash-menu-item-${slug}`).click();
 }
 
 test.describe("V2 spike editor renders end-to-end", () => {
@@ -153,9 +160,7 @@ test.describe("V2 spike editor renders end-to-end", () => {
   }) => {
     await page.goto("v2/entries/posts/1/edit");
     const canvas = page.getByTestId("plumix-editor-canvas");
-    await canvas.focus();
-    await page.keyboard.press("/");
-    await page.getByTestId("slash-menu-item-numbered").click();
+    await insertViaSlash(page, "numbered");
     await expect(canvas.locator("ol")).toHaveCount(1);
     await expect(canvas.locator("ul")).toHaveCount(0);
   });
@@ -175,9 +180,7 @@ test.describe("V2 spike editor renders end-to-end", () => {
   }) => {
     await page.goto("v2/entries/posts/1/edit");
     const canvas = page.getByTestId("plumix-editor-canvas");
-    await canvas.focus();
-    await page.keyboard.press("/");
-    await page.getByTestId("slash-menu-item-core/details").click();
+    await insertViaSlash(page, "core/details");
     await expect(canvas.locator("details")).toHaveCount(1);
     await expect(canvas.locator("details > summary")).toHaveCount(1);
   });
@@ -187,13 +190,47 @@ test.describe("V2 spike editor renders end-to-end", () => {
   }) => {
     await page.goto("v2/entries/posts/1/edit");
     const canvas = page.getByTestId("plumix-editor-canvas");
-    await canvas.focus();
-    await page.keyboard.press("/");
-    await page.getByTestId("slash-menu-item-core/callout").click();
+    await insertViaSlash(page, "core/callout");
     await expect(canvas.locator("aside[role='note']")).toHaveCount(1);
     await expect(
       canvas.locator("aside[role='note'][data-variant='info']"),
     ).toHaveCount(1);
+  });
+
+  test("slash menu insert: button inserts a <button> with the default variant", async ({
+    page,
+  }) => {
+    await page.goto("v2/entries/posts/1/edit");
+    const canvas = page.getByTestId("plumix-editor-canvas");
+    await insertViaSlash(page, "core/button");
+    await expect(
+      canvas.locator("button[data-variant='primary']"),
+    ).toHaveCount(1);
+  });
+
+  test("slash menu insert: table inserts a <table>", async ({ page }) => {
+    await page.goto("v2/entries/posts/1/edit");
+    const canvas = page.getByTestId("plumix-editor-canvas");
+    await insertViaSlash(page, "core/table");
+    await expect(canvas.locator("table")).toHaveCount(1);
+  });
+
+  test("slash menu insert: spacer inserts an aria-hidden <div>", async ({
+    page,
+  }) => {
+    await page.goto("v2/entries/posts/1/edit");
+    const canvas = page.getByTestId("plumix-editor-canvas");
+    await insertViaSlash(page, "core/spacer");
+    await expect(canvas.locator("div[aria-hidden='true']")).toHaveCount(1);
+  });
+
+  test("slash menu insert: description-list inserts a <dl>", async ({
+    page,
+  }) => {
+    await page.goto("v2/entries/posts/1/edit");
+    const canvas = page.getByTestId("plumix-editor-canvas");
+    await insertViaSlash(page, "core/description-list");
+    await expect(canvas.locator("dl")).toHaveCount(1);
   });
 
   test("server-loaded plumix.v2 content renders in the canvas on initial mount", async ({
@@ -554,18 +591,13 @@ test.describe("V2 spike editor renders end-to-end", () => {
     await page.goto("v2/entries/posts/1/edit");
 
     const pill = page.getByTestId("plumix-autosave-pill");
-    const canvas = page.getByTestId("plumix-editor-canvas");
 
-    await canvas.focus();
-    await page.keyboard.press("/");
-    await page.getByTestId("slash-menu-item-core/paragraph").click();
+    await insertViaSlash(page, "core/paragraph");
 
     await expect(pill).toHaveAttribute("data-status", "error");
     await expect.poll(() => entryGetCalls).toBe(2);
 
-    await canvas.focus();
-    await page.keyboard.press("/");
-    await page.getByTestId("slash-menu-item-core/paragraph").click();
+    await insertViaSlash(page, "core/paragraph");
 
     await expect(pill).toHaveAttribute("data-status", "saved");
     expect(

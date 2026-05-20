@@ -81,11 +81,6 @@ const CASES: readonly BlockCase[] = [
     query: "group",
     selector: ".ProseMirror div[data-plumix-block='core/group']",
   },
-  {
-    item: "core/table",
-    query: "table",
-    selector: ".ProseMirror table[data-plumix-block='core/table']",
-  },
 ];
 
 async function mockEmpty(page: Page, id: number): Promise<void> {

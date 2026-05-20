@@ -21,7 +21,7 @@ describe("coreBlocksV2", () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  test("layout-category v2 blocks include the migrated wrappers", () => {
+  test("layout-category v2 blocks include the migrated wrappers + spacer", () => {
     const layoutNames = coreBlocksV2
       .filter((b) => b.category === "layout")
       .map((b) => b.name);
@@ -31,6 +31,30 @@ describe("coreBlocksV2", () => {
         "core/columns",
         "core/details",
         "core/callout",
+        "core/spacer",
+      ]),
+    );
+  });
+
+  test("interactive-category v2 blocks include button + buttons", () => {
+    const interactiveNames = coreBlocksV2
+      .filter((b) => b.category === "interactive")
+      .map((b) => b.name);
+    expect(interactiveNames).toEqual(
+      expect.arrayContaining(["core/button", "core/buttons"]),
+    );
+  });
+
+  test("text-category v2 blocks include the description-list family and table", () => {
+    const textNames = coreBlocksV2
+      .filter((b) => b.category === "text")
+      .map((b) => b.name);
+    expect(textNames).toEqual(
+      expect.arrayContaining([
+        "core/description-list",
+        "core/description-term",
+        "core/description-detail",
+        "core/table",
       ]),
     );
   });
