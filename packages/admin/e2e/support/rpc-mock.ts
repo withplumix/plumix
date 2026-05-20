@@ -22,6 +22,47 @@ export {
   withCapabilities,
 } from "@plumix/core/test/playwright";
 
+// Non-editor entry-type fixture — supports lacks "editor", so the admin
+// route renders the plain-form (stacked Cards) layout instead of the
+// editor surface. Carries one entry metabox with two fields so the e2e
+// can exercise the Card/section + MetaBoxField pipeline.
+export const MANIFEST_WITH_PLAIN_FORM_TYPE: PlumixManifest = {
+  ...emptyManifest(),
+  entryTypes: [
+    {
+      name: "author",
+      adminSlug: "authors",
+      label: "Authors",
+      labels: { singular: "Author", plural: "Authors" },
+      supports: ["title", "slug"],
+    },
+  ],
+  entryMetaBoxes: [
+    {
+      id: "bio",
+      label: "Biography",
+      description: "Public-facing author profile copy.",
+      entryTypes: ["author"],
+      fields: [
+        {
+          key: "headline",
+          label: "Headline",
+          type: "string",
+          inputType: "text",
+          maxLength: 120,
+        },
+        {
+          key: "twitter",
+          label: "Twitter handle",
+          type: "string",
+          inputType: "text",
+          maxLength: 40,
+        },
+      ],
+    },
+  ],
+};
+
 // Default post-type manifest fixture — one entry, slug `entries`, shared
 // by specs that just need "something to list" without caring about the
 // specifics.

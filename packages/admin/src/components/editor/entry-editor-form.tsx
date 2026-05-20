@@ -81,7 +81,7 @@ const EMPTY_NUMBER_IDS: readonly number[] = [];
 // surfaces the same error inline without a round-trip.
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-const postEditorSchema = v.object({
+export const postEditorSchema = v.object({
   title: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(300)),
   slug: v.pipe(
     v.string(),
