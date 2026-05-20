@@ -547,4 +547,37 @@ describe("entry.update", () => {
     });
     expect(updated.content).toEqual(v2Content);
   });
+
+  test("rejects writing a capability-gated meta field with FORBIDDEN", async () => {
+    const plugins = createPluginRegistry();
+    plugins.entryMetaBoxes.set("test-gated", {
+      id: "test-gated",
+      label: "Gated",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "private_note",
+          label: "Private note",
+          type: "string",
+          inputType: "text",
+          capability: "view_private_notes",
+        },
+      ],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "author", plugins });
+    const own = await h.factory.draft.create({
+      authorId: h.user.id,
+      slug: "gated-field",
+    });
+    await expect(
+      h.client.entry.update({
+        id: own.id,
+        meta: { private_note: "leaked" },
+      }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { capability: "view_private_notes" },
+    });
+  });
 });

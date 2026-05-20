@@ -11,6 +11,7 @@ export interface RangeFieldOptions {
   readonly description?: string;
   readonly default?: number;
   readonly span?: MetaBoxFieldSpan;
+  readonly capability?: string;
   /**
    * Optional override. The builder ships a default sanitizer that
    * enforces the declared `min`/`max` bounds on write; passing a
@@ -46,6 +47,7 @@ export function range(options: RangeFieldOptions): RangeMetaBoxField {
     description: options.description,
     default: options.default,
     span: options.span,
+    capability: options.capability,
     sanitize: options.sanitize ?? buildBoundsSanitizer(min, max),
   };
 }

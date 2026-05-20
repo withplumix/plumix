@@ -11,6 +11,7 @@ export interface TimeFieldOptions {
   readonly description?: string;
   readonly default?: string;
   readonly span?: MetaBoxFieldSpan;
+  readonly capability?: string;
   readonly sanitize?: (value: unknown) => unknown;
 }
 
@@ -32,6 +33,7 @@ export function time(options: TimeFieldOptions): TimeMetaBoxField {
     description: options.description,
     default: options.default,
     span: options.span,
+    capability: options.capability,
     sanitize: options.sanitize,
   };
 }

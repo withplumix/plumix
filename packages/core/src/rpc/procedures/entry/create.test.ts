@@ -446,4 +446,34 @@ describe("entry.create", () => {
       code: "BAD_REQUEST",
     });
   });
+
+  test("rejects creating an entry with a capability-gated meta field", async () => {
+    const plugins = createPluginRegistry();
+    plugins.entryMetaBoxes.set("test-gated", {
+      id: "test-gated",
+      label: "Gated",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "private_note",
+          label: "Private note",
+          type: "string",
+          inputType: "text",
+          capability: "entry:post:view_private_notes",
+        },
+      ],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "author", plugins });
+    await expect(
+      h.client.entry.create({
+        title: "gated",
+        slug: "gated",
+        meta: { private_note: "leaked" },
+      }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { capability: "entry:post:view_private_notes" },
+    });
+  });
 });

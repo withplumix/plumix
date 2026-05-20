@@ -191,6 +191,16 @@ export interface MetaBoxFieldBase {
    * width. See `MetaBoxFieldSpan` for the responsive object form.
    */
   readonly span?: MetaBoxFieldSpan;
+  /**
+   * Capability gate for the individual field. When set, the admin hides
+   * the field from viewers whose capability set lacks it. The server
+   * rejects entry/term/user writes that include the field's key — both
+   * upserts and deletes count, so a viewer can't blank a value they
+   * can't see. Gating applies at the top-level field only; capabilities
+   * on repeater subfields are ignored (a row's gate is the parent
+   * repeater field's gate). Defaults to no gating.
+   */
+  readonly capability?: string;
 }
 
 /**
@@ -1263,6 +1273,10 @@ export interface MetaBoxFieldManifestEntry {
    * through this list when rendering each row.
    */
   readonly subFields?: readonly EntryMetaBoxFieldManifestEntry[];
+  /**
+   * Capability gate for the individual field. See `MetaBoxFieldBase.capability`.
+   */
+  readonly capability?: string;
 }
 
 /**
@@ -2283,6 +2297,7 @@ function toEntryMetaBoxFieldEntry(
     marks: view.marks,
     nodes: view.nodes,
     blocks: view.blocks,
+    capability: field.capability,
     // Repeater subfields recurse through the same projection — the
     // wire shape is uniform end to end, span dropped (rows are
     // full-width), sanitize callbacks stripped (server-only).

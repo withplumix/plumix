@@ -7,6 +7,7 @@ export interface JsonFieldOptions {
   readonly description?: string;
   readonly default?: unknown;
   readonly span?: MetaBoxFieldSpan;
+  readonly capability?: string;
   readonly sanitize?: (value: unknown) => unknown;
 }
 
@@ -25,6 +26,7 @@ export function json(options: JsonFieldOptions): JsonMetaBoxField {
     description: options.description,
     default: options.default,
     span: options.span,
+    capability: options.capability,
     sanitize: options.sanitize,
   };
 }

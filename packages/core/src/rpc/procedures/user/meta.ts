@@ -3,6 +3,7 @@ import type { PluginRegistry } from "../../../plugin/manifest.js";
 import type { MetaPatch } from "../../meta/core.js";
 import { users } from "../../../db/schema/users.js";
 import { findUserMetaField } from "../../../plugin/manifest.js";
+import { assertMetaCapabilities } from "../entry/meta.js";
 import {
   applyMetaPatch,
   decodeMetaBag as decodeMetaBagCore,
@@ -38,6 +39,23 @@ export async function validateUserMetaReferences(
     ctx,
     (key) => findUserMetaField(ctx.plugins, key),
     patch,
+    errors,
+  );
+}
+
+/** Mirror of `assertEntryMetaCapabilities` for the user meta surface. */
+export function assertUserMetaCapabilities(
+  registry: PluginRegistry,
+  patch: MetaPatch,
+  auth: { can(capability: string): boolean },
+  errors: {
+    FORBIDDEN: (args: { data: { capability: string } }) => Error;
+  },
+): void {
+  assertMetaCapabilities(
+    patch,
+    (key) => findUserMetaField(registry, key),
+    auth,
     errors,
   );
 }

@@ -11,6 +11,7 @@ export interface NumberFieldOptions {
   readonly description?: string;
   readonly default?: number;
   readonly span?: MetaBoxFieldSpan;
+  readonly capability?: string;
   readonly sanitize?: (value: unknown) => unknown;
 }
 
@@ -33,6 +34,7 @@ export function number(options: NumberFieldOptions): NumberMetaBoxField {
     description: options.description,
     default: options.default,
     span: options.span,
+    capability: options.capability,
     sanitize: options.sanitize,
   };
 }

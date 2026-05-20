@@ -9,6 +9,7 @@ export interface UserListFieldOptions {
   readonly description?: string;
   readonly default?: readonly string[];
   readonly span?: MetaBoxFieldSpan;
+  readonly capability?: string;
   readonly roles?: readonly UserRole[];
   readonly includeDisabled?: boolean;
   /** Max items allowed in the array. Omitted = unbounded. */
@@ -42,5 +43,6 @@ export function userList(options: UserListFieldOptions): UserListMetaBoxField {
     description: options.description,
     default: options.default,
     span: options.span,
+    capability: options.capability,
   };
 }

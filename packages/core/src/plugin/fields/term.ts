@@ -25,6 +25,7 @@ export interface TermFieldOptions {
   readonly description?: string;
   readonly default?: string;
   readonly span?: MetaBoxFieldSpan;
+  readonly capability?: string;
   readonly termTaxonomies: readonly string[];
 }
 
@@ -48,5 +49,6 @@ export function term(options: TermFieldOptions): TermReferenceMetaBoxField {
     description: options.description,
     default: options.default,
     span: options.span,
+    capability: options.capability,
   };
 }

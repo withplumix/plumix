@@ -22,6 +22,60 @@ export {
   withCapabilities,
 } from "@plumix/core/test/playwright";
 
+// Manifest fixture exercising capability gating across both metabox and
+// field levels. Two levels of gating in one fixture.
+export const MANIFEST_WITH_CAPABILITY_GATES: PlumixManifest = {
+  ...emptyManifest(),
+  entryTypes: [
+    {
+      name: "author",
+      adminSlug: "authors",
+      label: "Authors",
+      labels: { singular: "Author", plural: "Authors" },
+      supports: ["title", "slug"],
+    },
+  ],
+  entryMetaBoxes: [
+    {
+      id: "public-bio",
+      label: "Public bio",
+      entryTypes: ["author"],
+      fields: [
+        {
+          key: "headline",
+          label: "Headline",
+          type: "string",
+          inputType: "text",
+          maxLength: 120,
+        },
+        {
+          key: "secret_note",
+          label: "Secret note",
+          type: "string",
+          inputType: "text",
+          maxLength: 240,
+          capability: "entry:author:view_secret_notes",
+        },
+      ],
+    },
+    {
+      id: "internal-notes",
+      label: "Internal notes",
+      entryTypes: ["author"],
+      capability: "entry:author:manage_internal_notes",
+      fields: [
+        {
+          key: "internal_notes",
+          label: "Notes",
+          type: "string",
+          inputType: "textarea",
+          maxLength: 1000,
+        },
+      ],
+    },
+  ],
+};
+
 // Non-editor entry-type fixture — supports lacks "editor", so the admin
 // route renders the plain-form (stacked Cards) layout instead of the
 // editor surface. Carries one entry metabox with two fields so the e2e
