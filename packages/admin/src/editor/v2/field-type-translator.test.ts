@@ -47,6 +47,23 @@ describe("translateField", () => {
     });
   });
 
+  test("maps richtext to Puck's richtext field type", () => {
+    const out = translateField({ name: "body", type: "richtext", label: "Body" });
+    expect(out).toMatchObject({ type: "richtext", label: "Body" });
+  });
+
+  test("threads provided extensions into the richtext field config", () => {
+    const fakeExt = { name: "fake" } as never;
+    const out = translateField(
+      { name: "body", type: "richtext" },
+      { richtextExtensions: [fakeExt] },
+    );
+    expect(out).toMatchObject({
+      type: "richtext",
+      tiptap: { extensions: [fakeExt] },
+    });
+  });
+
   test("falls back to text for unknown field types", () => {
     expect(
       translateField({ name: "x", type: "wat", label: "Unknown" }),

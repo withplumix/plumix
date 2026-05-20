@@ -7,13 +7,53 @@ import { renderBlockTree } from "../render-block-tree.js";
 import { paragraphBlockV2 } from "./v2.js";
 
 describe("core/paragraph end-to-end through new defineBlock + walker + style emitter", () => {
+  test("walks the Tiptap doc body and renders inline marks", () => {
+    const registry = createBlockRegistry([paragraphBlockV2]);
+    const tree: readonly BlockNode[] = [
+      {
+        id: "p1",
+        name: "core/paragraph",
+        attrs: {
+          body: {
+            type: "doc",
+            content: [
+              {
+                type: "paragraph",
+                content: [
+                  { type: "text", text: "Hello " },
+                  { type: "text", text: "world", marks: [{ type: "bold" }] },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    ];
+
+    const html = renderToStaticMarkup(renderBlockTree(tree, registry));
+
+    expect(html).toBe(
+      '<div data-plumix-block="core/paragraph"><p>Hello <strong>world</strong></p></div>',
+    );
+  });
+
   test("renders a <p> wrapped in data-plumix-block", () => {
     const registry = createBlockRegistry([paragraphBlockV2]);
     const tree: readonly BlockNode[] = [
       {
         id: "p1",
         name: "core/paragraph",
-        attrs: { text: "Hello, world" },
+        attrs: {
+          body: {
+            type: "doc",
+            content: [
+              {
+                type: "paragraph",
+                content: [{ type: "text", text: "Hello, world" }],
+              },
+            ],
+          },
+        },
       },
     ];
 
@@ -30,7 +70,17 @@ describe("core/paragraph end-to-end through new defineBlock + walker + style emi
       {
         id: "p1",
         name: "core/paragraph",
-        attrs: { text: "Cascading" },
+        attrs: {
+          body: {
+            type: "doc",
+            content: [
+              {
+                type: "paragraph",
+                content: [{ type: "text", text: "Cascading" }],
+              },
+            ],
+          },
+        },
         style: {
           large: { padding: "lg" },
           small: { padding: "sm" },

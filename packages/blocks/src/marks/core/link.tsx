@@ -16,7 +16,7 @@ function sanitizeHref(raw: unknown): string | undefined {
   return trimmed;
 }
 
-const linkSchema = Mark.create({
+export const linkSchema = Mark.create({
   name: "link",
   inclusive: false,
 
@@ -29,11 +29,41 @@ const linkSchema = Mark.create({
   },
 
   parseHTML() {
-    return [{ tag: "a[href]" }];
+    // Sanitize at parse time so a pasted javascript:/vbscript:/data:
+    // URL never enters the editor doc. Returning `false` from
+    // `getAttrs` rejects the match entirely.
+    return [
+      {
+        tag: "a[href]",
+        getAttrs: (node) => {
+          if (!(node instanceof HTMLElement)) return false;
+          const href = sanitizeHref(node.getAttribute("href"));
+          if (!href) return false;
+          const target = node.getAttribute("target");
+          return {
+            href,
+            target: target === "_blank" ? "_blank" : null,
+            rel: "noopener noreferrer nofollow",
+          };
+        },
+      },
+    ];
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ["a", mergeAttributes(HTMLAttributes), 0];
+    // Clamp on render too: an attr written directly via `setAttr` can
+    // bypass `parseHTML`'s gate. Schema is the single source of truth.
+    const href = sanitizeHref(HTMLAttributes.href);
+    if (!href) return ["span", {}, 0];
+    return [
+      "a",
+      mergeAttributes(HTMLAttributes, {
+        href,
+        rel: "noopener noreferrer nofollow",
+        target: HTMLAttributes.target === "_blank" ? "_blank" : null,
+      }),
+      0,
+    ];
   },
 });
 
