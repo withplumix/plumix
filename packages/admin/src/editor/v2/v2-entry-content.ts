@@ -1,17 +1,9 @@
 import type { BlockNode } from "@plumix/blocks";
 import type { ComponentData, Data } from "@puckeditor/core";
-import { isBlockNodeArray } from "@plumix/blocks";
+import { isBlockNodeArray, isV2EntryContent } from "@plumix/blocks";
 
-export interface V2EntryContent {
-  readonly version: "plumix.v2";
-  readonly blocks: readonly BlockNode[];
-}
-
-export function isV2EntryContent(value: unknown): value is V2EntryContent {
-  if (typeof value !== "object" || value === null) return false;
-  const candidate = value as { version?: unknown; blocks?: unknown };
-  return candidate.version === "plumix.v2" && isBlockNodeArray(candidate.blocks);
-}
+export type { V2EntryContent } from "@plumix/blocks";
+export { isV2EntryContent } from "@plumix/blocks";
 
 export function blockNodesToPuckContent(
   nodes: readonly BlockNode[],

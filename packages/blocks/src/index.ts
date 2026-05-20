@@ -51,6 +51,9 @@ export {
   isBlockNodeArray,
   renderBlockTree,
 } from "./render-block-tree.js";
+export { isV2EntryContent } from "./v2-entry-content.js";
+export type { V2EntryContent } from "./v2-entry-content.js";
+export { validateV2EntryContent } from "./validate-v2-content.js";
 export { analyzeHeadingStructure } from "./heading/audit.js";
 export type { HeadingAuditViolation } from "./heading/audit.js";
 export { resolveBlockTransformsV2 } from "./transforms-v2.js";
