@@ -21,7 +21,7 @@ import type { SlashMenuItem } from "./slash-menu-items.js";
 import { AutosaveStatusPill } from "./AutosaveStatus.js";
 import { BlockActionsPanel } from "./BlockActionsPanel.js";
 import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
-import { MobileInspectorSheet } from "./MobileInspectorSheet.js";
+import { MobileSidebarSheet } from "./MobileSidebarSheet.js";
 import { patchStyleAtSelector } from "./patch-style.js";
 import { puckDataToBlockTree } from "./puck-to-block-tree.js";
 import { PUCK_ROOT_ZONE } from "./puck-zones.js";
@@ -83,36 +83,10 @@ export function PlumixEditorLayout({
         </button>
       </header>
       <div
-        className="grid flex-1 grid-cols-[260px_1fr] overflow-hidden md:grid-cols-[260px_1fr_320px]"
+        className="grid flex-1 grid-cols-[1fr] overflow-hidden md:grid-cols-[260px_1fr_320px]"
         data-testid="plumix-editor-cols"
       >
-        <aside
-          className="overflow-y-auto border-r"
-          data-testid="plumix-editor-left"
-        >
-          <Tabs defaultValue="blocks" className="h-full">
-            <TabsList className="w-full">
-              <TabsTrigger value="blocks" data-testid="plumix-editor-tab-blocks">
-                Blocks
-              </TabsTrigger>
-              <TabsTrigger value="outline" data-testid="plumix-editor-tab-outline">
-                Outline
-              </TabsTrigger>
-              <TabsTrigger value="audit" data-testid="plumix-editor-tab-audit">
-                Audit
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="blocks">
-              <Puck.Components />
-            </TabsContent>
-            <TabsContent value="outline">
-              <Puck.Outline />
-            </TabsContent>
-            <TabsContent value="audit">
-              <PlumixAuditTab />
-            </TabsContent>
-          </Tabs>
-        </aside>
+        <BlocksBody />
         <PlumixCanvasWithSlashMenu
           registry={registry}
           capabilities={capabilities}
@@ -120,6 +94,55 @@ export function PlumixEditorLayout({
         <InspectorBody registry={registry} tokens={tokens} />
       </div>
     </div>
+  );
+}
+
+function BlocksBody(): ReactElement {
+  const isMobile = useIsMobile();
+  const content = (
+    <Tabs defaultValue="blocks" className="h-full">
+      <TabsList className="w-full">
+        <TabsTrigger value="blocks" data-testid="plumix-editor-tab-blocks">
+          Blocks
+        </TabsTrigger>
+        <TabsTrigger value="outline" data-testid="plumix-editor-tab-outline">
+          Outline
+        </TabsTrigger>
+        <TabsTrigger value="audit" data-testid="plumix-editor-tab-audit">
+          Audit
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="blocks">
+        <Puck.Components />
+      </TabsContent>
+      <TabsContent value="outline">
+        <Puck.Outline />
+      </TabsContent>
+      <TabsContent value="audit">
+        <PlumixAuditTab />
+      </TabsContent>
+    </Tabs>
+  );
+  if (isMobile) {
+    return (
+      <MobileSidebarSheet
+        triggerLabel="Blocks"
+        triggerTestId="plumix-editor-mobile-blocks-trigger"
+        triggerSide="left"
+        sheetTitle="Blocks"
+        sheetDescription="Insertable blocks, outline, and the heading audit for this entry."
+      >
+        {content}
+      </MobileSidebarSheet>
+    );
+  }
+  return (
+    <aside
+      className="overflow-y-auto border-r"
+      data-testid="plumix-editor-left"
+    >
+      {content}
+    </aside>
   );
 }
 
@@ -152,7 +175,17 @@ function InspectorBody({ registry, tokens }: InspectorBodyProps): ReactElement {
     </>
   );
   if (isMobile) {
-    return <MobileInspectorSheet>{content}</MobileInspectorSheet>;
+    return (
+      <MobileSidebarSheet
+        triggerLabel="Inspector"
+        triggerTestId="plumix-editor-mobile-inspector-trigger"
+        triggerSide="right"
+        sheetTitle="Inspector"
+        sheetDescription="Block actions, fields, and style controls for the selected block."
+      >
+        {content}
+      </MobileSidebarSheet>
+    );
   }
   return (
     <aside
