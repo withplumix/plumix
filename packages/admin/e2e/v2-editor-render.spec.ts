@@ -313,4 +313,63 @@ test.describe("V2 spike editor renders end-to-end", () => {
     expect(lastInput.id).toBe(1);
     expect(lastInput.content.blocks.length).toBeGreaterThan(0);
   });
+
+  test("clicking the Publish button POSTs entry.update with status: published", async ({
+    page,
+  }) => {
+    const captures = await mockRpcWithCapture(page, {
+      captureSuffix: "/entry/update",
+      captureResponse: {
+        ...emptyEntry(1),
+        status: "published",
+        publishedAt: T0,
+        updatedAt: T0,
+      },
+      handlers: {
+        "/auth/session": AUTHED_ADMIN,
+        "/entry/get": emptyEntry(1),
+      },
+    });
+    await page.goto("v2/entries/posts/1/edit");
+
+    const button = page.getByTestId("plumix-editor-publish-button");
+    await expect(button).toBeEnabled();
+    await button.click();
+
+    await expect
+      .poll(
+        () =>
+          (captures.at(-1) as { status?: string } | undefined)?.status ?? null,
+      )
+      .toBe("published");
+    const lastInput = captures.at(-1) as {
+      readonly id: number;
+      readonly status: string;
+      readonly content?: unknown;
+    };
+    expect(lastInput.id).toBe(1);
+    expect(lastInput.content).toBeUndefined();
+  });
+
+  test("Publish button is disabled when the entry is already published", async ({
+    page,
+  }) => {
+    await page.route("**/_plumix/rpc/**", (route) => {
+      const url = route.request().url();
+      if (url.endsWith("/entry/get")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            json: { ...emptyEntry(1), status: "published", publishedAt: T0 },
+            meta: [],
+          }),
+        });
+      }
+      return route.fallback();
+    });
+    await page.goto("v2/entries/posts/1/edit");
+
+    await expect(page.getByTestId("plumix-editor-publish-button")).toBeDisabled();
+  });
 });

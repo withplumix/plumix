@@ -3,7 +3,7 @@ import type { Config, Data } from "@puckeditor/core";
 import type { ReactElement, ReactNode } from "react";
 import { coreBlocksV2, createBlockRegistry } from "@plumix/blocks";
 import { Puck } from "@puckeditor/core";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import * as v from "valibot";
@@ -145,11 +145,27 @@ function PuckSpikeRouteInner({
     },
     [debouncer],
   );
+  // Publish is a one-way state-machine transition server-side, not an
+  // idempotent re-stamp — the button is disabled once status === "published".
+  // expectedLiveUpdatedAt is not pinned yet; the concurrency-token gap
+  // (race between a concurrent publish and an in-flight content autosave)
+  // is owned by the error-UX slice on the #391 line.
+  const publish = useMutation({
+    mutationFn: () => orpc.entry.update.call({ id, status: "published" }),
+  });
+  const isPublished = entry.status === "published";
+  const handlePublish = useCallback(() => publish.mutate(), [publish]);
   const Layout = useCallback(
     (): ReactElement => (
-      <PlumixEditorLayout registry={registry} tokens={sampleTokens} />
+      <PlumixEditorLayout
+        registry={registry}
+        tokens={sampleTokens}
+        onPublish={handlePublish}
+        isPublishing={publish.isPending}
+        isPublished={isPublished}
+      />
     ),
-    [],
+    [handlePublish, publish.isPending, isPublished],
   );
 
   return (

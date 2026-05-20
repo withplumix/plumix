@@ -35,6 +35,9 @@ interface PlumixEditorLayoutProps {
   readonly capabilities?: ReadonlySet<string>;
   readonly tokens?: ThemeTokens;
   readonly children?: ReactNode;
+  readonly onPublish: () => void;
+  readonly isPublishing?: boolean;
+  readonly isPublished?: boolean;
 }
 
 const EMPTY_REGISTRY: BlockRegistryV2 = createBlockRegistry([]);
@@ -59,6 +62,9 @@ export function PlumixEditorLayout({
   registry = EMPTY_REGISTRY,
   capabilities = EMPTY_CAPS,
   tokens = EMPTY_TOKENS,
+  onPublish,
+  isPublishing = false,
+  isPublished = false,
 }: PlumixEditorLayoutProps): ReactElement {
   return (
     <div className="flex h-dvh flex-col" data-testid="plumix-editor-layout">
@@ -76,8 +82,10 @@ export function PlumixEditorLayout({
         <AutosaveStatusPill />
         <button
           type="button"
-          className="rounded border px-3 py-1 text-sm"
+          className="rounded border px-3 py-1 text-sm disabled:opacity-50"
           data-testid="plumix-editor-publish-button"
+          onClick={onPublish}
+          disabled={isPublishing || isPublished}
         >
           Publish
         </button>
