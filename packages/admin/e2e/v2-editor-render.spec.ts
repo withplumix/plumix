@@ -6,6 +6,7 @@ import {
   MANIFEST_WITH_POST,
   mockManifest,
   mockRpcWithCapture,
+  rpcErrorBody,
   rpcOkBody,
 } from "./support/rpc-mock.js";
 
@@ -422,5 +423,34 @@ test.describe("V2 spike editor renders end-to-end", () => {
     await button.click();
     await expect.poll(() => entryGetCalls).toBeGreaterThan(1);
     await expect(button).toBeDisabled();
+  });
+
+  test("autosave pill flips to error when entry.update rejects", async ({
+    page,
+  }) => {
+    await page.route("**/_plumix/rpc/**", (route) => {
+      const url = route.request().url();
+      if (url.endsWith("/entry/update")) {
+        return route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: rpcErrorBody({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "boom",
+          }),
+        });
+      }
+      return route.fallback();
+    });
+    await page.goto("v2/entries/posts/1/edit");
+
+    const pill = page.getByTestId("plumix-autosave-pill");
+    await expect(pill).toHaveAttribute("data-status", "saved");
+
+    await page.getByTestId("plumix-editor-canvas").focus();
+    await page.keyboard.press("/");
+    await page.getByTestId("slash-menu-item-core/paragraph").click();
+
+    await expect(pill).toHaveAttribute("data-status", "error");
   });
 });

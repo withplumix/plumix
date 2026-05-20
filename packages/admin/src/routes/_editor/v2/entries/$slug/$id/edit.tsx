@@ -127,9 +127,6 @@ function PuckSpikeRouteInner({
   const [status, setStatus] = useState<AutosaveStatus>("saved");
   const debouncer = useMemo(
     () =>
-      // Rejections are swallowed deliberately: error-state UX (retry, stuck
-      // pill, conflict surface) is its own slice. Without the catch the
-      // promise would surface as an unhandled rejection in CI smoke.
       createDebouncer(async (next: Data) => {
         writeDraft(draftKey, next);
         try {
@@ -142,7 +139,7 @@ function PuckSpikeRouteInner({
           });
           setStatus("saved");
         } catch {
-          // intentionally empty — see comment above
+          setStatus("error");
         }
       }, 300),
     [draftKey, id],
@@ -161,7 +158,7 @@ function PuckSpikeRouteInner({
   // idempotent re-stamp — the button is disabled once status === "published".
   // expectedLiveUpdatedAt is not pinned yet; the concurrency-token gap
   // (race between a concurrent publish and an in-flight content autosave)
-  // is owned by the error-UX slice on the #391 line.
+  // is owned by a follow-up slice on the #391 line.
   const publish = useMutation({
     mutationFn: () => orpc.entry.update.call({ id, status: "published" }),
     onSuccess: () =>
