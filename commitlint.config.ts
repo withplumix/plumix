@@ -1,7 +1,9 @@
 import configPnpmScopes from "@commitlint/config-pnpm-scopes";
 import type { RuleConfigCondition } from "@commitlint/types";
 
-const extraScopes = ["deps", "deps-dev"];
+// `deps`/`deps-dev` for dependabot, `docs`/`media` for cross-cutting
+// scopes that don't map to a single workspace package.
+const extraScopes = ["deps", "deps-dev", "docs", "media"];
 
 export default {
   extends: ["@commitlint/config-conventional"],
