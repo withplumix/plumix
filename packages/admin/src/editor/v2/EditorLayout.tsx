@@ -4,6 +4,8 @@ import { useCallback, useMemo, useState } from "react";
 import { createBlockRegistry } from "@plumix/blocks";
 import { Puck, usePuck } from "@puckeditor/core";
 
+import { useIsMobile } from "@/hooks/use-mobile.js";
+
 import {
   Dialog,
   DialogContent,
@@ -19,6 +21,7 @@ import type { SlashMenuItem } from "./slash-menu-items.js";
 import { AutosaveStatusPill } from "./AutosaveStatus.js";
 import { BlockActionsPanel } from "./BlockActionsPanel.js";
 import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
+import { MobileInspectorSheet } from "./MobileInspectorSheet.js";
 import { patchStyleAtSelector } from "./patch-style.js";
 import { puckDataToBlockTree } from "./puck-to-block-tree.js";
 import { PUCK_ROOT_ZONE } from "./puck-zones.js";
@@ -80,7 +83,7 @@ export function PlumixEditorLayout({
         </button>
       </header>
       <div
-        className="grid flex-1 grid-cols-[260px_1fr_320px] overflow-hidden"
+        className="grid flex-1 grid-cols-[260px_1fr] overflow-hidden md:grid-cols-[260px_1fr_320px]"
         data-testid="plumix-editor-cols"
       >
         <aside
@@ -114,30 +117,50 @@ export function PlumixEditorLayout({
           registry={registry}
           capabilities={capabilities}
         />
-        <aside
-          className="overflow-y-auto border-l"
-          data-testid="plumix-editor-right"
-        >
-          <PlumixBlockActions registry={registry} />
-          <Tabs defaultValue="block" className="h-full">
-            <TabsList className="w-full">
-              <TabsTrigger value="block" data-testid="plumix-editor-tab-block">
-                Block
-              </TabsTrigger>
-              <TabsTrigger value="style" data-testid="plumix-editor-tab-style">
-                Style
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="block">
-              <Puck.Fields />
-            </TabsContent>
-            <TabsContent value="style">
-              <PlumixStyleTab tokens={tokens} />
-            </TabsContent>
-          </Tabs>
-        </aside>
+        <InspectorBody registry={registry} tokens={tokens} />
       </div>
     </div>
+  );
+}
+
+interface InspectorBodyProps {
+  readonly registry: BlockRegistryV2;
+  readonly tokens: ThemeTokens;
+}
+
+function InspectorBody({ registry, tokens }: InspectorBodyProps): ReactElement {
+  const isMobile = useIsMobile();
+  const content = (
+    <>
+      <PlumixBlockActions registry={registry} />
+      <Tabs defaultValue="block" className="h-full">
+        <TabsList className="w-full">
+          <TabsTrigger value="block" data-testid="plumix-editor-tab-block">
+            Block
+          </TabsTrigger>
+          <TabsTrigger value="style" data-testid="plumix-editor-tab-style">
+            Style
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="block">
+          <Puck.Fields />
+        </TabsContent>
+        <TabsContent value="style">
+          <PlumixStyleTab tokens={tokens} />
+        </TabsContent>
+      </Tabs>
+    </>
+  );
+  if (isMobile) {
+    return <MobileInspectorSheet>{content}</MobileInspectorSheet>;
+  }
+  return (
+    <aside
+      className="overflow-y-auto border-l"
+      data-testid="plumix-editor-right"
+    >
+      {content}
+    </aside>
   );
 }
 
