@@ -1,6 +1,6 @@
-import type { BlockNode } from "../render-block-tree.js";
 import { describe, expect, test } from "vitest";
 
+import type { BlockNode } from "../render-block-tree.js";
 import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "../test/index.js";
 import {
   tableBlock,

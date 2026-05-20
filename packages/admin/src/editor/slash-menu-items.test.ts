@@ -1,6 +1,7 @@
+import { describe, expect, test } from "vitest";
+
 import type { BlockSpec } from "@plumix/blocks";
 import { createBlockRegistry } from "@plumix/blocks";
-import { describe, expect, test } from "vitest";
 
 import {
   nextInsertPoint,
@@ -176,7 +177,11 @@ describe("resolveSlashMenuItems", () => {
         title: "List",
         category: "text",
         variations: [
-          { slug: "bullet", title: "Bulleted list", attrs: { variant: "bullet" } },
+          {
+            slug: "bullet",
+            title: "Bulleted list",
+            attrs: { variant: "bullet" },
+          },
           {
             slug: "numbered",
             title: "Numbered list",
@@ -229,15 +234,17 @@ describe("nextInsertPoint", () => {
   });
 
   test("inserts immediately after a selected top-level block in the root zone", () => {
-    expect(
-      nextInsertPoint({ zone: PUCK_ROOT_ZONE, index: 2 }, 5),
-    ).toEqual({ zone: PUCK_ROOT_ZONE, index: 3 });
+    expect(nextInsertPoint({ zone: PUCK_ROOT_ZONE, index: 2 }, 5)).toEqual({
+      zone: PUCK_ROOT_ZONE,
+      index: 3,
+    });
   });
 
   test("inserts immediately after a selected block inside a nested zone", () => {
-    expect(
-      nextInsertPoint({ zone: "section-abc:left", index: 0 }, 5),
-    ).toEqual({ zone: "section-abc:left", index: 1 });
+    expect(nextInsertPoint({ zone: "section-abc:left", index: 0 }, 5)).toEqual({
+      zone: "section-abc:left",
+      index: 1,
+    });
   });
 
   test("falls back to root zone when a selector lacks zone metadata", () => {

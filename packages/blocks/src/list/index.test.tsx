@@ -1,6 +1,6 @@
-import type { BlockNode } from "../render-block-tree.js";
 import { describe, expect, test } from "vitest";
 
+import type { BlockNode } from "../render-block-tree.js";
 import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "../test/index.js";
 import { listBlock, listItemBlock } from "./index.js";
 
@@ -70,10 +70,7 @@ describe("core/list", () => {
         },
       },
     ];
-    const html = renderBlockTreeToHtml(
-      [listBlock, listItemBlock],
-      tree,
-    );
+    const html = renderBlockTreeToHtml([listBlock, listItemBlock], tree);
     expect(html).toContain("<ul><li>A</li><li>B</li></ul>");
   });
 
@@ -89,10 +86,7 @@ describe("core/list", () => {
         },
       },
     ];
-    const html = renderBlockTreeToHtml(
-      [listBlock, listItemBlock],
-      tree,
-    );
+    const html = renderBlockTreeToHtml([listBlock, listItemBlock], tree);
     expect(html).toContain('<ol start="3"><li>x</li></ol>');
   });
 

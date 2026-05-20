@@ -90,8 +90,12 @@ test.describe("plain-form route for non-editor entry types", () => {
     await expect(
       page.getByTestId("plain-form-meta-box-heading-bio"),
     ).toHaveText("Biography");
-    await expect(card.getByTestId("meta-box-field-headline-input")).toBeVisible();
-    await expect(card.getByTestId("meta-box-field-twitter-input")).toBeVisible();
+    await expect(
+      card.getByTestId("meta-box-field-headline-input"),
+    ).toBeVisible();
+    await expect(
+      card.getByTestId("meta-box-field-twitter-input"),
+    ).toBeVisible();
 
     await expectNoAxeViolations(page);
   });

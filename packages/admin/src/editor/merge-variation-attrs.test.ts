@@ -10,9 +10,7 @@ function data(content: Data["content"]): Data {
 
 describe("mergePropsAtSelector", () => {
   test("merges attrs into the props of the root block at the given index", () => {
-    const previous = data([
-      { type: "core/list", props: { id: "l1" } },
-    ]);
+    const previous = data([{ type: "core/list", props: { id: "l1" } }]);
     const next = mergePropsAtSelector(
       previous,
       { zone: PUCK_ROOT_ZONE, index: 0 },
@@ -67,9 +65,11 @@ describe("mergePropsAtSelector", () => {
       { zone: "inner:content", index: 0 },
       { variant: "numbered" },
     );
-    const outerSlot = (next.content[0]?.props as {
-      content?: { props: { content?: { props: unknown }[] } }[];
-    }).content;
+    const outerSlot = (
+      next.content[0]?.props as {
+        content?: { props: { content?: { props: unknown }[] } }[];
+      }
+    ).content;
     expect(outerSlot?.[0]?.props.content?.[0]?.props).toEqual({
       id: "l1",
       variant: "numbered",

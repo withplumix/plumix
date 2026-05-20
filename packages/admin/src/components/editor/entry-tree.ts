@@ -84,7 +84,7 @@ export function descendantIds(
   return ids;
 }
 
-export interface ParentPickerOption {
+interface ParentPickerOption {
   readonly id: number;
   readonly label: string;
 }

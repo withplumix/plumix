@@ -3,7 +3,6 @@ import { userEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { SlashMenuItem } from "./slash-menu-items.js";
-
 import { SlashMenuPanel } from "./SlashMenuPanel.js";
 
 afterEach(() => {

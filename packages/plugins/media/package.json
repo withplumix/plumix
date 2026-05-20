@@ -56,7 +56,6 @@
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.99.2",
-    "@tiptap/core": "^3.23.5",
     "plumix": "workspace:*",
     "react": "catalog:"
   },
@@ -69,7 +68,6 @@
     "@plumix/typescript-config": "workspace:*",
     "@plumix/vitest-config": "workspace:*",
     "@tanstack/react-query": "^5.99.2",
-    "@tiptap/core": "^3.23.5",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@vitest/coverage-v8": "catalog:",

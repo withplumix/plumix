@@ -57,8 +57,6 @@ describe("media/image v2", () => {
       alt: "",
       srcset: "/x.jpg 1x, /x@2x.jpg 2x",
     });
-    expect(html.toLowerCase()).toContain(
-      'srcset="/x.jpg 1x, /x@2x.jpg 2x"',
-    );
+    expect(html.toLowerCase()).toContain('srcset="/x.jpg 1x, /x@2x.jpg 2x"');
   });
 });

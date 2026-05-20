@@ -3,7 +3,9 @@ import { describe, expect, test } from "vitest";
 
 import { patchStyleAtSelector } from "./patch-style.js";
 
-function data(content: readonly { type: string; props: Record<string, unknown> }[]): Data {
+function data(
+  content: readonly { type: string; props: Record<string, unknown> }[],
+): Data {
   return {
     content: content as Data["content"],
     root: { props: {} },
@@ -51,10 +53,14 @@ describe("patchStyleAtSelector", () => {
       { large: { padding: "lg" } },
     );
 
-    const parent = after.content[0]?.props as { content: { props: { id: string; style?: unknown } }[] };
+    const parent = after.content[0]?.props as {
+      content: { props: { id: string; style?: unknown } }[];
+    };
     expect(parent.content[0]?.props.id).toBe("child-a");
     expect(parent.content[1]?.props.id).toBe("child-b");
-    expect(parent.content[1]?.props.style).toEqual({ large: { padding: "lg" } });
+    expect(parent.content[1]?.props.style).toEqual({
+      large: { padding: "lg" },
+    });
   });
 
   test("treats a selector without a zone as root-level (matches Puck's default)", () => {

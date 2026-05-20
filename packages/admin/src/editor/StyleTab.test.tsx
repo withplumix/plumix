@@ -1,8 +1,9 @@
-import type { ThemeTokens } from "@plumix/blocks";
 import type { ComponentData } from "@puckeditor/core";
 import { cleanup, render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
+
+import type { ThemeTokens } from "@plumix/blocks";
 
 import { StyleTab } from "./StyleTab.js";
 
@@ -66,9 +67,9 @@ describe("StyleTab", () => {
       />,
     );
 
-    expect(
-      screen.getByTestId("style-tab-active-bucket").textContent,
-    ).toContain("Mobile");
+    expect(screen.getByTestId("style-tab-active-bucket").textContent).toContain(
+      "Mobile",
+    );
   });
 
   test("seeds the dropdown from the active bucket's stored token id", () => {

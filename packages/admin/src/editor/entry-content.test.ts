@@ -1,6 +1,7 @@
-import type { BlockNode } from "@plumix/blocks";
 import type { Data } from "@puckeditor/core";
 import { describe, expect, test } from "vitest";
+
+import type { BlockNode } from "@plumix/blocks";
 
 import {
   blockNodesToPuckContent,
@@ -240,7 +241,11 @@ describe("seedPuckData", () => {
       {
         version: "plumix.v2",
         blocks: [
-          { id: "h1", name: "core/heading", attrs: { level: 2, text: "Server" } },
+          {
+            id: "h1",
+            name: "core/heading",
+            attrs: { level: 2, text: "Server" },
+          },
         ],
       },
       fallback,

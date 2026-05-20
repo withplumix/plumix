@@ -110,7 +110,9 @@ describe("entry.revisions.restore", () => {
     const allRevisions = await h.db.query.entries.findMany({
       where: eq(entries.type, REVISION_TYPE),
     });
-    const publishedRevision = allRevisions.find((r) => r.status === "published");
+    const publishedRevision = allRevisions.find(
+      (r) => r.status === "published",
+    );
     if (!publishedRevision) throw new Error("expected a published revision");
     const onPublished = h.spyAction("entry:published");
     await h.client.entry.revisions.restore({

@@ -1,6 +1,7 @@
+import { describe, expect, test } from "vitest";
+
 import type { BlockSpec } from "@plumix/blocks";
 import { createBlockRegistry } from "@plumix/blocks";
-import { describe, expect, test } from "vitest";
 
 import { availableTransforms } from "./available-transforms.js";
 
@@ -25,10 +26,7 @@ describe("availableTransforms", () => {
         title: "Paragraph",
         transforms: {
           priority: 50,
-          to: [
-            { target: "core/heading" },
-            { target: "core/ghost-missing" },
-          ],
+          to: [{ target: "core/heading" }, { target: "core/ghost-missing" }],
         },
       }),
       spec({ name: "core/heading", title: "Heading" }),
@@ -47,8 +45,14 @@ describe("availableTransforms", () => {
         transforms: {
           priority: 50,
           to: [
-            { target: "core/heading", mapAttrs: (a) => ({ level: 2, text: a.text }) },
-            { target: "core/quote", mapAttrs: (a) => ({ text: a.text, citation: "" }) },
+            {
+              target: "core/heading",
+              mapAttrs: (a) => ({ level: 2, text: a.text }),
+            },
+            {
+              target: "core/quote",
+              mapAttrs: (a) => ({ text: a.text, citation: "" }),
+            },
           ],
         },
       }),

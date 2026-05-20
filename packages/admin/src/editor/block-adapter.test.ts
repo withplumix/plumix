@@ -1,5 +1,6 @@
-import type { BlockSpec as BlockSpec } from "@plumix/blocks";
 import { describe, expect, test } from "vitest";
+
+import type { BlockSpec } from "@plumix/blocks";
 
 import { blockSpecsToPuckComponents } from "./block-adapter.js";
 

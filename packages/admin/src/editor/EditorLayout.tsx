@@ -1,17 +1,9 @@
 import type {
-  BlockRegistry,
-  BlockSpec,
-  InsertableBlockEntry,
-  ResponsiveStyleSlot,
-  ThemeTokens,
-} from "@plumix/blocks";
-import type { KeyboardEvent as ReactKeyboardEvent, ReactElement, ReactNode } from "react";
+  ReactElement,
+  KeyboardEvent as ReactKeyboardEvent,
+  ReactNode,
+} from "react";
 import { useCallback, useMemo, useState } from "react";
-import { createBlockRegistry, expandBlockVariations } from "@plumix/blocks";
-import { Puck, usePuck } from "@puckeditor/core";
-
-import { useIsMobile } from "@/hooks/use-mobile.js";
-
 import {
   Dialog,
   DialogContent,
@@ -19,11 +11,26 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog.js";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.js";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs.js";
+import { useIsMobile } from "@/hooks/use-mobile.js";
+import { Puck, usePuck } from "@puckeditor/core";
+
+import type {
+  BlockRegistry,
+  BlockSpec,
+  InsertableBlockEntry,
+  ResponsiveStyleSlot,
+  ThemeTokens,
+} from "@plumix/blocks";
+import { createBlockRegistry, expandBlockVariations } from "@plumix/blocks";
 
 import type { TransformOption } from "./available-transforms.js";
 import type { SlashMenuItem } from "./slash-menu-items.js";
-
 import { AutosaveStatusPill } from "./AutosaveStatus.js";
 import { BlockActionsPanel } from "./BlockActionsPanel.js";
 import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
@@ -223,7 +230,7 @@ function PlumixBlocksTab({
         <li key={entry.slug}>
           <button
             type="button"
-            className="w-full rounded border px-3 py-2 text-left text-sm hover:bg-muted"
+            className="hover:bg-muted w-full rounded border px-3 py-2 text-left text-sm"
             data-testid={`plumix-blocks-tab-item-${entry.slug}`}
             onClick={() => handleInsert(entry)}
           >
@@ -408,7 +415,8 @@ function PlumixStyleTab({ tokens }: PlumixStyleTabProps): ReactElement {
       if (!itemSelector) return;
       puck.dispatch({
         type: "setData",
-        data: (previous) => patchStyleAtSelector(previous, itemSelector, nextStyle),
+        data: (previous) =>
+          patchStyleAtSelector(previous, itemSelector, nextStyle),
       });
     },
     [puck],
@@ -428,7 +436,9 @@ interface PlumixBlockActionsProps {
   readonly registry: BlockRegistry;
 }
 
-function PlumixBlockActions({ registry }: PlumixBlockActionsProps): ReactElement {
+function PlumixBlockActions({
+  registry,
+}: PlumixBlockActionsProps): ReactElement {
   const puck = usePuck();
   const { selectedItem } = puck;
 
@@ -499,4 +509,3 @@ function PlumixBlockActions({ registry }: PlumixBlockActionsProps): ReactElement
     />
   );
 }
-

@@ -98,7 +98,9 @@ function isDevMode(): boolean {
   return process.env.NODE_ENV !== "production";
 }
 
-export function isBlockNodeArray(value: unknown): value is readonly BlockNode[] {
+export function isBlockNodeArray(
+  value: unknown,
+): value is readonly BlockNode[] {
   if (!Array.isArray(value)) return false;
   return value.every(
     (item) =>
@@ -226,12 +228,7 @@ function renderNode(
     type: "module",
     src: spec.client.script,
   });
-  return createElement(
-    Fragment,
-    { key: node.id },
-    wrappedEl,
-    hydrationScript,
-  );
+  return createElement(Fragment, { key: node.id }, wrappedEl, hydrationScript);
 }
 
 export function renderBlockTree(

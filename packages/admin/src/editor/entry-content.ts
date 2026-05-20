@@ -1,8 +1,8 @@
-import type { BlockNode } from "@plumix/blocks";
 import type { ComponentData, Data } from "@puckeditor/core";
+
+import type { BlockNode } from "@plumix/blocks";
 import { isBlockNodeArray, isEntryContent } from "@plumix/blocks";
 
-export type { EntryContent } from "@plumix/blocks";
 export { isEntryContent } from "@plumix/blocks";
 
 export function blockNodesToPuckContent(

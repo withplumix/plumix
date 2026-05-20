@@ -1,5 +1,4 @@
 import type { ReactElement, ReactNode } from "react";
-
 import {
   Sheet,
   SheetContent,
@@ -34,7 +33,7 @@ export function MobileSidebarSheet({
   return (
     <Sheet>
       <SheetTrigger
-        className={`fixed bottom-4 ${SIDE_CLASS[triggerSide]} z-40 rounded-full border bg-background px-3 py-2 text-xs shadow-md`}
+        className={`fixed bottom-4 ${SIDE_CLASS[triggerSide]} bg-background z-40 rounded-full border px-3 py-2 text-xs shadow-md`}
         data-testid={triggerTestId}
       >
         {triggerLabel}

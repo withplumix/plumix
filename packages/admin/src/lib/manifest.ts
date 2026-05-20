@@ -135,8 +135,7 @@ function filterMetaBoxes<
     .map((box) => ({
       ...box,
       fields: box.fields.filter(
-        (field) =>
-          field.capability === undefined || caps.has(field.capability),
+        (field) => field.capability === undefined || caps.has(field.capability),
       ),
     }))
     .sort(byPriorityThen((b) => b.id));
@@ -166,7 +165,11 @@ export function visibleUserMetaBoxes(
   capabilities: readonly string[],
   source: PlumixManifest = manifest,
 ): readonly UserMetaBoxManifestEntry[] {
-  return filterMetaBoxes(source.userMetaBoxes, new Set(capabilities), () => true);
+  return filterMetaBoxes(
+    source.userMetaBoxes,
+    new Set(capabilities),
+    () => true,
+  );
 }
 
 export function findSettingsPageByName(

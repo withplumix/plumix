@@ -71,7 +71,9 @@ test.describe("capability gating in plain-form route", () => {
 
     await page.goto("entries/authors/1/edit");
 
-    await expect(page.getByTestId("plain-form-meta-box-public-bio")).toBeVisible();
+    await expect(
+      page.getByTestId("plain-form-meta-box-public-bio"),
+    ).toBeVisible();
     await expect(
       page.getByTestId("meta-box-field-headline-input"),
     ).toBeVisible();

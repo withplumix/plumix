@@ -1,11 +1,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
 
+import type { BlockSpec } from "../block-registry.js";
 import type {
   BlockContext,
   BlockNode,
   RenderBlockTreeOptions,
 } from "../render-block-tree.js";
-import type { BlockSpec } from "../block-registry.js";
 import { createBlockRegistry } from "../block-registry.js";
 import { renderBlockTree } from "../render-block-tree.js";
 

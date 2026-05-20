@@ -1,8 +1,8 @@
-import type { BlockNode } from "../render-block-tree.js";
 import { describe, expect, test } from "vitest";
 
-import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "../test/index.js";
+import type { BlockNode } from "../render-block-tree.js";
 import { paragraphBlock } from "../paragraph/index.js";
+import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "../test/index.js";
 import { detailsBlock } from "./index.js";
 
 describe("core/details", () => {
@@ -30,7 +30,9 @@ describe("core/details", () => {
         name: "core/details",
         attrs: {
           summary: "More",
-          content: [{ id: "p1", name: "core/paragraph", attrs: { text: "Hidden" } }],
+          content: [
+            { id: "p1", name: "core/paragraph", attrs: { text: "Hidden" } },
+          ],
         },
       },
     ];

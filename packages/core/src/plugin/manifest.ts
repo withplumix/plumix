@@ -1,8 +1,4 @@
-import type {
-  BlockSpec,
-  BlockVariation,
-  MarkSpec,
-} from "@plumix/blocks";
+import type { BlockSpec, BlockVariation, MarkSpec } from "@plumix/blocks";
 
 import type {
   EntryTypeCapabilityOverrides,
@@ -2183,8 +2179,16 @@ function toFieldTypeEntry(
 }
 
 function toBlockEntry(block: RegisteredBlock): BlockManifestEntry {
-  const { name, title, category, icon, description, keywords, inserter, variations } =
-    block.spec;
+  const {
+    name,
+    title,
+    category,
+    icon,
+    description,
+    keywords,
+    inserter,
+    variations,
+  } = block.spec;
   return {
     name: name,
     title: title ?? name,

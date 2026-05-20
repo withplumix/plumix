@@ -1,12 +1,13 @@
-import type { BlockSpec as BlockSpec } from "@plumix/blocks";
 import type { Config } from "@puckeditor/core";
 import type { Extensions } from "@tiptap/core";
-import { DEFAULT_BLOCK_CONTEXT } from "@plumix/blocks";
 import { createElement, Fragment } from "react";
+
+import type { BlockSpec } from "@plumix/blocks";
+import { DEFAULT_BLOCK_CONTEXT } from "@plumix/blocks";
 
 import { translateFields } from "./field-type-translator.js";
 
-export interface BlockAdapterOptions {
+interface BlockAdapterOptions {
   readonly richtextExtensions?: Extensions;
 }
 

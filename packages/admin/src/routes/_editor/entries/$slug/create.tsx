@@ -1,15 +1,10 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
-import { useMutation } from "@tanstack/react-query";
-import {
-  createFileRoute,
-  notFound,
-  useNavigate,
-} from "@tanstack/react-router";
-
 import { hasCap } from "@/lib/caps.js";
 import { findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
+import { useMutation } from "@tanstack/react-query";
+import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { slugify } from "@plumix/core/slugify";
@@ -63,7 +58,7 @@ function CreateEntryRoute(): ReactNode {
 
   return (
     <div
-      className="flex flex-1 items-center justify-center text-sm text-muted-foreground"
+      className="text-muted-foreground flex flex-1 items-center justify-center text-sm"
       data-testid="create-entry-pending"
     >
       Creating new {entryType.labels?.singular ?? entryType.label}…

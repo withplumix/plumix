@@ -1,8 +1,8 @@
-import type { BlockNode } from "../render-block-tree.js";
 import { describe, expect, test } from "vitest";
 
-import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "../test/index.js";
+import type { BlockNode } from "../render-block-tree.js";
 import { buttonBlock } from "../button/index.js";
+import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "../test/index.js";
 import { buttonsBlock } from "./index.js";
 
 describe("core/buttons", () => {
@@ -64,10 +64,7 @@ describe("core/buttons", () => {
       },
     ];
 
-    const html = renderBlockTreeToHtml(
-      [buttonsBlock, buttonBlock],
-      tree,
-    );
+    const html = renderBlockTreeToHtml([buttonsBlock, buttonBlock], tree);
 
     expect(html).toContain('data-align="end"');
     expect(html).toContain("Save");

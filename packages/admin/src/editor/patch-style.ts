@@ -1,5 +1,6 @@
-import type { ResponsiveStyleSlot } from "@plumix/blocks";
 import type { ComponentData, Data } from "@puckeditor/core";
+
+import type { ResponsiveStyleSlot } from "@plumix/blocks";
 
 import { PUCK_ROOT_ZONE } from "./puck-zones.js";
 
@@ -15,7 +16,10 @@ export function patchStyleAtSelector(
 ): Data {
   const zone = selector.zone ?? PUCK_ROOT_ZONE;
   if (zone === PUCK_ROOT_ZONE) {
-    return { ...data, content: patchItemAtIndex(data.content, selector.index, nextStyle) };
+    return {
+      ...data,
+      content: patchItemAtIndex(data.content, selector.index, nextStyle),
+    };
   }
   const [parentId, slotName] = zone.split(":", 2) as [string, string];
   return {
@@ -61,7 +65,9 @@ function patchInSlot(
     : item;
 }
 
-function isComponentDataArray(value: unknown): value is readonly ComponentData[] {
+function isComponentDataArray(
+  value: unknown,
+): value is readonly ComponentData[] {
   return (
     Array.isArray(value) &&
     value.every(

@@ -3,9 +3,6 @@ import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import type { BlockRegistry, MarkSpec } from "@plumix/blocks";
 import { createBlockRegistry } from "@plumix/blocks";
 
-const EMPTY_BLOCK_REGISTRY: BlockRegistry = createBlockRegistry([]);
-const EMPTY_MARK_LIST: readonly MarkSpec[] = Object.freeze([]);
-
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { Mailer } from "../auth/mailer/types.js";
 import type { KnownCapability } from "../auth/rbac.js";
@@ -23,6 +20,9 @@ import type {
 } from "../runtime/slots.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
+
+const EMPTY_BLOCK_REGISTRY: BlockRegistry = createBlockRegistry([]);
+const EMPTY_MARK_LIST: readonly MarkSpec[] = Object.freeze([]);
 
 export type CoreSchema = typeof coreSchema;
 

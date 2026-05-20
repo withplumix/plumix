@@ -1,6 +1,6 @@
-import type { BlockNode, HeadingAuditViolation } from "@plumix/blocks";
 import type { ReactNode } from "react";
 
+import type { BlockNode, HeadingAuditViolation } from "@plumix/blocks";
 import { analyzeHeadingStructure } from "@plumix/blocks";
 
 interface HeadingAuditPanelProps {
@@ -16,18 +16,17 @@ export function HeadingAuditPanel({
 
   if (violations.length === 0) {
     return (
-      <div className="p-4 text-sm text-muted-foreground" data-testid="heading-audit-empty">
+      <div
+        className="text-muted-foreground p-4 text-sm"
+        data-testid="heading-audit-empty"
+      >
         No heading-structure issues detected.
       </div>
     );
   }
 
   return (
-    <ul
-      role="list"
-      className="space-y-2 p-2"
-      data-testid="heading-audit-list"
-    >
+    <ul role="list" className="space-y-2 p-2" data-testid="heading-audit-list">
       {violations.map((violation, index) => {
         const nodeIds = nodeIdsFor(violation);
         const primaryId = nodeIds[0];

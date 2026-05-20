@@ -3,7 +3,6 @@ import type { PluginRegistry } from "../../../plugin/manifest.js";
 import type { MetaPatch } from "../../meta/core.js";
 import { users } from "../../../db/schema/users.js";
 import { findUserMetaField } from "../../../plugin/manifest.js";
-import { assertMetaCapabilities } from "../entry/meta.js";
 import {
   applyMetaPatch,
   decodeMetaBag as decodeMetaBagCore,
@@ -13,6 +12,7 @@ import {
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
   validateMetaReferencesForRpc,
 } from "../../meta/core.js";
+import { assertMetaCapabilities } from "../entry/meta.js";
 
 export type { MetaChanges as UserMetaChanges } from "../../meta/core.js";
 

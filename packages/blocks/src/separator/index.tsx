@@ -6,7 +6,8 @@ const VARIANTS = ["solid", "dashed", "dotted", "wide"] as const;
 type SeparatorVariant = (typeof VARIANTS)[number];
 
 function pickVariant(raw: unknown): SeparatorVariant {
-  return typeof raw === "string" && (VARIANTS as readonly string[]).includes(raw)
+  return typeof raw === "string" &&
+    (VARIANTS as readonly string[]).includes(raw)
     ? (raw as SeparatorVariant)
     : "solid";
 }

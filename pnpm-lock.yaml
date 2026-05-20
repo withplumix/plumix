@@ -202,9 +202,6 @@ importers:
       '@tiptap/core':
         specifier: ^3.23.5
         version: 3.23.5(@tiptap/pm@3.23.4)
-      '@tiptap/react':
-        specifier: ^3.23.5
-        version: 3.23.5(@floating-ui/dom@1.7.6)(@tiptap/core@3.23.5(@tiptap/pm@3.23.4))(@tiptap/pm@3.23.4)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -302,9 +299,6 @@ importers:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.7(vitest@4.1.7)
-      axe-core:
-        specifier: ^4.11.3
-        version: 4.11.3
       esbuild:
         specifier: 0.27.7
         version: 0.27.7
@@ -357,9 +351,6 @@ importers:
       '@plumix/vitest-config':
         specifier: workspace:*
         version: link:../../tooling/vitest
-      '@testing-library/react':
-        specifier: ^16.3.2
-        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@types/node':
         specifier: 'catalog:'
         version: 24.12.2
@@ -746,9 +737,6 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.99.2
         version: 5.99.2(react@19.2.6)
-      '@tiptap/core':
-        specifier: ^3.23.5
-        version: 3.23.5(@tiptap/pm@3.23.4)
       '@types/node':
         specifier: 'catalog:'
         version: 24.12.2
@@ -9769,7 +9757,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.1.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.7(@types/node@24.12.2)(@vitest/coverage-v8@4.1.7)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.0.9(@types/node@24.12.2)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
+      vitest: 4.1.7(@types/node@25.6.0)(@vitest/coverage-v8@4.1.7)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.0.9(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
 
   '@vitest/expect@4.1.7':
     dependencies:

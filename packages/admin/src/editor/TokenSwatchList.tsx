@@ -1,6 +1,7 @@
-import type { ThemeTokenGroup } from "@plumix/blocks";
 import type { ReactElement } from "react";
 import { useId } from "react";
+
+import type { ThemeTokenGroup } from "@plumix/blocks";
 
 interface TokenSwatchListProps {
   readonly tokens: ThemeTokenGroup;

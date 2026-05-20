@@ -61,7 +61,9 @@ describe("resolveBlockTransforms", () => {
   });
 
   test("dedupes by target — forward beats inverse when its priority is higher", () => {
-    const forwardMap = (a: Readonly<Record<string, unknown>>) => ({ x: a.text });
+    const forwardMap = (a: Readonly<Record<string, unknown>>) => ({
+      x: a.text,
+    });
     const specs = [
       spec("core/quote", {
         to: [{ target: "core/paragraph", mapAttrs: forwardMap }],
@@ -97,10 +99,7 @@ describe("resolveBlockTransforms", () => {
   test("filters out targets that are not in the specs list", () => {
     const specs = [
       spec("core/heading", {
-        to: [
-          { target: "core/paragraph" },
-          { target: "core/missing" },
-        ],
+        to: [{ target: "core/paragraph" }, { target: "core/missing" }],
       }),
       spec("core/paragraph"),
     ];
@@ -113,10 +112,7 @@ describe("resolveBlockTransforms", () => {
   test("sorts targets by descending priority", () => {
     const specs = [
       spec("core/heading", {
-        to: [
-          { target: "core/paragraph" },
-          { target: "core/quote" },
-        ],
+        to: [{ target: "core/paragraph" }, { target: "core/quote" }],
         priority: 5,
       }),
       spec("core/paragraph"),

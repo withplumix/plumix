@@ -1,9 +1,9 @@
-import type { BlockRegistry } from "@plumix/blocks";
 import type { ReactElement } from "react";
 import { useMemo } from "react";
 
-import type { TransformOption } from "./available-transforms.js";
+import type { BlockRegistry } from "@plumix/blocks";
 
+import type { TransformOption } from "./available-transforms.js";
 import { availableTransforms } from "./available-transforms.js";
 
 interface BlockActionsPanelProps {
@@ -31,7 +31,7 @@ export function BlockActionsPanel({
   if (!specName) {
     return (
       <div
-        className="p-3 text-xs text-muted-foreground"
+        className="text-muted-foreground p-3 text-xs"
         data-testid="block-actions-empty"
       >
         Select a block to see actions.
@@ -46,11 +46,8 @@ export function BlockActionsPanel({
     <div className="space-y-2 border-b p-3" data-testid="block-actions-panel">
       {options.length > 0 ? (
         <div className="space-y-1">
-          <div className="text-xs text-muted-foreground">Transform to</div>
-          <ul
-            className="flex flex-wrap gap-1"
-            data-testid="block-actions-list"
-          >
+          <div className="text-muted-foreground text-xs">Transform to</div>
+          <ul className="flex flex-wrap gap-1" data-testid="block-actions-list">
             {options.map((option) => (
               <li key={option.targetName}>
                 <button

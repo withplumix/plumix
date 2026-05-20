@@ -1,6 +1,5 @@
 import type { ReactElement } from "react";
 import { createContext, useContext } from "react";
-
 import { cn } from "@/lib/utils.js";
 
 export type AutosaveStatus = "saved" | "saving" | "error";
@@ -19,9 +18,7 @@ export function AutosaveStatusPill(): ReactElement {
     <span
       className={cn(
         "rounded px-2 py-1 text-xs",
-        status === "error"
-          ? "bg-destructive/10 text-destructive"
-          : "bg-muted",
+        status === "error" ? "bg-destructive/10 text-destructive" : "bg-muted",
       )}
       data-testid="plumix-autosave-pill"
       data-status={status}

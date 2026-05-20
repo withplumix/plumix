@@ -1,7 +1,7 @@
-import type { BlockNode } from "../render-block-tree.js";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
+import type { BlockNode } from "../render-block-tree.js";
 import { createBlockRegistry } from "../block-registry.js";
 import { renderBlockTree } from "../render-block-tree.js";
 import { headingBlock } from "./index.js";

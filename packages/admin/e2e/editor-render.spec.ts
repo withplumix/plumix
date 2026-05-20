@@ -73,7 +73,9 @@ test.describe("V2 spike editor renders end-to-end", () => {
     await expect(page.getByTestId("plumix-editor-title-input")).toBeVisible();
     await expect(page.getByTestId("plumix-autosave-pill")).toBeVisible();
     await expect(page.getByTestId("plumix-autosave-pill")).toHaveText("Saved");
-    await expect(page.getByTestId("plumix-editor-publish-button")).toBeVisible();
+    await expect(
+      page.getByTestId("plumix-editor-publish-button"),
+    ).toBeVisible();
 
     await expect(page.getByTestId("plumix-editor-left")).toBeVisible();
     await expect(page.getByTestId("plumix-editor-tab-blocks")).toBeVisible();
@@ -203,9 +205,9 @@ test.describe("V2 spike editor renders end-to-end", () => {
     await page.goto("entries/posts/1/edit");
     const canvas = page.getByTestId("plumix-editor-canvas");
     await insertViaSlash(page, "core/button");
-    await expect(
-      canvas.locator("button[data-variant='primary']"),
-    ).toHaveCount(1);
+    await expect(canvas.locator("button[data-variant='primary']")).toHaveCount(
+      1,
+    );
   });
 
   test("slash menu insert: table inserts a <table>", async ({ page }) => {
@@ -341,9 +343,7 @@ test.describe("V2 spike editor renders end-to-end", () => {
     await page.setViewportSize({ width: 480, height: 800 });
     await page.goto("entries/posts/1/edit");
 
-    await page
-      .getByTestId("plumix-editor-mobile-inspector-trigger")
-      .click();
+    await page.getByTestId("plumix-editor-mobile-inspector-trigger").click();
     await expect(page.getByTestId("plumix-editor-tab-block")).toBeVisible();
 
     await expectNoAxeViolations(page);
@@ -398,11 +398,8 @@ test.describe("V2 spike editor renders end-to-end", () => {
     await expect
       .poll(
         () =>
-          (
-            captures.at(-1) as
-              | { content?: { version?: string } }
-              | undefined
-          )?.content?.version ?? null,
+          (captures.at(-1) as { content?: { version?: string } } | undefined)
+            ?.content?.version ?? null,
       )
       .toBe("plumix.v2");
     const lastInput = captures.at(-1) as {
@@ -473,7 +470,9 @@ test.describe("V2 spike editor renders end-to-end", () => {
     });
     await page.goto("entries/posts/1/edit");
 
-    await expect(page.getByTestId("plumix-editor-publish-button")).toBeDisabled();
+    await expect(
+      page.getByTestId("plumix-editor-publish-button"),
+    ).toBeDisabled();
   });
 
   test("publishing refetches entry.get so the button reflects the new status", async ({

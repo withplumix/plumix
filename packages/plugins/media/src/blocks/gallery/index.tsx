@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-
 import { defineBlock } from "plumix/blocks";
 
 import { clampColumns, normalizeGap, pickAspect } from "./normalize.js";
@@ -26,8 +25,18 @@ export const galleryBlock = defineBlock({
   description: "Grid of images with explicit column count and aspect ratio.",
   keywords: ["images", "grid", "photos"],
   inputs: [
-    { name: "columns", type: "select", label: "Columns", options: COLUMN_OPTIONS },
-    { name: "aspect", type: "select", label: "Aspect ratio", options: ASPECT_OPTIONS },
+    {
+      name: "columns",
+      type: "select",
+      label: "Columns",
+      options: COLUMN_OPTIONS,
+    },
+    {
+      name: "aspect",
+      type: "select",
+      label: "Aspect ratio",
+      options: ASPECT_OPTIONS,
+    },
     { name: "gap", type: "text", label: "Gap" },
     { name: "content", type: "slot", label: "Images" },
   ],
@@ -38,11 +47,7 @@ export const galleryBlock = defineBlock({
     const gap = normalizeGap(attrs.gap);
     const Content = attrs.content as (() => ReactNode) | undefined;
     return (
-      <div
-        data-columns={columns}
-        data-aspect={aspect}
-        data-gap={gap}
-      >
+      <div data-columns={columns} data-aspect={aspect} data-gap={gap}>
         {Content ? <Content /> : null}
       </div>
     );

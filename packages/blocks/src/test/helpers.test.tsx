@@ -1,7 +1,7 @@
-import type { BlockNode, BlockSpec } from "../index.js";
 import type { ReactNode } from "react";
 import { describe, expect, test } from "vitest";
 
+import type { BlockNode, BlockSpec } from "../index.js";
 import { defineBlock } from "../index.js";
 import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "./index.js";
 
@@ -46,7 +46,9 @@ describe("renderBlockSpecToHtml", () => {
     );
 
     // No style declared on the node; nothing emitted regardless of tokens.
-    expect(html).toBe('<div data-plumix-block="sample/styled"><span>x</span></div>');
+    expect(html).toBe(
+      '<div data-plumix-block="sample/styled"><span>x</span></div>',
+    );
   });
 });
 

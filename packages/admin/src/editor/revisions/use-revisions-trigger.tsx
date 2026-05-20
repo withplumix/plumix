@@ -1,10 +1,9 @@
 import type { ReactNode, RefObject } from "react";
 import { useMemo } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-
 import { RevisionsSheet } from "@/editor/revisions/RevisionsSheet.js";
 import { orpc } from "@/lib/orpc.js";
 import { formatRelativeTime } from "@/lib/relative-time.js";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface UseRevisionsTriggerInput {
   readonly entryId: number;

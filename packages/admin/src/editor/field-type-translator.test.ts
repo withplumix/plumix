@@ -1,5 +1,6 @@
-import type { BlockInput } from "@plumix/blocks";
 import { describe, expect, test } from "vitest";
+
+import type { BlockInput } from "@plumix/blocks";
 
 import { translateField, translateFields } from "./field-type-translator.js";
 
@@ -41,14 +42,20 @@ describe("translateField", () => {
   });
 
   test("maps slot to Puck's slot field type", () => {
-    expect(translateField({ name: "content", type: "slot", label: "Body" })).toEqual({
+    expect(
+      translateField({ name: "content", type: "slot", label: "Body" }),
+    ).toEqual({
       type: "slot",
       label: "Body",
     });
   });
 
   test("maps richtext to Puck's richtext field type", () => {
-    const out = translateField({ name: "body", type: "richtext", label: "Body" });
+    const out = translateField({
+      name: "body",
+      type: "richtext",
+      label: "Body",
+    });
     expect(out).toMatchObject({ type: "richtext", label: "Body" });
   });
 

@@ -1,30 +1,33 @@
-import type { ThemeTokens } from "@plumix/blocks";
+import type { AutosaveStatus } from "@/editor/AutosaveStatus.js";
 import type { Config, Data } from "@puckeditor/core";
 import type { ReactElement, ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AutosaveStatusContext } from "@/editor/AutosaveStatus.js";
+import { blockSpecsToPuckComponents } from "@/editor/block-adapter.js";
+import { createDebouncer } from "@/editor/debounce.js";
+import { PlumixEditorLayout } from "@/editor/EditorLayout.js";
+import { seedPuckData } from "@/editor/entry-content.js";
+import { readDraft, writeDraft } from "@/editor/local-draft.js";
+import { puckDataToBlockTree } from "@/editor/puck-to-block-tree.js";
+import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
+import { findEntryTypeBySlug } from "@/lib/manifest.js";
+import { orpc } from "@/lib/orpc.js";
+import { ORPCError } from "@orpc/client";
+import { Puck } from "@puckeditor/core";
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
+import { createFileRoute, notFound } from "@tanstack/react-router";
+import * as v from "valibot";
+
+import type { ThemeTokens } from "@plumix/blocks";
 import {
   coreBlocks,
   coreMarkExtensions,
   createBlockRegistry,
 } from "@plumix/blocks";
-import { ORPCError } from "@orpc/client";
-import { Puck } from "@puckeditor/core";
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, notFound } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import * as v from "valibot";
-
-import type { AutosaveStatus } from "@/editor/AutosaveStatus.js";
-
-import { AutosaveStatusContext } from "@/editor/AutosaveStatus.js";
-import { blockSpecsToPuckComponents } from "@/editor/block-adapter.js";
-import { createDebouncer } from "@/editor/debounce.js";
-import { PlumixEditorLayout } from "@/editor/EditorLayout.js";
-import { readDraft, writeDraft } from "@/editor/local-draft.js";
-import { puckDataToBlockTree } from "@/editor/puck-to-block-tree.js";
-import { seedPuckData } from "@/editor/entry-content.js";
-import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
-import { findEntryTypeBySlug } from "@/lib/manifest.js";
-import { orpc } from "@/lib/orpc.js";
 import { idPathParam } from "@plumix/core/validation";
 
 import "@puckeditor/core/puck.css";
@@ -93,7 +96,7 @@ export const Route = createFileRoute("/_editor/entries/$slug/$id/edit")({
 function PendingScreen(): ReactNode {
   return (
     <div
-      className="p-6 text-sm text-muted-foreground"
+      className="text-muted-foreground p-6 text-sm"
       data-testid="plumix-editor-pending"
     >
       Loading entry…
@@ -104,7 +107,7 @@ function PendingScreen(): ReactNode {
 function ErrorScreen(): ReactNode {
   return (
     <div
-      className="p-6 text-sm text-muted-foreground"
+      className="text-muted-foreground p-6 text-sm"
       data-testid="plumix-editor-error"
     >
       Couldn't load this entry.
@@ -230,10 +233,7 @@ function PuckSpikeRouteInner({
   });
   const isPublished = entry.status === "published";
   const handlePublish = useCallback(() => publish.mutate(), [publish]);
-  const capabilitySet = useMemo(
-    () => new Set(capabilities),
-    [capabilities],
-  );
+  const capabilitySet = useMemo(() => new Set(capabilities), [capabilities]);
   const revisionsTrigger = useRevisionsTrigger({
     entryId: id,
     enabled: supportsRevisions,
@@ -272,4 +272,3 @@ function PuckSpikeRouteInner({
     </AutosaveStatusContext.Provider>
   );
 }
-

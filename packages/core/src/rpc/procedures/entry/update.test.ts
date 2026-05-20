@@ -537,9 +537,7 @@ describe("entry.update", () => {
     });
     const v2Content = {
       version: "plumix.v2",
-      blocks: [
-        { id: "p1", name: "core/paragraph", attrs: { text: "Hello" } },
-      ],
+      blocks: [{ id: "p1", name: "core/paragraph", attrs: { text: "Hello" } }],
     };
     const updated = await h.client.entry.update({
       id: own.id,

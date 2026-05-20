@@ -1,5 +1,5 @@
-import type { BlockNode } from "./render-block-tree.js";
 import type { EntryContent } from "./entry-content.js";
+import type { BlockNode } from "./render-block-tree.js";
 import type { BlockContentValidationIssue } from "./validation-errors.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 

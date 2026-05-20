@@ -16,6 +16,8 @@ export function setStyleProperty(
   }
   const { [bucket]: _omit, ...rest } = style ?? {};
   const merged: ResponsiveStyleSlot =
-    Object.keys(nextBucket).length === 0 ? rest : { ...rest, [bucket]: nextBucket };
+    Object.keys(nextBucket).length === 0
+      ? rest
+      : { ...rest, [bucket]: nextBucket };
   return Object.keys(merged).length === 0 ? undefined : merged;
 }

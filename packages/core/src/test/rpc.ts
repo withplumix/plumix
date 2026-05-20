@@ -2,11 +2,7 @@ import type { RouterClient } from "@orpc/server";
 import { createRouterClient } from "@orpc/server";
 
 import type { BlockRegistry, MarkSpec } from "@plumix/blocks";
-import {
-  coreBlocks,
-  coreMarks,
-  createBlockRegistry,
-} from "@plumix/blocks";
+import { coreBlocks, coreMarks, createBlockRegistry } from "@plumix/blocks";
 
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { Mailer } from "../auth/mailer/types.js";

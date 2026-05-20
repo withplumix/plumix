@@ -175,8 +175,6 @@ describe("renderInlineAll (multi-paragraph)", () => {
         },
       ],
     };
-    expect(htmlOfAll(doc)).toBe(
-      "<p>first</p><p><strong>second </strong></p>",
-    );
+    expect(htmlOfAll(doc)).toBe("<p>first</p><p><strong>second </strong></p>");
   });
 });

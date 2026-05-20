@@ -1,11 +1,15 @@
+import { createQueryClient } from "@/providers/query-client.js";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import { createQueryClient } from "@/providers/query-client.js";
-
 import type { PostEditorValues } from "./post-editor-form.js";
-
 import { PlainFormLayout } from "./plain-form-layout.js";
 
 afterEach(() => {
@@ -50,9 +54,7 @@ describe("PlainFormLayout", () => {
         />,
       ),
     );
-    expect(
-      screen.getByTestId("custom-revisions-trigger"),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId("custom-revisions-trigger")).toBeInTheDocument();
   });
 
   test("autosave debounces field edits and fires onSubmit", async () => {

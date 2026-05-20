@@ -1,7 +1,7 @@
-import type { BlockContext, BlockNode } from "./render-block-tree.js";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import type { BlockContext, BlockNode } from "./render-block-tree.js";
 import { createBlockRegistry } from "./block-registry.js";
 import { renderBlockTree } from "./render-block-tree.js";
 
@@ -57,9 +57,7 @@ describe("renderBlockTree", () => {
       { id: "3", name: "core/heading", attrs: { text: "Third", level: 2 } },
     ];
 
-    const html = renderToStaticMarkup(
-      renderBlockTree(blocks, headingRegistry),
-    );
+    const html = renderToStaticMarkup(renderBlockTree(blocks, headingRegistry));
 
     expect(html).toBe(
       '<div data-plumix-block="core/heading"><h2>First</h2></div>' +
@@ -119,7 +117,11 @@ describe("renderBlockTree", () => {
         name: "core/section",
         render: ({ attrs }) => {
           const Content = attrs.content as () => React.ReactNode;
-          return <section><Content /></section>;
+          return (
+            <section>
+              <Content />
+            </section>
+          );
         },
       },
     ]);
@@ -161,7 +163,11 @@ describe("renderBlockTree", () => {
         name: "core/section",
         render: ({ attrs }) => {
           const Content = attrs.content as () => React.ReactNode;
-          return <section><Content /></section>;
+          return (
+            <section>
+              <Content />
+            </section>
+          );
         },
       },
     ]);
@@ -340,7 +346,9 @@ describe("renderBlockTree", () => {
 
       const html = renderToStaticMarkup(renderBlockTree(tree, registry));
 
-      const scriptMatches = html.match(/<script[^>]*src="\/assets\/carousel.js"/g);
+      const scriptMatches = html.match(
+        /<script[^>]*src="\/assets\/carousel.js"/g,
+      );
       expect(scriptMatches).toHaveLength(1);
       // Each instance still carries the island marker so the bootstrap can
       // find every DOM anchor by name.
@@ -415,7 +423,11 @@ describe("renderBlockTree", () => {
           name: "core/section",
           render: ({ attrs }) => {
             const Content = attrs.content as () => React.ReactNode;
-            return <section><Content /></section>;
+            return (
+              <section>
+                <Content />
+              </section>
+            );
           },
         },
         {
@@ -479,7 +491,9 @@ describe("renderBlockTree", () => {
         { id: "3", name: "core/heading", attrs: { text: "After", level: 2 } },
       ];
 
-      const roundtripped = JSON.parse(JSON.stringify(tree)) as readonly BlockNode[];
+      const roundtripped = JSON.parse(
+        JSON.stringify(tree),
+      ) as readonly BlockNode[];
 
       expect(roundtripped).toEqual(tree);
     });

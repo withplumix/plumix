@@ -11,7 +11,7 @@ export { PUCK_ROOT_ZONE };
 
 export type SlashMenuItem = InsertableBlockEntry;
 
-export interface ResolveSlashMenuItemsOptions {
+interface ResolveSlashMenuItemsOptions {
   readonly capabilities: ReadonlySet<string>;
   readonly query: string;
 }
@@ -66,7 +66,7 @@ function matchScore(item: SlashMenuItem, needle: string): number {
   return 0;
 }
 
-export interface InsertPointSelector {
+interface InsertPointSelector {
   readonly zone?: string;
   readonly index: number;
 }

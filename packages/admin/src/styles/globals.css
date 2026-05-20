@@ -222,13 +222,13 @@
     @apply bg-muted/40 border-muted-foreground/20 my-3 rounded-md border p-3;
   }
   [data-plumix-block="core/callout"] > aside[data-variant="warn"] {
-    @apply bg-yellow-100/60 border-yellow-300 text-yellow-900;
+    @apply border-yellow-300 bg-yellow-100/60 text-yellow-900;
   }
   [data-plumix-block="core/callout"] > aside[data-variant="error"] {
-    @apply bg-red-100/60 border-red-300 text-red-900;
+    @apply border-red-300 bg-red-100/60 text-red-900;
   }
   [data-plumix-block="core/callout"] > aside[data-variant="success"] {
-    @apply bg-green-100/60 border-green-300 text-green-900;
+    @apply border-green-300 bg-green-100/60 text-green-900;
   }
 
   /* Details */

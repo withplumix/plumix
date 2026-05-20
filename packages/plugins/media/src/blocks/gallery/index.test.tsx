@@ -1,4 +1,7 @@
-import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "plumix/blocks/test";
+import {
+  renderBlockSpecToHtml,
+  renderBlockTreeToHtml,
+} from "plumix/blocks/test";
 import { describe, expect, test } from "vitest";
 
 import { imageBlock } from "../image/index.js";
@@ -31,27 +34,30 @@ describe("media/gallery v2", () => {
   });
 
   test("renders nested media/image children from the content slot", () => {
-    const html = renderBlockTreeToHtml([galleryBlock, imageBlock], [
-      {
-        id: "g1",
-        name: "media/gallery",
-        attrs: {
-          columns: 2,
-          content: [
-            {
-              id: "i1",
-              name: "media/image",
-              attrs: { src: "/a.jpg", alt: "A" },
-            },
-            {
-              id: "i2",
-              name: "media/image",
-              attrs: { src: "/b.jpg", alt: "B" },
-            },
-          ],
+    const html = renderBlockTreeToHtml(
+      [galleryBlock, imageBlock],
+      [
+        {
+          id: "g1",
+          name: "media/gallery",
+          attrs: {
+            columns: 2,
+            content: [
+              {
+                id: "i1",
+                name: "media/image",
+                attrs: { src: "/a.jpg", alt: "A" },
+              },
+              {
+                id: "i2",
+                name: "media/image",
+                attrs: { src: "/b.jpg", alt: "B" },
+              },
+            ],
+          },
         },
-      },
-    ]);
+      ],
+    );
     expect(html).toContain('data-columns="2"');
     expect(html).toContain('src="/a.jpg"');
     expect(html).toContain('src="/b.jpg"');

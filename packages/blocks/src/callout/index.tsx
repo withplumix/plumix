@@ -6,7 +6,8 @@ const VARIANTS = ["info", "warn", "error", "success", "note"] as const;
 type CalloutVariant = (typeof VARIANTS)[number];
 
 function pickVariant(raw: unknown): CalloutVariant {
-  return typeof raw === "string" && (VARIANTS as readonly string[]).includes(raw)
+  return typeof raw === "string" &&
+    (VARIANTS as readonly string[]).includes(raw)
     ? (raw as CalloutVariant)
     : "info";
 }
@@ -30,7 +31,8 @@ export const calloutBlock = defineBlock({
   render: ({ attrs }): ReactNode => {
     const variant = pickVariant(attrs.variant);
     const iconRaw = attrs.icon as string | undefined;
-    const icon = typeof iconRaw === "string" && iconRaw.length > 0 ? iconRaw : undefined;
+    const icon =
+      typeof iconRaw === "string" && iconRaw.length > 0 ? iconRaw : undefined;
     const Content = attrs.content as (() => ReactNode) | undefined;
     return (
       <aside role="note" data-variant={variant} data-icon={icon}>

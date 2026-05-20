@@ -1,4 +1,4 @@
-export interface Debouncer<Args extends readonly unknown[]> {
+interface Debouncer<Args extends readonly unknown[]> {
   readonly call: (...args: Args) => void;
   readonly flush: () => void;
   readonly cancel: () => void;

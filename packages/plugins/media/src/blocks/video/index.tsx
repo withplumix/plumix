@@ -1,5 +1,4 @@
 import type { ReactElement } from "react";
-
 import { defineBlock } from "plumix/blocks";
 
 export const videoBlock = defineBlock({

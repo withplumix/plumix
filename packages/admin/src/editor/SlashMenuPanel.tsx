@@ -1,7 +1,5 @@
 import type { ReactElement } from "react";
 import { useMemo } from "react";
-import { Command as CommandPrimitive } from "cmdk";
-
 import {
   Command,
   CommandEmpty,
@@ -9,6 +7,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command.js";
+import { Command as CommandPrimitive } from "cmdk";
 
 import type { SlashMenuItem } from "./slash-menu-items.js";
 

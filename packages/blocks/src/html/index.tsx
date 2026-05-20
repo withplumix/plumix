@@ -1,6 +1,6 @@
-import type { BlockNodeRenderProps } from "../render-block-tree.js";
 import type { ReactNode } from "react";
 
+import type { BlockNodeRenderProps } from "../render-block-tree.js";
 import { defineBlock } from "../block-registry.js";
 import { useHtmlAllowlist } from "./context.js";
 import { sanitizeHtml } from "./sanitize.js";

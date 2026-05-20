@@ -209,7 +209,9 @@ describe("RevisionsSheet", () => {
       expect(onRestore).toHaveBeenCalledWith(8);
     });
     await waitFor(() => {
-      expect(screen.queryByTestId("revisions-sheet-diff")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("revisions-sheet-diff"),
+      ).not.toBeInTheDocument();
     });
   });
 

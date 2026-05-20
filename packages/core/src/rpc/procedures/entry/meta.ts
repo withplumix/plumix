@@ -67,10 +67,7 @@ export function assertMetaCapabilities(
     FORBIDDEN: (args: { data: { capability: string } }) => Error;
   },
 ): void {
-  const touched = new Set<string>([
-    ...patch.upserts.keys(),
-    ...patch.deletes,
-  ]);
+  const touched = new Set<string>([...patch.upserts.keys(), ...patch.deletes]);
   for (const key of touched) {
     const field = findField(key);
     if (!field?.capability) continue;

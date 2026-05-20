@@ -2,7 +2,7 @@ import type { ComponentData, Data } from "@puckeditor/core";
 
 import { PUCK_ROOT_ZONE } from "./puck-zones.js";
 
-export interface MergeSelector {
+interface MergeSelector {
   readonly zone: string;
   readonly index: number;
 }
@@ -13,7 +13,10 @@ export function mergePropsAtSelector(
   attrs: Readonly<Record<string, unknown>>,
 ): Data {
   if (selector.zone === PUCK_ROOT_ZONE) {
-    return { ...data, content: mergeAtIndex(data.content, selector.index, attrs) };
+    return {
+      ...data,
+      content: mergeAtIndex(data.content, selector.index, attrs),
+    };
   }
   const [parentId, slotName] = selector.zone.split(":", 2) as [string, string];
   return {
@@ -59,7 +62,9 @@ function mergeInSlot(
     : item;
 }
 
-function isComponentDataArray(value: unknown): value is readonly ComponentData[] {
+function isComponentDataArray(
+  value: unknown,
+): value is readonly ComponentData[] {
   return (
     Array.isArray(value) &&
     value.every(
@@ -78,8 +83,6 @@ function mergeAtIndex(
   attrs: Readonly<Record<string, unknown>>,
 ): ComponentData[] {
   return list.map((item, i) =>
-    i === index
-      ? { ...item, props: { ...item.props, ...attrs } }
-      : item,
+    i === index ? { ...item, props: { ...item.props, ...attrs } } : item,
   );
 }

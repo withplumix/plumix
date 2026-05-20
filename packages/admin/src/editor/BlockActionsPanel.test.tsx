@@ -1,11 +1,11 @@
-import type { BlockSpec } from "@plumix/blocks";
-import { createBlockRegistry } from "@plumix/blocks";
-
-import type { TransformOption } from "./available-transforms.js";
 import { cleanup, render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import type { BlockSpec } from "@plumix/blocks";
+import { createBlockRegistry } from "@plumix/blocks";
+
+import type { TransformOption } from "./available-transforms.js";
 import { BlockActionsPanel } from "./BlockActionsPanel.js";
 
 afterEach(() => {
@@ -70,9 +70,7 @@ describe("BlockActionsPanel", () => {
       />,
     );
 
-    await user.click(
-      screen.getByTestId("block-action-transform-core/heading"),
-    );
+    await user.click(screen.getByTestId("block-action-transform-core/heading"));
 
     expect(onTransform).toHaveBeenCalledTimes(1);
     expect(onTransform.mock.calls[0]?.[0].targetName).toBe("core/heading");

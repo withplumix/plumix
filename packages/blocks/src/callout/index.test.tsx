@@ -1,8 +1,8 @@
-import type { BlockNode } from "../render-block-tree.js";
 import { describe, expect, test } from "vitest";
 
-import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "../test/index.js";
+import type { BlockNode } from "../render-block-tree.js";
 import { paragraphBlock } from "../paragraph/index.js";
+import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "../test/index.js";
 import { calloutBlock } from "./index.js";
 
 describe("core/callout", () => {
@@ -20,7 +20,9 @@ describe("core/callout", () => {
   });
 
   test("falls back to info for an unknown variant", () => {
-    const html = renderBlockSpecToHtml(calloutBlock, { variant: "destructive" });
+    const html = renderBlockSpecToHtml(calloutBlock, {
+      variant: "destructive",
+    });
 
     expect(html).toContain('data-variant="info"');
   });
@@ -38,7 +40,9 @@ describe("core/callout", () => {
         name: "core/callout",
         attrs: {
           variant: "warn",
-          content: [{ id: "p1", name: "core/paragraph", attrs: { text: "Heads up" } }],
+          content: [
+            { id: "p1", name: "core/paragraph", attrs: { text: "Heads up" } },
+          ],
         },
       },
     ];

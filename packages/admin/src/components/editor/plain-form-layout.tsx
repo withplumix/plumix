@@ -1,12 +1,6 @@
-import type { EntryMetaBoxManifestEntry } from "@plumix/core/manifest";
 import type { ReactElement, ReactNode } from "react";
 import { useEffect, useRef } from "react";
-import { useForm, useWatch } from "react-hook-form";
-import { valibotResolver } from "@hookform/resolvers/valibot";
-
-import type { PostEditorValues } from "./post-editor-form.js";
-import { postEditorSchema } from "./post-editor-form.js";
-
+import { MetaBoxField } from "@/components/meta-box/meta-box-field.js";
 import { Button } from "@/components/ui/button.js";
 import {
   Card,
@@ -14,9 +8,20 @@ import {
   CardDescription,
   CardHeader,
 } from "@/components/ui/card.js";
-import { Form, FormControl, FormField, FormItem } from "@/components/ui/form.js";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+} from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
-import { MetaBoxField } from "@/components/meta-box/meta-box-field.js";
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import { useForm, useWatch } from "react-hook-form";
+
+import type { EntryMetaBoxManifestEntry } from "@plumix/core/manifest";
+
+import type { PostEditorValues } from "./post-editor-form.js";
+import { postEditorSchema } from "./post-editor-form.js";
 
 type SaveStatus = "saved" | "saving" | "error";
 
@@ -121,7 +126,7 @@ export function PlainFormLayout({
             )}
           />
           <span
-            className="rounded bg-muted px-2 py-1 text-xs"
+            className="bg-muted rounded px-2 py-1 text-xs"
             data-testid="plain-form-status-pill"
             data-status={saveStatus}
           >

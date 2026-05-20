@@ -1,6 +1,6 @@
-import type { BlockSpec } from "./block-registry.js";
 import { describe, expect, test } from "vitest";
 
+import type { BlockSpec } from "./block-registry.js";
 import { createBlockRegistry, defineBlock } from "./block-registry.js";
 
 function makeSpec(name: string, render: BlockSpec["render"]): BlockSpec {

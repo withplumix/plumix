@@ -29,8 +29,6 @@ export const groupBlock = defineBlock({
   render: ({ attrs }): ReactNode => {
     const layout = pickLayout(attrs.layout);
     const Content = attrs.content as (() => ReactNode) | undefined;
-    return (
-      <div data-layout={layout}>{Content ? <Content /> : null}</div>
-    );
+    return <div data-layout={layout}>{Content ? <Content /> : null}</div>;
   },
 });

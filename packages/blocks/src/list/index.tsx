@@ -43,7 +43,9 @@ export const listBlock = defineBlock({
       // legacy walker, which omits the attribute so the rendered HTML stays
       // identical to the implicit <ol>.
       const start =
-        typeof startRaw === "number" && Number.isInteger(startRaw) && startRaw > 1
+        typeof startRaw === "number" &&
+        Number.isInteger(startRaw) &&
+        startRaw > 1
           ? startRaw
           : undefined;
       return <ol start={start}>{Items ? <Items /> : null}</ol>;

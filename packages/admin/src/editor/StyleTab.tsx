@@ -1,11 +1,5 @@
-import type {
-  ResponsiveStyleSlot,
-  ThemeTokenGroup,
-  ThemeTokens,
-} from "@plumix/blocks";
-import type { ReactElement, ReactNode } from "react";
 import type { ComponentData } from "@puckeditor/core";
-
+import type { ReactElement, ReactNode } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -13,9 +7,15 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion.js";
 
+import type {
+  ResponsiveStyleSlot,
+  ThemeTokenGroup,
+  ThemeTokens,
+} from "@plumix/blocks";
+
+import type { StyleBucket } from "./viewport-bucket.js";
 import { setStyleProperty } from "./style-edit.js";
 import { TokenSwatchList } from "./TokenSwatchList.js";
-import type { StyleBucket } from "./viewport-bucket.js";
 
 type StyleProperty = "background" | "color" | "fontSize" | "padding";
 
@@ -43,7 +43,7 @@ export function StyleTab({
   if (!selectedItem) {
     return (
       <div
-        className="p-4 text-sm text-muted-foreground"
+        className="text-muted-foreground p-4 text-sm"
         data-testid="style-tab-empty"
       >
         Select a block to style.
@@ -62,7 +62,7 @@ export function StyleTab({
   return (
     <div className="space-y-4 p-3" data-testid="style-tab">
       <div
-        className="rounded bg-muted px-2 py-1 text-xs"
+        className="bg-muted rounded px-2 py-1 text-xs"
         data-testid="style-tab-active-bucket"
       >
         Editing for: {BUCKET_LABEL[bucket]}
@@ -106,7 +106,10 @@ interface SectionProps {
   readonly property: StyleProperty;
   readonly tokens: ThemeTokenGroup | undefined;
   readonly activeToken: string;
-  readonly onWrite: (property: StyleProperty, tokenId: string | undefined) => void;
+  readonly onWrite: (
+    property: StyleProperty,
+    tokenId: string | undefined,
+  ) => void;
 }
 
 interface CollapsibleSectionProps {
@@ -125,9 +128,7 @@ function CollapsibleSection({
       value={property}
       data-testid={`style-tab-section-${property}`}
     >
-      <AccordionTrigger
-        data-testid={`style-tab-section-${property}-trigger`}
-      >
+      <AccordionTrigger data-testid={`style-tab-section-${property}-trigger`}>
         {heading}
       </AccordionTrigger>
       <AccordionContent>{children}</AccordionContent>
@@ -169,7 +170,10 @@ function SelectSection({
       <select
         value={activeToken}
         onChange={(event) =>
-          onWrite(property, event.target.value === "" ? undefined : event.target.value)
+          onWrite(
+            property,
+            event.target.value === "" ? undefined : event.target.value,
+          )
         }
         className="w-full rounded border px-2 py-1 text-sm"
         data-testid={`style-tab-${property}-select`}

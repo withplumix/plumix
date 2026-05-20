@@ -3,7 +3,9 @@ import { describe, expect, test } from "vitest";
 
 import { puckDataToBlockTree } from "./puck-to-block-tree.js";
 
-function data(content: readonly { type: string; props: Record<string, unknown> }[]): Data {
+function data(
+  content: readonly { type: string; props: Record<string, unknown> }[],
+): Data {
   return {
     content: content as Data["content"],
     root: { props: {} },
@@ -89,10 +91,16 @@ describe("puckDataToBlockTree", () => {
           props: {
             id: "cols",
             left: [
-              { type: "core/heading", props: { id: "lh", text: "L", level: 2 } },
+              {
+                type: "core/heading",
+                props: { id: "lh", text: "L", level: 2 },
+              },
             ],
             right: [
-              { type: "core/heading", props: { id: "rh", text: "R", level: 2 } },
+              {
+                type: "core/heading",
+                props: { id: "rh", text: "R", level: 2 },
+              },
             ],
           },
         },
@@ -131,7 +139,9 @@ describe("puckDataToBlockTree", () => {
       ]),
     );
 
-    const outerContent = result[0]?.attrs?.content as readonly { attrs: Record<string, unknown> }[];
+    const outerContent = result[0]?.attrs?.content as readonly {
+      attrs: Record<string, unknown>;
+    }[];
     const middle = outerContent[0];
     expect(middle).toBeDefined();
     const inner = (middle?.attrs.content as readonly { id: string }[])[0];
@@ -184,10 +194,7 @@ describe("puckDataToBlockTree", () => {
           type: "core/picker",
           props: {
             id: "p",
-            tags: [
-              { value: "foo" },
-              { value: "bar" },
-            ],
+            tags: [{ value: "foo" }, { value: "bar" }],
           },
         },
       ]),

@@ -1,5 +1,4 @@
 import type { ReactElement } from "react";
-
 import { defineBlock } from "plumix/blocks";
 
 import { normalizeFocalPoint, pickSizing } from "./normalize.js";
@@ -42,8 +41,7 @@ export const imageBlock = defineBlock({
     const src = typeof attrs.src === "string" ? attrs.src : "";
     const alt = typeof attrs.alt === "string" ? attrs.alt : "";
     const caption = typeof attrs.caption === "string" ? attrs.caption : "";
-    const srcset =
-      typeof attrs.srcset === "string" ? attrs.srcset : undefined;
+    const srcset = typeof attrs.srcset === "string" ? attrs.srcset : undefined;
     const sizing = pickSizing(attrs.sizing);
     const focal = normalizeFocalPoint(attrs.focalPoint);
     const objectPosition = focal

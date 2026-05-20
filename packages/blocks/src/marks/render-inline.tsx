@@ -30,11 +30,7 @@ function sanitizeHref(raw: unknown): string | undefined {
   return trimmed;
 }
 
-function wrapMark(
-  mark: TiptapMark,
-  child: ReactNode,
-  key: string,
-): ReactNode {
+function wrapMark(mark: TiptapMark, child: ReactNode, key: string): ReactNode {
   const simpleTag: keyof JSX.IntrinsicElements | undefined =
     SIMPLE_MARK_TAGS[mark.type];
   if (simpleTag) return createElement(simpleTag, { key }, child);

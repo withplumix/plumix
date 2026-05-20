@@ -1,8 +1,8 @@
-import type { BlockNode } from "../render-block-tree.js";
 import { describe, expect, test } from "vitest";
 
-import { renderBlockTreeToHtml } from "../test/index.js";
+import type { BlockNode } from "../render-block-tree.js";
 import { paragraphBlock } from "../paragraph/index.js";
+import { renderBlockTreeToHtml } from "../test/index.js";
 import { groupBlock } from "./index.js";
 
 describe("core/group", () => {
@@ -45,10 +45,7 @@ describe("core/group", () => {
       },
     ];
 
-    const html = renderBlockTreeToHtml(
-      [groupBlock, paragraphBlock],
-      tree,
-    );
+    const html = renderBlockTreeToHtml([groupBlock, paragraphBlock], tree);
 
     expect(html).toContain(
       '<div data-plumix-block="core/paragraph"><p>Inside group</p></div>',

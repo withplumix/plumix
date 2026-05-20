@@ -1,7 +1,8 @@
-import type { ThemeTokenGroup } from "@plumix/blocks";
 import { cleanup, render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
+
+import type { ThemeTokenGroup } from "@plumix/blocks";
 
 import { TokenSwatchList } from "./TokenSwatchList.js";
 

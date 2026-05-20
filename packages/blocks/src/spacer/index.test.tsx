@@ -8,17 +8,21 @@ describe("core/spacer", () => {
     const html = renderBlockSpecToHtml(spacerBlock, {});
 
     expect(html).toContain('aria-hidden="true"');
-    expect(html).toContain('height:24px');
+    expect(html).toContain("height:24px");
   });
 
   test("renders the declared positive height", () => {
     const html = renderBlockSpecToHtml(spacerBlock, { height: 64 });
 
-    expect(html).toContain('height:64px');
+    expect(html).toContain("height:64px");
   });
 
   test("falls back to the default for negative or zero height", () => {
-    expect(renderBlockSpecToHtml(spacerBlock, { height: 0 })).toContain('height:24px');
-    expect(renderBlockSpecToHtml(spacerBlock, { height: -10 })).toContain('height:24px');
+    expect(renderBlockSpecToHtml(spacerBlock, { height: 0 })).toContain(
+      "height:24px",
+    );
+    expect(renderBlockSpecToHtml(spacerBlock, { height: -10 })).toContain(
+      "height:24px",
+    );
   });
 });

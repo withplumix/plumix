@@ -1,5 +1,4 @@
 import type { ReactElement } from "react";
-
 import { defineBlock } from "plumix/blocks";
 
 import { formatSize, sanitizeHref } from "./normalize.js";
@@ -38,9 +37,7 @@ export const fileBlock = defineBlock({
     return (
       <a href={href} download={filename} rel="noopener noreferrer">
         <span data-plumix-file-name="">{filename}</span>
-        {meta.length > 0 ? (
-          <span data-plumix-file-meta="">{meta}</span>
-        ) : null}
+        {meta.length > 0 ? <span data-plumix-file-meta="">{meta}</span> : null}
       </a>
     );
   },

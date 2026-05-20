@@ -1,12 +1,13 @@
-import type { ThemeTokens } from "@plumix/blocks";
 import type { Data } from "@puckeditor/core";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, test } from "vitest";
+
+import type { ThemeTokens } from "@plumix/blocks";
 import {
   createBlockRegistry,
   headingBlock,
   renderBlockTree,
 } from "@plumix/blocks";
-import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, test } from "vitest";
 
 import { puckDataToBlockTree } from "./puck-to-block-tree.js";
 

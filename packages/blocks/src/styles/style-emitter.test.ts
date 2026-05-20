@@ -1,7 +1,7 @@
-import type { ResponsiveStyleSlot } from "./style-emitter.js";
-import type { ThemeTokens } from "./types.js";
 import { describe, expect, test } from "vitest";
 
+import type { ResponsiveStyleSlot } from "./style-emitter.js";
+import type { ThemeTokens } from "./types.js";
 import { emitBlockStyleCss, tokenIdToCssVar } from "./style-emitter.js";
 
 describe("tokenIdToCssVar", () => {
@@ -99,8 +99,8 @@ describe("emitBlockStyleCss", () => {
   test("converts camelCase CSS properties to kebab-case", () => {
     const style: ResponsiveStyleSlot = { large: { fontSize: "lg" } };
 
-    expect(emitBlockStyleCss("b", style, { typography: { lg: { value: "20px" } } })).toBe(
-      ".b { font-size: var(--plumix-typography-lg, 20px); }",
-    );
+    expect(
+      emitBlockStyleCss("b", style, { typography: { lg: { value: "20px" } } }),
+    ).toBe(".b { font-size: var(--plumix-typography-lg, 20px); }");
   });
 });

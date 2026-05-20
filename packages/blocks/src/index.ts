@@ -7,10 +7,7 @@
  */
 
 // ─── Block registry primitives ──────────────────────────────────────────────
-export {
-  createBlockRegistry,
-  defineBlock,
-} from "./block-registry.js";
+export { createBlockRegistry, defineBlock } from "./block-registry.js";
 export type {
   BlockInput,
   BlockInputOption,

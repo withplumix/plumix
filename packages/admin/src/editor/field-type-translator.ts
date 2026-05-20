@@ -1,8 +1,9 @@
-import type { BlockInput } from "@plumix/blocks";
 import type { Fields } from "@puckeditor/core";
 import type { Extensions } from "@tiptap/core";
 
-export interface TranslateFieldOptions {
+import type { BlockInput } from "@plumix/blocks";
+
+interface TranslateFieldOptions {
   // Extra Tiptap mark / node extensions to inject into any `richtext`
   // field. Plumix-specific marks (kbd, abbr, cite, small, sub, sup,
   // highlight) live here; Puck's bundled Tiptap covers bold / italic
@@ -52,7 +53,10 @@ export function translateField(
         ],
       };
     default:
-      if (typeof process !== "undefined" && process.env.NODE_ENV !== "production") {
+      if (
+        typeof process !== "undefined" &&
+        process.env.NODE_ENV !== "production"
+      ) {
         console.warn(
           `[plumix:admin] field-type-translator: unknown input type "${input.type}" — falling back to text. Register the type via ctx.registerFieldType or pick a Puck-native type.`,
         );

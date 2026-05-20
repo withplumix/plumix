@@ -1,5 +1,6 @@
-import type { ResponsiveStyleSlot } from "@plumix/blocks";
 import { describe, expect, test } from "vitest";
+
+import type { ResponsiveStyleSlot } from "@plumix/blocks";
 
 import { setStyleProperty } from "./style-edit.js";
 
@@ -54,7 +55,9 @@ describe("setStyleProperty", () => {
     const frozen = Object.freeze({
       large: Object.freeze({ ...before.large }),
     }) as ResponsiveStyleSlot;
-    expect(() => setStyleProperty(frozen, "large", "padding", "lg")).not.toThrow();
+    expect(() =>
+      setStyleProperty(frozen, "large", "padding", "lg"),
+    ).not.toThrow();
     expect(frozen.large?.padding).toBe("md");
   });
 });

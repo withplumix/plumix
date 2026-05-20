@@ -26,9 +26,7 @@ describe("validateEntryContent", () => {
     const result = validateEntryContent(
       {
         version: "plumix.v2",
-        blocks: [
-          { id: "x1", name: "acme/widget", attrs: {} },
-        ],
+        blocks: [{ id: "x1", name: "acme/widget", attrs: {} }],
       },
       registry,
     );
@@ -53,9 +51,7 @@ describe("validateEntryContent", () => {
             id: "g1",
             name: "core/group",
             attrs: {
-              content: [
-                { id: "x1", name: "acme/widget", attrs: {} },
-              ],
+              content: [{ id: "x1", name: "acme/widget", attrs: {} }],
             },
           },
         ],

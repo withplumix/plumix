@@ -1,7 +1,8 @@
-import type { BlockNode } from "@plumix/blocks";
 import { cleanup, render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, test } from "vitest";
+
+import type { BlockNode } from "@plumix/blocks";
 
 import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
 
@@ -57,9 +58,7 @@ describe("HeadingAuditPanel", () => {
     render(<HeadingAuditPanel tree={tree} />);
 
     const item = screen.getByTestId("heading-audit-violation-multiple-h1");
-    expect(item.textContent).toContain(
-      "Multiple <h1> on the page (2 found).",
-    );
+    expect(item.textContent).toContain("Multiple <h1> on the page (2 found).");
   });
 
   test("invokes onSelect with the violation's primary node id when the click-to-jump button is pressed", async () => {

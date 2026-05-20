@@ -1,10 +1,10 @@
-export interface FocalPoint {
+interface FocalPoint {
   readonly x: number;
   readonly y: number;
 }
 
 const SIZING = ["full", "wide", "narrow", "thumbnail"] as const;
-export type Sizing = (typeof SIZING)[number];
+type Sizing = (typeof SIZING)[number];
 
 function clamp01(n: number): number {
   if (n < 0) return 0;
