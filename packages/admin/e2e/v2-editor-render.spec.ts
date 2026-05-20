@@ -7,6 +7,27 @@ import {
   rpcOkBody,
 } from "./support/rpc-mock.js";
 
+const T0 = new Date("2026-05-20T00:00:00Z");
+
+function emptyEntry(id: number): Record<string, unknown> {
+  return {
+    id,
+    type: "post",
+    parentId: null,
+    title: "Untitled",
+    slug: `entry-${String(id)}`,
+    content: null,
+    excerpt: null,
+    status: "draft",
+    authorId: 1,
+    sortOrder: 0,
+    publishedAt: null,
+    createdAt: T0,
+    updatedAt: T0,
+    meta: {},
+  };
+}
+
 test.describe("V2 spike editor renders end-to-end", () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
@@ -19,6 +40,13 @@ test.describe("V2 spike editor renders end-to-end", () => {
           status: 200,
           contentType: "application/json",
           body: rpcOkBody(AUTHED_ADMIN),
+        });
+      }
+      if (url.endsWith("/entry/get")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ json: emptyEntry(1), meta: [] }),
         });
       }
       return route.fulfill({ status: 404, body: "not-mocked" });
@@ -102,6 +130,49 @@ test.describe("V2 spike editor renders end-to-end", () => {
 
     await expect(page.getByTestId("slash-menu-dialog")).toBeHidden();
     await expect(canvas.locator("p")).toHaveCount(1);
+  });
+
+  test("server-loaded plumix.v2 content renders in the canvas on initial mount", async ({
+    page,
+  }) => {
+    await page.route("**/_plumix/rpc/**", async (route) => {
+      const url = route.request().url();
+      if (url.endsWith("/auth/session")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: rpcOkBody(AUTHED_ADMIN),
+        });
+      }
+      if (url.endsWith("/entry/get")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            json: {
+              ...emptyEntry(1),
+              content: {
+                version: "plumix.v2",
+                blocks: [
+                  {
+                    id: "h1",
+                    name: "core/heading",
+                    attrs: { level: 2, text: "Hello from server" },
+                  },
+                ],
+              },
+            },
+            meta: [],
+          }),
+        });
+      }
+      return route.fulfill({ status: 404, body: "not-mocked" });
+    });
+
+    await page.goto("v2/entries/posts/1/edit");
+
+    const canvas = page.getByTestId("plumix-editor-canvas");
+    await expect(canvas.locator("h2")).toHaveText("Hello from server");
   });
 
   test("autosave pill cycles saved → saving → saved when a block is inserted", async ({
