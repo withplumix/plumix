@@ -61,6 +61,130 @@ describe("blockNodesToPuckContent", () => {
       false,
     );
   });
+
+  test("recursively converts a single-slot wrapper's nested children", () => {
+    const nodes: readonly BlockNode[] = [
+      {
+        id: "g1",
+        name: "core/group",
+        attrs: {
+          content: [
+            { id: "h1", name: "core/heading", attrs: { level: 2, text: "X" } },
+          ],
+        },
+      },
+    ];
+
+    expect(blockNodesToPuckContent(nodes)).toEqual([
+      {
+        type: "core/group",
+        props: {
+          id: "g1",
+          content: [
+            { type: "core/heading", props: { id: "h1", level: 2, text: "X" } },
+          ],
+        },
+      },
+    ]);
+  });
+
+  test("converts independent slot arrays on a multi-slot parent", () => {
+    const nodes: readonly BlockNode[] = [
+      {
+        id: "c1",
+        name: "core/columns",
+        attrs: {
+          left: [
+            { id: "lh", name: "core/heading", attrs: { level: 2, text: "L" } },
+          ],
+          right: [
+            { id: "rh", name: "core/heading", attrs: { level: 2, text: "R" } },
+          ],
+        },
+      },
+    ];
+
+    expect(blockNodesToPuckContent(nodes)).toEqual([
+      {
+        type: "core/columns",
+        props: {
+          id: "c1",
+          left: [
+            { type: "core/heading", props: { id: "lh", level: 2, text: "L" } },
+          ],
+          right: [
+            { type: "core/heading", props: { id: "rh", level: 2, text: "R" } },
+          ],
+        },
+      },
+    ]);
+  });
+
+  test("walks slots arbitrarily deep", () => {
+    const nodes: readonly BlockNode[] = [
+      {
+        id: "outer",
+        name: "core/group",
+        attrs: {
+          content: [
+            {
+              id: "middle",
+              name: "core/group",
+              attrs: {
+                content: [
+                  {
+                    id: "inner",
+                    name: "core/heading",
+                    attrs: { level: 3, text: "Deep" },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    ];
+
+    expect(blockNodesToPuckContent(nodes)).toEqual([
+      {
+        type: "core/group",
+        props: {
+          id: "outer",
+          content: [
+            {
+              type: "core/group",
+              props: {
+                id: "middle",
+                content: [
+                  {
+                    type: "core/heading",
+                    props: { id: "inner", level: 3, text: "Deep" },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    ]);
+  });
+
+  test("leaves non-slot arrays in attrs untouched", () => {
+    const nodes: readonly BlockNode[] = [
+      {
+        id: "picker",
+        name: "core/picker",
+        attrs: { tags: [{ value: "foo" }, { value: "bar" }] },
+      },
+    ];
+
+    expect(blockNodesToPuckContent(nodes)).toEqual([
+      {
+        type: "core/picker",
+        props: { id: "picker", tags: [{ value: "foo" }, { value: "bar" }] },
+      },
+    ]);
+  });
 });
 
 describe("isV2EntryContent", () => {

@@ -175,6 +175,57 @@ test.describe("V2 spike editor renders end-to-end", () => {
     await expect(canvas.locator("h2")).toHaveText("Hello from server");
   });
 
+  test("server-loaded wrapper block renders its nested children in the canvas", async ({
+    page,
+  }) => {
+    await page.route("**/_plumix/rpc/**", async (route) => {
+      const url = route.request().url();
+      if (url.endsWith("/auth/session")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: rpcOkBody(AUTHED_ADMIN),
+        });
+      }
+      if (url.endsWith("/entry/get")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            json: {
+              ...emptyEntry(1),
+              content: {
+                version: "plumix.v2",
+                blocks: [
+                  {
+                    id: "g1",
+                    name: "core/group",
+                    attrs: {
+                      content: [
+                        {
+                          id: "child-h",
+                          name: "core/heading",
+                          attrs: { level: 3, text: "Inside group" },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+            meta: [],
+          }),
+        });
+      }
+      return route.fulfill({ status: 404, body: "not-mocked" });
+    });
+
+    await page.goto("v2/entries/posts/1/edit");
+
+    const canvas = page.getByTestId("plumix-editor-canvas");
+    await expect(canvas.locator("h3")).toHaveText("Inside group");
+  });
+
   test("autosave pill cycles saved → saving → saved when a block is inserted", async ({
     page,
   }) => {

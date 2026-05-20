@@ -1,5 +1,5 @@
 import type { BlockNode } from "@plumix/blocks";
-import type { Data } from "@puckeditor/core";
+import type { ComponentData, Data } from "@puckeditor/core";
 import { isBlockNodeArray } from "@plumix/blocks";
 
 export interface V2EntryContent {
@@ -16,14 +16,18 @@ export function isV2EntryContent(value: unknown): value is V2EntryContent {
 export function blockNodesToPuckContent(
   nodes: readonly BlockNode[],
 ): Data["content"] {
-  return nodes.map((node) => ({
-    type: node.name,
-    props: {
-      id: node.id,
-      ...node.attrs,
-      ...(node.style ? { style: node.style } : {}),
-    },
-  }));
+  return nodes.map(nodeToComponentData);
+}
+
+function nodeToComponentData(node: BlockNode): ComponentData {
+  const props: Record<string, unknown> = { id: node.id };
+  for (const [key, value] of Object.entries(node.attrs ?? {})) {
+    props[key] = isBlockNodeArray(value)
+      ? value.map(nodeToComponentData)
+      : value;
+  }
+  if (node.style) props.style = node.style;
+  return { type: node.name, props: props as ComponentData["props"] };
 }
 
 export function seedPuckData(content: unknown, fallback: Data): Data {
