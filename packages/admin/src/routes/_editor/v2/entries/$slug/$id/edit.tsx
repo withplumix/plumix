@@ -2,6 +2,7 @@ import type { ThemeTokens } from "@plumix/blocks";
 import type { Config, Data } from "@puckeditor/core";
 import type { ReactElement, ReactNode } from "react";
 import { coreBlocksV2, createBlockRegistry } from "@plumix/blocks";
+import { ORPCError } from "@orpc/client";
 import { Puck } from "@puckeditor/core";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";
@@ -24,6 +25,14 @@ import { idPathParam } from "@plumix/core/validation";
 import "@puckeditor/core/puck.css";
 
 const initialData: Data = { content: [], root: {} };
+
+// Keep in sync with the identical helper in _editor/entries/$slug/$id/edit.tsx.
+function isStaleConflictError(err: unknown): boolean {
+  if (!(err instanceof ORPCError)) return false;
+  if (err.code !== "CONFLICT") return false;
+  const data = err.data as { reason?: unknown };
+  return data.reason === "stale_expected_updated_at";
+}
 
 const sampleTokens: ThemeTokens = {
   colors: {
@@ -125,10 +134,9 @@ function PuckSpikeRouteInner({
     seedPuckData(entry.content, readDraft(draftKey) ?? initialData),
   );
   const [status, setStatus] = useState<AutosaveStatus>("saved");
-  // Optimistic-concurrency token; trailing-response wins on overlap, so a
-  // persistent CONFLICT leaves the ref stuck stale until reload (conflict
-  // resolution UI is the next slice on the #391 line).
+  // Optimistic-concurrency token; trailing-response wins on overlap.
   const liveUpdatedAtRef = useRef<Date>(entry.updatedAt);
+  const queryClient = useQueryClient();
   /* eslint-disable react-hooks/refs -- callback fires post-keystroke, not during render */
   const debouncer = useMemo(
     () =>
@@ -145,11 +153,24 @@ function PuckSpikeRouteInner({
           });
           liveUpdatedAtRef.current = updated.updatedAt;
           setStatus("saved");
-        } catch {
+        } catch (err) {
           setStatus("error");
+          if (isStaleConflictError(err)) {
+            // Puck state is seeded once and ignores this refetch — in-progress
+            // edits aren't overwritten.
+            try {
+              const fresh = await queryClient.fetchQuery({
+                ...orpc.entry.get.queryOptions({ input: { id } }),
+                staleTime: 0,
+              });
+              liveUpdatedAtRef.current = fresh.updatedAt;
+            } catch {
+              // Best-effort: pill already says "error"; next keystroke retries.
+            }
+          }
         }
       }, 300),
-    [draftKey, id],
+    [draftKey, id, queryClient],
   );
   /* eslint-enable react-hooks/refs */
   useEffect(() => () => debouncer.flush(), [debouncer]);
@@ -161,7 +182,6 @@ function PuckSpikeRouteInner({
     },
     [debouncer],
   );
-  const queryClient = useQueryClient();
   // Publish is a one-way state-machine transition server-side, not an
   // idempotent re-stamp — the button is disabled once status === "published".
   const publish = useMutation({

@@ -429,6 +429,90 @@ test.describe("V2 spike editor renders end-to-end", () => {
     await expect(button).toBeDisabled();
   });
 
+  test("autosave CONFLICT recovers: the next save sends the refreshed token", async ({
+    page,
+  }) => {
+    let entryGetCalls = 0;
+    let entryUpdateCalls = 0;
+    const T1 = new Date("2026-06-01T00:00:00Z");
+    const updateInputs: unknown[] = [];
+    // Hand-rolled error envelope: rpcErrorBody omits `defined`/`status`
+    // which oRPC's isORPCErrorJson requires to decode the rejection.
+    await page.route("**/_plumix/rpc/**", (route) => {
+      const url = route.request().url();
+      if (url.endsWith("/auth/session")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: rpcOkBody(AUTHED_ADMIN),
+        });
+      }
+      if (url.endsWith("/entry/get")) {
+        entryGetCalls += 1;
+        const updatedAt = entryGetCalls === 1 ? T0 : T1;
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            json: { ...emptyEntry(1), updatedAt },
+            meta: [],
+          }),
+        });
+      }
+      if (url.endsWith("/entry/update")) {
+        entryUpdateCalls += 1;
+        const body = route.request().postDataJSON() as { json?: unknown };
+        updateInputs.push(body.json);
+        if (entryUpdateCalls === 1) {
+          return route.fulfill({
+            status: 409,
+            contentType: "application/json",
+            body: JSON.stringify({
+              json: {
+                defined: true,
+                code: "CONFLICT",
+                status: 409,
+                message: "Resource conflict",
+                data: { reason: "stale_expected_updated_at" },
+              },
+              meta: [],
+            }),
+          });
+        }
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            json: { ...emptyEntry(1), updatedAt: T1 },
+            meta: [],
+          }),
+        });
+      }
+      return route.fulfill({ status: 404, body: "not-mocked" });
+    });
+    await page.goto("v2/entries/posts/1/edit");
+
+    const pill = page.getByTestId("plumix-autosave-pill");
+    const canvas = page.getByTestId("plumix-editor-canvas");
+
+    await canvas.focus();
+    await page.keyboard.press("/");
+    await page.getByTestId("slash-menu-item-core/paragraph").click();
+
+    await expect(pill).toHaveAttribute("data-status", "error");
+    await expect.poll(() => entryGetCalls).toBe(2);
+
+    await canvas.focus();
+    await page.keyboard.press("/");
+    await page.getByTestId("slash-menu-item-core/paragraph").click();
+
+    await expect(pill).toHaveAttribute("data-status", "saved");
+    expect(
+      (updateInputs.at(-1) as { expectedLiveUpdatedAt: string })
+        .expectedLiveUpdatedAt,
+    ).toBe(T1.toISOString());
+  });
+
   test("autosave pill flips to error when entry.update rejects", async ({
     page,
   }) => {
