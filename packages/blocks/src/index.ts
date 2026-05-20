@@ -153,28 +153,14 @@ export { coreMarks } from "./marks/core/index.js";
 
 export { coreBlocks } from "./core-blocks.js";
 export { coreBlocksV2 } from "./core-blocks-v2.js";
-export { buttonBlock } from "./button/index.js";
-export { buttonsBlock } from "./buttons/index.js";
 export { codeBlock } from "./code/index.js";
 export { columnBlock } from "./columns/column.js";
 export { columnsBlock } from "./columns/index.js";
-export { descriptionDetailBlock } from "./description-list/description-detail.js";
-export { descriptionTermBlock } from "./description-list/description-term.js";
-export { descriptionListBlock } from "./description-list/index.js";
 export { groupBlock } from "./group/index.js";
 export { headingBlock } from "./heading/index.js";
-export { htmlBlock } from "./html/index.js";
 export { listItemBlock } from "./list/list-item.js";
 export { listOrderedBlock } from "./list/list-ordered.js";
 export { listBlock } from "./list/list.js";
 export { paragraphBlock } from "./paragraph/index.js";
 export { quoteBlock } from "./quote/index.js";
 export { separatorBlock } from "./separator/index.js";
-export { spacerBlock } from "./spacer/index.js";
-export {
-  tableBlock,
-  tableBodyRowBlock,
-  tableCellBlock,
-  tableHeaderCellBlock,
-  tableHeaderRowBlock,
-} from "./table/index.js";
