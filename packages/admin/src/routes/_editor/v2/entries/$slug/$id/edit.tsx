@@ -104,6 +104,7 @@ function ErrorScreen(): ReactNode {
 
 function PuckSpikeRoute(): ReactNode {
   const { slug, id } = Route.useParams();
+  const { user } = Route.useRouteContext();
   const draftKey = `plumix.v2.draft.${slug}.${id}`;
   const entryTypeName = findEntryTypeBySlug(slug)?.name;
   return (
@@ -112,6 +113,7 @@ function PuckSpikeRoute(): ReactNode {
       draftKey={draftKey}
       id={id}
       entryTypeName={entryTypeName}
+      capabilities={user.capabilities}
     />
   );
 }
@@ -120,12 +122,14 @@ interface PuckSpikeRouteInnerProps {
   readonly draftKey: string;
   readonly id: number;
   readonly entryTypeName: string | undefined;
+  readonly capabilities: readonly string[];
 }
 
 function PuckSpikeRouteInner({
   draftKey,
   id,
   entryTypeName,
+  capabilities,
 }: PuckSpikeRouteInnerProps): ReactNode {
   const { data: entry } = useSuspenseQuery(
     orpc.entry.get.queryOptions({ input: { id } }),
@@ -212,17 +216,22 @@ function PuckSpikeRouteInner({
   });
   const isPublished = entry.status === "published";
   const handlePublish = useCallback(() => publish.mutate(), [publish]);
+  const capabilitySet = useMemo(
+    () => new Set(capabilities),
+    [capabilities],
+  );
   const Layout = useCallback(
     (): ReactElement => (
       <PlumixEditorLayout
         registry={registry}
+        capabilities={capabilitySet}
         tokens={sampleTokens}
         onPublish={handlePublish}
         isPublishing={publish.isPending}
         isPublished={isPublished}
       />
     ),
-    [handlePublish, publish.isPending, isPublished],
+    [handlePublish, publish.isPending, isPublished, capabilitySet],
   );
 
   return (

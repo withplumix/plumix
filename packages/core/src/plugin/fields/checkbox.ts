@@ -7,6 +7,7 @@ export interface CheckboxFieldOptions {
   readonly description?: string;
   readonly default?: boolean;
   readonly span?: MetaBoxFieldSpan;
+  readonly capability?: string;
   readonly sanitize?: (value: unknown) => unknown;
 }
 
@@ -25,6 +26,7 @@ export function checkbox(options: CheckboxFieldOptions): CheckboxMetaBoxField {
     description: options.description,
     default: options.default,
     span: options.span,
+    capability: options.capability,
     sanitize: options.sanitize,
   };
 }

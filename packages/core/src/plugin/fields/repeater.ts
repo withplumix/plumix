@@ -13,6 +13,7 @@ export interface RepeaterFieldOptions {
   readonly description?: string;
   readonly default?: unknown;
   readonly span?: MetaBoxFieldSpan;
+  readonly capability?: string;
   readonly subFields: readonly MetaBoxField[];
   readonly min?: number;
   readonly max?: number;
@@ -78,6 +79,7 @@ export function repeater(options: RepeaterFieldOptions): RepeaterMetaBoxField {
     description: options.description,
     default: options.default,
     span: options.span,
+    capability: options.capability,
     sanitize: walkRepeaterRows(options.subFields, {
       min: options.min,
       max: options.max,

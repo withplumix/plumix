@@ -25,6 +25,7 @@ export interface UserFieldOptions {
   readonly description?: string;
   readonly default?: string;
   readonly span?: MetaBoxFieldSpan;
+  readonly capability?: string;
   readonly roles?: readonly UserRole[];
   readonly includeDisabled?: boolean;
 }
@@ -55,5 +56,6 @@ export function user(options: UserFieldOptions): UserMetaBoxField {
     description: options.description,
     default: options.default,
     span: options.span,
+    capability: options.capability,
   };
 }

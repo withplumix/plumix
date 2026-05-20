@@ -7,6 +7,7 @@ import { isEmptyMetaPatch } from "../../meta/core.js";
 import { stripUndefined } from "../entry/helpers.js";
 import { parentWouldCreateCycle, taxonomyCapability } from "./helpers.js";
 import {
+  assertTermMetaCapabilities,
   decodeMetaBag,
   loadTermMeta,
   sanitizeMetaForRpc,
@@ -68,6 +69,13 @@ export const update = base
       errors,
     );
     if (metaPatch) {
+      assertTermMetaCapabilities(
+        context.plugins,
+        existing.taxonomy,
+        metaPatch,
+        context.auth,
+        errors,
+      );
       await validateTermMetaReferences(
         context,
         existing.taxonomy,

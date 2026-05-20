@@ -30,6 +30,7 @@ export interface EntryFieldOptions {
   readonly description?: string;
   readonly default?: string;
   readonly span?: MetaBoxFieldSpan;
+  readonly capability?: string;
   readonly entryTypes: readonly string[];
   readonly includeTrashed?: boolean;
 }
@@ -55,5 +56,6 @@ export function entry(options: EntryFieldOptions): EntryReferenceMetaBoxField {
     description: options.description,
     default: options.default,
     span: options.span,
+    capability: options.capability,
   };
 }

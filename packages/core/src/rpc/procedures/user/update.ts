@@ -9,6 +9,7 @@ import { isEmptyMetaPatch } from "../../meta/core.js";
 import { stripUndefined } from "../entry/helpers.js";
 import { otherActiveAdminExists } from "./helpers.js";
 import {
+  assertUserMetaCapabilities,
   decodeMetaBag,
   loadUserMeta,
   sanitizeMetaForRpc,
@@ -122,6 +123,12 @@ export const update = base
     const { id: _id, meta: metaInput, ...changes } = filtered;
     const metaPatch = sanitizeMetaForRpc(context.plugins, metaInput, errors);
     if (metaPatch) {
+      assertUserMetaCapabilities(
+        context.plugins,
+        metaPatch,
+        context.auth,
+        errors,
+      );
       await validateUserMetaReferences(context, metaPatch, errors);
     }
     const patch: Partial<NewUser> = stripUndefined(changes);

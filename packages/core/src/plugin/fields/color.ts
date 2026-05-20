@@ -8,6 +8,7 @@ export interface ColorFieldOptions {
   /** Hex string `#xxxxxx` (or `#xxx` shorthand). Must match `HEX_COLOR`. */
   readonly default?: string;
   readonly span?: MetaBoxFieldSpan;
+  readonly capability?: string;
   /**
    * Optional override. The builder ships a default sanitizer that
    * rejects non-hex values; passing a custom one replaces it
@@ -36,6 +37,7 @@ export function color(options: ColorFieldOptions): ColorMetaBoxField {
     description: options.description,
     default: options.default,
     span: options.span,
+    capability: options.capability,
     sanitize: options.sanitize ?? defaultColorSanitize,
   };
 }
