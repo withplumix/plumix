@@ -4,7 +4,7 @@ import { defineBlock } from "../block-registry.js";
 
 const DEFAULT_SUMMARY = "Details";
 
-export const detailsBlockV2 = defineBlock({
+export const detailsBlock = defineBlock({
   name: "core/details",
   title: "Details",
   icon: "ChevronDown",

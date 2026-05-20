@@ -1,6 +1,6 @@
 import type {
-  BlockRegistryV2,
-  BlockSpecV2,
+  BlockRegistry,
+  BlockSpec,
   InsertableBlockEntry,
 } from "@plumix/blocks";
 import { expandBlockVariations } from "@plumix/blocks";
@@ -21,13 +21,13 @@ const KEYWORD_MATCH = 2;
 const NAME_MATCH = 1;
 
 export function resolveSlashMenuItems(
-  registry: BlockRegistryV2,
+  registry: BlockRegistry,
   { capabilities, query }: ResolveSlashMenuItemsOptions,
 ): readonly SlashMenuItem[] {
   const needle = query.trim().toLowerCase();
   const scored: { item: SlashMenuItem; score: number }[] = [];
 
-  const eligibleSpecs: BlockSpecV2[] = [];
+  const eligibleSpecs: BlockSpec[] = [];
   for (const spec of registry) {
     if (spec.inserter === false) continue;
     if (!isInsertableForCapabilities(spec, capabilities)) continue;
@@ -50,7 +50,7 @@ export function resolveSlashMenuItems(
 }
 
 function isInsertableForCapabilities(
-  spec: BlockSpecV2,
+  spec: BlockSpec,
   capabilities: ReadonlySet<string>,
 ): boolean {
   if (!spec.capability) return true;

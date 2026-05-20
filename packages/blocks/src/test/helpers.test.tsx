@@ -1,11 +1,11 @@
-import type { BlockNode, BlockSpecV2 } from "../index.js";
+import type { BlockNode, BlockSpec } from "../index.js";
 import type { ReactNode } from "react";
 import { describe, expect, test } from "vitest";
 
-import { defineBlockSpec } from "../index.js";
+import { defineBlock } from "../index.js";
 import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "./index.js";
 
-const sampleHeading: BlockSpecV2 = defineBlockSpec({
+const sampleHeading: BlockSpec = defineBlock({
   name: "sample/heading",
   title: "Sample Heading",
   defaults: { level: 2, text: "" },
@@ -34,7 +34,7 @@ describe("renderBlockSpecToHtml", () => {
   });
 
   test("threads RenderBlockTreeOptions.tokens through to style emission", () => {
-    const sampleWithStyle: BlockSpecV2 = defineBlockSpec({
+    const sampleWithStyle: BlockSpec = defineBlock({
       name: "sample/styled",
       render: () => <span>x</span>,
     });

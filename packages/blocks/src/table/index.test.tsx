@@ -3,16 +3,16 @@ import { describe, expect, test } from "vitest";
 
 import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "../test/index.js";
 import {
-  tableBlockV2,
-  tableBodyRowBlockV2,
-  tableCellBlockV2,
-  tableHeaderCellBlockV2,
-  tableHeaderRowBlockV2,
-} from "./v2.js";
+  tableBlock,
+  tableBodyRowBlock,
+  tableCellBlock,
+  tableHeaderCellBlock,
+  tableHeaderRowBlock,
+} from "./index.js";
 
-describe("core/table family v2", () => {
+describe("core/table family", () => {
   test("renders an empty <table> with no striped/bordered attrs by default", () => {
-    const html = renderBlockSpecToHtml(tableBlockV2, {});
+    const html = renderBlockSpecToHtml(tableBlock, {});
 
     expect(html).toContain("<table>");
     expect(html).not.toContain("data-striped");
@@ -20,7 +20,7 @@ describe("core/table family v2", () => {
   });
 
   test("renders striped + bordered when truthy", () => {
-    const html = renderBlockSpecToHtml(tableBlockV2, {
+    const html = renderBlockSpecToHtml(tableBlock, {
       striped: true,
       bordered: true,
     });
@@ -30,7 +30,7 @@ describe("core/table family v2", () => {
   });
 
   test("renders <th scope=col> for header-cell with align attr, no universal wrapper (inline)", () => {
-    const html = renderBlockSpecToHtml(tableHeaderCellBlockV2, {
+    const html = renderBlockSpecToHtml(tableHeaderCellBlock, {
       text: "Name",
       align: "center",
     });
@@ -39,7 +39,7 @@ describe("core/table family v2", () => {
   });
 
   test("renders <td> for body cells, no universal wrapper (inline)", () => {
-    const html = renderBlockSpecToHtml(tableCellBlockV2, { text: "v1" });
+    const html = renderBlockSpecToHtml(tableCellBlock, { text: "v1" });
 
     expect(html).toBe("<td>v1</td>");
   });
@@ -84,11 +84,11 @@ describe("core/table family v2", () => {
 
     const html = renderBlockTreeToHtml(
       [
-        tableBlockV2,
-        tableHeaderRowBlockV2,
-        tableBodyRowBlockV2,
-        tableHeaderCellBlockV2,
-        tableCellBlockV2,
+        tableBlock,
+        tableHeaderRowBlock,
+        tableBodyRowBlock,
+        tableHeaderCellBlock,
+        tableCellBlock,
       ],
       tree,
     );

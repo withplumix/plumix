@@ -4,11 +4,11 @@ import { describe, expect, test } from "vitest";
 
 import { createBlockRegistry } from "../block-registry.js";
 import { renderBlockTree } from "../render-block-tree.js";
-import { paragraphBlockV2 } from "./v2.js";
+import { paragraphBlock } from "./index.js";
 
 describe("core/paragraph end-to-end through new defineBlock + walker + style emitter", () => {
   test("walks the Tiptap doc body and renders inline marks", () => {
-    const registry = createBlockRegistry([paragraphBlockV2]);
+    const registry = createBlockRegistry([paragraphBlock]);
     const tree: readonly BlockNode[] = [
       {
         id: "p1",
@@ -38,7 +38,7 @@ describe("core/paragraph end-to-end through new defineBlock + walker + style emi
   });
 
   test("renders a <p> wrapped in data-plumix-block", () => {
-    const registry = createBlockRegistry([paragraphBlockV2]);
+    const registry = createBlockRegistry([paragraphBlock]);
     const tree: readonly BlockNode[] = [
       {
         id: "p1",
@@ -65,7 +65,7 @@ describe("core/paragraph end-to-end through new defineBlock + walker + style emi
   });
 
   test("renders the desktop-first responsive @media cascade for a style slot override", () => {
-    const registry = createBlockRegistry([paragraphBlockV2]);
+    const registry = createBlockRegistry([paragraphBlock]);
     const tree: readonly BlockNode[] = [
       {
         id: "p1",

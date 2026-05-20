@@ -2,7 +2,7 @@ import type { ThemeTokens } from "@plumix/blocks";
 import type { Config, Data } from "@puckeditor/core";
 import type { ReactElement, ReactNode } from "react";
 import {
-  coreBlocksV2,
+  coreBlocks,
   coreMarkExtensions,
   createBlockRegistry,
 } from "@plumix/blocks";
@@ -60,9 +60,9 @@ const sampleTokens: ThemeTokens = {
   },
 };
 
-const registry = createBlockRegistry(coreBlocksV2);
+const registry = createBlockRegistry(coreBlocks);
 const config: Config = {
-  components: blockSpecsToPuckComponents(coreBlocksV2, {
+  components: blockSpecsToPuckComponents(coreBlocks, {
     // Puck types `extensions` as a mutable array; spread the readonly
     // plumix list to satisfy the assignment without weakening the
     // export.

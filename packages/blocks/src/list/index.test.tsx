@@ -2,21 +2,21 @@ import type { BlockNode } from "../render-block-tree.js";
 import { describe, expect, test } from "vitest";
 
 import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "../test/index.js";
-import { listBlockV2, listItemBlockV2 } from "./v2.js";
+import { listBlock, listItemBlock } from "./index.js";
 
-describe("core/list v2", () => {
+describe("core/list", () => {
   test("renders an empty <ul> for the bullet variant (default)", () => {
-    const html = renderBlockSpecToHtml(listBlockV2, {});
+    const html = renderBlockSpecToHtml(listBlock, {});
     expect(html).toBe('<div data-plumix-block="core/list"><ul></ul></div>');
   });
 
   test("renders an empty <ol> when the numbered variant is selected", () => {
-    const html = renderBlockSpecToHtml(listBlockV2, { variant: "numbered" });
+    const html = renderBlockSpecToHtml(listBlock, { variant: "numbered" });
     expect(html).toBe('<div data-plumix-block="core/list"><ol></ol></div>');
   });
 
   test("renders the start attribute on the numbered variant when greater than 1", () => {
-    const html = renderBlockSpecToHtml(listBlockV2, {
+    const html = renderBlockSpecToHtml(listBlock, {
       variant: "numbered",
       start: 5,
     });
@@ -24,7 +24,7 @@ describe("core/list v2", () => {
   });
 
   test("drops the start attribute when it equals the canonical default of 1", () => {
-    const html = renderBlockSpecToHtml(listBlockV2, {
+    const html = renderBlockSpecToHtml(listBlock, {
       variant: "numbered",
       start: 1,
     });
@@ -33,14 +33,14 @@ describe("core/list v2", () => {
 
   test("ignores invalid start values (zero, negative, fractional, NaN, Infinity, non-number)", () => {
     for (const start of [0, -3, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
-      const html = renderBlockSpecToHtml(listBlockV2, {
+      const html = renderBlockSpecToHtml(listBlock, {
         variant: "numbered",
         start,
       });
       expect(html).not.toContain("start=");
     }
     expect(
-      renderBlockSpecToHtml(listBlockV2, {
+      renderBlockSpecToHtml(listBlock, {
         variant: "numbered",
         start: "5",
       }),
@@ -48,12 +48,12 @@ describe("core/list v2", () => {
   });
 
   test("ignores the start attribute on the bullet variant", () => {
-    const html = renderBlockSpecToHtml(listBlockV2, { start: 5 });
+    const html = renderBlockSpecToHtml(listBlock, { start: 5 });
     expect(html).toBe('<div data-plumix-block="core/list"><ul></ul></div>');
   });
 
   test("renders a list-item as inline <li> (no universal wrapper)", () => {
-    const html = renderBlockSpecToHtml(listItemBlockV2, { text: "Bullet" });
+    const html = renderBlockSpecToHtml(listItemBlock, { text: "Bullet" });
     expect(html).toBe("<li>Bullet</li>");
   });
 
@@ -71,7 +71,7 @@ describe("core/list v2", () => {
       },
     ];
     const html = renderBlockTreeToHtml(
-      [listBlockV2, listItemBlockV2],
+      [listBlock, listItemBlock],
       tree,
     );
     expect(html).toContain("<ul><li>A</li><li>B</li></ul>");
@@ -90,14 +90,14 @@ describe("core/list v2", () => {
       },
     ];
     const html = renderBlockTreeToHtml(
-      [listBlockV2, listItemBlockV2],
+      [listBlock, listItemBlock],
       tree,
     );
     expect(html).toContain('<ol start="3"><li>x</li></ol>');
   });
 
   test("declares Bullet and Numbered variations", () => {
-    expect(listBlockV2.variations?.map((v) => v.slug)).toEqual([
+    expect(listBlock.variations?.map((v) => v.slug)).toEqual([
       "bullet",
       "numbered",
     ]);

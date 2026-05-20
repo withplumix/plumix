@@ -1,4 +1,4 @@
-import type { BlockSpecV2 } from "@plumix/blocks";
+import type { BlockSpec } from "@plumix/blocks";
 import { createBlockRegistry } from "@plumix/blocks";
 import { describe, expect, test } from "vitest";
 
@@ -8,7 +8,7 @@ import {
   resolveSlashMenuItems,
 } from "./slash-menu-items.js";
 
-function spec(partial: Partial<BlockSpecV2> & { name: string }): BlockSpecV2 {
+function spec(partial: Partial<BlockSpec> & { name: string }): BlockSpec {
   return { render: () => null, ...partial };
 }
 

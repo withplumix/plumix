@@ -1,10 +1,10 @@
 import type { ReactElement } from "react";
 
-import { defineBlockSpec } from "plumix/blocks";
+import { defineBlock } from "plumix/blocks";
 
 import { normalizeFocalPoint, pickSizing } from "./normalize.js";
 
-export const imageBlockV2 = defineBlockSpec({
+export const imageBlock = defineBlock({
   name: "media/image",
   title: "Image",
   category: "media",

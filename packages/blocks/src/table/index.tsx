@@ -11,7 +11,7 @@ function pickAlign(raw: unknown): Align | undefined {
     : undefined;
 }
 
-export const tableBlockV2 = defineBlock({
+export const tableBlock = defineBlock({
   name: "core/table",
   title: "Table",
   icon: "Table",
@@ -34,7 +34,7 @@ export const tableBlockV2 = defineBlock({
   },
 });
 
-export const tableHeaderRowBlockV2 = defineBlock({
+export const tableHeaderRowBlock = defineBlock({
   name: "core/table-header-row",
   title: "Header Row",
   icon: "Rows",
@@ -49,7 +49,7 @@ export const tableHeaderRowBlockV2 = defineBlock({
   },
 });
 
-export const tableBodyRowBlockV2 = defineBlock({
+export const tableBodyRowBlock = defineBlock({
   name: "core/table-body-row",
   title: "Body Row",
   icon: "Rows",
@@ -64,7 +64,7 @@ export const tableBodyRowBlockV2 = defineBlock({
   },
 });
 
-export const tableHeaderCellBlockV2 = defineBlock({
+export const tableHeaderCellBlock = defineBlock({
   name: "core/table-header-cell",
   title: "Header Cell",
   icon: "AlignLeft",
@@ -92,7 +92,7 @@ export const tableHeaderCellBlockV2 = defineBlock({
   },
 });
 
-export const tableCellBlockV2 = defineBlock({
+export const tableCellBlock = defineBlock({
   name: "core/table-cell",
   title: "Cell",
   icon: "AlignLeft",

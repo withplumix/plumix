@@ -1,6 +1,6 @@
 import type {
-  BlockRegistryV2,
-  BlockSpecV2,
+  BlockRegistry,
+  BlockSpec,
   InsertableBlockEntry,
   ResponsiveStyleSlot,
   ThemeTokens,
@@ -38,7 +38,7 @@ import { StyleTab } from "./StyleTab.js";
 import { viewportWidthToBucket } from "./viewport-bucket.js";
 
 interface PlumixEditorLayoutProps {
-  readonly registry?: BlockRegistryV2;
+  readonly registry?: BlockRegistry;
   readonly capabilities?: ReadonlySet<string>;
   readonly tokens?: ThemeTokens;
   readonly children?: ReactNode;
@@ -51,7 +51,7 @@ interface PlumixEditorLayoutProps {
   readonly revisionsTrigger?: ReactNode;
 }
 
-const EMPTY_REGISTRY: BlockRegistryV2 = createBlockRegistry([]);
+const EMPTY_REGISTRY: BlockRegistry = createBlockRegistry([]);
 const EMPTY_CAPS: ReadonlySet<string> = new Set();
 const EMPTY_TOKENS: ThemeTokens = {};
 
@@ -119,7 +119,7 @@ export function PlumixEditorLayout({
 }
 
 interface BlocksBodyProps {
-  readonly registry: BlockRegistryV2;
+  readonly registry: BlockRegistry;
   readonly capabilities: ReadonlySet<string>;
 }
 
@@ -173,7 +173,7 @@ function BlocksBody({ registry, capabilities }: BlocksBodyProps): ReactElement {
 }
 
 interface PlumixBlocksTabProps {
-  readonly registry: BlockRegistryV2;
+  readonly registry: BlockRegistry;
   readonly capabilities: ReadonlySet<string>;
 }
 
@@ -183,7 +183,7 @@ function PlumixBlocksTab({
 }: PlumixBlocksTabProps): ReactElement {
   const puck = usePuck();
   const entries = useMemo(() => {
-    const eligible: BlockSpecV2[] = [];
+    const eligible: BlockSpec[] = [];
     for (const spec of registry) {
       if (spec.inserter === false) continue;
       if (spec.capability && !capabilities.has(spec.capability)) continue;
@@ -236,7 +236,7 @@ function PlumixBlocksTab({
 }
 
 interface InspectorBodyProps {
-  readonly registry: BlockRegistryV2;
+  readonly registry: BlockRegistry;
   readonly tokens: ThemeTokens;
 }
 
@@ -287,7 +287,7 @@ function InspectorBody({ registry, tokens }: InspectorBodyProps): ReactElement {
 }
 
 interface PlumixCanvasWithSlashMenuProps {
-  readonly registry: BlockRegistryV2;
+  readonly registry: BlockRegistry;
   readonly capabilities: ReadonlySet<string>;
 }
 
@@ -425,7 +425,7 @@ function PlumixStyleTab({ tokens }: PlumixStyleTabProps): ReactElement {
 }
 
 interface PlumixBlockActionsProps {
-  readonly registry: BlockRegistryV2;
+  readonly registry: BlockRegistry;
 }
 
 function PlumixBlockActions({ registry }: PlumixBlockActionsProps): ReactElement {

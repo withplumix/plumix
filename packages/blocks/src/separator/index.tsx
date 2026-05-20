@@ -11,7 +11,7 @@ function pickVariant(raw: unknown): SeparatorVariant {
     : "solid";
 }
 
-export const separatorBlockV2 = defineBlock({
+export const separatorBlock = defineBlock({
   name: "core/separator",
   title: "Separator",
   icon: "Minus",

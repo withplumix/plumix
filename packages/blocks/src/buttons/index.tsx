@@ -19,7 +19,7 @@ function normalizeGap(raw: unknown): string | undefined {
   return undefined;
 }
 
-export const buttonsBlockV2 = defineBlock({
+export const buttonsBlock = defineBlock({
   name: "core/buttons",
   title: "Buttons",
   icon: "MousePointerClick",

@@ -31,7 +31,7 @@ function sanitizeHref(raw: unknown): string | undefined {
   return trimmed.length > 0 && SAFE_HREF.test(trimmed) ? trimmed : undefined;
 }
 
-export const buttonBlockV2 = defineBlock({
+export const buttonBlock = defineBlock({
   name: "core/button",
   title: "Button",
   icon: "MousePointerClick",

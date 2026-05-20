@@ -1,11 +1,11 @@
 import { describe, expect, test } from "vitest";
 
 import { renderBlockSpecToHtml } from "../test/index.js";
-import { separatorBlockV2 } from "./v2.js";
+import { separatorBlock } from "./index.js";
 
-describe("core/separator v2", () => {
+describe("core/separator", () => {
   test("renders an <hr> with the solid variant by default", () => {
-    const html = renderBlockSpecToHtml(separatorBlockV2, {});
+    const html = renderBlockSpecToHtml(separatorBlock, {});
 
     expect(html).toBe(
       '<div data-plumix-block="core/separator"><hr data-variant="solid"/></div>',
@@ -13,7 +13,7 @@ describe("core/separator v2", () => {
   });
 
   test("renders the declared variant when valid", () => {
-    const html = renderBlockSpecToHtml(separatorBlockV2, {
+    const html = renderBlockSpecToHtml(separatorBlock, {
       variant: "dashed",
     });
 
@@ -21,7 +21,7 @@ describe("core/separator v2", () => {
   });
 
   test("falls back to solid for an unknown variant", () => {
-    const html = renderBlockSpecToHtml(separatorBlockV2, {
+    const html = renderBlockSpecToHtml(separatorBlock, {
       variant: "wavy",
     });
 

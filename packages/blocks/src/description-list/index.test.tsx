@@ -3,14 +3,14 @@ import { describe, expect, test } from "vitest";
 
 import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "../test/index.js";
 import {
-  descriptionDetailBlockV2,
-  descriptionListBlockV2,
-  descriptionTermBlockV2,
-} from "./v2.js";
+  descriptionDetailBlock,
+  descriptionListBlock,
+  descriptionTermBlock,
+} from "./index.js";
 
-describe("core/description-list family v2", () => {
+describe("core/description-list family", () => {
   test("renders an empty <dl> when no items are provided", () => {
-    const html = renderBlockSpecToHtml(descriptionListBlockV2, {});
+    const html = renderBlockSpecToHtml(descriptionListBlock, {});
 
     expect(html).toBe(
       '<div data-plumix-block="core/description-list"><dl></dl></div>',
@@ -18,13 +18,13 @@ describe("core/description-list family v2", () => {
   });
 
   test("renders <dt> with the term text, no universal wrapper (inline)", () => {
-    const html = renderBlockSpecToHtml(descriptionTermBlockV2, { text: "Plumix" });
+    const html = renderBlockSpecToHtml(descriptionTermBlock, { text: "Plumix" });
 
     expect(html).toBe("<dt>Plumix</dt>");
   });
 
   test("renders <dd> with the detail text, no universal wrapper (inline)", () => {
-    const html = renderBlockSpecToHtml(descriptionDetailBlockV2, { text: "A CMS" });
+    const html = renderBlockSpecToHtml(descriptionDetailBlock, { text: "A CMS" });
 
     expect(html).toBe("<dd>A CMS</dd>");
   });
@@ -44,7 +44,7 @@ describe("core/description-list family v2", () => {
     ];
 
     const html = renderBlockTreeToHtml(
-      [descriptionListBlockV2, descriptionTermBlockV2, descriptionDetailBlockV2],
+      [descriptionListBlock, descriptionTermBlock, descriptionDetailBlock],
       tree,
     );
 

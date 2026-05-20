@@ -1,10 +1,10 @@
 import type { ReactElement } from "react";
 
-import { defineBlockSpec } from "plumix/blocks";
+import { defineBlock } from "plumix/blocks";
 
 import { formatSize, sanitizeHref } from "./normalize.js";
 
-export const fileBlockV2 = defineBlockSpec({
+export const fileBlock = defineBlock({
   name: "media/file",
   title: "File",
   category: "media",

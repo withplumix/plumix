@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import { EMPTY_BLOCK_REGISTRY } from "../index.js";
+import { createBlockRegistry } from "../index.js";
+const EMPTY_BLOCK_REGISTRY = createBlockRegistry([]);
 import { buildHtmlAllowlist } from "./build-allowlist.js";
 
 describe("buildHtmlAllowlist", () => {

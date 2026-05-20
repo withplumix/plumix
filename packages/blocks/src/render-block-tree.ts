@@ -4,8 +4,22 @@ import { createElement, Fragment } from "react";
 import type { BlockRegistry } from "./block-registry.js";
 import type { ResponsiveStyleSlot } from "./styles/style-emitter.js";
 import type { ThemeTokens } from "./styles/types.js";
-import type { BlockContext } from "./types.js";
 import { emitBlockStyleCss } from "./styles/style-emitter.js";
+
+/**
+ * Threaded through `renderBlockTree` recursion. Block components introspect
+ * it for placement-aware rendering — a block knows its full ancestry chain
+ * without prop drilling.
+ */
+export interface BlockContext {
+  readonly entry: Readonly<Record<string, unknown>> | null;
+  readonly siteSettings: Readonly<Record<string, unknown>>;
+  readonly theme: { readonly id: string } | null;
+  /** Name of the immediate parent block, or `null` at the document root. */
+  readonly parent: string | null;
+  /** 0 at root, incremented for each container traversal. */
+  readonly depth: number;
+}
 
 export interface BlockNode {
   readonly id: string;

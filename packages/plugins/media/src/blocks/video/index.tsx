@@ -1,8 +1,8 @@
 import type { ReactElement } from "react";
 
-import { defineBlockSpec } from "plumix/blocks";
+import { defineBlock } from "plumix/blocks";
 
-export const videoBlockV2 = defineBlockSpec({
+export const videoBlock = defineBlock({
   name: "media/video",
   title: "Video",
   category: "media",

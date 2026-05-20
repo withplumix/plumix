@@ -1,4 +1,4 @@
-import type { BlockSpecV2 as BlockSpec } from "@plumix/blocks";
+import type { BlockSpec as BlockSpec } from "@plumix/blocks";
 import type { Config } from "@puckeditor/core";
 import type { Extensions } from "@tiptap/core";
 import { DEFAULT_BLOCK_CONTEXT } from "@plumix/blocks";

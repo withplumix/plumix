@@ -6,76 +6,59 @@
  * directly — `@plumix/blocks` is workspace-internal and unpublished.
  */
 
-export { defineBlock } from "./define-block.js";
-export { BlockRegistrationError } from "./errors.js";
-export { EMPTY_BLOCK_REGISTRY, mergeBlockRegistry } from "./registry.js";
-export type { MergeBlockRegistryInput } from "./registry.js";
-export { resolveTransformTargets } from "./transforms.js";
-export { unknownBlockSchema } from "./unknown-node.js";
-export { BASELINE_HTML_ALLOWLIST, sanitizeHtml } from "./html/sanitize.js";
-export type { HtmlAllowlist } from "./html/sanitize.js";
-export { buildHtmlAllowlist } from "./html/build-allowlist.js";
-export type { HtmlAllowlistOverride } from "./html/build-allowlist.js";
-export { HtmlAllowlistProvider, useHtmlAllowlist } from "./html/context.js";
-export { validateBlockContent } from "./validate-content.js";
-export type { BlockContentValidationResult } from "./validate-content.js";
-export { BlockContentValidationError } from "./validation-errors.js";
-export type {
-  BlockContentValidationCode,
-  BlockContentValidationIssue,
-} from "./validation-errors.js";
-export { resolveBlockStyles } from "./styles/resolve-block-styles.js";
-export type { ResolvedBlockStyles } from "./styles/resolve-block-styles.js";
+// ─── Block registry primitives ──────────────────────────────────────────────
 export {
-  ThemeTokensProvider,
-  useBlockStyles,
-  useThemeTokens,
-} from "./styles/hooks.js";
-export type { ThemeTokensProviderProps } from "./styles/hooks.js";
-export { tokensToCss } from "./styles/tokens-to-css.js";
+  createBlockRegistry,
+  defineBlock,
+} from "./block-registry.js";
 export type {
-  BlockStyleSlot,
-  BlockSupports,
-  ThemeTokenEntry,
-  ThemeTokenGroup,
-  ThemeTokens,
-} from "./styles/types.js";
-export { EntryContent } from "./walker.js";
-export type {
-  BlockRenderHookContext,
-  EntryContentProps,
-  SyncFilterExecutor,
-} from "./walker.js";
+  BlockInput,
+  BlockInputOption,
+  BlockRegistry,
+  BlockShortcutMode,
+  BlockSpec,
+  BlockTransformFrom,
+  BlockTransformTo,
+  BlockTransforms,
+  BlockVariation,
+  ClientIslandDescriptor,
+} from "./block-registry.js";
+
+// ─── Walker + render contract ───────────────────────────────────────────────
 export {
   DEFAULT_BLOCK_CONTEXT,
   isBlockNodeArray,
   renderBlockTree,
 } from "./render-block-tree.js";
-export { isV2EntryContent } from "./v2-entry-content.js";
-export type { V2EntryContent } from "./v2-entry-content.js";
-export { validateV2EntryContent } from "./validate-v2-content.js";
-export { analyzeHeadingStructure } from "./heading/audit.js";
-export type { HeadingAuditViolation } from "./heading/audit.js";
-export { resolveBlockTransformsV2 } from "./transforms-v2.js";
-export type { ResolvedTransformTarget } from "./transforms-v2.js";
 export type {
+  BlockContext,
   BlockNode,
   BlockNodeComponent,
   BlockNodeRenderProps,
   BlockRenderHooks,
   RenderBlockTreeOptions,
 } from "./render-block-tree.js";
-export { createBlockRegistry, defineBlock as defineBlockSpec } from "./block-registry.js";
+
+// ─── Entry-content envelope ─────────────────────────────────────────────────
+export { isEntryContent } from "./entry-content.js";
+export type { EntryContent } from "./entry-content.js";
+
+// ─── Transforms + insertable expansion ─────────────────────────────────────
+export { resolveBlockTransforms } from "./transforms.js";
+export type { ResolvedTransformTarget } from "./transforms.js";
 export { expandBlockVariations } from "./expand-block-variations.js";
 export type { InsertableBlockEntry } from "./expand-block-variations.js";
+
+// ─── Validation ─────────────────────────────────────────────────────────────
+export { validateEntryContent } from "./validate-content.js";
+export type { BlockContentValidationResult } from "./validate-content.js";
+export { BlockContentValidationError } from "./validation-errors.js";
 export type {
-  BlockInput,
-  BlockInputOption,
-  BlockRegistry as BlockRegistryV2,
-  BlockSpec as BlockSpecV2,
-  BlockVariation as BlockVariationV2,
-  ClientIslandDescriptor,
-} from "./block-registry.js";
+  BlockContentValidationCode,
+  BlockContentValidationIssue,
+} from "./validation-errors.js";
+
+// ─── Style emission + theme tokens ──────────────────────────────────────────
 export {
   emitBlockStyleCss,
   tokenIdToCssVar,
@@ -86,81 +69,56 @@ export type {
   ResponsiveStyleSlot,
   TokenCategory,
 } from "./styles/style-emitter.js";
-export { paragraphBlockV2 } from "./paragraph/v2.js";
-export { quoteBlockV2 } from "./quote/v2.js";
-export { codeBlockV2 } from "./code/v2.js";
-export { separatorBlockV2 } from "./separator/v2.js";
-export { groupBlockV2 } from "./group/v2.js";
-export { columnsBlockV2 } from "./columns/v2.js";
-export { detailsBlockV2 } from "./details/v2.js";
-export { calloutBlockV2 } from "./callout/v2.js";
-export { buttonBlockV2 } from "./button/v2.js";
-export { spacerBlockV2 } from "./spacer/v2.js";
-export { htmlBlockV2 } from "./html/v2.js";
-export {
-  descriptionDetailBlockV2,
-  descriptionListBlockV2,
-  descriptionTermBlockV2,
-} from "./description-list/v2.js";
-export {
-  tableBlockV2,
-  tableBodyRowBlockV2,
-  tableCellBlockV2,
-  tableHeaderCellBlockV2,
-  tableHeaderRowBlockV2,
-} from "./table/v2.js";
-export { listBlockV2, listItemBlockV2 } from "./list/v2.js";
-export { buttonsBlockV2 } from "./buttons/v2.js";
-export { collectActiveIslands } from "./islands.js";
-export type { ActiveIsland } from "./islands.js";
-export { PlumixIslandBootstrap } from "./island-bootstrap.js";
-export type { PlumixIslandBootstrapProps } from "./island-bootstrap.js";
+export { tokensToCss } from "./styles/tokens-to-css.js";
 export type {
-  BlockAttributeSchema,
-  BlockComponent,
-  BlockContext,
-  BlockProps,
-  BlockRegistry,
-  BlockKeyboardShortcut,
-  BlockMarkdownShortcut,
-  BlockShortcutMode,
-  BlockSpec,
-  BlockTransformFrom,
-  BlockTransformTo,
-  BlockTransforms,
-  BlockVariation,
-  BlockVariationInnerBlock,
-  ClientIslandRef,
-  LazyRef,
-  ParsePasteRule,
-  ResolvedBlockSpec,
-  TiptapMark,
-  TiptapNode,
-} from "./types.js";
+  ThemeTokenEntry,
+  ThemeTokenGroup,
+  ThemeTokens,
+} from "./styles/types.js";
 
-export { defineMark } from "./marks/define-mark.js";
-export { MarkRegistrationError } from "./marks/errors.js";
-export { EMPTY_MARK_REGISTRY, mergeMarkRegistry } from "./marks/registry.js";
-export type { MergeMarkRegistryInput } from "./marks/registry.js";
-export type {
-  MarkComponent,
-  MarkProps,
-  MarkRegistry,
-  MarkSpec,
-  ResolvedMarkSpec,
-} from "./marks/types.js";
-export { coreMarks, coreMarkExtensions } from "./marks/core/index.js";
+// ─── HTML sanitisation ──────────────────────────────────────────────────────
+export { BASELINE_HTML_ALLOWLIST, sanitizeHtml } from "./html/sanitize.js";
+export type { HtmlAllowlist } from "./html/sanitize.js";
+export { buildHtmlAllowlist } from "./html/build-allowlist.js";
+export type { HtmlAllowlistOverride } from "./html/build-allowlist.js";
+export { HtmlAllowlistProvider, useHtmlAllowlist } from "./html/context.js";
 
+// ─── Heading audit ──────────────────────────────────────────────────────────
+export { analyzeHeadingStructure } from "./heading/audit.js";
+export type { HeadingAuditViolation } from "./heading/audit.js";
+
+// ─── Unknown-node Tiptap fallback ──────────────────────────────────────────
+export { unknownBlockSchema } from "./unknown-node.js";
+
+// ─── Core blocks ────────────────────────────────────────────────────────────
 export { coreBlocks } from "./core-blocks.js";
-export { coreBlocksV2 } from "./core-blocks-v2.js";
+export { buttonBlock } from "./button/index.js";
+export { buttonsBlock } from "./buttons/index.js";
+export { calloutBlock } from "./callout/index.js";
 export { codeBlock } from "./code/index.js";
-export { columnBlock } from "./columns/column.js";
 export { columnsBlock } from "./columns/index.js";
+export {
+  descriptionDetailBlock,
+  descriptionListBlock,
+  descriptionTermBlock,
+} from "./description-list/index.js";
+export { detailsBlock } from "./details/index.js";
 export { groupBlock } from "./group/index.js";
 export { headingBlock } from "./heading/index.js";
-export { listItemBlock } from "./list/list-item.js";
-export { listOrderedBlock } from "./list/list-ordered.js";
-export { listBlock } from "./list/list.js";
+export { htmlBlock } from "./html/index.js";
+export { listBlock, listItemBlock } from "./list/index.js";
 export { paragraphBlock } from "./paragraph/index.js";
 export { quoteBlock } from "./quote/index.js";
 export { separatorBlock } from "./separator/index.js";
+export { spacerBlock } from "./spacer/index.js";
+export {
+  tableBlock,
+  tableBodyRowBlock,
+  tableCellBlock,
+  tableHeaderCellBlock,
+  tableHeaderRowBlock,
+} from "./table/index.js";
+
+// ─── Inline marks ───────────────────────────────────────────────────────────
+export { coreMarks, coreMarkExtensions } from "./marks/core/index.js";
+export type { MarkSpec } from "./marks/types.js";

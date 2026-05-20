@@ -1,11 +1,11 @@
 import { renderBlockSpecToHtml } from "plumix/blocks/test";
 import { describe, expect, test } from "vitest";
 
-import { videoBlockV2 } from "./v2.js";
+import { videoBlock } from "./index.js";
 
 describe("media/video v2", () => {
   test("renders <video> with src + poster + controls by default", () => {
-    const html = renderBlockSpecToHtml(videoBlockV2, {
+    const html = renderBlockSpecToHtml(videoBlock, {
       src: "/_plumix/media/x/clip.mp4",
       poster: "/_plumix/media/x/poster.jpg",
     });
@@ -16,12 +16,12 @@ describe("media/video v2", () => {
   });
 
   test("playsinline default is true and respected by the render", () => {
-    const html = renderBlockSpecToHtml(videoBlockV2, { src: "/x.mp4" });
+    const html = renderBlockSpecToHtml(videoBlock, { src: "/x.mp4" });
     expect(html).toMatch(/playsinline/i);
   });
 
   test("muted + loop + autoplay map to native attrs", () => {
-    const html = renderBlockSpecToHtml(videoBlockV2, {
+    const html = renderBlockSpecToHtml(videoBlock, {
       src: "/x.mp4",
       muted: true,
       loop: true,

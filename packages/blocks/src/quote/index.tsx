@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { defineBlock } from "../block-registry.js";
 
-export const quoteBlockV2 = defineBlock({
+export const quoteBlock = defineBlock({
   name: "core/quote",
   title: "Quote",
   icon: "Quote",

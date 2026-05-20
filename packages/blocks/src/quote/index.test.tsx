@@ -1,11 +1,11 @@
 import { describe, expect, test } from "vitest";
 
 import { renderBlockSpecToHtml } from "../test/index.js";
-import { quoteBlockV2 } from "./v2.js";
+import { quoteBlock } from "./index.js";
 
-describe("core/quote v2", () => {
+describe("core/quote", () => {
   test("renders a blockquote with the text", () => {
-    const html = renderBlockSpecToHtml(quoteBlockV2, {
+    const html = renderBlockSpecToHtml(quoteBlock, {
       text: "To be or not to be",
     });
 
@@ -15,7 +15,7 @@ describe("core/quote v2", () => {
   });
 
   test("renders the cite attribute when citation is provided", () => {
-    const html = renderBlockSpecToHtml(quoteBlockV2, {
+    const html = renderBlockSpecToHtml(quoteBlock, {
       text: "I think therefore I am",
       citation: "https://example.com/descartes",
     });
@@ -25,7 +25,7 @@ describe("core/quote v2", () => {
   });
 
   test("omits cite when citation is empty", () => {
-    const html = renderBlockSpecToHtml(quoteBlockV2, { text: "Quiet" });
+    const html = renderBlockSpecToHtml(quoteBlock, { text: "Quiet" });
 
     expect(html).not.toContain("cite=");
   });

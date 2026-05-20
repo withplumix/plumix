@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { defineBlock } from "../block-registry.js";
 import { renderInlineAll } from "../marks/render-inline.js";
 
-export const paragraphBlockV2 = defineBlock({
+export const paragraphBlock = defineBlock({
   name: "core/paragraph",
   title: "Paragraph",
   icon: "Paragraph",

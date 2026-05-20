@@ -2,16 +2,16 @@ import type { BlockNode } from "../render-block-tree.js";
 import { describe, expect, test } from "vitest";
 
 import { renderBlockTreeToHtml } from "../test/index.js";
-import { paragraphBlockV2 } from "../paragraph/v2.js";
-import { columnsBlockV2 } from "./v2.js";
+import { paragraphBlock } from "../paragraph/index.js";
+import { columnsBlock } from "./index.js";
 
-describe("core/columns v2", () => {
+describe("core/columns", () => {
   test("renders an empty two-column layout with the default gap", () => {
     const tree: readonly BlockNode[] = [
       { id: "c1", name: "core/columns", attrs: {} },
     ];
 
-    const html = renderBlockTreeToHtml([columnsBlockV2], tree);
+    const html = renderBlockTreeToHtml([columnsBlock], tree);
 
     expect(html).toContain('data-plumix-columns="true"');
     expect(html).toContain('data-gap="md"');
@@ -24,7 +24,7 @@ describe("core/columns v2", () => {
       { id: "c1", name: "core/columns", attrs: { gap: "lg" } },
     ];
 
-    const html = renderBlockTreeToHtml([columnsBlockV2], tree);
+    const html = renderBlockTreeToHtml([columnsBlock], tree);
 
     expect(html).toContain('data-gap="lg"');
   });
@@ -46,7 +46,7 @@ describe("core/columns v2", () => {
     ];
 
     const html = renderBlockTreeToHtml(
-      [columnsBlockV2, paragraphBlockV2],
+      [columnsBlock, paragraphBlock],
       tree,
     );
 

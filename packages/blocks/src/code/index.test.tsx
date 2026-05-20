@@ -1,11 +1,11 @@
 import { describe, expect, test } from "vitest";
 
 import { renderBlockSpecToHtml } from "../test/index.js";
-import { codeBlockV2 } from "./v2.js";
+import { codeBlock } from "./index.js";
 
-describe("core/code v2", () => {
+describe("core/code", () => {
   test("renders a <pre> with the code text when no language is set", () => {
-    const html = renderBlockSpecToHtml(codeBlockV2, {
+    const html = renderBlockSpecToHtml(codeBlock, {
       text: "const x = 1;",
     });
 
@@ -15,7 +15,7 @@ describe("core/code v2", () => {
   });
 
   test("wraps the text in <code data-language> when a language is provided", () => {
-    const html = renderBlockSpecToHtml(codeBlockV2, {
+    const html = renderBlockSpecToHtml(codeBlock, {
       text: "fn main() {}",
       language: "rust",
     });
@@ -25,7 +25,7 @@ describe("core/code v2", () => {
   });
 
   test("treats whitespace-only language as no language", () => {
-    const html = renderBlockSpecToHtml(codeBlockV2, {
+    const html = renderBlockSpecToHtml(codeBlock, {
       text: "noop",
       language: "   ",
     });

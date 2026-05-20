@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { defineBlock } from "../block-registry.js";
 
-export const listBlockV2 = defineBlock({
+export const listBlock = defineBlock({
   name: "core/list",
   title: "List",
   icon: "List",
@@ -52,7 +52,7 @@ export const listBlockV2 = defineBlock({
   },
 });
 
-export const listItemBlockV2 = defineBlock({
+export const listItemBlock = defineBlock({
   name: "core/list-item",
   title: "List item",
   category: "text",

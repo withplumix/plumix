@@ -1,5 +1,3 @@
-import { coreBlocks } from "@plumix/blocks";
-
 // Server-side Tiptap ProseMirror JSON validator. Walks a saved doc
 // against the field's `marks` / `nodes` / `blocks` allowlist and
 // rejects any disallowed type/mark name with a JSON-path pointer to
@@ -36,21 +34,11 @@ const IMPLICIT_NODES: ReadonlySet<string> = new Set([
   "text",
 ]);
 
-/**
- * Bi-directional alias map: every core block's canonical name and
- * its `legacyAliases` resolve to the same equivalence group, so an
- * allowlist declared in either dialect (`"heading"` or
- * `"core/heading"`) accepts saved docs in the other.
- */
-const ALIAS_GROUPS: ReadonlyMap<string, readonly string[]> = new Map(
-  coreBlocks.flatMap((block) => {
-    const names = [block.name, ...(block.legacyAliases ?? [])];
-    return names.map((n) => [n, names] as const);
-  }),
-);
-
+// `legacyAliases` lived on the v1 BlockSpec; the v2 surface dropped it
+// since stored content now uses canonical names everywhere. Keeping the
+// expansion shape so call sites stay unchanged — it's a passthrough now.
 function expandAliases(allowlist: readonly string[]): readonly string[] {
-  return allowlist.flatMap((name) => ALIAS_GROUPS.get(name) ?? [name]);
+  return allowlist;
 }
 
 /**

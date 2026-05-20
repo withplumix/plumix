@@ -1,11 +1,11 @@
 import { renderBlockSpecToHtml } from "plumix/blocks/test";
 import { describe, expect, test } from "vitest";
 
-import { imageBlockV2 } from "./v2.js";
+import { imageBlock } from "./index.js";
 
 describe("media/image v2", () => {
   test("renders <figure><img></figure> with src + alt", () => {
-    const html = renderBlockSpecToHtml(imageBlockV2, {
+    const html = renderBlockSpecToHtml(imageBlock, {
       src: "/_plumix/media/x/photo.jpg",
       alt: "A cat",
     });
@@ -16,7 +16,7 @@ describe("media/image v2", () => {
   });
 
   test("adds figcaption when caption is provided", () => {
-    const html = renderBlockSpecToHtml(imageBlockV2, {
+    const html = renderBlockSpecToHtml(imageBlock, {
       src: "/x.jpg",
       alt: "",
       caption: "Sunset over the bay",
@@ -25,7 +25,7 @@ describe("media/image v2", () => {
   });
 
   test("encodes focal-point as object-position style on the img", () => {
-    const html = renderBlockSpecToHtml(imageBlockV2, {
+    const html = renderBlockSpecToHtml(imageBlock, {
       src: "/x.jpg",
       alt: "",
       focalPoint: { x: 0.25, y: 0.75 },
@@ -34,7 +34,7 @@ describe("media/image v2", () => {
   });
 
   test("clamps out-of-range focal-point coordinates to [0, 1]", () => {
-    const html = renderBlockSpecToHtml(imageBlockV2, {
+    const html = renderBlockSpecToHtml(imageBlock, {
       src: "/x.jpg",
       alt: "",
       focalPoint: { x: -0.5, y: 1.5 },
@@ -43,7 +43,7 @@ describe("media/image v2", () => {
   });
 
   test("emits the sizing data attribute when valid", () => {
-    const html = renderBlockSpecToHtml(imageBlockV2, {
+    const html = renderBlockSpecToHtml(imageBlock, {
       src: "/x.jpg",
       alt: "",
       sizing: "wide",
@@ -52,7 +52,7 @@ describe("media/image v2", () => {
   });
 
   test("passes srcset through to the img element", () => {
-    const html = renderBlockSpecToHtml(imageBlockV2, {
+    const html = renderBlockSpecToHtml(imageBlock, {
       src: "/x.jpg",
       alt: "",
       srcset: "/x.jpg 1x, /x@2x.jpg 2x",

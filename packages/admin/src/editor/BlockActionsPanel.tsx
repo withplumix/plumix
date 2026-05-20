@@ -1,4 +1,4 @@
-import type { BlockRegistryV2 } from "@plumix/blocks";
+import type { BlockRegistry } from "@plumix/blocks";
 import type { ReactElement } from "react";
 import { useMemo } from "react";
 
@@ -8,7 +8,7 @@ import { availableTransforms } from "./available-transforms.js";
 
 interface BlockActionsPanelProps {
   readonly specName: string | undefined;
-  readonly registry: BlockRegistryV2;
+  readonly registry: BlockRegistry;
   readonly onTransform: (option: TransformOption) => void;
   readonly onDuplicate?: () => void;
   readonly onDelete?: () => void;

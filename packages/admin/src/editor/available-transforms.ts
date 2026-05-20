@@ -1,5 +1,5 @@
-import type { BlockRegistryV2, BlockShortcutMode } from "@plumix/blocks";
-import { resolveBlockTransformsV2 } from "@plumix/blocks";
+import type { BlockRegistry, BlockShortcutMode } from "@plumix/blocks";
+import { resolveBlockTransforms } from "@plumix/blocks";
 
 export interface TransformOption {
   readonly targetName: string;
@@ -12,9 +12,9 @@ export interface TransformOption {
 
 export function availableTransforms(
   sourceName: string,
-  registry: BlockRegistryV2,
+  registry: BlockRegistry,
 ): readonly TransformOption[] {
-  const resolved = resolveBlockTransformsV2(sourceName, Array.from(registry));
+  const resolved = resolveBlockTransforms(sourceName, Array.from(registry));
   return resolved.map((entry) => ({
     targetName: entry.target,
     targetTitle: registry.get(entry.target)?.title ?? entry.target,

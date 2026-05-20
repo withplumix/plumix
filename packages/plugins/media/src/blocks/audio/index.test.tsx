@@ -1,11 +1,11 @@
 import { renderBlockSpecToHtml } from "plumix/blocks/test";
 import { describe, expect, test } from "vitest";
 
-import { audioBlockV2 } from "./v2.js";
+import { audioBlock } from "./index.js";
 
 describe("media/audio v2", () => {
   test("renders <audio> with src + controls by default", () => {
-    const html = renderBlockSpecToHtml(audioBlockV2, {
+    const html = renderBlockSpecToHtml(audioBlock, {
       src: "/_plumix/media/x/track.mp3",
     });
     expect(html).toContain('data-plumix-block="media/audio"');
@@ -14,7 +14,7 @@ describe("media/audio v2", () => {
   });
 
   test("autoplay + loop attrs map to native attributes", () => {
-    const html = renderBlockSpecToHtml(audioBlockV2, {
+    const html = renderBlockSpecToHtml(audioBlock, {
       src: "/x.mp3",
       autoplay: true,
       loop: true,

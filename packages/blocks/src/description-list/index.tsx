@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { defineBlock } from "../block-registry.js";
 
-export const descriptionListBlockV2 = defineBlock({
+export const descriptionListBlock = defineBlock({
   name: "core/description-list",
   title: "Description List",
   icon: "List",
@@ -15,7 +15,7 @@ export const descriptionListBlockV2 = defineBlock({
   },
 });
 
-export const descriptionTermBlockV2 = defineBlock({
+export const descriptionTermBlock = defineBlock({
   name: "core/description-term",
   title: "Term",
   icon: "Type",
@@ -30,7 +30,7 @@ export const descriptionTermBlockV2 = defineBlock({
   },
 });
 
-export const descriptionDetailBlockV2 = defineBlock({
+export const descriptionDetailBlock = defineBlock({
   name: "core/description-detail",
   title: "Detail",
   icon: "AlignLeft",

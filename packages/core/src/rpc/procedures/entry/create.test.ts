@@ -1,13 +1,8 @@
 import { describe, expect, test } from "vitest";
 
-import { defineBlock, defineMark } from "@plumix/blocks";
-
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
-import { HookRegistry } from "../../../hooks/registry.js";
-import { definePlugin } from "../../../plugin/define.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
-import { installPlugins } from "../../../plugin/register.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 import { registerCoreLookupAdapters } from "../lookup-adapters.js";
 
@@ -23,95 +18,17 @@ describe("entry.create", () => {
     expect(created.publishedAt).toBeNull();
   });
 
-  describe("with a fixture plugin contributing a block + mark", () => {
-    const PLUGIN_CONTENT = {
-      type: "doc",
-      content: [
-        {
-          type: "acme/callout",
-          content: [
-            {
-              type: "text",
-              text: "warn",
-              marks: [{ type: "acme/highlight-warning" }],
-            },
-          ],
-        },
-      ],
-    };
-
-    async function pluginHarness() {
-      const plugin = definePlugin("acme", (ctx) => {
-        ctx.registerBlock(
-          defineBlock({
-            name: "acme/callout",
-            title: "Callout",
-            schema: () =>
-              Promise.resolve({
-                name: "acme/callout",
-                parseHTML: () => [],
-                renderHTML: () => ["div", 0],
-              } as never),
-            component: () => Promise.resolve(() => null),
-          }),
-        );
-        ctx.registerMark(
-          defineMark({
-            name: "acme/highlight-warning",
-            title: "Warning highlight",
-            schema: () =>
-              Promise.resolve({
-                name: "acme/highlight-warning",
-                parseHTML: () => [],
-                renderHTML: () => ["mark", 0],
-              } as never),
-            component: () => Promise.resolve(() => null),
-          }),
-        );
-      });
-      const { registry } = await installPlugins({
-        hooks: new HookRegistry(),
-        plugins: [plugin],
-      });
-      return createRpcHarness({ authAs: "contributor", plugins: registry });
-    }
-
-    test("entry.create accepts content carrying the plugin block + mark", async () => {
-      const h = await pluginHarness();
-      const created = await h.client.entry.create({
-        title: "p",
-        slug: "p",
-        content: PLUGIN_CONTENT,
-      });
-      expect(created.status).toBe("draft");
-    });
-
-    test("entry.get round-trips the plugin block + mark content unchanged", async () => {
-      const h = await pluginHarness();
-      const created = await h.client.entry.create({
-        title: "p",
-        slug: "p",
-        content: PLUGIN_CONTENT,
-      });
-      const fetched = await h.client.entry.get({ id: created.id });
-      expect(fetched.content).toEqual(PLUGIN_CONTENT);
-    });
-  });
-
-  test("INVALID_BLOCK_CONTENT when content carries an unknown block type", async () => {
+  test("INVALID_BLOCK_CONTENT when v2 content carries an unknown block type", async () => {
     const h = await createRpcHarness({ authAs: "contributor" });
     const error = await h.client.entry
       .create({
         title: "t",
         slug: "t",
         content: {
-          type: "doc",
-          content: [
-            {
-              type: "core/paragraph",
-              content: [{ type: "text", text: "ok" }],
-            },
-            { type: "made-up/block", content: [] },
+          version: "plumix.v2",
+          blocks: [
+            { id: "p1", name: "core/paragraph", attrs: {} },
+            { id: "x1", name: "made-up/block", attrs: {} },
           ],
         },
       })

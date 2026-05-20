@@ -183,7 +183,7 @@ export const restore = base
     assertContentWithinByteCap(revision.content, errors);
     assertContentValidAgainstRegistries(
       revision.content,
-      { blocks: context.blocks, marks: context.marks },
+      { blocks: context.blocks },
       errors,
     );
 

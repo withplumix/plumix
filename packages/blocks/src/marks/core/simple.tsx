@@ -1,18 +1,14 @@
-import type { ReactElement } from "react";
 import { Mark } from "@tiptap/core";
 
-import type { MarkComponent, MarkProps, MarkSpec } from "../types.js";
-import { defineMark } from "../define-mark.js";
+import type { MarkSpec } from "../types.js";
 
 /**
  * Most marks are zero-attr "wrap children in a fixed HTML element". This
- * helper encodes that pattern once: declare the canonical HTML tag, the
- * parseHTML pattern that absorbs both that tag and any aliases (so pasted
- * `<b>` rolls up into `bold`, etc.), and the React Component is just the
- * tag wrapping children.
+ * helper encodes that pattern: declare the canonical HTML tag and the
+ * parseHTML aliases (so pasted `<b>` rolls up into `bold`, etc.).
  *
- * Mark / spec name are kept identical (`schemaName === spec.name`) so
- * the registry's schemaNameMismatch guard stays satisfied.
+ * Schema name and spec name are kept identical — the walker dispatches
+ * on `mark.type === schema.name`.
  */
 interface SimpleMarkOptions {
   readonly name: string;
@@ -24,8 +20,6 @@ interface SimpleMarkOptions {
   readonly bubbleMenuIcon?: string;
 }
 
-// Tiptap Mark built synchronously; Puck's richtext field reads from
-// here without awaiting MarkSpec's LazyRef.
 export interface SimpleMarkExtensionOptions {
   readonly name: string;
   readonly tag: keyof React.JSX.IntrinsicElements;
@@ -47,25 +41,16 @@ export function createSimpleMarkExtension(
 }
 
 export function simpleMark(opts: SimpleMarkOptions): MarkSpec {
-  const schema = createSimpleMarkExtension({
-    name: opts.name,
-    tag: opts.tag,
-    parseTags: opts.parseTags,
-  });
-
-  const Component: MarkComponent = ({ children }: MarkProps): ReactElement => {
-    const Tag = opts.tag;
-    return <Tag>{children}</Tag>;
-  };
-  Component.displayName = `${opts.name}-mark`;
-
-  return defineMark({
+  return {
     name: opts.name,
     title: opts.title,
     keyboardShortcut: opts.keyboardShortcut,
     bubbleMenuLabel: opts.bubbleMenuLabel,
     bubbleMenuIcon: opts.bubbleMenuIcon,
-    schema: () => Promise.resolve(schema),
-    component: () => Promise.resolve(Component),
-  });
+    schema: createSimpleMarkExtension({
+      name: opts.name,
+      tag: opts.tag,
+      parseTags: opts.parseTags,
+    }),
+  };
 }

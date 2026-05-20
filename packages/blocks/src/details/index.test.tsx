@@ -2,19 +2,19 @@ import type { BlockNode } from "../render-block-tree.js";
 import { describe, expect, test } from "vitest";
 
 import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "../test/index.js";
-import { paragraphBlockV2 } from "../paragraph/v2.js";
-import { detailsBlockV2 } from "./v2.js";
+import { paragraphBlock } from "../paragraph/index.js";
+import { detailsBlock } from "./index.js";
 
-describe("core/details v2", () => {
+describe("core/details", () => {
   test("falls back to 'Details' summary when summary is empty", () => {
-    const html = renderBlockSpecToHtml(detailsBlockV2, {});
+    const html = renderBlockSpecToHtml(detailsBlock, {});
 
     expect(html).toContain("<summary>Details</summary>");
     expect(html).not.toContain("open=");
   });
 
   test("renders the declared summary and opens when open=true", () => {
-    const html = renderBlockSpecToHtml(detailsBlockV2, {
+    const html = renderBlockSpecToHtml(detailsBlock, {
       summary: "Long version",
       open: true,
     });
@@ -35,7 +35,7 @@ describe("core/details v2", () => {
       },
     ];
 
-    const html = renderBlockTreeToHtml([detailsBlockV2, paragraphBlockV2], tree);
+    const html = renderBlockTreeToHtml([detailsBlock, paragraphBlock], tree);
 
     expect(html).toContain("<p>Hidden</p>");
   });

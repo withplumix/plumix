@@ -1,4 +1,4 @@
-import type { BlockSpecV2 } from "@plumix/blocks";
+import type { BlockSpec } from "@plumix/blocks";
 import { createBlockRegistry } from "@plumix/blocks";
 
 import type { TransformOption } from "./available-transforms.js";
@@ -12,7 +12,7 @@ afterEach(() => {
   cleanup();
 });
 
-function spec(partial: Partial<BlockSpecV2> & { name: string }): BlockSpecV2 {
+function spec(partial: Partial<BlockSpec> & { name: string }): BlockSpec {
   return { render: () => null, ...partial };
 }
 

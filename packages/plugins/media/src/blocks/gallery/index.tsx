@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { defineBlockSpec } from "plumix/blocks";
+import { defineBlock } from "plumix/blocks";
 
 import { clampColumns, normalizeGap, pickAspect } from "./normalize.js";
 
@@ -19,7 +19,7 @@ const ASPECT_OPTIONS = [
   { value: "auto", label: "Auto (image-native)" },
 ] as const;
 
-export const galleryBlockV2 = defineBlockSpec({
+export const galleryBlock = defineBlock({
   name: "media/gallery",
   title: "Gallery",
   category: "media",

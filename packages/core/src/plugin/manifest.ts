@@ -1,9 +1,5 @@
 import type {
-  BlockAttributeSchema,
-  BlockKeyboardShortcut,
-  BlockMarkdownShortcut,
   BlockSpec,
-  BlockSupports,
   BlockVariation,
   MarkSpec,
 } from "@plumix/blocks";
@@ -1419,16 +1415,7 @@ export interface BlockManifestEntry {
   readonly description?: string;
   readonly keywords?: readonly string[];
   readonly inserter?: boolean;
-  readonly attributes?: Readonly<Record<string, BlockAttributeSchema>>;
-  readonly supports?: BlockSupports;
   readonly variations?: readonly BlockVariation[];
-  readonly keyboardShortcuts?: readonly BlockKeyboardShortcut[];
-  readonly markdownShortcuts?: readonly BlockMarkdownShortcut[];
-  readonly legacyAliases?: readonly string[];
-  /** Export name on the plugin's `adminEntry` module — see `BlockSpec.adminSchema`. */
-  readonly adminSchema?: string;
-  /** Export name on the plugin's `adminEntry` module — see `BlockSpec.adminEditor`. */
-  readonly adminEditor?: string;
 }
 
 export interface MarkManifestEntry {
@@ -2196,39 +2183,17 @@ function toFieldTypeEntry(
 }
 
 function toBlockEntry(block: RegisteredBlock): BlockManifestEntry {
-  const {
-    name,
-    title,
-    category,
-    icon,
-    description,
-    keywords,
-    inserter,
-    attributes,
-    supports,
-    variations,
-    keyboardShortcuts,
-    markdownShortcuts,
-    legacyAliases,
-    adminSchema,
-    adminEditor,
-  } = block.spec;
+  const { name, title, category, icon, description, keywords, inserter, variations } =
+    block.spec;
   return {
-    name,
-    title,
+    name: name,
+    title: title ?? name,
     category,
     icon,
     description,
     keywords,
     inserter,
-    attributes,
-    supports,
     variations,
-    keyboardShortcuts,
-    markdownShortcuts,
-    legacyAliases,
-    adminSchema,
-    adminEditor,
   };
 }
 

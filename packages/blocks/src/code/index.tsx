@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { defineBlock } from "../block-registry.js";
 
-export const codeBlockV2 = defineBlock({
+export const codeBlock = defineBlock({
   name: "core/code",
   title: "Code",
   icon: "Code",

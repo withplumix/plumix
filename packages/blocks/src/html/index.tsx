@@ -5,7 +5,7 @@ import { defineBlock } from "../block-registry.js";
 import { useHtmlAllowlist } from "./context.js";
 import { sanitizeHtml } from "./sanitize.js";
 
-function HtmlBlockV2Render({ attrs }: BlockNodeRenderProps): ReactNode {
+function HtmlBlockRender({ attrs }: BlockNodeRenderProps): ReactNode {
   const allowlist = useHtmlAllowlist();
   const raw = (attrs.html as string | undefined) ?? "";
   return (
@@ -13,12 +13,12 @@ function HtmlBlockV2Render({ attrs }: BlockNodeRenderProps): ReactNode {
   );
 }
 
-export const htmlBlockV2 = defineBlock({
+export const htmlBlock = defineBlock({
   name: "core/html",
   title: "HTML",
   icon: "Code",
   category: "interactive",
   inputs: [{ name: "html", type: "textarea", label: "HTML" }],
   defaults: { html: "" },
-  render: HtmlBlockV2Render,
+  render: HtmlBlockRender,
 });

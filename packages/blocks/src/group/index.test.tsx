@@ -2,16 +2,16 @@ import type { BlockNode } from "../render-block-tree.js";
 import { describe, expect, test } from "vitest";
 
 import { renderBlockTreeToHtml } from "../test/index.js";
-import { paragraphBlockV2 } from "../paragraph/v2.js";
-import { groupBlockV2 } from "./v2.js";
+import { paragraphBlock } from "../paragraph/index.js";
+import { groupBlock } from "./index.js";
 
-describe("core/group v2", () => {
+describe("core/group", () => {
   test("renders an empty group with the default flow layout", () => {
     const tree: readonly BlockNode[] = [
       { id: "g1", name: "core/group", attrs: {} },
     ];
 
-    const html = renderBlockTreeToHtml([groupBlockV2], tree);
+    const html = renderBlockTreeToHtml([groupBlock], tree);
 
     expect(html).toBe(
       '<div data-plumix-block="core/group"><div data-layout="flow"></div></div>',
@@ -23,7 +23,7 @@ describe("core/group v2", () => {
       { id: "g1", name: "core/group", attrs: { layout: "flex-row" } },
     ];
 
-    const html = renderBlockTreeToHtml([groupBlockV2], tree);
+    const html = renderBlockTreeToHtml([groupBlock], tree);
 
     expect(html).toContain('data-layout="flex-row"');
   });
@@ -46,7 +46,7 @@ describe("core/group v2", () => {
     ];
 
     const html = renderBlockTreeToHtml(
-      [groupBlockV2, paragraphBlockV2],
+      [groupBlock, paragraphBlock],
       tree,
     );
 

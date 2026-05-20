@@ -11,7 +11,7 @@ function pickGap(raw: unknown): Gap {
     : "md";
 }
 
-export const columnsBlockV2 = defineBlock({
+export const columnsBlock = defineBlock({
   name: "core/columns",
   title: "Columns",
   icon: "Columns",

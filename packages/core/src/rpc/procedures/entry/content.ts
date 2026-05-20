@@ -1,13 +1,8 @@
 import type {
   BlockContentValidationIssue,
   BlockRegistry,
-  MarkRegistry,
 } from "@plumix/blocks";
-import {
-  isV2EntryContent,
-  validateBlockContent,
-  validateV2EntryContent,
-} from "@plumix/blocks";
+import { isEntryContent, validateEntryContent } from "@plumix/blocks";
 
 import type { EntryContent } from "../../../db/schema/entries.js";
 import { MAX_CONTENT_BYTES } from "./schemas.js";
@@ -33,13 +28,15 @@ export function assertContentWithinByteCap(
 
 export function assertContentValidAgainstRegistries(
   content: EntryContent | null | undefined,
-  registries: { readonly blocks: BlockRegistry; readonly marks: MarkRegistry },
+  registries: { readonly blocks: BlockRegistry },
   errors: Pick<ContentErrors, "INVALID_BLOCK_CONTENT">,
 ): void {
   if (content == null) return;
-  const result = isV2EntryContent(content)
-    ? validateV2EntryContent(content, registries.blocks)
-    : validateBlockContent(content, registries);
+  // Only the v2 envelope round-trips through validation. Legacy payloads
+  // (pre-cutover) bypass — the editor never emits them at this point and
+  // the new walker simply renders unknown nodes as nothing.
+  if (!isEntryContent(content)) return;
+  const result = validateEntryContent(content, registries.blocks);
   if (!result.ok) {
     throw errors.INVALID_BLOCK_CONTENT({
       data: { issues: [...result.errors] },

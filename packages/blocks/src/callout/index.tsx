@@ -11,7 +11,7 @@ function pickVariant(raw: unknown): CalloutVariant {
     : "info";
 }
 
-export const calloutBlockV2 = defineBlock({
+export const calloutBlock = defineBlock({
   name: "core/callout",
   title: "Callout",
   icon: "Megaphone",

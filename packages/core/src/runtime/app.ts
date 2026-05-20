@@ -1,19 +1,16 @@
 import { RPCHandler } from "@orpc/server/fetch";
 
 import type {
-  BlockComponent,
   BlockRegistry,
   HtmlAllowlist,
-  MarkComponent,
-  MarkRegistry,
+  MarkSpec,
   ThemeTokens,
 } from "@plumix/blocks";
 import {
   buildHtmlAllowlist,
   coreBlocks,
   coreMarks,
-  mergeBlockRegistry,
-  mergeMarkRegistry,
+  createBlockRegistry,
 } from "@plumix/blocks";
 
 import type { RequestAuthenticator } from "../auth/authenticator.js";
@@ -40,7 +37,6 @@ import { createCapabilityResolver } from "../auth/rbac.js";
 import { DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
 import * as coreSchema from "../db/schema/index.js";
 import { HookRegistry } from "../hooks/registry.js";
-import { CORE_FIELD_TYPES } from "../plugin/core-field-types.js";
 import {
   CORE_RPC_NAMESPACES,
   createPluginRegistry,
@@ -117,21 +113,16 @@ export interface PlumixApp {
   readonly scheduledTasks: readonly RegisteredScheduledTask[];
   /**
    * Merged block registry: `@plumix/blocks` core specs + plugin
-   * contributions from `ctx.registerBlock`. Component lazy refs on
-   * each spec are awaited once during `buildApp`, so the SSR walker
-   * reads `app.blocks.get(name).component` synchronously per request.
-   *
-   * Theme block overrides are merged in by the (forthcoming) theme
-   * pipeline; v1 of the foundation slice ships the core + plugin
-   * layers only.
+   * contributions from `ctx.registerBlock`, built once at boot.
    */
   readonly blocks: BlockRegistry;
   /**
-   * Merged mark registry: the 13 core marks from `@plumix/blocks` +
-   * plugin contributions from `ctx.registerMark`. Same shape and
-   * resolution model as `app.blocks`.
+   * Aggregated mark catalogue: the 13 core marks from `@plumix/blocks` +
+   * plugin contributions from `ctx.registerMark`. Surfaces in the manifest
+   * + admin bubble menu; the rendering path uses the hardcoded
+   * `renderInline` walker, not a per-spec component dispatch.
    */
-  readonly marks: MarkRegistry;
+  readonly marks: readonly MarkSpec[];
   /**
    * Sanitizer allowlist `core/html` reads at render time. Built once
    * from the intrinsic baseline + `config.blocks.htmlAllowlist`.
@@ -143,8 +134,8 @@ export interface PlumixApp {
   /**
    * Active theme's design tokens, flattened across `config.themes`
    * with later themes winning per-group. `undefined` when no theme
-   * declared `tokens` — the SSR shell skips `<ThemeTokensProvider>`
-   * in that case and `useBlockStyles` degrades to inline `style` only.
+   * declared `tokens` — the universal Style slot in `renderBlockTree`
+   * then has no token table to resolve through.
    */
   readonly themeTokens: ThemeTokens | undefined;
 }
@@ -218,40 +209,20 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
   const authenticator = config.auth.authenticator ?? defaultAuthenticator();
   const bootstrapAllowed = config.auth.bootstrapVia === "first-method-wins";
 
-  // Seed the per-app block registry from `@plumix/blocks` core specs +
-  // plugin contributions. The block walker reads attribute schemas
-  // referenced by name (`registerFieldType`); pass the resolved field-type
-  // set so `unknown_attribute_type` errors surface here instead of at
-  // render time. Theme overrides flatten across `config.themes` with
-  // later themes winning per-name — same precedence as `marks` below.
-  const pluginBlockContributions = Array.from(registry.blockSpecs.values()).map(
-    ({ spec, registeredBy }) => ({ spec, pluginId: registeredBy }),
+  // Aggregate `@plumix/blocks` core specs + plugin contributions into the
+  // per-app registry. `createBlockRegistry`'s last-write-wins semantics
+  // give plugins precedence over the core baseline; theme-level overrides
+  // are not part of the v2 surface (themes contribute through tokens +
+  // `config.themes[].setup`, not through component swaps).
+  const pluginBlockSpecs = Array.from(registry.blockSpecs.values()).map(
+    ({ spec }) => spec,
   );
-  const fieldTypeNames = new Set<string>([
-    ...CORE_FIELD_TYPES,
-    ...registry.fieldTypes.keys(),
-  ]);
-  const { overrides: blockOverrides, themeId: blockThemeId } =
-    collectThemeOverrides(config.themes, (theme) => theme.blocks);
-  const blocks = await mergeBlockRegistry({
-    core: coreBlocks,
-    plugins: pluginBlockContributions,
-    themeOverrides: blockOverrides,
-    themeId: blockThemeId,
-    fieldTypes: fieldTypeNames,
-  });
+  const blocks = createBlockRegistry([...coreBlocks, ...pluginBlockSpecs]);
 
-  const pluginMarkContributions = Array.from(registry.markSpecs.values()).map(
-    ({ spec, registeredBy }) => ({ spec, pluginId: registeredBy }),
+  const pluginMarkSpecs = Array.from(registry.markSpecs.values()).map(
+    ({ spec }) => spec,
   );
-  const { overrides: markOverrides, themeId: markThemeId } =
-    collectThemeOverrides(config.themes, (theme) => theme.marks);
-  const marks = await mergeMarkRegistry({
-    core: coreMarks,
-    plugins: pluginMarkContributions,
-    themeOverrides: markOverrides,
-    themeId: markThemeId,
-  });
+  const marks: readonly MarkSpec[] = [...coreMarks, ...pluginMarkSpecs];
 
   const htmlAllowlist = buildHtmlAllowlist(
     blocks,
@@ -322,23 +293,6 @@ function mergeThemeTokens(
     };
   }
   return merged;
-}
-
-function collectThemeOverrides<C extends BlockComponent | MarkComponent>(
-  themes: readonly ThemeDescriptor[],
-  pick: (theme: ThemeDescriptor) => Readonly<Record<string, C>> | undefined,
-): { overrides: Record<string, C>; themeId: string | null } {
-  const overrides: Record<string, C> = {};
-  let themeId: string | null = null;
-  for (const theme of themes) {
-    const layer = pick(theme);
-    if (!layer) continue;
-    for (const [name, component] of Object.entries(layer)) {
-      overrides[name] = component;
-      themeId = theme.id;
-    }
-  }
-  return { overrides, themeId };
 }
 
 function buildThemeSetupContext(

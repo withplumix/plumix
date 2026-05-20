@@ -11,7 +11,7 @@ function pickHeight(raw: unknown): number {
   return raw;
 }
 
-export const spacerBlockV2 = defineBlock({
+export const spacerBlock = defineBlock({
   name: "core/spacer",
   title: "Spacer",
   icon: "Minus",

@@ -1,23 +1,20 @@
 /**
- * Sync filter hooks fired by `<EntryContent>` around every block render.
+ * Sync filter hooks fired by `renderBlockTree` around every block render.
  *
  * Plugins decorate or replace the React element the walker is about to
  * render: `block:before_render` runs first, `block:after_render` second,
- * with the second receiving the first's return value. Both fire for the
- * unknown-block fallback too (so plugins can wrap unregistered content).
+ * with the second receiving the first's return value.
  *
  * Augments `FilterRegistry` so `setupContext.addFilter("block:before_render", ...)`
- * is type-safe at plugin-authoring time. The walker itself reads through a
- * structural `SyncFilterExecutor` in `@plumix/blocks` — that package has no
- * dependency on `@plumix/core`.
+ * is type-safe at plugin-authoring time.
  */
 
 import type { ReactNode } from "react";
 
-import type { BlockContext, TiptapNode } from "@plumix/blocks";
+import type { BlockContext, BlockNode } from "@plumix/blocks";
 
 export interface BlockRenderHookContext {
-  readonly node: TiptapNode;
+  readonly node: BlockNode;
   readonly context: BlockContext;
 }
 

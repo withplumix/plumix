@@ -11,7 +11,7 @@ function pickLayout(raw: unknown): GroupLayout {
     : "flow";
 }
 
-export const groupBlockV2 = defineBlock({
+export const groupBlock = defineBlock({
   name: "core/group",
   title: "Group",
   icon: "Group",
