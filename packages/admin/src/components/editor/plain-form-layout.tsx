@@ -1,5 +1,6 @@
 import type { EntryMetaBoxManifestEntry } from "@plumix/core/manifest";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
+import { useEffect, useRef } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 
@@ -26,6 +27,15 @@ interface PlainFormLayoutProps {
   readonly isSubmitting: boolean;
   readonly serverError: string | null;
   readonly onSubmit: (values: PostEditorValues) => void;
+  // Optional Revisions trigger slot — route layer wires the
+  // `<RevisionsSheet />` with RPC fetchers + onRestore and passes it
+  // here when the entry type declares `supports: ['revisions']`.
+  readonly revisionsTrigger?: ReactNode;
+  // Debounce window for autosave. When > 0, value edits trigger
+  // `onSubmit` after the window elapses with no new edits. 0 (default)
+  // disables autosave entirely so the layout keeps its explicit-save
+  // behaviour for callers that don't want it.
+  readonly autosaveMs?: number;
 }
 
 const LABEL: Readonly<Record<SaveStatus, string>> = {
@@ -50,6 +60,8 @@ export function PlainFormLayout({
   isSubmitting,
   serverError,
   onSubmit,
+  revisionsTrigger,
+  autosaveMs = 0,
 }: PlainFormLayoutProps): ReactElement {
   const form = useForm({
     resolver: valibotResolver(postEditorSchema),
@@ -59,6 +71,24 @@ export function PlainFormLayout({
   // whole tree (every Card + MetaBoxField) to re-render on every keystroke.
   const status = useWatch({ control: form.control, name: "status" });
   const saveStatus = resolveStatus(isSubmitting, serverError);
+  const watched = useWatch({ control: form.control });
+  const isDirty = form.formState.isDirty;
+  const onSubmitRef = useRef(onSubmit);
+  useEffect(() => {
+    onSubmitRef.current = onSubmit;
+  });
+  useEffect(() => {
+    if (autosaveMs <= 0) return;
+    if (!isDirty) return;
+    // Skip while a save is already in flight — the timer's keystroke
+    // dep makes it re-arm as soon as `isSubmitting` flips back to
+    // false, so a single coalesced save runs per quiet window.
+    if (isSubmitting) return;
+    const timer = setTimeout(() => {
+      void form.handleSubmit((values) => onSubmitRef.current(values))();
+    }, autosaveMs);
+    return () => clearTimeout(timer);
+  }, [watched, autosaveMs, isDirty, isSubmitting, form]);
   return (
     <Form {...form}>
       <form
@@ -97,6 +127,7 @@ export function PlainFormLayout({
           >
             {LABEL[saveStatus]}
           </span>
+          {revisionsTrigger}
           <Button
             type="submit"
             variant="outline"

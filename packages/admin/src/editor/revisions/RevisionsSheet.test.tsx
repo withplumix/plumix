@@ -155,6 +155,64 @@ describe("RevisionsSheet", () => {
     ).not.toBeInTheDocument();
   });
 
+  test("restore button calls onRestore and closes the sheet", async () => {
+    const fetchPage = vi.fn(() =>
+      Promise.resolve({
+        revisions: [
+          {
+            id: 8,
+            title: "Snapshot",
+            updatedAt: new Date("2026-05-17T12:00:00Z"),
+            authorId: 1,
+            authorName: "Ada",
+            authorEmail: "ada@x",
+          },
+        ] satisfies RevisionFixture[],
+        nextCursor: null,
+      }),
+    );
+    const onRestore = vi.fn(() => Promise.resolve());
+    render(
+      wrap(
+        <RevisionsSheet
+          entryId={42}
+          fetchPage={fetchPage}
+          relativeTime={() => "now"}
+          fetchRevision={() =>
+            Promise.resolve({
+              title: "S",
+              slug: "s",
+              excerpt: null,
+              content: { type: "doc", content: [] },
+              meta: {},
+            })
+          }
+          fetchCurrent={() =>
+            Promise.resolve({
+              title: "S v2",
+              slug: "s",
+              excerpt: null,
+              content: { type: "doc", content: [] },
+              meta: {},
+            })
+          }
+          onRestore={onRestore}
+        />,
+      ),
+    );
+    fireEvent.click(screen.getByTestId("revisions-sheet-trigger"));
+    await waitFor(() => screen.getByTestId("revisions-sheet-item-8-select"));
+    fireEvent.click(screen.getByTestId("revisions-sheet-item-8-select"));
+    await waitFor(() => screen.getByTestId("revisions-sheet-diff"));
+    fireEvent.click(screen.getByTestId("revisions-sheet-restore"));
+    await waitFor(() => {
+      expect(onRestore).toHaveBeenCalledWith(8);
+    });
+    await waitFor(() => {
+      expect(screen.queryByTestId("revisions-sheet-diff")).not.toBeInTheDocument();
+    });
+  });
+
   test("selecting a revision opens the diff panel and fetches both snapshots", async () => {
     const fetchPage = vi.fn(() =>
       Promise.resolve({

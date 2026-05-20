@@ -48,6 +48,9 @@ interface RevisionsSheetProps {
   // route layer owns RPC wiring and tests can stub deterministically.
   readonly fetchRevision: (revisionId: number) => Promise<DiffSnapshot>;
   readonly fetchCurrent: (entryId: number) => Promise<DiffSnapshot>;
+  // When omitted the restore action is hidden — keeps the sheet usable
+  // as a read-only diff viewer for roles without `edit_*` capabilities.
+  readonly onRestore?: (revisionId: number) => Promise<void>;
 }
 
 export function RevisionsSheet({
@@ -56,6 +59,7 @@ export function RevisionsSheet({
   relativeTime,
   fetchRevision,
   fetchCurrent,
+  onRestore,
 }: RevisionsSheetProps): ReactElement {
   const [open, setOpen] = useState(false);
   const [selectedRevisionId, setSelectedRevisionId] = useState<number | null>(
@@ -82,9 +86,23 @@ export function RevisionsSheet({
     queryFn: () => fetchCurrent(entryId),
   });
 
+  const [restorePending, setRestorePending] = useState(false);
   const allRevisions = query.data?.pages.flatMap((p) => p.revisions) ?? [];
   const hasMore = Boolean(query.data?.pages.at(-1)?.nextCursor);
   const showDiff = selectedRevisionId !== null;
+  const canRestore = onRestore !== undefined && selectedRevisionId !== null;
+
+  async function handleRestore(): Promise<void> {
+    if (!onRestore || selectedRevisionId === null) return;
+    setRestorePending(true);
+    try {
+      await onRestore(selectedRevisionId);
+      setSelectedRevisionId(null);
+      setOpen(false);
+    } finally {
+      setRestorePending(false);
+    }
+  }
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -110,15 +128,27 @@ export function RevisionsSheet({
               : "Every save creates a new revision. Newest first."}
           </SheetDescription>
           {showDiff ? (
-            <Button
-              variant="outline"
-              size="sm"
-              data-testid="revisions-sheet-back"
-              onClick={() => setSelectedRevisionId(null)}
-              className="mt-2 w-fit"
-            >
-              ← Back to list
-            </Button>
+            <div className="mt-2 flex w-fit gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                data-testid="revisions-sheet-back"
+                onClick={() => setSelectedRevisionId(null)}
+              >
+                ← Back to list
+              </Button>
+              {canRestore ? (
+                <Button
+                  variant="default"
+                  size="sm"
+                  data-testid="revisions-sheet-restore"
+                  disabled={restorePending}
+                  onClick={() => void handleRestore()}
+                >
+                  {restorePending ? "Restoring…" : "Restore this revision"}
+                </Button>
+              ) : null}
+            </div>
           ) : null}
         </SheetHeader>
         {showDiff ? (
