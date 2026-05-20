@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { expectNoAxeViolations } from "./support/axe.js";
 import {
   AUTHED_ADMIN,
   MANIFEST_WITH_POST,
@@ -224,6 +225,28 @@ test.describe("V2 spike editor renders end-to-end", () => {
 
     const canvas = page.getByTestId("plumix-editor-canvas");
     await expect(canvas.locator("h3")).toHaveText("Inside group");
+  });
+
+  test("v2 editor chrome has no WCAG 2.1 AA violations from axe-core", async ({
+    page,
+  }) => {
+    await page.goto("v2/entries/posts/1/edit");
+    await expect(page.getByTestId("plumix-editor-layout")).toBeVisible();
+    await expectNoAxeViolations(page);
+  });
+
+  test("mobile inspector sheet has no WCAG 2.1 AA violations when open", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 480, height: 800 });
+    await page.goto("v2/entries/posts/1/edit");
+
+    await page
+      .getByTestId("plumix-editor-mobile-inspector-trigger")
+      .click();
+    await expect(page.getByTestId("plumix-editor-tab-block")).toBeVisible();
+
+    await expectNoAxeViolations(page);
   });
 
   test("autosave pill cycles saved → saving → saved when a block is inserted", async ({
