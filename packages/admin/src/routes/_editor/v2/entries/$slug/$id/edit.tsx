@@ -15,6 +15,7 @@ import { blockSpecsToPuckComponents } from "@/editor/v2/block-adapter.js";
 import { createDebouncer } from "@/editor/v2/debounce.js";
 import { PlumixEditorLayout } from "@/editor/v2/EditorLayout.js";
 import { readDraft, writeDraft } from "@/editor/v2/local-draft.js";
+import { puckDataToBlockTree } from "@/editor/v2/puck-to-block-tree.js";
 import { seedPuckData } from "@/editor/v2/v2-entry-content.js";
 import { orpc } from "@/lib/orpc.js";
 import { idPathParam } from "@plumix/core/validation";
@@ -115,11 +116,25 @@ function PuckSpikeRouteInner({
   const [status, setStatus] = useState<AutosaveStatus>("saved");
   const debouncer = useMemo(
     () =>
-      createDebouncer((next: Data) => {
+      // Rejections are swallowed deliberately: error-state UX (retry, stuck
+      // pill, conflict surface) is its own slice. Without the catch the
+      // promise would surface as an unhandled rejection in CI smoke.
+      createDebouncer(async (next: Data) => {
         writeDraft(draftKey, next);
-        setStatus("saved");
+        try {
+          await orpc.entry.update.call({
+            id,
+            content: {
+              version: "plumix.v2",
+              blocks: puckDataToBlockTree({ content: next.content }),
+            },
+          });
+          setStatus("saved");
+        } catch {
+          // intentionally empty — see comment above
+        }
       }, 300),
-    [draftKey],
+    [draftKey, id],
   );
   useEffect(() => () => debouncer.flush(), [debouncer]);
   const handleChange = useCallback(

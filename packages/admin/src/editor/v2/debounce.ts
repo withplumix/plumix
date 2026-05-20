@@ -5,7 +5,7 @@ export interface Debouncer<Args extends readonly unknown[]> {
 }
 
 export function createDebouncer<Args extends readonly unknown[]>(
-  fn: (...args: Args) => void,
+  fn: (...args: Args) => void | Promise<void>,
   delayMs: number,
 ): Debouncer<Args> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -16,7 +16,7 @@ export function createDebouncer<Args extends readonly unknown[]>(
     const args = pending;
     pending = undefined;
     timer = undefined;
-    fn(...args);
+    void fn(...args);
   };
 
   return {
