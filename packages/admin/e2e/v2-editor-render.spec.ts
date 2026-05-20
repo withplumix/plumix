@@ -8,6 +8,8 @@ import {
 } from "./support/rpc-mock.js";
 
 test.describe("V2 spike editor renders end-to-end", () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
   test.beforeEach(async ({ page }) => {
     await mockManifest(page, MANIFEST_WITH_POST);
     await page.route("**/_plumix/rpc/**", async (route) => {
@@ -26,7 +28,6 @@ test.describe("V2 spike editor renders end-to-end", () => {
   test("desktop chrome renders: header, left sidebar tabs, canvas, right sidebar tabs", async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("v2/entries/posts/1/edit");
 
     await expect(page.getByTestId("plumix-editor-layout")).toBeVisible();
@@ -78,7 +79,6 @@ test.describe("V2 spike editor renders end-to-end", () => {
   test("slash menu opens on the canvas when '/' is pressed", async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("v2/entries/posts/1/edit");
 
     const canvas = page.getByTestId("plumix-editor-canvas");
@@ -91,7 +91,6 @@ test.describe("V2 spike editor renders end-to-end", () => {
   test("slash menu insert: selecting a paragraph adds it to the canvas", async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("v2/entries/posts/1/edit");
 
     const canvas = page.getByTestId("plumix-editor-canvas");
@@ -108,7 +107,6 @@ test.describe("V2 spike editor renders end-to-end", () => {
   test("autosave pill cycles saved → saving → saved when a block is inserted", async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("v2/entries/posts/1/edit");
 
     const pill = page.getByTestId("plumix-autosave-pill");
