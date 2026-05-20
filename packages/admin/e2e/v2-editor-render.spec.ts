@@ -87,4 +87,38 @@ test.describe("V2 spike editor renders end-to-end", () => {
 
     await expect(page.getByTestId("slash-menu-dialog")).toBeVisible();
   });
+
+  test("slash menu insert: selecting a paragraph adds it to the canvas", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("v2/entries/posts/1/edit");
+
+    const canvas = page.getByTestId("plumix-editor-canvas");
+    await canvas.focus();
+    await page.keyboard.press("/");
+
+    await expect(page.getByTestId("slash-menu-dialog")).toBeVisible();
+    await page.getByTestId("slash-menu-item-core/paragraph").click();
+
+    await expect(page.getByTestId("slash-menu-dialog")).toBeHidden();
+    await expect(canvas.locator("p")).toHaveCount(1);
+  });
+
+  test("autosave pill cycles saved → saving → saved when a block is inserted", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("v2/entries/posts/1/edit");
+
+    const pill = page.getByTestId("plumix-autosave-pill");
+    await expect(pill).toHaveAttribute("data-status", "saved");
+
+    await page.getByTestId("plumix-editor-canvas").focus();
+    await page.keyboard.press("/");
+    await page.getByTestId("slash-menu-item-core/paragraph").click();
+
+    await expect(pill).toHaveAttribute("data-status", "saving");
+    await expect(pill).toHaveAttribute("data-status", "saved");
+  });
 });
