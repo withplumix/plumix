@@ -3,7 +3,7 @@ import type { Config, Data } from "@puckeditor/core";
 import type { ReactElement, ReactNode } from "react";
 import { coreBlocksV2, createBlockRegistry } from "@plumix/blocks";
 import { Puck } from "@puckeditor/core";
-import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import * as v from "valibot";
@@ -17,6 +17,7 @@ import { PlumixEditorLayout } from "@/editor/v2/EditorLayout.js";
 import { readDraft, writeDraft } from "@/editor/v2/local-draft.js";
 import { puckDataToBlockTree } from "@/editor/v2/puck-to-block-tree.js";
 import { seedPuckData } from "@/editor/v2/v2-entry-content.js";
+import { findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { idPathParam } from "@plumix/core/validation";
 
@@ -95,17 +96,27 @@ function ErrorScreen(): ReactNode {
 function PuckSpikeRoute(): ReactNode {
   const { slug, id } = Route.useParams();
   const draftKey = `plumix.v2.draft.${slug}.${id}`;
-  return <PuckSpikeRouteInner key={draftKey} draftKey={draftKey} id={id} />;
+  const entryTypeName = findEntryTypeBySlug(slug)?.name;
+  return (
+    <PuckSpikeRouteInner
+      key={draftKey}
+      draftKey={draftKey}
+      id={id}
+      entryTypeName={entryTypeName}
+    />
+  );
 }
 
 interface PuckSpikeRouteInnerProps {
   readonly draftKey: string;
   readonly id: number;
+  readonly entryTypeName: string | undefined;
 }
 
 function PuckSpikeRouteInner({
   draftKey,
   id,
+  entryTypeName,
 }: PuckSpikeRouteInnerProps): ReactNode {
   const { data: entry } = useSuspenseQuery(
     orpc.entry.get.queryOptions({ input: { id } }),
@@ -145,6 +156,7 @@ function PuckSpikeRouteInner({
     },
     [debouncer],
   );
+  const queryClient = useQueryClient();
   // Publish is a one-way state-machine transition server-side, not an
   // idempotent re-stamp — the button is disabled once status === "published".
   // expectedLiveUpdatedAt is not pinned yet; the concurrency-token gap
@@ -152,6 +164,21 @@ function PuckSpikeRouteInner({
   // is owned by the error-UX slice on the #391 line.
   const publish = useMutation({
     mutationFn: () => orpc.entry.update.call({ id, status: "published" }),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
+        }),
+        ...(entryTypeName
+          ? [
+              queryClient.invalidateQueries({
+                queryKey: orpc.entry.list.key({
+                  input: { type: entryTypeName },
+                }),
+              }),
+            ]
+          : []),
+      ]),
   });
   const isPublished = entry.status === "published";
   const handlePublish = useCallback(() => publish.mutate(), [publish]);
