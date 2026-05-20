@@ -32,5 +32,3 @@ publicHoistPattern:
   - "@ianvs/prettier-plugin-sort-imports"
   - prettier-plugin-tailwindcss
 
-overrides:
-  "esbuild@<0.25.0": ">=0.25.0"
