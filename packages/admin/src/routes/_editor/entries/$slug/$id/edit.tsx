@@ -1,6 +1,6 @@
 import type { PostEditorValues } from "@/components/editor/entry-editor-form.js";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { EntryConflictDialog } from "@/components/editor/entry-conflict-dialog.js";
 import {
   POST_EDITOR_STATUSES,
@@ -9,6 +9,7 @@ import {
 import { PlainFormLayout } from "@/components/editor/plain-form-layout.js";
 import { useEntryFormScope } from "@/components/editor/use-entry-form-scope.js";
 import { useParentOptions } from "@/components/editor/use-parent-options.js";
+import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
 import { Skeleton } from "@/components/ui/skeleton.js";
 import { hasCap } from "@/lib/caps.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
@@ -110,6 +111,11 @@ function EditPostRoute(): ReactNode {
   );
 
   const isHierarchical = entryType.isHierarchical === true;
+  // Optimistic-concurrency token — server-confirmed `updatedAt` after
+  // each successful write. Keeping it in a ref lets the autosave path
+  // through `PlainFormLayout` send the up-to-date value without
+  // remounting the form mid-typing.
+  const liveUpdatedAtRef = useRef<Date>(post.updatedAt);
 
   const updatePost = useMutation({
     mutationFn: ({
@@ -134,8 +140,9 @@ function EditPostRoute(): ReactNode {
     onMutate: () => {
       setServerError(null);
     },
-    onSuccess: async () => {
+    onSuccess: async (updated) => {
       setConflict(null);
+      liveUpdatedAtRef.current = updated.updatedAt;
       // List variants are scoped by `type` so sibling post types
       // don't needlessly refetch.
       await Promise.all([
@@ -203,6 +210,13 @@ function EditPostRoute(): ReactNode {
     excludeSelfId: entryId,
   });
 
+  const supportsRevisions = Boolean(entryType.supports?.includes("revisions"));
+  const plainFormRevisionsTrigger = useRevisionsTrigger({
+    entryId,
+    enabled: supportsRevisions,
+    liveUpdatedAtRef,
+  });
+
   const capNamespace = `entry:${entryType.capabilityType ?? entryType.name}`;
   const canEditAny = hasCap(user.capabilities, `${capNamespace}:edit_any`);
   const canEditOwn =
@@ -225,23 +239,21 @@ function EditPostRoute(): ReactNode {
     return (
       <>
         <PlainFormLayout
-          // Remount on a successful update so the form's defaultValues
-          // resync to the refetched entry (parallels the editor route's
-          // same trick at the PostEditorForm call site).
-          key={
-            post.updatedAt instanceof Date
-              ? post.updatedAt.toISOString()
-              : String(post.updatedAt)
-          }
+          // Key on the entry id only: each id is its own form instance,
+          // but successful autosaves no longer remount the form (which
+          // would steal focus + drop in-flight keystrokes).
+          key={entryId}
           initialValues={initialValues}
           metaBoxes={metaBoxes}
           headline={`Edit ${singularLower}`}
           isSubmitting={updatePost.isPending}
           serverError={updatePost.isPending ? null : serverError}
+          autosaveMs={500}
+          revisionsTrigger={plainFormRevisionsTrigger}
           onSubmit={(values) => {
             updatePost.mutate({
               values,
-              expectedLiveUpdatedAt: post.updatedAt,
+              expectedLiveUpdatedAt: liveUpdatedAtRef.current,
             });
           }}
         />

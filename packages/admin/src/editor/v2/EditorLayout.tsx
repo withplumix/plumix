@@ -45,6 +45,10 @@ interface PlumixEditorLayoutProps {
   readonly onPublish: () => void;
   readonly isPublishing?: boolean;
   readonly isPublished?: boolean;
+  // Optional Revisions trigger rendered in the top-right header slot.
+  // Route layer owns RPC wiring and feeds a fully-wired <RevisionsSheet />
+  // here; the layout only allocates space and doesn't know the contract.
+  readonly revisionsTrigger?: ReactNode;
 }
 
 const EMPTY_REGISTRY: BlockRegistryV2 = createBlockRegistry([]);
@@ -72,6 +76,7 @@ export function PlumixEditorLayout({
   onPublish,
   isPublishing = false,
   isPublished = false,
+  revisionsTrigger,
 }: PlumixEditorLayoutProps): ReactElement {
   return (
     <div className="flex h-dvh flex-col" data-testid="plumix-editor-layout">
@@ -87,6 +92,7 @@ export function PlumixEditorLayout({
           data-testid="plumix-editor-title-input"
         />
         <AutosaveStatusPill />
+        {revisionsTrigger}
         <button
           type="button"
           className="rounded border px-3 py-1 text-sm disabled:opacity-50"

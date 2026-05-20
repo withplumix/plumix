@@ -18,6 +18,7 @@ import { PlumixEditorLayout } from "@/editor/v2/EditorLayout.js";
 import { readDraft, writeDraft } from "@/editor/v2/local-draft.js";
 import { puckDataToBlockTree } from "@/editor/v2/puck-to-block-tree.js";
 import { seedPuckData } from "@/editor/v2/v2-entry-content.js";
+import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
 import { findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { idPathParam } from "@plumix/core/validation";
@@ -106,13 +107,15 @@ function PuckSpikeRoute(): ReactNode {
   const { slug, id } = Route.useParams();
   const { user } = Route.useRouteContext();
   const draftKey = `plumix.v2.draft.${slug}.${id}`;
-  const entryTypeName = findEntryTypeBySlug(slug)?.name;
+  const entryType = findEntryTypeBySlug(slug);
+  const supportsRevisions = entryType?.supports?.includes("revisions") ?? false;
   return (
     <PuckSpikeRouteInner
       key={draftKey}
       draftKey={draftKey}
       id={id}
-      entryTypeName={entryTypeName}
+      entryTypeName={entryType?.name}
+      supportsRevisions={supportsRevisions}
       capabilities={user.capabilities}
     />
   );
@@ -122,6 +125,7 @@ interface PuckSpikeRouteInnerProps {
   readonly draftKey: string;
   readonly id: number;
   readonly entryTypeName: string | undefined;
+  readonly supportsRevisions: boolean;
   readonly capabilities: readonly string[];
 }
 
@@ -129,6 +133,7 @@ function PuckSpikeRouteInner({
   draftKey,
   id,
   entryTypeName,
+  supportsRevisions,
   capabilities,
 }: PuckSpikeRouteInnerProps): ReactNode {
   const { data: entry } = useSuspenseQuery(
@@ -220,6 +225,11 @@ function PuckSpikeRouteInner({
     () => new Set(capabilities),
     [capabilities],
   );
+  const revisionsTrigger = useRevisionsTrigger({
+    entryId: id,
+    enabled: supportsRevisions,
+    liveUpdatedAtRef,
+  });
   const Layout = useCallback(
     (): ReactElement => (
       <PlumixEditorLayout
@@ -229,9 +239,16 @@ function PuckSpikeRouteInner({
         onPublish={handlePublish}
         isPublishing={publish.isPending}
         isPublished={isPublished}
+        revisionsTrigger={revisionsTrigger}
       />
     ),
-    [handlePublish, publish.isPending, isPublished, capabilitySet],
+    [
+      handlePublish,
+      publish.isPending,
+      isPublished,
+      capabilitySet,
+      revisionsTrigger,
+    ],
   );
 
   return (
