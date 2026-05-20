@@ -310,9 +310,11 @@ test.describe("V2 spike editor renders end-to-end", () => {
     const lastInput = captures.at(-1) as {
       readonly id: number;
       readonly content: { readonly blocks: unknown[] };
+      readonly expectedLiveUpdatedAt: string;
     };
     expect(lastInput.id).toBe(1);
     expect(lastInput.content.blocks.length).toBeGreaterThan(0);
+    expect(lastInput.expectedLiveUpdatedAt).toBe(T0.toISOString());
   });
 
   test("clicking the Publish button POSTs entry.update with status: published", async ({
@@ -347,9 +349,11 @@ test.describe("V2 spike editor renders end-to-end", () => {
       readonly id: number;
       readonly status: string;
       readonly content?: unknown;
+      readonly expectedLiveUpdatedAt: string;
     };
     expect(lastInput.id).toBe(1);
     expect(lastInput.content).toBeUndefined();
+    expect(lastInput.expectedLiveUpdatedAt).toBe(T0.toISOString());
   });
 
   test("Publish button is disabled when the entry is already published", async ({

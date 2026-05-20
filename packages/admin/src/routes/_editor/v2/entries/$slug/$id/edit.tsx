@@ -5,7 +5,7 @@ import { coreBlocksV2, createBlockRegistry } from "@plumix/blocks";
 import { Puck } from "@puckeditor/core";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as v from "valibot";
 
 import type { AutosaveStatus } from "@/editor/v2/AutosaveStatus.js";
@@ -125,18 +125,25 @@ function PuckSpikeRouteInner({
     seedPuckData(entry.content, readDraft(draftKey) ?? initialData),
   );
   const [status, setStatus] = useState<AutosaveStatus>("saved");
+  // Optimistic-concurrency token; trailing-response wins on overlap, so a
+  // persistent CONFLICT leaves the ref stuck stale until reload (conflict
+  // resolution UI is the next slice on the #391 line).
+  const liveUpdatedAtRef = useRef<Date>(entry.updatedAt);
+  /* eslint-disable react-hooks/refs -- callback fires post-keystroke, not during render */
   const debouncer = useMemo(
     () =>
       createDebouncer(async (next: Data) => {
         writeDraft(draftKey, next);
         try {
-          await orpc.entry.update.call({
+          const updated = await orpc.entry.update.call({
             id,
             content: {
               version: "plumix.v2",
               blocks: puckDataToBlockTree({ content: next.content }),
             },
+            expectedLiveUpdatedAt: liveUpdatedAtRef.current,
           });
+          liveUpdatedAtRef.current = updated.updatedAt;
           setStatus("saved");
         } catch {
           setStatus("error");
@@ -144,6 +151,7 @@ function PuckSpikeRouteInner({
       }, 300),
     [draftKey, id],
   );
+  /* eslint-enable react-hooks/refs */
   useEffect(() => () => debouncer.flush(), [debouncer]);
   const handleChange = useCallback(
     (next: Data): void => {
@@ -156,11 +164,16 @@ function PuckSpikeRouteInner({
   const queryClient = useQueryClient();
   // Publish is a one-way state-machine transition server-side, not an
   // idempotent re-stamp — the button is disabled once status === "published".
-  // expectedLiveUpdatedAt is not pinned yet; the concurrency-token gap
-  // (race between a concurrent publish and an in-flight content autosave)
-  // is owned by a follow-up slice on the #391 line.
   const publish = useMutation({
-    mutationFn: () => orpc.entry.update.call({ id, status: "published" }),
+    mutationFn: async () => {
+      const updated = await orpc.entry.update.call({
+        id,
+        status: "published",
+        expectedLiveUpdatedAt: liveUpdatedAtRef.current,
+      });
+      liveUpdatedAtRef.current = updated.updatedAt;
+      return updated;
+    },
     onSuccess: () =>
       Promise.all([
         queryClient.invalidateQueries({
