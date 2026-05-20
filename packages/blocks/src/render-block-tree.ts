@@ -84,7 +84,7 @@ function isDevMode(): boolean {
   return process.env.NODE_ENV !== "production";
 }
 
-function isBlockNodeArray(value: unknown): value is readonly BlockNode[] {
+export function isBlockNodeArray(value: unknown): value is readonly BlockNode[] {
   if (!Array.isArray(value)) return false;
   return value.every(
     (item) =>
