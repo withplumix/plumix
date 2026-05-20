@@ -4,9 +4,10 @@ import type { ReactElement, ReactNode } from "react";
 import { coreBlocksV2, createBlockRegistry } from "@plumix/blocks";
 import { Puck } from "@puckeditor/core";
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { blockSpecsToPuckComponents } from "@/editor/v2/block-adapter.js";
+import { createDebouncer } from "@/editor/v2/debounce.js";
 import { PlumixEditorLayout } from "@/editor/v2/EditorLayout.js";
 import { readDraft, writeDraft } from "@/editor/v2/local-draft.js";
 
@@ -56,12 +57,17 @@ interface PuckSpikeRouteInnerProps {
 
 function PuckSpikeRouteInner({ draftKey }: PuckSpikeRouteInnerProps): ReactNode {
   const [data, setData] = useState<Data>(() => readDraft(draftKey) ?? initialData);
+  const debouncer = useMemo(
+    () => createDebouncer((next: Data) => writeDraft(draftKey, next), 300),
+    [draftKey],
+  );
+  useEffect(() => () => debouncer.flush(), [debouncer]);
   const handleChange = useCallback(
     (next: Data): void => {
       setData(next);
-      writeDraft(draftKey, next);
+      debouncer.call(next);
     },
-    [draftKey],
+    [debouncer],
   );
   const Layout = useCallback(
     (): ReactElement => (
