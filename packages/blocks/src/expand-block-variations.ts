@@ -1,0 +1,45 @@
+import type { BlockSpec } from "./block-registry.js";
+
+export interface InsertableBlockEntry {
+  readonly name: string;
+  readonly slug: string;
+  readonly title: string;
+  readonly description?: string;
+  readonly category?: string;
+  readonly icon?: string;
+  readonly keywords?: readonly string[];
+  readonly attrs?: Readonly<Record<string, unknown>>;
+}
+
+export function expandBlockVariations(
+  specs: Iterable<BlockSpec>,
+): readonly InsertableBlockEntry[] {
+  const out: InsertableBlockEntry[] = [];
+  for (const spec of specs) {
+    if (spec.variations && spec.variations.length > 0) {
+      for (const v of spec.variations) {
+        out.push({
+          name: spec.name,
+          slug: v.slug,
+          title: v.title,
+          description: v.description,
+          category: spec.category,
+          icon: v.icon,
+          keywords: v.keywords,
+          attrs: v.attrs,
+        });
+      }
+      continue;
+    }
+    out.push({
+      name: spec.name,
+      slug: spec.name,
+      title: spec.title ?? spec.name,
+      description: spec.description,
+      category: spec.category,
+      icon: spec.icon,
+      keywords: spec.keywords,
+    });
+  }
+  return out;
+}

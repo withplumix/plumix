@@ -72,9 +72,9 @@ export function SlashMenuPanel({
           >
             {members.map((item) => (
               <CommandItem
-                key={item.name}
-                value={item.name}
-                data-testid={`slash-menu-item-${item.name}`}
+                key={item.slug}
+                value={item.slug}
+                data-testid={`slash-menu-item-${item.slug}`}
                 onSelect={() => onSelect(item)}
                 className="flex items-start gap-2"
               >

@@ -66,11 +66,14 @@ export type {
   RenderBlockTreeOptions,
 } from "./render-block-tree.js";
 export { createBlockRegistry, defineBlock as defineBlockSpec } from "./block-registry.js";
+export { expandBlockVariations } from "./expand-block-variations.js";
+export type { InsertableBlockEntry } from "./expand-block-variations.js";
 export type {
   BlockInput,
   BlockInputOption,
   BlockRegistry as BlockRegistryV2,
   BlockSpec as BlockSpecV2,
+  BlockVariation as BlockVariationV2,
   ClientIslandDescriptor,
 } from "./block-registry.js";
 export {
@@ -106,11 +109,7 @@ export {
   tableHeaderCellBlockV2,
   tableHeaderRowBlockV2,
 } from "./table/v2.js";
-export {
-  listBlockV2,
-  listItemBlockV2,
-  listOrderedBlockV2,
-} from "./list/v2.js";
+export { listBlockV2, listItemBlockV2 } from "./list/v2.js";
 export { buttonsBlockV2 } from "./buttons/v2.js";
 export { collectActiveIslands } from "./islands.js";
 export type { ActiveIsland } from "./islands.js";

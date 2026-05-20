@@ -17,6 +17,15 @@ export interface ClientIslandDescriptor {
   readonly script: string;
 }
 
+export interface BlockVariation {
+  readonly slug: string;
+  readonly title: string;
+  readonly icon?: string;
+  readonly description?: string;
+  readonly keywords?: readonly string[];
+  readonly attrs?: Readonly<Record<string, unknown>>;
+}
+
 export interface BlockSpec<
   Attrs extends Readonly<Record<string, unknown>> = Readonly<
     Record<string, unknown>
@@ -37,6 +46,7 @@ export interface BlockSpec<
   readonly capability?: string;
   readonly client?: ClientIslandDescriptor;
   readonly transforms?: BlockTransforms;
+  readonly variations?: readonly BlockVariation[];
 }
 
 export interface BlockRegistry {

@@ -12,6 +12,7 @@ afterEach(() => {
 
 const heading: SlashMenuItem = {
   name: "core/heading",
+  slug: "core/heading",
   title: "Heading",
   description: "Section title",
   category: "typography",
@@ -19,6 +20,7 @@ const heading: SlashMenuItem = {
 
 const quote: SlashMenuItem = {
   name: "core/quote",
+  slug: "core/quote",
   title: "Quote",
   description: "Pull quote",
   category: "typography",

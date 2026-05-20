@@ -1,16 +1,15 @@
-import type { BlockRegistryV2, BlockSpecV2 } from "@plumix/blocks";
+import type {
+  BlockRegistryV2,
+  BlockSpecV2,
+  InsertableBlockEntry,
+} from "@plumix/blocks";
+import { expandBlockVariations } from "@plumix/blocks";
 
 import { PUCK_ROOT_ZONE } from "./puck-zones.js";
 
 export { PUCK_ROOT_ZONE };
 
-export interface SlashMenuItem {
-  readonly name: string;
-  readonly title: string;
-  readonly description?: string;
-  readonly category?: string;
-  readonly icon?: string;
-}
+export type SlashMenuItem = InsertableBlockEntry;
 
 export interface ResolveSlashMenuItemsOptions {
   readonly capabilities: ReadonlySet<string>;
@@ -28,15 +27,19 @@ export function resolveSlashMenuItems(
   const needle = query.trim().toLowerCase();
   const scored: { item: SlashMenuItem; score: number }[] = [];
 
+  const eligibleSpecs: BlockSpecV2[] = [];
   for (const spec of registry) {
     if (spec.inserter === false) continue;
     if (!isInsertableForCapabilities(spec, capabilities)) continue;
-    const item = toItem(spec);
+    eligibleSpecs.push(spec);
+  }
+
+  for (const item of expandBlockVariations(eligibleSpecs)) {
     if (needle === "") {
       scored.push({ item, score: 0 });
       continue;
     }
-    const score = matchScore(spec, item, needle);
+    const score = matchScore(item, needle);
     if (score > 0) scored.push({ item, score });
   }
 
@@ -54,26 +57,12 @@ function isInsertableForCapabilities(
   return capabilities.has(spec.capability);
 }
 
-function toItem(spec: BlockSpecV2): SlashMenuItem {
-  return {
-    name: spec.name,
-    title: spec.title ?? spec.name,
-    description: spec.description,
-    category: spec.category,
-    icon: spec.icon,
-  };
-}
-
-function matchScore(
-  spec: BlockSpecV2,
-  item: SlashMenuItem,
-  needle: string,
-): number {
+function matchScore(item: SlashMenuItem, needle: string): number {
   if (item.title.toLowerCase().includes(needle)) return TITLE_MATCH;
-  if (spec.keywords?.some((k) => k.toLowerCase().startsWith(needle))) {
+  if (item.keywords?.some((k) => k.toLowerCase().startsWith(needle))) {
     return KEYWORD_MATCH;
   }
-  if (spec.name.toLowerCase().includes(needle)) return NAME_MATCH;
+  if (item.name.toLowerCase().includes(needle)) return NAME_MATCH;
   return 0;
 }
 

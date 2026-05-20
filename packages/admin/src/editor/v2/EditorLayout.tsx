@@ -1,7 +1,13 @@
-import type { BlockRegistryV2, ResponsiveStyleSlot, ThemeTokens } from "@plumix/blocks";
+import type {
+  BlockRegistryV2,
+  BlockSpecV2,
+  InsertableBlockEntry,
+  ResponsiveStyleSlot,
+  ThemeTokens,
+} from "@plumix/blocks";
 import type { KeyboardEvent as ReactKeyboardEvent, ReactElement, ReactNode } from "react";
 import { useCallback, useMemo, useState } from "react";
-import { createBlockRegistry } from "@plumix/blocks";
+import { createBlockRegistry, expandBlockVariations } from "@plumix/blocks";
 import { Puck, usePuck } from "@puckeditor/core";
 
 import { useIsMobile } from "@/hooks/use-mobile.js";
@@ -21,6 +27,7 @@ import type { SlashMenuItem } from "./slash-menu-items.js";
 import { AutosaveStatusPill } from "./AutosaveStatus.js";
 import { BlockActionsPanel } from "./BlockActionsPanel.js";
 import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
+import { mergePropsAtSelector } from "./merge-variation-attrs.js";
 import { MobileSidebarSheet } from "./MobileSidebarSheet.js";
 import { patchStyleAtSelector } from "./patch-style.js";
 import { puckDataToBlockTree } from "./puck-to-block-tree.js";
@@ -94,7 +101,7 @@ export function PlumixEditorLayout({
         className="grid flex-1 grid-cols-[1fr] overflow-hidden md:grid-cols-[260px_1fr_320px]"
         data-testid="plumix-editor-cols"
       >
-        <BlocksBody />
+        <BlocksBody registry={registry} capabilities={capabilities} />
         <PlumixCanvasWithSlashMenu
           registry={registry}
           capabilities={capabilities}
@@ -105,7 +112,12 @@ export function PlumixEditorLayout({
   );
 }
 
-function BlocksBody(): ReactElement {
+interface BlocksBodyProps {
+  readonly registry: BlockRegistryV2;
+  readonly capabilities: ReadonlySet<string>;
+}
+
+function BlocksBody({ registry, capabilities }: BlocksBodyProps): ReactElement {
   const isMobile = useIsMobile();
   const content = (
     <Tabs defaultValue="blocks" className="h-full">
@@ -121,7 +133,7 @@ function BlocksBody(): ReactElement {
         </TabsTrigger>
       </TabsList>
       <TabsContent value="blocks">
-        <Puck.Components />
+        <PlumixBlocksTab registry={registry} capabilities={capabilities} />
       </TabsContent>
       <TabsContent value="outline">
         <Puck.Outline />
@@ -151,6 +163,69 @@ function BlocksBody(): ReactElement {
     >
       {content}
     </aside>
+  );
+}
+
+interface PlumixBlocksTabProps {
+  readonly registry: BlockRegistryV2;
+  readonly capabilities: ReadonlySet<string>;
+}
+
+function PlumixBlocksTab({
+  registry,
+  capabilities,
+}: PlumixBlocksTabProps): ReactElement {
+  const puck = usePuck();
+  const entries = useMemo(() => {
+    const eligible: BlockSpecV2[] = [];
+    for (const spec of registry) {
+      if (spec.inserter === false) continue;
+      if (spec.capability && !capabilities.has(spec.capability)) continue;
+      eligible.push(spec);
+    }
+    return expandBlockVariations(eligible);
+  }, [registry, capabilities]);
+
+  const handleInsert = useCallback(
+    (entry: InsertableBlockEntry): void => {
+      const index = puck.appState.data.content.length;
+      puck.dispatch({
+        type: "insert",
+        componentType: entry.name,
+        destinationZone: PUCK_ROOT_ZONE,
+        destinationIndex: index,
+      });
+      const variationAttrs = entry.attrs;
+      if (variationAttrs !== undefined) {
+        puck.dispatch({
+          type: "setData",
+          data: (previous) =>
+            mergePropsAtSelector(
+              previous,
+              { zone: PUCK_ROOT_ZONE, index },
+              variationAttrs,
+            ),
+        });
+      }
+    },
+    [puck],
+  );
+
+  return (
+    <ul className="flex flex-col gap-1 p-2" data-testid="plumix-blocks-tab">
+      {entries.map((entry) => (
+        <li key={entry.slug}>
+          <button
+            type="button"
+            className="w-full rounded border px-3 py-2 text-left text-sm hover:bg-muted"
+            data-testid={`plumix-blocks-tab-item-${entry.slug}`}
+            onClick={() => handleInsert(entry)}
+          >
+            {entry.title}
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -262,6 +337,14 @@ function PlumixCanvasWithSlashMenu({
         destinationZone: zone,
         destinationIndex: index,
       });
+      const variationAttrs = item.attrs;
+      if (variationAttrs !== undefined) {
+        puck.dispatch({
+          type: "setData",
+          data: (previous) =>
+            mergePropsAtSelector(previous, { zone, index }, variationAttrs),
+        });
+      }
       setOpen(false);
     },
     [puck],
