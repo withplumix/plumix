@@ -1,12 +1,18 @@
+import type { BlockSpecV2 } from "plumix/blocks";
 import type { PluginDescriptor } from "plumix/plugin";
 import { definePlugin } from "plumix/plugin";
 
 import { audioBlock } from "./blocks/audio/index.js";
+import { audioBlockV2 } from "./blocks/audio/v2.js";
 import { embedBlock } from "./blocks/embed/index.js";
 import { fileBlock } from "./blocks/file/index.js";
+import { fileBlockV2 } from "./blocks/file/v2.js";
 import { galleryBlock } from "./blocks/gallery/index.js";
+import { galleryBlockV2 } from "./blocks/gallery/v2.js";
 import { imageBlock } from "./blocks/image/index.js";
+import { imageBlockV2 } from "./blocks/image/v2.js";
 import { videoBlock } from "./blocks/video/index.js";
+import { videoBlockV2 } from "./blocks/video/v2.js";
 import { mediaLookupAdapter } from "./lookup.js";
 import { DEFAULT_ACCEPTED_TYPES } from "./mime.js";
 import { createMediaRouter } from "./rpc.js";
@@ -19,6 +25,15 @@ export { DEFAULT_ACCEPTED_TYPES };
 
 /** Default max upload size — 25 MiB. */
 export const DEFAULT_MAX_UPLOAD_SIZE = 25 * 1024 * 1024;
+
+// Out-of-band v2 spec export; collapses into `ctx.registerBlockSpec` later.
+export const mediaBlocksV2: readonly BlockSpecV2[] = Object.freeze([
+  imageBlockV2,
+  galleryBlockV2,
+  videoBlockV2,
+  audioBlockV2,
+  fileBlockV2,
+]);
 
 interface MediaPluginOptions {
   /**
