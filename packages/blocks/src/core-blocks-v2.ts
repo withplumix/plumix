@@ -12,11 +12,7 @@ import {
 import { detailsBlockV2 } from "./details/v2.js";
 import { groupBlockV2 } from "./group/v2.js";
 import { headingBlock } from "./heading/index.js";
-import {
-  listBlockV2,
-  listItemBlockV2,
-  listOrderedBlockV2,
-} from "./list/v2.js";
+import { listBlockV2, listItemBlockV2 } from "./list/v2.js";
 import { paragraphBlockV2 } from "./paragraph/v2.js";
 import { quoteBlockV2 } from "./quote/v2.js";
 import { separatorBlockV2 } from "./separator/v2.js";
@@ -37,7 +33,6 @@ export const coreBlocksV2: readonly BlockSpec[] = Object.freeze([
   spacerBlockV2,
   codeBlockV2,
   listBlockV2,
-  listOrderedBlockV2,
   listItemBlockV2,
   descriptionListBlockV2,
   descriptionTermBlockV2,

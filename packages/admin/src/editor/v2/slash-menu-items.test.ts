@@ -169,6 +169,38 @@ describe("resolveSlashMenuItems", () => {
     expect(items.map((i) => i.name).sort()).toEqual(["a/default", "a/opt-in"]);
   });
 
+  test("emits one item per variation when a block declares variations, slugs distinguish them", () => {
+    const registry = createBlockRegistry([
+      spec({
+        name: "core/list",
+        title: "List",
+        category: "text",
+        variations: [
+          { slug: "bullet", title: "Bulleted list", attrs: { variant: "bullet" } },
+          {
+            slug: "numbered",
+            title: "Numbered list",
+            attrs: { variant: "numbered" },
+          },
+        ],
+      }),
+    ]);
+
+    const items = resolveSlashMenuItems(registry, {
+      capabilities: new Set(),
+      query: "",
+    });
+
+    expect(items.map((i) => i.slug)).toEqual(["bullet", "numbered"]);
+    expect(items.map((i) => i.title)).toEqual([
+      "Bulleted list",
+      "Numbered list",
+    ]);
+    expect(items.every((i) => i.name === "core/list")).toBe(true);
+    expect(items[0]?.attrs).toEqual({ variant: "bullet" });
+    expect(items[1]?.attrs).toEqual({ variant: "numbered" });
+  });
+
   test("treats whitespace-only queries as empty (no filtering)", () => {
     const registry = createBlockRegistry([
       spec({ name: "core/heading", title: "Heading" }),

@@ -135,6 +135,42 @@ test.describe("V2 spike editor renders end-to-end", () => {
     await expect(canvas.locator("p")).toHaveCount(1);
   });
 
+  test("slash menu insert: bullet variation inserts a <ul>, parent core/list slug is absent", async ({
+    page,
+  }) => {
+    await page.goto("v2/entries/posts/1/edit");
+    const canvas = page.getByTestId("plumix-editor-canvas");
+    await canvas.focus();
+    await page.keyboard.press("/");
+    await expect(page.getByTestId("slash-menu-item-core/list")).toHaveCount(0);
+    await page.getByTestId("slash-menu-item-bullet").click();
+    await expect(canvas.locator("ul")).toHaveCount(1);
+    await expect(canvas.locator("ol")).toHaveCount(0);
+  });
+
+  test("slash menu insert: numbered variation inserts an <ol>", async ({
+    page,
+  }) => {
+    await page.goto("v2/entries/posts/1/edit");
+    const canvas = page.getByTestId("plumix-editor-canvas");
+    await canvas.focus();
+    await page.keyboard.press("/");
+    await page.getByTestId("slash-menu-item-numbered").click();
+    await expect(canvas.locator("ol")).toHaveCount(1);
+    await expect(canvas.locator("ul")).toHaveCount(0);
+  });
+
+  test("blocks tab numbered button inserts an <ol> in the canvas", async ({
+    page,
+  }) => {
+    await page.goto("v2/entries/posts/1/edit");
+    const canvas = page.getByTestId("plumix-editor-canvas");
+    await page.getByTestId("plumix-blocks-tab-item-numbered").click();
+    await expect(canvas.locator("ol")).toHaveCount(1);
+    await expect(canvas.locator("ul")).toHaveCount(0);
+  });
+
+
   test("server-loaded plumix.v2 content renders in the canvas on initial mount", async ({
     page,
   }) => {

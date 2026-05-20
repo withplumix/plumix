@@ -4,38 +4,51 @@ import { defineBlock } from "../block-registry.js";
 
 export const listBlockV2 = defineBlock({
   name: "core/list",
-  title: "Bulleted list",
+  title: "List",
   icon: "List",
   category: "text",
-  inputs: [{ name: "items", type: "slot", label: "Items" }],
-  defaults: {},
-  render: ({ attrs }): ReactNode => {
-    const Items = attrs.items as (() => ReactNode) | undefined;
-    return <ul>{Items ? <Items /> : null}</ul>;
-  },
-});
-
-export const listOrderedBlockV2 = defineBlock({
-  name: "core/list-ordered",
-  title: "Numbered list",
-  icon: "ListOrdered",
-  category: "text",
   inputs: [
+    {
+      name: "variant",
+      type: "select",
+      label: "Style",
+      options: [
+        { label: "Bulleted", value: "bullet" },
+        { label: "Numbered", value: "numbered" },
+      ],
+    },
     { name: "start", type: "number", label: "Start" },
     { name: "items", type: "slot", label: "Items" },
   ],
-  defaults: {},
+  defaults: { variant: "bullet" },
+  variations: [
+    {
+      slug: "bullet",
+      title: "Bulleted list",
+      icon: "List",
+      attrs: { variant: "bullet" },
+    },
+    {
+      slug: "numbered",
+      title: "Numbered list",
+      icon: "ListOrdered",
+      attrs: { variant: "numbered" },
+    },
+  ],
   render: ({ attrs }): ReactNode => {
-    const startRaw = attrs.start as number | undefined;
-    // Drop start when it equals the canonical default of 1 — matches the
-    // legacy walker, which omits the attribute so the rendered HTML stays
-    // identical to the implicit <ol>.
-    const start =
-      typeof startRaw === "number" && Number.isInteger(startRaw) && startRaw > 1
-        ? startRaw
-        : undefined;
     const Items = attrs.items as (() => ReactNode) | undefined;
-    return <ol start={start}>{Items ? <Items /> : null}</ol>;
+    if (attrs.variant === "numbered") {
+      const startRaw = attrs.start;
+      // Drop start when it equals the canonical default of 1 — matches the
+      // legacy walker, which omits the attribute so the rendered HTML stays
+      // identical to the implicit <ol>.
+      const start =
+        typeof startRaw === "number" && Number.isInteger(startRaw) && startRaw > 1
+          ? startRaw
+          : undefined;
+      return <ol start={start}>{Items ? <Items /> : null}</ol>;
+    }
+    return <ul>{Items ? <Items /> : null}</ul>;
   },
 });
 
