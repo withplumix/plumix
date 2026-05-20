@@ -6,6 +6,7 @@ import {
   POST_EDITOR_STATUSES,
   PostEditorForm,
 } from "@/components/editor/entry-editor-form.js";
+import { PlainFormLayout } from "@/components/editor/plain-form-layout.js";
 import { useEntryFormScope } from "@/components/editor/use-entry-form-scope.js";
 import { useParentOptions } from "@/components/editor/use-parent-options.js";
 import { Skeleton } from "@/components/ui/skeleton.js";
@@ -216,6 +217,50 @@ function EditPostRoute(): ReactNode {
   }
 
   const initialValues: PostEditorValues = toEditorValues(post, entryType);
+
+  const supportsEditor = (entryType.supports ?? ["title", "editor", "slug"])
+    .includes("editor");
+
+  if (!supportsEditor) {
+    return (
+      <>
+        <PlainFormLayout
+          // Remount on a successful update so the form's defaultValues
+          // resync to the refetched entry (parallels the editor route's
+          // same trick at the PostEditorForm call site).
+          key={
+            post.updatedAt instanceof Date
+              ? post.updatedAt.toISOString()
+              : String(post.updatedAt)
+          }
+          initialValues={initialValues}
+          metaBoxes={metaBoxes}
+          headline={`Edit ${singularLower}`}
+          isSubmitting={updatePost.isPending}
+          serverError={updatePost.isPending ? null : serverError}
+          onSubmit={(values) => {
+            updatePost.mutate({
+              values,
+              expectedLiveUpdatedAt: post.updatedAt,
+            });
+          }}
+        />
+        <EntryConflictDialog
+          open={conflict !== null}
+          singularLabel={singularLower}
+          mine={conflict?.mine ?? null}
+          theirs={conflict?.theirs ?? null}
+          onKeepMine={handleKeepMine}
+          onTakeTheirs={() => {
+            void handleTakeTheirs();
+          }}
+          onOpenChange={(open) => {
+            if (!open) setConflict(null);
+          }}
+        />
+      </>
+    );
+  }
 
   return (
     <>
