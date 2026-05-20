@@ -25,7 +25,9 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
     }
   });
 
-  test.skip("create a draft post → row appears in the list", async ({ page }) => {
+  test.skip("create a draft post → row appears in the list", async ({
+    page,
+  }) => {
     await page.goto("entries/posts");
     await page.getByTestId("content-list-new-button").click();
 
