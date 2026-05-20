@@ -1,38 +1,7 @@
 import type { BlockProps } from "plumix/blocks";
 import type { ReactElement } from "react";
 
-interface FocalPoint {
-  readonly x: number;
-  readonly y: number;
-}
-
-function normalizeFocalPoint(raw: unknown): FocalPoint | undefined {
-  if (typeof raw !== "object" || raw === null) return undefined;
-  const { x, y } = raw as { x?: unknown; y?: unknown };
-  if (
-    typeof x !== "number" ||
-    typeof y !== "number" ||
-    !Number.isFinite(x) ||
-    !Number.isFinite(y)
-  ) {
-    return undefined;
-  }
-  return { x: clamp01(x), y: clamp01(y) };
-}
-
-function clamp01(n: number): number {
-  if (n < 0) return 0;
-  if (n > 1) return 1;
-  return n;
-}
-
-const SIZING = ["full", "wide", "narrow", "thumbnail"] as const;
-
-function pickSizing(raw: unknown): (typeof SIZING)[number] | undefined {
-  return typeof raw === "string" && (SIZING as readonly string[]).includes(raw)
-    ? (raw as (typeof SIZING)[number])
-    : undefined;
-}
+import { normalizeFocalPoint, pickSizing } from "./normalize.js";
 
 /**
  * `media/image` frontend Component.
