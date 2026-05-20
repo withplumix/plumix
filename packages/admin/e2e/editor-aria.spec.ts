@@ -60,7 +60,7 @@ test.describe("v2 editor ARIA semantics", () => {
   test("left sidebar tab triggers carry role=tab + aria-selected reflecting active tab", async ({
     page,
   }) => {
-    await page.goto("v2/entries/posts/1/edit");
+    await page.goto("entries/posts/1/edit");
     const blocksTab = page.getByTestId("plumix-editor-tab-blocks");
     const outlineTab = page.getByTestId("plumix-editor-tab-outline");
     const auditTab = page.getByTestId("plumix-editor-tab-audit");
@@ -73,7 +73,7 @@ test.describe("v2 editor ARIA semantics", () => {
   test("slash menu input carries the aria-label that screen readers announce", async ({
     page,
   }) => {
-    await page.goto("v2/entries/posts/1/edit");
+    await page.goto("entries/posts/1/edit");
     await page.getByTestId("plumix-editor-canvas").focus();
     await page.keyboard.press("/");
     await expect(page.getByTestId("slash-menu-input")).toHaveAttribute(

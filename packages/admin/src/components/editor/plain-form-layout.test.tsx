@@ -4,7 +4,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { createQueryClient } from "@/providers/query-client.js";
 
-import type { PostEditorValues } from "./entry-editor-form.js";
+import type { PostEditorValues } from "./post-editor-form.js";
 
 import { PlainFormLayout } from "./plain-form-layout.js";
 

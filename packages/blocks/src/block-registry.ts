@@ -1,5 +1,4 @@
 import type { BlockNodeComponent } from "./render-block-tree.js";
-import type { BlockTransforms } from "./types.js";
 
 export interface BlockInputOption {
   readonly label: string;
@@ -24,6 +23,35 @@ export interface BlockVariation {
   readonly description?: string;
   readonly keywords?: readonly string[];
   readonly attrs?: Readonly<Record<string, unknown>>;
+}
+
+/**
+ * Dispatch hint shared between keyboard shortcuts, markdown shortcuts,
+ * and block transforms. `setNode` (default) for textblock-to-textblock
+ * conversions, `wrap` for list-style containers, `leaf` for atom inserts.
+ */
+export type BlockShortcutMode = "setNode" | "wrap" | "leaf";
+
+export interface BlockTransformTo {
+  readonly target: string;
+  readonly mapAttrs?: (
+    currentAttrs: Readonly<Record<string, unknown>>,
+  ) => Readonly<Record<string, unknown>>;
+  readonly mode?: BlockShortcutMode;
+}
+
+export interface BlockTransformFrom {
+  readonly source: string;
+  readonly mapAttrs?: (
+    sourceAttrs: Readonly<Record<string, unknown>>,
+  ) => Readonly<Record<string, unknown>>;
+  readonly mode?: BlockShortcutMode;
+}
+
+export interface BlockTransforms {
+  readonly priority?: number;
+  readonly to?: readonly BlockTransformTo[];
+  readonly from?: readonly BlockTransformFrom[];
 }
 
 export interface BlockSpec<

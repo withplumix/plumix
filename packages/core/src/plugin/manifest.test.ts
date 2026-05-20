@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import { defineBlock, defineMark } from "@plumix/blocks";
+import type { MarkSpec } from "@plumix/blocks";
+import { defineBlock } from "@plumix/blocks";
 
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "./define.js";
@@ -708,13 +709,7 @@ describe("buildManifest", () => {
           title: "Callout",
           category: "interactive",
           icon: "lightbulb",
-          schema: () =>
-            Promise.resolve({
-              name: "acme/callout",
-              parseHTML: () => [],
-              renderHTML: () => ["div", 0],
-            } as never),
-          component: () => Promise.resolve(() => null),
+          render: () => null,
         }),
       );
     });
@@ -740,13 +735,7 @@ describe("buildManifest", () => {
           description: "Highlight an aside passage.",
           keywords: ["aside", "note", "tip"],
           inserter: false,
-          schema: () =>
-            Promise.resolve({
-              name: "acme/callout",
-              parseHTML: () => [],
-              renderHTML: () => ["div", 0],
-            } as never),
-          component: () => Promise.resolve(() => null),
+          render: () => null,
         }),
       );
     });
@@ -759,71 +748,6 @@ describe("buildManifest", () => {
     });
   });
 
-  test("block entries carry attributes + supports for Inspector rendering", async () => {
-    const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerBlock(
-        defineBlock({
-          name: "acme/callout",
-          title: "Callout",
-          attributes: {
-            variant: {
-              type: "select",
-              label: "Variant",
-              default: "info",
-              options: [
-                { value: "info", label: "Info" },
-                { value: "warn", label: "Warning" },
-              ],
-            },
-            dismissible: {
-              type: "boolean",
-              label: "Dismissible",
-              default: false,
-            },
-          },
-          supports: {
-            color: { background: true, text: true },
-            spacing: { padding: true },
-            customClassName: true,
-          },
-          schema: () =>
-            Promise.resolve({
-              name: "acme/callout",
-              parseHTML: () => [],
-              renderHTML: () => ["div", 0],
-            } as never),
-          component: () => Promise.resolve(() => null),
-        }),
-      );
-    });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
-
-    expect(buildManifest(registry).blocks[0]).toMatchObject({
-      attributes: {
-        variant: {
-          type: "select",
-          label: "Variant",
-          default: "info",
-          options: [
-            { value: "info", label: "Info" },
-            { value: "warn", label: "Warning" },
-          ],
-        },
-        dismissible: {
-          type: "boolean",
-          label: "Dismissible",
-          default: false,
-        },
-      },
-      supports: {
-        color: { background: true, text: true },
-        spacing: { padding: true },
-        customClassName: true,
-      },
-    });
-  });
-
   test("block entries carry variations for slash-menu inserter items", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("acme", (ctx) => {
@@ -833,26 +757,20 @@ describe("buildManifest", () => {
           title: "Grid",
           variations: [
             {
-              name: "two-up",
+              slug: "two-up",
               title: "Two columns",
               description: "Equal width pair.",
               icon: "columns-2",
               keywords: ["pair"],
-              attributes: { ratio: "50/50" },
+              attrs: { ratio: "50/50" },
             },
             {
-              name: "three-up",
+              slug: "three-up",
               title: "Three columns",
-              attributes: { ratio: "33/33/33" },
+              attrs: { ratio: "33/33/33" },
             },
           ],
-          schema: () =>
-            Promise.resolve({
-              name: "acme/grid",
-              parseHTML: () => [],
-              renderHTML: () => ["div", 0],
-            } as never),
-          component: () => Promise.resolve(() => null),
+          render: () => null,
         }),
       );
     });
@@ -861,158 +779,43 @@ describe("buildManifest", () => {
     expect(buildManifest(registry).blocks[0]).toMatchObject({
       variations: [
         {
-          name: "two-up",
+          slug: "two-up",
           title: "Two columns",
           description: "Equal width pair.",
           icon: "columns-2",
           keywords: ["pair"],
-          attributes: { ratio: "50/50" },
+          attrs: { ratio: "50/50" },
         },
         {
-          name: "three-up",
+          slug: "three-up",
           title: "Three columns",
-          attributes: { ratio: "33/33/33" },
+          attrs: { ratio: "33/33/33" },
         },
       ],
     });
   });
 
-  test("block entries carry shortcut + legacy-alias bindings", async () => {
-    const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerBlock(
-        defineBlock({
-          name: "acme/callout",
-          title: "Callout",
-          keyboardShortcuts: [{ shortcut: "Mod-Alt-c", mode: "setNode" }],
-          markdownShortcuts: [{ pattern: "!! ", mode: "setNode" }],
-          legacyAliases: ["alert"],
-          schema: () =>
-            Promise.resolve({
-              name: "acme/callout",
-              parseHTML: () => [],
-              renderHTML: () => ["div", 0],
-            } as never),
-          component: () => Promise.resolve(() => null),
-        }),
-      );
-    });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
-
-    expect(buildManifest(registry).blocks[0]).toMatchObject({
-      keyboardShortcuts: [{ shortcut: "Mod-Alt-c", mode: "setNode" }],
-      markdownShortcuts: [{ pattern: "!! ", mode: "setNode" }],
-      legacyAliases: ["alert"],
-    });
-  });
-
-  test("plugin block entries carry adminSchema + adminEditor refs", async () => {
-    const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerBlock(
-        defineBlock({
-          name: "acme/callout",
-          title: "Callout",
-          adminSchema: "calloutSchema",
-          adminEditor: "CalloutEditor",
-          schema: () =>
-            Promise.resolve({
-              name: "acme/callout",
-              parseHTML: () => [],
-              renderHTML: () => ["div", 0],
-            } as never),
-          component: () => Promise.resolve(() => null),
-        }),
-      );
-    });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
-
-    expect(buildManifest(registry).blocks[0]).toMatchObject({
-      adminSchema: "calloutSchema",
-      adminEditor: "CalloutEditor",
-    });
-  });
-
-  test("plugin mark entries carry adminSchema ref", async () => {
-    const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerMark(
-        defineMark({
-          name: "acme/highlight-warning",
-          title: "Warning highlight",
-          adminSchema: "warningHighlightSchema",
-          schema: () =>
-            Promise.resolve({
-              name: "acme/highlight-warning",
-              parseHTML: () => [],
-              renderHTML: () => ["mark", 0],
-            } as never),
-          component: () => Promise.resolve(() => null),
-        }),
-      );
-    });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
-
-    expect(buildManifest(registry).marks[0]).toMatchObject({
-      adminSchema: "warningHighlightSchema",
-    });
-  });
-
   test("blocks and marks are sorted alphabetically by name", async () => {
     const hooks = new HookRegistry();
+    const zoomMark: MarkSpec = { name: "acme/zoom", title: "Zoom" };
+    const accentMark: MarkSpec = { name: "acme/accent", title: "Accent" };
     const plugin = definePlugin("acme", (ctx) => {
       ctx.registerBlock(
         defineBlock({
           name: "acme/zebra",
           title: "Zebra",
-          schema: () =>
-            Promise.resolve({
-              name: "acme/zebra",
-              parseHTML: () => [],
-              renderHTML: () => ["div", 0],
-            } as never),
-          component: () => Promise.resolve(() => null),
+          render: () => null,
         }),
       );
       ctx.registerBlock(
         defineBlock({
           name: "acme/apple",
           title: "Apple",
-          schema: () =>
-            Promise.resolve({
-              name: "acme/apple",
-              parseHTML: () => [],
-              renderHTML: () => ["div", 0],
-            } as never),
-          component: () => Promise.resolve(() => null),
+          render: () => null,
         }),
       );
-      ctx.registerMark(
-        defineMark({
-          name: "acme/zoom",
-          title: "Zoom",
-          schema: () =>
-            Promise.resolve({
-              name: "acme/zoom",
-              parseHTML: () => [],
-              renderHTML: () => ["span", 0],
-            } as never),
-          component: () => Promise.resolve(() => null),
-        }),
-      );
-      ctx.registerMark(
-        defineMark({
-          name: "acme/accent",
-          title: "Accent",
-          schema: () =>
-            Promise.resolve({
-              name: "acme/accent",
-              parseHTML: () => [],
-              renderHTML: () => ["span", 0],
-            } as never),
-          component: () => Promise.resolve(() => null),
-        }),
-      );
+      ctx.registerMark(zoomMark);
+      ctx.registerMark(accentMark);
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
@@ -1029,22 +832,14 @@ describe("buildManifest", () => {
 
   test("projects registered plugin marks into manifest.marks", async () => {
     const hooks = new HookRegistry();
+    const warnMark: MarkSpec = {
+      name: "acme/highlight-warning",
+      title: "Warning highlight",
+      keyboardShortcut: "Mod-Alt-w",
+      bubbleMenuIcon: "alert-triangle",
+    };
     const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerMark(
-        defineMark({
-          name: "acme/highlight-warning",
-          title: "Warning highlight",
-          keyboardShortcut: "Mod-Alt-w",
-          bubbleMenuIcon: "alert-triangle",
-          schema: () =>
-            Promise.resolve({
-              name: "acme/highlight-warning",
-              parseHTML: () => [],
-              renderHTML: () => ["mark", 0],
-            } as never),
-          component: () => Promise.resolve(() => null),
-        }),
-      );
+      ctx.registerMark(warnMark);
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
@@ -1060,28 +855,37 @@ describe("buildManifest", () => {
 
   test("mark entries carry bubbleMenuLabel + description", async () => {
     const hooks = new HookRegistry();
+    const warnMark: MarkSpec = {
+      name: "acme/highlight-warning",
+      title: "Warning highlight",
+      description: "Inline highlight emphasising a hazard.",
+      bubbleMenuLabel: "Warn",
+    };
     const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerMark(
-        defineMark({
-          name: "acme/highlight-warning",
-          title: "Warning highlight",
-          description: "Inline highlight emphasising a hazard.",
-          bubbleMenuLabel: "Warn",
-          schema: () =>
-            Promise.resolve({
-              name: "acme/highlight-warning",
-              parseHTML: () => [],
-              renderHTML: () => ["mark", 0],
-            } as never),
-          component: () => Promise.resolve(() => null),
-        }),
-      );
+      ctx.registerMark(warnMark);
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
     expect(buildManifest(registry).marks[0]).toMatchObject({
       description: "Inline highlight emphasising a hazard.",
       bubbleMenuLabel: "Warn",
+    });
+  });
+
+  test("plugin mark entries carry adminSchema ref", async () => {
+    const hooks = new HookRegistry();
+    const mark: MarkSpec = {
+      name: "acme/highlight-warning",
+      title: "Warning highlight",
+      adminSchema: "warningHighlightSchema",
+    };
+    const plugin = definePlugin("acme", (ctx) => {
+      ctx.registerMark(mark);
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+
+    expect(buildManifest(registry).marks[0]).toMatchObject({
+      adminSchema: "warningHighlightSchema",
     });
   });
 });

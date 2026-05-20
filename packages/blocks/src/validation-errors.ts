@@ -1,13 +1,11 @@
 import type { BlockContentValidationResult } from "./validate-content.js";
 
 /**
- * Codes the validator emits today. The union is intentionally narrow
- * — only what's actually produced — so admin clients dispatching on
- * `code` don't get a false sense of coverage. Adding attribute-level
- * validation will widen this union; until then anything beyond
- * `unknown_block_type` / `unknown_mark` would be a lie.
+ * Codes the validator emits today. The union is intentionally narrow —
+ * only what's actually produced — so admin clients dispatching on `code`
+ * don't get a false sense of coverage.
  */
-export type BlockContentValidationCode = "unknown_block_type" | "unknown_mark";
+export type BlockContentValidationCode = "unknown_block_type";
 
 export interface BlockContentValidationIssue {
   readonly code: BlockContentValidationCode;
@@ -15,7 +13,6 @@ export interface BlockContentValidationIssue {
   readonly path: string;
   readonly nodeName?: string;
   readonly attributeName?: string;
-  readonly markName?: string;
 }
 
 export class BlockContentValidationError extends Error {

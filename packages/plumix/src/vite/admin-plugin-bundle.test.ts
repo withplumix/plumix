@@ -262,7 +262,7 @@ describe("assemblePluginAdminBundle", () => {
     expect(bundle).toContain('"media_picker"');
   });
 
-  test("auto-emits register* calls for plugin block + mark adminSchema / adminEditor refs", async () => {
+  test("auto-emits register* calls for plugin mark adminSchema refs", async () => {
     const pkgDir = resolve(workspace, "node_modules/@fixture/plugin-blocks");
     await mkdir(pkgDir, { recursive: true });
     await writeFile(
@@ -283,39 +283,14 @@ describe("assemblePluginAdminBundle", () => {
       `,
     );
 
-    const { defineBlock, defineMark } = await import("@plumix/blocks");
     const descriptor = definePlugin(
       "acme",
       (ctx) => {
-        ctx.registerBlock(
-          defineBlock({
-            name: "acme/callout",
-            title: "Callout",
-            adminSchema: "calloutSchema",
-            adminEditor: "CalloutEditor",
-            schema: () =>
-              Promise.resolve({
-                name: "acme/callout",
-                parseHTML: () => [],
-                renderHTML: () => ["div", 0],
-              } as never),
-            component: () => Promise.resolve(() => null),
-          }),
-        );
-        ctx.registerMark(
-          defineMark({
-            name: "acme/highlight-warning",
-            title: "Warning highlight",
-            adminSchema: "warningHighlightSchema",
-            schema: () =>
-              Promise.resolve({
-                name: "acme/highlight-warning",
-                parseHTML: () => [],
-                renderHTML: () => ["mark", 0],
-              } as never),
-            component: () => Promise.resolve(() => null),
-          }),
-        );
+        ctx.registerMark({
+          name: "acme/highlight-warning",
+          title: "Warning highlight",
+          adminSchema: "warningHighlightSchema",
+        });
       },
       { adminEntry: "./node_modules/@fixture/plugin-blocks/entry.js" },
     );
@@ -340,10 +315,7 @@ describe("assemblePluginAdminBundle", () => {
       resolve(adminDest, "plugins/site-bundle.js"),
       "utf8",
     );
-    expect(bundle).toContain("registerPluginBlockSchema");
-    expect(bundle).toContain("registerPluginBlockEditor");
     expect(bundle).toContain("registerPluginMarkSchema");
-    expect(bundle).toContain('"acme/callout"');
     expect(bundle).toContain('"acme/highlight-warning"');
   });
 });

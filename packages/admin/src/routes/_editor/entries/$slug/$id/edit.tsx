@@ -1,41 +1,37 @@
-import type { PostEditorValues } from "@/components/editor/entry-editor-form.js";
-import type { ReactNode } from "react";
-import { useRef, useState } from "react";
-import { EntryConflictDialog } from "@/components/editor/entry-conflict-dialog.js";
+import type { ThemeTokens } from "@plumix/blocks";
+import type { Config, Data } from "@puckeditor/core";
+import type { ReactElement, ReactNode } from "react";
 import {
-  POST_EDITOR_STATUSES,
-  PostEditorForm,
-} from "@/components/editor/entry-editor-form.js";
-import { PlainFormLayout } from "@/components/editor/plain-form-layout.js";
-import { useEntryFormScope } from "@/components/editor/use-entry-form-scope.js";
-import { useParentOptions } from "@/components/editor/use-parent-options.js";
-import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
-import { Skeleton } from "@/components/ui/skeleton.js";
-import { hasCap } from "@/lib/caps.js";
-import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
-import { findEntryTypeBySlug } from "@/lib/manifest.js";
-import { orpc } from "@/lib/orpc.js";
-import { filterTermsForEntryType } from "@/lib/terms.js";
+  coreBlocks,
+  coreMarkExtensions,
+  createBlockRegistry,
+} from "@plumix/blocks";
 import { ORPCError } from "@orpc/client";
-import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query";
-import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
+import { Puck } from "@puckeditor/core";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { createFileRoute, notFound } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as v from "valibot";
 
-import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
-import type { Entry } from "@plumix/core/schema";
+import type { AutosaveStatus } from "@/editor/AutosaveStatus.js";
+
+import { AutosaveStatusContext } from "@/editor/AutosaveStatus.js";
+import { blockSpecsToPuckComponents } from "@/editor/block-adapter.js";
+import { createDebouncer } from "@/editor/debounce.js";
+import { PlumixEditorLayout } from "@/editor/EditorLayout.js";
+import { readDraft, writeDraft } from "@/editor/local-draft.js";
+import { puckDataToBlockTree } from "@/editor/puck-to-block-tree.js";
+import { seedPuckData } from "@/editor/entry-content.js";
+import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
+import { findEntryTypeBySlug } from "@/lib/manifest.js";
+import { orpc } from "@/lib/orpc.js";
 import { idPathParam } from "@plumix/core/validation";
 
-interface ConflictState {
-  readonly mine: PostEditorValues;
-  readonly theirs: Entry | null;
-}
+import "@puckeditor/core/puck.css";
 
-// oRPC types `ORPCError.data` as `any`, so the structural cast lives
-// in one place rather than at every call site.
+const initialData: Data = { content: [], root: {} };
+
+// Keep in sync with the identical helper in _editor/entries/$slug/$id/edit.tsx.
 function isStaleConflictError(err: unknown): boolean {
   if (!(err instanceof ORPCError)) return false;
   if (err.code !== "CONFLICT") return false;
@@ -43,9 +39,38 @@ function isStaleConflictError(err: unknown): boolean {
   return data.reason === "stale_expected_updated_at";
 }
 
+const sampleTokens: ThemeTokens = {
+  colors: {
+    background: { value: "#ffffff", label: "Background" },
+    surface: { value: "#f4f4f5", label: "Surface" },
+    brand: { value: "#0070f3", label: "Brand" },
+    ink: { value: "#111111", label: "Ink" },
+  },
+  spacing: {
+    none: { value: "0", label: "None" },
+    sm: { value: "0.5rem", label: "Small" },
+    md: { value: "1rem", label: "Medium" },
+    lg: { value: "2rem", label: "Large" },
+  },
+  typography: {
+    sm: { value: "0.875rem", label: "Small" },
+    md: { value: "1rem", label: "Medium" },
+    lg: { value: "1.25rem", label: "Large" },
+    xl: { value: "1.5rem", label: "Extra large" },
+  },
+};
+
+const registry = createBlockRegistry(coreBlocks);
+const config: Config = {
+  components: blockSpecsToPuckComponents(coreBlocks, {
+    // Puck types `extensions` as a mutable array; spread the readonly
+    // plumix list to satisfy the assignment without weakening the
+    // export.
+    richtextExtensions: [...coreMarkExtensions],
+  }),
+};
+
 export const Route = createFileRoute("/_editor/entries/$slug/$id/edit")({
-  // Reject invalid ids as a router 404 before `beforeLoad` / `loader`
-  // fire — no RPC, no stale-id flicker through the cache.
   params: {
     parse: (raw) => {
       const result = v.safeParse(idPathParam, raw.id);
@@ -56,357 +81,195 @@ export const Route = createFileRoute("/_editor/entries/$slug/$id/edit")({
       return { slug: raw.slug, id: result.output };
     },
   },
-  beforeLoad: ({ params }): { entryType: EntryTypeManifestEntry } => {
-    const entryType = findEntryTypeBySlug(params.slug);
-    if (!entryType) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
-      throw notFound();
-    }
-    return { entryType };
-  },
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(
       orpc.entry.get.queryOptions({ input: { id: params.id } }),
     ),
-  // Pending/error screens are per-slug so copy reflects the actual
-  // type ("page", "product") instead of hardcoding "post".
-  pendingComponent: EditPostPendingScreen,
-  errorComponent: EditPostErrorScreen,
-  component: EditPostRoute,
+  pendingComponent: PendingScreen,
+  errorComponent: ErrorScreen,
+  component: PuckSpikeRoute,
 });
 
-function postTypeSingular(slug: string): string {
+function PendingScreen(): ReactNode {
+  return (
+    <div
+      className="p-6 text-sm text-muted-foreground"
+      data-testid="plumix-editor-pending"
+    >
+      Loading entry…
+    </div>
+  );
+}
+
+function ErrorScreen(): ReactNode {
+  return (
+    <div
+      className="p-6 text-sm text-muted-foreground"
+      data-testid="plumix-editor-error"
+    >
+      Couldn't load this entry.
+    </div>
+  );
+}
+
+function PuckSpikeRoute(): ReactNode {
+  const { slug, id } = Route.useParams();
+  const { user } = Route.useRouteContext();
+  const draftKey = `plumix.v2.draft.${slug}.${id}`;
   const entryType = findEntryTypeBySlug(slug);
+  const supportsRevisions = entryType?.supports?.includes("revisions") ?? false;
   return (
-    entryType?.labels?.singular ??
-    entryType?.label ??
-    "post"
-  ).toLowerCase();
-}
-
-function EditPostPendingScreen(): ReactNode {
-  const { slug } = Route.useParams();
-  return <EditorSkeleton label={`Loading ${postTypeSingular(slug)}`} />;
-}
-
-function EditPostErrorScreen(): ReactNode {
-  const { slug } = Route.useParams();
-  return (
-    <NotFoundPlaceholder
-      message={`Couldn't load that ${postTypeSingular(slug)}. It may have been deleted.`}
+    <PuckSpikeRouteInner
+      key={draftKey}
+      draftKey={draftKey}
+      id={id}
+      entryTypeName={entryType?.name}
+      supportsRevisions={supportsRevisions}
+      capabilities={user.capabilities}
     />
   );
 }
 
-function EditPostRoute(): ReactNode {
-  const { user, entryType } = Route.useRouteContext();
-  const { id: entryId, slug } = Route.useParams();
-  const navigate = useNavigate();
+interface PuckSpikeRouteInnerProps {
+  readonly draftKey: string;
+  readonly id: number;
+  readonly entryTypeName: string | undefined;
+  readonly supportsRevisions: boolean;
+  readonly capabilities: readonly string[];
+}
+
+function PuckSpikeRouteInner({
+  draftKey,
+  id,
+  entryTypeName,
+  supportsRevisions,
+  capabilities,
+}: PuckSpikeRouteInnerProps): ReactNode {
+  const { data: entry } = useSuspenseQuery(
+    orpc.entry.get.queryOptions({ input: { id } }),
+  );
+  const [data, setData] = useState<Data>(() =>
+    seedPuckData(entry.content, readDraft(draftKey) ?? initialData),
+  );
+  const [status, setStatus] = useState<AutosaveStatus>("saved");
+  // Optimistic-concurrency token; trailing-response wins on overlap.
+  const liveUpdatedAtRef = useRef<Date>(entry.updatedAt);
   const queryClient = useQueryClient();
-  const [serverError, setServerError] = useState<string | null>(null);
-  const [conflict, setConflict] = useState<ConflictState | null>(null);
-
-  const { data: post } = useSuspenseQuery(
-    orpc.entry.get.queryOptions({ input: { id: entryId } }),
-  );
-
-  const isHierarchical = entryType.isHierarchical === true;
-  // Optimistic-concurrency token — server-confirmed `updatedAt` after
-  // each successful write. Keeping it in a ref lets the autosave path
-  // through `PlainFormLayout` send the up-to-date value without
-  // remounting the form mid-typing.
-  const liveUpdatedAtRef = useRef<Date>(post.updatedAt);
-
-  const updatePost = useMutation({
-    mutationFn: ({
-      values,
-      expectedLiveUpdatedAt,
-    }: {
-      values: PostEditorValues;
-      expectedLiveUpdatedAt: Date | undefined;
-    }) =>
-      orpc.entry.update.call({
-        id: entryId,
-        title: values.title,
-        slug: values.slug,
-        content: values.content,
-        excerpt: values.excerpt.length > 0 ? values.excerpt : null,
-        status: values.status,
-        meta: values.meta,
-        terms: filterTermsForEntryType(values.terms, entryType.termTaxonomies),
-        ...(isHierarchical ? { parentId: values.parentId } : {}),
-        ...(expectedLiveUpdatedAt ? { expectedLiveUpdatedAt } : {}),
-      }),
-    onMutate: () => {
-      setServerError(null);
-    },
-    onSuccess: async (updated) => {
-      setConflict(null);
-      liveUpdatedAtRef.current = updated.updatedAt;
-      // List variants are scoped by `type` so sibling post types
-      // don't needlessly refetch.
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: orpc.entry.get.queryOptions({ input: { id: entryId } })
-            .queryKey,
-        }),
-        queryClient.invalidateQueries({
-          queryKey: orpc.entry.list.key({ input: { type: entryType.name } }),
-        }),
-      ]);
-    },
-    onError: (err, variables) => {
-      if (isStaleConflictError(err)) {
-        setConflict({ mine: variables.values, theirs: null });
-        // Raw client bypasses the React Query cache so the fresh server
-        // state shows up in the Compare panel — `fetchQuery` would
-        // dedupe against the suspense query that loaded the entry on
-        // mount and return the same `post` we already have in memory.
-        void orpc.entry.get
-          .call({ id: entryId })
-          .then((fresh) => {
-            setConflict((prev) =>
-              prev === null ? prev : { ...prev, theirs: fresh },
-            );
-          })
-          .catch(() => {
-            // Best-effort: the dialog still works without "theirs"; the
-            // Compare panel renders a Loading state for the missing side.
+  /* eslint-disable react-hooks/refs -- callback fires post-keystroke, not during render */
+  const debouncer = useMemo(
+    () =>
+      createDebouncer(async (next: Data) => {
+        writeDraft(draftKey, next);
+        try {
+          const updated = await orpc.entry.update.call({
+            id,
+            content: {
+              version: "plumix.v2",
+              blocks: puckDataToBlockTree({ content: next.content }),
+            },
+            expectedLiveUpdatedAt: liveUpdatedAtRef.current,
           });
-        return;
-      }
-      setServerError(err instanceof Error ? err.message : "Couldn't save.");
-    },
-  });
-
-  function handleKeepMine(): void {
-    if (conflict === null) return;
-    updatePost.mutate({
-      values: conflict.mine,
-      expectedLiveUpdatedAt: undefined,
-    });
-  }
-
-  async function handleTakeTheirs(): Promise<void> {
-    setConflict(null);
-    await queryClient.invalidateQueries({
-      queryKey: orpc.entry.get.queryOptions({ input: { id: entryId } })
-        .queryKey,
-    });
-  }
-
-  const singularLower = (
-    entryType.labels?.singular ?? entryType.label
-  ).toLowerCase();
-
-  const { metaBoxes, taxonomies } = useEntryFormScope(
-    entryType,
-    user.capabilities,
+          liveUpdatedAtRef.current = updated.updatedAt;
+          setStatus("saved");
+        } catch (err) {
+          setStatus("error");
+          if (isStaleConflictError(err)) {
+            // Puck state is seeded once and ignores this refetch — in-progress
+            // edits aren't overwritten.
+            try {
+              const fresh = await queryClient.fetchQuery({
+                ...orpc.entry.get.queryOptions({ input: { id } }),
+                staleTime: 0,
+              });
+              liveUpdatedAtRef.current = fresh.updatedAt;
+            } catch {
+              // Best-effort: pill already says "error"; next keystroke retries.
+            }
+          }
+        }
+      }, 300),
+    [draftKey, id, queryClient],
   );
-
-  const parentOptions = useParentOptions({
-    entryTypeName: entryType.name,
-    isHierarchical,
-    excludeSelfId: entryId,
+  /* eslint-enable react-hooks/refs */
+  useEffect(() => () => debouncer.flush(), [debouncer]);
+  const handleChange = useCallback(
+    (next: Data): void => {
+      setData(next);
+      setStatus("saving");
+      debouncer.call(next);
+    },
+    [debouncer],
+  );
+  // Publish is a one-way state-machine transition server-side, not an
+  // idempotent re-stamp — the button is disabled once status === "published".
+  const publish = useMutation({
+    mutationFn: async () => {
+      const updated = await orpc.entry.update.call({
+        id,
+        status: "published",
+        expectedLiveUpdatedAt: liveUpdatedAtRef.current,
+      });
+      liveUpdatedAtRef.current = updated.updatedAt;
+      return updated;
+    },
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
+        }),
+        ...(entryTypeName
+          ? [
+              queryClient.invalidateQueries({
+                queryKey: orpc.entry.list.key({
+                  input: { type: entryTypeName },
+                }),
+              }),
+            ]
+          : []),
+      ]),
   });
-
-  const supportsRevisions = Boolean(entryType.supports?.includes("revisions"));
-  const plainFormRevisionsTrigger = useRevisionsTrigger({
-    entryId,
+  const isPublished = entry.status === "published";
+  const handlePublish = useCallback(() => publish.mutate(), [publish]);
+  const capabilitySet = useMemo(
+    () => new Set(capabilities),
+    [capabilities],
+  );
+  const revisionsTrigger = useRevisionsTrigger({
+    entryId: id,
     enabled: supportsRevisions,
     liveUpdatedAtRef,
   });
-
-  const capNamespace = `entry:${entryType.capabilityType ?? entryType.name}`;
-  const canEditAny = hasCap(user.capabilities, `${capNamespace}:edit_any`);
-  const canEditOwn =
-    post.authorId === user.id &&
-    hasCap(user.capabilities, `${capNamespace}:edit_own`);
-  if (!canEditAny && !canEditOwn) {
-    return (
-      <NotFoundPlaceholder
-        message={`You don't have permission to edit this ${singularLower}.`}
+  const Layout = useCallback(
+    (): ReactElement => (
+      <PlumixEditorLayout
+        registry={registry}
+        capabilities={capabilitySet}
+        tokens={sampleTokens}
+        onPublish={handlePublish}
+        isPublishing={publish.isPending}
+        isPublished={isPublished}
+        revisionsTrigger={revisionsTrigger}
       />
-    );
-  }
-
-  const initialValues: PostEditorValues = toEditorValues(post, entryType);
-
-  const supportsEditor = (entryType.supports ?? ["title", "editor", "slug"])
-    .includes("editor");
-
-  if (!supportsEditor) {
-    return (
-      <>
-        <PlainFormLayout
-          // Key on the entry id only: each id is its own form instance,
-          // but successful autosaves no longer remount the form (which
-          // would steal focus + drop in-flight keystrokes).
-          key={entryId}
-          initialValues={initialValues}
-          metaBoxes={metaBoxes}
-          headline={`Edit ${singularLower}`}
-          isSubmitting={updatePost.isPending}
-          serverError={updatePost.isPending ? null : serverError}
-          autosaveMs={500}
-          revisionsTrigger={plainFormRevisionsTrigger}
-          onSubmit={(values) => {
-            updatePost.mutate({
-              values,
-              expectedLiveUpdatedAt: liveUpdatedAtRef.current,
-            });
-          }}
-        />
-        <EntryConflictDialog
-          open={conflict !== null}
-          singularLabel={singularLower}
-          mine={conflict?.mine ?? null}
-          theirs={conflict?.theirs ?? null}
-          onKeepMine={handleKeepMine}
-          onTakeTheirs={() => {
-            void handleTakeTheirs();
-          }}
-          onOpenChange={(open) => {
-            if (!open) setConflict(null);
-          }}
-        />
-      </>
-    );
-  }
+    ),
+    [
+      handlePublish,
+      publish.isPending,
+      isPublished,
+      capabilitySet,
+      revisionsTrigger,
+    ],
+  );
 
   return (
-    <>
-      <PostEditorForm
-        // Key on `updatedAt` so a successful update (which bumps the
-        // server's updatedAt and triggers a refetch) remounts the form
-        // with fresh initial values — clears isDirty and re-arms the
-        // blocker cleanly. Switching entries (different id → different
-        // updatedAt) resets state the same way.
-        key={
-          post.updatedAt instanceof Date
-            ? post.updatedAt.toISOString()
-            : String(post.updatedAt)
-        }
-        initialValues={initialValues}
-        slugLocked
-        availableStatuses={POST_EDITOR_STATUSES}
-        supports={entryType.supports}
-        metaBoxes={metaBoxes}
-        taxonomies={taxonomies}
-        isHierarchical={isHierarchical}
-        parentOptions={parentOptions}
-        headline={`Edit ${singularLower}`}
-        submitLabel="Save"
-        // For the edit path, the post-save remount (keyed on
-        // `updatedAt`) resets the form's isDirty to false — so the
-        // blocker naturally stops prompting once the mutation settles.
-        // No need to carry `isSuccess` across, unlike the new-post
-        // route which has a navigation to bridge.
-        isSubmitting={updatePost.isPending}
-        serverError={updatePost.isPending ? null : serverError}
-        onSubmit={(values) => {
-          updatePost.mutate({
-            values,
-            expectedLiveUpdatedAt: post.updatedAt,
-          });
-        }}
-        onCancel={() => {
-          void navigate({
-            to: "/entries/$slug",
-            params: { slug },
-            search: ENTRIES_LIST_DEFAULT_SEARCH,
-          });
-        }}
+    <AutosaveStatusContext.Provider value={status}>
+      <Puck
+        config={config}
+        data={data}
+        onChange={handleChange}
+        iframe={{ enabled: false }}
+        overrides={{ puck: Layout }}
       />
-      <EntryConflictDialog
-        open={conflict !== null}
-        singularLabel={singularLower}
-        mine={conflict?.mine ?? null}
-        theirs={conflict?.theirs ?? null}
-        onKeepMine={handleKeepMine}
-        onTakeTheirs={() => {
-          void handleTakeTheirs();
-        }}
-        onOpenChange={(open) => {
-          if (!open) setConflict(null);
-        }}
-      />
-    </>
+    </AutosaveStatusContext.Provider>
   );
 }
 
-function toEditorValues(
-  post: Entry & { terms?: Record<string, readonly number[]> },
-  entryType: { readonly termTaxonomies?: readonly string[] },
-): PostEditorValues {
-  // Seed an empty array slot per registered taxonomy first, then
-  // override with the post's existing assignments. Same rationale as
-  // create.tsx: the form's valibot schema validates `terms` as
-  // `Record<string, number[]>` and the per-taxonomy FormField
-  // registers `terms.<taxonomy>` at mount; un-seeded slots end up
-  // `undefined` and submit fails with "Invalid type: Expected Array
-  // but received undefined".
-  const seededTerms = Object.fromEntries(
-    (entryType.termTaxonomies ?? []).map((tax) => [tax, [] as number[]]),
-  );
-  const postTerms = Object.fromEntries(
-    Object.entries(post.terms ?? {}).map(([k, v]) => [k, [...v]]),
-  );
-  return {
-    title: post.title,
-    slug: post.slug,
-    content: post.content,
-    excerpt: post.excerpt ?? "",
-    status: post.status,
-    meta: post.meta,
-    terms: { ...seededTerms, ...postTerms },
-    parentId: post.parentId,
-  };
-}
-
-// Full-screen-editor-shaped skeleton: sticky header line + centered
-// canvas placeholders + right rail. Layout mirrors the real editor so
-// the form doesn't pop in with a visible reflow once the query
-// resolves. `role=status` + `aria-live` announces the loading state to
-// screen readers; sighted users get the visual shimmer.
-function EditorSkeleton({ label }: { label: string }): ReactNode {
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      aria-label={label}
-      data-testid="post-editor-loading"
-      className="flex flex-1 flex-col"
-    >
-      <div className="flex h-14 shrink-0 items-center justify-between border-b px-4">
-        <Skeleton className="h-6 w-40" />
-        <Skeleton className="h-9 w-20" />
-      </div>
-      <div className="flex flex-1 overflow-hidden">
-        <div className="flex flex-1 overflow-auto">
-          <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-8 py-10">
-            <Skeleton className="h-10 w-2/3" />
-            <Skeleton className="h-64 w-full" />
-          </div>
-        </div>
-        {/* Width hardcoded to 16rem to match shadcn's `SIDEBAR_WIDTH`
-            constant — the `--sidebar-width` CSS variable isn't in scope
-            here because `SidebarProvider` mounts with the form below. */}
-        <aside className="flex w-64 shrink-0 flex-col gap-4 border-l p-4 max-md:hidden">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-40 w-full" />
-        </aside>
-      </div>
-    </div>
-  );
-}
-
-function NotFoundPlaceholder({ message }: { message: string }): ReactNode {
-  return (
-    <div className="flex flex-col gap-2">
-      <h1 className="text-2xl font-semibold">Not found</h1>
-      <p className="text-muted-foreground text-sm">{message}</p>
-    </div>
-  );
-}

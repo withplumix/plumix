@@ -1,10 +1,9 @@
 import type { Mark } from "@tiptap/core";
 
 import type { MarkSpec } from "../types.js";
-import { abbrMark, abbrSchema } from "./abbr.js";
-import { linkMark, linkSchema } from "./link.js";
-import { createSimpleMarkExtension, simpleMark } from "./simple.js";
-import { SIMPLE_MARK_CONFIGS } from "./simple-configs.js";
+import { abbrMark } from "./abbr.js";
+import { linkMark } from "./link.js";
+import { simpleMark } from "./simple.js";
 
 /**
  * The 13 canonical inline marks shipped by `@plumix/blocks`. Order is
@@ -98,10 +97,8 @@ export const coreMarks: readonly MarkSpec[] = Object.freeze([
   }),
 ]);
 
-// Sync projection consumed by Puck's richtext field config; the
-// MarkSpec's LazyRef wrapping isn't usable at module-load.
-export const coreMarkExtensions: readonly Mark[] = Object.freeze([
-  ...SIMPLE_MARK_CONFIGS.map((cfg) => createSimpleMarkExtension(cfg)),
-  linkSchema,
-  abbrSchema,
-]);
+// Sync projection of every core mark's Tiptap extension — consumed by
+// Puck's richtext field config without awaiting any LazyRefs.
+export const coreMarkExtensions: readonly Mark[] = Object.freeze(
+  coreMarks.flatMap((m) => (m.schema ? [m.schema] : [])),
+);

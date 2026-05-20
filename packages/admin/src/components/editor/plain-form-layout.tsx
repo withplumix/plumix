@@ -4,8 +4,8 @@ import { useEffect, useRef } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 
-import type { PostEditorValues } from "./entry-editor-form.js";
-import { postEditorSchema } from "./entry-editor-form.js";
+import type { PostEditorValues } from "./post-editor-form.js";
+import { postEditorSchema } from "./post-editor-form.js";
 
 import { Button } from "@/components/ui/button.js";
 import {

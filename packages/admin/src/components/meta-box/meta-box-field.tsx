@@ -18,7 +18,6 @@ import { cn } from "@/lib/utils";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 
-import { TiptapEditor } from "../editor/tiptap-editor.js";
 import { MultiReferencePicker } from "./multi-reference-picker.js";
 import { PluginFieldErrorBoundary } from "./plugin-field-error-boundary.js";
 import { ReferencePicker } from "./reference-picker.js";
@@ -375,22 +374,23 @@ function renderNativeInput({
   }
 
   if (field.inputType === "richtext") {
-    // The field's allowlist arrives via the manifest entry; pass it
-    // straight through to the editor + toolbar. Server-side validator
-    // (`walkRichtextDoc`, auto-injected via `richtext()` builder) is
-    // the trust boundary; the toolbar filtering here is the
-    // affordance-side mirror.
+    // Standalone richtext outside a block input has no host today. The
+    // v2 admin's richtext surface lives only inside Puck's `richtext`
+    // field type (block inputs). Surfacing it inside a metabox needs a
+    // separate Tiptap host slice; until that lands, the field falls
+    // back to a JSON textarea so the value is at least authorable.
     return (
-      <TiptapEditor
-        value={rhf.value as Parameters<typeof TiptapEditor>[0]["value"]}
-        onChange={(json) => {
-          rhf.onChange(json);
-        }}
+      <textarea
+        className="border-input bg-background w-full rounded-md border p-2 font-mono text-xs"
+        value={
+          typeof rhf.value === "string" ? rhf.value : JSON.stringify(rhf.value)
+        }
+        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+          rhf.onChange(e.target.value)
+        }
         disabled={disabled}
-        ariaLabel={field.label}
-        marks={field.marks}
-        nodes={field.nodes}
-        blocks={field.blocks}
+        aria-label={field.label}
+        data-testid={`meta-box-field-${field.key}-input`}
       />
     );
   }
