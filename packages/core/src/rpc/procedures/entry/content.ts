@@ -3,7 +3,11 @@ import type {
   BlockRegistry,
   MarkRegistry,
 } from "@plumix/blocks";
-import { validateBlockContent } from "@plumix/blocks";
+import {
+  isV2EntryContent,
+  validateBlockContent,
+  validateV2EntryContent,
+} from "@plumix/blocks";
 
 import type { EntryContent } from "../../../db/schema/entries.js";
 import { MAX_CONTENT_BYTES } from "./schemas.js";
@@ -33,7 +37,9 @@ export function assertContentValidAgainstRegistries(
   errors: Pick<ContentErrors, "INVALID_BLOCK_CONTENT">,
 ): void {
   if (content == null) return;
-  const result = validateBlockContent(content, registries);
+  const result = isV2EntryContent(content)
+    ? validateV2EntryContent(content, registries.blocks)
+    : validateBlockContent(content, registries);
   if (!result.ok) {
     throw errors.INVALID_BLOCK_CONTENT({
       data: { issues: [...result.errors] },
