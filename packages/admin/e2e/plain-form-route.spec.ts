@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { expectNoAxeViolations } from "./support/axe.js";
 import {
   AUTHED_ADMIN,
   MANIFEST_WITH_PLAIN_FORM_TYPE,
@@ -91,6 +92,8 @@ test.describe("plain-form route for non-editor entry types", () => {
     ).toHaveText("Biography");
     await expect(card.getByTestId("meta-box-field-headline-input")).toBeVisible();
     await expect(card.getByTestId("meta-box-field-twitter-input")).toBeVisible();
+
+    await expectNoAxeViolations(page);
   });
 
   test("Publish button submits an entry.update with status: published", async ({
