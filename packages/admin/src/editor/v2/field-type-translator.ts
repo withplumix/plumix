@@ -1,8 +1,18 @@
 import type { BlockInput } from "@plumix/blocks";
 import type { Fields } from "@puckeditor/core";
+import type { Extensions } from "@tiptap/core";
+
+export interface TranslateFieldOptions {
+  // Extra Tiptap mark / node extensions to inject into any `richtext`
+  // field. Plumix-specific marks (kbd, abbr, cite, small, sub, sup,
+  // highlight) live here; Puck's bundled Tiptap covers bold / italic
+  // / strike / code / link / underline via its built-in `options`.
+  readonly richtextExtensions?: Extensions;
+}
 
 export function translateField(
   input: BlockInput,
+  options: TranslateFieldOptions = {},
 ): Fields[string] {
   switch (input.type) {
     case "text":
@@ -21,6 +31,14 @@ export function translateField(
       };
     case "slot":
       return { type: "slot", label: input.label };
+    case "richtext":
+      return {
+        type: "richtext",
+        label: input.label,
+        ...(options.richtextExtensions
+          ? { tiptap: { extensions: options.richtextExtensions } }
+          : {}),
+      };
     case "checkbox":
       // Puck has no native checkbox; surface a radio with true/false options
       // so the editor produces booleans rather than silently downgrading to a
@@ -45,10 +63,11 @@ export function translateField(
 
 export function translateFields(
   inputs: readonly BlockInput[],
+  options: TranslateFieldOptions = {},
 ): Fields {
   const out: Record<string, Fields[string]> = {};
   for (const input of inputs) {
-    out[input.name] = translateField(input);
+    out[input.name] = translateField(input, options);
   }
   return out;
 }

@@ -149,7 +149,7 @@ export type {
   MarkSpec,
   ResolvedMarkSpec,
 } from "./marks/types.js";
-export { coreMarks } from "./marks/core/index.js";
+export { coreMarks, coreMarkExtensions } from "./marks/core/index.js";
 
 export { coreBlocks } from "./core-blocks.js";
 export { coreBlocksV2 } from "./core-blocks-v2.js";

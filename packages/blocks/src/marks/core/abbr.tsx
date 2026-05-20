@@ -4,7 +4,7 @@ import { Mark, mergeAttributes } from "@tiptap/core";
 import type { MarkComponent, MarkProps } from "../types.js";
 import { defineMark } from "../define-mark.js";
 
-const abbrSchema = Mark.create({
+export const abbrSchema = Mark.create({
   name: "abbr",
   addAttributes() {
     return { title: { default: null } };

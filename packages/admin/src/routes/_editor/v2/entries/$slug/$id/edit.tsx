@@ -1,7 +1,11 @@
 import type { ThemeTokens } from "@plumix/blocks";
 import type { Config, Data } from "@puckeditor/core";
 import type { ReactElement, ReactNode } from "react";
-import { coreBlocksV2, createBlockRegistry } from "@plumix/blocks";
+import {
+  coreBlocksV2,
+  coreMarkExtensions,
+  createBlockRegistry,
+} from "@plumix/blocks";
 import { ORPCError } from "@orpc/client";
 import { Puck } from "@puckeditor/core";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
@@ -58,7 +62,12 @@ const sampleTokens: ThemeTokens = {
 
 const registry = createBlockRegistry(coreBlocksV2);
 const config: Config = {
-  components: blockSpecsToPuckComponents(coreBlocksV2),
+  components: blockSpecsToPuckComponents(coreBlocksV2, {
+    // Puck types `extensions` as a mutable array; spread the readonly
+    // plumix list to satisfy the assignment without weakening the
+    // export.
+    richtextExtensions: [...coreMarkExtensions],
+  }),
 };
 
 export const Route = createFileRoute("/_editor/v2/entries/$slug/$id/edit")({

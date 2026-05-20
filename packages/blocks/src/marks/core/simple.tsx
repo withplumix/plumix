@@ -24,8 +24,18 @@ interface SimpleMarkOptions {
   readonly bubbleMenuIcon?: string;
 }
 
-export function simpleMark(opts: SimpleMarkOptions): MarkSpec {
-  const schema = Mark.create({
+// Tiptap Mark built synchronously; Puck's richtext field reads from
+// here without awaiting MarkSpec's LazyRef.
+export interface SimpleMarkExtensionOptions {
+  readonly name: string;
+  readonly tag: keyof React.JSX.IntrinsicElements;
+  readonly parseTags: readonly string[];
+}
+
+export function createSimpleMarkExtension(
+  opts: SimpleMarkExtensionOptions,
+): ReturnType<typeof Mark.create> {
+  return Mark.create({
     name: opts.name,
     parseHTML() {
       return opts.parseTags.map((tag) => ({ tag }));
@@ -33,6 +43,14 @@ export function simpleMark(opts: SimpleMarkOptions): MarkSpec {
     renderHTML() {
       return [opts.tag, 0];
     },
+  });
+}
+
+export function simpleMark(opts: SimpleMarkOptions): MarkSpec {
+  const schema = createSimpleMarkExtension({
+    name: opts.name,
+    tag: opts.tag,
+    parseTags: opts.parseTags,
   });
 
   const Component: MarkComponent = ({ children }: MarkProps): ReactElement => {
