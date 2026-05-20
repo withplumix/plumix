@@ -1,14 +1,12 @@
 import type { BlockSpec } from "./types.js";
 import { buttonBlock } from "./button/index.js";
 import { buttonsBlock } from "./buttons/index.js";
-import { calloutBlock } from "./callout/index.js";
 import { codeBlock } from "./code/index.js";
 import { columnBlock } from "./columns/column.js";
 import { columnsBlock } from "./columns/index.js";
 import { descriptionDetailBlock } from "./description-list/description-detail.js";
 import { descriptionTermBlock } from "./description-list/description-term.js";
 import { descriptionListBlock } from "./description-list/index.js";
-import { detailsBlock } from "./details/index.js";
 import { groupBlock } from "./group/index.js";
 import { listItemBlock } from "./list/list-item.js";
 import { listOrderedBlock } from "./list/list-ordered.js";
@@ -45,10 +43,10 @@ import {
  * whether they want the escape hatch at all. The operator-configurable
  * allowlist lands in #312.
  *
- * Note: `headingBlock` migrated to the new `defineBlock` surface in slice
- * #381 and is no longer here. Entries with `core/heading` therefore do not
- * round-trip through `EntryContent` on this feature branch; round-trip is
- * restored at cutover (#405) when the old walker + registry are deleted.
+ * Blocks migrated to the new `defineBlock` surface are intentionally
+ * absent here. Entries with those `core/*` names do not round-trip
+ * through `EntryContent` on this feature branch; round-trip is restored
+ * at cutover (#405) when the old walker + registry are deleted.
  */
 export const coreBlocks: readonly BlockSpec[] = Object.freeze([
   paragraphBlock,
@@ -67,8 +65,6 @@ export const coreBlocks: readonly BlockSpec[] = Object.freeze([
   columnBlock,
   buttonsBlock,
   buttonBlock,
-  detailsBlock,
-  calloutBlock,
   tableBlock,
   tableHeaderRowBlock,
   tableBodyRowBlock,

@@ -21,6 +21,20 @@ describe("coreBlocksV2", () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
+  test("layout-category v2 blocks include the migrated wrappers", () => {
+    const layoutNames = coreBlocksV2
+      .filter((b) => b.category === "layout")
+      .map((b) => b.name);
+    expect(layoutNames).toEqual(
+      expect.arrayContaining([
+        "core/group",
+        "core/columns",
+        "core/details",
+        "core/callout",
+      ]),
+    );
+  });
+
   test("seeds a BlockRegistry losslessly (size matches input length)", () => {
     const registry = createBlockRegistry(coreBlocksV2);
     expect(registry.size).toBe(coreBlocksV2.length);

@@ -218,8 +218,28 @@
   }
 
   /* Callout */
-  aside[data-plumix-block="core/callout"] {
+  [data-plumix-block="core/callout"] > aside {
     @apply bg-muted/40 border-muted-foreground/20 my-3 rounded-md border p-3;
+  }
+  [data-plumix-block="core/callout"] > aside[data-variant="warn"] {
+    @apply bg-yellow-100/60 border-yellow-300 text-yellow-900;
+  }
+  [data-plumix-block="core/callout"] > aside[data-variant="error"] {
+    @apply bg-red-100/60 border-red-300 text-red-900;
+  }
+  [data-plumix-block="core/callout"] > aside[data-variant="success"] {
+    @apply bg-green-100/60 border-green-300 text-green-900;
+  }
+
+  /* Details */
+  [data-plumix-block="core/details"] > details {
+    @apply border-border my-3 rounded-md border p-3;
+  }
+  [data-plumix-block="core/details"] > details > summary {
+    @apply cursor-pointer font-semibold;
+  }
+  [data-plumix-block="core/details"] > details[open] > summary {
+    @apply mb-2;
   }
 
   /* Buttons row */

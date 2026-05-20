@@ -77,18 +77,6 @@ const CASES: readonly BlockCase[] = [
     selector: ".ProseMirror hr[data-plumix-block='core/separator']",
   },
   {
-    item: "core/callout",
-    query: "callout",
-    payload: "Note",
-    selector: ".ProseMirror aside[data-plumix-block='core/callout']",
-    text: "Note",
-  },
-  {
-    item: "core/details",
-    query: "details",
-    selector: ".ProseMirror details[data-plumix-block='core/details']",
-  },
-  {
     item: "core/group",
     query: "group",
     selector: ".ProseMirror div[data-plumix-block='core/group']",

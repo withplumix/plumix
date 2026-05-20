@@ -170,6 +170,31 @@ test.describe("V2 spike editor renders end-to-end", () => {
     await expect(canvas.locator("ul")).toHaveCount(0);
   });
 
+  test("slash menu insert: details inserts a <details> with default summary", async ({
+    page,
+  }) => {
+    await page.goto("v2/entries/posts/1/edit");
+    const canvas = page.getByTestId("plumix-editor-canvas");
+    await canvas.focus();
+    await page.keyboard.press("/");
+    await page.getByTestId("slash-menu-item-core/details").click();
+    await expect(canvas.locator("details")).toHaveCount(1);
+    await expect(canvas.locator("details > summary")).toHaveCount(1);
+  });
+
+  test("slash menu insert: callout inserts an <aside role=note> with a default variant", async ({
+    page,
+  }) => {
+    await page.goto("v2/entries/posts/1/edit");
+    const canvas = page.getByTestId("plumix-editor-canvas");
+    await canvas.focus();
+    await page.keyboard.press("/");
+    await page.getByTestId("slash-menu-item-core/callout").click();
+    await expect(canvas.locator("aside[role='note']")).toHaveCount(1);
+    await expect(
+      canvas.locator("aside[role='note'][data-variant='info']"),
+    ).toHaveCount(1);
+  });
 
   test("server-loaded plumix.v2 content renders in the canvas on initial mount", async ({
     page,
