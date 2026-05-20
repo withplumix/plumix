@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.j
 import type { TransformOption } from "./available-transforms.js";
 import type { SlashMenuItem } from "./slash-menu-items.js";
 
+import { AutosaveStatusPill } from "./AutosaveStatus.js";
 import { BlockActionsPanel } from "./BlockActionsPanel.js";
 import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
 import { patchStyleAtSelector } from "./patch-style.js";
@@ -69,12 +70,7 @@ export function PlumixEditorLayout({
           className="flex-1 bg-transparent outline-none"
           data-testid="plumix-editor-title-input"
         />
-        <span
-          className="rounded bg-muted px-2 py-1 text-xs"
-          data-testid="plumix-editor-status-pill"
-        >
-          Draft
-        </span>
+        <AutosaveStatusPill />
         <button
           type="button"
           className="rounded border px-3 py-1 text-sm"
