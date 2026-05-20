@@ -5,6 +5,7 @@ import {
   AUTHED_ADMIN,
   MANIFEST_WITH_POST,
   mockManifest,
+  mockRpcWithCapture,
   rpcOkBody,
 } from "./support/rpc-mock.js";
 
@@ -252,6 +253,19 @@ test.describe("V2 spike editor renders end-to-end", () => {
   test("autosave pill cycles saved → saving → saved when a block is inserted", async ({
     page,
   }) => {
+    await page.route("**/_plumix/rpc/**", (route) => {
+      if (route.request().url().endsWith("/entry/update")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            json: { ...emptyEntry(1), updatedAt: T0 },
+            meta: [],
+          }),
+        });
+      }
+      return route.fallback();
+    });
     await page.goto("v2/entries/posts/1/edit");
 
     const pill = page.getByTestId("plumix-autosave-pill");
@@ -263,5 +277,40 @@ test.describe("V2 spike editor renders end-to-end", () => {
 
     await expect(pill).toHaveAttribute("data-status", "saving");
     await expect(pill).toHaveAttribute("data-status", "saved");
+  });
+
+  test("autosave POSTs a plumix.v2 envelope to entry.update after a block is inserted", async ({
+    page,
+  }) => {
+    const captures = await mockRpcWithCapture(page, {
+      captureSuffix: "/entry/update",
+      captureResponse: { ...emptyEntry(1), updatedAt: T0 },
+      handlers: {
+        "/auth/session": AUTHED_ADMIN,
+        "/entry/get": emptyEntry(1),
+      },
+    });
+    await page.goto("v2/entries/posts/1/edit");
+
+    await page.getByTestId("plumix-editor-canvas").focus();
+    await page.keyboard.press("/");
+    await page.getByTestId("slash-menu-item-core/paragraph").click();
+
+    await expect
+      .poll(
+        () =>
+          (
+            captures.at(-1) as
+              | { content?: { version?: string } }
+              | undefined
+          )?.content?.version ?? null,
+      )
+      .toBe("plumix.v2");
+    const lastInput = captures.at(-1) as {
+      readonly id: number;
+      readonly content: { readonly blocks: unknown[] };
+    };
+    expect(lastInput.id).toBe(1);
+    expect(lastInput.content.blocks.length).toBeGreaterThan(0);
   });
 });
