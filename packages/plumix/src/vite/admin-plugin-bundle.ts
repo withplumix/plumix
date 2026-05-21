@@ -188,21 +188,6 @@ function buildSynthesisedEntry({
           `${ns}[${JSON.stringify(fieldType.component)}]);`,
       );
     }
-    for (const block of registry.blockSpecs.values()) {
-      if (block.registeredBy !== plugin.id) continue;
-      if (block.spec.adminSchema !== undefined) {
-        registerLines.push(
-          `  __plumix.registerPluginBlockSchema(${JSON.stringify(block.spec.name)}, ` +
-            `${ns}[${JSON.stringify(block.spec.adminSchema)}]);`,
-        );
-      }
-      if (block.spec.adminEditor !== undefined) {
-        registerLines.push(
-          `  __plumix.registerPluginBlockEditor(${JSON.stringify(block.spec.name)}, ` +
-            `${ns}[${JSON.stringify(block.spec.adminEditor)}]);`,
-        );
-      }
-    }
     for (const mark of registry.markSpecs.values()) {
       if (mark.registeredBy !== plugin.id) continue;
       if (mark.spec.adminSchema !== undefined) {

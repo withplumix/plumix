@@ -1,8 +1,8 @@
+import type { BlockSpec } from "plumix/blocks";
 import type { PluginDescriptor } from "plumix/plugin";
 import { definePlugin } from "plumix/plugin";
 
 import { audioBlock } from "./blocks/audio/index.js";
-import { embedBlock } from "./blocks/embed/index.js";
 import { fileBlock } from "./blocks/file/index.js";
 import { galleryBlock } from "./blocks/gallery/index.js";
 import { imageBlock } from "./blocks/image/index.js";
@@ -19,6 +19,15 @@ export { DEFAULT_ACCEPTED_TYPES };
 
 /** Default max upload size — 25 MiB. */
 export const DEFAULT_MAX_UPLOAD_SIZE = 25 * 1024 * 1024;
+
+// Out-of-band v2 spec export; collapses into `ctx.registerBlockSpec` later.
+export const mediaBlocks: readonly BlockSpec[] = Object.freeze([
+  imageBlock,
+  galleryBlock,
+  videoBlock,
+  audioBlock,
+  fileBlock,
+]);
 
 interface MediaPluginOptions {
   /**
@@ -100,7 +109,6 @@ export function media(
       ctx.registerBlock(videoBlock);
       ctx.registerBlock(audioBlock);
       ctx.registerBlock(fileBlock);
-      ctx.registerBlock(embedBlock);
 
       ctx.registerEntryType("media", {
         label: "Media",

@@ -1,15 +1,14 @@
 import type { Mark as TiptapMarkExtension } from "@tiptap/core";
-import type { ComponentType, ReactNode } from "react";
 
-import type { LazyRef, ParsePasteRule } from "../types.js";
-
-export interface MarkProps {
-  readonly attrs: Readonly<Record<string, unknown>>;
-  readonly children: ReactNode;
-}
-
-export type MarkComponent = ComponentType<MarkProps>;
-
+/**
+ * Minimal metadata for a registered inline mark. Admin consumers (bubble
+ * menu, manifest) read this; rendering goes through the hardcoded
+ * `renderInline` walker which already knows every core mark by name.
+ *
+ * Plugin authors register marks through the manifest; the Tiptap extension
+ * itself comes through `coreMarkExtensions` (core) or
+ * `plugin.adminEntry.<adminSchema>` (plugin).
+ */
 export interface MarkSpec {
   readonly name: string;
   readonly title: string;
@@ -19,41 +18,18 @@ export interface MarkSpec {
   readonly bubbleMenuLabel?: string;
   /** Optional Lucide icon name for the bubble menu button. */
   readonly bubbleMenuIcon?: string;
-  readonly schema: LazyRef<ReturnType<typeof TiptapMarkExtension.create>>;
-  readonly component: LazyRef<MarkComponent>;
+  /**
+   * The synchronous Tiptap Mark instance for this mark. Stored here so
+   * the admin editor can build its extension list without any awaits.
+   * Core marks set this directly; plugin marks omit it and provide
+   * `adminSchema` instead.
+   */
+  readonly schema?: ReturnType<typeof TiptapMarkExtension.create>;
   /**
    * Export name on the plugin's `adminEntry` module that resolves to the
-   * Tiptap `Mark.create(...)` instance for this mark. Mirrors
-   * `BlockSpec.adminSchema`: lets the admin chunk synthesizer wire the
-   * mark into the editor's extension list. Core marks leave this unset —
-   * the admin imports `@plumix/blocks` directly.
+   * Tiptap `Mark.create(...)` instance. Lets the admin chunk synthesizer
+   * wire the mark into the editor's extension list. Core marks leave
+   * this unset — the admin imports `@plumix/blocks` directly.
    */
   readonly adminSchema?: string;
-  /**
-   * Paste rules: HTML selectors this mark absorbs when the editor
-   * receives pasted content. Marks usually need only the selector;
-   * the editor extension wraps matched ranges with this mark.
-   */
-  readonly parsePaste?: readonly ParsePasteRule[];
-}
-
-export interface ResolvedMarkSpec extends Omit<
-  MarkSpec,
-  "component" | "schema"
-> {
-  readonly component: MarkComponent;
-  /**
-   * Awaited Tiptap Mark instance. Stored sync (not lazy) so the admin
-   * editor can build its extension list synchronously — parallel to
-   * `ResolvedBlockSpec.schema`.
-   */
-  readonly schema: ReturnType<typeof TiptapMarkExtension.create>;
-  readonly registeredBy: string | null;
-}
-
-export interface MarkRegistry {
-  get(name: string): ResolvedMarkSpec | undefined;
-  has(name: string): boolean;
-  readonly size: number;
-  [Symbol.iterator](): IterableIterator<[string, ResolvedMarkSpec]>;
 }

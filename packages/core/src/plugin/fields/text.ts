@@ -16,6 +16,7 @@ export interface TextFieldOptions {
   readonly description?: string;
   readonly default?: string;
   readonly span?: MetaBoxFieldSpan;
+  readonly capability?: string;
   readonly sanitize?: (value: unknown) => unknown;
 }
 
@@ -45,6 +46,7 @@ export function text(options: TextFieldOptions): TextMetaBoxField {
     description: options.description,
     default: options.default,
     span: options.span,
+    capability: options.capability,
     sanitize: options.sanitize,
   };
 }

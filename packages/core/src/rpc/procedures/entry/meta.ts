@@ -30,6 +30,54 @@ export function sanitizeMetaForRpc(
 }
 
 /**
+ * Reject a meta patch that writes to a capability-gated field the viewer
+ * can't access. Treats the field's `capability` as a server-side gate so
+ * the API stays honest regardless of admin-side filtering. Deletes count
+ * as writes — you can't blank a value you can't see. Repeater subfields
+ * are NOT recursed: capability gates apply at the top-level field only;
+ * a row's capability is whichever the parent repeater field declares.
+ */
+export function assertEntryMetaCapabilities(
+  registry: PluginRegistry,
+  entryType: string,
+  patch: MetaPatch,
+  auth: { can(capability: string): boolean },
+  errors: {
+    FORBIDDEN: (args: { data: { capability: string } }) => Error;
+  },
+): void {
+  assertMetaCapabilities(
+    patch,
+    (key) => findEntryMetaField(registry, entryType, key),
+    auth,
+    errors,
+  );
+}
+
+/**
+ * Generic shape — `term.{create,update}` and `user.update` reuse this by
+ * passing their own `findField` lookup so all three surfaces honour the
+ * field-level capability gate uniformly.
+ */
+export function assertMetaCapabilities(
+  patch: MetaPatch,
+  findField: (key: string) => { readonly capability?: string } | undefined,
+  auth: { can(capability: string): boolean },
+  errors: {
+    FORBIDDEN: (args: { data: { capability: string } }) => Error;
+  },
+): void {
+  const touched = new Set<string>([...patch.upserts.keys(), ...patch.deletes]);
+  for (const key of touched) {
+    const field = findField(key);
+    if (!field?.capability) continue;
+    if (!auth.can(field.capability)) {
+      throw errors.FORBIDDEN({ data: { capability: field.capability } });
+    }
+  }
+}
+
+/**
  * Async second pass on a sanitised entry-meta patch: validates each
  * reference field's upserted ID against its registered
  * `LookupAdapter`. RPC procedures call this between

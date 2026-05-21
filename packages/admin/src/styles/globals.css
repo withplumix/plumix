@@ -218,27 +218,58 @@
   }
 
   /* Callout */
-  aside[data-plumix-block="core/callout"] {
+  [data-plumix-block="core/callout"] > aside {
     @apply bg-muted/40 border-muted-foreground/20 my-3 rounded-md border p-3;
+  }
+  [data-plumix-block="core/callout"] > aside[data-variant="warn"] {
+    @apply border-yellow-300 bg-yellow-100/60 text-yellow-900;
+  }
+  [data-plumix-block="core/callout"] > aside[data-variant="error"] {
+    @apply border-red-300 bg-red-100/60 text-red-900;
+  }
+  [data-plumix-block="core/callout"] > aside[data-variant="success"] {
+    @apply border-green-300 bg-green-100/60 text-green-900;
+  }
+
+  /* Details */
+  [data-plumix-block="core/details"] > details {
+    @apply border-border my-3 rounded-md border p-3;
+  }
+  [data-plumix-block="core/details"] > details > summary {
+    @apply cursor-pointer font-semibold;
+  }
+  [data-plumix-block="core/details"] > details[open] > summary {
+    @apply mb-2;
   }
 
   /* Buttons row */
-  div[data-plumix-block="core/buttons"] {
+  [data-plumix-block="core/buttons"] > div {
     @apply my-3 flex flex-wrap gap-2;
   }
-  a[data-plumix-block="core/button"] {
+  [data-plumix-block="core/button"] > a,
+  [data-plumix-block="core/button"] > button {
     @apply bg-primary text-primary-foreground inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium no-underline;
   }
 
   /* Table */
-  table[data-plumix-block="core/table"] {
+  [data-plumix-block="core/table"] > table {
     @apply border-border my-3 w-full border-collapse border;
   }
-  table[data-plumix-block="core/table"] th,
-  table[data-plumix-block="core/table"] td {
+  [data-plumix-block="core/table"] > table th,
+  [data-plumix-block="core/table"] > table td {
     @apply border-border border px-2 py-1;
   }
-  table[data-plumix-block="core/table"] th {
+  [data-plumix-block="core/table"] > table th {
     @apply bg-muted/50 text-left font-semibold;
+  }
+
+  /* Description list. dt/dd descend from the dl wrapper because the
+   inline term/detail blocks don't get a per-element data-plumix-block
+   wrapper (render-block-tree.ts skips wrapping inline specs). */
+  [data-plumix-block="core/description-list"] > dl {
+    @apply my-3 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1;
+  }
+  [data-plumix-block="core/description-list"] > dl > dt {
+    @apply font-semibold;
   }
 }

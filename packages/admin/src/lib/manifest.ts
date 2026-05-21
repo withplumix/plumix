@@ -118,6 +118,7 @@ function filterMetaBoxes<
     readonly id: string;
     readonly capability?: string;
     readonly priority?: number;
+    readonly fields: readonly { readonly capability?: string }[];
   },
 >(
   boxes: readonly T[] | undefined,
@@ -131,6 +132,12 @@ function filterMetaBoxes<
         return false;
       return true;
     })
+    .map((box) => ({
+      ...box,
+      fields: box.fields.filter(
+        (field) => field.capability === undefined || caps.has(field.capability),
+      ),
+    }))
     .sort(byPriorityThen((b) => b.id));
 }
 
@@ -158,10 +165,11 @@ export function visibleUserMetaBoxes(
   capabilities: readonly string[],
   source: PlumixManifest = manifest,
 ): readonly UserMetaBoxManifestEntry[] {
-  const caps = new Set(capabilities);
-  return (source.userMetaBoxes ?? [])
-    .filter((box) => box.capability === undefined || caps.has(box.capability))
-    .sort(byPriorityThen((b) => b.id));
+  return filterMetaBoxes(
+    source.userMetaBoxes,
+    new Set(capabilities),
+    () => true,
+  );
 }
 
 export function findSettingsPageByName(

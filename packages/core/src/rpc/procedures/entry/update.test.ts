@@ -524,4 +524,58 @@ describe("entry.update", () => {
       });
     });
   });
+
+  // Round-trip implies the v2 branch was taken: the v1 validator would
+  // reject this envelope at the root (`Content root must be a Tiptap doc
+  // node`), so a successful update + content match proves the dispatch in
+  // `assertContentValidAgainstRegistries`.
+  test("persists a plumix.v2 content envelope through entry.update", async () => {
+    const h = await createRpcHarness({ authAs: "author" });
+    const own = await h.factory.draft.create({
+      authorId: h.user.id,
+      slug: "v2-write",
+    });
+    const v2Content = {
+      version: "plumix.v2",
+      blocks: [{ id: "p1", name: "core/paragraph", attrs: { text: "Hello" } }],
+    };
+    const updated = await h.client.entry.update({
+      id: own.id,
+      content: v2Content,
+    });
+    expect(updated.content).toEqual(v2Content);
+  });
+
+  test("rejects writing a capability-gated meta field with FORBIDDEN", async () => {
+    const plugins = createPluginRegistry();
+    plugins.entryMetaBoxes.set("test-gated", {
+      id: "test-gated",
+      label: "Gated",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "private_note",
+          label: "Private note",
+          type: "string",
+          inputType: "text",
+          capability: "view_private_notes",
+        },
+      ],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "author", plugins });
+    const own = await h.factory.draft.create({
+      authorId: h.user.id,
+      slug: "gated-field",
+    });
+    await expect(
+      h.client.entry.update({
+        id: own.id,
+        meta: { private_note: "leaked" },
+      }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { capability: "view_private_notes" },
+    });
+  });
 });

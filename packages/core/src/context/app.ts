@@ -1,7 +1,7 @@
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 
-import type { BlockRegistry, MarkRegistry } from "@plumix/blocks";
-import { EMPTY_BLOCK_REGISTRY, EMPTY_MARK_REGISTRY } from "@plumix/blocks";
+import type { BlockRegistry, MarkSpec } from "@plumix/blocks";
+import { createBlockRegistry } from "@plumix/blocks";
 
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { Mailer } from "../auth/mailer/types.js";
@@ -20,6 +20,9 @@ import type {
 } from "../runtime/slots.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
+
+const EMPTY_BLOCK_REGISTRY: BlockRegistry = createBlockRegistry([]);
+const EMPTY_MARK_LIST: readonly MarkSpec[] = Object.freeze([]);
 
 export type CoreSchema = typeof coreSchema;
 
@@ -104,7 +107,7 @@ export interface AppContextBase<
    * them to render entry content.
    */
   readonly blocks: BlockRegistry;
-  readonly marks: MarkRegistry;
+  readonly marks: readonly MarkSpec[];
   readonly logger: Logger;
   readonly auth: AuthNamespace;
   /**
@@ -208,13 +211,13 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly hooks: HookExecutor;
   readonly plugins: PluginRegistry;
   /**
-   * Optional; defaults to `EMPTY_BLOCK_REGISTRY` / `EMPTY_MARK_REGISTRY`
-   * so call sites that don't exercise content validation (defer tests,
-   * narrow utility paths) can omit them. Production callers (`buildApp`
-   * + dispatcher) always pass real merged registries.
+   * Optional; defaults to an empty registry / mark list so call sites
+   * that don't exercise content validation (defer tests, narrow utility
+   * paths) can omit them. Production callers (`buildApp` + dispatcher)
+   * always pass real values.
    */
   readonly blocks?: BlockRegistry;
-  readonly marks?: MarkRegistry;
+  readonly marks?: readonly MarkSpec[];
   readonly user?: AuthenticatedUser | null;
   readonly tokenScopes?: readonly string[] | null;
   readonly origin?: string;
@@ -313,7 +316,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     hooks: args.hooks,
     plugins: args.plugins,
     blocks: args.blocks ?? EMPTY_BLOCK_REGISTRY,
-    marks: args.marks ?? EMPTY_MARK_REGISTRY,
+    marks: args.marks ?? EMPTY_MARK_LIST,
     logger: args.logger ?? consoleLogger,
     auth: {
       can: makeAuthCan(resolver, user, tokenScopes),

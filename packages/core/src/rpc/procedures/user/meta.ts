@@ -12,6 +12,7 @@ import {
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
   validateMetaReferencesForRpc,
 } from "../../meta/core.js";
+import { assertMetaCapabilities } from "../entry/meta.js";
 
 export type { MetaChanges as UserMetaChanges } from "../../meta/core.js";
 
@@ -38,6 +39,23 @@ export async function validateUserMetaReferences(
     ctx,
     (key) => findUserMetaField(ctx.plugins, key),
     patch,
+    errors,
+  );
+}
+
+/** Mirror of `assertEntryMetaCapabilities` for the user meta surface. */
+export function assertUserMetaCapabilities(
+  registry: PluginRegistry,
+  patch: MetaPatch,
+  auth: { can(capability: string): boolean },
+  errors: {
+    FORBIDDEN: (args: { data: { capability: string } }) => Error;
+  },
+): void {
+  assertMetaCapabilities(
+    patch,
+    (key) => findUserMetaField(registry, key),
+    auth,
     errors,
   );
 }

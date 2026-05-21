@@ -1,13 +1,8 @@
 import type { RouterClient } from "@orpc/server";
 import { createRouterClient } from "@orpc/server";
 
-import type { BlockRegistry, MarkRegistry } from "@plumix/blocks";
-import {
-  coreBlocks,
-  coreMarks,
-  mergeBlockRegistry,
-  mergeMarkRegistry,
-} from "@plumix/blocks";
+import type { BlockRegistry, MarkSpec } from "@plumix/blocks";
+import { coreBlocks, coreMarks, createBlockRegistry } from "@plumix/blocks";
 
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { Mailer } from "../auth/mailer/types.js";
@@ -129,7 +124,7 @@ function buildContext(
   hooks: HookExecutor,
   plugins: PluginRegistry,
   blocks: BlockRegistry,
-  marks: MarkRegistry,
+  marks: readonly MarkSpec[],
   request: Request,
   oauthProviders: readonly OAuthProviderSummary[],
   authenticator: RequestAuthenticator | undefined,
@@ -173,7 +168,7 @@ function assemble<TUser extends User | null>(
   hooks: HookRegistry,
   plugins: PluginRegistry,
   blocks: BlockRegistry,
-  marks: MarkRegistry,
+  marks: readonly MarkSpec[],
   request: Request,
   user: TUser,
   oauthProviders: readonly OAuthProviderSummary[],
@@ -248,24 +243,14 @@ export async function createRpcHarness(
   const oauthProviders = options.oauthProviders ?? [];
   // Build the same default registries `buildApp` would so the RPC
   // harness exercises validation against the real core specs.
-  const pluginBlockContributions = Array.from(plugins.blockSpecs.values()).map(
-    ({ spec, registeredBy }) => ({ spec, pluginId: registeredBy }),
+  const pluginBlockSpecs = Array.from(plugins.blockSpecs.values()).map(
+    ({ spec }) => spec,
   );
-  const pluginMarkContributions = Array.from(plugins.markSpecs.values()).map(
-    ({ spec, registeredBy }) => ({ spec, pluginId: registeredBy }),
+  const pluginMarkSpecs = Array.from(plugins.markSpecs.values()).map(
+    ({ spec }) => spec,
   );
-  const blocks = await mergeBlockRegistry({
-    core: coreBlocks,
-    plugins: pluginBlockContributions,
-    themeOverrides: {},
-    themeId: null,
-  });
-  const marks = await mergeMarkRegistry({
-    core: coreMarks,
-    plugins: pluginMarkContributions,
-    themeOverrides: {},
-    themeId: null,
-  });
+  const blocks = createBlockRegistry([...coreBlocks, ...pluginBlockSpecs]);
+  const marks: readonly MarkSpec[] = [...coreMarks, ...pluginMarkSpecs];
 
   if (!options.request && options.authAs) {
     const user = await userFactory

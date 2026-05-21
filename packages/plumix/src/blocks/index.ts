@@ -5,41 +5,39 @@
  * `@plumix/blocks` package. Consumers (plugins, themes, the user's app)
  * import from `plumix/blocks`; `@plumix/blocks` is never a direct
  * dependency in their `package.json`.
- *
- * Mirrors the convention already used by `plumix/theme` re-exporting
- * `defineTheme` from `@plumix/core`.
  */
 
 export {
   BlockContentValidationError,
-  BlockRegistrationError,
-  EntryContent,
-  MarkRegistrationError,
   coreBlocks,
   coreMarks,
+  createBlockRegistry,
   defineBlock,
-  defineMark,
-  mergeBlockRegistry,
-  mergeMarkRegistry,
+  isEntryContent,
+  isBlockNodeArray,
   paragraphBlock,
+  renderBlockTree,
+  resolveBlockTransforms,
+  expandBlockVariations,
+  validateEntryContent,
 } from "@plumix/blocks";
 export type {
-  BlockAttributeSchema,
-  BlockComponent,
   BlockContext,
-  BlockProps,
+  BlockInput,
+  BlockInputOption,
+  BlockNode,
+  BlockNodeComponent,
+  BlockNodeRenderProps,
   BlockRegistry,
+  BlockRenderHooks,
   BlockSpec,
-  EntryContentProps,
-  LazyRef,
-  MarkComponent,
-  MarkProps,
-  MarkRegistry,
+  BlockTransformFrom,
+  BlockTransformTo,
+  BlockTransforms,
+  BlockVariation,
+  EntryContent,
+  InsertableBlockEntry,
   MarkSpec,
-  MergeBlockRegistryInput,
-  MergeMarkRegistryInput,
-  ResolvedBlockSpec,
-  ResolvedMarkSpec,
-  TiptapMark,
-  TiptapNode,
+  RenderBlockTreeOptions,
+  ResolvedTransformTarget,
 } from "@plumix/blocks";

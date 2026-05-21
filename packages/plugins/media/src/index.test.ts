@@ -9,12 +9,11 @@ async function install() {
 }
 
 describe("@plumix/plugin-media — registration", () => {
-  test("contributes six media/* block specs", async () => {
+  test("contributes five media/* block specs", async () => {
     const { registry } = await install();
     const blockNames = Array.from(registry.blockSpecs.keys()).sort();
     expect(blockNames).toEqual([
       "media/audio",
-      "media/embed",
       "media/file",
       "media/gallery",
       "media/image",
@@ -30,7 +29,6 @@ describe("@plumix/plugin-media — registration", () => {
       "media/video",
       "media/audio",
       "media/file",
-      "media/embed",
     ]) {
       const entry = registry.blockSpecs.get(name);
       expect(entry?.registeredBy).toBe("media");

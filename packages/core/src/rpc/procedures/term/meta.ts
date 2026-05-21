@@ -12,6 +12,7 @@ import {
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
   validateMetaReferencesForRpc,
 } from "../../meta/core.js";
+import { assertMetaCapabilities } from "../entry/meta.js";
 
 export type { MetaChanges as TermMetaChanges } from "../../meta/core.js";
 
@@ -39,6 +40,24 @@ export async function validateTermMetaReferences(
     ctx,
     (key) => findTermMetaField(ctx.plugins, taxonomy, key),
     patch,
+    errors,
+  );
+}
+
+/** Mirror of `assertEntryMetaCapabilities` for the term meta surface. */
+export function assertTermMetaCapabilities(
+  registry: PluginRegistry,
+  taxonomy: string,
+  patch: MetaPatch,
+  auth: { can(capability: string): boolean },
+  errors: {
+    FORBIDDEN: (args: { data: { capability: string } }) => Error;
+  },
+): void {
+  assertMetaCapabilities(
+    patch,
+    (key) => findTermMetaField(registry, taxonomy, key),
+    auth,
     errors,
   );
 }

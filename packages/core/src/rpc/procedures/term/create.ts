@@ -4,6 +4,7 @@ import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { taxonomyCapability } from "./helpers.js";
 import {
+  assertTermMetaCapabilities,
   decodeMetaBag,
   loadTermMeta,
   sanitizeMetaForRpc,
@@ -53,6 +54,13 @@ export const create = base
       errors,
     );
     if (metaPatch) {
+      assertTermMetaCapabilities(
+        context.plugins,
+        filtered.taxonomy,
+        metaPatch,
+        context.auth,
+        errors,
+      );
       await validateTermMetaReferences(
         context,
         filtered.taxonomy,

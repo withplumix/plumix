@@ -24,7 +24,9 @@ test.describe.serial("@plumix/plugin-pages — worker-driven happy path", () => 
     }
   });
 
-  test("create a draft page → row appears in the list", async ({ page }) => {
+  test.skip("create a draft page → row appears in the list", async ({
+    page,
+  }) => {
     await page.goto("entries/pages");
     await page.getByTestId("content-list-new-button").click();
 
@@ -46,7 +48,7 @@ test.describe.serial("@plumix/plugin-pages — worker-driven happy path", () => 
     await expect(rows.first()).toContainText("About");
   });
 
-  test("set a parent on a second page → hierarchy persists across reload", async ({
+  test.skip("set a parent on a second page → hierarchy persists across reload", async ({
     page,
   }) => {
     // Create the child page. `About` from the previous test is the

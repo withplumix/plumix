@@ -280,6 +280,41 @@ describe("entryMetaBoxesForType", () => {
     const source: PlumixManifest = {};
     expect(entryMetaBoxesForType("post", [], source)).toEqual([]);
   });
+
+  test("hides capability-gated fields from low-cap viewers", () => {
+    const source: PlumixManifest = {
+      entryMetaBoxes: [
+        box("bio", {
+          fields: [
+            {
+              key: "headline",
+              label: "Headline",
+              type: "string",
+              inputType: "text",
+            },
+            {
+              key: "secret",
+              label: "Secret",
+              type: "string",
+              inputType: "text",
+              capability: "entry:post:view_secret",
+            },
+          ],
+        }),
+      ],
+    };
+    const lowCap = entryMetaBoxesForType("post", [], source);
+    expect(lowCap[0]?.fields.map((f) => f.key)).toEqual(["headline"]);
+    const highCap = entryMetaBoxesForType(
+      "post",
+      ["entry:post:view_secret"],
+      source,
+    );
+    expect(highCap[0]?.fields.map((f) => f.key)).toEqual([
+      "headline",
+      "secret",
+    ]);
+  });
 });
 
 describe("visibleUserMetaBoxes", () => {

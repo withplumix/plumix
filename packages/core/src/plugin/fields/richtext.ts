@@ -9,6 +9,7 @@ export interface RichtextFieldOptions {
   readonly description?: string;
   readonly default?: unknown;
   readonly span?: MetaBoxFieldSpan;
+  readonly capability?: string;
   readonly marks?: readonly string[];
   readonly nodes?: readonly string[];
   readonly blocks?: readonly string[];
@@ -35,6 +36,7 @@ export function richtext(options: RichtextFieldOptions): RichtextMetaBoxField {
     description: options.description,
     default: options.default,
     span: options.span,
+    capability: options.capability,
     sanitize: walkRichtextDoc({
       marks: options.marks,
       nodes: options.nodes,

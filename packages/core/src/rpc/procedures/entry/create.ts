@@ -15,6 +15,7 @@ import {
   loadReadableParent,
 } from "./lifecycle.js";
 import {
+  assertEntryMetaCapabilities,
   decodeMetaBag,
   loadEntryMeta,
   sanitizeMetaForRpc,
@@ -74,7 +75,7 @@ export const create = base
     assertContentWithinByteCap(filtered.content, errors);
     assertContentValidAgainstRegistries(
       filtered.content,
-      { blocks: context.blocks, marks: context.marks },
+      { blocks: context.blocks },
       errors,
     );
 
@@ -87,6 +88,13 @@ export const create = base
       errors,
     );
     if (metaPatch) {
+      assertEntryMetaCapabilities(
+        context.plugins,
+        filtered.type,
+        metaPatch,
+        context.auth,
+        errors,
+      );
       await validateEntryMetaReferences(
         context,
         filtered.type,

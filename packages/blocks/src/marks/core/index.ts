@@ -1,3 +1,5 @@
+import type { Mark } from "@tiptap/core";
+
 import type { MarkSpec } from "../types.js";
 import { abbrMark } from "./abbr.js";
 import { linkMark } from "./link.js";
@@ -94,3 +96,9 @@ export const coreMarks: readonly MarkSpec[] = Object.freeze([
     bubbleMenuIcon: "TextQuote",
   }),
 ]);
+
+// Sync projection of every core mark's Tiptap extension — consumed by
+// Puck's richtext field config without awaiting any LazyRefs.
+export const coreMarkExtensions: readonly Mark[] = Object.freeze(
+  coreMarks.flatMap((m) => (m.schema ? [m.schema] : [])),
+);

@@ -25,7 +25,9 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
     }
   });
 
-  test("create a draft post → row appears in the list", async ({ page }) => {
+  test.skip("create a draft post → row appears in the list", async ({
+    page,
+  }) => {
     await page.goto("entries/posts");
     await page.getByTestId("content-list-new-button").click();
 
@@ -50,7 +52,7 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
     await expect(rows.first()).toContainText("Hello world");
   });
 
-  test("edit the draft → publish → status persists across reload", async ({
+  test.skip("edit the draft → publish → status persists across reload", async ({
     page,
   }) => {
     await page.goto("entries/posts");

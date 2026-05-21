@@ -1,133 +1,105 @@
 import { describe, expect, test } from "vitest";
 
-import type { BlockRegistry, MarkRegistry } from "./index.js";
-import {
-  coreBlocks,
-  coreMarks,
-  mergeBlockRegistry,
-  mergeMarkRegistry,
-} from "./index.js";
-import { validateBlockContent } from "./validate-content.js";
+import { validateEntryContent } from "./validate-content.js";
 
-const registriesPromise = (async () => ({
-  blocks: await mergeBlockRegistry({
-    core: coreBlocks,
-    plugins: [],
-    themeOverrides: {},
-    themeId: null,
-  }),
-  marks: await mergeMarkRegistry({
-    core: coreMarks,
-    plugins: [],
-    themeOverrides: {},
-    themeId: null,
-  }),
-}))();
+const registry = {
+  has(name: string): boolean {
+    return name === "core/heading" || name === "core/group";
+  },
+};
 
-async function getRegistries(): Promise<{
-  readonly blocks: BlockRegistry;
-  readonly marks: MarkRegistry;
-}> {
-  return registriesPromise;
-}
-
-describe("validateBlockContent — happy path", () => {
-  test("accepts a minimal paragraph doc", async () => {
-    const r = await getRegistries();
-    const result = validateBlockContent(
+describe("validateEntryContent", () => {
+  test("accepts a valid leaf-block envelope", () => {
+    const result = validateEntryContent(
       {
-        type: "doc",
-        content: [
-          {
-            type: "core/paragraph",
-            content: [{ type: "text", text: "hi" }],
-          },
+        version: "plumix.v2",
+        blocks: [
+          { id: "h1", name: "core/heading", attrs: { level: 2, text: "Hi" } },
         ],
       },
-      r,
+      registry,
     );
-    expect(result.ok).toBe(true);
+    expect(result).toEqual({ ok: true });
   });
-});
 
-describe("validateBlockContent — unknown_mark", () => {
-  test("rejects a text leaf carrying an unknown mark type", async () => {
-    const r = await getRegistries();
-    const result = validateBlockContent(
+  test("rejects an envelope with an unregistered top-level block name", () => {
+    const result = validateEntryContent(
       {
-        type: "doc",
-        content: [
-          {
-            type: "core/paragraph",
-            content: [
-              {
-                type: "text",
-                text: "hi",
-                marks: [{ type: "blink-tag-from-the-90s" }],
-              },
-            ],
-          },
-        ],
+        version: "plumix.v2",
+        blocks: [{ id: "x1", name: "acme/widget", attrs: {} }],
       },
-      r,
+      registry,
     );
     expect(result.ok).toBe(false);
-    if (result.ok) throw new Error("expected failure");
-    expect(result.errors[0]?.code).toBe("unknown_mark");
-    expect(result.errors[0]?.markName).toBe("blink-tag-from-the-90s");
-    expect(result.errors[0]?.path).toContain(".marks[0]");
+    if (result.ok) return;
+    expect(result.errors).toEqual([
+      {
+        code: "unknown_block_type",
+        message: 'Unknown block type "acme/widget" at blocks[0].',
+        path: "blocks[0]",
+        nodeName: "acme/widget",
+      },
+    ]);
   });
 
-  test("accepts text with marks present in the registry", async () => {
-    const r = await getRegistries();
-    const result = validateBlockContent(
+  test("rejects an unregistered block name nested inside a slot child", () => {
+    const result = validateEntryContent(
       {
-        type: "doc",
-        content: [
+        version: "plumix.v2",
+        blocks: [
           {
-            type: "core/paragraph",
-            content: [
-              {
-                type: "text",
-                text: "hi",
-                marks: [{ type: "bold" }, { type: "italic" }],
-              },
-            ],
+            id: "g1",
+            name: "core/group",
+            attrs: {
+              content: [{ id: "x1", name: "acme/widget", attrs: {} }],
+            },
           },
         ],
       },
-      r,
-    );
-    expect(result.ok).toBe(true);
-  });
-});
-
-describe("validateBlockContent — unknown_block_type", () => {
-  test("rejects an unknown block name with a path pointing at the offender", async () => {
-    const r = await getRegistries();
-    const result = validateBlockContent(
-      {
-        type: "doc",
-        content: [
-          {
-            type: "core/quote",
-            content: [
-              {
-                type: "core/paragraph",
-                content: [{ type: "text", text: "ok" }],
-              },
-              { type: "made-up/block", content: [] },
-            ],
-          },
-        ],
-      },
-      r,
+      registry,
     );
     expect(result.ok).toBe(false);
-    if (result.ok) throw new Error("expected failure");
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]?.code).toBe("unknown_block_type");
-    expect(result.errors[0]?.path).toBe("content[0].content[1]");
-    expect(result.errors[0]?.nodeName).toBe("made-up/block");
+    if (result.ok) return;
+    expect(result.errors).toEqual([
+      {
+        code: "unknown_block_type",
+        message: 'Unknown block type "acme/widget" at blocks[0].content[0].',
+        path: "blocks[0].content[0]",
+        nodeName: "acme/widget",
+      },
+    ]);
+  });
+
+  test("accepts an empty blocks array", () => {
+    const result = validateEntryContent(
+      { version: "plumix.v2", blocks: [] },
+      registry,
+    );
+    expect(result).toEqual({ ok: true });
+  });
+
+  test("accepts a nested wrapper subtree where every name is registered", () => {
+    const result = validateEntryContent(
+      {
+        version: "plumix.v2",
+        blocks: [
+          {
+            id: "g1",
+            name: "core/group",
+            attrs: {
+              content: [
+                {
+                  id: "h1",
+                  name: "core/heading",
+                  attrs: { level: 3, text: "Inside group" },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      registry,
+    );
+    expect(result).toEqual({ ok: true });
   });
 });

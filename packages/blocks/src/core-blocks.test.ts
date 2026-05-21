@@ -1,55 +1,99 @@
 import { describe, expect, test } from "vitest";
 
+import { createBlockRegistry } from "./block-registry.js";
 import { coreBlocks } from "./core-blocks.js";
 
-describe("coreBlocks catalogue", () => {
-  test("ships layout primitives alongside paragraph and heading", () => {
+describe("coreBlocks", () => {
+  test("includes the canonical typography and layout blocks", () => {
+    const names = new Set(coreBlocks.map((b) => b.name));
+    expect(names.has("core/heading")).toBe(true);
+    expect(names.has("core/paragraph")).toBe(true);
+    expect(names.has("core/quote")).toBe(true);
+    expect(names.has("core/code")).toBe(true);
+    expect(names.has("core/group")).toBe(true);
+    expect(names.has("core/columns")).toBe(true);
+    expect(names.has("core/table")).toBe(true);
+    expect(names.has("core/list")).toBe(true);
+  });
+
+  test("declares unique block names with no duplicates", () => {
     const names = coreBlocks.map((b) => b.name);
-    expect(names).toEqual(
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  test("layout-category blocks include the migrated wrappers + spacer", () => {
+    const layoutNames = coreBlocks
+      .filter((b) => b.category === "layout")
+      .map((b) => b.name);
+    expect(layoutNames).toEqual(
       expect.arrayContaining([
-        "core/paragraph",
-        "core/heading",
         "core/group",
         "core/columns",
-        "core/column",
+        "core/details",
+        "core/callout",
+        "core/spacer",
       ]),
     );
   });
 
-  test("ships the list family and description-list trio", () => {
-    const names = coreBlocks.map((b) => b.name);
-    expect(names).toEqual(
+  test("interactive-category blocks include button + buttons", () => {
+    const interactiveNames = coreBlocks
+      .filter((b) => b.category === "interactive")
+      .map((b) => b.name);
+    expect(interactiveNames).toEqual(
+      expect.arrayContaining(["core/button", "core/buttons"]),
+    );
+  });
+
+  test("text-category blocks include the description-list family and table", () => {
+    const textNames = coreBlocks
+      .filter((b) => b.category === "text")
+      .map((b) => b.name);
+    expect(textNames).toEqual(
       expect.arrayContaining([
-        "core/list",
-        "core/list-ordered",
-        "core/list-item",
         "core/description-list",
         "core/description-term",
         "core/description-detail",
+        "core/table",
       ]),
     );
   });
 
-  test("layout blocks declare the `layout` category", () => {
-    const layoutBlocks = coreBlocks.filter((b) => b.category === "layout");
-    const names = layoutBlocks.map((b) => b.name);
-    expect(names).toEqual(
-      expect.arrayContaining(["core/group", "core/columns", "core/column"]),
-    );
+  test("seeds a BlockRegistry losslessly (size matches input length)", () => {
+    const registry = createBlockRegistry(coreBlocks);
+    expect(registry.size).toBe(coreBlocks.length);
+    for (const spec of coreBlocks) {
+      expect(registry.get(spec.name)).toBe(spec);
+    }
   });
 
-  test("interactive blocks declare the `interactive` category", () => {
-    const interactiveBlocks = coreBlocks.filter(
-      (b) => b.category === "interactive",
+  test("does not include the html block (operators opt in explicitly)", () => {
+    const names = new Set(coreBlocks.map((b) => b.name));
+    expect(names.has("core/html")).toBe(false);
+  });
+
+  test("declares `inserter: false` on every spec that only makes sense inside a parent", () => {
+    const contentOnlyNames = new Set([
+      "core/table-header-row",
+      "core/table-body-row",
+      "core/table-header-cell",
+      "core/table-cell",
+      "core/list-item",
+      "core/description-term",
+      "core/description-detail",
+    ]);
+
+    for (const spec of coreBlocks) {
+      if (contentOnlyNames.has(spec.name)) {
+        expect(spec.inserter).toBe(false);
+      } else {
+        expect(spec.inserter).not.toBe(false);
+      }
+    }
+
+    const hidden = new Set(
+      coreBlocks.filter((s) => s.inserter === false).map((s) => s.name),
     );
-    const names = interactiveBlocks.map((b) => b.name);
-    expect(names).toEqual(
-      expect.arrayContaining([
-        "core/buttons",
-        "core/button",
-        "core/details",
-        "core/callout",
-      ]),
-    );
+    expect(hidden).toEqual(contentOnlyNames);
   });
 });

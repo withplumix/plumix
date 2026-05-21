@@ -1,140 +1,153 @@
 import { describe, expect, test } from "vitest";
 
-import type { BlockRegistry, ResolvedBlockSpec } from "./types.js";
-import { resolveTransformTargets } from "./transforms.js";
+import type { BlockSpec } from "./block-registry.js";
+import { resolveBlockTransforms } from "./transforms.js";
 
-function spec(
-  partial: Partial<ResolvedBlockSpec> & { name: string; title: string },
-): ResolvedBlockSpec {
-  const out: Partial<ResolvedBlockSpec> = {
-    name: partial.name,
-    title: partial.title,
-    component: () => null,
-    registeredBy: null,
-    transforms: partial.transforms,
-  };
-  return out as ResolvedBlockSpec;
+const noopRender: BlockSpec["render"] = () => null;
+
+function spec(name: string, transforms?: BlockSpec["transforms"]): BlockSpec {
+  return { name, render: noopRender, transforms };
 }
 
-function fakeRegistry(specs: readonly ResolvedBlockSpec[]): BlockRegistry {
-  const map = new Map(specs.map((s) => [s.name, s]));
-  return {
-    get: (n) => map.get(n),
-    has: (n) => map.has(n),
-    size: map.size,
-    [Symbol.iterator]: () => map.entries(),
-  } satisfies BlockRegistry;
-}
+describe("resolveBlockTransforms", () => {
+  test("returns [] for an unknown source block", () => {
+    expect(resolveBlockTransforms("unknown/block", [])).toEqual([]);
+  });
 
-describe("resolveTransformTargets", () => {
-  test("returns transforms.to entries when source declares them", () => {
-    const heading = spec({ name: "core/heading", title: "Heading" });
-    const paragraph = spec({
-      name: "core/paragraph",
-      title: "Paragraph",
-      transforms: { to: [{ target: "core/heading" }] },
-    });
-    const registry = fakeRegistry([paragraph, heading]);
-    const targets = resolveTransformTargets("core/paragraph", registry);
+  test("resolves forward `transforms.to` targets declared by the source spec; priority defaults to 0", () => {
+    const specs = [
+      spec("core/heading", {
+        to: [{ target: "core/paragraph" }],
+      }),
+      spec("core/paragraph"),
+    ];
+
+    const targets = resolveBlockTransforms("core/heading", specs);
+
+    expect(targets.map((t) => t.target)).toEqual(["core/paragraph"]);
+    expect(targets[0]?.priority).toBe(0);
+  });
+
+  test("resolves inverse `transforms.from` declared by other specs (symmetric inverse)", () => {
+    const specs = [
+      spec("core/paragraph"),
+      spec("core/heading", {
+        from: [{ source: "core/paragraph" }],
+      }),
+    ];
+
+    const targets = resolveBlockTransforms("core/paragraph", specs);
+
     expect(targets.map((t) => t.target)).toEqual(["core/heading"]);
   });
 
-  test("includes targets discovered through other blocks' transforms.from", () => {
-    const heading = spec({
-      name: "core/heading",
-      title: "Heading",
-      transforms: { from: [{ source: "core/paragraph" }] },
-    });
-    const paragraph = spec({ name: "core/paragraph", title: "Paragraph" });
-    const registry = fakeRegistry([paragraph, heading]);
-    const targets = resolveTransformTargets("core/paragraph", registry);
-    expect(targets.map((t) => t.target)).toEqual(["core/heading"]);
-  });
+  test("dedupes by target — inverse beats forward when its priority is higher", () => {
+    const specs = [
+      spec("core/quote", {
+        to: [{ target: "core/paragraph" }],
+        priority: 5,
+      }),
+      spec("core/paragraph", {
+        from: [{ source: "core/quote" }],
+        priority: 10,
+      }),
+    ];
 
-  test("dedupes by target name and orders by priority desc", () => {
-    const heading = spec({
-      name: "core/heading",
-      title: "Heading",
-      transforms: { priority: 10, from: [{ source: "core/paragraph" }] },
-    });
-    const quote = spec({
-      name: "core/quote",
-      title: "Quote",
-      transforms: { priority: 5, from: [{ source: "core/paragraph" }] },
-    });
-    const paragraph = spec({
-      name: "core/paragraph",
-      title: "Paragraph",
-      transforms: {
-        priority: 100,
-        to: [{ target: "core/heading" }, { target: "core/quote" }],
-      },
-    });
-    const registry = fakeRegistry([paragraph, heading, quote]);
-    const names = resolveTransformTargets("core/paragraph", registry).map(
-      (t) => t.target,
-    );
-    // higher priority wins on dedupe: paragraph.priority=100 entries
-    // first, then by target name (stable)
-    expect(names).toEqual(["core/heading", "core/quote"]);
-  });
+    const targets = resolveBlockTransforms("core/quote", specs);
 
-  test("returns [] when the source spec has no transforms and no other block points to it", () => {
-    const paragraph = spec({ name: "core/paragraph", title: "Paragraph" });
-    const registry = fakeRegistry([paragraph]);
-    expect(resolveTransformTargets("core/paragraph", registry)).toEqual([]);
-  });
-
-  test("skips targets that no longer exist in the registry", () => {
-    const paragraph = spec({
-      name: "core/paragraph",
-      title: "Paragraph",
-      transforms: { to: [{ target: "core/missing-from-registry" }] },
-    });
-    const registry = fakeRegistry([paragraph]);
-    expect(
-      resolveTransformTargets("core/paragraph", registry).map((t) => t.target),
-    ).toEqual([]);
-  });
-
-  test("returns [] for unknown source name", () => {
-    const paragraph = spec({ name: "core/paragraph", title: "Paragraph" });
-    const registry = fakeRegistry([paragraph]);
-    expect(resolveTransformTargets("core/unknown", registry)).toEqual([]);
-  });
-
-  test("from-side beats to-side when its priority is higher", () => {
-    // paragraph declares heading at priority 1; heading declares
-    // accepts-paragraph at priority 99 with its own mapAttrs. The
-    // higher-priority side's entry survives the dedupe.
-    const headingMapper = () => ({ level: 9 });
-    const paragraphMapper = () => ({ level: 2 });
-    const heading = spec({
-      name: "core/heading",
-      title: "Heading",
-      transforms: {
-        priority: 99,
-        from: [{ source: "core/paragraph", mapAttrs: headingMapper }],
-      },
-    });
-    const paragraph = spec({
-      name: "core/paragraph",
-      title: "Paragraph",
-      transforms: {
-        priority: 1,
-        to: [{ target: "core/heading", mapAttrs: paragraphMapper }],
-      },
-    });
-    const registry = fakeRegistry([paragraph, heading]);
-    const targets = resolveTransformTargets("core/paragraph", registry);
     expect(targets).toHaveLength(1);
-    expect(targets[0]?.target).toBe("core/heading");
-    // The from-side entry is the synthesized `{ target: candidate.name }`
-    // without mapAttrs (the spec author's mapAttrs lives on the
-    // candidate's `transforms.from[i].mapAttrs`, which the resolver
-    // would have to carry through to surface it). For this slice the
-    // synthesized entry is `{ target }` only — assert that the
-    // priority-winning side replaced the to-side's `paragraphMapper`.
-    expect(targets[0]?.mapAttrs).not.toBe(paragraphMapper);
+    expect(targets[0]?.target).toBe("core/paragraph");
+    expect(targets[0]?.priority).toBe(10);
+  });
+
+  test("dedupes by target — forward beats inverse when its priority is higher", () => {
+    const forwardMap = (a: Readonly<Record<string, unknown>>) => ({
+      x: a.text,
+    });
+    const specs = [
+      spec("core/quote", {
+        to: [{ target: "core/paragraph", mapAttrs: forwardMap }],
+        priority: 50,
+      }),
+      spec("core/paragraph", {
+        from: [{ source: "core/quote" }],
+        priority: 5,
+      }),
+    ];
+
+    const targets = resolveBlockTransforms("core/quote", specs);
+
+    expect(targets).toHaveLength(1);
+    expect(targets[0]?.target).toBe("core/paragraph");
+    expect(targets[0]?.priority).toBe(50);
+    expect(targets[0]?.mapAttrs).toBe(forwardMap);
+  });
+
+  test("preserves the `mode` discriminator from forward transforms.to entries", () => {
+    const specs = [
+      spec("core/paragraph", {
+        to: [{ target: "core/list", mode: "wrap" }],
+      }),
+      spec("core/list"),
+    ];
+
+    const targets = resolveBlockTransforms("core/paragraph", specs);
+
+    expect(targets[0]?.mode).toBe("wrap");
+  });
+
+  test("filters out targets that are not in the specs list", () => {
+    const specs = [
+      spec("core/heading", {
+        to: [{ target: "core/paragraph" }, { target: "core/missing" }],
+      }),
+      spec("core/paragraph"),
+    ];
+
+    const targets = resolveBlockTransforms("core/heading", specs);
+
+    expect(targets.map((t) => t.target)).toEqual(["core/paragraph"]);
+  });
+
+  test("sorts targets by descending priority", () => {
+    const specs = [
+      spec("core/heading", {
+        to: [{ target: "core/paragraph" }, { target: "core/quote" }],
+        priority: 5,
+      }),
+      spec("core/paragraph"),
+      spec("core/quote", {
+        from: [{ source: "core/heading" }],
+        priority: 50,
+      }),
+    ];
+
+    const targets = resolveBlockTransforms("core/heading", specs);
+
+    expect(targets.map((t) => t.target)).toEqual([
+      "core/quote",
+      "core/paragraph",
+    ]);
+  });
+
+  test("forwards the mapAttrs function through both forward and inverse paths", () => {
+    const forwardMap = (a: Readonly<Record<string, unknown>>) => ({ x: a.x });
+    const inverseMap = (a: Readonly<Record<string, unknown>>) => ({ y: a.x });
+    const specs = [
+      spec("core/heading", {
+        to: [{ target: "core/paragraph", mapAttrs: forwardMap }],
+      }),
+      spec("core/paragraph"),
+      spec("core/quote", {
+        from: [{ source: "core/heading", mapAttrs: inverseMap }],
+      }),
+    ];
+
+    const targets = resolveBlockTransforms("core/heading", specs);
+
+    const para = targets.find((t) => t.target === "core/paragraph");
+    const quote = targets.find((t) => t.target === "core/quote");
+    expect(para?.mapAttrs).toBe(forwardMap);
+    expect(quote?.mapAttrs).toBe(inverseMap);
   });
 });

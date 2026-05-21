@@ -8,6 +8,7 @@ export interface TermListFieldOptions {
   readonly description?: string;
   readonly default?: readonly string[];
   readonly span?: MetaBoxFieldSpan;
+  readonly capability?: string;
   readonly termTaxonomies: readonly string[];
   /** Max items allowed in the array. Omitted = unbounded. */
   readonly max?: number;
@@ -39,5 +40,6 @@ export function termList(options: TermListFieldOptions): TermListMetaBoxField {
     description: options.description,
     default: options.default,
     span: options.span,
+    capability: options.capability,
   };
 }

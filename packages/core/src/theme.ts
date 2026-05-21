@@ -1,8 +1,4 @@
-import type {
-  BlockComponent,
-  MarkComponent,
-  ThemeTokens,
-} from "@plumix/blocks";
+import type { ThemeTokens } from "@plumix/blocks";
 
 import type { ThemeContextExtensions } from "./plugin/provides-context.js";
 import { ThemeError } from "./theme-errors.js";
@@ -29,28 +25,11 @@ export interface ThemeDescriptor {
    */
   readonly setup?: (ctx: ThemeSetupContext) => void | Promise<void>;
   /**
-   * Map of block name → React component. Overrides the resolved block's
-   * `component` only; schema/attributes/editor stay author-owned so
-   * stored content keeps validating. `buildApp` flattens overrides from
-   * `config.themes` (later themes win per-name) into a single map and
-   * hands it to `mergeBlockRegistry`.
-   */
-  readonly blocks?: Readonly<Record<string, BlockComponent>>;
-  /**
-   * Map of mark name → React component. Same precedence and override
-   * semantics as `blocks` — `buildApp` flattens across `config.themes`,
-   * later themes win, schema stays author-owned.
-   */
-  readonly marks?: Readonly<Record<string, MarkComponent>>;
-  /**
    * Design-token vocabulary the theme exposes to block style picks.
    * Authored values like `attrs.style.color.background = "primary"`
-   * resolve through this map at render time via `resolveBlockStyles` —
-   * a registered slug produces a stable utility class, a missing slug
-   * degrades to inline `style` carrying the literal slug. The Vite
-   * plugin also reads this at build time to populate
-   * `virtual:plumix/blocks/tokens.css` with CSS variables and the
-   * matching utility classes the resolver emits.
+   * resolve at render time through the universal Style slot in
+   * `renderBlockTree`. The Vite plugin also reads this at build time to
+   * populate `virtual:plumix/blocks/tokens.css` with CSS variables.
    */
   readonly tokens?: ThemeTokens;
 }
@@ -64,7 +43,6 @@ const TOKEN_SLUG_RE = /^[a-z][a-z0-9-]*$/;
 // string state. Operator-controlled tokens still flow into the bundle
 // verbatim, so any of these would let a hostile/careless theme rewrite
 // arbitrary rules.
-// eslint-disable-next-line no-control-regex
 const TOKEN_VALUE_FORBIDDEN_CHARS = /[;{}\\\n\r]|\/\*|\*\//;
 
 export function defineTheme(descriptor: ThemeDescriptor): ThemeDescriptor {

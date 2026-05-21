@@ -8,6 +8,7 @@ export interface EntryListFieldOptions {
   readonly description?: string;
   readonly default?: readonly string[];
   readonly span?: MetaBoxFieldSpan;
+  readonly capability?: string;
   readonly entryTypes: readonly string[];
   readonly includeTrashed?: boolean;
   /** Max items allowed in the array. Omitted = unbounded. */
@@ -43,5 +44,6 @@ export function entryList(
     description: options.description,
     default: options.default,
     span: options.span,
+    capability: options.capability,
   };
 }

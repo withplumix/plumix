@@ -1,7 +1,9 @@
 import { describe, expect, test } from "vitest";
 
-import { EMPTY_BLOCK_REGISTRY } from "../index.js";
+import { createBlockRegistry } from "../index.js";
 import { buildHtmlAllowlist } from "./build-allowlist.js";
+
+const EMPTY_BLOCK_REGISTRY = createBlockRegistry([]);
 
 describe("buildHtmlAllowlist", () => {
   test("baseline contains the standard formatting tags", () => {

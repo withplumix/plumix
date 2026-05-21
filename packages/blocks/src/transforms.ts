@@ -1,51 +1,57 @@
-import type { BlockRegistry, BlockTransformTo } from "./types.js";
+import type { BlockShortcutMode, BlockSpec } from "./block-registry.js";
 
-/**
- * Resolve the set of valid transform targets for the block named
- * `source`. The BlockMenu's "Transform to…" submenu renders this
- * list verbatim.
- *
- * Pulls from both sides of the relationship: `source.transforms.to`
- * entries the source spec authored, plus every other block whose
- * `transforms.from` lists `source`. Higher priority wins on dedupe —
- * same target surfacing from both sides keeps the entry whose owning
- * spec declared a higher `transforms.priority`.
- */
-export function resolveTransformTargets(
+type MapAttrs = (
+  attrs: Readonly<Record<string, unknown>>,
+) => Readonly<Record<string, unknown>>;
+
+export interface ResolvedTransformTarget {
+  readonly target: string;
+  readonly mapAttrs?: MapAttrs;
+  readonly mode?: BlockShortcutMode;
+  readonly priority: number;
+}
+
+export function resolveBlockTransforms(
   source: string,
-  registry: BlockRegistry,
-): readonly BlockTransformTo[] {
-  const sourceSpec = registry.get(source);
+  specs: readonly BlockSpec[],
+): readonly ResolvedTransformTarget[] {
+  const sourceSpec = specs.find((spec) => spec.name === source);
   if (!sourceSpec) return [];
 
-  interface Entry {
-    transform: BlockTransformTo;
-    priority: number;
-  }
-  const byTarget = new Map<string, Entry>();
-  const record = (transform: BlockTransformTo, priority: number): void => {
-    const existing = byTarget.get(transform.target);
+  const byTarget = new Map<string, ResolvedTransformTarget>();
+  const record = (
+    target: string,
+    mapAttrs: MapAttrs | undefined,
+    mode: BlockShortcutMode | undefined,
+    priority: number,
+  ): void => {
+    const existing = byTarget.get(target);
     if (!existing || priority > existing.priority) {
-      byTarget.set(transform.target, { transform, priority });
+      byTarget.set(target, { target, mapAttrs, mode, priority });
     }
   };
 
   const sourcePriority = sourceSpec.transforms?.priority ?? 0;
   for (const entry of sourceSpec.transforms?.to ?? []) {
-    record(entry, sourcePriority);
+    record(entry.target, entry.mapAttrs, entry.mode, sourcePriority);
   }
 
-  for (const [, candidate] of registry) {
+  for (const candidate of specs) {
     if (candidate.name === source) continue;
-    const acceptsSource = candidate.transforms?.from?.some(
+    const fromRule = candidate.transforms?.from?.find(
       (rule) => rule.source === source,
     );
-    if (!acceptsSource) continue;
-    record({ target: candidate.name }, candidate.transforms?.priority ?? 0);
+    if (!fromRule) continue;
+    record(
+      candidate.name,
+      fromRule.mapAttrs,
+      undefined,
+      candidate.transforms?.priority ?? 0,
+    );
   }
 
+  const known = new Set(specs.map((spec) => spec.name));
   return Array.from(byTarget.values())
-    .filter(({ transform }) => registry.has(transform.target))
-    .sort((a, b) => b.priority - a.priority)
-    .map(({ transform }) => transform);
+    .filter((entry) => known.has(entry.target))
+    .sort((a, b) => b.priority - a.priority);
 }

@@ -1,12 +1,4 @@
-import type {
-  BlockAttributeSchema,
-  BlockKeyboardShortcut,
-  BlockMarkdownShortcut,
-  BlockSpec,
-  BlockSupports,
-  BlockVariation,
-  MarkSpec,
-} from "@plumix/blocks";
+import type { BlockSpec, BlockVariation, MarkSpec } from "@plumix/blocks";
 
 import type {
   EntryTypeCapabilityOverrides,
@@ -191,6 +183,16 @@ export interface MetaBoxFieldBase {
    * width. See `MetaBoxFieldSpan` for the responsive object form.
    */
   readonly span?: MetaBoxFieldSpan;
+  /**
+   * Capability gate for the individual field. When set, the admin hides
+   * the field from viewers whose capability set lacks it. The server
+   * rejects entry/term/user writes that include the field's key — both
+   * upserts and deletes count, so a viewer can't blank a value they
+   * can't see. Gating applies at the top-level field only; capabilities
+   * on repeater subfields are ignored (a row's gate is the parent
+   * repeater field's gate). Defaults to no gating.
+   */
+  readonly capability?: string;
 }
 
 /**
@@ -1263,6 +1265,10 @@ export interface MetaBoxFieldManifestEntry {
    * through this list when rendering each row.
    */
   readonly subFields?: readonly EntryMetaBoxFieldManifestEntry[];
+  /**
+   * Capability gate for the individual field. See `MetaBoxFieldBase.capability`.
+   */
+  readonly capability?: string;
 }
 
 /**
@@ -1405,16 +1411,7 @@ export interface BlockManifestEntry {
   readonly description?: string;
   readonly keywords?: readonly string[];
   readonly inserter?: boolean;
-  readonly attributes?: Readonly<Record<string, BlockAttributeSchema>>;
-  readonly supports?: BlockSupports;
   readonly variations?: readonly BlockVariation[];
-  readonly keyboardShortcuts?: readonly BlockKeyboardShortcut[];
-  readonly markdownShortcuts?: readonly BlockMarkdownShortcut[];
-  readonly legacyAliases?: readonly string[];
-  /** Export name on the plugin's `adminEntry` module — see `BlockSpec.adminSchema`. */
-  readonly adminSchema?: string;
-  /** Export name on the plugin's `adminEntry` module — see `BlockSpec.adminEditor`. */
-  readonly adminEditor?: string;
 }
 
 export interface MarkManifestEntry {
@@ -2190,31 +2187,17 @@ function toBlockEntry(block: RegisteredBlock): BlockManifestEntry {
     description,
     keywords,
     inserter,
-    attributes,
-    supports,
     variations,
-    keyboardShortcuts,
-    markdownShortcuts,
-    legacyAliases,
-    adminSchema,
-    adminEditor,
   } = block.spec;
   return {
-    name,
-    title,
+    name: name,
+    title: title ?? name,
     category,
     icon,
     description,
     keywords,
     inserter,
-    attributes,
-    supports,
     variations,
-    keyboardShortcuts,
-    markdownShortcuts,
-    legacyAliases,
-    adminSchema,
-    adminEditor,
   };
 }
 
@@ -2283,6 +2266,7 @@ function toEntryMetaBoxFieldEntry(
     marks: view.marks,
     nodes: view.nodes,
     blocks: view.blocks,
+    capability: field.capability,
     // Repeater subfields recurse through the same projection — the
     // wire shape is uniform end to end, span dropped (rows are
     // full-width), sanitize callbacks stripped (server-only).
