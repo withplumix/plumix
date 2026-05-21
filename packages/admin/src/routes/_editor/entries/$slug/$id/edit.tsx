@@ -36,9 +36,11 @@ import "@puckeditor/core/puck.css";
 
 const EMPTY_DATA: Data = { content: [], root: {} };
 
-// 5 s batches typing bursts so quiet pauses do not pile up identical
-// revisions. WordPress defaults to 60 s.
-const AUTOSAVE_DEBOUNCE_MS = 5000;
+// 1 s batches typing bursts; the dedup snapshot in the autosave closure
+// is what actually prevents identical revisions. WordPress's 60 s
+// equivalent is overkill here because we round-trip a workers DB on
+// every save and revisions are cheap.
+const AUTOSAVE_DEBOUNCE_MS = 1000;
 
 // Keep in sync with the identical helper in _editor/entries/$slug/$id/edit.tsx.
 function isStaleConflictError(err: unknown): boolean {

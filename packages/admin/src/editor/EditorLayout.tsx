@@ -3,7 +3,14 @@ import type {
   KeyboardEvent as ReactKeyboardEvent,
   ReactNode,
 } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Dialog,
   DialogContent,
@@ -140,14 +147,15 @@ function CanvasToolbar({
     });
     onZoomChange(null);
   };
-  // When the current zoom is between presets (e.g. fit-to-screen lands
-  // at 62%), step to the next preset above or below — never get stuck
-  // at the off-preset value because +/- can't find an exact-index match.
+  // Step to the next preset strictly above/below the current zoom. The
+  // 1 % tolerance keeps a step away from an effectively-equal preset
+  // (e.g. fit-to-screen at 0.497 should still snap UP to 0.75, not
+  // shuffle to 0.5 and display the same percentage).
   const stepZoom = (delta: number): void => {
     const next =
       delta > 0
-        ? ZOOM_STEPS.find((s) => s > zoom + 0.001)
-        : [...ZOOM_STEPS].reverse().find((s) => s < zoom - 0.001);
+        ? ZOOM_STEPS.find((s) => s > zoom + 0.01)
+        : [...ZOOM_STEPS].reverse().find((s) => s < zoom - 0.01);
     if (next !== undefined) onZoomChange(next);
   };
   const firstStep = ZOOM_STEPS[0] ?? 0;
@@ -547,7 +555,11 @@ function PlumixCanvasWithSlashMenu({
   const [manualZoom, setManualZoom] = useState<number | null>(null);
   const mainRef = useRef<HTMLElement>(null);
   const [mainInnerWidth, setMainInnerWidth] = useState(0);
-  useEffect(() => {
+  // useLayoutEffect so the synchronous initial measure runs before
+  // paint — without it the canvas flashes 100% for one frame before
+  // dropping to the fit value, which races CI tests that click the
+  // zoom buttons immediately after navigation.
+  useLayoutEffect(() => {
     const el = mainRef.current;
     if (!el) return;
     const measure = (): void => {
