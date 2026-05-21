@@ -541,7 +541,7 @@ function PlumixCanvasWithSlashMenu({
   const viewportPx =
     typeof currentViewportWidth === "number"
       ? currentViewportWidth
-      : VIEWPORT_PRESETS[DEFAULT_VIEWPORT_INDEX]?.width ?? 1280;
+      : (VIEWPORT_PRESETS[DEFAULT_VIEWPORT_INDEX]?.width ?? 1280);
   // `null` keeps the canvas at fit-to-screen; an explicit number is
   // the manual override the zoom +/- buttons emit.
   const [manualZoom, setManualZoom] = useState<number | null>(null);
