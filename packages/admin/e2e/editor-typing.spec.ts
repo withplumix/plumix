@@ -159,18 +159,15 @@ test.describe("v2 editor: typing into a richtext block", () => {
     await expect(tablet).toHaveAttribute("data-active", "true");
     await expect(desktop).toHaveAttribute("data-active", "false");
 
-    // The canvas opens at fit-to-screen, which depends on the test
-    // viewport — could be anywhere between 50 % and ~100 %. Don't pin
-    // a specific initial value; just step up until the max preset and
-    // verify the display reaches 200 %, then step down to verify the
-    // direction reverses. Two clicks of zoom-in should land us at the
-    // next preset above the fit; zoom-out reverses.
+    // The canvas opens at fit-to-screen, which varies with the canvas
+    // column width — pinning a specific initial percentage is brittle.
+    // Walk up to the max preset (button disables itself at 200 %),
+    // then step back down to 150 % to verify the direction reverses.
     const percent = page.getByTestId("plumix-editor-zoom-percent");
-    await page.getByTestId("plumix-editor-zoom-in").click();
-    await page.getByTestId("plumix-editor-zoom-in").click();
-    await page.getByTestId("plumix-editor-zoom-in").click();
-    await page.getByTestId("plumix-editor-zoom-in").click();
-    await page.getByTestId("plumix-editor-zoom-in").click();
+    const zoomIn = page.getByTestId("plumix-editor-zoom-in");
+    for (let i = 0; i < 6 && (await zoomIn.isEnabled()); i++) {
+      await zoomIn.click();
+    }
     await expect(percent).toHaveText("200%");
     await page.getByTestId("plumix-editor-zoom-out").click();
     await expect(percent).toHaveText("150%");
