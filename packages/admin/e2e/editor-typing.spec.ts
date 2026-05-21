@@ -159,13 +159,16 @@ test.describe("v2 editor: typing into a richtext block", () => {
     await expect(tablet).toHaveAttribute("data-active", "true");
     await expect(desktop).toHaveAttribute("data-active", "false");
 
-    // Zoom percentage starts at 100% and steps through ZOOM_STEPS in
-    // 25% increments. The display is the chokepoint that surfaces a
-    // miswired stepZoom (e.g. off-by-one on the array indexing path).
+    // The canvas opens at fit-to-screen, not 100%, so the percentage
+    // text depends on the test viewport. Lock the displayed value by
+    // tapping zoom-out once: the closest preset to the fit value (75%
+    // at 1280-viewport / 860-canvas) is 75%, and the next step down is
+    // 50%. Then zoom-in three times reaches 125% regardless of where
+    // we started.
     const percent = page.getByTestId("plumix-editor-zoom-percent");
-    await expect(percent).toHaveText("100%");
     await page.getByTestId("plumix-editor-zoom-out").click();
-    await expect(percent).toHaveText("75%");
+    await expect(percent).toHaveText("50%");
+    await page.getByTestId("plumix-editor-zoom-in").click();
     await page.getByTestId("plumix-editor-zoom-in").click();
     await page.getByTestId("plumix-editor-zoom-in").click();
     await expect(percent).toHaveText("125%");

@@ -3,7 +3,7 @@ import type {
   KeyboardEvent as ReactKeyboardEvent,
   ReactNode,
 } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -107,7 +107,9 @@ const DEFAULT_VIEWPORT_INDEX = 2;
 
 interface CanvasToolbarProps {
   readonly zoom: number;
-  readonly onZoomChange: (next: number) => void;
+  // null clears the manual override so the canvas tracks fit-to-screen
+  // again. Numeric values pin the zoom level until cleared.
+  readonly onZoomChange: (next: number | null) => void;
 }
 
 function CanvasToolbar({
@@ -129,18 +131,29 @@ function CanvasToolbar({
       }),
     });
   }, [dispatch]);
-  const setViewport = (width: number, height: "auto"): void =>
+  const setViewport = (width: number, height: "auto"): void => {
     dispatch({
       type: "setUi",
       ui: (prev) => ({
         viewports: { ...prev.viewports, current: { width, height } },
       }),
     });
-  const zoomIndex = ZOOM_STEPS.indexOf(zoom);
+    onZoomChange(null);
+  };
+  // When the current zoom is between presets (e.g. fit-to-screen lands
+  // at 62%), step to the next preset above or below — never get stuck
+  // at the off-preset value because +/- can't find an exact-index match.
   const stepZoom = (delta: number): void => {
-    const next = ZOOM_STEPS[zoomIndex + delta];
+    const next =
+      delta > 0
+        ? ZOOM_STEPS.find((s) => s > zoom + 0.001)
+        : [...ZOOM_STEPS].reverse().find((s) => s < zoom - 0.001);
     if (next !== undefined) onZoomChange(next);
   };
+  const firstStep = ZOOM_STEPS[0] ?? 0;
+  const lastStep = ZOOM_STEPS[ZOOM_STEPS.length - 1] ?? 1;
+  const atMin = zoom <= firstStep;
+  const atMax = zoom >= lastStep;
   return (
     <div
       className="bg-background flex h-10 shrink-0 items-center justify-center gap-2 border-b"
@@ -179,7 +192,7 @@ function CanvasToolbar({
           data-testid="plumix-editor-zoom-out"
           aria-label="Zoom out"
           onClick={() => stepZoom(-1)}
-          disabled={zoomIndex <= 0}
+          disabled={atMin}
         >
           <Minus className="h-4 w-4" aria-hidden />
         </button>
@@ -189,7 +202,7 @@ function CanvasToolbar({
           data-testid="plumix-editor-zoom-in"
           aria-label="Zoom in"
           onClick={() => stepZoom(1)}
-          disabled={zoomIndex >= ZOOM_STEPS.length - 1}
+          disabled={atMax}
         >
           <Plus className="h-4 w-4" aria-hidden />
         </button>
@@ -529,15 +542,37 @@ function PlumixCanvasWithSlashMenu({
     typeof currentViewportWidth === "number"
       ? currentViewportWidth
       : VIEWPORT_PRESETS[DEFAULT_VIEWPORT_INDEX]?.width ?? 1280;
-  const [zoom, setZoom] = useState(1);
+  // `null` keeps the canvas at fit-to-screen; an explicit number is
+  // the manual override the zoom +/- buttons emit.
+  const [manualZoom, setManualZoom] = useState<number | null>(null);
+  const mainRef = useRef<HTMLElement>(null);
+  const [mainInnerWidth, setMainInnerWidth] = useState(0);
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    const measure = (): void => {
+      const styles = window.getComputedStyle(el);
+      const padX =
+        parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight);
+      setMainInnerWidth(el.clientWidth - padX);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  const fitZoom =
+    mainInnerWidth > 0 ? Math.min(1, mainInnerWidth / viewportPx) : 1;
+  const zoom = manualZoom ?? fitZoom;
 
   return (
     <div
       className="flex min-h-0 flex-col"
       data-testid="plumix-editor-canvas-column"
     >
-      <CanvasToolbar zoom={zoom} onZoomChange={setZoom} />
+      <CanvasToolbar zoom={zoom} onZoomChange={setManualZoom} />
       <main
+        ref={mainRef}
         className="bg-muted/30 flex-1 overflow-auto px-8 py-6"
         data-testid="plumix-editor-canvas"
         tabIndex={0}
