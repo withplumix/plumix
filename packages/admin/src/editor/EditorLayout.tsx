@@ -396,7 +396,7 @@ function PlumixBlocksTab({
   );
 
   return (
-    <ul className="flex flex-col gap-1 p-2" data-testid="plumix-blocks-tab">
+    <ul className="flex flex-col gap-1 p-4" data-testid="plumix-blocks-tab">
       {entries.map((entry) => (
         <li key={entry.slug}>
           <button
