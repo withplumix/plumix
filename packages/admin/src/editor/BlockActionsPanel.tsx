@@ -31,7 +31,7 @@ export function BlockActionsPanel({
   if (!specName) {
     return (
       <div
-        className="text-muted-foreground p-3 text-xs"
+        className="text-muted-foreground p-4 text-xs"
         data-testid="block-actions-empty"
       >
         Select a block to see actions.
@@ -43,7 +43,7 @@ export function BlockActionsPanel({
   if (options.length === 0 && !hasExtras) return null;
 
   return (
-    <div className="space-y-2 border-b p-3" data-testid="block-actions-panel">
+    <div className="space-y-2 border-b p-4" data-testid="block-actions-panel">
       {options.length > 0 ? (
         <div className="space-y-1">
           <div className="text-muted-foreground text-xs">Transform to</div>

@@ -290,7 +290,7 @@ function BlocksBody({ registry, capabilities }: BlocksBodyProps): ReactElement {
   const isMobile = useIsMobile();
   const content = (
     <Tabs defaultValue="blocks" className="h-full">
-      <div className="px-2 pt-2">
+      <div className="px-4 pt-4">
         <TabsList className="w-full">
           <TabsTrigger value="blocks" data-testid="plumix-editor-tab-blocks">
             Blocks
@@ -412,7 +412,7 @@ function InspectorBody({ registry, tokens }: InspectorBodyProps): ReactElement {
     <>
       <PlumixBlockActions registry={registry} />
       <Tabs defaultValue="block" className="h-full">
-        <div className="px-2 pt-2">
+        <div className="px-4 pt-4">
           <TabsList className="w-full">
             <TabsTrigger value="block" data-testid="plumix-editor-tab-block">
               Block
