@@ -147,15 +147,16 @@ test.describe("v2 editor: typing into a richtext block", () => {
 
     await page.goto("entries/posts/1/edit");
 
-    // Puck's default viewports ship 360 / 768 / 1280 / 100%. The active
-    // state is exposed via data-active on the per-width button — this
-    // is the chokepoint where the dispatch shape would silently break.
+    // The switcher ships Mobile (360) / Tablet (768) / Desktop (1280)
+    // presets. The editor mounts on Desktop via a one-shot effect; the
+    // active button exposes data-active="true" — this is the chokepoint
+    // where the dispatch shape would silently break.
+    const desktop = page.getByTestId("plumix-editor-viewport-1280");
+    await expect(desktop).toHaveAttribute("data-active", "true");
+
     const tablet = page.getByTestId("plumix-editor-viewport-768");
-    await expect(tablet).toBeVisible();
     await tablet.click();
     await expect(tablet).toHaveAttribute("data-active", "true");
-
-    const desktop = page.getByTestId("plumix-editor-viewport-1280");
     await expect(desktop).toHaveAttribute("data-active", "false");
   });
 

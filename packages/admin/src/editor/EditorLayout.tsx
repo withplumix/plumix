@@ -3,7 +3,7 @@ import type {
   KeyboardEvent as ReactKeyboardEvent,
   ReactNode,
 } from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -72,35 +72,77 @@ const VIEWPORT_BTN_INACTIVE =
   "text-muted-foreground hover:bg-accent hover:text-foreground";
 const VIEWPORT_BTN_ACTIVE = "bg-accent text-foreground";
 
-function viewportGlyph(icon: unknown): ReactElement {
-  const cls = "h-4 w-4";
-  if (icon === "Smartphone") return <Smartphone className={cls} aria-hidden />;
-  if (icon === "Tablet") return <Tablet className={cls} aria-hidden />;
-  return <Monitor className={cls} aria-hidden />;
+interface ViewportPreset {
+  readonly width: number;
+  readonly height: "auto";
+  readonly label: string;
+  readonly icon: ReactElement;
 }
 
-function ViewportSwitcher(): ReactElement | null {
+// Puck stores the `viewports` prop on the store but leaves
+// `appState.ui.viewports.options` empty until something dispatches into
+// it, so the switcher owns its own preset list and only mutates the
+// single live `current` field via setUi.
+const VIEWPORT_PRESETS: readonly ViewportPreset[] = [
+  {
+    width: 360,
+    height: "auto",
+    label: "Mobile",
+    icon: <Smartphone className="h-4 w-4" aria-hidden />,
+  },
+  {
+    width: 768,
+    height: "auto",
+    label: "Tablet",
+    icon: <Tablet className="h-4 w-4" aria-hidden />,
+  },
+  {
+    width: 1280,
+    height: "auto",
+    label: "Desktop",
+    icon: <Monitor className="h-4 w-4" aria-hidden />,
+  },
+];
+
+// Index into VIEWPORT_PRESETS that the editor should open on. Puck
+// hardcodes initial `viewports.current` to its bundled Smartphone
+// (360px) preset, which lands authors in mobile preview — pick Desktop
+// instead so a fresh edit starts at the wide layout.
+const DEFAULT_VIEWPORT_INDEX = 2;
+
+function ViewportSwitcher(): ReactElement {
   const puck = usePuck();
   const { viewports } = puck.appState.ui;
-  const options = viewports.options;
-  if (options.length === 0) return null;
   const currentWidth = viewports.current.width;
-  const currentIndex = options.findIndex((v) => v.width === currentWidth);
-  const setViewport = (width: number | "100%", height: number | "auto"): void =>
+  const dispatch = puck.dispatch;
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (seededRef.current) return;
+    seededRef.current = true;
+    const target = VIEWPORT_PRESETS[DEFAULT_VIEWPORT_INDEX];
+    if (!target) return;
+    const { width, height } = target;
+    dispatch({
+      type: "setUi",
+      ui: (prev) => ({
+        viewports: { ...prev.viewports, current: { width, height } },
+      }),
+    });
+  }, [dispatch]);
+  const currentIndex = VIEWPORT_PRESETS.findIndex(
+    (v) => v.width === currentWidth,
+  );
+  const setViewport = (width: number, height: "auto"): void =>
     puck.dispatch({
       type: "setUi",
       ui: (prev) => ({
-        viewports: {
-          ...prev.viewports,
-          current: { width, height },
-        },
+        viewports: { ...prev.viewports, current: { width, height } },
       }),
     });
   const step = (delta: number): void => {
-    if (currentIndex < 0) return;
-    const next = options[currentIndex + delta];
+    const next = VIEWPORT_PRESETS[currentIndex + delta];
     if (!next) return;
-    setViewport(next.width, next.height ?? "auto");
+    setViewport(next.width, next.height);
   };
   return (
     <div
@@ -117,20 +159,20 @@ function ViewportSwitcher(): ReactElement | null {
       >
         <Minus className="h-4 w-4" aria-hidden />
       </button>
-      {options.map((v) => {
+      {VIEWPORT_PRESETS.map((v) => {
         const isActive = v.width === currentWidth;
         return (
           <button
-            key={`${v.width}`}
+            key={v.width}
             type="button"
             className={`${VIEWPORT_BTN} ${isActive ? VIEWPORT_BTN_ACTIVE : VIEWPORT_BTN_INACTIVE}`}
             data-testid={`plumix-editor-viewport-${v.width}`}
             data-active={isActive ? "true" : "false"}
-            aria-label={v.label ?? `Viewport ${v.width}`}
+            aria-label={v.label}
             aria-pressed={isActive}
-            onClick={() => setViewport(v.width, v.height ?? "auto")}
+            onClick={() => setViewport(v.width, v.height)}
           >
-            {viewportGlyph(v.icon)}
+            {v.icon}
           </button>
         );
       })}
@@ -140,7 +182,9 @@ function ViewportSwitcher(): ReactElement | null {
         data-testid="plumix-editor-viewport-wider"
         aria-label="Wider viewport"
         onClick={() => step(1)}
-        disabled={currentIndex < 0 || currentIndex >= options.length - 1}
+        disabled={
+          currentIndex < 0 || currentIndex >= VIEWPORT_PRESETS.length - 1
+        }
       >
         <Plus className="h-4 w-4" aria-hidden />
       </button>
