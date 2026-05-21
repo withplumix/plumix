@@ -49,6 +49,9 @@ interface PlumixEditorLayoutProps {
   readonly capabilities?: ReadonlySet<string>;
   readonly tokens?: ThemeTokens;
   readonly children?: ReactNode;
+  readonly title: string;
+  readonly onTitleChange: (next: string) => void;
+  readonly backHref: string;
   readonly onPublish: () => void;
   readonly isPublishing?: boolean;
   readonly isPublished?: boolean;
@@ -80,6 +83,9 @@ export function PlumixEditorLayout({
   registry = EMPTY_REGISTRY,
   capabilities = EMPTY_CAPS,
   tokens = EMPTY_TOKENS,
+  title,
+  onTitleChange,
+  backHref,
   onPublish,
   isPublishing = false,
   isPublished = false,
@@ -91,12 +97,22 @@ export function PlumixEditorLayout({
         className="flex items-center gap-3 border-b px-4 py-2"
         data-testid="plumix-editor-header"
       >
+        <a
+          href={backHref}
+          aria-label="Back to list"
+          className="text-muted-foreground hover:text-foreground rounded border px-2 py-1 text-sm"
+          data-testid="plumix-editor-back-button"
+        >
+          ←
+        </a>
         <input
           type="text"
           placeholder="Untitled"
           aria-label="Entry title"
           className="flex-1 bg-transparent outline-none"
           data-testid="plumix-editor-title-input"
+          value={title}
+          onChange={(e) => onTitleChange(e.target.value)}
         />
         <AutosaveStatusPill />
         {revisionsTrigger}

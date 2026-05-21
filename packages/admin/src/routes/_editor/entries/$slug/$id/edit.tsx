@@ -129,6 +129,7 @@ function PuckSpikeRoute(): ReactNode {
   const supportsEditor = entryType?.supports
     ? entryType.supports.includes("editor")
     : true;
+  const backHref = `/entries/${slug}`;
   if (!supportsEditor && entryType) {
     return (
       <PlainFormRouteInner
@@ -148,6 +149,7 @@ function PuckSpikeRoute(): ReactNode {
       entryTypeName={entryType?.name}
       supportsRevisions={supportsRevisions}
       capabilities={user.capabilities}
+      backHref={backHref}
     />
   );
 }
@@ -158,6 +160,7 @@ interface PuckSpikeRouteInnerProps {
   readonly entryTypeName: string | undefined;
   readonly supportsRevisions: boolean;
   readonly capabilities: readonly string[];
+  readonly backHref: string;
 }
 
 function PuckSpikeRouteInner({
@@ -166,6 +169,7 @@ function PuckSpikeRouteInner({
   entryTypeName,
   supportsRevisions,
   capabilities,
+  backHref,
 }: PuckSpikeRouteInnerProps): ReactNode {
   const { data: entry } = useSuspenseQuery(
     orpc.entry.get.queryOptions({ input: { id } }),
@@ -173,21 +177,38 @@ function PuckSpikeRouteInner({
   const [data, setData] = useState<Data>(() =>
     seedPuckData(entry.content, readDraft(draftKey) ?? initialData),
   );
+  const [title, setTitle] = useState<string>(entry.title);
   const [status, setStatus] = useState<AutosaveStatus>("saved");
   // Optimistic-concurrency token; trailing-response wins on overlap.
   const liveUpdatedAtRef = useRef<Date>(entry.updatedAt);
   const queryClient = useQueryClient();
+  // Latest title + data refs so the debounced save closure always reads
+  // the most recent values (it's created once + called on every change).
+  // Effect-assign avoids the `react-hooks/refs` rule (no writes during
+  // render).
+  const titleRef = useRef(title);
+  const dataRef = useRef(data);
+  useEffect(() => {
+    titleRef.current = title;
+    dataRef.current = data;
+  });
   /* eslint-disable react-hooks/refs -- callback fires post-keystroke, not during render */
   const debouncer = useMemo(
     () =>
-      createDebouncer(async (next: Data) => {
-        writeDraft(draftKey, next);
+      createDebouncer(async () => {
+        writeDraft(draftKey, dataRef.current);
         try {
+          // entry.update's `title` schema is `trimmedText(300)` with a
+          // minLength of 1 — an empty title rejects with INVALID_INPUT.
+          // Omit the title from the payload when blank so a user mid-
+          // typing an empty input doesn't break their autosave loop.
+          const trimmedTitle = titleRef.current.trim();
           const updated = await orpc.entry.update.call({
             id,
+            ...(trimmedTitle.length > 0 ? { title: trimmedTitle } : {}),
             content: {
               version: "plumix.v2",
-              blocks: puckDataToBlockTree({ content: next.content }),
+              blocks: puckDataToBlockTree({ content: dataRef.current.content }),
             },
             expectedLiveUpdatedAt: liveUpdatedAtRef.current,
           });
@@ -218,7 +239,15 @@ function PuckSpikeRouteInner({
     (next: Data): void => {
       setData(next);
       setStatus("saving");
-      debouncer.call(next);
+      debouncer.call();
+    },
+    [debouncer],
+  );
+  const handleTitleChange = useCallback(
+    (next: string): void => {
+      setTitle(next);
+      setStatus("saving");
+      debouncer.call();
     },
     [debouncer],
   );
@@ -264,6 +293,9 @@ function PuckSpikeRouteInner({
         registry={registry}
         capabilities={capabilitySet}
         tokens={sampleTokens}
+        title={title}
+        onTitleChange={handleTitleChange}
+        backHref={backHref}
         onPublish={handlePublish}
         isPublishing={publish.isPending}
         isPublished={isPublished}
@@ -271,6 +303,9 @@ function PuckSpikeRouteInner({
       />
     ),
     [
+      title,
+      handleTitleChange,
+      backHref,
       handlePublish,
       publish.isPending,
       isPublished,

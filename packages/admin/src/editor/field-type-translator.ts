@@ -36,6 +36,10 @@ export function translateField(
       return {
         type: "richtext",
         label: input.label,
+        // contentEditable: true lets authors type directly on the canvas
+        // (Puck's inline-edit mode); without it the field is sidebar-only,
+        // which is the wrong UX for a paragraph body.
+        contentEditable: true,
         ...(options.richtextExtensions
           ? { tiptap: { extensions: options.richtextExtensions } }
           : {}),
