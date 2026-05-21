@@ -25,26 +25,27 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
     }
   });
 
-  test.skip("create a draft post → row appears in the list", async ({
-    page,
-  }) => {
+  test("create a draft post → row appears in the list", async ({ page }) => {
+    // v2 flow: click New takes the user through /entries/posts/create
+    // (the redirect-on-mount route that calls entry.create + navigates
+    // to the edit URL), then we land in the Puck editor. Title is
+    // bound to the title input; autosave fires on change.
     await page.goto("entries/posts");
-    await page.getByTestId("content-list-new-button").click();
-
-    await expect(page.getByTestId("post-editor-form")).toBeVisible();
-    await page.getByTestId("post-editor-title-input").fill("Hello world");
-    // Arm the navigation waiter BEFORE the click so we never miss a
-    // fast post-create redirect — playwright's `waitForURL` only matches
-    // navigations that start after it's armed, and the create RPC can
-    // resolve in <10ms against a warm worker.
     const navigated = page.waitForURL(/\/entries\/posts\/\d+\/edit/);
-    await page.getByTestId("post-editor-submit").click();
+    await page.getByTestId("content-list-new-button").click();
     await navigated;
 
+    // The Puck editor mounts; title input is wired through to
+    // entry.update. Wait for autosave to confirm via response.
+    await expect(page.getByTestId("plumix-editor-title-input")).toBeVisible();
+    const updated = page.waitForResponse(
+      (r) => r.url().endsWith("/entry/update") && r.status() === 200,
+    );
+    await page.getByTestId("plumix-editor-title-input").fill("Hello world");
+    await updated;
+
+    // Back to the list — the new row carries the typed title.
     await page.goto("entries/posts");
-    // `content-list-row-*` matches the row plus the per-row actions
-    // and trash buttons (`content-list-row-actions-<id>`,
-    // `content-list-row-trash-<id>`). Filter to just the row.
     const rows = page.locator(
       "[data-testid^='content-list-row-']:not([data-testid*='-actions-']):not([data-testid*='-trash-'])",
     );

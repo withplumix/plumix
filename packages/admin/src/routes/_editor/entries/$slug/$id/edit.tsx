@@ -34,7 +34,13 @@ import { idPathParam } from "@plumix/core/validation";
 
 import "@puckeditor/core/puck.css";
 
-const initialData: Data = { content: [], root: {} };
+const EMPTY_DATA: Data = { content: [], root: {} };
+
+// 1 s batches typing bursts; the dedup snapshot in the autosave closure
+// is what actually prevents identical revisions. WordPress's 60 s
+// equivalent is overkill here because we round-trip a workers DB on
+// every save and revisions are cheap.
+const AUTOSAVE_DEBOUNCE_MS = 1000;
 
 // Keep in sync with the identical helper in _editor/entries/$slug/$id/edit.tsx.
 function isStaleConflictError(err: unknown): boolean {
@@ -129,6 +135,7 @@ function PuckSpikeRoute(): ReactNode {
   const supportsEditor = entryType?.supports
     ? entryType.supports.includes("editor")
     : true;
+  const backHref = `/entries/${slug}`;
   if (!supportsEditor && entryType) {
     return (
       <PlainFormRouteInner
@@ -148,6 +155,7 @@ function PuckSpikeRoute(): ReactNode {
       entryTypeName={entryType?.name}
       supportsRevisions={supportsRevisions}
       capabilities={user.capabilities}
+      backHref={backHref}
     />
   );
 }
@@ -158,6 +166,7 @@ interface PuckSpikeRouteInnerProps {
   readonly entryTypeName: string | undefined;
   readonly supportsRevisions: boolean;
   readonly capabilities: readonly string[];
+  readonly backHref: string;
 }
 
 function PuckSpikeRouteInner({
@@ -166,32 +175,76 @@ function PuckSpikeRouteInner({
   entryTypeName,
   supportsRevisions,
   capabilities,
+  backHref,
 }: PuckSpikeRouteInnerProps): ReactNode {
   const { data: entry } = useSuspenseQuery(
     orpc.entry.get.queryOptions({ input: { id } }),
   );
-  const [data, setData] = useState<Data>(() =>
-    seedPuckData(entry.content, readDraft(draftKey) ?? initialData),
+  // Initial-only: Puck owns the live editor state via its internal store.
+  // Re-seeding `<Puck data>` mid-keystroke unmounts Tiptap and steals
+  // focus — useState's init function runs once per component instance
+  // and is immune to entry refetches.
+  const [initialData] = useState<Data>(() =>
+    seedPuckData(entry.content, readDraft(draftKey) ?? EMPTY_DATA),
   );
+  const [title, setTitle] = useState<string>(entry.title);
   const [status, setStatus] = useState<AutosaveStatus>("saved");
   // Optimistic-concurrency token; trailing-response wins on overlap.
   const liveUpdatedAtRef = useRef<Date>(entry.updatedAt);
   const queryClient = useQueryClient();
+  const titleRef = useRef(title);
+  const dataRef = useRef<Data>(initialData);
+  useEffect(() => {
+    titleRef.current = title;
+  });
+  // Seed dedup snapshots from the *server* entry, never from the local
+  // `data` — `data` may have been hydrated from a stale localStorage
+  // draft, and matching against that would skip the first autosave and
+  // silently strand the draft on the client.
+  const lastSavedTitleRef = useRef<string>(entry.title);
+  const lastSavedContentRef = useRef<string>(
+    JSON.stringify(
+      puckDataToBlockTree({
+        content: seedPuckData(entry.content, EMPTY_DATA).content,
+      }),
+    ),
+  );
   /* eslint-disable react-hooks/refs -- callback fires post-keystroke, not during render */
   const debouncer = useMemo(
     () =>
-      createDebouncer(async (next: Data) => {
-        writeDraft(draftKey, next);
+      createDebouncer(async () => {
+        writeDraft(draftKey, dataRef.current);
+        // entry.update's `title` schema is `trimmedText(300)` with a
+        // minLength of 1 — an empty title rejects with INVALID_INPUT.
+        // Omit the title from the payload when blank so a user mid-
+        // typing an empty input doesn't break their autosave loop.
+        const trimmedTitle = titleRef.current.trim();
+        const blocks = puckDataToBlockTree({
+          content: dataRef.current.content,
+        });
+        const serializedBlocks = JSON.stringify(blocks);
+        const titleChanged =
+          trimmedTitle.length > 0 && trimmedTitle !== lastSavedTitleRef.current;
+        const contentChanged = serializedBlocks !== lastSavedContentRef.current;
+        if (!titleChanged && !contentChanged) {
+          // Nothing actually changed since the last successful save.
+          // Skip the round-trip so we don't burn revision slots or
+          // generate identical rows. The pill stays on "saved".
+          setStatus("saved");
+          return;
+        }
         try {
           const updated = await orpc.entry.update.call({
             id,
-            content: {
-              version: "plumix.v2",
-              blocks: puckDataToBlockTree({ content: next.content }),
-            },
+            ...(titleChanged ? { title: trimmedTitle } : {}),
+            ...(contentChanged
+              ? { content: { version: "plumix.v2", blocks } }
+              : {}),
             expectedLiveUpdatedAt: liveUpdatedAtRef.current,
           });
           liveUpdatedAtRef.current = updated.updatedAt;
+          if (titleChanged) lastSavedTitleRef.current = trimmedTitle;
+          if (contentChanged) lastSavedContentRef.current = serializedBlocks;
           setStatus("saved");
         } catch (err) {
           setStatus("error");
@@ -209,16 +262,24 @@ function PuckSpikeRouteInner({
             }
           }
         }
-      }, 300),
+      }, AUTOSAVE_DEBOUNCE_MS),
     [draftKey, id, queryClient],
   );
   /* eslint-enable react-hooks/refs */
   useEffect(() => () => debouncer.flush(), [debouncer]);
   const handleChange = useCallback(
     (next: Data): void => {
-      setData(next);
+      dataRef.current = next;
       setStatus("saving");
-      debouncer.call(next);
+      debouncer.call();
+    },
+    [debouncer],
+  );
+  const handleTitleChange = useCallback(
+    (next: string): void => {
+      setTitle(next);
+      setStatus("saving");
+      debouncer.call();
     },
     [debouncer],
   );
@@ -264,6 +325,9 @@ function PuckSpikeRouteInner({
         registry={registry}
         capabilities={capabilitySet}
         tokens={sampleTokens}
+        title={title}
+        onTitleChange={handleTitleChange}
+        backHref={backHref}
         onPublish={handlePublish}
         isPublishing={publish.isPending}
         isPublished={isPublished}
@@ -271,6 +335,9 @@ function PuckSpikeRouteInner({
       />
     ),
     [
+      title,
+      handleTitleChange,
+      backHref,
       handlePublish,
       publish.isPending,
       isPublished,
@@ -283,7 +350,7 @@ function PuckSpikeRouteInner({
     <AutosaveStatusContext.Provider value={status}>
       <Puck
         config={config}
-        data={data}
+        data={initialData}
         onChange={handleChange}
         iframe={{ enabled: false }}
         overrides={{ puck: Layout }}

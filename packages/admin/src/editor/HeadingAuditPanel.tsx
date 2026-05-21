@@ -26,7 +26,7 @@ export function HeadingAuditPanel({
   }
 
   return (
-    <ul role="list" className="space-y-2 p-2" data-testid="heading-audit-list">
+    <ul role="list" className="space-y-2 p-4" data-testid="heading-audit-list">
       {violations.map((violation, index) => {
         const nodeIds = nodeIdsFor(violation);
         const primaryId = nodeIds[0];

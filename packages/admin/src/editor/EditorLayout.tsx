@@ -3,7 +3,14 @@ import type {
   KeyboardEvent as ReactKeyboardEvent,
   ReactNode,
 } from "react";
-import { useCallback, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +25,9 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs.js";
 import { useIsMobile } from "@/hooks/use-mobile.js";
+import { cn } from "@/lib/utils.js";
 import { Puck, usePuck } from "@puckeditor/core";
+import { Minus, Monitor, Plus, Smartphone, Tablet } from "lucide-react";
 
 import type {
   BlockRegistry,
@@ -33,6 +42,7 @@ import type { TransformOption } from "./available-transforms.js";
 import type { SlashMenuItem } from "./slash-menu-items.js";
 import { AutosaveStatusPill } from "./AutosaveStatus.js";
 import { BlockActionsPanel } from "./BlockActionsPanel.js";
+import { BlockIcon } from "./BlockIcon.js";
 import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
 import { mergePropsAtSelector } from "./merge-variation-attrs.js";
 import { MobileSidebarSheet } from "./MobileSidebarSheet.js";
@@ -49,6 +59,9 @@ interface PlumixEditorLayoutProps {
   readonly capabilities?: ReadonlySet<string>;
   readonly tokens?: ThemeTokens;
   readonly children?: ReactNode;
+  readonly title: string;
+  readonly onTitleChange: (next: string) => void;
+  readonly backHref: string;
   readonly onPublish: () => void;
   readonly isPublishing?: boolean;
   readonly isPublished?: boolean;
@@ -61,6 +74,157 @@ interface PlumixEditorLayoutProps {
 const EMPTY_REGISTRY: BlockRegistry = createBlockRegistry([]);
 const EMPTY_CAPS: ReadonlySet<string> = new Set();
 const EMPTY_TOKENS: ThemeTokens = {};
+
+const TOOLBAR_BTN =
+  "inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40";
+const ZOOM_STEPS: readonly number[] = [0.5, 0.75, 1, 1.25, 1.5, 2];
+
+interface ViewportPreset {
+  readonly width: number;
+  readonly height: "auto";
+  readonly label: string;
+  readonly icon: ReactElement;
+}
+
+const VIEWPORT_PRESETS: readonly ViewportPreset[] = [
+  {
+    width: 360,
+    height: "auto",
+    label: "Mobile",
+    icon: <Smartphone className="h-4 w-4" aria-hidden />,
+  },
+  {
+    width: 768,
+    height: "auto",
+    label: "Tablet",
+    icon: <Tablet className="h-4 w-4" aria-hidden />,
+  },
+  {
+    width: 1280,
+    height: "auto",
+    label: "Desktop",
+    icon: <Monitor className="h-4 w-4" aria-hidden />,
+  },
+];
+
+// Puck hardcodes initial `viewports.current` to its bundled Smartphone
+// (360px) preset, which lands authors in mobile preview — open on
+// Desktop instead so the editor starts at the wide layout.
+const DEFAULT_VIEWPORT_INDEX = 2;
+
+interface CanvasToolbarProps {
+  readonly zoom: number;
+  // null clears the manual override so the canvas tracks fit-to-screen
+  // again. Numeric values pin the zoom level until cleared.
+  readonly onZoomChange: (next: number | null) => void;
+}
+
+function CanvasToolbar({
+  zoom,
+  onZoomChange,
+}: CanvasToolbarProps): ReactElement {
+  const puck = usePuck();
+  const { viewports } = puck.appState.ui;
+  const currentWidth = viewports.current.width;
+  const dispatch = puck.dispatch;
+  useEffect(() => {
+    const target = VIEWPORT_PRESETS[DEFAULT_VIEWPORT_INDEX];
+    if (!target) return;
+    const { width, height } = target;
+    dispatch({
+      type: "setUi",
+      ui: (prev) => ({
+        viewports: { ...prev.viewports, current: { width, height } },
+      }),
+    });
+  }, [dispatch]);
+  const setViewport = (width: number, height: "auto"): void => {
+    dispatch({
+      type: "setUi",
+      ui: (prev) => ({
+        viewports: { ...prev.viewports, current: { width, height } },
+      }),
+    });
+    onZoomChange(null);
+  };
+  // Step to the next preset strictly above/below the current zoom. The
+  // 1 % tolerance keeps a step away from an effectively-equal preset
+  // (e.g. fit-to-screen at 0.497 should still snap UP to 0.75, not
+  // shuffle to 0.5 and display the same percentage).
+  const stepZoom = (delta: number): void => {
+    const next =
+      delta > 0
+        ? ZOOM_STEPS.find((s) => s > zoom + 0.01)
+        : [...ZOOM_STEPS].reverse().find((s) => s < zoom - 0.01);
+    if (next !== undefined) onZoomChange(next);
+  };
+  const firstStep = ZOOM_STEPS[0] ?? 0;
+  const lastStep = ZOOM_STEPS[ZOOM_STEPS.length - 1] ?? 1;
+  const atMin = zoom <= firstStep;
+  const atMax = zoom >= lastStep;
+  return (
+    <div
+      className="bg-background flex h-10 shrink-0 items-center justify-center gap-2 border-b"
+      data-testid="plumix-editor-canvas-toolbar"
+    >
+      <div
+        className="flex items-center gap-1"
+        data-testid="plumix-editor-viewports"
+      >
+        {VIEWPORT_PRESETS.map((v) => {
+          const isActive = v.width === currentWidth;
+          return (
+            <button
+              key={v.width}
+              type="button"
+              className={cn(
+                TOOLBAR_BTN,
+                isActive && "bg-accent text-foreground",
+              )}
+              data-testid={`plumix-editor-viewport-${v.width}`}
+              data-active={isActive ? "true" : "false"}
+              aria-label={v.label}
+              aria-pressed={isActive}
+              onClick={() => setViewport(v.width, v.height)}
+            >
+              {v.icon}
+            </button>
+          );
+        })}
+      </div>
+      <div className="bg-border h-5 w-px" aria-hidden />
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          className={TOOLBAR_BTN}
+          data-testid="plumix-editor-zoom-out"
+          aria-label="Zoom out"
+          onClick={() => stepZoom(-1)}
+          disabled={atMin}
+        >
+          <Minus className="h-4 w-4" aria-hidden />
+        </button>
+        <button
+          type="button"
+          className={TOOLBAR_BTN}
+          data-testid="plumix-editor-zoom-in"
+          aria-label="Zoom in"
+          onClick={() => stepZoom(1)}
+          disabled={atMax}
+        >
+          <Plus className="h-4 w-4" aria-hidden />
+        </button>
+      </div>
+      <div className="bg-border h-5 w-px" aria-hidden />
+      <span
+        className="text-muted-foreground w-12 text-center text-xs tabular-nums"
+        data-testid="plumix-editor-zoom-percent"
+      >
+        {Math.round(zoom * 100)}%
+      </span>
+    </div>
+  );
+}
 
 function PlumixAuditTab(): ReactElement {
   const puck = usePuck();
@@ -80,6 +244,9 @@ export function PlumixEditorLayout({
   registry = EMPTY_REGISTRY,
   capabilities = EMPTY_CAPS,
   tokens = EMPTY_TOKENS,
+  title,
+  onTitleChange,
+  backHref,
   onPublish,
   isPublishing = false,
   isPublished = false,
@@ -88,21 +255,31 @@ export function PlumixEditorLayout({
   return (
     <div className="flex h-dvh flex-col" data-testid="plumix-editor-layout">
       <header
-        className="flex items-center gap-3 border-b px-4 py-2"
+        className="bg-background flex h-12 shrink-0 items-center gap-3 border-b px-4"
         data-testid="plumix-editor-header"
       >
+        <a
+          href={backHref}
+          aria-label="Back to list"
+          className="text-muted-foreground hover:bg-accent hover:text-foreground inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-sm"
+          data-testid="plumix-editor-back-button"
+        >
+          ←
+        </a>
         <input
           type="text"
           placeholder="Untitled"
           aria-label="Entry title"
-          className="flex-1 bg-transparent outline-none"
+          className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent px-2 text-base font-medium outline-none"
           data-testid="plumix-editor-title-input"
+          value={title}
+          onChange={(e) => onTitleChange(e.target.value)}
         />
         <AutosaveStatusPill />
         {revisionsTrigger}
         <button
           type="button"
-          className="rounded border px-3 py-1 text-sm disabled:opacity-50"
+          className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-8 items-center rounded-md px-3 text-sm font-medium disabled:opacity-50"
           data-testid="plumix-editor-publish-button"
           onClick={onPublish}
           disabled={isPublishing || isPublished}
@@ -111,7 +288,7 @@ export function PlumixEditorLayout({
         </button>
       </header>
       <div
-        className="grid flex-1 grid-cols-[1fr] overflow-hidden md:grid-cols-[260px_1fr_320px]"
+        className="grid flex-1 grid-cols-[minmax(0,1fr)] overflow-hidden md:grid-cols-[260px_minmax(0,1fr)_320px]"
         data-testid="plumix-editor-cols"
       >
         <BlocksBody registry={registry} capabilities={capabilities} />
@@ -134,17 +311,19 @@ function BlocksBody({ registry, capabilities }: BlocksBodyProps): ReactElement {
   const isMobile = useIsMobile();
   const content = (
     <Tabs defaultValue="blocks" className="h-full">
-      <TabsList className="w-full">
-        <TabsTrigger value="blocks" data-testid="plumix-editor-tab-blocks">
-          Blocks
-        </TabsTrigger>
-        <TabsTrigger value="outline" data-testid="plumix-editor-tab-outline">
-          Outline
-        </TabsTrigger>
-        <TabsTrigger value="audit" data-testid="plumix-editor-tab-audit">
-          Audit
-        </TabsTrigger>
-      </TabsList>
+      <div className="px-4 pt-4">
+        <TabsList className="w-full">
+          <TabsTrigger value="blocks" data-testid="plumix-editor-tab-blocks">
+            Blocks
+          </TabsTrigger>
+          <TabsTrigger value="outline" data-testid="plumix-editor-tab-outline">
+            Outline
+          </TabsTrigger>
+          <TabsTrigger value="audit" data-testid="plumix-editor-tab-audit">
+            Audit
+          </TabsTrigger>
+        </TabsList>
+      </div>
       <TabsContent value="blocks">
         <PlumixBlocksTab registry={registry} capabilities={capabilities} />
       </TabsContent>
@@ -225,16 +404,17 @@ function PlumixBlocksTab({
   );
 
   return (
-    <ul className="flex flex-col gap-1 p-2" data-testid="plumix-blocks-tab">
+    <ul className="flex flex-col gap-1 p-4" data-testid="plumix-blocks-tab">
       {entries.map((entry) => (
         <li key={entry.slug}>
           <button
             type="button"
-            className="hover:bg-muted w-full rounded border px-3 py-2 text-left text-sm"
+            className="hover:bg-muted flex w-full items-center gap-2 rounded border px-3 py-2 text-left text-sm"
             data-testid={`plumix-blocks-tab-item-${entry.slug}`}
             onClick={() => handleInsert(entry)}
           >
-            {entry.title}
+            <BlockIcon name={entry.icon} />
+            <span className="truncate">{entry.title}</span>
           </button>
         </li>
       ))}
@@ -253,14 +433,16 @@ function InspectorBody({ registry, tokens }: InspectorBodyProps): ReactElement {
     <>
       <PlumixBlockActions registry={registry} />
       <Tabs defaultValue="block" className="h-full">
-        <TabsList className="w-full">
-          <TabsTrigger value="block" data-testid="plumix-editor-tab-block">
-            Block
-          </TabsTrigger>
-          <TabsTrigger value="style" data-testid="plumix-editor-tab-style">
-            Style
-          </TabsTrigger>
-        </TabsList>
+        <div className="px-4 pt-4">
+          <TabsList className="w-full">
+            <TabsTrigger value="block" data-testid="plumix-editor-tab-block">
+              Block
+            </TabsTrigger>
+            <TabsTrigger value="style" data-testid="plumix-editor-tab-style">
+              Style
+            </TabsTrigger>
+          </TabsList>
+        </div>
         <TabsContent value="block">
           <Puck.Fields />
         </TabsContent>
@@ -363,15 +545,58 @@ function PlumixCanvasWithSlashMenu({
     [puck],
   );
 
+  const currentViewportWidth = puck.appState.ui.viewports.current.width;
+  const viewportPx =
+    typeof currentViewportWidth === "number"
+      ? currentViewportWidth
+      : (VIEWPORT_PRESETS[DEFAULT_VIEWPORT_INDEX]?.width ?? 1280);
+  // `null` keeps the canvas at fit-to-screen; an explicit number is
+  // the manual override the zoom +/- buttons emit.
+  const [manualZoom, setManualZoom] = useState<number | null>(null);
+  const mainRef = useRef<HTMLElement>(null);
+  const [mainInnerWidth, setMainInnerWidth] = useState(0);
+  // useLayoutEffect so the synchronous initial measure runs before
+  // paint — without it the canvas flashes 100% for one frame before
+  // dropping to the fit value, which races CI tests that click the
+  // zoom buttons immediately after navigation.
+  useLayoutEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    const measure = (): void => {
+      const styles = window.getComputedStyle(el);
+      const padX =
+        parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight);
+      setMainInnerWidth(el.clientWidth - padX);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  const fitZoom =
+    mainInnerWidth > 0 ? Math.min(1, mainInnerWidth / viewportPx) : 1;
+  const zoom = manualZoom ?? fitZoom;
+
   return (
-    <>
+    <div
+      className="flex min-h-0 flex-col"
+      data-testid="plumix-editor-canvas-column"
+    >
+      <CanvasToolbar zoom={zoom} onZoomChange={setManualZoom} />
       <main
-        className="overflow-auto"
+        ref={mainRef}
+        className="bg-muted/30 flex-1 overflow-auto px-8 py-6"
         data-testid="plumix-editor-canvas"
         tabIndex={0}
         onKeyDown={handleCanvasKeyDown}
       >
-        <Puck.Preview />
+        <div
+          className="bg-background mx-auto rounded-md border p-8 shadow-sm transition-[width]"
+          style={{ width: viewportPx, zoom }}
+          data-testid="plumix-editor-canvas-frame"
+        >
+          <Puck.Preview />
+        </div>
       </main>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
@@ -394,7 +619,7 @@ function PlumixCanvasWithSlashMenu({
           />
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
 

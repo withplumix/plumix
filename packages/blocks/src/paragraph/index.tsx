@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
+import { isValidElement } from "react";
 
 import { defineBlock } from "../block-registry.js";
-import { renderInline } from "../marks/render-inline.js";
 
 export const paragraphBlock = defineBlock({
   name: "core/paragraph",
@@ -9,9 +9,7 @@ export const paragraphBlock = defineBlock({
   icon: "Paragraph",
   category: "text",
   inputs: [{ name: "body", type: "richtext", label: "Body" }],
-  // ProseMirror's `doc` requires at least one block child; an empty
-  // paragraph keeps the editor mountable on first focus.
-  defaults: { body: { type: "doc", content: [{ type: "paragraph" }] } },
+  defaults: { body: "<p></p>" },
   transforms: {
     priority: 50,
     to: [
@@ -22,17 +20,16 @@ export const paragraphBlock = defineBlock({
       },
     ],
   },
-  // Always emit a `<p>`. The first-paragraph inline run lives inside;
-  // multi-paragraph docs surface a single block but only the first run
-  // renders (Enter splits into a new paragraph block at the editor
-  // level, not a paragraph node inside one block).
+  // Puck's richtext field stores HTML strings (see apps/demo/config/
+  // blocks/RichText). The admin canvas hands `attrs.body` wrapped as a
+  // <RichTextRender> React element; SSR / walker callers see the raw
+  // string. TODO(#XXX): sanitize the HTML at the entry.update ingest —
+  // the trust boundary is the stored bytes, not the editor.
   render: ({ attrs }): ReactNode => {
-    if (typeof attrs.body === "object" && attrs.body !== null) {
-      return <p>{renderInline(attrs.body)}</p>;
+    if (isValidElement(attrs.body)) return attrs.body;
+    if (typeof attrs.body === "string") {
+      return <div dangerouslySetInnerHTML={{ __html: attrs.body }} />;
     }
-    // Legacy plain-string content (pre-richtext entries, nested-slot
-    // test fixtures). Drops once existing entries + fixtures move to
-    // the doc shape.
     if (typeof attrs.text === "string") return <p>{attrs.text}</p>;
     return <p />;
   },
