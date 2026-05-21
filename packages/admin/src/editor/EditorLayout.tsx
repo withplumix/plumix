@@ -35,6 +35,7 @@ import type { TransformOption } from "./available-transforms.js";
 import type { SlashMenuItem } from "./slash-menu-items.js";
 import { AutosaveStatusPill } from "./AutosaveStatus.js";
 import { BlockActionsPanel } from "./BlockActionsPanel.js";
+import { BlockIcon } from "./BlockIcon.js";
 import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
 import { mergePropsAtSelector } from "./merge-variation-attrs.js";
 import { MobileSidebarSheet } from "./MobileSidebarSheet.js";
@@ -289,17 +290,19 @@ function BlocksBody({ registry, capabilities }: BlocksBodyProps): ReactElement {
   const isMobile = useIsMobile();
   const content = (
     <Tabs defaultValue="blocks" className="h-full">
-      <TabsList className="w-full">
-        <TabsTrigger value="blocks" data-testid="plumix-editor-tab-blocks">
-          Blocks
-        </TabsTrigger>
-        <TabsTrigger value="outline" data-testid="plumix-editor-tab-outline">
-          Outline
-        </TabsTrigger>
-        <TabsTrigger value="audit" data-testid="plumix-editor-tab-audit">
-          Audit
-        </TabsTrigger>
-      </TabsList>
+      <div className="px-2 pt-2">
+        <TabsList className="w-full">
+          <TabsTrigger value="blocks" data-testid="plumix-editor-tab-blocks">
+            Blocks
+          </TabsTrigger>
+          <TabsTrigger value="outline" data-testid="plumix-editor-tab-outline">
+            Outline
+          </TabsTrigger>
+          <TabsTrigger value="audit" data-testid="plumix-editor-tab-audit">
+            Audit
+          </TabsTrigger>
+        </TabsList>
+      </div>
       <TabsContent value="blocks">
         <PlumixBlocksTab registry={registry} capabilities={capabilities} />
       </TabsContent>
@@ -385,11 +388,12 @@ function PlumixBlocksTab({
         <li key={entry.slug}>
           <button
             type="button"
-            className="hover:bg-muted w-full rounded border px-3 py-2 text-left text-sm"
+            className="hover:bg-muted flex w-full items-center gap-2 rounded border px-3 py-2 text-left text-sm"
             data-testid={`plumix-blocks-tab-item-${entry.slug}`}
             onClick={() => handleInsert(entry)}
           >
-            {entry.title}
+            <BlockIcon name={entry.icon} />
+            <span className="truncate">{entry.title}</span>
           </button>
         </li>
       ))}
@@ -408,14 +412,16 @@ function InspectorBody({ registry, tokens }: InspectorBodyProps): ReactElement {
     <>
       <PlumixBlockActions registry={registry} />
       <Tabs defaultValue="block" className="h-full">
-        <TabsList className="w-full">
-          <TabsTrigger value="block" data-testid="plumix-editor-tab-block">
-            Block
-          </TabsTrigger>
-          <TabsTrigger value="style" data-testid="plumix-editor-tab-style">
-            Style
-          </TabsTrigger>
-        </TabsList>
+        <div className="px-2 pt-2">
+          <TabsList className="w-full">
+            <TabsTrigger value="block" data-testid="plumix-editor-tab-block">
+              Block
+            </TabsTrigger>
+            <TabsTrigger value="style" data-testid="plumix-editor-tab-style">
+              Style
+            </TabsTrigger>
+          </TabsList>
+        </div>
         <TabsContent value="block">
           <Puck.Fields />
         </TabsContent>
