@@ -34,7 +34,7 @@ import { idPathParam } from "@plumix/core/validation";
 
 import "@puckeditor/core/puck.css";
 
-const initialData: Data = { content: [], root: {} };
+const EMPTY_DATA: Data = { content: [], root: {} };
 
 // 5 s batches typing bursts so quiet pauses do not pile up identical
 // revisions. WordPress defaults to 60 s.
@@ -178,23 +178,22 @@ function PuckSpikeRouteInner({
   const { data: entry } = useSuspenseQuery(
     orpc.entry.get.queryOptions({ input: { id } }),
   );
-  const [data, setData] = useState<Data>(() =>
-    seedPuckData(entry.content, readDraft(draftKey) ?? initialData),
+  // Initial-only: Puck owns the live editor state via its internal store.
+  // Re-seeding `<Puck data>` mid-keystroke unmounts Tiptap and steals
+  // focus — useState's init function runs once per component instance
+  // and is immune to entry refetches.
+  const [initialData] = useState<Data>(() =>
+    seedPuckData(entry.content, readDraft(draftKey) ?? EMPTY_DATA),
   );
   const [title, setTitle] = useState<string>(entry.title);
   const [status, setStatus] = useState<AutosaveStatus>("saved");
   // Optimistic-concurrency token; trailing-response wins on overlap.
   const liveUpdatedAtRef = useRef<Date>(entry.updatedAt);
   const queryClient = useQueryClient();
-  // Latest title + data refs so the debounced save closure always reads
-  // the most recent values (it's created once + called on every change).
-  // Effect-assign avoids the `react-hooks/refs` rule (no writes during
-  // render).
   const titleRef = useRef(title);
-  const dataRef = useRef(data);
+  const dataRef = useRef<Data>(initialData);
   useEffect(() => {
     titleRef.current = title;
-    dataRef.current = data;
   });
   // Seed dedup snapshots from the *server* entry, never from the local
   // `data` — `data` may have been hydrated from a stale localStorage
@@ -204,7 +203,7 @@ function PuckSpikeRouteInner({
   const lastSavedContentRef = useRef<string>(
     JSON.stringify(
       puckDataToBlockTree({
-        content: seedPuckData(entry.content, initialData).content,
+        content: seedPuckData(entry.content, EMPTY_DATA).content,
       }),
     ),
   );
@@ -268,7 +267,7 @@ function PuckSpikeRouteInner({
   useEffect(() => () => debouncer.flush(), [debouncer]);
   const handleChange = useCallback(
     (next: Data): void => {
-      setData(next);
+      dataRef.current = next;
       setStatus("saving");
       debouncer.call();
     },
@@ -349,7 +348,7 @@ function PuckSpikeRouteInner({
     <AutosaveStatusContext.Provider value={status}>
       <Puck
         config={config}
-        data={data}
+        data={initialData}
         onChange={handleChange}
         iframe={{ enabled: false }}
         overrides={{ puck: Layout }}
