@@ -2,6 +2,7 @@ import type { AutosaveStatus } from "@/editor/AutosaveStatus.js";
 import type { Config, Data } from "@puckeditor/core";
 import type { ReactElement, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { PlainFormLayout } from "@/components/editor/plain-form-layout.js";
 import { AutosaveStatusContext } from "@/editor/AutosaveStatus.js";
 import { blockSpecsToPuckComponents } from "@/editor/block-adapter.js";
 import { createDebouncer } from "@/editor/debounce.js";
@@ -10,7 +11,7 @@ import { seedPuckData } from "@/editor/entry-content.js";
 import { readDraft, writeDraft } from "@/editor/local-draft.js";
 import { puckDataToBlockTree } from "@/editor/puck-to-block-tree.js";
 import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
-import { findEntryTypeBySlug } from "@/lib/manifest.js";
+import { entryMetaBoxesForType, findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { ORPCError } from "@orpc/client";
 import { Puck } from "@puckeditor/core";
@@ -23,6 +24,7 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 import * as v from "valibot";
 
 import type { ThemeTokens } from "@plumix/blocks";
+import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import {
   coreBlocks,
   coreMarkExtensions,
@@ -121,6 +123,23 @@ function PuckSpikeRoute(): ReactNode {
   const draftKey = `plumix.v2.draft.${slug}.${id}`;
   const entryType = findEntryTypeBySlug(slug);
   const supportsRevisions = entryType?.supports?.includes("revisions") ?? false;
+  // Non-editor entry types (structured records like authors, products,
+  // events) get the plain-form Cards layout instead of the Puck canvas.
+  // The dispatcher reads from the manifest's `supports` list.
+  const supportsEditor = entryType?.supports
+    ? entryType.supports.includes("editor")
+    : true;
+  if (!supportsEditor && entryType) {
+    return (
+      <PlainFormRouteInner
+        key={draftKey}
+        entryType={entryType}
+        id={id}
+        supportsRevisions={supportsRevisions}
+        capabilities={user.capabilities}
+      />
+    );
+  }
   return (
     <PuckSpikeRouteInner
       key={draftKey}
@@ -270,5 +289,90 @@ function PuckSpikeRouteInner({
         overrides={{ puck: Layout }}
       />
     </AutosaveStatusContext.Provider>
+  );
+}
+
+interface PlainFormRouteInnerProps {
+  readonly entryType: EntryTypeManifestEntry;
+  readonly id: number;
+  readonly supportsRevisions: boolean;
+  readonly capabilities: readonly string[];
+}
+
+function PlainFormRouteInner({
+  entryType,
+  id,
+  supportsRevisions,
+  capabilities,
+}: PlainFormRouteInnerProps): ReactNode {
+  const { data: entry } = useSuspenseQuery(
+    orpc.entry.get.queryOptions({ input: { id } }),
+  );
+  const queryClient = useQueryClient();
+  const liveUpdatedAtRef = useRef<Date>(entry.updatedAt);
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const metaBoxes = entryMetaBoxesForType(entryType.name, capabilities);
+
+  const updateMutation = useMutation({
+    mutationFn: (values: {
+      title: string;
+      status: string;
+      meta: Record<string, unknown>;
+    }) =>
+      orpc.entry.update.call({
+        id,
+        title: values.title,
+        status: values.status as never,
+        meta: values.meta,
+        expectedLiveUpdatedAt: liveUpdatedAtRef.current,
+      }),
+    onSuccess: async (updated) => {
+      setServerError(null);
+      liveUpdatedAtRef.current = updated.updatedAt;
+      await queryClient.invalidateQueries({
+        queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
+      });
+    },
+    onError: (err) => {
+      setServerError(err instanceof Error ? err.message : "Couldn't save.");
+    },
+  });
+
+  const revisionsTrigger = useRevisionsTrigger({
+    entryId: id,
+    enabled: supportsRevisions,
+    liveUpdatedAtRef,
+  });
+
+  const initialValues = {
+    title: entry.title,
+    slug: entry.slug,
+    content: entry.content,
+    excerpt: entry.excerpt ?? "",
+    status: entry.status,
+    meta: entry.meta,
+    terms: {},
+    parentId: entry.parentId,
+  };
+
+  return (
+    <PlainFormLayout
+      key={String(id)}
+      initialValues={initialValues}
+      metaBoxes={metaBoxes}
+      headline={`Edit ${(entryType.labels?.singular ?? entryType.label).toLowerCase()}`}
+      isSubmitting={updateMutation.isPending}
+      serverError={updateMutation.isPending ? null : serverError}
+      autosaveMs={500}
+      revisionsTrigger={revisionsTrigger}
+      onSubmit={(values) =>
+        updateMutation.mutate({
+          title: values.title,
+          status: values.status,
+          meta: values.meta,
+        })
+      }
+    />
   );
 }

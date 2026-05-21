@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import { defineBlock } from "../block-registry.js";
-import { renderInlineAll } from "../marks/render-inline.js";
+import { renderInline } from "../marks/render-inline.js";
 
 export const paragraphBlock = defineBlock({
   name: "core/paragraph",
@@ -22,13 +22,18 @@ export const paragraphBlock = defineBlock({
       },
     ],
   },
+  // Always emit a `<p>`. The first-paragraph inline run lives inside;
+  // multi-paragraph docs surface a single block but only the first run
+  // renders (Enter splits into a new paragraph block at the editor
+  // level, not a paragraph node inside one block).
   render: ({ attrs }): ReactNode => {
     if (typeof attrs.body === "object" && attrs.body !== null) {
-      return <>{renderInlineAll(attrs.body)}</>;
+      return <p>{renderInline(attrs.body)}</p>;
     }
-    // Legacy plain-string content; drops at cutover (#405) once
-    // existing entries + fixtures move to the richtext doc shape.
+    // Legacy plain-string content (pre-richtext entries, nested-slot
+    // test fixtures). Drops once existing entries + fixtures move to
+    // the doc shape.
     if (typeof attrs.text === "string") return <p>{attrs.text}</p>;
-    return null;
+    return <p />;
   },
 });
