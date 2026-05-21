@@ -36,6 +36,10 @@ import "@puckeditor/core/puck.css";
 
 const initialData: Data = { content: [], root: {} };
 
+// 5 s batches typing bursts so quiet pauses do not pile up identical
+// revisions. WordPress defaults to 60 s.
+const AUTOSAVE_DEBOUNCE_MS = 5000;
+
 // Keep in sync with the identical helper in _editor/entries/$slug/$id/edit.tsx.
 function isStaleConflictError(err: unknown): boolean {
   if (!(err instanceof ORPCError)) return false;
@@ -192,27 +196,54 @@ function PuckSpikeRouteInner({
     titleRef.current = title;
     dataRef.current = data;
   });
+  // Seed dedup snapshots from the *server* entry, never from the local
+  // `data` — `data` may have been hydrated from a stale localStorage
+  // draft, and matching against that would skip the first autosave and
+  // silently strand the draft on the client.
+  const lastSavedTitleRef = useRef<string>(entry.title);
+  const lastSavedContentRef = useRef<string>(
+    JSON.stringify(
+      puckDataToBlockTree({
+        content: seedPuckData(entry.content, initialData).content,
+      }),
+    ),
+  );
   /* eslint-disable react-hooks/refs -- callback fires post-keystroke, not during render */
   const debouncer = useMemo(
     () =>
       createDebouncer(async () => {
         writeDraft(draftKey, dataRef.current);
+        // entry.update's `title` schema is `trimmedText(300)` with a
+        // minLength of 1 — an empty title rejects with INVALID_INPUT.
+        // Omit the title from the payload when blank so a user mid-
+        // typing an empty input doesn't break their autosave loop.
+        const trimmedTitle = titleRef.current.trim();
+        const blocks = puckDataToBlockTree({
+          content: dataRef.current.content,
+        });
+        const serializedBlocks = JSON.stringify(blocks);
+        const titleChanged =
+          trimmedTitle.length > 0 && trimmedTitle !== lastSavedTitleRef.current;
+        const contentChanged = serializedBlocks !== lastSavedContentRef.current;
+        if (!titleChanged && !contentChanged) {
+          // Nothing actually changed since the last successful save.
+          // Skip the round-trip so we don't burn revision slots or
+          // generate identical rows. The pill stays on "saved".
+          setStatus("saved");
+          return;
+        }
         try {
-          // entry.update's `title` schema is `trimmedText(300)` with a
-          // minLength of 1 — an empty title rejects with INVALID_INPUT.
-          // Omit the title from the payload when blank so a user mid-
-          // typing an empty input doesn't break their autosave loop.
-          const trimmedTitle = titleRef.current.trim();
           const updated = await orpc.entry.update.call({
             id,
-            ...(trimmedTitle.length > 0 ? { title: trimmedTitle } : {}),
-            content: {
-              version: "plumix.v2",
-              blocks: puckDataToBlockTree({ content: dataRef.current.content }),
-            },
+            ...(titleChanged ? { title: trimmedTitle } : {}),
+            ...(contentChanged
+              ? { content: { version: "plumix.v2", blocks } }
+              : {}),
             expectedLiveUpdatedAt: liveUpdatedAtRef.current,
           });
           liveUpdatedAtRef.current = updated.updatedAt;
+          if (titleChanged) lastSavedTitleRef.current = trimmedTitle;
+          if (contentChanged) lastSavedContentRef.current = serializedBlocks;
           setStatus("saved");
         } catch (err) {
           setStatus("error");
@@ -230,7 +261,7 @@ function PuckSpikeRouteInner({
             }
           }
         }
-      }, 300),
+      }, AUTOSAVE_DEBOUNCE_MS),
     [draftKey, id, queryClient],
   );
   /* eslint-enable react-hooks/refs */

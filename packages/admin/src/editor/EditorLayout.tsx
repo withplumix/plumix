@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/tabs.js";
 import { useIsMobile } from "@/hooks/use-mobile.js";
 import { Puck, usePuck } from "@puckeditor/core";
+import { Minus, Monitor, Plus, Smartphone, Tablet } from "lucide-react";
 
 import type {
   BlockRegistry,
@@ -65,6 +66,88 @@ const EMPTY_REGISTRY: BlockRegistry = createBlockRegistry([]);
 const EMPTY_CAPS: ReadonlySet<string> = new Set();
 const EMPTY_TOKENS: ThemeTokens = {};
 
+const VIEWPORT_BTN =
+  "inline-flex h-8 w-8 items-center justify-center rounded-md disabled:opacity-40";
+const VIEWPORT_BTN_INACTIVE =
+  "text-muted-foreground hover:bg-accent hover:text-foreground";
+const VIEWPORT_BTN_ACTIVE = "bg-accent text-foreground";
+
+function viewportGlyph(icon: unknown): ReactElement {
+  const cls = "h-4 w-4";
+  if (icon === "Smartphone") return <Smartphone className={cls} aria-hidden />;
+  if (icon === "Tablet") return <Tablet className={cls} aria-hidden />;
+  return <Monitor className={cls} aria-hidden />;
+}
+
+function ViewportSwitcher(): ReactElement | null {
+  const puck = usePuck();
+  const { viewports } = puck.appState.ui;
+  const options = viewports.options;
+  if (options.length === 0) return null;
+  const currentWidth = viewports.current.width;
+  const currentIndex = options.findIndex((v) => v.width === currentWidth);
+  const setViewport = (width: number | "100%", height: number | "auto"): void =>
+    puck.dispatch({
+      type: "setUi",
+      ui: (prev) => ({
+        viewports: {
+          ...prev.viewports,
+          current: { width, height },
+        },
+      }),
+    });
+  const step = (delta: number): void => {
+    if (currentIndex < 0) return;
+    const next = options[currentIndex + delta];
+    if (!next) return;
+    setViewport(next.width, next.height ?? "auto");
+  };
+  return (
+    <div
+      className="flex items-center gap-1"
+      data-testid="plumix-editor-viewports"
+    >
+      <button
+        type="button"
+        className={`${VIEWPORT_BTN} ${VIEWPORT_BTN_INACTIVE}`}
+        data-testid="plumix-editor-viewport-narrower"
+        aria-label="Narrower viewport"
+        onClick={() => step(-1)}
+        disabled={currentIndex <= 0}
+      >
+        <Minus className="h-4 w-4" aria-hidden />
+      </button>
+      {options.map((v) => {
+        const isActive = v.width === currentWidth;
+        return (
+          <button
+            key={`${v.width}`}
+            type="button"
+            className={`${VIEWPORT_BTN} ${isActive ? VIEWPORT_BTN_ACTIVE : VIEWPORT_BTN_INACTIVE}`}
+            data-testid={`plumix-editor-viewport-${v.width}`}
+            data-active={isActive ? "true" : "false"}
+            aria-label={v.label ?? `Viewport ${v.width}`}
+            aria-pressed={isActive}
+            onClick={() => setViewport(v.width, v.height ?? "auto")}
+          >
+            {viewportGlyph(v.icon)}
+          </button>
+        );
+      })}
+      <button
+        type="button"
+        className={`${VIEWPORT_BTN} ${VIEWPORT_BTN_INACTIVE}`}
+        data-testid="plumix-editor-viewport-wider"
+        aria-label="Wider viewport"
+        onClick={() => step(1)}
+        disabled={currentIndex < 0 || currentIndex >= options.length - 1}
+      >
+        <Plus className="h-4 w-4" aria-hidden />
+      </button>
+    </div>
+  );
+}
+
 function PlumixAuditTab(): ReactElement {
   const puck = usePuck();
   const tree = useMemo(
@@ -94,13 +177,13 @@ export function PlumixEditorLayout({
   return (
     <div className="flex h-dvh flex-col" data-testid="plumix-editor-layout">
       <header
-        className="flex items-center gap-3 border-b px-4 py-2"
+        className="bg-background flex h-12 shrink-0 items-center gap-3 border-b px-4"
         data-testid="plumix-editor-header"
       >
         <a
           href={backHref}
           aria-label="Back to list"
-          className="text-muted-foreground hover:text-foreground rounded border px-2 py-1 text-sm"
+          className="text-muted-foreground hover:bg-accent hover:text-foreground inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-sm"
           data-testid="plumix-editor-back-button"
         >
           ←
@@ -109,16 +192,17 @@ export function PlumixEditorLayout({
           type="text"
           placeholder="Untitled"
           aria-label="Entry title"
-          className="flex-1 bg-transparent outline-none"
+          className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent px-2 text-base font-medium outline-none"
           data-testid="plumix-editor-title-input"
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
         />
+        <ViewportSwitcher />
         <AutosaveStatusPill />
         {revisionsTrigger}
         <button
           type="button"
-          className="rounded border px-3 py-1 text-sm disabled:opacity-50"
+          className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-8 items-center rounded-md px-3 text-sm font-medium disabled:opacity-50"
           data-testid="plumix-editor-publish-button"
           onClick={onPublish}
           disabled={isPublishing || isPublished}
@@ -379,15 +463,25 @@ function PlumixCanvasWithSlashMenu({
     [puck],
   );
 
+  const currentViewportWidth = puck.appState.ui.viewports.current.width;
+  const canvasFrameWidth =
+    currentViewportWidth === "100%" ? "100%" : `${currentViewportWidth}px`;
+
   return (
     <>
       <main
-        className="overflow-auto"
+        className="bg-muted/30 overflow-auto px-8 py-6"
         data-testid="plumix-editor-canvas"
         tabIndex={0}
         onKeyDown={handleCanvasKeyDown}
       >
-        <Puck.Preview />
+        <div
+          className="bg-background mx-auto min-h-full rounded-md border p-8 shadow-sm transition-[width]"
+          style={{ width: canvasFrameWidth, maxWidth: "100%" }}
+          data-testid="plumix-editor-canvas-frame"
+        >
+          <Puck.Preview />
+        </div>
       </main>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent

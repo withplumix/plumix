@@ -125,6 +125,40 @@ test.describe("v2 editor: typing into a richtext block", () => {
     expect(last?.title).toBe("My new title");
   });
 
+  test("viewport switcher selects the tablet preset", async ({ page }) => {
+    await page.route("**/_plumix/rpc/**", (route) => {
+      const url = route.request().url();
+      if (url.endsWith("/auth/session")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: rpcOkBody(AUTHED_ADMIN),
+        });
+      }
+      if (url.endsWith("/entry/get")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ json: emptyEntry(1), meta: [] }),
+        });
+      }
+      return route.fulfill({ status: 404, body: "not-mocked" });
+    });
+
+    await page.goto("entries/posts/1/edit");
+
+    // Puck's default viewports ship 360 / 768 / 1280 / 100%. The active
+    // state is exposed via data-active on the per-width button — this
+    // is the chokepoint where the dispatch shape would silently break.
+    const tablet = page.getByTestId("plumix-editor-viewport-768");
+    await expect(tablet).toBeVisible();
+    await tablet.click();
+    await expect(tablet).toHaveAttribute("data-active", "true");
+
+    const desktop = page.getByTestId("plumix-editor-viewport-1280");
+    await expect(desktop).toHaveAttribute("data-active", "false");
+  });
+
   test("back button navigates to the entries list", async ({ page }) => {
     await page.route("**/_plumix/rpc/**", (route) => {
       const url = route.request().url();
