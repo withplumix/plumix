@@ -3,7 +3,7 @@ import type {
   KeyboardEvent as ReactKeyboardEvent,
   ReactNode,
 } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs.js";
 import { useIsMobile } from "@/hooks/use-mobile.js";
+import { cn } from "@/lib/utils.js";
 import { Puck, usePuck } from "@puckeditor/core";
 import { Minus, Monitor, Plus, Smartphone, Tablet } from "lucide-react";
 
@@ -66,11 +67,9 @@ const EMPTY_REGISTRY: BlockRegistry = createBlockRegistry([]);
 const EMPTY_CAPS: ReadonlySet<string> = new Set();
 const EMPTY_TOKENS: ThemeTokens = {};
 
-const VIEWPORT_BTN =
-  "inline-flex h-8 w-8 items-center justify-center rounded-md disabled:opacity-40";
-const VIEWPORT_BTN_INACTIVE =
-  "text-muted-foreground hover:bg-accent hover:text-foreground";
-const VIEWPORT_BTN_ACTIVE = "bg-accent text-foreground";
+const TOOLBAR_BTN =
+  "inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40";
+const ZOOM_STEPS: readonly number[] = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 interface ViewportPreset {
   readonly width: number;
@@ -79,10 +78,6 @@ interface ViewportPreset {
   readonly icon: ReactElement;
 }
 
-// Puck stores the `viewports` prop on the store but leaves
-// `appState.ui.viewports.options` empty until something dispatches into
-// it, so the switcher owns its own preset list and only mutates the
-// single live `current` field via setUi.
 const VIEWPORT_PRESETS: readonly ViewportPreset[] = [
   {
     width: 360,
@@ -104,21 +99,25 @@ const VIEWPORT_PRESETS: readonly ViewportPreset[] = [
   },
 ];
 
-// Index into VIEWPORT_PRESETS that the editor should open on. Puck
-// hardcodes initial `viewports.current` to its bundled Smartphone
-// (360px) preset, which lands authors in mobile preview — pick Desktop
-// instead so a fresh edit starts at the wide layout.
+// Puck hardcodes initial `viewports.current` to its bundled Smartphone
+// (360px) preset, which lands authors in mobile preview — open on
+// Desktop instead so the editor starts at the wide layout.
 const DEFAULT_VIEWPORT_INDEX = 2;
 
-function ViewportSwitcher(): ReactElement {
+interface CanvasToolbarProps {
+  readonly zoom: number;
+  readonly onZoomChange: (next: number) => void;
+}
+
+function CanvasToolbar({
+  zoom,
+  onZoomChange,
+}: CanvasToolbarProps): ReactElement {
   const puck = usePuck();
   const { viewports } = puck.appState.ui;
   const currentWidth = viewports.current.width;
   const dispatch = puck.dispatch;
-  const seededRef = useRef(false);
   useEffect(() => {
-    if (seededRef.current) return;
-    seededRef.current = true;
     const target = VIEWPORT_PRESETS[DEFAULT_VIEWPORT_INDEX];
     if (!target) return;
     const { width, height } = target;
@@ -129,65 +128,78 @@ function ViewportSwitcher(): ReactElement {
       }),
     });
   }, [dispatch]);
-  const currentIndex = VIEWPORT_PRESETS.findIndex(
-    (v) => v.width === currentWidth,
-  );
   const setViewport = (width: number, height: "auto"): void =>
-    puck.dispatch({
+    dispatch({
       type: "setUi",
       ui: (prev) => ({
         viewports: { ...prev.viewports, current: { width, height } },
       }),
     });
-  const step = (delta: number): void => {
-    const next = VIEWPORT_PRESETS[currentIndex + delta];
-    if (!next) return;
-    setViewport(next.width, next.height);
+  const zoomIndex = ZOOM_STEPS.indexOf(zoom);
+  const stepZoom = (delta: number): void => {
+    const next = ZOOM_STEPS[zoomIndex + delta];
+    if (next !== undefined) onZoomChange(next);
   };
   return (
     <div
-      className="flex items-center gap-1"
-      data-testid="plumix-editor-viewports"
+      className="bg-background flex h-10 shrink-0 items-center justify-center gap-2 border-b"
+      data-testid="plumix-editor-canvas-toolbar"
     >
-      <button
-        type="button"
-        className={`${VIEWPORT_BTN} ${VIEWPORT_BTN_INACTIVE}`}
-        data-testid="plumix-editor-viewport-narrower"
-        aria-label="Narrower viewport"
-        onClick={() => step(-1)}
-        disabled={currentIndex <= 0}
+      <div
+        className="flex items-center gap-1"
+        data-testid="plumix-editor-viewports"
       >
-        <Minus className="h-4 w-4" aria-hidden />
-      </button>
-      {VIEWPORT_PRESETS.map((v) => {
-        const isActive = v.width === currentWidth;
-        return (
-          <button
-            key={v.width}
-            type="button"
-            className={`${VIEWPORT_BTN} ${isActive ? VIEWPORT_BTN_ACTIVE : VIEWPORT_BTN_INACTIVE}`}
-            data-testid={`plumix-editor-viewport-${v.width}`}
-            data-active={isActive ? "true" : "false"}
-            aria-label={v.label}
-            aria-pressed={isActive}
-            onClick={() => setViewport(v.width, v.height)}
-          >
-            {v.icon}
-          </button>
-        );
-      })}
-      <button
-        type="button"
-        className={`${VIEWPORT_BTN} ${VIEWPORT_BTN_INACTIVE}`}
-        data-testid="plumix-editor-viewport-wider"
-        aria-label="Wider viewport"
-        onClick={() => step(1)}
-        disabled={
-          currentIndex < 0 || currentIndex >= VIEWPORT_PRESETS.length - 1
-        }
+        {VIEWPORT_PRESETS.map((v) => {
+          const isActive = v.width === currentWidth;
+          return (
+            <button
+              key={v.width}
+              type="button"
+              className={cn(
+                TOOLBAR_BTN,
+                isActive && "bg-accent text-foreground",
+              )}
+              data-testid={`plumix-editor-viewport-${v.width}`}
+              data-active={isActive ? "true" : "false"}
+              aria-label={v.label}
+              aria-pressed={isActive}
+              onClick={() => setViewport(v.width, v.height)}
+            >
+              {v.icon}
+            </button>
+          );
+        })}
+      </div>
+      <div className="bg-border h-5 w-px" aria-hidden />
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          className={TOOLBAR_BTN}
+          data-testid="plumix-editor-zoom-out"
+          aria-label="Zoom out"
+          onClick={() => stepZoom(-1)}
+          disabled={zoomIndex <= 0}
+        >
+          <Minus className="h-4 w-4" aria-hidden />
+        </button>
+        <button
+          type="button"
+          className={TOOLBAR_BTN}
+          data-testid="plumix-editor-zoom-in"
+          aria-label="Zoom in"
+          onClick={() => stepZoom(1)}
+          disabled={zoomIndex >= ZOOM_STEPS.length - 1}
+        >
+          <Plus className="h-4 w-4" aria-hidden />
+        </button>
+      </div>
+      <div className="bg-border h-5 w-px" aria-hidden />
+      <span
+        className="text-muted-foreground w-12 text-center text-xs tabular-nums"
+        data-testid="plumix-editor-zoom-percent"
       >
-        <Plus className="h-4 w-4" aria-hidden />
-      </button>
+        {Math.round(zoom * 100)}%
+      </span>
     </div>
   );
 }
@@ -241,7 +253,6 @@ export function PlumixEditorLayout({
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
         />
-        <ViewportSwitcher />
         <AutosaveStatusPill />
         {revisionsTrigger}
         <button
@@ -255,7 +266,7 @@ export function PlumixEditorLayout({
         </button>
       </header>
       <div
-        className="grid flex-1 grid-cols-[1fr] overflow-hidden md:grid-cols-[260px_1fr_320px]"
+        className="grid flex-1 grid-cols-[minmax(0,1fr)] overflow-hidden md:grid-cols-[260px_minmax(0,1fr)_320px]"
         data-testid="plumix-editor-cols"
       >
         <BlocksBody registry={registry} capabilities={capabilities} />
@@ -508,20 +519,27 @@ function PlumixCanvasWithSlashMenu({
   );
 
   const currentViewportWidth = puck.appState.ui.viewports.current.width;
-  const canvasFrameWidth =
-    currentViewportWidth === "100%" ? "100%" : `${currentViewportWidth}px`;
+  const viewportPx =
+    typeof currentViewportWidth === "number"
+      ? currentViewportWidth
+      : VIEWPORT_PRESETS[DEFAULT_VIEWPORT_INDEX]?.width ?? 1280;
+  const [zoom, setZoom] = useState(1);
 
   return (
-    <>
+    <div
+      className="flex min-h-0 flex-col"
+      data-testid="plumix-editor-canvas-column"
+    >
+      <CanvasToolbar zoom={zoom} onZoomChange={setZoom} />
       <main
-        className="bg-muted/30 overflow-auto px-8 py-6"
+        className="bg-muted/30 flex-1 overflow-auto px-8 py-6"
         data-testid="plumix-editor-canvas"
         tabIndex={0}
         onKeyDown={handleCanvasKeyDown}
       >
         <div
-          className="bg-background mx-auto min-h-full rounded-md border p-8 shadow-sm transition-[width]"
-          style={{ width: canvasFrameWidth, maxWidth: "100%" }}
+          className="bg-background mx-auto rounded-md border p-8 shadow-sm transition-[width]"
+          style={{ width: viewportPx, zoom }}
           data-testid="plumix-editor-canvas-frame"
         >
           <Puck.Preview />
@@ -548,7 +566,7 @@ function PlumixCanvasWithSlashMenu({
           />
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
 

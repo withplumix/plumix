@@ -125,7 +125,7 @@ test.describe("v2 editor: typing into a richtext block", () => {
     expect(last?.title).toBe("My new title");
   });
 
-  test("viewport switcher selects the tablet preset", async ({ page }) => {
+  test("canvas toolbar zooms and switches viewport", async ({ page }) => {
     await page.route("**/_plumix/rpc/**", (route) => {
       const url = route.request().url();
       if (url.endsWith("/auth/session")) {
@@ -147,7 +147,7 @@ test.describe("v2 editor: typing into a richtext block", () => {
 
     await page.goto("entries/posts/1/edit");
 
-    // The switcher ships Mobile (360) / Tablet (768) / Desktop (1280)
+    // The toolbar ships Mobile (360) / Tablet (768) / Desktop (1280)
     // presets. The editor mounts on Desktop via a one-shot effect; the
     // active button exposes data-active="true" — this is the chokepoint
     // where the dispatch shape would silently break.
@@ -158,6 +158,17 @@ test.describe("v2 editor: typing into a richtext block", () => {
     await tablet.click();
     await expect(tablet).toHaveAttribute("data-active", "true");
     await expect(desktop).toHaveAttribute("data-active", "false");
+
+    // Zoom percentage starts at 100% and steps through ZOOM_STEPS in
+    // 25% increments. The display is the chokepoint that surfaces a
+    // miswired stepZoom (e.g. off-by-one on the array indexing path).
+    const percent = page.getByTestId("plumix-editor-zoom-percent");
+    await expect(percent).toHaveText("100%");
+    await page.getByTestId("plumix-editor-zoom-out").click();
+    await expect(percent).toHaveText("75%");
+    await page.getByTestId("plumix-editor-zoom-in").click();
+    await page.getByTestId("plumix-editor-zoom-in").click();
+    await expect(percent).toHaveText("125%");
   });
 
   test("back button navigates to the entries list", async ({ page }) => {
