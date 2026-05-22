@@ -9,6 +9,7 @@ import {
   getRevision as repoGetRevision,
   listRevisions as repoListRevisions,
   setRevisionMessage as repoSetRevisionMessage,
+  upsertAutosave as repoUpsertAutosave,
 } from "../../../revisions/repository.js";
 import {
   decodeRevisionSlug,
@@ -31,7 +32,9 @@ import {
 import {
   applyEntryBeforeSave,
   entryCapability,
+  fireEntryAutosaveSaved,
   fireEntryPublished,
+  fireEntryRevisionRestored,
   fireEntryTransition,
   fireEntryUpdated,
 } from "./lifecycle.js";
@@ -166,6 +169,15 @@ export const restore = base
     if (!context.auth.can(readCapability)) {
       throw errors.FORBIDDEN({ data: { capability: readCapability } });
     }
+    // Restore lands either on the caller's autosave row (for types
+    // that opt into `supports: ['autosave']`) or the live row
+    // directly (legacy types). `restore_revision` gates both — pair
+    // it with `edit_*` so a viewer who can't edit the entry can't
+    // restore on it either.
+    const restoreCapability = entryCapability(live.type, "restore_revision");
+    if (!context.auth.can(restoreCapability)) {
+      throw errors.FORBIDDEN({ data: { capability: restoreCapability } });
+    }
     const isAuthor = live.authorId === context.user.id;
     const editOwnCapability = entryCapability(live.type, "edit_own");
     const editAnyCapability = entryCapability(live.type, "edit_any");
@@ -176,6 +188,50 @@ export const restore = base
       throw errors.FORBIDDEN({ data: { capability: editAnyCapability } });
     }
 
+    // Snapshots survive block deregistration — a block removed since
+    // capture would render but never validate via `entry.update`. Run
+    // the same gate so a stale revision can't land invalid content on
+    // the destination row (autosave or live).
+    assertContentWithinByteCap(revision.content, errors);
+    assertContentValidAgainstRegistries(
+      revision.content,
+      { blocks: context.blocks },
+      errors,
+    );
+
+    const typeSupportsAutosave =
+      context.plugins.entryTypes
+        .get(live.type)
+        ?.supports?.includes("autosave") ?? false;
+
+    // Autosave-supporting types: the restore lands on the caller's
+    // per-user autosave row. No live concurrency token needed — the
+    // user can publish (or discard) later via #290's flow.
+    if (typeSupportsAutosave) {
+      // Strip the snapshot envelope from the revision's meta bag
+      // before the autosave write — `upsertAutosave` re-encodes its
+      // own envelope from the live row's current slug + parentId.
+      const cleanedMeta: Record<string, unknown> = { ...revision.meta };
+      delete cleanedMeta[SNAPSHOT_META_KEY];
+      const autosave = await repoUpsertAutosave(context.db, {
+        entry: live,
+        authorId: context.user.id,
+        patch: {
+          title: revision.title,
+          content: revision.content,
+          excerpt: revision.excerpt,
+          meta: cleanedMeta,
+        },
+      });
+      await fireEntryRevisionRestored(context, revision, autosave, live.type);
+      await fireEntryAutosaveSaved(context, autosave, live);
+      return autosave;
+    }
+
+    // Legacy live-write path for types without autosave support.
+    // Preserves the pre-#290 behavior so existing callers don't break
+    // — the autosave destination is the modern path and only kicks in
+    // when the plugin explicitly opts in.
     assertExpectedLiveUpdatedAt(input.expectedLiveUpdatedAt, live.updatedAt, {
       stale: () => {
         throw errors.CONFLICT({
@@ -184,23 +240,9 @@ export const restore = base
       },
     });
 
-    // Snapshot's `meta` carries the framework `__plumix_snapshot`
-    // envelope plus whatever the live entry's meta bag held at capture
-    // time. The envelope is internal — strip before writing back.
     const snapshotMeta: Record<string, unknown> = { ...revision.meta };
     const decodedEnvelope = decodeSnapshotEnvelope(snapshotMeta);
     delete snapshotMeta[SNAPSHOT_META_KEY];
-
-    // Snapshots survive block deregistration — a block removed since
-    // capture would render but never validate via `entry.update`. Run
-    // the same gate so a stale revision can't land invalid content on
-    // the live row.
-    assertContentWithinByteCap(revision.content, errors);
-    assertContentValidAgainstRegistries(
-      revision.content,
-      { blocks: context.blocks },
-      errors,
-    );
 
     const isPublishTransition =
       revision.status === "published" && live.status !== "published";
@@ -243,17 +285,12 @@ export const restore = base
     }
     const updated: Entry = updatedRow;
 
+    await fireEntryRevisionRestored(context, revision, updated, live.type);
     await fireEntryUpdated(context, updated, live);
     await fireEntryTransition(context, updated, live.status);
     if (isPublishTransition) {
       await fireEntryPublished(context, updated);
     }
-    // WordPress's `wp_restore_post_revision` does not snapshot the
-    // post-restore state: the restored revision row already records
-    // the new live content, so writing another duplicate row would
-    // burn one slot of `versioning.maxRevisions` per restore for no
-    // history value. Audit attribution belongs in the audit-log
-    // plugin via a dedicated hook in a later slice.
     return updated;
   });
 

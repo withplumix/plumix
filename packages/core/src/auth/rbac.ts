@@ -51,6 +51,7 @@ export const CORE_CAPABILITIES: Readonly<Record<string, UserRole>> =
     "entry:post:edit_any": "editor",
     "entry:post:delete": "editor",
     "entry:post:read_revisions": "editor",
+    "entry:post:restore_revision": "editor",
     "user:list": "editor",
     "user:edit_own": "subscriber",
     "user:create": "admin",

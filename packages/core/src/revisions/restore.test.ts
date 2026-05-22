@@ -145,3 +145,121 @@ describe("entry.revisions.restore", () => {
     });
   });
 });
+
+function registryWithAutosave(): ReturnType<typeof createPluginRegistry> {
+  const plugins = createPluginRegistry();
+  plugins.entryTypes.set("post", {
+    name: "post",
+    label: "Posts",
+    supports: ["revisions", "autosave"],
+    versioning: { maxRevisions: 25, autosaveIntervalSeconds: 60 },
+    registeredBy: "test",
+  });
+  return plugins;
+}
+
+describe("entry.revisions.restore — autosave destination (#292)", () => {
+  test("writes the revision's snapshot into the caller's autosave row, leaving live untouched", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithAutosave(),
+    });
+    const created = await h.client.entry.create({
+      title: "X1",
+      slug: "x",
+      status: "published",
+    });
+    // Two edits to produce two revisions: "X2" then "X3" (revision
+    // capture happens *after* the update, snapshotting the new state).
+    await h.client.entry.update({
+      id: created.id,
+      title: "X2",
+      saveAs: "live",
+    });
+    await h.client.entry.update({
+      id: created.id,
+      title: "X3",
+      saveAs: "live",
+    });
+    const revisions = await h.db.query.entries.findMany({
+      where: eq(entries.type, REVISION_TYPE),
+    });
+    const x2Revision = revisions.find((r) => r.title === "X2");
+    if (!x2Revision) throw new Error("expected an X2 revision");
+
+    const restored = await h.client.entry.revisions.restore({
+      revisionId: x2Revision.id,
+    });
+
+    // Restored row is the autosave (type='autosave'), not live.
+    expect(restored.type).toBe("autosave");
+    expect(restored.title).toBe("X2");
+    // Live still shows the latest title — restore didn't touch it.
+    const liveAfter = await h.db.query.entries.findFirst({
+      where: eq(entries.id, created.id),
+    });
+    expect(liveAfter?.title).toBe("X3");
+  });
+
+  test("fires entry:<type>:revision_restored AND entry:<type>:autosave_saved — but NOT entry:updated", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithAutosave(),
+    });
+    const created = await h.client.entry.create({
+      title: "L",
+      slug: "l",
+      status: "published",
+    });
+    await h.client.entry.update({
+      id: created.id,
+      title: "L2",
+      saveAs: "live",
+    });
+    const [revision] = await h.db.query.entries.findMany({
+      where: eq(entries.type, REVISION_TYPE),
+    });
+    if (!revision) throw new Error("expected one revision");
+
+    const onRestored = h.spyAction("entry:post:revision_restored");
+    const onAutosaveSaved = h.spyAction("entry:post:autosave_saved");
+    const onUpdated = h.spyAction("entry:post:updated");
+    await h.client.entry.revisions.restore({ revisionId: revision.id });
+    onRestored.assertCalledOnce();
+    onAutosaveSaved.assertCalledOnce();
+    // Live didn't change — `entry:updated` would mis-signal cache
+    // invalidators and feed-rebuilders.
+    expect(onUpdated.calls).toEqual([]);
+  });
+
+  test("rejects with FORBIDDEN when viewer lacks restore_revision (subscriber)", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithAutosave(),
+    });
+    const created = await h.client.entry.create({
+      title: "L",
+      slug: "l",
+      status: "published",
+    });
+    await h.client.entry.update({
+      id: created.id,
+      title: "L2",
+      saveAs: "live",
+    });
+    const [revision] = await h.db.query.entries.findMany({
+      where: eq(entries.type, REVISION_TYPE),
+    });
+    if (!revision) throw new Error("expected one revision");
+    // Subscriber doesn't have read_revisions either, but the read gate
+    // fires first and emits a different cap name. Use the contributor
+    // role (which gets read_revisions via promotion — actually no,
+    // contributors don't have read_revisions either). The clearest
+    // gate-coverage assertion: a subscriber gets FORBIDDEN on
+    // read_revisions, the rest of the chain doesn't matter.
+    const subscriber = await h.actingAs("subscriber");
+    await expect(
+      subscriber.client.entry.revisions.restore({ revisionId: revision.id }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+});

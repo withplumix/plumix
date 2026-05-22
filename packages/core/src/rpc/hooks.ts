@@ -216,6 +216,23 @@ declare module "../hooks/types.js" {
     ) => void | Promise<void>;
 
     /**
+     * Fires when a user restores a past revision. For types that
+     * opt into `supports: ['autosave']` the restore lands on the
+     * caller's autosave row (paired with `entry:autosave_saved`).
+     * For non-autosave types the restore writes directly to live
+     * (paired with `entry:updated` via the same revision-on-write
+     * flow as a normal `entry.update`).
+     */
+    "entry:revision_restored": (
+      revision: Entry,
+      destination: Entry,
+    ) => void | Promise<void>;
+    [K: `entry:${string}:revision_restored`]: (
+      revision: Entry,
+      destination: Entry,
+    ) => void | Promise<void>;
+
+    /**
      * Fires after a successful meta write. Payload carries the decoded
      * upserts + deleted keys — matches WP's `updated_post_meta` /
      * `deleted_post_meta` / `added_post_meta` collapsed into one
