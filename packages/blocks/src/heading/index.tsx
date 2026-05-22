@@ -25,10 +25,6 @@ export const headingBlock = defineBlock({
     },
   ],
   defaults: { level: 2, text: "" },
-  transforms: {
-    priority: 50,
-    to: [{ target: "core/paragraph", mapAttrs: (a) => ({ text: a.text }) }],
-  },
   render: ({ attrs }): ReactNode => {
     const { level: rawLevel, text = "" } = attrs as {
       readonly level?: unknown;

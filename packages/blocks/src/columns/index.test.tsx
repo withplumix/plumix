@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { BlockNode } from "../render-block-tree.js";
-import { paragraphBlock } from "../paragraph/index.js";
+import { richTextBlock } from "../rich-text/index.js";
 import { renderBlockTreeToHtml } from "../test/index.js";
 import { columnsBlock } from "./index.js";
 
@@ -35,19 +35,31 @@ describe("core/columns", () => {
         id: "c1",
         name: "core/columns",
         attrs: {
-          left: [{ id: "p1", name: "core/paragraph", attrs: { text: "L" } }],
-          right: [{ id: "p2", name: "core/paragraph", attrs: { text: "R" } }],
+          left: [
+            {
+              id: "p1",
+              name: "core/rich-text",
+              attrs: { body: "<p>L</p>" },
+            },
+          ],
+          right: [
+            {
+              id: "p2",
+              name: "core/rich-text",
+              attrs: { body: "<p>R</p>" },
+            },
+          ],
         },
       },
     ];
 
-    const html = renderBlockTreeToHtml([columnsBlock, paragraphBlock], tree);
+    const html = renderBlockTreeToHtml([columnsBlock, richTextBlock], tree);
 
     expect(html).toContain(
-      '<div data-plumix-column="left"><div data-plumix-block="core/paragraph"><p>L</p></div></div>',
+      '<div data-plumix-column="left"><div data-plumix-block="core/rich-text"><div><p>L</p></div></div></div>',
     );
     expect(html).toContain(
-      '<div data-plumix-column="right"><div data-plumix-block="core/paragraph"><p>R</p></div></div>',
+      '<div data-plumix-column="right"><div data-plumix-block="core/rich-text"><div><p>R</p></div></div></div>',
     );
   });
 });

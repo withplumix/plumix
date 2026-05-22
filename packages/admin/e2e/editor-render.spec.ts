@@ -128,7 +128,7 @@ test.describe("V2 spike editor renders end-to-end", () => {
     await expect(page.getByTestId("slash-menu-dialog")).toBeVisible();
   });
 
-  test("slash menu insert: selecting a paragraph adds it to the canvas", async ({
+  test("slash menu insert: selecting rich-text adds a paragraph to the canvas", async ({
     page,
   }) => {
     await page.goto("entries/posts/1/edit");
@@ -138,43 +138,10 @@ test.describe("V2 spike editor renders end-to-end", () => {
     await page.keyboard.press("/");
 
     await expect(page.getByTestId("slash-menu-dialog")).toBeVisible();
-    await page.getByTestId("slash-menu-item-core/paragraph").click();
+    await page.getByTestId("slash-menu-item-core/rich-text").click();
 
     await expect(page.getByTestId("slash-menu-dialog")).toBeHidden();
     await expect(canvas.locator("p")).toHaveCount(1);
-  });
-
-  test("slash menu insert: bullet variation inserts a <ul>, parent core/list slug is absent", async ({
-    page,
-  }) => {
-    await page.goto("entries/posts/1/edit");
-    const canvas = page.getByTestId("plumix-editor-canvas");
-    await canvas.focus();
-    await page.keyboard.press("/");
-    await expect(page.getByTestId("slash-menu-item-core/list")).toHaveCount(0);
-    await page.getByTestId("slash-menu-item-bullet").click();
-    await expect(canvas.locator("ul")).toHaveCount(1);
-    await expect(canvas.locator("ol")).toHaveCount(0);
-  });
-
-  test("slash menu insert: numbered variation inserts an <ol>", async ({
-    page,
-  }) => {
-    await page.goto("entries/posts/1/edit");
-    const canvas = page.getByTestId("plumix-editor-canvas");
-    await insertViaSlash(page, "numbered");
-    await expect(canvas.locator("ol")).toHaveCount(1);
-    await expect(canvas.locator("ul")).toHaveCount(0);
-  });
-
-  test("blocks tab numbered button inserts an <ol> in the canvas", async ({
-    page,
-  }) => {
-    await page.goto("entries/posts/1/edit");
-    const canvas = page.getByTestId("plumix-editor-canvas");
-    await page.getByTestId("plumix-blocks-tab-item-numbered").click();
-    await expect(canvas.locator("ol")).toHaveCount(1);
-    await expect(canvas.locator("ul")).toHaveCount(0);
   });
 
   test("slash menu insert: details inserts a <details> with default summary", async ({
@@ -224,15 +191,6 @@ test.describe("V2 spike editor renders end-to-end", () => {
     const canvas = page.getByTestId("plumix-editor-canvas");
     await insertViaSlash(page, "core/spacer");
     await expect(canvas.locator("div[aria-hidden='true']")).toHaveCount(1);
-  });
-
-  test("slash menu insert: description-list inserts a <dl>", async ({
-    page,
-  }) => {
-    await page.goto("entries/posts/1/edit");
-    const canvas = page.getByTestId("plumix-editor-canvas");
-    await insertViaSlash(page, "core/description-list");
-    await expect(canvas.locator("dl")).toHaveCount(1);
   });
 
   test("server-loaded plumix.v2 content renders in the canvas on initial mount", async ({
@@ -372,7 +330,7 @@ test.describe("V2 spike editor renders end-to-end", () => {
 
     await page.getByTestId("plumix-editor-canvas").focus();
     await page.keyboard.press("/");
-    await page.getByTestId("slash-menu-item-core/paragraph").click();
+    await page.getByTestId("slash-menu-item-core/rich-text").click();
 
     await expect(pill).toHaveAttribute("data-status", "saving");
     await expect(pill).toHaveAttribute("data-status", "saved");
@@ -393,7 +351,7 @@ test.describe("V2 spike editor renders end-to-end", () => {
 
     await page.getByTestId("plumix-editor-canvas").focus();
     await page.keyboard.press("/");
-    await page.getByTestId("slash-menu-item-core/paragraph").click();
+    await page.getByTestId("slash-menu-item-core/rich-text").click();
 
     await expect
       .poll(
@@ -591,12 +549,12 @@ test.describe("V2 spike editor renders end-to-end", () => {
 
     const pill = page.getByTestId("plumix-autosave-pill");
 
-    await insertViaSlash(page, "core/paragraph");
+    await insertViaSlash(page, "core/rich-text");
 
     await expect(pill).toHaveAttribute("data-status", "error");
     await expect.poll(() => entryGetCalls).toBe(2);
 
-    await insertViaSlash(page, "core/paragraph");
+    await insertViaSlash(page, "core/rich-text");
 
     await expect(pill).toHaveAttribute("data-status", "saved");
     expect(
@@ -629,7 +587,7 @@ test.describe("V2 spike editor renders end-to-end", () => {
 
     await page.getByTestId("plumix-editor-canvas").focus();
     await page.keyboard.press("/");
-    await page.getByTestId("slash-menu-item-core/paragraph").click();
+    await page.getByTestId("slash-menu-item-core/rich-text").click();
 
     await expect(pill).toHaveAttribute("data-status", "error");
   });

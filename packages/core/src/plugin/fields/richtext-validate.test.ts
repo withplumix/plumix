@@ -318,20 +318,6 @@ describe("walkRichtextDoc — registry alias parity", () => {
     ).not.toThrow();
   });
 
-  test("core/paragraph is implicit alongside the legacy `paragraph`", () => {
-    // Mirrors `FIELD_MODE_IMPLICIT_BLOCK` in the admin editor wiring —
-    // the editor saves `core/paragraph` even when the field allowlist
-    // declares no nodes.
-    const validate = walkRichtextDoc({});
-    const doc = {
-      type: "doc",
-      content: [
-        { type: "core/paragraph", content: [{ type: "text", text: "hi" }] },
-      ],
-    };
-    expect(validate(doc)).toBe(doc);
-  });
-
   test.skip("namespaced names declared in the allowlist also accept their legacy aliases", () => {
     // Symmetric: if a field author migrates to the namespaced contract
     // by declaring `nodes: ["core/heading"]`, legacy stored content

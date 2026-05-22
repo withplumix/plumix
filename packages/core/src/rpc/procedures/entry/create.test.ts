@@ -27,7 +27,11 @@ describe("entry.create", () => {
         content: {
           version: "plumix.v2",
           blocks: [
-            { id: "p1", name: "core/paragraph", attrs: {} },
+            {
+              id: "p1",
+              name: "core/rich-text",
+              attrs: { body: "<p></p>" },
+            },
             { id: "x1", name: "made-up/block", attrs: {} },
           ],
         },
