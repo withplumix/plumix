@@ -5,7 +5,7 @@ export const blog = definePlugin("blog", (ctx) => {
     label: "Posts",
     labels: { singular: "Post", plural: "Posts" },
     description: "Standard blog posts",
-    supports: ["title", "editor", "excerpt", "revisions"],
+    supports: ["title", "editor", "excerpt", "revisions", "autosave"],
     versioning: { maxRevisions: 25, autosaveIntervalSeconds: 60 },
     termTaxonomies: ["category", "tag"],
     isHierarchical: false,

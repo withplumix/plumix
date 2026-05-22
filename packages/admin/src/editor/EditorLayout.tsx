@@ -11,6 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { Button } from "@/components/ui/button.js";
 import {
   Dialog,
   DialogContent,
@@ -73,6 +74,21 @@ interface PlumixEditorLayoutProps {
   // the route is in `?revision=<id>` preview mode — the title input
   // and publish button are hidden because edits don't autosave.
   readonly previewBanner?: ReactNode;
+  // edit-with-draft mode: replaces the lone Publish button with three
+  // actions (Discard / Save Draft / Publish) and renders an
+  // "unpublished changes" banner above the header when the entry is
+  // currently loaded from an autosave row. Driven through explicit
+  // state props (rather than ReactNode slots) so the layout owns the
+  // visual contract; route layer just wires the callbacks.
+  readonly draftMode?: {
+    readonly hasPendingDraft: boolean;
+    readonly onSaveDraft: () => void;
+    readonly onPublishDraft: () => void;
+    readonly onDiscardDraft: () => void;
+    readonly isSaving: boolean;
+    readonly isPublishing: boolean;
+    readonly isDiscarding: boolean;
+  };
 }
 
 const EMPTY_REGISTRY: BlockRegistry = createBlockRegistry([]);
@@ -244,6 +260,74 @@ function PlumixAuditTab(): ReactElement {
   return <HeadingAuditPanel tree={tree} onSelect={handleSelect} />;
 }
 
+interface LivePublishButtonProps {
+  readonly onPublish: () => void;
+  readonly isPublishing: boolean;
+  readonly isPublished: boolean;
+}
+
+function LivePublishButton({
+  onPublish,
+  isPublishing,
+  isPublished,
+}: LivePublishButtonProps): ReactElement {
+  return (
+    <button
+      type="button"
+      className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-8 items-center rounded-md px-3 text-sm font-medium disabled:opacity-50"
+      data-testid="plumix-editor-publish-button"
+      onClick={onPublish}
+      disabled={isPublishing || isPublished}
+    >
+      Publish
+    </button>
+  );
+}
+
+interface DraftActionsProps {
+  readonly draftMode: NonNullable<PlumixEditorLayoutProps["draftMode"]>;
+}
+
+// Three-action header for edit-with-draft mode. Discard and Publish
+// disable when there's no pending draft (mirrors the server's
+// NO_PENDING_DRAFT shape); Save Draft stays available so a pristine
+// published row can be edited and saved as the first draft.
+function DraftActions({ draftMode }: DraftActionsProps): ReactElement {
+  const anyInFlight =
+    draftMode.isSaving || draftMode.isPublishing || draftMode.isDiscarding;
+  return (
+    <div className="flex items-center gap-2">
+      <Button
+        variant="ghost"
+        size="sm"
+        data-testid="editor-draft-discard"
+        onClick={draftMode.onDiscardDraft}
+        disabled={anyInFlight || !draftMode.hasPendingDraft}
+      >
+        {draftMode.isDiscarding ? "Discarding…" : "Discard"}
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        data-testid="editor-draft-save"
+        onClick={draftMode.onSaveDraft}
+        disabled={anyInFlight}
+      >
+        {draftMode.isSaving ? "Saving…" : "Save Draft"}
+      </Button>
+      <Button
+        variant="default"
+        size="sm"
+        data-testid="editor-draft-publish"
+        onClick={draftMode.onPublishDraft}
+        disabled={anyInFlight || !draftMode.hasPendingDraft}
+      >
+        {draftMode.isPublishing ? "Publishing…" : "Publish"}
+      </Button>
+    </div>
+  );
+}
+
 export function PlumixEditorLayout({
   registry = EMPTY_REGISTRY,
   capabilities = EMPTY_CAPS,
@@ -256,11 +340,41 @@ export function PlumixEditorLayout({
   isPublished = false,
   revisionsTrigger,
   previewBanner,
+  draftMode,
 }: PlumixEditorLayoutProps): ReactElement {
   const isPreview = previewBanner !== undefined;
+  const isDraftMode = draftMode !== undefined;
+  const showDraftBanner = isDraftMode && draftMode.hasPendingDraft;
   return (
     <div className="flex h-dvh flex-col" data-testid="plumix-editor-layout">
       {previewBanner}
+      {showDraftBanner ? (
+        // Static banner — no `role="status"` because a live region
+        // containing a button gets re-announced on every state change,
+        // which makes the Discard button noisy for screen readers.
+        // Dark-mode contrast: `amber-900/30` background pairs with
+        // `amber-100` text at ~4.5:1 (AA for normal text); the original
+        // `amber-950/40` measured ~3.8:1.
+        <div
+          data-testid="unpublished-changes-banner"
+          className="flex shrink-0 items-center gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:bg-amber-900/30 dark:text-amber-100"
+        >
+          <span className="font-medium">
+            You have unpublished draft changes.
+          </span>
+          <span>Click Publish to push them live, or Discard to revert.</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            data-testid="unpublished-changes-banner-discard"
+            onClick={draftMode.onDiscardDraft}
+            disabled={draftMode.isDiscarding}
+            className="ml-auto"
+          >
+            {draftMode.isDiscarding ? "Discarding…" : "Discard"}
+          </Button>
+        </div>
+      ) : null}
       <header
         className="bg-background flex h-12 shrink-0 items-center gap-3 border-b px-4"
         data-testid="plumix-editor-header"
@@ -285,16 +399,14 @@ export function PlumixEditorLayout({
         />
         {isPreview ? null : <AutosaveStatusPill />}
         {revisionsTrigger}
-        {isPreview ? null : (
-          <button
-            type="button"
-            className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-8 items-center rounded-md px-3 text-sm font-medium disabled:opacity-50"
-            data-testid="plumix-editor-publish-button"
-            onClick={onPublish}
-            disabled={isPublishing || isPublished}
-          >
-            Publish
-          </button>
+        {isPreview ? null : isDraftMode ? (
+          <DraftActions draftMode={draftMode} />
+        ) : (
+          <LivePublishButton
+            onPublish={onPublish}
+            isPublishing={isPublishing}
+            isPublished={isPublished}
+          />
         )}
       </header>
       <div

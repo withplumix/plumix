@@ -11,6 +11,7 @@ import { seedPuckData } from "@/editor/entry-content.js";
 import { readDraft, writeDraft } from "@/editor/local-draft.js";
 import { puckDataToBlockTree } from "@/editor/puck-to-block-tree.js";
 import { registerCoreBlocks } from "@/editor/register-core-blocks.js";
+import { resolveEditorMode } from "@/editor/resolve-editor-mode.js";
 import { PreviewBanner } from "@/editor/revisions/PreviewBanner.js";
 import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
 import { entryMetaBoxesForType, findEntryTypeBySlug } from "@/lib/manifest.js";
@@ -179,9 +180,10 @@ function PuckSpikeRoute(): ReactNode {
       key={draftKey}
       draftKey={draftKey}
       id={id}
-      entryTypeName={entryType?.name}
+      entryType={entryType}
       supportsRevisions={supportsRevisions}
       capabilities={user.capabilities}
+      userId={user.id}
       backHref={backHref}
     />
   );
@@ -190,22 +192,30 @@ function PuckSpikeRoute(): ReactNode {
 interface PuckSpikeRouteInnerProps {
   readonly draftKey: string;
   readonly id: number;
-  readonly entryTypeName: string | undefined;
+  readonly entryType: EntryTypeManifestEntry | undefined;
   readonly supportsRevisions: boolean;
   readonly capabilities: readonly string[];
+  readonly userId: number;
   readonly backHref: string;
 }
 
 function PuckSpikeRouteInner({
   draftKey,
   id,
-  entryTypeName,
+  entryType,
   supportsRevisions,
   capabilities,
+  userId,
   backHref,
 }: PuckSpikeRouteInnerProps): ReactNode {
+  const entryTypeName = entryType?.name;
+  // `preview: true` overlays any existing autosave onto the live row
+  // and decorates the response with `_preview`. For types/users
+  // without autosave the overlay is a no-op and `_preview.source`
+  // reads `'live'`. Safe for the editor route because anyone here
+  // has the edit caps the preview gate requires.
   const { data: entry } = useSuspenseQuery(
-    orpc.entry.get.queryOptions({ input: { id } }),
+    orpc.entry.get.queryOptions({ input: { id, preview: true } }),
   );
   // Initial-only: Puck owns the live editor state via its internal store.
   // Re-seeding `<Puck data>` mid-keystroke unmounts Tiptap and steals
@@ -269,7 +279,15 @@ function PuckSpikeRouteInner({
               : {}),
             expectedLiveUpdatedAt: liveUpdatedAtRef.current,
           });
-          liveUpdatedAtRef.current = updated.updatedAt;
+          // Only stamp the live concurrency token when the write
+          // actually landed on the live row. Slice C routes
+          // autosave-supporting types to a per-user autosave row;
+          // the response's `updatedAt` is that autosave's timestamp,
+          // not live's. Poisoning the ref with it would 409 the next
+          // publish (the canonical bug this guard prevents).
+          if (updated.type === entry.type) {
+            liveUpdatedAtRef.current = updated.updatedAt;
+          }
           if (titleChanged) lastSavedTitleRef.current = trimmedTitle;
           if (contentChanged) lastSavedContentRef.current = serializedBlocks;
           setStatus("saved");
@@ -290,7 +308,9 @@ function PuckSpikeRouteInner({
           }
         }
       }, AUTOSAVE_DEBOUNCE_MS),
-    [draftKey, id, queryClient],
+    // `entry.type` is stable for a given row; including it satisfies
+    // the exhaustive-deps rule without adding meaningful churn.
+    [draftKey, id, queryClient, entry.type],
   );
   /* eslint-enable react-hooks/refs */
   useEffect(() => () => debouncer.flush(), [debouncer]);
@@ -353,6 +373,110 @@ function PuckSpikeRouteInner({
     enabled: supportsRevisions,
     onPreview: handlePreview,
   });
+
+  // edit-with-draft mode: published row + type opts into autosave +
+  // viewer can edit. The debouncer already routes writes to the
+  // autosave row via slice C's `saveAs` defaulting — only the
+  // header surface + banner + publish/discard wiring differ from
+  // the live flow.
+  const editorMode = resolveEditorMode({
+    entryType,
+    currentStatus: entry.status,
+    isAuthor: entry.authorId === userId,
+    capabilities: capabilitySet,
+  });
+  const isEditWithDraft = editorMode === "edit-with-draft";
+  const hasPendingDraft = entry._preview?.source === "autosave";
+
+  const publishDraft = useMutation({
+    mutationFn: () =>
+      orpc.entry.publish.call({
+        id,
+        expectedLiveUpdatedAt: liveUpdatedAtRef.current,
+      }),
+    onSuccess: async (updated) => {
+      liveUpdatedAtRef.current = updated.updatedAt;
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: orpc.entry.get.queryOptions({
+            input: { id, preview: true },
+          }).queryKey,
+        }),
+        ...(entryTypeName
+          ? [
+              queryClient.invalidateQueries({
+                queryKey: orpc.entry.list.key({
+                  input: { type: entryTypeName },
+                }),
+              }),
+              queryClient.invalidateQueries({
+                queryKey: ["entry.revisions", id],
+              }),
+            ]
+          : []),
+      ]);
+    },
+  });
+  const discardDraft = useMutation({
+    mutationFn: () => orpc.entry.discardDraft.call({ id }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: orpc.entry.get.queryOptions({
+            input: { id, preview: true },
+          }).queryKey,
+        }),
+        // Autosaves surface in the revisions list (slice 3 of #289
+        // shows them under the Autosaves tab once #292 lands).
+        // Invalidating here keeps the sheet in sync after a discard.
+        queryClient.invalidateQueries({
+          queryKey: ["entry.revisions", id],
+        }),
+      ]);
+    },
+  });
+  const handlePublishDraft = useCallback(
+    () => publishDraft.mutate(),
+    [publishDraft],
+  );
+  const handleDiscardDraft = useCallback(
+    () => discardDraft.mutate(),
+    [discardDraft],
+  );
+  const handleSaveDraft = useCallback(() => {
+    // Force-flush any pending debounced write so "Save Draft" is
+    // immediate. The debouncer's callback writes the autosave row via
+    // `entry.update` (server defaults to `saveAs: 'draft'`).
+    debouncer.flush();
+  }, [debouncer]);
+
+  const draftModeProp = useMemo(
+    () =>
+      isEditWithDraft
+        ? {
+            hasPendingDraft,
+            onSaveDraft: handleSaveDraft,
+            onPublishDraft: handlePublishDraft,
+            onDiscardDraft: handleDiscardDraft,
+            isSaving: status === "saving",
+            isPublishing: publishDraft.isPending,
+            isDiscarding: discardDraft.isPending,
+          }
+        : undefined,
+    [
+      isEditWithDraft,
+      hasPendingDraft,
+      handleSaveDraft,
+      handlePublishDraft,
+      handleDiscardDraft,
+      status,
+      publishDraft.isPending,
+      discardDraft.isPending,
+    ],
+  );
   const Layout = useCallback(
     (): ReactElement => (
       <PlumixEditorLayout
@@ -366,6 +490,7 @@ function PuckSpikeRouteInner({
         isPublishing={publish.isPending}
         isPublished={isPublished}
         revisionsTrigger={revisionsTrigger}
+        draftMode={draftModeProp}
       />
     ),
     [
@@ -377,6 +502,7 @@ function PuckSpikeRouteInner({
       isPublished,
       capabilitySet,
       revisionsTrigger,
+      draftModeProp,
     ],
   );
 

@@ -3,6 +3,7 @@
 // to the preview URL renders the banner read-only, Back-to-live
 // clears the param, and the canvas write affordances are gone.
 
+import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 import type { PlumixManifest } from "@plumix/core/manifest";
@@ -66,9 +67,7 @@ function revisionRow(): Record<string, unknown> {
   };
 }
 
-async function installMocks(
-  page: import("@playwright/test").Page,
-): Promise<void> {
+async function installMocks(page: Page): Promise<void> {
   await mockManifest(page, MANIFEST_WITH_REVISIONS);
   await page.route("**/_plumix/rpc/**", (route) => {
     const url = route.request().url();
