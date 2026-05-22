@@ -16,10 +16,9 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs.js";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 
 import { RevisionDiffDialog } from "./RevisionDiffDialog.js";
-import { RevisionDiffPanel } from "./RevisionDiffPanel.js";
 
 interface RevisionListItem {
   readonly id: number;
@@ -52,13 +51,15 @@ interface RevisionsSheetProps {
   // Injected so the admin can plug in its own intl helper and tests
   // can stub it deterministically (must return a stable string).
   readonly relativeTime: (date: Date) => string;
-  // Both fetchers are injected (consistent with `fetchPage`) so the
-  // route layer owns RPC wiring and tests can stub deterministically.
+  // Modal-only fetchers — the dev-mode JSON diff dialog reads from
+  // these. The inline diff panel was removed in slice 2; previews
+  // now live on the editor route via `?revision=<id>`.
   readonly fetchRevision: (revisionId: number) => Promise<DiffSnapshot>;
   readonly fetchCurrent: (entryId: number) => Promise<DiffSnapshot>;
-  // When omitted the restore action is hidden — keeps the sheet usable
-  // as a read-only diff viewer for roles without `edit_*` capabilities.
-  readonly onRestore?: (revisionId: number) => Promise<void>;
+  // Fires when the user clicks a row body — caller is expected to
+  // navigate to the preview URL. The sheet closes itself afterwards
+  // so the editor surface is unobstructed.
+  readonly onPreview: (revisionId: number) => void;
 }
 
 export function RevisionsSheet({
@@ -67,12 +68,9 @@ export function RevisionsSheet({
   relativeTime,
   fetchRevision,
   fetchCurrent,
-  onRestore,
+  onPreview,
 }: RevisionsSheetProps): ReactElement {
   const [open, setOpen] = useState(false);
-  const [selectedRevisionId, setSelectedRevisionId] = useState<number | null>(
-    null,
-  );
   const query = useInfiniteQuery({
     queryKey: ["entry.revisions", entryId],
     enabled: open,
@@ -80,38 +78,16 @@ export function RevisionsSheet({
     queryFn: ({ pageParam }) => fetchPage({ entryId, cursor: pageParam }),
     getNextPageParam: (page) => page.nextCursor,
   });
-  const revisionQuery = useQuery({
-    queryKey: ["entry.revision.diff", selectedRevisionId],
-    enabled: selectedRevisionId !== null,
-    // `enabled` already guards null; `?? 0` is the narrowest dodge
-    // around TanStack's exhaustive typing without an `as` cast.
-    queryFn: () => fetchRevision(selectedRevisionId ?? 0),
-  });
-  const currentQuery = useQuery({
-    queryKey: ["entry.current.diff", entryId],
-    enabled: selectedRevisionId !== null,
-    queryFn: () => fetchCurrent(entryId),
-  });
 
-  const [restorePending, setRestorePending] = useState(false);
   const [diffModalRevisionId, setDiffModalRevisionId] = useState<number | null>(
     null,
   );
   const allRevisions = query.data?.pages.flatMap((p) => p.revisions) ?? [];
   const hasMore = Boolean(query.data?.pages.at(-1)?.nextCursor);
-  const showDiff = selectedRevisionId !== null;
-  const canRestore = onRestore !== undefined && selectedRevisionId !== null;
 
-  async function handleRestore(): Promise<void> {
-    if (!onRestore || selectedRevisionId === null) return;
-    setRestorePending(true);
-    try {
-      await onRestore(selectedRevisionId);
-      setSelectedRevisionId(null);
-      setOpen(false);
-    } finally {
-      setRestorePending(false);
-    }
+  function handlePreview(revisionId: number): void {
+    onPreview(revisionId);
+    setOpen(false);
   }
 
   return (
@@ -137,97 +113,60 @@ export function RevisionsSheet({
         className="overflow-y-auto"
       >
         <SheetHeader>
-          <SheetTitle>{showDiff ? "Revision diff" : "Revisions"}</SheetTitle>
+          <SheetTitle>Revisions</SheetTitle>
           <SheetDescription>
-            {showDiff
-              ? "Changes between this revision and the current entry."
-              : "Every save creates a new revision. Newest first."}
+            Every save creates a new revision. Newest first.
           </SheetDescription>
-          {showDiff ? (
-            <div className="mt-2 flex w-fit gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                data-testid="revisions-sheet-back"
-                onClick={() => setSelectedRevisionId(null)}
-              >
-                ← Back to list
-              </Button>
-              {canRestore ? (
-                <Button
-                  variant="default"
-                  size="sm"
-                  data-testid="revisions-sheet-restore"
-                  disabled={restorePending}
-                  onClick={() => void handleRestore()}
-                >
-                  {restorePending ? "Restoring…" : "Restore this revision"}
-                </Button>
-              ) : null}
-            </div>
-          ) : null}
         </SheetHeader>
-        {showDiff ? (
-          <DiffSection
-            revisionLoading={revisionQuery.isLoading}
-            currentLoading={currentQuery.isLoading}
-            error={revisionQuery.isError || currentQuery.isError}
-            revision={revisionQuery.data}
-            current={currentQuery.data}
-          />
-        ) : (
-          (() => {
-            // Both All and Publishes render the identical list today —
-            // every revision is a publish. Once a revision-kind field
-            // exists (slice 2 of #289), Publishes will filter and the
-            // two panels diverge. Sharing the element keeps the JSX
-            // honest about the current shape.
-            const listPanel = (
-              <ListSection
-                isLoading={query.isLoading}
-                isError={query.isError}
-                allRevisions={allRevisions}
-                relativeTime={relativeTime}
-                onSelect={setSelectedRevisionId}
-                onOpenDiff={setDiffModalRevisionId}
-                hasMore={hasMore}
-                isFetchingNextPage={query.isFetchingNextPage}
-                fetchNextPage={() => void query.fetchNextPage()}
-              />
-            );
-            return (
-              <Tabs defaultValue="all" className="mt-2">
-                <TabsList className="w-full">
-                  <TabsTrigger value="all" data-testid="revisions-tab-all">
-                    All
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="publishes"
-                    data-testid="revisions-tab-publishes"
-                  >
-                    Publishes
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="autosaves"
-                    data-testid="revisions-tab-autosaves"
-                  >
-                    Autosaves
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value="all">{listPanel}</TabsContent>
-                <TabsContent value="publishes">{listPanel}</TabsContent>
-                <TabsContent value="autosaves">
-                  <div
-                    data-testid="revisions-autosaves-empty"
-                    className="text-muted-foreground px-4 py-6 text-sm"
-                  >
-                    Autosaves will appear here once drafts-of-published lands.
-                  </div>
-                </TabsContent>
-              </Tabs>
-            );
-          })()
-        )}
+        {(() => {
+          // Both All and Publishes render the identical list today —
+          // every revision is a publish. Once a revision-kind field
+          // lands, Publishes will filter and the two panels diverge.
+          const listPanel = (
+            <ListSection
+              isLoading={query.isLoading}
+              isError={query.isError}
+              allRevisions={allRevisions}
+              relativeTime={relativeTime}
+              onPreview={handlePreview}
+              onOpenDiff={setDiffModalRevisionId}
+              hasMore={hasMore}
+              isFetchingNextPage={query.isFetchingNextPage}
+              fetchNextPage={() => void query.fetchNextPage()}
+            />
+          );
+          return (
+            <Tabs defaultValue="all" className="mt-2">
+              <TabsList className="w-full">
+                <TabsTrigger value="all" data-testid="revisions-tab-all">
+                  All
+                </TabsTrigger>
+                <TabsTrigger
+                  value="publishes"
+                  data-testid="revisions-tab-publishes"
+                >
+                  Publishes
+                </TabsTrigger>
+                <TabsTrigger
+                  value="autosaves"
+                  data-testid="revisions-tab-autosaves"
+                >
+                  Autosaves
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="all">{listPanel}</TabsContent>
+              <TabsContent value="publishes">{listPanel}</TabsContent>
+              <TabsContent value="autosaves">
+                <div
+                  data-testid="revisions-autosaves-empty"
+                  className="text-muted-foreground px-4 py-6 text-sm"
+                >
+                  Autosaves will appear here once drafts-of-published lands.
+                </div>
+              </TabsContent>
+            </Tabs>
+          );
+        })()}
       </SheetContent>
       <RevisionDiffDialog
         entryId={entryId}
@@ -247,7 +186,7 @@ interface ListSectionProps {
   readonly isError: boolean;
   readonly allRevisions: readonly RevisionListItem[];
   readonly relativeTime: (date: Date) => string;
-  readonly onSelect: (id: number) => void;
+  readonly onPreview: (id: number) => void;
   readonly onOpenDiff: (id: number) => void;
   readonly hasMore: boolean;
   readonly isFetchingNextPage: boolean;
@@ -259,7 +198,7 @@ function ListSection({
   isError,
   allRevisions,
   relativeTime,
-  onSelect,
+  onPreview,
   onOpenDiff,
   hasMore,
   isFetchingNextPage,
@@ -309,7 +248,7 @@ function ListSection({
               <button
                 type="button"
                 data-testid={`revisions-sheet-item-${rev.id}-select`}
-                onClick={() => onSelect(rev.id)}
+                onClick={() => onPreview(rev.id)}
                 className="hover:bg-accent min-w-0 flex-1 rounded-md p-2 text-left"
               >
                 <div className="truncate text-sm font-medium">{rev.title}</div>
@@ -346,54 +285,5 @@ function ListSection({
         </div>
       ) : null}
     </>
-  );
-}
-
-interface DiffSectionProps {
-  readonly revisionLoading: boolean;
-  readonly currentLoading: boolean;
-  readonly error: boolean;
-  readonly revision: DiffSnapshot | undefined;
-  readonly current: DiffSnapshot | undefined;
-}
-
-function DiffSection({
-  revisionLoading,
-  currentLoading,
-  error,
-  revision,
-  current,
-}: DiffSectionProps): ReactElement {
-  if (error) {
-    return (
-      <div
-        data-testid="revisions-sheet-diff-error"
-        className="text-destructive px-4 py-6"
-      >
-        Failed to load the diff.
-      </div>
-    );
-  }
-  if (revisionLoading || currentLoading || !revision || !current) {
-    return (
-      <div
-        data-testid="revisions-sheet-diff-loading"
-        aria-label="Loading diff"
-        aria-busy="true"
-        className="space-y-3 px-4 py-6"
-      >
-        {Array.from({ length: 5 }, (_, i) => (
-          <div key={i} className="space-y-1.5">
-            <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-4 w-full" />
-          </div>
-        ))}
-      </div>
-    );
-  }
-  return (
-    <div data-testid="revisions-sheet-diff" className="px-3">
-      <RevisionDiffPanel revision={revision} current={current} />
-    </div>
   );
 }

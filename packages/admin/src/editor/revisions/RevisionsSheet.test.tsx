@@ -41,6 +41,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
           relativeTime={() => "now"}
           fetchRevision={vi.fn()}
           fetchCurrent={vi.fn()}
+          onPreview={vi.fn()}
         />,
       ),
     );
@@ -75,6 +76,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
           relativeTime={() => "now"}
           fetchRevision={vi.fn()}
           fetchCurrent={vi.fn()}
+          onPreview={vi.fn()}
         />,
       ),
     );
@@ -122,6 +124,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
           relativeTime={() => "now"}
           fetchRevision={fetchRevision}
           fetchCurrent={fetchCurrent}
+          onPreview={vi.fn()}
         />,
       ),
     );
@@ -172,6 +175,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
               meta: {},
             })
           }
+          onPreview={vi.fn()}
         />,
       ),
     );
@@ -214,6 +218,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
           relativeTime={() => "now"}
           fetchRevision={() => Promise.reject(new Error("boom"))}
           fetchCurrent={() => Promise.reject(new Error("boom"))}
+          onPreview={vi.fn()}
         />,
       ),
     );
@@ -264,6 +269,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
           relativeTime={() => "now"}
           fetchRevision={() => Promise.resolve(revision)}
           fetchCurrent={() => Promise.resolve(current)}
+          onPreview={vi.fn()}
         />,
       ),
     );
@@ -295,6 +301,7 @@ describe("RevisionsSheet", () => {
           relativeTime={(d) => d.toISOString()}
           fetchRevision={vi.fn()}
           fetchCurrent={vi.fn()}
+          onPreview={vi.fn()}
         />,
       ),
     );
@@ -337,6 +344,7 @@ describe("RevisionsSheet", () => {
           relativeTime={() => "just now"}
           fetchRevision={vi.fn()}
           fetchCurrent={vi.fn()}
+          onPreview={vi.fn()}
         />,
       ),
     );
@@ -394,6 +402,7 @@ describe("RevisionsSheet", () => {
           relativeTime={() => "now"}
           fetchRevision={vi.fn()}
           fetchCurrent={vi.fn()}
+          onPreview={vi.fn()}
         />,
       ),
     );
@@ -410,12 +419,12 @@ describe("RevisionsSheet", () => {
     ).not.toBeInTheDocument();
   });
 
-  test("restore button calls onRestore and closes the sheet", async () => {
+  test("clicking the row body calls onPreview with the revision id and closes the sheet", async () => {
     const fetchPage = vi.fn(() =>
       Promise.resolve({
         revisions: [
           {
-            id: 8,
+            id: 21,
             title: "Snapshot",
             updatedAt: new Date("2026-05-17T12:00:00Z"),
             authorId: 1,
@@ -426,56 +435,36 @@ describe("RevisionsSheet", () => {
         nextCursor: null,
       }),
     );
-    const onRestore = vi.fn(() => Promise.resolve());
+    const onPreview = vi.fn();
     render(
       wrap(
         <RevisionsSheet
           entryId={42}
           fetchPage={fetchPage}
           relativeTime={() => "now"}
-          fetchRevision={() =>
-            Promise.resolve({
-              title: "S",
-              slug: "s",
-              excerpt: null,
-              content: { type: "doc", content: [] },
-              meta: {},
-            })
-          }
-          fetchCurrent={() =>
-            Promise.resolve({
-              title: "S v2",
-              slug: "s",
-              excerpt: null,
-              content: { type: "doc", content: [] },
-              meta: {},
-            })
-          }
-          onRestore={onRestore}
+          fetchRevision={vi.fn()}
+          fetchCurrent={vi.fn()}
+          onPreview={onPreview}
         />,
       ),
     );
     fireEvent.click(screen.getByTestId("revisions-sheet-trigger"));
-    await waitFor(() => screen.getByTestId("revisions-sheet-item-8-select"));
-    fireEvent.click(screen.getByTestId("revisions-sheet-item-8-select"));
-    await waitFor(() => screen.getByTestId("revisions-sheet-diff"));
-    fireEvent.click(screen.getByTestId("revisions-sheet-restore"));
-    await waitFor(() => {
-      expect(onRestore).toHaveBeenCalledWith(8);
-    });
+    await waitFor(() => screen.getByTestId("revisions-sheet-item-21"));
+    fireEvent.click(screen.getByTestId("revisions-sheet-item-21-select"));
+    expect(onPreview).toHaveBeenCalledWith(21);
     await waitFor(() => {
       expect(
-        screen.queryByTestId("revisions-sheet-diff"),
+        screen.queryByTestId("revisions-sheet-list"),
       ).not.toBeInTheDocument();
     });
   });
 
-  test("selecting a revision opens the diff panel and fetches both snapshots", async () => {
+  test("no inline diff panel renders after a row click — preview lives on the route", async () => {
     const fetchPage = vi.fn(() =>
       Promise.resolve({
         revisions: [
           {
-            id: 8,
+            id: 22,
             title: "Snapshot",
             updatedAt: new Date("2026-05-17T12:00:00Z"),
             authorId: 1,
@@ -486,45 +475,26 @@ describe("RevisionsSheet", () => {
         nextCursor: null,
       }),
     );
-    const fetchRevision = vi.fn(() =>
-      Promise.resolve({
-        title: "Snapshot",
-        slug: "post",
-        excerpt: null,
-        content: { type: "doc", content: [] },
-        meta: {},
-      }),
-    );
-    const fetchCurrent = vi.fn(() =>
-      Promise.resolve({
-        title: "Snapshot v2",
-        slug: "post",
-        excerpt: null,
-        content: { type: "doc", content: [] },
-        meta: {},
-      }),
-    );
     render(
       wrap(
         <RevisionsSheet
           entryId={42}
           fetchPage={fetchPage}
           relativeTime={() => "now"}
-          fetchRevision={fetchRevision}
-          fetchCurrent={fetchCurrent}
+          fetchRevision={vi.fn()}
+          fetchCurrent={vi.fn()}
+          onPreview={vi.fn()}
         />,
       ),
     );
     fireEvent.click(screen.getByTestId("revisions-sheet-trigger"));
-    await waitFor(() => screen.getByTestId("revisions-sheet-item-8-select"));
-    fireEvent.click(screen.getByTestId("revisions-sheet-item-8-select"));
-    await waitFor(() => screen.getByTestId("revisions-sheet-diff"));
-    expect(fetchRevision).toHaveBeenCalledWith(8);
-    expect(fetchCurrent).toHaveBeenCalledWith(42);
-    // The diff renders the title field diff (Snapshot vs Snapshot v2).
-    expect(screen.getByTestId("revision-diff-field-title")).toBeInTheDocument();
-    // Back button returns to the list.
-    fireEvent.click(screen.getByTestId("revisions-sheet-back"));
-    await waitFor(() => screen.getByTestId("revisions-sheet-list"));
+    await waitFor(() => screen.getByTestId("revisions-sheet-item-22-select"));
+    fireEvent.click(screen.getByTestId("revisions-sheet-item-22-select"));
+    expect(
+      screen.queryByTestId("revisions-sheet-diff"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("revisions-sheet-restore"),
+    ).not.toBeInTheDocument();
   });
 });

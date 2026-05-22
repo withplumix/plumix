@@ -1,18 +1,17 @@
-import type { ReactNode, RefObject } from "react";
+import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { RevisionsSheet } from "@/editor/revisions/RevisionsSheet.js";
 import { orpc } from "@/lib/orpc.js";
 import { formatRelativeTime } from "@/lib/relative-time.js";
-import { useQueryClient } from "@tanstack/react-query";
 
 interface UseRevisionsTriggerInput {
   readonly entryId: number;
   readonly enabled: boolean;
-  // Optimistic-concurrency token source. Both routes mutate the same
-  // server-confirmed `updatedAt` they pass through `entry.update`, so
-  // the trigger reads from the same ref to send a fresh token on
-  // restore.
-  readonly liveUpdatedAtRef: RefObject<Date>;
+  // Fires when a row body is clicked — caller navigates the editor to
+  // preview the chosen revision (`?revision=<id>`). Restore now lives
+  // on the preview banner, not the sheet, so the sheet no longer
+  // owns the optimistic-concurrency token.
+  readonly onPreview: (revisionId: number) => void;
 }
 
 // Single chokepoint for the `<RevisionsSheet />` adapter both v1 and
@@ -21,9 +20,8 @@ interface UseRevisionsTriggerInput {
 export function useRevisionsTrigger({
   entryId,
   enabled,
-  liveUpdatedAtRef,
+  onPreview,
 }: UseRevisionsTriggerInput): ReactNode {
-  const queryClient = useQueryClient();
   return useMemo<ReactNode>(() => {
     if (!enabled) return null;
     return (
@@ -53,18 +51,8 @@ export function useRevisionsTrigger({
             meta: current.meta,
           };
         }}
-        onRestore={async (revisionId) => {
-          const restored = await orpc.entry.revisions.restore.call({
-            revisionId,
-            expectedLiveUpdatedAt: liveUpdatedAtRef.current,
-          });
-          liveUpdatedAtRef.current = restored.updatedAt;
-          await queryClient.invalidateQueries({
-            queryKey: orpc.entry.get.queryOptions({ input: { id: entryId } })
-              .queryKey,
-          });
-        }}
+        onPreview={onPreview}
       />
     );
-  }, [entryId, enabled, liveUpdatedAtRef, queryClient]);
+  }, [entryId, enabled, onPreview]);
 }

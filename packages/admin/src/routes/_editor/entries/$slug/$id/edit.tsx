@@ -11,10 +11,12 @@ import { seedPuckData } from "@/editor/entry-content.js";
 import { readDraft, writeDraft } from "@/editor/local-draft.js";
 import { puckDataToBlockTree } from "@/editor/puck-to-block-tree.js";
 import { registerCoreBlocks } from "@/editor/register-core-blocks.js";
+import { PreviewBanner } from "@/editor/revisions/PreviewBanner.js";
 import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
 import { entryMetaBoxesForType, findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { getRegisteredBlocks } from "@/lib/plugin-registry.js";
+import { formatRelativeTime } from "@/lib/relative-time.js";
 import { ORPCError } from "@orpc/client";
 import { Puck } from "@puckeditor/core";
 import {
@@ -81,6 +83,15 @@ const config: Config = {
   }),
 };
 
+// `?revision=<id>` switches the route into preview mode: the editor
+// loads the chosen revision's content read-only and replaces the
+// header with a `<PreviewBanner>` that offers "Back to live" + restore.
+// Schema is loose so any other admin search params (e.g. future tab
+// state) pass through untouched.
+const editSearchSchema = v.looseObject({
+  revision: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+});
+
 export const Route = createFileRoute("/_editor/entries/$slug/$id/edit")({
   params: {
     parse: (raw) => {
@@ -92,6 +103,7 @@ export const Route = createFileRoute("/_editor/entries/$slug/$id/edit")({
       return { slug: raw.slug, id: result.output };
     },
   },
+  validateSearch: (search) => v.parse(editSearchSchema, search),
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(
       orpc.entry.get.queryOptions({ input: { id: params.id } }),
@@ -126,6 +138,7 @@ function ErrorScreen(): ReactNode {
 function PuckSpikeRoute(): ReactNode {
   const { slug, id } = Route.useParams();
   const { user } = Route.useRouteContext();
+  const { revision: previewRevisionId } = Route.useSearch();
   const draftKey = `plumix.v2.draft.${slug}.${id}`;
   const entryType = findEntryTypeBySlug(slug);
   const supportsRevisions = entryType?.supports?.includes("revisions") ?? false;
@@ -144,6 +157,20 @@ function PuckSpikeRoute(): ReactNode {
         id={id}
         supportsRevisions={supportsRevisions}
         capabilities={user.capabilities}
+      />
+    );
+  }
+  // `key` flips on the preview revision so the editor remounts cleanly
+  // when entering / leaving preview — the `useState` initialisers that
+  // seed Puck data run again instead of stale-rendering live content.
+  if (previewRevisionId !== undefined) {
+    return (
+      <PuckPreviewRouteInner
+        key={`preview-${String(previewRevisionId)}`}
+        id={id}
+        revisionId={previewRevisionId}
+        capabilities={user.capabilities}
+        backHref={backHref}
       />
     );
   }
@@ -314,10 +341,17 @@ function PuckSpikeRouteInner({
   const isPublished = entry.status === "published";
   const handlePublish = useCallback(() => publish.mutate(), [publish]);
   const capabilitySet = useMemo(() => new Set(capabilities), [capabilities]);
+  const navigate = Route.useNavigate();
+  const handlePreview = useCallback(
+    (revisionId: number): void => {
+      void navigate({ search: (prev) => ({ ...prev, revision: revisionId }) });
+    },
+    [navigate],
+  );
   const revisionsTrigger = useRevisionsTrigger({
     entryId: id,
     enabled: supportsRevisions,
-    liveUpdatedAtRef,
+    onPreview: handlePreview,
   });
   const Layout = useCallback(
     (): ReactElement => (
@@ -356,6 +390,131 @@ function PuckSpikeRouteInner({
         overrides={{ puck: Layout }}
       />
     </AutosaveStatusContext.Provider>
+  );
+}
+
+// All five Puck Permissions flags off — drops drag handles, the +
+// insert affordance, inline-edit, the duplicate menu item, and the
+// delete action. Combined with the disabled title input + hidden
+// publish button in PlumixEditorLayout this leaves no write path
+// for the user while previewing a revision.
+const READ_ONLY_PERMISSIONS = {
+  drag: false,
+  duplicate: false,
+  delete: false,
+  edit: false,
+  insert: false,
+} as const;
+
+interface PuckPreviewRouteInnerProps {
+  readonly id: number;
+  readonly revisionId: number;
+  readonly capabilities: readonly string[];
+  readonly backHref: string;
+}
+
+function PuckPreviewRouteInner({
+  id,
+  revisionId,
+  capabilities,
+  backHref,
+}: PuckPreviewRouteInnerProps): ReactNode {
+  const { data: liveEntry } = useSuspenseQuery(
+    orpc.entry.get.queryOptions({ input: { id } }),
+  );
+  const { data: revision } = useSuspenseQuery(
+    orpc.entry.revisions.get.queryOptions({ input: { revisionId } }),
+  );
+  const queryClient = useQueryClient();
+  const navigate = Route.useNavigate();
+  const liveUpdatedAtRef = useRef<Date>(liveEntry.updatedAt);
+  // Read-once seed: Puck owns state internally after mount, and the
+  // outer `key` change on the search-param transition is what triggers
+  // a fresh init when entering / leaving preview.
+  const [initialData] = useState<Data>(() =>
+    seedPuckData(revision.content, EMPTY_DATA),
+  );
+  const capabilitySet = useMemo(() => new Set(capabilities), [capabilities]);
+
+  const handleBackToLive = useCallback((): void => {
+    void navigate({ search: (prev) => ({ ...prev, revision: undefined }) });
+  }, [navigate]);
+
+  const restore = useMutation({
+    mutationFn: async () => {
+      const restored = await orpc.entry.revisions.restore.call({
+        revisionId,
+        expectedLiveUpdatedAt: liveUpdatedAtRef.current,
+      });
+      liveUpdatedAtRef.current = restored.updatedAt;
+      return restored;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
+      });
+      handleBackToLive();
+    },
+  });
+
+  const handleRestore = useCallback(() => restore.mutate(), [restore]);
+  // Surface the most useful detail for the user. CONFLICT (stale
+  // `expectedLiveUpdatedAt`) is the common case when another tab
+  // edited the live entry after this preview loaded.
+  const restoreError =
+    restore.error instanceof ORPCError && restore.error.code === "CONFLICT"
+      ? "Another editor changed this entry. Reload and try again."
+      : restore.error instanceof Error
+        ? restore.error.message
+        : null;
+  const revisionAuthor =
+    revision.authorName ?? revision.authorEmail ?? `#${String(revisionId)}`;
+  const Layout = useCallback(
+    (): ReactElement => (
+      <PlumixEditorLayout
+        registry={registry}
+        capabilities={capabilitySet}
+        tokens={sampleTokens}
+        title={revision.title}
+        onTitleChange={() => undefined}
+        backHref={backHref}
+        onPublish={() => undefined}
+        isPublishing={false}
+        isPublished={false}
+        previewBanner={
+          <PreviewBanner
+            revisionUpdatedAt={revision.updatedAt}
+            revisionAuthor={revisionAuthor}
+            relativeTime={formatRelativeTime}
+            onBackToLive={handleBackToLive}
+            onRestore={handleRestore}
+            isRestoring={restore.isPending}
+            restoreError={restoreError}
+          />
+        }
+      />
+    ),
+    [
+      revision.title,
+      revision.updatedAt,
+      revisionAuthor,
+      backHref,
+      capabilitySet,
+      handleBackToLive,
+      handleRestore,
+      restore.isPending,
+      restoreError,
+    ],
+  );
+
+  return (
+    <Puck
+      config={config}
+      data={initialData}
+      iframe={{ enabled: false }}
+      permissions={READ_ONLY_PERMISSIONS}
+      overrides={{ puck: Layout }}
+    />
   );
 }
 
@@ -406,10 +565,17 @@ function PlainFormRouteInner({
     },
   });
 
+  const navigate = Route.useNavigate();
+  const handlePreview = useCallback(
+    (revisionId: number): void => {
+      void navigate({ search: (prev) => ({ ...prev, revision: revisionId }) });
+    },
+    [navigate],
+  );
   const revisionsTrigger = useRevisionsTrigger({
     entryId: id,
     enabled: supportsRevisions,
-    liveUpdatedAtRef,
+    onPreview: handlePreview,
   });
 
   const initialValues = {
