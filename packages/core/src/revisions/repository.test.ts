@@ -5,12 +5,15 @@ import { entries } from "../db/schema/entries.js";
 import { userFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import {
+  deleteAutosave,
+  getAutosave,
   getRevision,
   listRevisions,
   pruneOldRevisions,
   snapshotAsRevision,
+  upsertAutosave,
 } from "./repository.js";
-import { REVISION_TYPE } from "./slug-codec.js";
+import { AUTOSAVE_TYPE, REVISION_TYPE } from "./slug-codec.js";
 import { decodeSnapshotEnvelope } from "./snapshot-envelope.js";
 
 async function seedLiveEntry(db: Awaited<ReturnType<typeof createTestDb>>) {
@@ -211,5 +214,138 @@ describe("pruneOldRevisions", () => {
     expect(
       await pruneOldRevisions(db, { entryId: entry.id, maxRevisions: 5 }),
     ).toBe(0);
+  });
+});
+
+describe("upsertAutosave", () => {
+  test("inserts a new row mirroring the user's pending edit and snapshotting the live slug + parentId", async () => {
+    const db = await createTestDb();
+    const { author, entry } = await seedLiveEntry(db);
+    const autosave = await upsertAutosave(db, {
+      entry,
+      authorId: author.id,
+      patch: {
+        title: "Draft title",
+        content: { type: "doc", content: [{ type: "paragraph" }] },
+        excerpt: null,
+        meta: { foo: "bar" },
+      },
+    });
+    expect(autosave.type).toBe(AUTOSAVE_TYPE);
+    expect(autosave.title).toBe("Draft title");
+    expect(autosave.authorId).toBe(author.id);
+    expect(autosave.slug).toBe(
+      `autosave:${String(entry.id)}:${String(author.id)}`,
+    );
+    // The snapshot envelope carries the live's slug + parentId so
+    // publish can recover them without an extra query.
+    const envelope = decodeSnapshotEnvelope(autosave.meta);
+    expect(envelope?.slug).toBe(entry.slug);
+    expect(envelope?.parentId).toBe(entry.parentId);
+  });
+
+  test("upserts on a second call from the same author — no UNIQUE collision, content gets the new values", async () => {
+    const db = await createTestDb();
+    const { author, entry } = await seedLiveEntry(db);
+    const first = await upsertAutosave(db, {
+      entry,
+      authorId: author.id,
+      patch: {
+        title: "First",
+        content: null,
+        excerpt: null,
+        meta: {},
+      },
+    });
+    const second = await upsertAutosave(db, {
+      entry,
+      authorId: author.id,
+      patch: {
+        title: "Second",
+        content: { type: "doc", content: [{ type: "paragraph" }] },
+        excerpt: "summary",
+        meta: { foo: "bar" },
+      },
+    });
+    expect(second.id).toBe(first.id);
+    expect(second.title).toBe("Second");
+    expect(second.excerpt).toBe("summary");
+  });
+
+  test("two different authors editing the same entry get distinct rows (per-user isolation)", async () => {
+    const db = await createTestDb();
+    const ada = await userFactory.transient({ db }).create({ role: "author" });
+    const bea = await userFactory.transient({ db }).create({ role: "author" });
+    const { entry } = await seedLiveEntry(db);
+    const adaSave = await upsertAutosave(db, {
+      entry,
+      authorId: ada.id,
+      patch: { title: "Ada's draft", content: null, excerpt: null, meta: {} },
+    });
+    const beaSave = await upsertAutosave(db, {
+      entry,
+      authorId: bea.id,
+      patch: { title: "Bea's draft", content: null, excerpt: null, meta: {} },
+    });
+    expect(adaSave.id).not.toBe(beaSave.id);
+    expect(adaSave.title).toBe("Ada's draft");
+    expect(beaSave.title).toBe("Bea's draft");
+  });
+});
+
+describe("getAutosave + deleteAutosave", () => {
+  test("getAutosave returns the row for (entry, author) or undefined when none", async () => {
+    const db = await createTestDb();
+    const { author, entry } = await seedLiveEntry(db);
+    expect(
+      await getAutosave(db, { entryId: entry.id, authorId: author.id }),
+    ).toBeUndefined();
+    await upsertAutosave(db, {
+      entry,
+      authorId: author.id,
+      patch: { title: "Hi", content: null, excerpt: null, meta: {} },
+    });
+    const fetched = await getAutosave(db, {
+      entryId: entry.id,
+      authorId: author.id,
+    });
+    expect(fetched?.title).toBe("Hi");
+  });
+
+  test("deleteAutosave removes the row for the caller only — other authors' autosaves survive", async () => {
+    const db = await createTestDb();
+    const ada = await userFactory.transient({ db }).create({ role: "author" });
+    const bea = await userFactory.transient({ db }).create({ role: "author" });
+    const { entry } = await seedLiveEntry(db);
+    await upsertAutosave(db, {
+      entry,
+      authorId: ada.id,
+      patch: { title: "A", content: null, excerpt: null, meta: {} },
+    });
+    await upsertAutosave(db, {
+      entry,
+      authorId: bea.id,
+      patch: { title: "B", content: null, excerpt: null, meta: {} },
+    });
+    expect(
+      await deleteAutosave(db, { entryId: entry.id, authorId: ada.id }),
+    ).toBe(true);
+    expect(
+      await getAutosave(db, { entryId: entry.id, authorId: ada.id }),
+    ).toBeUndefined();
+    // Bea's autosave is untouched.
+    const beaSave = await getAutosave(db, {
+      entryId: entry.id,
+      authorId: bea.id,
+    });
+    expect(beaSave?.title).toBe("B");
+  });
+
+  test("deleteAutosave returns false when no row exists for (entry, author)", async () => {
+    const db = await createTestDb();
+    const { author, entry } = await seedLiveEntry(db);
+    expect(
+      await deleteAutosave(db, { entryId: entry.id, authorId: author.id }),
+    ).toBe(false);
   });
 });

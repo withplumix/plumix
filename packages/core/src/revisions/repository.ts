@@ -1,11 +1,16 @@
 import { and, desc, eq, inArray, like, lt } from "drizzle-orm";
 
 import type { Db } from "../context/app.js";
-import type { Entry } from "../db/schema/entries.js";
+import type { Entry, EntryContent } from "../db/schema/entries.js";
 import { isUniqueConstraintError } from "../db/errors.js";
 import { entries } from "../db/schema/entries.js";
 import { RevisionRepositoryError } from "./errors.js";
-import { buildRevisionSlug, REVISION_TYPE } from "./slug-codec.js";
+import {
+  AUTOSAVE_TYPE,
+  buildAutosaveSlug,
+  buildRevisionSlug,
+  REVISION_TYPE,
+} from "./slug-codec.js";
 import {
   encodeSnapshotEnvelope,
   REVISION_MESSAGE_META_KEY,
@@ -142,6 +147,107 @@ export async function getRevision(
     ),
   });
   return row;
+}
+
+interface UpsertAutosaveInput {
+  // The live entry whose identity (id, slug, parentId) the autosave
+  // tracks. The slug + parentId get snapshotted into the autosave's
+  // meta envelope so `entry.publish` can restore them onto live
+  // without a separate roundtrip.
+  readonly entry: Entry;
+  // The user editing. Combined with `entry.id` to produce the
+  // deterministic slug — UNIQUE (type, slug) enforces "one autosave
+  // per (entry, user)" without an extra dedup query.
+  readonly authorId: number;
+  readonly patch: {
+    readonly title: string;
+    readonly content: EntryContent | null;
+    readonly excerpt: string | null;
+    readonly meta: Readonly<Record<string, unknown>>;
+  };
+}
+
+// Writes the per-user pending edit, inserting on first call and
+// upserting on subsequent ones. Returns the post-write row so callers
+// can read back `updatedAt` (used as the optimistic-concurrency token
+// for the next save). `meta.__plumix_snapshot` stays load-bearing —
+// the publish path reads it to recover the live slug + parentId.
+export async function upsertAutosave(
+  db: Db,
+  input: UpsertAutosaveInput,
+): Promise<Entry> {
+  const { entry, authorId, patch } = input;
+  const meta = {
+    ...patch.meta,
+    ...encodeSnapshotEnvelope({ slug: entry.slug, parentId: entry.parentId }),
+  };
+  const slug = buildAutosaveSlug({ entryId: entry.id, authorId });
+  const [row] = await db
+    .insert(entries)
+    .values({
+      type: AUTOSAVE_TYPE,
+      parentId: null,
+      title: patch.title,
+      slug,
+      content: patch.content,
+      excerpt: patch.excerpt,
+      status: entry.status,
+      authorId,
+      sortOrder: 0,
+      meta,
+      publishedAt: entry.publishedAt,
+    })
+    .onConflictDoUpdate({
+      target: [entries.type, entries.slug],
+      // The autosave row's identity (type / slug / authorId) is
+      // fixed by the deterministic-slug contract; only the editable
+      // fields + the snapshot envelope can change. `excluded.*`
+      // references the conflicting insert's values per SQLite's
+      // upsert dialect.
+      set: {
+        title: patch.title,
+        content: patch.content,
+        excerpt: patch.excerpt,
+        meta,
+        updatedAt: new Date(),
+      },
+    })
+    .returning();
+  if (!row) throw RevisionRepositoryError.insertReturnedNoRow();
+  return row;
+}
+
+interface AutosavePairInput {
+  readonly entryId: number;
+  readonly authorId: number;
+}
+
+export async function getAutosave(
+  db: Db,
+  input: AutosavePairInput,
+): Promise<Entry | undefined> {
+  return db.query.entries.findFirst({
+    where: and(
+      eq(entries.type, AUTOSAVE_TYPE),
+      eq(entries.slug, buildAutosaveSlug(input)),
+    ),
+  });
+}
+
+export async function deleteAutosave(
+  db: Db,
+  input: AutosavePairInput,
+): Promise<boolean> {
+  const result = await db
+    .delete(entries)
+    .where(
+      and(
+        eq(entries.type, AUTOSAVE_TYPE),
+        eq(entries.slug, buildAutosaveSlug(input)),
+      ),
+    )
+    .returning({ id: entries.id });
+  return result.length > 0;
 }
 
 interface SetRevisionMessageInput {
