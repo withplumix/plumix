@@ -12,7 +12,7 @@ import {
 } from "../../../revisions/repository.js";
 import {
   decodeRevisionSlug,
-  isRevisionType,
+  isReservedType,
 } from "../../../revisions/slug-codec.js";
 import {
   decodeRevisionMessage,
@@ -67,7 +67,7 @@ export const list = base
         data: { kind: "entry", id: input.entryId },
       });
     }
-    if (isRevisionType(live.type)) {
+    if (isReservedType(live.type)) {
       throw errors.BAD_REQUEST({ data: { reason: "reserved_type" } });
     }
     const capability = entryCapability(live.type, "read_revisions");
@@ -123,7 +123,7 @@ export const get = base
     const live = await context.db.query.entries.findFirst({
       where: eq(entries.id, decoded.entryId),
     });
-    if (!live || isRevisionType(live.type)) throw notFound();
+    if (!live || isReservedType(live.type)) throw notFound();
 
     const capability = entryCapability(live.type, "read_revisions");
     if (!context.auth.can(capability)) {
@@ -160,7 +160,7 @@ export const restore = base
     const live = await context.db.query.entries.findFirst({
       where: eq(entries.id, decoded.entryId),
     });
-    if (!live || isRevisionType(live.type)) throw notFound();
+    if (!live || isReservedType(live.type)) throw notFound();
 
     const readCapability = entryCapability(live.type, "read_revisions");
     if (!context.auth.can(readCapability)) {
@@ -293,7 +293,7 @@ export const setMessage = base
     const live = await context.db.query.entries.findFirst({
       where: eq(entries.id, decoded.entryId),
     });
-    if (!live || isRevisionType(live.type)) throw notFound();
+    if (!live || isReservedType(live.type)) throw notFound();
 
     const readCapability = entryCapability(live.type, "read_revisions");
     if (!context.auth.can(readCapability)) {

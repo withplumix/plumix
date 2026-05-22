@@ -1,6 +1,6 @@
 import type { NewEntry } from "../../../db/schema/entries.js";
 import { entries } from "../../../db/schema/entries.js";
-import { isRevisionType } from "../../../revisions/slug-codec.js";
+import { isReservedType } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import {
@@ -38,10 +38,10 @@ export const create = base
       input,
     );
 
-    // Reserved internal types are written only by the framework's
-    // snapshot path — reject here so a hostile input.type can't
-    // smuggle revision rows into the table.
-    if (isRevisionType(filtered.type)) {
+    // Reserved internal types (revision, autosave) are written only by
+    // the framework's snapshot / draft paths — reject here so a hostile
+    // input.type can't smuggle reserved rows into the table.
+    if (isReservedType(filtered.type)) {
       throw errors.BAD_REQUEST({ data: { reason: "reserved_type" } });
     }
 

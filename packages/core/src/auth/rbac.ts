@@ -78,6 +78,11 @@ export const POST_TYPE_CAPABILITY_ACTIONS = {
   // ordinarily look at past versions of their own drafts. Matches the
   // PRD's "editors can see who saved what and when" framing.
   read_revisions: "editor",
+  // Restoring a prior revision overwrites the live row. Pairs with
+  // `read_revisions` for symmetry with the existing list/get gates;
+  // capability lands here so the full surface is consistent before
+  // the restore-into-autosave action wires up in a later slice.
+  restore_revision: "editor",
 } as const satisfies Record<string, UserRole>;
 
 export const TERM_TAXONOMY_CAPABILITY_ACTIONS = {
