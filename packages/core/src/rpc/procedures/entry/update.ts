@@ -2,6 +2,7 @@ import type { AuthenticatedAppContext } from "../../../context/app.js";
 import type { Entry, NewEntry } from "../../../db/schema/entries.js";
 import { and, eq, isUniqueConstraintError, ne } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import { isReservedType } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { isEmptyMetaPatch } from "../../meta/core.js";
@@ -153,7 +154,11 @@ export const update = base
     const existing = await context.db.query.entries.findFirst({
       where: eq(entries.id, filtered.id),
     });
-    if (!existing) {
+    // Reserved-type rows (revisions, autosaves) are written by the
+    // framework's snapshot / draft paths, not `entry.update`. Surface
+    // the same 404 a public row would emit so reserved-row existence
+    // isn't observable.
+    if (!existing || isReservedType(existing.type)) {
       throw errors.NOT_FOUND({ data: { kind: "entry", id: filtered.id } });
     }
 
