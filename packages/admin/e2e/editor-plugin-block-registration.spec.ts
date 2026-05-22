@@ -107,8 +107,6 @@ test.describe("plugin block registered via window.plumix bridge", () => {
     await canvas.focus();
     await page.keyboard.press("/");
     await page.keyboard.type("fake");
-    await expect(
-      page.getByTestId("slash-menu-item-test/fake"),
-    ).toBeVisible();
+    await expect(page.getByTestId("slash-menu-item-test/fake")).toBeVisible();
   });
 });
