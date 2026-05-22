@@ -262,5 +262,4 @@
   [data-plumix-block="core/table"] > table th {
     @apply bg-muted/50 text-left font-semibold;
   }
-
 }
