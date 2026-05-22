@@ -9,8 +9,15 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet.js";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs.js";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
+import { RevisionDiffDialog } from "./RevisionDiffDialog.js";
 import { RevisionDiffPanel } from "./RevisionDiffPanel.js";
 
 interface RevisionListItem {
@@ -75,9 +82,8 @@ export function RevisionsSheet({
   const revisionQuery = useQuery({
     queryKey: ["entry.revision.diff", selectedRevisionId],
     enabled: selectedRevisionId !== null,
-    // `enabled` guards null; the non-null assertion is the
-    // narrowest fix that satisfies TanStack's exhaustive typing
-    // without dragging an error factory into a UI component.
+    // `enabled` already guards null; `?? 0` is the narrowest dodge
+    // around TanStack's exhaustive typing without an `as` cast.
     queryFn: () => fetchRevision(selectedRevisionId ?? 0),
   });
   const currentQuery = useQuery({
@@ -87,6 +93,9 @@ export function RevisionsSheet({
   });
 
   const [restorePending, setRestorePending] = useState(false);
+  const [diffModalRevisionId, setDiffModalRevisionId] = useState<number | null>(
+    null,
+  );
   const allRevisions = query.data?.pages.flatMap((p) => p.revisions) ?? [];
   const hasMore = Boolean(query.data?.pages.at(-1)?.nextCursor);
   const showDiff = selectedRevisionId !== null;
@@ -105,7 +114,13 @@ export function RevisionsSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (!o) setDiffModalRevisionId(null);
+      }}
+    >
       <SheetTrigger asChild>
         <Button
           variant="outline"
@@ -160,18 +175,70 @@ export function RevisionsSheet({
             current={currentQuery.data}
           />
         ) : (
-          <ListSection
-            isLoading={query.isLoading}
-            isError={query.isError}
-            allRevisions={allRevisions}
-            relativeTime={relativeTime}
-            onSelect={setSelectedRevisionId}
-            hasMore={hasMore}
-            isFetchingNextPage={query.isFetchingNextPage}
-            fetchNextPage={() => void query.fetchNextPage()}
-          />
+          <Tabs defaultValue="all" className="mt-2">
+            <TabsList className="w-full">
+              <TabsTrigger value="all" data-testid="revisions-tab-all">
+                All
+              </TabsTrigger>
+              <TabsTrigger
+                value="publishes"
+                data-testid="revisions-tab-publishes"
+              >
+                Publishes
+              </TabsTrigger>
+              <TabsTrigger
+                value="autosaves"
+                data-testid="revisions-tab-autosaves"
+              >
+                Autosaves
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="all">
+              <ListSection
+                isLoading={query.isLoading}
+                isError={query.isError}
+                allRevisions={allRevisions}
+                relativeTime={relativeTime}
+                onSelect={setSelectedRevisionId}
+                onOpenDiff={setDiffModalRevisionId}
+                hasMore={hasMore}
+                isFetchingNextPage={query.isFetchingNextPage}
+                fetchNextPage={() => void query.fetchNextPage()}
+              />
+            </TabsContent>
+            <TabsContent value="publishes">
+              <ListSection
+                isLoading={query.isLoading}
+                isError={query.isError}
+                allRevisions={allRevisions}
+                relativeTime={relativeTime}
+                onSelect={setSelectedRevisionId}
+                onOpenDiff={setDiffModalRevisionId}
+                hasMore={hasMore}
+                isFetchingNextPage={query.isFetchingNextPage}
+                fetchNextPage={() => void query.fetchNextPage()}
+              />
+            </TabsContent>
+            <TabsContent value="autosaves">
+              <div
+                data-testid="revisions-autosaves-empty"
+                className="text-muted-foreground px-4 py-6 text-sm"
+              >
+                Autosaves will appear here once drafts-of-published lands.
+              </div>
+            </TabsContent>
+          </Tabs>
         )}
       </SheetContent>
+      <RevisionDiffDialog
+        entryId={entryId}
+        revisionId={diffModalRevisionId}
+        onOpenChange={(o) => {
+          if (!o) setDiffModalRevisionId(null);
+        }}
+        fetchRevision={fetchRevision}
+        fetchCurrent={fetchCurrent}
+      />
     </Sheet>
   );
 }
@@ -182,6 +249,7 @@ interface ListSectionProps {
   readonly allRevisions: readonly RevisionListItem[];
   readonly relativeTime: (date: Date) => string;
   readonly onSelect: (id: number) => void;
+  readonly onOpenDiff: (id: number) => void;
   readonly hasMore: boolean;
   readonly isFetchingNextPage: boolean;
   readonly fetchNextPage: () => void;
@@ -193,6 +261,7 @@ function ListSection({
   allRevisions,
   relativeTime,
   onSelect,
+  onOpenDiff,
   hasMore,
   isFetchingNextPage,
   fetchNextPage,
@@ -223,20 +292,29 @@ function ListSection({
             <li
               key={rev.id}
               data-testid={`revisions-sheet-item-${rev.id}`}
-              className="py-2"
+              className="flex items-center gap-1 py-2"
             >
               <button
                 type="button"
                 data-testid={`revisions-sheet-item-${rev.id}-select`}
                 onClick={() => onSelect(rev.id)}
-                className="hover:bg-accent w-full rounded-md p-2 text-left"
+                className="hover:bg-accent min-w-0 flex-1 rounded-md p-2 text-left"
               >
-                <div className="text-sm font-medium">{rev.title}</div>
+                <div className="truncate text-sm font-medium">{rev.title}</div>
                 <div className="text-muted-foreground text-xs">
                   <span>{rev.authorName ?? rev.authorEmail ?? "Unknown"}</span>
                   {" · "}
                   <span>{relativeTime(rev.updatedAt)}</span>
                 </div>
+              </button>
+              <button
+                type="button"
+                data-testid={`revisions-sheet-item-${rev.id}-diff`}
+                aria-label="View JSON diff"
+                onClick={() => onOpenDiff(rev.id)}
+                className="text-muted-foreground hover:bg-accent hover:text-foreground inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md font-mono text-xs"
+              >
+                &lt;/&gt;
               </button>
             </li>
           ))}
