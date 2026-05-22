@@ -105,9 +105,15 @@ export const Route = createFileRoute("/_editor/entries/$slug/$id/edit")({
     },
   },
   validateSearch: (search) => v.parse(editSearchSchema, search),
+  // Prefetch with `preview: true` to match what `PuckSpikeRouteInner`
+  // consumes — slice D switched the route's suspense to the preview
+  // overlay so the editor seeds from any existing autosave. Mismatched
+  // keys here would force a second roundtrip on mount.
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(
-      orpc.entry.get.queryOptions({ input: { id: params.id } }),
+      orpc.entry.get.queryOptions({
+        input: { id: params.id, preview: true },
+      }),
     ),
   pendingComponent: PendingScreen,
   errorComponent: ErrorScreen,

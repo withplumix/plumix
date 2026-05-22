@@ -1,4 +1,4 @@
-export type EditorMode = "create" | "edit-live" | "edit-with-draft";
+type EditorMode = "create" | "edit-live" | "edit-with-draft";
 
 interface ResolveEditorModeInput {
   // The entry type from the manifest, or `undefined` if the slug
