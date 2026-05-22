@@ -6,6 +6,7 @@ import { PlainFormLayout } from "@/components/editor/plain-form-layout.js";
 import { AutosaveStatusContext } from "@/editor/AutosaveStatus.js";
 import { blockSpecsToPuckComponents } from "@/editor/block-adapter.js";
 import { createDebouncer } from "@/editor/debounce.js";
+import { detectStaleAutosave } from "@/editor/detect-stale-autosave.js";
 import { PlumixEditorLayout } from "@/editor/EditorLayout.js";
 import { seedPuckData } from "@/editor/entry-content.js";
 import { readDraft, writeDraft } from "@/editor/local-draft.js";
@@ -14,6 +15,7 @@ import { registerCoreBlocks } from "@/editor/register-core-blocks.js";
 import { resolveEditorMode } from "@/editor/resolve-editor-mode.js";
 import { PreviewBanner } from "@/editor/revisions/PreviewBanner.js";
 import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
+import { StaleDraftDialog } from "@/editor/StaleDraftDialog.js";
 import { entryMetaBoxesForType, findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { getRegisteredBlocks } from "@/lib/plugin-registry.js";
@@ -22,6 +24,7 @@ import { ORPCError } from "@orpc/client";
 import { Puck } from "@puckeditor/core";
 import {
   useMutation,
+  useQuery,
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
@@ -148,6 +151,16 @@ function PuckSpikeRoute(): ReactNode {
   const { revision: previewRevisionId } = Route.useSearch();
   const draftKey = `plumix.v2.draft.${slug}.${id}`;
   const entryType = findEntryTypeBySlug(slug);
+  // Same suspense query the inner consumes — React Query caches the
+  // result, so the read here is free. Used to compute the inner's
+  // remount key from `_preview.source`: when the user picks "Use
+  // theirs" in the stale-draft dialog the discard mutation flips the
+  // source to `live`, the inner remounts, and Puck's `useState` seed
+  // re-inits from the now-live entry content.
+  const { data: entryForKey } = useSuspenseQuery(
+    orpc.entry.get.queryOptions({ input: { id, preview: true } }),
+  );
+  const previewSource = entryForKey._preview?.source ?? "live";
   const supportsRevisions = entryType?.supports?.includes("revisions") ?? false;
   // Non-editor entry types (structured records like authors, products,
   // events) get the plain-form Cards layout instead of the Puck canvas.
@@ -183,7 +196,7 @@ function PuckSpikeRoute(): ReactNode {
   }
   return (
     <PuckSpikeRouteInner
-      key={draftKey}
+      key={`${draftKey}:${previewSource}`}
       draftKey={draftKey}
       id={id}
       entryType={entryType}
@@ -353,6 +366,14 @@ function PuckSpikeRouteInner({
         queryClient.invalidateQueries({
           queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
         }),
+        // Preview-mode key is its own cache entry; without this the
+        // editor stays seeded against the pre-publish snapshot until
+        // a navigation refetches it.
+        queryClient.invalidateQueries({
+          queryKey: orpc.entry.get.queryOptions({
+            input: { id, preview: true },
+          }).queryKey,
+        }),
         ...(entryTypeName
           ? [
               queryClient.invalidateQueries({
@@ -393,6 +414,29 @@ function PuckSpikeRouteInner({
   });
   const isEditWithDraft = editorMode === "edit-with-draft";
   const hasPendingDraft = entry._preview?.source === "autosave";
+
+  // Stale-draft state: pending autosave was anchored against an older
+  // live row than what the server has now. Show the resolver dialog
+  // until the user picks Use mine / Use theirs (or the source flips
+  // to `live` via the cache refetch after Use theirs).
+  // `_preview` only exists when the route fetches with `preview: true`,
+  // which it always does — see the `useSuspenseQuery` at line ~210.
+  // Treat the absence as a programming error rather than masking it
+  // with a `entry.updatedAt` fallback (autosave timing isn't the
+  // same as live's `updatedAt` and a silent fallback would
+  // mis-classify the stale state).
+  const staleAutosaveState = entry._preview
+    ? detectStaleAutosave(
+        entry._preview.autosaveUpdatedAt,
+        entry._preview.liveUpdatedAt,
+      )
+    : "none";
+  const [staleResolved, setStaleResolved] = useState(false);
+  const showStaleDialog = staleAutosaveState === "stale" && !staleResolved;
+  // Use mine acknowledges the new live anchor — without this, the
+  // concurrency token still references the old `updatedAt` and every
+  // subsequent autosave write 409s on the server's stale-token guard.
+  const liveAnchorAfterResolve = entry._preview?.liveUpdatedAt;
 
   const publishDraft = useMutation({
     mutationFn: () =>
@@ -459,6 +503,32 @@ function PuckSpikeRouteInner({
     debouncer.flush();
   }, [debouncer]);
 
+  // Live snapshot for the stale-draft dialog's Compare pane. Enabled
+  // only when the resolver dialog is showing, so non-stale loads don't
+  // burn a roundtrip on read.
+  const liveSnapshotQuery = useQuery({
+    ...orpc.entry.get.queryOptions({ input: { id } }),
+    enabled: showStaleDialog,
+  });
+  const handleUseMine = useCallback((): void => {
+    if (liveAnchorAfterResolve) {
+      liveUpdatedAtRef.current = liveAnchorAfterResolve;
+    }
+    setStaleResolved(true);
+  }, [liveAnchorAfterResolve]);
+  const handleUseTheirs = useCallback((): void => {
+    discardDraft.mutate(undefined, {
+      onSuccess: () => {
+        // Discard succeeded → preview query invalidates → source flips
+        // to 'live' → the dispatcher's `key` changes → this inner
+        // remounts with a fresh seed. No need to manage local state
+        // beyond clearing the dialog visibility for the brief
+        // pre-remount window.
+        setStaleResolved(true);
+      },
+    });
+  }, [discardDraft]);
+
   const draftModeProp = useMemo(
     () =>
       isEditWithDraft
@@ -520,6 +590,31 @@ function PuckSpikeRouteInner({
         onChange={handleChange}
         iframe={{ enabled: false }}
         overrides={{ puck: Layout }}
+      />
+      {/*
+        Stale-draft resolver: blocks the canvas until the user picks
+        Use mine / Use theirs when their autosave was anchored against
+        an older live row than what's on the server now.
+       */}
+      <StaleDraftDialog
+        open={showStaleDialog}
+        autosaveSnapshot={{
+          title: entry.title,
+          content: entry.content,
+          excerpt: entry.excerpt,
+        }}
+        liveSnapshot={
+          liveSnapshotQuery.data
+            ? {
+                title: liveSnapshotQuery.data.title,
+                content: liveSnapshotQuery.data.content,
+                excerpt: liveSnapshotQuery.data.excerpt,
+              }
+            : { title: "Loading…", content: null, excerpt: null }
+        }
+        onUseMine={handleUseMine}
+        onUseTheirs={handleUseTheirs}
+        isResolving={discardDraft.isPending}
       />
     </AutosaveStatusContext.Provider>
   );
