@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, like, lt } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, like, lt, ne } from "drizzle-orm";
 
 import type { Db } from "../context/app.js";
 import type { Entry, EntryContent } from "../db/schema/entries.js";
@@ -248,6 +248,45 @@ export async function deleteAutosave(
     )
     .returning({ id: entries.id });
   return result.length > 0;
+}
+
+interface ListActiveAutosavesInput {
+  readonly entryId: number;
+  // Drop autosave rows whose `updatedAt` is older than this. Five
+  // minutes matches #293's "actively editing" threshold; the
+  // repository takes it as a parameter so tests can pin it to a
+  // fixture time.
+  readonly notOlderThan: Date;
+  // Exclude the calling user — every viewer should see their
+  // co-authors, not themselves.
+  readonly excludeAuthorId: number;
+}
+
+// Slug shape is `autosave:<entryId>:<authorId>`; the leading-anchor
+// `LIKE` scopes the query to one entry without a JOIN. Same pattern
+// as `listRevisions`.
+function entryAutosavePrefix(entryId: number): string {
+  return `autosave:${String(entryId)}:%`;
+}
+
+// Returns the autosave rows currently active on `entryId` — i.e.
+// touched within `notOlderThan` and not authored by the caller. The
+// RPC layer joins users on top for the wire surface; this returns
+// the raw rows so the join policy can change without touching the
+// repository.
+export async function listActiveAutosaves(
+  db: Db,
+  input: ListActiveAutosavesInput,
+): Promise<readonly Entry[]> {
+  return db.query.entries.findMany({
+    where: and(
+      eq(entries.type, AUTOSAVE_TYPE),
+      like(entries.slug, entryAutosavePrefix(input.entryId)),
+      gte(entries.updatedAt, input.notOlderThan),
+      ne(entries.authorId, input.excludeAuthorId),
+    ),
+    orderBy: [desc(entries.updatedAt)],
+  });
 }
 
 interface SetRevisionMessageInput {
