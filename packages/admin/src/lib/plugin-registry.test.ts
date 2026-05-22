@@ -128,9 +128,9 @@ describe("v2 block registry", () => {
   });
 
   test("rejects a spec whose name is not namespaced (no slash)", () => {
-    expect(() =>
-      registerPluginBlock({ name: "banner" } as BlockSpec),
-    ).toThrow(/namespaced string/);
+    expect(() => registerPluginBlock({ name: "banner" } as BlockSpec)).toThrow(
+      /namespaced string/,
+    );
   });
 
   test("preserves registration order so the inserter UI is deterministic", () => {

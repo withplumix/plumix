@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "vitest";
 
-import { bootPlumixGlobals } from "./plumix-globals.js";
 import { registerPluginBlock } from "./plugin-registry.js";
+import { bootPlumixGlobals } from "./plumix-globals.js";
 
 afterEach(() => {
   delete (window as { plumix?: unknown }).plumix;

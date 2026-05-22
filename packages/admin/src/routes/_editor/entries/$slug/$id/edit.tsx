@@ -10,9 +10,11 @@ import { PlumixEditorLayout } from "@/editor/EditorLayout.js";
 import { seedPuckData } from "@/editor/entry-content.js";
 import { readDraft, writeDraft } from "@/editor/local-draft.js";
 import { puckDataToBlockTree } from "@/editor/puck-to-block-tree.js";
+import { registerCoreBlocks } from "@/editor/register-core-blocks.js";
 import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
 import { entryMetaBoxesForType, findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
+import { getRegisteredBlocks } from "@/lib/plugin-registry.js";
 import { ORPCError } from "@orpc/client";
 import { Puck } from "@puckeditor/core";
 import {
@@ -27,9 +29,6 @@ import type { ThemeTokens } from "@plumix/blocks";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { coreMarkExtensions, createBlockRegistry } from "@plumix/blocks";
 import { idPathParam } from "@plumix/core/validation";
-
-import { getRegisteredBlocks } from "@/lib/plugin-registry.js";
-import { registerCoreBlocks } from "@/editor/register-core-blocks.js";
 
 import "@puckeditor/core/puck.css";
 
