@@ -66,7 +66,7 @@ test.describe("v2 editor: keyboard-only walkthrough", () => {
     // a future block adding "paragraph" to its keywords could otherwise
     // silently change which spec gets inserted while this still passes.
     await expect(
-      page.getByTestId("slash-menu-item-core/paragraph"),
+      page.getByTestId("slash-menu-item-core/rich-text"),
     ).toBeVisible();
     await page.keyboard.press("Enter");
 

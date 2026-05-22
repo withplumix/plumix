@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { BlockNode } from "../render-block-tree.js";
-import { paragraphBlock } from "../paragraph/index.js";
+import { richTextBlock } from "../rich-text/index.js";
 import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "../test/index.js";
 import { detailsBlock } from "./index.js";
 
@@ -31,13 +31,17 @@ describe("core/details", () => {
         attrs: {
           summary: "More",
           content: [
-            { id: "p1", name: "core/paragraph", attrs: { text: "Hidden" } },
+            {
+              id: "p1",
+              name: "core/rich-text",
+              attrs: { body: "<p>Hidden</p>" },
+            },
           ],
         },
       },
     ];
 
-    const html = renderBlockTreeToHtml([detailsBlock, paragraphBlock], tree);
+    const html = renderBlockTreeToHtml([detailsBlock, richTextBlock], tree);
 
     expect(html).toContain("<p>Hidden</p>");
   });

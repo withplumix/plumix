@@ -62,7 +62,7 @@ test.describe("v2 editor: typing into a richtext block", () => {
     await page.keyboard.press("/");
     await page.keyboard.type("paragraph");
     await expect(
-      page.getByTestId("slash-menu-item-core/paragraph"),
+      page.getByTestId("slash-menu-item-core/rich-text"),
     ).toBeVisible();
     await page.keyboard.press("Enter");
 
@@ -92,7 +92,7 @@ test.describe("v2 editor: typing into a richtext block", () => {
     expect(last?.content?.version).toBe("plumix.v2");
     const blocks = last?.content?.blocks ?? [];
     expect(blocks.length).toBeGreaterThan(0);
-    expect(blocks[0]?.name).toBe("core/paragraph");
+    expect(blocks[0]?.name).toBe("core/rich-text");
 
     // The autosave pill flips back to "saved" once the server returns
     // OK. If the server 500s, the pill stays on "error".

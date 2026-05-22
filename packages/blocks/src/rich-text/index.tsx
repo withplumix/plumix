@@ -8,6 +8,11 @@ export const richTextBlock = defineBlock({
   title: "Rich text",
   icon: "Type",
   category: "text",
+  // Authors still mentally call this "paragraph" — the slash menu's
+  // title/keywords/name matcher needs an explicit hook so typing
+  // `/paragraph` finds rich-text after the legacy paragraph block was
+  // removed in #473.
+  keywords: ["paragraph", "text", "body"],
   inputs: [{ name: "body", type: "richtext", label: "Body" }],
   defaults: { body: "<p></p>" },
   // Mirrors `paragraph/index.tsx` — admin Puck preview hands `attrs.body`

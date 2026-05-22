@@ -154,16 +154,16 @@
     @apply my-2 leading-relaxed;
   }
 
-  /* Lists — Tailwind preflight zeroes list-style and padding; we
-     opt our editor lists back in so authors see real bullets. */
-  ul[data-plumix-block="core/list"] {
+  /* Lists rendered inside the rich-text block — Tailwind preflight
+     zeroes list-style and padding, so opt our editor lists back in
+     for the bullet/number toolbar toggles inside `core/rich-text`. */
+  [data-plumix-block="core/rich-text"] ul {
     @apply my-2 list-disc pl-6;
   }
-  ol[data-plumix-block="core/list-ordered"] {
+  [data-plumix-block="core/rich-text"] ol {
     @apply my-2 list-decimal pl-6;
   }
-  ul[data-plumix-block="core/list"] li,
-  ol[data-plumix-block="core/list-ordered"] li {
+  [data-plumix-block="core/rich-text"] li {
     @apply my-1;
   }
 
@@ -263,13 +263,4 @@
     @apply bg-muted/50 text-left font-semibold;
   }
 
-  /* Description list. dt/dd descend from the dl wrapper because the
-   inline term/detail blocks don't get a per-element data-plumix-block
-   wrapper (render-block-tree.ts skips wrapping inline specs). */
-  [data-plumix-block="core/description-list"] > dl {
-    @apply my-3 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1;
-  }
-  [data-plumix-block="core/description-list"] > dl > dt {
-    @apply font-semibold;
-  }
 }

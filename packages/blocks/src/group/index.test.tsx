@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { BlockNode } from "../render-block-tree.js";
-import { paragraphBlock } from "../paragraph/index.js";
+import { richTextBlock } from "../rich-text/index.js";
 import { renderBlockTreeToHtml } from "../test/index.js";
 import { groupBlock } from "./index.js";
 
@@ -37,18 +37,18 @@ describe("core/group", () => {
           content: [
             {
               id: "p1",
-              name: "core/paragraph",
-              attrs: { text: "Inside group" },
+              name: "core/rich-text",
+              attrs: { body: "<p>Inside group</p>" },
             },
           ],
         },
       },
     ];
 
-    const html = renderBlockTreeToHtml([groupBlock, paragraphBlock], tree);
+    const html = renderBlockTreeToHtml([groupBlock, richTextBlock], tree);
 
     expect(html).toContain(
-      '<div data-plumix-block="core/paragraph"><p>Inside group</p></div>',
+      '<div data-plumix-block="core/rich-text"><div><p>Inside group</p></div></div>',
     );
   });
 });

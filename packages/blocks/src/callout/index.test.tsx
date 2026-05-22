@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { BlockNode } from "../render-block-tree.js";
-import { paragraphBlock } from "../paragraph/index.js";
+import { richTextBlock } from "../rich-text/index.js";
 import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "../test/index.js";
 import { calloutBlock } from "./index.js";
 
@@ -41,13 +41,17 @@ describe("core/callout", () => {
         attrs: {
           variant: "warn",
           content: [
-            { id: "p1", name: "core/paragraph", attrs: { text: "Heads up" } },
+            {
+              id: "p1",
+              name: "core/rich-text",
+              attrs: { body: "<p>Heads up</p>" },
+            },
           ],
         },
       },
     ];
 
-    const html = renderBlockTreeToHtml([calloutBlock, paragraphBlock], tree);
+    const html = renderBlockTreeToHtml([calloutBlock, richTextBlock], tree);
 
     expect(html).toContain("<p>Heads up</p>");
   });

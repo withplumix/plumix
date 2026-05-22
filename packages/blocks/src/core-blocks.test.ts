@@ -7,18 +7,21 @@ describe("coreBlocks", () => {
   test("includes the canonical typography and layout blocks", () => {
     const names = new Set(coreBlocks.map((b) => b.name));
     expect(names.has("core/heading")).toBe(true);
-    expect(names.has("core/paragraph")).toBe(true);
+    expect(names.has("core/rich-text")).toBe(true);
     expect(names.has("core/quote")).toBe(true);
     expect(names.has("core/code")).toBe(true);
     expect(names.has("core/group")).toBe(true);
     expect(names.has("core/columns")).toBe(true);
     expect(names.has("core/table")).toBe(true);
-    expect(names.has("core/list")).toBe(true);
   });
 
-  test("places core/rich-text immediately after core/paragraph so the inserter groups prose blocks together", () => {
+  test("core/paragraph is no longer registered (collapsed into core/rich-text)", () => {
+    expect(coreBlocks.map((b) => b.name)).not.toContain("core/paragraph");
+  });
+
+  test("places core/rich-text immediately after core/heading at the top of the inserter", () => {
     const names = coreBlocks.map((b) => b.name);
-    expect(names[names.indexOf("core/paragraph") + 1]).toBe("core/rich-text");
+    expect(names[names.indexOf("core/heading") + 1]).toBe("core/rich-text");
   });
 
   test("declares unique block names with no duplicates", () => {
@@ -50,17 +53,12 @@ describe("coreBlocks", () => {
     );
   });
 
-  test("text-category blocks include the description-list family and table", () => {
+  test("text-category blocks include rich-text and table", () => {
     const textNames = coreBlocks
       .filter((b) => b.category === "text")
       .map((b) => b.name);
     expect(textNames).toEqual(
-      expect.arrayContaining([
-        "core/description-list",
-        "core/description-term",
-        "core/description-detail",
-        "core/table",
-      ]),
+      expect.arrayContaining(["core/rich-text", "core/table"]),
     );
   });
 
@@ -83,9 +81,6 @@ describe("coreBlocks", () => {
       "core/table-body-row",
       "core/table-header-cell",
       "core/table-cell",
-      "core/list-item",
-      "core/description-term",
-      "core/description-detail",
     ]);
 
     for (const spec of coreBlocks) {

@@ -24,13 +24,11 @@ interface TiptapNodeShape {
  * Always-allowed type names. ProseMirror requires `doc` / `text`; the
  * editor mounts an implicit paragraph regardless of the field's
  * `nodes` allowlist — mirrors `FIELD_MODE_IMPLICIT_BLOCK` in admin's
- * `tiptap-extensions.ts`. Both `paragraph` and `core/paragraph` are
- * accepted so docs from either editor era round-trip unchanged.
+ * `tiptap-extensions.ts`.
  */
 const IMPLICIT_NODES: ReadonlySet<string> = new Set([
   "doc",
   "paragraph",
-  "core/paragraph",
   "text",
 ]);
 

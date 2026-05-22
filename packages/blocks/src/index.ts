@@ -94,17 +94,10 @@ export { buttonsBlock } from "./buttons/index.js";
 export { calloutBlock } from "./callout/index.js";
 export { codeBlock } from "./code/index.js";
 export { columnsBlock } from "./columns/index.js";
-export {
-  descriptionDetailBlock,
-  descriptionListBlock,
-  descriptionTermBlock,
-} from "./description-list/index.js";
 export { detailsBlock } from "./details/index.js";
 export { groupBlock } from "./group/index.js";
 export { headingBlock } from "./heading/index.js";
 export { htmlBlock } from "./html/index.js";
-export { listBlock, listItemBlock } from "./list/index.js";
-export { paragraphBlock } from "./paragraph/index.js";
 export { quoteBlock } from "./quote/index.js";
 export { richTextBlock } from "./rich-text/index.js";
 export { separatorBlock } from "./separator/index.js";
