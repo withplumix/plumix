@@ -16,6 +16,11 @@ describe("coreBlocks", () => {
     expect(names.has("core/list")).toBe(true);
   });
 
+  test("places core/rich-text immediately after core/paragraph so the inserter groups prose blocks together", () => {
+    const names = coreBlocks.map((b) => b.name);
+    expect(names[names.indexOf("core/paragraph") + 1]).toBe("core/rich-text");
+  });
+
   test("declares unique block names with no duplicates", () => {
     const names = coreBlocks.map((b) => b.name);
     expect(new Set(names).size).toBe(names.length);

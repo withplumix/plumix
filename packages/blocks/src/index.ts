@@ -106,6 +106,7 @@ export { htmlBlock } from "./html/index.js";
 export { listBlock, listItemBlock } from "./list/index.js";
 export { paragraphBlock } from "./paragraph/index.js";
 export { quoteBlock } from "./quote/index.js";
+export { richTextBlock } from "./rich-text/index.js";
 export { separatorBlock } from "./separator/index.js";
 export { spacerBlock } from "./spacer/index.js";
 export {
