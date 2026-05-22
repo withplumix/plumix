@@ -15,6 +15,7 @@ import { headingBlock } from "./heading/index.js";
 import { listBlock, listItemBlock } from "./list/index.js";
 import { paragraphBlock } from "./paragraph/index.js";
 import { quoteBlock } from "./quote/index.js";
+import { richTextBlock } from "./rich-text/index.js";
 import { separatorBlock } from "./separator/index.js";
 import { spacerBlock } from "./spacer/index.js";
 import {
@@ -28,6 +29,7 @@ import {
 export const coreBlocks: readonly BlockSpec[] = Object.freeze([
   headingBlock,
   paragraphBlock,
+  richTextBlock,
   quoteBlock,
   separatorBlock,
   spacerBlock,
