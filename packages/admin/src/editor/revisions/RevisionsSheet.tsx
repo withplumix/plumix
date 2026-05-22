@@ -9,6 +9,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet.js";
+import { Skeleton } from "@/components/ui/skeleton.js";
 import {
   Tabs,
   TabsContent,
@@ -267,9 +268,22 @@ function ListSection({
   return (
     <>
       {isLoading ? (
-        <div data-testid="revisions-sheet-loading" className="px-4 py-6">
-          Loading revisions…
-        </div>
+        <ul
+          data-testid="revisions-sheet-loading"
+          aria-label="Loading revisions"
+          aria-busy="true"
+          className="divide-y px-4 py-2"
+        >
+          {Array.from({ length: 4 }, (_, i) => (
+            <li key={i} className="flex items-center gap-1 py-2">
+              <div className="min-w-0 flex-1 p-2">
+                <Skeleton className="mb-2 h-4 w-2/3" />
+                <Skeleton className="h-3 w-1/3" />
+              </div>
+              <Skeleton className="h-7 w-7 shrink-0 rounded-md" />
+            </li>
+          ))}
+        </ul>
       ) : null}
       {isError ? (
         <div
@@ -362,8 +376,18 @@ function DiffSection({
   }
   if (revisionLoading || currentLoading || !revision || !current) {
     return (
-      <div data-testid="revisions-sheet-diff-loading" className="px-4 py-6">
-        Loading diff…
+      <div
+        data-testid="revisions-sheet-diff-loading"
+        aria-label="Loading diff"
+        aria-busy="true"
+        className="space-y-3 px-4 py-6"
+      >
+        {Array.from({ length: 5 }, (_, i) => (
+          <div key={i} className="space-y-1.5">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-4 w-full" />
+          </div>
+        ))}
       </div>
     );
   }

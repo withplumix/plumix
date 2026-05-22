@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog.js";
+import { Skeleton } from "@/components/ui/skeleton.js";
 import { useQuery } from "@tanstack/react-query";
 
 interface DiffSnapshot {
@@ -96,6 +97,44 @@ function DiffPane({
   readonly isError: boolean;
 }): ReactElement {
   const labelId = useId();
+  if (isError) {
+    return (
+      <section aria-labelledby={labelId}>
+        <div
+          id={labelId}
+          className="text-muted-foreground mb-1 text-xs font-medium"
+        >
+          {label}
+        </div>
+        <pre
+          className="bg-muted max-h-96 overflow-auto rounded-md p-2 text-xs"
+          data-testid="revision-diff-modal-error"
+        >
+          Failed to load snapshot.
+        </pre>
+      </section>
+    );
+  }
+  if (!snapshot) {
+    return (
+      <section aria-labelledby={labelId} aria-busy="true">
+        <div
+          id={labelId}
+          className="text-muted-foreground mb-1 text-xs font-medium"
+        >
+          {label}
+        </div>
+        <div
+          data-testid="revision-diff-modal-loading"
+          className="max-h-96 space-y-2 rounded-md border p-3"
+        >
+          {Array.from({ length: 8 }, (_, i) => (
+            <Skeleton key={i} className={i % 3 === 0 ? "h-3 w-2/3" : "h-3"} />
+          ))}
+        </div>
+      </section>
+    );
+  }
   return (
     <section aria-labelledby={labelId}>
       <div
@@ -104,15 +143,8 @@ function DiffPane({
       >
         {label}
       </div>
-      <pre
-        className="bg-muted max-h-96 overflow-auto rounded-md p-2 text-xs"
-        data-testid={isError ? "revision-diff-modal-error" : undefined}
-      >
-        {isError
-          ? "Failed to load snapshot."
-          : snapshot
-            ? JSON.stringify(snapshot, null, 2)
-            : "Loading…"}
+      <pre className="bg-muted max-h-96 overflow-auto rounded-md p-2 text-xs">
+        {JSON.stringify(snapshot, null, 2)}
       </pre>
     </section>
   );
