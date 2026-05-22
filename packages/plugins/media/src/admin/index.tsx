@@ -11,11 +11,10 @@
 // `registerPluginFieldType`'s registry. The host's meta-box-field
 // dispatcher consults that registry on every render.
 
+import type { BlockSpec } from "plumix/blocks";
 import type { ComponentType } from "react";
 
-import type { BlockSpec } from "plumix/blocks";
-
-import { mediaBlocks } from "../index.js";
+import { mediaBlocks } from "../media-blocks.js";
 import { MediaListPickerField } from "./MediaListPickerField.js";
 import { MediaPickerField } from "./MediaPickerField.js";
 

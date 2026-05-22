@@ -19,7 +19,7 @@ describe("media admin entry side effects", () => {
     // same fresh module instance (object identity matters for the
     // toHaveBeenNthCalledWith spec assertions).
     await import("./index.js");
-    const { mediaBlocks } = await import("../index.js");
+    const { mediaBlocks } = await import("../media-blocks.js");
 
     expect(registerPluginBlock).toHaveBeenCalledTimes(mediaBlocks.length);
     mediaBlocks.forEach((spec, i) => {

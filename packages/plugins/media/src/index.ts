@@ -1,4 +1,3 @@
-import type { BlockSpec } from "plumix/blocks";
 import type { PluginDescriptor } from "plumix/plugin";
 import { definePlugin } from "plumix/plugin";
 
@@ -20,14 +19,8 @@ export { DEFAULT_ACCEPTED_TYPES };
 /** Default max upload size — 25 MiB. */
 export const DEFAULT_MAX_UPLOAD_SIZE = 25 * 1024 * 1024;
 
-// Out-of-band v2 spec export; collapses into `ctx.registerBlockSpec` later.
-export const mediaBlocks: readonly BlockSpec[] = Object.freeze([
-  imageBlock,
-  galleryBlock,
-  videoBlock,
-  audioBlock,
-  fileBlock,
-]);
+// Re-export the canonical list from `media-blocks.ts` (server-clean).
+export { mediaBlocks } from "./media-blocks.js";
 
 interface MediaPluginOptions {
   /**
