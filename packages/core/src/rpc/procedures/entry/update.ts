@@ -2,6 +2,7 @@ import type { AuthenticatedAppContext } from "../../../context/app.js";
 import type { Entry, NewEntry } from "../../../db/schema/entries.js";
 import { and, eq, isUniqueConstraintError, ne } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import { upsertAutosave } from "../../../revisions/repository.js";
 import { isReservedType } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
@@ -16,6 +17,7 @@ import {
   applyEntryBeforeSave,
   captureRevisionIfSupported,
   entryCapability,
+  fireEntryAutosaveSaved,
   fireEntryPublished,
   fireEntryTransition,
   fireEntryUpdated,
@@ -183,6 +185,59 @@ export const update = base
       },
     );
 
+    // Resolve `saveAs` against the entry's state + type capabilities.
+    // The default keeps legacy callers writing to live unless the type
+    // explicitly opts into autosave AND the row is currently published;
+    // then a pending edit lands on a per-user autosave row instead.
+    const typeSupportsAutosave =
+      context.plugins.entryTypes
+        .get(existing.type)
+        ?.supports?.includes("autosave") ?? false;
+    const effectiveSaveAs: "draft" | "live" =
+      filtered.saveAs ??
+      (typeSupportsAutosave && existing.status === "published"
+        ? "draft"
+        : "live");
+    if (effectiveSaveAs === "draft") {
+      if (!typeSupportsAutosave) {
+        throw errors.BAD_REQUEST({
+          data: { reason: "autosave_unsupported" },
+        });
+      }
+      if (existing.status !== "published") {
+        // Drafts only make sense on a published row — the unpublished
+        // row IS the draft. Caller should write to live directly.
+        throw errors.BAD_REQUEST({
+          data: { reason: "autosave_requires_published" },
+        });
+      }
+      const autosave = await upsertAutosave(context.db, {
+        entry: existing,
+        authorId: context.user.id,
+        patch: {
+          title: filtered.title ?? existing.title,
+          content:
+            filtered.content !== undefined
+              ? filtered.content
+              : existing.content,
+          excerpt:
+            filtered.excerpt !== undefined
+              ? filtered.excerpt
+              : existing.excerpt,
+          // Autosave's meta bag tracks the in-progress edits; merge
+          // the caller's patch over the live row's current meta so
+          // unchanged keys persist across draft saves.
+          meta: { ...existing.meta, ...(filtered.meta ?? {}) },
+        },
+      });
+      await fireEntryAutosaveSaved(context, autosave, existing);
+      const decoded = decodeMetaBag(context.plugins, autosave, autosave.meta);
+      return context.hooks.applyFilter("rpc:entry.update:output", {
+        ...autosave,
+        meta: decoded,
+      });
+    }
+
     const isPublishTransition =
       filtered.status === "published" && existing.status !== "published";
     if (isPublishTransition) {
@@ -213,6 +268,7 @@ export const update = base
       terms: termsPatch,
       meta: metaInput,
       expectedLiveUpdatedAt: _expectedLiveUpdatedAt,
+      saveAs: _saveAs,
       ...changes
     } = filtered;
     const metaPatch = sanitizeMetaForRpc(

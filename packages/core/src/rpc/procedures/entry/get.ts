@@ -1,5 +1,6 @@
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import { getAutosave } from "../../../revisions/repository.js";
 import { isReservedType } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
@@ -42,6 +43,49 @@ export const get = base
       if (!canSeeAny && !ownsAndCanEdit) {
         throw errors.NOT_FOUND({ data: { kind: "entry", id: filtered.id } });
       }
+    }
+
+    // Preview mode: overlay the caller's autosave (if any) onto the
+    // live row's read fields, leaving `id` / `slug` / `parentId` /
+    // `authorId` / `updatedAt` / `createdAt` etc. anchored to live.
+    // Gated by edit_own / edit_any because previewing a pending draft
+    // is an editor concern.
+    if (filtered.preview) {
+      const canSeeAny = context.auth.can(entryCapability(row.type, "edit_any"));
+      const ownsAndCanEdit =
+        row.authorId === context.user.id &&
+        context.auth.can(entryCapability(row.type, "edit_own"));
+      if (!canSeeAny && !ownsAndCanEdit) {
+        throw errors.FORBIDDEN({
+          data: { capability: entryCapability(row.type, "edit_own") },
+        });
+      }
+      const autosave = await getAutosave(context.db, {
+        entryId: row.id,
+        authorId: context.user.id,
+      });
+      const source: "autosave" | "live" = autosave ? "autosave" : "live";
+      const overlaid = autosave
+        ? {
+            ...row,
+            title: autosave.title,
+            content: autosave.content,
+            excerpt: autosave.excerpt,
+            meta: autosave.meta,
+          }
+        : row;
+      const meta = decodeMetaBag(context.plugins, overlaid, overlaid.meta);
+      const terms = await loadEntryTerms(context, row.id);
+      return context.hooks.applyFilter("rpc:entry.get:output", {
+        ...overlaid,
+        meta,
+        terms,
+        _preview: {
+          source,
+          autosaveUpdatedAt: autosave?.updatedAt ?? null,
+          liveUpdatedAt: row.updatedAt,
+        },
+      });
     }
 
     const meta = decodeMetaBag(context.plugins, row, row.meta);
