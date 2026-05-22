@@ -10,9 +10,11 @@ import { PlumixEditorLayout } from "@/editor/EditorLayout.js";
 import { seedPuckData } from "@/editor/entry-content.js";
 import { readDraft, writeDraft } from "@/editor/local-draft.js";
 import { puckDataToBlockTree } from "@/editor/puck-to-block-tree.js";
+import { registerCoreBlocks } from "@/editor/register-core-blocks.js";
 import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
 import { entryMetaBoxesForType, findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
+import { getRegisteredBlocks } from "@/lib/plugin-registry.js";
 import { ORPCError } from "@orpc/client";
 import { Puck } from "@puckeditor/core";
 import {
@@ -25,11 +27,7 @@ import * as v from "valibot";
 
 import type { ThemeTokens } from "@plumix/blocks";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
-import {
-  coreBlocks,
-  coreMarkExtensions,
-  createBlockRegistry,
-} from "@plumix/blocks";
+import { coreMarkExtensions, createBlockRegistry } from "@plumix/blocks";
 import { idPathParam } from "@plumix/core/validation";
 
 import "@puckeditor/core/puck.css";
@@ -71,9 +69,11 @@ const sampleTokens: ThemeTokens = {
   },
 };
 
-const registry = createBlockRegistry(coreBlocks);
+registerCoreBlocks();
+const runtimeBlocks = getRegisteredBlocks();
+const registry = createBlockRegistry(runtimeBlocks);
 const config: Config = {
-  components: blockSpecsToPuckComponents(coreBlocks, {
+  components: blockSpecsToPuckComponents(runtimeBlocks, {
     // Puck types `extensions` as a mutable array; spread the readonly
     // plumix list to satisfy the assignment without weakening the
     // export.

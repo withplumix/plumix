@@ -1,12 +1,14 @@
 type AdminPluginRegistryErrorCode =
   | "duplicate_key"
   | "input_type_reserved"
+  | "invalid_block_name"
   | "ssr_walked_admin_spec";
 
 interface AdminPluginRegistryErrorFields {
   registerName?: string;
   key?: string;
   type?: string;
+  blockName?: unknown;
 }
 
 export class AdminPluginRegistryError extends Error {
@@ -18,6 +20,7 @@ export class AdminPluginRegistryError extends Error {
   readonly registerName: string | undefined;
   readonly key: string | undefined;
   readonly type: string | undefined;
+  readonly blockName: unknown;
 
   private constructor(
     code: AdminPluginRegistryErrorCode,
@@ -29,6 +32,7 @@ export class AdminPluginRegistryError extends Error {
     this.registerName = fields.registerName;
     this.key = fields.key;
     this.type = fields.type;
+    this.blockName = fields.blockName;
   }
 
   static duplicateKey(ctx: {
@@ -50,6 +54,16 @@ export class AdminPluginRegistryError extends Error {
         `Pick a different inputType for your custom field — see the host's ` +
         `RESERVED_INPUT_TYPES list.`,
       ctx,
+    );
+  }
+
+  static invalidBlockName(ctx: { name: unknown }): AdminPluginRegistryError {
+    return new AdminPluginRegistryError(
+      "invalid_block_name",
+      `registerPluginBlock: spec.name must be a namespaced string ` +
+        `("plugin/slug") to disambiguate from first-party blocks. ` +
+        `Got: ${JSON.stringify(ctx.name)}`,
+      { blockName: ctx.name },
     );
   }
 
