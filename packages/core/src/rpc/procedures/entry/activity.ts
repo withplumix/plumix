@@ -19,7 +19,6 @@ const listInput = v.object({ entryId: idParam });
 // SSE upgrade since the wire shape is just the user list.
 const ACTIVE_WINDOW_MS = 5 * 60 * 1000;
 
-
 // Returns the users currently editing `entryId` — autosave rows
 // touched within the last five minutes — excluding the caller. Empty
 // list when no co-authors are active. Polled by the editor header to
