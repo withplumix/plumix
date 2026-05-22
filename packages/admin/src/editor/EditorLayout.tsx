@@ -70,6 +70,10 @@ interface PlumixEditorLayoutProps {
   // Route layer owns RPC wiring and feeds a fully-wired <RevisionsSheet />
   // here; the layout only allocates space and doesn't know the contract.
   readonly revisionsTrigger?: ReactNode;
+  // Optional co-author indicator (avatar group + last-seen labels)
+  // surfaced next to the autosave pill. Route layer owns the
+  // `entry.activity.list` polling; the layout just allocates space.
+  readonly coAuthorIndicator?: ReactNode;
   // Optional preview-mode banner rendered above the header. When set,
   // the route is in `?revision=<id>` preview mode — the title input
   // and publish button are hidden because edits don't autosave.
@@ -339,6 +343,7 @@ export function PlumixEditorLayout({
   isPublishing = false,
   isPublished = false,
   revisionsTrigger,
+  coAuthorIndicator,
   previewBanner,
   draftMode,
 }: PlumixEditorLayoutProps): ReactElement {
@@ -398,6 +403,7 @@ export function PlumixEditorLayout({
           disabled={isPreview}
         />
         {isPreview ? null : <AutosaveStatusPill />}
+        {isPreview ? null : coAuthorIndicator}
         {revisionsTrigger}
         {isPreview ? null : isDraftMode ? (
           <DraftActions draftMode={draftMode} />

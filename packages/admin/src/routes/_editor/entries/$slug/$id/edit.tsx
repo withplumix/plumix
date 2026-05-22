@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PlainFormLayout } from "@/components/editor/plain-form-layout.js";
 import { AutosaveStatusContext } from "@/editor/AutosaveStatus.js";
 import { blockSpecsToPuckComponents } from "@/editor/block-adapter.js";
+import { CoAuthorIndicator } from "@/editor/CoAuthorIndicator.js";
 import { createDebouncer } from "@/editor/debounce.js";
 import { detectStaleAutosave } from "@/editor/detect-stale-autosave.js";
 import { PlumixEditorLayout } from "@/editor/EditorLayout.js";
@@ -39,6 +40,16 @@ import { idPathParam } from "@plumix/core/validation";
 import "@puckeditor/core/puck.css";
 
 const EMPTY_DATA: Data = { content: [], root: {} };
+
+// Stable empty array for the co-author indicator's no-data state. A
+// fresh `[]` per render would invalidate the `Layout` `useCallback`
+// even though the list is logically unchanged.
+const EMPTY_COAUTHORS: readonly {
+  id: number;
+  name: string | null;
+  email: string;
+  lastSeenAt: Date;
+}[] = [];
 
 // 1 s batches typing bursts; the dedup snapshot in the autosave closure
 // is what actually prevents identical revisions. WordPress's 60 s
@@ -510,6 +521,17 @@ function PuckSpikeRouteInner({
     ...orpc.entry.get.queryOptions({ input: { id } }),
     enabled: showStaleDialog,
   });
+  // Co-author awareness polling (#293). 30 s interval matches the
+  // server's 5-minute "active" window — a co-author whose autosave
+  // ages out drops off the indicator within one interval. `staleTime`
+  // keeps other consumers from forcing churn refetches between polls.
+  const coAuthorQuery = useQuery({
+    ...orpc.entry.activity.list.queryOptions({ input: { entryId: id } }),
+    enabled: isEditWithDraft,
+    refetchInterval: 30_000,
+    staleTime: 10_000,
+  });
+  const coAuthors = coAuthorQuery.data?.users ?? EMPTY_COAUTHORS;
   const handleUseMine = useCallback((): void => {
     if (liveAnchorAfterResolve) {
       liveUpdatedAtRef.current = liveAnchorAfterResolve;
@@ -566,6 +588,14 @@ function PuckSpikeRouteInner({
         isPublishing={publish.isPending}
         isPublished={isPublished}
         revisionsTrigger={revisionsTrigger}
+        coAuthorIndicator={
+          coAuthors.length > 0 ? (
+            <CoAuthorIndicator
+              users={coAuthors}
+              relativeTime={formatRelativeTime}
+            />
+          ) : null
+        }
         draftMode={draftModeProp}
       />
     ),
@@ -578,6 +608,7 @@ function PuckSpikeRouteInner({
       isPublished,
       capabilitySet,
       revisionsTrigger,
+      coAuthors,
       draftModeProp,
     ],
   );
