@@ -104,6 +104,10 @@ describe("entry.revisions.get", () => {
     });
     expect(fetched.id).toBe(first.id);
     expect(fetched.title).toBe("G2");
+    // Author join: the editor preview banner needs name/email so it
+    // can render "by <author>" without a second user roundtrip.
+    expect(fetched.authorName).toBe(first.authorName);
+    expect(fetched.authorEmail).toBe(first.authorEmail);
   });
 
   test("contributor gets FORBIDDEN on entry.revisions.get", async () => {

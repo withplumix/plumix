@@ -69,6 +69,10 @@ interface PlumixEditorLayoutProps {
   // Route layer owns RPC wiring and feeds a fully-wired <RevisionsSheet />
   // here; the layout only allocates space and doesn't know the contract.
   readonly revisionsTrigger?: ReactNode;
+  // Optional preview-mode banner rendered above the header. When set,
+  // the route is in `?revision=<id>` preview mode — the title input
+  // and publish button are hidden because edits don't autosave.
+  readonly previewBanner?: ReactNode;
 }
 
 const EMPTY_REGISTRY: BlockRegistry = createBlockRegistry([]);
@@ -251,9 +255,12 @@ export function PlumixEditorLayout({
   isPublishing = false,
   isPublished = false,
   revisionsTrigger,
+  previewBanner,
 }: PlumixEditorLayoutProps): ReactElement {
+  const isPreview = previewBanner !== undefined;
   return (
     <div className="flex h-dvh flex-col" data-testid="plumix-editor-layout">
+      {previewBanner}
       <header
         className="bg-background flex h-12 shrink-0 items-center gap-3 border-b px-4"
         data-testid="plumix-editor-header"
@@ -270,32 +277,55 @@ export function PlumixEditorLayout({
           type="text"
           placeholder="Untitled"
           aria-label="Entry title"
-          className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent px-2 text-base font-medium outline-none"
+          className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent px-2 text-base font-medium outline-none disabled:cursor-not-allowed disabled:opacity-60"
           data-testid="plumix-editor-title-input"
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
+          disabled={isPreview}
         />
-        <AutosaveStatusPill />
+        {isPreview ? null : <AutosaveStatusPill />}
         {revisionsTrigger}
-        <button
-          type="button"
-          className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-8 items-center rounded-md px-3 text-sm font-medium disabled:opacity-50"
-          data-testid="plumix-editor-publish-button"
-          onClick={onPublish}
-          disabled={isPublishing || isPublished}
-        >
-          Publish
-        </button>
+        {isPreview ? null : (
+          <button
+            type="button"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-8 items-center rounded-md px-3 text-sm font-medium disabled:opacity-50"
+            data-testid="plumix-editor-publish-button"
+            onClick={onPublish}
+            disabled={isPublishing || isPublished}
+          >
+            Publish
+          </button>
+        )}
       </header>
       <div
         className="grid flex-1 grid-cols-[minmax(0,1fr)] overflow-hidden md:grid-cols-[260px_minmax(0,1fr)_320px]"
         data-testid="plumix-editor-cols"
       >
         <BlocksBody registry={registry} capabilities={capabilities} />
-        <PlumixCanvasWithSlashMenu
-          registry={registry}
-          capabilities={capabilities}
-        />
+        {isPreview ? (
+          // Puck's `permissions` strips drag / insert / delete / dup /
+          // edit, but Tiptap inside rich-text fields keeps its own
+          // `editable: true`. Cover the canvas with a transparent
+          // overlay so the user can't type into rich-text without
+          // realising preview mode skips autosave.
+          <div className="relative" data-testid="plumix-editor-preview-shield">
+            <div
+              aria-hidden
+              className="bg-background/0 pointer-events-auto absolute inset-0 z-10"
+            />
+            <div className="pointer-events-none h-full">
+              <PlumixCanvasWithSlashMenu
+                registry={registry}
+                capabilities={capabilities}
+              />
+            </div>
+          </div>
+        ) : (
+          <PlumixCanvasWithSlashMenu
+            registry={registry}
+            capabilities={capabilities}
+          />
+        )}
         <InspectorBody registry={registry} tokens={tokens} />
       </div>
     </div>

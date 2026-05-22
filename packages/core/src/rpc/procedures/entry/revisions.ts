@@ -125,7 +125,17 @@ export const get = base
     if (!context.auth.can(capability)) {
       throw errors.FORBIDDEN({ data: { capability } });
     }
-    return revision;
+    // Join the author so the editor preview banner can show "by
+    // <name>" without a second roundtrip. Matches the shape `list`
+    // returns per row.
+    const author = await context.db.query.users.findFirst({
+      where: eq(users.id, revision.authorId),
+    });
+    return {
+      ...revision,
+      authorName: author?.name ?? null,
+      authorEmail: author?.email ?? null,
+    };
   });
 
 export const restore = base
