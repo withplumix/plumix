@@ -6,7 +6,10 @@ import { isUniqueConstraintError } from "../db/errors.js";
 import { entries } from "../db/schema/entries.js";
 import { RevisionRepositoryError } from "./errors.js";
 import { buildRevisionSlug, REVISION_TYPE } from "./slug-codec.js";
-import { encodeSnapshotEnvelope } from "./snapshot-envelope.js";
+import {
+  encodeSnapshotEnvelope,
+  REVISION_MESSAGE_META_KEY,
+} from "./snapshot-envelope.js";
 
 // 21 chars × 64-char alphabet = 126 bits of entropy — collision-
 // resistant under the `(type, slug)` unique index. URL-safe.
@@ -138,6 +141,36 @@ export async function getRevision(
       eq(entries.type, REVISION_TYPE),
     ),
   });
+  return row;
+}
+
+interface SetRevisionMessageInput {
+  readonly revisionId: number;
+  // `null` clears the message (deletes the meta key). The RPC layer
+  // is responsible for normalizing empty strings to null before it
+  // gets here — the repository writes what it's told.
+  readonly message: string | null;
+}
+
+// Patches the revision row's `meta.__plumix_revision_message`. Returns
+// the updated row, or `undefined` if `revisionId` doesn't exist.
+export async function setRevisionMessage(
+  db: Db,
+  input: SetRevisionMessageInput,
+): Promise<Entry | undefined> {
+  const current = await getRevision(db, { revisionId: input.revisionId });
+  if (!current) return undefined;
+  const nextMeta = { ...current.meta };
+  if (input.message === null) {
+    delete nextMeta[REVISION_MESSAGE_META_KEY];
+  } else {
+    nextMeta[REVISION_MESSAGE_META_KEY] = input.message;
+  }
+  const [row] = await db
+    .update(entries)
+    .set({ meta: nextMeta })
+    .where(eq(entries.id, input.revisionId))
+    .returning();
   return row;
 }
 

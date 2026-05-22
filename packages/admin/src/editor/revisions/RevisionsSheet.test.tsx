@@ -22,6 +22,7 @@ interface RevisionFixture {
   readonly authorId: number;
   readonly authorName: string | null;
   readonly authorEmail: string | null;
+  readonly message: string | null;
 }
 
 function wrap(child: React.ReactNode) {
@@ -42,6 +43,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
           fetchRevision={vi.fn()}
           fetchCurrent={vi.fn()}
           onPreview={vi.fn()}
+          onSaveMessage={vi.fn()}
         />,
       ),
     );
@@ -68,6 +70,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
                   authorId: 1,
                   authorName: "Ada",
                   authorEmail: "ada@x",
+                  message: null,
                 },
               ] satisfies RevisionFixture[],
               nextCursor: null,
@@ -77,6 +80,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
           fetchRevision={vi.fn()}
           fetchCurrent={vi.fn()}
           onPreview={vi.fn()}
+          onSaveMessage={vi.fn()}
         />,
       ),
     );
@@ -116,6 +120,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
                   authorId: 1,
                   authorName: "Ada",
                   authorEmail: "ada@x",
+                  message: null,
                 },
               ] satisfies RevisionFixture[],
               nextCursor: null,
@@ -125,6 +130,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
           fetchRevision={fetchRevision}
           fetchCurrent={fetchCurrent}
           onPreview={vi.fn()}
+          onSaveMessage={vi.fn()}
         />,
       ),
     );
@@ -151,6 +157,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
                   authorId: 1,
                   authorName: "Ada",
                   authorEmail: "ada@x",
+                  message: null,
                 },
               ] satisfies RevisionFixture[],
               nextCursor: null,
@@ -176,6 +183,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
             })
           }
           onPreview={vi.fn()}
+          onSaveMessage={vi.fn()}
         />,
       ),
     );
@@ -210,6 +218,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
                   authorId: 1,
                   authorName: "Ada",
                   authorEmail: "ada@x",
+                  message: null,
                 },
               ] satisfies RevisionFixture[],
               nextCursor: null,
@@ -219,6 +228,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
           fetchRevision={() => Promise.reject(new Error("boom"))}
           fetchCurrent={() => Promise.reject(new Error("boom"))}
           onPreview={vi.fn()}
+          onSaveMessage={vi.fn()}
         />,
       ),
     );
@@ -261,6 +271,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
                   authorId: 1,
                   authorName: "Ada",
                   authorEmail: "ada@x",
+                  message: null,
                 },
               ] satisfies RevisionFixture[],
               nextCursor: null,
@@ -270,6 +281,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
           fetchRevision={() => Promise.resolve(revision)}
           fetchCurrent={() => Promise.resolve(current)}
           onPreview={vi.fn()}
+          onSaveMessage={vi.fn()}
         />,
       ),
     );
@@ -302,6 +314,7 @@ describe("RevisionsSheet", () => {
           fetchRevision={vi.fn()}
           fetchCurrent={vi.fn()}
           onPreview={vi.fn()}
+          onSaveMessage={vi.fn()}
         />,
       ),
     );
@@ -323,6 +336,7 @@ describe("RevisionsSheet", () => {
             authorId: 1,
             authorName: "Ada",
             authorEmail: "ada@example.test",
+            message: null,
           },
           {
             id: 6,
@@ -331,6 +345,7 @@ describe("RevisionsSheet", () => {
             authorId: 1,
             authorName: "Ada",
             authorEmail: "ada@example.test",
+            message: null,
           },
         ] satisfies RevisionFixture[],
         nextCursor: null,
@@ -345,6 +360,7 @@ describe("RevisionsSheet", () => {
           fetchRevision={vi.fn()}
           fetchCurrent={vi.fn()}
           onPreview={vi.fn()}
+          onSaveMessage={vi.fn()}
         />,
       ),
     );
@@ -377,6 +393,7 @@ describe("RevisionsSheet", () => {
             authorId: 1,
             authorName: "Ada",
             authorEmail: "ada@x",
+            message: null,
           },
         ],
         nextCursor: "cur-1",
@@ -390,6 +407,7 @@ describe("RevisionsSheet", () => {
             authorId: 1,
             authorName: "Ada",
             authorEmail: "ada@x",
+            message: null,
           },
         ],
         nextCursor: null,
@@ -403,6 +421,7 @@ describe("RevisionsSheet", () => {
           fetchRevision={vi.fn()}
           fetchCurrent={vi.fn()}
           onPreview={vi.fn()}
+          onSaveMessage={vi.fn()}
         />,
       ),
     );
@@ -430,6 +449,7 @@ describe("RevisionsSheet", () => {
             authorId: 1,
             authorName: "Ada",
             authorEmail: "ada@x",
+            message: null,
           },
         ] satisfies RevisionFixture[],
         nextCursor: null,
@@ -445,6 +465,7 @@ describe("RevisionsSheet", () => {
           fetchRevision={vi.fn()}
           fetchCurrent={vi.fn()}
           onPreview={onPreview}
+          onSaveMessage={vi.fn()}
         />,
       ),
     );
@@ -470,6 +491,7 @@ describe("RevisionsSheet", () => {
             authorId: 1,
             authorName: "Ada",
             authorEmail: "ada@x",
+            message: null,
           },
         ] satisfies RevisionFixture[],
         nextCursor: null,
@@ -484,6 +506,7 @@ describe("RevisionsSheet", () => {
           fetchRevision={vi.fn()}
           fetchCurrent={vi.fn()}
           onPreview={vi.fn()}
+          onSaveMessage={vi.fn()}
         />,
       ),
     );
@@ -496,5 +519,262 @@ describe("RevisionsSheet", () => {
     expect(
       screen.queryByTestId("revisions-sheet-restore"),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("RevisionsSheet — comment editing (#289 slice 3)", () => {
+  test("row without a message shows the comment-add icon and no inline display", async () => {
+    const fetchPage = vi.fn(() =>
+      Promise.resolve({
+        revisions: [
+          {
+            id: 31,
+            title: "Snapshot",
+            updatedAt: new Date("2026-05-22T12:00:00Z"),
+            authorId: 1,
+            authorName: "Ada",
+            authorEmail: "ada@x",
+            message: null,
+          },
+        ] satisfies RevisionFixture[],
+        nextCursor: null,
+      }),
+    );
+    render(
+      wrap(
+        <RevisionsSheet
+          entryId={42}
+          fetchPage={fetchPage}
+          relativeTime={() => "now"}
+          fetchRevision={vi.fn()}
+          fetchCurrent={vi.fn()}
+          onPreview={vi.fn()}
+          onSaveMessage={vi.fn()}
+        />,
+      ),
+    );
+    fireEvent.click(screen.getByTestId("revisions-sheet-trigger"));
+    await waitFor(() => screen.getByTestId("revisions-sheet-item-31-comment"));
+    expect(
+      screen.queryByTestId("revisions-sheet-item-31-comment-display"),
+    ).not.toBeInTheDocument();
+  });
+
+  test("row with a message renders the comment text inline so the list is scannable", async () => {
+    const fetchPage = vi.fn(() =>
+      Promise.resolve({
+        revisions: [
+          {
+            id: 32,
+            title: "Snapshot",
+            updatedAt: new Date("2026-05-22T12:00:00Z"),
+            authorId: 1,
+            authorName: "Ada",
+            authorEmail: "ada@x",
+            message: "before the redesign",
+          },
+        ] satisfies RevisionFixture[],
+        nextCursor: null,
+      }),
+    );
+    render(
+      wrap(
+        <RevisionsSheet
+          entryId={42}
+          fetchPage={fetchPage}
+          relativeTime={() => "now"}
+          fetchRevision={vi.fn()}
+          fetchCurrent={vi.fn()}
+          onPreview={vi.fn()}
+          onSaveMessage={vi.fn()}
+        />,
+      ),
+    );
+    fireEvent.click(screen.getByTestId("revisions-sheet-trigger"));
+    await waitFor(() =>
+      screen.getByTestId("revisions-sheet-item-32-comment-display"),
+    );
+    expect(
+      screen.getByTestId("revisions-sheet-item-32-comment-display").textContent,
+    ).toContain("before the redesign");
+  });
+
+  test("clicking the comment icon opens an inline editor; Save calls onSaveMessage with the typed text", async () => {
+    const fetchPage = vi.fn(() =>
+      Promise.resolve({
+        revisions: [
+          {
+            id: 33,
+            title: "Snapshot",
+            updatedAt: new Date("2026-05-22T12:00:00Z"),
+            authorId: 1,
+            authorName: "Ada",
+            authorEmail: "ada@x",
+            message: null,
+          },
+        ] satisfies RevisionFixture[],
+        nextCursor: null,
+      }),
+    );
+    const onSaveMessage = vi.fn(() => Promise.resolve());
+    render(
+      wrap(
+        <RevisionsSheet
+          entryId={42}
+          fetchPage={fetchPage}
+          relativeTime={() => "now"}
+          fetchRevision={vi.fn()}
+          fetchCurrent={vi.fn()}
+          onPreview={vi.fn()}
+          onSaveMessage={onSaveMessage}
+        />,
+      ),
+    );
+    fireEvent.click(screen.getByTestId("revisions-sheet-trigger"));
+    await waitFor(() => screen.getByTestId("revisions-sheet-item-33-comment"));
+    fireEvent.click(screen.getByTestId("revisions-sheet-item-33-comment"));
+    const input = screen.getByTestId("revisions-sheet-item-33-comment-input");
+    fireEvent.change(input, { target: { value: "first publish" } });
+    fireEvent.click(screen.getByTestId("revisions-sheet-item-33-comment-save"));
+    await waitFor(() => {
+      expect(onSaveMessage).toHaveBeenCalledWith({
+        revisionId: 33,
+        message: "first publish",
+      });
+    });
+  });
+
+  test("Save with an empty input calls onSaveMessage with message=null (clears the comment)", async () => {
+    const fetchPage = vi.fn(() =>
+      Promise.resolve({
+        revisions: [
+          {
+            id: 34,
+            title: "Snapshot",
+            updatedAt: new Date("2026-05-22T12:00:00Z"),
+            authorId: 1,
+            authorName: "Ada",
+            authorEmail: "ada@x",
+            message: "old text",
+          },
+        ] satisfies RevisionFixture[],
+        nextCursor: null,
+      }),
+    );
+    const onSaveMessage = vi.fn(() => Promise.resolve());
+    render(
+      wrap(
+        <RevisionsSheet
+          entryId={42}
+          fetchPage={fetchPage}
+          relativeTime={() => "now"}
+          fetchRevision={vi.fn()}
+          fetchCurrent={vi.fn()}
+          onPreview={vi.fn()}
+          onSaveMessage={onSaveMessage}
+        />,
+      ),
+    );
+    fireEvent.click(screen.getByTestId("revisions-sheet-trigger"));
+    await waitFor(() => screen.getByTestId("revisions-sheet-item-34-comment"));
+    fireEvent.click(screen.getByTestId("revisions-sheet-item-34-comment"));
+    const input = screen.getByTestId("revisions-sheet-item-34-comment-input");
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.click(screen.getByTestId("revisions-sheet-item-34-comment-save"));
+    await waitFor(() => {
+      expect(onSaveMessage).toHaveBeenCalledWith({
+        revisionId: 34,
+        message: null,
+      });
+    });
+  });
+
+  test("re-clicking the comment icon closes the editor — second open re-seeds from the latest message", async () => {
+    const fetchPage = vi.fn(() =>
+      Promise.resolve({
+        revisions: [
+          {
+            id: 36,
+            title: "Snapshot",
+            updatedAt: new Date("2026-05-22T12:00:00Z"),
+            authorId: 1,
+            authorName: "Ada",
+            authorEmail: "ada@x",
+            message: "saved",
+          },
+        ] satisfies RevisionFixture[],
+        nextCursor: null,
+      }),
+    );
+    const onSaveMessage = vi.fn();
+    render(
+      wrap(
+        <RevisionsSheet
+          entryId={42}
+          fetchPage={fetchPage}
+          relativeTime={() => "now"}
+          fetchRevision={vi.fn()}
+          fetchCurrent={vi.fn()}
+          onPreview={vi.fn()}
+          onSaveMessage={onSaveMessage}
+        />,
+      ),
+    );
+    fireEvent.click(screen.getByTestId("revisions-sheet-trigger"));
+    await waitFor(() => screen.getByTestId("revisions-sheet-item-36-comment"));
+    // First click opens the editor seeded with the saved message.
+    fireEvent.click(screen.getByTestId("revisions-sheet-item-36-comment"));
+    expect(
+      screen.getByTestId("revisions-sheet-item-36-comment-editor"),
+    ).toBeInTheDocument();
+    // Second click on the same icon closes the editor (toggle).
+    fireEvent.click(screen.getByTestId("revisions-sheet-item-36-comment"));
+    expect(
+      screen.queryByTestId("revisions-sheet-item-36-comment-editor"),
+    ).not.toBeInTheDocument();
+    expect(onSaveMessage).not.toHaveBeenCalled();
+  });
+
+  test("Cancel button closes the editor without calling onSaveMessage", async () => {
+    const fetchPage = vi.fn(() =>
+      Promise.resolve({
+        revisions: [
+          {
+            id: 35,
+            title: "Snapshot",
+            updatedAt: new Date("2026-05-22T12:00:00Z"),
+            authorId: 1,
+            authorName: "Ada",
+            authorEmail: "ada@x",
+            message: null,
+          },
+        ] satisfies RevisionFixture[],
+        nextCursor: null,
+      }),
+    );
+    const onSaveMessage = vi.fn();
+    render(
+      wrap(
+        <RevisionsSheet
+          entryId={42}
+          fetchPage={fetchPage}
+          relativeTime={() => "now"}
+          fetchRevision={vi.fn()}
+          fetchCurrent={vi.fn()}
+          onPreview={vi.fn()}
+          onSaveMessage={onSaveMessage}
+        />,
+      ),
+    );
+    fireEvent.click(screen.getByTestId("revisions-sheet-trigger"));
+    await waitFor(() => screen.getByTestId("revisions-sheet-item-35-comment"));
+    fireEvent.click(screen.getByTestId("revisions-sheet-item-35-comment"));
+    fireEvent.click(
+      screen.getByTestId("revisions-sheet-item-35-comment-cancel"),
+    );
+    expect(
+      screen.queryByTestId("revisions-sheet-item-35-comment-editor"),
+    ).not.toBeInTheDocument();
+    expect(onSaveMessage).not.toHaveBeenCalled();
   });
 });

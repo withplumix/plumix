@@ -8,13 +8,16 @@ import { users } from "../../../db/schema/users.js";
 import {
   getRevision as repoGetRevision,
   listRevisions as repoListRevisions,
+  setRevisionMessage as repoSetRevisionMessage,
 } from "../../../revisions/repository.js";
 import {
   decodeRevisionSlug,
   isRevisionType,
 } from "../../../revisions/slug-codec.js";
 import {
+  decodeRevisionMessage,
   decodeSnapshotEnvelope,
+  REVISION_MESSAGE_MAX_LENGTH,
   SNAPSHOT_META_KEY,
 } from "../../../revisions/snapshot-envelope.js";
 import { authenticated } from "../../authenticated.js";
@@ -95,6 +98,7 @@ export const list = base
         authorId: r.authorId,
         authorName: author?.name ?? null,
         authorEmail: author?.email ?? null,
+        message: decodeRevisionMessage(r.meta),
       };
     });
     return { revisions: items, nextCursor: page.nextCursor };
@@ -135,6 +139,7 @@ export const get = base
       ...revision,
       authorName: author?.name ?? null,
       authorEmail: author?.email ?? null,
+      message: decodeRevisionMessage(revision.meta),
     };
   });
 
@@ -252,4 +257,71 @@ export const restore = base
     return updated;
   });
 
-export const revisionsRouter = { list, get, restore } as const;
+const setMessageInput = v.object({
+  revisionId: idParam,
+  // `null` clears the comment. Empty strings are coerced to null at
+  // the repository layer; the API surface accepts both so the UI can
+  // send whatever the input contains without a client-side trim
+  // pass.
+  message: v.union([
+    v.null(),
+    v.pipe(v.string(), v.maxLength(REVISION_MESSAGE_MAX_LENGTH)),
+  ]),
+});
+
+// Patches `revision.message`. Capability gate deliberately matches
+// `restore` (read_revisions + edit_own/edit_any) for symmetry — a
+// user who can revert a revision can also re-caption it; future
+// loosening (e.g. comment-only role) should change both gates in
+// lockstep. No `expectedLiveUpdatedAt` token: comment edits don't
+// touch the live entry, so concurrent label edits are
+// last-write-wins on the same revision row.
+export const setMessage = base
+  .use(authenticated)
+  .input(setMessageInput)
+  .handler(async ({ input, context, errors }) => {
+    const notFound = () =>
+      errors.NOT_FOUND({ data: { kind: "revision", id: input.revisionId } });
+
+    const revision = await repoGetRevision(context.db, {
+      revisionId: input.revisionId,
+    });
+    if (!revision) throw notFound();
+
+    const decoded = decodeRevisionSlug(revision.slug);
+    if (!decoded) throw notFound();
+    const live = await context.db.query.entries.findFirst({
+      where: eq(entries.id, decoded.entryId),
+    });
+    if (!live || isRevisionType(live.type)) throw notFound();
+
+    const readCapability = entryCapability(live.type, "read_revisions");
+    if (!context.auth.can(readCapability)) {
+      throw errors.FORBIDDEN({ data: { capability: readCapability } });
+    }
+    const isAuthor = live.authorId === context.user.id;
+    const editOwnCapability = entryCapability(live.type, "edit_own");
+    const editAnyCapability = entryCapability(live.type, "edit_any");
+    const canEdit =
+      (isAuthor && context.auth.can(editOwnCapability)) ||
+      context.auth.can(editAnyCapability);
+    if (!canEdit) {
+      throw errors.FORBIDDEN({ data: { capability: editAnyCapability } });
+    }
+
+    // Normalize empty string to null at the input boundary so the
+    // repository writes a canonical shape (delete-key vs set-key)
+    // and the on-disk meta stays clean across re-edits.
+    const normalized =
+      input.message === null || input.message.length === 0
+        ? null
+        : input.message;
+    const updated = await repoSetRevisionMessage(context.db, {
+      revisionId: input.revisionId,
+      message: normalized,
+    });
+    if (!updated) throw notFound();
+    return { id: updated.id, message: decodeRevisionMessage(updated.meta) };
+  });
+
+export const revisionsRouter = { list, get, restore, setMessage } as const;

@@ -110,6 +110,126 @@ describe("entry.revisions.get", () => {
     expect(fetched.authorEmail).toBe(first.authorEmail);
   });
 
+  test("list + get include message=null for revisions with no comment", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithRevisions(),
+    });
+    const created = await h.client.entry.create({ title: "M", slug: "m" });
+    await h.client.entry.update({ id: created.id, title: "M2" });
+    const listed = await h.client.entry.revisions.list({
+      entryId: created.id,
+    });
+    const [row] = listed.revisions;
+    if (!row) throw new Error("expected a revision");
+    expect(row.message).toBeNull();
+    const fetched = await h.client.entry.revisions.get({
+      revisionId: row.id,
+    });
+    expect(fetched.message).toBeNull();
+  });
+
+  test("setMessage persists a comment and surfaces it on list + get", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithRevisions(),
+    });
+    const created = await h.client.entry.create({ title: "M", slug: "m" });
+    await h.client.entry.update({ id: created.id, title: "M2" });
+    const listed = await h.client.entry.revisions.list({
+      entryId: created.id,
+    });
+    const [row] = listed.revisions;
+    if (!row) throw new Error("expected a revision");
+    const result = await h.client.entry.revisions.setMessage({
+      revisionId: row.id,
+      message: "before the redesign",
+    });
+    expect(result.message).toBe("before the redesign");
+    const refetched = await h.client.entry.revisions.list({
+      entryId: created.id,
+    });
+    expect(refetched.revisions[0]?.message).toBe("before the redesign");
+    const fetched = await h.client.entry.revisions.get({
+      revisionId: row.id,
+    });
+    expect(fetched.message).toBe("before the redesign");
+  });
+
+  test("setMessage with null clears a previously-set comment", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithRevisions(),
+    });
+    const created = await h.client.entry.create({ title: "M", slug: "m" });
+    await h.client.entry.update({ id: created.id, title: "M2" });
+    const listed = await h.client.entry.revisions.list({
+      entryId: created.id,
+    });
+    const [row] = listed.revisions;
+    if (!row) throw new Error("expected a revision");
+    await h.client.entry.revisions.setMessage({
+      revisionId: row.id,
+      message: "scratch",
+    });
+    const cleared = await h.client.entry.revisions.setMessage({
+      revisionId: row.id,
+      message: null,
+    });
+    expect(cleared.message).toBeNull();
+  });
+
+  test("setMessage rejects messages longer than 280 characters", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithRevisions(),
+    });
+    const created = await h.client.entry.create({ title: "M", slug: "m" });
+    await h.client.entry.update({ id: created.id, title: "M2" });
+    const listed = await h.client.entry.revisions.list({
+      entryId: created.id,
+    });
+    const [row] = listed.revisions;
+    if (!row) throw new Error("expected a revision");
+    await expect(
+      h.client.entry.revisions.setMessage({
+        revisionId: row.id,
+        message: "a".repeat(281),
+      }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  test("contributor without edit caps gets FORBIDDEN on setMessage", async () => {
+    const editor = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithRevisions(),
+    });
+    const created = await editor.client.entry.create({
+      title: "M",
+      slug: "m",
+    });
+    await editor.client.entry.update({ id: created.id, title: "M2" });
+    const listed = await editor.client.entry.revisions.list({
+      entryId: created.id,
+    });
+    const [row] = listed.revisions;
+    if (!row) throw new Error("expected a revision");
+
+    const contributor = await createRpcHarness({
+      authAs: "contributor",
+      plugins: registryWithRevisions(),
+    });
+    // Contributor lacks `read_revisions` on a foreign-authored entry —
+    // the read gate fires before the edit gate, so the rejection is
+    // the same NOT_FOUND that `get` raises (avoids leaking existence).
+    await expect(
+      contributor.client.entry.revisions.setMessage({
+        revisionId: row.id,
+        message: "from contributor",
+      }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
   test("contributor gets FORBIDDEN on entry.revisions.get", async () => {
     const h = await createRpcHarness({
       authAs: "editor",

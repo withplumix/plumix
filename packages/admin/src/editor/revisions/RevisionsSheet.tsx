@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button.js";
+import { Input } from "@/components/ui/input.js";
 import {
   Sheet,
   SheetContent,
@@ -17,6 +18,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs.js";
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { MessageCircle, MessageCircleMore } from "lucide-react";
 
 import { RevisionDiffDialog } from "./RevisionDiffDialog.js";
 
@@ -27,6 +29,10 @@ interface RevisionListItem {
   readonly authorId: number;
   readonly authorName: string | null;
   readonly authorEmail: string | null;
+  // Author-supplied label for the revision. `null` when unset; the
+  // row UI renders an em dash placeholder so existing rows pre-#289
+  // slice 3 stay legible.
+  readonly message: string | null;
 }
 
 interface RevisionPage {
@@ -60,6 +66,13 @@ interface RevisionsSheetProps {
   // navigate to the preview URL. The sheet closes itself afterwards
   // so the editor surface is unobstructed.
   readonly onPreview: (revisionId: number) => void;
+  // PATCHes `revision.message`. `null` clears the comment. The sheet
+  // owns the optimistic-update path so callers don't have to wire
+  // cache invalidation per render.
+  readonly onSaveMessage: (input: {
+    readonly revisionId: number;
+    readonly message: string | null;
+  }) => Promise<void>;
 }
 
 export function RevisionsSheet({
@@ -69,6 +82,7 @@ export function RevisionsSheet({
   fetchRevision,
   fetchCurrent,
   onPreview,
+  onSaveMessage,
 }: RevisionsSheetProps): ReactElement {
   const [open, setOpen] = useState(false);
   const query = useInfiniteQuery({
@@ -130,6 +144,7 @@ export function RevisionsSheet({
               relativeTime={relativeTime}
               onPreview={handlePreview}
               onOpenDiff={setDiffModalRevisionId}
+              onSaveMessage={onSaveMessage}
               hasMore={hasMore}
               isFetchingNextPage={query.isFetchingNextPage}
               fetchNextPage={() => void query.fetchNextPage()}
@@ -188,6 +203,10 @@ interface ListSectionProps {
   readonly relativeTime: (date: Date) => string;
   readonly onPreview: (id: number) => void;
   readonly onOpenDiff: (id: number) => void;
+  readonly onSaveMessage: (input: {
+    readonly revisionId: number;
+    readonly message: string | null;
+  }) => Promise<void>;
   readonly hasMore: boolean;
   readonly isFetchingNextPage: boolean;
   readonly fetchNextPage: () => void;
@@ -200,6 +219,7 @@ function ListSection({
   relativeTime,
   onPreview,
   onOpenDiff,
+  onSaveMessage,
   hasMore,
   isFetchingNextPage,
   fetchNextPage,
@@ -240,34 +260,14 @@ function ListSection({
       {allRevisions.length > 0 ? (
         <ul data-testid="revisions-sheet-list" className="divide-y px-4 py-2">
           {allRevisions.map((rev) => (
-            <li
+            <RevisionRow
               key={rev.id}
-              data-testid={`revisions-sheet-item-${rev.id}`}
-              className="flex items-center gap-1 py-2"
-            >
-              <button
-                type="button"
-                data-testid={`revisions-sheet-item-${rev.id}-select`}
-                onClick={() => onPreview(rev.id)}
-                className="hover:bg-accent min-w-0 flex-1 rounded-md p-2 text-left"
-              >
-                <div className="truncate text-sm font-medium">{rev.title}</div>
-                <div className="text-muted-foreground text-xs">
-                  <span>{rev.authorName ?? rev.authorEmail ?? "Unknown"}</span>
-                  {" · "}
-                  <span>{relativeTime(rev.updatedAt)}</span>
-                </div>
-              </button>
-              <button
-                type="button"
-                data-testid={`revisions-sheet-item-${rev.id}-diff`}
-                aria-label="View JSON diff"
-                onClick={() => onOpenDiff(rev.id)}
-                className="text-muted-foreground hover:bg-accent hover:text-foreground inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md font-mono text-xs"
-              >
-                &lt;/&gt;
-              </button>
-            </li>
+              revision={rev}
+              relativeTime={relativeTime}
+              onPreview={onPreview}
+              onOpenDiff={onOpenDiff}
+              onSaveMessage={onSaveMessage}
+            />
           ))}
         </ul>
       ) : null}
@@ -285,5 +285,158 @@ function ListSection({
         </div>
       ) : null}
     </>
+  );
+}
+
+interface RevisionRowProps {
+  readonly revision: RevisionListItem;
+  readonly relativeTime: (date: Date) => string;
+  readonly onPreview: (id: number) => void;
+  readonly onOpenDiff: (id: number) => void;
+  readonly onSaveMessage: (input: {
+    readonly revisionId: number;
+    readonly message: string | null;
+  }) => Promise<void>;
+}
+
+function RevisionRow({
+  revision,
+  relativeTime,
+  onPreview,
+  onOpenDiff,
+  onSaveMessage,
+}: RevisionRowProps): ReactElement {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(revision.message ?? "");
+  const [saving, setSaving] = useState(false);
+
+  // Toggle: re-clicking the icon while the editor is open closes it
+  // (without destroying the draft for the *next* open — `openEditor`
+  // re-seeds from the current message on each open). Without this,
+  // a second click would silently reset the in-progress text.
+  function toggleEditor(): void {
+    if (editing) {
+      setEditing(false);
+      return;
+    }
+    setDraft(revision.message ?? "");
+    setEditing(true);
+  }
+  async function save(): Promise<void> {
+    const next = draft.trim();
+    setSaving(true);
+    try {
+      await onSaveMessage({
+        revisionId: revision.id,
+        message: next.length === 0 ? null : next,
+      });
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <li
+      data-testid={`revisions-sheet-item-${revision.id}`}
+      className="flex flex-col gap-1 py-2"
+    >
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          data-testid={`revisions-sheet-item-${revision.id}-select`}
+          onClick={() => onPreview(revision.id)}
+          className="hover:bg-accent min-w-0 flex-1 rounded-md p-2 text-left"
+        >
+          <div className="truncate text-sm font-medium">{revision.title}</div>
+          <div className="text-muted-foreground text-xs">
+            <span>
+              {revision.authorName ?? revision.authorEmail ?? "Unknown"}
+            </span>
+            {" · "}
+            <span>{relativeTime(revision.updatedAt)}</span>
+          </div>
+        </button>
+        <button
+          type="button"
+          data-testid={`revisions-sheet-item-${revision.id}-comment`}
+          aria-label={
+            revision.message === null ? "Add comment" : "Edit comment"
+          }
+          aria-pressed={editing}
+          onClick={toggleEditor}
+          className="text-muted-foreground hover:bg-accent hover:text-foreground inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
+        >
+          {revision.message === null ? (
+            <MessageCircle className="h-4 w-4" aria-hidden />
+          ) : (
+            <MessageCircleMore
+              className="text-foreground h-4 w-4"
+              aria-hidden
+            />
+          )}
+        </button>
+        <button
+          type="button"
+          data-testid={`revisions-sheet-item-${revision.id}-diff`}
+          aria-label="View JSON diff"
+          onClick={() => onOpenDiff(revision.id)}
+          className="text-muted-foreground hover:bg-accent hover:text-foreground inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md font-mono text-xs"
+        >
+          &lt;/&gt;
+        </button>
+      </div>
+      {editing ? (
+        <div
+          data-testid={`revisions-sheet-item-${revision.id}-comment-editor`}
+          className="flex items-start gap-2 px-2"
+        >
+          <Input
+            type="text"
+            data-testid={`revisions-sheet-item-${revision.id}-comment-input`}
+            value={draft}
+            maxLength={280}
+            placeholder="Describe this revision…"
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setEditing(false);
+              // Skip Enter while an IME composition is active (CJK
+              // input methods commit on Enter to accept the candidate;
+              // saving here would fire prematurely).
+              if (e.key === "Enter" && !saving && !e.nativeEvent.isComposing) {
+                void save();
+              }
+            }}
+            className="h-8 text-xs"
+          />
+
+          <Button
+            variant="default"
+            size="sm"
+            data-testid={`revisions-sheet-item-${revision.id}-comment-save`}
+            onClick={() => void save()}
+            disabled={saving}
+          >
+            {saving ? "…" : "Save"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            data-testid={`revisions-sheet-item-${revision.id}-comment-cancel`}
+            onClick={() => setEditing(false)}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+        </div>
+      ) : revision.message !== null ? (
+        <div
+          data-testid={`revisions-sheet-item-${revision.id}-comment-display`}
+          className="text-muted-foreground truncate px-2 text-xs italic"
+        >
+          {revision.message}
+        </div>
+      ) : null}
+    </li>
   );
 }
