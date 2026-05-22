@@ -29,8 +29,15 @@ import type {
 
 // `entry.get` enriches the row with the assigned term ids per
 // taxonomy. Plugins editing the output filter receive this shape.
+// In preview mode the row also carries `_preview` so editor clients
+// can distinguish autosave-overlaid responses from straight live reads.
 type EntryWithTerms = Entry & {
   readonly terms: Record<string, readonly number[]>;
+  readonly _preview?: {
+    readonly source: "live" | "autosave";
+    readonly autosaveUpdatedAt: Date | null;
+    readonly liveUpdatedAt: Date;
+  };
 };
 
 // `user.list` decorates each row with `lastSignInAt` (max session
@@ -45,7 +52,10 @@ declare module "../hooks/types.js" {
     "rpc:entry.list:input": (input: EntryListInput) => EntryListInput;
     "rpc:entry.list:output": (output: readonly Entry[]) => readonly Entry[];
 
-    "rpc:entry.get:input": (input: { id: number }) => typeof input;
+    "rpc:entry.get:input": (input: {
+      id: number;
+      preview?: boolean;
+    }) => typeof input;
     "rpc:entry.get:output": (output: EntryWithTerms) => EntryWithTerms;
 
     "rpc:entry.create:input": (input: EntryCreateInput) => EntryCreateInput;
@@ -178,6 +188,31 @@ declare module "../hooks/types.js" {
     [K: `entry:${string}:revision_pruned`]: (
       live: Entry,
       prunedCount: number,
+    ) => void | Promise<void>;
+
+    /**
+     * Autosave lifecycle. Fires after `entry.update({ saveAs: 'draft' })`
+     * writes to the caller's autosave row (NOT the live row) and after
+     * `entry.discardDraft` removes it. Subscribers can sync editor
+     * sessions, drive co-author awareness, or log activity. The generic
+     * `entry:updated` hook deliberately does NOT fire on autosave writes
+     * — cache invalidators / RSS / sitemap should ignore pending drafts.
+     */
+    "entry:autosave_saved": (
+      autosave: Entry,
+      live: Entry,
+    ) => void | Promise<void>;
+    "entry:autosave_discarded": (
+      live: Entry,
+      authorId: number,
+    ) => void | Promise<void>;
+    [K: `entry:${string}:autosave_saved`]: (
+      autosave: Entry,
+      live: Entry,
+    ) => void | Promise<void>;
+    [K: `entry:${string}:autosave_discarded`]: (
+      live: Entry,
+      authorId: number,
     ) => void | Promise<void>;
 
     /**

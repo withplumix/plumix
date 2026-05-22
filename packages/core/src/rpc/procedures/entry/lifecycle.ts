@@ -67,6 +67,32 @@ export async function fireEntryTrashed(
   await ctx.hooks.doAction("entry:trashed", entry);
 }
 
+// Type-specific event keys on the live entry's type — the autosave row
+// itself carries `type='autosave'`, but subscribers care about the
+// type of the entry being edited (e.g. `entry:post:autosave_saved`),
+// not the framework storage type.
+export async function fireEntryAutosaveSaved(
+  ctx: AppContext,
+  autosave: Entry,
+  live: Entry,
+): Promise<void> {
+  await ctx.hooks.doAction(`entry:${live.type}:autosave_saved`, autosave, live);
+  await ctx.hooks.doAction("entry:autosave_saved", autosave, live);
+}
+
+export async function fireEntryAutosaveDiscarded(
+  ctx: AppContext,
+  live: Entry,
+  authorId: number,
+): Promise<void> {
+  await ctx.hooks.doAction(
+    `entry:${live.type}:autosave_discarded`,
+    live,
+    authorId,
+  );
+  await ctx.hooks.doAction("entry:autosave_discarded", live, authorId);
+}
+
 export function entryCapability(type: string, action: string): string {
   return `entry:${type}:${action}`;
 }

@@ -101,6 +101,14 @@ export const entryUpdateInputSchema = v.object({
    * write landed in between. Absent ⇒ legacy last-write-wins.
    */
   expectedLiveUpdatedAt: v.optional(v.date()),
+  /**
+   * Routes the write between the live row and the caller's autosave
+   * row. `'draft'` is only valid when the entry is currently published
+   * AND the type opts into `supports: ['autosave']`; otherwise the
+   * handler rejects with `BAD_REQUEST { reason: "autosave_unsupported" }`.
+   * Omitted ⇒ legacy `'live'` semantics for backwards compatibility.
+   */
+  saveAs: v.optional(v.picklist(["draft", "live"] as const)),
 });
 
 // Upper bound on the term-slug list per termTaxonomy clause. Mirrors the
@@ -199,7 +207,16 @@ export const entryListInputSchema = v.object({
   offset: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0)), 0),
 });
 
-export const entryGetInputSchema = v.object({ id: idParam });
+export const entryGetInputSchema = v.object({
+  id: idParam,
+  /**
+   * When `true`, the handler overlays the caller's autosave (if any)
+   * onto the live row and decorates the result with `_preview`
+   * metadata. Gated by `edit_own` / `edit_any` since previewing a
+   * pending draft is an editor concern.
+   */
+  preview: v.optional(v.boolean()),
+});
 export const entryTrashInputSchema = v.object({ id: idParam });
 
 export type EntryListInput = v.InferOutput<typeof entryListInputSchema>;
