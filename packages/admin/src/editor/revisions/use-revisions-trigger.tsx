@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { RevisionsSheet } from "@/editor/revisions/RevisionsSheet.js";
 import { orpc } from "@/lib/orpc.js";
 import { formatRelativeTime } from "@/lib/relative-time.js";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface UseRevisionsTriggerInput {
   readonly entryId: number;
@@ -22,6 +23,7 @@ export function useRevisionsTrigger({
   enabled,
   onPreview,
 }: UseRevisionsTriggerInput): ReactNode {
+  const queryClient = useQueryClient();
   return useMemo<ReactNode>(() => {
     if (!enabled) return null;
     return (
@@ -52,7 +54,17 @@ export function useRevisionsTrigger({
           };
         }}
         onPreview={onPreview}
+        onSaveMessage={async ({ revisionId, message }) => {
+          await orpc.entry.revisions.setMessage.call({ revisionId, message });
+          // Invalidate the infinite-list query so the row re-renders
+          // with the new message. Cheap to refetch — at most 25 rows
+          // and the user just clicked Save so they're focused on the
+          // sheet.
+          await queryClient.invalidateQueries({
+            queryKey: ["entry.revisions", entryId],
+          });
+        }}
       />
     );
-  }, [entryId, enabled, onPreview]);
+  }, [entryId, enabled, onPreview, queryClient]);
 }
