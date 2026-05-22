@@ -234,7 +234,9 @@ describe("upsertAutosave", () => {
     expect(autosave.type).toBe(AUTOSAVE_TYPE);
     expect(autosave.title).toBe("Draft title");
     expect(autosave.authorId).toBe(author.id);
-    expect(autosave.slug).toBe(`autosave:${String(entry.id)}:${String(author.id)}`);
+    expect(autosave.slug).toBe(
+      `autosave:${String(entry.id)}:${String(author.id)}`,
+    );
     // The snapshot envelope carries the live's slug + parentId so
     // publish can recover them without an extra query.
     const envelope = decodeSnapshotEnvelope(autosave.meta);
