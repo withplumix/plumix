@@ -1,3 +1,4 @@
+import { list as activityList } from "./activity.js";
 import { create } from "./create.js";
 import { discardDraft } from "./discard-draft.js";
 import { get } from "./get.js";
@@ -16,6 +17,7 @@ export const entryRouter = {
   publish,
   discardDraft,
   revisions: revisionsRouter,
+  activity: { list: activityList },
 } as const;
 
 export type EntryRouter = typeof entryRouter;
