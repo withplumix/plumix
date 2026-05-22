@@ -25,12 +25,11 @@ import * as v from "valibot";
 
 import type { ThemeTokens } from "@plumix/blocks";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
-import {
-  coreBlocks,
-  coreMarkExtensions,
-  createBlockRegistry,
-} from "@plumix/blocks";
+import { coreMarkExtensions, createBlockRegistry } from "@plumix/blocks";
 import { idPathParam } from "@plumix/core/validation";
+
+import { getRegisteredBlocks } from "@/lib/plugin-registry.js";
+import { registerCoreBlocks } from "@/editor/register-core-blocks.js";
 
 import "@puckeditor/core/puck.css";
 
@@ -71,9 +70,11 @@ const sampleTokens: ThemeTokens = {
   },
 };
 
-const registry = createBlockRegistry(coreBlocks);
+registerCoreBlocks();
+const runtimeBlocks = getRegisteredBlocks();
+const registry = createBlockRegistry(runtimeBlocks);
 const config: Config = {
-  components: blockSpecsToPuckComponents(coreBlocks, {
+  components: blockSpecsToPuckComponents(runtimeBlocks, {
     // Puck types `extensions` as a mutable array; spread the readonly
     // plumix list to satisfy the assignment without weakening the
     // export.

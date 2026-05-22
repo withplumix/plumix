@@ -2,6 +2,7 @@ import type { Mark, Node } from "@tiptap/core";
 import type { ComponentType } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 
+import type { BlockSpec } from "@plumix/blocks";
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 
 import { AdminPluginRegistryError } from "./errors.js";
@@ -48,6 +49,7 @@ const blockEditors = makeRegistry<ComponentType<unknown>>(
   "registerPluginBlockEditor",
 );
 const markSchemas = makeRegistry<Mark>("registerPluginMarkSchema");
+const pluginBlocks = makeRegistry<BlockSpec>("registerPluginBlock");
 
 function register<TComponent>(
   registry: PluginRegistryEntry<TComponent>,
@@ -157,6 +159,20 @@ export function getPluginMarkSchema(name: string): Mark | undefined {
   return markSchemas.map.get(name);
 }
 
+export function registerPluginBlock(spec: BlockSpec): void {
+  // Names must include a namespace slash so first-party / third-party
+  // origin is obvious in the inserter and inspector — matches the
+  // `core/*`, `media/*`, `acme/*` convention.
+  if (typeof spec.name !== "string" || !spec.name.includes("/")) {
+    throw AdminPluginRegistryError.invalidBlockName({ name: spec.name });
+  }
+  register(pluginBlocks, spec.name, spec);
+}
+
+export function getRegisteredBlocks(): readonly BlockSpec[] {
+  return Array.from(pluginBlocks.map.values());
+}
+
 /** @internal Test-only. */
 export function _resetPluginRegistry(): void {
   pages.map.clear();
@@ -164,4 +180,5 @@ export function _resetPluginRegistry(): void {
   blockSchemas.map.clear();
   blockEditors.map.clear();
   markSchemas.map.clear();
+  pluginBlocks.map.clear();
 }
