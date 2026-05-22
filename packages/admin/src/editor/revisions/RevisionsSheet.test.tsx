@@ -6,6 +6,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { RevisionsSheet } from "./RevisionsSheet.js";
@@ -86,15 +87,50 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
     await waitFor(() => {
       expect(screen.getByTestId("revisions-sheet-item-9")).toBeInTheDocument();
     });
-    const autosavesTab = screen.getByTestId("revisions-tab-autosaves");
-    fireEvent.pointerDown(autosavesTab);
-    fireEvent.mouseDown(autosavesTab);
-    fireEvent.click(autosavesTab);
+    await userEvent
+      .setup()
+      .click(screen.getByTestId("revisions-tab-autosaves"));
     await waitFor(() => {
       expect(
         screen.getByTestId("revisions-autosaves-empty"),
       ).toBeInTheDocument();
     });
+  });
+
+  test("dialog does not fetch before the user clicks the diff icon", async () => {
+    const fetchRevision = vi.fn();
+    const fetchCurrent = vi.fn();
+    render(
+      wrap(
+        <RevisionsSheet
+          entryId={1}
+          fetchPage={() =>
+            Promise.resolve({
+              revisions: [
+                {
+                  id: 17,
+                  title: "Snap",
+                  updatedAt: new Date("2026-05-22T00:00:00Z"),
+                  authorId: 1,
+                  authorName: "Ada",
+                  authorEmail: "ada@x",
+                },
+              ] satisfies RevisionFixture[],
+              nextCursor: null,
+            })
+          }
+          relativeTime={() => "now"}
+          fetchRevision={fetchRevision}
+          fetchCurrent={fetchCurrent}
+        />,
+      ),
+    );
+    fireEvent.click(screen.getByTestId("revisions-sheet-trigger"));
+    await waitFor(() => screen.getByTestId("revisions-sheet-item-17-diff"));
+    // The sheet is open and rows are rendered, but no row has been
+    // clicked — neither snapshot fetcher should have fired.
+    expect(fetchRevision).not.toHaveBeenCalled();
+    expect(fetchCurrent).not.toHaveBeenCalled();
   });
 
   test("closing the sheet also closes an open diff modal", async () => {

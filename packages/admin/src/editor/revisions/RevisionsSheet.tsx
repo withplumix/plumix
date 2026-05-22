@@ -175,25 +175,13 @@ export function RevisionsSheet({
             current={currentQuery.data}
           />
         ) : (
-          <Tabs defaultValue="all" className="mt-2">
-            <TabsList className="w-full">
-              <TabsTrigger value="all" data-testid="revisions-tab-all">
-                All
-              </TabsTrigger>
-              <TabsTrigger
-                value="publishes"
-                data-testid="revisions-tab-publishes"
-              >
-                Publishes
-              </TabsTrigger>
-              <TabsTrigger
-                value="autosaves"
-                data-testid="revisions-tab-autosaves"
-              >
-                Autosaves
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="all">
+          (() => {
+            // Both All and Publishes render the identical list today —
+            // every revision is a publish. Once a revision-kind field
+            // exists (slice 2 of #289), Publishes will filter and the
+            // two panels diverge. Sharing the element keeps the JSX
+            // honest about the current shape.
+            const listPanel = (
               <ListSection
                 isLoading={query.isLoading}
                 isError={query.isError}
@@ -205,29 +193,39 @@ export function RevisionsSheet({
                 isFetchingNextPage={query.isFetchingNextPage}
                 fetchNextPage={() => void query.fetchNextPage()}
               />
-            </TabsContent>
-            <TabsContent value="publishes">
-              <ListSection
-                isLoading={query.isLoading}
-                isError={query.isError}
-                allRevisions={allRevisions}
-                relativeTime={relativeTime}
-                onSelect={setSelectedRevisionId}
-                onOpenDiff={setDiffModalRevisionId}
-                hasMore={hasMore}
-                isFetchingNextPage={query.isFetchingNextPage}
-                fetchNextPage={() => void query.fetchNextPage()}
-              />
-            </TabsContent>
-            <TabsContent value="autosaves">
-              <div
-                data-testid="revisions-autosaves-empty"
-                className="text-muted-foreground px-4 py-6 text-sm"
-              >
-                Autosaves will appear here once drafts-of-published lands.
-              </div>
-            </TabsContent>
-          </Tabs>
+            );
+            return (
+              <Tabs defaultValue="all" className="mt-2">
+                <TabsList className="w-full">
+                  <TabsTrigger value="all" data-testid="revisions-tab-all">
+                    All
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="publishes"
+                    data-testid="revisions-tab-publishes"
+                  >
+                    Publishes
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="autosaves"
+                    data-testid="revisions-tab-autosaves"
+                  >
+                    Autosaves
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="all">{listPanel}</TabsContent>
+                <TabsContent value="publishes">{listPanel}</TabsContent>
+                <TabsContent value="autosaves">
+                  <div
+                    data-testid="revisions-autosaves-empty"
+                    className="text-muted-foreground px-4 py-6 text-sm"
+                  >
+                    Autosaves will appear here once drafts-of-published lands.
+                  </div>
+                </TabsContent>
+              </Tabs>
+            );
+          })()
         )}
       </SheetContent>
       <RevisionDiffDialog

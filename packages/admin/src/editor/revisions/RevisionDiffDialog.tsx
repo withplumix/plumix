@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { useId, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -31,14 +32,28 @@ export function RevisionDiffDialog({
   fetchRevision,
   fetchCurrent,
 }: RevisionDiffDialogProps): ReactElement {
+  // Sticky id keeps query results visible during Radix's close
+  // animation: once `revisionId` flips to null the queries would
+  // disable and the panes would flash to "Loading…" while the
+  // dialog fades out. Use the setState-during-render memoization
+  // pattern (refs would trip react-hooks/cannot-access-during-render).
+  const [stickyRevisionId, setStickyRevisionId] = useState<number | null>(
+    revisionId,
+  );
+  if (revisionId !== null && revisionId !== stickyRevisionId) {
+    setStickyRevisionId(revisionId);
+  }
+  // Same query keys as the inline diff section in RevisionsSheet — both
+  // surfaces read from a single TanStack cache entry, so opening the
+  // modal after the inline view doesn't re-fetch.
   const revisionQuery = useQuery({
-    queryKey: ["revision-diff-dialog.revision", revisionId],
-    enabled: revisionId !== null,
-    queryFn: () => fetchRevision(revisionId ?? 0),
+    queryKey: ["entry.revision.diff", stickyRevisionId],
+    enabled: stickyRevisionId !== null,
+    queryFn: () => fetchRevision(stickyRevisionId ?? 0),
   });
   const currentQuery = useQuery({
-    queryKey: ["revision-diff-dialog.current", entryId],
-    enabled: revisionId !== null,
+    queryKey: ["entry.current.diff", entryId],
+    enabled: stickyRevisionId !== null,
     queryFn: () => fetchCurrent(entryId),
   });
   return (
@@ -80,9 +95,13 @@ function DiffPane({
   readonly snapshot: DiffSnapshot | undefined;
   readonly isError: boolean;
 }): ReactElement {
+  const labelId = useId();
   return (
-    <section>
-      <div className="text-muted-foreground mb-1 text-xs font-medium">
+    <section aria-labelledby={labelId}>
+      <div
+        id={labelId}
+        className="text-muted-foreground mb-1 text-xs font-medium"
+      >
         {label}
       </div>
       <pre
