@@ -19,12 +19,6 @@ const listInput = v.object({ entryId: idParam });
 // SSE upgrade since the wire shape is just the user list.
 const ACTIVE_WINDOW_MS = 5 * 60 * 1000;
 
-export interface ActivityUser {
-  readonly id: number;
-  readonly name: string | null;
-  readonly email: string;
-  readonly lastSeenAt: Date;
-}
 
 // Returns the users currently editing `entryId` — autosave rows
 // touched within the last five minutes — excluding the caller. Empty
@@ -60,15 +54,23 @@ export const list = base
       notOlderThan,
       excludeAuthorId: context.user.id,
     });
-    if (activeRows.length === 0)
-      return { users: [] as readonly ActivityUser[] };
+    // Inline element shape — naming the interface here would force
+    // an `export` (so the router-output type can name it), and knip
+    // flags unused exports. The anonymous literal lets TS infer the
+    // shape into the router type without a top-level export.
+    const items: {
+      id: number;
+      name: string | null;
+      email: string;
+      lastSeenAt: Date;
+    }[] = [];
+    if (activeRows.length === 0) return { users: items };
 
     const authorIds = Array.from(new Set(activeRows.map((r) => r.authorId)));
     const authorRows = await context.db.query.users.findMany({
       where: inArray(users.id, authorIds),
     });
     const userById = new Map(authorRows.map((u) => [u.id, u]));
-    const items: ActivityUser[] = [];
     for (const row of activeRows) {
       const user = userById.get(row.authorId);
       if (!user) continue;
