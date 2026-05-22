@@ -93,6 +93,25 @@ export async function fireEntryAutosaveDiscarded(
   await ctx.hooks.doAction("entry:autosave_discarded", live, authorId);
 }
 
+// `destination` is the row the snapshot landed on — autosave for
+// autosave-supporting types, live otherwise. `liveType` is always the
+// public entry type (the destination's type is `'autosave'` for
+// per-user pending edits) so subscribers fire under the same namespace
+// regardless of where the snapshot landed.
+export async function fireEntryRevisionRestored(
+  ctx: AppContext,
+  revision: Entry,
+  destination: Entry,
+  liveType: string,
+): Promise<void> {
+  await ctx.hooks.doAction(
+    `entry:${liveType}:revision_restored`,
+    revision,
+    destination,
+  );
+  await ctx.hooks.doAction("entry:revision_restored", revision, destination);
+}
+
 export function entryCapability(type: string, action: string): string {
   return `entry:${type}:${action}`;
 }

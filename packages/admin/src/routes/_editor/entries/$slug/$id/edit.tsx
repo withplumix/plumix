@@ -671,15 +671,36 @@ function PuckPreviewRouteInner({
     mutationFn: async () => {
       const restored = await orpc.entry.revisions.restore.call({
         revisionId,
+        // Token is honored only on the legacy live-write path (types
+        // without `supports: ['autosave']`); the autosave destination
+        // ignores it. Always pass to keep the live-write contract.
         expectedLiveUpdatedAt: liveUpdatedAtRef.current,
       });
-      liveUpdatedAtRef.current = restored.updatedAt;
+      // Only stamp the live concurrency token when the write actually
+      // landed on live — same guard pattern as the autosave debouncer.
+      // The autosave destination returns a row of type `'autosave'`
+      // whose `updatedAt` doesn't reference the live row's anchor.
+      if (restored.type === liveEntry.type) {
+        liveUpdatedAtRef.current = restored.updatedAt;
+      }
       return restored;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
-      });
+      await Promise.all([
+        // Live `entry.get` for non-autosave callers (list views).
+        queryClient.invalidateQueries({
+          queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
+        }),
+        // Preview `entry.get` so the editor route picks up the new
+        // autosave overlay on next render. Per #292: restore
+        // invalidates `entry.get({ preview: true })` so the editor
+        // re-seeds with the restored content.
+        queryClient.invalidateQueries({
+          queryKey: orpc.entry.get.queryOptions({
+            input: { id, preview: true },
+          }).queryKey,
+        }),
+      ]);
       handleBackToLive();
     },
   });
