@@ -11,19 +11,22 @@
 // `registerPluginFieldType`'s registry. The host's meta-box-field
 // dispatcher consults that registry on every render.
 
+import type { BlockSpec } from "plumix/blocks";
 import type { ComponentType } from "react";
 
+import { mediaBlocks } from "../media-blocks.js";
 import { MediaListPickerField } from "./MediaListPickerField.js";
 import { MediaPickerField } from "./MediaPickerField.js";
 
 // Minimal structural shape of the host admin's `window.plumix` —
-// we only need the field-type registration entry. The host's full
-// declaration lives in `packages/admin/src/lib/plumix-globals.ts`.
+// we only need the registration entries. The host's full declaration
+// lives in `packages/admin/src/lib/plumix-globals.ts`.
 interface PlumixWindowGlobal {
   readonly registerPluginFieldType: (
     type: string,
     component: ComponentType<never>,
   ) => void;
+  readonly registerPluginBlock: (spec: BlockSpec) => void;
 }
 
 declare const window:
@@ -42,6 +45,9 @@ if (typeof window !== "undefined") {
       "mediaList",
       MediaListPickerField as ComponentType<never>,
     );
+    for (const spec of mediaBlocks) {
+      window.plumix.registerPluginBlock(spec);
+    }
   } else {
     // Silent no-op would leave the `media`/`mediaList` field renderers
     // unregistered for the whole session — every media field would fall
@@ -50,8 +56,8 @@ if (typeof window !== "undefined") {
     // load-order is diagnosable instead of silently degraded.
     console.warn(
       "[plumix-plugin-media] window.plumix not initialized — media " +
-        "field renderers not registered. Verify the host admin has booted " +
-        "plumix-globals before the plugin chunk loads.",
+        "field renderers and blocks not registered. Verify the host admin " +
+        "has booted plumix-globals before the plugin chunk loads.",
     );
   }
 }
