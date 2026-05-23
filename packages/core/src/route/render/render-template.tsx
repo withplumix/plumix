@@ -1,9 +1,16 @@
-import { PlumixProvider } from "@plumix/blocks/renderer";
-import { createElement, type ReactNode } from "react";
+import type { ReactNode } from "react";
+import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 
+import { PlumixProvider } from "@plumix/blocks/renderer";
+
 import type { AppContext } from "../../context/app.js";
-import type { ThemeDescriptor } from "../../theme.js";
+import type {
+  TemplateComponent,
+  TemplateData,
+  TemplateRegistry,
+  ThemeDescriptor,
+} from "../../theme.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
 import { resolveTemplateCandidates } from "./template-hierarchy.js";
 
@@ -11,7 +18,7 @@ interface RenderSingleArgs {
   readonly ctx: AppContext;
   readonly theme: ThemeDescriptor;
   readonly node: ResolvedNode;
-  readonly data: { readonly entry: { readonly title: string } };
+  readonly data: TemplateData;
 }
 
 export async function renderThroughTheme({
@@ -21,10 +28,7 @@ export async function renderThroughTheme({
   data,
 }: RenderSingleArgs): Promise<string> {
   const candidates = await resolveTemplateCandidates(node, ctx.hooks);
-  const matched = candidates.find((name) => theme.templates[name]);
-  const Template = matched
-    ? theme.templates[matched]!
-    : theme.templates.index;
+  const Template = pickTemplate(theme.templates, candidates);
 
   const templateTree: ReactNode = createElement(PlumixProvider, {
     value: { registry: ctx.blocks },
@@ -44,6 +48,17 @@ export async function renderThroughTheme({
       });
 
   return "<!doctype html>" + renderToString(documentTree);
+}
+
+function pickTemplate(
+  templates: TemplateRegistry,
+  candidates: readonly string[],
+): TemplateComponent<TemplateData> {
+  for (const name of candidates) {
+    const candidate = templates[name];
+    if (candidate) return candidate;
+  }
+  return templates.index;
 }
 
 function DefaultDocument({

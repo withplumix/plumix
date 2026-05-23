@@ -19,10 +19,10 @@ import type {
   ConnectedObjectStorage,
   ImageDelivery,
 } from "../runtime/slots.js";
+import type { ThemeDescriptor } from "../theme.js";
 import type { Factories } from "./factories.js";
 import type { FetchOptions } from "./request.js";
 import type { ActionSpy, FilterSpy } from "./spies.js";
-import type { ThemeDescriptor } from "../theme.js";
 import { auth } from "../auth/config.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { createSession } from "../auth/sessions.js";

@@ -1,9 +1,11 @@
-import { createContext, type ReactNode, useContext } from "react";
+import type { ReactNode } from "react";
+import { createContext, useContext } from "react";
 
 import type { BlockRegistry } from "../block-registry.js";
 import type { EntryContent } from "../entry-content.js";
-import { renderBlockTree } from "../render-block-tree.js";
 import type { ThemeTokens } from "../styles/types.js";
+import { renderBlockTree } from "../render-block-tree.js";
+import { RendererError } from "./errors.js";
 
 export interface PlumixContextValue {
   readonly registry: BlockRegistry;
@@ -15,7 +17,7 @@ const PlumixContext = createContext<PlumixContextValue | null>(null);
 function usePlumixContext(consumer: string): PlumixContextValue {
   const ctx = useContext(PlumixContext);
   if (!ctx) {
-    throw new Error(`${consumer} must be used inside a <PlumixProvider/>.`);
+    throw RendererError.missingProvider({ consumer });
   }
   return ctx;
 }

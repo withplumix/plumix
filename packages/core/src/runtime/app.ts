@@ -146,8 +146,13 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     registry: seededRegistry,
   });
 
-  if (config.theme && !config.theme.templates.index) {
-    throw ThemeRegistrationError.missingIndexTemplate();
+  if (config.theme) {
+    const templates = config.theme.templates as Readonly<
+      Record<string, unknown>
+    >;
+    if (!templates.index) {
+      throw ThemeRegistrationError.missingIndexTemplate();
+    }
   }
 
   const schema: Record<string, unknown> = { ...coreSchema };
@@ -238,4 +243,3 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     themeTokens,
   };
 }
-

@@ -1,5 +1,7 @@
-import { BlockRenderer } from "@plumix/blocks/renderer";
 import { describe, expect, test } from "vitest";
+
+import type { EntryContent } from "@plumix/blocks";
+import { BlockRenderer } from "@plumix/blocks/renderer";
 
 import { definePlugin } from "../../plugin/define.js";
 import { createDispatcherHarness } from "../../test/dispatcher.js";
@@ -18,9 +20,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
     const theme = defineTheme({
       templates: {
         index: () => null,
-        single: ({ data }) => (
-          <h1 data-testid="title">{data.entry.title}</h1>
-        ),
+        single: ({ data }) => <h1 data-testid="title">{data.entry.title}</h1>,
       },
     });
 
@@ -336,7 +336,12 @@ describe("resolvePublicRoute — single entry through theme", () => {
   test("template can render <BlockRenderer/> against the entry's content tree", async () => {
     const theme = defineTheme({
       templates: {
-        index: ({ data }) => <BlockRenderer content={data.entry.content} />,
+        index: ({ data }) =>
+          data.entry.content ? (
+            <BlockRenderer
+              content={data.entry.content as unknown as EntryContent}
+            />
+          ) : null,
       },
     });
 

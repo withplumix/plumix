@@ -1,11 +1,16 @@
-import type { ThemeTokens } from "@plumix/blocks";
 import type { ComponentType, ReactElement, ReactNode } from "react";
 
+import type { ThemeTokens } from "@plumix/blocks";
+
+import type { SingleData } from "./route/render/resolved-entry.js";
 import { ThemeError, ThemeRegistrationError } from "./theme-errors.js";
 
-// Placeholder until the per-kind data union lands in a follow-up cycle.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type TemplateData = any;
+/**
+ * Per-kind data union templates receive. Only `SingleData` is implemented
+ * today; archive / taxonomy / front-page / error kinds widen this in
+ * follow-up slices.
+ */
+export type TemplateData = SingleData;
 
 export type TemplateComponent<Data> = ComponentType<{ readonly data: Data }>;
 
@@ -33,7 +38,8 @@ export function defineTheme(descriptor: ThemeDescriptor): ThemeDescriptor {
   // Defense-in-depth: the type system already requires `templates.index`,
   // but JS callers can drop it. The hierarchy walker terminates at
   // `index`, so an absent fallback would render blank pages.
-  if (!descriptor.templates.index) {
+  const templates = descriptor.templates as Readonly<Record<string, unknown>>;
+  if (!templates.index) {
     throw ThemeRegistrationError.missingIndexTemplate();
   }
   if (descriptor.tokens) {

@@ -156,4 +156,3 @@ describe("getMenuForLocation", () => {
     expect(a?.slug).toBe(b?.slug);
   });
 });
-

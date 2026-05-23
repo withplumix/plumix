@@ -39,10 +39,7 @@ export class ThemeError extends Error {
     this.slug = slug;
   }
 
-  static invalidTokenSlug(ctx: {
-    group: string;
-    slug: string;
-  }): ThemeError {
+  static invalidTokenSlug(ctx: { group: string; slug: string }): ThemeError {
     return new ThemeError(
       "invalid_token_slug",
       `defineTheme: tokens.${ctx.group} slug ${JSON.stringify(ctx.slug)} is invalid. ` +

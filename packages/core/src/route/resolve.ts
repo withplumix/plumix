@@ -7,6 +7,7 @@ import type { Term } from "../db/schema/terms.js";
 import type { ThemeDescriptor } from "../theme.js";
 import type { RouteIntent } from "./intent.js";
 import type { RouteMatch } from "./match.js";
+import type { SingleData } from "./render/resolved-entry.js";
 import { and, desc, eq, inArray } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
@@ -29,35 +30,20 @@ interface ResolvedTaxonomyData {
   readonly entries: readonly Entry[];
 }
 
-interface ResolvedAuthor {
-  readonly id: number;
-  readonly name: string | null;
-  readonly avatarUrl: string | null;
-}
-
-interface ResolvedEntry extends Entry {
-  readonly terms: readonly Term[];
-  readonly author: ResolvedAuthor;
-}
-
-interface ResolvedSingleData {
-  readonly entry: ResolvedEntry;
-}
-
 declare module "../hooks/types.js" {
   interface FilterRegistry {
     "resolve:taxonomy:data": (
       data: ResolvedTaxonomyData,
     ) => ResolvedTaxonomyData | Promise<ResolvedTaxonomyData>;
     "resolve:single:data": (
-      data: ResolvedSingleData,
-    ) => ResolvedSingleData | Promise<ResolvedSingleData>;
+      data: SingleData,
+    ) => SingleData | Promise<SingleData>;
   }
 }
 
 const ARCHIVE_LIMIT = 20;
 
-export interface ResolvePublicRouteOptions {
+interface ResolvePublicRouteOptions {
   readonly theme?: ThemeDescriptor;
 }
 
@@ -180,7 +166,7 @@ async function resolveSingle(
 async function buildSingleData(
   ctx: AppContext,
   row: Entry,
-): Promise<ResolvedSingleData> {
+): Promise<SingleData> {
   const [authorRows, termRows] = await Promise.all([
     ctx.db
       .select({ id: users.id, name: users.name, avatarUrl: users.avatarUrl })

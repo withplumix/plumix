@@ -1,10 +1,11 @@
 import { describe, expect, test } from "vitest";
 
-import { plumix } from "./config.js";
+import type { ThemeDescriptor } from "./theme.js";
 import { auth } from "./auth/config.js";
+import { plumix } from "./config.js";
 import { buildApp } from "./runtime/app.js";
-import { defineTheme } from "./theme.js";
 import { ThemeRegistrationError } from "./theme-errors.js";
+import { defineTheme } from "./theme.js";
 
 const stubAdapter = {
   name: "test",
@@ -15,21 +16,18 @@ const stubAuth = auth({
   passkey: { rpName: "t", rpId: "t", origin: "https://t" },
 });
 
+// Bypass the compile-time `templates.index` requirement to simulate a
+// hand-rolled descriptor that skipped the `defineTheme` factory.
+const badTheme = { templates: {} } as unknown as ThemeDescriptor;
+
 describe("defineTheme", () => {
   test("throws ThemeRegistrationError when templates.index is missing", () => {
-    expect(() =>
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      defineTheme({ templates: {} as any }),
-    ).toThrow(ThemeRegistrationError);
+    expect(() => defineTheme(badTheme)).toThrow(ThemeRegistrationError);
   });
 });
 
 describe("buildApp", () => {
   test("throws ThemeRegistrationError when config.theme omits templates.index", async () => {
-    // Bypass defineTheme's compile-time guard with `as any` to simulate
-    // a hand-rolled descriptor that skipped the factory.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const badTheme = { templates: {} } as any;
     await expect(
       buildApp(
         plumix({
