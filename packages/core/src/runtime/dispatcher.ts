@@ -172,8 +172,22 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   }
 
   const match = matchRoute(url, app.routeMap);
-  if (match === null) return notFound("public-route-not-found");
-  return resolvePublicRoute(ctx, match, { theme: app.config.theme });
+  if (match !== null) {
+    return resolvePublicRoute(ctx, match, { theme: app.config.theme });
+  }
+  // `/` doesn't compile into the rule map; plugins can register
+  // `registerRewriteRule({ pattern: "/", ... })` which would have matched
+  // above. With a theme configured we synthesize the front-page intent
+  // so the default homepage flows through the resolver. Without a theme
+  // there's nothing to render — fall through to the 404.
+  if (url.pathname === "/" && app.config.theme) {
+    return resolvePublicRoute(
+      ctx,
+      { intent: { kind: "front-page" }, params: {} },
+      { theme: app.config.theme },
+    );
+  }
+  return notFound("public-route-not-found");
 }
 
 interface PluginRawRouteMatch {

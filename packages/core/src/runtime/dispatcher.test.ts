@@ -6,7 +6,10 @@ import { createDispatcherHarness, plumixRequest } from "../test/dispatcher.js";
 import { matchPluginRawRoute } from "./dispatcher.js";
 
 describe("dispatcher — routing", () => {
-  test("public / 404s when no plugin claims it", async () => {
+  test("public / 404s when no theme is configured", async () => {
+    // `/` only synthesizes a front-page match when a theme is configured;
+    // otherwise the resolver has no template to render through, so the
+    // dispatcher falls back to the standard "no rule claimed it" 404.
     const h = await createDispatcherHarness();
     const response = await h.dispatch(new Request("https://cms.example/"));
     expect(response.status).toBe(404);

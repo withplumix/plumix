@@ -36,3 +36,8 @@ export interface TaxonomyData {
   readonly entries: readonly ResolvedEntry[];
   readonly pagination: Pagination;
 }
+
+export interface FrontPageData {
+  readonly entries: readonly ResolvedEntry[];
+  readonly pagination: Pagination;
+}

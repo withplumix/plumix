@@ -9,6 +9,7 @@ import type { RouteIntent } from "./intent.js";
 import type { RouteMatch } from "./match.js";
 import type {
   ArchiveData,
+  FrontPageData,
   ResolvedEntry,
   SingleData,
   TaxonomyData,
@@ -55,6 +56,9 @@ declare module "../hooks/types.js" {
     "resolve:term:data": (
       data: TaxonomyData,
     ) => TaxonomyData | Promise<TaxonomyData>;
+    "resolve:front-page:data": (
+      data: FrontPageData,
+    ) => FrontPageData | Promise<FrontPageData>;
   }
 }
 
@@ -76,7 +80,44 @@ export async function resolvePublicRoute(
       return resolveArchive(ctx, match.intent, match.params, options);
     case "taxonomy":
       return resolveTaxonomy(ctx, match.intent, match.params, options);
+    case "front-page":
+      return resolveFrontPage(ctx, options);
   }
+}
+
+async function resolveFrontPage(
+  ctx: AppContext,
+  options: ResolvePublicRouteOptions,
+): Promise<Response> {
+  // The dispatcher only synthesizes the front-page intent when a theme
+  // is configured. The `if (options.theme)` guard is defensive — a
+  // direct caller bypassing the dispatcher would 500 instead of crashing.
+  if (!options.theme) return notFound("public-route-not-found");
+
+  const page = 1;
+  const where = eq(entries.status, "published");
+  const result = await paginatedEntries(ctx, where, page);
+
+  const initial: FrontPageData = {
+    entries: await buildResolvedEntries(ctx, result.rows),
+    pagination: {
+      page,
+      perPage: ARCHIVE_LIMIT,
+      total: result.total,
+      pageCount: result.pageCount,
+    },
+  };
+  const data = await ctx.hooks.applyFilter("resolve:front-page:data", initial);
+  const html = await renderThroughTheme({
+    ctx,
+    theme: options.theme,
+    node: { kind: "front-page" },
+    data,
+    title: "Home",
+  });
+  return new Response(html, {
+    headers: { "content-type": "text/html; charset=utf-8" },
+  });
 }
 
 async function resolveTaxonomy(

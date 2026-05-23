@@ -939,3 +939,42 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     expect(body).toContain("Feature");
   });
 });
+
+describe("resolvePublicRoute — front-page through theme", () => {
+  test("renders the front-page template with the latest entries at /", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        "front-page": ({ data }) => (
+          <section data-testid="front-page">
+            <ul>
+              {data.entries.map((entry: ResolvedEntry) => (
+                <li key={entry.id} data-testid={`row-${entry.slug}`}>
+                  {entry.title}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "latest",
+      title: "Latest",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(new Request("https://cms.example/"));
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain('data-testid="front-page"');
+    expect(body).toContain("Latest");
+  });
+});
