@@ -66,7 +66,6 @@ export type {
   ResponsiveStyleSlot,
   TokenCategory,
 } from "./styles/style-emitter.js";
-export { tokensToCss } from "./styles/tokens-to-css.js";
 export type {
   ThemeTokenEntry,
   ThemeTokenGroup,

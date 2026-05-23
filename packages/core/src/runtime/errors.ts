@@ -1,5 +1,4 @@
 type AppBootErrorCode =
-  | "duplicate_theme_id"
   | "schema_export_conflict"
   | "plugin_id_collides_with_core_rpc_namespace"
   | "plugin_id_collides_with_core_rpc_router";
@@ -10,7 +9,6 @@ export class AppBootError extends Error {
   }
 
   readonly code: AppBootErrorCode;
-  readonly themeId: string | undefined;
   readonly pluginId: string | undefined;
   readonly schemaKey: string | undefined;
   readonly previousOwner: string | undefined;
@@ -19,7 +17,6 @@ export class AppBootError extends Error {
     code: AppBootErrorCode,
     message: string,
     fields: {
-      themeId?: string;
       pluginId?: string;
       schemaKey?: string;
       previousOwner?: string;
@@ -27,18 +24,9 @@ export class AppBootError extends Error {
   ) {
     super(message);
     this.code = code;
-    this.themeId = fields.themeId;
     this.pluginId = fields.pluginId;
     this.schemaKey = fields.schemaKey;
     this.previousOwner = fields.previousOwner;
-  }
-
-  static duplicateThemeId(ctx: { themeId: string }): AppBootError {
-    return new AppBootError(
-      "duplicate_theme_id",
-      `Theme id "${ctx.themeId}" appears more than once in config.themes`,
-      ctx,
-    );
   }
 
   static schemaExportConflict(ctx: {
