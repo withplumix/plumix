@@ -22,6 +22,7 @@ import type {
 import type { Factories } from "./factories.js";
 import type { FetchOptions } from "./request.js";
 import type { ActionSpy, FilterSpy } from "./spies.js";
+import type { ThemeDescriptor } from "../theme.js";
 import { auth } from "../auth/config.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { createSession } from "../auth/sessions.js";
@@ -104,6 +105,7 @@ export interface CreateDispatcherHarnessOptions {
    * default passkey-only rail).
    */
   readonly bootstrapVia?: BootstrapVia;
+  readonly theme?: ThemeDescriptor;
 }
 
 export interface DispatcherHarness {
@@ -210,6 +212,7 @@ export async function createDispatcherHarness(
     plugins: options.plugins,
     imageDelivery: options.imageDelivery,
     mailer: options.mailer,
+    theme: options.theme,
   });
   const app = await buildApp(config);
   const dispatcher = createPlumixDispatcher(app);

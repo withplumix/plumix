@@ -11,7 +11,6 @@ import { createPluginSetupContext } from "./setup-context.js";
 export interface PluginInstallResult {
   readonly hooks: HookRegistry;
   readonly registry: PluginRegistry;
-  readonly themeExtensions: ReadonlyMap<string, ContextExtensionEntry>;
   /**
    * Plugin-contributed AppContext helpers from
    * `provides(ctx).extendAppContext(...)`. Runtime adapters merge these
@@ -46,14 +45,12 @@ export async function installPlugins({
   }
 
   const pluginExtensions = new Map<string, ContextExtensionEntry>();
-  const themeExtensions = new Map<string, ContextExtensionEntry>();
   const appContextExtensions = new Map<string, ContextExtensionEntry>();
   for (const descriptor of plugins) {
     if (!descriptor.provides) continue;
     const providesCtx = createPluginProvidesContext({
       pluginId: descriptor.id,
       pluginExtensions,
-      themeExtensions,
       appExtensions: appContextExtensions,
     });
     await descriptor.provides(providesCtx);
@@ -74,5 +71,5 @@ export async function installPlugins({
     await descriptor.setup(ctx, undefined);
   }
 
-  return { hooks, registry, themeExtensions, appContextExtensions };
+  return { hooks, registry, appContextExtensions };
 }

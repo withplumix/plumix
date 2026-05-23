@@ -11,7 +11,6 @@ const baseConfig: PlumixConfig = {
   auth: auth({
     passkey: { rpName: "t", rpId: "t", origin: "https://t" },
   }),
-  themes: [],
   plugins: [],
 };
 

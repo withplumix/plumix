@@ -168,32 +168,7 @@ async function regenerate(
     config.plugins,
   );
 
-  // Per-group merge across themes — a theme adding only `colors`
-  // doesn't wipe `spacing` / `typography` from a base theme. Mirrors
-  // `mergeThemeTokens` in `buildApp` so the virtual module's CSS
-  // matches the runtime resolver's tokens.
-  let themeTokens: ThemeTokens | undefined;
-  for (const theme of config.themes) {
-    if (!theme.tokens) continue;
-    themeTokens = {
-      ...(themeTokens ?? {}),
-      ...(theme.tokens.colors !== undefined && {
-        colors: { ...(themeTokens?.colors ?? {}), ...theme.tokens.colors },
-      }),
-      ...(theme.tokens.spacing !== undefined && {
-        spacing: { ...(themeTokens?.spacing ?? {}), ...theme.tokens.spacing },
-      }),
-      ...(theme.tokens.typography !== undefined && {
-        typography: {
-          ...(themeTokens?.typography ?? {}),
-          ...theme.tokens.typography,
-        },
-      }),
-      ...(theme.tokens.border !== undefined && {
-        border: { ...(themeTokens?.border ?? {}), ...theme.tokens.border },
-      }),
-    };
-  }
+  const themeTokens: ThemeTokens | undefined = config.theme?.tokens;
 
   return {
     configPath,

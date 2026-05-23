@@ -1,22 +1,19 @@
 import { definePlugin } from "plumix/plugin";
 
-import type { MenuLocationOptions, ResolvedMenuItem } from "./server/types.js";
+import type { ResolvedMenuItem } from "./server/types.js";
 import { createMenuRouter } from "./rpc.js";
-import { recordLocation } from "./server/locations.js";
 
-// `@plumix/plugin-menu` augments the theme setup context with
-// `registerMenuLocation`, plus three core option shapes with
-// menu-eligibility flags, plus the hook registries with three menu
+// `@plumix/plugin-menu` augments the core option shapes with
+// menu-eligibility flags and the hook registries with three menu
 // hooks. TypeScript surfaces all of these only when this plugin is
-// in the project's `node_modules`. The runtime implementation of
-// `registerMenuLocation` is wired via `extendThemeContext` below;
-// the eligibility flags are read at admin time by the eligibility
-// resolver (`getEligibleMenuKinds`); the hooks are fired by
-// `getMenuByName` and `menu.save`.
+// in the project's `node_modules`. The eligibility flags are read at
+// admin time by the eligibility resolver (`getEligibleMenuKinds`);
+// the hooks are fired by `getMenuByName` and `menu.save`.
+//
+// `registerMenuLocation` is deferred — `theme.setup` was removed in
+// the theming foundation slice; a new registration path lands with
+// the menu-locations follow-up.
 declare module "plumix/plugin" {
-  interface ThemeContextExtensions {
-    registerMenuLocation: (id: string, options: MenuLocationOptions) => void;
-  }
   interface EntryTypeOptions {
     /**
      * Whether this entry type appears in the menu plugin's item picker.
@@ -86,11 +83,6 @@ const ADMIN_ENTRY_PATH = "node_modules/@plumix/plugin-menu/dist/admin/index.js";
  */
 export const menu = definePlugin("menu", {
   adminEntry: ADMIN_ENTRY_PATH,
-  provides: (ctx) => {
-    ctx.extendThemeContext("registerMenuLocation", (id, options) => {
-      recordLocation(id, options);
-    });
-  },
   setup: (ctx) => {
     ctx.registerEntryType("menu_item", {
       label: "Menu items",

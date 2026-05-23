@@ -32,7 +32,6 @@ export default {
       origin: "http://localhost:8787",
     },
   },
-  themes: [],
   plugins: [],
 };
 `;

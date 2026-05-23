@@ -173,7 +173,7 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
 
   const match = matchRoute(url, app.routeMap);
   if (match === null) return notFound("public-route-not-found");
-  return resolvePublicRoute(ctx, match);
+  return resolvePublicRoute(ctx, match, { theme: app.config.theme });
 }
 
 interface PluginRawRouteMatch {

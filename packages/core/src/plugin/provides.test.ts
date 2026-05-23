@@ -14,9 +14,6 @@ declare module "./provides-context.js" {
       url(key: string): string;
     };
   }
-  interface ThemeContextExtensions {
-    registerMenuLocation(id: string, opts: { readonly label: string }): void;
-  }
 }
 
 declare module "../context/app.js" {
@@ -136,48 +133,6 @@ describe("provides phase", () => {
       installPlugins({ hooks: new HookRegistry(), plugins: [evil] }),
     ).rejects.toThrow(
       /"addFilter" collides with a built-in PluginSetupContext/,
-    );
-  });
-
-  test("theme extensions are collected and surfaced on the install result", async () => {
-    const menus = definePlugin("menus", {
-      provides: (ctx) => {
-        ctx.extendThemeContext("registerMenuLocation", (id, opts) => ({
-          id,
-          opts,
-        }));
-      },
-      setup: () => undefined,
-    });
-
-    const result = await installPlugins({
-      hooks: new HookRegistry(),
-      plugins: [menus],
-    });
-
-    const entry = result.themeExtensions.get("registerMenuLocation");
-    expect(entry?.pluginId).toBe("menus");
-    expect(typeof entry?.value).toBe("function");
-  });
-
-  test("two plugins extending the same theme-context key throw with both ids", async () => {
-    const a = definePlugin("a", {
-      provides: (ctx) => {
-        ctx.extendThemeContext("registerMenuLocation", () => undefined);
-      },
-      setup: () => undefined,
-    });
-    const b = definePlugin("b", {
-      provides: (ctx) => {
-        ctx.extendThemeContext("registerMenuLocation", () => undefined);
-      },
-      setup: () => undefined,
-    });
-
-    await expect(
-      installPlugins({ hooks: new HookRegistry(), plugins: [a, b] }),
-    ).rejects.toThrow(
-      /Plugin "b" extended.*"registerMenuLocation".*"a" already registered/s,
     );
   });
 

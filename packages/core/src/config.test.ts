@@ -23,10 +23,10 @@ const authConfig = auth({
   },
 });
 
-test("plumix() defaults missing plugins and themes to empty arrays", () => {
+test("plumix() defaults missing plugins to an empty array and theme to undefined", () => {
   const config = plumix({ runtime, database, auth: authConfig });
   expect(config.plugins).toEqual([]);
-  expect(config.themes).toEqual([]);
+  expect(config.theme).toBeUndefined();
 });
 
 test("plumix() exposes defineConfig as an alias", async () => {

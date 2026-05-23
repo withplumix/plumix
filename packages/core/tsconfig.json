@@ -1,6 +1,7 @@
 {
   "extends": "@plumix/typescript-config/library.json",
   "compilerOptions": {
+    "jsx": "react-jsx",
     "types": ["node"]
   },
   "include": ["src"]
