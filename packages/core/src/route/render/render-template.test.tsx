@@ -298,6 +298,52 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(body).toContain("custom-doc");
   });
 
+  test("`document` override positions children inside the supplied body wrapper", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: ({ data }) => (
+          <div data-testid="template-payload">{data.entry.title}</div>
+        ),
+      },
+      document: ({ children }) => (
+        <html lang="en">
+          <head>
+            <title>doc</title>
+          </head>
+          <body>
+            <header data-testid="doc-chrome-before">chrome-before</header>
+            {children}
+            <footer data-testid="doc-chrome-after">chrome-after</footer>
+          </body>
+        </html>
+      ),
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "positioned",
+      title: "Positioned",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/positioned"),
+    );
+    const body = await response.text();
+    // Order: chrome-before → template payload → chrome-after.
+    const beforeIdx = body.indexOf("chrome-before");
+    const payloadIdx = body.indexOf("Positioned");
+    const afterIdx = body.indexOf("chrome-after");
+    expect(beforeIdx).toBeGreaterThan(-1);
+    expect(payloadIdx).toBeGreaterThan(beforeIdx);
+    expect(afterIdx).toBeGreaterThan(payloadIdx);
+  });
+
   test("react 19 metadata hoisting: template-rendered <title> lands in <head>", async () => {
     const theme = defineTheme({
       templates: {
