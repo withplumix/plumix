@@ -29,3 +29,10 @@ export interface ArchiveData {
   readonly entries: readonly ResolvedEntry[];
   readonly pagination: Pagination;
 }
+
+export interface TaxonomyData {
+  readonly taxonomy: string;
+  readonly term: Term;
+  readonly entries: readonly ResolvedEntry[];
+  readonly pagination: Pagination;
+}
