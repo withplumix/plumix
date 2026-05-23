@@ -7,6 +7,7 @@ import {
   auth as authConfig,
   buildApp,
   definePlugin,
+  defineTheme,
   plumix,
   requestStore,
   SESSION_COOKIE_NAME,
@@ -29,10 +30,12 @@ const auth = authConfig({
   },
 });
 
+const theme = defineTheme({ templates: { index: () => null } });
+
 const emptyExecutionContext = {} as ExecutionContext;
 
 async function createApp(database: DatabaseAdapter = stubDatabase) {
-  const config = plumix({ runtime: cloudflare(), database, auth });
+  const config = plumix({ runtime: cloudflare(), database, auth, theme });
   return buildApp(config);
 }
 
@@ -51,7 +54,10 @@ async function invoke(
 
 describe("cloudflare adapter — buildFetchHandler", () => {
   test("routes the public / request through the dispatcher", async () => {
-    const response = await invoke(new Request("https://cms.example/"), {});
+    const response = await invoke(
+      new Request("https://cms.example/unknown"),
+      {},
+    );
     expect(response.status).toBe(404);
     expect(response.headers.get("x-plumix-hint")).toBe(
       "public-route-not-found",
@@ -60,7 +66,7 @@ describe("cloudflare adapter — buildFetchHandler", () => {
 
   test("ALS is entered for each request and cleaned up afterwards", async () => {
     expect(requestStore.getStore()).toBeUndefined();
-    await invoke(new Request("https://cms.example/"), {});
+    await invoke(new Request("https://cms.example/unknown"), {});
     expect(requestStore.getStore()).toBeUndefined();
   });
 
@@ -72,7 +78,7 @@ describe("cloudflare adapter — buildFetchHandler", () => {
       },
     };
     const response = await invoke(
-      new Request("https://cms.example/"),
+      new Request("https://cms.example/unknown"),
       {},
       failingDatabase,
     );
@@ -82,7 +88,10 @@ describe("cloudflare adapter — buildFetchHandler", () => {
   });
 
   test("tolerates a test-time executionCtx without waitUntil (after falls back to a no-op)", async () => {
-    const response = await invoke(new Request("https://cms.example/"), {});
+    const response = await invoke(
+      new Request("https://cms.example/unknown"),
+      {},
+    );
     expect(response.status).toBe(404);
   });
 
@@ -97,10 +106,14 @@ describe("cloudflare adapter — buildFetchHandler", () => {
     };
 
     const env = { DB: "binding-placeholder" };
-    await invoke(new Request("https://cms.example/"), env, capturingDatabase);
+    await invoke(
+      new Request("https://cms.example/unknown"),
+      env,
+      capturingDatabase,
+    );
 
     expect(received?.env).toBe(env);
-    expect(received?.requestUrl).toBe("https://cms.example/");
+    expect(received?.requestUrl).toBe("https://cms.example/unknown");
   });
 
   test("each request receives its own context (no cross-request leakage)", async () => {
@@ -109,12 +122,12 @@ describe("cloudflare adapter — buildFetchHandler", () => {
 
     const [a, b] = await Promise.all([
       fetchHandler(
-        new Request("https://cms.example/?seq=1"),
+        new Request("https://cms.example/unknown?seq=1"),
         {},
         emptyExecutionContext,
       ),
       fetchHandler(
-        new Request("https://cms.example/?seq=2"),
+        new Request("https://cms.example/unknown?seq=2"),
         {},
         emptyExecutionContext,
       ),
@@ -199,7 +212,7 @@ describe("cloudflare adapter — connectRequest", () => {
   test("when connectRequest returns a scoped db, connect is not called", async () => {
     const { adapter, connectCalls } = captureAdapter();
     const response = await invoke(
-      new Request("https://cms.example/"),
+      new Request("https://cms.example/unknown"),
       {},
       adapter,
     );
@@ -209,7 +222,7 @@ describe("cloudflare adapter — connectRequest", () => {
 
   test("passes env, request, schema, isAuthenticated, isWrite through to connectRequest", async () => {
     const { adapter, calls } = captureAdapter();
-    const req = new Request("https://cms.example/", {
+    const req = new Request("https://cms.example/unknown", {
       method: "POST",
       headers: {
         "x-plumix-request": "1",
@@ -219,7 +232,7 @@ describe("cloudflare adapter — connectRequest", () => {
     await invoke(req, { DB: "x" }, adapter);
 
     expect(calls).toHaveLength(1);
-    expect(calls[0]?.request.url).toBe("https://cms.example/");
+    expect(calls[0]?.request.url).toBe("https://cms.example/unknown");
     expect(calls[0]?.env).toEqual({ DB: "x" });
     expect(calls[0]?.isAuthenticated).toBe(true);
     expect(calls[0]?.isWrite).toBe(true);
@@ -227,14 +240,14 @@ describe("cloudflare adapter — connectRequest", () => {
 
   test("isAuthenticated=false when no session cookie is present", async () => {
     const { adapter, calls } = captureAdapter();
-    await invoke(new Request("https://cms.example/"), {}, adapter);
+    await invoke(new Request("https://cms.example/unknown"), {}, adapter);
     expect(calls[0]?.isAuthenticated).toBe(false);
   });
 
   test("isWrite=false for GET/HEAD/OPTIONS", async () => {
     const { adapter, calls } = captureAdapter();
     await invoke(
-      new Request("https://cms.example/", { method: "GET" }),
+      new Request("https://cms.example/unknown", { method: "GET" }),
       {},
       adapter,
     );
@@ -255,7 +268,7 @@ describe("cloudflare adapter — connectRequest", () => {
       }),
     };
     const response = await invoke(
-      new Request("https://cms.example/"),
+      new Request("https://cms.example/unknown"),
       {},
       adapter,
     );
@@ -274,7 +287,7 @@ describe("cloudflare adapter — connectRequest", () => {
       connectRequest: () => null,
     };
     const response = await invoke(
-      new Request("https://cms.example/"),
+      new Request("https://cms.example/unknown"),
       {},
       adapter,
     );
@@ -291,7 +304,7 @@ describe("cloudflare adapter — connectRequest", () => {
         return { db: {} };
       },
     };
-    await invoke(new Request("https://cms.example/"), {}, adapter);
+    await invoke(new Request("https://cms.example/unknown"), {}, adapter);
     expect(connectCalled).toBe(1);
   });
 
@@ -304,7 +317,7 @@ describe("cloudflare adapter — connectRequest", () => {
       },
     };
     const response = await invoke(
-      new Request("https://cms.example/"),
+      new Request("https://cms.example/unknown"),
       {},
       adapter,
     );
@@ -322,7 +335,7 @@ describe("cloudflare adapter — d1() slot", () => {
   test("throws a descriptive error when the configured binding is missing from env", () => {
     const adapter = d1({ binding: "DB" });
     expect(() =>
-      adapter.connect({}, new Request("https://cms.example/"), {}),
+      adapter.connect({}, new Request("https://cms.example/unknown"), {}),
     ).toThrow(/D1 binding "DB" missing/);
   });
 
@@ -340,7 +353,7 @@ describe("cloudflare adapter — binding validation", () => {
       connect: () => ({ db: {} }),
     };
     const response = await invoke(
-      new Request("https://cms.example/"),
+      new Request("https://cms.example/unknown"),
       { OTHER: 1 },
       adapterWithBindings,
     );
@@ -359,7 +372,7 @@ describe("cloudflare adapter — binding validation", () => {
       connect: () => ({ db: {} }),
     };
     const response = await invoke(
-      new Request("https://cms.example/"),
+      new Request("https://cms.example/unknown"),
       { DB: null },
       adapterWithBindings,
     );
@@ -378,7 +391,7 @@ describe("cloudflare adapter — binding validation", () => {
       connect: () => ({ db: {} }),
     };
     const response = await invoke(
-      new Request("https://cms.example/"),
+      new Request("https://cms.example/unknown"),
       undefined,
       adapterWithBindings,
     );
@@ -397,7 +410,7 @@ describe("cloudflare adapter — binding validation", () => {
       connect: () => ({ db: {} }),
     };
     const response = await invoke(
-      new Request("https://cms.example/"),
+      new Request("https://cms.example/unknown"),
       { DB: { fake: true } },
       adapterWithBindings,
     );
@@ -405,7 +418,10 @@ describe("cloudflare adapter — binding validation", () => {
   });
 
   test("adapter without requiredBindings is unaffected (opt-in behaviour)", async () => {
-    const response = await invoke(new Request("https://cms.example/"), {});
+    const response = await invoke(
+      new Request("https://cms.example/unknown"),
+      {},
+    );
     expect(response.status).toBe(404);
   });
 
@@ -423,7 +439,7 @@ describe("cloudflare adapter — binding validation", () => {
     const fetchHandler = cloudflare().buildFetchHandler(app);
     const env = { DB: { fake: true } };
     await fetchHandler(
-      new Request("https://cms.example/"),
+      new Request("https://cms.example/unknown"),
       env,
       emptyExecutionContext,
     );
@@ -449,6 +465,7 @@ describe("plugin schema collisions", () => {
       runtime: cloudflare(),
       database: { kind: "stub", connect: () => ({ db: {} }) },
       auth,
+      theme,
       plugins: [misbehaving],
     });
 
@@ -468,6 +485,7 @@ describe("plugin schema collisions", () => {
       runtime: cloudflare(),
       database: { kind: "stub", connect: () => ({ db: {} }) },
       auth,
+      theme,
       plugins: [a, b],
     });
 

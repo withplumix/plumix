@@ -1,16 +1,30 @@
+type ThemeRegistrationCode = "missing_theme" | "missing_index_template";
+
 export class ThemeRegistrationError extends Error {
   static {
     ThemeRegistrationError.prototype.name = "ThemeRegistrationError";
   }
 
-  readonly code = "missing_index_template" as const;
+  readonly code: ThemeRegistrationCode;
 
-  constructor(message: string) {
+  private constructor(code: ThemeRegistrationCode, message: string) {
     super(message);
+    this.code = code;
+  }
+
+  static missingTheme(): ThemeRegistrationError {
+    return new ThemeRegistrationError(
+      "missing_theme",
+      `Plumix config requires a \`theme\`. Every app renders public routes ` +
+        `through a theme — there is no inline-HTML fallback. Define one with ` +
+        `\`defineTheme({ templates: { index: …, … } })\` and pass it to ` +
+        `\`plumix({ … , theme })\`.`,
+    );
   }
 
   static missingIndexTemplate(): ThemeRegistrationError {
     return new ThemeRegistrationError(
+      "missing_index_template",
       `Theme registration: \`templates.index\` is required. Every theme ` +
         `must declare an \`index\` template — it is the final fallback the ` +
         `template hierarchy walks to when no more-specific template matches.`,

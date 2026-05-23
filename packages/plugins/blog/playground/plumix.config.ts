@@ -1,4 +1,4 @@
-import { auth, plumix } from "plumix";
+import { auth, defineTheme, plumix } from "plumix";
 
 import { blog } from "@plumix/plugin-blog";
 import {
@@ -35,4 +35,5 @@ export default plumix({
     },
   }),
   plugins: [blog],
+  theme: defineTheme({ templates: { index: () => null } }),
 });

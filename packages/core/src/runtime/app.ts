@@ -134,13 +134,15 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     registry: seededRegistry,
   });
 
-  if (config.theme) {
-    const templates = config.theme.templates as Readonly<
-      Record<string, unknown>
-    >;
-    if (!templates.index) {
-      throw ThemeRegistrationError.missingIndexTemplate();
-    }
+  // Defense-in-depth for JS callers — the type already requires `theme`,
+  // but a hand-rolled config can still drop it.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard for JS callers
+  if (!config.theme) {
+    throw ThemeRegistrationError.missingTheme();
+  }
+  const templates = config.theme.templates as Readonly<Record<string, unknown>>;
+  if (!templates.index) {
+    throw ThemeRegistrationError.missingIndexTemplate();
   }
 
   const schema: Record<string, unknown> = { ...coreSchema };

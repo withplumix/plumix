@@ -8,7 +8,7 @@ import {
   images,
   r2,
 } from "@plumix/runtime-cloudflare";
-import { auth, consoleMailer, plumix } from "plumix";
+import { auth, consoleMailer, defineTheme, plumix } from "plumix";
 
 // Derives `rpId` + `origin` from the Workers Builds env (`WORKERS_CI`,
 // `WORKERS_CI_BRANCH`): production deploys → `<worker>.<account>.workers.dev`,
@@ -76,6 +76,9 @@ export default plumix({
     magicLink: { siteName: "Plumix — Blog" },
   }),
   plugins: [blog, pages, media()],
+  // Noop placeholder — every Plumix app needs a theme. Replace with a
+  // real theme once you start rendering public routes.
+  theme: defineTheme({ templates: { index: () => null } }),
 });
 
 function resolveR2S3Credentials():

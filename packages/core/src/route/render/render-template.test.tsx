@@ -1,11 +1,3 @@
-// `TemplateData = any` (foundation placeholder) makes destructured
-// template props unsafe by eslint's rules. Templates here exercise
-// behavior, not type ergonomics — narrowing each access would obscure
-// the assertions. The follow-up that lands the discriminated TemplateData
-// union also drops these blanket disables.
-/* eslint-disable @typescript-eslint/no-unsafe-member-access,
-                  @typescript-eslint/no-unsafe-call */
-
 import { describe, expect, test } from "vitest";
 
 import type { EntryContent } from "@plumix/blocks";
@@ -1386,17 +1378,6 @@ describe("resolvePublicRoute — error pages through theme", () => {
     );
     expect(response.status).toBe(404);
     expect(response.headers.get("x-plumix-hint")).toBe("public-post-not-found");
-  });
-
-  test("no-theme 404 surfaces the plaintext `notFound` response unchanged", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
-    const response = await h.dispatch(
-      new Request("https://cms.example/post/never-existed"),
-    );
-    expect(response.status).toBe(404);
-    expect(response.headers.get("content-type")).toContain("text/plain");
-    expect(response.headers.get("x-plumix-hint")).toBe("public-post-not-found");
-    expect(await response.text()).toBe("Not Found");
   });
 
   test("built-in 404 default renders when the theme has no `404` template", async () => {

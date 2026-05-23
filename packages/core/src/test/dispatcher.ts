@@ -30,6 +30,7 @@ import { plumix } from "../config.js";
 import { createAppContext } from "../context/app.js";
 import { buildApp } from "../runtime/app.js";
 import { createPlumixDispatcher } from "../runtime/dispatcher.js";
+import { defaultTestTheme } from "./default-theme.js";
 import { factoriesFor, userFactory } from "./factories.js";
 import { createTestDb } from "./harness.js";
 import { buildRequest, TestResponse } from "./request.js";
@@ -212,7 +213,7 @@ export async function createDispatcherHarness(
     plugins: options.plugins,
     imageDelivery: options.imageDelivery,
     mailer: options.mailer,
-    theme: options.theme,
+    theme: options.theme ?? defaultTestTheme,
   });
   const app = await buildApp(config);
   const dispatcher = createPlumixDispatcher(app);
