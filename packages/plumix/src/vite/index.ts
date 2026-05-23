@@ -12,7 +12,6 @@ import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
 
-import type { ThemeTokens } from "@plumix/blocks";
 import type {
   AnyPluginDescriptor,
   PluginRegistry,
@@ -33,7 +32,6 @@ import {
   assemblePluginAdminBundle,
 } from "./admin-plugin-bundle.js";
 import { VitePluginError } from "./errors.js";
-import { loadTokensVirtual, resolveTokensVirtualId } from "./tokens-virtual.js";
 
 // `import.meta.url` for this module lives at plumix/dist/vite/index.js in
 // consumer installs, so the pre-compiled admin artifact is a sibling at
@@ -51,11 +49,6 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
   let root = process.cwd();
   let publicDir = "";
   let configPath: string | undefined;
-  // Active theme tokens captured at each regenerate. The virtual
-  // `virtual:plumix/blocks/tokens.css` module reads this every time
-  // Vite loads it; on config change the watcher refreshes it and
-  // sends a `full-reload` so the CSS imports pick up the new tokens.
-  let activeThemeTokens: ThemeTokens | undefined;
 
   return {
     name: "plumix",
@@ -87,7 +80,6 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
     async buildStart() {
       const emitted = await regenerate(root, options.configFile);
       configPath = emitted.configPath;
-      activeThemeTokens = emitted.themeTokens;
       warnOnPluginAdminMismatch(emitted.plugins, this.warn.bind(this));
       await stageAdminAssets(
         publicDir,
@@ -97,18 +89,11 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         root,
       );
     },
-    resolveId(id) {
-      return resolveTokensVirtualId(id);
-    },
-    load(id) {
-      return loadTokensVirtual(id, activeThemeTokens);
-    },
     configureServer(server) {
       server.watcher.on("change", (path) => {
         if (!configPath || resolve(path) !== configPath) return;
         void regenerate(root, options.configFile)
           .then(async (emitted) => {
-            activeThemeTokens = emitted.themeTokens;
             await stageAdminAssets(
               publicDir,
               emitted.manifest,
@@ -152,7 +137,6 @@ async function regenerate(
   manifest: PlumixManifest;
   registry: PluginRegistry;
   plugins: readonly AnyPluginDescriptor[];
-  themeTokens: ThemeTokens | undefined;
 }> {
   const { config, configPath } = await loadConfig(cwd, explicitConfig);
 
@@ -168,14 +152,11 @@ async function regenerate(
     config.plugins,
   );
 
-  const themeTokens: ThemeTokens | undefined = config.theme?.tokens;
-
   return {
     configPath,
     manifest,
     registry,
     plugins: config.plugins,
-    themeTokens,
   };
 }
 

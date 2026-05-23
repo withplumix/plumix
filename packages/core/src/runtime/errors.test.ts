@@ -2,22 +2,6 @@ import { describe, expect, test } from "vitest";
 
 import { AppBootError } from "./errors.js";
 
-describe("AppBootError.duplicateThemeId", () => {
-  test("class identity, code, and exposed themeId", () => {
-    const err = AppBootError.duplicateThemeId({ themeId: "blog" });
-    expect(err).toBeInstanceOf(AppBootError);
-    expect(err).toBeInstanceOf(Error);
-    expect(err.name).toBe("AppBootError");
-    expect(err.code).toBe("duplicate_theme_id");
-    expect(err.themeId).toBe("blog");
-  });
-
-  test("message names the duplicated theme id", () => {
-    const err = AppBootError.duplicateThemeId({ themeId: "blog" });
-    expect(err.message).toContain('Theme id "blog" appears more than once');
-  });
-});
-
 describe("AppBootError.schemaExportConflict", () => {
   test("class identity, code, and exposed plugin + schema + previous owner", () => {
     const err = AppBootError.schemaExportConflict({

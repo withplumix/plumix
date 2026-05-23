@@ -1,11 +1,6 @@
 import { RPCHandler } from "@orpc/server/fetch";
 
-import type {
-  BlockRegistry,
-  HtmlAllowlist,
-  MarkSpec,
-  ThemeTokens,
-} from "@plumix/blocks";
+import type { BlockRegistry, HtmlAllowlist, MarkSpec } from "@plumix/blocks";
 import {
   buildHtmlAllowlist,
   coreBlocks,
@@ -127,13 +122,6 @@ export interface PlumixApp {
    * output rather than being silently swapped with the baseline.
    */
   readonly htmlAllowlist: HtmlAllowlist;
-  /**
-   * Active theme's design tokens, flattened across `config.themes`
-   * with later themes winning per-group. `undefined` when no theme
-   * declared `tokens` — the universal Style slot in `renderBlockTree`
-   * then has no token table to resolve through.
-   */
-  readonly themeTokens: ThemeTokens | undefined;
 }
 
 export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
@@ -200,9 +188,7 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
 
   // Aggregate `@plumix/blocks` core specs + plugin contributions into the
   // per-app registry. `createBlockRegistry`'s last-write-wins semantics
-  // give plugins precedence over the core baseline; theme-level overrides
-  // are not part of the v2 surface (themes contribute through tokens +
-  // `config.themes[].setup`, not through component swaps).
+  // give plugins precedence over the core baseline.
   const pluginBlockSpecs = Array.from(registry.blockSpecs.values()).map(
     ({ spec }) => spec,
   );
@@ -217,8 +203,6 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     blocks,
     config.blocks?.htmlAllowlist,
   );
-
-  const themeTokens = config.theme?.tokens;
 
   return {
     config,
@@ -240,6 +224,5 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     blocks,
     marks,
     htmlAllowlist,
-    themeTokens,
   };
 }
