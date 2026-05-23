@@ -41,3 +41,15 @@ export interface FrontPageData {
   readonly entries: readonly ResolvedEntry[];
   readonly pagination: Pagination;
 }
+
+/** Sanitised — never includes the raw Error or stack trace. */
+export interface NotFoundData {
+  readonly request: Request;
+  readonly hint?: string;
+}
+
+/** Sanitised — never includes the raw Error or stack trace. */
+export interface ServerErrorData {
+  readonly request: Request;
+  readonly hint?: string;
+}

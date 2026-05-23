@@ -978,3 +978,116 @@ describe("resolvePublicRoute — front-page through theme", () => {
     expect(body).toContain("Latest");
   });
 });
+
+describe("resolvePublicRoute — error pages through theme", () => {
+  test("registered `404` template renders for an unmatched URL", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        "404": ({ data }) => (
+          <main data-testid="four-oh-four">
+            <h1>Page missing</h1>
+            <code data-testid="hint">{data.hint ?? ""}</code>
+          </main>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/never-existed"),
+    );
+    expect(response.status).toBe(404);
+    const body = await response.text();
+    expect(body).toContain('data-testid="four-oh-four"');
+    expect(body).toContain("Page missing");
+  });
+
+  test("built-in 404 default renders when the theme has no `404` template", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/never-existed"),
+    );
+    expect(response.status).toBe(404);
+    const body = await response.text();
+    // Sanity: it's the built-in shell, not an empty 404.
+    expect(body).toContain("<!doctype html>");
+    expect(body).toContain("Not Found");
+  });
+
+  test("theme template that throws renders the `500` template + 500 status", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: () => {
+          throw new Error("kaboom-secret-payload");
+        },
+        "500": ({ data }) => (
+          <main data-testid="five-oh-oh">
+            <h1>Server error</h1>
+            <p data-testid="hint">{data.hint ?? ""}</p>
+          </main>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "boom",
+      title: "Boom",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/boom"),
+    );
+    expect(response.status).toBe(500);
+    const body = await response.text();
+    expect(body).toContain('data-testid="five-oh-oh"');
+    // Internal error text must never leak to clients.
+    expect(body).not.toContain("kaboom-secret-payload");
+  });
+
+  test("built-in 500 default renders when the theme has no `500` template", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: () => {
+          throw new Error("kaboom-different-payload");
+        },
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "boom2",
+      title: "Boom2",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/boom2"),
+    );
+    expect(response.status).toBe(500);
+    const body = await response.text();
+    expect(body).toContain("<!doctype html>");
+    expect(body).toContain("Internal Server Error");
+    expect(body).not.toContain("kaboom-different-payload");
+  });
+});

@@ -11,6 +11,7 @@ import type {
   TemplateRegistry,
   ThemeDescriptor,
 } from "../../theme.js";
+import type { NotFoundData, ServerErrorData } from "./resolved-entry.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
 import { resolveTemplateCandidates } from "./template-hierarchy.js";
 
@@ -32,7 +33,51 @@ export async function renderThroughTheme({
 }: RenderArgs): Promise<string> {
   const candidates = await resolveTemplateCandidates(node, ctx.hooks);
   const Template = pickTemplate(theme.templates, candidates);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- TemplateData placeholder
+  return renderTree({ ctx, theme, data, title, Template });
+}
 
+interface RenderErrorArgs {
+  readonly ctx: AppContext;
+  readonly theme: ThemeDescriptor;
+  readonly kind: "not-found" | "server-error";
+  readonly data: NotFoundData | ServerErrorData;
+}
+
+export function renderErrorThroughTheme({
+  ctx,
+  theme,
+  kind,
+  data,
+}: RenderErrorArgs): string {
+  const key = kind === "not-found" ? "404" : "500";
+  const fallbackTitle =
+    kind === "not-found" ? "Not Found" : "Internal Server Error";
+  const Template = theme.templates[key] ?? defaultErrorTemplateFor(kind);
+  return renderTree({
+    ctx,
+    theme,
+    data,
+    title: fallbackTitle,
+    Template,
+  });
+}
+
+interface RenderTreeArgs {
+  readonly ctx: AppContext;
+  readonly theme: ThemeDescriptor;
+  readonly data: TemplateData;
+  readonly title: string;
+  readonly Template: TemplateComponent<TemplateData>;
+}
+
+function renderTree({
+  ctx,
+  theme,
+  data,
+  title,
+  Template,
+}: RenderTreeArgs): string {
   const templateTree: ReactNode = createElement(PlumixProvider, {
     value: { registry: ctx.blocks },
     children: createElement(Template, { data }),
@@ -80,5 +125,30 @@ function DefaultDocument({
       </head>
       <body>{children}</body>
     </html>
+  );
+}
+
+function defaultErrorTemplateFor(
+  kind: "not-found" | "server-error",
+): TemplateComponent<TemplateData> {
+  if (kind === "not-found") return DefaultNotFound;
+  return DefaultServerError;
+}
+
+function DefaultNotFound() {
+  return (
+    <main>
+      <h1>Not Found</h1>
+      <p>The page you're looking for doesn't exist.</p>
+    </main>
+  );
+}
+
+function DefaultServerError() {
+  return (
+    <main>
+      <h1>Internal Server Error</h1>
+      <p>Something went wrong while rendering this page.</p>
+    </main>
   );
 }
