@@ -2,15 +2,16 @@ import type { ComponentType, ReactElement, ReactNode } from "react";
 
 import type { ThemeTokens } from "@plumix/blocks";
 
-import type { SingleData } from "./route/render/resolved-entry.js";
 import { ThemeError, ThemeRegistrationError } from "./theme-errors.js";
 
 /**
- * Per-kind data union templates receive. Only `SingleData` is implemented
- * today; archive / taxonomy / front-page / error kinds widen this in
- * follow-up slices.
+ * Per-kind data templates receive — `SingleData` for single-entry kinds,
+ * `ArchiveData` for archives, more as follow-up slices land. Modelled as
+ * `any` so templates can destructure freely without per-key narrowing;
+ * tightening to a discriminated union is a follow-up.
  */
-export type TemplateData = SingleData;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type TemplateData = any;
 
 export type TemplateComponent<Data> = ComponentType<{ readonly data: Data }>;
 
