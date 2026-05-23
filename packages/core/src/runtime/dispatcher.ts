@@ -27,6 +27,7 @@ import {
 } from "../auth/passkey/routes.js";
 import { withUser } from "../context/app.js";
 import { matchRoute } from "../route/match.js";
+import { renderErrorThroughTheme } from "../route/render/render-template.js";
 import { resolvePublicRoute } from "../route/resolve.js";
 import { forbidden, jsonResponse, methodNotAllowed, notFound } from "./http.js";
 
@@ -171,6 +172,62 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
     return methodNotAllowed(["GET", "HEAD"]);
   }
 
+  return dispatchPublicRoute(app, ctx, url);
+}
+
+async function dispatchPublicRoute(
+  app: PlumixApp,
+  ctx: AppContext,
+  url: URL,
+): Promise<Response> {
+  const theme = app.config.theme;
+  try {
+    const response = await resolvePublicRouteOrFallback(app, ctx, url);
+    if (response.status === 404 && theme) {
+      const html = renderErrorThroughTheme({
+        ctx,
+        theme,
+        kind: "not-found",
+        data: {
+          request: ctx.request,
+          hint: response.headers.get("x-plumix-hint") ?? undefined,
+        },
+      });
+      return new Response(html, {
+        status: 404,
+        headers: { "content-type": "text/html; charset=utf-8" },
+      });
+    }
+    return response;
+  } catch (err) {
+    ctx.logger.error("dispatch_failed", {
+      url: url.href,
+      err: err instanceof Error ? err.message : String(err),
+    });
+    if (!theme) {
+      return new Response("Internal Server Error", {
+        status: 500,
+        headers: { "content-type": "text/plain; charset=utf-8" },
+      });
+    }
+    const html = renderErrorThroughTheme({
+      ctx,
+      theme,
+      kind: "server-error",
+      data: { request: ctx.request },
+    });
+    return new Response(html, {
+      status: 500,
+      headers: { "content-type": "text/html; charset=utf-8" },
+    });
+  }
+}
+
+async function resolvePublicRouteOrFallback(
+  app: PlumixApp,
+  ctx: AppContext,
+  url: URL,
+): Promise<Response> {
   const match = matchRoute(url, app.routeMap);
   if (match !== null) {
     return resolvePublicRoute(ctx, match, { theme: app.config.theme });
