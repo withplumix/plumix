@@ -32,7 +32,6 @@ export async function renderThroughTheme({
 }: RenderArgs): Promise<string> {
   const candidates = await resolveTemplateCandidates(node, ctx.hooks);
   const Template = pickTemplate(theme.templates, candidates);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- TemplateData placeholder
   return renderTree({ ctx, theme, data, title, Template });
 }
 
@@ -59,7 +58,8 @@ export function renderErrorThroughTheme({
   data,
 }: RenderErrorArgs): string {
   const variant = ERROR_VARIANTS[kind];
-  const Template = theme.templates[variant.key] ?? variant.fallback;
+  const Template = (theme.templates[variant.key] ??
+    variant.fallback) as TemplateComponent<TemplateData>;
   return renderTree({ ctx, theme, data, title: variant.title, Template });
 }
 
@@ -102,9 +102,12 @@ function pickTemplate(
   templates: TemplateRegistry,
   candidates: readonly string[],
 ): TemplateComponent<TemplateData> {
+  // The candidate list is derived from the route's kind, so the picked
+  // template's narrowed data shape always matches the runtime `data`.
+  // TS can't see that — widen with a cast at the boundary.
   for (const name of candidates) {
     const candidate = templates[name];
-    if (candidate) return candidate;
+    if (candidate) return candidate as TemplateComponent<TemplateData>;
   }
   return templates.index;
 }
