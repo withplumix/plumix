@@ -37,6 +37,16 @@ export type { MemoryStorageConfig } from "./runtime/memory-storage.js";
 export { runScheduledTasks } from "./runtime/scheduled.js";
 export type * from "./runtime/slots.js";
 export { slugify } from "./slugify.js";
+export type {
+  ArchiveData,
+  ErrorData,
+  FrontPageData,
+  Pagination,
+  ResolvedAuthor,
+  ResolvedEntry,
+  SingleData,
+  TaxonomyData,
+} from "./route/render/resolved-entry.js";
 export { defineTheme } from "./theme.js";
 export type {
   TemplateComponent,

@@ -58,9 +58,10 @@ describe("resolvePublicRoute — single entry through theme", () => {
   test("falls through to `index` template when no `single` is registered", async () => {
     const theme = defineTheme({
       templates: {
-        index: ({ data }) => (
-          <article data-testid="index">{data.entry.title}</article>
-        ),
+        index: ({ data }) =>
+          "entry" in data ? (
+            <article data-testid="index">{data.entry.title}</article>
+          ) : null,
       },
     });
 
@@ -116,7 +117,8 @@ describe("resolvePublicRoute — single entry through theme", () => {
   test("runs resolve:single:data filters before the template renders", async () => {
     const theme = defineTheme({
       templates: {
-        index: ({ data }) => <h1>{data.entry.title}</h1>,
+        index: () => null,
+        single: ({ data }) => <h1>{data.entry.title}</h1>,
       },
     });
 
@@ -152,7 +154,8 @@ describe("resolvePublicRoute — single entry through theme", () => {
   test("template receives ResolvedAuthor with public-safe fields", async () => {
     const theme = defineTheme({
       templates: {
-        index: ({ data }) => (
+        index: () => null,
+        single: ({ data }) => (
           <p data-testid="author">{data.entry.author.name}</p>
         ),
       },
@@ -185,7 +188,8 @@ describe("resolvePublicRoute — single entry through theme", () => {
   test("template receives eager-loaded terms in batched order", async () => {
     const theme = defineTheme({
       templates: {
-        index: ({ data }) => (
+        index: () => null,
+        single: ({ data }) => (
           <span data-testid="terms">{`terms:${String(data.entry.terms.length)}`}</span>
         ),
       },
@@ -233,7 +237,8 @@ describe("resolvePublicRoute — single entry through theme", () => {
   test("default document shell supplies doctype + html/head/body with charset, viewport, and title", async () => {
     const theme = defineTheme({
       templates: {
-        index: ({ data }) => <article>{data.entry.title}</article>,
+        index: () => null,
+        single: ({ data }) => <article>{data.entry.title}</article>,
       },
     });
 
@@ -266,7 +271,8 @@ describe("resolvePublicRoute — single entry through theme", () => {
   test("theme `document` override replaces the default shell", async () => {
     const theme = defineTheme({
       templates: {
-        index: ({ data }) => <article>{data.entry.title}</article>,
+        index: () => null,
+        single: ({ data }) => <article>{data.entry.title}</article>,
       },
       document: ({ children }) => (
         <html lang="fr">
@@ -302,7 +308,8 @@ describe("resolvePublicRoute — single entry through theme", () => {
   test("`document` override renders children between header and footer", async () => {
     const theme = defineTheme({
       templates: {
-        index: ({ data }) => (
+        index: () => null,
+        single: ({ data }) => (
           <div data-testid="template-payload">{data.entry.title}</div>
         ),
       },
@@ -344,7 +351,8 @@ describe("resolvePublicRoute — single entry through theme", () => {
   test("react 19 metadata hoisting: template-rendered <title> lands in <head>", async () => {
     const theme = defineTheme({
       templates: {
-        index: ({ data }) => (
+        index: () => null,
+        single: ({ data }) => (
           <>
             <title>From-Template</title>
             <article>{data.entry.title}</article>
@@ -388,9 +396,12 @@ describe("resolvePublicRoute — single entry through theme", () => {
   test("template can render <BlockRenderer/> against the entry's content tree", async () => {
     const theme = defineTheme({
       templates: {
-        index: ({ data }) =>
+        index: () => null,
+        single: ({ data }) =>
           data.entry.content ? (
-            <BlockRenderer content={data.entry.content as EntryContent} />
+            <BlockRenderer
+              content={data.entry.content as unknown as EntryContent}
+            />
           ) : null,
       },
     });

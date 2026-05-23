@@ -2,18 +2,40 @@ import type { ComponentType, ReactElement, ReactNode } from "react";
 
 import type { ThemeTokens } from "@plumix/blocks";
 
+import type {
+  ArchiveData,
+  ErrorData,
+  FrontPageData,
+  SingleData,
+  TaxonomyData,
+} from "./route/render/resolved-entry.js";
 import { ThemeError, ThemeRegistrationError } from "./theme-errors.js";
 
 /**
- * Per-kind data templates receive — `SingleData` for single-entry kinds,
- * `ArchiveData` for archives, more as follow-up slices land. Modelled as
- * `any` so templates can destructure freely without per-key narrowing;
- * tightening to a discriminated union is a follow-up.
+ * Discriminated union of every data shape a template can receive. Per-kind
+ * templates (`single`, `archive`, …) narrow via the registry; `index`
+ * receives the union and discriminates at runtime (e.g. `"entry" in data`).
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type TemplateData = any;
+export type TemplateData =
+  | SingleData
+  | ArchiveData
+  | TaxonomyData
+  | FrontPageData
+  | ErrorData;
 
 export type TemplateComponent<Data> = ComponentType<{ readonly data: Data }>;
+
+// Catch-all for the registry's index signature. The narrow per-key
+// slots can't share a single typed slot due to contravariance, so the
+// signature accepts any concrete-shape component (`single-{type}`,
+// `archive-{type}`, …) or one written against the full union.
+type DynamicTemplateComponent =
+  | TemplateComponent<SingleData>
+  | TemplateComponent<ArchiveData>
+  | TemplateComponent<TaxonomyData>
+  | TemplateComponent<FrontPageData>
+  | TemplateComponent<ErrorData>
+  | TemplateComponent<TemplateData>;
 
 export type ThemeDocument = (props: {
   readonly data: TemplateData;
@@ -23,7 +45,18 @@ export type ThemeDocument = (props: {
 
 export interface TemplateRegistry {
   readonly index: TemplateComponent<TemplateData>;
-  readonly [key: string]: TemplateComponent<TemplateData>;
+  readonly single?: TemplateComponent<SingleData>;
+  readonly singular?: TemplateComponent<SingleData>;
+  readonly page?: TemplateComponent<SingleData>;
+  readonly archive?: TemplateComponent<ArchiveData>;
+  readonly taxonomy?: TemplateComponent<TaxonomyData>;
+  readonly category?: TemplateComponent<TaxonomyData>;
+  readonly tag?: TemplateComponent<TaxonomyData>;
+  readonly "front-page"?: TemplateComponent<FrontPageData>;
+  readonly home?: TemplateComponent<FrontPageData>;
+  readonly "404"?: TemplateComponent<ErrorData>;
+  readonly "500"?: TemplateComponent<ErrorData>;
+  readonly [key: string]: DynamicTemplateComponent | undefined;
 }
 
 export interface ThemeDescriptor {
