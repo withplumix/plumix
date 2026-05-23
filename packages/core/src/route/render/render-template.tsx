@@ -14,11 +14,13 @@ import type {
 import type { ResolvedNode } from "./template-hierarchy.js";
 import { resolveTemplateCandidates } from "./template-hierarchy.js";
 
-interface RenderSingleArgs {
+interface RenderArgs {
   readonly ctx: AppContext;
   readonly theme: ThemeDescriptor;
   readonly node: ResolvedNode;
   readonly data: TemplateData;
+  /** Plain-text title for the default document's `<title>`. */
+  readonly title: string;
 }
 
 export async function renderThroughTheme({
@@ -26,7 +28,8 @@ export async function renderThroughTheme({
   theme,
   node,
   data,
-}: RenderSingleArgs): Promise<string> {
+  title,
+}: RenderArgs): Promise<string> {
   const candidates = await resolveTemplateCandidates(node, ctx.hooks);
   const Template = pickTemplate(theme.templates, candidates);
 
@@ -43,7 +46,7 @@ export async function renderThroughTheme({
         children: templateTree,
       })
     : createElement(DefaultDocument, {
-        title: data.entry.title,
+        title,
         children: templateTree,
       });
 

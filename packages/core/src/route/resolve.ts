@@ -7,7 +7,11 @@ import type { Term } from "../db/schema/terms.js";
 import type { ThemeDescriptor } from "../theme.js";
 import type { RouteIntent } from "./intent.js";
 import type { RouteMatch } from "./match.js";
-import type { SingleData } from "./render/resolved-entry.js";
+import type {
+  ArchiveData,
+  ResolvedEntry,
+  SingleData,
+} from "./render/resolved-entry.js";
 import { and, desc, eq, inArray } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
@@ -38,6 +42,9 @@ declare module "../hooks/types.js" {
     "resolve:single:data": (
       data: SingleData,
     ) => SingleData | Promise<SingleData>;
+    "resolve:archive:data": (
+      data: ArchiveData,
+    ) => ArchiveData | Promise<ArchiveData>;
   }
 }
 
@@ -56,7 +63,7 @@ export async function resolvePublicRoute(
     case "single":
       return resolveSingle(ctx, match.intent, match.params, options);
     case "archive":
-      return resolveArchive(ctx, match.intent, match.params);
+      return resolveArchive(ctx, match.intent, match.params, options);
     case "taxonomy":
       return resolveTaxonomy(ctx, match.intent, match.params);
   }
@@ -97,6 +104,7 @@ async function resolveTaxonomy(
 
   const result = await paginatedEntries(ctx, where, page);
   if (result.outOfRange) return notFound("public-term-page-out-of-range");
+  // TODO(#495): plumb `total` + `pageCount` into TaxonomyData when slice 3 lands.
   const rows = result.rows;
 
   // Run plugin filters before render so plugins can mutate the resolved
@@ -152,6 +160,7 @@ async function resolveSingle(
         databaseId: row.id,
       },
       data,
+      title: data.entry.title,
     });
     return new Response(html, {
       headers: { "content-type": "text/html; charset=utf-8" },
@@ -195,6 +204,8 @@ async function buildSingleData(
       `buildSingleData: entry ${String(row.id)} references missing author ${String(row.authorId)}`,
     );
   }
+  // Spread `row` first; `terms`/`author` overwrite any same-named entry
+  // columns. Schema collision is intentional: loaded relations win.
   return { entry: { ...row, terms: termRows, author } };
 }
 
@@ -202,6 +213,7 @@ async function resolveArchive(
   ctx: AppContext,
   intent: Extract<RouteIntent, { kind: "archive" }>,
   params: Record<string, string>,
+  options: ResolvePublicRouteOptions,
 ): Promise<Response> {
   const page = parsePageParam(params.page);
   const where = and(
@@ -221,12 +233,92 @@ async function resolveArchive(
   const registered = ctx.plugins.entryTypes.get(intent.entryType);
   const title =
     registered?.labels?.plural ?? registered?.label ?? intent.entryType;
+
+  if (options.theme) {
+    const initial: ArchiveData = {
+      contentType: intent.entryType,
+      entries: await buildResolvedEntries(ctx, rows),
+      pagination: {
+        page,
+        perPage: ARCHIVE_LIMIT,
+        total: result.total,
+        pageCount: result.pageCount,
+      },
+    };
+    const data = await ctx.hooks.applyFilter("resolve:archive:data", initial);
+    const html = await renderThroughTheme({
+      ctx,
+      theme: options.theme,
+      node: { kind: "content-type-archive", entryType: intent.entryType },
+      data,
+      title,
+    });
+    return new Response(html, {
+      headers: { "content-type": "text/html; charset=utf-8" },
+    });
+  }
+
   const baseSlug = registered?.rewrite?.slug ?? intent.entryType;
   const body =
     rows.length === 0
       ? `<h1>${escapeHtml(title)}</h1><p>No entries yet.</p>`
       : `<h1>${escapeHtml(title)}</h1><ul>${rows.map((row) => renderArchiveItem(row, baseSlug)).join("")}</ul>`;
   return htmlResponse(title, body);
+}
+
+// Batched eager-load mirroring WordPress's `update_post_caches` semantics:
+// one query for authors (IN (...)), one query for the entry_term×terms
+// join (IN (...)). Templates read entry.author + entry.terms without N+1.
+async function buildResolvedEntries(
+  ctx: AppContext,
+  rows: readonly Entry[],
+): Promise<readonly ResolvedEntry[]> {
+  if (rows.length === 0) return [];
+  const entryIds = rows.map((r) => r.id);
+  const authorIds = Array.from(new Set(rows.map((r) => r.authorId)));
+  const [authorRows, joinRows] = await Promise.all([
+    ctx.db
+      .select({ id: users.id, name: users.name, avatarUrl: users.avatarUrl })
+      .from(users)
+      .where(inArray(users.id, authorIds)),
+    ctx.db
+      .select({
+        entryId: entryTerm.entryId,
+        id: terms.id,
+        taxonomy: terms.taxonomy,
+        name: terms.name,
+        slug: terms.slug,
+        description: terms.description,
+        meta: terms.meta,
+        parentId: terms.parentId,
+        version: terms.version,
+      })
+      .from(entryTerm)
+      .innerJoin(terms, eq(entryTerm.termId, terms.id))
+      .where(inArray(entryTerm.entryId, entryIds)),
+  ]);
+  const authorById = new Map(authorRows.map((a) => [a.id, a]));
+  const termsByEntryId = new Map<number, Term[]>();
+  for (const row of joinRows) {
+    const { entryId, ...term } = row;
+    const bucket = termsByEntryId.get(entryId) ?? [];
+    bucket.push(term);
+    termsByEntryId.set(entryId, bucket);
+  }
+  return rows.map((row) => {
+    const author = authorById.get(row.authorId);
+    if (!author) {
+      // FK guarantees this; diagnostic throw surfaces corruption.
+      // eslint-disable-next-line no-restricted-syntax -- diagnostic throw
+      throw new Error(
+        `buildResolvedEntries: entry ${String(row.id)} references missing author ${String(row.authorId)}`,
+      );
+    }
+    // Spread `row` first; `terms`/`author` overwrite any same-named entry
+    // columns. If the schema ever grows columns literally named `terms`
+    // or `author` the loaded relations still win — this is intentional.
+    return { ...row, terms: termsByEntryId.get(row.id) ?? [], author };
+  });
 }
 
 // URL :page captures are always strings; invalid input (non-numeric,
@@ -288,10 +380,20 @@ async function paginatedEntries(
   ctx: AppContext,
   where: SQL | null | undefined,
   page: number,
-): Promise<{ readonly rows: readonly Entry[]; readonly outOfRange: boolean }> {
+): Promise<{
+  readonly rows: readonly Entry[];
+  readonly outOfRange: boolean;
+  readonly total: number;
+  readonly pageCount: number;
+}> {
   if (where == null) {
     const slice = paginate({ page, perPage: ARCHIVE_LIMIT, total: 0 });
-    return { rows: [], outOfRange: slice.outOfRange };
+    return {
+      rows: [],
+      outOfRange: slice.outOfRange,
+      total: 0,
+      pageCount: slice.totalPages,
+    };
   }
 
   const totalRow = await ctx.db
@@ -301,7 +403,14 @@ async function paginatedEntries(
   const total = totalRow[0]?.total ?? 0;
 
   const slice = paginate({ page, perPage: ARCHIVE_LIMIT, total });
-  if (slice.outOfRange) return { rows: [], outOfRange: true };
+  if (slice.outOfRange) {
+    return {
+      rows: [],
+      outOfRange: true,
+      total,
+      pageCount: slice.totalPages,
+    };
+  }
 
   const rows = await ctx.db
     .select()
@@ -310,7 +419,7 @@ async function paginatedEntries(
     .orderBy(desc(entries.publishedAt), desc(entries.id))
     .limit(slice.limit)
     .offset(slice.offset);
-  return { rows, outOfRange: false };
+  return { rows, outOfRange: false, total, pageCount: slice.totalPages };
 }
 
 function renderArchiveItem(row: Entry, baseSlug: string): string {

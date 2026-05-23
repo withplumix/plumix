@@ -16,3 +16,16 @@ export interface ResolvedEntry extends Entry {
 export interface SingleData {
   readonly entry: ResolvedEntry;
 }
+
+export interface Pagination {
+  readonly page: number;
+  readonly perPage: number;
+  readonly total: number;
+  readonly pageCount: number;
+}
+
+export interface ArchiveData {
+  readonly contentType: string;
+  readonly entries: readonly ResolvedEntry[];
+  readonly pagination: Pagination;
+}
