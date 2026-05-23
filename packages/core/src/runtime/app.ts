@@ -26,11 +26,6 @@ import type {
 } from "../plugin/manifest.js";
 import type { ContextExtensionEntry } from "../plugin/provides-context.js";
 import type { RouteRule } from "../route/intent.js";
-import type {
-  ThemeDescriptor,
-  ThemeSetupContext,
-  ThemeSetupContextBase,
-} from "../theme.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
@@ -45,6 +40,7 @@ import { installPlugins } from "../plugin/register.js";
 import { compileRouteMap } from "../route/compile.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
 import { appRouter } from "../rpc/router.js";
+import { ThemeRegistrationError } from "../theme-errors.js";
 import { AppBootError } from "./errors.js";
 
 export interface OAuthProviderSummary {
@@ -144,25 +140,18 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
   const hooks = new HookRegistry();
   const seededRegistry = createPluginRegistry();
   registerCoreLookupAdapters(seededRegistry);
-  const { registry, themeExtensions, appContextExtensions } =
-    await installPlugins({
-      hooks,
-      plugins: config.plugins,
-      registry: seededRegistry,
-    });
+  const { registry, appContextExtensions } = await installPlugins({
+    hooks,
+    plugins: config.plugins,
+    registry: seededRegistry,
+  });
 
-  // Themes run after plugins so plugins' `provides` callbacks have already
-  // populated `themeExtensions`. Each theme's setup runs in declared
-  // order; ids are unique across `config.themes`.
-  const themeIds = new Set<string>();
-  for (const theme of config.themes) {
-    if (themeIds.has(theme.id)) {
-      throw AppBootError.duplicateThemeId({ themeId: theme.id });
-    }
-    themeIds.add(theme.id);
-    if (theme.setup) {
-      const ctx = buildThemeSetupContext(theme.id, themeExtensions);
-      await theme.setup(ctx);
+  if (config.theme) {
+    const templates = config.theme.templates as Readonly<
+      Record<string, unknown>
+    >;
+    if (!templates.index) {
+      throw ThemeRegistrationError.missingIndexTemplate();
     }
   }
 
@@ -229,11 +218,7 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     config.blocks?.htmlAllowlist,
   );
 
-  // Per-group merge across themes: a theme that declares only `colors`
-  // doesn't wipe `spacing` / `typography` from an earlier base theme.
-  // Within a group, later themes win per-slug — same precedence as the
-  // block/mark override flatten above.
-  const themeTokens = mergeThemeTokens(config.themes);
+  const themeTokens = config.theme?.tokens;
 
   return {
     config,
@@ -257,55 +242,4 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     htmlAllowlist,
     themeTokens,
   };
-}
-
-/**
- * Flatten per-name component overrides from every theme in declaration
- * order. Later themes win when names collide, mirroring CSS cascade
- * intuition (the most-recently-applied theme has the final say). The
- * reported `themeId` is the last theme that contributed any override —
- * used by `mergeMarkRegistry` / `mergeBlockRegistry` only to attribute
- * `themeOverrideUnknownName` errors.
- */
-function mergeThemeTokens(
-  themes: readonly ThemeDescriptor[],
-): ThemeTokens | undefined {
-  let merged: ThemeTokens | undefined;
-  for (const theme of themes) {
-    if (!theme.tokens) continue;
-    merged = {
-      ...(merged ?? {}),
-      ...(theme.tokens.colors !== undefined && {
-        colors: { ...(merged?.colors ?? {}), ...theme.tokens.colors },
-      }),
-      ...(theme.tokens.spacing !== undefined && {
-        spacing: { ...(merged?.spacing ?? {}), ...theme.tokens.spacing },
-      }),
-      ...(theme.tokens.typography !== undefined && {
-        typography: {
-          ...(merged?.typography ?? {}),
-          ...theme.tokens.typography,
-        },
-      }),
-      ...(theme.tokens.border !== undefined && {
-        border: { ...(merged?.border ?? {}), ...theme.tokens.border },
-      }),
-    };
-  }
-  return merged;
-}
-
-function buildThemeSetupContext(
-  id: string,
-  themeExtensions: ReadonlyMap<string, ContextExtensionEntry>,
-): ThemeSetupContext {
-  // `satisfies` so adding a field to `ThemeSetupContextBase` later forces
-  // this builder to update — a plain `Record<string, unknown>` cast would
-  // silently produce a context missing the new field.
-  const base = { id } satisfies ThemeSetupContextBase;
-  const ctx: Record<string, unknown> = { ...base };
-  for (const [key, entry] of themeExtensions) {
-    ctx[key] = entry.value;
-  }
-  return ctx as unknown as ThemeSetupContext;
 }

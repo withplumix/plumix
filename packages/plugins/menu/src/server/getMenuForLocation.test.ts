@@ -1,13 +1,6 @@
-import type {
-  AppContext,
-  PluginRegistry,
-  ThemeDescriptor,
-} from "plumix/plugin";
+import type { AppContext, PluginRegistry } from "plumix/plugin";
 import {
-  auth,
-  buildApp,
   createPluginRegistry,
-  defineTheme,
   HookRegistry,
   installPlugins,
   registerCoreLookupAdapters,
@@ -25,16 +18,6 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { menu } from "../index.js";
 import { getMenuForLocation } from "./getMenuForLocation.js";
 import { clearRegisteredLocations } from "./locations.js";
-
-function testAuth() {
-  return auth({
-    passkey: {
-      rpName: "Test",
-      rpId: "localhost",
-      origin: "http://localhost",
-    },
-  });
-}
 
 interface TestRegistryBundle {
   readonly registry: PluginRegistry;
@@ -171,107 +154,5 @@ describe("getMenuForLocation", () => {
     const b = await getMenuForLocation(otherCtx, "primary");
     expect(a).not.toBe(b);
     expect(a?.slug).toBe(b?.slug);
-  });
-});
-
-describe("defineTheme + registerMenuLocation integration via buildApp", () => {
-  afterEach(() => {
-    clearRegisteredLocations();
-  });
-
-  test("theme setup runs after plugin install and registers locations", async () => {
-    const blogTheme: ThemeDescriptor = defineTheme({
-      id: "blog",
-      setup: (themeCtx) => {
-        themeCtx.registerMenuLocation("primary", {
-          label: "Primary navigation",
-        });
-        themeCtx.registerMenuLocation("footer", { label: "Footer" });
-      },
-    });
-
-    const stubAdapter = {
-      name: "test",
-      buildFetchHandler: () => () => new Response("stub"),
-    };
-    const stubDatabase = {
-      kind: "test",
-      connect: () => ({ db: {} }),
-    };
-
-    await buildApp({
-      runtime: stubAdapter,
-      database: stubDatabase,
-      auth: testAuth(),
-      plugins: [menu],
-      themes: [blogTheme],
-    });
-
-    const { getRegisteredLocations } = await import("./locations.js");
-    const registered = getRegisteredLocations();
-    expect(registered.size).toBe(2);
-    expect(registered.get("primary")?.label).toBe("Primary navigation");
-    expect(registered.get("footer")?.label).toBe("Footer");
-  });
-
-  test("multiple themes' setup callbacks invoke in declared order", async () => {
-    const order: string[] = [];
-    const stubAdapter = {
-      name: "test",
-      buildFetchHandler: () => () => new Response("stub"),
-    };
-    const stubDatabase = {
-      kind: "test",
-      connect: () => ({ db: {} }),
-    };
-
-    await buildApp({
-      runtime: stubAdapter,
-      database: stubDatabase,
-      auth: testAuth(),
-      plugins: [menu],
-      themes: [
-        defineTheme({
-          id: "first",
-          setup: (themeCtx) => {
-            order.push("first");
-            themeCtx.registerMenuLocation("a", { label: "A" });
-          },
-        }),
-        defineTheme({
-          id: "second",
-          setup: (themeCtx) => {
-            order.push("second");
-            themeCtx.registerMenuLocation("b", { label: "B" });
-          },
-        }),
-      ],
-    });
-
-    expect(order).toEqual(["first", "second"]);
-  });
-
-  test("rejects duplicate theme ids in config.themes", async () => {
-    const stubAdapter = {
-      name: "test",
-      buildFetchHandler: () => () => new Response("stub"),
-    };
-    const stubDatabase = {
-      kind: "test",
-      connect: () => ({ db: {} }),
-    };
-
-    await expect(
-      buildApp({
-        runtime: stubAdapter,
-        database: stubDatabase,
-        auth: testAuth(),
-        plugins: [menu],
-        themes: [
-          defineTheme({ id: "blog", setup: () => undefined }),
-          defineTheme({ id: "blog", setup: () => undefined }),
-        ],
-      }),
-    ).rejects.toThrow(/Theme id "blog" appears more than once/);
   });
 });

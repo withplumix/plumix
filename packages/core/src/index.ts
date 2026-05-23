@@ -39,7 +39,10 @@ export type * from "./runtime/slots.js";
 export { slugify } from "./slugify.js";
 export { defineTheme } from "./theme.js";
 export type {
+  TemplateComponent,
+  TemplateData,
+  TemplateRegistry,
   ThemeDescriptor,
-  ThemeSetupContext,
-  ThemeSetupContextBase,
+  ThemeDocument,
 } from "./theme.js";
+export { ThemeError, ThemeRegistrationError } from "./theme-errors.js";

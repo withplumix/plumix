@@ -4,12 +4,15 @@ import { count } from "drizzle-orm";
 import type { AppContext } from "../context/app.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { Term } from "../db/schema/terms.js";
+import type { ThemeDescriptor } from "../theme.js";
 import type { RouteIntent } from "./intent.js";
 import type { RouteMatch } from "./match.js";
+import type { SingleData } from "./render/resolved-entry.js";
 import { and, desc, eq, inArray } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
+import { users } from "../db/schema/users.js";
 import { notFound } from "../runtime/http.js";
 import { paginate } from "./paginate.js";
 import { findEntryByPath, findTermByPath } from "./path-chain.js";
@@ -18,6 +21,7 @@ import {
   escapeHtml,
   renderDefaultDocument,
 } from "./render/document.js";
+import { renderThroughTheme } from "./render/render-template.js";
 import { renderTiptapContent } from "./render/tiptap.js";
 
 interface ResolvedTaxonomyData {
@@ -31,18 +35,26 @@ declare module "../hooks/types.js" {
     "resolve:taxonomy:data": (
       data: ResolvedTaxonomyData,
     ) => ResolvedTaxonomyData | Promise<ResolvedTaxonomyData>;
+    "resolve:single:data": (
+      data: SingleData,
+    ) => SingleData | Promise<SingleData>;
   }
 }
 
 const ARCHIVE_LIMIT = 20;
 
+interface ResolvePublicRouteOptions {
+  readonly theme?: ThemeDescriptor;
+}
+
 export async function resolvePublicRoute(
   ctx: AppContext,
   match: RouteMatch,
+  options: ResolvePublicRouteOptions = {},
 ): Promise<Response> {
   switch (match.intent.kind) {
     case "single":
-      return resolveSingle(ctx, match.intent, match.params);
+      return resolveSingle(ctx, match.intent, match.params, options);
     case "archive":
       return resolveArchive(ctx, match.intent, match.params);
     case "taxonomy":
@@ -116,6 +128,7 @@ async function resolveSingle(
   ctx: AppContext,
   intent: Extract<RouteIntent, { kind: "single" }>,
   params: Record<string, string>,
+  options: ResolvePublicRouteOptions,
 ): Promise<Response> {
   // `:path+` rules surface their capture as `params.path` (multi-segment);
   // flat `:slug` rules surface a single segment as `params.slug`. The
@@ -124,13 +137,65 @@ async function resolveSingle(
   const row = await findEntryForSingle(ctx, intent.entryType, params);
   if (!row) return notFound("public-post-not-found");
 
-  // Stash the matched entity so render-side helpers (menu plugin's
-  // `isCurrent`, breadcrumbs, canonical tags) can identify the
-  // current page without re-running URL matching.
   ctx.resolvedEntity = { kind: "entry", id: row.id };
 
+  if (options.theme) {
+    const initial = await buildSingleData(ctx, row);
+    const data = await ctx.hooks.applyFilter("resolve:single:data", initial);
+    const html = await renderThroughTheme({
+      ctx,
+      theme: options.theme,
+      node: {
+        kind: "content",
+        entryType: row.type,
+        slug: row.slug,
+        databaseId: row.id,
+      },
+      data,
+    });
+    return new Response(html, {
+      headers: { "content-type": "text/html; charset=utf-8" },
+    });
+  }
+
+  // TODO(#491 follow-up): drop this fallback once all consumers ship a theme.
   const body = `<article><h1>${escapeHtml(row.title)}</h1>${renderTiptapContent(row.content)}</article>`;
   return htmlResponse(row.title, body);
+}
+
+async function buildSingleData(
+  ctx: AppContext,
+  row: Entry,
+): Promise<SingleData> {
+  const [authorRows, termRows] = await Promise.all([
+    ctx.db
+      .select({ id: users.id, name: users.name, avatarUrl: users.avatarUrl })
+      .from(users)
+      .where(eq(users.id, row.authorId)),
+    ctx.db
+      .select({
+        id: terms.id,
+        taxonomy: terms.taxonomy,
+        name: terms.name,
+        slug: terms.slug,
+        description: terms.description,
+        meta: terms.meta,
+        parentId: terms.parentId,
+        version: terms.version,
+      })
+      .from(entryTerm)
+      .innerJoin(terms, eq(entryTerm.termId, terms.id))
+      .where(eq(entryTerm.entryId, row.id)),
+  ]);
+  const author = authorRows[0];
+  if (!author) {
+    // FK constraint guarantees this; defensive throw surfaces corruption fast.
+    // eslint-disable-next-line no-restricted-syntax -- diagnostic throw
+    throw new Error(
+      `buildSingleData: entry ${String(row.id)} references missing author ${String(row.authorId)}`,
+    );
+  }
+  return { entry: { ...row, terms: termRows, author } };
 }
 
 async function resolveArchive(

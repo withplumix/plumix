@@ -3,11 +3,13 @@ import { describe, expect, test } from "vitest";
 import { ThemeError } from "./theme-errors.js";
 import { defineTheme } from "./theme.js";
 
+const Stub = () => null;
+
 describe("defineTheme tokens validation", () => {
   test("accepts valid tokens", () => {
     expect(() =>
       defineTheme({
-        id: "blog",
+        templates: { index: Stub },
         tokens: {
           colors: { primary: { value: "#0066cc", label: "Primary" } },
           spacing: { md: { value: "1rem" } },
@@ -19,12 +21,8 @@ describe("defineTheme tokens validation", () => {
   test("rejects a slug with CSS-breaking characters", () => {
     expect(() =>
       defineTheme({
-        id: "blog",
-        tokens: {
-          colors: {
-            "x } body": { value: "#fff" },
-          },
-        },
+        templates: { index: Stub },
+        tokens: { colors: { "x } body": { value: "#fff" } } },
       }),
     ).toThrow(ThemeError);
   });
@@ -32,7 +30,7 @@ describe("defineTheme tokens validation", () => {
   test("rejects a slug starting with a digit", () => {
     expect(() =>
       defineTheme({
-        id: "blog",
+        templates: { index: Stub },
         tokens: { colors: { "1bad": { value: "#fff" } } },
       }),
     ).toThrow(ThemeError);
@@ -41,11 +39,9 @@ describe("defineTheme tokens validation", () => {
   test("rejects a value with `;` (declaration breakout)", () => {
     expect(() =>
       defineTheme({
-        id: "blog",
+        templates: { index: Stub },
         tokens: {
-          colors: {
-            primary: { value: "#fff; } body { display:none" },
-          },
+          colors: { primary: { value: "#fff; } body { display:none" } },
         },
       }),
     ).toThrow(ThemeError);
@@ -54,7 +50,7 @@ describe("defineTheme tokens validation", () => {
   test("rejects a value with `*/` (comment breakout)", () => {
     expect(() =>
       defineTheme({
-        id: "blog",
+        templates: { index: Stub },
         tokens: {
           colors: { primary: { value: "#fff */ body { x: 1 } /*" } },
         },
@@ -65,7 +61,7 @@ describe("defineTheme tokens validation", () => {
   test("rejects a value with embedded newline", () => {
     expect(() =>
       defineTheme({
-        id: "blog",
+        templates: { index: Stub },
         tokens: { colors: { primary: { value: "#fff\nbody { x: 1 }" } } },
       }),
     ).toThrow(ThemeError);

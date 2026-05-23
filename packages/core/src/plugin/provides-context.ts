@@ -9,18 +9,11 @@ export interface ContextExtensionEntry {
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface PluginContextExtensions {}
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ThemeContextExtensions {}
-
 export interface PluginProvidesContext {
   readonly id: string;
   extendPluginContext<TKey extends keyof PluginContextExtensions>(
     key: TKey,
     value: PluginContextExtensions[TKey],
-  ): void;
-  extendThemeContext<TKey extends keyof ThemeContextExtensions>(
-    key: TKey,
-    value: ThemeContextExtensions[TKey],
   ): void;
   /**
    * Register a runtime helper on every per-request `AppContext`. Reads
@@ -37,7 +30,6 @@ export interface PluginProvidesContext {
 interface CreateProvidesContextArgs {
   readonly pluginId: string;
   readonly pluginExtensions: Map<string, ContextExtensionEntry>;
-  readonly themeExtensions: Map<string, ContextExtensionEntry>;
   readonly appExtensions: Map<string, ContextExtensionEntry>;
 }
 
@@ -81,12 +73,11 @@ const APP_CONTEXT_BASE_KEYS: ReadonlySet<string> = new Set([
 export function createPluginProvidesContext({
   pluginId,
   pluginExtensions,
-  themeExtensions,
   appExtensions,
 }: CreateProvidesContextArgs): PluginProvidesContext {
   const stash = (
     target: Map<string, ContextExtensionEntry>,
-    kind: "Plugin" | "Theme" | "App",
+    kind: "Plugin" | "App",
     key: string,
     value: unknown,
   ): void => {
@@ -121,9 +112,6 @@ export function createPluginProvidesContext({
     id: pluginId,
     extendPluginContext: (key, value) => {
       stash(pluginExtensions, "Plugin", key, value);
-    },
-    extendThemeContext: (key, value) => {
-      stash(themeExtensions, "Theme", key, value);
     },
     extendAppContext: (key, value) => {
       stash(appExtensions, "App", key, value);

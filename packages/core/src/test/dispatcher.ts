@@ -19,6 +19,7 @@ import type {
   ConnectedObjectStorage,
   ImageDelivery,
 } from "../runtime/slots.js";
+import type { ThemeDescriptor } from "../theme.js";
 import type { Factories } from "./factories.js";
 import type { FetchOptions } from "./request.js";
 import type { ActionSpy, FilterSpy } from "./spies.js";
@@ -104,6 +105,7 @@ export interface CreateDispatcherHarnessOptions {
    * default passkey-only rail).
    */
   readonly bootstrapVia?: BootstrapVia;
+  readonly theme?: ThemeDescriptor;
 }
 
 export interface DispatcherHarness {
@@ -210,6 +212,7 @@ export async function createDispatcherHarness(
     plugins: options.plugins,
     imageDelivery: options.imageDelivery,
     mailer: options.mailer,
+    theme: options.theme,
   });
   const app = await buildApp(config);
   const dispatcher = createPlumixDispatcher(app);

@@ -43,7 +43,7 @@ export interface PlumixConfigInput {
    * is the dev default.
    */
   readonly mailer?: Mailer;
-  readonly themes?: readonly ThemeDescriptor[];
+  readonly theme?: ThemeDescriptor;
   readonly plugins?: readonly AnyPluginDescriptor[];
   /**
    * Block-system configuration. Today only exposes the operator-
@@ -63,7 +63,7 @@ export interface PlumixConfig {
   readonly imageDelivery?: ImageDelivery;
   readonly kv?: KV;
   readonly mailer?: Mailer;
-  readonly themes: readonly ThemeDescriptor[];
+  readonly theme?: ThemeDescriptor;
   readonly plugins: readonly AnyPluginDescriptor[];
   readonly blocks?: {
     readonly htmlAllowlist?: HtmlAllowlistOverride;
@@ -89,7 +89,7 @@ export function plumix(config: PlumixConfigInput): PlumixConfig {
     imageDelivery: config.imageDelivery,
     kv: config.kv,
     mailer: config.mailer,
-    themes: config.themes ?? [],
+    theme: config.theme,
     plugins: config.plugins ?? [],
     blocks: config.blocks,
   };

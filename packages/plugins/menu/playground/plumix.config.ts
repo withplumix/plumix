@@ -1,5 +1,4 @@
 import { auth, plumix } from "plumix";
-import { defineTheme } from "plumix/theme";
 
 import { menu } from "@plumix/plugin-menu";
 import {
@@ -7,18 +6,6 @@ import {
   cloudflareDeployOrigin,
   d1,
 } from "@plumix/runtime-cloudflare";
-
-// Minimal theme that registers menu locations. Without a theme the
-// menu plugin's locations list is empty, so the worker-driven e2e
-// can't exercise the location-assignment flow. Themes are the
-// canonical surface that ships menu locations to admin authors.
-const playgroundTheme = defineTheme({
-  id: "menu-playground-theme",
-  setup: (themeCtx) => {
-    themeCtx.registerMenuLocation("primary", { label: "Primary Nav" });
-    themeCtx.registerMenuLocation("footer", { label: "Footer" });
-  },
-});
 
 // Plumix consumer wiring only the menu plugin — the smallest config
 // you can run to dogfood `@plumix/plugin-menu` without bringing the
@@ -47,6 +34,5 @@ export default plumix({
       origin,
     },
   }),
-  themes: [playgroundTheme],
   plugins: [menu],
 });

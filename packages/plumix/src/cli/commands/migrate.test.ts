@@ -20,7 +20,6 @@ function fakeApp(): PlumixApp {
         kind: "plumix",
         passkey: { rpName: "x", rpId: "localhost", origin: "http://x" },
       },
-      themes: [],
       plugins: [],
     },
   } as unknown as PlumixApp;
