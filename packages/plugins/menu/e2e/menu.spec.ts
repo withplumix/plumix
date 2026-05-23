@@ -97,7 +97,12 @@ test.describe.serial("@plumix/plugin-menu — worker-driven happy path", () => {
     await expect(reloadedRows.last()).toContainText("Home");
   });
 
-  test("locations tab — assign the menu to Primary Nav, reload, assignment persists", async ({
+  // Skipped pending a new menu-location registration path. theme.setup was
+  // removed in the theming-foundation slice (#493 / PR #500), which means
+  // the playground no longer registers a "primary" location. A follow-up
+  // will reintroduce registration via plugin config or admin-defined
+  // locations; this test is the canary that unskips when that lands.
+  test.skip("locations tab — assign the menu to Primary Nav, reload, assignment persists", async ({
     page,
   }) => {
     await page.goto("pages/menus");
