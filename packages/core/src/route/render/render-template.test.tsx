@@ -631,3 +631,311 @@ describe("resolvePublicRoute — archive through theme", () => {
     expect(body).not.toContain("ada@example.test");
   });
 });
+
+const topicPlugin = definePlugin("blog-topic", (ctx) => {
+  ctx.registerEntryType("post", {
+    label: "Posts",
+    isPublic: true,
+    hasArchive: true,
+  });
+  ctx.registerTermTaxonomy("topic", {
+    label: "Topics",
+    labels: { singular: "Topic" },
+    entryTypes: ["post"],
+    isHierarchical: false,
+  });
+});
+
+const categoryPlugin = definePlugin("blog-category", (ctx) => {
+  ctx.registerEntryType("post", {
+    label: "Posts",
+    isPublic: true,
+    hasArchive: true,
+  });
+  ctx.registerTermTaxonomy("category", {
+    label: "Categories",
+    labels: { singular: "Category" },
+    entryTypes: ["post"],
+    isHierarchical: false,
+  });
+  ctx.registerTermTaxonomy("tag", {
+    label: "Tags",
+    labels: { singular: "Tag" },
+    entryTypes: ["post"],
+    isHierarchical: false,
+  });
+});
+
+describe("resolvePublicRoute — taxonomy through theme", () => {
+  test("renders the taxonomy template with the term + its entries", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        taxonomy: ({ data }) => (
+          <section data-testid="taxonomy">
+            <h1 data-testid="term-name">{data.term.name}</h1>
+            <ul>
+              {data.entries.map((entry: ResolvedEntry) => (
+                <li key={entry.id}>{entry.title}</li>
+              ))}
+            </ul>
+          </section>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({
+      plugins: [topicPlugin],
+      theme,
+    });
+    const author = await h.seedUser("admin");
+    const term = await h.factory.term.create({
+      taxonomy: "topic",
+      slug: "news",
+      name: "News",
+    });
+    const a = await h.factory.entry.create({
+      type: "post",
+      slug: "story-a",
+      title: "Story A",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.factory.entryTerm.create({
+      entryId: a.id,
+      termId: term.id,
+      sortOrder: 0,
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/topic/news"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain('data-testid="taxonomy"');
+    expect(body).toContain('data-testid="term-name"');
+    expect(body).toContain("News");
+    expect(body).toContain("Story A");
+  });
+
+  test("renders built-in `category` template via the category-* hierarchy", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        category: ({ data }) => (
+          <div data-testid="category">{data.term.name}</div>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({
+      plugins: [categoryPlugin],
+      theme,
+    });
+    const author = await h.seedUser("admin");
+    const cat = await h.factory.term.create({
+      taxonomy: "category",
+      slug: "biz",
+      name: "Biz",
+    });
+    const post = await h.factory.entry.create({
+      type: "post",
+      slug: "biz-1",
+      title: "Biz 1",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.factory.entryTerm.create({
+      entryId: post.id,
+      termId: cat.id,
+      sortOrder: 0,
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/category/biz"),
+    );
+    const body = await response.text();
+    expect(body).toContain('data-testid="category"');
+    expect(body).toContain("Biz");
+  });
+
+  test("/topic/{slug}/page/2 renders page 2 of entries", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        taxonomy: ({ data }) => (
+          <span data-testid="page">{`page:${String(data.pagination.page)};entries:${String(data.entries.length)}`}</span>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({
+      plugins: [topicPlugin],
+      theme,
+    });
+    const author = await h.seedUser("admin");
+    const term = await h.factory.term.create({
+      taxonomy: "topic",
+      slug: "page-tax",
+      name: "PageTax",
+    });
+    for (let i = 0; i < 22; i++) {
+      const e = await h.factory.entry.create({
+        type: "post",
+        slug: `e-${String(i)}`,
+        title: `E${String(i)}`,
+        content: null,
+        status: "published",
+        authorId: author.id,
+        publishedAt: new Date(2026, 4, i + 1),
+      });
+      await h.factory.entryTerm.create({
+        entryId: e.id,
+        termId: term.id,
+        sortOrder: i,
+      });
+    }
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/topic/page-tax/page/2"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("page:2;entries:2");
+  });
+
+  test("runs resolve:term:data filters before the template renders", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        taxonomy: ({ data }) => (
+          <span data-testid="name">{data.term.name}</span>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({
+      plugins: [topicPlugin],
+      theme,
+    });
+    await h.factory.term.create({
+      taxonomy: "topic",
+      slug: "filtered",
+      name: "Original",
+    });
+
+    h.app.hooks.addFilter(
+      "resolve:term:data",
+      (data) => ({
+        ...data,
+        term: { ...data.term, name: "Filtered" },
+      }),
+      { plugin: "test" },
+    );
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/topic/filtered"),
+    );
+    const body = await response.text();
+    expect(body).toContain("Filtered");
+    expect(body).not.toContain("Original");
+  });
+
+  test("each entry in the taxonomy carries eager-loaded author + terms", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        taxonomy: ({ data }) => (
+          <ul>
+            {data.entries.map((entry: ResolvedEntry) => (
+              <li key={entry.id}>
+                <span data-testid="author">{entry.author.name}</span>
+              </li>
+            ))}
+          </ul>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({
+      plugins: [topicPlugin],
+      theme,
+    });
+    const writer = await h.factory.user.create({
+      email: "secret@example.test",
+      name: "Public Writer",
+      role: "admin",
+    });
+    const term = await h.factory.term.create({
+      taxonomy: "topic",
+      slug: "eager",
+      name: "Eager",
+    });
+    const post = await h.factory.entry.create({
+      type: "post",
+      slug: "p",
+      title: "P",
+      content: null,
+      status: "published",
+      authorId: writer.id,
+      publishedAt: new Date(),
+    });
+    await h.factory.entryTerm.create({
+      entryId: post.id,
+      termId: term.id,
+      sortOrder: 0,
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/topic/eager"),
+    );
+    const body = await response.text();
+    expect(body).toContain("Public Writer");
+    expect(body).not.toContain("secret@example.test");
+  });
+
+  test("built-in `tag` template via the tag-* hierarchy mirrors `category`", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        tag: ({ data }) => <div data-testid="tag">{data.term.name}</div>,
+      },
+    });
+
+    const h = await createDispatcherHarness({
+      plugins: [categoryPlugin],
+      theme,
+    });
+    const author = await h.seedUser("admin");
+    const t = await h.factory.term.create({
+      taxonomy: "tag",
+      slug: "feature",
+      name: "Feature",
+    });
+    const post = await h.factory.entry.create({
+      type: "post",
+      slug: "tagged",
+      title: "Tagged",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.factory.entryTerm.create({
+      entryId: post.id,
+      termId: t.id,
+      sortOrder: 0,
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/tag/feature"),
+    );
+    const body = await response.text();
+    expect(body).toContain('data-testid="tag"');
+    expect(body).toContain("Feature");
+  });
+});

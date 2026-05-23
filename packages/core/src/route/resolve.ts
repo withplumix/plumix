@@ -11,6 +11,7 @@ import type {
   ArchiveData,
   ResolvedEntry,
   SingleData,
+  TaxonomyData,
 } from "./render/resolved-entry.js";
 import { and, desc, eq, inArray } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
@@ -36,6 +37,12 @@ interface ResolvedTaxonomyData {
 
 declare module "../hooks/types.js" {
   interface FilterRegistry {
+    /**
+     * @deprecated since slice 3 of #491. Fires only on the theme-less
+     * fallback path and receives raw `Entry[]`, not eager-loaded
+     * `ResolvedEntry[]`. Migrate to `resolve:term:data` when the
+     * resolver is rendering through a theme.
+     */
     "resolve:taxonomy:data": (
       data: ResolvedTaxonomyData,
     ) => ResolvedTaxonomyData | Promise<ResolvedTaxonomyData>;
@@ -45,6 +52,9 @@ declare module "../hooks/types.js" {
     "resolve:archive:data": (
       data: ArchiveData,
     ) => ArchiveData | Promise<ArchiveData>;
+    "resolve:term:data": (
+      data: TaxonomyData,
+    ) => TaxonomyData | Promise<TaxonomyData>;
   }
 }
 
@@ -65,7 +75,7 @@ export async function resolvePublicRoute(
     case "archive":
       return resolveArchive(ctx, match.intent, match.params, options);
     case "taxonomy":
-      return resolveTaxonomy(ctx, match.intent, match.params);
+      return resolveTaxonomy(ctx, match.intent, match.params, options);
   }
 }
 
@@ -73,6 +83,7 @@ async function resolveTaxonomy(
   ctx: AppContext,
   intent: Extract<RouteIntent, { kind: "taxonomy" }>,
   params: Record<string, string>,
+  options: ResolvePublicRouteOptions,
 ): Promise<Response> {
   // Same dispatch as resolveSingle: `:path+` rules surface params.path
   // (multi-segment), flat `:term` rules surface params.term.
@@ -104,8 +115,37 @@ async function resolveTaxonomy(
 
   const result = await paginatedEntries(ctx, where, page);
   if (result.outOfRange) return notFound("public-term-page-out-of-range");
-  // TODO(#495): plumb `total` + `pageCount` into TaxonomyData when slice 3 lands.
   const rows = result.rows;
+
+  if (options.theme) {
+    const initial: TaxonomyData = {
+      taxonomy: intent.taxonomy,
+      term,
+      entries: await buildResolvedEntries(ctx, rows),
+      pagination: {
+        page,
+        perPage: ARCHIVE_LIMIT,
+        total: result.total,
+        pageCount: result.pageCount,
+      },
+    };
+    const data = await ctx.hooks.applyFilter("resolve:term:data", initial);
+    const html = await renderThroughTheme({
+      ctx,
+      theme: options.theme,
+      node: {
+        kind: "term",
+        taxonomy: intent.taxonomy,
+        slug: term.slug,
+        databaseId: term.id,
+      },
+      data,
+      title: taxonomy?.labels?.singular ?? taxonomy?.label ?? term.name,
+    });
+    return new Response(html, {
+      headers: { "content-type": "text/html; charset=utf-8" },
+    });
+  }
 
   // Run plugin filters before render so plugins can mutate the resolved
   // shape (drop entries, append plugin-contributed fields, etc.) without
