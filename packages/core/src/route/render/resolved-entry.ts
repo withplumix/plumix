@@ -42,14 +42,12 @@ export interface FrontPageData {
   readonly pagination: Pagination;
 }
 
-/** Sanitised — never includes the raw Error or stack trace. */
-export interface NotFoundData {
-  readonly request: Request;
-  readonly hint?: string;
-}
-
-/** Sanitised — never includes the raw Error or stack trace. */
-export interface ServerErrorData {
+/**
+ * Payload threaded to a theme's `404` / `500` template. Public-safe by
+ * shape — there is no Error field, so internal exception messages have
+ * no path to the rendered output.
+ */
+export interface ErrorData {
   readonly request: Request;
   readonly hint?: string;
 }

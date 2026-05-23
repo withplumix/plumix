@@ -193,10 +193,9 @@ async function dispatchPublicRoute(
           hint: response.headers.get("x-plumix-hint") ?? undefined,
         },
       });
-      return new Response(html, {
-        status: 404,
-        headers: { "content-type": "text/html; charset=utf-8" },
-      });
+      const headers = new Headers(response.headers);
+      headers.set("content-type", "text/html; charset=utf-8");
+      return new Response(html, { status: 404, headers });
     }
     return response;
   } catch (err) {
@@ -204,21 +203,31 @@ async function dispatchPublicRoute(
       url: url.href,
       err: err instanceof Error ? err.message : String(err),
     });
-    if (!theme) {
-      return new Response("Internal Server Error", {
-        status: 500,
-        headers: { "content-type": "text/plain; charset=utf-8" },
-      });
+    if (theme) {
+      try {
+        const html = renderErrorThroughTheme({
+          ctx,
+          theme,
+          kind: "server-error",
+          data: { request: ctx.request },
+        });
+        return new Response(html, {
+          status: 500,
+          headers: { "content-type": "text/html; charset=utf-8" },
+        });
+      } catch (templateErr) {
+        ctx.logger.error("error_template_failed", {
+          url: url.href,
+          err:
+            templateErr instanceof Error
+              ? templateErr.message
+              : String(templateErr),
+        });
+      }
     }
-    const html = renderErrorThroughTheme({
-      ctx,
-      theme,
-      kind: "server-error",
-      data: { request: ctx.request },
-    });
-    return new Response(html, {
+    return new Response("Internal Server Error", {
       status: 500,
-      headers: { "content-type": "text/html; charset=utf-8" },
+      headers: { "content-type": "text/plain; charset=utf-8" },
     });
   }
 }
@@ -228,20 +237,14 @@ async function resolvePublicRouteOrFallback(
   ctx: AppContext,
   url: URL,
 ): Promise<Response> {
+  const theme = app.config.theme;
   const match = matchRoute(url, app.routeMap);
-  if (match !== null) {
-    return resolvePublicRoute(ctx, match, { theme: app.config.theme });
-  }
-  // `/` doesn't compile into the rule map; plugins can register
-  // `registerRewriteRule({ pattern: "/", ... })` which would have matched
-  // above. With a theme configured we synthesize the front-page intent
-  // so the default homepage flows through the resolver. Without a theme
-  // there's nothing to render — fall through to the 404.
-  if (url.pathname === "/" && app.config.theme) {
+  if (match !== null) return resolvePublicRoute(ctx, match, theme);
+  if (url.pathname === "/" && theme) {
     return resolvePublicRoute(
       ctx,
       { intent: { kind: "front-page" }, params: {} },
-      { theme: app.config.theme },
+      theme,
     );
   }
   return notFound("public-route-not-found");

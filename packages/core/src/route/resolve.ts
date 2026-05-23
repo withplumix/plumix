@@ -14,7 +14,7 @@ import type {
   SingleData,
   TaxonomyData,
 } from "./render/resolved-entry.js";
-import { and, desc, eq, inArray } from "../db/index.js";
+import { and, desc, eq, inArray, isNotNull } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
@@ -64,38 +64,41 @@ declare module "../hooks/types.js" {
 
 const ARCHIVE_LIMIT = 20;
 
-interface ResolvePublicRouteOptions {
-  readonly theme?: ThemeDescriptor;
-}
-
 export async function resolvePublicRoute(
   ctx: AppContext,
   match: RouteMatch,
-  options: ResolvePublicRouteOptions = {},
+  theme: ThemeDescriptor | undefined,
 ): Promise<Response> {
   switch (match.intent.kind) {
     case "single":
-      return resolveSingle(ctx, match.intent, match.params, options);
+      return resolveSingle(ctx, match.intent, match.params, theme);
     case "archive":
-      return resolveArchive(ctx, match.intent, match.params, options);
+      return resolveArchive(ctx, match.intent, match.params, theme);
     case "taxonomy":
-      return resolveTaxonomy(ctx, match.intent, match.params, options);
+      return resolveTaxonomy(ctx, match.intent, match.params, theme);
     case "front-page":
-      return resolveFrontPage(ctx, options);
+      return resolveFrontPage(ctx, theme);
   }
 }
 
 async function resolveFrontPage(
   ctx: AppContext,
-  options: ResolvePublicRouteOptions,
+  theme: ThemeDescriptor | undefined,
 ): Promise<Response> {
-  // The dispatcher only synthesizes the front-page intent when a theme
-  // is configured. The `if (options.theme)` guard is defensive — a
-  // direct caller bypassing the dispatcher would 500 instead of crashing.
-  if (!options.theme) return notFound("public-route-not-found");
+  if (!theme) return notFound("public-route-not-found");
 
   const page = 1;
-  const where = eq(entries.status, "published");
+  const publicTypes = Array.from(ctx.plugins.entryTypes.entries())
+    .filter(([, spec]) => spec.isPublic !== false)
+    .map(([key]) => key);
+  const where =
+    publicTypes.length === 0
+      ? null
+      : and(
+          eq(entries.status, "published"),
+          isNotNull(entries.publishedAt),
+          inArray(entries.type, publicTypes),
+        );
   const result = await paginatedEntries(ctx, where, page);
 
   const initial: FrontPageData = {
@@ -110,7 +113,7 @@ async function resolveFrontPage(
   const data = await ctx.hooks.applyFilter("resolve:front-page:data", initial);
   const html = await renderThroughTheme({
     ctx,
-    theme: options.theme,
+    theme,
     node: { kind: "front-page" },
     data,
     title: "Home",
@@ -124,7 +127,7 @@ async function resolveTaxonomy(
   ctx: AppContext,
   intent: Extract<RouteIntent, { kind: "taxonomy" }>,
   params: Record<string, string>,
-  options: ResolvePublicRouteOptions,
+  theme: ThemeDescriptor | undefined,
 ): Promise<Response> {
   // Same dispatch as resolveSingle: `:path+` rules surface params.path
   // (multi-segment), flat `:term` rules surface params.term.
@@ -144,6 +147,7 @@ async function resolveTaxonomy(
       ? null
       : and(
           eq(entries.status, "published"),
+          isNotNull(entries.publishedAt),
           inArray(entries.type, allowedTypes),
           inArray(
             entries.id,
@@ -158,7 +162,7 @@ async function resolveTaxonomy(
   if (result.outOfRange) return notFound("public-term-page-out-of-range");
   const rows = result.rows;
 
-  if (options.theme) {
+  if (theme) {
     const initial: TaxonomyData = {
       taxonomy: intent.taxonomy,
       term,
@@ -173,7 +177,7 @@ async function resolveTaxonomy(
     const data = await ctx.hooks.applyFilter("resolve:term:data", initial);
     const html = await renderThroughTheme({
       ctx,
-      theme: options.theme,
+      theme,
       node: {
         kind: "term",
         taxonomy: intent.taxonomy,
@@ -217,7 +221,7 @@ async function resolveSingle(
   ctx: AppContext,
   intent: Extract<RouteIntent, { kind: "single" }>,
   params: Record<string, string>,
-  options: ResolvePublicRouteOptions,
+  theme: ThemeDescriptor | undefined,
 ): Promise<Response> {
   // `:path+` rules surface their capture as `params.path` (multi-segment);
   // flat `:slug` rules surface a single segment as `params.slug`. The
@@ -228,12 +232,17 @@ async function resolveSingle(
 
   ctx.resolvedEntity = { kind: "entry", id: row.id };
 
-  if (options.theme) {
-    const initial = await buildSingleData(ctx, row);
+  if (theme) {
+    const [entry] = await buildResolvedEntries(ctx, [row]);
+    if (!entry) {
+      // eslint-disable-next-line no-restricted-syntax -- diagnostic throw
+      throw new Error("buildResolvedEntries: empty result for one row");
+    }
+    const initial: SingleData = { entry };
     const data = await ctx.hooks.applyFilter("resolve:single:data", initial);
     const html = await renderThroughTheme({
       ctx,
-      theme: options.theme,
+      theme,
       node: {
         kind: "content",
         entryType: row.type,
@@ -253,53 +262,17 @@ async function resolveSingle(
   return htmlResponse(row.title, body);
 }
 
-async function buildSingleData(
-  ctx: AppContext,
-  row: Entry,
-): Promise<SingleData> {
-  const [authorRows, termRows] = await Promise.all([
-    ctx.db
-      .select({ id: users.id, name: users.name, avatarUrl: users.avatarUrl })
-      .from(users)
-      .where(eq(users.id, row.authorId)),
-    ctx.db
-      .select({
-        id: terms.id,
-        taxonomy: terms.taxonomy,
-        name: terms.name,
-        slug: terms.slug,
-        description: terms.description,
-        meta: terms.meta,
-        parentId: terms.parentId,
-        version: terms.version,
-      })
-      .from(entryTerm)
-      .innerJoin(terms, eq(entryTerm.termId, terms.id))
-      .where(eq(entryTerm.entryId, row.id)),
-  ]);
-  const author = authorRows[0];
-  if (!author) {
-    // FK constraint guarantees this; defensive throw surfaces corruption fast.
-    // eslint-disable-next-line no-restricted-syntax -- diagnostic throw
-    throw new Error(
-      `buildSingleData: entry ${String(row.id)} references missing author ${String(row.authorId)}`,
-    );
-  }
-  // Spread `row` first; `terms`/`author` overwrite any same-named entry
-  // columns. Schema collision is intentional: loaded relations win.
-  return { entry: { ...row, terms: termRows, author } };
-}
-
 async function resolveArchive(
   ctx: AppContext,
   intent: Extract<RouteIntent, { kind: "archive" }>,
   params: Record<string, string>,
-  options: ResolvePublicRouteOptions,
+  theme: ThemeDescriptor | undefined,
 ): Promise<Response> {
   const page = parsePageParam(params.page);
   const where = and(
     eq(entries.type, intent.entryType),
     eq(entries.status, "published"),
+    isNotNull(entries.publishedAt),
   );
 
   const result = await paginatedEntries(ctx, where, page);
@@ -315,7 +288,7 @@ async function resolveArchive(
   const title =
     registered?.labels?.plural ?? registered?.label ?? intent.entryType;
 
-  if (options.theme) {
+  if (theme) {
     const initial: ArchiveData = {
       contentType: intent.entryType,
       entries: await buildResolvedEntries(ctx, rows),
@@ -329,7 +302,7 @@ async function resolveArchive(
     const data = await ctx.hooks.applyFilter("resolve:archive:data", initial);
     const html = await renderThroughTheme({
       ctx,
-      theme: options.theme,
+      theme,
       node: { kind: "content-type-archive", entryType: intent.entryType },
       data,
       title,
@@ -389,15 +362,11 @@ async function buildResolvedEntries(
   return rows.map((row) => {
     const author = authorById.get(row.authorId);
     if (!author) {
-      // FK guarantees this; diagnostic throw surfaces corruption.
       // eslint-disable-next-line no-restricted-syntax -- diagnostic throw
       throw new Error(
         `buildResolvedEntries: entry ${String(row.id)} references missing author ${String(row.authorId)}`,
       );
     }
-    // Spread `row` first; `terms`/`author` overwrite any same-named entry
-    // columns. If the schema ever grows columns literally named `terms`
-    // or `author` the loaded relations still win — this is intentional.
     return { ...row, terms: termsByEntryId.get(row.id) ?? [], author };
   });
 }

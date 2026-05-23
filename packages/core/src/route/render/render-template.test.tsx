@@ -12,6 +12,7 @@ import type { EntryContent } from "@plumix/blocks";
 import { BlockRenderer } from "@plumix/blocks/renderer";
 
 import type { ResolvedEntry } from "./resolved-entry.js";
+import { entries as entriesTable } from "../../db/schema/entries.js";
 import { definePlugin } from "../../plugin/define.js";
 import { createDispatcherHarness } from "../../test/dispatcher.js";
 import { defineTheme } from "../../theme.js";
@@ -298,7 +299,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(body).toContain("custom-doc");
   });
 
-  test("`document` override positions children inside the supplied body wrapper", async () => {
+  test("`document` override renders children between header and footer", async () => {
     const theme = defineTheme({
       templates: {
         index: ({ data }) => (
@@ -311,9 +312,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
             <title>doc</title>
           </head>
           <body>
-            <header data-testid="doc-chrome-before">chrome-before</header>
+            <header>chrome-before</header>
             {children}
-            <footer data-testid="doc-chrome-after">chrome-after</footer>
+            <footer>chrome-after</footer>
           </body>
         </html>
       ),
@@ -335,13 +336,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       new Request("https://cms.example/post/positioned"),
     );
     const body = await response.text();
-    // Order: chrome-before → template payload → chrome-after.
-    const beforeIdx = body.indexOf("chrome-before");
-    const payloadIdx = body.indexOf("Positioned");
-    const afterIdx = body.indexOf("chrome-after");
-    expect(beforeIdx).toBeGreaterThan(-1);
-    expect(payloadIdx).toBeGreaterThan(beforeIdx);
-    expect(afterIdx).toBeGreaterThan(payloadIdx);
+    expect(body).toMatch(
+      /chrome-before[\s\S]*data-testid="template-payload"[\s\S]*chrome-after/,
+    );
   });
 
   test("react 19 metadata hoisting: template-rendered <title> lands in <head>", async () => {
@@ -467,6 +464,49 @@ describe("resolvePublicRoute — archive through theme", () => {
     expect(body).toContain('data-testid="archive"');
     expect(body).toContain("First");
     expect(body).toContain("Second");
+  });
+
+  test("excludes published entries with NULL publishedAt from the archive", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        archive: ({ data }) => (
+          <ul>
+            {data.entries.map((entry: ResolvedEntry) => (
+              <li key={entry.id} data-testid={`entry-${entry.slug}`}>
+                {entry.title}
+              </li>
+            ))}
+          </ul>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "kept",
+      title: "Kept",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.db.insert(entriesTable).values({
+      type: "post",
+      slug: "no-date",
+      title: "No Date",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: null,
+    });
+
+    const response = await h.dispatch(new Request("https://cms.example/post"));
+    const body = await response.text();
+    expect(body).toContain('data-testid="entry-kept"');
+    expect(body).not.toContain('data-testid="entry-no-date"');
   });
 
   test("template receives the pagination shape { page, perPage, total, pageCount }", async () => {
@@ -766,6 +806,70 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     expect(body).toContain("Story A");
   });
 
+  test("excludes published entries with NULL publishedAt from the term archive", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        taxonomy: ({ data }) => (
+          <ul>
+            {data.entries.map((entry: ResolvedEntry) => (
+              <li key={entry.id} data-testid={`entry-${entry.slug}`}>
+                {entry.title}
+              </li>
+            ))}
+          </ul>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [topicPlugin], theme });
+    const author = await h.seedUser("admin");
+    const term = await h.factory.term.create({
+      taxonomy: "topic",
+      slug: "news",
+      name: "News",
+    });
+    const kept = await h.factory.entry.create({
+      type: "post",
+      slug: "kept",
+      title: "Kept",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    const [nullDated] = await h.db
+      .insert(entriesTable)
+      .values({
+        type: "post",
+        slug: "no-date",
+        title: "No Date",
+        content: null,
+        status: "published",
+        authorId: author.id,
+        publishedAt: null,
+      })
+      .returning();
+    if (!nullDated) throw new Error("insert returned no row");
+    await h.factory.entryTerm.create({
+      entryId: kept.id,
+      termId: term.id,
+      sortOrder: 0,
+    });
+    await h.factory.entryTerm.create({
+      entryId: nullDated.id,
+      termId: term.id,
+      sortOrder: 1,
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/topic/news"),
+    );
+    const body = await response.text();
+    expect(body).toContain('data-testid="entry-kept"');
+    expect(body).not.toContain('data-testid="entry-no-date"');
+  });
+
   test("renders built-in `category` template via the category-* hierarchy", async () => {
     const theme = defineTheme({
       templates: {
@@ -1023,6 +1127,214 @@ describe("resolvePublicRoute — front-page through theme", () => {
     expect(body).toContain('data-testid="front-page"');
     expect(body).toContain("Latest");
   });
+
+  test("excludes entries whose type is not registered by any plugin", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        "front-page": ({ data }) => (
+          <ul>
+            {data.entries.map((entry: ResolvedEntry) => (
+              <li key={entry.id} data-testid={`row-${entry.slug}`}>
+                {entry.title}
+              </li>
+            ))}
+          </ul>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "kept",
+      title: "Kept",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    // An entry whose type is not registered (e.g. plugin uninstalled).
+    await h.factory.entry.create({
+      type: "ghost",
+      slug: "leaked",
+      title: "Leaked",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(new Request("https://cms.example/"));
+    const body = await response.text();
+    expect(body).toContain('data-testid="row-kept"');
+    expect(body).not.toContain('data-testid="row-leaked"');
+  });
+
+  test("excludes entries from `isPublic: false` types", async () => {
+    const mixedPlugin = definePlugin("mixed", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerEntryType("internal", { label: "Internal", isPublic: false });
+    });
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        "front-page": ({ data }) => (
+          <ul>
+            {data.entries.map((entry: ResolvedEntry) => (
+              <li key={entry.id} data-testid={`row-${entry.slug}`}>
+                {entry.title}
+              </li>
+            ))}
+          </ul>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [mixedPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "public",
+      title: "Public",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.factory.entry.create({
+      type: "internal",
+      slug: "private",
+      title: "Private",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(new Request("https://cms.example/"));
+    const body = await response.text();
+    expect(body).toContain('data-testid="row-public"');
+    expect(body).not.toContain('data-testid="row-private"');
+  });
+
+  test("excludes published entries with NULL publishedAt", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        "front-page": ({ data }) => (
+          <ul>
+            {data.entries.map((entry: ResolvedEntry) => (
+              <li key={entry.id} data-testid={`row-${entry.slug}`}>
+                {entry.title}
+              </li>
+            ))}
+          </ul>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "kept",
+      title: "Kept",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    // Side-step the factory's publishedAt coercion: insert directly so
+    // `status: "published"` survives alongside an explicit null timestamp.
+    await h.db.insert(entriesTable).values({
+      type: "post",
+      slug: "no-date",
+      title: "No Date",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: null,
+    });
+
+    const response = await h.dispatch(new Request("https://cms.example/"));
+    const body = await response.text();
+    expect(body).toContain('data-testid="row-kept"');
+    expect(body).not.toContain('data-testid="row-no-date"');
+  });
+
+  test("plugin-registered `/` rewrite rule wins over front-page synthesis", async () => {
+    const homepagePlugin = definePlugin("homepage", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerRewriteRule("/", { kind: "archive", entryType: "post" });
+    });
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        "front-page": () => <section data-testid="front-page" />,
+        archive: () => <section data-testid="archive" />,
+      },
+    });
+
+    const h = await createDispatcherHarness({
+      plugins: [homepagePlugin],
+      theme,
+    });
+    const response = await h.dispatch(new Request("https://cms.example/"));
+    const body = await response.text();
+    expect(body).toContain('data-testid="archive"');
+    expect(body).not.toContain('data-testid="front-page"');
+  });
+
+  test("runs resolve:front-page:data filters before the template renders", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        "front-page": ({ data }) => (
+          <ul>
+            {data.entries.map((entry: ResolvedEntry) => (
+              <li key={entry.id} data-testid={`row-${entry.slug}`}>
+                {entry.title}
+              </li>
+            ))}
+          </ul>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    h.spyFilter("resolve:front-page:data").override((data) => ({
+      ...data,
+      entries: data.entries.filter(
+        (entry: ResolvedEntry) => entry.slug !== "filtered-out",
+      ),
+    }));
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "filtered-out",
+      title: "Filtered Out",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.factory.entry.create({
+      type: "post",
+      slug: "kept-by-filter",
+      title: "Kept",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(new Request("https://cms.example/"));
+    const body = await response.text();
+    expect(body).toContain('data-testid="row-kept-by-filter"');
+    expect(body).not.toContain('data-testid="row-filtered-out"');
+  });
 });
 
 describe("resolvePublicRoute — error pages through theme", () => {
@@ -1047,6 +1359,33 @@ describe("resolvePublicRoute — error pages through theme", () => {
     const body = await response.text();
     expect(body).toContain('data-testid="four-oh-four"');
     expect(body).toContain("Page missing");
+  });
+
+  test("themed 404 preserves the `x-plumix-hint` diagnostic header", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        "404": () => <main data-testid="four-oh-four" />,
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/never-existed"),
+    );
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-plumix-hint")).toBe("public-post-not-found");
+  });
+
+  test("no-theme 404 surfaces the plaintext `notFound` response unchanged", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/never-existed"),
+    );
+    expect(response.status).toBe(404);
+    expect(response.headers.get("content-type")).toContain("text/plain");
+    expect(response.headers.get("x-plumix-hint")).toBe("public-post-not-found");
+    expect(await response.text()).toBe("Not Found");
   });
 
   test("built-in 404 default renders when the theme has no `404` template", async () => {
@@ -1135,5 +1474,75 @@ describe("resolvePublicRoute — error pages through theme", () => {
     expect(body).toContain("<!doctype html>");
     expect(body).toContain("Internal Server Error");
     expect(body).not.toContain("kaboom-different-payload");
+  });
+
+  test("a resolver-side throw renders the themed `500` template, not JSON", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => <h1>{data.entry.title}</h1>,
+        "500": () => <main data-testid="five-oh-oh" />,
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    h.spyFilter("resolve:single:data").override(() => {
+      throw new Error("kaboom-resolver-secret");
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "boom-resolver",
+      title: "Boom Resolver",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/boom-resolver"),
+    );
+    expect(response.status).toBe(500);
+    expect(response.headers.get("content-type")).toContain("text/html");
+    const body = await response.text();
+    expect(body).toContain('data-testid="five-oh-oh"');
+    expect(body).not.toContain("kaboom-resolver-secret");
+  });
+
+  test("falls back to plaintext 500 when the theme's `500` template also throws", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: () => {
+          throw new Error("kaboom-inner-secret");
+        },
+        "500": () => {
+          throw new Error("kaboom-error-template-secret");
+        },
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "double-boom",
+      title: "Double Boom",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/double-boom"),
+    );
+    expect(response.status).toBe(500);
+    expect(response.headers.get("content-type")).toContain("text/plain");
+    const body = await response.text();
+    expect(body).toContain("Internal Server Error");
+    expect(body).not.toContain("kaboom-inner-secret");
+    expect(body).not.toContain("kaboom-error-template-secret");
   });
 });
