@@ -183,7 +183,7 @@ async function dispatchPublicRoute(
   const theme = app.config.theme;
   try {
     const response = await resolvePublicRouteOrFallback(app, ctx, url);
-    if (response.status === 404 && theme) {
+    if (response.status === 404) {
       const html = renderErrorThroughTheme({
         ctx,
         theme,
@@ -203,32 +203,30 @@ async function dispatchPublicRoute(
       url: url.href,
       err: err instanceof Error ? err.message : String(err),
     });
-    if (theme) {
-      try {
-        const html = renderErrorThroughTheme({
-          ctx,
-          theme,
-          kind: "server-error",
-          data: { request: ctx.request },
-        });
-        return new Response(html, {
-          status: 500,
-          headers: { "content-type": "text/html; charset=utf-8" },
-        });
-      } catch (templateErr) {
-        ctx.logger.error("error_template_failed", {
-          url: url.href,
-          err:
-            templateErr instanceof Error
-              ? templateErr.message
-              : String(templateErr),
-        });
-      }
+    try {
+      const html = renderErrorThroughTheme({
+        ctx,
+        theme,
+        kind: "server-error",
+        data: { request: ctx.request },
+      });
+      return new Response(html, {
+        status: 500,
+        headers: { "content-type": "text/html; charset=utf-8" },
+      });
+    } catch (templateErr) {
+      ctx.logger.error("error_template_failed", {
+        url: url.href,
+        err:
+          templateErr instanceof Error
+            ? templateErr.message
+            : String(templateErr),
+      });
+      return new Response("Internal Server Error", {
+        status: 500,
+        headers: { "content-type": "text/plain; charset=utf-8" },
+      });
     }
-    return new Response("Internal Server Error", {
-      status: 500,
-      headers: { "content-type": "text/plain; charset=utf-8" },
-    });
   }
 }
 
@@ -240,7 +238,7 @@ async function resolvePublicRouteOrFallback(
   const theme = app.config.theme;
   const match = matchRoute(url, app.routeMap);
   if (match !== null) return resolvePublicRoute(ctx, match, theme);
-  if (url.pathname === "/" && theme) {
+  if (url.pathname === "/") {
     return resolvePublicRoute(
       ctx,
       { intent: { kind: "front-page" }, params: {} },

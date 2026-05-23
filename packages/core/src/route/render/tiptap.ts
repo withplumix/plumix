@@ -1,4 +1,16 @@
-import { escapeAttr, escapeHtml } from "./document.js";
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+// Attribute-context escape: `href="..."` / `alt="..."` etc. Additionally
+// escapes the quote characters that would let untrusted input break out
+// of the attribute.
+function escapeAttr(value: string): string {
+  return escapeHtml(value).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
 
 /**
  * Tiptap / ProseMirror JSON → HTML walker. Renders the parsed document

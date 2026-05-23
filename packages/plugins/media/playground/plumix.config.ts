@@ -1,4 +1,4 @@
-import { auth, plumix } from "plumix";
+import { auth, defineTheme, plumix } from "plumix";
 
 import { media } from "@plumix/plugin-media";
 import {
@@ -55,6 +55,7 @@ export default plumix({
     },
   }),
   plugins: [media()],
+  theme: defineTheme({ templates: { index: () => null } }),
 });
 
 function resolveS3Credentials():

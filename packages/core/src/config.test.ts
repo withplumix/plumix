@@ -4,6 +4,7 @@ import type { RuntimeAdapter } from "./runtime/adapter.js";
 import type { DatabaseAdapter, ImageDelivery } from "./runtime/slots.js";
 import { auth } from "./auth/config.js";
 import { plumix } from "./config.js";
+import { defineTheme } from "./theme.js";
 
 const runtime: RuntimeAdapter = {
   name: "mock",
@@ -23,10 +24,11 @@ const authConfig = auth({
   },
 });
 
-test("plumix() defaults missing plugins to an empty array and theme to undefined", () => {
-  const config = plumix({ runtime, database, auth: authConfig });
+const theme = defineTheme({ templates: { index: () => null } });
+
+test("plumix() defaults missing plugins to an empty array", () => {
+  const config = plumix({ runtime, database, auth: authConfig, theme });
   expect(config.plugins).toEqual([]);
-  expect(config.theme).toBeUndefined();
 });
 
 test("plumix() exposes defineConfig as an alias", async () => {
@@ -44,6 +46,7 @@ test("plumix() preserves imageDelivery slot when provided", () => {
     runtime,
     database,
     auth: authConfig,
+    theme,
     imageDelivery,
   });
   expect(config.imageDelivery).toBe(imageDelivery);
@@ -53,13 +56,19 @@ test("plumix() preserves imageDelivery slot when provided", () => {
 });
 
 test("plumix() leaves imageDelivery undefined when not provided", () => {
-  const config = plumix({ runtime, database, auth: authConfig });
+  const config = plumix({ runtime, database, auth: authConfig, theme });
   expect(config.imageDelivery).toBeUndefined();
 });
 
 test("plumix() preserves the top-level mailer slot", () => {
   const mailer = { send: () => Promise.resolve() };
-  const config = plumix({ runtime, database, auth: authConfig, mailer });
+  const config = plumix({
+    runtime,
+    database,
+    auth: authConfig,
+    theme,
+    mailer,
+  });
   expect(config.mailer).toBe(mailer);
 });
 
@@ -72,9 +81,9 @@ test("plumix() requires mailer when auth.magicLink is configured", () => {
     },
     magicLink: { siteName: "mock" },
   });
-  expect(() => plumix({ runtime, database, auth: authWithMagicLink })).toThrow(
-    /magicLink.*requires.*mailer/,
-  );
+  expect(() =>
+    plumix({ runtime, database, auth: authWithMagicLink, theme }),
+  ).toThrow(/magicLink.*requires.*mailer/);
 });
 
 test("plumix() accepts auth.magicLink when paired with a top-level mailer", () => {
@@ -88,6 +97,6 @@ test("plumix() accepts auth.magicLink when paired with a top-level mailer", () =
   });
   const mailer = { send: () => Promise.resolve() };
   expect(() =>
-    plumix({ runtime, database, auth: authWithMagicLink, mailer }),
+    plumix({ runtime, database, auth: authWithMagicLink, theme, mailer }),
   ).not.toThrow();
 });

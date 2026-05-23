@@ -22,31 +22,10 @@ import { users } from "../db/schema/users.js";
 import { notFound } from "../runtime/http.js";
 import { paginate } from "./paginate.js";
 import { findEntryByPath, findTermByPath } from "./path-chain.js";
-import {
-  escapeAttr,
-  escapeHtml,
-  renderDefaultDocument,
-} from "./render/document.js";
 import { renderThroughTheme } from "./render/render-template.js";
-import { renderTiptapContent } from "./render/tiptap.js";
-
-interface ResolvedTaxonomyData {
-  readonly taxonomy: string;
-  readonly term: Term;
-  readonly entries: readonly Entry[];
-}
 
 declare module "../hooks/types.js" {
   interface FilterRegistry {
-    /**
-     * @deprecated since slice 3 of #491. Fires only on the theme-less
-     * fallback path and receives raw `Entry[]`, not eager-loaded
-     * `ResolvedEntry[]`. Migrate to `resolve:term:data` when the
-     * resolver is rendering through a theme.
-     */
-    "resolve:taxonomy:data": (
-      data: ResolvedTaxonomyData,
-    ) => ResolvedTaxonomyData | Promise<ResolvedTaxonomyData>;
     "resolve:single:data": (
       data: SingleData,
     ) => SingleData | Promise<SingleData>;
@@ -67,7 +46,7 @@ const ARCHIVE_LIMIT = 20;
 export async function resolvePublicRoute(
   ctx: AppContext,
   match: RouteMatch,
-  theme: ThemeDescriptor | undefined,
+  theme: ThemeDescriptor,
 ): Promise<Response> {
   switch (match.intent.kind) {
     case "single":
@@ -83,10 +62,8 @@ export async function resolvePublicRoute(
 
 async function resolveFrontPage(
   ctx: AppContext,
-  theme: ThemeDescriptor | undefined,
+  theme: ThemeDescriptor,
 ): Promise<Response> {
-  if (!theme) return notFound("public-route-not-found");
-
   const page = 1;
   const publicTypes = Array.from(ctx.plugins.entryTypes.entries())
     .filter(([, spec]) => spec.isPublic !== false)
@@ -127,10 +104,8 @@ async function resolveTaxonomy(
   ctx: AppContext,
   intent: Extract<RouteIntent, { kind: "taxonomy" }>,
   params: Record<string, string>,
-  theme: ThemeDescriptor | undefined,
+  theme: ThemeDescriptor,
 ): Promise<Response> {
-  // Same dispatch as resolveSingle: `:path+` rules surface params.path
-  // (multi-segment), flat `:term` rules surface params.term.
   const term = await findTermForTaxonomy(ctx, intent.taxonomy, params);
   if (!term) return notFound("public-term-not-found");
 
@@ -160,113 +135,76 @@ async function resolveTaxonomy(
 
   const result = await paginatedEntries(ctx, where, page);
   if (result.outOfRange) return notFound("public-term-page-out-of-range");
-  const rows = result.rows;
 
-  if (theme) {
-    const initial: TaxonomyData = {
-      taxonomy: intent.taxonomy,
-      term,
-      entries: await buildResolvedEntries(ctx, rows),
-      pagination: {
-        page,
-        perPage: ARCHIVE_LIMIT,
-        total: result.total,
-        pageCount: result.pageCount,
-      },
-    };
-    const data = await ctx.hooks.applyFilter("resolve:term:data", initial);
-    const html = await renderThroughTheme({
-      ctx,
-      theme,
-      node: {
-        kind: "term",
-        taxonomy: intent.taxonomy,
-        slug: term.slug,
-        databaseId: term.id,
-      },
-      data,
-      title: taxonomy?.labels?.singular ?? taxonomy?.label ?? term.name,
-    });
-    return new Response(html, {
-      headers: { "content-type": "text/html; charset=utf-8" },
-    });
-  }
-
-  // Run plugin filters before render so plugins can mutate the resolved
-  // shape (drop entries, append plugin-contributed fields, etc.) without
-  // forking the resolver. Mirrors WP's `pre_get_posts` ergonomics.
-  const data = await ctx.hooks.applyFilter("resolve:taxonomy:data", {
+  const initial: TaxonomyData = {
     taxonomy: intent.taxonomy,
     term,
-    entries: rows,
+    entries: await buildResolvedEntries(ctx, result.rows),
+    pagination: {
+      page,
+      perPage: ARCHIVE_LIMIT,
+      total: result.total,
+      pageCount: result.pageCount,
+    },
+  };
+  const data = await ctx.hooks.applyFilter("resolve:term:data", initial);
+  const html = await renderThroughTheme({
+    ctx,
+    theme,
+    node: {
+      kind: "term",
+      taxonomy: intent.taxonomy,
+      slug: term.slug,
+      databaseId: term.id,
+    },
+    data,
+    title: taxonomy?.labels?.singular ?? taxonomy?.label ?? term.name,
   });
-
-  const title = taxonomy?.labels?.singular ?? taxonomy?.label ?? data.term.name;
-  const heading = escapeHtml(data.term.name);
-  const body =
-    data.entries.length === 0
-      ? `<h1>${heading}</h1><p>No entries yet.</p>`
-      : `<h1>${heading}</h1><ul>${data.entries.map(renderTaxonomyItem).join("")}</ul>`;
-  return htmlResponse(title, body);
-}
-
-function renderTaxonomyItem(row: Entry): string {
-  // Reuse the entry-type's permalink base — taxonomy archives can mix
-  // multiple entry types, so each item needs its own type-specific URL.
-  const href = `/${row.type}/${row.slug}`;
-  return `<li><a href="${escapeAttr(href)}">${escapeHtml(row.title)}</a></li>`;
+  return new Response(html, {
+    headers: { "content-type": "text/html; charset=utf-8" },
+  });
 }
 
 async function resolveSingle(
   ctx: AppContext,
   intent: Extract<RouteIntent, { kind: "single" }>,
   params: Record<string, string>,
-  theme: ThemeDescriptor | undefined,
+  theme: ThemeDescriptor,
 ): Promise<Response> {
-  // `:path+` rules surface their capture as `params.path` (multi-segment);
-  // flat `:slug` rules surface a single segment as `params.slug`. The
-  // route compiler picks the capture name based on rewrite.isHierarchical
-  // — the resolver dispatches off whichever one was set.
   const row = await findEntryForSingle(ctx, intent.entryType, params);
   if (!row) return notFound("public-post-not-found");
 
   ctx.resolvedEntity = { kind: "entry", id: row.id };
 
-  if (theme) {
-    const [entry] = await buildResolvedEntries(ctx, [row]);
-    if (!entry) {
-      // eslint-disable-next-line no-restricted-syntax -- diagnostic throw
-      throw new Error("buildResolvedEntries: empty result for one row");
-    }
-    const initial: SingleData = { entry };
-    const data = await ctx.hooks.applyFilter("resolve:single:data", initial);
-    const html = await renderThroughTheme({
-      ctx,
-      theme,
-      node: {
-        kind: "content",
-        entryType: row.type,
-        slug: row.slug,
-        databaseId: row.id,
-      },
-      data,
-      title: data.entry.title,
-    });
-    return new Response(html, {
-      headers: { "content-type": "text/html; charset=utf-8" },
-    });
+  const [entry] = await buildResolvedEntries(ctx, [row]);
+  if (!entry) {
+    // eslint-disable-next-line no-restricted-syntax -- diagnostic throw
+    throw new Error("buildResolvedEntries: empty result for one row");
   }
-
-  // TODO(#491 follow-up): drop this fallback once all consumers ship a theme.
-  const body = `<article><h1>${escapeHtml(row.title)}</h1>${renderTiptapContent(row.content)}</article>`;
-  return htmlResponse(row.title, body);
+  const initial: SingleData = { entry };
+  const data = await ctx.hooks.applyFilter("resolve:single:data", initial);
+  const html = await renderThroughTheme({
+    ctx,
+    theme,
+    node: {
+      kind: "content",
+      entryType: row.type,
+      slug: row.slug,
+      databaseId: row.id,
+    },
+    data,
+    title: data.entry.title,
+  });
+  return new Response(html, {
+    headers: { "content-type": "text/html; charset=utf-8" },
+  });
 }
 
 async function resolveArchive(
   ctx: AppContext,
   intent: Extract<RouteIntent, { kind: "archive" }>,
   params: Record<string, string>,
-  theme: ThemeDescriptor | undefined,
+  theme: ThemeDescriptor,
 ): Promise<Response> {
   const page = parsePageParam(params.page);
   const where = and(
@@ -277,47 +215,37 @@ async function resolveArchive(
 
   const result = await paginatedEntries(ctx, where, page);
   if (result.outOfRange) return notFound("public-archive-page-out-of-range");
-  const rows = result.rows;
 
   // Set after the query so a thrown query doesn't leave a stale entity
   // on ctx for any downstream middleware (logging, error pages) that
-  // reads it. Mirrors `resolveSingle`.
+  // reads it.
   ctx.resolvedEntity = { kind: "archive", entryType: intent.entryType };
 
   const registered = ctx.plugins.entryTypes.get(intent.entryType);
   const title =
     registered?.labels?.plural ?? registered?.label ?? intent.entryType;
 
-  if (theme) {
-    const initial: ArchiveData = {
-      contentType: intent.entryType,
-      entries: await buildResolvedEntries(ctx, rows),
-      pagination: {
-        page,
-        perPage: ARCHIVE_LIMIT,
-        total: result.total,
-        pageCount: result.pageCount,
-      },
-    };
-    const data = await ctx.hooks.applyFilter("resolve:archive:data", initial);
-    const html = await renderThroughTheme({
-      ctx,
-      theme,
-      node: { kind: "content-type-archive", entryType: intent.entryType },
-      data,
-      title,
-    });
-    return new Response(html, {
-      headers: { "content-type": "text/html; charset=utf-8" },
-    });
-  }
-
-  const baseSlug = registered?.rewrite?.slug ?? intent.entryType;
-  const body =
-    rows.length === 0
-      ? `<h1>${escapeHtml(title)}</h1><p>No entries yet.</p>`
-      : `<h1>${escapeHtml(title)}</h1><ul>${rows.map((row) => renderArchiveItem(row, baseSlug)).join("")}</ul>`;
-  return htmlResponse(title, body);
+  const initial: ArchiveData = {
+    contentType: intent.entryType,
+    entries: await buildResolvedEntries(ctx, result.rows),
+    pagination: {
+      page,
+      perPage: ARCHIVE_LIMIT,
+      total: result.total,
+      pageCount: result.pageCount,
+    },
+  };
+  const data = await ctx.hooks.applyFilter("resolve:archive:data", initial);
+  const html = await renderThroughTheme({
+    ctx,
+    theme,
+    node: { kind: "content-type-archive", entryType: intent.entryType },
+    data,
+    title,
+  });
+  return new Response(html, {
+    headers: { "content-type": "text/html; charset=utf-8" },
+  });
 }
 
 // Batched eager-load mirroring WordPress's `update_post_caches` semantics:
@@ -470,15 +398,4 @@ async function paginatedEntries(
     .limit(slice.limit)
     .offset(slice.offset);
   return { rows, outOfRange: false, total, pageCount: slice.totalPages };
-}
-
-function renderArchiveItem(row: Entry, baseSlug: string): string {
-  const href = baseSlug === "" ? `/${row.slug}` : `/${baseSlug}/${row.slug}`;
-  return `<li><a href="${escapeAttr(href)}">${escapeHtml(row.title)}</a></li>`;
-}
-
-function htmlResponse(title: string, bodyHtml: string): Response {
-  return new Response(renderDefaultDocument({ title, bodyHtml }), {
-    headers: { "content-type": "text/html; charset=utf-8" },
-  });
 }

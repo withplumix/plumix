@@ -1,4 +1,4 @@
-import { auth, plumix } from "plumix";
+import { auth, defineTheme, plumix } from "plumix";
 
 import { auditLog } from "@plumix/plugin-audit-log";
 import {
@@ -35,4 +35,5 @@ export default plumix({
     },
   }),
   plugins: [auditLog()],
+  theme: defineTheme({ templates: { index: () => null } }),
 });

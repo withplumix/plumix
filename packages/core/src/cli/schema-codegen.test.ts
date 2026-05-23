@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { PlumixConfig } from "../config.js";
 import type { PluginDescriptor } from "../plugin/define.js";
 import { auth } from "../auth/config.js";
+import { defineTheme } from "../theme.js";
 import { generateSchemaSource } from "./schema-codegen.js";
 
 const baseConfig: PlumixConfig = {
@@ -11,6 +12,7 @@ const baseConfig: PlumixConfig = {
   auth: auth({
     passkey: { rpName: "t", rpId: "t", origin: "https://t" },
   }),
+  theme: defineTheme({ templates: { index: () => null } }),
   plugins: [],
 };
 

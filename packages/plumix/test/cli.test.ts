@@ -33,6 +33,7 @@ export default {
     },
   },
   plugins: [],
+  theme: { templates: { index: () => null } },
 };
 `;
 
