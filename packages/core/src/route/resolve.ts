@@ -234,7 +234,11 @@ async function resolveSingle(
 
   if (theme) {
     const [entry] = await buildResolvedEntries(ctx, [row]);
-    const initial: SingleData = { entry: entry! };
+    if (!entry) {
+      // eslint-disable-next-line no-restricted-syntax -- diagnostic throw
+      throw new Error("buildResolvedEntries: empty result for one row");
+    }
+    const initial: SingleData = { entry };
     const data = await ctx.hooks.applyFilter("resolve:single:data", initial);
     const html = await renderThroughTheme({
       ctx,

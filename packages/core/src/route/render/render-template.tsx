@@ -32,6 +32,7 @@ export async function renderThroughTheme({
 }: RenderArgs): Promise<string> {
   const candidates = await resolveTemplateCandidates(node, ctx.hooks);
   const Template = pickTemplate(theme.templates, candidates);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- TemplateData placeholder
   return renderTree({ ctx, theme, data, title, Template });
 }
 

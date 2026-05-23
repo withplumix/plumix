@@ -850,13 +850,14 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
         publishedAt: null,
       })
       .returning();
+    if (!nullDated) throw new Error("insert returned no row");
     await h.factory.entryTerm.create({
       entryId: kept.id,
       termId: term.id,
       sortOrder: 0,
     });
     await h.factory.entryTerm.create({
-      entryId: nullDated!.id,
+      entryId: nullDated.id,
       termId: term.id,
       sortOrder: 1,
     });
@@ -1247,17 +1248,15 @@ describe("resolvePublicRoute — front-page through theme", () => {
     });
     // Side-step the factory's publishedAt coercion: insert directly so
     // `status: "published"` survives alongside an explicit null timestamp.
-    await h.db
-      .insert(entriesTable)
-      .values({
-        type: "post",
-        slug: "no-date",
-        title: "No Date",
-        content: null,
-        status: "published",
-        authorId: author.id,
-        publishedAt: null,
-      });
+    await h.db.insert(entriesTable).values({
+      type: "post",
+      slug: "no-date",
+      title: "No Date",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: null,
+    });
 
     const response = await h.dispatch(new Request("https://cms.example/"));
     const body = await response.text();
