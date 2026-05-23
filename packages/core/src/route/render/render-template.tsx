@@ -11,7 +11,7 @@ import type {
   TemplateRegistry,
   ThemeDescriptor,
 } from "../../theme.js";
-import type { NotFoundData, ServerErrorData } from "./resolved-entry.js";
+import type { ErrorData } from "./resolved-entry.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
 import { resolveTemplateCandidates } from "./template-hierarchy.js";
 
@@ -20,7 +20,6 @@ interface RenderArgs {
   readonly theme: ThemeDescriptor;
   readonly node: ResolvedNode;
   readonly data: TemplateData;
-  /** Plain-text title for the default document's `<title>`. */
   readonly title: string;
 }
 
@@ -33,7 +32,6 @@ export async function renderThroughTheme({
 }: RenderArgs): Promise<string> {
   const candidates = await resolveTemplateCandidates(node, ctx.hooks);
   const Template = pickTemplate(theme.templates, candidates);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- TemplateData placeholder
   return renderTree({ ctx, theme, data, title, Template });
 }
 
@@ -41,8 +39,17 @@ interface RenderErrorArgs {
   readonly ctx: AppContext;
   readonly theme: ThemeDescriptor;
   readonly kind: "not-found" | "server-error";
-  readonly data: NotFoundData | ServerErrorData;
+  readonly data: ErrorData;
 }
+
+const ERROR_VARIANTS = {
+  "not-found": { key: "404", title: "Not Found", fallback: DefaultNotFound },
+  "server-error": {
+    key: "500",
+    title: "Internal Server Error",
+    fallback: DefaultServerError,
+  },
+} as const;
 
 export function renderErrorThroughTheme({
   ctx,
@@ -50,17 +57,9 @@ export function renderErrorThroughTheme({
   kind,
   data,
 }: RenderErrorArgs): string {
-  const key = kind === "not-found" ? "404" : "500";
-  const fallbackTitle =
-    kind === "not-found" ? "Not Found" : "Internal Server Error";
-  const Template = theme.templates[key] ?? defaultErrorTemplateFor(kind);
-  return renderTree({
-    ctx,
-    theme,
-    data,
-    title: fallbackTitle,
-    Template,
-  });
+  const variant = ERROR_VARIANTS[kind];
+  const Template = theme.templates[variant.key] ?? variant.fallback;
+  return renderTree({ ctx, theme, data, title: variant.title, Template });
 }
 
 interface RenderTreeArgs {
@@ -126,13 +125,6 @@ function DefaultDocument({
       <body>{children}</body>
     </html>
   );
-}
-
-function defaultErrorTemplateFor(
-  kind: "not-found" | "server-error",
-): TemplateComponent<TemplateData> {
-  if (kind === "not-found") return DefaultNotFound;
-  return DefaultServerError;
 }
 
 function DefaultNotFound() {
