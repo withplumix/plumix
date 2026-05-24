@@ -1,10 +1,28 @@
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { createElement, Fragment } from "react";
 
 import type { BlockRegistry } from "./block-registry.js";
 import type { ResponsiveStyleSlot } from "./styles/style-emitter.js";
 import type { ThemeTokens } from "./styles/types.js";
+import { serializeProps } from "./serialize.js";
 import { emitBlockStyleCss } from "./styles/style-emitter.js";
+
+/**
+ * Per-component manifest entry the Vite islands plugin produces at
+ * build time. Keyed by the component reference (`spec.client.component`)
+ * so the walker can resolve `chunkUrl` + `exportName` for any island
+ * the registry contains. Phase F (`plugin-islands.ts`) populates this;
+ * the walker reads it but never builds it.
+ */
+export interface IslandManifestEntry {
+  readonly chunkUrl: string;
+  readonly exportName: string;
+}
+
+export type IslandManifest = ReadonlyMap<
+  ComponentType<Readonly<Record<string, unknown>>>,
+  IslandManifestEntry
+>;
 
 /**
  * Threaded through `renderBlockTree` recursion. Block components introspect
@@ -46,6 +64,7 @@ export interface BlockRenderHooks {
 export interface RenderBlockTreeOptions {
   readonly tokens?: ThemeTokens;
   readonly hooks?: BlockRenderHooks;
+  readonly islandManifest?: IslandManifest;
 }
 
 export interface BlockNodeRenderProps<
@@ -118,6 +137,7 @@ function materializeSlots(
   childContext: BlockContext,
   tokens: ThemeTokens | undefined,
   hooks: BlockRenderHooks | undefined,
+  islandManifest: IslandManifest | undefined,
 ): Readonly<Record<string, unknown>> {
   let materialized: Record<string, unknown> | undefined;
   for (const [key, value] of Object.entries(attrs)) {
@@ -131,6 +151,7 @@ function materializeSlots(
           childContext,
           tokens,
           hooks,
+          islandManifest,
         );
       };
     }
@@ -145,8 +166,8 @@ function renderNodes(
   context: BlockContext,
   tokens: ThemeTokens | undefined,
   hooks: BlockRenderHooks | undefined,
+  islandManifest: IslandManifest | undefined,
 ): ReactNode {
-  const seenScripts = new Set<string>();
   return nodes.map((node) => {
     hooks?.beforeRender?.(node, context);
     const result = renderNode(
@@ -156,7 +177,7 @@ function renderNodes(
       context,
       tokens,
       hooks,
-      seenScripts,
+      islandManifest,
     );
     hooks?.afterRender?.(node, context);
     return result;
@@ -170,7 +191,7 @@ function renderNode(
   context: BlockContext,
   tokens: ThemeTokens | undefined,
   hooks: BlockRenderHooks | undefined,
-  seenScripts: Set<string>,
+  islandManifest: IslandManifest | undefined,
 ): ReactNode {
   const spec = registry.get(node.name);
   if (!spec) {
@@ -192,6 +213,7 @@ function renderNode(
     childContext,
     tokens,
     hooks,
+    islandManifest,
   );
   const rendered = createElement(spec.render, { attrs, context });
   if (spec.inline) {
@@ -206,29 +228,85 @@ function renderNode(
   const styleTag = styleCss
     ? createElement("style", { key: "style" }, styleCss)
     : null;
-  const wrappedEl = createElement(
+
+  // Client island? Wrap in `<plumix-island>` so the custom element
+  // (`packages/blocks/src/island-element.ts`) can hydrate the React
+  // component on the client. The walker only emits the wrapper when
+  // a manifest entry exists for this block's `client.component`; a
+  // build without the islands Vite plugin (or a block whose component
+  // wasn't bundled) gracefully degrades to the SSR'd output without a
+  // wrapper. Props from `node.attrs` are serialized to a sibling
+  // `<script type="application/json">` rather than an attribute so
+  // large prop graphs don't run into HTML attribute size limits.
+  if (spec.client && islandManifest) {
+    const entry = islandManifest.get(spec.client.component);
+    if (entry) {
+      return renderIsland({
+        node,
+        entry,
+        hydrateWhen: spec.client.hydrateWhen ?? "load",
+        className,
+        styleTag,
+        rendered,
+        attrs,
+        displayName: spec.client.component.displayName ?? spec.name,
+      });
+    }
+  }
+
+  return createElement(
     "div",
     {
       key: node.id,
       "data-plumix-block": node.name,
-      "data-plumix-island": spec.client ? node.name : undefined,
       className,
     },
     styleTag,
     rendered,
   );
-  if (!spec.client) return wrappedEl;
-  // Dedupe per-renderNodes-call so N instances of the same client block ship
-  // one <script type="module">, not N. The module loader already dedupes
-  // execution by URL; this avoids shipping the tag at all for siblings.
-  if (seenScripts.has(spec.client.script)) return wrappedEl;
-  seenScripts.add(spec.client.script);
-  const hydrationScript = createElement("script", {
-    key: "client-island",
-    type: "module",
-    src: spec.client.script,
+}
+
+interface RenderIslandArgs {
+  readonly node: BlockNode;
+  readonly entry: IslandManifestEntry;
+  readonly hydrateWhen: string;
+  readonly className: string | undefined;
+  readonly styleTag: ReactNode;
+  readonly rendered: ReactNode;
+  readonly attrs: Readonly<Record<string, unknown>>;
+  readonly displayName: string;
+}
+
+function renderIsland(args: RenderIslandArgs): ReactNode {
+  const propsPayload = serializeProps(args.attrs, {
+    displayName: args.displayName,
   });
-  return createElement(Fragment, { key: node.id }, wrappedEl, hydrationScript);
+  // Escape the JSON string against premature `</script>` termination —
+  // a string prop containing `</script>` would otherwise close the
+  // element here and let the rest of the JSON leak into the DOM as
+  // markup. Forward-slash escape is safe inside JSON.
+  const safePayload = propsPayload.replace(/<\/script/gi, "<\\/script");
+  return createElement(
+    Fragment,
+    { key: args.node.id },
+    createElement(
+      "plumix-island",
+      {
+        "chunk-url": args.entry.chunkUrl,
+        "component-export": args.entry.exportName,
+        client: args.hydrateWhen,
+        "data-plumix-block": args.node.name,
+        className: args.className,
+      },
+      args.styleTag,
+      args.rendered,
+    ),
+    createElement("script", {
+      type: "application/json",
+      "data-plumix-island-props": "",
+      dangerouslySetInnerHTML: { __html: safePayload },
+    }),
+  );
 }
 
 export function renderBlockTree(
@@ -243,5 +321,6 @@ export function renderBlockTree(
     DEFAULT_BLOCK_CONTEXT,
     options?.tokens,
     options?.hooks,
+    options?.islandManifest,
   );
 }

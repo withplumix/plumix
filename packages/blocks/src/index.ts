@@ -19,6 +19,8 @@ export type {
   BlockTransforms,
   BlockVariation,
   ClientIslandDescriptor,
+  HydrateWhen,
+  PrefetchWhen,
 } from "./block-registry.js";
 
 // ─── Walker + render contract ───────────────────────────────────────────────
@@ -32,6 +34,8 @@ export type {
   BlockNode,
   BlockNodeComponent,
   BlockNodeRenderProps,
+  IslandManifest,
+  IslandManifestEntry,
   BlockRenderHooks,
   RenderBlockTreeOptions,
 } from "./render-block-tree.js";

@@ -1,3 +1,5 @@
+import type { ComponentType } from "react";
+
 import type { BlockNodeComponent } from "./render-block-tree.js";
 
 export interface BlockInputOption {
@@ -12,8 +14,26 @@ export interface BlockInput {
   readonly options?: readonly BlockInputOption[];
 }
 
+/**
+ * Hydration strategy declared by a block's `client` descriptor. Only
+ * `load` is wired in the islands MVP; the remaining values are exported
+ * up front so block-author code targeting the full strategy set
+ * compiles today even though `idle`/`visible`/`interaction`/`only` land
+ * in a follow-up slice.
+ */
+export type HydrateWhen = "load" | "idle" | "visible" | "interaction" | "only";
+
+/**
+ * Prefetch strategy for the island's JS chunk. Like `HydrateWhen`,
+ * declared as a full union for compile-time stability; only `load`
+ * acts today.
+ */
+export type PrefetchWhen = "load" | "idle" | "visible";
+
 export interface ClientIslandDescriptor {
-  readonly script: string;
+  readonly component: ComponentType<Readonly<Record<string, unknown>>>;
+  readonly hydrateWhen?: HydrateWhen;
+  readonly prefetchWhen?: PrefetchWhen;
 }
 
 export interface BlockVariation {

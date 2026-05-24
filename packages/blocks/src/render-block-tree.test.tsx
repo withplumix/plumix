@@ -311,51 +311,6 @@ describe("renderBlockTree", () => {
   });
 
   describe("client islands", () => {
-    test("emits a <script type='module'> next to the wrapper when spec.client is declared", () => {
-      const registry = createBlockRegistry([
-        {
-          name: "acme/carousel",
-          render: () => <div className="carousel" />,
-          client: { script: "/assets/carousel.js" },
-        },
-      ]);
-      const tree: readonly BlockNode[] = [
-        { id: "c1", name: "acme/carousel", attrs: {} },
-      ];
-
-      const html = renderToStaticMarkup(renderBlockTree(tree, registry));
-
-      expect(html).toContain('data-plumix-block="acme/carousel"');
-      expect(html).toContain(
-        '<script type="module" src="/assets/carousel.js"></script>',
-      );
-    });
-
-    test("dedupes the hydration script when multiple instances share a client.script URL", () => {
-      const registry = createBlockRegistry([
-        {
-          name: "acme/carousel",
-          render: () => <div />,
-          client: { script: "/assets/carousel.js" },
-        },
-      ]);
-      const tree: readonly BlockNode[] = [
-        { id: "c1", name: "acme/carousel", attrs: {} },
-        { id: "c2", name: "acme/carousel", attrs: {} },
-      ];
-
-      const html = renderToStaticMarkup(renderBlockTree(tree, registry));
-
-      const scriptMatches = html.match(
-        /<script[^>]*src="\/assets\/carousel.js"/g,
-      );
-      expect(scriptMatches).toHaveLength(1);
-      // Each instance still carries the island marker so the bootstrap can
-      // find every DOM anchor by name.
-      const islandMatches = html.match(/data-plumix-island="acme\/carousel"/g);
-      expect(islandMatches).toHaveLength(2);
-    });
-
     test("does not emit a script for blocks without spec.client", () => {
       const heading: BlockNode = {
         id: "h1",
@@ -368,6 +323,94 @@ describe("renderBlockTree", () => {
       );
 
       expect(html).not.toContain("<script");
+    });
+
+    test("wraps the block in <plumix-island> when client + manifest entry present", () => {
+      const Search = () => <input data-testid="search" />;
+      const registry = createBlockRegistry([
+        {
+          name: "acme/search",
+          render: () => <input className="ssr-fallback" />,
+          client: { component: Search, hydrateWhen: "load" },
+        },
+      ]);
+      const manifest = new Map([
+        [
+          Search,
+          {
+            chunkUrl: "/_plumix/assets/search.abc123.js",
+            exportName: "Search",
+          },
+        ],
+      ]);
+      const tree: readonly BlockNode[] = [
+        { id: "s1", name: "acme/search", attrs: { placeholder: "Type…" } },
+      ];
+
+      const html = renderToStaticMarkup(
+        renderBlockTree(tree, registry, { islandManifest: manifest }),
+      );
+
+      expect(html).toContain("<plumix-island");
+      expect(html).toContain('chunk-url="/_plumix/assets/search.abc123.js"');
+      expect(html).toContain('component-export="Search"');
+      expect(html).toContain('client="load"');
+      expect(html).toContain('data-plumix-block="acme/search"');
+      expect(html).toContain("ssr-fallback");
+      expect(html).toContain(
+        '<script type="application/json" data-plumix-island-props="">',
+      );
+    });
+
+    test("falls back to plain div when client is declared but no manifest entry resolves", () => {
+      const Search = () => null;
+      const registry = createBlockRegistry([
+        {
+          name: "acme/search",
+          render: () => <input className="ssr-fallback" />,
+          client: { component: Search, hydrateWhen: "load" },
+        },
+      ]);
+      const tree: readonly BlockNode[] = [
+        { id: "s1", name: "acme/search", attrs: {} },
+      ];
+
+      // No manifest passed → graceful degradation.
+      const html = renderToStaticMarkup(renderBlockTree(tree, registry));
+
+      expect(html).not.toContain("<plumix-island");
+      expect(html).toContain("ssr-fallback");
+    });
+
+    test("escapes </script> sequences in serialized props", () => {
+      const Widget = () => null;
+      const registry = createBlockRegistry([
+        {
+          name: "acme/widget",
+          render: () => <span />,
+          client: { component: Widget, hydrateWhen: "load" },
+        },
+      ]);
+      const manifest = new Map([
+        [Widget, { chunkUrl: "/w.js", exportName: "Widget" }],
+      ]);
+      const tree: readonly BlockNode[] = [
+        {
+          id: "w1",
+          name: "acme/widget",
+          attrs: { code: "alert('hi'); </script>" },
+        },
+      ];
+
+      const html = renderToStaticMarkup(
+        renderBlockTree(tree, registry, { islandManifest: manifest }),
+      );
+
+      // The legitimate closing `</script>` for the prop tag exists once;
+      // the escape must prevent a second one from appearing inside the JSON.
+      const closingMatches = html.match(/<\/script>/g);
+      expect(closingMatches).toHaveLength(1);
+      expect(html).toContain("<\\/script");
     });
   });
 
