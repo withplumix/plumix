@@ -36,6 +36,18 @@ declare global {
 
 const RETRY_DELAY_MS = 1000;
 
+// Prototype-pollution defense: the element does `mod[exportName]` to
+// resolve the component, and `mod["__proto__"]` would return
+// `Object.prototype` which `createRoot(...).render(<Component />)`
+// would happily then try to mount. Mirror's Astro's
+// `FORBIDDEN_COMPONENT_EXPORT_KEYS` and the matching server-side
+// guard in `packages/plumix/src/vite/island-transform.ts`.
+const FORBIDDEN_EXPORT_KEYS: ReadonlySet<string> = new Set([
+  "__proto__",
+  "constructor",
+  "prototype",
+]);
+
 export class PlumixIslandElement extends HTMLElement {
   private root: Root | null = null;
   private retried = false;
@@ -95,6 +107,12 @@ export class PlumixIslandElement extends HTMLElement {
     const exportName = this.getAttribute("component-export") ?? "default";
     if (!chunkUrl) {
       this.dispatchHydrationError(new Error("missing chunk-url attribute"));
+      return;
+    }
+    if (FORBIDDEN_EXPORT_KEYS.has(exportName)) {
+      this.dispatchHydrationError(
+        new Error(`forbidden component-export key: ${exportName}`),
+      );
       return;
     }
     const Component = await this.loadComponent(chunkUrl, exportName);

@@ -1,11 +1,14 @@
 // Port of Astro's prop serializer (Apache-2.0). PROP_TYPE integer
-// codes match Astro 1:1 so the wire format reads as a familiar tag.
-// The payload shape diverges in one place: nested Map/Set/Array/typed-
-// array values are stored as JSON-stringified strings (Astro stores
-// them as nested arrays). That's a conscious simplification — it keeps
-// the encoder/decoder symmetric and matches what `JSON.parse` returns
-// in one step on the client; if a future slice wants to share fixtures
-// or runtime with Astro it'll need a wire-format pass to align.
+// codes AND payload shape match Astro byte-for-byte: nested collection
+// types (Map/Set/Array/typed-arrays) are encoded as nested arrays of
+// `[type, value]` tuples, NOT JSON-stringified strings. The single
+// outer `JSON.stringify` in `serializeProps` walks the whole tree once.
+//
+// Why this matters: encoding `new Map([["k", new Date(0)]])` with the
+// old nested-stringify approach would lose the inner Date — it would
+// round-trip as `Map<string, string>` because the second-stage JSON
+// parse couldn't see the nested `[PROP_TYPE.Date, "..."]` tuple. The
+// nested-array form preserves type fidelity through the whole graph.
 //
 // Cycle detection runs at the SSR boundary and throws with the
 // component displayName so a broken prop graph fails loud rather than
@@ -132,42 +135,28 @@ function encodeInner(
     case "[object Map]":
       return [
         PROP_TYPE.Map,
-        JSON.stringify(
-          [...(value as Map<unknown, unknown>).entries()].map((entry) => [
-            encode(entry[0], seen, displayName),
-            encode(entry[1], seen, displayName),
-          ]),
-        ),
+        [...(value as Map<unknown, unknown>).entries()].map((entry) => [
+          encode(entry[0], seen, displayName),
+          encode(entry[1], seen, displayName),
+        ]),
       ];
     case "[object Set]":
       return [
         PROP_TYPE.Set,
-        JSON.stringify(
-          [...(value as Set<unknown>).values()].map((v) =>
-            encode(v, seen, displayName),
-          ),
+        [...(value as Set<unknown>).values()].map((v) =>
+          encode(v, seen, displayName),
         ),
       ];
     case "[object Uint8Array]":
-      return [PROP_TYPE.Uint8Array, JSON.stringify([...(value as Uint8Array)])];
+      return [PROP_TYPE.Uint8Array, [...(value as Uint8Array)]];
     case "[object Uint16Array]":
-      return [
-        PROP_TYPE.Uint16Array,
-        JSON.stringify([...(value as Uint16Array)]),
-      ];
+      return [PROP_TYPE.Uint16Array, [...(value as Uint16Array)]];
     case "[object Uint32Array]":
-      return [
-        PROP_TYPE.Uint32Array,
-        JSON.stringify([...(value as Uint32Array)]),
-      ];
+      return [PROP_TYPE.Uint32Array, [...(value as Uint32Array)]];
     case "[object Array]":
       return [
         PROP_TYPE.JSON,
-        JSON.stringify(
-          (value as readonly unknown[]).map((v) =>
-            encode(v, seen, displayName),
-          ),
-        ),
+        (value as readonly unknown[]).map((v) => encode(v, seen, displayName)),
       ];
     default: {
       const obj: Record<string, Encoded> = {};
@@ -186,7 +175,7 @@ function decode(encoded: Encoded): unknown {
     case PROP_TYPE.Value:
       return decodeValue(raw);
     case PROP_TYPE.JSON:
-      return (JSON.parse(raw as string) as Encoded[]).map(decode);
+      return (raw as readonly Encoded[]).map(decode);
     case PROP_TYPE.RegExp: {
       const { source, flags } = raw as { source: string; flags: string };
       return new RegExp(source, flags);
@@ -194,11 +183,11 @@ function decode(encoded: Encoded): unknown {
     case PROP_TYPE.Date:
       return new Date(raw as string);
     case PROP_TYPE.Map: {
-      const entries = JSON.parse(raw as string) as [Encoded, Encoded][];
+      const entries = raw as readonly [Encoded, Encoded][];
       return new Map(entries.map(([k, v]) => [decode(k), decode(v)]));
     }
     case PROP_TYPE.Set: {
-      const values = JSON.parse(raw as string) as Encoded[];
+      const values = raw as readonly Encoded[];
       return new Set(values.map(decode));
     }
     case PROP_TYPE.BigInt:
@@ -206,11 +195,11 @@ function decode(encoded: Encoded): unknown {
     case PROP_TYPE.URL:
       return new URL(raw as string);
     case PROP_TYPE.Uint8Array:
-      return new Uint8Array(JSON.parse(raw as string) as number[]);
+      return new Uint8Array(raw as readonly number[]);
     case PROP_TYPE.Uint16Array:
-      return new Uint16Array(JSON.parse(raw as string) as number[]);
+      return new Uint16Array(raw as readonly number[]);
     case PROP_TYPE.Uint32Array:
-      return new Uint32Array(JSON.parse(raw as string) as number[]);
+      return new Uint32Array(raw as readonly number[]);
     case PROP_TYPE.Infinity:
       return (raw as number) > 0 ? Infinity : -Infinity;
   }

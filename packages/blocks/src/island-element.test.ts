@@ -88,6 +88,23 @@ describe("PlumixIslandElement lifecycle", () => {
     expect(strategy).toHaveBeenCalledTimes(1);
   });
 
+  test("rejects a __proto__ component-export with plumix:hydration-error (proto pollution guard)", async () => {
+    stubStrategies();
+    const listener = vi.fn();
+    window.addEventListener("plumix:hydration-error", listener);
+    const el = makeIsland({
+      client: "load",
+      "chunk-url": "/chunk.js",
+      "component-export": "__proto__",
+      opts: "{}",
+    });
+    document.body.appendChild(el);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(listener).toHaveBeenCalledTimes(1);
+    window.removeEventListener("plumix:hydration-error", listener);
+  });
+
   test("dispatches plumix:hydration-error when no strategy is registered", async () => {
     const listener = vi.fn();
     window.addEventListener("plumix:hydration-error", listener);

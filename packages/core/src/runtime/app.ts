@@ -1,6 +1,11 @@
 import { RPCHandler } from "@orpc/server/fetch";
 
-import type { BlockRegistry, HtmlAllowlist, MarkSpec } from "@plumix/blocks";
+import type {
+  BlockRegistry,
+  HtmlAllowlist,
+  IslandManifest,
+  MarkSpec,
+} from "@plumix/blocks";
 import {
   buildHtmlAllowlist,
   coreBlocks,
@@ -151,14 +156,25 @@ export interface PlumixApp {
    * per-request renders pay zero merge cost.
    */
   readonly templateDocuments: ReadonlyMap<string, DocumentManifest>;
+  /**
+   * Map from each block-island `ComponentType` reference to its
+   * `{ chunkUrl, exportName }`. Vite resolves this from
+   * `virtual:plumix/island-manifest` and the worker template passes it
+   * into `buildApp`; the SSR renderer threads it through `PlumixProvider`
+   * so `BlockRenderer` can emit `<plumix-island>` wrappers with the
+   * right chunk URL per component. Empty `Map` in dev / tests / builds
+   * that haven't been through the islands Vite pipeline.
+   */
+  readonly islandManifest: IslandManifest;
 }
 
 // Runtime-only state the worker template injects at boot — values
-// resolved by the Vite plugin from virtual modules (asset manifest).
-// Kept internal: consumers (tests + the generated worker) pass an
-// inline object literal that structurally satisfies the type.
+// resolved by the Vite plugin from virtual modules (asset + island
+// manifests). Kept internal: consumers (tests + the generated worker)
+// pass an inline object literal that structurally satisfies the type.
 interface RuntimeContext {
   readonly assetManifest?: AssetManifest;
+  readonly islandManifest?: IslandManifest;
 }
 
 export async function buildApp(
@@ -276,6 +292,7 @@ export async function buildApp(
     document,
     assetManifest: runtime.assetManifest ?? {},
     templateDocuments,
+    islandManifest: runtime.islandManifest ?? new Map(),
   };
 }
 
