@@ -1,4 +1,4 @@
-export interface PathAlias {
+interface PathAlias {
   readonly find: string;
   readonly replacement: string;
 }
