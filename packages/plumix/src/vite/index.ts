@@ -26,6 +26,7 @@ import {
   installPlugins,
 } from "@plumix/core";
 
+import type { DiscoveredIsland } from "./island-transform.js";
 import { loadConfig } from "../cli/load-config.js";
 import {
   ADMIN_URL_PREFIX,
@@ -33,6 +34,7 @@ import {
 } from "./admin-plugin-bundle.js";
 import { generateClientEntrySource } from "./client-entry-codegen.js";
 import { VitePluginError } from "./errors.js";
+import { scanUserSources } from "./island-transform.js";
 import { plumixPathAliases } from "./path-aliases.js";
 import { stageUserPublic } from "./public-staging.js";
 
@@ -50,11 +52,19 @@ export interface PlumixVitePluginOptions {
 
 const ASSET_MANIFEST_VIRTUAL_ID = "virtual:plumix/asset-manifest";
 const ASSET_MANIFEST_RESOLVED_ID = "\0" + ASSET_MANIFEST_VIRTUAL_ID;
+const ISLAND_MANIFEST_VIRTUAL_ID = "virtual:plumix/island-manifest";
+const ISLAND_MANIFEST_RESOLVED_ID = "\0" + ISLAND_MANIFEST_VIRTUAL_ID;
 
 export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
   let root = process.cwd();
   let publicDir = "";
   let configPath: string | undefined;
+  // Discovered at config() time so rollupOptions.input can be extended
+  // before Vite resolves entries. The list is also what the
+  // `virtual:plumix/island-manifest` virtual module's `load` hook reads
+  // to emit the Map<ComponentType, { chunkUrl, exportName }> the SSR
+  // walker uses for `<plumix-island>` wrapper emission.
+  let islands: readonly DiscoveredIsland[] = [];
 
   return {
     name: "plumix",
@@ -88,6 +98,19 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       // none is set (see packages/vite-plugin-cloudflare/src/build.ts).
       // Vite merges this with the CF plugin's config; the merged
       // result has both `manifest: true` and our entry input.
+      // Scan user source for block-side islands BEFORE Vite resolves
+      // entries. Each discovered island becomes its own rollupOptions
+      // input so Vite emits a content-hashed chunk per island
+      // (matches the asset pipeline from PRD #510 slice #514). The
+      // SSR worker imports `virtual:plumix/island-manifest` which
+      // resolves the chunk URL per component out of Vite's
+      // `manifest.json` post-build.
+      const scanRoot = userConfig.root ?? process.cwd();
+      islands = scanUserSources(scanRoot);
+      const islandInputs: Record<string, string> = {};
+      for (const island of islands) {
+        islandInputs[islandEntryName(island)] = island.sourcePath;
+      }
       const environments = {
         client: {
           build: {
@@ -95,6 +118,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
             rollupOptions: {
               input: {
                 "plumix-client": ".plumix/client-entry.ts",
+                ...islandInputs,
               },
             },
           },
@@ -116,18 +140,24 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
     },
     resolveId(id) {
       if (id === ASSET_MANIFEST_VIRTUAL_ID) return ASSET_MANIFEST_RESOLVED_ID;
+      if (id === ISLAND_MANIFEST_VIRTUAL_ID) return ISLAND_MANIFEST_RESOLVED_ID;
       return null;
     },
     load(id) {
-      if (id !== ASSET_MANIFEST_RESOLVED_ID) return null;
-      // Read the manifest Vite emits to `<outDir>/.vite/manifest.json`.
-      // Returns `{}` when missing — which happens in dev (no manifest
-      // is written) AND on the FIRST production build of a fresh
-      // project: @cloudflare/vite-plugin builds the worker env before
-      // the client env, so on a cold build the worker bakes an empty
-      // manifest and the second build picks up the real entries.
-      // Followup #528 tracks the fix.
-      return `export default ${JSON.stringify(loadAssetManifest(root))};`;
+      if (id === ASSET_MANIFEST_RESOLVED_ID) {
+        // Read the manifest Vite emits to `<outDir>/.vite/manifest.json`.
+        // Returns `{}` when missing — which happens in dev (no manifest
+        // is written) AND on the FIRST production build of a fresh
+        // project: @cloudflare/vite-plugin builds the worker env before
+        // the client env, so on a cold build the worker bakes an empty
+        // manifest and the second build picks up the real entries.
+        // Followup #528 tracks the fix.
+        return `export default ${JSON.stringify(loadAssetManifest(root))};`;
+      }
+      if (id === ISLAND_MANIFEST_RESOLVED_ID) {
+        return generateIslandManifestSource(root, islands);
+      }
+      return null;
     },
     async buildStart() {
       const emitted = await regenerate(root, options.configFile);
@@ -447,6 +477,83 @@ async function destIsFresh(dest: string, src: string): Promise<boolean> {
 // for the asset-manifest virtual module can read the file synchronously
 // off disk. Returns `{}` when the file isn't present yet (dev, or first
 // build pass before the client env finishes).
+/**
+ * Per-island synthesized entry name. Used as the `rollupOptions.input`
+ * key (the chunk's name in Vite's manifest.json) and as the lookup key
+ * in `generateIslandManifestSource`. A short content-derived suffix is
+ * appended so two sources whose paths differ only by case or by stripped
+ * punctuation (`/foo/Bar.tsx` vs `/foo-Bar.tsx`) don't collide on
+ * case-insensitive filesystems.
+ */
+function islandEntryName(island: DiscoveredIsland): string {
+  const slug = island.sourcePath.replace(/[^A-Za-z0-9]/g, "_");
+  const suffix = simpleHash(island.sourcePath).toString(16).slice(0, 8);
+  return `island-${slug}-${suffix}`;
+}
+
+// 32-bit FNV-1a — enough entropy to disambiguate path-slug collisions
+// without pulling in `node:crypto` for what's effectively a deterministic
+// label. Production correctness comes from `sourcePath` being unique
+// per resolved component, not from the hash.
+function simpleHash(input: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < input.length; i += 1) {
+    h ^= input.charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}
+
+/**
+ * Generate the source for the `virtual:plumix/island-manifest` virtual
+ * module. The shape is a `Map<ComponentType, { chunkUrl, exportName }>`
+ * keyed by the component reference — the SSR walker uses this key to
+ * resolve a block's `client.component` to its hashed client-bundle URL.
+ *
+ * Component identity is preserved across the manifest import + the
+ * worker's evaluated plumix.config.ts because both import the same
+ * source path — JavaScript module identity makes the keys equal-by-ref.
+ *
+ * Returns an empty Map when no islands were discovered, so consumers
+ * (BlockRenderer) can unconditionally read from context.
+ */
+function generateIslandManifestSource(
+  rootDir: string,
+  islands: readonly DiscoveredIsland[],
+): string {
+  if (islands.length === 0) {
+    return "export const islandManifest = new Map();\n";
+  }
+  const assetManifest = loadAssetManifest(rootDir) as Record<
+    string,
+    { file?: string } | undefined
+  >;
+  const imports: string[] = [];
+  const entries: string[] = [];
+  islands.forEach((island, idx) => {
+    const localName = `Component_${idx}`;
+    const importClause =
+      island.exportName === "default"
+        ? `import ${localName} from ${JSON.stringify(island.sourcePath)};`
+        : `import { ${island.exportName} as ${localName} } from ${JSON.stringify(island.sourcePath)};`;
+    imports.push(importClause);
+    // Match the manifest key Vite uses — the rollup input key (e.g.
+    // `island-_abs_path_to_Search_tsx`). If Vite hasn't emitted the
+    // chunk yet (dev mode + cold-build edge case the asset-manifest
+    // virtual module documents), fall back to a dev-server path so the
+    // browser still loads the source module via Vite's middleware.
+    const manifestKey = islandEntryName(island);
+    const chunkUrl =
+      assetManifest[manifestKey]?.file !== undefined
+        ? `/${assetManifest[manifestKey].file}`
+        : `/@fs${island.sourcePath}`;
+    entries.push(
+      `  [${localName}, { chunkUrl: ${JSON.stringify(chunkUrl)}, exportName: ${JSON.stringify(island.exportName)} }],`,
+    );
+  });
+  return `${imports.join("\n")}\nexport const islandManifest = new Map([\n${entries.join("\n")}\n]);\n`;
+}
+
 function loadAssetManifest(rootDir: string): unknown {
   const candidates = [
     resolve(rootDir, "dist/client/.vite/manifest.json"),
