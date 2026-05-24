@@ -7,6 +7,7 @@ import { PlumixProvider } from "@plumix/blocks/renderer";
 import type { AppContext } from "../../context/app.js";
 import type {
   DocumentLink,
+  DocumentManifest,
   DocumentMeta,
   DocumentScript,
   TemplateComponent,
@@ -21,6 +22,7 @@ import { resolveTemplateCandidates } from "./template-hierarchy.js";
 interface RenderArgs {
   readonly ctx: AppContext;
   readonly theme: ThemeDescriptor;
+  readonly document: DocumentManifest;
   readonly node: ResolvedNode;
   readonly data: TemplateData;
   readonly title: string;
@@ -29,18 +31,20 @@ interface RenderArgs {
 export async function renderThroughTheme({
   ctx,
   theme,
+  document,
   node,
   data,
   title,
 }: RenderArgs): Promise<string> {
   const candidates = await resolveTemplateCandidates(node, ctx.hooks);
   const Template = pickTemplate(theme.templates, candidates);
-  return renderTree({ ctx, theme, data, title, Template });
+  return renderTree({ ctx, document, data, title, Template });
 }
 
 interface RenderErrorArgs {
   readonly ctx: AppContext;
   readonly theme: ThemeDescriptor;
+  readonly document: DocumentManifest;
   readonly kind: "not-found" | "server-error";
   readonly data: ErrorData;
 }
@@ -57,18 +61,19 @@ const ERROR_VARIANTS = {
 export function renderErrorThroughTheme({
   ctx,
   theme,
+  document,
   kind,
   data,
 }: RenderErrorArgs): string {
   const variant = ERROR_VARIANTS[kind];
   const Template = (theme.templates[variant.key] ??
     variant.fallback) as TemplateComponent<TemplateData>;
-  return renderTree({ ctx, theme, data, title: variant.title, Template });
+  return renderTree({ ctx, document, data, title: variant.title, Template });
 }
 
 interface RenderTreeArgs {
   readonly ctx: AppContext;
-  readonly theme: ThemeDescriptor;
+  readonly document: DocumentManifest;
   readonly data: TemplateData;
   readonly title: string;
   readonly Template: TemplateComponent<TemplateData>;
@@ -82,7 +87,7 @@ interface RenderTreeArgs {
 // template — Astro's approach for the same reason.
 function renderTree({
   ctx,
-  theme,
+  document,
   data,
   title,
   Template,
@@ -94,11 +99,10 @@ function renderTree({
   const rendered = renderToString(templateTree);
   const { hoisted, body } = splitHoistedMetadata(rendered);
 
-  const manifest = theme.document;
-  const scripts = groupScriptsByPosition(manifest?.script);
+  const scripts = groupScriptsByPosition(document.script);
 
-  const htmlAttrs = renderAttrs({ lang: "en", ...manifest?.html });
-  const bodyAttrs = renderAttrs(manifest?.body);
+  const htmlAttrs = renderAttrs({ lang: "en", ...document.html });
+  const bodyAttrs = renderAttrs(document.body);
 
   // A template-rendered `<title>` is part of `hoisted`. Browsers honor the
   // first `<title>` in document order, so emitting the framework default
@@ -113,8 +117,8 @@ function renderTree({
     '<meta name="viewport" content="width=device-width, initial-scale=1"/>' +
     hoisted +
     titleFallback +
-    voidTagsToHtml("link", manifest?.link) +
-    voidTagsToHtml("meta", manifest?.meta) +
+    voidTagsToHtml("link", document.link) +
+    voidTagsToHtml("meta", document.meta) +
     scripts.headEnd.map(scriptToHtml).join("");
 
   const bodyContent =

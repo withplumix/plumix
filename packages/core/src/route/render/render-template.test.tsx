@@ -316,6 +316,53 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(body).toContain('<body class="font-sans theme-light">');
   });
 
+  test("`theme:document` filter contributions surface in SSR'd <head>", async () => {
+    const seoPlugin = definePlugin("seo", (ctx) => {
+      ctx.registerEntryType("post", {
+        label: "Posts",
+        isPublic: true,
+        hasArchive: true,
+      });
+      ctx.addFilter("theme:document", (manifest) => ({
+        ...manifest,
+        meta: [
+          ...(manifest.meta ?? []),
+          { property: "og:site_name", content: "Demo" },
+        ],
+      }));
+    });
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => <article>{data.entry.title}</article>,
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [seoPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "filtered",
+      title: "Filtered",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/filtered"),
+    );
+    const body = await response.text();
+    const headSection = body.slice(
+      body.indexOf("<head>"),
+      body.indexOf("</head>"),
+    );
+    expect(headSection).toContain(
+      '<meta property="og:site_name" content="Demo"',
+    );
+  });
+
   test("manifest `link[]` entries land in <head> in declared order", async () => {
     const theme = defineTheme({
       templates: {

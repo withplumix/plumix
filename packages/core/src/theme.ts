@@ -11,6 +11,19 @@ import type {
 } from "./route/render/resolved-entry.js";
 import { ThemeError, ThemeRegistrationError } from "./theme-errors.js";
 
+// `theme:document` is a boot-time filter chain. `buildApp` fires it once,
+// after plugins install, threading the theme's own `document` manifest
+// (or `{}` if absent) through every registered filter. The merged result
+// is frozen on `PlumixApp.document` so per-request renders pay zero merge
+// cost.
+declare module "./hooks/types.js" {
+  interface FilterRegistry {
+    "theme:document": (
+      manifest: DocumentManifest,
+    ) => DocumentManifest | Promise<DocumentManifest>;
+  }
+}
+
 /**
  * Discriminated union of every data shape a template can receive. Per-kind
  * templates (`single`, `archive`, …) narrow via the registry; `index`
@@ -122,6 +135,30 @@ export function defineTheme(descriptor: ThemeDescriptor): ThemeDescriptor {
     validateTokens(descriptor.tokens);
   }
   return descriptor;
+}
+
+// Post-filter validation: catches malformed contributions at boot
+// (before any request can render). Validates the two cases the renderer
+// can't recover from gracefully — link entries without `rel` (browsers
+// ignore them, invalid HTML) and scripts with no src + no inline body
+// (dead weight, signals a plugin bug worth surfacing loud).
+export function validateDocumentManifest(manifest: DocumentManifest): void {
+  manifest.link?.forEach((entry, index) => {
+    if (typeof entry.rel !== "string" || entry.rel.length === 0) {
+      throw ThemeRegistrationError.documentInvalidLink({ index });
+    }
+  });
+  manifest.script?.forEach((entry, index) => {
+    const hasSrc = typeof entry.src === "string" && entry.src.length > 0;
+    const hasChildren =
+      typeof entry.children === "string" && entry.children.length > 0;
+    const hasInnerHtml =
+      typeof entry.dangerouslySetInnerHTML?.__html === "string" &&
+      entry.dangerouslySetInnerHTML.__html.length > 0;
+    if (!hasSrc && !hasChildren && !hasInnerHtml) {
+      throw ThemeRegistrationError.documentInvalidScript({ index });
+    }
+  });
 }
 
 function validateTokens(tokens: ThemeTokens): void {

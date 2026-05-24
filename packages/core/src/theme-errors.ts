@@ -1,4 +1,8 @@
-type ThemeRegistrationCode = "missing_theme" | "missing_index_template";
+type ThemeRegistrationCode =
+  | "missing_theme"
+  | "missing_index_template"
+  | "document_invalid_link"
+  | "document_invalid_script";
 
 export class ThemeRegistrationError extends Error {
   static {
@@ -28,6 +32,26 @@ export class ThemeRegistrationError extends Error {
       `Theme registration: \`templates.index\` is required. Every theme ` +
         `must declare an \`index\` template — it is the final fallback the ` +
         `template hierarchy walks to when no more-specific template matches.`,
+    );
+  }
+
+  static documentInvalidLink(ctx: { index: number }): ThemeRegistrationError {
+    return new ThemeRegistrationError(
+      "document_invalid_link",
+      `\`theme:document\` filter chain produced a \`link[${ctx.index}]\` ` +
+        `entry without a \`rel\` attribute. Every \`<link>\` in the document ` +
+        `manifest must declare a \`rel\` — browsers ignore unkeyed link tags ` +
+        `and the renderer would emit invalid HTML.`,
+    );
+  }
+
+  static documentInvalidScript(ctx: { index: number }): ThemeRegistrationError {
+    return new ThemeRegistrationError(
+      "document_invalid_script",
+      `\`theme:document\` filter chain produced a \`script[${ctx.index}]\` ` +
+        `entry with neither \`src\` nor inline content (\`children\` / ` +
+        `\`dangerouslySetInnerHTML\`). Scripts must reference a source URL ` +
+        `or carry an inline body — an empty \`<script>\` tag is dead weight.`,
     );
   }
 }
