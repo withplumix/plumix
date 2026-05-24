@@ -15,9 +15,9 @@ import type {
   TemplateRegistry,
   ThemeDescriptor,
 } from "../../theme.js";
+import type { AssetManifest } from "./asset-manifest.js";
 import type { ErrorData } from "./resolved-entry.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
-import type { AssetManifest } from "./asset-manifest.js";
 import { bundledCssTags } from "./asset-manifest.js";
 import { resolveTemplateCandidates } from "./template-hierarchy.js";
 

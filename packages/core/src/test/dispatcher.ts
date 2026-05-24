@@ -12,9 +12,9 @@ import type {
   FilterName,
   FilterRest,
 } from "../hooks/types.js";
+import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type { PlumixApp } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
-import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type {
   AssetsBinding,
   ConnectedObjectStorage,

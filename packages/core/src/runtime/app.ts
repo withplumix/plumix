@@ -142,13 +142,11 @@ export interface PlumixApp {
   readonly assetManifest: AssetManifest;
 }
 
-/**
- * Runtime-only state the worker template injects at boot — values
- * resolved by the Vite plugin from virtual modules (asset manifest)
- * or the worker runtime (TBD). Optional in tests + cases that don't
- * spin up the full build pipeline.
- */
-export interface RuntimeContext {
+// Runtime-only state the worker template injects at boot — values
+// resolved by the Vite plugin from virtual modules (asset manifest).
+// Kept internal: consumers (tests + the generated worker) pass an
+// inline object literal that structurally satisfies the type.
+interface RuntimeContext {
   readonly assetManifest?: AssetManifest;
 }
 
