@@ -159,10 +159,13 @@ export function defineTheme(descriptor: ThemeDescriptor): ThemeDescriptor {
 // can't recover from gracefully — link entries without `rel` (browsers
 // ignore them, invalid HTML) and scripts with no src + no inline body
 // (dead weight, signals a plugin bug worth surfacing loud).
-export function validateDocumentManifest(manifest: DocumentManifest): void {
+export function validateDocumentManifest(
+  manifest: DocumentManifest,
+  slot?: string,
+): void {
   manifest.link?.forEach((entry, index) => {
     if (typeof entry.rel !== "string" || entry.rel.length === 0) {
-      throw ThemeRegistrationError.documentInvalidLink({ index });
+      throw ThemeRegistrationError.documentInvalidLink({ index, slot });
     }
   });
   manifest.script?.forEach((entry, index) => {
@@ -173,7 +176,7 @@ export function validateDocumentManifest(manifest: DocumentManifest): void {
       typeof entry.dangerouslySetInnerHTML?.__html === "string" &&
       entry.dangerouslySetInnerHTML.__html.length > 0;
     if (!hasSrc && !hasChildren && !hasInnerHtml) {
-      throw ThemeRegistrationError.documentInvalidScript({ index });
+      throw ThemeRegistrationError.documentInvalidScript({ index, slot });
     }
   });
 }

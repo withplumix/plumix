@@ -26,6 +26,7 @@ interface RenderArgs {
   readonly ctx: AppContext;
   readonly theme: ThemeDescriptor;
   readonly document: DocumentManifest;
+  readonly templateDocuments: ReadonlyMap<string, DocumentManifest>;
   readonly assetManifest: AssetManifest;
   readonly node: ResolvedNode;
   readonly data: TemplateData;
@@ -36,20 +37,32 @@ export async function renderThroughTheme({
   ctx,
   theme,
   document,
+  templateDocuments,
   assetManifest,
   node,
   data,
   title,
 }: RenderArgs): Promise<string> {
   const candidates = await resolveTemplateCandidates(node, ctx.hooks);
-  const template = pickTemplate(theme.templates, candidates);
-  return renderTree({ ctx, document, assetManifest, data, title, template });
+  const { template, slot } = pickTemplate(theme.templates, candidates);
+  // Per-template fragment is precomputed at boot; fall back to the
+  // theme-wide document when the template didn't declare its own.
+  const renderDocument = templateDocuments.get(slot) ?? document;
+  return renderTree({
+    ctx,
+    document: renderDocument,
+    assetManifest,
+    data,
+    title,
+    template,
+  });
 }
 
 interface RenderErrorArgs {
   readonly ctx: AppContext;
   readonly theme: ThemeDescriptor;
   readonly document: DocumentManifest;
+  readonly templateDocuments: ReadonlyMap<string, DocumentManifest>;
   readonly assetManifest: AssetManifest;
   readonly kind: "not-found" | "server-error";
   readonly data: ErrorData;
@@ -68,6 +81,7 @@ export function renderErrorThroughTheme({
   ctx,
   theme,
   document,
+  templateDocuments,
   assetManifest,
   kind,
   data,
@@ -75,9 +89,10 @@ export function renderErrorThroughTheme({
   const variant = ERROR_VARIANTS[kind];
   const raw = theme.templates[variant.key] ?? variant.fallback;
   const template = normalizeTemplate(raw, variant.key);
+  const renderDocument = templateDocuments.get(variant.key) ?? document;
   return renderTree({
     ctx,
-    document,
+    document: renderDocument,
     assetManifest,
     data,
     title: variant.title,
@@ -279,16 +294,22 @@ function escapeAttr(value: string): string {
 function pickTemplate(
   templates: TemplateRegistry,
   candidates: readonly string[],
-): Template<TemplateData> {
+): { template: Template<TemplateData>; slot: string } {
   // The candidate list is derived from the route's kind, so the picked
   // template's narrowed data shape always matches the runtime `data`.
   // Normalize at the boundary — accepts both plain function templates
-  // (legacy) and factory-built `Template<T>` objects.
+  // (legacy) and factory-built `Template<T>` objects. The returned
+  // `slot` keys per-template document lookups on the app's precomputed
+  // `templateDocuments` map.
   for (const name of candidates) {
     const candidate = templates[name];
-    if (candidate) return normalizeTemplate(candidate, name);
+    if (candidate)
+      return { template: normalizeTemplate(candidate, name), slot: name };
   }
-  return normalizeTemplate(templates.index, "index");
+  return {
+    template: normalizeTemplate(templates.index, "index"),
+    slot: "index",
+  };
 }
 
 function DefaultNotFound() {

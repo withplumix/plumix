@@ -217,6 +217,78 @@ describe("buildApp — theme:document filter", () => {
   });
 });
 
+describe("buildApp — per-template document fragments", () => {
+  test("PlumixApp.templateDocuments holds the per-template merged manifest", async () => {
+    const { defineTemplate } = await import("./template.js");
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: defineTemplate({
+          render: () => null,
+          document: { meta: [{ name: "robots", content: "noindex" }] },
+        }),
+      },
+      document: {
+        meta: [{ name: "theme-color", content: "#0ea5e9" }],
+      },
+    });
+    const app = await buildApp(
+      plumix({
+        runtime: stubAdapter,
+        database: stubDatabase,
+        auth: stubAuth,
+        theme,
+      }),
+    );
+    const singleDoc = app.templateDocuments.get("single");
+    expect(singleDoc?.meta).toEqual([
+      { name: "theme-color", content: "#0ea5e9" },
+      { name: "robots", content: "noindex" },
+    ]);
+  });
+
+  test("templates without a document fragment do NOT populate the map", async () => {
+    const app = await buildApp(
+      plumix({
+        runtime: stubAdapter,
+        database: stubDatabase,
+        auth: stubAuth,
+        theme: defineTheme({
+          templates: { index: () => null, single: () => null },
+          document: { meta: [{ name: "x", content: "y" }] },
+        }),
+      }),
+    );
+    expect(app.templateDocuments.has("single")).toBe(false);
+    expect(app.templateDocuments.has("index")).toBe(false);
+  });
+
+  test("templateDocuments entries are deep-frozen", async () => {
+    const { defineTemplate } = await import("./template.js");
+    const app = await buildApp(
+      plumix({
+        runtime: stubAdapter,
+        database: stubDatabase,
+        auth: stubAuth,
+        theme: defineTheme({
+          templates: {
+            index: () => null,
+            single: defineTemplate({
+              render: () => null,
+              document: { link: [{ rel: "icon", href: "/x.svg" }] },
+            }),
+          },
+        }),
+      }),
+    );
+    const doc = app.templateDocuments.get("single");
+    expect(Object.isFrozen(doc)).toBe(true);
+    expect(() => {
+      (doc as { link?: unknown }).link = "mutated";
+    }).toThrow(TypeError);
+  });
+});
+
 describe("buildApp", () => {
   test("throws ThemeRegistrationError when config.theme omits templates.index", async () => {
     await expect(
