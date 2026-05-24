@@ -23,13 +23,12 @@ import type { ContextExtensionEntry } from "../plugin/provides-context.js";
 import type { RouteRule } from "../route/intent.js";
 import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type { DocumentManifest } from "../theme.js";
-import { mergeDocumentManifest } from "../document-merge.js";
-import { isTemplate } from "../template.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
 import { DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
 import * as coreSchema from "../db/schema/index.js";
+import { mergeDocumentManifest } from "../document-merge.js";
 import { HookRegistry } from "../hooks/registry.js";
 import {
   CORE_RPC_NAMESPACES,
@@ -39,6 +38,7 @@ import { installPlugins } from "../plugin/register.js";
 import { compileRouteMap } from "../route/compile.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
 import { appRouter } from "../rpc/router.js";
+import { isTemplate } from "../template.js";
 import { ThemeRegistrationError } from "../theme-errors.js";
 import { validateDocumentManifest } from "../theme.js";
 import { AppBootError } from "./errors.js";
@@ -246,7 +246,10 @@ export async function buildApp(
   );
 
   const document = await resolveDocumentManifest(hooks, config.theme.document);
-  const templateDocuments = buildTemplateDocuments(config.theme.templates, document);
+  const templateDocuments = buildTemplateDocuments(
+    config.theme.templates,
+    document,
+  );
 
   return {
     config,

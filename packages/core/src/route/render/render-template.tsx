@@ -303,9 +303,13 @@ function pickTemplate(
   // `templateDocuments` map.
   for (const name of candidates) {
     const candidate = templates[name];
-    if (candidate) return { template: normalizeTemplate(candidate, name), slot: name };
+    if (candidate)
+      return { template: normalizeTemplate(candidate, name), slot: name };
   }
-  return { template: normalizeTemplate(templates.index, "index"), slot: "index" };
+  return {
+    template: normalizeTemplate(templates.index, "index"),
+    slot: "index",
+  };
 }
 
 function DefaultNotFound() {

@@ -84,7 +84,13 @@ export async function resolvePublicRoute(
         assetManifest,
       );
     case "front-page":
-      return resolveFrontPage(ctx, theme, document, templateDocuments, assetManifest);
+      return resolveFrontPage(
+        ctx,
+        theme,
+        document,
+        templateDocuments,
+        assetManifest,
+      );
   }
 }
 
