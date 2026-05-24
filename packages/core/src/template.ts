@@ -39,7 +39,7 @@ export interface Template<TData extends TemplateData = TemplateData> {
   readonly [PLUMIX_TEMPLATE_BRAND]: true;
 }
 
-export interface DefineTemplateConfig<TData extends TemplateData> {
+interface DefineTemplateConfig<TData extends TemplateData> {
   readonly render: TemplateRender<TData>;
 }
 

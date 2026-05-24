@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { describe, expect, test } from "vitest";
 
 import type { EntryContent } from "@plumix/blocks";
@@ -6,10 +7,8 @@ import { BlockRenderer } from "@plumix/blocks/renderer";
 import type { ResolvedEntry } from "./resolved-entry.js";
 import { entries as entriesTable } from "../../db/schema/entries.js";
 import { definePlugin } from "../../plugin/define.js";
-import { createDispatcherHarness } from "../../test/dispatcher.js";
-import { useId } from "react";
-
 import { defineTemplate } from "../../template.js";
+import { createDispatcherHarness } from "../../test/dispatcher.js";
 import { defineTheme } from "../../theme.js";
 
 const blogPlugin = definePlugin("blog", (ctx) => {
