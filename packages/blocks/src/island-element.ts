@@ -53,6 +53,7 @@ export class PlumixIslandElement extends HTMLElement {
   private retried = false;
   private hydrated = false;
   private childObserver: MutationObserver | null = null;
+  private parentObserver: MutationObserver | null = null;
 
   connectedCallback(): void {
     // If await-children is set, defer until the streaming SSR finishes
@@ -82,12 +83,57 @@ export class PlumixIslandElement extends HTMLElement {
   disconnectedCallback(): void {
     this.childObserver?.disconnect();
     this.childObserver = null;
-    this.root?.unmount();
-    this.root = null;
+    this.parentObserver?.disconnect();
+    this.parentObserver = null;
+    // Only signal unmount when there's something to unmount. A deferred
+    // island that never hydrated (parent never cleared `ssr`, or
+    // `await-children` never settled) shouldn't emit `plumix:unmount`
+    // — listeners pair these with the hydration lifecycle.
+    if (this.hydrated) {
+      // Dispatch on `window` (not `this`) because the element is
+      // already detached by the time `disconnectedCallback` fires — a
+      // bubbling event has no parent chain to traverse. Matches the
+      // `plumix:hydration-error` event surface. Fires BEFORE
+      // `root.unmount()` so listeners can read React state via refs
+      // before teardown.
+      window.dispatchEvent(
+        new CustomEvent<{ element: PlumixIslandElement }>("plumix:unmount", {
+          detail: { element: this },
+        }),
+      );
+      this.root?.unmount();
+      this.root = null;
+    }
   }
 
   private async start(): Promise<void> {
     if (this.hydrated) return;
+    // Top-down hydration: a nested island must NOT hydrate until its
+    // closest `<plumix-island>` ancestor has cleared its `ssr` marker.
+    // Without this, a parent React render that swaps the child's
+    // subtree mid-hydration leaves a dangling `createRoot` on a
+    // detached node. Mirrors Astro's `closest('astro-island[ssr]')`
+    // contract.
+    //
+    // Searching from `parentElement`, not `this` — the walker stamps
+    // `ssr=""` on every island including this one, so a self-rooted
+    // `closest` would match `this` and self-block forever.
+    const blockingAncestor = this.parentElement?.closest(`${ISLAND_TAG}[ssr]`);
+    if (blockingAncestor) {
+      const observer = new MutationObserver(() => {
+        if (!blockingAncestor.hasAttribute("ssr")) {
+          observer.disconnect();
+          this.parentObserver = null;
+          void this.start();
+        }
+      });
+      this.parentObserver = observer;
+      observer.observe(blockingAncestor, {
+        attributes: true,
+        attributeFilter: ["ssr"],
+      });
+      return;
+    }
     const strategy = this.getAttribute("client") ?? "load";
     const opts = parseJsonAttr(this.getAttribute("opts"));
     const strategies = window.Plumix;
@@ -103,6 +149,12 @@ export class PlumixIslandElement extends HTMLElement {
 
   private async hydrate(): Promise<void> {
     if (this.hydrated) return;
+    // Bail when the parent React render has unmounted us between the
+    // strategy firing and the loadFn callback executing — `createRoot`
+    // on a detached node throws, and hydrating something not in the
+    // document is moot anyway. Mirrors Astro's `if (!isConnected)`
+    // guard in `astro-island.ts`.
+    if (!this.isConnected) return;
     const chunkUrl = this.getAttribute("chunk-url");
     const exportName = this.getAttribute("component-export") ?? "default";
     if (!chunkUrl) {
@@ -121,6 +173,10 @@ export class PlumixIslandElement extends HTMLElement {
     this.hydrated = true;
     this.root = createRoot(this);
     this.root.render(createElement(Component, props));
+    // Clearing the `ssr` attribute signals any nested island awaiting
+    // this parent that it's safe to hydrate now. See the MutationObserver
+    // in `start()` that watches the closest ancestor's `ssr` attribute.
+    this.removeAttribute("ssr");
   }
 
   private async loadComponent(

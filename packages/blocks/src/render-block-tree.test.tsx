@@ -357,6 +357,10 @@ describe("renderBlockTree", () => {
       expect(html).toContain('client="load"');
       expect(html).toContain('data-plumix-block="acme/search"');
       expect(html).toContain("ssr-fallback");
+      // `ssr` attribute marks an SSR'd-but-not-yet-hydrated island so
+      // nested children can defer their own hydration until the parent
+      // clears it. Removed by the custom element after hydrate() runs.
+      expect(html).toContain('ssr=""');
       expect(html).toContain(
         '<script type="application/json" data-plumix-island-props="">',
       );
