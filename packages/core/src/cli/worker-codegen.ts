@@ -10,9 +10,14 @@ export function generateWorkerSource({
     "// Regenerated from plumix.config.ts on each build.",
     "",
     'import { buildApp } from "plumix";',
+    // The plumix Vite plugin resolves this virtual module — in dev it's
+    // `{}`; in build it's the parsed `.vite/manifest.json` Vite emitted
+    // for the client environment. The SSR renderer reads it to inject
+    // hashed `<link rel="stylesheet">` tags after the theme's `link[]`.
+    'import assetManifest from "virtual:plumix/asset-manifest";',
     `import config from ${JSON.stringify(configModule)};`,
     "",
-    "const appPromise = buildApp(config);",
+    "const appPromise = buildApp(config, { assetManifest });",
     "let fetchHandler;",
     "let scheduledHandler;",
     "",

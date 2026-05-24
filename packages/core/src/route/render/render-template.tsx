@@ -17,12 +17,15 @@ import type {
 } from "../../theme.js";
 import type { ErrorData } from "./resolved-entry.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
+import type { AssetManifest } from "./asset-manifest.js";
+import { bundledCssTags } from "./asset-manifest.js";
 import { resolveTemplateCandidates } from "./template-hierarchy.js";
 
 interface RenderArgs {
   readonly ctx: AppContext;
   readonly theme: ThemeDescriptor;
   readonly document: DocumentManifest;
+  readonly assetManifest: AssetManifest;
   readonly node: ResolvedNode;
   readonly data: TemplateData;
   readonly title: string;
@@ -32,19 +35,21 @@ export async function renderThroughTheme({
   ctx,
   theme,
   document,
+  assetManifest,
   node,
   data,
   title,
 }: RenderArgs): Promise<string> {
   const candidates = await resolveTemplateCandidates(node, ctx.hooks);
   const Template = pickTemplate(theme.templates, candidates);
-  return renderTree({ ctx, document, data, title, Template });
+  return renderTree({ ctx, document, assetManifest, data, title, Template });
 }
 
 interface RenderErrorArgs {
   readonly ctx: AppContext;
   readonly theme: ThemeDescriptor;
   readonly document: DocumentManifest;
+  readonly assetManifest: AssetManifest;
   readonly kind: "not-found" | "server-error";
   readonly data: ErrorData;
 }
@@ -62,18 +67,27 @@ export function renderErrorThroughTheme({
   ctx,
   theme,
   document,
+  assetManifest,
   kind,
   data,
 }: RenderErrorArgs): string {
   const variant = ERROR_VARIANTS[kind];
   const Template = (theme.templates[variant.key] ??
     variant.fallback) as TemplateComponent<TemplateData>;
-  return renderTree({ ctx, document, data, title: variant.title, Template });
+  return renderTree({
+    ctx,
+    document,
+    assetManifest,
+    data,
+    title: variant.title,
+    Template,
+  });
 }
 
 interface RenderTreeArgs {
   readonly ctx: AppContext;
   readonly document: DocumentManifest;
+  readonly assetManifest: AssetManifest;
   readonly data: TemplateData;
   readonly title: string;
   readonly Template: TemplateComponent<TemplateData>;
@@ -88,6 +102,7 @@ interface RenderTreeArgs {
 function renderTree({
   ctx,
   document,
+  assetManifest,
   data,
   title,
   Template,
@@ -111,6 +126,8 @@ function renderTree({
     ? ""
     : `<title>${escapeHtml(title)}</title>`;
 
+  // Bundled CSS lands AFTER theme `link[]` so theme-local stylesheets
+  // override CDN imports declared in `link[]` (last-wins cascade).
   const headContent =
     scripts.headStart.map(scriptToHtml).join("") +
     '<meta charSet="utf-8"/>' +
@@ -118,6 +135,7 @@ function renderTree({
     hoisted +
     titleFallback +
     voidTagsToHtml("link", document.link) +
+    bundledCssTags(assetManifest) +
     voidTagsToHtml("meta", document.meta) +
     scripts.headEnd.map(scriptToHtml).join("");
 

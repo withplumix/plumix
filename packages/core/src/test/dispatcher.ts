@@ -14,6 +14,7 @@ import type {
 } from "../hooks/types.js";
 import type { PlumixApp } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
+import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type {
   AssetsBinding,
   ConnectedObjectStorage,
@@ -107,6 +108,13 @@ export interface CreateDispatcherHarnessOptions {
    */
   readonly bootstrapVia?: BootstrapVia;
   readonly theme?: ThemeDescriptor;
+  /**
+   * Vite-emitted asset manifest. Tests that exercise the renderer's
+   * `<link rel="stylesheet">` auto-injection pass a stub manifest here;
+   * the default empty object mirrors the runtime's "no client entries"
+   * fallback.
+   */
+  readonly assetManifest?: AssetManifest;
 }
 
 export interface DispatcherHarness {
@@ -215,7 +223,9 @@ export async function createDispatcherHarness(
     mailer: options.mailer,
     theme: options.theme ?? defaultTestTheme,
   });
-  const app = await buildApp(config);
+  const app = await buildApp(config, {
+    assetManifest: options.assetManifest,
+  });
   const dispatcher = createPlumixDispatcher(app);
   const { assets, storage } = options;
 
