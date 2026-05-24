@@ -20,7 +20,7 @@ import ts from "typescript";
  *   block author aliases it (`defineBlock as db`), we don't detect.
  *   Documented as a known limitation in the slice spec.
  */
-export interface IslandFinding {
+interface IslandFinding {
   readonly localBindingName: string;
   readonly importPath: string;
   readonly exportName: string;
