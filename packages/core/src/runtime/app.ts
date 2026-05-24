@@ -35,7 +35,9 @@ import { installPlugins } from "../plugin/register.js";
 import { compileRouteMap } from "../route/compile.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
 import { appRouter } from "../rpc/router.js";
+import type { DocumentManifest } from "../theme.js";
 import { ThemeRegistrationError } from "../theme-errors.js";
+import { validateDocumentManifest } from "../theme.js";
 import { AppBootError } from "./errors.js";
 
 export interface OAuthProviderSummary {
@@ -122,6 +124,13 @@ export interface PlumixApp {
    * output rather than being silently swapped with the baseline.
    */
   readonly htmlAllowlist: HtmlAllowlist;
+  /**
+   * Document manifest after the `theme:document` filter chain runs.
+   * Resolved once at boot from `config.theme.document ?? {}` so plugin
+   * contributions surface in every SSR render without per-request merge
+   * cost. Frozen post-resolution to keep the contract immutable.
+   */
+  readonly document: DocumentManifest;
 }
 
 export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
@@ -206,6 +215,8 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     config.blocks?.htmlAllowlist,
   );
 
+  const document = await resolveDocumentManifest(hooks, config.theme.document);
+
   return {
     config,
     hooks,
@@ -226,5 +237,35 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     blocks,
     marks,
     htmlAllowlist,
+    document,
   };
+}
+
+// Run the `theme:document` filter chain once at boot. Plugins spread + add
+// onto a `{}` seed when the theme has no `document` of its own, so authors
+// never need null-checks. The post-filter result is validated for shape
+// (renderer can't recover from missing `link.rel` or empty `<script>`)
+// then deep-frozen so per-request renders treat it as the immutable contract
+// — a shallow freeze would still let a plugin mutate `app.document.meta`
+// after boot and corrupt state across requests.
+async function resolveDocumentManifest(
+  hooks: HookRegistry,
+  themeManifest: DocumentManifest | undefined,
+): Promise<DocumentManifest> {
+  const seed: DocumentManifest = themeManifest ?? {};
+  const merged = await hooks.applyFilter("theme:document", seed);
+  validateDocumentManifest(merged);
+  return deepFreezeManifest(merged);
+}
+
+function deepFreezeManifest(manifest: DocumentManifest): DocumentManifest {
+  manifest.link?.forEach((entry) => Object.freeze(entry));
+  manifest.meta?.forEach((entry) => Object.freeze(entry));
+  manifest.script?.forEach((entry) => Object.freeze(entry));
+  if (manifest.link) Object.freeze(manifest.link);
+  if (manifest.meta) Object.freeze(manifest.meta);
+  if (manifest.script) Object.freeze(manifest.script);
+  if (manifest.html) Object.freeze(manifest.html);
+  if (manifest.body) Object.freeze(manifest.body);
+  return Object.freeze(manifest);
 }

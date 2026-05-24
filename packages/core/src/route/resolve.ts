@@ -4,7 +4,7 @@ import { count } from "drizzle-orm";
 import type { AppContext } from "../context/app.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { Term } from "../db/schema/terms.js";
-import type { ThemeDescriptor } from "../theme.js";
+import type { DocumentManifest, ThemeDescriptor } from "../theme.js";
 import type { RouteIntent } from "./intent.js";
 import type { RouteMatch } from "./match.js";
 import type {
@@ -47,22 +47,24 @@ export async function resolvePublicRoute(
   ctx: AppContext,
   match: RouteMatch,
   theme: ThemeDescriptor,
+  document: DocumentManifest,
 ): Promise<Response> {
   switch (match.intent.kind) {
     case "single":
-      return resolveSingle(ctx, match.intent, match.params, theme);
+      return resolveSingle(ctx, match.intent, match.params, theme, document);
     case "archive":
-      return resolveArchive(ctx, match.intent, match.params, theme);
+      return resolveArchive(ctx, match.intent, match.params, theme, document);
     case "taxonomy":
-      return resolveTaxonomy(ctx, match.intent, match.params, theme);
+      return resolveTaxonomy(ctx, match.intent, match.params, theme, document);
     case "front-page":
-      return resolveFrontPage(ctx, theme);
+      return resolveFrontPage(ctx, theme, document);
   }
 }
 
 async function resolveFrontPage(
   ctx: AppContext,
   theme: ThemeDescriptor,
+  document: DocumentManifest,
 ): Promise<Response> {
   const page = 1;
   const publicTypes = Array.from(ctx.plugins.entryTypes.entries())
@@ -91,6 +93,7 @@ async function resolveFrontPage(
   const html = await renderThroughTheme({
     ctx,
     theme,
+    document,
     node: { kind: "front-page" },
     data,
     title: "Home",
@@ -105,6 +108,7 @@ async function resolveTaxonomy(
   intent: Extract<RouteIntent, { kind: "taxonomy" }>,
   params: Record<string, string>,
   theme: ThemeDescriptor,
+  document: DocumentManifest,
 ): Promise<Response> {
   const term = await findTermForTaxonomy(ctx, intent.taxonomy, params);
   if (!term) return notFound("public-term-not-found");
@@ -151,6 +155,7 @@ async function resolveTaxonomy(
   const html = await renderThroughTheme({
     ctx,
     theme,
+    document,
     node: {
       kind: "term",
       taxonomy: intent.taxonomy,
@@ -170,6 +175,7 @@ async function resolveSingle(
   intent: Extract<RouteIntent, { kind: "single" }>,
   params: Record<string, string>,
   theme: ThemeDescriptor,
+  document: DocumentManifest,
 ): Promise<Response> {
   const row = await findEntryForSingle(ctx, intent.entryType, params);
   if (!row) return notFound("public-post-not-found");
@@ -186,6 +192,7 @@ async function resolveSingle(
   const html = await renderThroughTheme({
     ctx,
     theme,
+    document,
     node: {
       kind: "content",
       entryType: row.type,
@@ -205,6 +212,7 @@ async function resolveArchive(
   intent: Extract<RouteIntent, { kind: "archive" }>,
   params: Record<string, string>,
   theme: ThemeDescriptor,
+  document: DocumentManifest,
 ): Promise<Response> {
   const page = parsePageParam(params.page);
   const where = and(
@@ -239,6 +247,7 @@ async function resolveArchive(
   const html = await renderThroughTheme({
     ctx,
     theme,
+    document,
     node: { kind: "content-type-archive", entryType: intent.entryType },
     data,
     title,

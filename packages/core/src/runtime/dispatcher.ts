@@ -181,12 +181,14 @@ async function dispatchPublicRoute(
   url: URL,
 ): Promise<Response> {
   const theme = app.config.theme;
+  const document = app.document;
   try {
     const response = await resolvePublicRouteOrFallback(app, ctx, url);
     if (response.status === 404) {
       const html = renderErrorThroughTheme({
         ctx,
         theme,
+        document,
         kind: "not-found",
         data: {
           request: ctx.request,
@@ -207,6 +209,7 @@ async function dispatchPublicRoute(
       const html = renderErrorThroughTheme({
         ctx,
         theme,
+        document,
         kind: "server-error",
         data: { request: ctx.request },
       });
@@ -236,13 +239,15 @@ async function resolvePublicRouteOrFallback(
   url: URL,
 ): Promise<Response> {
   const theme = app.config.theme;
+  const document = app.document;
   const match = matchRoute(url, app.routeMap);
-  if (match !== null) return resolvePublicRoute(ctx, match, theme);
+  if (match !== null) return resolvePublicRoute(ctx, match, theme, document);
   if (url.pathname === "/") {
     return resolvePublicRoute(
       ctx,
       { intent: { kind: "front-page" }, params: {} },
       theme,
+      document,
     );
   }
   return notFound("public-route-not-found");
