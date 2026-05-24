@@ -17,17 +17,43 @@ export interface AssetManifestEntry {
 
 export type AssetManifest = Readonly<Record<string, AssetManifestEntry>>;
 
-// Dedupes across entries that share a CSS bundle. Walks `isEntry: true`
-// chunks only; CSS attached to code-split chunks (via `imports[]` /
-// `dynamicImports[]`) won't surface until that walk lands as a follow-up.
+// Walks the import graph starting from every `isEntry: true` chunk and
+// collects CSS from every reachable chunk (including code-split nodes
+// under `imports[]` / `dynamicImports[]`). Dedupes across entries that
+// share a bundle. Cycle-safe via the visited set.
+//
+// Output order is DFS-from-entries — deterministic for a given manifest
+// (V8 preserves Object.entries insertion order) but not author-
+// controllable. Themes that need a specific cascade should declare
+// CSS via `document.link[]` (emits before bundled CSS) and rely on
+// CSS specificity for the rest.
 export function bundledCssTags(manifest: AssetManifest): string {
-  const seen = new Set<string>();
-  for (const entry of Object.values(manifest)) {
-    if (!entry.isEntry || !entry.css) continue;
-    for (const href of entry.css) seen.add(href);
+  const css = new Set<string>();
+  const visited = new Set<string>();
+  for (const [key, entry] of Object.entries(manifest)) {
+    if (entry.isEntry) collectReachableCss(key, manifest, css, visited);
   }
-  if (seen.size === 0) return "";
-  return Array.from(seen)
+  if (css.size === 0) return "";
+  return Array.from(css)
     .map((href) => `<link rel="stylesheet" href="/${href}" />`)
     .join("");
+}
+
+function collectReachableCss(
+  key: string,
+  manifest: AssetManifest,
+  css: Set<string>,
+  visited: Set<string>,
+): void {
+  if (visited.has(key)) return;
+  visited.add(key);
+  const entry = manifest[key];
+  if (!entry) return;
+  for (const href of entry.css ?? []) css.add(href);
+  for (const dep of entry.imports ?? []) {
+    collectReachableCss(dep, manifest, css, visited);
+  }
+  for (const dep of entry.dynamicImports ?? []) {
+    collectReachableCss(dep, manifest, css, visited);
+  }
 }
