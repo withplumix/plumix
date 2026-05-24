@@ -46,8 +46,9 @@ export type TemplateDepResults = {
   >;
 };
 
-export interface TemplateRenderArgs<TData extends TemplateData>
-  extends TemplateDepResults {
+export interface TemplateRenderArgs<
+  TData extends TemplateData,
+> extends TemplateDepResults {
   readonly data: TData;
   readonly ctx: AppContext;
 }
@@ -70,15 +71,17 @@ export type TemplateRender<TData extends TemplateData> = (
  * on the template object so the framework's per-request dispatch can
  * read them via `template[kind]` and fire the registered loaders.
  */
-export interface Template<TData extends TemplateData = TemplateData>
-  extends TemplateDepDeclarations {
+export interface Template<
+  TData extends TemplateData = TemplateData,
+> extends TemplateDepDeclarations {
   readonly render: TemplateRender<TData>;
   readonly document?: DocumentManifest;
   readonly [PLUMIX_TEMPLATE_BRAND]: true;
 }
 
-interface DefineTemplateConfig<TData extends TemplateData>
-  extends TemplateDepDeclarations {
+interface DefineTemplateConfig<
+  TData extends TemplateData,
+> extends TemplateDepDeclarations {
   readonly render: TemplateRender<TData>;
   readonly document?: DocumentManifest;
 }

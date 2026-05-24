@@ -15,11 +15,11 @@ import type {
   HookOptions,
 } from "../hooks/types.js";
 import type { RouteIntent } from "../route/intent.js";
-import type { TemplateDepRegistry } from "../template.js";
 import type {
   RegisteredTemplateDep,
   TemplateDepLoader,
 } from "../template-deps.js";
+import type { TemplateDepRegistry } from "../template.js";
 import type { LookupAdapterOptions } from "./lookup.js";
 import type {
   AdminPageOptions,
@@ -590,9 +590,10 @@ export function createPluginSetupContext({
       }
       // Erase the per-kind generic at storage time — the typed view is
       // recovered when `defineTemplate` looks the loader up by kind.
+      const erased = load as unknown as RegisteredTemplateDep["load"];
       registry.templateDeps.set(kind, {
         kind,
-        load: load as RegisteredTemplateDep["load"],
+        load: erased,
         registeredBy: pluginId,
       });
     },

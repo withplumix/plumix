@@ -5,8 +5,8 @@ import { renderToString } from "react-dom/server";
 import { PlumixProvider } from "@plumix/blocks/renderer";
 
 import type { AppContext } from "../../context/app.js";
-import type { Template } from "../../template.js";
 import type { RegisteredTemplateDep } from "../../template-deps.js";
+import type { Template } from "../../template.js";
 import type {
   DocumentLink,
   DocumentManifest,
@@ -19,8 +19,8 @@ import type {
 import type { AssetManifest } from "./asset-manifest.js";
 import type { ErrorData } from "./resolved-entry.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
-import { normalizeTemplate } from "../../template.js";
 import { loadTemplateDeps } from "../../template-deps.js";
+import { normalizeTemplate } from "../../template.js";
 import { bundledCssTags } from "./asset-manifest.js";
 import { resolveTemplateCandidates } from "./template-hierarchy.js";
 
@@ -157,9 +157,7 @@ function renderTree({
   // misregistered dep kind literally named `"data"` or `"ctx"` can't
   // silently clobber the canonical args.
   const TemplateAdapter = (): ReactNode =>
-    template.render({ ...deps, data, ctx } as Parameters<
-      typeof template.render
-    >[0]);
+    template.render({ ...deps, data, ctx });
   const templateTree: ReactNode = createElement(PlumixProvider, {
     value: { registry: ctx.blocks },
     children: createElement(TemplateAdapter),

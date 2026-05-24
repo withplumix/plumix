@@ -45,7 +45,7 @@ export interface RegisteredTemplateDep {
  * the deps map — themes use optional chaining (`settings?.["site"]`).
  */
 export async function loadTemplateDeps(
-  template: { readonly [key: string]: unknown },
+  template: Readonly<Record<string, unknown>>,
   registry: ReadonlyMap<string, RegisteredTemplateDep>,
   ctx: AppContext,
 ): Promise<Record<string, Record<string, unknown>>> {
@@ -70,9 +70,7 @@ async function loadOne(
     const raw = await loader.load(slugs, ctx);
     // Fill any slug the loader omitted with null — themes get a
     // stable shape per declared slug.
-    const filled = Object.fromEntries(
-      slugs.map((s) => [s, raw[s] ?? null]),
-    );
+    const filled = Object.fromEntries(slugs.map((s) => [s, raw[s] ?? null]));
     return [kind, filled];
   } catch (err) {
     ctx.logger.error("template_dep_load_failed", {

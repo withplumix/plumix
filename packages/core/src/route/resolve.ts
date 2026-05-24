@@ -4,10 +4,10 @@ import { count } from "drizzle-orm";
 import type { AppContext } from "../context/app.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { Term } from "../db/schema/terms.js";
+import type { RegisteredTemplateDep } from "../template-deps.js";
 import type { DocumentManifest, ThemeDescriptor } from "../theme.js";
 import type { RouteIntent } from "./intent.js";
 import type { RouteMatch } from "./match.js";
-import type { RegisteredTemplateDep } from "../template-deps.js";
 import type { AssetManifest } from "./render/asset-manifest.js";
 import type {
   ArchiveData,

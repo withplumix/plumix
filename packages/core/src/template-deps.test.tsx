@@ -1,13 +1,13 @@
 import { describe, expect, test } from "vitest";
 
+import type { RegisteredTemplateDep } from "./template-deps.js";
 import { auth } from "./auth/config.js";
 import { plumix } from "./config.js";
 import { definePlugin } from "./plugin/define.js";
 import { DuplicateRegistrationError } from "./plugin/errors.js";
 import { buildApp } from "./runtime/app.js";
-import { defineTemplate, normalizeTemplate } from "./template.js";
 import { loadTemplateDeps } from "./template-deps.js";
-import type { RegisteredTemplateDep } from "./template-deps.js";
+import { defineTemplate, normalizeTemplate } from "./template.js";
 import { createDispatcherHarness } from "./test/dispatcher.js";
 import { defineTheme } from "./theme.js";
 
@@ -34,8 +34,10 @@ describe("ctx.registerTemplateDep", () => {
   test("a plugin's registration lands in app.plugins.templateDeps", async () => {
     const probe = definePlugin("probe", (ctx) => {
       ctx.registerTemplateDep("test-thing", {
-        load: async (slugs) =>
-          Object.fromEntries(slugs.map((s) => [s, { value: s }])),
+        load: (slugs) =>
+          Promise.resolve(
+            Object.fromEntries(slugs.map((s) => [s, { value: s }])),
+          ),
       });
     });
     const app = await buildApp(
@@ -54,10 +56,14 @@ describe("ctx.registerTemplateDep", () => {
 
   test("two plugins registering the same kind throw at boot", async () => {
     const first = definePlugin("first", (ctx) => {
-      ctx.registerTemplateDep("test-thing", { load: async () => ({}) });
+      ctx.registerTemplateDep("test-thing", {
+        load: () => Promise.resolve({}),
+      });
     });
     const second = definePlugin("second", (ctx) => {
-      ctx.registerTemplateDep("test-thing", { load: async () => ({}) });
+      ctx.registerTemplateDep("test-thing", {
+        load: () => Promise.resolve({}),
+      });
     });
     await expect(
       buildApp(
@@ -75,11 +81,13 @@ describe("ctx.registerTemplateDep", () => {
   test("different kinds from different plugins coexist", async () => {
     const a = definePlugin("a", (ctx) => {
       ctx.registerTemplateDep("test-thing", {
-        load: async () => ({ x: { value: "from-a" } }),
+        load: () => Promise.resolve({ x: { value: "from-a" } }),
       });
     });
     const b = definePlugin("b", (ctx) => {
-      ctx.registerTemplateDep("test-other", { load: async () => ({ y: 42 }) });
+      ctx.registerTemplateDep("test-other", {
+        load: () => Promise.resolve({ y: 42 }),
+      });
     });
     const app = await buildApp(
       plumix({
@@ -96,7 +104,7 @@ describe("ctx.registerTemplateDep", () => {
 });
 
 const captureLogger = () => {
-  const errors: Array<{ msg: string; ctx?: Record<string, unknown> }> = [];
+  const errors: { msg: string; ctx?: Record<string, unknown> }[] = [];
   return {
     errors,
     logger: {
@@ -121,7 +129,7 @@ function makeRegistry(
     out.set(kind, {
       kind,
       registeredBy: "test",
-      load: async (slugs, _ctx) => load(slugs),
+      load: (slugs, _ctx) => load(slugs),
     });
   }
   return out;
@@ -145,11 +153,9 @@ describe("loadTemplateDeps", () => {
     const template = { "test-thing": ["a"], "test-other": ["b"] };
     const ctx = captureLogger();
     const start = Date.now();
-    const deps = await loadTemplateDeps(
-      template,
-      registry,
-      { logger: ctx.logger } as unknown as Parameters<typeof loadTemplateDeps>[2],
-    );
+    const deps = await loadTemplateDeps(template, registry, {
+      logger: ctx.logger,
+    } as unknown as Parameters<typeof loadTemplateDeps>[2]);
     const elapsed = Date.now() - start;
     expect(deps["test-thing"]).toEqual({ a: { value: "thing-a" } });
     expect(deps["test-other"]).toEqual({ b: 7 });
@@ -158,15 +164,13 @@ describe("loadTemplateDeps", () => {
 
   test("a slug missing from the loader result fills with null", async () => {
     const registry = makeRegistry({
-      "test-thing": async () => ({ present: { value: "yes" } }),
+      "test-thing": () => Promise.resolve({ present: { value: "yes" } }),
     });
     const template = { "test-thing": ["present", "absent"] };
     const ctx = captureLogger();
-    const deps = await loadTemplateDeps(
-      template,
-      registry,
-      { logger: ctx.logger } as unknown as Parameters<typeof loadTemplateDeps>[2],
-    );
+    const deps = await loadTemplateDeps(template, registry, {
+      logger: ctx.logger,
+    } as unknown as Parameters<typeof loadTemplateDeps>[2]);
     expect(deps["test-thing"]).toEqual({
       present: { value: "yes" },
       absent: null,
@@ -175,17 +179,13 @@ describe("loadTemplateDeps", () => {
 
   test("a thrown loader logs `template_dep_load_failed` and seeds an empty map", async () => {
     const registry = makeRegistry({
-      "test-thing": async () => {
-        throw new Error("db down");
-      },
+      "test-thing": () => Promise.reject(new Error("db down")),
     });
     const template = { "test-thing": ["x"] };
     const ctx = captureLogger();
-    const deps = await loadTemplateDeps(
-      template,
-      registry,
-      { logger: ctx.logger } as unknown as Parameters<typeof loadTemplateDeps>[2],
-    );
+    const deps = await loadTemplateDeps(template, registry, {
+      logger: ctx.logger,
+    } as unknown as Parameters<typeof loadTemplateDeps>[2]);
     expect(deps["test-thing"]).toEqual({});
     expect(ctx.errors[0]?.msg).toBe("template_dep_load_failed");
     expect(ctx.errors[0]?.ctx).toMatchObject({
@@ -205,8 +205,12 @@ describe("renderThroughTheme — template deps lifecycle", () => {
         hasArchive: true,
       });
       ctx.registerTemplateDep("test-thing", {
-        load: async (slugs) =>
-          Object.fromEntries(slugs.map((s) => [s, { value: `loaded-${s}` }])),
+        load: (slugs) =>
+          Promise.resolve(
+            Object.fromEntries(
+              slugs.map((s) => [s, { value: `loaded-${s}` }]),
+            ),
+          ),
       });
     });
     const theme = defineTheme({
@@ -215,10 +219,17 @@ describe("renderThroughTheme — template deps lifecycle", () => {
         single: defineTemplate({
           "test-thing": ["alpha", "beta"],
           render: (args) => {
-            const deps = (args as unknown as Record<string, Record<string, { value: string } | null>>)["test-thing"];
+            const deps = (
+              args as unknown as Record<
+                string,
+                Record<string, { value: string } | null>
+              >
+            )["test-thing"];
             return (
               <article>
-                <span data-testid="alpha">{deps?.alpha?.value ?? "missing"}</span>
+                <span data-testid="alpha">
+                  {deps?.alpha?.value ?? "missing"}
+                </span>
                 <span data-testid="beta">{deps?.beta?.value ?? "missing"}</span>
               </article>
             );
@@ -254,9 +265,7 @@ describe("renderThroughTheme — template deps lifecycle", () => {
         hasArchive: true,
       });
       ctx.registerTemplateDep("test-thing", {
-        load: async () => {
-          throw new Error("loader exploded");
-        },
+        load: () => Promise.reject(new Error("loader exploded")),
       });
     });
     const theme = defineTheme({
@@ -303,16 +312,10 @@ describe("core settings dep", () => {
         single: defineTemplate({
           settings: ["site-info"],
           render: (args) => {
-            const all = (
-              args as unknown as Record<
-                string,
-                Record<string, Record<string, unknown> | null> | undefined
-              >
-            ).settings;
-            const siteInfo = all?.["site-info"];
+            const siteInfo = args.settings?.["site-info"];
             const title =
               siteInfo && typeof siteInfo === "object"
-                ? (siteInfo as Record<string, unknown>).title
+                ? siteInfo.title
                 : undefined;
             return (
               <h1 data-testid="site-title">
@@ -359,13 +362,15 @@ describe("loadTemplateDeps — legacy templates", () => {
   test("a normalized legacy function template has no declarations; returns {}", async () => {
     const legacy = normalizeTemplate(() => null, "single");
     const registry = makeRegistry({
-      "test-thing": async () => ({ x: { value: "should-not-load" } }),
+      "test-thing": () => Promise.resolve({ x: { value: "should-not-load" } }),
     });
     const ctx = captureLogger();
     const deps = await loadTemplateDeps(
       legacy as unknown as Record<string, unknown>,
       registry,
-      { logger: ctx.logger } as unknown as Parameters<typeof loadTemplateDeps>[2],
+      { logger: ctx.logger } as unknown as Parameters<
+        typeof loadTemplateDeps
+      >[2],
     );
     expect(deps).toEqual({});
     expect(ctx.errors).toEqual([]);

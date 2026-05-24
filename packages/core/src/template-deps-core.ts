@@ -1,8 +1,8 @@
 import { inArray } from "drizzle-orm";
 
 import type { AppContext } from "./context/app.js";
-import { settings } from "./db/schema/settings.js";
 import type { MutablePluginRegistry } from "./plugin/manifest.js";
+import { settings } from "./db/schema/settings.js";
 
 // Augment the registry with the core `settings` dep — themes declare
 // `defineTemplate({ settings: ["site-info", ...], render })` and the
