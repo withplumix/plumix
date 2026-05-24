@@ -316,6 +316,53 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(body).toContain('<body class="font-sans theme-light">');
   });
 
+  test("bundled CSS from the asset manifest auto-injects after theme link[]", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => <article>{data.entry.title}</article>,
+      },
+      document: {
+        link: [{ rel: "icon", href: "/favicon.svg" }],
+      },
+    });
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin],
+      theme,
+      assetManifest: {
+        "src/theme/index.ts": {
+          file: "_plumix/assets/theme-abc123.js",
+          isEntry: true,
+          css: ["_plumix/assets/theme-def456.css"],
+        },
+      },
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "css-bundle",
+      title: "CSS Bundle",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/css-bundle"),
+    );
+    const body = await response.text();
+    const headSection = body.slice(
+      body.indexOf("<head>"),
+      body.indexOf("</head>"),
+    );
+    // The bundled CSS link must follow the theme's own `link[]` so it
+    // wins the cascade.
+    expect(headSection).toMatch(
+      /<link\s+rel="icon"[\s\S]*<link\s+rel="stylesheet"\s+href="\/_plumix\/assets\/theme-def456\.css"/,
+    );
+  });
+
   test("`theme:document` filter contributions surface in SSR'd <head>", async () => {
     const seoPlugin = definePlugin("seo", (ctx) => {
       ctx.registerEntryType("post", {

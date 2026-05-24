@@ -21,6 +21,7 @@ import type {
 } from "../plugin/manifest.js";
 import type { ContextExtensionEntry } from "../plugin/provides-context.js";
 import type { RouteRule } from "../route/intent.js";
+import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type { DocumentManifest } from "../theme.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
@@ -131,9 +132,28 @@ export interface PlumixApp {
    * cost. Frozen post-resolution to keep the contract immutable.
    */
   readonly document: DocumentManifest;
+  /**
+   * Vite-emitted asset manifest baked into the worker bundle via
+   * `virtual:plumix/asset-manifest`. The renderer reads this to inject
+   * `<link rel="stylesheet">` tags for bundled theme CSS. Empty `{}`
+   * in dev (Vite serves source directly) and when no client entries
+   * exist (e.g. tests that don't run a full Vite build).
+   */
+  readonly assetManifest: AssetManifest;
 }
 
-export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
+// Runtime-only state the worker template injects at boot — values
+// resolved by the Vite plugin from virtual modules (asset manifest).
+// Kept internal: consumers (tests + the generated worker) pass an
+// inline object literal that structurally satisfies the type.
+interface RuntimeContext {
+  readonly assetManifest?: AssetManifest;
+}
+
+export async function buildApp(
+  config: PlumixConfig,
+  runtime: RuntimeContext = {},
+): Promise<PlumixApp> {
   const hooks = new HookRegistry();
   const seededRegistry = createPluginRegistry();
   registerCoreLookupAdapters(seededRegistry);
@@ -238,6 +258,7 @@ export async function buildApp(config: PlumixConfig): Promise<PlumixApp> {
     marks,
     htmlAllowlist,
     document,
+    assetManifest: runtime.assetManifest ?? {},
   };
 }
 

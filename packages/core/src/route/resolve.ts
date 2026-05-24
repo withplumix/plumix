@@ -7,6 +7,7 @@ import type { Term } from "../db/schema/terms.js";
 import type { DocumentManifest, ThemeDescriptor } from "../theme.js";
 import type { RouteIntent } from "./intent.js";
 import type { RouteMatch } from "./match.js";
+import type { AssetManifest } from "./render/asset-manifest.js";
 import type {
   ArchiveData,
   FrontPageData,
@@ -48,16 +49,38 @@ export async function resolvePublicRoute(
   match: RouteMatch,
   theme: ThemeDescriptor,
   document: DocumentManifest,
+  assetManifest: AssetManifest,
 ): Promise<Response> {
   switch (match.intent.kind) {
     case "single":
-      return resolveSingle(ctx, match.intent, match.params, theme, document);
+      return resolveSingle(
+        ctx,
+        match.intent,
+        match.params,
+        theme,
+        document,
+        assetManifest,
+      );
     case "archive":
-      return resolveArchive(ctx, match.intent, match.params, theme, document);
+      return resolveArchive(
+        ctx,
+        match.intent,
+        match.params,
+        theme,
+        document,
+        assetManifest,
+      );
     case "taxonomy":
-      return resolveTaxonomy(ctx, match.intent, match.params, theme, document);
+      return resolveTaxonomy(
+        ctx,
+        match.intent,
+        match.params,
+        theme,
+        document,
+        assetManifest,
+      );
     case "front-page":
-      return resolveFrontPage(ctx, theme, document);
+      return resolveFrontPage(ctx, theme, document, assetManifest);
   }
 }
 
@@ -65,6 +88,7 @@ async function resolveFrontPage(
   ctx: AppContext,
   theme: ThemeDescriptor,
   document: DocumentManifest,
+  assetManifest: AssetManifest,
 ): Promise<Response> {
   const page = 1;
   const publicTypes = Array.from(ctx.plugins.entryTypes.entries())
@@ -94,6 +118,7 @@ async function resolveFrontPage(
     ctx,
     theme,
     document,
+    assetManifest,
     node: { kind: "front-page" },
     data,
     title: "Home",
@@ -109,6 +134,7 @@ async function resolveTaxonomy(
   params: Record<string, string>,
   theme: ThemeDescriptor,
   document: DocumentManifest,
+  assetManifest: AssetManifest,
 ): Promise<Response> {
   const term = await findTermForTaxonomy(ctx, intent.taxonomy, params);
   if (!term) return notFound("public-term-not-found");
@@ -156,6 +182,7 @@ async function resolveTaxonomy(
     ctx,
     theme,
     document,
+    assetManifest,
     node: {
       kind: "term",
       taxonomy: intent.taxonomy,
@@ -176,6 +203,7 @@ async function resolveSingle(
   params: Record<string, string>,
   theme: ThemeDescriptor,
   document: DocumentManifest,
+  assetManifest: AssetManifest,
 ): Promise<Response> {
   const row = await findEntryForSingle(ctx, intent.entryType, params);
   if (!row) return notFound("public-post-not-found");
@@ -193,6 +221,7 @@ async function resolveSingle(
     ctx,
     theme,
     document,
+    assetManifest,
     node: {
       kind: "content",
       entryType: row.type,
@@ -213,6 +242,7 @@ async function resolveArchive(
   params: Record<string, string>,
   theme: ThemeDescriptor,
   document: DocumentManifest,
+  assetManifest: AssetManifest,
 ): Promise<Response> {
   const page = parsePageParam(params.page);
   const where = and(
@@ -248,6 +278,7 @@ async function resolveArchive(
     ctx,
     theme,
     document,
+    assetManifest,
     node: { kind: "content-type-archive", entryType: intent.entryType },
     data,
     title,

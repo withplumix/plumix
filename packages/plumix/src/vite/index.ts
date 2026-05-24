@@ -46,6 +46,9 @@ export interface PlumixVitePluginOptions {
   readonly configFile?: string;
 }
 
+const ASSET_MANIFEST_VIRTUAL_ID = "virtual:plumix/asset-manifest";
+const ASSET_MANIFEST_RESOLVED_ID = "\0" + ASSET_MANIFEST_VIRTUAL_ID;
+
 export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
   let root = process.cwd();
   let publicDir = "";
@@ -71,12 +74,30 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
           process.env.WORKERS_CI_BRANCH ?? "",
         ),
       };
-      if (userConfig.publicDir !== undefined) return { define };
-      return { publicDir: ".plumix/public", define };
+      // `build.manifest: true` makes Vite emit `<outDir>/.vite/manifest.json`,
+      // which the worker imports through `virtual:plumix/asset-manifest` so
+      // the SSR renderer knows which hashed `<link rel="stylesheet">` tags
+      // to inject after the theme's own `link[]`.
+      const build = { manifest: true };
+      if (userConfig.publicDir !== undefined) return { define, build };
+      return { publicDir: ".plumix/public", define, build };
     },
     configResolved(config) {
       root = config.root;
       publicDir = config.publicDir;
+    },
+    resolveId(id) {
+      if (id === ASSET_MANIFEST_VIRTUAL_ID) return ASSET_MANIFEST_RESOLVED_ID;
+      return null;
+    },
+    load(id) {
+      if (id !== ASSET_MANIFEST_RESOLVED_ID) return null;
+      // Build mode reads the manifest Vite emitted to
+      // `<outDir>/.vite/manifest.json` from a previous environment in
+      // the same build pass (sequential build order from
+      // @cloudflare/vite-plugin). Dev mode never produces a manifest;
+      // `loadAssetManifest` returns `{}` when the file isn't present.
+      return `export default ${JSON.stringify(loadAssetManifest(root))};`;
     },
     async buildStart() {
       const emitted = await regenerate(root, options.configFile);
@@ -382,6 +403,27 @@ async function destIsFresh(dest: string, src: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+// Vite emits `.vite/manifest.json` under the client environment's
+// outDir. Cross-environment builds (e.g. @cloudflare/vite-plugin) run
+// the client env first, then the worker — so the worker's `load` hook
+// for the asset-manifest virtual module can read the file synchronously
+// off disk. Returns `{}` when the file isn't present yet (dev, or first
+// build pass before the client env finishes).
+function loadAssetManifest(rootDir: string): unknown {
+  const candidates = [
+    resolve(rootDir, "dist/client/.vite/manifest.json"),
+    resolve(rootDir, "dist/.vite/manifest.json"),
+  ];
+  for (const path of candidates) {
+    try {
+      return JSON.parse(readFileSync(path, "utf8")) as unknown;
+    } catch {
+      continue;
+    }
+  }
+  return {};
 }
 
 function writeIfChanged(path: string, content: string): void {

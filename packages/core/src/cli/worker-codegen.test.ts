@@ -42,6 +42,14 @@ describe("generateWorkerSource", () => {
     expect(source).toContain("scheduledHandler ??=");
   });
 
+  test("imports the asset manifest virtual module and threads it into buildApp", () => {
+    const source = generateWorkerSource({ configModule: "./config.ts" });
+    expect(source).toContain(
+      'import assetManifest from "virtual:plumix/asset-manifest";',
+    );
+    expect(source).toContain("buildApp(config, { assetManifest })");
+  });
+
   test("no-ops cleanly when the runtime omits buildScheduledHandler", () => {
     const source = generateWorkerSource({ configModule: "./config.ts" });
     // The generated code guards the call so a runtime that returns
