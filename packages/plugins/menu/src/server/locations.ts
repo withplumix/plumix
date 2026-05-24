@@ -2,16 +2,12 @@ import type { MenuLocationOptions, RegisteredMenuLocation } from "./types.js";
 import { MenuPluginError } from "../errors.js";
 
 /**
- * Module-scoped registry of menu locations. Themes call
- * `registerMenuLocation` from their `setup` callback (the implementation
- * is wired into `ThemeContextExtensions` from the plugin's `provides`),
- * which delegates to `recordLocation` here.
- *
- * Lifetime: populated once during `buildApp`, read for the rest of the
- * process / Worker isolate. The CF Worker model reuses isolates across
- * requests, so this is effectively boot-time-immutable in production.
- *
- * Tests reset between cases via `clearRegisteredLocations`.
+ * Module-scoped registry of menu locations populated at boot. The
+ * menu RPC's `locations.list` + `locations.assign` procedures read it
+ * to validate which location slots a theme has declared. Tests reset
+ * state between cases via `clearRegisteredLocations`. A re-registration
+ * path for themes (lost when `theme.setup` went away) is a separate
+ * follow-up.
  */
 const locations = new Map<string, RegisteredMenuLocation>();
 
