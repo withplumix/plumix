@@ -118,9 +118,7 @@ export class PlumixIslandElement extends HTMLElement {
     // Searching from `parentElement`, not `this` — the walker stamps
     // `ssr=""` on every island including this one, so a self-rooted
     // `closest` would match `this` and self-block forever.
-    const blockingAncestor = this.parentElement?.closest(
-      `${ISLAND_TAG}[ssr]`,
-    );
+    const blockingAncestor = this.parentElement?.closest(`${ISLAND_TAG}[ssr]`);
     if (blockingAncestor) {
       const observer = new MutationObserver(() => {
         if (!blockingAncestor.hasAttribute("ssr")) {

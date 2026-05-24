@@ -122,7 +122,12 @@ describe("PlumixIslandElement lifecycle", () => {
     // A nested child blocked on the parent's `ssr` attribute that gets
     // detached before its parent ever hydrates. No mount happened, so
     // no unmount event should fire — listeners pair the two.
-    stubStrategies();
+    //
+    // Strategy captures loadFn without invoking it so neither parent
+    // nor child ever progresses past `start()` — keeps the test focused
+    // on the unmount-event contract without leaking an in-flight
+    // `dynamicImport` into the next test.
+    stubStrategies(() => undefined);
     const listener = vi.fn();
     window.addEventListener("plumix:unmount", listener);
     const parent = makeIsland({
