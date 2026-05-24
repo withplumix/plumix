@@ -122,7 +122,7 @@ export class PluginContextError extends Error {
 
   static extendContextInvalidKey(ctx: {
     pluginId: string;
-    kind: "Plugin" | "Theme" | "App";
+    kind: "Plugin" | "App";
   }): PluginContextError {
     return new PluginContextError(
       "extend_context_invalid_key",
@@ -134,7 +134,7 @@ export class PluginContextError extends Error {
 
   static extendContextReservedKey(ctx: {
     pluginId: string;
-    kind: "Plugin" | "Theme" | "App";
+    kind: "Plugin" | "App";
     key: string;
   }): PluginContextError {
     return new PluginContextError(
@@ -163,7 +163,7 @@ export class PluginContextError extends Error {
 
   static extendContextDuplicate(ctx: {
     pluginId: string;
-    kind: "Plugin" | "Theme" | "App";
+    kind: "Plugin" | "App";
     key: string;
     existingOwner: string;
   }): PluginContextError {

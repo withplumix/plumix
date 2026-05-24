@@ -1,7 +1,17 @@
 import { definePlugin } from "plumix/plugin";
 
-import type { ResolvedMenuItem } from "./server/types.js";
+import type { ResolvedMenu, ResolvedMenuItem } from "./server/types.js";
 import { createMenuRouter } from "./rpc.js";
+import { getMenuByName } from "./server/getMenuByName.js";
+
+// Register the `menus` template-dep kind so themes can declare
+// `defineTemplate({ menus: ["primary", "footer"], render })` and the
+// framework batches loads per request via the registered loader below.
+declare module "plumix/plugin" {
+  interface TemplateDepRegistry {
+    menus: { slug: string; result: ResolvedMenu };
+  }
+}
 
 // `@plumix/plugin-menu` augments the core option shapes with
 // menu-eligibility flags and the hook registries with three menu
@@ -9,10 +19,6 @@ import { createMenuRouter } from "./rpc.js";
 // in the project's `node_modules`. The eligibility flags are read at
 // admin time by the eligibility resolver (`getEligibleMenuKinds`);
 // the hooks are fired by `getMenuByName` and `menu.save`.
-//
-// `registerMenuLocation` is deferred — `theme.setup` was removed in
-// the theming foundation slice; a new registration path lands with
-// the menu-locations follow-up.
 declare module "plumix/plugin" {
   interface EntryTypeOptions {
     /**
@@ -101,6 +107,18 @@ export const menu = definePlugin("menu", {
       isHierarchical: false,
       entryTypes: ["menu_item"],
       isPublic: false,
+    });
+
+    ctx.registerTemplateDep("menus", {
+      load: async (slugs, appCtx) => {
+        const result: Record<string, ResolvedMenu | null> = {};
+        await Promise.all(
+          slugs.map(async (slug) => {
+            result[slug] = await getMenuByName(appCtx, slug);
+          }),
+        );
+        return result;
+      },
     });
 
     ctx.registerRpcRouter(createMenuRouter());

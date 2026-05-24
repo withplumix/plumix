@@ -77,7 +77,7 @@ export type DeferFn = (promise: Promise<unknown>) => void;
  * route, hook listeners) read them via `ctx.<key>`.
  *
  * Empty by default — plugins augment via TypeScript module merging,
- * mirroring `PluginContextExtensions` / `ThemeContextExtensions`.
+ * mirroring `PluginContextExtensions`.
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface AppContextExtensions {}

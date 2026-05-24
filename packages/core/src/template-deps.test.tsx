@@ -137,16 +137,19 @@ function makeRegistry(
 
 describe("loadTemplateDeps", () => {
   test("invokes every declared kind in parallel via Promise.all", async () => {
-    // Two loaders each sleep 30ms — serial would take 60ms, parallel
-    // ~30ms. Window with 5ms slack for CI noise.
+    // Two loaders each sleep 50ms — serial would take 100ms, parallel
+    // ~50ms. The threshold sits below the serial floor so a regression
+    // to sequential `await`s fails the test, but stays far enough
+    // above the parallel floor to absorb CI scheduler jitter (saw 61ms
+    // for 30ms+5ms-slack tuning).
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const registry = makeRegistry({
       "test-thing": async () => {
-        await sleep(30);
+        await sleep(50);
         return { a: { value: "thing-a" } };
       },
       "test-other": async () => {
-        await sleep(30);
+        await sleep(50);
         return { b: 7 };
       },
     });
@@ -159,7 +162,7 @@ describe("loadTemplateDeps", () => {
     const elapsed = Date.now() - start;
     expect(deps["test-thing"]).toEqual({ a: { value: "thing-a" } });
     expect(deps["test-other"]).toEqual({ b: 7 });
-    expect(elapsed).toBeLessThan(55);
+    expect(elapsed).toBeLessThan(90);
   });
 
   test("a slug missing from the loader result fills with null", async () => {

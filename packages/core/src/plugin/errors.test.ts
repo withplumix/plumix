@@ -37,12 +37,12 @@ describe("PluginContextError — extend-context factories", () => {
   test("extendContextReservedKey", () => {
     const err = PluginContextError.extendContextReservedKey({
       pluginId: "blog",
-      kind: "Theme",
+      kind: "App",
       key: "__proto__",
     });
     expect(err.code).toBe("extend_context_reserved_key");
     expect(err.key).toBe("__proto__");
-    expect(err.message).toContain("extendThemeContext with the reserved name");
+    expect(err.message).toContain("extendAppContext with the reserved name");
     expect(err.message).toContain('"__proto__"');
   });
 
