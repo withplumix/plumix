@@ -21,6 +21,7 @@ import type {
 } from "../plugin/manifest.js";
 import type { ContextExtensionEntry } from "../plugin/provides-context.js";
 import type { RouteRule } from "../route/intent.js";
+import type { DocumentManifest } from "../theme.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
@@ -35,7 +36,6 @@ import { installPlugins } from "../plugin/register.js";
 import { compileRouteMap } from "../route/compile.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
 import { appRouter } from "../rpc/router.js";
-import type { DocumentManifest } from "../theme.js";
 import { ThemeRegistrationError } from "../theme-errors.js";
 import { validateDocumentManifest } from "../theme.js";
 import { AppBootError } from "./errors.js";

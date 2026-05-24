@@ -35,9 +35,7 @@ export class ThemeRegistrationError extends Error {
     );
   }
 
-  static documentInvalidLink(ctx: {
-    index: number;
-  }): ThemeRegistrationError {
+  static documentInvalidLink(ctx: { index: number }): ThemeRegistrationError {
     return new ThemeRegistrationError(
       "document_invalid_link",
       `\`theme:document\` filter chain produced a \`link[${ctx.index}]\` ` +
@@ -47,9 +45,7 @@ export class ThemeRegistrationError extends Error {
     );
   }
 
-  static documentInvalidScript(ctx: {
-    index: number;
-  }): ThemeRegistrationError {
+  static documentInvalidScript(ctx: { index: number }): ThemeRegistrationError {
     return new ThemeRegistrationError(
       "document_invalid_script",
       `\`theme:document\` filter chain produced a \`script[${ctx.index}]\` ` +
