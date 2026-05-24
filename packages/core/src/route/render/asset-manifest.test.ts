@@ -117,12 +117,8 @@ describe("bundledCssTags", () => {
       },
     };
     const html = bundledCssTags(manifest);
-    expect(html).toContain(
-      '<link rel="stylesheet" href="/_chunks/a.css" />',
-    );
-    expect(html).toContain(
-      '<link rel="stylesheet" href="/_chunks/b.css" />',
-    );
+    expect(html).toContain('<link rel="stylesheet" href="/_chunks/a.css" />');
+    expect(html).toContain('<link rel="stylesheet" href="/_chunks/b.css" />');
   });
 
   test("ignores entries that are not marked isEntry", () => {
