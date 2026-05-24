@@ -35,6 +35,22 @@ interface IslandFinding {
 // degrades to a plain `<div>` per the design.
 const IDENT_RE = /^[A-Za-z_$][\w$]*$/;
 
+// Prototype-pollution defense. The client-side runtime does
+// `mod[exportName]` to look up the component; a malicious or
+// accidentally-named `__proto__` / `constructor` / `prototype` export
+// would resolve to `Object.prototype` or the module's constructor and
+// `createRoot(...).render(<Component />)` would throw or worse —
+// emit DOM in a confused state. Both the codegen here AND the
+// client-side island element guard against these keys; defense in
+// depth, since export names are author-controlled but the regex alone
+// happily admits `__proto__`. Matches Astro's
+// `FORBIDDEN_COMPONENT_EXPORT_KEYS` set.
+const FORBIDDEN_EXPORT_KEYS: ReadonlySet<string> = new Set([
+  "__proto__",
+  "constructor",
+  "prototype",
+]);
+
 export function findIslands(
   source: string,
   filePath: string,
@@ -54,7 +70,11 @@ export function findIslands(
       const componentRef = extractClientComponentIdentifier(node);
       if (componentRef !== null) {
         const match = imports.get(componentRef);
-        if (match && IDENT_RE.test(match.exportName)) {
+        if (
+          match &&
+          IDENT_RE.test(match.exportName) &&
+          !FORBIDDEN_EXPORT_KEYS.has(match.exportName)
+        ) {
           findings.push({
             localBindingName: componentRef,
             importPath: match.importPath,

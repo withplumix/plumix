@@ -117,6 +117,28 @@ describe("serializeProps / deserializeProps", () => {
     expect(deserializeProps(serializeProps(props))).toEqual(props);
   });
 
+  test("preserves nested-value type fidelity inside Map/Set/Array (Astro parity)", () => {
+    // The previous wire format JSON.stringified nested collection values,
+    // which silently degraded inner Date/Map/Set to strings on round-trip.
+    // The nested-array form preserves type identity through the graph.
+    const epoch = new Date("2026-01-01T00:00:00.000Z");
+    const props = {
+      m: new Map<string, Date>([["k", epoch]]),
+      s: new Set<Date>([epoch]),
+      a: [epoch, new URL("https://plumix.dev/")],
+    };
+    const out = deserializeProps(serializeProps(props)) as {
+      m: Map<string, Date>;
+      s: Set<Date>;
+      a: [Date, URL];
+    };
+    expect(out.m.get("k")).toBeInstanceOf(Date);
+    expect(out.m.get("k")?.toISOString()).toBe(epoch.toISOString());
+    expect([...out.s][0]).toBeInstanceOf(Date);
+    expect(out.a[0]).toBeInstanceOf(Date);
+    expect(out.a[1]).toBeInstanceOf(URL);
+  });
+
   test("PROP_TYPE enum values are byte-identical to Astro", () => {
     expect(PROP_TYPE.Value).toBe(0);
     expect(PROP_TYPE.JSON).toBe(1);

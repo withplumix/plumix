@@ -137,6 +137,21 @@ describe("findIslands", () => {
     expect(findIslands(source, "/x.ts")).toEqual([]);
   });
 
+  test("drops a finding whose exportName is a prototype-pollution key", () => {
+    // `import { __proto__ as Foo } from "..."` — would resolve to
+    // Object.prototype on the client's `mod[exportName]` lookup.
+    const source = `
+      import { __proto__ as Foo } from "./Foo.tsx";
+      import { defineBlock } from "@plumix/blocks";
+      export const block = defineBlock({
+        name: "acme/x",
+        render: () => null,
+        client: { component: Foo },
+      });
+    `;
+    expect(findIslands(source, "/x.ts")).toEqual([]);
+  });
+
   test("parses .tsx sources without complaining about JSX in render", () => {
     const source = `
       import { Search } from "./Search.tsx";
