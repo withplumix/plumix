@@ -15,6 +15,11 @@ import type {
   HookOptions,
 } from "../hooks/types.js";
 import type { RouteIntent } from "../route/intent.js";
+import type {
+  RegisteredTemplateDep,
+  TemplateDepLoader,
+} from "../template-deps.js";
+import type { TemplateDepRegistry } from "../template.js";
 import type { LookupAdapterOptions } from "./lookup.js";
 import type {
   AdminPageOptions,
@@ -222,6 +227,19 @@ export interface PluginSetupContextBase {
    * `cron`; per-task cron filtering is a follow-up.
    */
   registerScheduledTask(task: ScheduledTask): void;
+  /**
+   * Register a template-dep loader. Themes declare what they need
+   * (`defineTemplate({ [kind]: ["slug-a", "slug-b"], render })`); the
+   * framework fires every declared dep's loader in parallel per
+   * request and passes the results to the template's render
+   * function. The `kind` must match a key in the augmentable
+   * `TemplateDepRegistry` interface; two plugins registering the
+   * same `kind` is a boot-time error.
+   */
+  registerTemplateDep<TKind extends keyof TemplateDepRegistry>(
+    kind: TKind,
+    options: { readonly load: TemplateDepLoader<TKind> },
+  ): void;
 }
 
 export type PluginSetupContext = PluginSetupContextBase &
@@ -558,6 +576,24 @@ export function createPluginSetupContext({
       }
       registry.scheduledTasks.push({
         ...task,
+        registeredBy: pluginId,
+      });
+    },
+
+    registerTemplateDep: (kind, { load }) => {
+      const existing = registry.templateDeps.get(kind);
+      if (existing) {
+        throw DuplicateRegistrationError.alreadyRegistered({
+          kind: "template dep",
+          identifier: kind,
+        });
+      }
+      // Erase the per-kind generic at storage time — the typed view is
+      // recovered when `defineTemplate` looks the loader up by kind.
+      const erased = load as unknown as RegisteredTemplateDep["load"];
+      registry.templateDeps.set(kind, {
+        kind,
+        load: erased,
         registeredBy: pluginId,
       });
     },

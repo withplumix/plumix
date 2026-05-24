@@ -183,15 +183,17 @@ async function dispatchPublicRoute(
   const theme = app.config.theme;
   const document = app.document;
   const templateDocuments = app.templateDocuments;
+  const templateDeps = app.plugins.templateDeps;
   const assetManifest = app.assetManifest;
   try {
     const response = await resolvePublicRouteOrFallback(app, ctx, url);
     if (response.status === 404) {
-      const html = renderErrorThroughTheme({
+      const html = await renderErrorThroughTheme({
         ctx,
         theme,
         document,
         templateDocuments,
+        templateDeps,
         assetManifest,
         kind: "not-found",
         data: {
@@ -210,11 +212,12 @@ async function dispatchPublicRoute(
       err: err instanceof Error ? err.message : String(err),
     });
     try {
-      const html = renderErrorThroughTheme({
+      const html = await renderErrorThroughTheme({
         ctx,
         theme,
         document,
         templateDocuments,
+        templateDeps,
         assetManifest,
         kind: "server-error",
         data: { request: ctx.request },
@@ -247,6 +250,7 @@ async function resolvePublicRouteOrFallback(
   const theme = app.config.theme;
   const document = app.document;
   const templateDocuments = app.templateDocuments;
+  const templateDeps = app.plugins.templateDeps;
   const assetManifest = app.assetManifest;
   const match = matchRoute(url, app.routeMap);
   if (match !== null) {
@@ -256,6 +260,7 @@ async function resolvePublicRouteOrFallback(
       theme,
       document,
       templateDocuments,
+      templateDeps,
       assetManifest,
     );
   }
@@ -266,6 +271,7 @@ async function resolvePublicRouteOrFallback(
       theme,
       document,
       templateDocuments,
+      templateDeps,
       assetManifest,
     );
   }

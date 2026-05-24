@@ -53,6 +53,7 @@ export type {
   TemplateRender,
   TemplateRenderArgs,
 } from "./template.js";
+export type { TemplateDepLoader } from "./template-deps.js";
 export { defineTheme } from "./theme.js";
 export type {
   DocumentLink,

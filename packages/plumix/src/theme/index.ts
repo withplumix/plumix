@@ -12,6 +12,7 @@ export {
   type EntryArchiveProps,
   type TaxonomyArchiveProps,
   type Template,
+  type TemplateDepLoader,
   type TemplateDepRegistry,
   type TemplateRender,
   type TemplateRenderArgs,

@@ -7,6 +7,7 @@ import type {
 import type { AppContext } from "../context/app.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { RouteIntent } from "../route/intent.js";
+import type { RegisteredTemplateDep } from "../template-deps.js";
 import type { RegisteredLookupAdapter } from "./lookup.js";
 import { DuplicateAdminSlugError, PluginDefinitionError } from "./errors.js";
 
@@ -1066,6 +1067,7 @@ export interface PluginRegistry {
   readonly markSpecs: ReadonlyMap<string, RegisteredMark>;
   readonly lookupAdapters: ReadonlyMap<string, RegisteredLookupAdapter>;
   readonly scheduledTasks: readonly RegisteredScheduledTask[];
+  readonly templateDeps: ReadonlyMap<string, RegisteredTemplateDep>;
 }
 
 export interface MutablePluginRegistry extends PluginRegistry {
@@ -1087,6 +1089,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly markSpecs: Map<string, RegisteredMark>;
   readonly lookupAdapters: Map<string, RegisteredLookupAdapter>;
   readonly scheduledTasks: RegisteredScheduledTask[];
+  readonly templateDeps: Map<string, RegisteredTemplateDep>;
 }
 
 export function createPluginRegistry(): MutablePluginRegistry {
@@ -1109,6 +1112,7 @@ export function createPluginRegistry(): MutablePluginRegistry {
     markSpecs: new Map(),
     lookupAdapters: new Map(),
     scheduledTasks: [],
+    templateDeps: new Map(),
   };
 }
 

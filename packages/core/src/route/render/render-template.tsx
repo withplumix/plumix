@@ -5,6 +5,7 @@ import { renderToString } from "react-dom/server";
 import { PlumixProvider } from "@plumix/blocks/renderer";
 
 import type { AppContext } from "../../context/app.js";
+import type { RegisteredTemplateDep } from "../../template-deps.js";
 import type { Template } from "../../template.js";
 import type {
   DocumentLink,
@@ -18,6 +19,7 @@ import type {
 import type { AssetManifest } from "./asset-manifest.js";
 import type { ErrorData } from "./resolved-entry.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
+import { loadTemplateDeps } from "../../template-deps.js";
 import { normalizeTemplate } from "../../template.js";
 import { bundledCssTags } from "./asset-manifest.js";
 import { resolveTemplateCandidates } from "./template-hierarchy.js";
@@ -27,6 +29,7 @@ interface RenderArgs {
   readonly theme: ThemeDescriptor;
   readonly document: DocumentManifest;
   readonly templateDocuments: ReadonlyMap<string, DocumentManifest>;
+  readonly templateDeps: ReadonlyMap<string, RegisteredTemplateDep>;
   readonly assetManifest: AssetManifest;
   readonly node: ResolvedNode;
   readonly data: TemplateData;
@@ -38,6 +41,7 @@ export async function renderThroughTheme({
   theme,
   document,
   templateDocuments,
+  templateDeps,
   assetManifest,
   node,
   data,
@@ -48,6 +52,14 @@ export async function renderThroughTheme({
   // Per-template fragment is precomputed at boot; fall back to the
   // theme-wide document when the template didn't declare its own.
   const renderDocument = templateDocuments.get(slot) ?? document;
+  // Load every dep the template declared in parallel before render.
+  // Loader failures don't 500 the page — `loadTemplateDeps` swallows
+  // them, logs via `ctx.logger.error`, and seeds an empty map.
+  const deps = await loadTemplateDeps(
+    template as unknown as Record<string, unknown>,
+    templateDeps,
+    ctx,
+  );
   return renderTree({
     ctx,
     document: renderDocument,
@@ -55,6 +67,7 @@ export async function renderThroughTheme({
     data,
     title,
     template,
+    deps,
   });
 }
 
@@ -63,6 +76,7 @@ interface RenderErrorArgs {
   readonly theme: ThemeDescriptor;
   readonly document: DocumentManifest;
   readonly templateDocuments: ReadonlyMap<string, DocumentManifest>;
+  readonly templateDeps: ReadonlyMap<string, RegisteredTemplateDep>;
   readonly assetManifest: AssetManifest;
   readonly kind: "not-found" | "server-error";
   readonly data: ErrorData;
@@ -77,19 +91,27 @@ const ERROR_VARIANTS = {
   },
 } as const;
 
-export function renderErrorThroughTheme({
+export async function renderErrorThroughTheme({
   ctx,
   theme,
   document,
   templateDocuments,
+  templateDeps,
   assetManifest,
   kind,
   data,
-}: RenderErrorArgs): string {
+}: RenderErrorArgs): Promise<string> {
   const variant = ERROR_VARIANTS[kind];
   const raw = theme.templates[variant.key] ?? variant.fallback;
   const template = normalizeTemplate(raw, variant.key);
   const renderDocument = templateDocuments.get(variant.key) ?? document;
+  // Error templates can declare deps too — loader failures still log
+  // + empty-map fallback so a 404/500 render never escalates.
+  const deps = await loadTemplateDeps(
+    template as unknown as Record<string, unknown>,
+    templateDeps,
+    ctx,
+  );
   return renderTree({
     ctx,
     document: renderDocument,
@@ -97,6 +119,7 @@ export function renderErrorThroughTheme({
     data,
     title: variant.title,
     template,
+    deps,
   });
 }
 
@@ -107,6 +130,7 @@ interface RenderTreeArgs {
   readonly data: TemplateData;
   readonly title: string;
   readonly template: Template<TemplateData>;
+  readonly deps: Record<string, Record<string, unknown>>;
 }
 
 // React 19 reorders every child of `<head>` (metadata first, scripts /
@@ -122,14 +146,18 @@ function renderTree({
   data,
   title,
   template,
+  deps,
 }: RenderTreeArgs): string {
-  // Adapter FC wraps `template.render({ data, ctx })` so it executes
-  // inside React's render pass — hooks (useState, useId, useMemo,
-  // useSyncExternalStore) inside a factory template are legal. A
-  // direct `template.render({data, ctx})` here would throw "Invalid
-  // hook call" because React's dispatcher isn't set yet at this
-  // construction point.
-  const TemplateAdapter = (): ReactNode => template.render({ data, ctx });
+  // Adapter FC wraps `template.render({ data, ctx, ...deps })` so it
+  // executes inside React's render pass — hooks (useState, useId,
+  // useMemo, useSyncExternalStore) inside a factory template are
+  // legal. A direct call here would throw "Invalid hook call" because
+  // React's dispatcher isn't set yet at this construction point.
+  // `data` + `ctx` are framework-owned; spread `deps` first so a
+  // misregistered dep kind literally named `"data"` or `"ctx"` can't
+  // silently clobber the canonical args.
+  const TemplateAdapter = (): ReactNode =>
+    template.render({ ...deps, data, ctx });
   const templateTree: ReactNode = createElement(PlumixProvider, {
     value: { registry: ctx.blocks },
     children: createElement(TemplateAdapter),
