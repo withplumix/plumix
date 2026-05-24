@@ -207,9 +207,7 @@ describe("renderThroughTheme — template deps lifecycle", () => {
       ctx.registerTemplateDep("test-thing", {
         load: (slugs) =>
           Promise.resolve(
-            Object.fromEntries(
-              slugs.map((s) => [s, { value: `loaded-${s}` }]),
-            ),
+            Object.fromEntries(slugs.map((s) => [s, { value: `loaded-${s}` }])),
           ),
       });
     });
