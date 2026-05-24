@@ -260,28 +260,21 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(body).toContain("<body>");
   });
 
-  test("theme `document` override replaces the default shell", async () => {
+  test("manifest `html.lang` spreads onto the rendered <html>", async () => {
     const theme = defineTheme({
       templates: {
         index: () => null,
         single: ({ data }) => <article>{data.entry.title}</article>,
       },
-      document: ({ children }) => (
-        <html lang="fr">
-          <head>
-            <title>custom-doc</title>
-          </head>
-          <body className="branded">{children}</body>
-        </html>
-      ),
+      document: { html: { lang: "fr" } },
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
-      slug: "doc-override",
-      title: "Doc",
+      slug: "lang",
+      title: "Lang",
       content: null,
       status: "published",
       authorId: author.id,
@@ -289,42 +282,230 @@ describe("resolvePublicRoute — single entry through theme", () => {
     });
 
     const response = await h.dispatch(
-      new Request("https://cms.example/post/doc-override"),
+      new Request("https://cms.example/post/lang"),
     );
     const body = await response.text();
     expect(body).toContain('<html lang="fr">');
-    expect(body).toContain('class="branded"');
-    expect(body).toContain("custom-doc");
   });
 
-  test("`document` override renders children between header and footer", async () => {
+  test("manifest `body.className` spreads onto the rendered <body>", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => <article>{data.entry.title}</article>,
+      },
+      document: { body: { className: "font-sans theme-light" } },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "body-class",
+      title: "Body",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/body-class"),
+    );
+    const body = await response.text();
+    expect(body).toContain('<body class="font-sans theme-light">');
+  });
+
+  test("manifest `link[]` entries land in <head> in declared order", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => <article>{data.entry.title}</article>,
+      },
+      document: {
+        link: [
+          { rel: "icon", href: "/favicon.svg" },
+          { rel: "preconnect", href: "https://fonts.example" },
+          { rel: "stylesheet", href: "https://fonts.example/inter.css" },
+        ],
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "links",
+      title: "Links",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/links"),
+    );
+    const body = await response.text();
+    const headSection = body.slice(
+      body.indexOf("<head>"),
+      body.indexOf("</head>"),
+    );
+    expect(headSection).toMatch(
+      /<link\s+rel="icon"\s+href="\/favicon\.svg"\s*\/>[\s\S]*<link\s+rel="preconnect"\s+href="https:\/\/fonts\.example"\s*\/>[\s\S]*<link\s+rel="stylesheet"\s+href="https:\/\/fonts\.example\/inter\.css"\s*\/>/,
+    );
+  });
+
+  test("manifest `meta[]` entries land in <head> in declared order", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => <article>{data.entry.title}</article>,
+      },
+      document: {
+        meta: [
+          { name: "description", content: "Site default" },
+          { property: "og:site_name", content: "Demo" },
+          { name: "theme-color", content: "#1e293b" },
+        ],
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "metas",
+      title: "Metas",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/metas"),
+    );
+    const body = await response.text();
+    const headSection = body.slice(
+      body.indexOf("<head>"),
+      body.indexOf("</head>"),
+    );
+    expect(headSection).toMatch(
+      /<meta\s+name="description"\s+content="Site default"\s*\/>[\s\S]*<meta\s+property="og:site_name"\s+content="Demo"\s*\/>[\s\S]*<meta\s+name="theme-color"\s+content="#1e293b"\s*\/>/,
+    );
+  });
+
+  test('manifest `script[].position="headStart"` lands at the top of <head>', async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => <article>{data.entry.title}</article>,
+      },
+      document: {
+        link: [{ rel: "icon", href: "/favicon.svg" }],
+        script: [
+          {
+            src: "https://plausible.io/js/script.js",
+            defer: true,
+            position: "headStart",
+          },
+        ],
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "head-start",
+      title: "Head Start",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/head-start"),
+    );
+    const body = await response.text();
+    const headSection = body.slice(
+      body.indexOf("<head>"),
+      body.indexOf("</head>"),
+    );
+    expect(headSection).toMatch(
+      /<script\s+src="https:\/\/plausible\.io\/js\/script\.js"\s+defer(?:="[^"]*")?\s*>[\s\S]*<link\s+rel="icon"/,
+    );
+  });
+
+  test('manifest `script[].position="headEnd"` lands after theme link/meta but inside <head>', async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => <article>{data.entry.title}</article>,
+      },
+      document: {
+        link: [{ rel: "icon", href: "/favicon.svg" }],
+        meta: [{ name: "theme-color", content: "#ffffff" }],
+        script: [
+          {
+            src: "https://cdn.example/late.js",
+            position: "headEnd",
+          },
+        ],
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "head-end",
+      title: "Head End",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/head-end"),
+    );
+    const body = await response.text();
+    const headSection = body.slice(
+      body.indexOf("<head>"),
+      body.indexOf("</head>"),
+    );
+    expect(headSection).toMatch(
+      /<link\s+rel="icon"[\s\S]*<meta\s+name="theme-color"[\s\S]*<script\s+src="https:\/\/cdn\.example\/late\.js"/,
+    );
+  });
+
+  test('manifest `script[].position="bodyStart"` lands at the top of <body>', async () => {
     const theme = defineTheme({
       templates: {
         index: () => null,
         single: ({ data }) => (
-          <div data-testid="template-payload">{data.entry.title}</div>
+          <article data-testid="entry">{data.entry.title}</article>
         ),
       },
-      document: ({ children }) => (
-        <html lang="en">
-          <head>
-            <title>doc</title>
-          </head>
-          <body>
-            <header>chrome-before</header>
-            {children}
-            <footer>chrome-after</footer>
-          </body>
-        </html>
-      ),
+      document: {
+        script: [
+          {
+            src: "https://cdn.example/boot.js",
+            position: "bodyStart",
+          },
+        ],
+      },
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
-      slug: "positioned",
-      title: "Positioned",
+      slug: "body-start",
+      title: "Body Start",
       content: null,
       status: "published",
       authorId: author.id,
@@ -332,15 +513,93 @@ describe("resolvePublicRoute — single entry through theme", () => {
     });
 
     const response = await h.dispatch(
-      new Request("https://cms.example/post/positioned"),
+      new Request("https://cms.example/post/body-start"),
     );
     const body = await response.text();
-    expect(body).toMatch(
-      /chrome-before[\s\S]*data-testid="template-payload"[\s\S]*chrome-after/,
+    const bodySection = body.slice(
+      body.indexOf("<body"),
+      body.indexOf("</body>"),
+    );
+    expect(bodySection).toMatch(
+      /<body[^>]*><script\s+src="https:\/\/cdn\.example\/boot\.js"[^>]*>[\s\S]*<article[^>]*data-testid="entry"/,
     );
   });
 
-  test("react 19 metadata hoisting: template-rendered <title> lands in <head>", async () => {
+  test("manifest `script[]` with no position defaults to end of <body>", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => (
+          <article data-testid="entry">{data.entry.title}</article>
+        ),
+      },
+      document: {
+        script: [{ src: "https://cdn.example/analytics.js" }],
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "body-end",
+      title: "Body End",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/body-end"),
+    );
+    const body = await response.text();
+    const bodySection = body.slice(
+      body.indexOf("<body"),
+      body.indexOf("</body>"),
+    );
+    expect(bodySection).toMatch(
+      /<article[^>]*data-testid="entry"[\s\S]*<script\s+src="https:\/\/cdn\.example\/analytics\.js"/,
+    );
+  });
+
+  test("reserved hydration slot sits at the end of <body>, after any theme scripts", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => <article>{data.entry.title}</article>,
+      },
+      document: {
+        script: [{ src: "https://cdn.example/analytics.js" }],
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "hydration-slot",
+      title: "Hydration Slot",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/hydration-slot"),
+    );
+    const body = await response.text();
+    expect(body).toContain("<!--plumix-hydration-slot-->");
+    const slotIdx = body.indexOf("<!--plumix-hydration-slot-->");
+    const closingBodyIdx = body.indexOf("</body>");
+    const scriptIdx = body.indexOf("https://cdn.example/analytics.js");
+    expect(scriptIdx).toBeGreaterThan(0);
+    expect(scriptIdx).toBeLessThan(slotIdx);
+    expect(slotIdx).toBeLessThan(closingBodyIdx);
+  });
+
+  test("template-rendered <title> wins over framework default title", async () => {
     const theme = defineTheme({
       templates: {
         index: () => null,
@@ -351,14 +610,6 @@ describe("resolvePublicRoute — single entry through theme", () => {
           </>
         ),
       },
-      document: ({ children }) => (
-        <html lang="en">
-          <head>
-            <meta charSet="utf-8" />
-          </head>
-          <body>{children}</body>
-        </html>
-      ),
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -366,7 +617,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
     await h.factory.entry.create({
       type: "post",
       slug: "hoisting",
-      title: "Body",
+      title: "Framework-Default",
       content: null,
       status: "published",
       authorId: author.id,
@@ -377,12 +628,97 @@ describe("resolvePublicRoute — single entry through theme", () => {
       new Request("https://cms.example/post/hoisting"),
     );
     const body = await response.text();
-    // React 19 hoists <title> rendered in the body tree into <head>.
     const headSection = body.slice(
       body.indexOf("<head>"),
       body.indexOf("</head>"),
     );
+    // React 19 hoists template-rendered <title> into <head>; the
+    // framework default must not shadow it (browsers honor the first
+    // <title> in document order).
     expect(headSection).toContain("<title>From-Template</title>");
+    expect(headSection).not.toContain("<title>Framework-Default</title>");
+  });
+
+  test("react 19 hoists template-rendered <script> into <head>", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => (
+          <>
+            <script
+              async
+              src="https://cdn.example/from-template.js"
+              data-testid="hoisted-script"
+            />
+            <article>{data.entry.title}</article>
+          </>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "hoisted-script",
+      title: "Hoisted Script",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/hoisted-script"),
+    );
+    const body = await response.text();
+    const headSection = body.slice(
+      body.indexOf("<head>"),
+      body.indexOf("</head>"),
+    );
+    const bodySection = body.slice(
+      body.indexOf("<body"),
+      body.indexOf("</body>"),
+    );
+    expect(headSection).toContain("https://cdn.example/from-template.js");
+    expect(bodySection).not.toContain("https://cdn.example/from-template.js");
+  });
+
+  test("manifest `meta[]` translates JSX-cased keys (`httpEquiv` -> `http-equiv`)", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => <article>{data.entry.title}</article>,
+      },
+      document: {
+        meta: [{ httpEquiv: "X-UA-Compatible", content: "IE=edge" }],
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "http-equiv",
+      title: "HttpEquiv",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/http-equiv"),
+    );
+    const body = await response.text();
+    const headSection = body.slice(
+      body.indexOf("<head>"),
+      body.indexOf("</head>"),
+    );
+    expect(headSection).toContain(
+      '<meta http-equiv="X-UA-Compatible" content="IE=edge"',
+    );
+    expect(headSection).not.toContain("httpEquiv");
   });
 
   test("template can render <BlockRenderer/> against the entry's content tree", async () => {

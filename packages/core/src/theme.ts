@@ -1,4 +1,4 @@
-import type { ComponentType, ReactElement, ReactNode } from "react";
+import type { ComponentType, JSX } from "react";
 
 import type { ThemeTokens } from "@plumix/blocks";
 
@@ -37,11 +37,53 @@ type DynamicTemplateComponent =
   | TemplateComponent<ErrorData>
   | TemplateComponent<TemplateData>;
 
-export type ThemeDocument = (props: {
-  readonly data: TemplateData;
-  readonly request: Request;
-  readonly children: ReactNode;
-}) => ReactElement;
+/**
+ * Strip React-isms that don't belong in HTML attribute descriptors:
+ * `key`/`ref` are React infrastructure; `on*` handlers don't apply
+ * to SSR'd strings; `children` and `dangerouslySetInnerHTML` are kept
+ * only for `<script>` (inline content).
+ */
+type DocumentTag<T extends keyof JSX.IntrinsicElements> = Omit<
+  JSX.IntrinsicElements[T],
+  "key" | "ref" | `on${string}`
+>;
+
+export type DocumentLink = Omit<
+  DocumentTag<"link">,
+  "children" | "dangerouslySetInnerHTML"
+>;
+
+export type DocumentMeta = Omit<
+  DocumentTag<"meta">,
+  "children" | "dangerouslySetInnerHTML"
+>;
+
+// `children` and `dangerouslySetInnerHTML` are narrowed to plain strings:
+// SSR'd inline script bodies, not React nodes or browser-native trusted-type
+// values. JSX would otherwise allow `ReactNode`/`TrustedHTML` here, which
+// can't be safely stringified into HTML.
+export type DocumentScript = Omit<
+  DocumentTag<"script">,
+  "children" | "dangerouslySetInnerHTML"
+> & {
+  readonly position?: "headStart" | "headEnd" | "bodyStart" | "bodyEnd";
+  readonly children?: string;
+  readonly dangerouslySetInnerHTML?: { readonly __html: string };
+};
+
+export interface DocumentManifest {
+  readonly html?: Omit<
+    DocumentTag<"html">,
+    "children" | "dangerouslySetInnerHTML"
+  >;
+  readonly body?: Omit<
+    DocumentTag<"body">,
+    "children" | "dangerouslySetInnerHTML"
+  >;
+  readonly link?: readonly DocumentLink[];
+  readonly meta?: readonly DocumentMeta[];
+  readonly script?: readonly DocumentScript[];
+}
 
 export interface TemplateRegistry {
   readonly index: TemplateComponent<TemplateData>;
@@ -61,7 +103,7 @@ export interface TemplateRegistry {
 
 export interface ThemeDescriptor {
   readonly templates: TemplateRegistry;
-  readonly document?: ThemeDocument;
+  readonly document?: DocumentManifest;
   readonly tokens?: ThemeTokens;
 }
 

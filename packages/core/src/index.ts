@@ -48,10 +48,13 @@ export type {
 } from "./route/render/resolved-entry.js";
 export { defineTheme } from "./theme.js";
 export type {
+  DocumentLink,
+  DocumentManifest,
+  DocumentMeta,
+  DocumentScript,
   TemplateComponent,
   TemplateData,
   TemplateRegistry,
   ThemeDescriptor,
-  ThemeDocument,
 } from "./theme.js";
 export { ThemeError, ThemeRegistrationError } from "./theme-errors.js";
