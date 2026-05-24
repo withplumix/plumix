@@ -31,7 +31,9 @@ import {
   ADMIN_URL_PREFIX,
   assemblePluginAdminBundle,
 } from "./admin-plugin-bundle.js";
+import { generateClientEntrySource } from "./client-entry-codegen.js";
 import { VitePluginError } from "./errors.js";
+import { plumixPathAliases } from "./path-aliases.js";
 import { stageUserPublic } from "./public-staging.js";
 
 // `import.meta.url` for this module lives at plumix/dist/vite/index.js in
@@ -79,8 +81,34 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       // the SSR renderer knows which hashed `<link rel="stylesheet">` tags
       // to inject after the theme's own `link[]`.
       const build = { manifest: true };
-      if (userConfig.publicDir !== undefined) return { define, build };
-      return { publicDir: ".plumix/public", define, build };
+      // Register `.plumix/client-entry.ts` as the CLIENT environment's
+      // entry. @cloudflare/vite-plugin checks for a non-empty
+      // `clientEnvironment.config.build.rollupOptions.input` and only
+      // falls back to its private `__cloudflare_fallback_entry__` when
+      // none is set (see packages/vite-plugin-cloudflare/src/build.ts).
+      // Vite merges this with the CF plugin's config; the merged
+      // result has both `manifest: true` and our entry input.
+      const environments = {
+        client: {
+          build: {
+            manifest: true,
+            rollupOptions: {
+              input: {
+                "plumix-client": ".plumix/client-entry.ts",
+              },
+            },
+          },
+        },
+      };
+      const resolveOpts = {
+        alias: plumixPathAliases(userConfig.root ?? process.cwd()),
+      };
+      // Default publicDir to `.plumix/public` only when the user hasn't
+      // set one — Vite merges the returned object with `userConfig`, so
+      // we keep theirs by omitting the key entirely.
+      const base = { define, build, environments, resolve: resolveOpts };
+      if (userConfig.publicDir !== undefined) return base;
+      return { ...base, publicDir: ".plumix/public" };
     },
     configResolved(config) {
       root = config.root;
@@ -92,11 +120,13 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
     },
     load(id) {
       if (id !== ASSET_MANIFEST_RESOLVED_ID) return null;
-      // Build mode reads the manifest Vite emitted to
-      // `<outDir>/.vite/manifest.json` from a previous environment in
-      // the same build pass (sequential build order from
-      // @cloudflare/vite-plugin). Dev mode never produces a manifest;
-      // `loadAssetManifest` returns `{}` when the file isn't present.
+      // Read the manifest Vite emits to `<outDir>/.vite/manifest.json`.
+      // Returns `{}` when missing — which happens in dev (no manifest
+      // is written) AND on the FIRST production build of a fresh
+      // project: @cloudflare/vite-plugin builds the worker env before
+      // the client env, so on a cold build the worker bakes an empty
+      // manifest and the second build picks up the real entries.
+      // Followup #528 tracks the fix.
       return `export default ${JSON.stringify(loadAssetManifest(root))};`;
     },
     async buildStart() {
@@ -179,16 +209,22 @@ async function regenerate(
   });
   writeIfChanged(resolve(cwd, ".plumix/worker.ts"), workerSource);
 
+  // Always emit `.plumix/client-entry.ts`, even when empty. The plumix
+  // Vite plugin's `config()` hook unconditionally lists it as a client
+  // entry — Vite resolves entries during the build pass (after
+  // `buildStart`), so this file just needs to exist before then. CSS
+  // imports declared in `theme.css` (Nuxt-style string array) land in
+  // the client bundle through this entry's import graph; jiti never
+  // sees them, so themes can import arbitrary asset types without
+  // hitting the config loader.
+  const clientEntrySource = generateClientEntrySource(config.theme.css ?? []);
+  writeIfChanged(resolve(cwd, ".plumix/client-entry.ts"), clientEntrySource);
+
   const { manifest, registry } = await computeManifestAndRegistry(
     config.plugins,
   );
 
-  return {
-    configPath,
-    manifest,
-    registry,
-    plugins: config.plugins,
-  };
+  return { configPath, manifest, registry, plugins: config.plugins };
 }
 
 type PluginDescriptors = Parameters<typeof installPlugins>[0]["plugins"];
