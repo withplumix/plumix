@@ -2,7 +2,8 @@ type ThemeRegistrationCode =
   | "missing_theme"
   | "missing_index_template"
   | "document_invalid_link"
-  | "document_invalid_script";
+  | "document_invalid_script"
+  | "invalid_template";
 
 export class ThemeRegistrationError extends Error {
   static {
@@ -42,6 +43,17 @@ export class ThemeRegistrationError extends Error {
         `entry without a \`rel\` attribute. Every \`<link>\` in the document ` +
         `manifest must declare a \`rel\` — browsers ignore unkeyed link tags ` +
         `and the renderer would emit invalid HTML.`,
+    );
+  }
+
+  static invalidTemplate(ctx: { slot: string }): ThemeRegistrationError {
+    return new ThemeRegistrationError(
+      "invalid_template",
+      `Theme registration: templates.${ctx.slot} must be either a plain ` +
+        `function (legacy form) or a Template built via \`defineTemplate({ ` +
+        `render: ... })\`. A hand-written \`{ render }\` literal that ` +
+        `didn't go through the factory is rejected so future deps / ` +
+        `document-fragment fields don't get silently ignored.`,
     );
   }
 

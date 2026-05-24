@@ -5,12 +5,12 @@ import { renderToString } from "react-dom/server";
 import { PlumixProvider } from "@plumix/blocks/renderer";
 
 import type { AppContext } from "../../context/app.js";
+import type { Template } from "../../template.js";
 import type {
   DocumentLink,
   DocumentManifest,
   DocumentMeta,
   DocumentScript,
-  TemplateComponent,
   TemplateData,
   TemplateRegistry,
   ThemeDescriptor,
@@ -18,6 +18,7 @@ import type {
 import type { AssetManifest } from "./asset-manifest.js";
 import type { ErrorData } from "./resolved-entry.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
+import { normalizeTemplate } from "../../template.js";
 import { bundledCssTags } from "./asset-manifest.js";
 import { resolveTemplateCandidates } from "./template-hierarchy.js";
 
@@ -41,8 +42,8 @@ export async function renderThroughTheme({
   title,
 }: RenderArgs): Promise<string> {
   const candidates = await resolveTemplateCandidates(node, ctx.hooks);
-  const Template = pickTemplate(theme.templates, candidates);
-  return renderTree({ ctx, document, assetManifest, data, title, Template });
+  const template = pickTemplate(theme.templates, candidates);
+  return renderTree({ ctx, document, assetManifest, data, title, template });
 }
 
 interface RenderErrorArgs {
@@ -72,15 +73,15 @@ export function renderErrorThroughTheme({
   data,
 }: RenderErrorArgs): string {
   const variant = ERROR_VARIANTS[kind];
-  const Template = (theme.templates[variant.key] ??
-    variant.fallback) as TemplateComponent<TemplateData>;
+  const raw = theme.templates[variant.key] ?? variant.fallback;
+  const template = normalizeTemplate(raw, variant.key);
   return renderTree({
     ctx,
     document,
     assetManifest,
     data,
     title: variant.title,
-    Template,
+    template,
   });
 }
 
@@ -90,7 +91,7 @@ interface RenderTreeArgs {
   readonly assetManifest: AssetManifest;
   readonly data: TemplateData;
   readonly title: string;
-  readonly Template: TemplateComponent<TemplateData>;
+  readonly template: Template<TemplateData>;
 }
 
 // React 19 reorders every child of `<head>` (metadata first, scripts /
@@ -105,11 +106,18 @@ function renderTree({
   assetManifest,
   data,
   title,
-  Template,
+  template,
 }: RenderTreeArgs): string {
+  // Adapter FC wraps `template.render({ data, ctx })` so it executes
+  // inside React's render pass — hooks (useState, useId, useMemo,
+  // useSyncExternalStore) inside a factory template are legal. A
+  // direct `template.render({data, ctx})` here would throw "Invalid
+  // hook call" because React's dispatcher isn't set yet at this
+  // construction point.
+  const TemplateAdapter = (): ReactNode => template.render({ data, ctx });
   const templateTree: ReactNode = createElement(PlumixProvider, {
     value: { registry: ctx.blocks },
-    children: createElement(Template, { data }),
+    children: createElement(TemplateAdapter),
   });
   const rendered = renderToString(templateTree);
   const { hoisted, body } = splitHoistedMetadata(rendered);
@@ -271,15 +279,16 @@ function escapeAttr(value: string): string {
 function pickTemplate(
   templates: TemplateRegistry,
   candidates: readonly string[],
-): TemplateComponent<TemplateData> {
+): Template<TemplateData> {
   // The candidate list is derived from the route's kind, so the picked
   // template's narrowed data shape always matches the runtime `data`.
-  // TS can't see that — widen with a cast at the boundary.
+  // Normalize at the boundary — accepts both plain function templates
+  // (legacy) and factory-built `Template<T>` objects.
   for (const name of candidates) {
     const candidate = templates[name];
-    if (candidate) return candidate as TemplateComponent<TemplateData>;
+    if (candidate) return normalizeTemplate(candidate, name);
   }
-  return templates.index;
+  return normalizeTemplate(templates.index, "index");
 }
 
 function DefaultNotFound() {
