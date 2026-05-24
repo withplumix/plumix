@@ -156,9 +156,7 @@ function encodeInner(
     case "[object Array]":
       return [
         PROP_TYPE.JSON,
-        (value as readonly unknown[]).map((v) =>
-          encode(v, seen, displayName),
-        ),
+        (value as readonly unknown[]).map((v) => encode(v, seen, displayName)),
       ];
     default: {
       const obj: Record<string, Encoded> = {};
