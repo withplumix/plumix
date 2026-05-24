@@ -157,8 +157,11 @@ function splitHoistedMetadata(rendered: string): {
   return { hoisted: rendered.slice(0, cursor), body: rendered.slice(cursor) };
 }
 
+// Case-insensitive: React's `renderToString` always emits lowercase tag
+// names, but the regex still needs `i` to satisfy code-scanning that
+// (correctly) treats case-sensitive HTML filters as fragile.
 const HOISTED_TAG_RE =
-  /<(?:title\b[^>]*>[^<]*<\/title>|script\b[^>]*>[^<]*<\/script>|(?:meta|link)\b[^>]*\/?>)/y;
+  /<(?:title\b[^>]*>[^<]*<\/title>|script\b[^>]*>[^<]*<\/script>|(?:meta|link)\b[^>]*\/?>)/iy;
 
 type ScriptPosition = "headStart" | "headEnd" | "bodyStart" | "bodyEnd";
 
