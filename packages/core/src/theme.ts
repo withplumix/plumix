@@ -118,6 +118,14 @@ export interface ThemeDescriptor {
   readonly templates: TemplateRegistry;
   readonly document?: DocumentManifest;
   readonly tokens?: ThemeTokens;
+  /**
+   * Paths (relative to the project root or aliased) to CSS / asset files
+   * that should ship as client bundles. Mirror of Nuxt's `css: []` — the
+   * strings never enter jiti's module graph; the plumix Vite plugin
+   * generates a synthetic client entry that imports each path so Vite
+   * resolves them through its normal graph and emits hashed bundles.
+   */
+  readonly css?: readonly string[];
 }
 
 const TOKEN_SLUG_RE = /^[a-z][a-z0-9-]*$/;
