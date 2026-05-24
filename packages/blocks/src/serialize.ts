@@ -59,7 +59,7 @@ export enum PROP_TYPE {
   Infinity = 11,
 }
 
-export interface SerializePropsOptions {
+interface SerializePropsOptions {
   readonly displayName?: string;
 }
 
