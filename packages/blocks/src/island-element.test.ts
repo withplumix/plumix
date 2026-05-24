@@ -88,6 +88,142 @@ describe("PlumixIslandElement lifecycle", () => {
     expect(strategy).toHaveBeenCalledTimes(1);
   });
 
+  test("disconnectedCallback dispatches `plumix:unmount` on window with element in detail", async () => {
+    // Forward-compat with future view-transitions / client-side
+    // navigation: when an island is removed from the DOM (e.g. a route
+    // swap unmounts the page), themes can listen for `plumix:unmount`
+    // to clean up subscriptions before React's `root.unmount()` runs.
+    // Dispatched on window because the element is already detached
+    // when disconnectedCallback fires.
+    stubStrategies();
+    restoreImport = setDynamicImport(() =>
+      Promise.resolve({ default: () => null } as unknown),
+    );
+    const listener = vi.fn();
+    window.addEventListener("plumix:unmount", listener);
+    const el = makeIsland({
+      client: "load",
+      "chunk-url": "/chunk.js",
+      "component-export": "default",
+      opts: "{}",
+    });
+    document.body.appendChild(el);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    el.remove();
+    expect(listener).toHaveBeenCalledTimes(1);
+    const event = listener.mock.calls[0]?.[0] as CustomEvent<{
+      element: PlumixIslandElement;
+    }>;
+    expect(event.detail.element).toBe(el);
+    window.removeEventListener("plumix:unmount", listener);
+  });
+
+  test("a never-hydrated (deferred) island that disconnects does NOT emit `plumix:unmount`", async () => {
+    // A nested child blocked on the parent's `ssr` attribute that gets
+    // detached before its parent ever hydrates. No mount happened, so
+    // no unmount event should fire — listeners pair the two.
+    stubStrategies();
+    const listener = vi.fn();
+    window.addEventListener("plumix:unmount", listener);
+    const parent = makeIsland({
+      client: "load",
+      "chunk-url": "/parent.js",
+      opts: "{}",
+      ssr: "",
+    });
+    const child = makeIsland({
+      client: "load",
+      "chunk-url": "/child.js",
+      opts: "{}",
+      ssr: "",
+    });
+    parent.appendChild(child);
+    document.body.appendChild(parent);
+    await Promise.resolve();
+    // Detach the child WHILE it's still deferred. The parentObserver
+    // teardown should also run (no leaked MutationObserver) but the
+    // observable surface here is the absence of plumix:unmount.
+    child.remove();
+    expect(listener).not.toHaveBeenCalled();
+    window.removeEventListener("plumix:unmount", listener);
+  });
+
+  test("a nested island defers its strategy until the parent island clears its `ssr` attribute", async () => {
+    // SSR'd structure: <plumix-island ssr><...inner content with another
+    // <plumix-island ssr>...></plumix-island>. The child must NOT
+    // hydrate while the parent is still marked SSR — Astro's top-down
+    // contract. Walker emits both with `ssr=""`; each clears its own
+    // attribute after its `hydrate()` runs.
+    const strategy = vi.fn<IslandStrategy>((loadFn) => loadFn());
+    stubStrategies(strategy);
+    const importer = vi.fn(() =>
+      Promise.resolve({ default: () => null } as unknown),
+    );
+    restoreImport = setDynamicImport(importer);
+    const parent = makeIsland({
+      client: "load",
+      "chunk-url": "/parent.js",
+      "component-export": "default",
+      opts: "{}",
+      ssr: "",
+    });
+    const child = makeIsland({
+      client: "load",
+      "chunk-url": "/child.js",
+      "component-export": "default",
+      opts: "{}",
+      ssr: "",
+    });
+    parent.appendChild(child);
+    document.body.appendChild(parent);
+    // Yield one microtask; child should defer, only the parent should
+    // have invoked its strategy.
+    await Promise.resolve();
+    await Promise.resolve();
+    const childStrategyCalls = strategy.mock.calls.filter(
+      (call) => call[2] === child,
+    );
+    expect(childStrategyCalls).toHaveLength(0);
+
+    // Parent clears its ssr attribute → child should hydrate next tick.
+    parent.removeAttribute("ssr");
+    await Promise.resolve();
+    await Promise.resolve();
+    const childStrategyCallsAfter = strategy.mock.calls.filter(
+      (call) => call[2] === child,
+    );
+    expect(childStrategyCallsAfter).toHaveLength(1);
+  });
+
+  test("start() bails when the element is no longer connected by the time the strategy fires", async () => {
+    // Real-world: connectedCallback fires, strategy schedules an async
+    // import, the parent React render unmounts the island wrapper before
+    // the import resolves. createRoot on a detached node would throw.
+    let deferredLoad: (() => Promise<void>) | undefined;
+    stubStrategies((loadFn) => {
+      // Capture loadFn without invoking it — defers hydration.
+      deferredLoad = loadFn;
+    });
+    const importer = vi.fn(() =>
+      Promise.resolve({ default: () => null } as unknown),
+    );
+    restoreImport = setDynamicImport(importer);
+    const el = makeIsland({
+      client: "load",
+      "chunk-url": "/chunk.js",
+      "component-export": "default",
+      opts: "{}",
+    });
+    document.body.appendChild(el);
+    await Promise.resolve();
+    // Detach BEFORE the strategy's loadFn runs.
+    el.remove();
+    expect(el.isConnected).toBe(false);
+    await deferredLoad?.();
+    // hydrate's component lookup should never have fired.
+    expect(importer).not.toHaveBeenCalled();
+  });
+
   test("rejects a __proto__ component-export with plumix:hydration-error (proto pollution guard)", async () => {
     stubStrategies();
     const listener = vi.fn();

@@ -296,6 +296,13 @@ function renderIsland(args: RenderIslandArgs): ReactNode {
         "component-export": args.entry.exportName,
         client: args.hydrateWhen,
         "data-plumix-block": args.node.name,
+        // `ssr` marks the wrapper as SSR'd-but-not-yet-hydrated. The
+        // custom element removes it after `hydrate()` runs. Nested
+        // islands check this attribute on their closest ancestor and
+        // defer their own start() until the parent clears it — keeps
+        // the top-down hydration order React expects when a parent
+        // island can re-render and swap out a child.
+        ssr: "",
         className: args.className,
       },
       args.styleTag,
