@@ -32,6 +32,7 @@ import {
   assemblePluginAdminBundle,
 } from "./admin-plugin-bundle.js";
 import { VitePluginError } from "./errors.js";
+import { stageUserPublic } from "./public-staging.js";
 
 // `import.meta.url` for this module lives at plumix/dist/vite/index.js in
 // consumer installs, so the pre-compiled admin artifact is a sibling at
@@ -81,6 +82,11 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       const emitted = await regenerate(root, options.configFile);
       configPath = emitted.configPath;
       warnOnPluginAdminMismatch(emitted.plugins, this.warn.bind(this));
+      // User `public/` is staged BEFORE admin so the admin SPA's
+      // freshness check still works against its own source mtime —
+      // and the `_plumix/` filter in `stageUserPublic` keeps users
+      // from corrupting admin's subtree on collision.
+      await stageUserPublic({ workspaceRoot: root, publicDir });
       await stageAdminAssets(
         publicDir,
         emitted.manifest,
@@ -89,11 +95,15 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         root,
       );
     },
+    // No watcher on workspace `public/` here — Vite serves `publicDir`
+    // contents directly from disk in dev, so file edits / additions are
+    // picked up on next request without a re-stage.
     configureServer(server) {
       server.watcher.on("change", (path) => {
         if (!configPath || resolve(path) !== configPath) return;
         void regenerate(root, options.configFile)
           .then(async (emitted) => {
+            await stageUserPublic({ workspaceRoot: root, publicDir });
             await stageAdminAssets(
               publicDir,
               emitted.manifest,
