@@ -13,14 +13,41 @@ import { ThemeRegistrationError } from "./theme-errors.js";
 const PLUMIX_TEMPLATE_BRAND: unique symbol = Symbol("plumix.template");
 
 /**
- * Augmentable registry of template-level dep slots. Slice #518 wires
- * `registerTemplateDep` against this interface; today it stays empty
- * so subsequent module augmentations don't require an ABI bump.
+ * Augmentable registry of template-level dep slots. Plugins register
+ * loaders via `ctx.registerTemplateDep(kind, { load })` and themes
+ * declare what they need via `defineTemplate({ [kind]: slugs[], ... })`.
+ * The framework loads each declared dep in parallel per request and
+ * passes results into render.
+ *
+ * Each entry shape: `{ slug: string; result: ResultType }`. Augment via
+ * declaration merging — see `core` registering `settings` for the
+ * canonical example.
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- intentional augmentation seam
 export interface TemplateDepRegistry {}
 
-export interface TemplateRenderArgs<TData extends TemplateData> {
+/**
+ * Per-kind declarations on a template — array of slugs the template
+ * needs the framework to load before render. Optional per kind so a
+ * template can opt into just the deps it uses.
+ */
+export type TemplateDepDeclarations = {
+  readonly [K in keyof TemplateDepRegistry]?: readonly TemplateDepRegistry[K]["slug"][];
+};
+
+/**
+ * Per-kind results threaded into the render function. Keyed by slug,
+ * `null` when the loader didn't return a value for that slug (or
+ * threw — see `template_dep_load_failed` log).
+ */
+export type TemplateDepResults = {
+  readonly [K in keyof TemplateDepRegistry]?: Readonly<
+    Record<string, TemplateDepRegistry[K]["result"] | null>
+  >;
+};
+
+export interface TemplateRenderArgs<TData extends TemplateData>
+  extends TemplateDepResults {
   readonly data: TData;
   readonly ctx: AppContext;
 }
@@ -38,14 +65,20 @@ export type TemplateRender<TData extends TemplateData> = (
  * theme's site-wide document at boot. Per-request renders look up the
  * already-merged result keyed by the matched template slot — zero
  * runtime merge cost.
+ *
+ * Dep declarations (`[K in keyof TemplateDepRegistry]?`) live directly
+ * on the template object so the framework's per-request dispatch can
+ * read them via `template[kind]` and fire the registered loaders.
  */
-export interface Template<TData extends TemplateData = TemplateData> {
+export interface Template<TData extends TemplateData = TemplateData>
+  extends TemplateDepDeclarations {
   readonly render: TemplateRender<TData>;
   readonly document?: DocumentManifest;
   readonly [PLUMIX_TEMPLATE_BRAND]: true;
 }
 
-interface DefineTemplateConfig<TData extends TemplateData> {
+interface DefineTemplateConfig<TData extends TemplateData>
+  extends TemplateDepDeclarations {
   readonly render: TemplateRender<TData>;
   readonly document?: DocumentManifest;
 }
@@ -53,13 +86,12 @@ interface DefineTemplateConfig<TData extends TemplateData> {
 export function defineTemplate<TData extends TemplateData = TemplateData>(
   config: DefineTemplateConfig<TData>,
 ): Template<TData> {
-  const template: {
-    render: TemplateRender<TData>;
-    document?: DocumentManifest;
-  } = {
-    render: config.render,
-  };
-  if (config.document !== undefined) template.document = config.document;
+  // Copy every config key onto the template object. That preserves
+  // any declared dep kinds (`settings`, `menus`, ...) which live as
+  // top-level slug arrays — the framework's per-request dispatch
+  // reads `template[kind]` to know which loaders to fire. `render` +
+  // `document` come along the same way.
+  const template: Record<string | symbol, unknown> = { ...config };
   // `enumerable: false` keeps the brand out of `Object.keys` / JSON;
   // writable/configurable defaults are fine — the symbol itself is
   // module-local so no caller can forge or rewrite it.
@@ -67,7 +99,7 @@ export function defineTemplate<TData extends TemplateData = TemplateData>(
     value: true,
     enumerable: false,
   });
-  return template as Template<TData>;
+  return template as unknown as Template<TData>;
 }
 
 export function isTemplate(value: unknown): value is Template<TemplateData> {

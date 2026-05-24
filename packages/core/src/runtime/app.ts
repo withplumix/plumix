@@ -38,6 +38,7 @@ import { installPlugins } from "../plugin/register.js";
 import { compileRouteMap } from "../route/compile.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
 import { appRouter } from "../rpc/router.js";
+import { registerCoreTemplateDeps } from "../template-deps-core.js";
 import { isTemplate } from "../template.js";
 import { ThemeRegistrationError } from "../theme-errors.js";
 import { validateDocumentManifest } from "../theme.js";
@@ -167,6 +168,7 @@ export async function buildApp(
   const hooks = new HookRegistry();
   const seededRegistry = createPluginRegistry();
   registerCoreLookupAdapters(seededRegistry);
+  registerCoreTemplateDeps(seededRegistry);
   const { registry, appContextExtensions } = await installPlugins({
     hooks,
     plugins: config.plugins,
