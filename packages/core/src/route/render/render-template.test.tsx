@@ -365,6 +365,137 @@ describe("resolvePublicRoute — single entry through theme", () => {
     );
   });
 
+  test("per-template document fragment merges with theme document; theme entries first", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: defineTemplate({
+          document: {
+            meta: [{ name: "robots", content: "noindex" }],
+            html: { className: "single-variant" },
+          },
+          render: ({ data }) => <article>{data.entry.title}</article>,
+        }),
+      },
+      document: {
+        meta: [{ name: "theme-color", content: "#0ea5e9" }],
+        html: { lang: "en", className: "site" },
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "merged-doc",
+      title: "Merged",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/merged-doc"),
+    );
+    const body = await response.text();
+    // html.className concatenated, theme first then template
+    expect(body).toContain('<html lang="en" class="site single-variant">');
+    // Meta from both theme and template appear, theme before template
+    const headSection = body.slice(
+      body.indexOf("<head>"),
+      body.indexOf("</head>"),
+    );
+    expect(headSection).toMatch(
+      /<meta\s+name="theme-color"[\s\S]*<meta\s+name="robots"\s+content="noindex"/,
+    );
+  });
+
+  test("per-template script[] with headEnd position lands in head after theme scripts", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: defineTemplate({
+          document: {
+            script: [
+              {
+                src: "https://template.example/single.js",
+                position: "headEnd",
+                defer: true,
+              },
+            ],
+          },
+          render: ({ data }) => <article>{data.entry.title}</article>,
+        }),
+      },
+      document: {
+        script: [
+          {
+            src: "https://theme.example/site.js",
+            position: "headEnd",
+          },
+        ],
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "script-position",
+      title: "Script Position",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/script-position"),
+    );
+    const body = await response.text();
+    const headSection = body.slice(
+      body.indexOf("<head>"),
+      body.indexOf("</head>"),
+    );
+    // Both scripts in head; theme's first, template's after
+    expect(headSection).toMatch(
+      /<script\s+src="https:\/\/theme\.example\/site\.js"[^>]*><\/script>[\s\S]*<script\s+src="https:\/\/template\.example\/single\.js"/,
+    );
+  });
+
+  test("templates without a document fragment fall back to the theme-wide document", async () => {
+    // Locks the contract: a template that doesn't declare its own
+    // fragment shouldn't pay any per-template cost — and shouldn't
+    // accidentally render a wrong document either.
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        // Plain function form — no `document` at all.
+        single: ({ data }) => <article>{data.entry.title}</article>,
+      },
+      document: {
+        meta: [{ name: "theme-color", content: "#0ea5e9" }],
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "no-fragment",
+      title: "No Fragment",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/no-fragment"),
+    );
+    const body = await response.text();
+    expect(body).toContain('<meta name="theme-color" content="#0ea5e9"');
+  });
+
   test("React hooks (useId) inside a factory template render correctly", async () => {
     // Regression for the gotcha: if the renderer calls `template.render`
     // outside React's render pass, useId / useState etc. throw with

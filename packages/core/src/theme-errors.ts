@@ -36,13 +36,19 @@ export class ThemeRegistrationError extends Error {
     );
   }
 
-  static documentInvalidLink(ctx: { index: number }): ThemeRegistrationError {
+  static documentInvalidLink(ctx: {
+    index: number;
+    slot?: string;
+  }): ThemeRegistrationError {
+    const source = ctx.slot
+      ? `template \`${ctx.slot}\` document fragment`
+      : "`theme:document` filter chain";
     return new ThemeRegistrationError(
       "document_invalid_link",
-      `\`theme:document\` filter chain produced a \`link[${ctx.index}]\` ` +
-        `entry without a \`rel\` attribute. Every \`<link>\` in the document ` +
-        `manifest must declare a \`rel\` — browsers ignore unkeyed link tags ` +
-        `and the renderer would emit invalid HTML.`,
+      `${source} produced a \`link[${ctx.index}]\` entry without a \`rel\` ` +
+        `attribute. Every \`<link>\` in the document manifest must declare ` +
+        `a \`rel\` — browsers ignore unkeyed link tags and the renderer ` +
+        `would emit invalid HTML.`,
     );
   }
 
@@ -57,11 +63,17 @@ export class ThemeRegistrationError extends Error {
     );
   }
 
-  static documentInvalidScript(ctx: { index: number }): ThemeRegistrationError {
+  static documentInvalidScript(ctx: {
+    index: number;
+    slot?: string;
+  }): ThemeRegistrationError {
+    const source = ctx.slot
+      ? `template \`${ctx.slot}\` document fragment`
+      : "`theme:document` filter chain";
     return new ThemeRegistrationError(
       "document_invalid_script",
-      `\`theme:document\` filter chain produced a \`script[${ctx.index}]\` ` +
-        `entry with neither \`src\` nor inline content (\`children\` / ` +
+      `${source} produced a \`script[${ctx.index}]\` entry with neither ` +
+        `\`src\` nor inline content (\`children\` / ` +
         `\`dangerouslySetInnerHTML\`). Scripts must reference a source URL ` +
         `or carry an inline body — an empty \`<script>\` tag is dead weight.`,
     );

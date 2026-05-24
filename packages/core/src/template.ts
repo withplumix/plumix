@@ -2,7 +2,7 @@ import type { ComponentType, ReactNode } from "react";
 import { createElement } from "react";
 
 import type { AppContext } from "./context/app.js";
-import type { TemplateData } from "./theme.js";
+import type { DocumentManifest, TemplateData } from "./theme.js";
 import { ThemeRegistrationError } from "./theme-errors.js";
 
 // Module-local brand — not `Symbol.for(...)`. The global registry
@@ -33,22 +33,33 @@ export type TemplateRender<TData extends TemplateData> = (
  * Output of `defineTemplate`. The brand symbol is non-enumerable so
  * it doesn't pollute `Object.keys` / JSON serialization but stays
  * load-bearing for runtime identification via `isTemplate`.
+ *
+ * `document` is the optional per-template fragment merged with the
+ * theme's site-wide document at boot. Per-request renders look up the
+ * already-merged result keyed by the matched template slot — zero
+ * runtime merge cost.
  */
 export interface Template<TData extends TemplateData = TemplateData> {
   readonly render: TemplateRender<TData>;
+  readonly document?: DocumentManifest;
   readonly [PLUMIX_TEMPLATE_BRAND]: true;
 }
 
 interface DefineTemplateConfig<TData extends TemplateData> {
   readonly render: TemplateRender<TData>;
+  readonly document?: DocumentManifest;
 }
 
 export function defineTemplate<TData extends TemplateData = TemplateData>(
   config: DefineTemplateConfig<TData>,
 ): Template<TData> {
-  const template: { render: TemplateRender<TData> } = {
+  const template: {
+    render: TemplateRender<TData>;
+    document?: DocumentManifest;
+  } = {
     render: config.render,
   };
+  if (config.document !== undefined) template.document = config.document;
   // `enumerable: false` keeps the brand out of `Object.keys` / JSON;
   // writable/configurable defaults are fine — the symbol itself is
   // module-local so no caller can forge or rewrite it.

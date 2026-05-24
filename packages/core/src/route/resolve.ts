@@ -49,6 +49,7 @@ export async function resolvePublicRoute(
   match: RouteMatch,
   theme: ThemeDescriptor,
   document: DocumentManifest,
+  templateDocuments: ReadonlyMap<string, DocumentManifest>,
   assetManifest: AssetManifest,
 ): Promise<Response> {
   switch (match.intent.kind) {
@@ -59,6 +60,7 @@ export async function resolvePublicRoute(
         match.params,
         theme,
         document,
+        templateDocuments,
         assetManifest,
       );
     case "archive":
@@ -68,6 +70,7 @@ export async function resolvePublicRoute(
         match.params,
         theme,
         document,
+        templateDocuments,
         assetManifest,
       );
     case "taxonomy":
@@ -77,10 +80,11 @@ export async function resolvePublicRoute(
         match.params,
         theme,
         document,
+        templateDocuments,
         assetManifest,
       );
     case "front-page":
-      return resolveFrontPage(ctx, theme, document, assetManifest);
+      return resolveFrontPage(ctx, theme, document, templateDocuments, assetManifest);
   }
 }
 
@@ -88,6 +92,7 @@ async function resolveFrontPage(
   ctx: AppContext,
   theme: ThemeDescriptor,
   document: DocumentManifest,
+  templateDocuments: ReadonlyMap<string, DocumentManifest>,
   assetManifest: AssetManifest,
 ): Promise<Response> {
   const page = 1;
@@ -118,6 +123,7 @@ async function resolveFrontPage(
     ctx,
     theme,
     document,
+    templateDocuments,
     assetManifest,
     node: { kind: "front-page" },
     data,
@@ -134,6 +140,7 @@ async function resolveTaxonomy(
   params: Record<string, string>,
   theme: ThemeDescriptor,
   document: DocumentManifest,
+  templateDocuments: ReadonlyMap<string, DocumentManifest>,
   assetManifest: AssetManifest,
 ): Promise<Response> {
   const term = await findTermForTaxonomy(ctx, intent.taxonomy, params);
@@ -182,6 +189,7 @@ async function resolveTaxonomy(
     ctx,
     theme,
     document,
+    templateDocuments,
     assetManifest,
     node: {
       kind: "term",
@@ -203,6 +211,7 @@ async function resolveSingle(
   params: Record<string, string>,
   theme: ThemeDescriptor,
   document: DocumentManifest,
+  templateDocuments: ReadonlyMap<string, DocumentManifest>,
   assetManifest: AssetManifest,
 ): Promise<Response> {
   const row = await findEntryForSingle(ctx, intent.entryType, params);
@@ -221,6 +230,7 @@ async function resolveSingle(
     ctx,
     theme,
     document,
+    templateDocuments,
     assetManifest,
     node: {
       kind: "content",
@@ -242,6 +252,7 @@ async function resolveArchive(
   params: Record<string, string>,
   theme: ThemeDescriptor,
   document: DocumentManifest,
+  templateDocuments: ReadonlyMap<string, DocumentManifest>,
   assetManifest: AssetManifest,
 ): Promise<Response> {
   const page = parsePageParam(params.page);
@@ -278,6 +289,7 @@ async function resolveArchive(
     ctx,
     theme,
     document,
+    templateDocuments,
     assetManifest,
     node: { kind: "content-type-archive", entryType: intent.entryType },
     data,

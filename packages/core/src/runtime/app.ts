@@ -23,6 +23,8 @@ import type { ContextExtensionEntry } from "../plugin/provides-context.js";
 import type { RouteRule } from "../route/intent.js";
 import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type { DocumentManifest } from "../theme.js";
+import { mergeDocumentManifest } from "../document-merge.js";
+import { isTemplate } from "../template.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
@@ -140,6 +142,14 @@ export interface PlumixApp {
    * exist (e.g. tests that don't run a full Vite build).
    */
   readonly assetManifest: AssetManifest;
+  /**
+   * Per-template merged document manifest. Each entry is the result
+   * of `mergeDocumentManifest(app.document, template.document)`,
+   * resolved once at boot and frozen. The renderer looks up by the
+   * matched template slot (`single`, `archive`, `index`, etc.) so
+   * per-request renders pay zero merge cost.
+   */
+  readonly templateDocuments: ReadonlyMap<string, DocumentManifest>;
 }
 
 // Runtime-only state the worker template injects at boot — values
@@ -236,6 +246,7 @@ export async function buildApp(
   );
 
   const document = await resolveDocumentManifest(hooks, config.theme.document);
+  const templateDocuments = buildTemplateDocuments(config.theme.templates, document);
 
   return {
     config,
@@ -259,7 +270,38 @@ export async function buildApp(
     htmlAllowlist,
     document,
     assetManifest: runtime.assetManifest ?? {},
+    templateDocuments,
   };
+}
+
+// Precompute the per-template merged document — theme-wide manifest
+// (already through the `theme:document` filter chain) merged with each
+// template's optional fragment. Each result is deep-frozen; the map
+// itself is frozen too. The renderer looks up by matched template slot
+// at request time and pays zero merge cost.
+function buildTemplateDocuments(
+  templates: Record<string, unknown>,
+  themeDocument: DocumentManifest,
+): ReadonlyMap<string, DocumentManifest> {
+  const result = new Map<string, DocumentManifest>();
+  for (const [slot, value] of Object.entries(templates)) {
+    if (!isTemplate(value)) {
+      // Legacy function form has no `document` field — render still
+      // uses `app.document` via the fallback lookup, so we don't need
+      // a per-slot entry.
+      continue;
+    }
+    if (value.document === undefined) {
+      // No fragment means the template wants the site-wide document
+      // verbatim; skip the entry so the renderer falls back to
+      // `app.document` (already deep-frozen).
+      continue;
+    }
+    const merged = mergeDocumentManifest(themeDocument, value.document);
+    validateDocumentManifest(merged, slot);
+    result.set(slot, deepFreezeManifest(merged));
+  }
+  return Object.freeze(result);
 }
 
 // Run the `theme:document` filter chain once at boot. Plugins spread + add
