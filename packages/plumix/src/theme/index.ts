@@ -1,4 +1,5 @@
 export {
+  defineTemplate,
   defineTheme,
   isEntryArchive,
   isTaxonomy,
@@ -10,5 +11,9 @@ export {
   type DocumentScript,
   type EntryArchiveProps,
   type TaxonomyArchiveProps,
+  type Template,
+  type TemplateDepRegistry,
+  type TemplateRender,
+  type TemplateRenderArgs,
   type ThemeDescriptor,
 } from "@plumix/core";

@@ -46,6 +46,13 @@ export type {
   SingleData,
   TaxonomyData,
 } from "./route/render/resolved-entry.js";
+export { defineTemplate } from "./template.js";
+export type {
+  Template,
+  TemplateDepRegistry,
+  TemplateRender,
+  TemplateRenderArgs,
+} from "./template.js";
 export { defineTheme } from "./theme.js";
 export type {
   DocumentLink,
@@ -54,6 +61,7 @@ export type {
   DocumentScript,
   TemplateComponent,
   TemplateData,
+  TemplateEntry,
   TemplateRegistry,
   ThemeDescriptor,
 } from "./theme.js";

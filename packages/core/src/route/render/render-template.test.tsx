@@ -7,6 +7,9 @@ import type { ResolvedEntry } from "./resolved-entry.js";
 import { entries as entriesTable } from "../../db/schema/entries.js";
 import { definePlugin } from "../../plugin/define.js";
 import { createDispatcherHarness } from "../../test/dispatcher.js";
+import { useId } from "react";
+
+import { defineTemplate } from "../../template.js";
 import { defineTheme } from "../../theme.js";
 
 const blogPlugin = definePlugin("blog", (ctx) => {
@@ -361,6 +364,85 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(headSection).toMatch(
       /<link\s+rel="icon"[\s\S]*<link\s+rel="stylesheet"\s+href="\/_plumix\/assets\/theme-def456\.css"/,
     );
+  });
+
+  test("React hooks (useId) inside a factory template render correctly", async () => {
+    // Regression for the gotcha: if the renderer calls `template.render`
+    // outside React's render pass, useId / useState etc. throw with
+    // "Invalid hook call". The TemplateAdapter wraps the call so hooks
+    // are legal — this test enforces that contract.
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: defineTemplate({
+          render: ({ data }) => {
+            const id = useId();
+            return (
+              <article id={id} data-testid="hook-host">
+                {data.entry.title}
+              </article>
+            );
+          },
+        }),
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "hooks-ok",
+      title: "Hooks Ok",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/hooks-ok"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain('data-testid="hook-host"');
+    // React 19's useId returns deterministic SSR ids beginning with «r;
+    // assert just the presence of an id attribute, not its value.
+    expect(body).toMatch(/<article\s+id="[^"]+"/);
+  });
+
+  test("factory-built template's render receives ctx with request + resolvedEntity", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: defineTemplate({
+          render: ({ data, ctx }) => (
+            <article data-testid="entry">
+              <h1>{data.entry.title}</h1>
+              <p data-testid="ctx-host">{new URL(ctx.request.url).host}</p>
+            </article>
+          ),
+        }),
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "ctx-aware",
+      title: "Ctx Aware",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/ctx-aware"),
+    );
+    const body = await response.text();
+    expect(body).toContain('data-testid="ctx-host"');
+    expect(body).toContain("cms.example");
+    expect(body).toContain("Ctx Aware");
   });
 
   test("`theme:document` filter contributions surface in SSR'd <head>", async () => {
