@@ -246,9 +246,7 @@ describe("findUseClientIslands", () => {
       "use client";
       export function Counter() { return null; }
     `;
-    expect(findUseClientIslands(source)).toEqual([
-      { exportName: "Counter" },
-    ]);
+    expect(findUseClientIslands(source)).toEqual([{ exportName: "Counter" }]);
   });
 });
 
@@ -270,9 +268,7 @@ describe("transformUseClientModule", () => {
     const out = result.code;
     // Re-imports the original file via the ?plumix-orig query so the
     // shim doesn't recursively re-trigger this transform.
-    expect(out).toContain(
-      `from "/abs/path/Counter.tsx?plumix-orig"`,
-    );
+    expect(out).toContain(`from "/abs/path/Counter.tsx?plumix-orig"`);
     // Re-exports every name the original exports, but as a shim.
     expect(out).toMatch(/export\s+function\s+Counter\s*\(/);
     // Shim wraps in `<plumix-island>` with chunk-url + component-export

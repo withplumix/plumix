@@ -51,66 +51,93 @@ const FORBIDDEN_EXPORT_KEYS: ReadonlySet<string> = new Set([
   "prototype",
 ]);
 
-export interface UseClientFinding {
+interface UseClientFinding {
   readonly exportName: string;
 }
 
 export function findUseClientIslands(
   source: string,
 ): readonly UseClientFinding[] {
-  if (!hasUseClientDirective(source)) return [];
+  // Cheap reject before paying the parse cost.
+  if (!source.includes("use client")) return [];
+  const sourceFile = ts.createSourceFile(
+    "use-client-scan.tsx",
+    source,
+    ts.ScriptTarget.Latest,
+    /* setParentNodes */ false,
+    ts.ScriptKind.TSX,
+  );
+  // RSC convention: `"use client"` must be the first non-comment
+  // statement. TypeScript exposes it as an `ExpressionStatement` whose
+  // expression is a string literal — matches both `"use client";` and
+  // `'use client';`. Anything else as the first statement disqualifies.
+  const first = sourceFile.statements[0];
+  if (!first || !ts.isExpressionStatement(first)) return [];
+  const expr = first.expression;
+  if (!ts.isStringLiteral(expr) || expr.text !== "use client") return [];
+
   const seen = new Set<string>();
   const out: UseClientFinding[] = [];
-  const push = (name: string | undefined): void => {
-    if (!name || FORBIDDEN_EXPORT_KEYS.has(name) || seen.has(name)) return;
+  const push = (name: string): void => {
+    if (FORBIDDEN_EXPORT_KEYS.has(name) || seen.has(name)) return;
     seen.add(name);
     out.push({ exportName: name });
   };
-  // `export function|const|let|var|class X`.
-  const named =
-    /export\s+(?:async\s+)?(?:function|const|let|var|class)\s+(\w+)/g;
-  let m: RegExpExecArray | null;
-  while ((m = named.exec(source)) !== null) push(m[1]);
-  // `export { Foo, Bar as Baz }` — common when authors split definition
-  // from export. Bare re-exports without `from` only; `export { Foo }
-  // from "./other"` is intentionally out of scope (the source file is
-  // the originating island module).
-  const reexport = /export\s*\{([^}]+)\}(?!\s*from)/g;
-  while ((m = reexport.exec(source)) !== null) {
-    const list = m[1] ?? "";
-    for (const part of list.split(",")) {
-      const aliased = part.trim().split(/\s+as\s+/);
-      push(aliased[aliased.length - 1]);
+
+  for (const statement of sourceFile.statements) {
+    if (
+      ts.isFunctionDeclaration(statement) ||
+      ts.isClassDeclaration(statement)
+    ) {
+      if (!hasExportModifier(statement)) continue;
+      if (hasDefaultModifier(statement)) push("default");
+      else if (statement.name) push(statement.name.text);
+      continue;
+    }
+    if (ts.isVariableStatement(statement)) {
+      if (!hasExportModifier(statement)) continue;
+      for (const decl of statement.declarationList.declarations) {
+        if (ts.isIdentifier(decl.name)) push(decl.name.text);
+      }
+      continue;
+    }
+    if (ts.isExportAssignment(statement)) {
+      // `export default <expr>`.
+      if (!statement.isExportEquals) push("default");
+      continue;
+    }
+    if (ts.isExportDeclaration(statement)) {
+      // `export { Foo, Bar as Baz } [from "..."]`.
+      // Re-exports from another module (`... from "..."`) name the
+      // current file as the chunk source, so they're skipped — the
+      // re-exporter isn't the island module.
+      if (statement.moduleSpecifier) continue;
+      if (!statement.exportClause || !ts.isNamedExports(statement.exportClause))
+        continue;
+      for (const element of statement.exportClause.elements) {
+        // `name` is the outward-facing name (after `as`); we feed the
+        // chunk's `mod[exportName]` lookup, so use the outward name.
+        push(element.name.text);
+      }
     }
   }
-  if (/export\s+default\b/.test(source)) push("default");
   return out;
 }
 
-// RSC convention: `"use client"` must lead the module. Earlier
-// statements disqualify the file.
-function hasUseClientDirective(source: string): boolean {
-  let i = 0;
-  while (i < source.length) {
-    const ch = source[i];
-    if (ch === " " || ch === "\n" || ch === "\r" || ch === "\t") {
-      i++;
-      continue;
-    }
-    if (source.startsWith("//", i)) {
-      const nl = source.indexOf("\n", i);
-      i = nl === -1 ? source.length : nl + 1;
-      continue;
-    }
-    if (source.startsWith("/*", i)) {
-      const end = source.indexOf("*/", i);
-      i = end === -1 ? source.length : end + 2;
-      continue;
-    }
-    break;
-  }
-  const head = source.slice(i, i + 14);
-  return head.startsWith('"use client"') || head.startsWith("'use client'");
+function hasExportModifier(node: ts.HasModifiers): boolean {
+  return (
+    ts
+      .getModifiers(node)
+      ?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword) ?? false
+  );
+}
+
+function hasDefaultModifier(node: ts.HasModifiers): boolean {
+  return (
+    ts
+      .getModifiers(node)
+      ?.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword) ?? false
+  );
 }
 
 // Vite virtual-module suffix the SSR shim uses to read the original
@@ -120,11 +147,11 @@ function hasUseClientDirective(source: string): boolean {
 // recursively re-trigger this transform.
 export const ORIG_QUERY = "?plumix-orig";
 
-export interface TransformUseClientOptions {
+interface TransformUseClientOptions {
   readonly chunkUrl: string;
 }
 
-export interface TransformUseClientResult {
+interface TransformUseClientResult {
   readonly code: string;
 }
 
