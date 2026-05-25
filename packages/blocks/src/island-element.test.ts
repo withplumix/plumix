@@ -373,9 +373,7 @@ describe("PlumixIslandElement lifecycle", () => {
     expect(seen[0]?.label).toBe("x");
     // The slot value should now be a React element (the StaticHtml bridge)
     // — the simplest observable is `$$typeof === Symbol`.
-    const childrenProp = seen[0]?.children as
-      | { $$typeof?: symbol }
-      | undefined;
+    const childrenProp = seen[0]?.children as { $$typeof?: symbol } | undefined;
     expect(typeof childrenProp?.$$typeof).toBe("symbol");
   });
 
