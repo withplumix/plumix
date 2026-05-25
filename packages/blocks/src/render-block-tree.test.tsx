@@ -361,9 +361,9 @@ describe("renderBlockTree", () => {
       // nested children can defer their own hydration until the parent
       // clears it. Removed by the custom element after hydrate() runs.
       expect(html).toContain('ssr=""');
-      expect(html).toContain(
-        '<script type="application/json" data-plumix-island-props="">',
-      );
+      // Props ride on the wrapper attribute — no sibling script.
+      expect(html).toMatch(/<plumix-island [^>]*props="/);
+      expect(html).not.toContain('<script type="application/json"');
     });
 
     test("falls back to plain div when client is declared but no manifest entry resolves", () => {
@@ -386,7 +386,9 @@ describe("renderBlockTree", () => {
       expect(html).toContain("ssr-fallback");
     });
 
-    test("escapes </script> sequences in serialized props", () => {
+    test("HTML-escapes props attribute so embedded quotes survive parsing", () => {
+      // React's JSX renderer is responsible for the attribute escape;
+      // round-tripping through a real DOM parse is what proves it.
       const Widget = () => null;
       const registry = createBlockRegistry([
         {
@@ -398,23 +400,23 @@ describe("renderBlockTree", () => {
       const manifest = new Map([
         [Widget, { chunkUrl: "/w.js", exportName: "Widget" }],
       ]);
+      const tricky = `alert("hi") & </script>`;
       const tree: readonly BlockNode[] = [
-        {
-          id: "w1",
-          name: "acme/widget",
-          attrs: { code: "alert('hi'); </script>" },
-        },
+        { id: "w1", name: "acme/widget", attrs: { code: tricky } },
       ];
 
       const html = renderToStaticMarkup(
         renderBlockTree(tree, registry, { islandManifest: manifest }),
       );
 
-      // The legitimate closing `</script>` for the prop tag exists once;
-      // the escape must prevent a second one from appearing inside the JSON.
-      const closingMatches = html.match(/<\/script>/g);
-      expect(closingMatches).toHaveLength(1);
-      expect(html).toContain("<\\/script");
+      document.body.innerHTML = html;
+      const island = document.querySelector("plumix-island");
+      const propsAttr = island?.getAttribute("props") ?? "";
+      const parsed = JSON.parse(propsAttr) as Record<
+        string,
+        readonly [number, string]
+      >;
+      expect(parsed.code?.[1]).toBe(tricky);
     });
   });
 

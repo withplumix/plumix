@@ -235,9 +235,7 @@ function renderNode(
   // a manifest entry exists for this block's `client.component`; a
   // build without the islands Vite plugin (or a block whose component
   // wasn't bundled) gracefully degrades to the SSR'd output without a
-  // wrapper. Props from `node.attrs` are serialized to a sibling
-  // `<script type="application/json">` rather than an attribute so
-  // large prop graphs don't run into HTML attribute size limits.
+  // wrapper.
   if (spec.client && islandManifest) {
     const entry = islandManifest.get(spec.client.component);
     if (entry) {
@@ -278,41 +276,32 @@ interface RenderIslandArgs {
 }
 
 function renderIsland(args: RenderIslandArgs): ReactNode {
+  // Practical size limit: HTML attribute values are unbounded by spec,
+  // but browser engines truncate around 64 KB. Blocks whose prop graphs
+  // exceed that should fetch their data on the client instead.
   const propsPayload = serializeProps(args.attrs, {
     displayName: args.displayName,
   });
-  // Escape the JSON string against premature `</script>` termination —
-  // a string prop containing `</script>` would otherwise close the
-  // element here and let the rest of the JSON leak into the DOM as
-  // markup. Forward-slash escape is safe inside JSON.
-  const safePayload = propsPayload.replace(/<\/script/gi, "<\\/script");
   return createElement(
-    Fragment,
-    { key: args.node.id },
-    createElement(
-      "plumix-island",
-      {
-        "chunk-url": args.entry.chunkUrl,
-        "component-export": args.entry.exportName,
-        client: args.hydrateWhen,
-        "data-plumix-block": args.node.name,
-        // `ssr` marks the wrapper as SSR'd-but-not-yet-hydrated. The
-        // custom element removes it after `hydrate()` runs. Nested
-        // islands check this attribute on their closest ancestor and
-        // defer their own start() until the parent clears it — keeps
-        // the top-down hydration order React expects when a parent
-        // island can re-render and swap out a child.
-        ssr: "",
-        className: args.className,
-      },
-      args.styleTag,
-      args.rendered,
-    ),
-    createElement("script", {
-      type: "application/json",
-      "data-plumix-island-props": "",
-      dangerouslySetInnerHTML: { __html: safePayload },
-    }),
+    "plumix-island",
+    {
+      key: args.node.id,
+      "chunk-url": args.entry.chunkUrl,
+      "component-export": args.entry.exportName,
+      client: args.hydrateWhen,
+      "data-plumix-block": args.node.name,
+      // `ssr` marks the wrapper as SSR'd-but-not-yet-hydrated. The
+      // custom element removes it after `hydrate()` runs. Nested
+      // islands check this attribute on their closest ancestor and
+      // defer their own start() until the parent clears it — keeps
+      // the top-down hydration order React expects when a parent
+      // island can re-render and swap out a child.
+      ssr: "",
+      props: propsPayload,
+      className: args.className,
+    },
+    args.styleTag,
+    args.rendered,
   );
 }
 

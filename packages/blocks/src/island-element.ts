@@ -1,11 +1,9 @@
 // Port of Astro's `astro-island.ts` (Apache-2.0). The custom element
 // reads its hydration target from attributes the SSR walker emitted:
 // the chunk URL, the named export to mount, the strategy name, the
-// strategy-specific opts JSON, and an optional `await-children` flag
-// that gates hydration on `MutationObserver` until streamed children
-// settle. Props live in a sibling `<script type="application/json">`
-// rather than an attribute because attribute size limits in real
-// browsers (~64 KB on some engines) would clip a large prop graph.
+// strategy-specific opts JSON, the serialized `props` payload, and an
+// optional `await-children` flag that gates hydration on
+// `MutationObserver` until streamed children settle.
 //
 // On a failed chunk import, hydrate() retries once with a cache-bust
 // hash (`#plumix-retry=<ts>`) — covers the deploy-during-page-load
@@ -49,11 +47,36 @@ const FORBIDDEN_EXPORT_KEYS: ReadonlySet<string> = new Set([
 ]);
 
 export class PlumixIslandElement extends HTMLElement {
+  static readonly observedAttributes: readonly string[] = ["props"];
+
   private root: Root | null = null;
   private retried = false;
   private hydrated = false;
+  private component: ComponentType<Readonly<Record<string, unknown>>> | null =
+    null;
   private childObserver: MutationObserver | null = null;
   private parentObserver: MutationObserver | null = null;
+
+  attributeChangedCallback(
+    _name: string,
+    oldValue: string | null,
+    newValue: string | null,
+  ): void {
+    // Spec fires this for every observed attribute already on the element
+    // at upgrade time (oldValue=null). The first render is owned by
+    // `start()` → `hydrate()`; skip until that completes. The root/
+    // component nullability checks satisfy TS — they're true together
+    // with `hydrated` by construction.
+    if (
+      !this.hydrated ||
+      !this.root ||
+      !this.component ||
+      oldValue === newValue
+    ) {
+      return;
+    }
+    this.root.render(createElement(this.component, readProps(this)));
+  }
 
   connectedCallback(): void {
     // If await-children is set, defer until the streaming SSR finishes
@@ -103,6 +126,7 @@ export class PlumixIslandElement extends HTMLElement {
       );
       this.root?.unmount();
       this.root = null;
+      this.component = null;
     }
   }
 
@@ -171,6 +195,7 @@ export class PlumixIslandElement extends HTMLElement {
     if (!Component) return;
     const props = readProps(this);
     this.hydrated = true;
+    this.component = Component;
     this.root = createRoot(this);
     this.root.render(createElement(Component, props));
     // Clearing the `ssr` attribute signals any nested island awaiting
@@ -255,22 +280,9 @@ function parseJsonAttr(raw: string | null): Readonly<Record<string, unknown>> {
 }
 
 function readProps(el: HTMLElement): Readonly<Record<string, unknown>> {
-  // SSR emits `<script type="application/json" data-plumix-island-props>`
-  // as a sibling of the island element. Known limitation: any DOM
-  // rewriter that inserts a non-script element between the two (third-
-  // party scripts, translate extensions, theme post-processors) breaks
-  // the lookup and the React component mounts with `{}` props. A more
-  // robust lookup keyed by an explicit `props-id` attribute is filed
-  // for a follow-up — for the islands MVP, the positional sibling
-  // pattern matches the contract the walker emits.
-  const script = el.nextElementSibling;
-  if (
-    !(script instanceof HTMLScriptElement) ||
-    script.getAttribute("data-plumix-island-props") === null
-  ) {
-    return {};
-  }
-  return deserializeProps(script.textContent || "{}");
+  const raw = el.getAttribute("props");
+  if (!raw) return {};
+  return deserializeProps(raw);
 }
 
 export const ISLAND_TAG = "plumix-island";
