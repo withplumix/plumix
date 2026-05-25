@@ -1,7 +1,6 @@
+import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, test, vi } from "vitest";
-
-import { createElement } from "react";
 
 import type { BlockContext, BlockNode } from "./render-block-tree.js";
 import { createBlockRegistry } from "./block-registry.js";

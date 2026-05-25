@@ -124,7 +124,14 @@ function materializeSlots(
     if (isBlockNodeArray(value)) {
       materialized ??= { ...attrs };
       materialized[key] = function SlotComponent() {
-        return renderNodes(value, registry, devState, childContext, tokens, hooks);
+        return renderNodes(
+          value,
+          registry,
+          devState,
+          childContext,
+          tokens,
+          hooks,
+        );
       };
     }
   }
