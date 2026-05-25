@@ -7,6 +7,7 @@ import {
   registerIslandElement,
   setDynamicImport,
 } from "./island-element.js";
+import { serializeProps } from "./serialize.js";
 
 function makeIsland(attrs: Record<string, string>): PlumixIslandElement {
   registerIslandElement();
@@ -309,9 +310,57 @@ describe("PlumixIslandElement lifecycle", () => {
     vi.useRealTimers();
   });
 
-  // The sibling-script prop pipeline is covered end-to-end by the
-  // Playwright e2e in `packages/e2e/tests/islands-mvp.spec.ts` (Phase G).
-  // Verifying it here would mean flushing a React 19 concurrent commit
-  // out of jsdom, which is more harness wiring than value at the unit
-  // layer. The deserializer round-trip is in `serialize.test.ts`.
+  test("re-renders the component when the `props` attribute changes after mount", async () => {
+    const seen: Readonly<Record<string, unknown>>[] = [];
+    const Component = (props: Readonly<Record<string, unknown>>) => {
+      seen.push(props);
+      return null;
+    };
+    restoreImport = setDynamicImport(() =>
+      Promise.resolve({ default: Component } as unknown),
+    );
+    stubStrategies();
+    const el = makeIsland({
+      client: "load",
+      "chunk-url": "/chunk.js",
+      "component-export": "default",
+      opts: "{}",
+      props: serializeProps({ title: "first" }),
+    });
+    document.body.appendChild(el);
+    // React 19 concurrent commits don't land in a single setTimeout(0)
+    // tick — poll until the first render lands.
+    await vi.waitFor(() => expect(seen).toHaveLength(1));
+    expect(seen[0]).toEqual({ title: "first" });
+
+    el.setAttribute("props", serializeProps({ title: "second" }));
+    await vi.waitFor(() => expect(seen).toHaveLength(2));
+    expect(seen[1]).toEqual({ title: "second" });
+  });
+
+  test("declares `props` in observedAttributes", () => {
+    expect(PlumixIslandElement.observedAttributes).toContain("props");
+  });
+
+  test("reads props from the `props` attribute and forwards them to the component", async () => {
+    const seen: Readonly<Record<string, unknown>>[] = [];
+    const Component = (props: Readonly<Record<string, unknown>>) => {
+      seen.push(props);
+      return null;
+    };
+    restoreImport = setDynamicImport(() =>
+      Promise.resolve({ default: Component } as unknown),
+    );
+    stubStrategies();
+    const el = makeIsland({
+      client: "load",
+      "chunk-url": "/chunk.js",
+      "component-export": "default",
+      opts: "{}",
+      props: serializeProps({ title: "hello", n: 42 }),
+    });
+    document.body.appendChild(el);
+    await vi.waitFor(() => expect(seen).toHaveLength(1));
+    expect(seen[0]).toEqual({ title: "hello", n: 42 });
+  });
 });
