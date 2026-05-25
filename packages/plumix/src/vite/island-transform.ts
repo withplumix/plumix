@@ -51,6 +51,124 @@ const FORBIDDEN_EXPORT_KEYS: ReadonlySet<string> = new Set([
   "prototype",
 ]);
 
+export interface UseClientFinding {
+  readonly exportName: string;
+}
+
+export function findUseClientIslands(
+  source: string,
+): readonly UseClientFinding[] {
+  if (!hasUseClientDirective(source)) return [];
+  const seen = new Set<string>();
+  const out: UseClientFinding[] = [];
+  const push = (name: string | undefined): void => {
+    if (!name || FORBIDDEN_EXPORT_KEYS.has(name) || seen.has(name)) return;
+    seen.add(name);
+    out.push({ exportName: name });
+  };
+  // `export function|const|let|var|class X`.
+  const named =
+    /export\s+(?:async\s+)?(?:function|const|let|var|class)\s+(\w+)/g;
+  let m: RegExpExecArray | null;
+  while ((m = named.exec(source)) !== null) push(m[1]);
+  // `export { Foo, Bar as Baz }` — common when authors split definition
+  // from export. Bare re-exports without `from` only; `export { Foo }
+  // from "./other"` is intentionally out of scope (the source file is
+  // the originating island module).
+  const reexport = /export\s*\{([^}]+)\}(?!\s*from)/g;
+  while ((m = reexport.exec(source)) !== null) {
+    const list = m[1] ?? "";
+    for (const part of list.split(",")) {
+      const aliased = part.trim().split(/\s+as\s+/);
+      push(aliased[aliased.length - 1]);
+    }
+  }
+  if (/export\s+default\b/.test(source)) push("default");
+  return out;
+}
+
+// RSC convention: `"use client"` must lead the module. Earlier
+// statements disqualify the file.
+function hasUseClientDirective(source: string): boolean {
+  let i = 0;
+  while (i < source.length) {
+    const ch = source[i];
+    if (ch === " " || ch === "\n" || ch === "\r" || ch === "\t") {
+      i++;
+      continue;
+    }
+    if (source.startsWith("//", i)) {
+      const nl = source.indexOf("\n", i);
+      i = nl === -1 ? source.length : nl + 1;
+      continue;
+    }
+    if (source.startsWith("/*", i)) {
+      const end = source.indexOf("*/", i);
+      i = end === -1 ? source.length : end + 2;
+      continue;
+    }
+    break;
+  }
+  const head = source.slice(i, i + 14);
+  return head.startsWith('"use client"') || head.startsWith("'use client'");
+}
+
+// Vite virtual-module suffix the SSR shim uses to read the original
+// `"use client"` source — the plugin's `resolveId`/`load` serve the
+// unmodified file at this query and `transform` short-circuits, so the
+// shim's `import * as __orig from "<file>?plumix-orig"` doesn't
+// recursively re-trigger this transform.
+export const ORIG_QUERY = "?plumix-orig";
+
+export interface TransformUseClientOptions {
+  readonly chunkUrl: string;
+}
+
+export interface TransformUseClientResult {
+  readonly code: string;
+}
+
+export function transformUseClientModule(
+  source: string,
+  filePath: string,
+  options: TransformUseClientOptions,
+): TransformUseClientResult | null {
+  const findings = findUseClientIslands(source);
+  if (findings.length === 0) return null;
+
+  const origUrl = JSON.stringify(filePath + ORIG_QUERY);
+  const chunkUrl = JSON.stringify(options.chunkUrl);
+  const lines: string[] = [
+    `import { createElement as __c } from "react";`,
+    `import * as __orig from ${origUrl};`,
+  ];
+  for (const finding of findings) {
+    const name = finding.exportName;
+    const isDefault = name === "default";
+    const targetLiteral = JSON.stringify(name);
+    const exportPrefix = isDefault
+      ? "export default function PlumixIsland(props)"
+      : `export function ${name}(props)`;
+    // `client` is the framework-reserved strategy slot. `IslandProps<T>`
+    // guarantees the type at compile; if a consumer ignores the helper
+    // and passes garbage, the custom element dispatches
+    // `plumix:hydration-error` at runtime. No second guard here.
+    lines.push(
+      `${exportPrefix} {`,
+      `  const { client, ...forward } = props ?? {};`,
+      `  return __c("plumix-island", {`,
+      `    "chunk-url": ${chunkUrl},`,
+      `    "component-export": ${targetLiteral},`,
+      `    "client": typeof client === "string" ? client : "load",`,
+      `    "props": JSON.stringify(forward),`,
+      `    "ssr": "",`,
+      `  }, __c(__orig[${targetLiteral}], forward));`,
+      `}`,
+    );
+  }
+  return { code: lines.join("\n") };
+}
+
 export function findIslands(
   source: string,
   filePath: string,
@@ -143,10 +261,20 @@ export function scanUserSources(
 ): readonly DiscoveredIsland[] {
   const islands: DiscoveredIsland[] = [];
   walk(cwd, fs, (filePath, source) => {
-    const findings = findIslands(source, filePath);
-    for (const finding of findings) {
+    for (const finding of findIslands(source, filePath)) {
       islands.push({
         sourcePath: resolveImportPath(filePath, finding.importPath),
+        exportName: finding.exportName,
+        blockFile: toPosix(filePath),
+      });
+    }
+    // `"use client"` modules ARE their own source — sourcePath and
+    // blockFile collapse to the file itself; the manifest reads the
+    // chunk from this entry the same way it does for defineBlock-
+    // discovered components.
+    for (const finding of findUseClientIslands(source)) {
+      islands.push({
+        sourcePath: toPosix(filePath),
         exportName: finding.exportName,
         blockFile: toPosix(filePath),
       });
@@ -176,10 +304,12 @@ function walk(
     if (!SCANNABLE_EXTS.has(extname(entry.name))) continue;
     try {
       const source = fs.readFile(full);
-      // Cheap pre-filter: skip any file that can't possibly contain a
-      // defineBlock call. Saves the AST parse on the vast majority of
-      // user-source files (auth, RPC, db helpers, etc.).
-      if (!source.includes("defineBlock")) continue;
+      // Cheap pre-filter: skip files that can't possibly contain either
+      // a `defineBlock(...)` call or a `"use client"` directive. Saves
+      // the AST parse on the vast majority of user-source files (auth,
+      // RPC, db helpers, etc.).
+      if (!source.includes("defineBlock") && !source.includes("use client"))
+        continue;
       visit(full, source);
     } catch {
       // Unreadable file (permissions, deleted mid-scan) — skip

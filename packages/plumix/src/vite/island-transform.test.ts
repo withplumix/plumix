@@ -1,7 +1,12 @@
 import { describe, expect, test } from "vitest";
 
 import type { ScannerFs } from "./island-transform.js";
-import { findIslands, scanUserSources } from "./island-transform.js";
+import {
+  findIslands,
+  findUseClientIslands,
+  scanUserSources,
+  transformUseClientModule,
+} from "./island-transform.js";
 
 function fixtureFs(
   files: Record<string, string>,
@@ -167,6 +172,164 @@ describe("findIslands", () => {
   });
 });
 
+describe("findUseClientIslands", () => {
+  test("extracts a single named export from a `use client` module", () => {
+    const source = `
+      "use client";
+      import { useState } from "react";
+      export function Counter() {
+        const [n, setN] = useState(0);
+        return <button onClick={() => setN(n + 1)}>{n}</button>;
+      }
+    `;
+    const islands = findUseClientIslands(source);
+    expect(islands).toEqual([{ exportName: "Counter" }]);
+  });
+
+  test("returns [] when the directive isn't the first statement", () => {
+    // Match React 19 / RSC semantics — the directive must lead.
+    const source = `
+      const sentinel = 42;
+      "use client";
+      export function Counter() { return null; }
+    `;
+    expect(findUseClientIslands(source)).toEqual([]);
+  });
+
+  test("returns [] when the file lacks the directive entirely", () => {
+    const source = `
+      import { useState } from "react";
+      export function NotAnIsland() { return null; }
+    `;
+    expect(findUseClientIslands(source)).toEqual([]);
+  });
+
+  test("returns one finding per named function/const/class export", () => {
+    const source = `
+      "use client";
+      export function A() { return null; }
+      export const B = () => null;
+      export class C {}
+    `;
+    const islands = findUseClientIslands(source);
+    expect(islands.map((i) => i.exportName)).toEqual(["A", "B", "C"]);
+  });
+
+  test("includes the default export, encoded as exportName='default'", () => {
+    const source = `
+      "use client";
+      export default function MyComponent() { return null; }
+    `;
+    const islands = findUseClientIslands(source);
+    expect(islands).toEqual([{ exportName: "default" }]);
+  });
+
+  test("drops exports whose name is a prototype-pollution key", () => {
+    // `mod["__proto__"]` would resolve to Object.prototype on the client
+    // side and `createRoot(...).render(<Component />)` would crash.
+    // Match the existing `FORBIDDEN_EXPORT_KEYS` guard from defineBlock
+    // discovery.
+    const source = `
+      "use client";
+      export const __proto__ = () => null;
+      export const constructor = () => null;
+      export const Counter = () => null;
+    `;
+    const islands = findUseClientIslands(source);
+    expect(islands.map((i) => i.exportName)).toEqual(["Counter"]);
+  });
+
+  test("ignores comments and leading whitespace before the directive", () => {
+    const source = `
+      // Copyright header
+      /* multiline note */
+      "use client";
+      export function Counter() { return null; }
+    `;
+    expect(findUseClientIslands(source)).toEqual([
+      { exportName: "Counter" },
+    ]);
+  });
+});
+
+describe("transformUseClientModule", () => {
+  test("rewrites a `use client` module to re-export shim components", () => {
+    const source = `
+      "use client";
+      import { useState } from "react";
+      export function Counter() {
+        const [n, setN] = useState(0);
+        return <button onClick={() => setN(n + 1)}>{n}</button>;
+      }
+    `;
+    const result = transformUseClientModule(source, "/abs/path/Counter.tsx", {
+      chunkUrl: "/src/Counter.tsx",
+    });
+    expect(result).not.toBeNull();
+    if (!result) return;
+    const out = result.code;
+    // Re-imports the original file via the ?plumix-orig query so the
+    // shim doesn't recursively re-trigger this transform.
+    expect(out).toContain(
+      `from "/abs/path/Counter.tsx?plumix-orig"`,
+    );
+    // Re-exports every name the original exports, but as a shim.
+    expect(out).toMatch(/export\s+function\s+Counter\s*\(/);
+    // Shim wraps in `<plumix-island>` with chunk-url + component-export
+    // + ssr="" baked in. We just check the literals are present — the
+    // exact JSX/createElement shape is an internal detail.
+    expect(out).toContain('"chunk-url": "/src/Counter.tsx"');
+    expect(out).toContain('"component-export": "Counter"');
+    expect(out).toContain('"ssr": ""');
+  });
+
+  test("shim forwards strategy from the `client` JSX prop, defaulting to load", () => {
+    // `IslandProps<T>` enforces the type at compile time; the custom
+    // element dispatches `plumix:hydration-error` for unknown strategies
+    // at runtime. The shim itself just passes the value through.
+    const source = `
+      "use client";
+      export function Counter() { return null; }
+    `;
+    const result = transformUseClientModule(source, "/Counter.tsx", {
+      chunkUrl: "/Counter.tsx",
+    });
+    expect(result?.code).toContain(
+      `typeof client === "string" ? client : "load"`,
+    );
+  });
+
+  test("shim serializes props via JSON.stringify (functions drop automatically)", () => {
+    // The shim's `props=` attribute is built by `JSON.stringify(forward)`.
+    // JSON.stringify omits function-typed values at every depth — a
+    // standard JS behavior we rely on rather than re-implement. Assert
+    // the generated source uses JSON.stringify on the forwarded props
+    // (the strip happens for free).
+    const source = `
+      "use client";
+      export function Action() { return null; }
+    `;
+    const result = transformUseClientModule(source, "/Action.tsx", {
+      chunkUrl: "/Action.tsx",
+    });
+    expect(result?.code).toContain("JSON.stringify(forward)");
+    // The shim must destructure `client` out before forwarding so the
+    // strategy slot doesn't leak into the props attribute either.
+    expect(result?.code).toContain("const { client, ...forward }");
+  });
+
+  test("returns null for files without the directive (no-op transform)", () => {
+    const source = `
+      import { useState } from "react";
+      export function NotAnIsland() { return null; }
+    `;
+    const result = transformUseClientModule(source, "/x.tsx", {
+      chunkUrl: "/x.tsx",
+    });
+    expect(result).toBeNull();
+  });
+});
+
 describe("scanUserSources", () => {
   test("finds a single island and resolves its importPath against the block file dir", () => {
     const fs = fixtureFs({
@@ -202,6 +365,37 @@ describe("scanUserSources", () => {
     });
     const islands = scanUserSources("/app", fs);
     expect(islands.map((i) => i.exportName)).toEqual(["A"]);
+  });
+
+  test("surfaces `use client` modules alongside defineBlock findings", () => {
+    const fs = fixtureFs({
+      "/app/src/blocks.ts": `
+        import { Search } from "./Search.tsx";
+        import { defineBlock } from "@plumix/blocks";
+        export const block = defineBlock({
+          name: "acme/search",
+          render: () => null,
+          client: { component: Search },
+        });
+      `,
+      "/app/src/Search.tsx": "export const Search = () => null;",
+      // A separate `use client` module — not referenced by any defineBlock,
+      // but a theme template imports `Header` and `Footer` and uses them.
+      "/app/src/header.tsx": `
+        "use client";
+        export function Header() { return null; }
+        export function Footer() { return null; }
+      `,
+    });
+    const islands = scanUserSources("/app", fs);
+    const summarized = islands
+      .map((i) => `${i.sourcePath}#${i.exportName}`)
+      .sort();
+    expect(summarized).toEqual([
+      "/app/src/Search.tsx#Search",
+      "/app/src/header.tsx#Footer",
+      "/app/src/header.tsx#Header",
+    ]);
   });
 
   test("aggregates findings across multiple files in subdirectories", () => {
