@@ -167,7 +167,32 @@ export function transformUseClientModule(
   const chunkUrl = JSON.stringify(options.chunkUrl);
   const lines: string[] = [
     `import { createElement as __c } from "react";`,
+    // Route props through `serializeProps` so Date/Map/Set/etc. survive
+    // the round-trip the custom element's `deserializeProps` expects.
+    // Plain JSON.stringify would silently coerce them.
+    `import { serializeProps as __ser } from "@plumix/blocks";`,
     `import * as __orig from ${origUrl};`,
+    // `wrapped` is the full prop set fed to the SSR'd Component (with
+    // React-element props replaced by <plumix-static-slot> wrappers).
+    // `rest` is the JSON-safe subset for the serialized `props=`
+    // attribute — element props are excluded and bridged via
+    // StaticHtml on hydrate.
+    `function __split(props) {`,
+    `  const { client, ...rest } = props ?? {};`,
+    `  const slots = [];`,
+    `  const wrapped = {};`,
+    `  for (const k of Object.keys(rest)) {`,
+    `    const v = rest[k];`,
+    `    if (v != null && typeof v === "object" && typeof v.$$typeof === "symbol") {`,
+    `      slots.push(k);`,
+    `      wrapped[k] = __c("plumix-static-slot", { "data-plumix-slot": k }, v);`,
+    `      delete rest[k];`,
+    `    } else {`,
+    `      wrapped[k] = v;`,
+    `    }`,
+    `  }`,
+    `  return { client, rest, wrapped, slots };`,
+    `}`,
   ];
   for (const finding of findings) {
     const name = finding.exportName;
@@ -176,20 +201,17 @@ export function transformUseClientModule(
     const exportPrefix = isDefault
       ? "export default function PlumixIsland(props)"
       : `export function ${name}(props)`;
-    // `client` is the framework-reserved strategy slot. `IslandProps<T>`
-    // guarantees the type at compile; if a consumer ignores the helper
-    // and passes garbage, the custom element dispatches
-    // `plumix:hydration-error` at runtime. No second guard here.
     lines.push(
       `${exportPrefix} {`,
-      `  const { client, ...forward } = props ?? {};`,
+      `  const { client, rest, wrapped, slots } = __split(props);`,
       `  return __c("plumix-island", {`,
       `    "chunk-url": ${chunkUrl},`,
       `    "component-export": ${targetLiteral},`,
       `    "client": typeof client === "string" ? client : "load",`,
-      `    "props": JSON.stringify(forward),`,
+      `    "props": __ser(rest),`,
+      `    "slots": slots.length ? slots.join(",") : null,`,
       `    "ssr": "",`,
-      `  }, __c(__orig[${targetLiteral}], forward));`,
+      `  }, __c(__orig[${targetLiteral}], wrapped));`,
       `}`,
     );
   }

@@ -119,3 +119,6 @@ export type { MarkSpec } from "./marks/types.js";
 
 // ─── Islands authoring ──────────────────────────────────────────────────────
 export type { IslandProps, PlumixStrategy } from "./island-props.js";
+// Re-exported for the SSR shim the Vite plugin emits for `"use client"`
+// modules; not intended for direct theme/block-author consumption.
+export { serializeProps } from "./serialize.js";

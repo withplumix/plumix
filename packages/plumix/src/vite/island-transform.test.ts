@@ -308,10 +308,13 @@ describe("transformUseClientModule", () => {
     const result = transformUseClientModule(source, "/Action.tsx", {
       chunkUrl: "/Action.tsx",
     });
-    expect(result?.code).toContain("JSON.stringify(forward)");
-    // The shim must destructure `client` out before forwarding so the
+    // Props travel through `serializeProps` (plumix's tuple format)
+    // — the custom element's `deserializeProps` expects this shape
+    // so Date/Map/Set/etc. survive the round-trip.
+    expect(result?.code).toContain("__ser(rest)");
+    // The shim destructures `client` out before forwarding so the
     // strategy slot doesn't leak into the props attribute either.
-    expect(result?.code).toContain("const { client, ...forward }");
+    expect(result?.code).toContain("const { client, ...rest }");
   });
 
   test("returns null for files without the directive (no-op transform)", () => {
@@ -323,6 +326,27 @@ describe("transformUseClientModule", () => {
       chunkUrl: "/x.tsx",
     });
     expect(result).toBeNull();
+  });
+
+  test("shim wraps React-element props in <plumix-static-slot> and lists them on `slots`", () => {
+    const source = `
+      "use client";
+      export function Wrapper() { return null; }
+    `;
+    const result = transformUseClientModule(source, "/Wrapper.tsx", {
+      chunkUrl: "/Wrapper.tsx",
+    });
+    // The shim detects React elements via $$typeof === Symbol and wraps
+    // each in a <plumix-static-slot>. Slot names go on a `slots=`
+    // attribute so the custom element knows which descendants to extract
+    // at hydrate time.
+    expect(result?.code).toContain("$$typeof");
+    expect(result?.code).toContain('"plumix-static-slot"');
+    expect(result?.code).toContain('"slots"');
+    // Wrapped element props must NOT appear in the serialized `props=`
+    // attribute (they'd serialize to a meaningless object). Props go
+    // through `serializeProps` (plumix's tuple format).
+    expect(result?.code).toContain("__ser(rest)");
   });
 });
 

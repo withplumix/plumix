@@ -19,6 +19,7 @@ import { createElement } from "react";
 import { createRoot } from "react-dom/client";
 
 import { deserializeProps } from "./serialize.js";
+import { StaticHtml } from "./static-html.js";
 
 export type IslandStrategy = (
   loadFn: () => Promise<void>,
@@ -193,7 +194,7 @@ export class PlumixIslandElement extends HTMLElement {
     }
     const Component = await this.loadComponent(chunkUrl, exportName);
     if (!Component) return;
-    const props = readProps(this);
+    const props = { ...readProps(this), ...readSlotProps(this) };
     this.hydrated = true;
     this.component = Component;
     this.root = createRoot(this);
@@ -283,6 +284,32 @@ function readProps(el: HTMLElement): Readonly<Record<string, unknown>> {
   const raw = el.getAttribute("props");
   if (!raw) return {};
   return deserializeProps(raw);
+}
+
+// React-element props (children + named slots) were wrapped in
+// <plumix-static-slot> at SSR and listed by name on `slots=`. On
+// hydrate, find each matching descendant and bridge its SSR'd HTML
+// back into the prop slot via <StaticHtml>. The closest('plumix-
+// island') === el guard filters nested-island slots so a parent
+// doesn't claim a child's.
+function readSlotProps(el: PlumixIslandElement): Record<string, unknown> {
+  const raw = el.getAttribute("slots");
+  if (!raw) return {};
+  const out: Record<string, unknown> = {};
+  for (const name of raw.split(",")) {
+    if (!name) continue;
+    const slot = Array.from(
+      el.querySelectorAll<HTMLElement>(
+        `plumix-static-slot[data-plumix-slot="${name}"]`,
+      ),
+    ).find((node) => node.closest(ISLAND_TAG) === el);
+    if (!slot) continue;
+    out[name] = createElement(StaticHtml, {
+      html: slot.innerHTML,
+      slotName: name,
+    });
+  }
+  return out;
 }
 
 export const ISLAND_TAG = "plumix-island";

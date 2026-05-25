@@ -342,6 +342,76 @@ describe("PlumixIslandElement lifecycle", () => {
     expect(PlumixIslandElement.observedAttributes).toContain("props");
   });
 
+  test("extracts SSR'd slot HTML and forwards it as a React-element prop on hydrate", async () => {
+    // When the SSR shim wraps a React-element prop in <plumix-static-slot>,
+    // the wrapper carries a `slots="<name>,<name>"` attribute listing
+    // those props. On hydrate the custom element finds each matching
+    // descendant and feeds its innerHTML back as a StaticHtml element
+    // bridged into the same prop slot.
+    const seen: Readonly<Record<string, unknown>>[] = [];
+    const Component = (props: Readonly<Record<string, unknown>>) => {
+      seen.push(props);
+      return null;
+    };
+    restoreImport = setDynamicImport(() =>
+      Promise.resolve({ default: Component } as unknown),
+    );
+    stubStrategies();
+    const el = makeIsland({
+      client: "load",
+      "chunk-url": "/chunk.js",
+      "component-export": "default",
+      opts: "{}",
+      props: serializeProps({ label: "x" }),
+      slots: "children",
+    });
+    // Drop a SSR'd slot inside the wrapper, as the server would emit.
+    el.innerHTML =
+      '<plumix-static-slot data-plumix-slot="children"><strong>child-text</strong></plumix-static-slot>';
+    document.body.appendChild(el);
+    await vi.waitFor(() => expect(seen).toHaveLength(1));
+    expect(seen[0]?.label).toBe("x");
+    // The slot value should now be a React element (the StaticHtml bridge)
+    // — the simplest observable is `$$typeof === Symbol`.
+    const childrenProp = seen[0]?.children as { $$typeof?: symbol } | undefined;
+    expect(typeof childrenProp?.$$typeof).toBe("symbol");
+  });
+
+  test("nested-island slot is NOT claimed by the parent island", async () => {
+    // A nested <plumix-island> has its own <plumix-static-slot> child.
+    // The parent island's slot collector must filter via
+    // `closest('plumix-island') === this` so the inner slot doesn't get
+    // stolen and the nested island's children stay intact.
+    const seen: Readonly<Record<string, unknown>>[] = [];
+    const Component = (props: Readonly<Record<string, unknown>>) => {
+      seen.push(props);
+      return null;
+    };
+    restoreImport = setDynamicImport(() =>
+      Promise.resolve({ default: Component } as unknown),
+    );
+    stubStrategies();
+    const parent = makeIsland({
+      client: "load",
+      "chunk-url": "/p.js",
+      "component-export": "default",
+      opts: "{}",
+      props: serializeProps({}),
+      slots: "children",
+    });
+    parent.innerHTML = `
+      <plumix-island ssr="" client="load" chunk-url="/c.js" component-export="default" props="{}" slots="children">
+        <plumix-static-slot data-plumix-slot="children">child-slot</plumix-static-slot>
+      </plumix-island>
+    `;
+    document.body.appendChild(parent);
+    await vi.waitFor(() => expect(seen).toHaveLength(1));
+    // Parent's children slot has no direct descendant <plumix-static-slot>
+    // it can claim (the only one belongs to the nested child), so its
+    // `children` prop is absent.
+    expect(seen[0]?.children).toBeUndefined();
+  });
+
   test("reads props from the `props` attribute and forwards them to the component", async () => {
     const seen: Readonly<Record<string, unknown>>[] = [];
     const Component = (props: Readonly<Record<string, unknown>>) => {
