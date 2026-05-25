@@ -15,10 +15,9 @@ export function generateWorkerSource({
     // for the client environment. The SSR renderer reads it to inject
     // hashed `<link rel="stylesheet">` tags after the theme's `link[]`.
     'import assetManifest from "virtual:plumix/asset-manifest";',
-    'import { islandManifest } from "virtual:plumix/island-manifest";',
     `import config from ${JSON.stringify(configModule)};`,
     "",
-    "const appPromise = buildApp(config, { assetManifest, islandManifest });",
+    "const appPromise = buildApp(config, { assetManifest });",
     "let fetchHandler;",
     "let scheduledHandler;",
     "",

@@ -1,28 +1,10 @@
-import type { ComponentType, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { createElement, Fragment } from "react";
 
 import type { BlockRegistry } from "./block-registry.js";
 import type { ResponsiveStyleSlot } from "./styles/style-emitter.js";
 import type { ThemeTokens } from "./styles/types.js";
-import { serializeProps } from "./serialize.js";
 import { emitBlockStyleCss } from "./styles/style-emitter.js";
-
-/**
- * Per-component manifest entry the Vite islands plugin produces at
- * build time. Keyed by the component reference (`spec.client.component`)
- * so the walker can resolve `chunkUrl` + `exportName` for any island
- * the registry contains. Phase F (`plugin-islands.ts`) populates this;
- * the walker reads it but never builds it.
- */
-export interface IslandManifestEntry {
-  readonly chunkUrl: string;
-  readonly exportName: string;
-}
-
-export type IslandManifest = ReadonlyMap<
-  ComponentType<Readonly<Record<string, unknown>>>,
-  IslandManifestEntry
->;
 
 /**
  * Threaded through `renderBlockTree` recursion. Block components introspect
@@ -64,7 +46,6 @@ export interface BlockRenderHooks {
 export interface RenderBlockTreeOptions {
   readonly tokens?: ThemeTokens;
   readonly hooks?: BlockRenderHooks;
-  readonly islandManifest?: IslandManifest;
 }
 
 export interface BlockNodeRenderProps<
@@ -137,22 +118,13 @@ function materializeSlots(
   childContext: BlockContext,
   tokens: ThemeTokens | undefined,
   hooks: BlockRenderHooks | undefined,
-  islandManifest: IslandManifest | undefined,
 ): Readonly<Record<string, unknown>> {
   let materialized: Record<string, unknown> | undefined;
   for (const [key, value] of Object.entries(attrs)) {
     if (isBlockNodeArray(value)) {
       materialized ??= { ...attrs };
       materialized[key] = function SlotComponent() {
-        return renderNodes(
-          value,
-          registry,
-          devState,
-          childContext,
-          tokens,
-          hooks,
-          islandManifest,
-        );
+        return renderNodes(value, registry, devState, childContext, tokens, hooks);
       };
     }
   }
@@ -166,19 +138,10 @@ function renderNodes(
   context: BlockContext,
   tokens: ThemeTokens | undefined,
   hooks: BlockRenderHooks | undefined,
-  islandManifest: IslandManifest | undefined,
 ): ReactNode {
   return nodes.map((node) => {
     hooks?.beforeRender?.(node, context);
-    const result = renderNode(
-      node,
-      registry,
-      devState,
-      context,
-      tokens,
-      hooks,
-      islandManifest,
-    );
+    const result = renderNode(node, registry, devState, context, tokens, hooks);
     hooks?.afterRender?.(node, context);
     return result;
   });
@@ -191,7 +154,6 @@ function renderNode(
   context: BlockContext,
   tokens: ThemeTokens | undefined,
   hooks: BlockRenderHooks | undefined,
-  islandManifest: IslandManifest | undefined,
 ): ReactNode {
   const spec = registry.get(node.name);
   if (!spec) {
@@ -213,7 +175,6 @@ function renderNode(
     childContext,
     tokens,
     hooks,
-    islandManifest,
   );
   const rendered = createElement(spec.render, { attrs, context });
   if (spec.inline) {
@@ -229,29 +190,6 @@ function renderNode(
     ? createElement("style", { key: "style" }, styleCss)
     : null;
 
-  // Client island? Wrap in `<plumix-island>` so the custom element
-  // (`packages/blocks/src/island-element.ts`) can hydrate the React
-  // component on the client. The walker only emits the wrapper when
-  // a manifest entry exists for this block's `client.component`; a
-  // build without the islands Vite plugin (or a block whose component
-  // wasn't bundled) gracefully degrades to the SSR'd output without a
-  // wrapper.
-  if (spec.client && islandManifest) {
-    const entry = islandManifest.get(spec.client.component);
-    if (entry) {
-      return renderIsland({
-        node,
-        entry,
-        hydrateWhen: spec.client.hydrateWhen ?? "load",
-        className,
-        styleTag,
-        rendered,
-        attrs,
-        displayName: spec.client.component.displayName ?? spec.name,
-      });
-    }
-  }
-
   return createElement(
     "div",
     {
@@ -261,47 +199,6 @@ function renderNode(
     },
     styleTag,
     rendered,
-  );
-}
-
-interface RenderIslandArgs {
-  readonly node: BlockNode;
-  readonly entry: IslandManifestEntry;
-  readonly hydrateWhen: string;
-  readonly className: string | undefined;
-  readonly styleTag: ReactNode;
-  readonly rendered: ReactNode;
-  readonly attrs: Readonly<Record<string, unknown>>;
-  readonly displayName: string;
-}
-
-function renderIsland(args: RenderIslandArgs): ReactNode {
-  // Practical size limit: HTML attribute values are unbounded by spec,
-  // but browser engines truncate around 64 KB. Blocks whose prop graphs
-  // exceed that should fetch their data on the client instead.
-  const propsPayload = serializeProps(args.attrs, {
-    displayName: args.displayName,
-  });
-  return createElement(
-    "plumix-island",
-    {
-      key: args.node.id,
-      "chunk-url": args.entry.chunkUrl,
-      "component-export": args.entry.exportName,
-      client: args.hydrateWhen,
-      "data-plumix-block": args.node.name,
-      // `ssr` marks the wrapper as SSR'd-but-not-yet-hydrated. The
-      // custom element removes it after `hydrate()` runs. Nested
-      // islands check this attribute on their closest ancestor and
-      // defer their own start() until the parent clears it — keeps
-      // the top-down hydration order React expects when a parent
-      // island can re-render and swap out a child.
-      ssr: "",
-      props: propsPayload,
-      className: args.className,
-    },
-    args.styleTag,
-    args.rendered,
   );
 }
 
@@ -317,6 +214,5 @@ export function renderBlockTree(
     DEFAULT_BLOCK_CONTEXT,
     options?.tokens,
     options?.hooks,
-    options?.islandManifest,
   );
 }

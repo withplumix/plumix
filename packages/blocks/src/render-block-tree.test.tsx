@@ -1,6 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import { createElement } from "react";
+
 import type { BlockContext, BlockNode } from "./render-block-tree.js";
 import { createBlockRegistry } from "./block-registry.js";
 import { renderBlockTree } from "./render-block-tree.js";
@@ -310,8 +312,8 @@ describe("renderBlockTree", () => {
     expect(html).not.toContain("data-plumix-block");
   });
 
-  describe("client islands", () => {
-    test("does not emit a script for blocks without spec.client", () => {
+  describe("client islands (now handled by the Vite shim)", () => {
+    test("does not emit any <plumix-island> wrapper from the walker", () => {
       const heading: BlockNode = {
         id: "h1",
         name: "core/heading",
@@ -322,101 +324,37 @@ describe("renderBlockTree", () => {
         renderBlockTree([heading], headingRegistry),
       );
 
+      expect(html).not.toContain("<plumix-island");
       expect(html).not.toContain("<script");
     });
 
-    test("wraps the block in <plumix-island> when client + manifest entry present", () => {
-      const Search = () => <input data-testid="search" />;
-      const registry = createBlockRegistry([
-        {
-          name: "acme/search",
-          render: () => <input className="ssr-fallback" />,
-          client: { component: Search, hydrateWhen: "load" },
-        },
-      ]);
-      const manifest = new Map([
-        [
-          Search,
-          {
-            chunkUrl: "/_plumix/assets/search.abc123.js",
-            exportName: "Search",
-          },
-        ],
-      ]);
-      const tree: readonly BlockNode[] = [
-        { id: "s1", name: "acme/search", attrs: { placeholder: "Type…" } },
-      ];
-
-      const html = renderToStaticMarkup(
-        renderBlockTree(tree, registry, { islandManifest: manifest }),
-      );
-
-      expect(html).toContain("<plumix-island");
-      expect(html).toContain('chunk-url="/_plumix/assets/search.abc123.js"');
-      expect(html).toContain('component-export="Search"');
-      expect(html).toContain('client="load"');
-      expect(html).toContain('data-plumix-block="acme/search"');
-      expect(html).toContain("ssr-fallback");
-      // `ssr` attribute marks an SSR'd-but-not-yet-hydrated island so
-      // nested children can defer their own hydration until the parent
-      // clears it. Removed by the custom element after hydrate() runs.
-      expect(html).toContain('ssr=""');
-      // Props ride on the wrapper attribute — no sibling script.
-      expect(html).toMatch(/<plumix-island [^>]*props="/);
-      expect(html).not.toContain('<script type="application/json"');
-    });
-
-    test("falls back to plain div when client is declared but no manifest entry resolves", () => {
-      const Search = () => null;
-      const registry = createBlockRegistry([
-        {
-          name: "acme/search",
-          render: () => <input className="ssr-fallback" />,
-          client: { component: Search, hydrateWhen: "load" },
-        },
-      ]);
-      const tree: readonly BlockNode[] = [
-        { id: "s1", name: "acme/search", attrs: {} },
-      ];
-
-      // No manifest passed → graceful degradation.
-      const html = renderToStaticMarkup(renderBlockTree(tree, registry));
-
-      expect(html).not.toContain("<plumix-island");
-      expect(html).toContain("ssr-fallback");
-    });
-
-    test("HTML-escapes props attribute so embedded quotes survive parsing", () => {
-      // React's JSX renderer is responsible for the attribute escape;
-      // round-tripping through a real DOM parse is what proves it.
-      const Widget = () => null;
+    test("blocks whose render() returns plumix-island markup pass it through unchanged", () => {
       const registry = createBlockRegistry([
         {
           name: "acme/widget",
-          render: () => <span />,
-          client: { component: Widget, hydrateWhen: "load" },
+          render: () =>
+            createElement(
+              "plumix-island",
+              {
+                "chunk-url": "/w.js",
+                "component-export": "Widget",
+                client: "load",
+                props: "{}",
+                ssr: "",
+              },
+              createElement("span", { className: "ssr-fallback" }),
+            ),
         },
       ]);
-      const manifest = new Map([
-        [Widget, { chunkUrl: "/w.js", exportName: "Widget" }],
-      ]);
-      const tricky = `alert("hi") & </script>`;
       const tree: readonly BlockNode[] = [
-        { id: "w1", name: "acme/widget", attrs: { code: tricky } },
+        { id: "w1", name: "acme/widget", attrs: {} },
       ];
 
-      const html = renderToStaticMarkup(
-        renderBlockTree(tree, registry, { islandManifest: manifest }),
-      );
+      const html = renderToStaticMarkup(renderBlockTree(tree, registry));
 
-      document.body.innerHTML = html;
-      const island = document.querySelector("plumix-island");
-      const propsAttr = island?.getAttribute("props") ?? "";
-      const parsed = JSON.parse(propsAttr) as Record<
-        string,
-        readonly [number, string]
-      >;
-      expect(parsed.code?.[1]).toBe(tricky);
+      expect(html).toContain('<plumix-island chunk-url="/w.js"');
+      expect(html).toContain('client="load"');
+      expect(html).toContain("ssr-fallback");
     });
   });
 

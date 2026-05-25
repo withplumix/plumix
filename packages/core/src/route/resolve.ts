@@ -1,7 +1,6 @@
 import type { SQL } from "drizzle-orm";
 import { count } from "drizzle-orm";
 
-import type { IslandManifest } from "@plumix/blocks";
 
 import type { AppContext } from "../context/app.js";
 import type { Entry } from "../db/schema/entries.js";
@@ -55,7 +54,7 @@ export async function resolvePublicRoute(
   templateDocuments: ReadonlyMap<string, DocumentManifest>,
   templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
   assetManifest: AssetManifest,
-  islandManifest: IslandManifest,
+
 ): Promise<Response> {
   switch (match.intent.kind) {
     case "single":
@@ -68,7 +67,7 @@ export async function resolvePublicRoute(
         templateDocuments,
         templateDeps,
         assetManifest,
-        islandManifest,
+
       );
     case "archive":
       return resolveArchive(
@@ -80,7 +79,7 @@ export async function resolvePublicRoute(
         templateDocuments,
         templateDeps,
         assetManifest,
-        islandManifest,
+
       );
     case "taxonomy":
       return resolveTaxonomy(
@@ -92,7 +91,7 @@ export async function resolvePublicRoute(
         templateDocuments,
         templateDeps,
         assetManifest,
-        islandManifest,
+
       );
     case "front-page":
       return resolveFrontPage(
@@ -102,7 +101,7 @@ export async function resolvePublicRoute(
         templateDocuments,
         templateDeps,
         assetManifest,
-        islandManifest,
+
       );
   }
 }
@@ -114,7 +113,7 @@ async function resolveFrontPage(
   templateDocuments: ReadonlyMap<string, DocumentManifest>,
   templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
   assetManifest: AssetManifest,
-  islandManifest: IslandManifest,
+
 ): Promise<Response> {
   const page = 1;
   const publicTypes = Array.from(ctx.plugins.entryTypes.entries())
@@ -147,7 +146,7 @@ async function resolveFrontPage(
     templateDocuments,
     templateDeps,
     assetManifest,
-    islandManifest,
+
     node: { kind: "front-page" },
     data,
     title: "Home",
@@ -166,7 +165,7 @@ async function resolveTaxonomy(
   templateDocuments: ReadonlyMap<string, DocumentManifest>,
   templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
   assetManifest: AssetManifest,
-  islandManifest: IslandManifest,
+
 ): Promise<Response> {
   const term = await findTermForTaxonomy(ctx, intent.taxonomy, params);
   if (!term) return notFound("public-term-not-found");
@@ -217,7 +216,7 @@ async function resolveTaxonomy(
     templateDocuments,
     templateDeps,
     assetManifest,
-    islandManifest,
+
     node: {
       kind: "term",
       taxonomy: intent.taxonomy,
@@ -241,7 +240,7 @@ async function resolveSingle(
   templateDocuments: ReadonlyMap<string, DocumentManifest>,
   templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
   assetManifest: AssetManifest,
-  islandManifest: IslandManifest,
+
 ): Promise<Response> {
   const row = await findEntryForSingle(ctx, intent.entryType, params);
   if (!row) return notFound("public-post-not-found");
@@ -262,7 +261,7 @@ async function resolveSingle(
     templateDocuments,
     templateDeps,
     assetManifest,
-    islandManifest,
+
     node: {
       kind: "content",
       entryType: row.type,
@@ -286,7 +285,7 @@ async function resolveArchive(
   templateDocuments: ReadonlyMap<string, DocumentManifest>,
   templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
   assetManifest: AssetManifest,
-  islandManifest: IslandManifest,
+
 ): Promise<Response> {
   const page = parsePageParam(params.page);
   const where = and(
@@ -325,7 +324,7 @@ async function resolveArchive(
     templateDocuments,
     templateDeps,
     assetManifest,
-    islandManifest,
+
     node: { kind: "content-type-archive", entryType: intent.entryType },
     data,
     title,
