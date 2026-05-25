@@ -2,6 +2,12 @@ import type { ReactNode } from "react";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 
+import type {
+  EntryContent,
+  LoaderErrorEvent,
+  ResolvedBlockLoaders,
+} from "@plumix/blocks";
+import { isEntryContent, resolveBlockLoaders } from "@plumix/blocks";
 import { PlumixProvider } from "@plumix/blocks/renderer";
 
 import type { AppContext } from "../../context/app.js";
@@ -61,6 +67,7 @@ export async function renderThroughTheme({
     templateDeps,
     ctx,
   );
+  const loaderData = await prefetchEntryLoaders(ctx, data);
   return renderTree({
     ctx,
     document: renderDocument,
@@ -69,6 +76,7 @@ export async function renderThroughTheme({
     title,
     template,
     deps,
+    loaderData,
   });
 }
 
@@ -121,7 +129,45 @@ export async function renderErrorThroughTheme({
     title: variant.title,
     template,
     deps,
+    loaderData: undefined,
   });
+}
+
+// v1 only pre-resolves loaders on the single-entry path. Listing
+// shapes (archive / taxonomy / front-page) carry entry arrays but
+// their templates render summaries, not block trees — a future slice
+// can broaden coverage once a real consumer needs it.
+async function prefetchEntryLoaders(
+  ctx: AppContext,
+  data: TemplateData,
+): Promise<ResolvedBlockLoaders | undefined> {
+  const content = singleEntryContent(data);
+  if (!content) return undefined;
+  return resolveBlockLoaders(content.blocks, ctx.blocks, ctx, {
+    // Fire-and-forget bridge into the framework filter so plugins can
+    // subscribe via `addFilter("blocks:loader:error", ...)`. `applyFilter`
+    // is async; we don't await (the loader resolver shouldn't back-pressure
+    // on observability), but we DO catch — a throwing subscriber would
+    // otherwise surface as an unhandledRejection and on workers that
+    // kills the request. `LoaderErrorEvent` shape matches `BlockLoaderErrorContext`.
+    onLoaderError: (event: LoaderErrorEvent) => {
+      ctx.hooks
+        .applyFilter("blocks:loader:error", undefined, event)
+        .catch((hookError: unknown) => {
+          ctx.logger.error("[plumix] blocks:loader:error hook threw", {
+            hookError,
+            blockName: event.spec.name,
+            nodeId: event.node.id,
+          });
+        });
+    },
+  });
+}
+
+function singleEntryContent(data: TemplateData): EntryContent | null {
+  const candidate =
+    (data as { entry?: { content?: unknown } }).entry?.content ?? null;
+  return isEntryContent(candidate) ? candidate : null;
 }
 
 interface RenderTreeArgs {
@@ -132,6 +178,7 @@ interface RenderTreeArgs {
   readonly title: string;
   readonly template: Template<TemplateData>;
   readonly deps: Record<string, Record<string, unknown>>;
+  readonly loaderData: ResolvedBlockLoaders | undefined;
 }
 
 // React 19 reorders every child of `<head>` (metadata first, scripts /
@@ -148,6 +195,7 @@ function renderTree({
   title,
   template,
   deps,
+  loaderData,
 }: RenderTreeArgs): string {
   // Adapter FC wraps `template.render({ data, ctx, ...deps })` so it
   // executes inside React's render pass — hooks (useState, useId,
@@ -160,7 +208,7 @@ function renderTree({
   const TemplateAdapter = (): ReactNode =>
     template.render({ ...deps, data, ctx });
   const templateTree: ReactNode = createElement(PlumixProvider, {
-    value: { registry: ctx.blocks },
+    value: { registry: ctx.blocks, loaderData },
     children: createElement(TemplateAdapter),
   });
   const rendered = renderToString(templateTree);
