@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 
-import type { IslandManifest } from "@plumix/blocks";
 import { PlumixProvider } from "@plumix/blocks/renderer";
 
 import type { AppContext } from "../../context/app.js";
@@ -32,7 +31,6 @@ interface RenderArgs {
   readonly templateDocuments: ReadonlyMap<string, DocumentManifest>;
   readonly templateDeps: ReadonlyMap<string, RegisteredTemplateDep>;
   readonly assetManifest: AssetManifest;
-  readonly islandManifest: IslandManifest;
   readonly node: ResolvedNode;
   readonly data: TemplateData;
   readonly title: string;
@@ -45,7 +43,6 @@ export async function renderThroughTheme({
   templateDocuments,
   templateDeps,
   assetManifest,
-  islandManifest,
   node,
   data,
   title,
@@ -67,7 +64,6 @@ export async function renderThroughTheme({
     ctx,
     document: renderDocument,
     assetManifest,
-    islandManifest,
     data,
     title,
     template,
@@ -82,7 +78,6 @@ interface RenderErrorArgs {
   readonly templateDocuments: ReadonlyMap<string, DocumentManifest>;
   readonly templateDeps: ReadonlyMap<string, RegisteredTemplateDep>;
   readonly assetManifest: AssetManifest;
-  readonly islandManifest: IslandManifest;
   readonly kind: "not-found" | "server-error";
   readonly data: ErrorData;
 }
@@ -103,7 +98,6 @@ export async function renderErrorThroughTheme({
   templateDocuments,
   templateDeps,
   assetManifest,
-  islandManifest,
   kind,
   data,
 }: RenderErrorArgs): Promise<string> {
@@ -122,7 +116,6 @@ export async function renderErrorThroughTheme({
     ctx,
     document: renderDocument,
     assetManifest,
-    islandManifest,
     data,
     title: variant.title,
     template,
@@ -134,7 +127,6 @@ interface RenderTreeArgs {
   readonly ctx: AppContext;
   readonly document: DocumentManifest;
   readonly assetManifest: AssetManifest;
-  readonly islandManifest: IslandManifest;
   readonly data: TemplateData;
   readonly title: string;
   readonly template: Template<TemplateData>;
@@ -151,7 +143,6 @@ function renderTree({
   ctx,
   document,
   assetManifest,
-  islandManifest,
   data,
   title,
   template,
@@ -168,7 +159,7 @@ function renderTree({
   const TemplateAdapter = (): ReactNode =>
     template.render({ ...deps, data, ctx });
   const templateTree: ReactNode = createElement(PlumixProvider, {
-    value: { registry: ctx.blocks, islandManifest },
+    value: { registry: ctx.blocks },
     children: createElement(TemplateAdapter),
   });
   const rendered = renderToString(templateTree);

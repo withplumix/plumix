@@ -185,7 +185,6 @@ async function dispatchPublicRoute(
   const templateDocuments = app.templateDocuments;
   const templateDeps = app.plugins.templateDeps;
   const assetManifest = app.assetManifest;
-  const islandManifest = app.islandManifest;
   try {
     const response = await resolvePublicRouteOrFallback(app, ctx, url);
     if (response.status === 404) {
@@ -196,7 +195,6 @@ async function dispatchPublicRoute(
         templateDocuments,
         templateDeps,
         assetManifest,
-        islandManifest,
         kind: "not-found",
         data: {
           request: ctx.request,
@@ -221,7 +219,6 @@ async function dispatchPublicRoute(
         templateDocuments,
         templateDeps,
         assetManifest,
-        islandManifest,
         kind: "server-error",
         data: { request: ctx.request },
       });
@@ -255,7 +252,6 @@ async function resolvePublicRouteOrFallback(
   const templateDocuments = app.templateDocuments;
   const templateDeps = app.plugins.templateDeps;
   const assetManifest = app.assetManifest;
-  const islandManifest = app.islandManifest;
   const match = matchRoute(url, app.routeMap);
   if (match !== null) {
     return resolvePublicRoute(
@@ -266,7 +262,6 @@ async function resolvePublicRouteOrFallback(
       templateDocuments,
       templateDeps,
       assetManifest,
-      islandManifest,
     );
   }
   if (url.pathname === "/") {
@@ -278,7 +273,6 @@ async function resolvePublicRouteOrFallback(
       templateDocuments,
       templateDeps,
       assetManifest,
-      islandManifest,
     );
   }
   return notFound("public-route-not-found");

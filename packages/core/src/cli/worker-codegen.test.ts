@@ -42,17 +42,12 @@ describe("generateWorkerSource", () => {
     expect(source).toContain("scheduledHandler ??=");
   });
 
-  test("imports the asset + island manifest virtual modules and threads them into buildApp", () => {
+  test("imports the asset manifest virtual module and threads it into buildApp", () => {
     const source = generateWorkerSource({ configModule: "./config.ts" });
     expect(source).toContain(
       'import assetManifest from "virtual:plumix/asset-manifest";',
     );
-    expect(source).toContain(
-      'import { islandManifest } from "virtual:plumix/island-manifest";',
-    );
-    expect(source).toContain(
-      "buildApp(config, { assetManifest, islandManifest })",
-    );
+    expect(source).toContain("buildApp(config, { assetManifest })");
   });
 
   test("no-ops cleanly when the runtime omits buildScheduledHandler", () => {
