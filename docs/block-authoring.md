@@ -58,7 +58,6 @@ the slash menu, and the SSR `<EntryContent>` walker.
 | `inline` | no | Skip the wrapper `<div data-plumix-block>` and emit the rendered element bare. |
 | `transforms` | no | Convert-to / convert-from descriptors surfaced in the action bar. |
 | `variations` | no | Pre-set attr configurations surfaced as their own inserter entries. |
-| `client` | no | Hydration descriptor for browser-side interactive blocks. |
 | `render` | yes | React function that receives `{ attrs, context }` and returns the block UI. |
 
 ## Inputs
@@ -150,15 +149,146 @@ The reverse direction is derived automatically — if `B` declares a
 
 ## Client islands
 
-Blocks with browser-side interactivity declare a `client` descriptor:
+A block adds interactivity by rendering a `"use client"` component
+inside its `render()`. The Vite plugin discovers every `"use client"`
+file, emits one chunk per discovered module, and on the SSR side
+substitutes the import with a wrapper that:
+
+- Renders the SSR'd HTML inside a `<plumix-island>` custom element
+  so the browser sees the first paint immediately.
+- Carries the chunk URL, the export name, the serialized props, and
+  the optional hydration strategy on the wrapper's attributes.
+
+On the client, the custom element dynamic-imports its chunk when the
+strategy fires (`load` immediately, `visible` on IntersectionObserver,
+etc.) and mounts the React component into the existing DOM. Pages with
+no client component on them ship zero JavaScript.
+
+### Carousel — worked example
 
 ```tsx
-client: { script: "/_plumix/admin/assets/media-embed.client.js" },
+// blocks/carousel/carousel-client.tsx
+"use client";
+
+import { useEffect, useState, type ReactNode } from "react";
+import type { IslandProps } from "@plumix/blocks";
+
+interface Props {
+  readonly slides: readonly { src: string; alt: string }[];
+  readonly autoplay: boolean;
+  readonly caption?: ReactNode;
+}
+
+export function CarouselClient(props: IslandProps<Props>) {
+  const [index, setIndex] = useState(0);
+  useEffect(() => {
+    if (!props.autoplay) return;
+    const id = setInterval(
+      () => setIndex((i) => (i + 1) % props.slides.length),
+      4000,
+    );
+    return () => clearInterval(id);
+  }, [props.autoplay, props.slides.length]);
+  return (
+    <figure>
+      <img src={props.slides[index].src} alt={props.slides[index].alt} />
+      {props.caption}
+      <button onClick={() => setIndex((i) => (i + 1) % props.slides.length)}>
+        Next
+      </button>
+    </figure>
+  );
+}
 ```
 
-The SSR walker emits a placeholder `<div data-block>` plus a `<script
-type="module">` adjacent. The script hydrates the React component on the
-client. Use this for carousels, accordions, anything that needs JS.
+```tsx
+// blocks/carousel/index.tsx
+import { defineBlock } from "plumix";
+import { CarouselClient } from "./carousel-client.js";
+
+export const carousel = defineBlock({
+  name: "acme/carousel",
+  inputs: [
+    { name: "slides", type: "json", label: "Slides" },
+    { name: "autoplay", type: "checkbox", label: "Autoplay" },
+    { name: "caption", type: "slot", label: "Caption" },
+  ],
+  render: ({ attrs }) => (
+    <CarouselClient
+      slides={attrs.slides as readonly { src: string; alt: string }[]}
+      autoplay={attrs.autoplay as boolean}
+      caption={
+        typeof attrs.caption === "function" ? (attrs.caption as () => ReactNode)() : null
+      }
+      client="visible"
+    />
+  ),
+});
+```
+
+### Hydration strategy — the `client` prop
+
+Pass a strategy via the `client` JSX prop at the call site. The prop is
+typed against `PlumixStrategy`:
+
+```tsx
+<CarouselClient client="load" />     // hydrate immediately (default)
+<CarouselClient client="visible" />  // hydrate when scrolled into view
+```
+
+v0 ships `load` and `visible`. Additional strategies (`idle`,
+`interaction`, `media`, `only`) land in their own slices.
+
+### `IslandProps<T>`
+
+`@plumix/blocks` exports `IslandProps<T>` to type island prop shapes
+correctly. It does two things:
+
+- Strips function-typed properties from `T` so a callback that wouldn't
+  survive serialization fails at compile time.
+- Reserves the `client` prop as `PlumixStrategy | undefined` so a
+  consumer-defined `client` prop can't silently clobber the strategy
+  slot.
+
+### Slots and children
+
+React-element props (`children` + any named slot) survive hydration via
+the `StaticHtml` bridge. The SSR shim wraps each element prop in a
+`<plumix-static-slot>` marker; on hydrate the custom element extracts
+the slot's HTML and re-passes it as a `<StaticHtml>` element so React's
+hydration sees the same DOM both pre and post. Nested islands inside
+children hydrate in correct top-down order via the existing
+`plumix-island[ssr]` guard.
+
+### Limitations to know
+
+1. **Function props are silently dropped on hydration.** SSR has the
+   real callback; the client receives `undefined` after the wrapper
+   re-parses the `props=` attribute. Use `IslandProps<T>` to catch this
+   at compile time.
+2. **`client` is reserved.** The shim strips it before forwarding to
+   your component and routes its string value into the wrapper's
+   strategy slot. A consumer-defined `client` prop would be lost —
+   rename it.
+3. **Cyclic prop graphs throw at SSR time.** The `serializeProps`
+   helper detects cycles and throws `IslandPropSerializationError` with
+   the component's display name. Restructure the graph; islands don't
+   support cyclic refs.
+4. **Large data should be fetched on the client.** HTML attribute
+   values are unbounded by spec but slow over the wire when serialized
+   into the SSR'd HTML. Fetch data > ~10 KB inside the component (with
+   suspense / a query hook) rather than passing it as a prop.
+
+### Admin preview (Puck)
+
+Block previews in the admin show the SSR'd first state of the island
+inside Puck. The custom element isn't registered in the admin bundle,
+so the `<plumix-island>` wrapper is an inert `HTMLUnknownElement` — no
+JS runs, no event handlers fire, drag-and-drop and selection work
+normally over the static markup. For blocks where the SSR'd first
+state isn't meaningful in the editor (e.g. a chart that only renders
+after a client-side fetch), provide an explicit `editor` field on the
+block spec to override the preview.
 
 ## Inline blocks
 
