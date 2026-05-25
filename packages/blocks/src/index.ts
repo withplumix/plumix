@@ -116,3 +116,6 @@ export {
 // ─── Inline marks ───────────────────────────────────────────────────────────
 export { coreMarks, coreMarkExtensions } from "./marks/core/index.js";
 export type { MarkSpec } from "./marks/types.js";
+
+// ─── Islands authoring ──────────────────────────────────────────────────────
+export type { IslandProps, PlumixStrategy } from "./island-props.js";

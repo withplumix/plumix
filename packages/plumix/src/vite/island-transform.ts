@@ -51,6 +51,151 @@ const FORBIDDEN_EXPORT_KEYS: ReadonlySet<string> = new Set([
   "prototype",
 ]);
 
+interface UseClientFinding {
+  readonly exportName: string;
+}
+
+export function findUseClientIslands(
+  source: string,
+): readonly UseClientFinding[] {
+  // Cheap reject before paying the parse cost.
+  if (!source.includes("use client")) return [];
+  const sourceFile = ts.createSourceFile(
+    "use-client-scan.tsx",
+    source,
+    ts.ScriptTarget.Latest,
+    /* setParentNodes */ false,
+    ts.ScriptKind.TSX,
+  );
+  // RSC convention: `"use client"` must be the first non-comment
+  // statement. TypeScript exposes it as an `ExpressionStatement` whose
+  // expression is a string literal — matches both `"use client";` and
+  // `'use client';`. Anything else as the first statement disqualifies.
+  const first = sourceFile.statements[0];
+  if (!first || !ts.isExpressionStatement(first)) return [];
+  const expr = first.expression;
+  if (!ts.isStringLiteral(expr) || expr.text !== "use client") return [];
+
+  const seen = new Set<string>();
+  const out: UseClientFinding[] = [];
+  const push = (name: string): void => {
+    if (FORBIDDEN_EXPORT_KEYS.has(name) || seen.has(name)) return;
+    seen.add(name);
+    out.push({ exportName: name });
+  };
+
+  for (const statement of sourceFile.statements) {
+    if (
+      ts.isFunctionDeclaration(statement) ||
+      ts.isClassDeclaration(statement)
+    ) {
+      if (!hasExportModifier(statement)) continue;
+      if (hasDefaultModifier(statement)) push("default");
+      else if (statement.name) push(statement.name.text);
+      continue;
+    }
+    if (ts.isVariableStatement(statement)) {
+      if (!hasExportModifier(statement)) continue;
+      for (const decl of statement.declarationList.declarations) {
+        if (ts.isIdentifier(decl.name)) push(decl.name.text);
+      }
+      continue;
+    }
+    if (ts.isExportAssignment(statement)) {
+      // `export default <expr>`.
+      if (!statement.isExportEquals) push("default");
+      continue;
+    }
+    if (ts.isExportDeclaration(statement)) {
+      // `export { Foo, Bar as Baz } [from "..."]`.
+      // Re-exports from another module (`... from "..."`) name the
+      // current file as the chunk source, so they're skipped — the
+      // re-exporter isn't the island module.
+      if (statement.moduleSpecifier) continue;
+      if (!statement.exportClause || !ts.isNamedExports(statement.exportClause))
+        continue;
+      for (const element of statement.exportClause.elements) {
+        // `name` is the outward-facing name (after `as`); we feed the
+        // chunk's `mod[exportName]` lookup, so use the outward name.
+        push(element.name.text);
+      }
+    }
+  }
+  return out;
+}
+
+function hasExportModifier(node: ts.HasModifiers): boolean {
+  return (
+    ts
+      .getModifiers(node)
+      ?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword) ?? false
+  );
+}
+
+function hasDefaultModifier(node: ts.HasModifiers): boolean {
+  return (
+    ts
+      .getModifiers(node)
+      ?.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword) ?? false
+  );
+}
+
+// Vite virtual-module suffix the SSR shim uses to read the original
+// `"use client"` source — the plugin's `resolveId`/`load` serve the
+// unmodified file at this query and `transform` short-circuits, so the
+// shim's `import * as __orig from "<file>?plumix-orig"` doesn't
+// recursively re-trigger this transform.
+export const ORIG_QUERY = "?plumix-orig";
+
+interface TransformUseClientOptions {
+  readonly chunkUrl: string;
+}
+
+interface TransformUseClientResult {
+  readonly code: string;
+}
+
+export function transformUseClientModule(
+  source: string,
+  filePath: string,
+  options: TransformUseClientOptions,
+): TransformUseClientResult | null {
+  const findings = findUseClientIslands(source);
+  if (findings.length === 0) return null;
+
+  const origUrl = JSON.stringify(filePath + ORIG_QUERY);
+  const chunkUrl = JSON.stringify(options.chunkUrl);
+  const lines: string[] = [
+    `import { createElement as __c } from "react";`,
+    `import * as __orig from ${origUrl};`,
+  ];
+  for (const finding of findings) {
+    const name = finding.exportName;
+    const isDefault = name === "default";
+    const targetLiteral = JSON.stringify(name);
+    const exportPrefix = isDefault
+      ? "export default function PlumixIsland(props)"
+      : `export function ${name}(props)`;
+    // `client` is the framework-reserved strategy slot. `IslandProps<T>`
+    // guarantees the type at compile; if a consumer ignores the helper
+    // and passes garbage, the custom element dispatches
+    // `plumix:hydration-error` at runtime. No second guard here.
+    lines.push(
+      `${exportPrefix} {`,
+      `  const { client, ...forward } = props ?? {};`,
+      `  return __c("plumix-island", {`,
+      `    "chunk-url": ${chunkUrl},`,
+      `    "component-export": ${targetLiteral},`,
+      `    "client": typeof client === "string" ? client : "load",`,
+      `    "props": JSON.stringify(forward),`,
+      `    "ssr": "",`,
+      `  }, __c(__orig[${targetLiteral}], forward));`,
+      `}`,
+    );
+  }
+  return { code: lines.join("\n") };
+}
+
 export function findIslands(
   source: string,
   filePath: string,
@@ -143,10 +288,20 @@ export function scanUserSources(
 ): readonly DiscoveredIsland[] {
   const islands: DiscoveredIsland[] = [];
   walk(cwd, fs, (filePath, source) => {
-    const findings = findIslands(source, filePath);
-    for (const finding of findings) {
+    for (const finding of findIslands(source, filePath)) {
       islands.push({
         sourcePath: resolveImportPath(filePath, finding.importPath),
+        exportName: finding.exportName,
+        blockFile: toPosix(filePath),
+      });
+    }
+    // `"use client"` modules ARE their own source — sourcePath and
+    // blockFile collapse to the file itself; the manifest reads the
+    // chunk from this entry the same way it does for defineBlock-
+    // discovered components.
+    for (const finding of findUseClientIslands(source)) {
+      islands.push({
+        sourcePath: toPosix(filePath),
         exportName: finding.exportName,
         blockFile: toPosix(filePath),
       });
@@ -176,10 +331,12 @@ function walk(
     if (!SCANNABLE_EXTS.has(extname(entry.name))) continue;
     try {
       const source = fs.readFile(full);
-      // Cheap pre-filter: skip any file that can't possibly contain a
-      // defineBlock call. Saves the AST parse on the vast majority of
-      // user-source files (auth, RPC, db helpers, etc.).
-      if (!source.includes("defineBlock")) continue;
+      // Cheap pre-filter: skip files that can't possibly contain either
+      // a `defineBlock(...)` call or a `"use client"` directive. Saves
+      // the AST parse on the vast majority of user-source files (auth,
+      // RPC, db helpers, etc.).
+      if (!source.includes("defineBlock") && !source.includes("use client"))
+        continue;
       visit(full, source);
     } catch {
       // Unreadable file (permissions, deleted mid-scan) — skip

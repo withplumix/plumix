@@ -34,7 +34,11 @@ import {
 } from "./admin-plugin-bundle.js";
 import { generateClientEntrySource } from "./client-entry-codegen.js";
 import { VitePluginError } from "./errors.js";
-import { scanUserSources } from "./island-transform.js";
+import {
+  ORIG_QUERY,
+  scanUserSources,
+  transformUseClientModule,
+} from "./island-transform.js";
 import { plumixPathAliases } from "./path-aliases.js";
 import { stageUserPublic } from "./public-staging.js";
 
@@ -138,12 +142,25 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       root = config.root;
       publicDir = config.publicDir;
     },
-    resolveId(id) {
+    resolveId(id, importer) {
       if (id === ASSET_MANIFEST_VIRTUAL_ID) return ASSET_MANIFEST_RESOLVED_ID;
       if (id === ISLAND_MANIFEST_VIRTUAL_ID) return ISLAND_MANIFEST_RESOLVED_ID;
+      // `<file>?plumix-orig` — the SSR shim imports the original module
+      // from this virtual ID; `transform` short-circuits on it so the
+      // shim isn't recursively wrapped. The shim emits an absolute path,
+      // so passing `id` straight through resolves correctly.
+      if (id.endsWith(ORIG_QUERY)) {
+        if (!importer) return id;
+        const cleanId = id.slice(0, -ORIG_QUERY.length);
+        return resolve(dirname(importer), cleanId) + ORIG_QUERY;
+      }
       return null;
     },
     load(id) {
+      if (id.endsWith(ORIG_QUERY)) {
+        const filePath = id.slice(0, -ORIG_QUERY.length);
+        return readFileSync(filePath, "utf8");
+      }
       if (id === ASSET_MANIFEST_RESOLVED_ID) {
         // Read the manifest Vite emits to `<outDir>/.vite/manifest.json`.
         // Returns `{}` when missing — which happens in dev (no manifest
@@ -158,6 +175,17 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         return generateIslandManifestSource(root, islands);
       }
       return null;
+    },
+    transform(code, id, options) {
+      if (!options?.ssr) return null;
+      if (id.endsWith(ORIG_QUERY)) return null;
+      if (!id.endsWith(".tsx") && !id.endsWith(".ts")) return null;
+      if (!code.includes("use client")) return null;
+      // Dev chunk URL. Production needs the hashed path from Vite's
+      // `.vite/manifest.json` — follow-up to this slice.
+      const chunkUrl = "/@fs" + id;
+      const result = transformUseClientModule(code, id, { chunkUrl });
+      return result ? { code: result.code, map: null } : null;
     },
     async buildStart() {
       const emitted = await regenerate(root, options.configFile);
