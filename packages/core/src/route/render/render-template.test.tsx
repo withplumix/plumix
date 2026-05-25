@@ -1073,9 +1073,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
           loaders: {
             marker: () => Promise.resolve("loaded-on-server"),
           },
-          render: ({ loaders }) => (
-            <div data-loaded>{loaders.marker}</div>
-          ),
+          render: ({ loaders }) => <div data-loaded>{loaders.marker}</div>,
         }),
       );
     });

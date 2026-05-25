@@ -39,9 +39,6 @@ declare module "./types.js" {
       element: ReactNode,
       ctx: BlockRenderHookContext,
     ) => ReactNode;
-    "blocks:loader:error": (
-      result: void,
-      ctx: BlockLoaderErrorContext,
-    ) => void;
+    "blocks:loader:error": (result: void, ctx: BlockLoaderErrorContext) => void;
   }
 }

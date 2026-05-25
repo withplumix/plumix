@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
 
-import type { BlockNode } from "./render-block-tree.js";
 import type { BlockLoaderArgs } from "./loaders.js";
-import { collectLoaderEntries, resolveBlockLoaders } from "./loaders.js";
+import type { BlockNode } from "./render-block-tree.js";
 import { createBlockRegistry } from "./block-registry.js";
+import { collectLoaderEntries, resolveBlockLoaders } from "./loaders.js";
 
 describe("collectLoaderEntries", () => {
   test("returns empty list when no block in the tree declares loaders", () => {
@@ -189,14 +189,19 @@ describe("resolveBlockLoaders", () => {
       { id: "n1", name: "acme/two-loaders", attrs: {} },
     ];
 
-    await resolveBlockLoaders(tree, registry, {}, {
-      onLoaderError: ({ spec, key, error }) =>
-        events.push({
-          name: spec.name,
-          key,
-          message: (error as Error).message,
-        }),
-    });
+    await resolveBlockLoaders(
+      tree,
+      registry,
+      {},
+      {
+        onLoaderError: ({ spec, key, error }) =>
+          events.push({
+            name: spec.name,
+            key,
+            message: (error as Error).message,
+          }),
+      },
+    );
 
     expect(events).toEqual([
       { name: "acme/two-loaders", key: "bad", message: "kaboom" },

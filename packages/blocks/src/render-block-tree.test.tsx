@@ -2,8 +2,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import type { BlockContext, BlockNode } from "./render-block-tree.js";
 import type { ResolvedBlockLoaders } from "./loaders.js";
+import type { BlockContext, BlockNode } from "./render-block-tree.js";
 import { createBlockRegistry } from "./block-registry.js";
 import { renderBlockTree } from "./render-block-tree.js";
 
@@ -598,9 +598,7 @@ describe("renderBlockTree", () => {
       ]);
 
       const html = withProductionEnv(() =>
-        renderToStaticMarkup(
-          renderBlockTree(tree, registry, { loaderData }),
-        ),
+        renderToStaticMarkup(renderBlockTree(tree, registry, { loaderData })),
       );
 
       expect(html).toBe("");
