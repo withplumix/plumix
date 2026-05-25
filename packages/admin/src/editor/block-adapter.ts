@@ -28,6 +28,9 @@ export function blockSpecsToPuckComponents(
           spec.render({
             attrs: props,
             context: DEFAULT_BLOCK_CONTEXT,
+            // Admin preview has no SSR pass; loader data only flows
+            // through `renderBlockTree({ loaderData })` at the server.
+            loaders: {},
           }),
         ),
     };

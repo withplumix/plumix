@@ -2,6 +2,11 @@ import type { ReactNode } from "react";
 import { createElement, Fragment } from "react";
 
 import type { BlockRegistry } from "./block-registry.js";
+import type {
+  BlockLoaderRecord,
+  ResolvedBlockLoaders,
+  ResolvedLoaders,
+} from "./loaders.js";
 import type { ResponsiveStyleSlot } from "./styles/style-emitter.js";
 import type { ThemeTokens } from "./styles/types.js";
 import { emitBlockStyleCss } from "./styles/style-emitter.js";
@@ -46,18 +51,22 @@ export interface BlockRenderHooks {
 export interface RenderBlockTreeOptions {
   readonly tokens?: ThemeTokens;
   readonly hooks?: BlockRenderHooks;
+  readonly loaderData?: ResolvedBlockLoaders;
 }
 
 export interface BlockNodeRenderProps<
   Attrs = Readonly<Record<string, unknown>>,
+  Loaders extends BlockLoaderRecord = BlockLoaderRecord,
 > {
   readonly attrs: Attrs;
   readonly context: BlockContext;
+  readonly loaders: ResolvedLoaders<Loaders>;
 }
 
-export type BlockNodeComponent<Attrs = Readonly<Record<string, unknown>>> = (
-  props: BlockNodeRenderProps<Attrs>,
-) => ReactNode;
+export type BlockNodeComponent<
+  Attrs = Readonly<Record<string, unknown>>,
+  Loaders extends BlockLoaderRecord = BlockLoaderRecord,
+> = (props: BlockNodeRenderProps<Attrs, Loaders>) => ReactNode;
 
 export const DEFAULT_BLOCK_CONTEXT: BlockContext = Object.freeze({
   entry: null,
@@ -113,55 +122,48 @@ export function isBlockNodeArray(
 
 function materializeSlots(
   attrs: Readonly<Record<string, unknown>>,
-  registry: BlockRegistry,
-  devState: DevWarnState,
+  env: WalkerEnv,
   childContext: BlockContext,
-  tokens: ThemeTokens | undefined,
-  hooks: BlockRenderHooks | undefined,
 ): Readonly<Record<string, unknown>> {
   let materialized: Record<string, unknown> | undefined;
   for (const [key, value] of Object.entries(attrs)) {
     if (isBlockNodeArray(value)) {
       materialized ??= { ...attrs };
       materialized[key] = function SlotComponent() {
-        return renderNodes(
-          value,
-          registry,
-          devState,
-          childContext,
-          tokens,
-          hooks,
-        );
+        return renderNodes(value, env, childContext);
       };
     }
   }
   return materialized ?? attrs;
 }
 
+interface WalkerEnv {
+  readonly registry: BlockRegistry;
+  readonly devState: DevWarnState;
+  readonly tokens: ThemeTokens | undefined;
+  readonly hooks: BlockRenderHooks | undefined;
+  readonly loaderData: ResolvedBlockLoaders | undefined;
+}
+
 function renderNodes(
   nodes: readonly BlockNode[],
-  registry: BlockRegistry,
-  devState: DevWarnState,
+  env: WalkerEnv,
   context: BlockContext,
-  tokens: ThemeTokens | undefined,
-  hooks: BlockRenderHooks | undefined,
 ): ReactNode {
   return nodes.map((node) => {
-    hooks?.beforeRender?.(node, context);
-    const result = renderNode(node, registry, devState, context, tokens, hooks);
-    hooks?.afterRender?.(node, context);
+    env.hooks?.beforeRender?.(node, context);
+    const result = renderNode(node, env, context);
+    env.hooks?.afterRender?.(node, context);
     return result;
   });
 }
 
 function renderNode(
   node: BlockNode,
-  registry: BlockRegistry,
-  devState: DevWarnState,
+  env: WalkerEnv,
   context: BlockContext,
-  tokens: ThemeTokens | undefined,
-  hooks: BlockRenderHooks | undefined,
 ): ReactNode {
+  const { registry, devState, tokens, loaderData } = env;
   const spec = registry.get(node.name);
   if (!spec) {
     return createElement(
@@ -175,15 +177,19 @@ function renderNode(
     parent: node.name,
     depth: context.depth + 1,
   };
-  const attrs = materializeSlots(
-    node.attrs ?? {},
-    registry,
-    devState,
-    childContext,
-    tokens,
-    hooks,
-  );
-  const rendered = createElement(spec.render, { attrs, context });
+  const attrs = materializeSlots(node.attrs ?? {}, env, childContext);
+  const data = loaderData?.get(node.id);
+  let rendered: ReactNode;
+  if (data && data.error !== null) {
+    // Same shape as the unknown-block path: emit nothing when the block
+    // didn't declare a fallback. Observability flows through the
+    // `blocks:loader:error` hook, not a console warn here.
+    if (!spec.errorFallback) return createElement(Fragment, { key: node.id });
+    rendered = spec.errorFallback({ attrs, error: data.error });
+  } else {
+    const loaders = data?.loaders ?? EMPTY_LOADERS;
+    rendered = createElement(spec.render, { attrs, context, loaders });
+  }
   if (spec.inline) {
     return createElement(Fragment, { key: node.id }, rendered);
   }
@@ -209,17 +215,19 @@ function renderNode(
   );
 }
 
+const EMPTY_LOADERS: Readonly<Record<string, unknown>> = Object.freeze({});
+
 export function renderBlockTree(
   nodes: readonly BlockNode[],
   registry: BlockRegistry,
   options?: RenderBlockTreeOptions,
 ): ReactNode {
-  return renderNodes(
-    nodes,
+  const env: WalkerEnv = {
     registry,
-    devWarnState(registry),
-    DEFAULT_BLOCK_CONTEXT,
-    options?.tokens,
-    options?.hooks,
-  );
+    devState: devWarnState(registry),
+    tokens: options?.tokens,
+    hooks: options?.hooks,
+    loaderData: options?.loaderData,
+  };
+  return renderNodes(nodes, env, DEFAULT_BLOCK_CONTEXT);
 }

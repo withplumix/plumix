@@ -39,6 +39,20 @@ export type {
 export { isEntryContent } from "./entry-content.js";
 export type { EntryContent } from "./entry-content.js";
 
+// ─── Per-block SSR loaders ──────────────────────────────────────────────────
+export { collectLoaderEntries, resolveBlockLoaders } from "./loaders.js";
+export type {
+  BlockLoaderArgs,
+  BlockLoaderFn,
+  BlockLoaderRecord,
+  LoaderEntry,
+  LoaderErrorEvent,
+  ResolveBlockLoadersOptions,
+  ResolvedBlockLoaderData,
+  ResolvedBlockLoaders,
+  ResolvedLoaders,
+} from "./loaders.js";
+
 // ─── Transforms + insertable expansion ─────────────────────────────────────
 export { resolveBlockTransforms } from "./transforms.js";
 export type { ResolvedTransformTarget } from "./transforms.js";

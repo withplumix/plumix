@@ -1,3 +1,6 @@
+import type { ReactNode } from "react";
+
+import type { BlockLoaderRecord } from "./loaders.js";
 import type { BlockNodeComponent } from "./render-block-tree.js";
 
 export interface BlockInputOption {
@@ -54,6 +57,7 @@ export interface BlockSpec<
   Attrs extends Readonly<Record<string, unknown>> = Readonly<
     Record<string, unknown>
   >,
+  Loaders extends BlockLoaderRecord = BlockLoaderRecord,
 > {
   readonly name: string;
   readonly title?: string;
@@ -63,9 +67,20 @@ export interface BlockSpec<
   readonly category?: string;
   readonly inserter?: boolean;
   readonly inputs?: readonly BlockInput[];
-  readonly render: BlockNodeComponent<Attrs>;
+  readonly render: BlockNodeComponent<Attrs, Loaders>;
+  readonly loaders?: Loaders;
+  // Renders in place of `render` when a loader rejects. Without one,
+  // the walker emits nothing (same shape as the unknown-block path).
+  readonly errorFallback?: (args: {
+    readonly attrs: Attrs;
+    readonly error: unknown;
+  }) => ReactNode;
   readonly inline?: boolean;
-  readonly defaults?: Readonly<Partial<Attrs>>;
+  // `NoInfer` keeps `defaults` from driving `Attrs` inference at
+  // `defineBlock` — without it, `{ defaults: { text: "" } }` would
+  // narrow `Attrs` to `{ text: string }` even when `render` reads other
+  // keys. `defaults` checks against the inferred `Attrs`, doesn't bias it.
+  readonly defaults?: Readonly<Partial<NoInfer<Attrs>>>;
   readonly placeholder?: string;
   readonly capability?: string;
   readonly transforms?: BlockTransforms;
@@ -96,6 +111,19 @@ export function createBlockRegistry(
   });
 }
 
-export function defineBlock(spec: BlockSpec): BlockSpec {
-  return Object.freeze(spec);
+// Strong typing flows through the inline spec literal (so `render`
+// sees `loaders` typed from the `loaders` record, and `defaults` is
+// checked against `Attrs`). The return type widens to plain `BlockSpec`
+// because `BlockRegistry` stores a homogenized row and `BlockSpec` is
+// invariant in both generics. Same shape TanStack uses for
+// `match.loaderData`. `Attrs` defaults wide so call sites that read
+// extra keys from `attrs` aren't accidentally narrowed by `defaults`.
+export function defineBlock<
+  Attrs extends Readonly<Record<string, unknown>> = Readonly<
+    Record<string, unknown>
+  >,
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  Loaders extends BlockLoaderRecord = {},
+>(spec: BlockSpec<Attrs, Loaders>): BlockSpec {
+  return Object.freeze(spec) as unknown as BlockSpec;
 }

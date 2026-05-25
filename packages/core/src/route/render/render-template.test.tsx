@@ -2,6 +2,7 @@ import { useId } from "react";
 import { describe, expect, test } from "vitest";
 
 import type { EntryContent } from "@plumix/blocks";
+import { defineBlock } from "@plumix/blocks";
 import { BlockRenderer } from "@plumix/blocks/renderer";
 
 import type { ResolvedEntry } from "./resolved-entry.js";
@@ -1062,6 +1063,56 @@ describe("resolvePublicRoute — single entry through theme", () => {
     const body = await response.text();
     expect(body).toContain("Hi");
     expect(body).toContain('data-plumix-block="core/heading"');
+  });
+
+  test("dispatcher pre-resolves block loaders before render — render() sees the resolved data", async () => {
+    const probePlugin = definePlugin("acme-probe", (ctx) => {
+      ctx.registerBlock(
+        defineBlock({
+          name: "acme/probe",
+          loaders: {
+            marker: () => Promise.resolve("loaded-on-server"),
+          },
+          render: ({ loaders }) => <div data-loaded>{loaders.marker}</div>,
+        }),
+      );
+    });
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) =>
+          data.entry.content ? (
+            <BlockRenderer
+              content={data.entry.content as unknown as EntryContent}
+            />
+          ) : null,
+      },
+    });
+
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin, probePlugin],
+      theme,
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "with-loader",
+      title: "Loader Block",
+      content: {
+        version: "plumix.v2",
+        blocks: [{ id: "n", name: "acme/probe", attrs: {} }],
+      },
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/with-loader"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("loaded-on-server");
   });
 });
 

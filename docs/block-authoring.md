@@ -58,7 +58,9 @@ the slash menu, and the SSR `<EntryContent>` walker.
 | `inline` | no | Skip the wrapper `<div data-plumix-block>` and emit the rendered element bare. |
 | `transforms` | no | Convert-to / convert-from descriptors surfaced in the action bar. |
 | `variations` | no | Pre-set attr configurations surfaced as their own inserter entries. |
-| `render` | yes | React function that receives `{ attrs, context }` and returns the block UI. |
+| `render` | yes | React function that receives `{ attrs, context, loaders }` and returns the block UI. |
+| `loaders` | no | Per-block SSR data fetchers — see [Server-side data](#server-side-data). |
+| `errorFallback` | no | Renders in place of `render` when a loader rejects. |
 
 ## Inputs
 
@@ -146,6 +148,142 @@ transforms: {
 The reverse direction is derived automatically — if `B` declares a
 `transforms.to[].target === "A"`, then `A`'s action bar surfaces a
 "Transform to B" row computed from B's mapper inverse.
+
+## Server-side data
+
+A block that needs to fetch data at SSR — "latest 3 posts", "featured
+author", "trending tags in this category" — declares one or more
+`loaders`. Each loader is a function that receives the request's
+`AppContext` plus the block's `attrs` and returns a Promise. The
+walker pre-resolves every loader across the page in parallel before
+the React render pass; the resolved data flows into `render` as a
+typed `loaders` record.
+
+```tsx
+import { and, desc, eq } from "drizzle-orm";
+import { defineBlock, entries } from "plumix";
+
+export const latestPosts = defineBlock({
+  name: "acme/latest-posts",
+  inputs: [
+    { name: "count", type: "number", default: 3, label: "How many?" },
+  ],
+  loaders: {
+    posts: ({ ctx, attrs }) =>
+      ctx.db.query.entries.findMany({
+        where: eq(entries.kind, "post"),
+        orderBy: desc(entries.publishedAt),
+        limit: (attrs.count as number) ?? 3,
+      }),
+  },
+  render: ({ loaders }) => (
+    // `loaders.posts` is `Awaited<ReturnType<typeof posts>>` — full
+    // autocomplete on `p.title`, `p.slug`, etc.
+    <section>
+      <h2>Latest</h2>
+      <ul>
+        {loaders.posts.map((p) => (
+          <li key={p.id}><a href={p.slug}>{p.title}</a></li>
+        ))}
+      </ul>
+    </section>
+  ),
+});
+```
+
+Loader return types flow into `render`'s `loaders` prop automatically
+via `ResolvedLoaders<L>`. No `useLoaderData()` cast, no manual type
+imports — declare a loader returning `Promise<Post[]>`, get
+`loaders.posts: Post[]` in render.
+
+### Request data inside a loader
+
+`ctx.request` is a standard `Request` — pull query strings, headers,
+or cookies straight off it:
+
+```tsx
+loaders: {
+  results: ({ ctx, attrs }) => {
+    const url = new URL(ctx.request.url);
+    const q = url.searchParams.get("q") ?? "";
+    return ctx.db.query.entries.findMany({
+      where: like(entries.title, `%${q}%`),
+      limit: attrs.limit as number,
+    });
+  },
+},
+```
+
+The matched entity for a public route is on `ctx.resolvedEntity`. The
+authenticated user (if any) is on `ctx.user`; capability checks go
+through `ctx.auth.can(...)` as anywhere else.
+
+### Error handling
+
+A loader can throw — bad query, dropped connection, missing record.
+The walker catches per-block (one block's failure never 500s the
+page) and renders an optional `errorFallback` for that node only:
+
+```tsx
+defineBlock({
+  loaders: { posts: ... },
+  errorFallback: ({ attrs, error }) => (
+    <div role="status">Couldn't load posts: {(error as Error).message}</div>
+  ),
+  render: ({ loaders }) => ...,
+});
+```
+
+Without an `errorFallback`, the block emits nothing in production.
+Observability plugins subscribe to the `blocks:loader:error` hook to
+log/report rejections regardless of whether a fallback was provided.
+
+### Loaders + client islands
+
+A loader-using block can hand the SSR-resolved data straight to a
+`"use client"` component as initial state — the same prop-serialization
+machinery the islands shim uses elsewhere:
+
+```tsx
+render: ({ loaders }) => (
+  <SearchWidgetClient
+    initialPosts={loaders.initialPosts}
+    client="visible"
+  />
+),
+```
+
+The client component owns later refetches (filters, infinite scroll,
+etc.) via fetch / RPC / whatever fits — SSR loaders are one-shot per
+request.
+
+### Treat `attrs` as untrusted input
+
+The `attrs` record fed to a loader comes straight from the entry's
+stored block tree. Validate it before using it in a query — drizzle
+parameterizes values so SQLi is unlikely, but a hostile
+`attrs.limit = 10_000_000` is wide open. The recommended pattern is
+to parse with zod at the top of the loader and let the schema set the
+upper bound on numeric inputs.
+
+### No built-in timeout / concurrency cap
+
+v1 fires every loader on the page in parallel and waits on all of
+them. A slow query blocks the request indefinitely. If a real consumer
+hits this, pass an `AbortSignal` derived from `ctx.request.signal`
+manually inside the loader body and race against `setTimeout`.
+
+### What loaders are not
+
+- **Not request-scoped caching.** Two loaders that hit the same query
+  fire twice. Add a `ctx.cache` LRU yourself if a real consumer needs
+  dedup.
+- **Not React 19 `use(promise)`.** The walker pre-resolves; `render`
+  stays synchronous. No Suspense boundaries needed.
+- **Not for archive/taxonomy listings.** v1 only pre-resolves block
+  loaders on the single-entry path (`data.entry.content`). A theme
+  that renders `<BlockRenderer content={data.entries[i].content}/>`
+  in an archive sees empty `loaders` records for those blocks.
 
 ## Client islands
 

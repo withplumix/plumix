@@ -11,11 +11,22 @@
 
 import type { ReactNode } from "react";
 
-import type { BlockContext, BlockNode } from "@plumix/blocks";
+import type { BlockContext, BlockNode, BlockSpec } from "@plumix/blocks";
 
 export interface BlockRenderHookContext {
   readonly node: BlockNode;
   readonly context: BlockContext;
+}
+
+// Fired by the SSR dispatcher once per rejected loader. The hook is
+// observational only (filters return `void`); plugins typically log to
+// external observability and leave user-visible fallback to
+// `BlockSpec.errorFallback`.
+export interface BlockLoaderErrorContext {
+  readonly spec: BlockSpec;
+  readonly node: BlockNode;
+  readonly key: string;
+  readonly error: unknown;
 }
 
 declare module "./types.js" {
@@ -28,5 +39,6 @@ declare module "./types.js" {
       element: ReactNode,
       ctx: BlockRenderHookContext,
     ) => ReactNode;
+    "blocks:loader:error": (result: void, ctx: BlockLoaderErrorContext) => void;
   }
 }

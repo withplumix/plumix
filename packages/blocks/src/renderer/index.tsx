@@ -3,6 +3,7 @@ import { createContext, useContext } from "react";
 
 import type { BlockRegistry } from "../block-registry.js";
 import type { EntryContent } from "../entry-content.js";
+import type { ResolvedBlockLoaders } from "../loaders.js";
 import type { ThemeTokens } from "../styles/types.js";
 import { renderBlockTree } from "../render-block-tree.js";
 import { RendererError } from "./errors.js";
@@ -10,6 +11,7 @@ import { RendererError } from "./errors.js";
 export interface PlumixContextValue {
   readonly registry: BlockRegistry;
   readonly tokens?: ThemeTokens;
+  readonly loaderData?: ResolvedBlockLoaders;
 }
 
 const PlumixContext = createContext<PlumixContextValue | null>(null);
@@ -42,6 +44,7 @@ export function BlockRenderer({
   const ctx = usePlumixContext("BlockRenderer");
   return renderBlockTree(content.blocks, ctx.registry, {
     tokens: ctx.tokens,
+    loaderData: ctx.loaderData,
   });
 }
 

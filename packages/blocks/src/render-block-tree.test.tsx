@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import type { ResolvedBlockLoaders } from "./loaders.js";
 import type { BlockContext, BlockNode } from "./render-block-tree.js";
 import { createBlockRegistry } from "./block-registry.js";
 import { renderBlockTree } from "./render-block-tree.js";
@@ -506,6 +507,102 @@ describe("renderBlockTree", () => {
       expect(html).toContain('data-plumix-unknown-block="acme/missing"');
       expect(html).toContain('data-plumix-unknown-block="acme/other"');
       expect(warn).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("loader data", () => {
+    test("passes resolved loader data into the block's render fn", () => {
+      let seen: unknown;
+      const registry = createBlockRegistry([
+        {
+          name: "acme/needs-data",
+          render: ({ loaders }) => {
+            seen = loaders;
+            return null;
+          },
+          loaders: { posts: () => Promise.resolve([]) },
+        },
+      ]);
+      const tree: readonly BlockNode[] = [
+        { id: "n1", name: "acme/needs-data", attrs: {} },
+      ];
+      const loaderData: ResolvedBlockLoaders = new Map([
+        ["n1", { loaders: { posts: ["a", "b"] }, error: null }],
+      ]);
+
+      renderToStaticMarkup(renderBlockTree(tree, registry, { loaderData }));
+
+      expect(seen).toEqual({ posts: ["a", "b"] });
+    });
+
+    test("passes an empty record when the resolver has no entry for the node", () => {
+      let seen: unknown;
+      const registry = createBlockRegistry([
+        {
+          name: "acme/loaderless",
+          render: ({ loaders }) => {
+            seen = loaders;
+            return null;
+          },
+        },
+      ]);
+      const tree: readonly BlockNode[] = [
+        { id: "l1", name: "acme/loaderless", attrs: {} },
+      ];
+
+      renderToStaticMarkup(renderBlockTree(tree, registry));
+
+      expect(seen).toEqual({});
+    });
+
+    test("invokes errorFallback when the node's loader rejected", () => {
+      const registry = createBlockRegistry([
+        {
+          name: "acme/risky",
+          render: () => "should-not-render",
+          errorFallback: ({ error }) => `oops: ${(error as Error).message}`,
+          loaders: { v: () => Promise.resolve(null) },
+        },
+      ]);
+      const tree: readonly BlockNode[] = [
+        { id: "r1", name: "acme/risky", attrs: {} },
+      ];
+      const loaderData: ResolvedBlockLoaders = new Map([
+        ["r1", { loaders: {}, error: new Error("boom") }],
+      ]);
+
+      const html = renderToStaticMarkup(
+        renderBlockTree(tree, registry, { loaderData }),
+      );
+
+      expect(html).toContain("oops: boom");
+      expect(html).not.toContain("should-not-render");
+    });
+
+    test("renders nothing in production when a loader rejected and no errorFallback is declared", () => {
+      const warn = vi
+        .spyOn(console, "warn")
+        .mockImplementation(() => undefined);
+      const registry = createBlockRegistry([
+        {
+          name: "acme/risky-silent",
+          render: () => "should-not-render",
+          loaders: { v: () => Promise.resolve(null) },
+        },
+      ]);
+      const tree: readonly BlockNode[] = [
+        { id: "r2", name: "acme/risky-silent", attrs: {} },
+      ];
+      const loaderData: ResolvedBlockLoaders = new Map([
+        ["r2", { loaders: {}, error: new Error("boom") }],
+      ]);
+
+      const html = withProductionEnv(() =>
+        renderToStaticMarkup(renderBlockTree(tree, registry, { loaderData })),
+      );
+
+      expect(html).toBe("");
+      expect(warn).not.toHaveBeenCalled();
     });
   });
 });
