@@ -72,6 +72,10 @@ const PLUMIX_PACKAGE_VERSION = "^0.1.0";
 const CATALOG_RESOLUTIONS: Record<string, string> = {
   "@cloudflare/workers-types": "^4.20260421.1",
   "@types/node": "^24.12.2",
+  "@types/react": "^19.2.14",
+  "@types/react-dom": "^19.2.3",
+  react: "^19.2.6",
+  "react-dom": "^19.2.6",
   typescript: "^6.0.3",
   wrangler: "^4.86.0",
 };

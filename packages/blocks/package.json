@@ -15,6 +15,10 @@
     "./renderer": {
       "types": "./dist/renderer/index.d.ts",
       "default": "./dist/renderer/index.js"
+    },
+    "./island-runtime": {
+      "types": "./dist/island-runtime.d.ts",
+      "default": "./dist/island-runtime.js"
     }
   },
   "scripts": {

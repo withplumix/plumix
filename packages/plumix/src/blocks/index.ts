@@ -20,7 +20,11 @@ export {
   resolveBlockTransforms,
   expandBlockVariations,
   validateEntryContent,
+  // Re-exported for the SSR shim the Vite plugin generates for
+  // `"use client"` modules. Not intended for direct consumption.
+  serializeProps,
 } from "@plumix/blocks";
+export type { IslandProps, PlumixStrategy } from "@plumix/blocks";
 export type {
   BlockContext,
   BlockInput,

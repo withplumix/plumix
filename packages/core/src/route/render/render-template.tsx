@@ -22,6 +22,7 @@ import type { ResolvedNode } from "./template-hierarchy.js";
 import { loadTemplateDeps } from "../../template-deps.js";
 import { normalizeTemplate } from "../../template.js";
 import { bundledCssTags } from "./asset-manifest.js";
+import { injectIslandsBootstrap } from "./inject-islands-bootstrap.js";
 import { resolveTemplateCandidates } from "./template-hierarchy.js";
 
 interface RenderArgs {
@@ -192,7 +193,14 @@ function renderTree({
 
   const bodyContent =
     scripts.bodyStart.map(scriptToHtml).join("") +
-    body +
+    injectIslandsBootstrap(
+      body,
+      assetManifest,
+      // `process.env.PLUMIX_DEV` is Vite-substituted at SSR-bundle time
+      // — non-empty in `plumix dev`, empty in `plumix build`. The
+      // plumix Vite plugin's `define` populates the literal.
+      process.env.PLUMIX_DEV ? "serve" : "build",
+    ) +
     scripts.bodyEnd.map(scriptToHtml).join("") +
     HYDRATION_SLOT;
 

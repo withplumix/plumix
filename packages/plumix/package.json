@@ -21,7 +21,9 @@
     "typescript",
     "headless-cms"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/blocks/island-runtime.js"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -90,6 +92,10 @@
     "./blocks/test": {
       "types": "./dist/blocks/test.d.ts",
       "default": "./dist/blocks/test.js"
+    },
+    "./blocks/island-runtime": {
+      "types": "./dist/blocks/island-runtime.d.ts",
+      "default": "./dist/blocks/island-runtime.js"
     },
     "./schema": {
       "types": "./dist/schema/index.d.ts",

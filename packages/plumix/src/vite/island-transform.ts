@@ -134,7 +134,7 @@ export function transformUseClientModule(
     // Route props through `serializeProps` so Date/Map/Set/etc. survive
     // the round-trip the custom element's `deserializeProps` expects.
     // Plain JSON.stringify would silently coerce them.
-    `import { serializeProps as __ser } from "@plumix/blocks";`,
+    `import { serializeProps as __ser } from "plumix/blocks";`,
     `import * as __orig from ${origUrl};`,
     // `wrapped` is the full prop set fed to the SSR'd Component (with
     // React-element props replaced by <plumix-static-slot> wrappers).

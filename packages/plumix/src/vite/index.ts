@@ -61,11 +61,9 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
   let root = process.cwd();
   let publicDir = "";
   let configPath: string | undefined;
+  let command: "serve" | "build" = "serve";
   // Discovered at config() time so rollupOptions.input can be extended
-  // before Vite resolves entries. The list is also what the
-  // `virtual:plumix/island-manifest` virtual module's `load` hook reads
-  // to emit the Map<ComponentType, { chunkUrl, exportName }> the SSR
-  // walker uses for `<plumix-island>` wrapper emission.
+  // before Vite resolves entries.
   let islands: readonly DiscoveredIsland[] = [];
 
   return {
@@ -81,11 +79,18 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
     // doesn't depend on `process.env` being populated — CF Workers'
     // process.env is empty by default and the helper would otherwise
     // fall back to localhost on every deployed request.
-    config(userConfig) {
+    config(userConfig, env) {
       const define = {
         "process.env.WORKERS_CI": JSON.stringify(process.env.WORKERS_CI ?? ""),
         "process.env.WORKERS_CI_BRANCH": JSON.stringify(
           process.env.WORKERS_CI_BRANCH ?? "",
+        ),
+        // Used by `injectIslandsBootstrap` to pick between the dev
+        // source-entry path and the hashed build manifest URL. Vite
+        // substitutes this literal at bundle time so the SSR worker
+        // gets a static boolean (no `process` lookup at runtime).
+        "process.env.PLUMIX_DEV": JSON.stringify(
+          env.command === "build" ? "" : "1",
         ),
       };
       // `build.manifest: true` makes Vite emit `<outDir>/.vite/manifest.json`,
@@ -100,17 +105,18 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       // none is set (see packages/vite-plugin-cloudflare/src/build.ts).
       // Vite merges this with the CF plugin's config; the merged
       // result has both `manifest: true` and our entry input.
-      // Scan user source for block-side islands BEFORE Vite resolves
-      // entries. Each discovered island becomes its own rollupOptions
-      // input so Vite emits a content-hashed chunk per island
-      // (matches the asset pipeline from PRD #510 slice #514). The
-      // SSR worker imports `virtual:plumix/island-manifest` which
-      // resolves the chunk URL per component out of Vite's
-      // `manifest.json` post-build.
+      // Scan user source for islands BEFORE Vite resolves entries. Each
+      // `"use client"` module becomes its own `rollupOptions.input` so
+      // Vite emits one content-hashed chunk per island. The SSR shim
+      // resolves chunk URLs from Vite's `.vite/manifest.json` at build
+      // time (see `resolveIslandChunkUrl`).
       const scanRoot = userConfig.root ?? process.cwd();
       islands = scanUserSources(scanRoot);
       const islandInputs: Record<string, string> = {};
+      const seenSourcePaths = new Set<string>();
       for (const island of islands) {
+        if (seenSourcePaths.has(island.sourcePath)) continue;
+        seenSourcePaths.add(island.sourcePath);
         islandInputs[islandEntryName(island)] = island.sourcePath;
       }
       const environments = {
@@ -120,6 +126,11 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
             rollupOptions: {
               input: {
                 "plumix-client": ".plumix/client-entry.ts",
+                // Per-page islands runtime — bootstraps the custom element
+                // + strategies. Bundled as its own chunk so the SSR layer
+                // can inject `<script src="<hashed-url>">` only when the
+                // page contains at least one `<plumix-island>`.
+                "plumix-islands-runtime": ".plumix/islands-entry.ts",
                 ...islandInputs,
               },
             },
@@ -139,6 +150,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
     configResolved(config) {
       root = config.root;
       publicDir = config.publicDir;
+      command = config.command;
     },
     resolveId(id, importer) {
       if (id === ASSET_MANIFEST_VIRTUAL_ID) return ASSET_MANIFEST_RESOLVED_ID;
@@ -175,9 +187,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       if (id.endsWith(ORIG_QUERY)) return null;
       if (!id.endsWith(".tsx") && !id.endsWith(".ts")) return null;
       if (!code.includes("use client")) return null;
-      // Dev chunk URL. Production needs the hashed path from Vite's
-      // `.vite/manifest.json` — follow-up to this slice.
-      const chunkUrl = "/@fs" + id;
+      const chunkUrl = resolveIslandChunkUrl(id, command, root);
       const result = transformUseClientModule(code, id, { chunkUrl });
       return result ? { code: result.code, map: null } : null;
     },
@@ -271,6 +281,17 @@ async function regenerate(
   // hitting the config loader.
   const clientEntrySource = generateClientEntrySource(config.theme.css ?? []);
   writeIfChanged(resolve(cwd, ".plumix/client-entry.ts"), clientEntrySource);
+
+  // Always-emit islands runtime entry. The file is bundled as its own
+  // client chunk (`plumix-islands-runtime` in rollupOptions.input) so
+  // the SSR layer can inject `<script src="<hashed-url>">` only on
+  // pages that contain at least one `<plumix-island>`. Importing the
+  // runtime is a side-effect — it registers the custom element +
+  // strategies on `self.Plumix` + `customElements`.
+  writeIfChanged(
+    resolve(cwd, ".plumix/islands-entry.ts"),
+    `// Generated by plumix — do not edit.\nimport "plumix/blocks/island-runtime";\n`,
+  );
 
   const { manifest, registry } = await computeManifestAndRegistry(
     config.plugins,
@@ -508,6 +529,39 @@ function simpleHash(input: string): number {
     h = (h * 0x01000193) >>> 0;
   }
   return h >>> 0;
+}
+
+// Resolve a `"use client"` module's chunk URL for the shim's
+// `<plumix-island chunk-url="…">` attribute.
+//
+// Dev (`serve`): `/@fs<absolute-id>` — Vite serves the original
+// module via its dev-server middleware. The custom element's dynamic
+// `import()` loads it through Vite's module graph so HMR plumbing
+// works (full-page reload on edit; live patch isn't supported across
+// the island boundary).
+//
+// Build: look up the per-island Rollup input by its
+// `islandEntryName` and emit the hashed `file:` from Vite's
+// `.vite/manifest.json`. Falls back to `/@fs<id>` if the manifest
+// entry is missing (cold-build edge case the asset-manifest virtual
+// module already documents).
+export function resolveIslandChunkUrl(
+  id: string,
+  command: "serve" | "build",
+  rootDir: string,
+): string {
+  if (command === "serve") return "/@fs" + id;
+  const manifest = loadAssetManifest(rootDir) as Record<
+    string,
+    { file?: string } | undefined
+  >;
+  // Vite's manifest keys source paths relative to the project root,
+  // not by the `rollupOptions.input` name. Compute the relative POSIX
+  // path so the lookup matches.
+  const relativeId = relative(rootDir, id).replace(/\\/g, "/");
+  const entry = manifest[relativeId];
+  if (entry?.file) return "/" + entry.file;
+  return "/@fs" + id;
 }
 
 function loadAssetManifest(rootDir: string): unknown {

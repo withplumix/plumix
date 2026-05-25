@@ -13,12 +13,17 @@
   },
   "dependencies": {
     "@plumix/runtime-cloudflare": "workspace:*",
-    "plumix": "workspace:*"
+    "plumix": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",
+    "@playwright/test": "^1.59.1",
     "@plumix/typescript-config": "workspace:*",
     "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
     "typescript": "catalog:",
     "wrangler": "catalog:"
   }

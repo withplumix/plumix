@@ -51,8 +51,17 @@ describe("PlumixIslandElement lifecycle", () => {
     restoreImport = () => undefined;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     restoreImport();
+    // Detach any islands the test mounted so the React scheduler
+    // unmounts their roots before the next test (or vitest's jsdom
+    // teardown). React 19's scheduler queues work via setImmediate /
+    // MessageChannel; without a clean unmount + microtask drain, the
+    // deferred callback fires after jsdom is torn down and throws
+    // `ReferenceError: window is not defined`, which vitest reports as
+    // an unhandled error and fails the run.
+    document.body.innerHTML = "";
+    await new Promise((resolve) => setTimeout(resolve, 0));
   });
 
   test("connectedCallback invokes the registered `load` strategy", async () => {
