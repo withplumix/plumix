@@ -5,8 +5,6 @@ import {
   d1,
 } from "@plumix/runtime-cloudflare";
 
-import { IndexTemplate } from "./src/template";
-
 // Derives `rpId` + `origin` from the Workers Builds env (`WORKERS_CI`,
 // `WORKERS_CI_BRANCH`): production deploys → `<worker>.<account>.workers.dev`,
 // preview deploys → `<branch>-<worker>.<account>.workers.dev`,
@@ -29,5 +27,7 @@ export default plumix({
       origin,
     },
   }),
-  theme: defineTheme({ templates: { index: IndexTemplate } }),
+  // Noop placeholder — every Plumix app needs a theme. Replace with a
+  // real theme once you start rendering public routes.
+  theme: defineTheme({ templates: { index: () => null } }),
 });
