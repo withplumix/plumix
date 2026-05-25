@@ -8,7 +8,7 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": [".cache/tsbuildinfo.json", "dist/**"],
-      "env": ["WORKERS_CI", "WORKERS_CI_BRANCH"]
+      "env": ["WORKERS_CI", "WORKERS_CI_BRANCH", "PLUMIX_DEV"]
     },
     "dev": {
       "cache": false,
