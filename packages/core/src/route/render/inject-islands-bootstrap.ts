@@ -18,6 +18,13 @@ import type { AssetManifest } from "./asset-manifest.js";
 
 const DEV_ENTRY_PATH = "/.plumix/islands-entry.ts";
 const RUNTIME_MANIFEST_KEY = ".plumix/islands-entry.ts";
+// The renderer chunk (React + ReactDOM) is fetched lazily by the custom
+// element on first hydration, not loaded eagerly here. We only thread
+// its URL onto the runtime script tag as `data-plumix-renderer-url`;
+// `island-runtime.ts` reads it and hands it to the element so a page
+// whose islands never hydrate ships zero React.
+const DEV_RENDERER_PATH = "/.plumix/islands-renderer-entry.ts";
+const RENDERER_MANIFEST_KEY = ".plumix/islands-renderer-entry.ts";
 
 export function injectIslandsBootstrap(
   body: string,
@@ -25,10 +32,36 @@ export function injectIslandsBootstrap(
   command: "serve" | "build",
 ): string {
   if (!body.includes("<plumix-island")) return body;
-  let src = DEV_ENTRY_PATH;
+  const src = resolveEntryUrl(
+    manifest,
+    command,
+    RUNTIME_MANIFEST_KEY,
+    DEV_ENTRY_PATH,
+  );
+  const rendererUrl = resolveEntryUrl(
+    manifest,
+    command,
+    RENDERER_MANIFEST_KEY,
+    DEV_RENDERER_PATH,
+  );
+  return (
+    body +
+    `<script type="module" src="${src}" data-plumix-renderer-url="${rendererUrl}"></script>`
+  );
+}
+
+// In build, resolve the hashed asset path from Vite's manifest; in dev
+// (or on the cold-build edge where the entry isn't in the manifest yet)
+// fall back to the source path Vite's dev server serves directly.
+function resolveEntryUrl(
+  manifest: AssetManifest,
+  command: "serve" | "build",
+  key: string,
+  devPath: string,
+): string {
   if (command === "build") {
-    const entry = manifest[RUNTIME_MANIFEST_KEY];
-    if (entry?.file) src = "/" + entry.file;
+    const entry = manifest[key];
+    if (entry?.file) return "/" + entry.file;
   }
-  return body + `<script type="module" src="${src}"></script>`;
+  return devPath;
 }
