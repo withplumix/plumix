@@ -34,7 +34,7 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@tiptap/core": "^3.23.5",
+    "@tiptap/core": "^3.23.6",
     "sanitize-html": "^2.17.4"
   },
   "peerDependencies": {
