@@ -26,11 +26,15 @@ interface RendererModule {
   mount(element: HTMLElement): IslandRoot;
 }
 
+// A strategy decides *when* to run `loadFn` (hydrate or prefetch). It may
+// return a teardown the element calls on `disconnectedCallback` — so an
+// island removed before its trigger fires doesn't leak the strategy's
+// observer / listener (a leak both Astro and Nuxt carry).
 export type IslandStrategy = (
   loadFn: () => Promise<void>,
   opts: Readonly<Record<string, unknown>>,
   el: PlumixIslandElement,
-) => void | Promise<void>;
+) => void | (() => void) | Promise<void | (() => void)>;
 
 declare global {
   interface Window {
@@ -62,6 +66,11 @@ export class PlumixIslandElement extends HTMLElement {
     null;
   private childObserver: MutationObserver | null = null;
   private parentObserver: MutationObserver | null = null;
+  private prefetched = false;
+  // Teardowns returned by the hydrate + prefetch strategies, run on
+  // disconnect so a deferred island removed before its trigger doesn't leak
+  // an IntersectionObserver / event-listener registration.
+  private strategyCleanups: (() => void)[] = [];
 
   attributeChangedCallback(
     _name: string,
@@ -117,6 +126,8 @@ export class PlumixIslandElement extends HTMLElement {
     this.childObserver = null;
     this.parentObserver?.disconnect();
     this.parentObserver = null;
+    for (const cleanup of this.strategyCleanups) cleanup();
+    this.strategyCleanups = [];
     // Only signal unmount when there's something to unmount. A deferred
     // island that never hydrated (parent never cleared `ssr`, or
     // `await-children` never settled) shouldn't emit `plumix:unmount`
@@ -168,8 +179,27 @@ export class PlumixIslandElement extends HTMLElement {
       return;
     }
     const strategy = this.getAttribute("client") ?? "load";
+    const prefetch = this.getAttribute("prefetch");
     const opts = parseJsonAttr(this.getAttribute("opts"));
     const strategies = window.Plumix;
+
+    // Prefetch is wired first — it fires no later than hydration. Skip it
+    // when hydration is already immediate (`load`/`only`) or shares the
+    // trigger, since the hydrate path's own fetch covers that case. This
+    // split (warm the chunk on `visible`, hydrate on `interaction`) is the
+    // lever Astro and Nuxt lack — both couple fetch to the hydrate trigger.
+    if (prefetch && shouldPrefetch(strategy, prefetch)) {
+      const prefetchFn = strategies?.[prefetch];
+      if (prefetchFn) {
+        const cleanup = await prefetchFn(
+          () => Promise.resolve(this.prefetch()),
+          opts,
+          this,
+        );
+        if (typeof cleanup === "function") this.strategyCleanups.push(cleanup);
+      }
+    }
+
     const fn = strategies?.[strategy];
     if (!fn) {
       // No registered strategy — the runtime entry script never loaded.
@@ -177,7 +207,23 @@ export class PlumixIslandElement extends HTMLElement {
       this.dispatchHydrationError(new Error(`unknown strategy: ${strategy}`));
       return;
     }
-    await fn(() => this.hydrate(), opts, this);
+    const cleanup = await fn(() => this.hydrate(), opts, this);
+    if (typeof cleanup === "function") this.strategyCleanups.push(cleanup);
+  }
+
+  // Warm the browser's module cache for this island's component chunk and
+  // the shared renderer chunk, without mounting. `hydrate()` then resolves
+  // its `import()`s from cache, so the work left at trigger time is pure
+  // CPU (createRoot + render) — no network round-trip. Best-effort: a
+  // failed prefetch is swallowed; `hydrate()` owns the retry + error event.
+  private prefetch(): void {
+    if (this.hydrated || this.prefetched) return;
+    this.prefetched = true;
+    const chunkUrl = this.getAttribute("chunk-url");
+    const exportName = this.getAttribute("component-export") ?? "default";
+    if (!chunkUrl || FORBIDDEN_EXPORT_KEYS.has(exportName)) return;
+    void dynamicImport(chunkUrl).catch(() => undefined);
+    void loadRenderer().catch(() => undefined);
   }
 
   private async hydrate(): Promise<void> {
@@ -344,6 +390,15 @@ function appendCacheBust(url: string): string {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Prefetch only earns its keep when it fires strictly before hydration.
+// `load`/`only` hydrate immediately (nothing to pre-warm), and a prefetch
+// trigger equal to the hydrate trigger is covered by the hydrate fetch
+// itself — so both cases skip the extra strategy registration.
+function shouldPrefetch(hydrateWhen: string, prefetchWhen: string): boolean {
+  if (hydrateWhen === "load" || hydrateWhen === "only") return false;
+  return hydrateWhen !== prefetchWhen;
 }
 
 function parseJsonAttr(raw: string | null): Readonly<Record<string, unknown>> {

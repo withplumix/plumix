@@ -3,7 +3,11 @@
 
 import { describe, expectTypeOf, test } from "vitest";
 
-import type { IslandProps, PlumixStrategy } from "./island-props.js";
+import type {
+  IslandProps,
+  PlumixPrefetch,
+  PlumixStrategy,
+} from "./island-props.js";
 
 interface Primitives {
   label: string;
@@ -24,6 +28,11 @@ interface WithClientProp {
 
 interface NoClientProp {
   label: string;
+}
+
+interface WithPrefetchProp {
+  label: string;
+  prefetch: string;
 }
 
 describe("IslandProps<T>", () => {
@@ -49,5 +58,20 @@ describe("IslandProps<T>", () => {
   test("adds `client?: PlumixStrategy` even when the input has no `client` prop", () => {
     type Out = IslandProps<NoClientProp>;
     expectTypeOf<Out["client"]>().toEqualTypeOf<PlumixStrategy | undefined>();
+  });
+
+  test("`PlumixStrategy` covers all five hydration triggers", () => {
+    expectTypeOf<PlumixStrategy>().toEqualTypeOf<
+      "load" | "idle" | "visible" | "interaction" | "only"
+    >();
+  });
+
+  test("`PlumixPrefetch` is the subset valid as a prefetch trigger", () => {
+    expectTypeOf<PlumixPrefetch>().toEqualTypeOf<"load" | "idle" | "visible">();
+  });
+
+  test("reserves `prefetch` as an optional prefetch-trigger prop", () => {
+    type Out = IslandProps<WithPrefetchProp>;
+    expectTypeOf<Out["prefetch"]>().toEqualTypeOf<PlumixPrefetch | undefined>();
   });
 });
