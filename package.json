@@ -12,7 +12,6 @@
     "build": "turbo run build",
     "clean": "git clean -xdf node_modules",
     "clean:workspaces": "turbo run clean",
-    "boundaries": "depcruise --config .dependency-cruiser.cjs packages examples",
     "commitlint": "commitlint",
     "dev": "turbo watch dev --continue",
     "format": "turbo run format --continue -- --cache --cache-location .cache/.prettiercache",
@@ -31,7 +30,6 @@
     "@commitlint/config-conventional": "^21.0.1",
     "@commitlint/config-pnpm-scopes": "^21.0.1",
     "@commitlint/types": "^21.0.1",
-    "dependency-cruiser": "^17.4.0",
     "knip": "^6.6.0",
     "turbo": "^2.9.14"
   },

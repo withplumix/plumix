@@ -1,5 +1,5 @@
 import { defineConfig } from "eslint/config";
 
-import { baseConfig, noBareThrowError } from "@plumix/eslint-config/base";
+import { baseConfig } from "@plumix/eslint-config/base";
 
-export default defineConfig(baseConfig, noBareThrowError);
+export default defineConfig(baseConfig);

@@ -44,25 +44,10 @@ export const baseConfig = defineConfig(
       "import-x/no-duplicates": "error",
     },
   },
+  // Named-errors convention (umbrella #232): production `src/` code may not
+  // `throw new Error(...)` — use a factory from the area's errors.ts.
   {
-    linterOptions: { reportUnusedDisableDirectives: true },
-    languageOptions: {
-      parserOptions: {
-        projectService: true,
-      },
-    },
-  },
-);
-
-// Named-errors convention (umbrella #232). Production code in opted-in
-// areas may not `throw new Error(...)` — use a factory from the area's
-// errors.ts (e.g. R2Error.bindingMissing({ binding })). Packages opt in
-// by spreading one of these configs alongside baseConfig in their
-// eslint.config.ts. Subsequent PRs broaden the scope by adding the import
-// (or expanding the file globs) on a per-area basis.
-export function noBareThrowErrorFor(filesGlobs: readonly string[]) {
-  return defineConfig({
-    files: [...filesGlobs],
+    files: ["src/**/*.ts", "src/**/*.tsx"],
     ignores: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/test/**"],
     rules: {
       "no-restricted-syntax": [
@@ -74,13 +59,35 @@ export function noBareThrowErrorFor(filesGlobs: readonly string[]) {
         },
       ],
     },
-  });
-}
+  },
+  {
+    linterOptions: { reportUnusedDisableDirectives: true },
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+      },
+    },
+  },
+);
 
-// Whole-`src/` opt-in. Suitable for packages where every production-code
-// throw site has already been migrated to a factory. Cloudflare runtime
-// uses this shape (issue #236).
-export const noBareThrowError = noBareThrowErrorFor([
-  "src/**/*.ts",
-  "src/**/*.tsx",
-]);
+// Public-API boundary. Consumer packages (plugins, runtimes, the scaffolder)
+// must import from the public `plumix` umbrella, never reach into the internal
+// @plumix/{core,admin,blocks} packages. Packages opt in by spreading this
+// alongside baseConfig in their eslint.config.ts.
+export const noInternalImports = defineConfig({
+  files: ["**/*.js", "**/*.ts", "**/*.tsx"],
+  rules: {
+    "no-restricted-imports": [
+      "error",
+      {
+        patterns: [
+          {
+            group: ["@plumix/core", "@plumix/admin", "@plumix/blocks"],
+            message:
+              "Import from the public 'plumix' umbrella instead of reaching into internal @plumix/{core,admin,blocks} packages.",
+          },
+        ],
+      },
+    ],
+  },
+});
