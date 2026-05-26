@@ -44,25 +44,10 @@ export const baseConfig = defineConfig(
       "import-x/no-duplicates": "error",
     },
   },
+  // Named-errors convention (umbrella #232): production `src/` code may not
+  // `throw new Error(...)` — use a factory from the area's errors.ts.
   {
-    linterOptions: { reportUnusedDisableDirectives: true },
-    languageOptions: {
-      parserOptions: {
-        projectService: true,
-      },
-    },
-  },
-);
-
-// Named-errors convention (umbrella #232). Production code in opted-in
-// areas may not `throw new Error(...)` — use a factory from the area's
-// errors.ts (e.g. R2Error.bindingMissing({ binding })). Packages opt in
-// by spreading one of these configs alongside baseConfig in their
-// eslint.config.ts. Subsequent PRs broaden the scope by adding the import
-// (or expanding the file globs) on a per-area basis.
-export function noBareThrowErrorFor(filesGlobs: readonly string[]) {
-  return defineConfig({
-    files: [...filesGlobs],
+    files: ["src/**/*.ts", "src/**/*.tsx"],
     ignores: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/test/**"],
     rules: {
       "no-restricted-syntax": [
@@ -74,16 +59,16 @@ export function noBareThrowErrorFor(filesGlobs: readonly string[]) {
         },
       ],
     },
-  });
-}
-
-// Whole-`src/` opt-in. Suitable for packages where every production-code
-// throw site has already been migrated to a factory. Cloudflare runtime
-// uses this shape (issue #236).
-export const noBareThrowError = noBareThrowErrorFor([
-  "src/**/*.ts",
-  "src/**/*.tsx",
-]);
+  },
+  {
+    linterOptions: { reportUnusedDisableDirectives: true },
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+      },
+    },
+  },
+);
 
 // Public-API boundary. Consumer packages (plugins, runtimes, the scaffolder)
 // must import from the public `plumix` umbrella, never reach into the internal
