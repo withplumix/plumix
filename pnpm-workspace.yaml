@@ -19,7 +19,7 @@ catalog:
   "drizzle-valibot": ^0.4.2
   eslint: ^10.4.0
   prettier: ^3.8.3
-  publint: ^0.3.18
+  publint: ^0.3.21
   react: ^19.2.6
   react-dom: ^19.2.6
   typescript: ^6.0.3
