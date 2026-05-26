@@ -55,7 +55,7 @@
     "valibot": "catalog:"
   },
   "peerDependencies": {
-    "@tanstack/react-query": "^5.99.2",
+    "@tanstack/react-query": "^5.100.14",
     "plumix": "workspace:*",
     "react": "catalog:"
   },
@@ -67,7 +67,7 @@
     "@plumix/runtime-cloudflare": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
     "@plumix/vitest-config": "workspace:*",
-    "@tanstack/react-query": "^5.99.2",
+    "@tanstack/react-query": "^5.100.14",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@vitest/coverage-v8": "catalog:",
