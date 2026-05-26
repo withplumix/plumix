@@ -14,12 +14,17 @@
 // visible error UI, but the framework never crashes the page.
 
 import type { ComponentType } from "react";
-import type { Root } from "react-dom/client";
-import { createElement } from "react";
-import { createRoot } from "react-dom/client";
 
+import type { IslandRoot } from "./island-renderer.js";
 import { deserializeProps } from "./serialize.js";
-import { StaticHtml } from "./static-html.js";
+
+// The renderer module (`island-renderer.ts`) carries all the React +
+// ReactDOM + StaticHtml weight. It is imported only as a type here
+// (erased at build) and fetched at runtime via `loadRenderer()` inside
+// `hydrate()`, so this element chunk stays React-free.
+interface RendererModule {
+  mount(element: HTMLElement): IslandRoot;
+}
 
 export type IslandStrategy = (
   loadFn: () => Promise<void>,
@@ -50,7 +55,7 @@ const FORBIDDEN_EXPORT_KEYS: ReadonlySet<string> = new Set([
 export class PlumixIslandElement extends HTMLElement {
   static readonly observedAttributes: readonly string[] = ["props"];
 
-  private root: Root | null = null;
+  private root: IslandRoot | null = null;
   private retried = false;
   private hydrated = false;
   private component: ComponentType<Readonly<Record<string, unknown>>> | null =
@@ -76,7 +81,10 @@ export class PlumixIslandElement extends HTMLElement {
     ) {
       return;
     }
-    this.root.render(createElement(this.component, readProps(this)));
+    // Re-render through the renderer handle. Slot props are bridged once
+    // at hydrate; a `props` change re-renders with scalar props only —
+    // same surface as before the renderer split.
+    this.root.render(this.component, readProps(this), {});
   }
 
   connectedCallback(): void {
@@ -192,13 +200,29 @@ export class PlumixIslandElement extends HTMLElement {
       );
       return;
     }
-    const Component = await this.loadComponent(chunkUrl, exportName);
-    if (!Component) return;
-    const props = { ...readProps(this), ...readSlotProps(this) };
+    // Fetch the component chunk and the shared renderer chunk in
+    // parallel — one round-trip on first hydration (Astro's pattern).
+    const componentPromise = this.loadComponent(chunkUrl, exportName);
+    const rendererPromise = loadRenderer();
+    const Component = await componentPromise;
+    if (!Component) {
+      // Component import already dispatched its own error and we're
+      // bailing — make sure the in-flight renderer fetch can't surface as
+      // an unhandled rejection (both fail together on a broken deploy).
+      void rendererPromise.catch(() => undefined);
+      return;
+    }
+    let renderer: RendererModule;
+    try {
+      renderer = await rendererPromise;
+    } catch (err) {
+      this.dispatchHydrationError(err);
+      return;
+    }
     this.hydrated = true;
     this.component = Component;
-    this.root = createRoot(this);
-    this.root.render(createElement(Component, props));
+    this.root = renderer.mount(this);
+    this.root.render(Component, readProps(this), readSlotHtml(this));
     // Clearing the `ssr` attribute signals any nested island awaiting
     // this parent that it's safe to hydrate now. See the MutationObserver
     // in `start()` that watches the closest ancestor's `ssr` attribute.
@@ -259,6 +283,61 @@ export function setDynamicImport(
   };
 }
 
+// The shared renderer chunk's URL, threaded in at runtime by the islands
+// bootstrap (`island-runtime.ts` reads it off the injected `<script>`'s
+// `data-plumix-renderer-url`). Resolved from Vite's manifest at SSR time,
+// the same path per-island `chunk-url`s take — never baked at build time.
+let rendererUrl: string | null = null;
+
+export function setRendererUrl(url: string): void {
+  rendererUrl = url;
+}
+
+// Memoized so concurrent islands on one page share a single renderer
+// fetch. The custom element calls this in parallel with its component
+// chunk inside `hydrate()`. A rejection is NOT cached — the memo resets
+// so a later island can retry after a transient failure (deploy race),
+// matching `loadComponent`'s retry posture.
+let rendererPromise: Promise<RendererModule> | null = null;
+let loadRenderer: () => Promise<RendererModule> = () => {
+  if (rendererUrl === null) {
+    return Promise.reject(new Error("island renderer URL not set"));
+  }
+  rendererPromise ??= importRendererWithRetry(rendererUrl).catch(
+    (err: unknown) => {
+      rendererPromise = null;
+      throw err;
+    },
+  );
+  return rendererPromise;
+};
+
+// Same deploy-during-load defense as `loadComponent`: one retry with a
+// cache-bust hash before giving up, since the renderer URL is resolved
+// from the SSR manifest exactly like the per-island chunk URL.
+async function importRendererWithRetry(url: string): Promise<RendererModule> {
+  try {
+    return (await dynamicImport(url)) as RendererModule;
+  } catch {
+    await sleep(RETRY_DELAY_MS);
+    return (await dynamicImport(appendCacheBust(url))) as RendererModule;
+  }
+}
+
+// Test seam: jsdom can't import a real renderer chunk URL, so unit tests
+// inject the (statically imported) renderer module directly. Mirrors
+// `setDynamicImport`.
+export function setRendererImport(
+  fn: () => Promise<RendererModule>,
+): () => void {
+  const prev = loadRenderer;
+  loadRenderer = fn;
+  return () => {
+    loadRenderer = prev;
+    rendererPromise = null;
+  };
+}
+
 function appendCacheBust(url: string): string {
   return `${url}#plumix-retry=${Date.now()}`;
 }
@@ -288,14 +367,15 @@ function readProps(el: HTMLElement): Readonly<Record<string, unknown>> {
 
 // React-element props (children + named slots) were wrapped in
 // <plumix-static-slot> at SSR and listed by name on `slots=`. On
-// hydrate, find each matching descendant and bridge its SSR'd HTML
-// back into the prop slot via <StaticHtml>. The closest('plumix-
-// island') === el guard filters nested-island slots so a parent
-// doesn't claim a child's.
-function readSlotProps(el: PlumixIslandElement): Record<string, unknown> {
+// hydrate, find each matching descendant and collect its SSR'd HTML as a
+// raw string by slot name; the renderer chunk wraps each in <StaticHtml>
+// (that's the React work, kept out of this chunk). The
+// closest('plumix-island') === el guard filters nested-island slots so a
+// parent doesn't claim a child's.
+function readSlotHtml(el: PlumixIslandElement): Record<string, string> {
   const raw = el.getAttribute("slots");
   if (!raw) return {};
-  const out: Record<string, unknown> = {};
+  const out: Record<string, string> = {};
   for (const name of raw.split(",")) {
     if (!name) continue;
     const slot = Array.from(
@@ -304,10 +384,7 @@ function readSlotProps(el: PlumixIslandElement): Record<string, unknown> {
       ),
     ).find((node) => node.closest(ISLAND_TAG) === el);
     if (!slot) continue;
-    out[name] = createElement(StaticHtml, {
-      html: slot.innerHTML,
-      slotName: name,
-    });
+    out[name] = slot.innerHTML;
   }
   return out;
 }

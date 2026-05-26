@@ -18,33 +18,46 @@ describe("injectIslandsBootstrap", () => {
         file: "assets/plumix-islands-runtime.abc.js",
         isEntry: true,
       },
+      ".plumix/islands-renderer-entry.ts": {
+        file: "assets/plumix-islands-renderer.def.js",
+        isEntry: true,
+      },
     };
-    expect(injectIslandsBootstrap(body, staleManifest, "serve")).toContain(
-      '<script type="module" src="/.plumix/islands-entry.ts"></script>',
+    const out = injectIslandsBootstrap(body, staleManifest, "serve");
+    expect(out).toContain('src="/.plumix/islands-entry.ts"');
+    expect(out).toContain(
+      'data-plumix-renderer-url="/.plumix/islands-renderer-entry.ts"',
     );
   });
 
-  test("build mode uses the hashed manifest URL when present", () => {
+  test("build mode uses the hashed manifest URLs for runtime + renderer", () => {
     const body = '<plumix-island chunk-url="/x"></plumix-island>';
     const manifest = {
       ".plumix/islands-entry.ts": {
         file: "assets/plumix-islands-runtime-abc123.js",
         isEntry: true,
       },
+      ".plumix/islands-renderer-entry.ts": {
+        file: "assets/plumix-islands-renderer-def456.js",
+        isEntry: true,
+      },
     };
-    expect(injectIslandsBootstrap(body, manifest, "build")).toContain(
-      '<script type="module" src="/assets/plumix-islands-runtime-abc123.js"></script>',
+    const out = injectIslandsBootstrap(body, manifest, "build");
+    expect(out).toContain('src="/assets/plumix-islands-runtime-abc123.js"');
+    expect(out).toContain(
+      'data-plumix-renderer-url="/assets/plumix-islands-renderer-def456.js"',
     );
   });
 
-  test("build mode falls back to the dev path when manifest entry is missing", () => {
-    // First-build edge: manifest exists but doesn't have the runtime
-    // entry yet (the cold-build ordering @cloudflare/vite-plugin
-    // produces). Don't break the page — emit the dev path so the page
-    // still hydrates locally even in this transient state.
+  test("build mode falls back to the dev paths when manifest entries are missing", () => {
+    // First-build edge: manifest exists but doesn't have the entries yet
+    // (the cold-build ordering @cloudflare/vite-plugin produces). Don't
+    // break the page — emit the dev paths so it still hydrates locally.
     const body = '<plumix-island chunk-url="/x"></plumix-island>';
-    expect(injectIslandsBootstrap(body, {}, "build")).toContain(
-      '<script type="module" src="/.plumix/islands-entry.ts"></script>',
+    const out = injectIslandsBootstrap(body, {}, "build");
+    expect(out).toContain('src="/.plumix/islands-entry.ts"');
+    expect(out).toContain(
+      'data-plumix-renderer-url="/.plumix/islands-renderer-entry.ts"',
     );
   });
 });

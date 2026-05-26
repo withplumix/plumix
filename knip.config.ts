@@ -65,11 +65,13 @@ const config: KnipConfig = {
         "src/admin/theme.css",
         "src/blocks/index.ts",
         "src/blocks/test.ts",
-        // The islands runtime entry is loaded by the consumer's
-        // generated `.plumix/islands-entry.ts` via `import
-        // "plumix/blocks/island-runtime"` — runtime import knip
+        // The islands runtime + renderer entries are loaded by the
+        // consumer's generated `.plumix/islands-*-entry.ts` files via
+        // `import "plumix/blocks/island-runtime"` / `export * from
+        // "plumix/blocks/island-renderer"` — runtime imports knip
         // can't see.
         "src/blocks/island-runtime.ts",
+        "src/blocks/island-renderer.ts",
         "src/cli/index.ts",
         "src/fields/index.ts",
         "src/i18n/index.ts",

@@ -6,7 +6,12 @@ import {
   PlumixIslandElement,
   registerIslandElement,
   setDynamicImport,
+  setRendererImport,
+  setRendererUrl,
 } from "./island-element.js";
+// The real renderer chunk, injected via the seam — jsdom can't import a
+// renderer chunk by URL, so unit tests hand the element the actual module.
+import * as islandRenderer from "./island-renderer.js";
 import { serializeProps } from "./serialize.js";
 
 function makeIsland(attrs: Record<string, string>): PlumixIslandElement {
@@ -44,15 +49,20 @@ describe("registerIslandElement", () => {
 
 describe("PlumixIslandElement lifecycle", () => {
   let restoreImport: () => void = () => undefined;
+  let restoreRenderer: () => void = () => undefined;
 
   beforeEach(() => {
     document.body.innerHTML = "";
     delete (window as { Plumix?: unknown }).Plumix;
     restoreImport = () => undefined;
+    // Hand the element the real renderer module; production resolves it
+    // from a chunk URL, which jsdom can't import.
+    restoreRenderer = setRendererImport(() => Promise.resolve(islandRenderer));
   });
 
   afterEach(async () => {
     restoreImport();
+    restoreRenderer();
     // Detach any islands the test mounted so the React scheduler
     // unmounts their roots before the next test (or vitest's jsdom
     // teardown). React 19's scheduler queues work via setImmediate /
@@ -345,6 +355,43 @@ describe("PlumixIslandElement lifecycle", () => {
     el.setAttribute("props", serializeProps({ title: "second" }));
     await vi.waitFor(() => expect(seen).toHaveLength(2));
     expect(seen[1]).toEqual({ title: "second" });
+  });
+
+  test("retries the renderer chunk import with a cache-bust after one failure", async () => {
+    // The renderer URL is resolved from the SSR manifest exactly like the
+    // per-island chunk URL, so it gets the same deploy-during-load defense:
+    // one cache-busted retry before surfacing a hydration error.
+    vi.useFakeTimers();
+    // Drop back to the default URL-based renderer loader (the suite's
+    // beforeEach injects the real module directly; here we exercise the
+    // network path).
+    restoreRenderer();
+    setRendererUrl("/renderer.js");
+    const calls: string[] = [];
+    restoreImport = setDynamicImport((url) => {
+      calls.push(url);
+      if (url.startsWith("/renderer.js") && !url.includes("plumix-retry")) {
+        return Promise.reject(new Error("renderer blip"));
+      }
+      return Promise.resolve({
+        default: () => null,
+        mount: islandRenderer.mount,
+      });
+    });
+    stubStrategies();
+    const el = makeIsland({
+      client: "load",
+      "chunk-url": "/chunk.js",
+      "component-export": "default",
+      opts: "{}",
+    });
+    document.body.appendChild(el);
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(1000);
+    const rendererCalls = calls.filter((u) => u.startsWith("/renderer.js"));
+    expect(rendererCalls).toHaveLength(2);
+    expect(rendererCalls[1]).toMatch(/#plumix-retry=\d+$/);
+    vi.useRealTimers();
   });
 
   test("declares `props` in observedAttributes", () => {

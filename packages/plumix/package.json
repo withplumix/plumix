@@ -97,6 +97,10 @@
       "types": "./dist/blocks/island-runtime.d.ts",
       "default": "./dist/blocks/island-runtime.js"
     },
+    "./blocks/island-renderer": {
+      "types": "./dist/blocks/island-renderer.d.ts",
+      "default": "./dist/blocks/island-renderer.js"
+    },
     "./schema": {
       "types": "./dist/schema/index.d.ts",
       "default": "./dist/schema/index.js"
