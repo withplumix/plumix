@@ -1,5 +1,9 @@
 packages:
-  - "packages/*"
+  - "packages/admin"
+  - "packages/blocks"
+  - "packages/core"
+  - "packages/create-plumix-app"
+  - "packages/plumix"
   - "packages/runtimes/*"
   - "packages/plugins/*"
   - "packages/plugins/*/playground"
