@@ -84,3 +84,25 @@ export const noBareThrowError = noBareThrowErrorFor([
   "src/**/*.ts",
   "src/**/*.tsx",
 ]);
+
+// Public-API boundary. Consumer packages (plugins, runtimes, the scaffolder)
+// must import from the public `plumix` umbrella, never reach into the internal
+// @plumix/{core,admin,blocks} packages. Packages opt in by spreading this
+// alongside baseConfig in their eslint.config.ts.
+export const noInternalImports = defineConfig({
+  files: ["**/*.js", "**/*.ts", "**/*.tsx"],
+  rules: {
+    "no-restricted-imports": [
+      "error",
+      {
+        patterns: [
+          {
+            group: ["@plumix/core", "@plumix/admin", "@plumix/blocks"],
+            message:
+              "Import from the public 'plumix' umbrella instead of reaching into internal @plumix/{core,admin,blocks} packages.",
+          },
+        ],
+      },
+    ],
+  },
+});

@@ -17,7 +17,6 @@ Turborepo drives everything from the root:
 - `pnpm test` — vitest across every package that defines tests
 - `pnpm test:e2e` — Playwright e2e (only the packages that opt in)
 - `pnpm knip` — unused-export and dependency check
-- `pnpm boundaries` — dependency-cruiser; enforces the umbrella-vs-internals rule (see Architecture)
 - `pnpm commitlint` — conventional-commit lint
 
 **Single-package commands.** Use turbo, not pnpm, for any task with `dependsOn` set (`build`, `lint`, `typecheck`, `test`, `test:e2e`, `publint`, `attw`):
@@ -55,7 +54,7 @@ The `plumix` package re-exports the public API surface from internal `@plumix/{c
 
 **Consumer packages — plugins, runtimes, examples, `create-plumix-app` — must import from `plumix` (or its subpaths). They must not import from `@plumix/core`, `@plumix/admin`, or `@plumix/blocks` directly.**
 
-This is the boundary that lets internal packages refactor freely while the published surface stays stable. Violations are caught by `pnpm boundaries` (config in `.dependency-cruiser.cjs`).
+This is the boundary that lets internal packages refactor freely while the published surface stays stable. Violations are caught by ESLint's `no-restricted-imports` rule via the `noInternalImports` config in `@plumix/eslint-config`, which consumer packages opt into.
 
 ### Plugin model
 
