@@ -22,6 +22,18 @@ describe("bootstrapIslandRuntime", () => {
     ).toBe("function");
   });
 
+  test("registers all five hydration strategies on window.Plumix", async () => {
+    // Call the exported bootstrap directly: the module-body invocation runs
+    // once (module cache), but beforeEach clears window.Plumix, so we
+    // re-bootstrap to populate it deterministically.
+    const { bootstrapIslandRuntime } = await import("./island-runtime.js");
+    bootstrapIslandRuntime();
+    const plumix = (window as { Plumix?: Record<string, unknown> }).Plumix;
+    for (const name of ["load", "idle", "visible", "interaction", "only"]) {
+      expect(typeof plumix?.[name]).toBe("function");
+    }
+  });
+
   test("re-running bootstrap is idempotent", async () => {
     const { bootstrapIslandRuntime } = await import("./island-runtime.js");
     bootstrapIslandRuntime();

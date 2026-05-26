@@ -153,13 +153,16 @@ describe("transformUseClientModule", () => {
     // exact JSX/createElement shape is an internal detail.
     expect(out).toContain('"chunk-url": "/src/Counter.tsx"');
     expect(out).toContain('"component-export": "Counter"');
-    expect(out).toContain('"ssr": ""');
+    // `ssr=""` gates nested hydration for SSR'd islands; `only` islands get
+    // `null` (no markup, no gate).
+    expect(out).toContain('"ssr": __only ? null : ""');
   });
 
-  test("shim forwards strategy from the `client` JSX prop, defaulting to load", () => {
+  test("shim defaults the hydration trigger to `interaction`", () => {
     // `IslandProps<T>` enforces the type at compile time; the custom
-    // element dispatches `plumix:hydration-error` for unknown strategies
-    // at runtime. The shim itself just passes the value through.
+    // element dispatches `plumix:hydration-error` for unknown strategies at
+    // runtime. The shim passes an explicit `client` prop through and falls
+    // back to `interaction` — hydrate on first user intent.
     const source = `
       "use client";
       export function Counter() { return null; }
@@ -168,7 +171,42 @@ describe("transformUseClientModule", () => {
       chunkUrl: "/Counter.tsx",
     });
     expect(result?.code).toContain(
-      `typeof client === "string" ? client : "load"`,
+      `typeof client === "string" ? client : "interaction"`,
+    );
+  });
+
+  test("shim resolves a default `prefetch` trigger per the defaults table", () => {
+    // Prefetch (chunk download) is split from hydrate (mount): the
+    // `interaction` default warms on `visible` so the first click is
+    // instant. Authors override via the `prefetch` prop, which the shim
+    // destructures out and forwards as a `prefetch=` attribute.
+    const source = `
+      "use client";
+      export function Counter() { return null; }
+    `;
+    const result = transformUseClientModule(source, "/Counter.tsx", {
+      chunkUrl: "/Counter.tsx",
+    });
+    expect(result?.code).toContain(`interaction: "visible"`);
+    expect(result?.code).toContain(
+      `typeof prefetch === "string" ? prefetch : (__PREFETCH_DEFAULTS[__when]`,
+    );
+    expect(result?.code).toContain('"prefetch": __pf');
+  });
+
+  test("shim renders no SSR markup for an `only` island (empty shell)", () => {
+    const source = `
+      "use client";
+      export function BrowserOnly() { return null; }
+    `;
+    const result = transformUseClientModule(source, "/BrowserOnly.tsx", {
+      chunkUrl: "/BrowserOnly.tsx",
+    });
+    // The child render + the `ssr` gate are both guarded on `__only`, so an
+    // `only` island emits `<plumix-island>` with no children.
+    expect(result?.code).toContain('const __only = __when === "only"');
+    expect(result?.code).toContain(
+      `__only ? null : __c(__orig["BrowserOnly"], wrapped)`,
     );
   });
 
@@ -189,9 +227,9 @@ describe("transformUseClientModule", () => {
     // — the custom element's `deserializeProps` expects this shape
     // so Date/Map/Set/etc. survive the round-trip.
     expect(result?.code).toContain("__ser(rest)");
-    // The shim destructures `client` out before forwarding so the
-    // strategy slot doesn't leak into the props attribute either.
-    expect(result?.code).toContain("const { client, ...rest }");
+    // The shim destructures `client` + `prefetch` out before forwarding so
+    // neither strategy slot leaks into the props attribute.
+    expect(result?.code).toContain("const { client, prefetch, ...rest }");
   });
 
   test("returns null for files without the directive (no-op transform)", () => {

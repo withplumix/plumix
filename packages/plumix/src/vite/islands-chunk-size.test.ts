@@ -13,10 +13,15 @@ type ViteManifest = Record<string, { readonly file: string }>;
 // modules the generated `.plumix/islands-*-entry.ts` inputs re-export)
 // through Vite with the plugin's load-bearing options
 // (`preserveEntrySignatures: "strict"`, prod minify) and asserts the
-// element chunk stays under the issue's 3 KB gz ceiling. A regression
-// that pulls React back into the element chunk blows it to ~60 KB and
-// fails here.
-const ELEMENT_CHUNK_CEILING_BYTES = 3 * 1024;
+// element chunk stays under the ceiling. A regression that pulls React back
+// into the element chunk blows it to ~60 KB and fails here.
+//
+// The chunk carries the custom element + all five hydration strategies
+// (load/idle/visible/interaction/only) + the prefetch wiring + prop
+// (de)serialization — measured at ~3.5 KB gz (was ~2.4 KB with only
+// `load`). 4 KB leaves headroom for a strategy or two while still catching
+// React (~60 KB) instantly.
+const ELEMENT_CHUNK_CEILING_BYTES = 4 * 1024;
 // A real Vite build — give it room beyond vitest's 5s default.
 const BUILD_TIMEOUT_MS = 30_000;
 

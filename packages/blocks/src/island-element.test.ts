@@ -490,3 +490,115 @@ describe("PlumixIslandElement lifecycle", () => {
     expect(seen[0]).toEqual({ title: "hello", n: 42 });
   });
 });
+
+describe("PlumixIslandElement prefetch/hydrate split", () => {
+  let restoreImport: () => void = () => undefined;
+  let restoreRenderer: () => void = () => undefined;
+
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    delete (window as { Plumix?: unknown }).Plumix;
+    restoreImport = () => undefined;
+    restoreRenderer = setRendererImport(() => Promise.resolve(islandRenderer));
+  });
+
+  afterEach(async () => {
+    restoreImport();
+    restoreRenderer();
+    document.body.innerHTML = "";
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+
+  test("wires prefetch separately from hydrate and warms the chunk without mounting", async () => {
+    const imports: string[] = [];
+    restoreImport = setDynamicImport((url) => {
+      imports.push(url);
+      return Promise.resolve({ default: () => null } as unknown);
+    });
+    let prefetchLoad: (() => Promise<void>) | undefined;
+    let hydrateLoad: (() => Promise<void>) | undefined;
+    window.Plumix = {
+      visible: (loadFn) => {
+        prefetchLoad = loadFn;
+      },
+      interaction: (loadFn) => {
+        hydrateLoad = loadFn;
+      },
+    };
+    const el = makeIsland({
+      client: "interaction",
+      prefetch: "visible",
+      "chunk-url": "/chunk.js",
+      "component-export": "default",
+      opts: "{}",
+    });
+    document.body.appendChild(el);
+    await Promise.resolve();
+
+    // Both triggers are wired; nothing has been fetched yet.
+    expect(typeof prefetchLoad).toBe("function");
+    expect(typeof hydrateLoad).toBe("function");
+    expect(imports).toEqual([]);
+
+    // Firing the prefetch trigger warms the component chunk without mounting.
+    await prefetchLoad?.();
+    expect(imports).toContain("/chunk.js");
+  });
+
+  test("skips the prefetch strategy entirely when hydration is immediate (load)", async () => {
+    const calls: string[] = [];
+    window.Plumix = {
+      load: () => {
+        calls.push("load");
+      },
+      visible: () => {
+        calls.push("visible");
+      },
+    };
+    const el = makeIsland({
+      client: "load",
+      prefetch: "load",
+      "chunk-url": "/c.js",
+      "component-export": "default",
+      opts: "{}",
+    });
+    document.body.appendChild(el);
+    await Promise.resolve();
+    expect(calls).toEqual(["load"]);
+  });
+
+  test("does not double-wire when the prefetch trigger equals the hydrate trigger", async () => {
+    const calls: string[] = [];
+    window.Plumix = {
+      visible: () => {
+        calls.push("visible");
+      },
+    };
+    const el = makeIsland({
+      client: "visible",
+      prefetch: "visible",
+      "chunk-url": "/c.js",
+      "component-export": "default",
+      opts: "{}",
+    });
+    document.body.appendChild(el);
+    await Promise.resolve();
+    expect(calls).toEqual(["visible"]);
+  });
+
+  test("runs a strategy's teardown when the island disconnects", async () => {
+    const teardown = vi.fn();
+    window.Plumix = { visible: () => teardown };
+    const el = makeIsland({
+      client: "visible",
+      "chunk-url": "/c.js",
+      "component-export": "default",
+      opts: "{}",
+    });
+    document.body.appendChild(el);
+    await Promise.resolve();
+    expect(teardown).not.toHaveBeenCalled();
+    el.remove();
+    expect(teardown).toHaveBeenCalledTimes(1);
+  });
+});

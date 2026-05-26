@@ -136,13 +136,17 @@ export function transformUseClientModule(
     // Plain JSON.stringify would silently coerce them.
     `import { serializeProps as __ser } from "plumix/blocks";`,
     `import * as __orig from ${origUrl};`,
+    // Default prefetch trigger per hydration trigger. `interaction`'s
+    // `visible` default is the one that makes the first click feel instant
+    // — the chunk is warm before the user reaches the island.
+    `const __PREFETCH_DEFAULTS = { load: "load", idle: "load", visible: "visible", interaction: "visible", only: "load" };`,
     // `wrapped` is the full prop set fed to the SSR'd Component (with
     // React-element props replaced by <plumix-static-slot> wrappers).
     // `rest` is the JSON-safe subset for the serialized `props=`
     // attribute — element props are excluded and bridged via
     // StaticHtml on hydrate.
     `function __split(props) {`,
-    `  const { client, ...rest } = props ?? {};`,
+    `  const { client, prefetch, ...rest } = props ?? {};`,
     `  const slots = [];`,
     `  const wrapped = {};`,
     `  for (const k of Object.keys(rest)) {`,
@@ -155,7 +159,7 @@ export function transformUseClientModule(
     `      wrapped[k] = v;`,
     `    }`,
     `  }`,
-    `  return { client, rest, wrapped, slots };`,
+    `  return { client, prefetch, rest, wrapped, slots };`,
     `}`,
   ];
   for (const finding of findings) {
@@ -167,15 +171,24 @@ export function transformUseClientModule(
       : `export function ${name}(props)`;
     lines.push(
       `${exportPrefix} {`,
-      `  const { client, rest, wrapped, slots } = __split(props);`,
+      `  const { client, prefetch, rest, wrapped, slots } = __split(props);`,
+      // Default hydration trigger is `interaction` — hydrate on first user
+      // intent, replay the event. Authors opt into eager/visible/idle
+      // explicitly; the common case pays for JS only when engaged.
+      `  const __when = typeof client === "string" ? client : "interaction";`,
+      `  const __pf = typeof prefetch === "string" ? prefetch : (__PREFETCH_DEFAULTS[__when] || "load");`,
+      // `only` skips SSR entirely: empty shell, no `ssr` gate attribute, the
+      // client renders into it on connect.
+      `  const __only = __when === "only";`,
       `  return __c("plumix-island", {`,
       `    "chunk-url": ${chunkUrl},`,
       `    "component-export": ${targetLiteral},`,
-      `    "client": typeof client === "string" ? client : "load",`,
+      `    "client": __when,`,
+      `    "prefetch": __pf,`,
       `    "props": __ser(rest),`,
       `    "slots": slots.length ? slots.join(",") : null,`,
-      `    "ssr": "",`,
-      `  }, __c(__orig[${targetLiteral}], wrapped));`,
+      `    "ssr": __only ? null : "",`,
+      `  }, __only ? null : __c(__orig[${targetLiteral}], wrapped));`,
       `}`,
     );
   }
