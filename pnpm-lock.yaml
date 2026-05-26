@@ -43,8 +43,8 @@ catalogs:
       specifier: ^3.8.3
       version: 3.8.3
     publint:
-      specifier: ^0.3.18
-      version: 0.3.18
+      specifier: ^0.3.21
+      version: 0.3.21
     react:
       specifier: ^19.2.6
       version: 19.2.6
@@ -507,7 +507,7 @@ importers:
         version: 3.8.3
       publint:
         specifier: 'catalog:'
-        version: 0.3.18
+        version: 0.3.21
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -589,7 +589,7 @@ importers:
         version: 3.8.3
       publint:
         specifier: 'catalog:'
-        version: 0.3.18
+        version: 0.3.21
       react:
         specifier: 'catalog:'
         version: 19.2.6
@@ -671,7 +671,7 @@ importers:
         version: 3.8.3
       publint:
         specifier: 'catalog:'
-        version: 0.3.18
+        version: 0.3.21
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -757,7 +757,7 @@ importers:
         version: 3.8.3
       publint:
         specifier: 'catalog:'
-        version: 0.3.18
+        version: 0.3.21
       react:
         specifier: 'catalog:'
         version: 19.2.6
@@ -876,7 +876,7 @@ importers:
         version: 3.8.3
       publint:
         specifier: 'catalog:'
-        version: 0.3.18
+        version: 0.3.21
       react:
         specifier: 'catalog:'
         version: 19.2.6
@@ -958,7 +958,7 @@ importers:
         version: 3.8.3
       publint:
         specifier: 'catalog:'
-        version: 0.3.18
+        version: 0.3.21
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -1080,7 +1080,7 @@ importers:
         version: 3.8.3
       publint:
         specifier: 'catalog:'
-        version: 0.3.18
+        version: 0.3.21
       react:
         specifier: 'catalog:'
         version: 19.2.6
@@ -1153,7 +1153,7 @@ importers:
         version: 3.8.3
       publint:
         specifier: 'catalog:'
-        version: 0.3.18
+        version: 0.3.21
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -6090,8 +6090,8 @@ packages:
   prosemirror-view@1.41.8:
     resolution: {integrity: sha512-TnKDdohEatgyZNGCDWIdccOHXhYloJwbwU+phw/a23KBvJIR9lWQWW7WHHK3vBdOLDNuF7TaX98GObUZOWkOnA==}
 
-  publint@0.3.18:
-    resolution: {integrity: sha512-JRJFeBTrfx4qLwEuGFPk+haJOJN97KnPuK01yj+4k/Wj5BgoOK5uNsivporiqBjk2JDaslg7qJOhGRnpltGeog==}
+  publint@0.3.21:
+    resolution: {integrity: sha512-OqejcnMV6E9zel2oCrUOJEiiFkGiAAni0A6ibfQNh1k9Gu5z4F+Yso8lllam7AzmV6Do0vp7u3UpZNRBwuXaHQ==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -11669,7 +11669,7 @@ snapshots:
       prosemirror-state: 1.4.4
       prosemirror-transform: 1.12.0
 
-  publint@0.3.18:
+  publint@0.3.21:
     dependencies:
       '@publint/pack': 0.1.4
       package-manager-detector: 1.6.0
