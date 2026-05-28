@@ -81,6 +81,14 @@ export interface ResolvedMenu {
   readonly items: readonly ResolvedMenuItem[];
 }
 
+// Lives here (not main entry) so themes pulling /server types pick
+// up the augmentation without a side-effect import on the main entry.
+declare module "plumix/plugin" {
+  interface TemplateDepRegistry {
+    menus: { slug: string; result: ResolvedMenu };
+  }
+}
+
 /**
  * Theme-side input for `registerMenuLocation`. The label appears in the
  * admin Locations panel (slice 7+); description is optional helper text.

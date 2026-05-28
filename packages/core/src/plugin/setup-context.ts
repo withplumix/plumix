@@ -235,6 +235,25 @@ export interface PluginSetupContextBase {
    * function. The `kind` must match a key in the augmentable
    * `TemplateDepRegistry` interface; two plugins registering the
    * same `kind` is a boot-time error.
+   *
+   * **Augmenting `TemplateDepRegistry` so consumers see the kind.**
+   * TypeScript only merges the augmentation when the file declaring
+   * it is in the consumer's tsc program. The pattern depends on where
+   * the plugin lives:
+   *
+   * - **Workspace-package plugin** (e.g. `@plumix/plugin-menu`): put
+   *   the `declare module "plumix/plugin"` block alongside the
+   *   result type the plugin exports from `/server`. Themes import
+   *   the result type from `/server`, which pulls the augmentation
+   *   in too. Avoid the main entry — themes that only touch `/server`
+   *   types never load it.
+   *
+   * - **Consumer-local plugin** (defined inline in the consumer's
+   *   source, e.g. `playground/plugins/post-navigation.ts`): the
+   *   theme can't import from the consumer (wrong dep direction).
+   *   Put the `declare module` block in a shared types file (e.g.
+   *   `plumix-types.d.ts`) that both the consumer's plumix config
+   *   and the theme entry import as a side effect.
    */
   registerTemplateDep<TKind extends keyof TemplateDepRegistry>(
     kind: TKind,

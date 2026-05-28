@@ -1,3 +1,6 @@
+// Side-effect: exposes core's `TemplateDepRegistry` augmentation.
+import "./template-deps-core.js";
+
 export * from "./admin/index.js";
 export * from "./auth/index.js";
 export * from "./cli/index.js";
