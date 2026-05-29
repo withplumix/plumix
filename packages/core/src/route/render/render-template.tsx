@@ -26,7 +26,10 @@ import type { AssetManifest } from "./asset-manifest.js";
 import type { ErrorData } from "./resolved-entry.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
 import { mergeDocumentManifest } from "../../document-merge.js";
-import { loadTemplateDeps } from "../../template-deps.js";
+import {
+  loadTemplateDeps,
+  mergeTemplateDepDeclarations,
+} from "../../template-deps.js";
 import { normalizeTemplate } from "../../template.js";
 import { validateDocumentManifest } from "../../theme.js";
 import { bundledCssTags } from "./asset-manifest.js";
@@ -58,11 +61,11 @@ export async function renderThroughTheme({
 }: RenderArgs): Promise<string> {
   const candidates = await resolveTemplateCandidates(node, ctx.hooks);
   const { template, slot } = pickTemplate(theme.templates, candidates);
-  // Load every dep the template declared in parallel before render.
-  // Loader failures don't 500 the page — `loadTemplateDeps` swallows
-  // them, logs via `ctx.logger.error`, and seeds an empty map.
   const deps = await loadTemplateDeps(
-    template as unknown as Record<string, unknown>,
+    mergeTemplateDepDeclarations(
+      theme.templateDeps,
+      template as unknown as Record<string, unknown>,
+    ),
     templateDeps,
     ctx,
   );
@@ -121,10 +124,11 @@ export async function renderErrorThroughTheme({
   const variant = ERROR_VARIANTS[kind];
   const raw = theme.templates[variant.key] ?? variant.fallback;
   const template = normalizeTemplate(raw, variant.key);
-  // Error templates can declare deps too — loader failures still log
-  // + empty-map fallback so a 404/500 render never escalates.
   const deps = await loadTemplateDeps(
-    template as unknown as Record<string, unknown>,
+    mergeTemplateDepDeclarations(
+      theme.templateDeps,
+      template as unknown as Record<string, unknown>,
+    ),
     templateDeps,
     ctx,
   );

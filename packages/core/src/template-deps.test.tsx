@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { RegisteredTemplateDep } from "./template-deps.js";
 import { auth } from "./auth/config.js";
 import { plumix } from "./config.js";
+import { settings as settingsSchema } from "./db/schema/settings.js";
 import { definePlugin } from "./plugin/define.js";
 import { DuplicateRegistrationError } from "./plugin/errors.js";
 import { buildApp } from "./runtime/app.js";
@@ -356,6 +357,105 @@ describe("core settings dep", () => {
       new Request("https://cms.example/post/settings-flow"),
     );
     expect(await after.text()).toContain("Plumix Demo");
+  });
+});
+
+function pickString(bag: unknown, key: string): string {
+  if (bag === null || typeof bag !== "object") return "";
+  const value = (bag as Record<string, unknown>)[key];
+  return typeof value === "string" ? value : "";
+}
+
+const blogTypePlugin = definePlugin("blog", (ctx) => {
+  ctx.registerEntryType("post", {
+    label: "Posts",
+    isPublic: true,
+    hasArchive: true,
+  });
+});
+
+describe("theme-level templateDeps", () => {
+  test("declarations on `defineTheme` reach every template's render args", async () => {
+    const theme = defineTheme({
+      templateDeps: { settings: ["site-info"] },
+      templates: {
+        index: () => null,
+        single: defineTemplate({
+          render: (args) =>
+            pickString(args.settings?.["site-info"], "title") || "Untitled",
+        }),
+      },
+    });
+    const h = await createDispatcherHarness({
+      plugins: [blogTypePlugin],
+      theme,
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "from-theme",
+      title: "From Theme",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.db.insert(settingsSchema).values({
+      group: "site-info",
+      key: "title",
+      value: "Plumix Demo",
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/from-theme"),
+    );
+    expect(await response.text()).toContain("Plumix Demo");
+  });
+
+  test("per-template slugs union with theme-level slugs of the same kind", async () => {
+    const theme = defineTheme({
+      templateDeps: { settings: ["site-info"] },
+      templates: {
+        index: () => null,
+        single: defineTemplate({
+          settings: ["author-info"],
+          render: (args) => (
+            <article>
+              {pickString(args.settings?.["site-info"], "title")}
+              {"|"}
+              {pickString(args.settings?.["author-info"], "name")}
+            </article>
+          ),
+        }),
+      },
+    });
+    const h = await createDispatcherHarness({
+      plugins: [blogTypePlugin],
+      theme,
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "union",
+      title: "Union",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.db
+      .insert(settingsSchema)
+      .values([
+        { group: "site-info", key: "title", value: "Plumix" },
+        { group: "author-info", key: "name", value: "Ada" },
+      ]);
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/union"),
+    );
+    const body = await response.text();
+    expect(body).toContain("Plumix");
+    expect(body).toContain("Ada");
   });
 });
 

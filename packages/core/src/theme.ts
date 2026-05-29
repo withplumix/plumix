@@ -9,7 +9,7 @@ import type {
   SingleData,
   TaxonomyData,
 } from "./route/render/resolved-entry.js";
-import type { Template } from "./template.js";
+import type { Template, TemplateDepDeclarations } from "./template.js";
 import { ThemeError, ThemeRegistrationError } from "./theme-errors.js";
 
 // `theme:document` is a boot-time filter chain. `buildApp` fires it once,
@@ -135,6 +135,12 @@ export interface ThemeDescriptor {
    * resolves them through its normal graph and emits hashed bundles.
    */
   readonly css?: readonly string[];
+  /**
+   * Dep declarations applied to every template. Per-template slugs of
+   * the same kind union (dedup'd) with these; a global `settings:
+   * ["general"]` reaches templates that never declared `settings`.
+   */
+  readonly templateDeps?: TemplateDepDeclarations;
 }
 
 const TOKEN_SLUG_RE = /^[a-z][a-z0-9-]*$/;
