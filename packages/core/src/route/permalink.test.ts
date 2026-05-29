@@ -7,7 +7,11 @@ import { definePlugin } from "../plugin/define.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { installPlugins } from "../plugin/register.js";
 import { adminUser, createTestDb, factoriesFor } from "../test/index.js";
-import { buildEntryPermalink, buildTermArchiveUrl } from "./permalink.js";
+import {
+  buildEntryPermalink,
+  buildEntryPermalinkSync,
+  buildTermArchiveUrl,
+} from "./permalink.js";
 
 async function buildRegistry(
   plugins: ReturnType<typeof definePlugin>[],
@@ -256,6 +260,117 @@ describe("buildEntryPermalink", () => {
     expect(await buildEntryPermalink(ctx, { type: "post", slug: "./.." })).toBe(
       "/post",
     );
+  });
+});
+
+describe("buildEntryPermalinkSync", () => {
+  // Locks the sync slice's branches — the async permalink builder now
+  // delegates here for the no-DB cases, so a regression here ripples
+  // out to listing URLs, sitemap, canonical tags, and the menu plugin.
+
+  test("non-hierarchical type returns the substituted URL", async () => {
+    const registry = await buildRegistry([
+      definePlugin("blog", (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      }),
+    ]);
+    const db = await createTestDb();
+    const ctx = ctxFor(db, registry);
+
+    expect(buildEntryPermalinkSync(ctx, { type: "post", slug: "hi" })).toBe(
+      "/post/hi",
+    );
+  });
+
+  test("hierarchical type with parentId=null returns the top-level URL", async () => {
+    const registry = await buildRegistry([
+      definePlugin("pages", (ctx) => {
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          isHierarchical: true,
+        });
+      }),
+    ]);
+    const db = await createTestDb();
+    const ctx = ctxFor(db, registry);
+
+    expect(
+      buildEntryPermalinkSync(ctx, {
+        type: "page",
+        slug: "about",
+        parentId: null,
+      }),
+    ).toBe("/page/about");
+  });
+
+  test("hierarchical with rewrite.isHierarchical:false flattens regardless of parentId", async () => {
+    const registry = await buildRegistry([
+      definePlugin("pages", (ctx) => {
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          isHierarchical: true,
+          rewrite: { slug: "page", isHierarchical: false },
+        });
+      }),
+    ]);
+    const db = await createTestDb();
+    const ctx = ctxFor(db, registry);
+
+    expect(
+      buildEntryPermalinkSync(ctx, {
+        type: "page",
+        slug: "leaf",
+        parentId: 7,
+      }),
+    ).toBe("/page/leaf");
+  });
+
+  test("hierarchical with a non-null parentId returns null (defers to async ancestor walk)", async () => {
+    const registry = await buildRegistry([
+      definePlugin("pages", (ctx) => {
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          isHierarchical: true,
+        });
+      }),
+    ]);
+    const db = await createTestDb();
+    const ctx = ctxFor(db, registry);
+
+    expect(
+      buildEntryPermalinkSync(ctx, {
+        type: "page",
+        slug: "leaf",
+        parentId: 7,
+      }),
+    ).toBeNull();
+  });
+
+  test("returns null for isPublic:false types", async () => {
+    const registry = await buildRegistry([
+      definePlugin("internal", (ctx) => {
+        ctx.registerEntryType("hidden", { label: "Hidden", isPublic: false });
+      }),
+    ]);
+    const db = await createTestDb();
+    const ctx = ctxFor(db, registry);
+
+    expect(
+      buildEntryPermalinkSync(ctx, { type: "hidden", slug: "x" }),
+    ).toBeNull();
+  });
+
+  test("returns null for unregistered types", async () => {
+    const registry = await buildRegistry([]);
+    const db = await createTestDb();
+    const ctx = ctxFor(db, registry);
+
+    expect(
+      buildEntryPermalinkSync(ctx, { type: "ghost", slug: "x" }),
+    ).toBeNull();
   });
 });
 

@@ -13,10 +13,14 @@ export interface ResolvedAuthor {
 // `content` stays loose so non-blocks serializers (TipTap, etc.) keep
 // working; `contentBlocks` is the narrowed `EntryContent` (null when
 // the stored JSON fails the shape check).
+//
+// `url` is null when an ancestor-chain DB walk is required — hierarchical
+// types with a non-null parentId await a follow-up batched resolver.
 export interface ResolvedEntry extends Entry {
   readonly contentBlocks: EntryContent | null;
   readonly terms: readonly Term[];
   readonly author: ResolvedAuthor;
+  readonly url: string | null;
 }
 
 // Per-kind data shapes are generic over the entry projection so theme
