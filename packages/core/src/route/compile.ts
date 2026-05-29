@@ -7,6 +7,11 @@ import type { RouteIntent, RouteRule } from "./intent.js";
 import { RouteCompileError } from "./errors.js";
 
 const AUTO_ROUTE_PRIORITY = 50;
+// Empty rewrite.slug claims root paths — `/:path+` or `/:slug` — which
+// would otherwise greedy-match every other plugin's auto rule under
+// URLPattern's first-match-wins. Demote so non-catch-all rules always
+// match first regardless of plugin registration order.
+const CATCH_ALL_ROUTE_PRIORITY = 60;
 export const DEFAULT_REWRITE_RULE_PRIORITY = 10;
 
 interface CompiledRule extends RouteRule {
@@ -97,7 +102,7 @@ function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
     pattern: new URLPattern({ pathname: singlePattern }),
     rawPattern: singlePattern,
     intent: { kind: "single", entryType: entryType.name },
-    priority: AUTO_ROUTE_PRIORITY,
+    priority: baseSlug === "" ? CATCH_ALL_ROUTE_PRIORITY : AUTO_ROUTE_PRIORITY,
     registeredBy: entryType.registeredBy,
   });
 

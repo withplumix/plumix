@@ -12,5 +12,6 @@ export const pages = definePlugin("pages", (ctx) => {
     hasArchive: false,
     capabilityType: "page",
     menuIcon: "layout",
+    rewrite: { slug: "" },
   });
 });

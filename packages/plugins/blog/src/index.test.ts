@@ -19,6 +19,11 @@ describe("@plumix/plugin-blog", () => {
     expect(post?.registeredBy).toBe("blog");
   });
 
+  test("posts permalinks use the plural `posts` base — /posts/:slug, /posts archive", async () => {
+    const { registry } = await install();
+    expect(registry.entryTypes.get("post")?.rewrite).toEqual({ slug: "posts" });
+  });
+
   test("registers category as a hierarchical taxonomy with admin column", async () => {
     const { registry } = await install();
     const category = registry.termTaxonomies.get("category");

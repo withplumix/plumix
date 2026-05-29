@@ -362,6 +362,97 @@ describe("compileRouteMap", () => {
     expect(map[0]?.priority).toBe(5);
   });
 
+  test("empty rewrite.slug emits the root catch-all at lower precedence than non-empty auto rules", async () => {
+    const registry = await buildRegistry([
+      definePlugin("pages", (ctx) => {
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          isHierarchical: true,
+          rewrite: { slug: "" },
+        });
+      }),
+      definePlugin("blog", (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          isPublic: true,
+          hasArchive: true,
+          rewrite: { slug: "posts" },
+        });
+      }),
+    ]);
+    const map = compileRouteMap(registry);
+    const patterns = map.map((r) => r.rawPattern);
+    // `/:path+` is greedy — it must sort after every non-catch-all rule
+    // so consumer plugin ordering can't shadow other plugins' singles
+    // and archives.
+    expect(patterns).toEqual([
+      "/posts/page/:page",
+      "/posts",
+      "/posts/:slug",
+      "/:path+",
+    ]);
+    expect(map.at(-1)?.priority).toBeGreaterThan(50);
+  });
+
+  test("empty rewrite.slug catch-all sorts last regardless of registration order", async () => {
+    const registryPagesFirst = await buildRegistry([
+      definePlugin("pages", (ctx) => {
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          isHierarchical: true,
+          rewrite: { slug: "" },
+        });
+      }),
+      definePlugin("blog", (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          isPublic: true,
+          hasArchive: true,
+          rewrite: { slug: "posts" },
+        });
+      }),
+    ]);
+    const registryBlogFirst = await buildRegistry([
+      definePlugin("blog", (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          isPublic: true,
+          hasArchive: true,
+          rewrite: { slug: "posts" },
+        });
+      }),
+      definePlugin("pages", (ctx) => {
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          isHierarchical: true,
+          rewrite: { slug: "" },
+        });
+      }),
+    ]);
+    const tail = (rs: ReturnType<typeof compileRouteMap>) =>
+      rs.at(-1)?.rawPattern;
+    expect(tail(compileRouteMap(registryPagesFirst))).toBe("/:path+");
+    expect(tail(compileRouteMap(registryBlogFirst))).toBe("/:path+");
+  });
+
+  test("flat empty-slug entry type also emits its single at catch-all priority", async () => {
+    const registry = await buildRegistry([
+      definePlugin("docs", (ctx) => {
+        ctx.registerEntryType("doc", {
+          label: "Docs",
+          isPublic: true,
+          rewrite: { slug: "" },
+        });
+      }),
+    ]);
+    const map = compileRouteMap(registry);
+    expect(map.map((r) => r.rawPattern)).toEqual(["/:slug"]);
+    expect(map[0]?.priority).toBeGreaterThan(50);
+  });
+
   test("hasArchive: string rejects multi-segment or non-kebab input", async () => {
     const bad = await buildRegistry([
       definePlugin("x", (ctx) => {

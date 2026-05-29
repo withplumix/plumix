@@ -13,6 +13,7 @@ export const blog = definePlugin("blog", (ctx) => {
     hasArchive: true,
     capabilityType: "post",
     menuIcon: "file-text",
+    rewrite: { slug: "posts" },
   });
 
   ctx.registerTermTaxonomy("category", {
