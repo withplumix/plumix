@@ -1,5 +1,8 @@
 import type { AppContext } from "./context/app.js";
-import type { TemplateDepRegistry } from "./template.js";
+import type {
+  TemplateDepDeclarations,
+  TemplateDepRegistry,
+} from "./template.js";
 
 /**
  * Loader signature for a template dep. Receives the slugs declared by
@@ -29,6 +32,33 @@ export interface RegisteredTemplateDep {
   readonly load: UntypedTemplateDepLoader;
   /** Plugin id, or `null` for core-registered deps (e.g. `settings`). */
   readonly registeredBy: string | null;
+}
+
+/**
+ * Combine the theme's global dep declarations with the matched
+ * template's own. Same-kind slug arrays union (Set-based dedup); the
+ * result has the same shape as a template's declarations and can be
+ * fed straight into `loadTemplateDeps`.
+ */
+export function mergeTemplateDepDeclarations(
+  themeDeps: TemplateDepDeclarations | undefined,
+  template: Readonly<Record<string, unknown>>,
+): Readonly<Record<string, readonly string[]>> {
+  const result: Record<string, readonly string[]> = {};
+  for (const [kind, value] of Object.entries(template)) {
+    if (Array.isArray(value)) result[kind] = value as readonly string[];
+  }
+  if (!themeDeps) return result;
+  for (const [kind, slugs] of Object.entries(themeDeps)) {
+    if (!Array.isArray(slugs)) continue;
+    const existing = result[kind];
+    const themeSlugs = slugs as readonly string[];
+    result[kind] =
+      existing === undefined
+        ? themeSlugs
+        : Array.from(new Set([...existing, ...themeSlugs]));
+  }
+  return result;
 }
 
 /**
