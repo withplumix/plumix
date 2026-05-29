@@ -2052,6 +2052,47 @@ describe("resolvePublicRoute — front-page through theme", () => {
     expect(body).not.toContain('data-testid="row-no-date"');
   });
 
+  test("/page/N renders the front-page on page N", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        "front-page": ({ data }) => (
+          <span data-testid="page">{`page:${String(data.pagination.page)}`}</span>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "p",
+      title: "P",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/page/1"),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("page:1");
+  });
+
+  test("/page/0 on the front-page is out-of-range 404", async () => {
+    const theme = defineTheme({
+      templates: { index: () => null, "front-page": () => null },
+    });
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/page/0"),
+    );
+    expect(response.status).toBe(404);
+  });
+
   test("plugin-registered `/` rewrite rule wins over front-page synthesis", async () => {
     const homepagePlugin = definePlugin("homepage", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });

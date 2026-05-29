@@ -264,10 +264,11 @@ async function resolvePublicRouteOrFallback(
       assetManifest,
     );
   }
-  if (url.pathname === "/") {
+  const frontPageParams = matchFrontPagePathname(url.pathname);
+  if (frontPageParams !== null) {
     return resolvePublicRoute(
       ctx,
-      { intent: { kind: "front-page" }, params: {} },
+      { intent: { kind: "front-page" }, params: frontPageParams },
       theme,
       document,
       templateDocuments,
@@ -276,6 +277,17 @@ async function resolvePublicRouteOrFallback(
     );
   }
   return notFound("public-route-not-found");
+}
+
+const FRONT_PAGE_PAGINATED = new URLPattern({ pathname: "/page/:page" });
+
+function matchFrontPagePathname(
+  pathname: string,
+): Record<string, string> | null {
+  if (pathname === "/") return {};
+  const match = FRONT_PAGE_PAGINATED.exec({ pathname });
+  const page = match?.pathname.groups.page;
+  return page === undefined ? null : { page };
 }
 
 interface PluginRawRouteMatch {
