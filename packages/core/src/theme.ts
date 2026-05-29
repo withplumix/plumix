@@ -189,14 +189,12 @@ function validateTokens(tokens: ThemeTokens): void {
       if (!TOKEN_SLUG_RE.test(slug)) {
         throw ThemeError.invalidTokenSlug({ group, slug });
       }
-      if (
-        typeof entry.value !== "string" ||
-        TOKEN_VALUE_FORBIDDEN_CHARS.test(entry.value)
-      ) {
+      if (entry.value === undefined) continue;
+      if (TOKEN_VALUE_FORBIDDEN_CHARS.test(entry.value)) {
         throw ThemeError.invalidTokenValue({
           group,
           slug,
-          value: String(entry.value),
+          value: entry.value,
         });
       }
     }
