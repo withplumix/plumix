@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { lstatSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { extname, join } from "node:path";
 import ts from "typescript";
 
@@ -215,6 +215,9 @@ export interface DiscoveredIsland {
 export interface ScannerFs {
   readDir(path: string): readonly { name: string; isDirectory: boolean }[];
   readFile(path: string): string;
+  isSymlink(path: string): boolean;
+  /** Resolves a symlink to its target; identity for plain paths. */
+  realPath(path: string): string;
 }
 
 const SCANNABLE_EXTS: ReadonlySet<string> = new Set([".ts", ".tsx"]);
@@ -229,27 +232,29 @@ const SKIP_DIRS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Walks `cwd` recursively, runs `findUseClientIslands` on every
- * `.ts`/`.tsx` source it sees (skipping the noise dirs above), and
- * surfaces every discovered island.
- *
- * v1 only walks the user's `cwd`. Island declarations in published npm
- * packages (under `node_modules`) are out of scope; a follow-up can opt
- * in via an explicit package list once the use case surfaces.
+ * Walks `cwd` and any workspace-symlinked packages under `node_modules`
+ * so a theme or plugin can ship `"use client"` files in its own `src/`
+ * without explicit registration. The `walkSymlinkedDeps` realpath gate
+ * keeps the scan out of the pnpm store.
  */
 export function scanUserSources(
   cwd: string,
   fs: ScannerFs = nodeFs,
 ): readonly DiscoveredIsland[] {
   const islands: DiscoveredIsland[] = [];
-  walk(cwd, fs, (filePath, source) => {
-    for (const finding of findUseClientIslands(source)) {
-      islands.push({
-        sourcePath: toPosix(filePath),
-        exportName: finding.exportName,
-      });
-    }
-  });
+  walk(
+    cwd,
+    fs,
+    (filePath, source) => {
+      for (const finding of findUseClientIslands(source)) {
+        islands.push({
+          sourcePath: toPosix(filePath),
+          exportName: finding.exportName,
+        });
+      }
+    },
+    true,
+  );
   return islands;
 }
 
@@ -257,6 +262,7 @@ function walk(
   dirPath: string,
   fs: ScannerFs,
   visit: (filePath: string, source: string) => void,
+  followSymlinks: boolean,
 ): void {
   let entries: readonly { name: string; isDirectory: boolean }[];
   try {
@@ -267,8 +273,12 @@ function walk(
   for (const entry of entries) {
     const full = join(dirPath, entry.name);
     if (entry.isDirectory) {
+      if (entry.name === "node_modules") {
+        if (followSymlinks) walkSymlinkedDeps(full, fs, visit);
+        continue;
+      }
       if (SKIP_DIRS.has(entry.name)) continue;
-      walk(full, fs, visit);
+      walk(full, fs, visit, followSymlinks);
       continue;
     }
     if (!SCANNABLE_EXTS.has(extname(entry.name))) continue;
@@ -286,6 +296,38 @@ function walk(
   }
 }
 
+// pnpm symlinks every dep — workspace AND published — so isSymlink
+// alone can't tell them apart. Discriminator: a workspace dep
+// realpaths outside any `node_modules` segment; a published dep
+// realpaths back into `.pnpm/<pkg>@<ver>/node_modules/<pkg>`.
+function walkSymlinkedDeps(
+  nodeModulesPath: string,
+  fs: ScannerFs,
+  visit: (filePath: string, source: string) => void,
+): void {
+  let entries: readonly { name: string; isDirectory: boolean }[];
+  try {
+    entries = fs.readDir(nodeModulesPath);
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    if (!entry.isDirectory) continue;
+    if (entry.name.startsWith(".")) continue;
+    const full = join(nodeModulesPath, entry.name);
+    if (entry.name.startsWith("@")) {
+      walkSymlinkedDeps(full, fs, visit);
+      continue;
+    }
+    if (!fs.isSymlink(full)) continue;
+    const target = fs.realPath(full);
+    if (target.includes("/node_modules/")) continue;
+    // Walk the realpath so recorded paths match what Vite emits after
+    // its default `preserveSymlinks: false` resolution.
+    walk(target, fs, visit, false);
+  }
+}
+
 function toPosix(path: string): string {
   return path.replace(/\\/g, "/");
 }
@@ -297,4 +339,18 @@ const nodeFs: ScannerFs = {
       isDirectory: entry.isDirectory(),
     })),
   readFile: (path) => readFileSync(path, "utf8"),
+  isSymlink: (path) => {
+    try {
+      return lstatSync(path).isSymbolicLink();
+    } catch {
+      return false;
+    }
+  },
+  realPath: (path) => {
+    try {
+      return realpathSync(path);
+    } catch {
+      return path;
+    }
+  },
 };

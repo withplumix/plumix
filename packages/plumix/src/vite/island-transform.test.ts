@@ -9,8 +9,14 @@ import {
 
 function fixtureFs(
   files: Record<string, string>,
-  dirs: readonly string[] = [],
+  options: {
+    readonly dirs?: readonly string[];
+    /** `linkPath → realTarget` mapping for symlinks. Reads/lists at linkPath transparently resolve to realTarget. */
+    readonly links?: Readonly<Record<string, string>>;
+  } = {},
 ): ScannerFs {
+  const dirs = options.dirs ?? [];
+  const links = options.links ?? {};
   const dirSet = new Set<string>(dirs);
   for (const path of Object.keys(files)) {
     let cur = "/";
@@ -19,6 +25,22 @@ function fixtureFs(
       dirSet.add(cur);
     }
   }
+  for (const linkPath of Object.keys(links)) {
+    let cur = "/";
+    for (const part of linkPath.split("/").filter(Boolean).slice(0, -1)) {
+      cur = cur === "/" ? `/${part}` : `${cur}/${part}`;
+      dirSet.add(cur);
+    }
+  }
+  const resolveSymlinks = (path: string): string => {
+    for (const [linkPath, target] of Object.entries(links)) {
+      if (path === linkPath) return target;
+      if (path.startsWith(`${linkPath}/`)) {
+        return `${target}${path.slice(linkPath.length)}`;
+      }
+    }
+    return path;
+  };
   const childrenOf = (dirPath: string) => {
     const out: { name: string; isDirectory: boolean }[] = [];
     const prefix = dirPath === "/" ? "/" : `${dirPath}/`;
@@ -32,20 +54,32 @@ function fixtureFs(
       const fullChild = `${prefix}${next}`;
       out.push({ name: next, isDirectory: dirSet.has(fullChild) });
     }
+    for (const linkPath of Object.keys(links)) {
+      if (!linkPath.startsWith(prefix)) continue;
+      const rest = linkPath.slice(prefix.length);
+      const next = rest.split("/")[0];
+      if (!next || seen.has(next)) continue;
+      seen.add(next);
+      out.push({ name: next, isDirectory: true });
+    }
     return out;
   };
   return {
     readDir: (path) => {
-      if (!dirSet.has(path) && path !== "/") {
+      const resolved = resolveSymlinks(path);
+      if (!dirSet.has(resolved) && resolved !== "/") {
         throw new Error(`no such dir: ${path}`);
       }
-      return childrenOf(path);
+      return childrenOf(resolved);
     },
     readFile: (path) => {
-      const content = files[path];
+      const resolved = resolveSymlinks(path);
+      const content = files[resolved];
       if (content === undefined) throw new Error(`no such file: ${path}`);
       return content;
     },
+    isSymlink: (path) => Object.prototype.hasOwnProperty.call(links, path),
+    realPath: (path) => resolveSymlinks(path),
   };
 }
 
@@ -302,6 +336,46 @@ describe("scanUserSources", () => {
     expect(new Set(islands.map((i) => i.sourcePath))).toEqual(
       new Set(["/app/src/a/A.tsx", "/app/src/b/B.tsx"]),
     );
+  });
+
+  test("does NOT follow symlinks that land in another node_modules (pnpm store)", () => {
+    // pnpm wires every dep — including published — as a symlink; only
+    // workspace targets realpath outside node_modules.
+    const fs = fixtureFs(
+      {
+        "/app/src/page.tsx": `import {} from "lodash";`,
+        "/app/node_modules/.pnpm/lodash@4/node_modules/lodash/i.tsx": `"use client"; export function Bad() { return null; }`,
+      },
+      {
+        links: {
+          "/app/node_modules/lodash":
+            "/app/node_modules/.pnpm/lodash@4/node_modules/lodash",
+        },
+      },
+    );
+    expect(scanUserSources("/app", fs)).toEqual([]);
+  });
+
+  test("descends into symlinked workspace packages under node_modules", () => {
+    const fs = fixtureFs(
+      {
+        "/app/src/page.tsx": `import { CopyLink } from "@plumix/theme-starter";`,
+        "/workspace/themes/starter/src/islands/CopyLink.tsx": `"use client"; export function CopyLink() { return null; }`,
+      },
+      {
+        links: {
+          "/app/node_modules/@plumix/theme-starter":
+            "/workspace/themes/starter",
+        },
+      },
+    );
+    const islands = scanUserSources("/app", fs);
+    expect(islands).toEqual([
+      {
+        sourcePath: "/workspace/themes/starter/src/islands/CopyLink.tsx",
+        exportName: "CopyLink",
+      },
+    ]);
   });
 
   test("ignores files that don't mention `use client` (cheap pre-filter)", () => {
