@@ -1,3 +1,5 @@
+import type { EntryContent } from "@plumix/blocks";
+
 import type { Entry } from "../../db/schema/entries.js";
 import type { Term } from "../../db/schema/terms.js";
 
@@ -8,7 +10,11 @@ export interface ResolvedAuthor {
   readonly avatarUrl: string | null;
 }
 
+// `content` stays loose so non-blocks serializers (TipTap, etc.) keep
+// working; `contentBlocks` is the narrowed `EntryContent` (null when
+// the stored JSON fails the shape check).
 export interface ResolvedEntry extends Entry {
+  readonly contentBlocks: EntryContent | null;
   readonly terms: readonly Term[];
   readonly author: ResolvedAuthor;
 }

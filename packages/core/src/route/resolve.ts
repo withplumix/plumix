@@ -1,6 +1,8 @@
 import type { SQL } from "drizzle-orm";
 import { count } from "drizzle-orm";
 
+import { isEntryContent } from "@plumix/blocks";
+
 import type { AppContext } from "../context/app.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { Term } from "../db/schema/terms.js";
@@ -381,7 +383,12 @@ async function buildResolvedEntries(
         `buildResolvedEntries: entry ${String(row.id)} references missing author ${String(row.authorId)}`,
       );
     }
-    return { ...row, terms: termsByEntryId.get(row.id) ?? [], author };
+    return {
+      ...row,
+      contentBlocks: isEntryContent(row.content) ? row.content : null,
+      terms: termsByEntryId.get(row.id) ?? [],
+      author,
+    };
   });
 }
 
