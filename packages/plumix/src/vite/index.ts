@@ -10,7 +10,8 @@ import {
 } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Plugin } from "vite";
+import type { Plugin, UserConfig } from "vite";
+import { mergeConfig } from "vite";
 
 import type {
   AnyPluginDescriptor,
@@ -79,7 +80,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
     // doesn't depend on `process.env` being populated — CF Workers'
     // process.env is empty by default and the helper would otherwise
     // fall back to localhost on every deployed request.
-    config(userConfig, env) {
+    async config(userConfig, env) {
       const define = {
         "process.env.WORKERS_CI": JSON.stringify(process.env.WORKERS_CI ?? ""),
         "process.env.WORKERS_CI_BRANCH": JSON.stringify(
@@ -153,9 +154,25 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       // Default publicDir to `.plumix/public` only when the user hasn't
       // set one — Vite merges the returned object with `userConfig`, so
       // we keep theirs by omitting the key entirely.
-      const base = { define, build, environments, resolve: resolveOpts };
-      if (userConfig.publicDir !== undefined) return base;
-      return { ...base, publicDir: ".plumix/public" };
+      const base: Partial<UserConfig> = {
+        define,
+        build,
+        environments,
+        resolve: resolveOpts,
+      };
+      if (userConfig.publicDir === undefined) {
+        base.publicDir = ".plumix/public";
+      }
+      // TODO: triple loadConfig per cold start (config + buildStart + CLI).
+      // Cache via a closure once moduleCache:false in load-config.ts is
+      // safe to relax.
+      const { config } = await loadConfig(scanRoot, options.configFile);
+      return config.vite
+        ? (mergeConfig(
+            base,
+            config.vite as Partial<UserConfig>,
+          ) as Partial<UserConfig>)
+        : base;
     },
     configResolved(config) {
       root = config.root;
