@@ -6,6 +6,7 @@ import type {
   BlockNode,
   LoaderErrorEvent,
   ResolvedBlockLoaders,
+  ThemeTokens,
 } from "@plumix/blocks";
 import { resolveBlockLoaders } from "@plumix/blocks";
 import { PlumixProvider } from "@plumix/blocks/renderer";
@@ -88,6 +89,7 @@ export async function renderThroughTheme({
     template,
     deps,
     loaderData,
+    tokens: theme.tokens,
   });
 }
 
@@ -150,6 +152,7 @@ export async function renderErrorThroughTheme({
     template,
     deps,
     loaderData: undefined,
+    tokens: theme.tokens,
   });
 }
 
@@ -229,6 +232,7 @@ interface RenderTreeArgs {
   readonly template: Template<TemplateData>;
   readonly deps: Record<string, Record<string, unknown>>;
   readonly loaderData: ResolvedBlockLoaders | undefined;
+  readonly tokens: ThemeTokens | undefined;
 }
 
 // React 19 reorders every child of `<head>` (metadata first, scripts /
@@ -245,6 +249,7 @@ function renderTree({
   title,
   template,
   deps,
+  tokens,
   loaderData,
 }: RenderTreeArgs): string {
   // Adapter FC wraps `template.render({ data, ctx, ...deps })` so it
@@ -258,7 +263,7 @@ function renderTree({
   const TemplateAdapter = (): ReactNode =>
     template.render({ ...deps, data, ctx });
   const templateTree: ReactNode = createElement(PlumixProvider, {
-    value: { registry: ctx.blocks, loaderData },
+    value: { registry: ctx.blocks, tokens, loaderData },
     children: createElement(TemplateAdapter),
   });
   const rendered = renderToString(templateTree);

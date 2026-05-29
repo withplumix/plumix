@@ -1175,6 +1175,46 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(body).toContain('data-plumix-block="core/heading"');
   });
 
+  test("theme tokens reach the block walker — styled blocks emit `var(--plumix-…)` fallbacks", async () => {
+    const theme = defineTheme({
+      tokens: { colors: { brand: { value: "#abc" } } },
+      templates: {
+        index: () => null,
+        single: ({ data }) =>
+          data.entry.contentBlocks ? (
+            <BlockRenderer content={data.entry.contentBlocks} />
+          ) : null,
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "styled",
+      title: "Styled",
+      content: {
+        version: "plumix.v2",
+        blocks: [
+          {
+            id: "s",
+            name: "core/heading",
+            attrs: { text: "Hi" },
+            style: { large: { background: "brand" } },
+          },
+        ],
+      },
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/styled"),
+    );
+    expect(await response.text()).toContain("var(--plumix-color-brand, #abc)");
+  });
+
   test("dispatcher pre-resolves block loaders before render — render() sees the resolved data", async () => {
     const probePlugin = definePlugin("acme-probe", (ctx) => {
       ctx.registerBlock(
