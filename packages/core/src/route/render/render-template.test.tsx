@@ -1276,6 +1276,43 @@ describe("resolvePublicRoute — archive through theme", () => {
     expect(body).toContain("page:2;entries:5");
   });
 
+  test("entry type's `archivePerPage` overrides the default page size on the archive", async () => {
+    const smallPagePlugin = definePlugin("small-page", (ctx) => {
+      ctx.registerEntryType("post", {
+        label: "Posts",
+        isPublic: true,
+        hasArchive: true,
+        archivePerPage: 5,
+      });
+    });
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        archive: ({ data }) => (
+          <span data-testid="per-page">{`perPage:${String(data.pagination.perPage)}`}</span>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({
+      plugins: [smallPagePlugin],
+      theme,
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "p",
+      title: "P",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(new Request("https://cms.example/post"));
+    expect(await response.text()).toContain("perPage:5");
+  });
+
   test("archive-{type} specificity wins over `archive` and `index`", async () => {
     const theme = defineTheme({
       templates: {
@@ -1500,6 +1537,61 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     expect(body).toContain('data-testid="term-name"');
     expect(body).toContain("News");
     expect(body).toContain("Story A");
+  });
+
+  test("taxonomy's `archivePerPage` overrides the default page size on term archives", async () => {
+    const smallPageTaxonomy = definePlugin("small-page-tax", (ctx) => {
+      ctx.registerEntryType("post", {
+        label: "Posts",
+        isPublic: true,
+        hasArchive: true,
+      });
+      ctx.registerTermTaxonomy("topic", {
+        label: "Topics",
+        labels: { singular: "Topic" },
+        entryTypes: ["post"],
+        isHierarchical: false,
+        archivePerPage: 3,
+      });
+    });
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        taxonomy: ({ data }) => (
+          <span data-testid="per-page">{`perPage:${String(data.pagination.perPage)}`}</span>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({
+      plugins: [smallPageTaxonomy],
+      theme,
+    });
+    const author = await h.seedUser("admin");
+    const term = await h.factory.term.create({
+      taxonomy: "topic",
+      slug: "news",
+      name: "News",
+    });
+    const entry = await h.factory.entry.create({
+      type: "post",
+      slug: "t",
+      title: "T",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.factory.entryTerm.create({
+      entryId: entry.id,
+      termId: term.id,
+      sortOrder: 0,
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/topic/news"),
+    );
+    expect(await response.text()).toContain("perPage:3");
   });
 
   test("excludes published entries with NULL publishedAt from the term archive", async () => {
