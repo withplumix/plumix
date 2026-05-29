@@ -91,6 +91,7 @@ export async function resolvePublicRoute(
     case "front-page":
       return resolveFrontPage(
         ctx,
+        match.params,
         theme,
         document,
         templateDocuments,
@@ -102,13 +103,14 @@ export async function resolvePublicRoute(
 
 async function resolveFrontPage(
   ctx: AppContext,
+  params: Record<string, string>,
   theme: ThemeDescriptor,
   document: DocumentManifest,
   templateDocuments: ReadonlyMap<string, DocumentManifest>,
   templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
   assetManifest: AssetManifest,
 ): Promise<Response> {
-  const page = 1;
+  const page = parsePageParam(params.page);
   const publicTypes = Array.from(ctx.plugins.entryTypes.entries())
     .filter(([, spec]) => spec.isPublic !== false)
     .map(([key]) => key);
@@ -126,6 +128,7 @@ async function resolveFrontPage(
     page,
     DEFAULT_ARCHIVE_PER_PAGE,
   );
+  if (result.outOfRange) return notFound("public-front-page-page-out-of-range");
 
   const initial: FrontPageData = {
     entries: await buildResolvedEntries(ctx, result.rows),
