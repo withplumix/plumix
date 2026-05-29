@@ -1270,6 +1270,135 @@ describe("resolvePublicRoute — archive through theme", () => {
     expect(body).toContain("Second");
   });
 
+  test("archive with `prefetchListingLoaders` resolves block loaders for every entry", async () => {
+    const probePlugin = definePlugin("acme-listing-probe", (ctx) => {
+      ctx.registerBlock(
+        defineBlock({
+          name: "acme/listing-probe",
+          loaders: {
+            marker: (args: { readonly attrs: Record<string, unknown> }) => {
+              const tag =
+                typeof args.attrs.tag === "string" ? args.attrs.tag : "?";
+              return Promise.resolve(`loaded-${tag}`);
+            },
+          },
+          render: ({ loaders }) => <span>{loaders.marker}</span>,
+        }),
+      );
+    });
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        archive: defineTemplate({
+          prefetchListingLoaders: true,
+          render: ({ data }) => (
+            <ul>
+              {data.entries.map((entry: ResolvedEntry) =>
+                entry.contentBlocks ? (
+                  <li key={entry.id}>
+                    <BlockRenderer content={entry.contentBlocks} />
+                  </li>
+                ) : null,
+              )}
+            </ul>
+          ),
+        }),
+      },
+    });
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin, probePlugin],
+      theme,
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "alpha",
+      title: "Alpha",
+      content: {
+        version: "plumix.v2",
+        blocks: [
+          { id: "alpha-1", name: "acme/listing-probe", attrs: { tag: "a" } },
+        ],
+      },
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date("2026-05-01"),
+    });
+    await h.factory.entry.create({
+      type: "post",
+      slug: "beta",
+      title: "Beta",
+      content: {
+        version: "plumix.v2",
+        blocks: [
+          { id: "beta-1", name: "acme/listing-probe", attrs: { tag: "b" } },
+        ],
+      },
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date("2026-05-02"),
+    });
+
+    const response = await h.dispatch(new Request("https://cms.example/post"));
+    const body = await response.text();
+    expect(body).toContain("loaded-a");
+    expect(body).toContain("loaded-b");
+  });
+
+  test("archive without `prefetchListingLoaders` leaves listing block loaders unresolved", async () => {
+    const probePlugin = definePlugin("acme-listing-probe-off", (ctx) => {
+      ctx.registerBlock(
+        defineBlock({
+          name: "acme/listing-probe-off",
+          loaders: { marker: () => Promise.resolve("loader-fired") },
+          render: ({ loaders }) => (
+            <span data-testid="probe">{loaders.marker}</span>
+          ),
+        }),
+      );
+    });
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        archive: ({ data }) => (
+          <ul>
+            {data.entries.map((entry: ResolvedEntry) =>
+              entry.contentBlocks ? (
+                <li key={entry.id}>
+                  <BlockRenderer content={entry.contentBlocks} />
+                </li>
+              ) : null,
+            )}
+          </ul>
+        ),
+      },
+    });
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin, probePlugin],
+      theme,
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "gamma",
+      title: "Gamma",
+      content: {
+        version: "plumix.v2",
+        blocks: [{ id: "g-1", name: "acme/listing-probe-off", attrs: {} }],
+      },
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(new Request("https://cms.example/post"));
+    const body = await response.text();
+    // Block rendered (probe testid present) but loader never fired
+    // (marker text absent — `loaders.marker` was undefined at runtime).
+    expect(body).toContain('data-testid="probe"');
+    expect(body).not.toContain("loader-fired");
+  });
+
   test("excludes published entries with NULL publishedAt from the archive", async () => {
     const theme = defineTheme({
       templates: {

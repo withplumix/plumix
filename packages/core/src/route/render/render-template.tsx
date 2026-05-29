@@ -3,7 +3,7 @@ import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 
 import type {
-  EntryContent,
+  BlockNode,
   LoaderErrorEvent,
   ResolvedBlockLoaders,
 } from "@plumix/blocks";
@@ -78,7 +78,7 @@ export async function renderThroughTheme({
     ctx,
     deps,
   });
-  const loaderData = await prefetchEntryLoaders(ctx, data);
+  const loaderData = await prefetchEntryLoaders(ctx, data, template);
   return renderTree({
     ctx,
     document: renderDocument,
@@ -153,17 +153,14 @@ export async function renderErrorThroughTheme({
   });
 }
 
-// v1 only pre-resolves loaders on the single-entry path. Listing
-// shapes (archive / taxonomy / front-page) carry entry arrays but
-// their templates render summaries, not block trees — a future slice
-// can broaden coverage once a real consumer needs it.
 async function prefetchEntryLoaders(
   ctx: AppContext,
   data: TemplateData,
+  template: Template<TemplateData>,
 ): Promise<ResolvedBlockLoaders | undefined> {
-  const content = singleEntryContent(data);
-  if (!content) return undefined;
-  return resolveBlockLoaders(content.blocks, ctx.blocks, ctx, {
+  const blocks = collectLoaderBlocks(data, template);
+  if (blocks.length === 0) return undefined;
+  return resolveBlockLoaders(blocks, ctx.blocks, ctx, {
     // Fire-and-forget bridge into the framework filter so plugins can
     // subscribe via `addFilter("blocks:loader:error", ...)`. `applyFilter`
     // is async; we don't await (the loader resolver shouldn't back-pressure
@@ -184,8 +181,14 @@ async function prefetchEntryLoaders(
   });
 }
 
-function singleEntryContent(data: TemplateData): EntryContent | null {
-  return "entry" in data ? data.entry.contentBlocks : null;
+function collectLoaderBlocks(
+  data: TemplateData,
+  template: Template<TemplateData>,
+): readonly BlockNode[] {
+  if ("entry" in data) return data.entry.contentBlocks?.blocks ?? [];
+  if (!("entries" in data)) return [];
+  if (!template.prefetchListingLoaders) return [];
+  return data.entries.flatMap((e) => e.contentBlocks?.blocks ?? []);
 }
 
 interface ResolveDocumentArgs {

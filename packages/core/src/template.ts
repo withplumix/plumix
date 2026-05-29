@@ -79,6 +79,13 @@ export interface Template<
 > extends TemplateDepDeclarations {
   readonly render: TemplateRender<TData>;
   readonly document?: TemplateDocument<TData>;
+  /**
+   * Cost is `O(entries × loaders/entry)`. Assumes `node.id` is unique
+   * across all entries' block trees — editor content satisfies this;
+   * bulk imports must ensure unique ids or sibling loader data
+   * silently collides in the per-id result map.
+   */
+  readonly prefetchListingLoaders?: boolean;
   readonly [PLUMIX_TEMPLATE_BRAND]: true;
 }
 
@@ -87,6 +94,7 @@ interface DefineTemplateConfig<
 > extends TemplateDepDeclarations {
   readonly render: TemplateRender<TData>;
   readonly document?: TemplateDocument<TData>;
+  readonly prefetchListingLoaders?: boolean;
 }
 
 export function defineTemplate<TData extends TemplateData = TemplateData>(
