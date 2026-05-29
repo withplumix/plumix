@@ -463,6 +463,53 @@ describe("resolvePublicRoute — single entry through theme", () => {
     );
   });
 
+  test("template `document` accepts a function that receives the render args and renders per-request", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: defineTemplate({
+          document: ({ data }) => ({
+            meta: [
+              {
+                property: "og:description",
+                content: `desc:${data.entry.title}`,
+              },
+            ],
+          }),
+          render: ({ data }) => <article>{data.entry.title}</article>,
+        }),
+      },
+      document: {
+        meta: [{ name: "theme-color", content: "#0ea5e9" }],
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "dyn",
+      title: "Dynamic Title",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/dyn"),
+    );
+    const body = await response.text();
+    const headSection = body.slice(
+      body.indexOf("<head>"),
+      body.indexOf("</head>"),
+    );
+    expect(headSection).toContain(
+      '<meta property="og:description" content="desc:Dynamic Title"',
+    );
+    expect(headSection).toContain('<meta name="theme-color"');
+  });
+
   test("templates without a document fragment fall back to the theme-wide document", async () => {
     // Locks the contract: a template that doesn't declare its own
     // fragment shouldn't pay any per-template cost — and shouldn't

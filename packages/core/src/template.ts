@@ -58,14 +58,17 @@ export type TemplateRender<TData extends TemplateData> = (
 ) => ReactNode;
 
 /**
+ * Literal manifest is merged at boot; function form is called per
+ * request with the same args `render` sees.
+ */
+export type TemplateDocument<TData extends TemplateData> =
+  | DocumentManifest
+  | ((args: TemplateRenderArgs<TData>) => DocumentManifest);
+
+/**
  * Output of `defineTemplate`. The brand symbol is non-enumerable so
  * it doesn't pollute `Object.keys` / JSON serialization but stays
  * load-bearing for runtime identification via `isTemplate`.
- *
- * `document` is the optional per-template fragment merged with the
- * theme's site-wide document at boot. Per-request renders look up the
- * already-merged result keyed by the matched template slot — zero
- * runtime merge cost.
  *
  * Dep declarations (`[K in keyof TemplateDepRegistry]?`) live directly
  * on the template object so the framework's per-request dispatch can
@@ -75,7 +78,7 @@ export interface Template<
   TData extends TemplateData = TemplateData,
 > extends TemplateDepDeclarations {
   readonly render: TemplateRender<TData>;
-  readonly document?: DocumentManifest;
+  readonly document?: TemplateDocument<TData>;
   readonly [PLUMIX_TEMPLATE_BRAND]: true;
 }
 
@@ -83,7 +86,7 @@ interface DefineTemplateConfig<
   TData extends TemplateData,
 > extends TemplateDepDeclarations {
   readonly render: TemplateRender<TData>;
-  readonly document?: DocumentManifest;
+  readonly document?: TemplateDocument<TData>;
 }
 
 export function defineTemplate<TData extends TemplateData = TemplateData>(

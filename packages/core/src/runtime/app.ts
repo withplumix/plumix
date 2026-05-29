@@ -302,6 +302,10 @@ function buildTemplateDocuments(
       // `app.document` (already deep-frozen).
       continue;
     }
+    if (typeof value.document === "function") {
+      // Resolved per-request by the renderer; nothing to precompute.
+      continue;
+    }
     const merged = mergeDocumentManifest(themeDocument, value.document);
     validateDocumentManifest(merged, slot);
     result.set(slot, deepFreezeManifest(merged));
