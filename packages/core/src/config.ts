@@ -53,6 +53,11 @@ export interface PlumixConfigInput {
   readonly blocks?: {
     readonly htmlAllowlist?: HtmlAllowlistOverride;
   };
+  /**
+   * Passthrough merged with plumix's own Vite config via `mergeConfig`.
+   * Structural so core stays Vite-dep-free.
+   */
+  readonly vite?: Readonly<Record<string, unknown>>;
 }
 
 export interface PlumixConfig {
@@ -68,6 +73,7 @@ export interface PlumixConfig {
   readonly blocks?: {
     readonly htmlAllowlist?: HtmlAllowlistOverride;
   };
+  readonly vite?: Readonly<Record<string, unknown>>;
 }
 
 export function plumix(config: PlumixConfigInput): PlumixConfig {
@@ -92,6 +98,7 @@ export function plumix(config: PlumixConfigInput): PlumixConfig {
     theme: config.theme,
     plugins: config.plugins ?? [],
     blocks: config.blocks,
+    vite: config.vite,
   };
 }
 

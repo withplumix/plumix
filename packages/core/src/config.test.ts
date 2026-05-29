@@ -86,6 +86,19 @@ test("plumix() requires mailer when auth.magicLink is configured", () => {
   ).toThrow(/magicLink.*requires.*mailer/);
 });
 
+test("plumix() preserves top-level vite passthrough for the Vite layer to consume", () => {
+  const probe = { name: "probe" };
+  const config = plumix({
+    runtime,
+    database,
+    auth: authConfig,
+    theme,
+    vite: { plugins: [probe], optimizeDeps: { exclude: ["x"] } },
+  });
+  expect(config.vite?.plugins).toEqual([probe]);
+  expect(config.vite?.optimizeDeps).toEqual({ exclude: ["x"] });
+});
+
 test("plumix() accepts auth.magicLink when paired with a top-level mailer", () => {
   const authWithMagicLink = auth({
     passkey: {
