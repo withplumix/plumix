@@ -53,6 +53,8 @@ export interface EntryTypeOptions {
     readonly maxRevisions?: number;
     readonly autosaveIntervalSeconds?: number;
   };
+  /** Page size for this type's archive route. Default 20. */
+  readonly archivePerPage?: number;
 }
 
 export interface TermTaxonomyOptions {
@@ -73,6 +75,8 @@ export interface TermTaxonomyOptions {
   };
   readonly capabilities?: TermTaxonomyCapabilityOverrides;
   readonly menuIcon?: string;
+  /** Page size for this taxonomy's term archives. Default 20. */
+  readonly archivePerPage?: number;
 }
 
 export function resolveEntryTypeVisibility(options: EntryTypeOptions): {

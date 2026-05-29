@@ -43,7 +43,7 @@ declare module "../hooks/types.js" {
   }
 }
 
-const ARCHIVE_LIMIT = 20;
+const DEFAULT_ARCHIVE_PER_PAGE = 20;
 
 export async function resolvePublicRoute(
   ctx: AppContext,
@@ -120,13 +120,18 @@ async function resolveFrontPage(
           isNotNull(entries.publishedAt),
           inArray(entries.type, publicTypes),
         );
-  const result = await paginatedEntries(ctx, where, page);
+  const result = await paginatedEntries(
+    ctx,
+    where,
+    page,
+    DEFAULT_ARCHIVE_PER_PAGE,
+  );
 
   const initial: FrontPageData = {
     entries: await buildResolvedEntries(ctx, result.rows),
     pagination: {
       page,
-      perPage: ARCHIVE_LIMIT,
+      perPage: DEFAULT_ARCHIVE_PER_PAGE,
       total: result.total,
       pageCount: result.pageCount,
     },
@@ -186,7 +191,8 @@ async function resolveTaxonomy(
           ),
         );
 
-  const result = await paginatedEntries(ctx, where, page);
+  const perPage = taxonomy?.archivePerPage ?? DEFAULT_ARCHIVE_PER_PAGE;
+  const result = await paginatedEntries(ctx, where, page, perPage);
   if (result.outOfRange) return notFound("public-term-page-out-of-range");
 
   const initial: TaxonomyData = {
@@ -195,7 +201,7 @@ async function resolveTaxonomy(
     entries: await buildResolvedEntries(ctx, result.rows),
     pagination: {
       page,
-      perPage: ARCHIVE_LIMIT,
+      perPage,
       total: result.total,
       pageCount: result.pageCount,
     },
@@ -284,7 +290,9 @@ async function resolveArchive(
     isNotNull(entries.publishedAt),
   );
 
-  const result = await paginatedEntries(ctx, where, page);
+  const registered = ctx.plugins.entryTypes.get(intent.entryType);
+  const perPage = registered?.archivePerPage ?? DEFAULT_ARCHIVE_PER_PAGE;
+  const result = await paginatedEntries(ctx, where, page, perPage);
   if (result.outOfRange) return notFound("public-archive-page-out-of-range");
 
   // Set after the query so a thrown query doesn't leave a stale entity
@@ -292,7 +300,6 @@ async function resolveArchive(
   // reads it.
   ctx.resolvedEntity = { kind: "archive", entryType: intent.entryType };
 
-  const registered = ctx.plugins.entryTypes.get(intent.entryType);
   const title =
     registered?.labels?.plural ?? registered?.label ?? intent.entryType;
 
@@ -301,7 +308,7 @@ async function resolveArchive(
     entries: await buildResolvedEntries(ctx, result.rows),
     pagination: {
       page,
-      perPage: ARCHIVE_LIMIT,
+      perPage,
       total: result.total,
       pageCount: result.pageCount,
     },
@@ -434,6 +441,7 @@ async function paginatedEntries(
   ctx: AppContext,
   where: SQL | null | undefined,
   page: number,
+  perPage: number,
 ): Promise<{
   readonly rows: readonly Entry[];
   readonly outOfRange: boolean;
@@ -441,7 +449,7 @@ async function paginatedEntries(
   readonly pageCount: number;
 }> {
   if (where == null) {
-    const slice = paginate({ page, perPage: ARCHIVE_LIMIT, total: 0 });
+    const slice = paginate({ page, perPage, total: 0 });
     return {
       rows: [],
       outOfRange: slice.outOfRange,
@@ -456,7 +464,7 @@ async function paginatedEntries(
     .where(where);
   const total = totalRow[0]?.total ?? 0;
 
-  const slice = paginate({ page, perPage: ARCHIVE_LIMIT, total });
+  const slice = paginate({ page, perPage, total });
   if (slice.outOfRange) {
     return {
       rows: [],
