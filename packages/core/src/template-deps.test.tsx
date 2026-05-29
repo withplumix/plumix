@@ -443,12 +443,10 @@ describe("theme-level templateDeps", () => {
       authorId: author.id,
       publishedAt: new Date(),
     });
-    await h.db
-      .insert(settingsSchema)
-      .values([
-        { group: "site-info", key: "title", value: "Plumix" },
-        { group: "author-info", key: "name", value: "Ada" },
-      ]);
+    await h.db.insert(settingsSchema).values([
+      { group: "site-info", key: "title", value: "Plumix" },
+      { group: "author-info", key: "name", value: "Ada" },
+    ]);
 
     const response = await h.dispatch(
       new Request("https://cms.example/post/union"),
