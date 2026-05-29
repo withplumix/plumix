@@ -25,8 +25,10 @@ import type {
 import type { AssetManifest } from "./asset-manifest.js";
 import type { ErrorData } from "./resolved-entry.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
+import { mergeDocumentManifest } from "../../document-merge.js";
 import { loadTemplateDeps } from "../../template-deps.js";
 import { normalizeTemplate } from "../../template.js";
+import { validateDocumentManifest } from "../../theme.js";
 import { bundledCssTags } from "./asset-manifest.js";
 import { injectIslandsBootstrap } from "./inject-islands-bootstrap.js";
 import { resolveTemplateCandidates } from "./template-hierarchy.js";
@@ -56,9 +58,6 @@ export async function renderThroughTheme({
 }: RenderArgs): Promise<string> {
   const candidates = await resolveTemplateCandidates(node, ctx.hooks);
   const { template, slot } = pickTemplate(theme.templates, candidates);
-  // Per-template fragment is precomputed at boot; fall back to the
-  // theme-wide document when the template didn't declare its own.
-  const renderDocument = templateDocuments.get(slot) ?? document;
   // Load every dep the template declared in parallel before render.
   // Loader failures don't 500 the page — `loadTemplateDeps` swallows
   // them, logs via `ctx.logger.error`, and seeds an empty map.
@@ -67,6 +66,15 @@ export async function renderThroughTheme({
     templateDeps,
     ctx,
   );
+  const renderDocument = resolveRenderDocument({
+    template,
+    slot,
+    document,
+    templateDocuments,
+    data,
+    ctx,
+    deps,
+  });
   const loaderData = await prefetchEntryLoaders(ctx, data);
   return renderTree({
     ctx,
@@ -113,7 +121,6 @@ export async function renderErrorThroughTheme({
   const variant = ERROR_VARIANTS[kind];
   const raw = theme.templates[variant.key] ?? variant.fallback;
   const template = normalizeTemplate(raw, variant.key);
-  const renderDocument = templateDocuments.get(variant.key) ?? document;
   // Error templates can declare deps too — loader failures still log
   // + empty-map fallback so a 404/500 render never escalates.
   const deps = await loadTemplateDeps(
@@ -121,6 +128,15 @@ export async function renderErrorThroughTheme({
     templateDeps,
     ctx,
   );
+  const renderDocument = resolveRenderDocument({
+    template,
+    slot: variant.key,
+    document,
+    templateDocuments,
+    data,
+    ctx,
+    deps,
+  });
   return renderTree({
     ctx,
     document: renderDocument,
@@ -166,6 +182,35 @@ async function prefetchEntryLoaders(
 
 function singleEntryContent(data: TemplateData): EntryContent | null {
   return "entry" in data ? data.entry.contentBlocks : null;
+}
+
+interface ResolveDocumentArgs {
+  readonly template: Template<TemplateData>;
+  readonly slot: string;
+  readonly document: DocumentManifest;
+  readonly templateDocuments: ReadonlyMap<string, DocumentManifest>;
+  readonly data: TemplateData;
+  readonly ctx: AppContext;
+  readonly deps: Record<string, Record<string, unknown>>;
+}
+
+function resolveRenderDocument({
+  template,
+  slot,
+  document,
+  templateDocuments,
+  data,
+  ctx,
+  deps,
+}: ResolveDocumentArgs): DocumentManifest {
+  const fragment = template.document;
+  if (typeof fragment !== "function") {
+    return templateDocuments.get(slot) ?? document;
+  }
+  const resolved = fragment({ ...deps, data, ctx });
+  const merged = mergeDocumentManifest(document, resolved);
+  validateDocumentManifest(merged, slot);
+  return merged;
 }
 
 interface RenderTreeArgs {
