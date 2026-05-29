@@ -4,15 +4,6 @@ import type { ResolvedMenu, ResolvedMenuItem } from "./server/types.js";
 import { createMenuRouter } from "./rpc.js";
 import { getMenuByName } from "./server/getMenuByName.js";
 
-// Register the `menus` template-dep kind so themes can declare
-// `defineTemplate({ menus: ["primary", "footer"], render })` and the
-// framework batches loads per request via the registered loader below.
-declare module "plumix/plugin" {
-  interface TemplateDepRegistry {
-    menus: { slug: string; result: ResolvedMenu };
-  }
-}
-
 // `@plumix/plugin-menu` augments the core option shapes with
 // menu-eligibility flags and the hook registries with three menu
 // hooks. TypeScript surfaces all of these only when this plugin is
