@@ -20,6 +20,16 @@ describe("tokenIdToCssVar", () => {
       "var(--plumix-spacing-xl)",
     );
   });
+
+  test("returns a CSS variable reference without fallback when the token is registered with no value (label-only)", () => {
+    const tokens: ThemeTokens = {
+      spacing: { lg: { label: "Large" } },
+    };
+
+    expect(tokenIdToCssVar("lg", "spacing", tokens)).toBe(
+      "var(--plumix-spacing-lg)",
+    );
+  });
 });
 
 describe("emitBlockStyleCss", () => {

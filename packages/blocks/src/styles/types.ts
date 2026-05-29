@@ -1,11 +1,10 @@
 /**
- * One entry in a token group. `value` is the CSS value the browser
- * receives (hex/rgb for colors, length string for spacing, etc.).
- * `label` is the human-readable name the Inspector picker shows;
- * defaults to the slug when omitted.
+ * One entry in a token group. `value` is the CSS literal written as
+ * the `var(..., <fallback>)`; omit when `:root` provides it. `label`
+ * is the Inspector display name; defaults to the slug.
  */
 export interface ThemeTokenEntry {
-  readonly value: string;
+  readonly value?: string;
   readonly label?: string;
 }
 

@@ -50,6 +50,22 @@ describe("TokenSwatchList", () => {
     expect(swatch.style.backgroundColor).toBe("rgb(0, 112, 243)");
   });
 
+  test("renders a colorless swatch when the token has no value (label-only)", () => {
+    const labelOnly: ThemeTokenGroup = { brand: { label: "Brand" } };
+    render(
+      <TokenSwatchList
+        tokens={labelOnly}
+        value=""
+        onChange={vi.fn()}
+        testIdPrefix="bg"
+        ariaLabel="Background color"
+      />,
+    );
+
+    const swatch = screen.getByTestId("bg-swatch-brand");
+    expect(swatch.style.backgroundColor).toBe("");
+  });
+
   test("marks the active token as the checked radio", () => {
     render(
       <TokenSwatchList

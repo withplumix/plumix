@@ -18,6 +18,15 @@ describe("defineTheme tokens validation", () => {
     ).not.toThrow();
   });
 
+  test("accepts a token entry with no value (label-only)", () => {
+    expect(() =>
+      defineTheme({
+        templates: { index: Stub },
+        tokens: { colors: { brand: { label: "Brand" } } },
+      }),
+    ).not.toThrow();
+  });
+
   test("rejects a slug with CSS-breaking characters", () => {
     expect(() =>
       defineTheme({
