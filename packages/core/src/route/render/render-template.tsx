@@ -7,7 +7,7 @@ import type {
   LoaderErrorEvent,
   ResolvedBlockLoaders,
 } from "@plumix/blocks";
-import { isEntryContent, resolveBlockLoaders } from "@plumix/blocks";
+import { resolveBlockLoaders } from "@plumix/blocks";
 import { PlumixProvider } from "@plumix/blocks/renderer";
 
 import type { AppContext } from "../../context/app.js";
@@ -165,9 +165,7 @@ async function prefetchEntryLoaders(
 }
 
 function singleEntryContent(data: TemplateData): EntryContent | null {
-  const candidate =
-    (data as { entry?: { content?: unknown } }).entry?.content ?? null;
-  return isEntryContent(candidate) ? candidate : null;
+  return "entry" in data ? data.entry.contentBlocks : null;
 }
 
 interface RenderTreeArgs {

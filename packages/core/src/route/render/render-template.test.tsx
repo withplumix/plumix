@@ -1,7 +1,6 @@
 import { useId } from "react";
 import { describe, expect, test } from "vitest";
 
-import type { EntryContent } from "@plumix/blocks";
 import { defineBlock } from "@plumix/blocks";
 import { BlockRenderer } from "@plumix/blocks/renderer";
 
@@ -1028,15 +1027,79 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(headSection).not.toContain("httpEquiv");
   });
 
+  test("theme reads entry.contentBlocks without a cast", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => (
+          <span data-testid="blocks">
+            {`blocks:${String(data.entry.contentBlocks?.blocks.length ?? 0)}`}
+          </span>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "typed",
+      title: "Typed",
+      content: {
+        version: "plumix.v2",
+        blocks: [
+          { id: "a", name: "core/heading", attrs: { text: "Hi" } },
+          { id: "b", name: "core/paragraph", attrs: { text: "ok" } },
+        ],
+      },
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/typed"),
+    );
+    expect(await response.text()).toContain("blocks:2");
+  });
+
+  test("contentBlocks is null when stored content doesn't match the EntryContent shape", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => (
+          <span data-testid="result">
+            {`isNull:${String(data.entry.contentBlocks === null)}`}
+          </span>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.db.insert(entriesTable).values({
+      type: "post",
+      slug: "bad",
+      title: "Bad",
+      content: { not: "valid" },
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/bad"),
+    );
+    expect(await response.text()).toContain("isNull:true");
+  });
+
   test("template can render <BlockRenderer/> against the entry's content tree", async () => {
     const theme = defineTheme({
       templates: {
         index: () => null,
         single: ({ data }) =>
-          data.entry.content ? (
-            <BlockRenderer
-              content={data.entry.content as unknown as EntryContent}
-            />
+          data.entry.contentBlocks ? (
+            <BlockRenderer content={data.entry.contentBlocks} />
           ) : null,
       },
     });
@@ -1081,10 +1144,8 @@ describe("resolvePublicRoute — single entry through theme", () => {
       templates: {
         index: () => null,
         single: ({ data }) =>
-          data.entry.content ? (
-            <BlockRenderer
-              content={data.entry.content as unknown as EntryContent}
-            />
+          data.entry.contentBlocks ? (
+            <BlockRenderer content={data.entry.contentBlocks} />
           ) : null,
       },
     });
