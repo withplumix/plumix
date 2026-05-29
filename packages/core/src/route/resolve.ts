@@ -26,6 +26,7 @@ import { users } from "../db/schema/users.js";
 import { notFound } from "../runtime/http.js";
 import { paginate } from "./paginate.js";
 import { findEntryByPath, findTermByPath } from "./path-chain.js";
+import { buildEntryPermalinkSync } from "./permalink.js";
 import { renderThroughTheme } from "./render/render-template.js";
 
 declare module "../hooks/types.js" {
@@ -388,6 +389,7 @@ async function buildResolvedEntries(
       contentBlocks: isEntryContent(row.content) ? row.content : null,
       terms: termsByEntryId.get(row.id) ?? [],
       author,
+      url: buildEntryPermalinkSync(ctx, row),
     };
   });
 }

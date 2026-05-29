@@ -30,20 +30,17 @@ export async function buildEntryPermalink(
   },
   options?: { readonly ancestorSlugs?: readonly string[] },
 ): Promise<string | null> {
+  const sync = buildEntryPermalinkSync(ctx, entry);
+  if (sync !== null) return sync;
   const entryType = ctx.plugins.entryTypes.get(entry.type);
+  // sync returned null → either unregistered / isPublic:false (real null) or
+  // hierarchical needing the ancestor walk. Re-check the predicate to split.
   if (!entryType || entryType.isPublic === false) return null;
-
-  const baseSlug = entryTypeBaseSlug(entryType);
   const parentId = entry.parentId ?? null;
-
-  if (!shouldNestUnderEntryParent(entryType, parentId)) {
-    return joinSegments([baseSlug, entry.slug]);
-  }
-
-  // shouldNestUnderEntryParent guarantees parentId is non-null here.
+  if (!shouldNestUnderEntryParent(entryType, parentId)) return null;
   const ancestors =
     options?.ancestorSlugs ?? (await loadAncestorSlugs(ctx, parentId));
-  return joinSegments([baseSlug, ...ancestors, entry.slug]);
+  return joinSegments([entryTypeBaseSlug(entryType), ...ancestors, entry.slug]);
 }
 
 /**
@@ -73,6 +70,26 @@ export async function buildTermArchiveUrl(
   const ancestors =
     options?.ancestorSlugs ?? (await loadTermAncestorSlugs(ctx, parentId));
   return joinSegments([baseSlug, ...ancestors, term.slug]);
+}
+
+/**
+ * Sync subset of `buildEntryPermalink`; returns `null` when an ancestor
+ * chain lookup is required so callers (e.g., `buildResolvedEntries`)
+ * can avoid the per-entry CTE.
+ */
+export function buildEntryPermalinkSync(
+  ctx: AppContext,
+  entry: {
+    readonly type: string;
+    readonly slug: string;
+    readonly parentId?: number | null;
+  },
+): string | null {
+  const entryType = ctx.plugins.entryTypes.get(entry.type);
+  if (!entryType || entryType.isPublic === false) return null;
+  if (shouldNestUnderEntryParent(entryType, entry.parentId ?? null))
+    return null;
+  return joinSegments([entryTypeBaseSlug(entryType), entry.slug]);
 }
 
 function entryTypeBaseSlug(entryType: RegisteredEntryType): string {

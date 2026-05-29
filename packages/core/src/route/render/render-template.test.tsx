@@ -1270,6 +1270,35 @@ describe("resolvePublicRoute — archive through theme", () => {
     expect(body).toContain("Second");
   });
 
+  test("archive listing exposes `entry.url` to templates", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        archive: ({ data }) => (
+          <ul>
+            {data.entries.map((entry: ResolvedEntry) => (
+              <li key={entry.id}>{entry.url}</li>
+            ))}
+          </ul>
+        ),
+      },
+    });
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "alpha",
+      title: "Alpha",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(new Request("https://cms.example/post"));
+    expect(await response.text()).toContain("/post/alpha");
+  });
+
   test("archive with `prefetchListingLoaders` resolves block loaders for every entry", async () => {
     const probePlugin = definePlugin("acme-listing-probe", (ctx) => {
       ctx.registerBlock(
