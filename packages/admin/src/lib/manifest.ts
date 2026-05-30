@@ -1,3 +1,4 @@
+import type { ThemeTokens } from "@plumix/blocks";
 import type {
   AdminNavGroup,
   AdminNavItem,
@@ -56,10 +57,17 @@ function normalize(value: unknown): PlumixManifest {
       (result as Record<string, unknown>)[key] = v[key];
     }
   }
+  if (v.tokens && typeof v.tokens === "object") {
+    (result as Record<string, unknown>).tokens = v.tokens;
+  }
   return result;
 }
 
 const manifest: PlumixManifest = readManifest();
+
+export function getThemeTokens(source: PlumixManifest = manifest): ThemeTokens {
+  return source.tokens ?? {};
+}
 
 export function findEntryTypeBySlug(
   slug: string,

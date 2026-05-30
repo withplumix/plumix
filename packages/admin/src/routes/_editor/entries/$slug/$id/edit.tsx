@@ -17,7 +17,11 @@ import { resolveEditorMode } from "@/editor/resolve-editor-mode.js";
 import { PreviewBanner } from "@/editor/revisions/PreviewBanner.js";
 import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
 import { StaleDraftDialog } from "@/editor/StaleDraftDialog.js";
-import { entryMetaBoxesForType, findEntryTypeBySlug } from "@/lib/manifest.js";
+import {
+  entryMetaBoxesForType,
+  findEntryTypeBySlug,
+  getThemeTokens,
+} from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { getRegisteredBlocks } from "@/lib/plugin-registry.js";
 import { formatRelativeTime } from "@/lib/relative-time.js";
@@ -32,7 +36,6 @@ import {
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import * as v from "valibot";
 
-import type { ThemeTokens } from "@plumix/blocks";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { coreMarkExtensions, createBlockRegistry } from "@plumix/blocks";
 import { idPathParam } from "@plumix/core/validation";
@@ -65,26 +68,7 @@ function isStaleConflictError(err: unknown): boolean {
   return data.reason === "stale_expected_updated_at";
 }
 
-const sampleTokens: ThemeTokens = {
-  colors: {
-    background: { value: "#ffffff", label: "Background" },
-    surface: { value: "#f4f4f5", label: "Surface" },
-    brand: { value: "#0070f3", label: "Brand" },
-    ink: { value: "#111111", label: "Ink" },
-  },
-  spacing: {
-    none: { value: "0", label: "None" },
-    sm: { value: "0.5rem", label: "Small" },
-    md: { value: "1rem", label: "Medium" },
-    lg: { value: "2rem", label: "Large" },
-  },
-  typography: {
-    sm: { value: "0.875rem", label: "Small" },
-    md: { value: "1rem", label: "Medium" },
-    lg: { value: "1.25rem", label: "Large" },
-    xl: { value: "1.5rem", label: "Extra large" },
-  },
-};
+const themeTokens = getThemeTokens();
 
 registerCoreBlocks();
 const runtimeBlocks = getRegisteredBlocks();
@@ -580,7 +564,7 @@ function PuckSpikeRouteInner({
       <PlumixEditorLayout
         registry={registry}
         capabilities={capabilitySet}
-        tokens={sampleTokens}
+        tokens={themeTokens}
         title={title}
         onTitleChange={handleTitleChange}
         backHref={backHref}
@@ -753,7 +737,7 @@ function PuckPreviewRouteInner({
       <PlumixEditorLayout
         registry={registry}
         capabilities={capabilitySet}
-        tokens={sampleTokens}
+        tokens={themeTokens}
         title={revision.title}
         onTitleChange={() => undefined}
         backHref={backHref}

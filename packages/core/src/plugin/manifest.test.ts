@@ -21,6 +21,14 @@ import {
 import { installPlugins } from "./register.js";
 
 describe("buildManifest", () => {
+  test("carries theme.tokens through to the admin manifest channel", () => {
+    const tokens = {
+      colors: { brand: { value: "#0070f3", label: "Brand" } },
+    };
+    const manifest = buildManifest(createPluginRegistry(), { tokens });
+    expect(manifest.tokens).toEqual(tokens);
+  });
+
   test("empty registry projects core-seeded adminNav (Dashboard / Management) and empty everything else", () => {
     const manifest = buildManifest(createPluginRegistry());
     expect(manifest.entryTypes).toEqual([]);
