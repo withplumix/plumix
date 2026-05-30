@@ -11,7 +11,8 @@ export type RouteIntent =
   | { readonly kind: "single"; readonly entryType: string }
   | { readonly kind: "archive"; readonly entryType: string }
   | { readonly kind: "taxonomy"; readonly taxonomy: string }
-  | { readonly kind: "front-page" };
+  | { readonly kind: "front-page" }
+  | { readonly kind: "search" };
 
 /**
  * Compiled rule. `priority` preserves arch-doc ordering semantics — lower

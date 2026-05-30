@@ -56,6 +56,12 @@ export interface FrontPageData<TEntry extends ResolvedEntry = ResolvedEntry> {
   readonly pagination: Pagination;
 }
 
+export interface SearchData<TEntry extends ResolvedEntry = ResolvedEntry> {
+  readonly query: string;
+  readonly entries: readonly TEntry[];
+  readonly pagination: Pagination;
+}
+
 /**
  * Payload threaded to a theme's `404` / `500` template. Public-safe by
  * shape — there is no Error field, so internal exception messages have

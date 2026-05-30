@@ -15,10 +15,11 @@ import type {
   ArchiveData,
   FrontPageData,
   ResolvedEntry,
+  SearchData,
   SingleData,
   TaxonomyData,
 } from "./render/resolved-entry.js";
-import { and, desc, eq, inArray, isNotNull } from "../db/index.js";
+import { and, desc, eq, inArray, isNotNull, sql } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
@@ -43,6 +44,9 @@ declare module "../hooks/types.js" {
     "resolve:front-page:data": (
       data: FrontPageData,
     ) => FrontPageData | Promise<FrontPageData>;
+    "resolve:search:data": (
+      data: SearchData,
+    ) => SearchData | Promise<SearchData>;
   }
 }
 
@@ -93,6 +97,16 @@ export async function resolvePublicRoute(
       );
     case "front-page":
       return resolveFrontPage(
+        ctx,
+        match.params,
+        theme,
+        document,
+        templateDocuments,
+        templateDeps,
+        assetManifest,
+      );
+    case "search":
+      return resolveSearch(
         ctx,
         match.params,
         theme,
@@ -154,6 +168,79 @@ async function resolveFrontPage(
     node: { kind: "front-page" },
     data,
     title: "Home",
+  });
+  return new Response(html, {
+    headers: { "content-type": "text/html; charset=utf-8" },
+  });
+}
+
+function decodeSearchQuery(raw: string | undefined): string {
+  if (raw === undefined || raw === "") return "";
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    // Malformed percent-sequences fall back to empty — render the bare
+    // search template instead of crashing the request.
+    return "";
+  }
+}
+
+async function resolveSearch(
+  ctx: AppContext,
+  params: Record<string, string>,
+  theme: ThemeDescriptor,
+  document: DocumentManifest,
+  templateDocuments: ReadonlyMap<string, DocumentManifest>,
+  templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
+  assetManifest: AssetManifest,
+): Promise<Response> {
+  const query = decodeSearchQuery(params.query);
+  const page = parsePageParam(params.page);
+  const searchableTypes = Array.from(ctx.plugins.entryTypes.entries())
+    .filter(
+      ([, spec]) => spec.isPublic !== false && spec.excludeFromSearch !== true,
+    )
+    .map(([key]) => key);
+  // Escape SQL LIKE wildcards in the user query so `_` and `%` match
+  // literal characters instead of any-char / any-string.
+  const escaped = query.replace(/[\\%_]/g, "\\$&");
+  const where =
+    searchableTypes.length === 0 || query === ""
+      ? null
+      : and(
+          eq(entries.status, "published"),
+          isNotNull(entries.publishedAt),
+          inArray(entries.type, searchableTypes),
+          sql`${entries.title} LIKE ${`%${escaped}%`} ESCAPE '\\'`,
+        );
+  const result = await paginatedEntries(
+    ctx,
+    where,
+    page,
+    DEFAULT_ARCHIVE_PER_PAGE,
+  );
+  if (result.outOfRange) return notFound("public-search-page-out-of-range");
+  const initial: SearchData = {
+    query,
+    entries: await buildResolvedEntries(ctx, result.rows),
+    pagination: {
+      page,
+      perPage: DEFAULT_ARCHIVE_PER_PAGE,
+      total: result.total,
+      pageCount: result.pageCount,
+    },
+  };
+  const data = await ctx.hooks.applyFilter("resolve:search:data", initial);
+  const html = await renderThroughTheme({
+    ctx,
+    theme,
+    document,
+    templateDocuments,
+    templateDeps,
+    assetManifest,
+    node: { kind: "search" },
+    data,
+    title: data.query ? `Search: ${data.query}` : "Search",
   });
   return new Response(html, {
     headers: { "content-type": "text/html; charset=utf-8" },
