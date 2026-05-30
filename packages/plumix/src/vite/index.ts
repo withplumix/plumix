@@ -213,7 +213,16 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
     transform(code, id, options) {
       if (!options?.ssr) return null;
       if (id.endsWith(ORIG_QUERY)) return null;
-      if (!id.endsWith(".tsx") && !id.endsWith(".ts")) return null;
+      // `.js`/`.jsx` covers theme-shipped islands compiled by tsc — the
+      // `"use client"` directive survives in the dist file (#606).
+      if (
+        !id.endsWith(".tsx") &&
+        !id.endsWith(".ts") &&
+        !id.endsWith(".jsx") &&
+        !id.endsWith(".js")
+      ) {
+        return null;
+      }
       if (!code.includes("use client")) return null;
       const chunkUrl = resolveIslandChunkUrl(id, command, root);
       const result = transformUseClientModule(code, id, { chunkUrl });
