@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import type { Plugin, UserConfig } from "vite";
 import { mergeConfig } from "vite";
 
+import type { ThemeTokens } from "@plumix/blocks";
 import type {
   AnyPluginDescriptor,
   PluginRegistry,
@@ -332,6 +333,7 @@ async function regenerate(
 
   const { manifest, registry } = await computeManifestAndRegistry(
     config.plugins,
+    config.theme,
   );
 
   return { configPath, manifest, registry, plugins: config.plugins };
@@ -349,12 +351,13 @@ type PluginDescriptors = Parameters<typeof installPlugins>[0]["plugins"];
 // so plugins should keep setup free of IO.
 async function computeManifestAndRegistry(
   plugins: PluginDescriptors,
+  theme: { readonly tokens?: ThemeTokens },
 ): Promise<{ manifest: PlumixManifest; registry: PluginRegistry }> {
   const { registry } = await installPlugins({
     hooks: new HookRegistry(),
     plugins,
   });
-  return { manifest: buildManifest(registry), registry };
+  return { manifest: buildManifest(registry, theme), registry };
 }
 
 // Copies the compiled admin SPA from plumix/dist/admin-app into the effective

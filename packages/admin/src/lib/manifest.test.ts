@@ -52,6 +52,14 @@ describe("readManifest", () => {
     });
   });
 
+  test("carries theme tokens through to consumers", () => {
+    const tokens = {
+      colors: { brand: { value: "#0070f3", label: "Brand" } },
+    };
+    const doc = withManifestScript(JSON.stringify({ tokens }));
+    expect(readManifest(doc).tokens).toEqual(tokens);
+  });
+
   test("empty payload falls back to empty manifest", () => {
     const doc = withManifestScript("");
     expect(readManifest(doc)).toEqual({});

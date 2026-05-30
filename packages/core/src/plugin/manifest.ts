@@ -1,4 +1,9 @@
-import type { BlockSpec, BlockVariation, MarkSpec } from "@plumix/blocks";
+import type {
+  BlockSpec,
+  BlockVariation,
+  MarkSpec,
+  ThemeTokens,
+} from "@plumix/blocks";
 
 import type {
   EntryTypeCapabilityOverrides,
@@ -1451,6 +1456,12 @@ export interface PlumixManifest {
   readonly fieldTypes?: readonly FieldTypeManifestEntry[];
   readonly blocks?: readonly BlockManifestEntry[];
   readonly marks?: readonly MarkManifestEntry[];
+  /**
+   * Theme tokens from `defineTheme({ tokens })`. Routed through the
+   * manifest channel because the precompiled admin shell can't import
+   * `plumix.config.ts` at build time.
+   */
+  readonly tokens?: ThemeTokens;
 }
 
 /**
@@ -1479,6 +1490,7 @@ export function emptyManifest(): PlumixManifest {
     fieldTypes: [],
     blocks: [],
     marks: [],
+    tokens: {},
   };
 }
 
@@ -1494,7 +1506,10 @@ export function emptyManifest(): PlumixManifest {
  * admin slug — the admin router can't disambiguate `/entries/$slug` in that
  * case, and catching it at build time is cheaper than a 404 at runtime.
  */
-export function buildManifest(registry: PluginRegistry): BuiltManifest {
+export function buildManifest(
+  registry: PluginRegistry,
+  theme?: { readonly tokens?: ThemeTokens },
+): BuiltManifest {
   const entries = Array.from(registry.entryTypes.values())
     .map(toEntryTypeManifest)
     .sort(byPriorityThen((e) => e.name));
@@ -1567,6 +1582,7 @@ export function buildManifest(registry: PluginRegistry): BuiltManifest {
     fieldTypes,
     blocks,
     marks,
+    tokens: theme?.tokens ?? {},
   };
 }
 
