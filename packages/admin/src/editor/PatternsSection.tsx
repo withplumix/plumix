@@ -5,12 +5,14 @@ import type { PatternManifestEntry } from "@plumix/core/manifest";
 
 interface PatternsSectionProps {
   readonly patterns: readonly PatternManifestEntry[];
+  readonly onSelect: (pattern: PatternManifestEntry) => void;
 }
 
 const UNCATEGORIZED = "uncategorized";
 
 export function PatternsSection({
   patterns,
+  onSelect,
 }: PatternsSectionProps): ReactElement | null {
   const grouped = useMemo(() => {
     const map = new Map<string, PatternManifestEntry[]>();
@@ -48,12 +50,14 @@ export function PatternsSection({
           <ul className="flex flex-col gap-1">
             {entries.map((entry) => (
               <li key={entry.name}>
-                <div
-                  className="text-foreground w-full rounded border px-3 py-2 text-left text-sm"
+                <button
+                  type="button"
+                  className="text-foreground hover:bg-muted w-full rounded border px-3 py-2 text-left text-sm"
                   data-testid={`plumix-patterns-row-${entry.name}`}
+                  onClick={() => onSelect(entry)}
                 >
                   {entry.title}
-                </div>
+                </button>
               </li>
             ))}
           </ul>

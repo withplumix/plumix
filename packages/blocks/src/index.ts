@@ -26,6 +26,7 @@ export {
   isBlockNodeArray,
   renderBlockTree,
 } from "./render-block-tree.js";
+export { rewriteBlockNodeIds } from "./rewrite-node-ids.js";
 export type {
   BlockContext,
   BlockNode,
