@@ -5,6 +5,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import type { ResolvedBlockLoaders } from "./loaders.js";
 import type { BlockContext, BlockNode } from "./render-block-tree.js";
 import { createBlockRegistry } from "./block-registry.js";
+import { createPatternRegistry, definePattern } from "./pattern-registry.js";
 import { renderBlockTree } from "./render-block-tree.js";
 
 function withProductionEnv<T>(fn: () => T): T {
@@ -603,6 +604,112 @@ describe("renderBlockTree", () => {
 
       expect(html).toBe("");
       expect(warn).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("core/pattern-ref resolution", () => {
+    const refRegistry = createBlockRegistry([
+      {
+        name: "core/pattern-ref",
+        inserter: false,
+        render: () => null,
+      },
+      {
+        name: "core/heading",
+        render: ({ attrs }) =>
+          createElement("h1", null, (attrs as { text: string }).text),
+      },
+    ]);
+
+    test("resolves a known slug to the registered pattern's content", () => {
+      const patterns = createPatternRegistry([
+        definePattern({
+          name: "starter/hero",
+          title: "Hero",
+          content: [
+            { id: "h-1", name: "core/heading", attrs: { text: "Resolved" } },
+          ],
+        }),
+      ]);
+      const tree: readonly BlockNode[] = [
+        {
+          id: "ref-1",
+          name: "core/pattern-ref",
+          attrs: { slug: "starter/hero" },
+        },
+      ];
+
+      const html = renderToStaticMarkup(
+        renderBlockTree(tree, refRegistry, { patterns }),
+      );
+
+      expect(html).toContain("Resolved");
+    });
+
+    test("dev: unknown slug renders a placeholder + logs a console.warn naming the slug", () => {
+      const patterns = createPatternRegistry([]);
+      const tree: readonly BlockNode[] = [
+        {
+          id: "ref-1",
+          name: "core/pattern-ref",
+          attrs: { slug: "nope/missing" },
+        },
+      ];
+      const warn = vi
+        .spyOn(console, "warn")
+        .mockImplementation(() => undefined);
+
+      const html = renderToStaticMarkup(
+        renderBlockTree(tree, refRegistry, { patterns }),
+      );
+
+      expect(html).toContain("data-plumix-unresolved-pattern-ref");
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("nope/missing"),
+      );
+      warn.mockRestore();
+    });
+
+    test("prod: unknown slug renders nothing (no DOM, still a console.warn)", () => {
+      // Distinct slug so the once-per-registry de-dup of the dev-mode
+      // test above doesn't suppress this assertion.
+      const patterns = createPatternRegistry([]);
+      const tree: readonly BlockNode[] = [
+        {
+          id: "ref-1",
+          name: "core/pattern-ref",
+          attrs: { slug: "nope/prod-missing" },
+        },
+      ];
+      const warn = vi
+        .spyOn(console, "warn")
+        .mockImplementation(() => undefined);
+
+      const html = withProductionEnv(() =>
+        renderToStaticMarkup(renderBlockTree(tree, refRegistry, { patterns })),
+      );
+
+      expect(html).toBe("");
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("nope/prod-missing"),
+      );
+      warn.mockRestore();
+    });
+
+    test("renders nothing for a ref when no pattern registry is supplied", () => {
+      const tree: readonly BlockNode[] = [
+        {
+          id: "ref-1",
+          name: "core/pattern-ref",
+          attrs: { slug: "anything" },
+        },
+      ];
+
+      const html = withProductionEnv(() =>
+        renderToStaticMarkup(renderBlockTree(tree, refRegistry)),
+      );
+
+      expect(html).toBe("");
     });
   });
 });

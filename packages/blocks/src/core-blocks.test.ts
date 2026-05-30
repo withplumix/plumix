@@ -81,6 +81,7 @@ describe("coreBlocks", () => {
       "core/table-body-row",
       "core/table-header-cell",
       "core/table-cell",
+      "core/pattern-ref",
     ]);
 
     for (const spec of coreBlocks) {
@@ -95,5 +96,12 @@ describe("coreBlocks", () => {
       coreBlocks.filter((s) => s.inserter === false).map((s) => s.name),
     );
     expect(hidden).toEqual(contentOnlyNames);
+  });
+
+  test("registers core/pattern-ref with a `slug` input declared", () => {
+    const ref = coreBlocks.find((b) => b.name === "core/pattern-ref");
+    expect(ref).toBeDefined();
+    expect(ref?.inserter).toBe(false);
+    expect(ref?.inputs?.map((i) => i.name)).toEqual(["slug"]);
   });
 });

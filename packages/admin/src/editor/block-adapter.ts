@@ -6,6 +6,9 @@ import type { BlockSpec } from "@plumix/blocks";
 import { DEFAULT_BLOCK_CONTEXT } from "@plumix/blocks";
 
 import { translateFields } from "./field-type-translator.js";
+import { PatternRefPreview } from "./PatternRefPreview.js";
+
+const PATTERN_REF_BLOCK = "core/pattern-ref";
 
 interface BlockAdapterOptions {
   readonly richtextExtensions?: Extensions;
@@ -17,6 +20,19 @@ export function blockSpecsToPuckComponents(
 ): Config["components"] {
   const out: Config["components"] = {};
   for (const spec of specs) {
+    if (spec.name === PATTERN_REF_BLOCK) {
+      out[spec.name] = {
+        label: spec.title ?? spec.name,
+        fields: spec.inputs ? translateFields(spec.inputs, options) : {},
+        defaultProps: spec.defaults,
+        render: (props) =>
+          createElement(PatternRefPreview, {
+            slug: (props as { slug?: string }).slug,
+            id: (props as { id?: string }).id,
+          }),
+      };
+      continue;
+    }
     out[spec.name] = {
       label: spec.title ?? spec.name,
       fields: spec.inputs ? translateFields(spec.inputs, options) : {},

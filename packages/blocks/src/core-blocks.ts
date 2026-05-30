@@ -7,6 +7,7 @@ import { columnsBlock } from "./columns/index.js";
 import { detailsBlock } from "./details/index.js";
 import { groupBlock } from "./group/index.js";
 import { headingBlock } from "./heading/index.js";
+import { patternRefBlock } from "./pattern-ref/index.js";
 import { quoteBlock } from "./quote/index.js";
 import { richTextBlock } from "./rich-text/index.js";
 import { separatorBlock } from "./separator/index.js";
@@ -37,4 +38,5 @@ export const coreBlocks: readonly BlockSpec[] = Object.freeze([
   tableBodyRowBlock,
   tableHeaderCellBlock,
   tableCellBlock,
+  patternRefBlock,
 ]);

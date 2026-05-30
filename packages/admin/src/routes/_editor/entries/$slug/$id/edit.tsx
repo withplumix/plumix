@@ -3,6 +3,7 @@ import type { Config, Data } from "@puckeditor/core";
 import type { ReactElement, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PlainFormLayout } from "@/components/editor/plain-form-layout.js";
+import { buildAdminPatternRegistry } from "@/editor/admin-pattern-registry.js";
 import { AutosaveStatusContext } from "@/editor/AutosaveStatus.js";
 import { blockSpecsToPuckComponents } from "@/editor/block-adapter.js";
 import { CoAuthorIndicator } from "@/editor/CoAuthorIndicator.js";
@@ -20,6 +21,7 @@ import { StaleDraftDialog } from "@/editor/StaleDraftDialog.js";
 import {
   entryMetaBoxesForType,
   findEntryTypeBySlug,
+  getPatterns,
   getThemeTokens,
 } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
@@ -73,6 +75,7 @@ const themeTokens = getThemeTokens();
 registerCoreBlocks();
 const runtimeBlocks = getRegisteredBlocks();
 const registry = createBlockRegistry(runtimeBlocks);
+const patternRegistry = buildAdminPatternRegistry(getPatterns());
 const config: Config = {
   components: blockSpecsToPuckComponents(runtimeBlocks, {
     // Puck types `extensions` as a mutable array; spread the readonly
@@ -563,6 +566,7 @@ function PuckSpikeRouteInner({
     (): ReactElement => (
       <PlumixEditorLayout
         registry={registry}
+        patternRegistry={patternRegistry}
         capabilities={capabilitySet}
         tokens={themeTokens}
         title={title}
@@ -736,6 +740,7 @@ function PuckPreviewRouteInner({
     (): ReactElement => (
       <PlumixEditorLayout
         registry={registry}
+        patternRegistry={patternRegistry}
         capabilities={capabilitySet}
         tokens={themeTokens}
         title={revision.title}

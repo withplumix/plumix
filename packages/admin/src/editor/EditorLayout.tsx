@@ -35,11 +35,16 @@ import type {
   BlockRegistry,
   BlockSpec,
   InsertableBlockEntry,
+  PatternRegistry,
   ResponsiveStyleSlot,
   ThemeTokens,
 } from "@plumix/blocks";
 import type { PatternManifestEntry } from "@plumix/core/manifest";
-import { createBlockRegistry, expandBlockVariations } from "@plumix/blocks";
+import {
+  createBlockRegistry,
+  createPatternRegistry,
+  expandBlockVariations,
+} from "@plumix/blocks";
 
 import type { TransformOption } from "./available-transforms.js";
 import type { SlashMenuItem } from "./slash-menu-items.js";
@@ -47,10 +52,11 @@ import { AutosaveStatusPill } from "./AutosaveStatus.js";
 import { BlockActionsPanel } from "./BlockActionsPanel.js";
 import { BlockIcon } from "./BlockIcon.js";
 import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
-import { insertPatternCopy } from "./insert-pattern.js";
+import { insertPattern } from "./insert-pattern.js";
 import { mergePropsAtSelector } from "./merge-variation-attrs.js";
 import { MobileSidebarSheet } from "./MobileSidebarSheet.js";
 import { patchStyleAtSelector } from "./patch-style.js";
+import { PatternRefProvider } from "./PatternRefPreview.js";
 import { PatternsSection } from "./PatternsSection.js";
 import { puckDataToBlockTree } from "./puck-to-block-tree.js";
 import { PUCK_ROOT_ZONE } from "./puck-zones.js";
@@ -61,6 +67,7 @@ import { viewportWidthToBucket } from "./viewport-bucket.js";
 
 interface PlumixEditorLayoutProps {
   readonly registry?: BlockRegistry;
+  readonly patternRegistry?: PatternRegistry;
   readonly capabilities?: ReadonlySet<string>;
   readonly tokens?: ThemeTokens;
   readonly children?: ReactNode;
@@ -100,6 +107,7 @@ interface PlumixEditorLayoutProps {
 }
 
 const EMPTY_REGISTRY: BlockRegistry = createBlockRegistry([]);
+const EMPTY_PATTERN_REGISTRY: PatternRegistry = createPatternRegistry([]);
 const EMPTY_CAPS: ReadonlySet<string> = new Set();
 const EMPTY_TOKENS: ThemeTokens = {};
 
@@ -338,6 +346,7 @@ function DraftActions({ draftMode }: DraftActionsProps): ReactElement {
 
 export function PlumixEditorLayout({
   registry = EMPTY_REGISTRY,
+  patternRegistry = EMPTY_PATTERN_REGISTRY,
   capabilities = EMPTY_CAPS,
   tokens = EMPTY_TOKENS,
   title,
@@ -354,103 +363,112 @@ export function PlumixEditorLayout({
   const isPreview = previewBanner !== undefined;
   const isDraftMode = draftMode !== undefined;
   const showDraftBanner = isDraftMode && draftMode.hasPendingDraft;
+  const refContextValue = useMemo(
+    () => ({ patterns: patternRegistry, blocks: registry }),
+    [patternRegistry, registry],
+  );
   return (
-    <div className="flex h-dvh flex-col" data-testid="plumix-editor-layout">
-      {previewBanner}
-      {showDraftBanner ? (
-        // Static banner — no `role="status"` because a live region
-        // containing a button gets re-announced on every state change,
-        // which makes the Discard button noisy for screen readers.
-        // Dark-mode contrast: `amber-900/30` background pairs with
-        // `amber-100` text at ~4.5:1 (AA for normal text); the original
-        // `amber-950/40` measured ~3.8:1.
-        <div
-          data-testid="unpublished-changes-banner"
-          className="flex shrink-0 items-center gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:bg-amber-900/30 dark:text-amber-100"
-        >
-          <span className="font-medium">
-            You have unpublished draft changes.
-          </span>
-          <span>Click Publish to push them live, or Discard to revert.</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            data-testid="unpublished-changes-banner-discard"
-            onClick={draftMode.onDiscardDraft}
-            disabled={draftMode.isDiscarding}
-            className="ml-auto"
+    <PatternRefProvider value={refContextValue}>
+      <div className="flex h-dvh flex-col" data-testid="plumix-editor-layout">
+        {previewBanner}
+        {showDraftBanner ? (
+          // Static banner — no `role="status"` because a live region
+          // containing a button gets re-announced on every state change,
+          // which makes the Discard button noisy for screen readers.
+          // Dark-mode contrast: `amber-900/30` background pairs with
+          // `amber-100` text at ~4.5:1 (AA for normal text); the original
+          // `amber-950/40` measured ~3.8:1.
+          <div
+            data-testid="unpublished-changes-banner"
+            className="flex shrink-0 items-center gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:bg-amber-900/30 dark:text-amber-100"
           >
-            {draftMode.isDiscarding ? "Discarding…" : "Discard"}
-          </Button>
-        </div>
-      ) : null}
-      <header
-        className="bg-background flex h-12 shrink-0 items-center gap-3 border-b px-4"
-        data-testid="plumix-editor-header"
-      >
-        <a
-          href={backHref}
-          aria-label="Back to list"
-          className="text-muted-foreground hover:bg-accent hover:text-foreground inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-sm"
-          data-testid="plumix-editor-back-button"
-        >
-          ←
-        </a>
-        <input
-          type="text"
-          placeholder="Untitled"
-          aria-label="Entry title"
-          className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent px-2 text-base font-medium outline-none disabled:cursor-not-allowed disabled:opacity-60"
-          data-testid="plumix-editor-title-input"
-          value={title}
-          onChange={(e) => onTitleChange(e.target.value)}
-          disabled={isPreview}
-        />
-        {isPreview ? null : <AutosaveStatusPill />}
-        {isPreview ? null : coAuthorIndicator}
-        {revisionsTrigger}
-        {isPreview ? null : isDraftMode ? (
-          <DraftActions draftMode={draftMode} />
-        ) : (
-          <LivePublishButton
-            onPublish={onPublish}
-            isPublishing={isPublishing}
-            isPublished={isPublished}
-          />
-        )}
-      </header>
-      <div
-        className="grid flex-1 grid-cols-[minmax(0,1fr)] overflow-hidden md:grid-cols-[260px_minmax(0,1fr)_320px]"
-        data-testid="plumix-editor-cols"
-      >
-        <BlocksBody registry={registry} capabilities={capabilities} />
-        {isPreview ? (
-          // Puck's `permissions` strips drag / insert / delete / dup /
-          // edit, but Tiptap inside rich-text fields keeps its own
-          // `editable: true`. Cover the canvas with a transparent
-          // overlay so the user can't type into rich-text without
-          // realising preview mode skips autosave.
-          <div className="relative" data-testid="plumix-editor-preview-shield">
-            <div
-              aria-hidden
-              className="bg-background/0 pointer-events-auto absolute inset-0 z-10"
-            />
-            <div className="pointer-events-none h-full">
-              <PlumixCanvasWithSlashMenu
-                registry={registry}
-                capabilities={capabilities}
-              />
-            </div>
+            <span className="font-medium">
+              You have unpublished draft changes.
+            </span>
+            <span>Click Publish to push them live, or Discard to revert.</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              data-testid="unpublished-changes-banner-discard"
+              onClick={draftMode.onDiscardDraft}
+              disabled={draftMode.isDiscarding}
+              className="ml-auto"
+            >
+              {draftMode.isDiscarding ? "Discarding…" : "Discard"}
+            </Button>
           </div>
-        ) : (
-          <PlumixCanvasWithSlashMenu
-            registry={registry}
-            capabilities={capabilities}
+        ) : null}
+        <header
+          className="bg-background flex h-12 shrink-0 items-center gap-3 border-b px-4"
+          data-testid="plumix-editor-header"
+        >
+          <a
+            href={backHref}
+            aria-label="Back to list"
+            className="text-muted-foreground hover:bg-accent hover:text-foreground inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-sm"
+            data-testid="plumix-editor-back-button"
+          >
+            ←
+          </a>
+          <input
+            type="text"
+            placeholder="Untitled"
+            aria-label="Entry title"
+            className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent px-2 text-base font-medium outline-none disabled:cursor-not-allowed disabled:opacity-60"
+            data-testid="plumix-editor-title-input"
+            value={title}
+            onChange={(e) => onTitleChange(e.target.value)}
+            disabled={isPreview}
           />
-        )}
-        <InspectorBody registry={registry} tokens={tokens} />
+          {isPreview ? null : <AutosaveStatusPill />}
+          {isPreview ? null : coAuthorIndicator}
+          {revisionsTrigger}
+          {isPreview ? null : isDraftMode ? (
+            <DraftActions draftMode={draftMode} />
+          ) : (
+            <LivePublishButton
+              onPublish={onPublish}
+              isPublishing={isPublishing}
+              isPublished={isPublished}
+            />
+          )}
+        </header>
+        <div
+          className="grid flex-1 grid-cols-[minmax(0,1fr)] overflow-hidden md:grid-cols-[260px_minmax(0,1fr)_320px]"
+          data-testid="plumix-editor-cols"
+        >
+          <BlocksBody registry={registry} capabilities={capabilities} />
+          {isPreview ? (
+            // Puck's `permissions` strips drag / insert / delete / dup /
+            // edit, but Tiptap inside rich-text fields keeps its own
+            // `editable: true`. Cover the canvas with a transparent
+            // overlay so the user can't type into rich-text without
+            // realising preview mode skips autosave.
+            <div
+              className="relative"
+              data-testid="plumix-editor-preview-shield"
+            >
+              <div
+                aria-hidden
+                className="bg-background/0 pointer-events-auto absolute inset-0 z-10"
+              />
+              <div className="pointer-events-none h-full">
+                <PlumixCanvasWithSlashMenu
+                  registry={registry}
+                  capabilities={capabilities}
+                />
+              </div>
+            </div>
+          ) : (
+            <PlumixCanvasWithSlashMenu
+              registry={registry}
+              capabilities={capabilities}
+            />
+          )}
+          <InspectorBody registry={registry} tokens={tokens} />
+        </div>
       </div>
-    </div>
+    </PatternRefProvider>
   );
 }
 
@@ -562,7 +580,7 @@ function PlumixBlocksTab({
       puck.dispatch({
         type: "setData",
         data: (previous) =>
-          insertPatternCopy(previous, pattern.content, previous.content.length),
+          insertPattern(previous, pattern, previous.content.length),
       });
     },
     [puck],
