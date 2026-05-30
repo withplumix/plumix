@@ -11,6 +11,7 @@ export const blog = definePlugin("blog", (ctx) => {
     isHierarchical: false,
     isPublic: true,
     hasArchive: true,
+    rewrite: { slug: "posts" },
     capabilityType: "post",
     menuIcon: "file-text",
   });
