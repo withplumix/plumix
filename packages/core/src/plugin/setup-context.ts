@@ -45,6 +45,7 @@ import {
   deriveTermTaxonomyCapabilities,
 } from "../auth/rbac.js";
 import { DEFAULT_REWRITE_RULE_PRIORITY } from "../route/compile.js";
+import { RESERVED_DEP_KIND_NAMES } from "../template-deps.js";
 import { DuplicateRegistrationError, PluginContextError } from "./errors.js";
 import { CORE_RPC_NAMESPACES } from "./manifest.js";
 import {
@@ -600,6 +601,14 @@ export function createPluginSetupContext({
     },
 
     registerTemplateDep: (kind, { load }) => {
+      if (RESERVED_DEP_KIND_NAMES.has(kind)) {
+        // Reserved framework keys would silently no-op at request time
+        // since the merger skips them on theme/template traversal.
+        throw PluginContextError.templateDepKindReserved({
+          pluginId,
+          kind,
+        });
+      }
       const existing = registry.templateDeps.get(kind);
       if (existing) {
         throw DuplicateRegistrationError.alreadyRegistered({

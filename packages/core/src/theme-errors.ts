@@ -1,6 +1,8 @@
 type ThemeRegistrationCode =
   | "missing_theme"
   | "missing_index_template"
+  | "legacy_template_deps_shape"
+  | "theme_dep_function_form"
   | "document_invalid_link"
   | "document_invalid_script"
   | "invalid_template";
@@ -33,6 +35,27 @@ export class ThemeRegistrationError extends Error {
       `Theme registration: \`templates.index\` is required. Every theme ` +
         `must declare an \`index\` template — it is the final fallback the ` +
         `template hierarchy walks to when no more-specific template matches.`,
+    );
+  }
+
+  static legacyTemplateDepsShape(): ThemeRegistrationError {
+    return new ThemeRegistrationError(
+      "legacy_template_deps_shape",
+      `Theme registration: \`templateDeps: { ... }\` is no longer accepted. ` +
+        `Lift dep kinds to the flat root of \`defineTheme\` instead — e.g. ` +
+        `\`defineTheme({ menus: ["primary"], settings: ["general"], templates: { ... } })\`. ` +
+        `Templates compose via the array (replace) or function (extend) form ` +
+        `per kind; see #614.`,
+    );
+  }
+
+  static themeDepFunctionForm(kind: string): ThemeRegistrationError {
+    return new ThemeRegistrationError(
+      "theme_dep_function_form",
+      `Theme registration: dep kind \`${kind}\` was declared as a function. ` +
+        `The function form means "given the parent, return the next" — but the ` +
+        `theme root has no parent. Use a plain array at the theme level; the ` +
+        `function form is for per-template extension (see #614).`,
     );
   }
 

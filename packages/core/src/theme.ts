@@ -11,6 +11,7 @@ import type {
   TaxonomyData,
 } from "./route/render/resolved-entry.js";
 import type { Template, TemplateDepDeclarations } from "./template.js";
+import { RESERVED_DEP_KIND_NAMES } from "./template-deps.js";
 import { ThemeError, ThemeRegistrationError } from "./theme-errors.js";
 
 // `theme:document` is a boot-time filter chain. `buildApp` fires it once,
@@ -129,7 +130,7 @@ export interface TemplateRegistry {
   readonly [key: string]: DynamicTemplateEntry | undefined;
 }
 
-export interface ThemeDescriptor {
+export interface ThemeDescriptor extends TemplateDepDeclarations {
   readonly templates: TemplateRegistry;
   readonly document?: DocumentManifest;
   readonly tokens?: ThemeTokens;
@@ -141,12 +142,6 @@ export interface ThemeDescriptor {
    * resolves them through its normal graph and emits hashed bundles.
    */
   readonly css?: readonly string[];
-  /**
-   * Dep declarations applied to every template. Per-template slugs of
-   * the same kind union (dedup'd) with these; a global `settings:
-   * ["general"]` reaches templates that never declared `settings`.
-   */
-  readonly templateDeps?: TemplateDepDeclarations;
 }
 
 const TOKEN_SLUG_RE = /^[a-z][a-z0-9-]*$/;
@@ -159,6 +154,18 @@ export function defineTheme(descriptor: ThemeDescriptor): ThemeDescriptor {
   const templates = descriptor.templates as Readonly<Record<string, unknown>>;
   if (!templates.index) {
     throw ThemeRegistrationError.missingIndexTemplate();
+  }
+  if ("templateDeps" in descriptor) {
+    throw ThemeRegistrationError.legacyTemplateDepsShape();
+  }
+  // Function-form deps are template-only: they need a parent. The theme
+  // root has none, so reject the form here instead of letting it silently
+  // no-op.
+  for (const [key, value] of Object.entries(descriptor)) {
+    if (RESERVED_DEP_KIND_NAMES.has(key)) continue;
+    if (typeof value === "function") {
+      throw ThemeRegistrationError.themeDepFunctionForm(key);
+    }
   }
   if (descriptor.tokens) {
     validateTokens(descriptor.tokens);

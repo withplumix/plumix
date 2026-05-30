@@ -30,7 +30,8 @@ type PluginContextErrorCode =
   | "meta_box_too_many_fields"
   | "meta_box_field_invalid_key"
   | "meta_box_field_duplicate_key"
-  | "meta_box_field_reserved_key";
+  | "meta_box_field_reserved_key"
+  | "template_dep_kind_reserved";
 
 interface PluginContextErrorFields {
   pluginId?: string;
@@ -202,6 +203,19 @@ export class PluginContextError extends Error {
       `Settings page "${ctx.name}" lists a group more than once; ` +
         `each group may appear at most once per page.`,
       { identifierName: ctx.name },
+    );
+  }
+
+  static templateDepKindReserved(ctx: {
+    pluginId: string;
+    kind: string;
+  }): PluginContextError {
+    return new PluginContextError(
+      "template_dep_kind_reserved",
+      `Plugin "${ctx.pluginId}" registered template dep kind "${ctx.kind}" — ` +
+        `that name is reserved by the framework (theme or template uses it ` +
+        `for something else). Pick a different name; see #614.`,
+      ctx,
     );
   }
 

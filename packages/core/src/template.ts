@@ -27,12 +27,18 @@ const PLUMIX_TEMPLATE_BRAND: unique symbol = Symbol("plumix.template");
 export interface TemplateDepRegistry {}
 
 /**
- * Per-kind declarations on a template — array of slugs the template
- * needs the framework to load before render. Optional per kind so a
- * template can opt into just the deps it uses.
+ * Per-kind declarations on a theme or template. An array replaces the
+ * inherited value (override); a function `(prev) => next` receives the
+ * theme's slugs and returns the composed set (extend / filter); an
+ * empty array disables the dep for that template; an omitted kind
+ * inherits unchanged.
  */
 export type TemplateDepDeclarations = {
-  readonly [K in keyof TemplateDepRegistry]?: readonly TemplateDepRegistry[K]["slug"][];
+  readonly [K in keyof TemplateDepRegistry]?:
+    | readonly TemplateDepRegistry[K]["slug"][]
+    | ((
+        prev: readonly TemplateDepRegistry[K]["slug"][],
+      ) => readonly TemplateDepRegistry[K]["slug"][]);
 };
 
 /**
