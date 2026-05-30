@@ -64,7 +64,7 @@ export async function renderThroughTheme({
   const { template, slot } = pickTemplate(theme.templates, candidates);
   const deps = await loadTemplateDeps(
     mergeTemplateDepDeclarations(
-      theme.templateDeps,
+      theme,
       template as unknown as Record<string, unknown>,
     ),
     templateDeps,
@@ -139,7 +139,7 @@ export async function renderErrorThroughTheme({
   const template = normalizeTemplate(raw, variant.key);
   const deps = await loadTemplateDeps(
     mergeTemplateDepDeclarations(
-      theme.templateDeps,
+      theme,
       template as unknown as Record<string, unknown>,
     ),
     templateDeps,

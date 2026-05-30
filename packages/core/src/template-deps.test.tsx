@@ -102,6 +102,28 @@ describe("ctx.registerTemplateDep", () => {
     expect(app.plugins.templateDeps.get("test-thing")?.registeredBy).toBe("a");
     expect(app.plugins.templateDeps.get("test-other")?.registeredBy).toBe("b");
   });
+
+  test("rejects registration when the dep kind collides with a framework key", async () => {
+    const offender = definePlugin("offender", (ctx) => {
+      // `render` is a framework-reserved key on every template; a dep
+      // kind by that name would silently no-op at request time since
+      // the merger skips it.
+      ctx.registerTemplateDep("render" as never, {
+        load: () => Promise.resolve({}),
+      });
+    });
+    await expect(
+      buildApp(
+        plumix({
+          runtime: stubAdapter,
+          database: stubDatabase,
+          auth: stubAuth,
+          theme: stubTheme,
+          plugins: [offender],
+        }),
+      ),
+    ).rejects.toThrow(/reserved/i);
+  });
 });
 
 const captureLogger = () => {
@@ -374,10 +396,10 @@ const blogTypePlugin = definePlugin("blog", (ctx) => {
   });
 });
 
-describe("theme-level templateDeps", () => {
-  test("declarations on `defineTheme` reach every template's render args", async () => {
+describe("theme-level flat dep declarations", () => {
+  test("dep slugs declared at the flat root of defineTheme reach the render args", async () => {
     const theme = defineTheme({
-      templateDeps: { settings: ["site-info"] },
+      settings: ["site-info"],
       templates: {
         index: () => null,
         single: defineTemplate({
@@ -393,8 +415,8 @@ describe("theme-level templateDeps", () => {
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
-      slug: "from-theme",
-      title: "From Theme",
+      slug: "from-flat-theme",
+      title: "From Flat Theme",
       content: null,
       status: "published",
       authorId: author.id,
@@ -407,23 +429,26 @@ describe("theme-level templateDeps", () => {
     });
 
     const response = await h.dispatch(
-      new Request("https://cms.example/post/from-theme"),
+      new Request("https://cms.example/post/from-flat-theme"),
     );
     expect(await response.text()).toContain("Plumix Demo");
   });
 
-  test("per-template slugs union with theme-level slugs of the same kind", async () => {
+  test("template array form replaces the theme's slugs for that kind", async () => {
+    // Override semantics: the matched template's `settings: ["author-info"]`
+    // takes the entire slot — `site-info` is NOT inherited from the
+    // theme. To extend instead, use the function form (TDD #3).
     const theme = defineTheme({
-      templateDeps: { settings: ["site-info"] },
+      settings: ["site-info"],
       templates: {
         index: () => null,
         single: defineTemplate({
           settings: ["author-info"],
           render: (args) => (
             <article>
-              {pickString(args.settings?.["site-info"], "title")}
+              {`site:${pickString(args.settings?.["site-info"], "title")}`}
               {"|"}
-              {pickString(args.settings?.["author-info"], "name")}
+              {`author:${pickString(args.settings?.["author-info"], "name")}`}
             </article>
           ),
         }),
@@ -436,8 +461,8 @@ describe("theme-level templateDeps", () => {
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
-      slug: "union",
-      title: "Union",
+      slug: "override",
+      title: "Override",
       content: null,
       status: "published",
       authorId: author.id,
@@ -449,11 +474,119 @@ describe("theme-level templateDeps", () => {
     ]);
 
     const response = await h.dispatch(
-      new Request("https://cms.example/post/union"),
+      new Request("https://cms.example/post/override"),
     );
     const body = await response.text();
-    expect(body).toContain("Plumix");
-    expect(body).toContain("Ada");
+    expect(body).toContain("author:Ada");
+    expect(body).not.toContain("site:Plumix");
+  });
+
+  test("template function form receives parent slugs and can extend them", async () => {
+    const theme = defineTheme({
+      settings: ["site-info"],
+      templates: {
+        index: () => null,
+        single: defineTemplate({
+          settings: (prev: readonly string[]) => [...prev, "author-info"],
+          render: (args) => (
+            <article>
+              {`site:${pickString(args.settings?.["site-info"], "title")}`}
+              {"|"}
+              {`author:${pickString(args.settings?.["author-info"], "name")}`}
+            </article>
+          ),
+        }),
+      },
+    });
+    const h = await createDispatcherHarness({
+      plugins: [blogTypePlugin],
+      theme,
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "extend",
+      title: "Extend",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.db.insert(settingsSchema).values([
+      { group: "site-info", key: "title", value: "Plumix" },
+      { group: "author-info", key: "name", value: "Ada" },
+    ]);
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/extend"),
+    );
+    const body = await response.text();
+    expect(body).toContain("site:Plumix");
+    expect(body).toContain("author:Ada");
+  });
+
+  test("template empty array disables the dep for that template", async () => {
+    const theme = defineTheme({
+      settings: ["site-info"],
+      templates: {
+        index: () => null,
+        single: defineTemplate({
+          settings: [],
+          render: (args) =>
+            args.settings === undefined
+              ? "disabled"
+              : `loaded:${JSON.stringify(args.settings)}`,
+        }),
+      },
+    });
+    const h = await createDispatcherHarness({
+      plugins: [blogTypePlugin],
+      theme,
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "disable",
+      title: "Disable",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.db.insert(settingsSchema).values({
+      group: "site-info",
+      key: "title",
+      value: "Plumix",
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/disable"),
+    );
+    const body = await response.text();
+    expect(body).toContain("disabled");
+    expect(body).not.toContain("Plumix");
+  });
+
+  test("function-form dep on the theme root throws at defineTheme (no parent)", () => {
+    // The function form means "given the parent, return the next." The
+    // theme root has no parent — declaring a function there is always a
+    // mistake. Reject at boot so it doesn't silently no-op like
+    // pre-#614 templateDeps.
+    const bad = {
+      settings: (prev: readonly string[]) => [...prev, "general"],
+      templates: { index: () => null },
+    } as unknown as Parameters<typeof defineTheme>[0];
+    expect(() => defineTheme(bad)).toThrow(/function/i);
+  });
+
+  test("legacy nested `templateDeps: {}` on the theme throws at defineTheme", () => {
+    // Pre-#614 shape. The runtime guard makes sure migrations don't
+    // silently no-op when consumers forget to lift the keys to root.
+    const legacy = {
+      templateDeps: { settings: ["site-info"] },
+      templates: { index: () => null },
+    } as unknown as Parameters<typeof defineTheme>[0];
+    expect(() => defineTheme(legacy)).toThrow(/templateDeps/);
   });
 });
 
