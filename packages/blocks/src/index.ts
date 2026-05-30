@@ -36,7 +36,7 @@ export type {
 } from "./render-block-tree.js";
 
 // ─── Entry-content envelope ─────────────────────────────────────────────────
-export { isEntryContent } from "./entry-content.js";
+export { defineEntryContent, isEntryContent } from "./entry-content.js";
 export type { EntryContent } from "./entry-content.js";
 
 // ─── Per-block SSR loaders ──────────────────────────────────────────────────

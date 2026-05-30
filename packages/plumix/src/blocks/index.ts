@@ -13,6 +13,7 @@ export {
   coreMarks,
   createBlockRegistry,
   defineBlock,
+  defineEntryContent,
   isEntryContent,
   isBlockNodeArray,
   renderBlockTree,
