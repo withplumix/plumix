@@ -28,6 +28,8 @@ export function mergeDocumentManifest(
     link: concatArrays(theme.link, fragment?.link),
     meta: concatArrays(theme.meta, fragment?.meta),
     script: concatArrays(theme.script, fragment?.script),
+    title: fragment?.title ?? theme.title,
+    titleTemplate: fragment?.titleTemplate ?? theme.titleTemplate,
   };
 }
 

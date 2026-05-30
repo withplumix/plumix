@@ -105,6 +105,8 @@ export interface DocumentManifest {
   readonly link?: readonly DocumentLink[];
   readonly meta?: readonly DocumentMeta[];
   readonly script?: readonly DocumentScript[];
+  readonly title?: string;
+  readonly titleTemplate?: string | ((title: string | undefined) => string);
 }
 
 export interface TemplateRegistry {
