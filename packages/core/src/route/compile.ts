@@ -11,6 +11,10 @@ export const DEFAULT_REWRITE_RULE_PRIORITY = 10;
 // Framework-owned routes sort ahead of explicit rewrites so a plugin's
 // catch-all can't shadow `/page/N`.
 const FRAMEWORK_ROUTE_PRIORITY = 5;
+// Empty-baseSlug single patterns (`/:slug` or `/:path+`) match everything
+// at the URL root, so they sort after sibling-plugin auto rules to keep
+// resolution order-independent.
+const CATCH_ALL_ROUTE_PRIORITY = 60;
 
 export const FRAMEWORK_FRONT_PAGE_PATTERN = "/page/:page(\\d+)";
 
@@ -111,7 +115,7 @@ function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
     pattern: new URLPattern({ pathname: singlePattern }),
     rawPattern: singlePattern,
     intent: { kind: "single", entryType: entryType.name },
-    priority: AUTO_ROUTE_PRIORITY,
+    priority: baseSlug === "" ? CATCH_ALL_ROUTE_PRIORITY : AUTO_ROUTE_PRIORITY,
     registeredBy: entryType.registeredBy,
   });
 
