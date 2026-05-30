@@ -2638,6 +2638,56 @@ describe("resolvePublicRoute — front-page through theme", () => {
     expect(await response.text()).toContain("page:1");
   });
 
+  test("blog archive at /posts resolves even when a pages plugin's empty-slug catch-all registers first", async () => {
+    // With `rewrite.slug: ""`, the pages plugin auto-registers `/:slug`
+    // (or `/:path+` hierarchical). Sharing AUTO_ROUTE_PRIORITY (50) with
+    // blog's `/posts` archive made resolution depend on plugin order —
+    // `[pages, blog]` would 404 because pages' catch-all matched first
+    // and the page resolver missed slug "posts".
+    const pagesPlugin = definePlugin("pages", (ctx) => {
+      ctx.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        rewrite: { slug: "" },
+      });
+    });
+    const blogPostsPlugin = definePlugin("blog-posts", (ctx) => {
+      ctx.registerEntryType("post", {
+        label: "Posts",
+        isPublic: true,
+        hasArchive: true,
+        rewrite: { slug: "posts" },
+      });
+    });
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        archive: ({ data }) => (
+          <span data-testid="archive">{`type:${data.contentType}`}</span>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({
+      plugins: [pagesPlugin, blogPostsPlugin],
+      theme,
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "hello",
+      title: "Hello",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(new Request("https://cms.example/posts"));
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("type:post");
+  });
+
   test("plugin-registered `/` rewrite rule wins over front-page synthesis", async () => {
     const homepagePlugin = definePlugin("homepage", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
