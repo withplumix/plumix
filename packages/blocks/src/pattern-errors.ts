@@ -31,4 +31,14 @@ export class PatternRegistryError extends Error {
       `Pattern "${patternName}" at ${path} uses undeclared attr "${attrKey}" on block "${blockName}".`,
     );
   }
+
+  static unresolvedRef(
+    patternName: string,
+    path: string,
+    targetSlug: string,
+  ): PatternRegistryError {
+    return new PatternRegistryError(
+      `Pattern "${patternName}" at ${path} references unregistered pattern "${targetSlug}".`,
+    );
+  }
 }

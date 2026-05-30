@@ -55,6 +55,24 @@ describe("definePattern", () => {
     expect(pattern.content.map((n) => n.id)).toEqual(["p1", "p2"]);
   });
 
+  test("preserves the insert mode field — copy + reference both round-trip", () => {
+    const copy = definePattern({
+      name: "x/copy",
+      title: "C",
+      content: [],
+      insert: "copy",
+    });
+    const ref = definePattern({
+      name: "x/ref",
+      title: "R",
+      content: [],
+      insert: "reference",
+    });
+
+    expect(copy.insert).toBe("copy");
+    expect(ref.insert).toBe("reference");
+  });
+
   test("typed category registry accepts seeded defaults and augmented categories", () => {
     // Seeded default categories compile.
     definePattern({ name: "x/a", title: "A", category: "hero", content: [] });
@@ -200,5 +218,48 @@ describe("commitPatterns", () => {
     expect(() => commitPatterns(patterns, strictBlocks)).toThrow(
       /starter\/attrs-mismatch.*garbage/,
     );
+  });
+
+  test("throws when a pattern body references an unregistered pattern via core/pattern-ref", () => {
+    const ref = defineBlock({
+      name: "core/pattern-ref",
+      inserter: false,
+      inputs: [{ name: "slug", type: "text" }],
+      render: () => null,
+    });
+    const refBlocks = createBlockRegistry([ref]);
+    const wrapper = definePattern({
+      name: "starter/wrapper",
+      title: "Wrapper",
+      content: [block("core/pattern-ref", { slug: "starter/missing" })],
+    });
+    const patterns = createPatternRegistry([wrapper]);
+
+    expect(() => commitPatterns(patterns, refBlocks)).toThrow(
+      /starter\/wrapper.*starter\/missing/,
+    );
+  });
+
+  test("accepts pattern bodies whose pattern-ref targets ARE registered", () => {
+    const ref = defineBlock({
+      name: "core/pattern-ref",
+      inserter: false,
+      inputs: [{ name: "slug", type: "text" }],
+      render: () => null,
+    });
+    const refBlocks = createBlockRegistry([ref]);
+    const target = definePattern({
+      name: "starter/target",
+      title: "Target",
+      content: [],
+    });
+    const wrapper = definePattern({
+      name: "starter/wrapper-ok",
+      title: "Wrapper",
+      content: [block("core/pattern-ref", { slug: "starter/target" })],
+    });
+    const patterns = createPatternRegistry([target, wrapper]);
+
+    expect(() => commitPatterns(patterns, refBlocks)).not.toThrow();
   });
 });

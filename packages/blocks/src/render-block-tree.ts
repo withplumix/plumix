@@ -7,9 +7,12 @@ import type {
   ResolvedBlockLoaders,
   ResolvedLoaders,
 } from "./loaders.js";
+import type { PatternRegistry } from "./pattern-registry.js";
 import type { ResponsiveStyleSlot } from "./styles/style-emitter.js";
 import type { ThemeTokens } from "./styles/types.js";
 import { emitBlockStyleCss } from "./styles/style-emitter.js";
+
+const PATTERN_REF_BLOCK = "core/pattern-ref";
 
 /**
  * Threaded through `renderBlockTree` recursion. Block components introspect
@@ -52,6 +55,7 @@ export interface RenderBlockTreeOptions {
   readonly tokens?: ThemeTokens;
   readonly hooks?: BlockRenderHooks;
   readonly loaderData?: ResolvedBlockLoaders;
+  readonly patterns?: PatternRegistry;
 }
 
 export interface BlockNodeRenderProps<
@@ -143,6 +147,7 @@ interface WalkerEnv {
   readonly tokens: ThemeTokens | undefined;
   readonly hooks: BlockRenderHooks | undefined;
   readonly loaderData: ResolvedBlockLoaders | undefined;
+  readonly patterns: PatternRegistry | undefined;
 }
 
 function renderNodes(
@@ -164,6 +169,9 @@ function renderNode(
   context: BlockContext,
 ): ReactNode {
   const { registry, devState, tokens, loaderData } = env;
+  if (node.name === PATTERN_REF_BLOCK) {
+    return renderPatternRef(node, env, context);
+  }
   const spec = registry.get(node.name);
   if (!spec) {
     return createElement(
@@ -217,6 +225,42 @@ function renderNode(
 
 const EMPTY_LOADERS: Readonly<Record<string, unknown>> = Object.freeze({});
 
+function renderPatternRef(
+  node: BlockNode,
+  env: WalkerEnv,
+  context: BlockContext,
+): ReactNode {
+  const slug = typeof node.attrs?.slug === "string" ? node.attrs.slug : "";
+  const resolved = env.patterns?.get(slug);
+  if (resolved) {
+    return createElement(
+      Fragment,
+      { key: node.id },
+      renderNodes(resolved.content, env, context),
+    );
+  }
+  return createElement(
+    Fragment,
+    { key: node.id },
+    renderUnresolvedPatternRef(slug, env.devState),
+  );
+}
+
+function renderUnresolvedPatternRef(
+  slug: string,
+  devState: DevWarnState,
+): ReactNode {
+  const key = `pattern-ref:${slug}`;
+  if (!devState.seen.has(key)) {
+    devState.seen.add(key);
+    console.warn(`[plumix:blocks] Unresolved pattern reference: ${slug}`);
+  }
+  if (!isDevMode()) return null;
+  return createElement("template", {
+    "data-plumix-unresolved-pattern-ref": slug,
+  });
+}
+
 export function renderBlockTree(
   nodes: readonly BlockNode[],
   registry: BlockRegistry,
@@ -228,6 +272,7 @@ export function renderBlockTree(
     tokens: options?.tokens,
     hooks: options?.hooks,
     loaderData: options?.loaderData,
+    patterns: options?.patterns,
   };
   return renderNodes(nodes, env, DEFAULT_BLOCK_CONTEXT);
 }

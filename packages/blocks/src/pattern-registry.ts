@@ -36,10 +36,16 @@ type AttrsFor<TName extends string> = TName extends keyof BlockTypeRegistry
   ? BlockTypeRegistry[TName]
   : Readonly<Record<string, unknown>>;
 
+export type PatternInsertMode = "copy" | "reference";
+
 export interface BlockPattern {
   readonly name: string;
   readonly title: string;
   readonly category?: keyof PatternCategoryRegistry;
+  // Defaults to "copy" when unset — the inserter splices a deep-cloned
+  // body. "reference" inserts a single `core/pattern-ref` node the
+  // walker resolves at render.
+  readonly insert?: PatternInsertMode;
   readonly content: readonly BlockNode[];
 }
 
@@ -112,6 +118,8 @@ export function createPatternRegistry(
   });
 }
 
+const PATTERN_REF_BLOCK_NAME = "core/pattern-ref";
+
 export function commitPatterns(
   patterns: PatternRegistry,
   blocks: BlockRegistry,
@@ -130,8 +138,32 @@ export function commitPatterns(
       );
     }
     validateAttrs(pattern.name, pattern.content, "blocks", blocks);
+    validatePatternRefs(pattern.name, pattern.content, "blocks", patterns);
   }
   return patterns;
+}
+
+function validatePatternRefs(
+  patternName: string,
+  nodes: readonly BlockNode[],
+  basePath: string,
+  patterns: PatternRegistry,
+): void {
+  nodes.forEach((node, i) => {
+    const path = `${basePath}[${i}]`;
+    if (node.name === PATTERN_REF_BLOCK_NAME) {
+      const slug = node.attrs?.slug;
+      if (typeof slug === "string" && !patterns.has(slug)) {
+        throw PatternRegistryError.unresolvedRef(patternName, path, slug);
+      }
+      return;
+    }
+    for (const [key, value] of Object.entries(node.attrs ?? {})) {
+      if (isBlockNodeArray(value)) {
+        validatePatternRefs(patternName, value, `${path}.${key}`, patterns);
+      }
+    }
+  });
 }
 
 function validateAttrs(
