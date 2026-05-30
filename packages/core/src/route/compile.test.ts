@@ -4,13 +4,19 @@ import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { installPlugins } from "../plugin/register.js";
-import { compileRouteMap } from "./compile.js";
+import { compileRouteMap, FRAMEWORK_FRONT_PAGE_PATTERN } from "./compile.js";
 
 async function buildRegistry(plugins: ReturnType<typeof definePlugin>[]) {
   const hooks = new HookRegistry();
   const registry = createPluginRegistry();
   await installPlugins({ hooks, plugins, registry });
   return registry;
+}
+
+function pluginRoutes(registry: ReturnType<typeof createPluginRegistry>) {
+  return compileRouteMap(registry).filter(
+    (rule) => rule.rawPattern !== FRAMEWORK_FRONT_PAGE_PATTERN,
+  );
 }
 
 describe("compileRouteMap", () => {
@@ -89,7 +95,7 @@ describe("compileRouteMap", () => {
         });
       }),
     ]);
-    const map = compileRouteMap(registry);
+    const map = pluginRoutes(registry);
     expect(map.map((r) => r.rawPattern)).toEqual([
       "/r/:term/page/:page",
       "/r/:term",
@@ -104,7 +110,7 @@ describe("compileRouteMap", () => {
         ctx.registerTermTaxonomy("topic", { label: "Topics" });
       }),
     ]);
-    expect(compileRouteMap(registry).map((r) => r.rawPattern)).toEqual([
+    expect(pluginRoutes(registry).map((r) => r.rawPattern)).toEqual([
       "/topic/:term/page/:page",
       "/topic/:term",
     ]);
@@ -119,7 +125,7 @@ describe("compileRouteMap", () => {
         });
       }),
     ]);
-    expect(compileRouteMap(registry)).toHaveLength(0);
+    expect(pluginRoutes(registry)).toHaveLength(0);
   });
 
   test("taxonomy rule beats colliding entry-type single on slug match (WP-faithful)", async () => {
@@ -183,7 +189,7 @@ describe("compileRouteMap", () => {
         ctx.registerEntryType("post", { label: "Posts", isPublic: true });
       }),
     ]);
-    const map = compileRouteMap(registry);
+    const map = pluginRoutes(registry);
     expect(map).toHaveLength(1);
     expect(map[0]?.rawPattern).toBe("/post/:slug");
     expect(map[0]?.intent).toEqual({ kind: "single", entryType: "post" });
@@ -224,7 +230,7 @@ describe("compileRouteMap", () => {
         });
       }),
     ]);
-    const map = compileRouteMap(registry);
+    const map = pluginRoutes(registry);
     const patterns = map.map((r) => r.rawPattern);
     expect(patterns).toEqual(["/shop/page/:page", "/shop", "/shop/:slug"]);
     expect(map[0]?.intent).toEqual({ kind: "archive", entryType: "product" });
@@ -243,8 +249,7 @@ describe("compileRouteMap", () => {
         });
       }),
     ]);
-    const map = compileRouteMap(registry);
-    expect(map.map((r) => r.rawPattern)).toEqual([
+    expect(pluginRoutes(registry).map((r) => r.rawPattern)).toEqual([
       "/store/page/:page",
       "/store",
       "/p/:slug",
@@ -260,7 +265,7 @@ describe("compileRouteMap", () => {
         });
       }),
     ]);
-    expect(compileRouteMap(registry)).toHaveLength(0);
+    expect(pluginRoutes(registry)).toHaveLength(0);
   });
 
   test("registerRewriteRule lands ahead of auto rules via default priority", async () => {
@@ -277,7 +282,7 @@ describe("compileRouteMap", () => {
         });
       }),
     ]);
-    const map = compileRouteMap(registry);
+    const map = pluginRoutes(registry);
     expect(map[0]?.rawPattern).toBe("/docs/:category/:slug");
     expect(map[0]?.priority).toBe(10);
     expect(map[1]?.rawPattern).toBe("/docs/:slug");
@@ -329,8 +334,10 @@ describe("compileRouteMap", () => {
         ctx.registerRewriteRule("/b", { kind: "single", entryType: "x" });
       }),
     ]);
-    const map = compileRouteMap(registry);
-    expect(map.map((r) => r.rawPattern)).toEqual(["/a", "/b"]);
+    expect(pluginRoutes(registry).map((r) => r.rawPattern)).toEqual([
+      "/a",
+      "/b",
+    ]);
   });
 
   test("isPublic defaults to true — omitting it still generates routes", async () => {
@@ -339,7 +346,7 @@ describe("compileRouteMap", () => {
         ctx.registerEntryType("article", { label: "Articles" });
       }),
     ]);
-    expect(compileRouteMap(registry).map((r) => r.rawPattern)).toEqual([
+    expect(pluginRoutes(registry).map((r) => r.rawPattern)).toEqual([
       "/article/:slug",
     ]);
   });
@@ -357,9 +364,17 @@ describe("compileRouteMap", () => {
         );
       }),
     ]);
-    const map = compileRouteMap(registry);
+    const map = pluginRoutes(registry);
     expect(map[0]?.rawPattern).toBe("/post/featured");
     expect(map[0]?.priority).toBe(5);
+  });
+
+  test("framework registers /page/:page(\\d+) ahead of plugin rules", async () => {
+    const registry = await buildRegistry([]);
+    const map = compileRouteMap(registry);
+    expect(map[0]?.rawPattern).toBe(FRAMEWORK_FRONT_PAGE_PATTERN);
+    expect(map[0]?.intent).toEqual({ kind: "front-page" });
+    expect(map[0]?.priority).toBeLessThan(10);
   });
 
   test("hasArchive: string rejects multi-segment or non-kebab input", async () => {
