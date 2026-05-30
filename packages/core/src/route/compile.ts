@@ -8,6 +8,11 @@ import { RouteCompileError } from "./errors.js";
 
 const AUTO_ROUTE_PRIORITY = 50;
 export const DEFAULT_REWRITE_RULE_PRIORITY = 10;
+// Framework-owned routes sort ahead of explicit rewrites so a plugin's
+// catch-all can't shadow `/page/N`.
+const FRAMEWORK_ROUTE_PRIORITY = 5;
+
+export const FRAMEWORK_FRONT_PAGE_PATTERN = "/page/:page(\\d+)";
 
 interface CompiledRule extends RouteRule {
   readonly registeredBy: string | null;
@@ -22,7 +27,16 @@ interface CompiledRule extends RouteRule {
 export function compileRouteMap(
   registry: PluginRegistry,
 ): readonly RouteRule[] {
-  const rules: CompiledRule[] = [];
+  const rules: CompiledRule[] = [
+    {
+      // `(\d+)` lets a hierarchical pages plugin keep `/page/:path+`.
+      pattern: new URLPattern({ pathname: FRAMEWORK_FRONT_PAGE_PATTERN }),
+      rawPattern: FRAMEWORK_FRONT_PAGE_PATTERN,
+      intent: { kind: "front-page" },
+      priority: FRAMEWORK_ROUTE_PRIORITY,
+      registeredBy: null,
+    },
+  ];
 
   // Taxonomies emit before entry types so that a slug collision (e.g. a
   // post type with `rewrite.slug: 'category'` shadowing a `category`

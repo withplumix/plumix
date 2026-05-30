@@ -2601,6 +2601,43 @@ describe("resolvePublicRoute — front-page through theme", () => {
     expect(response.status).toBe(404);
   });
 
+  test("/page/N is not shadowed by a plugin that grabs the `/page/:slug` auto-route", async () => {
+    // The `page` entry type auto-generates `/page/:slug`, which would
+    // otherwise swallow `/page/1`.
+    const pagesPlugin = definePlugin("pages", (ctx) => {
+      ctx.registerEntryType("page", { label: "Pages", isPublic: true });
+    });
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        "front-page": ({ data }) => (
+          <span data-testid="page">{`page:${String(data.pagination.page)}`}</span>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin, pagesPlugin],
+      theme,
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "p",
+      title: "P",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/page/1"),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("page:1");
+  });
+
   test("plugin-registered `/` rewrite rule wins over front-page synthesis", async () => {
     const homepagePlugin = definePlugin("homepage", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
