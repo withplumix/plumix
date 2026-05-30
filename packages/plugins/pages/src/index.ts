@@ -10,6 +10,7 @@ export const pages = definePlugin("pages", (ctx) => {
     isHierarchical: true,
     isPublic: true,
     hasArchive: false,
+    rewrite: { slug: "" },
     capabilityType: "page",
     menuIcon: "layout",
   });

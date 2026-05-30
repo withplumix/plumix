@@ -19,6 +19,12 @@ describe("@plumix/plugin-pages", () => {
     expect(page?.registeredBy).toBe("pages");
   });
 
+  test("serves pages at the URL root via empty rewrite.slug", async () => {
+    const { registry } = await install();
+    const page = registry.entryTypes.get("page");
+    expect(page?.rewrite).toEqual({ slug: "" });
+  });
+
   test("registers no taxonomies", async () => {
     const { registry } = await install();
     expect(registry.termTaxonomies.size).toBe(0);
