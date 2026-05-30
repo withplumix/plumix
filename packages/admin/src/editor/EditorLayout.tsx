@@ -26,6 +26,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs.js";
 import { useIsMobile } from "@/hooks/use-mobile.js";
+import { getPatterns } from "@/lib/manifest.js";
 import { cn } from "@/lib/utils.js";
 import { Puck, usePuck } from "@puckeditor/core";
 import { Minus, Monitor, Plus, Smartphone, Tablet } from "lucide-react";
@@ -48,6 +49,7 @@ import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
 import { mergePropsAtSelector } from "./merge-variation-attrs.js";
 import { MobileSidebarSheet } from "./MobileSidebarSheet.js";
 import { patchStyleAtSelector } from "./patch-style.js";
+import { PatternsSection } from "./PatternsSection.js";
 import { puckDataToBlockTree } from "./puck-to-block-tree.js";
 import { PUCK_ROOT_ZONE } from "./puck-zones.js";
 import { nextInsertPoint, resolveSlashMenuItems } from "./slash-menu-items.js";
@@ -551,22 +553,27 @@ function PlumixBlocksTab({
     [puck],
   );
 
+  const patterns = useMemo(() => getPatterns(), []);
+
   return (
-    <ul className="flex flex-col gap-1 p-4" data-testid="plumix-blocks-tab">
-      {entries.map((entry) => (
-        <li key={entry.slug}>
-          <button
-            type="button"
-            className="hover:bg-muted flex w-full items-center gap-2 rounded border px-3 py-2 text-left text-sm"
-            data-testid={`plumix-blocks-tab-item-${entry.slug}`}
-            onClick={() => handleInsert(entry)}
-          >
-            <BlockIcon name={entry.icon} />
-            <span className="truncate">{entry.title}</span>
-          </button>
-        </li>
-      ))}
-    </ul>
+    <div className="flex flex-col">
+      <ul className="flex flex-col gap-1 p-4" data-testid="plumix-blocks-tab">
+        {entries.map((entry) => (
+          <li key={entry.slug}>
+            <button
+              type="button"
+              className="hover:bg-muted flex w-full items-center gap-2 rounded border px-3 py-2 text-left text-sm"
+              data-testid={`plumix-blocks-tab-item-${entry.slug}`}
+              onClick={() => handleInsert(entry)}
+            >
+              <BlockIcon name={entry.icon} />
+              <span className="truncate">{entry.title}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <PatternsSection patterns={patterns} />
+    </div>
   );
 }
 

@@ -59,6 +59,21 @@ export type { ResolvedTransformTarget } from "./transforms.js";
 export { expandBlockVariations } from "./expand-block-variations.js";
 export type { InsertableBlockEntry } from "./expand-block-variations.js";
 
+// ─── Pattern registry primitives ────────────────────────────────────────────
+export {
+  block,
+  commitPatterns,
+  createPatternRegistry,
+  definePattern,
+} from "./pattern-registry.js";
+export type {
+  BlockPattern,
+  BlockTypeRegistry,
+  PatternCategoryRegistry,
+  PatternRegistry,
+} from "./pattern-registry.js";
+export { PatternRegistryError } from "./pattern-errors.js";
+
 // ─── Validation ─────────────────────────────────────────────────────────────
 export { validateEntryContent } from "./validate-content.js";
 export type { BlockContentValidationResult } from "./validate-content.js";

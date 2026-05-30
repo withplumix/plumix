@@ -13,6 +13,7 @@ import {
   findSettingsGroupByName,
   findSettingsPageByName,
   findTermTaxonomyByName,
+  getPatterns,
   groupsForSettingsPage,
   readManifest,
   visibleEntryTypes,
@@ -493,5 +494,46 @@ describe("findSettingsPageByName + visibleSettingsPages + findSettingsGroupByNam
     expect(groupsForSettingsPage(orphan, source).map((g) => g.name)).toEqual([
       "identity",
     ]);
+  });
+});
+
+describe("getPatterns", () => {
+  test("readManifest carries the patterns slice through normalization", () => {
+    const doc = withManifestScript(
+      JSON.stringify({
+        patterns: [
+          {
+            name: "starter/hero",
+            title: "Hero",
+            category: "hero",
+            content: [],
+          },
+          {
+            name: "starter/cta",
+            title: "CTA",
+            category: "cta",
+            content: [],
+          },
+        ],
+      }),
+    );
+
+    expect(readManifest(doc).patterns).toEqual([
+      { name: "starter/hero", title: "Hero", category: "hero", content: [] },
+      { name: "starter/cta", title: "CTA", category: "cta", content: [] },
+    ]);
+  });
+
+  test("getPatterns returns the manifest patterns list, defaulting to empty", () => {
+    expect(getPatterns({ patterns: [] })).toEqual([]);
+    expect(getPatterns({})).toEqual([]);
+
+    const heroEntry = {
+      name: "x/h",
+      title: "Hero",
+      category: "hero" as const,
+      content: [],
+    };
+    expect(getPatterns({ patterns: [heroEntry] })).toEqual([heroEntry]);
   });
 });

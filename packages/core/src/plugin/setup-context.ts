@@ -1,4 +1,4 @@
-import type { BlockSpec, MarkSpec } from "@plumix/blocks";
+import type { BlockPattern, BlockSpec, MarkSpec } from "@plumix/blocks";
 
 import type { DerivedCapability } from "../auth/rbac.js";
 import type { AppContext } from "../context/app.js";
@@ -195,6 +195,13 @@ export interface PluginSetupContextBase {
    * rejected; the convention for plugin marks is `pluginId/markName`.
    */
   registerMark(spec: MarkSpec): void;
+  /**
+   * Register a `BlockPattern` produced by `definePattern` from
+   * `plumix/blocks`. Plugin- and theme-contributed patterns merge into
+   * the per-app pattern registry at `buildApp` time. Duplicate slugs
+   * across plugins throw — patterns are not silently overridden.
+   */
+  registerPattern(spec: BlockPattern): void;
   /**
    * Register a `LookupAdapter` for a reference target kind. The
    * `kind` matches the `referenceTarget.kind` carried on a reference
@@ -545,6 +552,16 @@ export function createPluginSetupContext({
         });
       }
       registry.markSpecs.set(spec.name, { spec, registeredBy: pluginId });
+    },
+
+    registerPattern: (spec) => {
+      if (registry.patternSpecs.has(spec.name)) {
+        throw DuplicateRegistrationError.alreadyRegistered({
+          kind: "pattern",
+          identifier: spec.name,
+        });
+      }
+      registry.patternSpecs.set(spec.name, { spec, registeredBy: pluginId });
     },
 
     registerLookupAdapter: (options) => {
