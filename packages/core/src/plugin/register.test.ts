@@ -909,3 +909,37 @@ describe("registerScheduledTask", () => {
     expect(registry.scheduledTasks[0]?.cron).toBeUndefined();
   });
 });
+
+describe("registerPattern", () => {
+  test("stores the registered pattern keyed by slug, tagged with the plugin id", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("acme", (ctx) => {
+      ctx.registerPattern({
+        name: "acme/hero",
+        title: "Hero",
+        category: "hero",
+        content: [],
+      });
+    });
+
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+
+    expect(registry.patternSpecs.has("acme/hero")).toBe(true);
+    expect(registry.patternSpecs.get("acme/hero")?.registeredBy).toBe("acme");
+    expect(registry.patternSpecs.get("acme/hero")?.spec.title).toBe("Hero");
+  });
+
+  test("throws when two plugins register the same pattern slug", async () => {
+    const hooks = new HookRegistry();
+    const a = definePlugin("a", (ctx) => {
+      ctx.registerPattern({ name: "shared/hero", title: "A", content: [] });
+    });
+    const b = definePlugin("b", (ctx) => {
+      ctx.registerPattern({ name: "shared/hero", title: "B", content: [] });
+    });
+
+    await expect(installPlugins({ hooks, plugins: [a, b] })).rejects.toThrow(
+      DuplicateRegistrationError,
+    );
+  });
+});

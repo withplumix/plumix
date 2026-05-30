@@ -1340,4 +1340,37 @@ describe("buildManifest visibility projection", () => {
     expect(tax?.isPublic).toBe(false);
     expect(tax?.showInSidebar).toBe(false);
   });
+
+  test("projects registered patterns into manifest.patterns sorted by name", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("acme", (ctx) => {
+      ctx.registerPattern({
+        name: "acme/zeta",
+        title: "Zeta",
+        category: "hero",
+        content: [],
+      });
+      ctx.registerPattern({
+        name: "acme/alpha",
+        title: "Alpha",
+        category: "cta",
+        content: [],
+      });
+    });
+
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+
+    expect(manifest.patterns).toHaveLength(2);
+    expect(manifest.patterns[0]).toMatchObject({
+      name: "acme/alpha",
+      title: "Alpha",
+      category: "cta",
+      content: [],
+    });
+    expect(manifest.patterns[1]).toMatchObject({
+      name: "acme/zeta",
+      title: "Zeta",
+    });
+  });
 });

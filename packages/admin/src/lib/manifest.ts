@@ -4,6 +4,7 @@ import type {
   AdminNavItem,
   EntryMetaBoxManifestEntry,
   EntryTypeManifestEntry,
+  PatternManifestEntry,
   PlumixManifest,
   SettingsGroupManifestEntry,
   SettingsPageManifestEntry,
@@ -46,6 +47,7 @@ const KNOWN_ARRAY_FIELDS = [
   "fieldTypes",
   "blocks",
   "marks",
+  "patterns",
 ] as const satisfies readonly (keyof PlumixManifest)[];
 
 function normalize(value: unknown): PlumixManifest {
@@ -67,6 +69,12 @@ const manifest: PlumixManifest = readManifest();
 
 export function getThemeTokens(source: PlumixManifest = manifest): ThemeTokens {
   return source.tokens ?? {};
+}
+
+export function getPatterns(
+  source: PlumixManifest = manifest,
+): readonly PatternManifestEntry[] {
+  return source.patterns ?? [];
 }
 
 export function findEntryTypeBySlug(

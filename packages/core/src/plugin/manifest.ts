@@ -1,4 +1,6 @@
 import type {
+  BlockNode,
+  BlockPattern,
   BlockSpec,
   BlockVariation,
   MarkSpec,
@@ -1057,6 +1059,11 @@ export interface RegisteredMark {
   readonly registeredBy: string;
 }
 
+export interface RegisteredPattern {
+  readonly spec: BlockPattern;
+  readonly registeredBy: string;
+}
+
 export interface PluginRegistry {
   readonly entryTypes: ReadonlyMap<string, RegisteredEntryType>;
   readonly termTaxonomies: ReadonlyMap<string, RegisteredTermTaxonomy>;
@@ -1074,6 +1081,7 @@ export interface PluginRegistry {
   readonly fieldTypes: ReadonlyMap<string, RegisteredFieldType>;
   readonly blockSpecs: ReadonlyMap<string, RegisteredBlock>;
   readonly markSpecs: ReadonlyMap<string, RegisteredMark>;
+  readonly patternSpecs: ReadonlyMap<string, RegisteredPattern>;
   readonly lookupAdapters: ReadonlyMap<string, RegisteredLookupAdapter>;
   readonly scheduledTasks: readonly RegisteredScheduledTask[];
   readonly templateDeps: ReadonlyMap<string, RegisteredTemplateDep>;
@@ -1096,6 +1104,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly fieldTypes: Map<string, RegisteredFieldType>;
   readonly blockSpecs: Map<string, RegisteredBlock>;
   readonly markSpecs: Map<string, RegisteredMark>;
+  readonly patternSpecs: Map<string, RegisteredPattern>;
   readonly lookupAdapters: Map<string, RegisteredLookupAdapter>;
   readonly scheduledTasks: RegisteredScheduledTask[];
   readonly templateDeps: Map<string, RegisteredTemplateDep>;
@@ -1119,6 +1128,7 @@ export function createPluginRegistry(): MutablePluginRegistry {
     fieldTypes: new Map(),
     blockSpecs: new Map(),
     markSpecs: new Map(),
+    patternSpecs: new Map(),
     lookupAdapters: new Map(),
     scheduledTasks: [],
     templateDeps: new Map(),
@@ -1438,6 +1448,13 @@ export interface MarkManifestEntry {
   readonly adminSchema?: string;
 }
 
+export interface PatternManifestEntry {
+  readonly name: string;
+  readonly title: string;
+  readonly category?: string;
+  readonly content: readonly BlockNode[];
+}
+
 /**
  * Wire-shipped manifest payload. Every field is optional on the type
  * so test fixtures can declare just the slice they exercise; the
@@ -1456,6 +1473,7 @@ export interface PlumixManifest {
   readonly fieldTypes?: readonly FieldTypeManifestEntry[];
   readonly blocks?: readonly BlockManifestEntry[];
   readonly marks?: readonly MarkManifestEntry[];
+  readonly patterns?: readonly PatternManifestEntry[];
   /**
    * Theme tokens from `defineTheme({ tokens })`. Routed through the
    * manifest channel because the precompiled admin shell can't import
@@ -1490,6 +1508,7 @@ export function emptyManifest(): PlumixManifest {
     fieldTypes: [],
     blocks: [],
     marks: [],
+    patterns: [],
     tokens: {},
   };
 }
@@ -1570,6 +1589,9 @@ export function buildManifest(
   const marks = Array.from(registry.markSpecs.values())
     .map(toMarkEntry)
     .sort((a, b) => a.name.localeCompare(b.name));
+  const patterns = Array.from(registry.patternSpecs.values())
+    .map(toPatternEntry)
+    .sort((a, b) => a.name.localeCompare(b.name));
   return {
     entryTypes: entries,
     termTaxonomies,
@@ -1582,6 +1604,7 @@ export function buildManifest(
     fieldTypes,
     blocks,
     marks,
+    patterns,
     tokens: theme?.tokens ?? {},
   };
 }
@@ -2223,6 +2246,11 @@ function toBlockEntry(block: RegisteredBlock): BlockManifestEntry {
     inserter,
     variations,
   };
+}
+
+function toPatternEntry(pattern: RegisteredPattern): PatternManifestEntry {
+  const { name, title, category, content } = pattern.spec;
+  return { name, title, category, content };
 }
 
 function toMarkEntry(mark: RegisteredMark): MarkManifestEntry {
