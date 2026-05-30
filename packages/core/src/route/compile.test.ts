@@ -4,7 +4,20 @@ import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { installPlugins } from "../plugin/register.js";
-import { compileRouteMap, FRAMEWORK_FRONT_PAGE_PATTERN } from "./compile.js";
+import {
+  compileRouteMap,
+  FRAMEWORK_FRONT_PAGE_PATTERN,
+  FRAMEWORK_SEARCH_BARE_PATTERN,
+  FRAMEWORK_SEARCH_PAGINATED_PATTERN,
+  FRAMEWORK_SEARCH_QUERY_PATTERN,
+} from "./compile.js";
+
+const FRAMEWORK_PATTERNS = new Set<string>([
+  FRAMEWORK_FRONT_PAGE_PATTERN,
+  FRAMEWORK_SEARCH_PAGINATED_PATTERN,
+  FRAMEWORK_SEARCH_QUERY_PATTERN,
+  FRAMEWORK_SEARCH_BARE_PATTERN,
+]);
 
 async function buildRegistry(plugins: ReturnType<typeof definePlugin>[]) {
   const hooks = new HookRegistry();
@@ -15,7 +28,7 @@ async function buildRegistry(plugins: ReturnType<typeof definePlugin>[]) {
 
 function pluginRoutes(registry: ReturnType<typeof createPluginRegistry>) {
   return compileRouteMap(registry).filter(
-    (rule) => rule.rawPattern !== FRAMEWORK_FRONT_PAGE_PATTERN,
+    (rule) => !FRAMEWORK_PATTERNS.has(rule.rawPattern),
   );
 }
 
@@ -375,6 +388,23 @@ describe("compileRouteMap", () => {
     expect(map[0]?.rawPattern).toBe(FRAMEWORK_FRONT_PAGE_PATTERN);
     expect(map[0]?.intent).toEqual({ kind: "front-page" });
     expect(map[0]?.priority).toBeLessThan(10);
+  });
+
+  test("framework registers /search routes that emit kind: 'search'", async () => {
+    const registry = await buildRegistry([]);
+    const map = compileRouteMap(registry);
+    const patterns = map.map((r) => r.rawPattern);
+    expect(patterns).toContain(FRAMEWORK_SEARCH_BARE_PATTERN);
+    expect(patterns).toContain(FRAMEWORK_SEARCH_QUERY_PATTERN);
+    expect(patterns).toContain(FRAMEWORK_SEARCH_PAGINATED_PATTERN);
+    expect(patterns.indexOf(FRAMEWORK_SEARCH_PAGINATED_PATTERN)).toBeLessThan(
+      patterns.indexOf(FRAMEWORK_SEARCH_QUERY_PATTERN),
+    );
+    const search = map.find(
+      (r) => r.rawPattern === FRAMEWORK_SEARCH_BARE_PATTERN,
+    );
+    expect(search?.intent).toEqual({ kind: "search" });
+    expect(search?.priority).toBeLessThan(10);
   });
 
   test("hasArchive: string rejects multi-segment or non-kebab input", async () => {

@@ -2761,6 +2761,320 @@ describe("resolvePublicRoute — front-page through theme", () => {
   });
 });
 
+describe("resolvePublicRoute — search through theme", () => {
+  test("/search/<query> renders the `search` template with the query in scope", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        search: ({ data }) => (
+          <section data-testid="search">{`query:${data.query}`}</section>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const response = await h.dispatch(
+      new Request("https://cms.example/search/hello"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain('data-testid="search"');
+    expect(body).toContain("query:hello");
+  });
+
+  test("search results filter entries whose title matches the query", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        search: ({ data }) => (
+          <ul>
+            {data.entries.map((entry: ResolvedEntry) => (
+              <li key={entry.id} data-testid={`hit-${entry.slug}`}>
+                {entry.title}
+              </li>
+            ))}
+          </ul>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "matches",
+      title: "Hello world",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.factory.entry.create({
+      type: "post",
+      slug: "no-match",
+      title: "Unrelated",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/search/hello"),
+    );
+    const body = await response.text();
+    expect(body).toContain('data-testid="hit-matches"');
+    expect(body).not.toContain('data-testid="hit-no-match"');
+  });
+
+  test("/search/<q>/page/N paginates the search results", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        search: ({ data }) => (
+          <span data-testid="page">{`page:${String(data.pagination.page)};entries:${String(data.entries.length)}`}</span>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    // 25 matches, default per-page 20 → page 2 has 5 entries
+    for (let i = 0; i < 25; i++) {
+      await h.factory.entry.create({
+        type: "post",
+        slug: `hit-${String(i)}`,
+        title: `Hello ${String(i)}`,
+        content: null,
+        status: "published",
+        authorId: author.id,
+        publishedAt: new Date(2026, 4, i + 1),
+      });
+    }
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/search/hello/page/2"),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("page:2;entries:5");
+  });
+
+  test("/search (no query) renders the empty-search state", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        search: ({ data }) => (
+          <section data-testid="search">{`q:[${data.query}]`}</section>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const response = await h.dispatch(
+      new Request("https://cms.example/search"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain('data-testid="search"');
+    expect(body).toContain("q:[]");
+  });
+
+  test("?s= on a non-search URL stays on the original route (no hijack)", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => (
+          <article data-testid={`post-${data.entry.slug}`}>
+            {data.entry.title}
+          </article>
+        ),
+        search: () => <section data-testid="search" />,
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "about",
+      title: "About",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/about?s=hello"),
+    );
+    const body = await response.text();
+    expect(body).toContain('data-testid="post-about"');
+    expect(body).not.toContain('data-testid="search"');
+  });
+
+  test("entry types flagged excludeFromSearch don't appear in search hits", async () => {
+    const mediaPlugin = definePlugin("media", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerEntryType("attachment", {
+        label: "Media",
+        isPublic: true,
+        excludeFromSearch: true,
+      });
+    });
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        search: ({ data }) => (
+          <ul>
+            {data.entries.map((entry: ResolvedEntry) => (
+              <li key={entry.id} data-testid={`hit-${entry.slug}`}>
+                {entry.title}
+              </li>
+            ))}
+          </ul>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [mediaPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "hello-post",
+      title: "Hello post",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.factory.entry.create({
+      type: "attachment",
+      slug: "hello-media",
+      title: "Hello media",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/search/hello"),
+    );
+    const body = await response.text();
+    expect(body).toContain('data-testid="hit-hello-post"');
+    expect(body).not.toContain('data-testid="hit-hello-media"');
+  });
+
+  test("URL-encoded query is decoded before matching and rendering", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        search: ({ data }) => (
+          <span data-testid="q">{`q:[${data.query}]`}</span>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "spaced",
+      title: "hello world post",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/search/hello%20world"),
+    );
+    const body = await response.text();
+    expect(body).toContain("q:[hello world]");
+  });
+
+  test("`_` in the query matches the literal character, not any-single-char", async () => {
+    // Without escaping, SQLite LIKE treats `_` as a wildcard — a query of
+    // `_` would match every entry. The framework escapes user wildcards.
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        search: ({ data }) => (
+          <ul>
+            {data.entries.map((entry: ResolvedEntry) => (
+              <li key={entry.id} data-testid={`hit-${entry.slug}`}>
+                {entry.title}
+              </li>
+            ))}
+          </ul>
+        ),
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "literal-underscore",
+      title: "snake_case naming",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.factory.entry.create({
+      type: "post",
+      slug: "plain",
+      title: "Plain title",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/search/_"),
+    );
+    const body = await response.text();
+    expect(body).toContain('data-testid="hit-literal-underscore"');
+    expect(body).not.toContain('data-testid="hit-plain"');
+  });
+
+  test("runs resolve:search:data filters before the search template renders", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        search: ({ data }) => <span data-testid="q">{`q:${data.query}`}</span>,
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    h.app.hooks.addFilter(
+      "resolve:search:data",
+      (data) => ({ ...data, query: `filtered:${data.query}` }),
+      { plugin: "test" },
+    );
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/search/hello"),
+    );
+    const body = await response.text();
+    expect(body).toContain("q:filtered:hello");
+  });
+
+  test("/search/<q>/page/N returns 404 when N is out of range", async () => {
+    const theme = defineTheme({
+      templates: { index: () => null, search: () => null },
+    });
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const response = await h.dispatch(
+      new Request("https://cms.example/search/anything/page/99"),
+    );
+    expect(response.status).toBe(404);
+  });
+});
+
 describe("resolvePublicRoute — error pages through theme", () => {
   test("404 page composes its title through the theme titleTemplate", async () => {
     const theme = defineTheme({

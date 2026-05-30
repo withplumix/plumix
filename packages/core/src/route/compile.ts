@@ -17,6 +17,10 @@ const FRAMEWORK_ROUTE_PRIORITY = 5;
 const CATCH_ALL_ROUTE_PRIORITY = 60;
 
 export const FRAMEWORK_FRONT_PAGE_PATTERN = "/page/:page(\\d+)";
+export const FRAMEWORK_SEARCH_BARE_PATTERN = "/search";
+export const FRAMEWORK_SEARCH_QUERY_PATTERN = "/search/:query";
+export const FRAMEWORK_SEARCH_PAGINATED_PATTERN =
+  "/search/:query/page/:page(\\d+)";
 
 interface CompiledRule extends RouteRule {
   readonly registeredBy: string | null;
@@ -37,6 +41,30 @@ export function compileRouteMap(
       pattern: new URLPattern({ pathname: FRAMEWORK_FRONT_PAGE_PATTERN }),
       rawPattern: FRAMEWORK_FRONT_PAGE_PATTERN,
       intent: { kind: "front-page" },
+      priority: FRAMEWORK_ROUTE_PRIORITY,
+      registeredBy: null,
+    },
+    // Paginated variant goes first so `/search/foo/page/2` doesn't
+    // accidentally match the bare-query rule with `:query = "foo/page/2"`
+    // when URLPattern relaxes its segment captures.
+    {
+      pattern: new URLPattern({ pathname: FRAMEWORK_SEARCH_PAGINATED_PATTERN }),
+      rawPattern: FRAMEWORK_SEARCH_PAGINATED_PATTERN,
+      intent: { kind: "search" },
+      priority: FRAMEWORK_ROUTE_PRIORITY,
+      registeredBy: null,
+    },
+    {
+      pattern: new URLPattern({ pathname: FRAMEWORK_SEARCH_QUERY_PATTERN }),
+      rawPattern: FRAMEWORK_SEARCH_QUERY_PATTERN,
+      intent: { kind: "search" },
+      priority: FRAMEWORK_ROUTE_PRIORITY,
+      registeredBy: null,
+    },
+    {
+      pattern: new URLPattern({ pathname: FRAMEWORK_SEARCH_BARE_PATTERN }),
+      rawPattern: FRAMEWORK_SEARCH_BARE_PATTERN,
+      intent: { kind: "search" },
       priority: FRAMEWORK_ROUTE_PRIORITY,
       registeredBy: null,
     },

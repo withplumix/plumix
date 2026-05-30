@@ -34,7 +34,8 @@ export type ResolvedNode =
   | ResolvedContentNode
   | ResolvedContentTypeArchive
   | ResolvedFrontPage
-  | ResolvedPostsPage;
+  | ResolvedPostsPage
+  | ResolvedSearch;
 
 interface ResolvedTermNode {
   readonly kind: "term";
@@ -68,6 +69,10 @@ interface ResolvedPostsPage {
   readonly kind: "posts-page";
 }
 
+interface ResolvedSearch {
+  readonly kind: "search";
+}
+
 export function getPossibleTemplates(node: ResolvedNode): readonly string[] {
   const candidates: string[] = [];
   switch (node.kind) {
@@ -85,6 +90,9 @@ export function getPossibleTemplates(node: ResolvedNode): readonly string[] {
       break;
     case "posts-page":
       candidates.push("home");
+      break;
+    case "search":
+      candidates.push("search");
       break;
   }
   candidates.push("index");

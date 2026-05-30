@@ -6,6 +6,7 @@ import type {
   ArchiveData,
   ErrorData,
   FrontPageData,
+  SearchData,
   SingleData,
   TaxonomyData,
 } from "./route/render/resolved-entry.js";
@@ -35,6 +36,7 @@ export type TemplateData =
   | ArchiveData
   | TaxonomyData
   | FrontPageData
+  | SearchData
   | ErrorData;
 
 export type TemplateComponent<Data> = ComponentType<{ readonly data: Data }>;
@@ -56,6 +58,7 @@ type DynamicTemplateEntry =
   | TemplateEntry<ArchiveData>
   | TemplateEntry<TaxonomyData>
   | TemplateEntry<FrontPageData>
+  | TemplateEntry<SearchData>
   | TemplateEntry<ErrorData>
   | TemplateEntry<TemplateData>;
 
@@ -120,6 +123,7 @@ export interface TemplateRegistry {
   readonly tag?: TemplateEntry<TaxonomyData>;
   readonly "front-page"?: TemplateEntry<FrontPageData>;
   readonly home?: TemplateEntry<FrontPageData>;
+  readonly search?: TemplateEntry<SearchData>;
   readonly "404"?: TemplateEntry<ErrorData>;
   readonly "500"?: TemplateEntry<ErrorData>;
   readonly [key: string]: DynamicTemplateEntry | undefined;
