@@ -38,6 +38,7 @@ import type {
   ResponsiveStyleSlot,
   ThemeTokens,
 } from "@plumix/blocks";
+import type { PatternManifestEntry } from "@plumix/core/manifest";
 import { createBlockRegistry, expandBlockVariations } from "@plumix/blocks";
 
 import type { TransformOption } from "./available-transforms.js";
@@ -46,6 +47,7 @@ import { AutosaveStatusPill } from "./AutosaveStatus.js";
 import { BlockActionsPanel } from "./BlockActionsPanel.js";
 import { BlockIcon } from "./BlockIcon.js";
 import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
+import { insertPatternCopy } from "./insert-pattern.js";
 import { mergePropsAtSelector } from "./merge-variation-attrs.js";
 import { MobileSidebarSheet } from "./MobileSidebarSheet.js";
 import { patchStyleAtSelector } from "./patch-style.js";
@@ -555,6 +557,17 @@ function PlumixBlocksTab({
 
   const patterns = useMemo(() => getPatterns(), []);
 
+  const handlePatternInsert = useCallback(
+    (pattern: PatternManifestEntry): void => {
+      puck.dispatch({
+        type: "setData",
+        data: (previous) =>
+          insertPatternCopy(previous, pattern.content, previous.content.length),
+      });
+    },
+    [puck],
+  );
+
   return (
     <div className="flex flex-col">
       <ul className="flex flex-col gap-1 p-4" data-testid="plumix-blocks-tab">
@@ -572,7 +585,7 @@ function PlumixBlocksTab({
           </li>
         ))}
       </ul>
-      <PatternsSection patterns={patterns} />
+      <PatternsSection patterns={patterns} onSelect={handlePatternInsert} />
     </div>
   );
 }
