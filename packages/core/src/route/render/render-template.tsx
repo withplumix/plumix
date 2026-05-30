@@ -34,6 +34,7 @@ import {
 import { normalizeTemplate } from "../../template.js";
 import { validateDocumentManifest } from "../../theme.js";
 import { bundledCssTags } from "./asset-manifest.js";
+import { composeTitle } from "./compose-title.js";
 import { injectIslandsBootstrap } from "./inject-islands-bootstrap.js";
 import { resolveTemplateCandidates } from "./template-hierarchy.js";
 
@@ -85,7 +86,12 @@ export async function renderThroughTheme({
     document: renderDocument,
     assetManifest,
     data,
-    title,
+    title: composeTitle({
+      templateTitle: renderDocument.title,
+      templateAbsolute: renderDocument.titleAbsolute === true,
+      themeTitleTemplate: renderDocument.titleTemplate,
+      resolverTitle: title,
+    }),
     template,
     deps,
     loaderData,
@@ -148,7 +154,12 @@ export async function renderErrorThroughTheme({
     document: renderDocument,
     assetManifest,
     data,
-    title: variant.title,
+    title: composeTitle({
+      templateTitle: renderDocument.title,
+      templateAbsolute: renderDocument.titleAbsolute === true,
+      themeTitleTemplate: renderDocument.titleTemplate,
+      resolverTitle: variant.title,
+    }),
     template,
     deps,
     loaderData: undefined,

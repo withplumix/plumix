@@ -82,4 +82,29 @@ describe("mergeDocumentManifest", () => {
       { rel: "preconnect", href: "https://cdn.example" },
     ]);
   });
+
+  test("template title overrides theme title (last-wins)", () => {
+    const merged = mergeDocumentManifest(
+      { title: "Theme Default" },
+      { title: "Template Title" },
+    );
+    expect(merged.title).toBe("Template Title");
+  });
+
+  test("titleTemplate carries from theme when template doesn't redefine it", () => {
+    const merged = mergeDocumentManifest(
+      { titleTemplate: "%s · Site" },
+      { title: "Hello" },
+    );
+    expect(merged.titleTemplate).toBe("%s · Site");
+    expect(merged.title).toBe("Hello");
+  });
+
+  test("titleAbsolute is preserved from the template fragment", () => {
+    const merged = mergeDocumentManifest(
+      { titleTemplate: "%s · Site" },
+      { title: "Home", titleAbsolute: true },
+    );
+    expect(merged.titleAbsolute).toBe(true);
+  });
 });

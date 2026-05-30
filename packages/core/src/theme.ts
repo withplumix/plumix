@@ -93,6 +93,15 @@ export type DocumentScript = Omit<
   readonly dangerouslySetInnerHTML?: { readonly __html: string };
 };
 
+/**
+ * Function form receives `string | undefined` so themes can pick a
+ * default for archive / search / 404 templates — mirrors unhead's
+ * `resolveTitleTemplate`.
+ */
+export type TitleTemplate =
+  | string
+  | ((title: string | undefined) => string);
+
 export interface DocumentManifest {
   readonly html?: Omit<
     DocumentTag<"html">,
@@ -105,6 +114,10 @@ export interface DocumentManifest {
   readonly link?: readonly DocumentLink[];
   readonly meta?: readonly DocumentMeta[];
   readonly script?: readonly DocumentScript[];
+  readonly title?: string;
+  readonly titleTemplate?: TitleTemplate;
+  /** Per-template opt-out of `titleTemplate` (Next.js `title.absolute`). */
+  readonly titleAbsolute?: boolean;
 }
 
 export interface TemplateRegistry {

@@ -952,6 +952,171 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(slotIdx).toBeLessThan(closingBodyIdx);
   });
 
+  test("theme-level titleTemplate (string) composes the per-template title", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: defineTemplate({
+          document: ({ data }) => ({ title: data.entry.title }),
+          render: ({ data }) => <article>{data.entry.title}</article>,
+        }),
+      },
+      document: { titleTemplate: "%s · Plumix Starter" },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "title-tmpl-string",
+      title: "Hello world",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/title-tmpl-string"),
+    );
+    const body = await response.text();
+    expect(body).toContain("<title>Hello world · Plumix Starter</title>");
+  });
+
+  test("titleTemplate function receives undefined when template doesn't supply title", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        archive: defineTemplate({
+          render: ({ data }) => (
+            <ul>
+              {data.entries.map((entry: ResolvedEntry) => (
+                <li key={entry.id}>{entry.title}</li>
+              ))}
+            </ul>
+          ),
+        }),
+      },
+      document: {
+        titleTemplate: (title) => title ?? "Plumix Starter Archive",
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "any",
+      title: "Any",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(new Request("https://cms.example/post"));
+    const body = await response.text();
+    expect(body).toContain("<title>Plumix Starter Archive</title>");
+  });
+
+  test("titleAbsolute: true bypasses the theme titleTemplate", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        "front-page": defineTemplate({
+          document: () => ({ title: "Plumix Starter", titleAbsolute: true }),
+          render: () => <section data-testid="front-page" />,
+        }),
+      },
+      document: { titleTemplate: "%s · Plumix Starter" },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const response = await h.dispatch(new Request("https://cms.example/"));
+    const body = await response.text();
+    expect(body).toContain("<title>Plumix Starter</title>");
+    expect(body).not.toContain("Plumix Starter · Plumix Starter");
+  });
+
+  test("per-template titleTemplate overrides theme-level titleTemplate", async () => {
+    // A template fragment can supply its own composition pattern that
+    // wins over the theme's site-wide template.
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: defineTemplate({
+          document: ({ data }) => ({
+            title: data.entry.title,
+            titleTemplate: "%s | Per-Template",
+          }),
+          render: ({ data }) => <article>{data.entry.title}</article>,
+        }),
+      },
+      document: { titleTemplate: "%s · Theme Default" },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "tmpl-override",
+      title: "Override",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/tmpl-override"),
+    );
+    const body = await response.text();
+    expect(body).toContain("<title>Override | Per-Template</title>");
+    expect(body).not.toContain("Theme Default");
+  });
+
+  test("backwards-compat: no titleTemplate, no template title — resolver title wins", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => <article>{data.entry.title}</article>,
+      },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "backcompat",
+      title: "Resolver Title",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/backcompat"),
+    );
+    const body = await response.text();
+    expect(body).toContain("<title>Resolver Title</title>");
+  });
+
+  test("theme-level document.title supplies a default when no template participates", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        "front-page": () => <section data-testid="front-page" />,
+      },
+      document: { title: "Plumix Starter" },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const response = await h.dispatch(new Request("https://cms.example/"));
+    const body = await response.text();
+    expect(body).toContain("<title>Plumix Starter</title>");
+  });
+
   test("template-rendered <title> wins over framework default title", async () => {
     const theme = defineTheme({
       templates: {
