@@ -85,12 +85,23 @@ export async function renderThroughTheme({
     document: renderDocument,
     assetManifest,
     data,
-    title,
+    title: composeTitle(renderDocument, title),
     template,
     deps,
     loaderData,
     tokens: theme.tokens,
   });
+}
+
+// String form falls back to the resolver title instead of substituting
+// `undefined`, dodging unhead's `"%s · Site"` → `" · Site"` orphan separator.
+function composeTitle(document: DocumentManifest, fallback: string): string {
+  const { title, titleTemplate } = document;
+  if (typeof titleTemplate === "function") return titleTemplate(title);
+  if (typeof titleTemplate === "string" && title !== undefined) {
+    return titleTemplate.replaceAll("%s", title);
+  }
+  return title ?? fallback;
 }
 
 interface RenderErrorArgs {
@@ -148,7 +159,12 @@ export async function renderErrorThroughTheme({
     document: renderDocument,
     assetManifest,
     data,
-    title: variant.title,
+    // Seed variant.title so theme titleTemplate composes a final string;
+    // an error template's own `title` still wins via the `??`.
+    title: composeTitle(
+      { ...renderDocument, title: renderDocument.title ?? variant.title },
+      variant.title,
+    ),
     template,
     deps,
     loaderData: undefined,
