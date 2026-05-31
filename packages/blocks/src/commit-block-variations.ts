@@ -57,6 +57,15 @@ export function commitBlockVariations(blocks: BlockRegistry): void {
           blocks,
         );
       }
+      if (variation.example?.innerBlocks) {
+        walk(
+          spec.name,
+          variation.slug,
+          variation.example.innerBlocks,
+          "example.innerBlocks",
+          blocks,
+        );
+      }
     }
   }
 }

@@ -115,6 +115,28 @@ describe("commitBlockVariations", () => {
     );
   });
 
+  test("validates example.innerBlocks against the block registry", () => {
+    const group = defineBlock({
+      name: "x-test/group",
+      title: "Group",
+      inputs: [{ name: "content", type: "slot" }],
+      render: () => null,
+      variations: [
+        {
+          slug: "with-example",
+          title: "With example",
+          example: {
+            innerBlocks: [{ id: "g1", name: "core/ghost", attrs: {} }],
+          },
+        },
+      ],
+    });
+    const blocks = createBlockRegistry([group, headingBlock]);
+    expect(() => commitBlockVariations(blocks)).toThrow(
+      /Variation "with-example" of "x-test\/group" at example\.innerBlocks\[0\] references unknown block "core\/ghost"/,
+    );
+  });
+
   test("recurses into slot-shaped attrs to validate nested innerBlocks", () => {
     const group = defineBlock({
       name: "core/group-test",

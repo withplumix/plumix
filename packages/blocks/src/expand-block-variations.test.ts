@@ -1,7 +1,10 @@
 import { describe, expect, test } from "vitest";
 
 import type { BlockSpec } from "./block-registry.js";
-import { expandBlockVariations } from "./expand-block-variations.js";
+import {
+  expandBlockVariations,
+  resolveVariationPreview,
+} from "./expand-block-variations.js";
 
 function block(spec: Partial<BlockSpec> & { name: string }): BlockSpec {
   return { render: () => null, ...spec };
@@ -107,5 +110,45 @@ describe("expandBlockVariations", () => {
       }),
     ]);
     expect(entries.map((e) => e.slug)).toEqual(["bullet"]);
+  });
+
+  test("carries variation.example through to InsertableBlockEntry.example for preview overrides", () => {
+    const entries = expandBlockVariations([
+      block({
+        name: "core/columns",
+        title: "Columns",
+        variations: [
+          {
+            slug: "loader-backed",
+            title: "Loader-backed",
+            attrs: { dataSrc: "/api/things" },
+            example: { attrs: { dataSrc: "static-preview" } },
+          },
+        ],
+      }),
+    ]);
+    expect(entries[0]?.example?.attrs).toEqual({ dataSrc: "static-preview" });
+  });
+
+  test("resolveVariationPreview uses example overrides for preview but leaves entry runtime data untouched", () => {
+    const [entry] = expandBlockVariations([
+      block({
+        name: "core/columns",
+        title: "Columns",
+        variations: [
+          {
+            slug: "loader-backed",
+            title: "Loader-backed",
+            attrs: { dataSrc: "/api/things" },
+            example: { attrs: { dataSrc: "static-preview" } },
+          },
+        ],
+      }),
+    ]);
+    expect(entry?.attrs).toEqual({ dataSrc: "/api/things" });
+    if (!entry) throw new Error("expected variation entry");
+    expect(resolveVariationPreview(entry).attrs).toEqual({
+      dataSrc: "static-preview",
+    });
   });
 });
