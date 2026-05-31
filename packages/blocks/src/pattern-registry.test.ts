@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import type { BlockNode } from "./render-block-tree.js";
 import { createBlockRegistry, defineBlock } from "./block-registry.js";
 import {
   block,
@@ -261,5 +262,129 @@ describe("commitPatterns", () => {
     const patterns = createPatternRegistry([target, wrapper]);
 
     expect(() => commitPatterns(patterns, refBlocks)).not.toThrow();
+  });
+
+  test("throws on a pattern-ref cycle, naming the full chain of involved slugs", () => {
+    const ref = defineBlock({
+      name: "core/pattern-ref",
+      inserter: false,
+      inputs: [{ name: "slug", type: "text" }],
+      render: () => null,
+    });
+    const refBlocks = createBlockRegistry([ref]);
+    const a = definePattern({
+      name: "starter/a",
+      title: "A",
+      content: [block("core/pattern-ref", { slug: "starter/b" })],
+    });
+    const b = definePattern({
+      name: "starter/b",
+      title: "B",
+      content: [block("core/pattern-ref", { slug: "starter/c" })],
+    });
+    const c = definePattern({
+      name: "starter/c",
+      title: "C",
+      content: [block("core/pattern-ref", { slug: "starter/a" })],
+    });
+    const patterns = createPatternRegistry([a, b, c]);
+
+    expect(() => commitPatterns(patterns, refBlocks)).toThrow(
+      /starter\/a.*starter\/b.*starter\/c.*starter\/a/,
+    );
+  });
+
+  test("inlines core/pattern-ref nodes inside pattern bodies — resolved registry contains no refs", () => {
+    const ref = defineBlock({
+      name: "core/pattern-ref",
+      inserter: false,
+      inputs: [{ name: "slug", type: "text" }],
+      render: () => null,
+    });
+    const heading = defineBlock({
+      name: "core/heading",
+      inputs: [{ name: "text", type: "text" }],
+      render: () => null,
+    });
+    const refBlocks = createBlockRegistry([ref, heading]);
+    const inner = definePattern({
+      name: "starter/inner",
+      title: "Inner",
+      content: [block("core/heading", { text: "From inner" })],
+    });
+    const outer = definePattern({
+      name: "starter/outer",
+      title: "Outer",
+      content: [
+        block("core/heading", { text: "Outer top" }),
+        block("core/pattern-ref", { slug: "starter/inner" }),
+        block("core/heading", { text: "Outer bottom" }),
+      ],
+    });
+    const patterns = createPatternRegistry([inner, outer]);
+
+    const resolved = commitPatterns(patterns, refBlocks);
+    const resolvedOuter = resolved.get("starter/outer");
+
+    expect(resolvedOuter?.content.map((n) => n.name)).toEqual([
+      "core/heading",
+      "core/heading",
+      "core/heading",
+    ]);
+    const texts = resolvedOuter?.content.map((n) => n.attrs?.text);
+    expect(texts).toEqual(["Outer top", "From inner", "Outer bottom"]);
+  });
+
+  test("post-commit invariant: no pattern body contains a core/pattern-ref node at any depth", () => {
+    const ref = defineBlock({
+      name: "core/pattern-ref",
+      inserter: false,
+      inputs: [{ name: "slug", type: "text" }],
+      render: () => null,
+    });
+    const group = defineBlock({
+      name: "core/group",
+      inputs: [{ name: "content", type: "slot" }],
+      render: () => null,
+    });
+    const heading = defineBlock({
+      name: "core/heading",
+      inputs: [{ name: "text", type: "text" }],
+      render: () => null,
+    });
+    const refBlocks = createBlockRegistry([ref, group, heading]);
+    const inner = definePattern({
+      name: "starter/inner",
+      title: "Inner",
+      content: [block("core/heading", { text: "Inner" })],
+    });
+    const outer = definePattern({
+      name: "starter/outer-nested",
+      title: "Outer",
+      content: [
+        block("core/group", {
+          content: [block("core/pattern-ref", { slug: "starter/inner" })],
+        }),
+      ],
+    });
+    const patterns = createPatternRegistry([inner, outer]);
+
+    const resolved = commitPatterns(patterns, refBlocks);
+
+    function containsRef(nodes: readonly BlockNode[]): boolean {
+      for (const node of nodes) {
+        if (node.name === "core/pattern-ref") return true;
+        for (const value of Object.values(node.attrs ?? {})) {
+          if (Array.isArray(value) && containsRef(value as BlockNode[])) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    for (const pattern of resolved) {
+      expect(containsRef(pattern.content)).toBe(false);
+    }
   });
 });
