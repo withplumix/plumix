@@ -49,6 +49,7 @@ export interface BlockPattern {
   readonly name: string;
   readonly title: string;
   readonly category?: keyof PatternCategoryRegistry;
+  readonly keywords?: readonly string[];
   // Defaults to "copy" when unset — the inserter splices a deep-cloned
   // body. "reference" inserts a single `core/pattern-ref` node the
   // walker resolves at render.

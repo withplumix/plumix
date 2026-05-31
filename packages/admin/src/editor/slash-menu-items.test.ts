@@ -14,6 +14,21 @@ function spec(partial: Partial<BlockSpec> & { name: string }): BlockSpec {
 }
 
 describe("resolveSlashMenuItems", () => {
+  test("wraps each block in a discriminated `{ kind: 'block', entry }` shape", () => {
+    const registry = createBlockRegistry([
+      spec({ name: "core/heading", title: "Heading" }),
+    ]);
+
+    const items = resolveSlashMenuItems(registry, {
+      capabilities: new Set(),
+      query: "",
+    });
+
+    expect(items).toHaveLength(1);
+    expect(items[0]?.kind).toBe("block");
+    expect(items[0]?.entry.name).toBe("core/heading");
+  });
+
   test("projects every block in the registry into a SlashMenuItem", () => {
     const registry = createBlockRegistry([
       spec({ name: "core/heading", title: "Heading", category: "typography" }),
@@ -25,13 +40,13 @@ describe("resolveSlashMenuItems", () => {
       query: "",
     });
 
-    expect(items.map((i) => i.name).sort()).toEqual([
+    expect(items.map((i) => i.entry.name).sort()).toEqual([
       "core/columns",
       "core/heading",
     ]);
-    expect(items.find((i) => i.name === "core/columns")?.category).toBe(
-      "layout",
-    );
+    expect(
+      items.find((i) => i.entry.name === "core/columns")?.entry.category,
+    ).toBe("layout");
   });
 
   test("matches blocks by title (substring) and name (substring), case-insensitive", () => {
@@ -44,13 +59,13 @@ describe("resolveSlashMenuItems", () => {
       capabilities: new Set(),
       query: "HEAD",
     });
-    expect(byTitle.map((i) => i.name)).toEqual(["core/heading"]);
+    expect(byTitle.map((i) => i.entry.name)).toEqual(["core/heading"]);
 
     const byName = resolveSlashMenuItems(registry, {
       capabilities: new Set(),
       query: "paragraph",
     });
-    expect(byName.map((i) => i.name)).toEqual(["core/paragraph"]);
+    expect(byName.map((i) => i.entry.name)).toEqual(["core/paragraph"]);
   });
 
   test("matches keywords by prefix (alias semantics), not substring", () => {
@@ -66,13 +81,13 @@ describe("resolveSlashMenuItems", () => {
       capabilities: new Set(),
       query: "block",
     });
-    expect(prefixMatch.map((i) => i.name)).toEqual(["x/pull"]);
+    expect(prefixMatch.map((i) => i.entry.name)).toEqual(["x/pull"]);
 
     const substringNonMatch = resolveSlashMenuItems(registry, {
       capabilities: new Set(),
       query: "quote",
     });
-    expect(substringNonMatch.map((i) => i.name)).toEqual([]);
+    expect(substringNonMatch.map((i) => i.entry.name)).toEqual([]);
   });
 
   test("omits blocks whose `capability` is not present in the viewer's capability set", () => {
@@ -85,13 +100,13 @@ describe("resolveSlashMenuItems", () => {
       capabilities: new Set(),
       query: "",
     });
-    expect(restricted.map((i) => i.name)).toEqual(["core/heading"]);
+    expect(restricted.map((i) => i.entry.name)).toEqual(["core/heading"]);
 
     const elevated = resolveSlashMenuItems(registry, {
       capabilities: new Set(["edit_html"]),
       query: "",
     });
-    expect(elevated.map((i) => i.name).sort()).toEqual([
+    expect(elevated.map((i) => i.entry.name).sort()).toEqual([
       "core/heading",
       "core/html",
     ]);
@@ -109,7 +124,7 @@ describe("resolveSlashMenuItems", () => {
       query: "quote",
     });
 
-    expect(items.map((i) => i.name)).toEqual([
+    expect(items.map((i) => i.entry.name)).toEqual([
       "z/title",
       "z/keyword",
       "core/quote",
@@ -127,10 +142,12 @@ describe("resolveSlashMenuItems", () => {
       query: "",
     });
 
-    expect(items.find((i) => i.name === "core/spacer")?.title).toBe(
+    expect(items.find((i) => i.entry.name === "core/spacer")?.entry.title).toBe(
       "core/spacer",
     );
-    expect(items.find((i) => i.name === "core/heading")?.title).toBe("Heading");
+    expect(
+      items.find((i) => i.entry.name === "core/heading")?.entry.title,
+    ).toBe("Heading");
   });
 
   test("omits specs declared with `inserter: false` so structural-children stay out of the menu", () => {
@@ -153,7 +170,7 @@ describe("resolveSlashMenuItems", () => {
       query: "",
     });
 
-    expect(items.map((i) => i.name)).toEqual(["core/table"]);
+    expect(items.map((i) => i.entry.name)).toEqual(["core/table"]);
   });
 
   test("keeps specs that omit `inserter` (default shown) and specs that opt in with `inserter: true`", () => {
@@ -167,7 +184,10 @@ describe("resolveSlashMenuItems", () => {
       query: "",
     });
 
-    expect(items.map((i) => i.name).sort()).toEqual(["a/default", "a/opt-in"]);
+    expect(items.map((i) => i.entry.name).sort()).toEqual([
+      "a/default",
+      "a/opt-in",
+    ]);
   });
 
   test("emits one item per variation when a block declares variations, slugs distinguish them", () => {
@@ -196,14 +216,100 @@ describe("resolveSlashMenuItems", () => {
       query: "",
     });
 
-    expect(items.map((i) => i.slug)).toEqual(["bullet", "numbered"]);
-    expect(items.map((i) => i.title)).toEqual([
+    const blockEntries = items.flatMap((i) =>
+      i.kind === "block" ? [i.entry] : [],
+    );
+    expect(blockEntries.map((e) => e.slug)).toEqual(["bullet", "numbered"]);
+    expect(blockEntries.map((e) => e.title)).toEqual([
       "Bulleted list",
       "Numbered list",
     ]);
-    expect(items.every((i) => i.name === "core/list")).toBe(true);
-    expect(items[0]?.attrs).toEqual({ variant: "bullet" });
-    expect(items[1]?.attrs).toEqual({ variant: "numbered" });
+    expect(blockEntries.every((e) => e.name === "core/list")).toBe(true);
+    expect(blockEntries[0]?.attrs).toEqual({ variant: "bullet" });
+    expect(blockEntries[1]?.attrs).toEqual({ variant: "numbered" });
+  });
+
+  test("interleaves pattern entries from the patterns option as `{ kind: 'pattern', entry }`", () => {
+    const registry = createBlockRegistry([
+      spec({ name: "core/heading", title: "Heading" }),
+    ]);
+
+    const items = resolveSlashMenuItems(registry, {
+      capabilities: new Set(),
+      query: "",
+      patterns: [
+        {
+          name: "starter/hero",
+          title: "Hero",
+          category: "hero",
+          content: [],
+        },
+        {
+          name: "starter/cta",
+          title: "Call to action",
+          category: "cta",
+          content: [],
+        },
+      ],
+    });
+
+    const patterns = items.filter((i) => i.kind === "pattern");
+    expect(patterns.map((i) => i.entry.name).sort()).toEqual([
+      "starter/cta",
+      "starter/hero",
+    ]);
+    expect(items.some((i) => i.kind === "block")).toBe(true);
+  });
+
+  test("matches pattern entries by title, name, category, and keywords", () => {
+    const registry = createBlockRegistry([]);
+
+    const matches = (query: string, expected: string[]): void => {
+      const items = resolveSlashMenuItems(registry, {
+        capabilities: new Set(),
+        query,
+        patterns: [
+          {
+            name: "starter/hero-cta",
+            title: "Hero with CTA",
+            category: "hero",
+            keywords: ["landing"],
+            content: [],
+          },
+          {
+            name: "starter/footer",
+            title: "Footer",
+            category: "footer",
+            content: [],
+          },
+        ],
+      });
+      expect(items.map((i) => i.entry.name).sort()).toEqual(expected.sort());
+    };
+
+    matches("hero", ["starter/hero-cta"]);
+    matches("footer", ["starter/footer"]);
+    matches("landing", ["starter/hero-cta"]);
+    matches("starter/footer", ["starter/footer"]);
+  });
+
+  test("matches a pattern by category prefix when title/name/keywords don't carry the token", () => {
+    const registry = createBlockRegistry([]);
+
+    const items = resolveSlashMenuItems(registry, {
+      capabilities: new Set(),
+      query: "head",
+      patterns: [
+        {
+          name: "starter/site-top",
+          title: "Site top",
+          category: "header",
+          content: [],
+        },
+      ],
+    });
+
+    expect(items.map((i) => i.entry.name)).toEqual(["starter/site-top"]);
   });
 
   test("treats whitespace-only queries as empty (no filtering)", () => {

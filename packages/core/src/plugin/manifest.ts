@@ -1454,6 +1454,7 @@ export interface PatternManifestEntry {
   readonly name: string;
   readonly title: string;
   readonly category?: string;
+  readonly keywords?: readonly string[];
   // `buildManifest` always populates this with the spec's value or
   // `"copy"`; consumers that read raw manifest fixtures may still see
   // `undefined`.
@@ -2256,11 +2257,13 @@ function toBlockEntry(block: RegisteredBlock): BlockManifestEntry {
 }
 
 function toPatternEntry(pattern: RegisteredPattern): PatternManifestEntry {
-  const { name, title, category, content, insert, preview } = pattern.spec;
+  const { name, title, category, keywords, content, insert, preview } =
+    pattern.spec;
   return {
     name,
     title,
     category,
+    keywords,
     insert: insert ?? "copy",
     preview,
     content,

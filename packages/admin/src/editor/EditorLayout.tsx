@@ -363,6 +363,7 @@ export function PlumixEditorLayout({
   const isPreview = previewBanner !== undefined;
   const isDraftMode = draftMode !== undefined;
   const showDraftBanner = isDraftMode && draftMode.hasPendingDraft;
+  const patterns = useMemo(() => getPatterns(), []);
   const refContextValue = useMemo(
     () => ({ patterns: patternRegistry, blocks: registry }),
     [patternRegistry, registry],
@@ -441,6 +442,7 @@ export function PlumixEditorLayout({
             registry={registry}
             patternRegistry={patternRegistry}
             capabilities={capabilities}
+            patterns={patterns}
           />
           {isPreview ? (
             // Puck's `permissions` strips drag / insert / delete / dup /
@@ -460,6 +462,7 @@ export function PlumixEditorLayout({
                 <PlumixCanvasWithSlashMenu
                   registry={registry}
                   capabilities={capabilities}
+                  patterns={patterns}
                 />
               </div>
             </div>
@@ -467,6 +470,7 @@ export function PlumixEditorLayout({
             <PlumixCanvasWithSlashMenu
               registry={registry}
               capabilities={capabilities}
+              patterns={patterns}
             />
           )}
           <InspectorBody registry={registry} tokens={tokens} />
@@ -480,12 +484,14 @@ interface BlocksBodyProps {
   readonly registry: BlockRegistry;
   readonly patternRegistry: PatternRegistry;
   readonly capabilities: ReadonlySet<string>;
+  readonly patterns: readonly PatternManifestEntry[];
 }
 
 function BlocksBody({
   registry,
   patternRegistry,
   capabilities,
+  patterns,
 }: BlocksBodyProps): ReactElement {
   const isMobile = useIsMobile();
   const content = (
@@ -508,6 +514,7 @@ function BlocksBody({
           registry={registry}
           patternRegistry={patternRegistry}
           capabilities={capabilities}
+          patterns={patterns}
         />
       </TabsContent>
       <TabsContent value="outline">
@@ -545,12 +552,14 @@ interface PlumixBlocksTabProps {
   readonly registry: BlockRegistry;
   readonly patternRegistry: PatternRegistry;
   readonly capabilities: ReadonlySet<string>;
+  readonly patterns: readonly PatternManifestEntry[];
 }
 
 function PlumixBlocksTab({
   registry,
   patternRegistry,
   capabilities,
+  patterns,
 }: PlumixBlocksTabProps): ReactElement {
   const puck = usePuck();
   const entries = useMemo(() => {
@@ -587,8 +596,6 @@ function PlumixBlocksTab({
     },
     [puck],
   );
-
-  const patterns = useMemo(() => getPatterns(), []);
 
   const handlePatternInsert = useCallback(
     (pattern: PatternManifestEntry): void => {
@@ -684,19 +691,21 @@ function InspectorBody({ registry, tokens }: InspectorBodyProps): ReactElement {
 interface PlumixCanvasWithSlashMenuProps {
   readonly registry: BlockRegistry;
   readonly capabilities: ReadonlySet<string>;
+  readonly patterns: readonly PatternManifestEntry[];
 }
 
 function PlumixCanvasWithSlashMenu({
   registry,
   capabilities,
+  patterns,
 }: PlumixCanvasWithSlashMenuProps): ReactElement {
   const puck = usePuck();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
   const items = useMemo(
-    () => resolveSlashMenuItems(registry, { capabilities, query }),
-    [registry, capabilities, query],
+    () => resolveSlashMenuItems(registry, { capabilities, query, patterns }),
+    [registry, capabilities, query, patterns],
   );
 
   const handleCanvasKeyDown = useCallback(
@@ -732,18 +741,32 @@ function PlumixCanvasWithSlashMenu({
         itemSelector,
         puck.appState.data.content.length,
       );
-      puck.dispatch({
-        type: "insert",
-        componentType: item.name,
-        destinationZone: zone,
-        destinationIndex: index,
-      });
-      const variationAttrs = item.attrs;
-      if (variationAttrs !== undefined) {
+      if (item.kind === "block") {
+        const { entry } = item;
+        puck.dispatch({
+          type: "insert",
+          componentType: entry.name,
+          destinationZone: zone,
+          destinationIndex: index,
+        });
+        const variationAttrs = entry.attrs;
+        if (variationAttrs !== undefined) {
+          puck.dispatch({
+            type: "setData",
+            data: (previous) =>
+              mergePropsAtSelector(previous, { zone, index }, variationAttrs),
+          });
+        }
+      } else {
+        // The pattern insert primitive operates on the root content
+        // array; nextInsertPoint may have returned a nested zone for
+        // selection-aware placement, but pattern insertion at non-root
+        // zones is deferred — fall back to end-of-document.
+        const insertIndex =
+          zone === PUCK_ROOT_ZONE ? index : puck.appState.data.content.length;
         puck.dispatch({
           type: "setData",
-          data: (previous) =>
-            mergePropsAtSelector(previous, { zone, index }, variationAttrs),
+          data: (previous) => insertPattern(previous, item.entry, insertIndex),
         });
       }
       setOpen(false);
@@ -811,9 +834,10 @@ function PlumixCanvasWithSlashMenu({
           showCloseButton={false}
         >
           <DialogHeader className="sr-only">
-            <DialogTitle>Insert block</DialogTitle>
+            <DialogTitle>Insert block or pattern</DialogTitle>
             <DialogDescription>
-              Search blocks by title or keyword and press Enter to insert.
+              Search blocks and patterns by title or keyword and press Enter to
+              insert.
             </DialogDescription>
           </DialogHeader>
           <SlashMenuPanel
