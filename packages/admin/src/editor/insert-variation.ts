@@ -1,45 +1,34 @@
-import type { ComponentData, Data } from "@puckeditor/core";
-
-import type { BlockNode, InsertableBlockEntry } from "@plumix/blocks";
+import type { InsertableBlockEntry } from "@plumix/blocks";
 import { rewriteBlockNodeIds } from "@plumix/blocks";
 
 import { blockNodesToPuckContent } from "./entry-content.js";
 
 const CONTENT_SLOT_KEY = "content";
 
-// Variations declare default child blocks via `innerBlocks`; on insert
-// the engine slots them into the parent block's conventional `content`
-// key as ComponentData[] — the shape Puck's slot fields read back from
-// `puckDataToBlockTree` and the save path. ID rewrite keeps repeated
-// insertions of the same variation from sharing React keys. The parent
-// block also gets a fresh `props.id` because Puck's reducer keys
-// instances on that field — without it the slot adapter fails to
-// resolve and the canvas renderer hangs.
-export function insertVariation(
-  data: Data,
+// Compute the props patch to merge onto a freshly-inserted block when
+// the chosen entry is a variation. Returns an empty object when there's
+// nothing to merge — callers skip the follow-up `setData` dispatch in
+// that case. Slot content is converted to `ComponentData[]` (the shape
+// Puck's slot fields expect) and ID-rewritten so repeated insertions of
+// the same variation never collide on React keys.
+//
+// The caller dispatches Puck's native `insert` action first — Puck
+// generates `props.id` itself there. Then this merge runs on top via
+// `setData` + `mergePropsAtSelector`. Doing it in two dispatches
+// (rather than constructing the ComponentData by hand) keeps Puck's
+// internal id-generation contract intact, so the autosave hook sees a
+// single state change per insert and the dedup path doesn't race.
+export function computeVariationMergeAttrs(
   entry: InsertableBlockEntry,
-  index: number,
-): Data {
-  const seed: BlockNode = {
-    id: "",
-    name: entry.name,
-    attrs: { ...(entry.attrs ?? {}) },
-  };
-  const [withId] = rewriteBlockNodeIds([seed]);
-  const props: Record<string, unknown> = {
-    ...(withId?.attrs ?? {}),
-    id: withId?.id,
-  };
-  if (entry.innerBlocks && entry.innerBlocks.length > 0) {
-    props[CONTENT_SLOT_KEY] = blockNodesToPuckContent(
-      rewriteBlockNodeIds(entry.innerBlocks),
-    );
+): Readonly<Record<string, unknown>> {
+  const base = entry.attrs ?? {};
+  if (!entry.innerBlocks || entry.innerBlocks.length === 0) {
+    return base;
   }
-  const inserted: ComponentData = {
-    type: entry.name,
-    props: props as ComponentData["props"],
+  return {
+    ...base,
+    [CONTENT_SLOT_KEY]: blockNodesToPuckContent(
+      rewriteBlockNodeIds(entry.innerBlocks),
+    ),
   };
-  const next = [...data.content];
-  next.splice(index, 0, inserted);
-  return { ...data, content: next };
 }

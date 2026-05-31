@@ -1,73 +1,68 @@
-import type { Data } from "@puckeditor/core";
 import { describe, expect, test } from "vitest";
 
-import type { InsertableBlockEntry } from "@plumix/blocks";
+import type { BlockNode, InsertableBlockEntry } from "@plumix/blocks";
 
-import { insertVariation } from "./insert-variation.js";
-import { puckDataToBlockTree } from "./puck-to-block-tree.js";
+import { computeVariationMergeAttrs } from "./insert-variation.js";
 
-function emptyData(): Data {
-  return { content: [], root: { props: {} } };
-}
+describe("computeVariationMergeAttrs", () => {
+  test("returns the entry's plain attrs when no innerBlocks are declared", () => {
+    const entry: InsertableBlockEntry = {
+      name: "core/group",
+      slug: "core/group/with-layout",
+      title: "Group with layout",
+      attrs: { layout: "stack" },
+    };
+    expect(computeVariationMergeAttrs(entry)).toEqual({ layout: "stack" });
+  });
 
-describe("insertVariation", () => {
-  test("stamps a Puck-shaped id into props so the renderer can key the instance", () => {
+  test("emits an empty object when neither attrs nor innerBlocks are set", () => {
     const entry: InsertableBlockEntry = {
       name: "core/details",
       slug: "core/details",
       title: "Details",
     };
-    const after = insertVariation(emptyData(), entry, 0);
-    const inserted = after.content[0];
-    expect(inserted?.type).toBe("core/details");
-    const id = (inserted?.props as { id?: unknown }).id;
-    expect(typeof id).toBe("string");
-    expect((id as string).length).toBeGreaterThan(0);
+    expect(computeVariationMergeAttrs(entry)).toEqual({});
   });
 
-  test("inserts a parent block whose Puck slot carries innerBlocks the walker can read back", () => {
+  test("converts innerBlocks to ComponentData[] under the conventional `content` slot key", () => {
+    const heading: BlockNode = {
+      id: "src-h",
+      name: "core/heading",
+      attrs: { level: 2, text: "Hi" },
+    };
     const entry: InsertableBlockEntry = {
       name: "core/group",
       slug: "core/group/with-heading",
       title: "Group with heading",
       attrs: { layout: "stack" },
-      innerBlocks: [
-        { id: "src-h", name: "core/heading", attrs: { level: 2, text: "Hi" } },
-      ],
+      innerBlocks: [heading],
     };
-    const after = insertVariation(emptyData(), entry, 0);
-    const tree = puckDataToBlockTree(after);
-    expect(tree).toHaveLength(1);
-    const parent = tree[0];
-    expect(parent?.name).toBe("core/group");
-    expect(parent?.attrs?.layout).toBe("stack");
-    const slot = parent?.attrs?.content as readonly { name: string }[];
+    const merge = computeVariationMergeAttrs(entry);
+    expect(merge.layout).toBe("stack");
+    const slot = merge.content as readonly { type: string }[];
     expect(slot).toHaveLength(1);
-    expect(slot[0]?.name).toBe("core/heading");
+    expect(slot[0]?.type).toBe("core/heading");
   });
 
-  test("does not mutate source innerBlocks and ID-rewrites on every insert", () => {
-    const heading = {
+  test("does not mutate source innerBlocks and re-IDs every call", () => {
+    const heading: BlockNode = {
       id: "src-h",
       name: "core/heading",
       attrs: { level: 2 },
-    } as const;
+    };
     const entry: InsertableBlockEntry = {
       name: "core/group",
       slug: "core/group/with-heading",
       title: "Group with heading",
       innerBlocks: [heading],
     };
-    const first = insertVariation(emptyData(), entry, 0);
-    const second = insertVariation(emptyData(), entry, 0);
-    const firstTree = puckDataToBlockTree(first);
-    const secondTree = puckDataToBlockTree(second);
-    const firstSlot = firstTree[0]?.attrs?.content as readonly { id: string }[];
-    const secondSlot = secondTree[0]?.attrs?.content as readonly {
-      id: string;
+    const first = computeVariationMergeAttrs(entry).content as readonly {
+      props: { id: string };
     }[];
-    expect(firstSlot[0]?.id).not.toBe(secondSlot[0]?.id);
-    expect(firstSlot[0]?.id).not.toBe("src-h");
+    const second = computeVariationMergeAttrs(entry).content as readonly {
+      props: { id: string };
+    }[];
+    expect(first[0]?.props.id).not.toBe(second[0]?.props.id);
     expect(heading.id).toBe("src-h");
     expect(heading.attrs).toEqual({ level: 2 });
   });
