@@ -41,4 +41,10 @@ export class PatternRegistryError extends Error {
       `Pattern "${patternName}" at ${path} references unregistered pattern "${targetSlug}".`,
     );
   }
+
+  static cycle(chain: readonly string[]): PatternRegistryError {
+    return new PatternRegistryError(
+      `Pattern reference cycle: ${chain.join(" → ")}.`,
+    );
+  }
 }

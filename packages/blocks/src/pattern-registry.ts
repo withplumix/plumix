@@ -140,7 +140,76 @@ export function commitPatterns(
     validateAttrs(pattern.name, pattern.content, "blocks", blocks);
     validatePatternRefs(pattern.name, pattern.content, "blocks", patterns);
   }
-  return patterns;
+  // Phase 2: walk every pattern body and inline-expand core/pattern-ref
+  // nodes so the resolved registry is flat — the entry-level walker
+  // never recurses into pattern-body refs at render. Per-host stacks
+  // catch ref cycles with the full chain.
+  const resolved: BlockPattern[] = [];
+  for (const pattern of patterns) {
+    const inlined = inlinePatternRefs(pattern.content, patterns, [
+      pattern.name,
+    ]);
+    resolved.push(
+      inlined === pattern.content
+        ? pattern
+        : Object.freeze({ ...pattern, content: inlined }),
+    );
+  }
+  return createPatternRegistry(resolved);
+}
+
+function inlinePatternRefs(
+  nodes: readonly BlockNode[],
+  patterns: PatternRegistry,
+  chain: readonly string[],
+): readonly BlockNode[] {
+  let changed = false;
+  const out: BlockNode[] = [];
+  for (const node of nodes) {
+    if (node.name === PATTERN_REF_BLOCK_NAME) {
+      const slug = node.attrs?.slug;
+      const target = typeof slug === "string" ? patterns.get(slug) : undefined;
+      if (target) {
+        if (chain.includes(target.name)) {
+          throw PatternRegistryError.cycle([...chain, target.name]);
+        }
+        const expanded = inlinePatternRefs(target.content, patterns, [
+          ...chain,
+          target.name,
+        ]);
+        out.push(...expanded);
+        changed = true;
+        continue;
+      }
+    }
+    const nextAttrs = inlineRefsInAttrs(node.attrs, patterns, chain);
+    if (nextAttrs !== node.attrs) {
+      out.push({ ...node, attrs: nextAttrs });
+      changed = true;
+    } else {
+      out.push(node);
+    }
+  }
+  return changed ? out : nodes;
+}
+
+function inlineRefsInAttrs(
+  attrs: Readonly<Record<string, unknown>> | undefined,
+  patterns: PatternRegistry,
+  chain: readonly string[],
+): Readonly<Record<string, unknown>> | undefined {
+  if (!attrs) return attrs;
+  let mutated: Record<string, unknown> | undefined;
+  for (const [key, value] of Object.entries(attrs)) {
+    if (isBlockNodeArray(value)) {
+      const next = inlinePatternRefs(value, patterns, chain);
+      if (next !== value) {
+        mutated ??= { ...attrs };
+        mutated[key] = next;
+      }
+    }
+  }
+  return mutated ?? attrs;
 }
 
 function validatePatternRefs(
