@@ -6,6 +6,7 @@ import type { PatternManifestEntry } from "@plumix/core/manifest";
 
 import { LazyMount } from "./LazyMount.js";
 import { PatternThumbnail } from "./PatternThumbnail.js";
+import { THUMBNAIL_MIN_HEIGHT } from "./thumbnail-min-height.js";
 
 interface PatternsSectionProps {
   readonly patterns: readonly PatternManifestEntry[];
@@ -13,10 +14,6 @@ interface PatternsSectionProps {
   readonly blocks: BlockRegistry;
   readonly patternRegistry: PatternRegistry;
 }
-
-// Reserved space so the IntersectionObserver placeholder consumes its
-// target dimensions and doesn't trip on first paint.
-const ROW_THUMB_MIN_HEIGHT = 120;
 
 const UNCATEGORIZED = "uncategorized";
 
@@ -81,7 +78,7 @@ export function PatternsSection({
                 >
                   <LazyMount
                     placeholderTestId={`plumix-patterns-row-placeholder-${entry.name}`}
-                    minHeight={ROW_THUMB_MIN_HEIGHT}
+                    minHeight={THUMBNAIL_MIN_HEIGHT}
                   >
                     <div className="overflow-hidden rounded">
                       <PatternThumbnail
