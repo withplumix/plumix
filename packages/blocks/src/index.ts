@@ -72,6 +72,7 @@ export type {
   BlockTypeRegistry,
   PatternCategoryRegistry,
   PatternInsertMode,
+  PatternPreview,
   PatternRegistry,
 } from "./pattern-registry.js";
 export { PatternRegistryError } from "./pattern-errors.js";

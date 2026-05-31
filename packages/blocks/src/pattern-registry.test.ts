@@ -56,6 +56,27 @@ describe("definePattern", () => {
     expect(pattern.content.map((n) => n.id)).toEqual(["p1", "p2"]);
   });
 
+  test("preserves the preview override field with width, height, and optional alt", () => {
+    const pattern = definePattern({
+      name: "x/preview",
+      title: "P",
+      content: [],
+      preview: {
+        src: "./hero.png",
+        width: 1400,
+        height: 900,
+        alt: "Hero preview",
+      },
+    });
+
+    expect(pattern.preview).toEqual({
+      src: "./hero.png",
+      width: 1400,
+      height: 900,
+      alt: "Hero preview",
+    });
+  });
+
   test("preserves the insert mode field — copy + reference both round-trip", () => {
     const copy = definePattern({
       name: "x/copy",
