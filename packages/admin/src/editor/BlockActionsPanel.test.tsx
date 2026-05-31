@@ -175,4 +175,65 @@ describe("BlockActionsPanel", () => {
     expect(screen.queryByTestId("block-actions-list")).toBeNull();
     expect(screen.getByTestId("block-action-delete")).toBeDefined();
   });
+
+  test("renders the identity header with title and description when supplied", () => {
+    const noTransforms = createBlockRegistry([
+      spec({ name: "core/spacer", title: "Spacer" }),
+    ]);
+
+    render(
+      <BlockActionsPanel
+        specName="core/spacer"
+        registry={noTransforms}
+        identity={{
+          title: "Bulleted list",
+          icon: "List",
+          description: "Disc bullets",
+        }}
+        onTransform={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("block-actions-identity")).toBeDefined();
+    expect(
+      screen.getByTestId("block-actions-identity-title"),
+    ).toHaveTextContent("Bulleted list");
+  });
+
+  test("renders the panel when only identity is set — no transforms, no extras", () => {
+    const noTransforms = createBlockRegistry([
+      spec({ name: "core/spacer", title: "Spacer" }),
+    ]);
+
+    render(
+      <BlockActionsPanel
+        specName="core/spacer"
+        registry={noTransforms}
+        identity={{ title: "Spacer" }}
+        onTransform={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("block-actions-panel")).toBeDefined();
+    expect(screen.getByTestId("block-actions-identity")).toBeDefined();
+  });
+
+  test("renders identity header even when identity.icon is undefined — neutral fallback glyph", () => {
+    const noTransforms = createBlockRegistry([
+      spec({ name: "core/spacer", title: "Spacer" }),
+    ]);
+
+    render(
+      <BlockActionsPanel
+        specName="core/spacer"
+        registry={noTransforms}
+        identity={{ title: "No-icon block" }}
+        onTransform={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByTestId("block-actions-identity-title"),
+    ).toHaveTextContent("No-icon block");
+  });
 });

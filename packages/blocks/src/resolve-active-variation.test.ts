@@ -140,6 +140,76 @@ describe("resolveActiveVariation", () => {
     expect(long?.slug).toBe("long");
   });
 
+  test("string[] matcher uses structural equality so nested-object attrs match across renders", () => {
+    const spec = defineBlock({
+      name: "core/columns",
+      title: "Columns",
+      render: () => null,
+      variations: [
+        {
+          slug: "split",
+          title: "Split",
+          attrs: { layout: { type: "split" } },
+          isActive: ["layout"],
+        },
+      ],
+    });
+    const match = resolveActiveVariation(spec, {
+      layout: { type: "split" },
+    });
+    expect(match?.slug).toBe("split");
+  });
+
+  test("string[] matcher skips keys absent from variation.attrs so padding can't inflate specificity", () => {
+    const spec = defineBlock({
+      name: "core/list",
+      title: "List",
+      render: () => null,
+      variations: [
+        {
+          slug: "tight",
+          title: "Tight",
+          attrs: { variant: "bullet" },
+          isActive: ["variant"],
+        },
+        {
+          slug: "padded",
+          title: "Padded",
+          attrs: { variant: "bullet" },
+          isActive: ["variant", "extra", "extra2"],
+        },
+      ],
+    });
+    const match = resolveActiveVariation(spec, { variant: "bullet" });
+    expect(match?.slug).toBe("tight");
+  });
+
+  test("a true function matcher short-circuits — wins over a later string[] matcher of higher specificity", () => {
+    // Pinned semantics: function matchers run first-true-wins in
+    // registration order. A function predicate that returns true wins
+    // even when a later string[] matcher would be more specific.
+    const spec = defineBlock({
+      name: "core/badge",
+      title: "Badge",
+      render: () => null,
+      variations: [
+        {
+          slug: "permissive-fn",
+          title: "Permissive function",
+          isActive: () => true,
+        },
+        {
+          slug: "specific-array",
+          title: "Specific array",
+          attrs: { a: 1, b: 2, c: 3 },
+          isActive: ["a", "b", "c"],
+        },
+      ],
+    });
+    const match = resolveActiveVariation(spec, { a: 1, b: 2, c: 3 });
+    expect(match?.slug).toBe("permissive-fn");
+  });
+
   test("function matcher that throws is treated as false and surfaced via console.warn", () => {
     const spec = defineBlock({
       name: "core/quote",
