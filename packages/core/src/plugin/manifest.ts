@@ -6,6 +6,7 @@ import type {
   MarkSpec,
   PatternInsertMode,
   PatternPreview,
+  PatternTarget,
   ThemeTokens,
 } from "@plumix/blocks";
 
@@ -1460,6 +1461,9 @@ export interface PatternManifestEntry {
   // `undefined`.
   readonly insert?: PatternInsertMode;
   readonly preview?: PatternPreview;
+  readonly target?: PatternTarget;
+  readonly entryTypes?: readonly string[];
+  readonly priority?: number;
   readonly content: readonly BlockNode[];
 }
 
@@ -2257,8 +2261,18 @@ function toBlockEntry(block: RegisteredBlock): BlockManifestEntry {
 }
 
 function toPatternEntry(pattern: RegisteredPattern): PatternManifestEntry {
-  const { name, title, category, keywords, content, insert, preview } =
-    pattern.spec;
+  const {
+    name,
+    title,
+    category,
+    keywords,
+    content,
+    insert,
+    preview,
+    target,
+    entryTypes,
+    priority,
+  } = pattern.spec;
   return {
     name,
     title,
@@ -2266,6 +2280,9 @@ function toPatternEntry(pattern: RegisteredPattern): PatternManifestEntry {
     keywords,
     insert: insert ?? "copy",
     preview,
+    target,
+    entryTypes,
+    priority,
     content,
   };
 }

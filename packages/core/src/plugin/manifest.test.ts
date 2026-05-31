@@ -1374,6 +1374,28 @@ describe("buildManifest visibility projection", () => {
     });
   });
 
+  test("projects the starter-modal fields — target, entryTypes, priority — through the manifest", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("acme", (ctx) => {
+      ctx.registerPattern({
+        name: "acme/page-blank",
+        title: "Blank page",
+        content: [],
+        target: "post-content",
+        entryTypes: ["page"],
+        priority: 5,
+      });
+    });
+
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    const entry = manifest.patterns.find((p) => p.name === "acme/page-blank");
+
+    expect(entry?.target).toBe("post-content");
+    expect(entry?.entryTypes).toEqual(["page"]);
+    expect(entry?.priority).toBe(5);
+  });
+
   test("projects the preview override through the manifest when set, omits it otherwise", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("acme", (ctx) => {

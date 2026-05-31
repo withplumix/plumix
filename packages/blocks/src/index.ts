@@ -74,6 +74,7 @@ export type {
   PatternInsertMode,
   PatternPreview,
   PatternRegistry,
+  PatternTarget,
 } from "./pattern-registry.js";
 export { PatternRegistryError } from "./pattern-errors.js";
 

@@ -56,6 +56,21 @@ describe("definePattern", () => {
     expect(pattern.content.map((n) => n.id)).toEqual(["p1", "p2"]);
   });
 
+  test("preserves the starter-modal fields — target, entryTypes, priority", () => {
+    const pattern = definePattern({
+      name: "starter/page-blank",
+      title: "Blank page",
+      content: [],
+      target: "post-content",
+      entryTypes: ["page"],
+      priority: 5,
+    });
+
+    expect(pattern.target).toBe("post-content");
+    expect(pattern.entryTypes).toEqual(["page"]);
+    expect(pattern.priority).toBe(5);
+  });
+
   test("preserves the preview override field with width, height, and optional alt", () => {
     const pattern = definePattern({
       name: "x/preview",
