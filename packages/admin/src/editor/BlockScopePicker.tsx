@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { Button } from "@/components/ui/button.js";
 import {
   Dialog,
   DialogContent,
@@ -102,14 +103,14 @@ export function BlockScopePicker({
           ))}
         </ul>
         <div className="flex justify-end">
-          <button
-            type="button"
-            className="text-muted-foreground hover:text-foreground text-sm underline-offset-2 hover:underline"
+          <Button
+            variant="ghost"
+            size="sm"
             data-testid="plumix-block-scope-picker-cancel"
             onClick={onDismiss}
           >
             Cancel
-          </button>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
