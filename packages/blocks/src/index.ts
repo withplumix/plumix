@@ -81,6 +81,8 @@ export { serializePatternSource } from "./serialize-pattern-source.js";
 export type { SerializePatternSourceOptions } from "./serialize-pattern-source.js";
 export { commitBlockVariations } from "./commit-block-variations.js";
 export { BlockVariationError } from "./variation-errors.js";
+export { resolveBlockScopeVariations } from "./block-scope-variations.js";
+export type { BlockVariationScope } from "./block-registry.js";
 
 // ─── Validation ─────────────────────────────────────────────────────────────
 export { validateEntryContent } from "./validate-content.js";

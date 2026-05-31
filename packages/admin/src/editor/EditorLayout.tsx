@@ -34,6 +34,7 @@ import { Minus, Monitor, Plus, Smartphone, Tablet } from "lucide-react";
 import type {
   BlockRegistry,
   BlockSpec,
+  BlockVariation,
   InsertableBlockEntry,
   PatternRegistry,
   ResponsiveStyleSlot,
@@ -44,6 +45,7 @@ import {
   createBlockRegistry,
   createPatternRegistry,
   expandBlockVariations,
+  resolveBlockScopeVariations,
 } from "@plumix/blocks";
 
 import type { TransformOption } from "./available-transforms.js";
@@ -51,6 +53,7 @@ import type { SlashMenuItem } from "./slash-menu-items.js";
 import { AutosaveStatusPill } from "./AutosaveStatus.js";
 import { BlockActionsPanel } from "./BlockActionsPanel.js";
 import { BlockIcon } from "./BlockIcon.js";
+import { BlockScopePicker } from "./BlockScopePicker.js";
 import { buildCopyPatternSource } from "./build-copy-pattern-source.js";
 import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
 import { insertPattern } from "./insert-pattern.js";
@@ -605,6 +608,11 @@ interface PlumixBlocksTabProps {
   readonly patterns: readonly PatternManifestEntry[];
 }
 
+interface PendingPick {
+  readonly entry: InsertableBlockEntry;
+  readonly variations: readonly BlockVariation[];
+}
+
 function PlumixBlocksTab({
   registry,
   patternRegistry,
@@ -612,6 +620,7 @@ function PlumixBlocksTab({
   patterns,
 }: PlumixBlocksTabProps): ReactElement {
   const puck = usePuck();
+  const [pendingPick, setPendingPick] = useState<PendingPick | undefined>();
   const entries = useMemo(() => {
     const eligible: BlockSpec[] = [];
     for (const spec of registry) {
@@ -622,7 +631,7 @@ function PlumixBlocksTab({
     return expandBlockVariations(eligible);
   }, [registry, capabilities]);
 
-  const handleInsert = useCallback(
+  const insertEntry = useCallback(
     (entry: InsertableBlockEntry): void => {
       puck.dispatch({
         type: "setData",
@@ -631,6 +640,28 @@ function PlumixBlocksTab({
       });
     },
     [puck],
+  );
+
+  const handleInsert = useCallback(
+    (entry: InsertableBlockEntry): void => {
+      // Parent-block card: if the block declares any `scope: ["block"]`
+      // variations the user can still pick, open the picker. Otherwise
+      // (no variations, or all capability-gated out) fall through to
+      // bare insert with `blockSpec.defaults`.
+      if (entry.slug === entry.name) {
+        const blockScoped = resolveBlockScopeVariations(
+          registry,
+          entry.name,
+          capabilities,
+        );
+        if (blockScoped.length > 0) {
+          setPendingPick({ entry, variations: blockScoped });
+          return;
+        }
+      }
+      insertEntry(entry);
+    },
+    [insertEntry, registry, capabilities],
   );
 
   const handlePatternInsert = useCallback(
@@ -643,6 +674,37 @@ function PlumixBlocksTab({
     },
     [puck],
   );
+
+  const handlePickerSelect = useCallback(
+    (variation: BlockVariation): void => {
+      if (!pendingPick) return;
+      const picked: InsertableBlockEntry = {
+        name: pendingPick.entry.name,
+        slug: `${pendingPick.entry.name}/${variation.slug}`,
+        title: variation.title,
+        attrs: variation.attrs,
+        innerBlocks: variation.innerBlocks,
+      };
+      insertEntry(picked);
+      setPendingPick(undefined);
+    },
+    [insertEntry, pendingPick],
+  );
+
+  const handlePickerDismiss = useCallback((): void => {
+    if (!pendingPick) return;
+    // ESC / cancel inserts the bare block with `blockSpec.defaults`.
+    // Constructing a plain entry with no attrs/innerBlocks routes
+    // through the same `insertVariation` path which will land empty
+    // props, and Puck applies the spec's `defaults` on render.
+    const bare: InsertableBlockEntry = {
+      name: pendingPick.entry.name,
+      slug: pendingPick.entry.slug,
+      title: pendingPick.entry.title,
+    };
+    insertEntry(bare);
+    setPendingPick(undefined);
+  }, [insertEntry, pendingPick]);
 
   return (
     <div className="flex flex-col">
@@ -667,6 +729,14 @@ function PlumixBlocksTab({
         blocks={registry}
         patternRegistry={patternRegistry}
       />
+      {pendingPick ? (
+        <BlockScopePicker
+          blockTitle={pendingPick.entry.title}
+          variations={pendingPick.variations}
+          onSelect={handlePickerSelect}
+          onDismiss={handlePickerDismiss}
+        />
+      ) : null}
     </div>
   );
 }

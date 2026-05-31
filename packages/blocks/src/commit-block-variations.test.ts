@@ -96,6 +96,25 @@ describe("commitBlockVariations", () => {
     );
   });
 
+  test("rejects scope values outside the declared union", () => {
+    const block = defineBlock({
+      name: "x-test/scoped",
+      title: "Scoped",
+      render: () => null,
+      variations: [
+        {
+          slug: "rogue-scope",
+          title: "Rogue scope",
+          scope: ["banner" as "inserter"],
+        },
+      ],
+    });
+    const blocks = createBlockRegistry([block]);
+    expect(() => commitBlockVariations(blocks)).toThrow(
+      /Variation "rogue-scope" of "x-test\/scoped" declares scope value "banner" outside the allowed union/,
+    );
+  });
+
   test("recurses into slot-shaped attrs to validate nested innerBlocks", () => {
     const group = defineBlock({
       name: "core/group-test",
