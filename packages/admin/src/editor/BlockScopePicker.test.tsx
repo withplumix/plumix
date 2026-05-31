@@ -1,15 +1,51 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { BlockVariation } from "@plumix/blocks";
 import { createBlockRegistry, createPatternRegistry } from "@plumix/blocks";
 
 import { BlockScopePicker } from "./BlockScopePicker.js";
 
+interface FakeObserverHandle {
+  readonly callback: IntersectionObserverCallback;
+}
+
+let observers: FakeObserverHandle[];
+
+beforeEach(() => {
+  observers = [];
+  class FakeObserver {
+    constructor(public readonly callback: IntersectionObserverCallback) {
+      observers.push({ callback });
+    }
+    observe = vi.fn();
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+    takeRecords = vi.fn((): IntersectionObserverEntry[] => []);
+  }
+  vi.stubGlobal("IntersectionObserver", FakeObserver);
+});
+
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
 });
+
+function intersect(): void {
+  const entry = {
+    isIntersecting: true,
+    intersectionRatio: 1,
+    target: document.createElement("div"),
+    boundingClientRect: {} as DOMRectReadOnly,
+    intersectionRect: {} as DOMRectReadOnly,
+    rootBounds: null,
+    time: 0,
+  } satisfies IntersectionObserverEntry;
+  act(() => {
+    for (const o of observers) o.callback([entry], {} as IntersectionObserver);
+  });
+}
 
 const blocks = createBlockRegistry([]);
 const patterns = createPatternRegistry([]);
@@ -52,7 +88,7 @@ describe("BlockScopePicker", () => {
     ).toBeDefined();
   });
 
-  test("renders a live thumbnail for each card keyed on parent + slug", () => {
+  test("renders a placeholder for each thumbnail before the card scrolls into view", () => {
     render(
       <BlockScopePicker
         blockTitle="Columns"
@@ -65,10 +101,33 @@ describe("BlockScopePicker", () => {
       />,
     );
     expect(
-      screen.getByTestId("plumix-variation-thumbnail-core/columns:two-up"),
+      screen.getByTestId(
+        "plumix-block-scope-picker-thumbnail-placeholder-core/columns:two-up",
+      ),
     ).toBeDefined();
     expect(
-      screen.getByTestId("plumix-variation-thumbnail-core/columns:three-up"),
+      screen.queryByTestId("plumix-variation-thumbnail-core/columns:two-up"),
+    ).toBeNull();
+  });
+
+  test("mounts the live thumbnail once the placeholder intersects the viewport", () => {
+    render(
+      <BlockScopePicker
+        blockTitle="Columns"
+        parentBlockName="core/columns"
+        variations={[twoUp]}
+        blocks={blocks}
+        patterns={patterns}
+        onSelect={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    );
+    expect(
+      screen.queryByTestId("plumix-variation-thumbnail-core/columns:two-up"),
+    ).toBeNull();
+    intersect();
+    expect(
+      screen.getByTestId("plumix-variation-thumbnail-core/columns:two-up"),
     ).toBeDefined();
   });
 

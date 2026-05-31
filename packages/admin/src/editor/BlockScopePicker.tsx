@@ -13,7 +13,12 @@ import type {
   PatternRegistry,
 } from "@plumix/blocks";
 
+import { LazyMount } from "./LazyMount.js";
 import { VariationThumbnail } from "./VariationThumbnail.js";
+
+// Reserves space so the placeholder isn't a zero-height target that
+// intersects the viewport on first paint and defeats the lazy mount.
+const THUMBNAIL_MIN_HEIGHT = 120;
 
 interface BlockScopePickerProps {
   readonly blockTitle: string;
@@ -73,14 +78,19 @@ export function BlockScopePicker({
                   }
                 }}
               >
-                <div className="overflow-hidden rounded">
-                  <VariationThumbnail
-                    parentBlockName={parentBlockName}
-                    variation={variation}
-                    blocks={blocks}
-                    patterns={patterns}
-                  />
-                </div>
+                <LazyMount
+                  placeholderTestId={`plumix-block-scope-picker-thumbnail-placeholder-${parentBlockName}:${variation.slug}`}
+                  minHeight={THUMBNAIL_MIN_HEIGHT}
+                >
+                  <div className="overflow-hidden rounded">
+                    <VariationThumbnail
+                      parentBlockName={parentBlockName}
+                      variation={variation}
+                      blocks={blocks}
+                      patterns={patterns}
+                    />
+                  </div>
+                </LazyMount>
                 <span className="text-sm font-medium">{variation.title}</span>
                 {variation.description ? (
                   <span className="text-muted-foreground text-xs">
