@@ -1,6 +1,6 @@
 import type { ComponentData, Data } from "@puckeditor/core";
 
-import type { InsertableBlockEntry } from "@plumix/blocks";
+import type { BlockNode, InsertableBlockEntry } from "@plumix/blocks";
 import { rewriteBlockNodeIds } from "@plumix/blocks";
 
 import { blockNodesToPuckContent } from "./entry-content.js";
@@ -11,13 +11,25 @@ const CONTENT_SLOT_KEY = "content";
 // the engine slots them into the parent block's conventional `content`
 // key as ComponentData[] — the shape Puck's slot fields read back from
 // `puckDataToBlockTree` and the save path. ID rewrite keeps repeated
-// insertions of the same variation from sharing React keys.
+// insertions of the same variation from sharing React keys. The parent
+// block also gets a fresh `props.id` because Puck's reducer keys
+// instances on that field — without it the slot adapter fails to
+// resolve and the canvas renderer hangs.
 export function insertVariation(
   data: Data,
   entry: InsertableBlockEntry,
   index: number,
 ): Data {
-  const props: Record<string, unknown> = { ...(entry.attrs ?? {}) };
+  const seed: BlockNode = {
+    id: "",
+    name: entry.name,
+    attrs: { ...(entry.attrs ?? {}) },
+  };
+  const [withId] = rewriteBlockNodeIds([seed]);
+  const props: Record<string, unknown> = {
+    ...(withId?.attrs ?? {}),
+    id: withId?.id,
+  };
   if (entry.innerBlocks && entry.innerBlocks.length > 0) {
     props[CONTENT_SLOT_KEY] = blockNodesToPuckContent(
       rewriteBlockNodeIds(entry.innerBlocks),

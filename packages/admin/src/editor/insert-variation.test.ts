@@ -11,6 +11,20 @@ function emptyData(): Data {
 }
 
 describe("insertVariation", () => {
+  test("stamps a Puck-shaped id into props so the renderer can key the instance", () => {
+    const entry: InsertableBlockEntry = {
+      name: "core/details",
+      slug: "core/details",
+      title: "Details",
+    };
+    const after = insertVariation(emptyData(), entry, 0);
+    const inserted = after.content[0];
+    expect(inserted?.type).toBe("core/details");
+    const id = (inserted?.props as { id?: unknown }).id;
+    expect(typeof id).toBe("string");
+    expect((id as string).length).toBeGreaterThan(0);
+  });
+
   test("inserts a parent block whose Puck slot carries innerBlocks the walker can read back", () => {
     const entry: InsertableBlockEntry = {
       name: "core/group",
