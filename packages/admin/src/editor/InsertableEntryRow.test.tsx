@@ -1,50 +1,17 @@
-import { act, cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { InsertableBlockEntry } from "@plumix/blocks";
 import { createBlockRegistry, createPatternRegistry } from "@plumix/blocks";
 
 import { InsertableEntryRow } from "./InsertableEntryRow.js";
+import { installFakeIntersectionObserver } from "./intersection-observer-harness.js";
 
-interface FakeObserverHandle {
-  readonly callback: IntersectionObserverCallback;
-}
-
-let observers: FakeObserverHandle[];
-
-beforeEach(() => {
-  observers = [];
-  class FakeObserver {
-    constructor(public readonly callback: IntersectionObserverCallback) {
-      observers.push({ callback });
-    }
-    observe = vi.fn();
-    unobserve = vi.fn();
-    disconnect = vi.fn();
-    takeRecords = vi.fn((): IntersectionObserverEntry[] => []);
-  }
-  vi.stubGlobal("IntersectionObserver", FakeObserver);
-});
+const { intersect } = installFakeIntersectionObserver();
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
 });
-
-function intersect(): void {
-  const entry = {
-    isIntersecting: true,
-    intersectionRatio: 1,
-    target: document.createElement("div"),
-    boundingClientRect: {} as DOMRectReadOnly,
-    intersectionRect: {} as DOMRectReadOnly,
-    rootBounds: null,
-    time: 0,
-  } satisfies IntersectionObserverEntry;
-  act(() => {
-    for (const o of observers) o.callback([entry], {} as IntersectionObserver);
-  });
-}
 
 const blocks = createBlockRegistry([]);
 const patterns = createPatternRegistry([]);

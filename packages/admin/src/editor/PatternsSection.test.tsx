@@ -1,56 +1,17 @@
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { createBlockRegistry, createPatternRegistry } from "@plumix/blocks";
 
+import { installFakeIntersectionObserver } from "./intersection-observer-harness.js";
 import { PatternsSection } from "./PatternsSection.js";
 
-interface QueuedObserver {
-  readonly callback: IntersectionObserverCallback;
-  readonly target: Element;
-}
-
-let observers: QueuedObserver[];
-
-beforeEach(() => {
-  observers = [];
-  class FakeObserver {
-    constructor(public readonly callback: IntersectionObserverCallback) {}
-    observe = (target: Element): void => {
-      observers.push({ callback: this.callback, target });
-    };
-    unobserve = vi.fn();
-    disconnect = vi.fn();
-    takeRecords = vi.fn((): IntersectionObserverEntry[] => []);
-  }
-  vi.stubGlobal("IntersectionObserver", FakeObserver);
-});
+const { intersect: intersectAll } = installFakeIntersectionObserver();
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
 });
-
-// Flushes every queued observer with an intersecting entry — mirrors
-// the pattern in LazyMount.test.tsx so React state updates land inside
-// act() and the warning-free assertion path is consistent.
-function intersectAll(): void {
-  act(() => {
-    for (const { callback, target } of observers) {
-      const entry = {
-        isIntersecting: true,
-        intersectionRatio: 1,
-        target,
-        boundingClientRect: {} as DOMRectReadOnly,
-        intersectionRect: {} as DOMRectReadOnly,
-        rootBounds: null,
-        time: 0,
-      } satisfies IntersectionObserverEntry;
-      callback([entry], null as unknown as IntersectionObserver);
-    }
-  });
-}
 
 const noop = vi.fn();
 const blocks = createBlockRegistry([]);
