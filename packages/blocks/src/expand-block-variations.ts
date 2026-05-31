@@ -20,31 +20,39 @@ export function expandBlockVariations(
 ): readonly InsertableBlockEntry[] {
   const out: InsertableBlockEntry[] = [];
   for (const spec of specs) {
-    if (spec.variations && spec.variations.length > 0) {
-      for (const v of spec.variations) {
-        out.push({
-          name: spec.name,
-          slug: v.slug,
-          title: v.title,
-          description: v.description,
-          category: spec.category,
-          icon: v.icon,
-          keywords: v.keywords,
-          attrs: v.attrs,
-          innerBlocks: v.innerBlocks,
-        });
-      }
-      continue;
+    const variations = spec.variations ?? [];
+    const inserterVariations = variations.filter((v) =>
+      (v.scope ?? ["inserter"]).includes("inserter"),
+    );
+    const hasBlockScoped = variations.some((v) => v.scope?.includes("block"));
+    for (const v of inserterVariations) {
+      out.push({
+        name: spec.name,
+        slug: v.slug,
+        title: v.title,
+        description: v.description,
+        category: spec.category,
+        icon: v.icon,
+        keywords: v.keywords,
+        attrs: v.attrs,
+        innerBlocks: v.innerBlocks,
+      });
     }
-    out.push({
-      name: spec.name,
-      slug: spec.name,
-      title: spec.title ?? spec.name,
-      description: spec.description,
-      category: spec.category,
-      icon: spec.icon,
-      keywords: spec.keywords,
-    });
+    // The parent block becomes its own inserter card when:
+    //   - no variations exist (the original baseline), or
+    //   - at least one variation is block-scoped (so the user can land
+    //     on a picker that lists the layout choices).
+    if (variations.length === 0 || hasBlockScoped) {
+      out.push({
+        name: spec.name,
+        slug: spec.name,
+        title: spec.title ?? spec.name,
+        description: spec.description,
+        category: spec.category,
+        icon: spec.icon,
+        keywords: spec.keywords,
+      });
+    }
   }
   return out;
 }

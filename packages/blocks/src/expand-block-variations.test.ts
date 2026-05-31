@@ -54,4 +54,58 @@ describe("expandBlockVariations", () => {
       "core/heading",
     ]);
   });
+
+  test("omits variations scoped only to block-picker — the parent block stands in for the inserter card", () => {
+    const entries = expandBlockVariations([
+      block({
+        name: "core/columns",
+        title: "Columns",
+        variations: [
+          {
+            slug: "two-up",
+            title: "Two up",
+            attrs: { layout: "split" },
+            scope: ["block"],
+          },
+          {
+            slug: "three-up",
+            title: "Three up",
+            attrs: { layout: "three" },
+            scope: ["block"],
+          },
+        ],
+      }),
+    ]);
+    expect(entries.map((e) => e.slug)).toEqual(["core/columns"]);
+    expect(entries[0]?.name).toBe("core/columns");
+  });
+
+  test("respects explicit `scope: ['inserter']` and skips variations with empty scope", () => {
+    const entries = expandBlockVariations([
+      block({
+        name: "core/list",
+        title: "List",
+        variations: [
+          {
+            slug: "bullet",
+            title: "Bulleted",
+            attrs: { variant: "bullet" },
+            scope: ["inserter"],
+          },
+          {
+            slug: "hidden",
+            title: "Hidden",
+            attrs: { variant: "hidden" },
+            scope: [],
+          },
+          {
+            slug: "transform-only",
+            title: "Transform only",
+            scope: ["transform"],
+          },
+        ],
+      }),
+    ]);
+    expect(entries.map((e) => e.slug)).toEqual(["bullet"]);
+  });
 });

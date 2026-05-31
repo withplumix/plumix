@@ -15,6 +15,8 @@ export interface BlockInput {
   readonly options?: readonly BlockInputOption[];
 }
 
+export type BlockVariationScope = "inserter" | "block" | "transform";
+
 export interface BlockVariation {
   readonly slug: string;
   readonly title: string;
@@ -28,6 +30,11 @@ export interface BlockVariation {
   // at commit time so unknown block names / undeclared attrs surface
   // at boot with parent + variation + path traces.
   readonly innerBlocks?: readonly BlockNode[];
+  // Surfaces the variation in the inserter (default), via a block-scope
+  // picker, or as a transform target. Empty array hides the variation
+  // from all surfaces — useful as a readback-only identity for stored
+  // instances referenced by `isActive`.
+  readonly scope?: readonly BlockVariationScope[];
 }
 
 /**

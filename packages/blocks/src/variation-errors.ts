@@ -38,4 +38,14 @@ export class BlockVariationError extends Error {
       `Variation "${variationSlug}" of "${parentBlock}" declares innerBlocks but the parent block has no "content" slot input.`,
     );
   }
+
+  static invalidScope(
+    parentBlock: string,
+    variationSlug: string,
+    value: string,
+  ): BlockVariationError {
+    return new BlockVariationError(
+      `Variation "${variationSlug}" of "${parentBlock}" declares scope value "${value}" outside the allowed union ("inserter" | "block" | "transform").`,
+    );
+  }
 }

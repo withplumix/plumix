@@ -13,6 +13,22 @@ export function commitBlockVariations(blocks: BlockRegistry): void {
       (input) => input.name === "content" && input.type === "slot",
     );
     for (const variation of spec.variations) {
+      if (variation.scope) {
+        for (const value of variation.scope) {
+          // Cast through `string` so the union-narrow doesn't tell
+          // eslint "this is dead code" — the gate exists for plugins
+          // (untyped JS) and dynamic-shape payloads that fall through
+          // the compile-time union.
+          const v = value as string;
+          if (v !== "inserter" && v !== "block" && v !== "transform") {
+            throw BlockVariationError.invalidScope(
+              spec.name,
+              variation.slug,
+              v,
+            );
+          }
+        }
+      }
       if (variation.attrs && declared) {
         for (const key of Object.keys(variation.attrs)) {
           if (!declared.has(key)) {
