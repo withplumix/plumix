@@ -65,6 +65,44 @@ const bulletListVariation: SlashMenuItem = {
 const noop = vi.fn();
 
 describe("SlashMenuPanel", () => {
+  test("two variations sharing a slug across different parents get distinct testids", () => {
+    const listBullet: SlashMenuItem = {
+      kind: "block",
+      entry: {
+        name: "core/list",
+        slug: "bullet",
+        title: "Bulleted list",
+        category: "lists",
+      },
+    };
+    const tabsBullet: SlashMenuItem = {
+      kind: "block",
+      entry: {
+        name: "core/tabs",
+        slug: "bullet",
+        title: "Bulleted tabs",
+        category: "tabs",
+      },
+    };
+    render(
+      <SlashMenuPanel
+        items={[listBullet, tabsBullet]}
+        query=""
+        onQueryChange={noop}
+        onSelect={noop}
+        onDismiss={noop}
+        blocks={blocks}
+        patterns={patterns}
+      />,
+    );
+    expect(
+      screen.getByTestId("slash-menu-item-core/list/bullet"),
+    ).toBeDefined();
+    expect(
+      screen.getByTestId("slash-menu-item-core/tabs/bullet"),
+    ).toBeDefined();
+  });
+
   test("marks pattern entries with a distinct card-style testid", () => {
     render(
       <SlashMenuPanel

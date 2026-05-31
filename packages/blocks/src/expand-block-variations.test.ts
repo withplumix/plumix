@@ -155,4 +155,28 @@ describe("expandBlockVariations", () => {
       dataSrc: "static-preview",
     });
   });
+
+  test("variation entries emit the variation's raw slug, never namespaced under the parent", () => {
+    // The admin's `entryKey` helper relies on this — it namespaces by
+    // joining `${entry.name}/${entry.slug}`, which would double-prefix
+    // if the producer ever emitted `slug = ${name}/${variation.slug}`.
+    const entries = expandBlockVariations([
+      block({
+        name: "core/list",
+        title: "List",
+        variations: [
+          { slug: "bullet", title: "Bulleted", attrs: { variant: "bullet" } },
+          {
+            slug: "numbered",
+            title: "Numbered",
+            attrs: { variant: "numbered" },
+          },
+        ],
+      }),
+    ]);
+    for (const entry of entries) {
+      expect(entry.slug.startsWith(`${entry.name}/`)).toBe(false);
+    }
+    expect(entries.map((e) => e.slug)).toEqual(["bullet", "numbered"]);
+  });
 });

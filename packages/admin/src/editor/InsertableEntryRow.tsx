@@ -7,7 +7,7 @@ import type {
 } from "@plumix/blocks";
 
 import { BlockIcon } from "./BlockIcon.js";
-import { isVariation } from "./is-variation.js";
+import { entryKey, isVariation } from "./is-variation.js";
 import { LazyMount } from "./LazyMount.js";
 import { THUMBNAIL_MIN_HEIGHT } from "./thumbnail-min-height.js";
 import { VariationThumbnail } from "./VariationThumbnail.js";
@@ -30,7 +30,7 @@ export function InsertableEntryRow({
       <button
         type="button"
         className="hover:bg-muted flex w-full items-center gap-2 rounded border px-3 py-2 text-left text-sm"
-        data-testid={`plumix-blocks-tab-item-${entry.slug}`}
+        data-testid={`plumix-blocks-tab-item-${entryKey(entry)}`}
         onClick={onClick}
       >
         <BlockIcon name={entry.icon} />
@@ -47,7 +47,7 @@ export function InsertableEntryRow({
       role="button"
       tabIndex={0}
       className="hover:bg-muted flex w-full flex-col gap-2 rounded border p-2 text-left text-sm focus:outline-none focus-visible:ring"
-      data-testid={`plumix-blocks-tab-item-${entry.slug}`}
+      data-testid={`plumix-blocks-tab-item-${entryKey(entry)}`}
       onClick={onClick}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {

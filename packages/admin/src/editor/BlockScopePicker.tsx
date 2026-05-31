@@ -59,6 +59,9 @@ export function BlockScopePicker({
             {blockTitle}.
           </DialogDescription>
         </DialogHeader>
+        {/* Raw `variation.slug` is safe here — the picker scopes to one
+           parent block at a time and a BlockSpec can't declare two
+           variations with the same slug. */}
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {variations.map((variation) => (
             <li key={variation.slug}>

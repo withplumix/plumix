@@ -59,7 +59,7 @@ import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
 import { insertPattern } from "./insert-pattern.js";
 import { dispatchVariationInsert } from "./insert-variation.js";
 import { InsertableEntryRow } from "./InsertableEntryRow.js";
-import { isVariation } from "./is-variation.js";
+import { entryKey, isVariation } from "./is-variation.js";
 import { MobileSidebarSheet } from "./MobileSidebarSheet.js";
 import { patchStyleAtSelector } from "./patch-style.js";
 import { PatternRefProvider } from "./PatternRefPreview.js";
@@ -710,7 +710,7 @@ function PlumixBlocksTab({
     <div className="flex flex-col">
       <ul className="flex flex-col gap-1 p-4" data-testid="plumix-blocks-tab">
         {entries.map((entry) => (
-          <li key={entry.slug}>
+          <li key={entryKey(entry)}>
             <InsertableEntryRow
               entry={entry}
               blocks={registry}

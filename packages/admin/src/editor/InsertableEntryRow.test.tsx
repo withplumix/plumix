@@ -17,6 +17,41 @@ const blocks = createBlockRegistry([]);
 const patterns = createPatternRegistry([]);
 
 describe("InsertableEntryRow", () => {
+  test("two variations sharing a slug across different parents get distinct testids", () => {
+    const listBullet: InsertableBlockEntry = {
+      name: "core/list",
+      slug: "bullet",
+      title: "Bulleted list",
+    };
+    const tabsBullet: InsertableBlockEntry = {
+      name: "core/tabs",
+      slug: "bullet",
+      title: "Bulleted tabs",
+    };
+    render(
+      <>
+        <InsertableEntryRow
+          entry={listBullet}
+          blocks={blocks}
+          patterns={patterns}
+          onClick={vi.fn()}
+        />
+        <InsertableEntryRow
+          entry={tabsBullet}
+          blocks={blocks}
+          patterns={patterns}
+          onClick={vi.fn()}
+        />
+      </>,
+    );
+    expect(
+      screen.getByTestId("plumix-blocks-tab-item-core/list/bullet"),
+    ).toBeDefined();
+    expect(
+      screen.getByTestId("plumix-blocks-tab-item-core/tabs/bullet"),
+    ).toBeDefined();
+  });
+
   test("renders a plain block as a single-line row without a thumbnail", () => {
     const entry: InsertableBlockEntry = {
       name: "core/heading",
