@@ -58,7 +58,8 @@ import { BlockScopePicker } from "./BlockScopePicker.js";
 import { buildCopyPatternSource } from "./build-copy-pattern-source.js";
 import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
 import { insertPattern } from "./insert-pattern.js";
-import { insertVariation } from "./insert-variation.js";
+import { computeVariationMergeAttrs } from "./insert-variation.js";
+import { mergePropsAtSelector } from "./merge-variation-attrs.js";
 import { MobileSidebarSheet } from "./MobileSidebarSheet.js";
 import { patchStyleAtSelector } from "./patch-style.js";
 import { PatternRefProvider } from "./PatternRefPreview.js";
@@ -634,11 +635,31 @@ function PlumixBlocksTab({
 
   const insertEntry = useCallback(
     (entry: InsertableBlockEntry): void => {
+      const index = puck.appState.data.content.length;
+      // Two-dispatch shape: Puck's `insert` action stamps `props.id`
+      // itself, then the merge applies variation attrs + slot content.
+      // Constructing the ComponentData via `setData` directly skipped
+      // Puck's id-generation contract and the autosave hook saw a
+      // double state-change per slash insert, racing the conflict
+      // recovery test on CI.
       puck.dispatch({
-        type: "setData",
-        data: (previous) =>
-          insertVariation(previous, entry, previous.content.length),
+        type: "insert",
+        componentType: entry.name,
+        destinationZone: PUCK_ROOT_ZONE,
+        destinationIndex: index,
       });
+      const mergeAttrs = computeVariationMergeAttrs(entry);
+      if (Object.keys(mergeAttrs).length > 0) {
+        puck.dispatch({
+          type: "setData",
+          data: (previous) =>
+            mergePropsAtSelector(
+              previous,
+              { zone: PUCK_ROOT_ZONE, index },
+              mergeAttrs,
+            ),
+        });
+      }
     },
     [puck],
   );
@@ -885,9 +906,23 @@ function PlumixCanvasWithSlashMenu({
         const insertIndex =
           zone === PUCK_ROOT_ZONE ? index : puck.appState.data.content.length;
         puck.dispatch({
-          type: "setData",
-          data: (previous) => insertVariation(previous, entry, insertIndex),
+          type: "insert",
+          componentType: entry.name,
+          destinationZone: PUCK_ROOT_ZONE,
+          destinationIndex: insertIndex,
         });
+        const mergeAttrs = computeVariationMergeAttrs(entry);
+        if (Object.keys(mergeAttrs).length > 0) {
+          puck.dispatch({
+            type: "setData",
+            data: (previous) =>
+              mergePropsAtSelector(
+                previous,
+                { zone: PUCK_ROOT_ZONE, index: insertIndex },
+                mergeAttrs,
+              ),
+          });
+        }
       } else {
         // The pattern insert primitive operates on the root content
         // array; nextInsertPoint may have returned a nested zone for
