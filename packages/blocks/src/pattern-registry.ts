@@ -45,6 +45,8 @@ export interface PatternPreview {
   readonly alt?: string;
 }
 
+export type PatternTarget = "post-content";
+
 export interface BlockPattern {
   readonly name: string;
   readonly title: string;
@@ -57,6 +59,13 @@ export interface BlockPattern {
   // Static preview override. When set, the inserter renders an <img>
   // at the declared dimensions instead of live-rendering `content`.
   readonly preview?: PatternPreview;
+  // Marks the pattern as eligible for the starter modal when the
+  // matching entry type is being authored from scratch.
+  readonly target?: PatternTarget;
+  readonly entryTypes?: readonly string[];
+  // Lower numbers float to the top of the starter modal; ties break
+  // alphabetically by name.
+  readonly priority?: number;
   readonly content: readonly BlockNode[];
 }
 

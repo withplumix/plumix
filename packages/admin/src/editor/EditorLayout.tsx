@@ -62,12 +62,18 @@ import { puckDataToBlockTree } from "./puck-to-block-tree.js";
 import { PUCK_ROOT_ZONE } from "./puck-zones.js";
 import { nextInsertPoint, resolveSlashMenuItems } from "./slash-menu-items.js";
 import { SlashMenuPanel } from "./SlashMenuPanel.js";
+import { StarterModal } from "./StarterModal.js";
 import { StyleTab } from "./StyleTab.js";
+import { useStarterModalState } from "./use-starter-modal-state.js";
 import { viewportWidthToBucket } from "./viewport-bucket.js";
 
 interface PlumixEditorLayoutProps {
   readonly registry?: BlockRegistry;
   readonly patternRegistry?: PatternRegistry;
+  // Pre-filtered starter patterns surfaced in the entry-create modal.
+  // Route owns the filter (entry type / capability); the layout just
+  // renders what it's given.
+  readonly starterCandidates?: readonly PatternManifestEntry[];
   readonly capabilities?: ReadonlySet<string>;
   readonly tokens?: ThemeTokens;
   readonly children?: ReactNode;
@@ -108,6 +114,9 @@ interface PlumixEditorLayoutProps {
 
 const EMPTY_REGISTRY: BlockRegistry = createBlockRegistry([]);
 const EMPTY_PATTERN_REGISTRY: PatternRegistry = createPatternRegistry([]);
+const EMPTY_STARTER_CANDIDATES: readonly PatternManifestEntry[] = Object.freeze(
+  [],
+);
 const EMPTY_CAPS: ReadonlySet<string> = new Set();
 const EMPTY_TOKENS: ThemeTokens = {};
 
@@ -153,11 +162,18 @@ interface CanvasToolbarProps {
   // null clears the manual override so the canvas tracks fit-to-screen
   // again. Numeric values pin the zoom level until cleared.
   readonly onZoomChange: (next: number | null) => void;
+  // Visible only while the entry is empty AND starter candidates exist
+  // — re-summons the starter modal after a dismissal so authors can
+  // change their mind before they start building.
+  readonly canReopenStarter: boolean;
+  readonly onReopenStarter: () => void;
 }
 
 function CanvasToolbar({
   zoom,
   onZoomChange,
+  canReopenStarter,
+  onReopenStarter,
 }: CanvasToolbarProps): ReactElement {
   const puck = usePuck();
   const { viewports } = puck.appState.ui;
@@ -258,6 +274,19 @@ function CanvasToolbar({
       >
         {Math.round(zoom * 100)}%
       </span>
+      {canReopenStarter ? (
+        <>
+          <div className="bg-border h-5 w-px" aria-hidden />
+          <button
+            type="button"
+            className="text-muted-foreground hover:text-foreground inline-flex h-7 items-center rounded-md px-2 text-xs"
+            data-testid="plumix-editor-replace-starter"
+            onClick={onReopenStarter}
+          >
+            Pick a starter…
+          </button>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -347,6 +376,7 @@ function DraftActions({ draftMode }: DraftActionsProps): ReactElement {
 export function PlumixEditorLayout({
   registry = EMPTY_REGISTRY,
   patternRegistry = EMPTY_PATTERN_REGISTRY,
+  starterCandidates = EMPTY_STARTER_CANDIDATES,
   capabilities = EMPTY_CAPS,
   tokens = EMPTY_TOKENS,
   title,
@@ -461,16 +491,20 @@ export function PlumixEditorLayout({
               <div className="pointer-events-none h-full">
                 <PlumixCanvasWithSlashMenu
                   registry={registry}
+                  patternRegistry={patternRegistry}
                   capabilities={capabilities}
                   patterns={patterns}
+                  starterCandidates={starterCandidates}
                 />
               </div>
             </div>
           ) : (
             <PlumixCanvasWithSlashMenu
               registry={registry}
+              patternRegistry={patternRegistry}
               capabilities={capabilities}
               patterns={patterns}
+              starterCandidates={starterCandidates}
             />
           )}
           <InspectorBody registry={registry} tokens={tokens} />
@@ -690,18 +724,42 @@ function InspectorBody({ registry, tokens }: InspectorBodyProps): ReactElement {
 
 interface PlumixCanvasWithSlashMenuProps {
   readonly registry: BlockRegistry;
+  readonly patternRegistry: PatternRegistry;
   readonly capabilities: ReadonlySet<string>;
   readonly patterns: readonly PatternManifestEntry[];
+  readonly starterCandidates: readonly PatternManifestEntry[];
 }
 
 function PlumixCanvasWithSlashMenu({
   registry,
+  patternRegistry,
   capabilities,
   patterns,
+  starterCandidates,
 }: PlumixCanvasWithSlashMenuProps): ReactElement {
   const puck = usePuck();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  // Captured once at mount: the modal's initial open state must reflect
+  // the entry as it was loaded, not later state changes that follow a
+  // pattern seed.
+  const [initiallyEmpty] = useState(
+    () => puck.appState.data.content.length === 0,
+  );
+  const starterState = useStarterModalState({
+    initiallyEmpty,
+    candidates: starterCandidates,
+  });
+  const handleStarterSelect = useCallback(
+    (pattern: PatternManifestEntry): void => {
+      puck.dispatch({
+        type: "setData",
+        data: (previous) => insertPattern(previous, pattern, 0),
+      });
+      starterState.dismiss();
+    },
+    [puck, starterState],
+  );
 
   const items = useMemo(
     () => resolveSlashMenuItems(registry, { capabilities, query, patterns }),
@@ -811,7 +869,15 @@ function PlumixCanvasWithSlashMenu({
       className="flex min-h-0 flex-col"
       data-testid="plumix-editor-canvas-column"
     >
-      <CanvasToolbar zoom={zoom} onZoomChange={setManualZoom} />
+      <CanvasToolbar
+        zoom={zoom}
+        onZoomChange={setManualZoom}
+        canReopenStarter={
+          puck.appState.data.content.length === 0 &&
+          starterCandidates.length > 0
+        }
+        onReopenStarter={starterState.reopen}
+      />
       <main
         ref={mainRef}
         className="bg-muted/30 flex-1 overflow-auto px-8 py-6"
@@ -849,6 +915,15 @@ function PlumixCanvasWithSlashMenu({
           />
         </DialogContent>
       </Dialog>
+      {starterState.open ? (
+        <StarterModal
+          candidates={starterCandidates}
+          blocks={registry}
+          patterns={patternRegistry}
+          onSelect={handleStarterSelect}
+          onDismiss={starterState.dismiss}
+        />
+      ) : null}
     </div>
   );
 }

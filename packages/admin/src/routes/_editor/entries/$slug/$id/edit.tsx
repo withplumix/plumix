@@ -17,6 +17,7 @@ import { registerCoreBlocks } from "@/editor/register-core-blocks.js";
 import { resolveEditorMode } from "@/editor/resolve-editor-mode.js";
 import { PreviewBanner } from "@/editor/revisions/PreviewBanner.js";
 import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
+import { selectStarterPatterns } from "@/editor/select-starter-patterns.js";
 import { StaleDraftDialog } from "@/editor/StaleDraftDialog.js";
 import {
   entryMetaBoxesForType,
@@ -225,6 +226,11 @@ function PuckSpikeRouteInner({
   userId,
   backHref,
 }: PuckSpikeRouteInnerProps): ReactNode {
+  const starterCandidates = useMemo(
+    () =>
+      entryType ? selectStarterPatterns(getPatterns(), entryType.name) : [],
+    [entryType],
+  );
   const entryTypeName = entryType?.name;
   // `preview: true` overlays any existing autosave onto the live row
   // and decorates the response with `_preview`. For types/users
@@ -567,6 +573,7 @@ function PuckSpikeRouteInner({
       <PlumixEditorLayout
         registry={registry}
         patternRegistry={patternRegistry}
+        starterCandidates={starterCandidates}
         capabilities={capabilitySet}
         tokens={themeTokens}
         title={title}
@@ -598,6 +605,7 @@ function PuckSpikeRouteInner({
       revisionsTrigger,
       coAuthors,
       draftModeProp,
+      starterCandidates,
     ],
   );
 
@@ -737,6 +745,8 @@ function PuckPreviewRouteInner({
   const revisionAuthor =
     revision.authorName ?? revision.authorEmail ?? `#${String(revisionId)}`;
   const Layout = useCallback(
+    // Preview mode never opens the starter modal — the entry being
+    // previewed is always pre-populated.
     (): ReactElement => (
       <PlumixEditorLayout
         registry={registry}
