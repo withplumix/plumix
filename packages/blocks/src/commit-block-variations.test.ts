@@ -72,7 +72,7 @@ describe("commitBlockVariations", () => {
     });
     const blocks = createBlockRegistry([heading, headingBlock]);
     expect(() => commitBlockVariations(blocks)).toThrow(
-      /Variation "with-children" of "x-test\/leaf" declares innerBlocks but the parent block has no "content" slot input/,
+      /Variation "with-children" of "x-test\/leaf" declares innerBlocks at innerBlocks but the parent block has no "content" slot input/,
     );
   });
 
@@ -153,7 +153,7 @@ describe("commitBlockVariations", () => {
     });
     const blocks = createBlockRegistry([leaf, headingBlock]);
     expect(() => commitBlockVariations(blocks)).toThrow(
-      /Variation "with-example-children" of "x-test\/leaf" declares innerBlocks but the parent block has no "content" slot input/,
+      /Variation "with-example-children" of "x-test\/leaf" declares innerBlocks at example\.innerBlocks but the parent block has no "content" slot input/,
     );
   });
 
@@ -174,6 +174,27 @@ describe("commitBlockVariations", () => {
     const blocks = createBlockRegistry([block]);
     expect(() => commitBlockVariations(blocks)).toThrow(
       /Variation "no-attrs" of "x-test\/empty-transform" is scoped "transform" but declares no attrs to apply/,
+    );
+  });
+
+  test("rejects a transform-scope variation whose attrs object is empty — same no-op shape", () => {
+    const block = defineBlock({
+      name: "x-test/empty-transform",
+      title: "Empty Transform",
+      inputs: [{ name: "layout", type: "text" }],
+      render: () => null,
+      variations: [
+        {
+          slug: "empty-attrs",
+          title: "Empty attrs",
+          attrs: {},
+          scope: ["transform"],
+        },
+      ],
+    });
+    const blocks = createBlockRegistry([block]);
+    expect(() => commitBlockVariations(blocks)).toThrow(
+      /Variation "empty-attrs" of "x-test\/empty-transform" is scoped "transform" but declares no attrs to apply/,
     );
   });
 

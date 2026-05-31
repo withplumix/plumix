@@ -220,6 +220,42 @@ describe("BlockActionsPanel", () => {
     expect(screen.getByTestId("block-actions-identity")).toBeDefined();
   });
 
+  test("renders two transform-scope variations of the same block as distinct buttons", () => {
+    const columnsWithTwoVariations = createBlockRegistry([
+      spec({
+        name: "core/columns",
+        title: "Columns",
+        variations: [
+          {
+            slug: "two-up",
+            title: "Two up",
+            attrs: { layout: "split" },
+            scope: ["transform"],
+          },
+          {
+            slug: "three-up",
+            title: "Three up",
+            attrs: { layout: "three" },
+            scope: ["transform"],
+          },
+        ],
+      }),
+    ]);
+    render(
+      <BlockActionsPanel
+        specName="core/columns"
+        registry={columnsWithTwoVariations}
+        onTransform={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByTestId("block-action-transform-variation:two-up"),
+    ).toHaveTextContent("Two up");
+    expect(
+      screen.getByTestId("block-action-transform-variation:three-up"),
+    ).toHaveTextContent("Three up");
+  });
+
   test("renders identity header even when identity.icon is undefined — neutral fallback glyph", () => {
     const noTransforms = createBlockRegistry([
       spec({ name: "core/spacer", title: "Spacer" }),
