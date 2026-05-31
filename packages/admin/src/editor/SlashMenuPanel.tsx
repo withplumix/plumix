@@ -12,7 +12,7 @@ import { Command as CommandPrimitive } from "cmdk";
 import type { BlockRegistry, PatternRegistry } from "@plumix/blocks";
 
 import type { SlashMenuItem } from "./slash-menu-items.js";
-import { isVariation } from "./is-variation.js";
+import { entryKey, isVariation } from "./is-variation.js";
 import { LazyMount } from "./LazyMount.js";
 import { SLASH_THUMBNAIL_MIN_HEIGHT } from "./thumbnail-min-height.js";
 import { VariationThumbnail } from "./VariationThumbnail.js";
@@ -67,12 +67,13 @@ function renderMember(
     );
   }
   const { entry } = item;
+  const key = entryKey(entry);
   if (isVariation(entry)) {
     return (
       <CommandItem
-        key={entry.slug}
-        value={entry.slug}
-        data-testid={`slash-menu-item-${entry.slug}`}
+        key={key}
+        value={key}
+        data-testid={`slash-menu-item-${key}`}
         onSelect={() => onSelect(item)}
         className="flex flex-col items-start gap-1 px-2 py-2"
       >
@@ -98,9 +99,9 @@ function renderMember(
   }
   return (
     <CommandItem
-      key={entry.slug}
-      value={entry.slug}
-      data-testid={`slash-menu-item-${entry.slug}`}
+      key={key}
+      value={key}
+      data-testid={`slash-menu-item-${key}`}
       onSelect={() => onSelect(item)}
       className="flex items-start gap-2"
     >
