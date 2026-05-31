@@ -1,19 +1,70 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
+import { createBlockRegistry, createPatternRegistry } from "@plumix/blocks";
 
 import { PatternsSection } from "./PatternsSection.js";
 
-afterEach(() => {
-  cleanup();
+interface QueuedObserver {
+  readonly callback: IntersectionObserverCallback;
+  readonly target: Element;
+}
+
+let observers: QueuedObserver[];
+
+beforeEach(() => {
+  observers = [];
+  class FakeObserver {
+    constructor(public readonly callback: IntersectionObserverCallback) {}
+    observe = (target: Element): void => {
+      observers.push({ callback: this.callback, target });
+    };
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+    takeRecords = vi.fn((): IntersectionObserverEntry[] => []);
+  }
+  vi.stubGlobal("IntersectionObserver", FakeObserver);
 });
 
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+// Flushes every queued observer with an intersecting entry — mirrors
+// the pattern in LazyMount.test.tsx so React state updates land inside
+// act() and the warning-free assertion path is consistent.
+function intersectAll(): void {
+  act(() => {
+    for (const { callback, target } of observers) {
+      const entry = {
+        isIntersecting: true,
+        intersectionRatio: 1,
+        target,
+        boundingClientRect: {} as DOMRectReadOnly,
+        intersectionRect: {} as DOMRectReadOnly,
+        rootBounds: null,
+        time: 0,
+      } satisfies IntersectionObserverEntry;
+      callback([entry], null as unknown as IntersectionObserver);
+    }
+  });
+}
+
 const noop = vi.fn();
+const blocks = createBlockRegistry([]);
+const patterns = createPatternRegistry([]);
 
 describe("PatternsSection", () => {
   test("renders nothing when no patterns are registered", () => {
     const { container } = render(
-      <PatternsSection patterns={[]} onSelect={noop} />,
+      <PatternsSection
+        patterns={[]}
+        onSelect={noop}
+        blocks={blocks}
+        patternRegistry={patterns}
+      />,
     );
     expect(container).toBeEmptyDOMElement();
   });
@@ -22,6 +73,8 @@ describe("PatternsSection", () => {
     render(
       <PatternsSection
         onSelect={noop}
+        blocks={blocks}
+        patternRegistry={patterns}
         patterns={[
           {
             name: "starter/hero",
@@ -65,6 +118,8 @@ describe("PatternsSection", () => {
     render(
       <PatternsSection
         onSelect={noop}
+        blocks={blocks}
+        patternRegistry={patterns}
         patterns={[{ name: "x/anon", title: "Anonymous", content: [] }]}
       />,
     );
@@ -77,6 +132,57 @@ describe("PatternsSection", () => {
     ).toBeInTheDocument();
   });
 
+  test("renders a thumbnail card for each pattern after the row intersects the viewport", () => {
+    const hero = {
+      name: "starter/hero",
+      title: "Hero",
+      preview: {
+        src: "/hero.png",
+        width: 200,
+        height: 120,
+        alt: "Hero preview",
+      },
+      content: [],
+    };
+    const cta = {
+      name: "starter/cta",
+      title: "CTA",
+      preview: {
+        src: "/cta.png",
+        width: 200,
+        height: 120,
+        alt: "CTA preview",
+      },
+      content: [],
+    };
+
+    render(
+      <PatternsSection
+        patterns={[hero, cta]}
+        onSelect={noop}
+        blocks={blocks}
+        patternRegistry={patterns}
+      />,
+    );
+
+    // Pre-intersection: only placeholders, no thumbnails.
+    expect(
+      screen.queryByTestId(`plumix-pattern-thumbnail-${hero.name}`),
+    ).toBeNull();
+    expect(
+      screen.getByTestId(`plumix-patterns-row-placeholder-${hero.name}`),
+    ).toBeInTheDocument();
+
+    intersectAll();
+
+    expect(
+      screen.getByTestId(`plumix-pattern-thumbnail-${hero.name}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId(`plumix-pattern-thumbnail-${cta.name}`),
+    ).toBeInTheDocument();
+  });
+
   test("clicking a pattern row invokes onSelect with the pattern entry", async () => {
     const onSelect = vi.fn();
     const hero = {
@@ -85,7 +191,14 @@ describe("PatternsSection", () => {
       category: "hero" as const,
       content: [],
     };
-    render(<PatternsSection patterns={[hero]} onSelect={onSelect} />);
+    render(
+      <PatternsSection
+        patterns={[hero]}
+        onSelect={onSelect}
+        blocks={blocks}
+        patternRegistry={patterns}
+      />,
+    );
 
     await userEvent.click(
       screen.getByTestId("plumix-patterns-row-starter/hero"),

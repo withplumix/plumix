@@ -5,6 +5,7 @@ import type {
   BlockVariation,
   MarkSpec,
   PatternInsertMode,
+  PatternPreview,
   ThemeTokens,
 } from "@plumix/blocks";
 
@@ -1457,6 +1458,7 @@ export interface PatternManifestEntry {
   // `"copy"`; consumers that read raw manifest fixtures may still see
   // `undefined`.
   readonly insert?: PatternInsertMode;
+  readonly preview?: PatternPreview;
   readonly content: readonly BlockNode[];
 }
 
@@ -2254,8 +2256,15 @@ function toBlockEntry(block: RegisteredBlock): BlockManifestEntry {
 }
 
 function toPatternEntry(pattern: RegisteredPattern): PatternManifestEntry {
-  const { name, title, category, content, insert } = pattern.spec;
-  return { name, title, category, insert: insert ?? "copy", content };
+  const { name, title, category, content, insert, preview } = pattern.spec;
+  return {
+    name,
+    title,
+    category,
+    insert: insert ?? "copy",
+    preview,
+    content,
+  };
 }
 
 function toMarkEntry(mark: RegisteredMark): MarkManifestEntry {

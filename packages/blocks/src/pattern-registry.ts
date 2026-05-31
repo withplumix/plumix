@@ -38,6 +38,13 @@ type AttrsFor<TName extends string> = TName extends keyof BlockTypeRegistry
 
 export type PatternInsertMode = "copy" | "reference";
 
+export interface PatternPreview {
+  readonly src: string;
+  readonly width: number;
+  readonly height: number;
+  readonly alt?: string;
+}
+
 export interface BlockPattern {
   readonly name: string;
   readonly title: string;
@@ -46,6 +53,9 @@ export interface BlockPattern {
   // body. "reference" inserts a single `core/pattern-ref` node the
   // walker resolves at render.
   readonly insert?: PatternInsertMode;
+  // Static preview override. When set, the inserter renders an <img>
+  // at the declared dimensions instead of live-rendering `content`.
+  readonly preview?: PatternPreview;
   readonly content: readonly BlockNode[];
 }
 

@@ -1374,6 +1374,43 @@ describe("buildManifest visibility projection", () => {
     });
   });
 
+  test("projects the preview override through the manifest when set, omits it otherwise", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("acme", (ctx) => {
+      ctx.registerPattern({
+        name: "acme/hero",
+        title: "Hero",
+        content: [],
+        preview: {
+          src: "./hero.png",
+          width: 1400,
+          height: 900,
+          alt: "Hero preview",
+        },
+      });
+      ctx.registerPattern({
+        name: "acme/plain",
+        title: "Plain",
+        content: [],
+      });
+    });
+
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+
+    expect(
+      manifest.patterns.find((p) => p.name === "acme/hero")?.preview,
+    ).toEqual({
+      src: "./hero.png",
+      width: 1400,
+      height: 900,
+      alt: "Hero preview",
+    });
+    expect(
+      manifest.patterns.find((p) => p.name === "acme/plain")?.preview,
+    ).toBeUndefined();
+  });
+
   test("projects pattern insert mode through the manifest, defaulting to copy", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("acme", (ctx) => {

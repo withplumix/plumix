@@ -437,7 +437,11 @@ export function PlumixEditorLayout({
           className="grid flex-1 grid-cols-[minmax(0,1fr)] overflow-hidden md:grid-cols-[260px_minmax(0,1fr)_320px]"
           data-testid="plumix-editor-cols"
         >
-          <BlocksBody registry={registry} capabilities={capabilities} />
+          <BlocksBody
+            registry={registry}
+            patternRegistry={patternRegistry}
+            capabilities={capabilities}
+          />
           {isPreview ? (
             // Puck's `permissions` strips drag / insert / delete / dup /
             // edit, but Tiptap inside rich-text fields keeps its own
@@ -474,10 +478,15 @@ export function PlumixEditorLayout({
 
 interface BlocksBodyProps {
   readonly registry: BlockRegistry;
+  readonly patternRegistry: PatternRegistry;
   readonly capabilities: ReadonlySet<string>;
 }
 
-function BlocksBody({ registry, capabilities }: BlocksBodyProps): ReactElement {
+function BlocksBody({
+  registry,
+  patternRegistry,
+  capabilities,
+}: BlocksBodyProps): ReactElement {
   const isMobile = useIsMobile();
   const content = (
     <Tabs defaultValue="blocks" className="h-full">
@@ -495,7 +504,11 @@ function BlocksBody({ registry, capabilities }: BlocksBodyProps): ReactElement {
         </TabsList>
       </div>
       <TabsContent value="blocks">
-        <PlumixBlocksTab registry={registry} capabilities={capabilities} />
+        <PlumixBlocksTab
+          registry={registry}
+          patternRegistry={patternRegistry}
+          capabilities={capabilities}
+        />
       </TabsContent>
       <TabsContent value="outline">
         <Puck.Outline />
@@ -530,11 +543,13 @@ function BlocksBody({ registry, capabilities }: BlocksBodyProps): ReactElement {
 
 interface PlumixBlocksTabProps {
   readonly registry: BlockRegistry;
+  readonly patternRegistry: PatternRegistry;
   readonly capabilities: ReadonlySet<string>;
 }
 
 function PlumixBlocksTab({
   registry,
+  patternRegistry,
   capabilities,
 }: PlumixBlocksTabProps): ReactElement {
   const puck = usePuck();
@@ -603,7 +618,12 @@ function PlumixBlocksTab({
           </li>
         ))}
       </ul>
-      <PatternsSection patterns={patterns} onSelect={handlePatternInsert} />
+      <PatternsSection
+        patterns={patterns}
+        onSelect={handlePatternInsert}
+        blocks={registry}
+        patternRegistry={patternRegistry}
+      />
     </div>
   );
 }

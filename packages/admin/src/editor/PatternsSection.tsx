@@ -1,18 +1,30 @@
 import type { ReactElement } from "react";
 import { useMemo } from "react";
 
+import type { BlockRegistry, PatternRegistry } from "@plumix/blocks";
 import type { PatternManifestEntry } from "@plumix/core/manifest";
+
+import { LazyMount } from "./LazyMount.js";
+import { PatternThumbnail } from "./PatternThumbnail.js";
 
 interface PatternsSectionProps {
   readonly patterns: readonly PatternManifestEntry[];
   readonly onSelect: (pattern: PatternManifestEntry) => void;
+  readonly blocks: BlockRegistry;
+  readonly patternRegistry: PatternRegistry;
 }
+
+// Reserved space so the IntersectionObserver placeholder consumes its
+// target dimensions and doesn't trip on first paint.
+const ROW_THUMB_MIN_HEIGHT = 120;
 
 const UNCATEGORIZED = "uncategorized";
 
 export function PatternsSection({
   patterns,
   onSelect,
+  blocks,
+  patternRegistry,
 }: PatternsSectionProps): ReactElement | null {
   const grouped = useMemo(() => {
     const map = new Map<string, PatternManifestEntry[]>();
@@ -50,14 +62,37 @@ export function PatternsSection({
           <ul className="flex flex-col gap-1">
             {entries.map((entry) => (
               <li key={entry.name}>
-                <button
-                  type="button"
-                  className="text-foreground hover:bg-muted w-full rounded border px-3 py-2 text-left text-sm"
+                {/* `<div role="button">` rather than `<button>` because
+                    the live thumbnail can render its own interactive
+                    HTML — nested <button>/<a> in a real <button> is
+                    invalid and the inner element steals focus. */}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  className="text-foreground hover:bg-muted flex w-full flex-col gap-1 rounded border p-2 text-left text-sm focus:outline-none focus-visible:ring"
                   data-testid={`plumix-patterns-row-${entry.name}`}
                   onClick={() => onSelect(entry)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSelect(entry);
+                    }
+                  }}
                 >
-                  {entry.title}
-                </button>
+                  <LazyMount
+                    placeholderTestId={`plumix-patterns-row-placeholder-${entry.name}`}
+                    minHeight={ROW_THUMB_MIN_HEIGHT}
+                  >
+                    <div className="overflow-hidden rounded">
+                      <PatternThumbnail
+                        pattern={entry}
+                        blocks={blocks}
+                        patterns={patternRegistry}
+                      />
+                    </div>
+                  </LazyMount>
+                  <span className="truncate">{entry.title}</span>
+                </div>
               </li>
             ))}
           </ul>
