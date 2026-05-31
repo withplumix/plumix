@@ -7,11 +7,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog.js";
 
-import type { BlockVariation } from "@plumix/blocks";
+import type {
+  BlockRegistry,
+  BlockVariation,
+  PatternRegistry,
+} from "@plumix/blocks";
+
+import { VariationThumbnail } from "./VariationThumbnail.js";
 
 interface BlockScopePickerProps {
   readonly blockTitle: string;
+  readonly parentBlockName: string;
   readonly variations: readonly BlockVariation[];
+  readonly blocks: BlockRegistry;
+  readonly patterns: PatternRegistry;
   readonly onSelect: (variation: BlockVariation) => void;
   readonly onDismiss: () => void;
 }
@@ -19,12 +28,12 @@ interface BlockScopePickerProps {
 // Block-scope picker — opens after inserting a parent block whose
 // variations include any `scope: ["block"]`. The author picks a layout;
 // cancel inserts the bare block with its declared defaults.
-//
-// TODO(#637): replace the textual card body with the live thumbnail
-// path used by the patterns sidebar (lazy-mount + scaled render).
 export function BlockScopePicker({
   blockTitle,
+  parentBlockName,
   variations,
+  blocks,
+  patterns,
   onSelect,
   onDismiss,
 }: BlockScopePickerProps): ReactElement | null {
@@ -54,7 +63,7 @@ export function BlockScopePicker({
               <div
                 role="button"
                 tabIndex={0}
-                className="hover:bg-muted/40 flex w-full flex-col gap-1 rounded border p-3 text-left focus:outline-none focus-visible:ring"
+                className="hover:bg-muted/40 flex w-full flex-col gap-2 rounded border p-3 text-left focus:outline-none focus-visible:ring"
                 data-testid={`plumix-block-scope-picker-card-${variation.slug}`}
                 onClick={() => onSelect(variation)}
                 onKeyDown={(e) => {
@@ -64,6 +73,14 @@ export function BlockScopePicker({
                   }
                 }}
               >
+                <div className="overflow-hidden rounded">
+                  <VariationThumbnail
+                    parentBlockName={parentBlockName}
+                    variation={variation}
+                    blocks={blocks}
+                    patterns={patterns}
+                  />
+                </div>
                 <span className="text-sm font-medium">{variation.title}</span>
                 {variation.description ? (
                   <span className="text-muted-foreground text-xs">
