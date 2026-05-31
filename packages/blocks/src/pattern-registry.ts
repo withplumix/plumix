@@ -222,7 +222,13 @@ function validatePatternRefs(
     const path = `${basePath}[${i}]`;
     if (node.name === PATTERN_REF_BLOCK_NAME) {
       const slug = node.attrs?.slug;
-      if (typeof slug === "string" && !patterns.has(slug)) {
+      // Strict gate keeps the Phase-2 invariant honest: a ref the
+      // inliner can't substitute would otherwise survive into the
+      // resolved registry as a dangling node.
+      if (typeof slug !== "string" || slug.length === 0) {
+        throw PatternRegistryError.malformedRef(patternName, path);
+      }
+      if (!patterns.has(slug)) {
         throw PatternRegistryError.unresolvedRef(patternName, path, slug);
       }
       return;

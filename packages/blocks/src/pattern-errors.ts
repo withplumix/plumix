@@ -47,4 +47,10 @@ export class PatternRegistryError extends Error {
       `Pattern reference cycle: ${chain.join(" → ")}.`,
     );
   }
+
+  static malformedRef(patternName: string, path: string): PatternRegistryError {
+    return new PatternRegistryError(
+      `Pattern "${patternName}" at ${path} has a core/pattern-ref node with a missing or non-string slug.`,
+    );
+  }
 }

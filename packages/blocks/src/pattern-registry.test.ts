@@ -264,6 +264,26 @@ describe("commitPatterns", () => {
     expect(() => commitPatterns(patterns, refBlocks)).not.toThrow();
   });
 
+  test("throws on a malformed core/pattern-ref (missing or non-string slug)", () => {
+    const ref = defineBlock({
+      name: "core/pattern-ref",
+      inserter: false,
+      inputs: [{ name: "slug", type: "text" }],
+      render: () => null,
+    });
+    const refBlocks = createBlockRegistry([ref]);
+    const broken = definePattern({
+      name: "starter/broken-ref",
+      title: "Broken",
+      content: [block("core/pattern-ref", { slug: 123 })],
+    });
+    const patterns = createPatternRegistry([broken]);
+
+    expect(() => commitPatterns(patterns, refBlocks)).toThrow(
+      /starter\/broken-ref.*missing or non-string slug/,
+    );
+  });
+
   test("throws on a pattern-ref cycle, naming the full chain of involved slugs", () => {
     const ref = defineBlock({
       name: "core/pattern-ref",
