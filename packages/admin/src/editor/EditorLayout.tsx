@@ -51,6 +51,7 @@ import {
 import type { TransformOption } from "./available-transforms.js";
 import type { SlashMenuItem } from "./slash-menu-items.js";
 import { AutosaveStatusPill } from "./AutosaveStatus.js";
+import { deriveBlockIdentity } from "./block-identity.js";
 import { BlockActionsPanel } from "./BlockActionsPanel.js";
 import { BlockIcon } from "./BlockIcon.js";
 import { BlockScopePicker } from "./BlockScopePicker.js";
@@ -1115,10 +1116,21 @@ function PlumixBlockActions({
       });
   }, [selectedItem]);
 
+  const identity = useMemo(() => {
+    if (!selectedItem) return undefined;
+    const spec = registry.get(selectedItem.type);
+    if (!spec) return undefined;
+    return deriveBlockIdentity(
+      spec,
+      selectedItem.props as Record<string, unknown>,
+    );
+  }, [selectedItem, registry]);
+
   return (
     <BlockActionsPanel
       specName={selectedItem?.type}
       registry={registry}
+      identity={identity}
       onTransform={handleTransform}
       onDuplicate={handleDuplicate}
       onDelete={handleDelete}
