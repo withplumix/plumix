@@ -2,6 +2,11 @@ import type { BlockRegistry, BlockShortcutMode } from "@plumix/blocks";
 import { resolveBlockTransforms } from "@plumix/blocks";
 
 export interface TransformOption {
+  // Stable identifier for the option — React key + `data-testid` suffix.
+  // Multiple transform-scope variations of the same block all share
+  // `targetName === sourceName`, so the variation slug is what keeps
+  // them distinct.
+  readonly key: string;
   readonly targetName: string;
   readonly targetTitle: string;
   readonly mapAttrs?: (
@@ -16,6 +21,7 @@ export function availableTransforms(
 ): readonly TransformOption[] {
   const resolved = resolveBlockTransforms(sourceName, Array.from(registry));
   const fromTransforms: TransformOption[] = resolved.map((entry) => ({
+    key: `to:${entry.target}`,
     targetName: entry.target,
     targetTitle: registry.get(entry.target)?.title ?? entry.target,
     mapAttrs: entry.mapAttrs,
@@ -31,6 +37,7 @@ export function availableTransforms(
     sourceSpec?.variations
       ?.filter((v) => v.scope?.includes("transform"))
       .map((variation) => ({
+        key: `variation:${variation.slug}`,
         targetName: sourceName,
         targetTitle: variation.title,
         mapAttrs: (current) => ({ ...current, ...(variation.attrs ?? {}) }),

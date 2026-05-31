@@ -29,43 +29,62 @@ export function commitBlockVariations(blocks: BlockRegistry): void {
           }
         }
       }
-      if (variation.attrs && declared) {
-        for (const key of Object.keys(variation.attrs)) {
-          if (!declared.has(key)) {
-            throw BlockVariationError.undeclaredAttr(
-              spec.name,
-              variation.slug,
-              "variation.attrs",
-              spec.name,
-              key,
-            );
-          }
-        }
+      if (variation.scope?.includes("transform") && !variation.attrs) {
+        throw BlockVariationError.transformScopeMissingAttrs(
+          spec.name,
+          variation.slug,
+        );
       }
-      if (variation.innerBlocks && variation.innerBlocks.length > 0) {
+      checkAttrKeys(
+        spec.name,
+        variation.slug,
+        "variation.attrs",
+        variation.attrs,
+        declared,
+      );
+      checkAttrKeys(
+        spec.name,
+        variation.slug,
+        "example.attrs",
+        variation.example?.attrs,
+        declared,
+      );
+      const guardWalk = (nodes: readonly BlockNode[], path: string): void => {
         if (!hasContentSlot) {
           throw BlockVariationError.missingContentSlot(
             spec.name,
             variation.slug,
           );
         }
-        walk(
-          spec.name,
-          variation.slug,
-          variation.innerBlocks,
-          "innerBlocks",
-          blocks,
-        );
+        walk(spec.name, variation.slug, nodes, path, blocks);
+      };
+      if (variation.innerBlocks && variation.innerBlocks.length > 0) {
+        guardWalk(variation.innerBlocks, "innerBlocks");
       }
       if (variation.example?.innerBlocks) {
-        walk(
-          spec.name,
-          variation.slug,
-          variation.example.innerBlocks,
-          "example.innerBlocks",
-          blocks,
-        );
+        guardWalk(variation.example.innerBlocks, "example.innerBlocks");
       }
+    }
+  }
+}
+
+function checkAttrKeys(
+  parentBlock: string,
+  variationSlug: string,
+  path: string,
+  attrs: Readonly<Record<string, unknown>> | undefined,
+  declared: ReadonlySet<string> | undefined,
+): void {
+  if (!attrs || !declared) return;
+  for (const key of Object.keys(attrs)) {
+    if (!declared.has(key)) {
+      throw BlockVariationError.undeclaredAttr(
+        parentBlock,
+        variationSlug,
+        path,
+        parentBlock,
+        key,
+      );
     }
   }
 }

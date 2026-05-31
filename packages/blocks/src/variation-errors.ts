@@ -48,4 +48,13 @@ export class BlockVariationError extends Error {
       `Variation "${variationSlug}" of "${parentBlock}" declares scope value "${value}" outside the allowed union ("inserter" | "block" | "transform").`,
     );
   }
+
+  static transformScopeMissingAttrs(
+    parentBlock: string,
+    variationSlug: string,
+  ): BlockVariationError {
+    return new BlockVariationError(
+      `Variation "${variationSlug}" of "${parentBlock}" is scoped "transform" but declares no attrs to apply — the action-bar entry would be a no-op.`,
+    );
+  }
 }

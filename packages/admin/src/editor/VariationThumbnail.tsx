@@ -6,7 +6,7 @@ import type {
   BlockVariation,
   PatternRegistry,
 } from "@plumix/blocks";
-import { renderBlockTree } from "@plumix/blocks";
+import { renderBlockTree, resolveVariationPreview } from "@plumix/blocks";
 
 interface VariationThumbnailProps {
   readonly parentBlockName: string;
@@ -26,13 +26,11 @@ export function VariationThumbnail({
   blocks,
   patterns,
 }: VariationThumbnailProps): ReactElement {
-  const previewAttrs = variation.example?.attrs ?? variation.attrs ?? {};
-  const previewInner =
-    variation.example?.innerBlocks ?? variation.innerBlocks ?? [];
+  const preview = resolveVariationPreview(variation);
   const node: BlockNode = {
     id: `${parentBlockName}-${variation.slug}`,
     name: parentBlockName,
-    attrs: { ...previewAttrs, content: previewInner },
+    attrs: { ...preview.attrs, content: preview.innerBlocks },
   };
   return (
     <div

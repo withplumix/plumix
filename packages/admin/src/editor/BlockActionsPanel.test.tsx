@@ -52,10 +52,10 @@ describe("BlockActionsPanel", () => {
     );
 
     expect(
-      screen.getByTestId("block-action-transform-core/heading").textContent,
+      screen.getByTestId("block-action-transform-to:core/heading").textContent,
     ).toContain("Heading");
     expect(
-      screen.getByTestId("block-action-transform-core/quote"),
+      screen.getByTestId("block-action-transform-to:core/quote"),
     ).toBeDefined();
   });
 
@@ -70,7 +70,9 @@ describe("BlockActionsPanel", () => {
       />,
     );
 
-    await user.click(screen.getByTestId("block-action-transform-core/heading"));
+    await user.click(
+      screen.getByTestId("block-action-transform-to:core/heading"),
+    );
 
     expect(onTransform).toHaveBeenCalledTimes(1);
     expect(onTransform.mock.calls[0]?.[0].targetName).toBe("core/heading");

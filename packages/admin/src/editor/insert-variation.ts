@@ -1,7 +1,11 @@
+import type { PuckAction } from "@puckeditor/core";
+
 import type { InsertableBlockEntry } from "@plumix/blocks";
 import { rewriteBlockNodeIds } from "@plumix/blocks";
 
 import { blockNodesToPuckContent } from "./entry-content.js";
+import { mergePropsAtSelector } from "./merge-variation-attrs.js";
+import { PUCK_ROOT_ZONE } from "./puck-zones.js";
 
 const CONTENT_SLOT_KEY = "content";
 
@@ -31,4 +35,32 @@ export function computeVariationMergeAttrs(
       rewriteBlockNodeIds(entry.innerBlocks),
     ),
   };
+}
+
+// Two-dispatch insert at the root zone: Puck's `insert` stamps
+// `props.id`, then the variation merge overlays attrs + slot content via
+// `mergePropsAtSelector`. The follow-up `setData` is skipped when the
+// entry has nothing to merge, so plain block inserts stay single-action.
+export function dispatchVariationInsert(
+  dispatch: (action: PuckAction) => void,
+  entry: InsertableBlockEntry,
+  index: number,
+): void {
+  dispatch({
+    type: "insert",
+    componentType: entry.name,
+    destinationZone: PUCK_ROOT_ZONE,
+    destinationIndex: index,
+  });
+  const mergeAttrs = computeVariationMergeAttrs(entry);
+  if (Object.keys(mergeAttrs).length === 0) return;
+  dispatch({
+    type: "setData",
+    data: (previous) =>
+      mergePropsAtSelector(
+        previous,
+        { zone: PUCK_ROOT_ZONE, index },
+        mergeAttrs,
+      ),
+  });
 }
