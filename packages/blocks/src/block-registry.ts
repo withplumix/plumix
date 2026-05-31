@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { BlockLoaderRecord } from "./loaders.js";
-import type { BlockNodeComponent } from "./render-block-tree.js";
+import type { BlockNode, BlockNodeComponent } from "./render-block-tree.js";
 
 export interface BlockInputOption {
   readonly label: string;
@@ -22,6 +22,12 @@ export interface BlockVariation {
   readonly description?: string;
   readonly keywords?: readonly string[];
   readonly attrs?: Readonly<Record<string, unknown>>;
+  // Default body for the parent block's conventional `content` slot.
+  // Inserted as a deep-cloned, ID-rewritten tree — source remains
+  // unmutated across insertions. Validated against the block registry
+  // at commit time so unknown block names / undeclared attrs surface
+  // at boot with parent + variation + path traces.
+  readonly innerBlocks?: readonly BlockNode[];
 }
 
 /**

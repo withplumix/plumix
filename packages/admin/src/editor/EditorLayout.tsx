@@ -54,7 +54,7 @@ import { BlockIcon } from "./BlockIcon.js";
 import { buildCopyPatternSource } from "./build-copy-pattern-source.js";
 import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
 import { insertPattern } from "./insert-pattern.js";
-import { mergePropsAtSelector } from "./merge-variation-attrs.js";
+import { insertVariation } from "./insert-variation.js";
 import { MobileSidebarSheet } from "./MobileSidebarSheet.js";
 import { patchStyleAtSelector } from "./patch-style.js";
 import { PatternRefProvider } from "./PatternRefPreview.js";
@@ -624,25 +624,11 @@ function PlumixBlocksTab({
 
   const handleInsert = useCallback(
     (entry: InsertableBlockEntry): void => {
-      const index = puck.appState.data.content.length;
       puck.dispatch({
-        type: "insert",
-        componentType: entry.name,
-        destinationZone: PUCK_ROOT_ZONE,
-        destinationIndex: index,
+        type: "setData",
+        data: (previous) =>
+          insertVariation(previous, entry, previous.content.length),
       });
-      const variationAttrs = entry.attrs;
-      if (variationAttrs !== undefined) {
-        puck.dispatch({
-          type: "setData",
-          data: (previous) =>
-            mergePropsAtSelector(
-              previous,
-              { zone: PUCK_ROOT_ZONE, index },
-              variationAttrs,
-            ),
-        });
-      }
     },
     [puck],
   );
@@ -821,20 +807,16 @@ function PlumixCanvasWithSlashMenu({
       );
       if (item.kind === "block") {
         const { entry } = item;
+        // Variation insert operates on the root content array; nested
+        // zones fall back to end-of-document so innerBlocks (which must
+        // sit in a top-level slot the walker recognises) never land in
+        // the wrong shape.
+        const insertIndex =
+          zone === PUCK_ROOT_ZONE ? index : puck.appState.data.content.length;
         puck.dispatch({
-          type: "insert",
-          componentType: entry.name,
-          destinationZone: zone,
-          destinationIndex: index,
+          type: "setData",
+          data: (previous) => insertVariation(previous, entry, insertIndex),
         });
-        const variationAttrs = entry.attrs;
-        if (variationAttrs !== undefined) {
-          puck.dispatch({
-            type: "setData",
-            data: (previous) =>
-              mergePropsAtSelector(previous, { zone, index }, variationAttrs),
-          });
-        }
       } else {
         // The pattern insert primitive operates on the root content
         // array; nextInsertPoint may have returned a nested zone for

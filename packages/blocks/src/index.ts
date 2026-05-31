@@ -79,6 +79,8 @@ export type {
 export { PatternRegistryError } from "./pattern-errors.js";
 export { serializePatternSource } from "./serialize-pattern-source.js";
 export type { SerializePatternSourceOptions } from "./serialize-pattern-source.js";
+export { commitBlockVariations } from "./commit-block-variations.js";
+export { BlockVariationError } from "./variation-errors.js";
 
 // ─── Validation ─────────────────────────────────────────────────────────────
 export { validateEntryContent } from "./validate-content.js";

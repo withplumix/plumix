@@ -1,6 +1,7 @@
 import type { BlockRegistry } from "./block-registry.js";
 import type { BlockNode } from "./render-block-tree.js";
 import type { ResponsiveStyleSlot } from "./styles/style-emitter.js";
+import { commitBlockVariations } from "./commit-block-variations.js";
 import { PatternRegistryError } from "./pattern-errors.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 import { validateEntryContent } from "./validate-content.js";
@@ -149,6 +150,10 @@ export function commitPatterns(
   patterns: PatternRegistry,
   blocks: BlockRegistry,
 ): PatternRegistry {
+  // Variations carry their own author-defined trees (`innerBlocks`);
+  // validating them alongside patterns means a single boot pass catches
+  // drift in every author-supplied tree against the block registry.
+  commitBlockVariations(blocks);
   for (const pattern of patterns) {
     const result = validateEntryContent(
       { version: "plumix.v2", blocks: pattern.content },

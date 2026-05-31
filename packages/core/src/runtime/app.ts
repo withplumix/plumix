@@ -3,6 +3,7 @@ import { RPCHandler } from "@orpc/server/fetch";
 import type { BlockRegistry, HtmlAllowlist, MarkSpec } from "@plumix/blocks";
 import {
   buildHtmlAllowlist,
+  commitBlockVariations,
   coreBlocks,
   coreMarks,
   createBlockRegistry,
@@ -236,6 +237,10 @@ export async function buildApp(
     ({ spec }) => spec,
   );
   const blocks = createBlockRegistry([...coreBlocks, ...pluginBlockSpecs]);
+  // Boot validation: every variation's `innerBlocks` is walked against
+  // the committed registry. Unknown block names and undeclared attrs
+  // throw structured errors here rather than producing render junk later.
+  commitBlockVariations(blocks);
 
   const pluginMarkSpecs = Array.from(registry.markSpecs.values()).map(
     ({ spec }) => spec,
