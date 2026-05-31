@@ -29,7 +29,10 @@ export function commitBlockVariations(blocks: BlockRegistry): void {
           }
         }
       }
-      if (variation.scope?.includes("transform") && !variation.attrs) {
+      if (
+        variation.scope?.includes("transform") &&
+        (!variation.attrs || Object.keys(variation.attrs).length === 0)
+      ) {
         throw BlockVariationError.transformScopeMissingAttrs(
           spec.name,
           variation.slug,
@@ -54,6 +57,7 @@ export function commitBlockVariations(blocks: BlockRegistry): void {
           throw BlockVariationError.missingContentSlot(
             spec.name,
             variation.slug,
+            path,
           );
         }
         walk(spec.name, variation.slug, nodes, path, blocks);

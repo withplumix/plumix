@@ -33,9 +33,10 @@ export class BlockVariationError extends Error {
   static missingContentSlot(
     parentBlock: string,
     variationSlug: string,
+    path: string,
   ): BlockVariationError {
     return new BlockVariationError(
-      `Variation "${variationSlug}" of "${parentBlock}" declares innerBlocks but the parent block has no "content" slot input.`,
+      `Variation "${variationSlug}" of "${parentBlock}" declares innerBlocks at ${path} but the parent block has no "content" slot input.`,
     );
   }
 
