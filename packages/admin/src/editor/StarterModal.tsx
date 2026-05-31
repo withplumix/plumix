@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { Button } from "@/components/ui/button.js";
 import {
   Dialog,
   DialogContent,
@@ -79,14 +80,14 @@ export function StarterModal({
           ))}
         </ul>
         <div className="flex justify-end">
-          <button
-            type="button"
-            className="text-muted-foreground hover:text-foreground text-sm underline-offset-2 hover:underline"
+          <Button
+            variant="ghost"
+            size="sm"
             data-testid="plumix-starter-modal-start-blank"
             onClick={onDismiss}
           >
             Start from blank
-          </button>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
