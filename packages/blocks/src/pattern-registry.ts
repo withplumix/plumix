@@ -1,5 +1,6 @@
 import type { BlockRegistry } from "./block-registry.js";
 import type { BlockNode } from "./render-block-tree.js";
+import type { ResponsiveStyleSlot } from "./styles/style-emitter.js";
 import { PatternRegistryError } from "./pattern-errors.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 import { validateEntryContent } from "./validate-content.js";
@@ -84,13 +85,17 @@ export function definePattern(spec: BlockPattern): BlockPattern {
 export function block<TName extends string>(
   name: TName,
   attrs: AttrsFor<TName>,
-  options?: { readonly id?: string },
+  options?: {
+    readonly id?: string;
+    readonly style?: ResponsiveStyleSlot;
+  },
 ): BlockNode {
-  return {
+  const base: BlockNode = {
     id: options?.id ?? PLACEHOLDER_ID,
     name,
     attrs,
   };
+  return options?.style ? { ...base, style: options.style } : base;
 }
 
 function assignPatternIds(nodes: readonly BlockNode[]): readonly BlockNode[] {

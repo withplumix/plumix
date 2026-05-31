@@ -51,6 +51,7 @@ import type { SlashMenuItem } from "./slash-menu-items.js";
 import { AutosaveStatusPill } from "./AutosaveStatus.js";
 import { BlockActionsPanel } from "./BlockActionsPanel.js";
 import { BlockIcon } from "./BlockIcon.js";
+import { buildCopyPatternSource } from "./build-copy-pattern-source.js";
 import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
 import { insertPattern } from "./insert-pattern.js";
 import { mergePropsAtSelector } from "./merge-variation-attrs.js";
@@ -167,6 +168,9 @@ interface CanvasToolbarProps {
   // change their mind before they start building.
   readonly canReopenStarter: boolean;
   readonly onReopenStarter: () => void;
+  // Writes the current selection (or whole doc when no selection) to
+  // the clipboard as a paste-ready `definePattern({...})` snippet.
+  readonly onCopyAsPatternSource: () => void;
 }
 
 function CanvasToolbar({
@@ -174,6 +178,7 @@ function CanvasToolbar({
   onZoomChange,
   canReopenStarter,
   onReopenStarter,
+  onCopyAsPatternSource,
 }: CanvasToolbarProps): ReactElement {
   const puck = usePuck();
   const { viewports } = puck.appState.ui;
@@ -287,6 +292,15 @@ function CanvasToolbar({
           </button>
         </>
       ) : null}
+      <div className="bg-border h-5 w-px" aria-hidden />
+      <button
+        type="button"
+        className="text-muted-foreground hover:text-foreground inline-flex h-7 items-center rounded-md px-2 text-xs"
+        data-testid="plumix-editor-copy-as-pattern-source"
+        onClick={onCopyAsPatternSource}
+      >
+        Copy as pattern source
+      </button>
     </div>
   );
 }
@@ -495,6 +509,7 @@ export function PlumixEditorLayout({
                   capabilities={capabilities}
                   patterns={patterns}
                   starterCandidates={starterCandidates}
+                  entryTitle={title}
                 />
               </div>
             </div>
@@ -505,6 +520,7 @@ export function PlumixEditorLayout({
               capabilities={capabilities}
               patterns={patterns}
               starterCandidates={starterCandidates}
+              entryTitle={title}
             />
           )}
           <InspectorBody registry={registry} tokens={tokens} />
@@ -728,6 +744,9 @@ interface PlumixCanvasWithSlashMenuProps {
   readonly capabilities: ReadonlySet<string>;
   readonly patterns: readonly PatternManifestEntry[];
   readonly starterCandidates: readonly PatternManifestEntry[];
+  // Entry title — drives both the emitted snippet's `title` field and
+  // its derived `name` slug for the Copy-as-pattern-source action.
+  readonly entryTitle: string;
 }
 
 function PlumixCanvasWithSlashMenu({
@@ -736,6 +755,7 @@ function PlumixCanvasWithSlashMenu({
   capabilities,
   patterns,
   starterCandidates,
+  entryTitle,
 }: PlumixCanvasWithSlashMenuProps): ReactElement {
   const puck = usePuck();
   const [open, setOpen] = useState(false);
@@ -864,6 +884,20 @@ function PlumixCanvasWithSlashMenu({
     mainInnerWidth > 0 ? Math.min(1, mainInnerWidth / viewportPx) : 1;
   const zoom = manualZoom ?? fitZoom;
 
+  const handleCopyAsPatternSource = useCallback((): void => {
+    const source = buildCopyPatternSource({
+      title: entryTitle,
+      data: puck.appState.data,
+      selectedItem: puck.selectedItem ?? null,
+    });
+    navigator.clipboard.writeText(source).catch((error: unknown) => {
+      console.error(
+        "[plumix:copy-as-pattern-source] clipboard write failed:",
+        error,
+      );
+    });
+  }, [puck, entryTitle]);
+
   return (
     <div
       className="flex min-h-0 flex-col"
@@ -877,6 +911,7 @@ function PlumixCanvasWithSlashMenu({
           starterCandidates.length > 0
         }
         onReopenStarter={starterState.reopen}
+        onCopyAsPatternSource={handleCopyAsPatternSource}
       />
       <main
         ref={mainRef}
