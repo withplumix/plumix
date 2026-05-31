@@ -1,4 +1,5 @@
 import type { BlockSpec } from "./block-registry.js";
+import type { BlockNode } from "./render-block-tree.js";
 
 export interface InsertableBlockEntry {
   readonly name: string;
@@ -9,6 +10,9 @@ export interface InsertableBlockEntry {
   readonly icon?: string;
   readonly keywords?: readonly string[];
   readonly attrs?: Readonly<Record<string, unknown>>;
+  // Default body for the parent block's conventional `content` slot.
+  // Caller deep-clones + ID-rewrites before merging into a block instance.
+  readonly innerBlocks?: readonly BlockNode[];
 }
 
 export function expandBlockVariations(
@@ -27,6 +31,7 @@ export function expandBlockVariations(
           icon: v.icon,
           keywords: v.keywords,
           attrs: v.attrs,
+          innerBlocks: v.innerBlocks,
         });
       }
       continue;
