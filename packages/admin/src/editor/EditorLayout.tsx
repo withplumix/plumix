@@ -754,7 +754,10 @@ function PlumixBlocksTab({
       {pendingPick ? (
         <BlockScopePicker
           blockTitle={pendingPick.entry.title}
+          parentBlockName={pendingPick.entry.name}
           variations={pendingPick.variations}
+          blocks={registry}
+          patterns={patternRegistry}
           onSelect={handlePickerSelect}
           onDismiss={handlePickerDismiss}
         />

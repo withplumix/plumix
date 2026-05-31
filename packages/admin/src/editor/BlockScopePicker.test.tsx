@@ -3,12 +3,16 @@ import { userEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { BlockVariation } from "@plumix/blocks";
+import { createBlockRegistry, createPatternRegistry } from "@plumix/blocks";
 
 import { BlockScopePicker } from "./BlockScopePicker.js";
 
 afterEach(() => {
   cleanup();
 });
+
+const blocks = createBlockRegistry([]);
+const patterns = createPatternRegistry([]);
 
 const twoUp: BlockVariation = {
   slug: "two-up",
@@ -31,7 +35,10 @@ describe("BlockScopePicker", () => {
     render(
       <BlockScopePicker
         blockTitle="Columns"
+        parentBlockName="core/columns"
         variations={[twoUp, threeUp]}
+        blocks={blocks}
+        patterns={patterns}
         onSelect={vi.fn()}
         onDismiss={vi.fn()}
       />,
@@ -45,12 +52,35 @@ describe("BlockScopePicker", () => {
     ).toBeDefined();
   });
 
+  test("renders a live thumbnail for each card keyed on parent + slug", () => {
+    render(
+      <BlockScopePicker
+        blockTitle="Columns"
+        parentBlockName="core/columns"
+        variations={[twoUp, threeUp]}
+        blocks={blocks}
+        patterns={patterns}
+        onSelect={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByTestId("plumix-variation-thumbnail-core/columns:two-up"),
+    ).toBeDefined();
+    expect(
+      screen.getByTestId("plumix-variation-thumbnail-core/columns:three-up"),
+    ).toBeDefined();
+  });
+
   test("clicking a card calls onSelect with the chosen variation", async () => {
     const onSelect = vi.fn();
     render(
       <BlockScopePicker
         blockTitle="Columns"
+        parentBlockName="core/columns"
         variations={[twoUp, threeUp]}
+        blocks={blocks}
+        patterns={patterns}
         onSelect={onSelect}
         onDismiss={vi.fn()}
       />,
@@ -66,7 +96,10 @@ describe("BlockScopePicker", () => {
     render(
       <BlockScopePicker
         blockTitle="Columns"
+        parentBlockName="core/columns"
         variations={[twoUp]}
+        blocks={blocks}
+        patterns={patterns}
         onSelect={vi.fn()}
         onDismiss={onDismiss}
       />,
