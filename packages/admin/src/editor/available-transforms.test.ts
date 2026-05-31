@@ -70,4 +70,59 @@ describe("availableTransforms", () => {
       options.find((o) => o.targetName === "core/heading")?.targetTitle,
     ).toBe("Heading");
   });
+
+  test("surfaces a transform-scoped variation of the source block as a same-block option", () => {
+    const registry = createBlockRegistry([
+      spec({
+        name: "core/columns",
+        title: "Columns",
+        variations: [
+          {
+            slug: "two-up",
+            title: "Two up",
+            attrs: { layout: "split" },
+            scope: ["transform"],
+          },
+          {
+            slug: "three-up",
+            title: "Three up",
+            attrs: { layout: "three" },
+            scope: ["transform"],
+          },
+          {
+            slug: "inserter-only",
+            title: "Inserter only",
+            attrs: { layout: "rare" },
+          },
+        ],
+      }),
+    ]);
+    const options = availableTransforms("core/columns", registry);
+    expect(options.map((o) => `${o.targetName}:${o.targetTitle}`)).toEqual([
+      "core/columns:Two up",
+      "core/columns:Three up",
+    ]);
+  });
+
+  test("variation-scoped transform applies the variation attrs over the current ones via mapAttrs", () => {
+    const registry = createBlockRegistry([
+      spec({
+        name: "core/columns",
+        title: "Columns",
+        variations: [
+          {
+            slug: "two-up",
+            title: "Two up",
+            attrs: { layout: "split" },
+            scope: ["transform"],
+          },
+        ],
+      }),
+    ]);
+    const [option] = availableTransforms("core/columns", registry);
+    expect(option?.mapAttrs?.({ layout: "stale", other: "kept" })).toEqual({
+      layout: "split",
+      other: "kept",
+    });
+  });
 });
