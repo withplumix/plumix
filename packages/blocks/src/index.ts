@@ -57,8 +57,12 @@ export type {
 // ─── Transforms + insertable expansion ─────────────────────────────────────
 export { resolveBlockTransforms } from "./transforms.js";
 export type { ResolvedTransformTarget } from "./transforms.js";
-export { expandBlockVariations } from "./expand-block-variations.js";
+export {
+  expandBlockVariations,
+  resolveVariationPreview,
+} from "./expand-block-variations.js";
 export type { InsertableBlockEntry } from "./expand-block-variations.js";
+export type { BlockVariationExample } from "./block-registry.js";
 
 // ─── Pattern registry primitives ────────────────────────────────────────────
 export {

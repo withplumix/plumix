@@ -17,6 +17,11 @@ export interface BlockInput {
 
 export type BlockVariationScope = "inserter" | "block" | "transform";
 
+export interface BlockVariationExample {
+  readonly attrs?: Readonly<Record<string, unknown>>;
+  readonly innerBlocks?: readonly BlockNode[];
+}
+
 export interface BlockVariation {
   readonly slug: string;
   readonly title: string;
@@ -35,6 +40,12 @@ export interface BlockVariation {
   // from all surfaces — useful as a readback-only identity for stored
   // instances referenced by `isActive`.
   readonly scope?: readonly BlockVariationScope[];
+  // Preview-only override for inserter card / block-scope picker. When
+  // set, preview surfaces render `example.attrs` / `example.innerBlocks`
+  // instead of the runtime values. Insertion still uses the runtime
+  // `attrs` + `innerBlocks` — useful when the runtime body relies on an
+  // async loader and the preview needs static content.
+  readonly example?: BlockVariationExample;
 }
 
 /**

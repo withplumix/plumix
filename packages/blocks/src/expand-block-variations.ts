@@ -1,4 +1,4 @@
-import type { BlockSpec } from "./block-registry.js";
+import type { BlockSpec, BlockVariationExample } from "./block-registry.js";
 import type { BlockNode } from "./render-block-tree.js";
 
 export interface InsertableBlockEntry {
@@ -13,6 +13,9 @@ export interface InsertableBlockEntry {
   // Default body for the parent block's conventional `content` slot.
   // Caller deep-clones + ID-rewrites before merging into a block instance.
   readonly innerBlocks?: readonly BlockNode[];
+  // Preview-only override for inserter card / picker card rendering.
+  // Insertion paths still use `attrs` + `innerBlocks` above.
+  readonly example?: BlockVariationExample;
 }
 
 export function expandBlockVariations(
@@ -36,6 +39,7 @@ export function expandBlockVariations(
         keywords: v.keywords,
         attrs: v.attrs,
         innerBlocks: v.innerBlocks,
+        example: v.example,
       });
     }
     // The parent block becomes its own inserter card when:
@@ -55,4 +59,20 @@ export function expandBlockVariations(
     }
   }
   return out;
+}
+
+// Resolves the preview data for a variation entry: example overrides
+// applied on top of the runtime attrs/innerBlocks. Used by preview
+// surfaces (inserter cards, block-scope picker thumbnails) — never by
+// insertion paths.
+export function resolveVariationPreview(entry: InsertableBlockEntry): {
+  readonly attrs: Readonly<Record<string, unknown>>;
+  readonly innerBlocks: readonly BlockNode[];
+} {
+  const baseAttrs = entry.attrs ?? {};
+  const baseInner = entry.innerBlocks ?? [];
+  return {
+    attrs: entry.example?.attrs ?? baseAttrs,
+    innerBlocks: entry.example?.innerBlocks ?? baseInner,
+  };
 }
