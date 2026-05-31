@@ -1,13 +1,54 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
+import { createBlockRegistry, createPatternRegistry } from "@plumix/blocks";
 
 import type { SlashMenuItem } from "./slash-menu-items.js";
 import { SlashMenuPanel } from "./SlashMenuPanel.js";
 
+interface FakeObserverHandle {
+  readonly callback: IntersectionObserverCallback;
+}
+
+let observers: FakeObserverHandle[];
+
+beforeEach(() => {
+  observers = [];
+  class FakeObserver {
+    constructor(public readonly callback: IntersectionObserverCallback) {
+      observers.push({ callback });
+    }
+    observe = vi.fn();
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+    takeRecords = vi.fn((): IntersectionObserverEntry[] => []);
+  }
+  vi.stubGlobal("IntersectionObserver", FakeObserver);
+});
+
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
 });
+
+function intersect(): void {
+  const entry = {
+    isIntersecting: true,
+    intersectionRatio: 1,
+    target: document.createElement("div"),
+    boundingClientRect: {} as DOMRectReadOnly,
+    intersectionRect: {} as DOMRectReadOnly,
+    rootBounds: null,
+    time: 0,
+  } satisfies IntersectionObserverEntry;
+  act(() => {
+    for (const o of observers) o.callback([entry], {} as IntersectionObserver);
+  });
+}
+
+const blocks = createBlockRegistry([]);
+const patterns = createPatternRegistry([]);
 
 const heading: SlashMenuItem = {
   kind: "block",
@@ -41,6 +82,19 @@ const heroPattern: SlashMenuItem = {
   },
 };
 
+// `expandBlockVariations` emits the variation's own raw slug — keep the
+// fixture aligned with production output (see InsertableEntryRow.tsx).
+const bulletListVariation: SlashMenuItem = {
+  kind: "block",
+  entry: {
+    name: "core/list",
+    slug: "bullet",
+    title: "Bulleted list",
+    attrs: { variant: "bullet" },
+    category: "lists",
+  },
+};
+
 const noop = vi.fn();
 
 describe("SlashMenuPanel", () => {
@@ -52,6 +106,8 @@ describe("SlashMenuPanel", () => {
         onQueryChange={noop}
         onSelect={noop}
         onDismiss={noop}
+        blocks={blocks}
+        patterns={patterns}
       />,
     );
 
@@ -70,6 +126,8 @@ describe("SlashMenuPanel", () => {
         onQueryChange={noop}
         onSelect={noop}
         onDismiss={noop}
+        blocks={blocks}
+        patterns={patterns}
       />,
     );
 
@@ -86,6 +144,8 @@ describe("SlashMenuPanel", () => {
         onQueryChange={noop}
         onSelect={noop}
         onDismiss={noop}
+        blocks={blocks}
+        patterns={patterns}
       />,
     );
 
@@ -102,6 +162,8 @@ describe("SlashMenuPanel", () => {
         onQueryChange={noop}
         onSelect={onSelect}
         onDismiss={noop}
+        blocks={blocks}
+        patterns={patterns}
       />,
     );
 
@@ -120,6 +182,8 @@ describe("SlashMenuPanel", () => {
         onQueryChange={onQueryChange}
         onSelect={noop}
         onDismiss={noop}
+        blocks={blocks}
+        patterns={patterns}
       />,
     );
 
@@ -140,6 +204,8 @@ describe("SlashMenuPanel", () => {
         onQueryChange={noop}
         onSelect={noop}
         onDismiss={onDismiss}
+        blocks={blocks}
+        patterns={patterns}
       />,
     );
 
@@ -159,6 +225,8 @@ describe("SlashMenuPanel", () => {
         onQueryChange={noop}
         onSelect={onSelect}
         onDismiss={noop}
+        blocks={blocks}
+        patterns={patterns}
       />,
     );
 
@@ -166,5 +234,43 @@ describe("SlashMenuPanel", () => {
     await user.keyboard("{Enter}");
 
     expect(onSelect).toHaveBeenCalledWith(heading);
+  });
+
+  test("variation block items get a lazy-mounted thumbnail placeholder before scroll-in", () => {
+    render(
+      <SlashMenuPanel
+        items={[bulletListVariation]}
+        query=""
+        onQueryChange={noop}
+        onSelect={noop}
+        onDismiss={noop}
+        blocks={blocks}
+        patterns={patterns}
+      />,
+    );
+    expect(
+      screen.getByTestId("slash-menu-thumbnail-placeholder-core/list:bullet"),
+    ).toBeDefined();
+    expect(
+      screen.queryByTestId("plumix-variation-thumbnail-core/list:bullet"),
+    ).toBeNull();
+  });
+
+  test("variation block items mount the live thumbnail once the placeholder intersects", () => {
+    render(
+      <SlashMenuPanel
+        items={[bulletListVariation]}
+        query=""
+        onQueryChange={noop}
+        onSelect={noop}
+        onDismiss={noop}
+        blocks={blocks}
+        patterns={patterns}
+      />,
+    );
+    intersect();
+    expect(
+      screen.getByTestId("plumix-variation-thumbnail-core/list:bullet"),
+    ).toBeDefined();
   });
 });

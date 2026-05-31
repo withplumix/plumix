@@ -7,6 +7,7 @@ import type {
 } from "@plumix/blocks";
 
 import { BlockIcon } from "./BlockIcon.js";
+import { isVariation } from "./is-variation.js";
 import { LazyMount } from "./LazyMount.js";
 import { THUMBNAIL_MIN_HEIGHT } from "./thumbnail-min-height.js";
 import { VariationThumbnail } from "./VariationThumbnail.js";
@@ -16,13 +17,6 @@ interface InsertableEntryRowProps {
   readonly blocks: BlockRegistry;
   readonly patterns: PatternRegistry;
   readonly onClick: () => void;
-}
-
-// `expandBlockVariations` emits a parent block entry with `slug === name`
-// and every variation entry with the variation's own raw slug — the
-// inequality is the cheapest "is this a variation?" check at the row.
-function isVariation(entry: InsertableBlockEntry): boolean {
-  return entry.slug !== entry.name;
 }
 
 export function InsertableEntryRow({
@@ -66,7 +60,10 @@ export function InsertableEntryRow({
         placeholderTestId={`plumix-blocks-tab-thumbnail-placeholder-${entry.name}:${entry.slug}`}
         minHeight={THUMBNAIL_MIN_HEIGHT}
       >
-        <div className="pointer-events-none overflow-hidden rounded">
+        <div
+          aria-hidden
+          className="pointer-events-none overflow-hidden rounded"
+        >
           <VariationThumbnail
             parentBlockName={entry.name}
             variation={entry}
