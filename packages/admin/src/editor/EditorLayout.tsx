@@ -59,6 +59,7 @@ import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
 import { insertPattern } from "./insert-pattern.js";
 import { dispatchVariationInsert } from "./insert-variation.js";
 import { InsertableEntryRow } from "./InsertableEntryRow.js";
+import { isVariation } from "./is-variation.js";
 import { MobileSidebarSheet } from "./MobileSidebarSheet.js";
 import { patchStyleAtSelector } from "./patch-style.js";
 import { PatternRefProvider } from "./PatternRefPreview.js";
@@ -649,7 +650,7 @@ function PlumixBlocksTab({
       // variations the user can still pick, open the picker. Otherwise
       // (no variations, or all capability-gated out) fall through to
       // bare insert with `blockSpec.defaults`.
-      if (entry.slug === entry.name) {
+      if (!isVariation(entry)) {
         const blockScoped = resolveBlockScopeVariations(
           registry,
           entry.name,
@@ -994,6 +995,8 @@ function PlumixCanvasWithSlashMenu({
             onQueryChange={setQuery}
             onSelect={handleSelect}
             onDismiss={() => setOpen(false)}
+            blocks={registry}
+            patterns={patternRegistry}
           />
         </DialogContent>
       </Dialog>

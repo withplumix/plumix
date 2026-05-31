@@ -9,7 +9,13 @@ import {
 } from "@/components/ui/command.js";
 import { Command as CommandPrimitive } from "cmdk";
 
+import type { BlockRegistry, PatternRegistry } from "@plumix/blocks";
+
 import type { SlashMenuItem } from "./slash-menu-items.js";
+import { isVariation } from "./is-variation.js";
+import { LazyMount } from "./LazyMount.js";
+import { SLASH_THUMBNAIL_MIN_HEIGHT } from "./thumbnail-min-height.js";
+import { VariationThumbnail } from "./VariationThumbnail.js";
 
 interface SlashMenuPanelProps {
   readonly items: readonly SlashMenuItem[];
@@ -17,6 +23,8 @@ interface SlashMenuPanelProps {
   readonly onQueryChange: (query: string) => void;
   readonly onSelect: (item: SlashMenuItem) => void;
   readonly onDismiss: () => void;
+  readonly blocks: BlockRegistry;
+  readonly patterns: PatternRegistry;
 }
 
 const UNCATEGORIZED = "other";
@@ -24,6 +32,8 @@ const UNCATEGORIZED = "other";
 function renderMember(
   item: SlashMenuItem,
   onSelect: (item: SlashMenuItem) => void,
+  blocks: BlockRegistry,
+  patterns: PatternRegistry,
 ): ReactElement {
   if (item.kind === "pattern") {
     const { entry } = item;
@@ -57,6 +67,35 @@ function renderMember(
     );
   }
   const { entry } = item;
+  if (isVariation(entry)) {
+    return (
+      <CommandItem
+        key={entry.slug}
+        value={entry.slug}
+        data-testid={`slash-menu-item-${entry.slug}`}
+        onSelect={() => onSelect(item)}
+        className="flex flex-col items-start gap-1 px-2 py-2"
+      >
+        <LazyMount
+          placeholderTestId={`slash-menu-thumbnail-placeholder-${entry.name}:${entry.slug}`}
+          minHeight={SLASH_THUMBNAIL_MIN_HEIGHT}
+        >
+          <div
+            aria-hidden
+            className="pointer-events-none h-12 w-full overflow-hidden rounded"
+          >
+            <VariationThumbnail
+              parentBlockName={entry.name}
+              variation={entry}
+              blocks={blocks}
+              patterns={patterns}
+            />
+          </div>
+        </LazyMount>
+        <span className="text-sm font-medium">{entry.title}</span>
+      </CommandItem>
+    );
+  }
   return (
     <CommandItem
       key={entry.slug}
@@ -83,6 +122,8 @@ export function SlashMenuPanel({
   onQueryChange,
   onSelect,
   onDismiss,
+  blocks,
+  patterns,
 }: SlashMenuPanelProps): ReactElement {
   const buckets = useMemo(() => {
     const map = new Map<string, SlashMenuItem[]>();
@@ -123,7 +164,9 @@ export function SlashMenuPanel({
             heading={category}
             data-testid={`slash-menu-group-${category}`}
           >
-            {members.map((item) => renderMember(item, onSelect))}
+            {members.map((item) =>
+              renderMember(item, onSelect, blocks, patterns),
+            )}
           </CommandGroup>
         ))}
       </CommandList>
