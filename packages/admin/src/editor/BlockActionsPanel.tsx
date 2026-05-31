@@ -4,11 +4,16 @@ import { useMemo } from "react";
 import type { BlockRegistry } from "@plumix/blocks";
 
 import type { TransformOption } from "./available-transforms.js";
+import type { BlockIdentity } from "./block-identity.js";
 import { availableTransforms } from "./available-transforms.js";
+import { BlockIcon } from "./BlockIcon.js";
 
 interface BlockActionsPanelProps {
   readonly specName: string | undefined;
   readonly registry: BlockRegistry;
+  // Live identity for the selected instance — variation override or
+  // parent block. Caller memoizes against the instance's attrs.
+  readonly identity?: BlockIdentity;
   readonly onTransform: (option: TransformOption) => void;
   readonly onDuplicate?: () => void;
   readonly onDelete?: () => void;
@@ -18,6 +23,7 @@ interface BlockActionsPanelProps {
 export function BlockActionsPanel({
   specName,
   registry,
+  identity,
   onTransform,
   onDuplicate,
   onDelete,
@@ -40,10 +46,31 @@ export function BlockActionsPanel({
   }
 
   const hasExtras = Boolean(onDuplicate ?? onDelete ?? onCopyJson);
-  if (options.length === 0 && !hasExtras) return null;
+  if (options.length === 0 && !hasExtras && !identity) return null;
 
   return (
     <div className="space-y-2 border-b p-4" data-testid="block-actions-panel">
+      {identity ? (
+        <div
+          className="flex items-center gap-2"
+          data-testid="block-actions-identity"
+        >
+          <BlockIcon name={identity.icon} />
+          <div className="min-w-0 flex-1">
+            <div
+              className="truncate text-sm font-medium"
+              data-testid="block-actions-identity-title"
+            >
+              {identity.title}
+            </div>
+            {identity.description ? (
+              <div className="text-muted-foreground truncate text-xs">
+                {identity.description}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       {options.length > 0 ? (
         <div className="space-y-1">
           <div className="text-muted-foreground text-xs">Transform to</div>

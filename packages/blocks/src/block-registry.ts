@@ -22,6 +22,13 @@ export interface BlockVariationExample {
   readonly innerBlocks?: readonly BlockNode[];
 }
 
+export type BlockVariationIsActive =
+  | readonly string[]
+  | ((
+      blockAttrs: Readonly<Record<string, unknown>>,
+      variationAttrs: Readonly<Record<string, unknown>>,
+    ) => boolean);
+
 export interface BlockVariation {
   readonly slug: string;
   readonly title: string;
@@ -46,6 +53,11 @@ export interface BlockVariation {
   // `attrs` + `innerBlocks` — useful when the runtime body relies on an
   // async loader and the preview needs static content.
   readonly example?: BlockVariationExample;
+  // Per-instance identity matcher. `string[]` lists attr names whose
+  // values on the block instance must equal the variation's `attrs`
+  // value for the same name; among ties the longest list wins, then
+  // registration order. Function matchers run first-true wins.
+  readonly isActive?: BlockVariationIsActive;
 }
 
 /**

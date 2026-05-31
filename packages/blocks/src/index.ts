@@ -81,6 +81,8 @@ export type {
   PatternTarget,
 } from "./pattern-registry.js";
 export { PatternRegistryError } from "./pattern-errors.js";
+export { resolveActiveVariation } from "./resolve-active-variation.js";
+export type { BlockVariationIsActive } from "./block-registry.js";
 export { serializePatternSource } from "./serialize-pattern-source.js";
 export type { SerializePatternSourceOptions } from "./serialize-pattern-source.js";
 export { commitBlockVariations } from "./commit-block-variations.js";
