@@ -53,12 +53,12 @@ import type { SlashMenuItem } from "./slash-menu-items.js";
 import { AutosaveStatusPill } from "./AutosaveStatus.js";
 import { deriveBlockIdentity } from "./block-identity.js";
 import { BlockActionsPanel } from "./BlockActionsPanel.js";
-import { BlockIcon } from "./BlockIcon.js";
 import { BlockScopePicker } from "./BlockScopePicker.js";
 import { buildCopyPatternSource } from "./build-copy-pattern-source.js";
 import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
 import { insertPattern } from "./insert-pattern.js";
 import { dispatchVariationInsert } from "./insert-variation.js";
+import { InsertableEntryRow } from "./InsertableEntryRow.js";
 import { MobileSidebarSheet } from "./MobileSidebarSheet.js";
 import { patchStyleAtSelector } from "./patch-style.js";
 import { PatternRefProvider } from "./PatternRefPreview.js";
@@ -710,15 +710,12 @@ function PlumixBlocksTab({
       <ul className="flex flex-col gap-1 p-4" data-testid="plumix-blocks-tab">
         {entries.map((entry) => (
           <li key={entry.slug}>
-            <button
-              type="button"
-              className="hover:bg-muted flex w-full items-center gap-2 rounded border px-3 py-2 text-left text-sm"
-              data-testid={`plumix-blocks-tab-item-${entry.slug}`}
+            <InsertableEntryRow
+              entry={entry}
+              blocks={registry}
+              patterns={patternRegistry}
               onClick={() => handleInsert(entry)}
-            >
-              <BlockIcon name={entry.icon} />
-              <span className="truncate">{entry.title}</span>
-            </button>
+            />
           </li>
         ))}
       </ul>
