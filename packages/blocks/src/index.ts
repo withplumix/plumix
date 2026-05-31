@@ -77,6 +77,8 @@ export type {
   PatternTarget,
 } from "./pattern-registry.js";
 export { PatternRegistryError } from "./pattern-errors.js";
+export { serializePatternSource } from "./serialize-pattern-source.js";
+export type { SerializePatternSourceOptions } from "./serialize-pattern-source.js";
 
 // ─── Validation ─────────────────────────────────────────────────────────────
 export { validateEntryContent } from "./validate-content.js";
