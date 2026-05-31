@@ -78,7 +78,7 @@ test.describe("v2 editor ARIA semantics", () => {
     await page.keyboard.press("/");
     await expect(page.getByTestId("slash-menu-input")).toHaveAttribute(
       "aria-label",
-      "Search blocks",
+      "Search blocks and patterns",
     );
   });
 });
