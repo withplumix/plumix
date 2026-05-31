@@ -104,6 +104,33 @@ describe("availableTransforms", () => {
     ]);
   });
 
+  test("emits a stable, unique key per option so React + getByTestId don't collide on multiple same-block variations", () => {
+    const registry = createBlockRegistry([
+      spec({
+        name: "core/columns",
+        title: "Columns",
+        variations: [
+          {
+            slug: "two-up",
+            title: "Two up",
+            attrs: { layout: "split" },
+            scope: ["transform"],
+          },
+          {
+            slug: "three-up",
+            title: "Three up",
+            attrs: { layout: "three" },
+            scope: ["transform"],
+          },
+        ],
+      }),
+    ]);
+    const keys = availableTransforms("core/columns", registry).map(
+      (o) => o.key,
+    );
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
   test("variation-scoped transform applies the variation attrs over the current ones via mapAttrs", () => {
     const registry = createBlockRegistry([
       spec({

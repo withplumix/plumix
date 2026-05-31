@@ -61,18 +61,27 @@ export function expandBlockVariations(
   return out;
 }
 
-// Resolves the preview data for a variation entry: example overrides
-// applied on top of the runtime attrs/innerBlocks. Used by preview
-// surfaces (inserter cards, block-scope picker thumbnails) — never by
-// insertion paths.
-export function resolveVariationPreview(entry: InsertableBlockEntry): {
+// Structural shape shared by InsertableBlockEntry and BlockVariation —
+// both carry runtime `attrs`/`innerBlocks` plus an optional `example`
+// preview override. Typing the helper against the shape (not the
+// concrete entry type) lets the block-scope picker thumbnail resolve
+// previews straight from a BlockVariation.
+export interface VariationPreviewSource {
+  readonly attrs?: Readonly<Record<string, unknown>>;
+  readonly innerBlocks?: readonly BlockNode[];
+  readonly example?: BlockVariationExample;
+}
+
+// Resolves the preview data for a variation: example overrides applied
+// on top of the runtime attrs/innerBlocks. Used by preview surfaces
+// (inserter cards, block-scope picker thumbnails) — never by insertion
+// paths.
+export function resolveVariationPreview(source: VariationPreviewSource): {
   readonly attrs: Readonly<Record<string, unknown>>;
   readonly innerBlocks: readonly BlockNode[];
 } {
-  const baseAttrs = entry.attrs ?? {};
-  const baseInner = entry.innerBlocks ?? [];
   return {
-    attrs: entry.example?.attrs ?? baseAttrs,
-    innerBlocks: entry.example?.innerBlocks ?? baseInner,
+    attrs: source.example?.attrs ?? source.attrs ?? {},
+    innerBlocks: source.example?.innerBlocks ?? source.innerBlocks ?? [],
   };
 }

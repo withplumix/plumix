@@ -58,8 +58,7 @@ import { BlockScopePicker } from "./BlockScopePicker.js";
 import { buildCopyPatternSource } from "./build-copy-pattern-source.js";
 import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
 import { insertPattern } from "./insert-pattern.js";
-import { computeVariationMergeAttrs } from "./insert-variation.js";
-import { mergePropsAtSelector } from "./merge-variation-attrs.js";
+import { dispatchVariationInsert } from "./insert-variation.js";
 import { MobileSidebarSheet } from "./MobileSidebarSheet.js";
 import { patchStyleAtSelector } from "./patch-style.js";
 import { PatternRefProvider } from "./PatternRefPreview.js";
@@ -635,31 +634,11 @@ function PlumixBlocksTab({
 
   const insertEntry = useCallback(
     (entry: InsertableBlockEntry): void => {
-      const index = puck.appState.data.content.length;
-      // Two-dispatch shape: Puck's `insert` action stamps `props.id`
-      // itself, then the merge applies variation attrs + slot content.
-      // Constructing the ComponentData via `setData` directly skipped
-      // Puck's id-generation contract and the autosave hook saw a
-      // double state-change per slash insert, racing the conflict
-      // recovery test on CI.
-      puck.dispatch({
-        type: "insert",
-        componentType: entry.name,
-        destinationZone: PUCK_ROOT_ZONE,
-        destinationIndex: index,
-      });
-      const mergeAttrs = computeVariationMergeAttrs(entry);
-      if (Object.keys(mergeAttrs).length > 0) {
-        puck.dispatch({
-          type: "setData",
-          data: (previous) =>
-            mergePropsAtSelector(
-              previous,
-              { zone: PUCK_ROOT_ZONE, index },
-              mergeAttrs,
-            ),
-        });
-      }
+      dispatchVariationInsert(
+        puck.dispatch,
+        entry,
+        puck.appState.data.content.length,
+      );
     },
     [puck],
   );
@@ -715,10 +694,8 @@ function PlumixBlocksTab({
 
   const handlePickerDismiss = useCallback((): void => {
     if (!pendingPick) return;
-    // ESC / cancel inserts the bare block with `blockSpec.defaults`.
-    // Constructing a plain entry with no attrs/innerBlocks routes
-    // through the same `insertVariation` path which will land empty
-    // props, and Puck applies the spec's `defaults` on render.
+    // ESC / cancel falls back to the bare parent block — Puck applies
+    // the spec's `defaults` on render.
     const bare: InsertableBlockEntry = {
       name: pendingPick.entry.name,
       slug: pendingPick.entry.slug,
@@ -901,31 +878,13 @@ function PlumixCanvasWithSlashMenu({
         puck.appState.data.content.length,
       );
       if (item.kind === "block") {
-        const { entry } = item;
         // Variation insert operates on the root content array; nested
         // zones fall back to end-of-document so innerBlocks (which must
         // sit in a top-level slot the walker recognises) never land in
         // the wrong shape.
         const insertIndex =
           zone === PUCK_ROOT_ZONE ? index : puck.appState.data.content.length;
-        puck.dispatch({
-          type: "insert",
-          componentType: entry.name,
-          destinationZone: PUCK_ROOT_ZONE,
-          destinationIndex: insertIndex,
-        });
-        const mergeAttrs = computeVariationMergeAttrs(entry);
-        if (Object.keys(mergeAttrs).length > 0) {
-          puck.dispatch({
-            type: "setData",
-            data: (previous) =>
-              mergePropsAtSelector(
-                previous,
-                { zone: PUCK_ROOT_ZONE, index: insertIndex },
-                mergeAttrs,
-              ),
-          });
-        }
+        dispatchVariationInsert(puck.dispatch, item.entry, insertIndex);
       } else {
         // The pattern insert primitive operates on the root content
         // array; nextInsertPoint may have returned a nested zone for

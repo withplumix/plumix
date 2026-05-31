@@ -61,7 +61,10 @@ export {
   expandBlockVariations,
   resolveVariationPreview,
 } from "./expand-block-variations.js";
-export type { InsertableBlockEntry } from "./expand-block-variations.js";
+export type {
+  InsertableBlockEntry,
+  VariationPreviewSource,
+} from "./expand-block-variations.js";
 export type { BlockVariationExample } from "./block-registry.js";
 
 // ─── Pattern registry primitives ────────────────────────────────────────────

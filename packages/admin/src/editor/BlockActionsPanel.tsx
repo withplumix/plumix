@@ -76,12 +76,12 @@ export function BlockActionsPanel({
           <div className="text-muted-foreground text-xs">Transform to</div>
           <ul className="flex flex-wrap gap-1" data-testid="block-actions-list">
             {options.map((option) => (
-              <li key={option.targetName}>
+              <li key={option.key}>
                 <button
                   type="button"
                   onClick={() => onTransform(option)}
                   className="rounded border px-2 py-1 text-xs"
-                  data-testid={`block-action-transform-${option.targetName}`}
+                  data-testid={`block-action-transform-${option.key}`}
                 >
                   {option.targetTitle}
                 </button>
