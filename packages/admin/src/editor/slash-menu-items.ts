@@ -3,17 +3,21 @@ import type {
   BlockSpec,
   InsertableBlockEntry,
 } from "@plumix/blocks";
+import type { PatternManifestEntry } from "@plumix/core/manifest";
 import { expandBlockVariations } from "@plumix/blocks";
 
 import { PUCK_ROOT_ZONE } from "./puck-zones.js";
 
 export { PUCK_ROOT_ZONE };
 
-export type SlashMenuItem = InsertableBlockEntry;
+export type SlashMenuItem =
+  | { readonly kind: "block"; readonly entry: InsertableBlockEntry }
+  | { readonly kind: "pattern"; readonly entry: PatternManifestEntry };
 
 interface ResolveSlashMenuItemsOptions {
   readonly capabilities: ReadonlySet<string>;
   readonly query: string;
+  readonly patterns?: readonly PatternManifestEntry[];
 }
 
 const TITLE_MATCH = 3;
@@ -22,7 +26,7 @@ const NAME_MATCH = 1;
 
 export function resolveSlashMenuItems(
   registry: BlockRegistry,
-  { capabilities, query }: ResolveSlashMenuItemsOptions,
+  { capabilities, query, patterns }: ResolveSlashMenuItemsOptions,
 ): readonly SlashMenuItem[] {
   const needle = query.trim().toLowerCase();
   const scored: { item: SlashMenuItem; score: number }[] = [];
@@ -34,13 +38,20 @@ export function resolveSlashMenuItems(
     eligibleSpecs.push(spec);
   }
 
-  for (const item of expandBlockVariations(eligibleSpecs)) {
+  function pushScored(item: SlashMenuItem): void {
     if (needle === "") {
       scored.push({ item, score: 0 });
-      continue;
+      return;
     }
     const score = matchScore(item, needle);
     if (score > 0) scored.push({ item, score });
+  }
+
+  for (const entry of expandBlockVariations(eligibleSpecs)) {
+    pushScored({ kind: "block", entry });
+  }
+  for (const entry of patterns ?? []) {
+    pushScored({ kind: "pattern", entry });
   }
 
   if (needle !== "") {
@@ -57,12 +68,23 @@ function isInsertableForCapabilities(
   return capabilities.has(spec.capability);
 }
 
+// Category-as-keyword matches patterns only — block entries don't
+// surface category as an alias today. Prefix semantics mirror the
+// keyword scorer so typing "her" matches a pattern with category
+// "hero", not just the exact slug.
 function matchScore(item: SlashMenuItem, needle: string): number {
-  if (item.title.toLowerCase().includes(needle)) return TITLE_MATCH;
-  if (item.keywords?.some((k) => k.toLowerCase().startsWith(needle))) {
+  const { entry } = item;
+  if (entry.title.toLowerCase().includes(needle)) return TITLE_MATCH;
+  if (entry.keywords?.some((k) => k.toLowerCase().startsWith(needle))) {
     return KEYWORD_MATCH;
   }
-  if (item.name.toLowerCase().includes(needle)) return NAME_MATCH;
+  if (
+    item.kind === "pattern" &&
+    entry.category?.toLowerCase().startsWith(needle)
+  ) {
+    return KEYWORD_MATCH;
+  }
+  if (entry.name.toLowerCase().includes(needle)) return NAME_MATCH;
   return 0;
 }
 

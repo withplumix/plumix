@@ -10,24 +10,58 @@ afterEach(() => {
 });
 
 const heading: SlashMenuItem = {
-  name: "core/heading",
-  slug: "core/heading",
-  title: "Heading",
-  description: "Section title",
-  category: "typography",
+  kind: "block",
+  entry: {
+    name: "core/heading",
+    slug: "core/heading",
+    title: "Heading",
+    description: "Section title",
+    category: "typography",
+  },
 };
 
 const quote: SlashMenuItem = {
-  name: "core/quote",
-  slug: "core/quote",
-  title: "Quote",
-  description: "Pull quote",
-  category: "typography",
+  kind: "block",
+  entry: {
+    name: "core/quote",
+    slug: "core/quote",
+    title: "Quote",
+    description: "Pull quote",
+    category: "typography",
+  },
+};
+
+const heroPattern: SlashMenuItem = {
+  kind: "pattern",
+  entry: {
+    name: "starter/hero",
+    title: "Hero",
+    category: "hero",
+    content: [],
+  },
 };
 
 const noop = vi.fn();
 
 describe("SlashMenuPanel", () => {
+  test("marks pattern entries with a distinct card-style testid", () => {
+    render(
+      <SlashMenuPanel
+        items={[heading, heroPattern]}
+        query=""
+        onQueryChange={noop}
+        onSelect={noop}
+        onDismiss={noop}
+      />,
+    );
+
+    // Blocks keep the single-line row id; patterns get a card id.
+    expect(screen.getByTestId("slash-menu-item-core/heading")).toBeDefined();
+    expect(
+      screen.getByTestId("slash-menu-pattern-card-starter/hero"),
+    ).toBeDefined();
+  });
+
   test("renders one item per resolved entry with stable testids and category headings", () => {
     render(
       <SlashMenuPanel

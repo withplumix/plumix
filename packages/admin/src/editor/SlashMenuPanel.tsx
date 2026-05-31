@@ -21,6 +21,62 @@ interface SlashMenuPanelProps {
 
 const UNCATEGORIZED = "other";
 
+function renderMember(
+  item: SlashMenuItem,
+  onSelect: (item: SlashMenuItem) => void,
+): ReactElement {
+  if (item.kind === "pattern") {
+    const { entry } = item;
+    return (
+      <CommandItem
+        key={entry.name}
+        value={entry.name}
+        data-testid={`slash-menu-pattern-card-${entry.name}`}
+        onSelect={() => onSelect(item)}
+        className="flex flex-col items-start gap-1 px-2 py-2"
+      >
+        {/* Fixed-aspect strip keeps two-line cards a stable height
+            regardless of the author's preview dimensions. The fallback
+            is a neutral placeholder — the title below carries the label,
+            so doubling it in the strip would just be visual noise. */}
+        {entry.preview ? (
+          <img
+            src={entry.preview.src}
+            alt={entry.preview.alt ?? ""}
+            className="h-12 w-full rounded object-cover"
+          />
+        ) : (
+          <span
+            aria-hidden
+            className="bg-muted h-12 w-full rounded"
+            data-testid={`slash-menu-pattern-card-placeholder-${entry.name}`}
+          />
+        )}
+        <span className="text-sm font-medium">{entry.title}</span>
+      </CommandItem>
+    );
+  }
+  const { entry } = item;
+  return (
+    <CommandItem
+      key={entry.slug}
+      value={entry.slug}
+      data-testid={`slash-menu-item-${entry.slug}`}
+      onSelect={() => onSelect(item)}
+      className="flex items-start gap-2"
+    >
+      <span className="flex min-w-0 flex-col">
+        <span className="text-sm font-medium">{entry.title}</span>
+        {entry.description ? (
+          <span className="text-muted-foreground text-xs">
+            {entry.description}
+          </span>
+        ) : null}
+      </span>
+    </CommandItem>
+  );
+}
+
 export function SlashMenuPanel({
   items,
   query,
@@ -31,7 +87,7 @@ export function SlashMenuPanel({
   const buckets = useMemo(() => {
     const map = new Map<string, SlashMenuItem[]>();
     for (const item of items) {
-      const key = item.category ?? UNCATEGORIZED;
+      const key = item.entry.category ?? UNCATEGORIZED;
       const bucket = map.get(key) ?? [];
       bucket.push(item);
       map.set(key, bucket);
@@ -57,36 +113,17 @@ export function SlashMenuPanel({
         data-testid="slash-menu-input"
         autoFocus
         className="sr-only"
-        aria-label="Search blocks"
+        aria-label="Search blocks and patterns"
       />
       <CommandList>
-        <CommandEmpty data-testid="slash-menu-empty">
-          No blocks found
-        </CommandEmpty>
+        <CommandEmpty data-testid="slash-menu-empty">No matches</CommandEmpty>
         {buckets.map(([category, members]) => (
           <CommandGroup
             key={category}
             heading={category}
             data-testid={`slash-menu-group-${category}`}
           >
-            {members.map((item) => (
-              <CommandItem
-                key={item.slug}
-                value={item.slug}
-                data-testid={`slash-menu-item-${item.slug}`}
-                onSelect={() => onSelect(item)}
-                className="flex items-start gap-2"
-              >
-                <span className="flex min-w-0 flex-col">
-                  <span className="text-sm font-medium">{item.title}</span>
-                  {item.description ? (
-                    <span className="text-muted-foreground text-xs">
-                      {item.description}
-                    </span>
-                  ) : null}
-                </span>
-              </CommandItem>
-            ))}
+            {members.map((item) => renderMember(item, onSelect))}
           </CommandGroup>
         ))}
       </CommandList>
