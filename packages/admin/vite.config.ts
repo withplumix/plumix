@@ -1,4 +1,6 @@
 import { fileURLToPath } from "node:url";
+import { lingui, linguiTransformerBabelPreset } from "@lingui/vite-plugin";
+import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
@@ -27,6 +29,21 @@ export default defineConfig({
     }),
     tailwindcss(),
     react(),
+    // `@lingui/vite-plugin` compiles catalogs on-the-fly during dev and
+    // emits per-locale chunks for prod. `@rolldown/plugin-babel` runs
+    // Lingui's macro transform (`defineMessage`, `t`, `<Trans>`, etc.)
+    // alongside plugin-react v6's OXC pipeline — v6 dropped its own
+    // Babel hook, so this is the canonical path back. Both need an
+    // explicit `cwd` so tools evaluating this config from the repo
+    // root (knip) still find `packages/admin/lingui.config.ts`.
+    lingui({ cwd: fileURLToPath(new URL(".", import.meta.url)) }),
+    babel({
+      presets: [
+        linguiTransformerBabelPreset(undefined, {
+          cwd: fileURLToPath(new URL(".", import.meta.url)),
+        }),
+      ],
+    }),
   ],
   server: {
     port: ADMIN_DEV_PORT,

@@ -203,7 +203,7 @@ export class CliError extends Error {
   static i18nCheckDrift(ctx: { ids: readonly string[] }): CliError {
     return new CliError(
       "i18n_check_drift",
-      `Translation catalogs out of sync — ${ctx.ids.length} new msgid(s) in source but not in committed .po:\n  ${ctx.ids.join("\n  ")}`,
+      `Translation catalogs out of sync — ${ctx.ids.length} msgid(s) drifted (+ added, - removed):\n  ${ctx.ids.join("\n  ")}`,
       "Run `plumix i18n extract` locally and commit the updated `.po` file(s).",
       undefined,
     );

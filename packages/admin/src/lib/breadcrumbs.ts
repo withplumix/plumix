@@ -1,4 +1,5 @@
 import type { MessageDescriptor } from "@lingui/core";
+import { defineMessage } from "@lingui/core/macro";
 
 import {
   findEntryTypeBySlug,
@@ -21,19 +22,21 @@ export interface Crumb {
   readonly to?: string;
 }
 
-// Hand-authored descriptors; matching entries live in `locales/{en,de}.po`.
 const M = {
-  dashboard: { id: "breadcrumb.dashboard", message: "Dashboard" },
-  entries: { id: "breadcrumb.entries", message: "Entries" },
-  terms: { id: "breadcrumb.terms", message: "Terms" },
-  users: { id: "breadcrumb.users", message: "Users" },
-  settings: { id: "breadcrumb.settings", message: "Settings" },
-  profile: { id: "breadcrumb.profile", message: "Profile" },
-  admin: { id: "breadcrumb.admin", message: "Admin" },
-  create: { id: "breadcrumb.create", message: "Create" },
-  edit: { id: "breadcrumb.edit", message: "Edit" },
-  addNew: { id: "breadcrumb.addNew", message: "Add new" },
-  editUser: { id: "breadcrumb.editUser", message: "Edit user" },
+  dashboard: defineMessage({
+    id: "breadcrumb.dashboard",
+    message: "Dashboard",
+  }),
+  entries: defineMessage({ id: "breadcrumb.entries", message: "Entries" }),
+  terms: defineMessage({ id: "breadcrumb.terms", message: "Terms" }),
+  users: defineMessage({ id: "breadcrumb.users", message: "Users" }),
+  settings: defineMessage({ id: "breadcrumb.settings", message: "Settings" }),
+  profile: defineMessage({ id: "breadcrumb.profile", message: "Profile" }),
+  admin: defineMessage({ id: "breadcrumb.admin", message: "Admin" }),
+  create: defineMessage({ id: "breadcrumb.create", message: "Create" }),
+  edit: defineMessage({ id: "breadcrumb.edit", message: "Edit" }),
+  addNew: defineMessage({ id: "breadcrumb.addNew", message: "Add new" }),
+  editUser: defineMessage({ id: "breadcrumb.editUser", message: "Edit user" }),
 } satisfies Record<string, MessageDescriptor>;
 
 /**
