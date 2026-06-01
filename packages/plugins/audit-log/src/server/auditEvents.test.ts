@@ -113,6 +113,7 @@ const adminUser: AuthenticatedUser = {
   id: 7,
   email: "alice@example.com",
   role: "admin",
+  meta: {},
 };
 const subjectUser = {
   id: 42,

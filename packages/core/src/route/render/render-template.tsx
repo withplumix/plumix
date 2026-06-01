@@ -287,7 +287,7 @@ function renderTree({
 
   const scripts = groupScriptsByPosition(document.script);
 
-  const { code, direction } = ctx.i18n.defaultLocale;
+  const { code, direction } = ctx.locale;
   const htmlAttrs = renderAttrs({
     lang: code,
     dir: direction,

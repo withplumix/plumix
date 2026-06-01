@@ -64,6 +64,7 @@ const adminUser: AuthenticatedUser = {
   id: 7,
   email: "alice@example.com",
   role: "admin",
+  meta: {},
 };
 
 describe("createAuditExtension", () => {

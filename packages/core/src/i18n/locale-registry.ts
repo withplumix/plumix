@@ -1,3 +1,5 @@
+import type { AuthenticatedUser } from "../context/app.js";
+
 export type LocaleDirection = "ltr" | "rtl";
 
 export interface LocaleInput {
@@ -10,7 +12,16 @@ export interface LocaleInput {
 export interface I18nInput {
   readonly defaultLocale: string;
   readonly locales: readonly (string | LocaleInput)[];
+  readonly resolveLocale?: LocaleResolverOverride;
 }
+
+// Escape hatch for sites that want Accept-Language detection, URL-prefix
+// routing, or any other resolution model WP doesn't do natively. Return
+// `null` to fall through; out-of-registry / disabled returns are also ignored.
+export type LocaleResolverOverride = (
+  request: Request,
+  user: AuthenticatedUser | null,
+) => ResolvedLocale | null;
 
 export interface ResolvedLocale {
   readonly code: string;
@@ -22,6 +33,7 @@ export interface ResolvedLocale {
 export interface ResolvedI18n {
   readonly defaultLocale: ResolvedLocale;
   readonly locales: readonly ResolvedLocale[];
+  readonly resolveLocale?: LocaleResolverOverride;
 }
 
 // `Intl.Locale.prototype.getTextInfo()` shipped in V8/Node/Workers but the
@@ -47,7 +59,7 @@ export function resolveLocales(input: I18nInput): ResolvedI18n {
       `plumix(): i18n.defaultLocale ${JSON.stringify(input.defaultLocale)} cannot be marked enabled:false.`,
     );
   }
-  return { defaultLocale, locales };
+  return { defaultLocale, locales, resolveLocale: input.resolveLocale };
 }
 
 function normalizeEntry(entry: string | LocaleInput): ResolvedLocale {
@@ -77,6 +89,24 @@ function canonicalize(raw: string): Intl.Locale {
 
 function canonicalizeLocaleCode(raw: string): string {
   return canonicalize(raw).toString();
+}
+
+/**
+ * Match a code from an untrusted source (user.meta, override return) against
+ * the registry. Canonicalizes the input so `"en_US"` / `"en-us"` still find
+ * an `"en-US"` entry. Returns the registry entry only if it's enabled.
+ */
+export function findEnabledLocale(
+  i18n: ResolvedI18n,
+  rawCode: string,
+): ResolvedLocale | null {
+  let code: string;
+  try {
+    code = canonicalizeLocaleCode(rawCode);
+  } catch {
+    return null;
+  }
+  return i18n.locales.find((l) => l.code === code && l.enabled) ?? null;
 }
 
 // `Intl.DisplayNames` rejects some valid BCP 47 tags its constructor doesn't

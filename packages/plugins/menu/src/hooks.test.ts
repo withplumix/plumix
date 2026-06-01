@@ -65,7 +65,7 @@ async function setup(): Promise<Bundle> {
     request: new Request("https://cms.example/_plumix/rpc", { method: "POST" }),
     hooks,
     plugins: registry,
-    user: { id: user.id, email: user.email, role: user.role },
+    user: { id: user.id, email: user.email, role: user.role, meta: {} },
     authenticator: stubAuthenticator(user),
     origin: "https://cms.example",
   });

@@ -187,7 +187,7 @@ function withRequest(
     marks: app.marks,
     logger: silentLogger,
     user: user
-      ? { id: user.id, email: user.email, role: user.role }
+      ? { id: user.id, email: user.email, role: user.role, meta: user.meta }
       : undefined,
     assets,
     storage,

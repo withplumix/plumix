@@ -324,9 +324,9 @@ async function dispatchPluginRawRoute(
   const result = await ctx.authenticator.authenticate(ctx.request, ctx.db);
   if (!result) return jsonResponse({ error: "unauthorized" }, { status: 401 });
 
-  const { id, email, role } = result.user;
+  const { id, email, role, meta } = result.user;
   const tokenScopes = result.tokenScopes ?? null;
-  const authedCtx = withUser(ctx, { id, email, role }, tokenScopes);
+  const authedCtx = withUser(ctx, { id, email, role, meta }, tokenScopes);
 
   if (gate === "authenticated") {
     return route.handler(authedCtx.request, authedCtx);
