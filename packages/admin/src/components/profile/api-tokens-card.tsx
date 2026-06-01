@@ -50,7 +50,7 @@ import { parseScopesText } from "@/lib/scopes.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, Plus } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import * as v from "valibot";
 
 // Renders the API-token surface for a target user. Two modes:
@@ -429,7 +429,7 @@ function CreateTokenForm({
     },
     mode: "onBlur",
   });
-  const scopeMode = form.watch("scopeMode");
+  const scopeMode = useWatch({ control: form.control, name: "scopeMode" });
 
   return (
     <Form {...form}>

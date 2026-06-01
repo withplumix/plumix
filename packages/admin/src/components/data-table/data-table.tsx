@@ -48,6 +48,11 @@ export function DataTable<TData>({
   /** Screen-reader label for the loading region when `isLoading`. */
   readonly loadingLabel?: string;
 }): ReactNode {
+  // `useReactTable` returns a non-stable table instance — React Compiler
+  // can't memoize the surrounding render. The instance is the documented
+  // contract (its methods and state are read by row/cell components)
+  // so there's no equivalent subscription-style API to migrate to.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: data as TData[],
     columns,
