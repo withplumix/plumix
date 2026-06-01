@@ -147,7 +147,7 @@ describe("dispatcher — routing", () => {
     expect(await response.text()).toContain('<html lang="zh-TW" dir="ltr">');
   });
 
-  test("admin shell rewrite strips upstream content-encoding / content-length / etag (body no longer matches)", async () => {
+  test("admin shell rewrite strips upstream body-shape headers (encoding / length / transfer-encoding / etag) — body no longer matches", async () => {
     const indexBody =
       '<!doctype html><html lang="en"><head></head><body></body></html>';
     const assets = {
@@ -159,6 +159,7 @@ describe("dispatcher — routing", () => {
               "content-type": "text/html",
               "content-encoding": "gzip",
               "content-length": String(indexBody.length),
+              "transfer-encoding": "chunked",
               etag: '"upstream-original"',
             },
           }),
@@ -172,7 +173,10 @@ describe("dispatcher — routing", () => {
 
     expect(response.headers.get("content-encoding")).toBeNull();
     expect(response.headers.get("content-length")).toBeNull();
+    expect(response.headers.get("transfer-encoding")).toBeNull();
     expect(response.headers.get("etag")).toBeNull();
+    // content-type must survive — browser uses it to parse the new body.
+    expect(response.headers.get("content-type")).toBe("text/html");
   });
 });
 

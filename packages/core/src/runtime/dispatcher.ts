@@ -389,6 +389,7 @@ async function serveAdmin(ctx: AppContext): Promise<Response> {
   const headers = new Headers(upstream.headers);
   headers.delete("content-encoding");
   headers.delete("content-length");
+  headers.delete("transfer-encoding");
   headers.delete("etag");
 
   const html = await upstream.text();
