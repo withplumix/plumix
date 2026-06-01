@@ -86,6 +86,25 @@ test("plumix() requires mailer when auth.magicLink is configured", () => {
   ).toThrow(/magicLink.*requires.*mailer/);
 });
 
+test("plumix() resolves i18n input into a registry and stores it on the config", () => {
+  const config = plumix({
+    runtime,
+    database,
+    auth: authConfig,
+    theme,
+    i18n: { defaultLocale: "ar", locales: ["ar", "en"] },
+  });
+  expect(config.i18n.defaultLocale.code).toBe("ar");
+  expect(config.i18n.defaultLocale.direction).toBe("rtl");
+  expect(config.i18n.locales.map((l) => l.code)).toEqual(["ar", "en"]);
+});
+
+test("plumix() defaults to an English-only registry when i18n is omitted", () => {
+  const config = plumix({ runtime, database, auth: authConfig, theme });
+  expect(config.i18n.defaultLocale.code).toBe("en");
+  expect(config.i18n.locales).toHaveLength(1);
+});
+
 test("plumix() preserves top-level vite passthrough for the Vite layer to consume", () => {
   const probe = { name: "probe" };
   const config = plumix({

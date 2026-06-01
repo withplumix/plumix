@@ -253,13 +253,44 @@ describe("resolvePublicRoute — single entry through theme", () => {
     );
     const body = await response.text();
     expect(body).toContain("<!doctype html>");
-    expect(body).toContain('<html lang="en">');
+    expect(body).toContain('<html lang="en" dir="ltr">');
     expect(body).toContain('<meta charSet="utf-8"/>');
     expect(body).toContain(
       '<meta name="viewport" content="width=device-width, initial-scale=1"/>',
     );
     expect(body).toContain("<title>DocTitle</title>");
     expect(body).toContain("<body>");
+  });
+
+  test("site's i18n defaultLocale drives <html lang dir> (RTL example)", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => <article>{data.entry.title}</article>,
+      },
+    });
+
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin],
+      theme,
+      i18n: { defaultLocale: "ar", locales: ["ar", "en"] },
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "rtl",
+      title: "RTL",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/rtl"),
+    );
+    const body = await response.text();
+    expect(body).toContain('<html lang="ar" dir="rtl">');
   });
 
   test("manifest `html.lang` spreads onto the rendered <html>", async () => {
@@ -287,7 +318,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
       new Request("https://cms.example/post/lang"),
     );
     const body = await response.text();
-    expect(body).toContain('<html lang="fr">');
+    expect(body).toContain('<html lang="fr" dir="ltr">');
   });
 
   test("manifest `body.className` spreads onto the rendered <body>", async () => {
@@ -400,7 +431,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
     );
     const body = await response.text();
     // html.className concatenated, theme first then template
-    expect(body).toContain('<html lang="en" class="site single-variant">');
+    expect(body).toContain(
+      '<html lang="en" dir="ltr" class="site single-variant">',
+    );
     // Meta from both theme and template appear, theme before template
     const headSection = body.slice(
       body.indexOf("<head>"),

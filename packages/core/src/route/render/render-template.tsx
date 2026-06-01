@@ -287,7 +287,12 @@ function renderTree({
 
   const scripts = groupScriptsByPosition(document.script);
 
-  const htmlAttrs = renderAttrs({ lang: "en", ...document.html });
+  const { code, direction } = ctx.i18n.defaultLocale;
+  const htmlAttrs = renderAttrs({
+    lang: code,
+    dir: direction,
+    ...document.html,
+  });
   const bodyAttrs = renderAttrs(document.body);
 
   // A template-rendered `<title>` is part of `hoisted`. Browsers honor the
