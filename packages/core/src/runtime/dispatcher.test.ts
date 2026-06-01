@@ -127,6 +127,26 @@ describe("dispatcher — routing", () => {
     expect(await response.text()).toContain('<html lang="ar" dir="rtl">');
   });
 
+  test("anonymous GET /_plumix/admin honors Accept-Language for first-time visitors (3-tier matcher)", async () => {
+    const assets = htmlAssets(
+      '<!doctype html><html lang="en"><head></head><body></body></html>',
+    );
+    const h = await createDispatcherHarness({
+      assets,
+      i18n: { defaultLocale: "en", locales: ["en", "zh-TW"] },
+    });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/admin/", {
+        method: "GET",
+        headers: { "accept-language": "zh-Hant,en;q=0.5" },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('<html lang="zh-TW" dir="ltr">');
+  });
+
   test("admin shell rewrite strips upstream content-encoding / content-length / etag (body no longer matches)", async () => {
     const indexBody =
       '<!doctype html><html lang="en"><head></head><body></body></html>';

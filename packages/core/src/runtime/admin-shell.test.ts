@@ -100,4 +100,69 @@ describe("resolveAdminShellLocale", () => {
 
     expect(resolved.code).toBe("en");
   });
+
+  test("Accept-Language exact tag wins when no cookie is set (anonymous first-time visitor)", () => {
+    const request = new Request("https://cms.example/_plumix/admin/", {
+      headers: { "accept-language": "ar,en;q=0.5" },
+    });
+    const resolved = resolveAdminShellLocale({
+      request,
+      user: null,
+      i18n: enArFr,
+    });
+
+    expect(resolved.code).toBe("ar");
+  });
+
+  test("Accept-Language script tag maps to the supported regional variant (zh-Hant → zh-TW)", () => {
+    const i18n = resolveLocales({
+      defaultLocale: "en",
+      locales: ["en", "zh-TW"],
+    });
+    const request = new Request("https://cms.example/_plumix/admin/", {
+      headers: { "accept-language": "zh-Hant" },
+    });
+    const resolved = resolveAdminShellLocale({ request, user: null, i18n });
+
+    expect(resolved.code).toBe("zh-TW");
+  });
+
+  test("Accept-Language base language falls back to a supported regional variant (pt-PT → pt-BR)", () => {
+    const i18n = resolveLocales({
+      defaultLocale: "en",
+      locales: ["en", "pt-BR"],
+    });
+    const request = new Request("https://cms.example/_plumix/admin/", {
+      headers: { "accept-language": "pt-PT" },
+    });
+    const resolved = resolveAdminShellLocale({ request, user: null, i18n });
+
+    expect(resolved.code).toBe("pt-BR");
+  });
+
+  test("Accept-Language is case-insensitive (ZH-HANT → zh-TW)", () => {
+    const i18n = resolveLocales({
+      defaultLocale: "en",
+      locales: ["en", "zh-TW"],
+    });
+    const request = new Request("https://cms.example/_plumix/admin/", {
+      headers: { "accept-language": "ZH-HANT" },
+    });
+    const resolved = resolveAdminShellLocale({ request, user: null, i18n });
+
+    expect(resolved.code).toBe("zh-TW");
+  });
+
+  test("cookie still wins over Accept-Language when both are present", () => {
+    const request = new Request("https://cms.example/_plumix/admin/", {
+      headers: { cookie: "plumix-locale=fr", "accept-language": "ar" },
+    });
+    const resolved = resolveAdminShellLocale({
+      request,
+      user: null,
+      i18n: enArFr,
+    });
+
+    expect(resolved.code).toBe("fr");
+  });
 });
