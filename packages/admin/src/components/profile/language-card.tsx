@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card.js";
 import { readManifest } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
+import { Trans } from "@lingui/react";
 import { useMutation } from "@tanstack/react-query";
 
 interface LanguageCardProps {
@@ -30,10 +31,14 @@ export function LanguageCard({ userLocale }: LanguageCardProps): ReactNode {
   return (
     <Card data-testid="language-card">
       <CardHeader>
-        <CardTitle>Language</CardTitle>
+        <CardTitle>
+          <Trans id="profile.language.title" message="Language" />
+        </CardTitle>
         <CardDescription>
-          Your admin chrome renders in this language. The page reloads after you
-          switch so the new translations apply everywhere.
+          <Trans
+            id="profile.language.description"
+            message="Your admin chrome renders in this language. The page reloads after you switch so the new translations apply everywhere."
+          />
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
@@ -45,7 +50,10 @@ export function LanguageCard({ userLocale }: LanguageCardProps): ReactNode {
         {setLocale.isError ? (
           <Alert variant="destructive">
             <AlertDescription>
-              Couldn't switch language. Please try again.
+              <Trans
+                id="profile.language.error"
+                message="Couldn't switch language. Please try again."
+              />
             </AlertDescription>
           </Alert>
         ) : null}

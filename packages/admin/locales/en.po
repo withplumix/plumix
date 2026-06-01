@@ -8,6 +8,158 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.dashboard"
+msgstr "Dashboard"
+
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.entries"
+msgstr "Entries"
+
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.terms"
+msgstr "Terms"
+
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.users"
+msgstr "Users"
+
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.settings"
+msgstr "Settings"
+
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.profile"
+msgstr "Profile"
+
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.admin"
+msgstr "Admin"
+
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.create"
+msgstr "Create"
+
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.edit"
+msgstr "Edit"
+
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.addNew"
+msgstr "Add new"
+
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.editUser"
+msgstr "Edit user"
+
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.welcome"
+msgstr "Welcome, {greeting}"
+
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.tagline"
+msgstr "What would you like to work on today?"
+
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.tile.description"
+msgstr "Write, edit, and publish {labelLower}."
+
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.tile.browse"
+msgstr "Browse {labelLower}"
+
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.title"
 msgstr "No content types yet"
+
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.empty.description"
+msgstr "Add a plugin that registers a post type (e.g. <0>@plumix/plugin-blog</0>) to see it here."
+
+#: src/components/shell/user-menu.tsx
+msgid "menu.profile"
+msgstr "Profile"
+
+#: src/components/shell/user-menu.tsx
+msgid "menu.settings"
+msgstr "Settings"
+
+#: src/components/shell/user-menu.tsx
+msgid "menu.signOut"
+msgstr "Sign out"
+
+#: src/components/shell/user-menu.tsx
+msgid "menu.signOut.pending"
+msgstr "Signing out…"
+
+#: src/components/locale-switcher.tsx
+msgid "profile.language.aria"
+msgstr "Language"
+
+#: src/components/profile/language-card.tsx
+msgid "profile.language.title"
+msgstr "Language"
+
+#: src/components/profile/language-card.tsx
+msgid "profile.language.description"
+msgstr "Your admin chrome renders in this language. The page reloads after you switch so the new translations apply everywhere."
+
+#: src/components/profile/language-card.tsx
+msgid "profile.language.error"
+msgstr "Couldn't switch language. Please try again."
+
+#: src/routes/_auth/login.tsx
+msgid "login.title"
+msgstr "Sign in"
+
+#: src/routes/_auth/login.tsx
+msgid "login.description"
+msgstr "Use a passkey, get a one-time email link, or continue with a provider."
+
+#: src/routes/_auth/login.tsx
+msgid "login.email.label"
+msgstr "Email"
+
+#: src/routes/_auth/login.tsx
+msgid "login.passkey.submit"
+msgstr "Sign in with passkey"
+
+#: src/routes/_auth/login.tsx
+msgid "login.passkey.pending"
+msgstr "Signing in…"
+
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.submit"
+msgstr "Email me a link"
+
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.pending"
+msgstr "Sending…"
+
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.emailRequired"
+msgstr "Enter your email above first."
+
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.sent.title"
+msgstr "Check your email"
+
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.sent.description"
+msgstr "If an account exists for this email, we sent a sign-in link. The link expires in 15 minutes."
+
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.back"
+msgstr "Back"
+
+#: src/routes/_auth/login.tsx
+msgid "login.emailChange.success"
+msgstr "Email confirmed. Sign in with the new address."
+
+#: src/routes/_auth/login.tsx
+msgid "login.oauth.separator"
+msgstr "or"
+
+#: src/routes/_auth/login.tsx
+msgid "login.oauth.continueWith"
+msgstr "Continue with {label}"

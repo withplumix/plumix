@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { pathToCrumbs } from "@/lib/breadcrumbs.js";
 import { sessionQueryOptions } from "@/lib/session.js";
+import { Trans, useLingui } from "@lingui/react";
 import {
   createRootRouteWithContext,
   Outlet,
@@ -35,11 +36,20 @@ function useDocumentTitle(): void {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
+  const { i18n } = useLingui();
   useEffect(() => {
     const crumbs = pathToCrumbs(pathname);
     const leaf = crumbs[crumbs.length - 1];
-    document.title = leaf ? `${leaf.label} · ${TITLE_BRAND}` : TITLE_BRAND;
-  }, [pathname]);
+    if (!leaf) {
+      document.title = TITLE_BRAND;
+      return;
+    }
+    const label =
+      typeof leaf.label === "string"
+        ? leaf.label
+        : i18n._(leaf.label.id, undefined, { message: leaf.label.message });
+    document.title = `${label} · ${TITLE_BRAND}`;
+  }, [pathname, i18n]);
 }
 
 function NotFound(): ReactNode {
@@ -48,10 +58,14 @@ function NotFound(): ReactNode {
       data-testid="not-found-page"
       className="flex h-screen flex-col items-center justify-center gap-2 p-6 text-center"
     >
-      <h1 className="text-2xl font-semibold">Not found</h1>
+      <h1 className="text-2xl font-semibold">
+        <Trans id="notFound.title" message="Not found" />
+      </h1>
       <p className="text-muted-foreground text-sm">
-        The page you're looking for doesn't exist or the resource isn't
-        registered. Check the URL and try again.
+        <Trans
+          id="notFound.description"
+          message="The page you're looking for doesn't exist or the resource isn't registered. Check the URL and try again."
+        />
       </p>
     </div>
   );

@@ -31,6 +31,7 @@ import { getPasskeyErrorMessage, PasskeyError } from "@/lib/passkey-errors.js";
 import { signInWithPasskey } from "@/lib/passkey.js";
 import { SESSION_QUERY_KEY, sessionQueryOptions } from "@/lib/session.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { Trans, useLingui } from "@lingui/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
@@ -67,6 +68,7 @@ export const Route = createFileRoute("/_auth/login")({
 function LoginRoute(): ReactNode {
   const router = useRouter();
   const search = Route.useSearch();
+  const { i18n } = useLingui();
   const [passkeyError, setPasskeyError] = useState<string | null>(null);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [magicLinkError, setMagicLinkError] = useState<string | null>(null);
@@ -110,7 +112,11 @@ function LoginRoute(): ReactNode {
   const onMagicLinkClick = (): void => {
     const email = form.getValues("email").trim();
     if (!email) {
-      setMagicLinkError("Enter your email above first.");
+      setMagicLinkError(
+        i18n._("login.magicLink.emailRequired", undefined, {
+          message: "Enter your email above first.",
+        }),
+      );
       return;
     }
     magicLink.mutate({ email });
@@ -133,11 +139,18 @@ function LoginRoute(): ReactNode {
       <Card data-testid="login-magic-link-sent">
         <CardHeader>
           <CardTitle>
-            <h1 data-testid="login-heading">Check your email</h1>
+            <h1 data-testid="login-heading">
+              <Trans
+                id="login.magicLink.sent.title"
+                message="Check your email"
+              />
+            </h1>
           </CardTitle>
           <CardDescription>
-            If an account exists for this email, we sent a sign-in link. The
-            link expires in 15 minutes.
+            <Trans
+              id="login.magicLink.sent.description"
+              message="If an account exists for this email, we sent a sign-in link. The link expires in 15 minutes."
+            />
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -147,7 +160,7 @@ function LoginRoute(): ReactNode {
             onClick={() => setMagicLinkSent(false)}
             data-testid="login-magic-link-back"
           >
-            Back
+            <Trans id="login.magicLink.back" message="Back" />
           </Button>
         </CardContent>
       </Card>
@@ -158,10 +171,15 @@ function LoginRoute(): ReactNode {
     <Card>
       <CardHeader>
         <CardTitle>
-          <h1 data-testid="login-heading">Sign in</h1>
+          <h1 data-testid="login-heading">
+            <Trans id="login.title" message="Sign in" />
+          </h1>
         </CardTitle>
         <CardDescription>
-          Use a passkey, get a one-time email link, or continue with a provider.
+          <Trans
+            id="login.description"
+            message="Use a passkey, get a one-time email link, or continue with a provider."
+          />
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -172,7 +190,9 @@ function LoginRoute(): ReactNode {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>
+                    <Trans id="login.email.label" message="Email" />
+                  </FormLabel>
                   <FormControl>
                     <Input
                       type="email"
@@ -219,7 +239,10 @@ function LoginRoute(): ReactNode {
             {emailChangeSuccess ? (
               <Alert data-testid="login-email-change-success">
                 <AlertDescription>
-                  Email confirmed. Sign in with the new address.
+                  <Trans
+                    id="login.emailChange.success"
+                    message="Email confirmed. Sign in with the new address."
+                  />
                 </AlertDescription>
               </Alert>
             ) : null}
@@ -240,7 +263,14 @@ function LoginRoute(): ReactNode {
                 disabled={signIn.isPending || magicLink.isPending}
                 data-testid="login-passkey-submit"
               >
-                {signIn.isPending ? "Signing in…" : "Sign in with passkey"}
+                {signIn.isPending ? (
+                  <Trans id="login.passkey.pending" message="Signing in…" />
+                ) : (
+                  <Trans
+                    id="login.passkey.submit"
+                    message="Sign in with passkey"
+                  />
+                )}
               </Button>
               <Button
                 type="button"
@@ -250,7 +280,14 @@ function LoginRoute(): ReactNode {
                 disabled={signIn.isPending || magicLink.isPending}
                 data-testid="login-magic-link-submit"
               >
-                {magicLink.isPending ? "Sending…" : "Email me a link"}
+                {magicLink.isPending ? (
+                  <Trans id="login.magicLink.pending" message="Sending…" />
+                ) : (
+                  <Trans
+                    id="login.magicLink.submit"
+                    message="Email me a link"
+                  />
+                )}
               </Button>
             </div>
           </form>
@@ -264,7 +301,7 @@ function LoginRoute(): ReactNode {
             <div className="flex items-center gap-2">
               <Separator className="flex-1" />
               <span className="text-muted-foreground text-xs tracking-wide uppercase">
-                or
+                <Trans id="login.oauth.separator" message="or" />
               </span>
               <Separator className="flex-1" />
             </div>
@@ -276,7 +313,11 @@ function LoginRoute(): ReactNode {
                 data-testid={`login-oauth-${key}`}
               >
                 <a href={`/_plumix/auth/oauth/${key}/start`}>
-                  Continue with {label}
+                  <Trans
+                    id="login.oauth.continueWith"
+                    message="Continue with {label}"
+                    values={{ label }}
+                  />
                 </a>
               </Button>
             ))}

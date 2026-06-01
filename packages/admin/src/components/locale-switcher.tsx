@@ -6,6 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select.js";
+import { useLingui } from "@lingui/react";
 
 import type { PlumixManifest } from "@plumix/core/manifest";
 
@@ -20,12 +21,15 @@ export function LocaleSwitcher({
   manifest,
   onSelect,
 }: LocaleSwitcherProps): ReactNode {
+  const { i18n } = useLingui();
   const locales = manifest.i18n?.locales ?? [];
   return (
     <Select value={currentCode} onValueChange={onSelect}>
       <SelectTrigger
         data-testid="locale-switcher-trigger"
-        aria-label="Language"
+        aria-label={i18n._("profile.language.aria", undefined, {
+          message: "Language",
+        })}
       >
         <SelectValue />
       </SelectTrigger>

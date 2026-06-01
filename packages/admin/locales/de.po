@@ -8,6 +8,158 @@ msgstr ""
 "Language: de\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.dashboard"
+msgstr "Übersicht"
+
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.entries"
+msgstr "Einträge"
+
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.terms"
+msgstr "Begriffe"
+
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.users"
+msgstr "Benutzer"
+
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.settings"
+msgstr "Einstellungen"
+
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.profile"
+msgstr "Profil"
+
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.admin"
+msgstr "Verwaltung"
+
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.create"
+msgstr "Erstellen"
+
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.edit"
+msgstr "Bearbeiten"
+
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.addNew"
+msgstr "Neu hinzufügen"
+
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.editUser"
+msgstr "Benutzer bearbeiten"
+
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.welcome"
+msgstr "Willkommen, {greeting}"
+
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.tagline"
+msgstr "Woran möchten Sie heute arbeiten?"
+
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.tile.description"
+msgstr "{labelLower} schreiben, bearbeiten und veröffentlichen."
+
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.tile.browse"
+msgstr "{labelLower} durchsuchen"
+
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.title"
 msgstr "Noch keine Inhaltstypen"
+
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.empty.description"
+msgstr "Fügen Sie ein Plugin hinzu, das einen Beitragstyp registriert (z. B. <0>@plumix/plugin-blog</0>), damit dieser hier erscheint."
+
+#: src/components/shell/user-menu.tsx
+msgid "menu.profile"
+msgstr "Profil"
+
+#: src/components/shell/user-menu.tsx
+msgid "menu.settings"
+msgstr "Einstellungen"
+
+#: src/components/shell/user-menu.tsx
+msgid "menu.signOut"
+msgstr "Abmelden"
+
+#: src/components/shell/user-menu.tsx
+msgid "menu.signOut.pending"
+msgstr "Wird abgemeldet…"
+
+#: src/components/locale-switcher.tsx
+msgid "profile.language.aria"
+msgstr "Sprache"
+
+#: src/components/profile/language-card.tsx
+msgid "profile.language.title"
+msgstr "Sprache"
+
+#: src/components/profile/language-card.tsx
+msgid "profile.language.description"
+msgstr "Die Admin-Oberfläche wird in dieser Sprache angezeigt. Die Seite lädt nach dem Wechsel neu, damit die neuen Übersetzungen überall greifen."
+
+#: src/components/profile/language-card.tsx
+msgid "profile.language.error"
+msgstr "Sprache konnte nicht gewechselt werden. Bitte erneut versuchen."
+
+#: src/routes/_auth/login.tsx
+msgid "login.title"
+msgstr "Anmelden"
+
+#: src/routes/_auth/login.tsx
+msgid "login.description"
+msgstr "Verwenden Sie einen Passkey, lassen Sie sich einen einmaligen Anmeldelink schicken oder fahren Sie mit einem Anbieter fort."
+
+#: src/routes/_auth/login.tsx
+msgid "login.email.label"
+msgstr "E-Mail"
+
+#: src/routes/_auth/login.tsx
+msgid "login.passkey.submit"
+msgstr "Mit Passkey anmelden"
+
+#: src/routes/_auth/login.tsx
+msgid "login.passkey.pending"
+msgstr "Wird angemeldet…"
+
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.submit"
+msgstr "Per E-Mail-Link"
+
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.pending"
+msgstr "Wird gesendet…"
+
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.emailRequired"
+msgstr "Bitte zuerst eine E-Mail-Adresse oben eingeben."
+
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.sent.title"
+msgstr "Prüfen Sie Ihre E-Mails"
+
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.sent.description"
+msgstr "Falls für diese E-Mail-Adresse ein Konto existiert, haben wir einen Anmeldelink gesendet. Der Link läuft in 15 Minuten ab."
+
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.back"
+msgstr "Zurück"
+
+#: src/routes/_auth/login.tsx
+msgid "login.emailChange.success"
+msgstr "E-Mail bestätigt. Bitte mit der neuen Adresse anmelden."
+
+#: src/routes/_auth/login.tsx
+msgid "login.oauth.separator"
+msgstr "oder"
+
+#: src/routes/_auth/login.tsx
+msgid "login.oauth.continueWith"
+msgstr "Mit {label} fortfahren"
