@@ -36,10 +36,17 @@ function DashboardIndex(): ReactNode {
           data-testid="dashboard-welcome-heading"
           className="text-2xl font-semibold"
         >
-          Welcome, {greeting}
+          <Trans
+            id="dashboard.welcome"
+            message="Welcome, {greeting}"
+            values={{ greeting }}
+          />
         </h1>
         <p className="text-muted-foreground text-sm">
-          What would you like to work on today?
+          <Trans
+            id="dashboard.tagline"
+            message="What would you like to work on today?"
+          />
         </p>
       </div>
 
@@ -56,8 +63,13 @@ function DashboardIndex(): ReactNode {
                   </div>
                   <CardTitle>{label}</CardTitle>
                   <CardDescription>
-                    {pt.description ??
-                      `Write, edit, and publish ${labelLower}.`}
+                    {pt.description ?? (
+                      <Trans
+                        id="dashboard.tile.description"
+                        message="Write, edit, and publish {labelLower}."
+                        values={{ labelLower }}
+                      />
+                    )}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -68,7 +80,11 @@ function DashboardIndex(): ReactNode {
                       search={ENTRIES_LIST_DEFAULT_SEARCH}
                       data-testid={`dashboard-tile-${pt.name}-link`}
                     >
-                      Browse {labelLower}
+                      <Trans
+                        id="dashboard.tile.browse"
+                        message="Browse {labelLower}"
+                        values={{ labelLower }}
+                      />
                       <ArrowRight />
                     </Link>
                   </Button>
@@ -91,8 +107,11 @@ function DashboardIndex(): ReactNode {
                 />
               </EmptyTitle>
               <EmptyDescription>
-                Add a plugin that registers a post type (e.g.{" "}
-                <code>@plumix/plugin-blog</code>) to see it here.
+                <Trans
+                  id="dashboard.empty.description"
+                  message="Add a plugin that registers a post type (e.g. <0>@plumix/plugin-blog</0>) to see it here."
+                  components={{ 0: <code /> }}
+                />
               </EmptyDescription>
             </EmptyHeader>
           </Empty>

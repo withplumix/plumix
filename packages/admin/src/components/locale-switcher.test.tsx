@@ -1,10 +1,17 @@
+import { i18n } from "@lingui/core";
+import { I18nProvider } from "@lingui/react";
 import { cleanup, render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { PlumixManifest } from "@plumix/core/manifest";
 
 import { LocaleSwitcher } from "./locale-switcher.js";
+
+beforeEach(() => {
+  i18n.load({ en: {} });
+  i18n.activate("en");
+});
 
 afterEach(() => cleanup());
 
@@ -18,9 +25,13 @@ const enArManifest: PlumixManifest = {
   },
 };
 
+function renderInProvider(node: React.ReactNode) {
+  return render(<I18nProvider i18n={i18n}>{node}</I18nProvider>);
+}
+
 describe("LocaleSwitcher", () => {
   test("renders the trigger with the current locale's label", () => {
-    render(
+    renderInProvider(
       <LocaleSwitcher
         currentCode="ar"
         manifest={enArManifest}
@@ -33,7 +44,7 @@ describe("LocaleSwitcher", () => {
 
   test("calls onSelect with the chosen locale code when the user picks an option", async () => {
     const onSelect = vi.fn();
-    render(
+    renderInProvider(
       <LocaleSwitcher
         currentCode="en"
         manifest={enArManifest}

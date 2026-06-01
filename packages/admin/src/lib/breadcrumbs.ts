@@ -1,3 +1,5 @@
+import type { MessageDescriptor } from "@lingui/core";
+
 import {
   findEntryTypeBySlug,
   findPluginPageByPath,
@@ -6,12 +8,32 @@ import {
 } from "./manifest.js";
 
 export interface Crumb {
-  readonly label: string;
+  /**
+   * Either a `MessageDescriptor` (for chrome-owned labels like "Dashboard",
+   * "Entries") or a plain string (for manifest-derived labels like an
+   * entry type's plural). Slice 5/#674 widens manifest labels to descriptors
+   * too — when that lands, this type can narrow to `MessageDescriptor`.
+   */
+  readonly label: string | MessageDescriptor;
   /** Absolute admin path for non-leaf crumbs that link to a real list
    *  page. Omitted for group labels (no list route exists) and for
    *  the leaf crumb. */
   readonly to?: string;
 }
+
+const M = {
+  dashboard: { id: "breadcrumb.dashboard", message: "Dashboard" },
+  entries: { id: "breadcrumb.entries", message: "Entries" },
+  terms: { id: "breadcrumb.terms", message: "Terms" },
+  users: { id: "breadcrumb.users", message: "Users" },
+  settings: { id: "breadcrumb.settings", message: "Settings" },
+  profile: { id: "breadcrumb.profile", message: "Profile" },
+  admin: { id: "breadcrumb.admin", message: "Admin" },
+  create: { id: "breadcrumb.create", message: "Create" },
+  edit: { id: "breadcrumb.edit", message: "Edit" },
+  addNew: { id: "breadcrumb.addNew", message: "Add new" },
+  editUser: { id: "breadcrumb.editUser", message: "Edit user" },
+} satisfies Record<string, MessageDescriptor>;
 
 /**
  * Pathname → breadcrumb trail. Resolves entry-type / taxonomy / settings
@@ -21,9 +43,9 @@ export interface Crumb {
  * (which only reads the leaf label).
  */
 export function pathToCrumbs(pathname: string): readonly Crumb[] {
-  if (pathname === "/") return [{ label: "Dashboard" }];
+  if (pathname === "/") return [{ label: M.dashboard }];
   const parts = pathname.split("/").filter((p) => p.length > 0);
-  if (parts.length === 0) return [{ label: "Dashboard" }];
+  if (parts.length === 0) return [{ label: M.dashboard }];
 
   switch (parts[0]) {
     case "entries":
@@ -35,47 +57,47 @@ export function pathToCrumbs(pathname: string): readonly Crumb[] {
     case "settings":
       return settingsCrumbs(parts);
     case "profile":
-      return [{ label: "Profile" }];
+      return [{ label: M.profile }];
     case "pages":
       return pluginPagesCrumbs(parts);
     default:
-      return [{ label: "Admin" }];
+      return [{ label: M.admin }];
   }
 }
 
 function entriesCrumbs(parts: readonly string[]): readonly Crumb[] {
   const slug = parts[1];
-  if (slug === undefined) return [{ label: "Entries" }];
+  if (slug === undefined) return [{ label: M.entries }];
   const entry = findEntryTypeBySlug(slug);
   const label = entry?.labels?.plural ?? entry?.label ?? slug;
   const list: Crumb = { label, to: `/entries/${slug}` };
   if (parts[2] === "create")
-    return [{ label: "Entries" }, list, { label: "Create" }];
+    return [{ label: M.entries }, list, { label: M.create }];
   if (parts[3] === "edit")
-    return [{ label: "Entries" }, list, { label: "Edit" }];
-  return [{ label: "Entries" }, { ...list, to: undefined }];
+    return [{ label: M.entries }, list, { label: M.edit }];
+  return [{ label: M.entries }, { ...list, to: undefined }];
 }
 
 function taxonomiesCrumbs(parts: readonly string[]): readonly Crumb[] {
   const name = parts[1];
-  if (name === undefined) return [{ label: "Terms" }];
+  if (name === undefined) return [{ label: M.terms }];
   const tax = findTermTaxonomyByName(name);
   const label = tax?.label ?? name;
   const singular = (tax?.labels?.singular ?? label).toLowerCase();
   const list: Crumb = { label, to: `/terms/${name}` };
   if (parts[2] === "create")
-    return [{ label: "Terms" }, list, { label: `Create ${singular}` }];
+    return [{ label: M.terms }, list, { label: `Create ${singular}` }];
   if (parts[3] === "edit")
-    return [{ label: "Terms" }, list, { label: `Edit ${singular}` }];
-  return [{ label: "Terms" }, { ...list, to: undefined }];
+    return [{ label: M.terms }, list, { label: `Edit ${singular}` }];
+  return [{ label: M.terms }, { ...list, to: undefined }];
 }
 
 function usersCrumbs(parts: readonly string[]): readonly Crumb[] {
-  if (parts[1] === undefined) return [{ label: "Users" }];
-  const usersList: Crumb = { label: "Users", to: "/users" };
-  if (parts[1] === "create") return [usersList, { label: "Add new" }];
-  if (parts[2] === "edit") return [usersList, { label: "Edit user" }];
-  return [{ label: "Users" }];
+  if (parts[1] === undefined) return [{ label: M.users }];
+  const usersList: Crumb = { label: M.users, to: "/users" };
+  if (parts[1] === "create") return [usersList, { label: M.addNew }];
+  if (parts[2] === "edit") return [usersList, { label: M.editUser }];
+  return [{ label: M.users }];
 }
 
 function pluginPagesCrumbs(parts: readonly string[]): readonly Crumb[] {
@@ -96,10 +118,10 @@ function pluginPagesCrumbs(parts: readonly string[]): readonly Crumb[] {
 
 function settingsCrumbs(parts: readonly string[]): readonly Crumb[] {
   const name = parts[1];
-  if (name === undefined) return [{ label: "Settings" }];
+  if (name === undefined) return [{ label: M.settings }];
   const page = findSettingsPageByName(name);
   return [
-    { label: "Settings", to: "/settings" },
+    { label: M.settings, to: "/settings" },
     { label: page?.label ?? name },
   ];
 }
