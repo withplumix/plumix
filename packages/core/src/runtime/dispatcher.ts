@@ -1,6 +1,7 @@
 import type { AppContext } from "../context/app.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { PlumixApp } from "./app.js";
+import { readSessionCookie } from "../auth/cookies.js";
 import { hasCsrfHeader, hasMatchingOrigin } from "../auth/csrf.js";
 import {
   handleDeviceCodeRequest,
@@ -376,7 +377,13 @@ async function serveAdmin(ctx: AppContext): Promise<Response> {
   const contentType = upstream.headers.get("content-type")?.toLowerCase();
   if (!contentType?.includes("text/html")) return upstream;
 
-  const auth = await ctx.authenticator.authenticate(ctx.request, ctx.db);
+  // Only run the authenticator when there's actually a session cookie to
+  // validate — Bearer-only requests on the shell path would otherwise bump
+  // `api_tokens.lastUsedAt` on every cross-site GET navigation. Anonymous
+  // visitors hit the cookie + Accept-Language tiers of the resolver chain.
+  const auth = readSessionCookie(ctx.request)
+    ? await ctx.authenticator.authenticate(ctx.request, ctx.db)
+    : null;
   const locale = resolveAdminShellLocale({
     request: ctx.request,
     user: auth?.user ?? null,
@@ -391,6 +398,9 @@ async function serveAdmin(ctx: AppContext): Promise<Response> {
   headers.delete("content-length");
   headers.delete("transfer-encoding");
   headers.delete("etag");
+  // Body varies per request locale; keep it out of shared caches.
+  headers.set("cache-control", "private, no-cache");
+  headers.append("vary", "cookie, accept-language");
 
   const html = await upstream.text();
   return new Response(rewriteAdminShellLangDir(html, locale), {

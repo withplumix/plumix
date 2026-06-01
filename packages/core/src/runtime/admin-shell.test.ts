@@ -153,6 +153,24 @@ describe("resolveAdminShellLocale", () => {
     expect(resolved.code).toBe("zh-TW");
   });
 
+  test("Accept-Language iteration is capped — pathologically long header doesn't blow up the loop", () => {
+    // 5000 unmatched entries followed by the real match. With the cap (~16),
+    // the loop short-circuits long before reaching the match — first-time
+    // visitor with a hostile header falls through to the site default rather
+    // than burning CPU on Intl.Locale allocations.
+    const hostile = `${Array.from({ length: 5000 }, () => "zz-ZZ").join(",")},ar`;
+    const request = new Request("https://cms.example/_plumix/admin/", {
+      headers: { "accept-language": hostile },
+    });
+    const resolved = resolveAdminShellLocale({
+      request,
+      user: null,
+      i18n: enArFr,
+    });
+
+    expect(resolved.code).toBe("en");
+  });
+
   test("cookie still wins over Accept-Language when both are present", () => {
     const request = new Request("https://cms.example/_plumix/admin/", {
       headers: { cookie: "plumix-locale=fr", "accept-language": "ar" },

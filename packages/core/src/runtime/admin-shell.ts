@@ -3,9 +3,11 @@ import type { ResolvedI18n, ResolvedLocale } from "../i18n/locale-registry.js";
 import { readSessionCookie } from "../auth/cookies.js";
 import { findEnabledLocale } from "../i18n/locale-registry.js";
 
-// Scoped `Path=/_plumix/admin/` at write-time so it never reaches public
-// routes — keeps public HTML identical across visitors for cache layers.
 const ADMIN_LOCALE_COOKIE = "plumix-locale";
+
+// Real Accept-Language headers carry 1–4 entries; cap defensively so a
+// hostile client can't burn CPU on N×`Intl.Locale` allocations per GET.
+const MAX_ACCEPT_LANGUAGE_ENTRIES = 16;
 
 export function rewriteAdminShellLangDir(
   html: string,
@@ -17,17 +19,11 @@ export function rewriteAdminShellLangDir(
   );
 }
 
-// Admin shell locale chain: explicit signals first, then Accept-Language as
-// a first-time-visitor convenience (emdash parity). `?lang=` query is a
-// one-shot override; `user.meta.locale` is WP `get_user_locale` parity for
-// the authenticated path; `plumix-locale` cookie is WP `wp_lang` parity for
-// anonymous visitors that have already picked. Accept-Language closes the
-// "first-time visitor sees the site default" gap — uncached admin path, so
-// the public-frontend cache invariant from slice 2 is unaffected.
-//
-// `i18n.resolveLocale` operator override is intentionally NOT consulted;
-// admin uses this chain, the public-route resolver is the place to layer
-// custom resolution.
+// `?lang=` query → `user.meta.locale` (WP `get_user_locale` parity) →
+// `plumix-locale` cookie (WP `wp_lang` parity) → Accept-Language (emdash
+// 3-tier matcher) → site default. `i18n.resolveLocale` override is
+// intentionally NOT consulted here; admin uses this chain, the public-route
+// resolver is the place to layer custom resolution.
 export function resolveAdminShellLocale(args: {
   readonly request: Request;
   readonly user: AuthenticatedUser | null;
@@ -61,9 +57,9 @@ function matchAcceptLanguage(
 ): ResolvedLocale | null {
   const header = request.headers.get("accept-language");
   if (!header) return null;
-  const scriptMap = buildScriptMap(i18n);
-  const baseMap = buildBaseMap(i18n);
-  for (const entry of header.split(",")) {
+  const { scriptMap, baseMap } = buildFallbackMaps(i18n);
+  const entries = header.split(",", MAX_ACCEPT_LANGUAGE_ENTRIES);
+  for (const entry of entries) {
     const raw = entry.split(";")[0]?.trim();
     if (!raw) continue;
     const matched = matchTag(raw, i18n, scriptMap, baseMap);
@@ -78,52 +74,39 @@ function matchTag(
   scriptMap: Map<string, ResolvedLocale>,
   baseMap: Map<string, ResolvedLocale>,
 ): ResolvedLocale | null {
-  let canonical: string;
   let locale: Intl.Locale;
   try {
     locale = new Intl.Locale(raw);
-    canonical = locale.baseName;
   } catch {
     return null;
   }
-  const exact = findEnabledLocale(i18n, canonical);
+  const exact = findEnabledLocale(i18n, locale.baseName);
   if (exact) return exact;
   if (locale.script) {
-    const key = `${locale.language}-${locale.script}`.toLowerCase();
-    const scripted = scriptMap.get(key);
+    const scripted = scriptMap.get(
+      `${locale.language}-${locale.script}`.toLowerCase(),
+    );
     if (scripted) return scripted;
   }
-  const base = canonical.split("-")[0]?.toLowerCase();
-  if (base) {
-    const based = baseMap.get(base);
-    if (based) return based;
-  }
-  return null;
+  return baseMap.get(locale.language) ?? null;
 }
 
-function buildScriptMap(i18n: ResolvedI18n): Map<string, ResolvedLocale> {
-  const map = new Map<string, ResolvedLocale>();
+function buildFallbackMaps(i18n: ResolvedI18n): {
+  scriptMap: Map<string, ResolvedLocale>;
+  baseMap: Map<string, ResolvedLocale>;
+} {
+  // Registry codes were canonicalized through `new Intl.Locale(...)` at boot
+  // (`resolveLocales`), so `maximize()` here cannot throw on a valid entry.
+  const scriptMap = new Map<string, ResolvedLocale>();
+  const baseMap = new Map<string, ResolvedLocale>();
   for (const l of i18n.locales) {
     if (!l.enabled) continue;
-    let max: Intl.Locale;
-    try {
-      max = new Intl.Locale(l.code).maximize();
-    } catch {
-      continue;
+    const max = new Intl.Locale(l.code).maximize();
+    if (max.script) {
+      const key = `${max.language}-${max.script}`.toLowerCase();
+      if (!scriptMap.has(key)) scriptMap.set(key, l);
     }
-    if (!max.script) continue;
-    const key = `${max.language}-${max.script}`.toLowerCase();
-    if (!map.has(key)) map.set(key, l);
+    if (!baseMap.has(max.language)) baseMap.set(max.language, l);
   }
-  return map;
-}
-
-function buildBaseMap(i18n: ResolvedI18n): Map<string, ResolvedLocale> {
-  const map = new Map<string, ResolvedLocale>();
-  for (const l of i18n.locales) {
-    if (!l.enabled) continue;
-    const base = l.code.split("-")[0]?.toLowerCase();
-    if (base && !map.has(base)) map.set(base, l);
-  }
-  return map;
+  return { scriptMap, baseMap };
 }

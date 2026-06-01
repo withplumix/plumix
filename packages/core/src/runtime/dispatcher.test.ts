@@ -110,23 +110,6 @@ describe("dispatcher — routing", () => {
     expect(await response.text()).toContain('<html lang="ar" dir="rtl">');
   });
 
-  test("anonymous GET /_plumix/admin rewrites <html lang dir> to the site default", async () => {
-    const assets = htmlAssets(
-      '<!doctype html><html lang="en"><head></head><body></body></html>',
-    );
-    const h = await createDispatcherHarness({
-      assets,
-      i18n: { defaultLocale: "ar", locales: ["ar", "en"] },
-    });
-
-    const response = await h.dispatch(
-      plumixRequest("/_plumix/admin/", { method: "GET" }),
-    );
-
-    expect(response.status).toBe(200);
-    expect(await response.text()).toContain('<html lang="ar" dir="rtl">');
-  });
-
   test("anonymous GET /_plumix/admin honors Accept-Language for first-time visitors (3-tier matcher)", async () => {
     const assets = htmlAssets(
       '<!doctype html><html lang="en"><head></head><body></body></html>',
@@ -177,6 +160,48 @@ describe("dispatcher — routing", () => {
     expect(response.headers.get("etag")).toBeNull();
     // content-type must survive — browser uses it to parse the new body.
     expect(response.headers.get("content-type")).toBe("text/html");
+  });
+
+  test("admin shell response sets cache-control + vary so locale-varying body isn't shared-cached", async () => {
+    const assets = htmlAssets(
+      '<!doctype html><html lang="en"><head></head><body></body></html>',
+    );
+    const h = await createDispatcherHarness({ assets });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/admin/", { method: "GET" }),
+    );
+
+    expect(response.headers.get("cache-control")).toBe("private, no-cache");
+    const vary = response.headers.get("vary")?.toLowerCase() ?? "";
+    expect(vary).toContain("cookie");
+    expect(vary).toContain("accept-language");
+  });
+
+  test("admin shell does NOT invoke the authenticator when only a Bearer token is present (no api_tokens.lastUsedAt bump)", async () => {
+    let authenticated = false;
+    const assets = htmlAssets(
+      '<!doctype html><html lang="en"><head></head><body></body></html>',
+    );
+    const h = await createDispatcherHarness({
+      assets,
+      authenticator: {
+        authenticate: () => {
+          authenticated = true;
+          return Promise.resolve(null);
+        },
+      },
+    });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/admin/", {
+        method: "GET",
+        headers: { authorization: "Bearer pl_pat_irrelevant" },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(authenticated).toBe(false);
   });
 });
 

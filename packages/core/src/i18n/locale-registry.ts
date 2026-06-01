@@ -69,11 +69,24 @@ function normalizeEntry(entry: string | LocaleInput): ResolvedLocale {
   return {
     code: locale.toString(),
     label: input.label ?? labelFor(locale),
-    direction:
+    direction: validateDirection(
       input.direction ??
-      (locale as unknown as LocaleWithTextInfo).getTextInfo().direction,
+        (locale as unknown as LocaleWithTextInfo).getTextInfo().direction,
+      input.code,
+    ),
     enabled: input.enabled ?? true,
   };
+}
+
+// `direction` is the only registry field that flows raw into rendered HTML
+// (`<html dir="${direction}">`). Validate at the type seam so a misuse of the
+// union via `as any` can't punch out of the attribute.
+function validateDirection(raw: unknown, code: string): LocaleDirection {
+  if (raw === "ltr" || raw === "rtl") return raw;
+  // eslint-disable-next-line no-restricted-syntax -- TODO migrate to a named factory in a follow-up slice
+  throw new Error(
+    `plumix(): i18n locale ${JSON.stringify(code)} direction must be "ltr" or "rtl", got ${JSON.stringify(raw)}.`,
+  );
 }
 
 function canonicalize(raw: string): Intl.Locale {
