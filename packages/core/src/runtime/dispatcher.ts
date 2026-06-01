@@ -29,6 +29,10 @@ import { withUser } from "../context/app.js";
 import { matchRoute } from "../route/match.js";
 import { renderErrorThroughTheme } from "../route/render/render-template.js";
 import { resolvePublicRoute } from "../route/resolve.js";
+import {
+  resolveAdminShellLocale,
+  rewriteAdminShellLangDir,
+} from "./admin-shell.js";
 import { forbidden, jsonResponse, methodNotAllowed, notFound } from "./http.js";
 
 const RPC_PREFIX = "/_plumix/rpc";
@@ -368,5 +372,29 @@ async function serveAdmin(ctx: AppContext): Promise<Response> {
   // `not_found_handling: "single-page-application"` and miniflare's
   // local emulation.
   const indexUrl = new URL(`${ADMIN_PREFIX}/`, ctx.request.url);
-  return ctx.assets.fetch(new Request(indexUrl, ctx.request));
+  const upstream = await ctx.assets.fetch(new Request(indexUrl, ctx.request));
+  const contentType = upstream.headers.get("content-type")?.toLowerCase();
+  if (!contentType?.includes("text/html")) return upstream;
+
+  const auth = await ctx.authenticator.authenticate(ctx.request, ctx.db);
+  const locale = resolveAdminShellLocale({
+    request: ctx.request,
+    user: auth?.user ?? null,
+    i18n: ctx.i18n,
+  });
+
+  // Rewrite invalidates upstream body-shape headers: encoding stops applying
+  // (`upstream.text()` already decompressed), length is wrong (the new tag is
+  // longer), etag refers to the original bytes.
+  const headers = new Headers(upstream.headers);
+  headers.delete("content-encoding");
+  headers.delete("content-length");
+  headers.delete("etag");
+
+  const html = await upstream.text();
+  return new Response(rewriteAdminShellLangDir(html, locale), {
+    status: upstream.status,
+    statusText: upstream.statusText,
+    headers,
+  });
 }

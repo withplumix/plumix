@@ -83,7 +83,90 @@ describe("dispatcher — routing", () => {
     expect(response.status).toBe(404);
     expect(response.headers.get("x-plumix-hint")).toBe("unknown-plumix-route");
   });
+
+  test("authenticated GET /_plumix/admin rewrites <html lang dir> to user.meta.locale", async () => {
+    const assets = htmlAssets(
+      '<!doctype html><html lang="en"><head></head><body></body></html>',
+    );
+    const h = await createDispatcherHarness({
+      assets,
+      i18n: { defaultLocale: "en", locales: ["en", "ar"] },
+    });
+    const admin = await h.seedUser("admin");
+    const { users } = await import("../db/schema/users.js");
+    const { eq } = await import("drizzle-orm");
+    await h.db
+      .update(users)
+      .set({ meta: { locale: "ar" } })
+      .where(eq(users.id, admin.id));
+
+    const request = await h.authenticateRequest(
+      plumixRequest("/_plumix/admin/", { method: "GET" }),
+      admin.id,
+    );
+    const response = await h.dispatch(request);
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('<html lang="ar" dir="rtl">');
+  });
+
+  test("anonymous GET /_plumix/admin rewrites <html lang dir> to the site default", async () => {
+    const assets = htmlAssets(
+      '<!doctype html><html lang="en"><head></head><body></body></html>',
+    );
+    const h = await createDispatcherHarness({
+      assets,
+      i18n: { defaultLocale: "ar", locales: ["ar", "en"] },
+    });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/admin/", { method: "GET" }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('<html lang="ar" dir="rtl">');
+  });
+
+  test("admin shell rewrite strips upstream content-encoding / content-length / etag (body no longer matches)", async () => {
+    const indexBody =
+      '<!doctype html><html lang="en"><head></head><body></body></html>';
+    const assets = {
+      fetch: (): Promise<Response> =>
+        Promise.resolve(
+          new Response(indexBody, {
+            status: 200,
+            headers: {
+              "content-type": "text/html",
+              "content-encoding": "gzip",
+              "content-length": String(indexBody.length),
+              etag: '"upstream-original"',
+            },
+          }),
+        ),
+    };
+    const h = await createDispatcherHarness({ assets });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/admin/", { method: "GET" }),
+    );
+
+    expect(response.headers.get("content-encoding")).toBeNull();
+    expect(response.headers.get("content-length")).toBeNull();
+    expect(response.headers.get("etag")).toBeNull();
+  });
 });
+
+function htmlAssets(body: string): { fetch: () => Promise<Response> } {
+  return {
+    fetch: (): Promise<Response> =>
+      Promise.resolve(
+        new Response(body, {
+          status: 200,
+          headers: { "content-type": "text/html" },
+        }),
+      ),
+  };
+}
 
 describe("dispatcher — CSRF", () => {
   test("POST /_plumix/rpc/post.list without the X-Plumix-Request header is forbidden", async () => {
