@@ -65,11 +65,15 @@ async function runExtractCheck(
   for (const content of snapshot.values()) {
     for (const id of activeMsgids(content)) knownIds.add(id);
   }
-  // Not forwarding `--clean`: that would obsolete hand-authored entries
-  // (e.g., descriptors not discoverable by the macro extractor) and
-  // false-positive every gate run. We catch new msgids; deletions are
-  // caught by code review on the source change.
-  const forwarded = rest.filter((a) => a !== "--check");
+  // Forward `--clean` so source-side deletions also count as drift: a
+  // msgid removed from source becomes `#~ obsolete` in .po, which
+  // `activeMsgids` filters out — the resulting "missing from active
+  // set" surfaces in the drift list. INVARIANT: every msgid in the
+  // committed catalog must be reachable from extractor-visible source
+  // (a Lingui macro call or `<Trans>` JSX). Hand-authoring a msgid
+  // that isn't reachable from extractor input would cause `--clean`
+  // to demote it on every gate run.
+  const forwarded = ["--clean", ...rest.filter((a) => a !== "--check")];
   try {
     await i18nDeps.spawnInherit(
       process.execPath,
@@ -77,13 +81,24 @@ async function runExtractCheck(
       { cwd: ctx.cwd },
     );
     const introduced = new Set<string>();
+    const removed = new Set<string>();
+    const afterIds = new Set<string>();
     for (const path of listPoFiles(localesDir)) {
       for (const id of activeMsgids(readFileSync(path, "utf8"))) {
+        afterIds.add(id);
         if (!knownIds.has(id)) introduced.add(id);
       }
     }
-    if (introduced.size > 0) {
-      throw CliError.i18nCheckDrift({ ids: [...introduced].sort() });
+    for (const id of knownIds) {
+      if (!afterIds.has(id)) removed.add(id);
+    }
+    if (introduced.size > 0 || removed.size > 0) {
+      throw CliError.i18nCheckDrift({
+        ids: [
+          ...[...introduced].sort().map((id) => `+ ${id}`),
+          ...[...removed].sort().map((id) => `- ${id}`),
+        ],
+      });
     }
   } finally {
     for (const [path, content] of snapshot) writeFileSync(path, content);

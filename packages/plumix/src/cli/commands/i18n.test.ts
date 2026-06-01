@@ -138,6 +138,45 @@ describe("i18nCommand", () => {
       );
     });
 
+    test("forwards `--clean` so source-side deletions surface as drift", async () => {
+      const localesDir = join(dir, "locales");
+      mkdirSync(localesDir, { recursive: true });
+      const enPo = join(localesDir, "en.po");
+      // Catalog starts with `removed.in.source` active. Extract with
+      // --clean would demote it to `#~` obsolete (msgid no longer in
+      // source); `activeMsgids` filters obsoletes, so the gate sees
+      // the id as removed.
+      writeFileSync(
+        enPo,
+        'msgid ""\nmsgstr "header"\n\nmsgid "removed.in.source"\nmsgstr ""\n',
+      );
+
+      vi.spyOn(i18nDeps, "resolveLinguiCliBin").mockReturnValue(
+        "/fake/lingui.js",
+      );
+      const spawn = vi
+        .spyOn(i18nDeps, "spawnInherit")
+        .mockImplementation(() => {
+          // Simulate lingui --clean output: msgid demoted to obsolete.
+          writeFileSync(
+            enPo,
+            'msgid ""\nmsgstr "header"\n\n#~ msgid "removed.in.source"\n#~ msgstr ""\n',
+          );
+          return Promise.resolve();
+        });
+
+      await expect(
+        i18nCommand.run(ctx({ cwd: dir, argv: ["extract", "--check"] })),
+      ).rejects.toThrow(/- removed\.in\.source/);
+
+      // Verify `--clean` was forwarded to lingui.
+      expect(spawn).toHaveBeenCalledWith(
+        process.execPath,
+        ["/fake/lingui.js", "extract", "--clean"],
+        { cwd: dir },
+      );
+    });
+
     test("treats a new .po written by extract as drift and cleans it up", async () => {
       const localesDir = join(dir, "locales");
       mkdirSync(localesDir, { recursive: true });
@@ -162,7 +201,7 @@ describe("i18nCommand", () => {
       expect(existsSync(dePo)).toBe(false);
     });
 
-    test("strips `--check` before invoking lingui (the flag is plumix's own)", async () => {
+    test("strips `--check` and forwards `--clean` to lingui", async () => {
       const localesDir = join(dir, "locales");
       mkdirSync(localesDir, { recursive: true });
       writeFileSync(join(localesDir, "en.po"), 'msgid ""\nmsgstr "header"\n');
@@ -176,10 +215,11 @@ describe("i18nCommand", () => {
 
       await i18nCommand.run(ctx({ cwd: dir, argv: ["extract", "--check"] }));
 
-      // Lingui itself must never see `--check` (plumix's flag).
+      // `--check` is plumix's own flag (never reaches lingui). `--clean`
+      // is forwarded so source-side deletions count as drift.
       expect(spawn).toHaveBeenCalledWith(
         process.execPath,
-        ["/fake/lingui.js", "extract"],
+        ["/fake/lingui.js", "extract", "--clean"],
         { cwd: dir },
       );
     });
