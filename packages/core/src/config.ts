@@ -2,6 +2,7 @@ import type { HtmlAllowlistOverride } from "@plumix/blocks";
 
 import type { PlumixAuthConfig } from "./auth/config.js";
 import type { Mailer } from "./auth/mailer/types.js";
+import type { I18nInput, ResolvedI18n } from "./i18n/locale-registry.js";
 import type { PluginDescriptor } from "./plugin/define.js";
 import type { RuntimeAdapter } from "./runtime/adapter.js";
 import type {
@@ -11,6 +12,7 @@ import type {
   ObjectStorage,
 } from "./runtime/slots.js";
 import type { ThemeDescriptor } from "./theme.js";
+import { resolveLocales } from "./i18n/locale-registry.js";
 
 /**
  * Re-exported from `./theme.js` so existing `import { Theme } from
@@ -45,6 +47,7 @@ export interface PlumixConfigInput {
   readonly mailer?: Mailer;
   readonly theme: ThemeDescriptor;
   readonly plugins?: readonly AnyPluginDescriptor[];
+  readonly i18n?: I18nInput;
   /**
    * Block-system configuration. Today only exposes the operator-
    * configurable `core/html` allowlist override; future block-level
@@ -70,6 +73,7 @@ export interface PlumixConfig {
   readonly mailer?: Mailer;
   readonly theme: ThemeDescriptor;
   readonly plugins: readonly AnyPluginDescriptor[];
+  readonly i18n: ResolvedI18n;
   readonly blocks?: {
     readonly htmlAllowlist?: HtmlAllowlistOverride;
   };
@@ -97,6 +101,9 @@ export function plumix(config: PlumixConfigInput): PlumixConfig {
     mailer: config.mailer,
     theme: config.theme,
     plugins: config.plugins ?? [],
+    i18n: resolveLocales(
+      config.i18n ?? { defaultLocale: "en", locales: ["en"] },
+    ),
     blocks: config.blocks,
     vite: config.vite,
   };

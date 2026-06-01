@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { PlumixConfig } from "../config.js";
 import type { PluginDescriptor } from "../plugin/define.js";
 import { auth } from "../auth/config.js";
+import { resolveLocales } from "../i18n/locale-registry.js";
 import { defineTheme } from "../theme.js";
 import { generateSchemaSource } from "./schema-codegen.js";
 
@@ -14,6 +15,7 @@ const baseConfig: PlumixConfig = {
   }),
   theme: defineTheme({ templates: { index: () => null } }),
   plugins: [],
+  i18n: resolveLocales({ defaultLocale: "en", locales: ["en"] }),
 };
 
 function pluginWithSchemaModule(

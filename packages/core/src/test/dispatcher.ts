@@ -12,6 +12,7 @@ import type {
   FilterName,
   FilterRest,
 } from "../hooks/types.js";
+import type { I18nInput } from "../i18n/locale-registry.js";
 import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type { PlumixApp } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
@@ -108,6 +109,7 @@ export interface CreateDispatcherHarnessOptions {
    */
   readonly bootstrapVia?: BootstrapVia;
   readonly theme?: ThemeDescriptor;
+  readonly i18n?: I18nInput;
   /**
    * Vite-emitted asset manifest. Tests that exercise the renderer's
    * `<link rel="stylesheet">` auto-injection pass a stub manifest here;
@@ -191,6 +193,7 @@ function withRequest(
     storage,
     imageDelivery: app.config.imageDelivery,
     mailer: app.config.mailer,
+    i18n: app.config.i18n,
     oauthProviders: app.oauthProviders,
     authenticator: app.authenticator,
     bootstrapAllowed: app.bootstrapAllowed,
@@ -221,6 +224,7 @@ export async function createDispatcherHarness(
     plugins: options.plugins,
     imageDelivery: options.imageDelivery,
     mailer: options.mailer,
+    i18n: options.i18n,
     theme: options.theme ?? defaultTestTheme,
   });
   const app = await buildApp(config, {

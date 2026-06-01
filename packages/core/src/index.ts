@@ -9,6 +9,7 @@ export * from "./context/index.js";
 export * from "./db/index.js";
 export * from "./db/schema/index.js";
 export * from "./hooks/index.js";
+export * from "./i18n/index.js";
 export * from "./plugin/index.js";
 export { isCurrentSource } from "./route/current.js";
 export type { CurrentSource, ResolvedEntity } from "./route/current.js";

@@ -9,6 +9,7 @@ import type { KnownCapability } from "../auth/rbac.js";
 import type * as coreSchema from "../db/schema/index.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { HookExecutor } from "../hooks/registry.js";
+import type { ResolvedI18n } from "../i18n/locale-registry.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { ResolvedEntity } from "../route/current.js";
 import type { OAuthProviderSummary } from "../runtime/app.js";
@@ -20,9 +21,14 @@ import type {
 } from "../runtime/slots.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
+import { resolveLocales } from "../i18n/locale-registry.js";
 
 const EMPTY_BLOCK_REGISTRY: BlockRegistry = createBlockRegistry([]);
 const EMPTY_MARK_LIST: readonly MarkSpec[] = Object.freeze([]);
+const DEFAULT_I18N: ResolvedI18n = resolveLocales({
+  defaultLocale: "en",
+  locales: ["en"],
+});
 
 export type CoreSchema = typeof coreSchema;
 
@@ -184,6 +190,7 @@ export interface AppContextBase<
    * a config-missing reason in that case.
    */
   readonly siteName?: string;
+  readonly i18n: ResolvedI18n;
   /**
    * Set by the public-route resolver after URL → entity matching;
    * `null` for non-public routes (admin, RPC, etc.) and on cold-start.
@@ -228,6 +235,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly storage?: ConnectedObjectStorage;
   readonly imageDelivery?: ImageDelivery;
   readonly mailer?: Mailer;
+  readonly i18n?: ResolvedI18n;
   readonly oauthProviders?: readonly OAuthProviderSummary[];
   readonly authenticator?: RequestAuthenticator;
   readonly bootstrapAllowed?: boolean;
@@ -326,6 +334,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     storage: args.storage,
     imageDelivery: args.imageDelivery,
     mailer: args.mailer,
+    i18n: args.i18n ?? DEFAULT_I18N,
     oauthProviders: args.oauthProviders ?? [],
     authenticator: args.authenticator ?? defaultAuthenticator(),
     bootstrapAllowed: args.bootstrapAllowed ?? false,
