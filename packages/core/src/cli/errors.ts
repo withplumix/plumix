@@ -12,7 +12,9 @@ type CliErrorCode =
   | "config_not_found_explicit"
   | "config_not_found_default"
   | "config_load_failed"
-  | "config_invalid";
+  | "config_invalid"
+  | "i18n_check_drift"
+  | "tooling_command_no_app";
 
 export class CliError extends Error {
   static {
@@ -185,6 +187,24 @@ export class CliError extends Error {
       "config_invalid",
       `Invalid config shape in ${ctx.configPath}`,
       "Default export must be the return value of plumix({ ... }) or defineConfig({ ... }).",
+      undefined,
+    );
+  }
+
+  static toolingCommandNoApp(ctx: { command: string }): CliError {
+    return new CliError(
+      "tooling_command_no_app",
+      `plumix ${ctx.command}: ctx.app is not available — tooling commands run without a config`,
+      "If this command needs the runtime app, dispatch it through the normal config-loading path.",
+      undefined,
+    );
+  }
+
+  static i18nCheckDrift(ctx: { ids: readonly string[] }): CliError {
+    return new CliError(
+      "i18n_check_drift",
+      `Translation catalogs out of sync — ${ctx.ids.length} new msgid(s) in source but not in committed .po:\n  ${ctx.ids.join("\n  ")}`,
+      "Run `plumix i18n extract` locally and commit the updated `.po` file(s).",
       undefined,
     );
   }

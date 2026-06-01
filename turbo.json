@@ -44,6 +44,10 @@
     },
     "attw": {
       "dependsOn": ["build"]
+    },
+    "i18n:check": {
+      "dependsOn": ["plumix#build"],
+      "cache": false
     }
   },
   "globalPassThroughEnv": [

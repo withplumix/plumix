@@ -113,6 +113,34 @@ export async function run(argv: readonly string[]): Promise<void> {
     return;
   }
 
+  // `i18n` is tooling — runs from any package directory (admin, plugins,
+  // themes) regardless of whether the cwd is a plumix consumer project.
+  // No `plumix.config.ts` means no app + no runtime; dispatch directly.
+  if (args.command === "i18n") {
+    const command = BUILT_IN_COMMANDS.get("i18n");
+    if (!command) throw CliError.unknownCommand({ command: args.command });
+    // Proxy so any future refactor that reads `ctx.app` from i18n fails
+    // loud at the access site rather than silently NPE'ing inside a
+    // method call. The cast is structural (`app` is non-optional on
+    // CommandContext); the runtime guard is the real safety net.
+    const sentinel = new Proxy(
+      {},
+      {
+        get(): never {
+          throw CliError.toolingCommandNoApp({ command: "i18n" });
+        },
+      },
+    ) as never;
+    await command.run({
+      app: sentinel,
+      cwd: args.cwd,
+      configPath: "",
+      argv: args.rest,
+      runtimeMigrate: {},
+    });
+    return;
+  }
+
   const loaded = await loadConfig(args.cwd, args.config);
   const runtimeModule = await loadRuntimeCommands(
     loaded.config.runtime,
