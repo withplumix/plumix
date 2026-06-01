@@ -1,4 +1,10 @@
 export {
+  formatDate,
+  formatNumber,
+  formatRelative,
+  type FormatRelativeOptions,
+} from "./format.js";
+export {
   CatalogParseError,
   createCatalogLoader,
   type CatalogJSON,

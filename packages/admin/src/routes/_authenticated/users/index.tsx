@@ -22,8 +22,9 @@ import {
   SelectValue,
 } from "@/components/ui/select.js";
 import { hasCap } from "@/lib/caps.js";
-import { formatRelative, toDate } from "@/lib/dates.js";
+import { toDate } from "@/lib/dates.js";
 import { orpc } from "@/lib/orpc.js";
+import { useFormatters } from "@/lib/use-formatters.js";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Plus, UserPlus } from "lucide-react";
@@ -159,9 +160,10 @@ function UsersListRoute(): ReactNode {
   // `beforeLoad` for defense-in-depth.
   const canInvite = hasCap(user.capabilities, "user:create");
 
+  const { formatRelative } = useFormatters();
   const columns = useMemo(
-    () => buildColumns({ currentUserId: user.id }),
-    [user.id],
+    () => buildColumns({ currentUserId: user.id, formatRelative }),
+    [user.id, formatRelative],
   );
 
   return (
@@ -241,8 +243,10 @@ type UserListRow = User & {
 
 function buildColumns({
   currentUserId,
+  formatRelative,
 }: {
   currentUserId: number;
+  formatRelative: (value: Date) => string;
 }): ColumnDef<UserListRow>[] {
   return [
     {

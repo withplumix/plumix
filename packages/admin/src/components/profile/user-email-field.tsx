@@ -22,9 +22,10 @@ import {
 } from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
 import { Label } from "@/components/ui/label.js";
-import { formatRelative, toDate } from "@/lib/dates.js";
+import { toDate } from "@/lib/dates.js";
 import { extractCode, extractReason } from "@/lib/orpc-errors.js";
 import { orpc } from "@/lib/orpc.js";
+import { useFormatters } from "@/lib/use-formatters.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -62,6 +63,7 @@ export function UserEmailField({
   canEdit: boolean;
 }): ReactNode {
   const queryClient = useQueryClient();
+  const { formatRelative } = useFormatters();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);

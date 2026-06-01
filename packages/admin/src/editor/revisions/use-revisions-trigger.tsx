@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { RevisionsSheet } from "@/editor/revisions/RevisionsSheet.js";
 import { orpc } from "@/lib/orpc.js";
-import { formatRelativeTime } from "@/lib/relative-time.js";
+import { useFormatters } from "@/lib/use-formatters.js";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface UseRevisionsTriggerInput {
@@ -24,12 +24,13 @@ export function useRevisionsTrigger({
   onPreview,
 }: UseRevisionsTriggerInput): ReactNode {
   const queryClient = useQueryClient();
+  const { formatRelative } = useFormatters();
   return useMemo<ReactNode>(() => {
     if (!enabled) return null;
     return (
       <RevisionsSheet
         entryId={entryId}
-        relativeTime={formatRelativeTime}
+        relativeTime={formatRelative}
         fetchPage={({ entryId, cursor }) =>
           orpc.entry.revisions.list.call({ entryId, cursor })
         }
@@ -66,5 +67,5 @@ export function useRevisionsTrigger({
         }}
       />
     );
-  }, [entryId, enabled, onPreview, queryClient]);
+  }, [entryId, enabled, onPreview, queryClient, formatRelative]);
 }

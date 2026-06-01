@@ -27,6 +27,7 @@ import { extractCode, extractReason } from "@/lib/orpc-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { PasskeyError } from "@/lib/passkey-errors.js";
 import { registerWithPasskey } from "@/lib/passkey.js";
+import { useFormatters } from "@/lib/use-formatters.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 // Wire shape from `auth.credentials.list`. Mirrors the columns the RPC
@@ -146,6 +147,7 @@ interface PasskeyRowProps {
 }
 
 function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
+  const { formatDate } = useFormatters();
   const createdAt = toDate(cred.createdAt);
   const lastUsedAt = toDate(cred.lastUsedAt);
   const [editing, setEditing] = useState(false);
@@ -352,16 +354,6 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
       </AlertDialog>
     </li>
   );
-}
-
-// Server returns ISO strings for timestamps; date-format helper centralises
-// the consistent short form across this card.
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  }).format(date);
 }
 
 function formatTransport(cred: PasskeyWire): string | null {
