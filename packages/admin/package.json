@@ -8,6 +8,8 @@
     "clean": "git clean -xdf .cache .turbo dist node_modules playwright-report test-results",
     "dev": "vite",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path .prettierignore",
+    "i18n:extract": "lingui extract",
+    "i18n:compile": "lingui compile --namespace es",
     "lint": "eslint",
     "test": "vitest run",
     "test:e2e": "playwright test",
@@ -46,6 +48,8 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.2",
+    "@lingui/cli": "^6.2.0",
+    "@lingui/format-po": "^6.2.0",
     "@playwright/test": "catalog:",
     "@plumix/blocks": "workspace:*",
     "@plumix/core": "workspace:*",

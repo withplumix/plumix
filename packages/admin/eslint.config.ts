@@ -6,5 +6,7 @@ import { reactConfig } from "@plumix/eslint-config/react";
 export default defineConfig(baseConfig, reactConfig, {
   // Vendored shadcn/ui primitives — kept verbatim so `shadcn diff` upgrades
   // don't merge-conflict. Lint these like we lint node_modules: we don't.
-  ignores: ["src/components/ui/**", "src/hooks/use-mobile.ts"],
+  // Compiled Lingui catalogs are generated; their `/*eslint-disable*/`
+  // header trips the unused-disable-directive rule.
+  ignores: ["src/components/ui/**", "src/hooks/use-mobile.ts", "locales/**"],
 });

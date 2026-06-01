@@ -7,159 +7,248 @@ msgstr ""
 "X-Generator: hand-authored (slice 3 tracer; slice 6 wires plumix i18n compile)\n"
 "Language: de\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
 
+#. Hand-maintained: defined in src/lib/breadcrumbs.ts as a plain
+#. descriptor (no macro), so `lingui extract` cannot discover it.
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
-msgid "breadcrumb.dashboard"
-msgstr "Übersicht"
 
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
-msgid "breadcrumb.entries"
-msgstr "Einträge"
 
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
-msgid "breadcrumb.terms"
-msgstr "Begriffe"
 
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
-msgid "breadcrumb.users"
-msgstr "Benutzer"
 
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
-msgid "breadcrumb.settings"
-msgstr "Einstellungen"
 
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
-msgid "breadcrumb.profile"
-msgstr "Profil"
 
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
-msgid "breadcrumb.admin"
-msgstr "Verwaltung"
 
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
-msgid "breadcrumb.create"
-msgstr "Erstellen"
 
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
-msgid "breadcrumb.edit"
-msgstr "Bearbeiten"
 
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.empty.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.back"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.tile.browse"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.sent.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.oauth.continueWith"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/language-card.tsx
+msgid "profile.language.error"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.email.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.emailChange.success"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.submit"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.emailRequired"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.sent.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/locale-switcher.tsx
+msgid "profile.language.aria"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/language-card.tsx
+msgid "profile.language.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.empty.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/__root.tsx
+msgid "notFound.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.oauth.separator"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/shell/user-menu.tsx
+msgid "menu.profile"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/shell/user-menu.tsx
+msgid "menu.settings"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.passkey.submit"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/shell/user-menu.tsx
+msgid "menu.signOut"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.passkey.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/shell/user-menu.tsx
+msgid "menu.signOut.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/__root.tsx
+msgid "notFound.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.welcome"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.tagline"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.tile.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/language-card.tsx
+msgid "profile.language.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.addNew"
 msgstr "Neu hinzufügen"
 
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.admin"
+msgstr "Verwaltung"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.create"
+msgstr "Erstellen"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.dashboard"
+msgstr "Übersicht"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.edit"
+msgstr "Bearbeiten"
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.editUser"
 msgstr "Benutzer bearbeiten"
 
-#: src/routes/_authenticated/index.tsx
-msgid "dashboard.welcome"
-msgstr "Willkommen, {greeting}"
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.entries"
+msgstr "Einträge"
 
-#: src/routes/_authenticated/index.tsx
-msgid "dashboard.tagline"
-msgstr "Woran möchten Sie heute arbeiten?"
-
-#: src/routes/_authenticated/index.tsx
-msgid "dashboard.tile.description"
-msgstr "{labelLower} schreiben, bearbeiten und veröffentlichen."
-
-#: src/routes/_authenticated/index.tsx
-msgid "dashboard.tile.browse"
-msgstr "{labelLower} durchsuchen"
-
-#: src/routes/_authenticated/index.tsx
-msgid "dashboard.empty.title"
-msgstr "Noch keine Inhaltstypen"
-
-#: src/routes/_authenticated/index.tsx
-msgid "dashboard.empty.description"
-msgstr "Fügen Sie ein Plugin hinzu, das einen Beitragstyp registriert (z. B. <0>@plumix/plugin-blog</0>), damit dieser hier erscheint."
-
-#: src/components/shell/user-menu.tsx
-msgid "menu.profile"
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.profile"
 msgstr "Profil"
 
-#: src/components/shell/user-menu.tsx
-msgid "menu.settings"
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.settings"
 msgstr "Einstellungen"
 
-#: src/components/shell/user-menu.tsx
-msgid "menu.signOut"
-msgstr "Abmelden"
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.terms"
+msgstr "Begriffe"
 
-#: src/components/shell/user-menu.tsx
-msgid "menu.signOut.pending"
-msgstr "Wird abgemeldet…"
-
-#: src/components/locale-switcher.tsx
-msgid "profile.language.aria"
-msgstr "Sprache"
-
-#: src/components/profile/language-card.tsx
-msgid "profile.language.title"
-msgstr "Sprache"
-
-#: src/components/profile/language-card.tsx
-msgid "profile.language.description"
-msgstr "Die Admin-Oberfläche wird in dieser Sprache angezeigt. Die Seite lädt nach dem Wechsel neu, damit die neuen Übersetzungen überall greifen."
-
-#: src/components/profile/language-card.tsx
-msgid "profile.language.error"
-msgstr "Sprache konnte nicht gewechselt werden. Bitte erneut versuchen."
-
-#: src/routes/_auth/login.tsx
-msgid "login.title"
-msgstr "Anmelden"
-
-#: src/routes/_auth/login.tsx
-msgid "login.description"
-msgstr "Verwenden Sie einen Passkey, lassen Sie sich einen einmaligen Anmeldelink schicken oder fahren Sie mit einem Anbieter fort."
-
-#: src/routes/_auth/login.tsx
-msgid "login.email.label"
-msgstr "E-Mail"
-
-#: src/routes/_auth/login.tsx
-msgid "login.passkey.submit"
-msgstr "Mit Passkey anmelden"
-
-#: src/routes/_auth/login.tsx
-msgid "login.passkey.pending"
-msgstr "Wird angemeldet…"
-
-#: src/routes/_auth/login.tsx
-msgid "login.magicLink.submit"
-msgstr "Per E-Mail-Link"
-
-#: src/routes/_auth/login.tsx
-msgid "login.magicLink.pending"
-msgstr "Wird gesendet…"
-
-#: src/routes/_auth/login.tsx
-msgid "login.magicLink.emailRequired"
-msgstr "Bitte zuerst eine E-Mail-Adresse oben eingeben."
-
-#: src/routes/_auth/login.tsx
-msgid "login.magicLink.sent.title"
-msgstr "Prüfen Sie Ihre E-Mails"
-
-#: src/routes/_auth/login.tsx
-msgid "login.magicLink.sent.description"
-msgstr "Falls für diese E-Mail-Adresse ein Konto existiert, haben wir einen Anmeldelink gesendet. Der Link läuft in 15 Minuten ab."
-
-#: src/routes/_auth/login.tsx
-msgid "login.magicLink.back"
-msgstr "Zurück"
-
-#: src/routes/_auth/login.tsx
-msgid "login.emailChange.success"
-msgstr "E-Mail bestätigt. Bitte mit der neuen Adresse anmelden."
-
-#: src/routes/_auth/login.tsx
-msgid "login.oauth.separator"
-msgstr "oder"
-
-#: src/routes/_auth/login.tsx
-msgid "login.oauth.continueWith"
-msgstr "Mit {label} fortfahren"
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.users"
+msgstr "Benutzer"

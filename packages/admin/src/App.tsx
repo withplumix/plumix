@@ -13,15 +13,6 @@ import {
   ThemeProvider,
 } from "./providers/index.js";
 
-// Source-locale boot: with active === source, Lingui returns
-// `descriptor.message` directly, so no catalog is needed yet. Per-user
-// activation (`ctx.locale` from the admin shell rewrite) is a follow-up.
-// TODO(#675): swap the hand-authored .json for compiled output and call
-// `setMessagesCompiler` so production runtime doesn't `console.warn` on
-// every translated key.
-i18n.load({ en: {} });
-i18n.activate("en");
-
 const IS_DEV = process.env.NODE_ENV === "development";
 
 export function App(): ReactNode {
