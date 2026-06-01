@@ -12,6 +12,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar.js";
 import { visibleAdminNav } from "@/lib/manifest.js";
+import { useLabel } from "@/lib/use-label.js";
 import { Link } from "@tanstack/react-router";
 import {
   Calendar,
@@ -57,6 +58,7 @@ export function AppSidebar({
   capabilities: readonly string[];
 }): ReactNode {
   const groups = visibleAdminNav(capabilities);
+  const renderLabel = useLabel();
   return (
     <Sidebar collapsible="icon" variant="inset">
       <SidebarContent>
@@ -78,7 +80,7 @@ export function AppSidebar({
                           activeOptions={{ exact: item.exact ?? false }}
                         >
                           <Icon />
-                          <span>{item.label}</span>
+                          <span>{renderLabel(item.label)}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

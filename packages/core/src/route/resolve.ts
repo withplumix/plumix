@@ -393,8 +393,17 @@ async function resolveArchive(
   // reads it.
   ctx.resolvedEntity = { kind: "archive", entryType: intent.entryType };
 
+  // Take `descriptor.message` as the SSR fallback for descriptor-form
+  // labels until the SSR-side `ctx.i18n` wiring lands (slice 11 #680
+  // closed core's tRPC translation; SSR title resolution is pending).
+  const registeredLabel: string | undefined =
+    registered === undefined
+      ? undefined
+      : typeof registered.label === "string"
+        ? registered.label
+        : registered.label.message;
   const title =
-    registered?.labels?.plural ?? registered?.label ?? intent.entryType;
+    registered?.labels?.plural ?? registeredLabel ?? intent.entryType;
 
   const initial: ArchiveData = {
     contentType: intent.entryType,

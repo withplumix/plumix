@@ -16,6 +16,7 @@ import type {
 } from "../auth/rbac.js";
 import type { AppContext } from "../context/app.js";
 import type { UserRole } from "../db/schema/users.js";
+import type { Label } from "../i18n/label.js";
 import type { ResolvedI18n, ResolvedLocale } from "../i18n/locale-registry.js";
 import type { RouteIntent } from "../route/intent.js";
 import type { RegisteredTemplateDep } from "../template-deps.js";
@@ -23,7 +24,7 @@ import type { RegisteredLookupAdapter } from "./lookup.js";
 import { DuplicateAdminSlugError, PluginDefinitionError } from "./errors.js";
 
 export interface EntryTypeOptions {
-  readonly label: string;
+  readonly label: Label;
   /**
    * Human-readable label variants. `plural` also drives the admin URL slug
    * (`/entries/<slugified-plural>`) unless overridden; omit it and the slug
@@ -1207,7 +1208,7 @@ export function findUserMetaField(
 export interface EntryTypeManifestEntry {
   readonly name: string;
   readonly adminSlug: string;
-  readonly label: string;
+  readonly label: Label;
   readonly labels?: {
     readonly singular?: string;
     readonly plural?: string;
@@ -1407,7 +1408,7 @@ export interface SettingsPageManifestEntry {
  */
 export interface AdminNavItem {
   readonly to: string;
-  readonly label: string;
+  readonly label: Label;
   readonly order?: number;
   readonly capability?: string;
   readonly icon?: PluginComponentRef;
@@ -1811,12 +1812,19 @@ function addAdminPageNavItems(
 }
 
 function compareByOrderThenLabel(
-  a: { order?: number; label: string },
-  b: { order?: number; label: string },
+  a: { order?: number; label: Label },
+  b: { order?: number; label: Label },
 ): number {
   const ao = a.order ?? Number.POSITIVE_INFINITY;
   const bo = b.order ?? Number.POSITIVE_INFINITY;
-  return ao - bo || a.label.localeCompare(b.label);
+  // Server-side sort uses `descriptor.message` (source-locale form)
+  // as the comparable key. The runtime sort in admin can re-sort by
+  // the locale-resolved string once labels are rendered.
+  const aLabel =
+    typeof a.label === "string" ? a.label : (a.label.message ?? "");
+  const bLabel =
+    typeof b.label === "string" ? b.label : (b.label.message ?? "");
+  return ao - bo || aLabel.localeCompare(bLabel);
 }
 
 function compareByPriorityThenId(

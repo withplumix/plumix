@@ -11,6 +11,21 @@ export type PluginProvides = (
   ctx: PluginProvidesContext,
 ) => void | Promise<void>;
 
+export interface PluginI18nSlot {
+  /** Source locale every msgid is authored in. Mirrors lingui.config
+   *  but lives on the manifest so admin can resolve plugin catalog
+   *  paths without re-parsing the plugin's lingui config at runtime. */
+  readonly sourceLocale: string;
+  /** Locales the plugin ships catalogs for. Intersected with the
+   *  site's enabled locales before any URL is generated — declaring
+   *  more locales than the site enables doesn't expand the dropdown. */
+  readonly locales: readonly string[];
+  /** Directory containing the compiled `<locale>.json` catalogs,
+   *  relative to the plugin's package root. Admin (via slice 17
+   *  #697) resolves and lazy-loads catalogs from here. */
+  readonly catalogPath: string;
+}
+
 export interface PluginDescriptor<TConfig = undefined> {
   readonly id: string;
   readonly version?: string;
@@ -18,6 +33,10 @@ export interface PluginDescriptor<TConfig = undefined> {
   readonly setup: PluginSetup<TConfig>;
   readonly schema?: Record<string, unknown>;
   readonly schemaModule?: string;
+  /** Translation catalog declaration — opts the plugin into the i18n
+   *  pipeline. Omit to keep all labels rendered as their authored
+   *  strings (no translation lookup, no catalog discovery). */
+  readonly i18n?: PluginI18nSlot;
   /**
    * Path to the plugin's admin entry — a TypeScript/TSX module that
    * imports React from the bare specifier and registers components via
@@ -42,6 +61,7 @@ export interface DefinePluginOptions {
   readonly adminChunk?: string;
   readonly adminCss?: string;
   readonly adminPeerVersion?: string;
+  readonly i18n?: PluginI18nSlot;
 }
 
 export interface DefinePluginInput<TConfig> extends DefinePluginOptions {
@@ -96,6 +116,7 @@ export function definePlugin<TConfig = undefined>(
       adminChunk: legacyOptions?.adminChunk,
       adminCss: legacyOptions?.adminCss,
       adminPeerVersion: legacyOptions?.adminPeerVersion,
+      i18n: legacyOptions?.i18n,
     };
   }
   if (legacyOptions !== undefined) {
@@ -113,6 +134,7 @@ export function definePlugin<TConfig = undefined>(
     adminChunk: setupOrInput.adminChunk,
     adminCss: setupOrInput.adminCss,
     adminPeerVersion: setupOrInput.adminPeerVersion,
+    i18n: setupOrInput.i18n,
   };
 }
 

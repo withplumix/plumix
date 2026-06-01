@@ -4,6 +4,7 @@ export {
   formatRelative,
   type FormatRelativeOptions,
 } from "./format.js";
+export { resolveLabel, type Label } from "./label.js";
 export {
   CatalogParseError,
   createCatalogLoader,

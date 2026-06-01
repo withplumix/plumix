@@ -5,6 +5,7 @@ import { hasCap } from "@/lib/caps.js";
 import { findPluginPageByPath } from "@/lib/manifest.js";
 import { PluginErrorBoundary } from "@/lib/plugin-error-boundary.js";
 import { getPluginPage } from "@/lib/plugin-registry.js";
+import { useLabel } from "@/lib/use-label.js";
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/pages/$")({
@@ -33,6 +34,8 @@ export const Route = createFileRoute("/_authenticated/pages/$")({
 
 function PluginPageRoute(): ReactNode {
   const { navItem } = Route.useRouteContext();
+  const renderLabel = useLabel();
+  const labelText = renderLabel(navItem.label);
   // navItem.to is `/pages/<plugin-path>` — derive the plugin's own
   // path for registry lookup.
   const pluginPath = navItem.to.replace(/^\/pages/, "");
@@ -41,11 +44,11 @@ function PluginPageRoute(): ReactNode {
     return <PluginNotLoaded path={pluginPath} />;
   }
   return (
-    <PluginErrorBoundary kind="page" pluginLabel={navItem.label}>
+    <PluginErrorBoundary kind="page" pluginLabel={labelText}>
       <Suspense
         fallback={
           <FormEditSkeleton
-            ariaLabel={`Loading ${navItem.label}`}
+            ariaLabel={`Loading ${labelText}`}
             testId={`plugin-page__loading__${pluginPath}`}
           />
         }
