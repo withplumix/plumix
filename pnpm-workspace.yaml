@@ -17,6 +17,8 @@ catalog:
   "@dnd-kit/sortable": ^10.0.0
   "@dnd-kit/utilities": ^3.2.2
   "@libsql/client": ^0.17.3
+  "@lingui/core": ^6.2.0
+  "@lingui/react": ^6.2.0
   "@orpc/client": ^1.14.3
   "@orpc/server": ^1.14.3
   "@orpc/tanstack-query": ^1.14.3
