@@ -63,6 +63,14 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm knip
 
+  i18n:
+    name: i18n
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+      - run: pnpm i18n:check
+
   test:
     name: Test
     runs-on: ubuntu-latest
