@@ -25,7 +25,7 @@ import { parseScopesText } from "@/lib/scopes.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import * as v from "valibot";
 
 // Admin-side approval page for OAuth 2.0 Device Authorization Grant
@@ -260,7 +260,7 @@ function ApproveCard({
     },
     mode: "onBlur",
   });
-  const scopeMode = form.watch("scopeMode");
+  const scopeMode = useWatch({ control: form.control, name: "scopeMode" });
 
   const approve = useMutation({
     mutationFn: (input: {
