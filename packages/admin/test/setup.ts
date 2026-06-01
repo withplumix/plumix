@@ -24,3 +24,16 @@ if (typeof globalThis.ResizeObserver === "undefined") {
 Element.prototype.scrollIntoView = function scrollIntoView(): void {
   /* no-op */
 };
+
+// jsdom omits the PointerEvent capture API; Radix's Select trigger calls
+// `hasPointerCapture` on `pointerdown` and crashes without it.
+const elementProto = Element.prototype as unknown as {
+  hasPointerCapture?: (id: number) => boolean;
+  setPointerCapture?: (id: number) => void;
+  releasePointerCapture?: (id: number) => void;
+};
+if (!elementProto.hasPointerCapture) {
+  elementProto.hasPointerCapture = (): boolean => false;
+  elementProto.setPointerCapture = (): void => undefined;
+  elementProto.releasePointerCapture = (): void => undefined;
+}

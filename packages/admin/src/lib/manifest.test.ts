@@ -53,6 +53,18 @@ describe("readManifest", () => {
     });
   });
 
+  test("carries i18n config through to consumers", () => {
+    const i18n = {
+      defaultLocale: "en",
+      locales: [
+        { code: "en", label: "English", direction: "ltr", enabled: true },
+        { code: "ar", label: "العربية", direction: "rtl", enabled: true },
+      ],
+    };
+    const doc = withManifestScript(JSON.stringify({ i18n }));
+    expect(readManifest(doc).i18n).toEqual(i18n);
+  });
+
   test("carries theme tokens through to consumers", () => {
     const tokens = {
       colors: { brand: { value: "#0070f3", label: "Brand" } },

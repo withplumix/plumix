@@ -4,6 +4,7 @@ import type { MarkSpec } from "@plumix/blocks";
 import { defineBlock } from "@plumix/blocks";
 
 import { HookRegistry } from "../hooks/registry.js";
+import { resolveLocales } from "../i18n/locale-registry.js";
 import { definePlugin } from "./define.js";
 import { DuplicateAdminSlugError } from "./errors.js";
 import {
@@ -27,6 +28,21 @@ describe("buildManifest", () => {
     };
     const manifest = buildManifest(createPluginRegistry(), { tokens });
     expect(manifest.tokens).toEqual(tokens);
+  });
+
+  test("buildManifest projects the site's i18n config — defaultLocale + enabled locales", () => {
+    const i18n = resolveLocales({
+      defaultLocale: "en",
+      locales: ["en", "ar"],
+    });
+    const manifest = buildManifest(createPluginRegistry(), { i18n });
+    expect(manifest.i18n).toEqual({
+      defaultLocale: "en",
+      locales: [
+        { code: "en", label: "English", direction: "ltr", enabled: true },
+        { code: "ar", label: "العربية", direction: "rtl", enabled: true },
+      ],
+    });
   });
 
   test("empty registry projects core-seeded adminNav (Dashboard / Management) and empty everything else", () => {

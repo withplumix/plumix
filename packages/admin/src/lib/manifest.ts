@@ -62,6 +62,9 @@ function normalize(value: unknown): PlumixManifest {
   if (v.tokens && typeof v.tokens === "object") {
     (result as Record<string, unknown>).tokens = v.tokens;
   }
+  if (v.i18n && typeof v.i18n === "object") {
+    (result as Record<string, unknown>).i18n = v.i18n;
+  }
   return result;
 }
 

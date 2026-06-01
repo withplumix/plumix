@@ -16,6 +16,7 @@ import type {
 } from "../auth/rbac.js";
 import type { AppContext } from "../context/app.js";
 import type { UserRole } from "../db/schema/users.js";
+import type { ResolvedI18n, ResolvedLocale } from "../i18n/locale-registry.js";
 import type { RouteIntent } from "../route/intent.js";
 import type { RegisteredTemplateDep } from "../template-deps.js";
 import type { RegisteredLookupAdapter } from "./lookup.js";
@@ -1492,6 +1493,17 @@ export interface PlumixManifest {
    * `plumix.config.ts` at build time.
    */
   readonly tokens?: ThemeTokens;
+  /**
+   * Site i18n config — populates the locale-switcher dropdown and gives
+   * admin components access to the active default. Same channel reason as
+   * `tokens`: the precompiled admin shell can't import the user's config.
+   */
+  readonly i18n?: I18nManifest;
+}
+
+export interface I18nManifest {
+  readonly defaultLocale: string;
+  readonly locales: readonly ResolvedLocale[];
 }
 
 /**
@@ -1522,6 +1534,7 @@ export function emptyManifest(): PlumixManifest {
     marks: [],
     patterns: [],
     tokens: {},
+    i18n: { defaultLocale: "en", locales: [] },
   };
 }
 
@@ -1539,7 +1552,10 @@ export function emptyManifest(): PlumixManifest {
  */
 export function buildManifest(
   registry: PluginRegistry,
-  theme?: { readonly tokens?: ThemeTokens },
+  options?: {
+    readonly tokens?: ThemeTokens;
+    readonly i18n?: ResolvedI18n;
+  },
 ): BuiltManifest {
   const entries = Array.from(registry.entryTypes.values())
     .map(toEntryTypeManifest)
@@ -1617,7 +1633,14 @@ export function buildManifest(
     blocks,
     marks,
     patterns,
-    tokens: theme?.tokens ?? {},
+    tokens: options?.tokens ?? {},
+    i18n: {
+      defaultLocale: options?.i18n?.defaultLocale.code ?? "en",
+      // Wire-filtered to enabled entries — the admin dropdown ships exactly
+      // what's available, and a "disabled in catalog but visible in UI"
+      // affordance can be re-introduced when there's a consumer.
+      locales: (options?.i18n?.locales ?? []).filter((l) => l.enabled),
+    },
   };
 }
 

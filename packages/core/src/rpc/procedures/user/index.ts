@@ -7,6 +7,7 @@ import { invite } from "./invite.js";
 import { list } from "./list.js";
 import { pendingEmailChange } from "./pending-email-change.js";
 import { requestEmailChangeProc } from "./request-email-change.js";
+import { setLocale } from "./set-locale.js";
 import { update } from "./update.js";
 
 export const userRouter = {
@@ -17,6 +18,7 @@ export const userRouter = {
   disable,
   enable,
   delete: del,
+  setLocale,
   requestEmailChange: requestEmailChangeProc,
   cancelEmailChange: cancelEmailChangeProc,
   pendingEmailChange,
