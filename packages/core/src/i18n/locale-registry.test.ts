@@ -70,6 +70,20 @@ describe("resolveLocales", () => {
     ).toThrow(/__nope__/);
   });
 
+  test("malformed direction value (escaped via `as any`) throws at boot — defense in depth for HTML interpolation", () => {
+    expect(() =>
+      resolveLocales({
+        defaultLocale: "en",
+        locales: [
+          {
+            code: "en",
+            direction: 'ltr"><script>alert(1)</script>' as "ltr",
+          },
+        ],
+      }),
+    ).toThrow(/direction must be/);
+  });
+
   test("region-tagged RTL locales still derive direction rtl (ar-EG, he-IL)", () => {
     const registry = resolveLocales({
       defaultLocale: "ar-EG",

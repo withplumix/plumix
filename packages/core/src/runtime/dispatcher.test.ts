@@ -83,7 +83,139 @@ describe("dispatcher — routing", () => {
     expect(response.status).toBe(404);
     expect(response.headers.get("x-plumix-hint")).toBe("unknown-plumix-route");
   });
+
+  test("authenticated GET /_plumix/admin rewrites <html lang dir> to user.meta.locale", async () => {
+    const assets = htmlAssets(
+      '<!doctype html><html lang="en"><head></head><body></body></html>',
+    );
+    const h = await createDispatcherHarness({
+      assets,
+      i18n: { defaultLocale: "en", locales: ["en", "ar"] },
+    });
+    const admin = await h.seedUser("admin");
+    const { users } = await import("../db/schema/users.js");
+    const { eq } = await import("drizzle-orm");
+    await h.db
+      .update(users)
+      .set({ meta: { locale: "ar" } })
+      .where(eq(users.id, admin.id));
+
+    const request = await h.authenticateRequest(
+      plumixRequest("/_plumix/admin/", { method: "GET" }),
+      admin.id,
+    );
+    const response = await h.dispatch(request);
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('<html lang="ar" dir="rtl">');
+  });
+
+  test("anonymous GET /_plumix/admin honors Accept-Language for first-time visitors (3-tier matcher)", async () => {
+    const assets = htmlAssets(
+      '<!doctype html><html lang="en"><head></head><body></body></html>',
+    );
+    const h = await createDispatcherHarness({
+      assets,
+      i18n: { defaultLocale: "en", locales: ["en", "zh-TW"] },
+    });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/admin/", {
+        method: "GET",
+        headers: { "accept-language": "zh-Hant,en;q=0.5" },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('<html lang="zh-TW" dir="ltr">');
+  });
+
+  test("admin shell rewrite strips upstream body-shape headers (encoding / length / transfer-encoding / etag) — body no longer matches", async () => {
+    const indexBody =
+      '<!doctype html><html lang="en"><head></head><body></body></html>';
+    const assets = {
+      fetch: (): Promise<Response> =>
+        Promise.resolve(
+          new Response(indexBody, {
+            status: 200,
+            headers: {
+              "content-type": "text/html",
+              "content-encoding": "gzip",
+              "content-length": String(indexBody.length),
+              "transfer-encoding": "chunked",
+              etag: '"upstream-original"',
+            },
+          }),
+        ),
+    };
+    const h = await createDispatcherHarness({ assets });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/admin/", { method: "GET" }),
+    );
+
+    expect(response.headers.get("content-encoding")).toBeNull();
+    expect(response.headers.get("content-length")).toBeNull();
+    expect(response.headers.get("transfer-encoding")).toBeNull();
+    expect(response.headers.get("etag")).toBeNull();
+    // content-type must survive — browser uses it to parse the new body.
+    expect(response.headers.get("content-type")).toBe("text/html");
+  });
+
+  test("admin shell response sets cache-control + vary so locale-varying body isn't shared-cached", async () => {
+    const assets = htmlAssets(
+      '<!doctype html><html lang="en"><head></head><body></body></html>',
+    );
+    const h = await createDispatcherHarness({ assets });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/admin/", { method: "GET" }),
+    );
+
+    expect(response.headers.get("cache-control")).toBe("private, no-cache");
+    const vary = response.headers.get("vary")?.toLowerCase() ?? "";
+    expect(vary).toContain("cookie");
+    expect(vary).toContain("accept-language");
+  });
+
+  test("admin shell does NOT invoke the authenticator when only a Bearer token is present (no api_tokens.lastUsedAt bump)", async () => {
+    let authenticated = false;
+    const assets = htmlAssets(
+      '<!doctype html><html lang="en"><head></head><body></body></html>',
+    );
+    const h = await createDispatcherHarness({
+      assets,
+      authenticator: {
+        authenticate: () => {
+          authenticated = true;
+          return Promise.resolve(null);
+        },
+      },
+    });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/admin/", {
+        method: "GET",
+        headers: { authorization: "Bearer pl_pat_irrelevant" },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(authenticated).toBe(false);
+  });
 });
+
+function htmlAssets(body: string): { fetch: () => Promise<Response> } {
+  return {
+    fetch: (): Promise<Response> =>
+      Promise.resolve(
+        new Response(body, {
+          status: 200,
+          headers: { "content-type": "text/html" },
+        }),
+      ),
+  };
+}
 
 describe("dispatcher — CSRF", () => {
   test("POST /_plumix/rpc/post.list without the X-Plumix-Request header is forbidden", async () => {
