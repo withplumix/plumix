@@ -4,3 +4,8 @@
 # differently, so a `prettier --write` is immediately clobbered on the
 # next generation. Per the generator's own file header, exclude it.
 src/routeTree.gen.ts
+
+# `lingui compile` emits single-line catalogs with an `eslint-disable`
+# header. Prettier reformats every run; the files are machine-written
+# and not meant to be read in diffs.
+locales/*.mjs

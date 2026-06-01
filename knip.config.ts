@@ -106,6 +106,12 @@ const config: KnipConfig = {
         "playwright.config.ts",
         "e2e/*.spec.ts",
         "e2e/support/*.ts",
+        // Lingui CLI config + compiled catalogs. `lingui.config.ts` is
+        // loaded by the `@lingui/cli` binary (extract/compile) — never
+        // imported. Compiled `.mjs` catalogs are loaded by `i18n-boot`
+        // via a template-literal dynamic import that knip can't follow.
+        "lingui.config.ts",
+        "locales/*.mjs",
       ],
       // playwright.config.ts imports `@plumix/core/test/playwright` whose
       // dist may not exist on a fresh clone. Knip's playwright plugin

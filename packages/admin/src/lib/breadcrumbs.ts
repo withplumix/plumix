@@ -21,6 +21,7 @@ export interface Crumb {
   readonly to?: string;
 }
 
+// Hand-authored descriptors; matching entries live in `locales/{en,de}.po`.
 const M = {
   dashboard: { id: "breadcrumb.dashboard", message: "Dashboard" },
   entries: { id: "breadcrumb.entries", message: "Entries" },
