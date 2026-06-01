@@ -84,7 +84,7 @@ function buildContext(role: UserRole): AppContext {
     request: new Request("https://cms.example/_plumix/rpc", { method: "POST" }),
     hooks: new HookRegistry(),
     plugins: registry,
-    user: { id: user.id, email: user.email, role: user.role },
+    user: { id: user.id, email: user.email, role: user.role, meta: {} },
     authenticator: stubAuthenticator(user),
     origin: "https://cms.example",
   });

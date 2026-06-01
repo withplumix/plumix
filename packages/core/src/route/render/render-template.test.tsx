@@ -262,6 +262,86 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(body).toContain("<body>");
   });
 
+  test("public route stays on site default — Accept-Language is intentionally ignored (WP get_locale parity)", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => <article>{data.entry.title}</article>,
+      },
+    });
+
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin],
+      theme,
+      i18n: { defaultLocale: "en", locales: ["en", "ar"] },
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "cacheable",
+      title: "Cacheable",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/cacheable", {
+        headers: { "accept-language": "ar" },
+      }),
+    );
+    const body = await response.text();
+    // Site default wins — public HTML is identical for every visitor, so
+    // CDN caching by URL alone is correct without `Vary: Accept-Language`.
+    expect(body).toContain('<html lang="en" dir="ltr">');
+  });
+
+  test("authenticated visitor of a public URL still sees the site default (WP frontend vs admin split)", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => <article>{data.entry.title}</article>,
+      },
+    });
+
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin],
+      theme,
+      i18n: { defaultLocale: "en", locales: ["en", "ar"] },
+    });
+    const author = await h.seedUser("admin");
+
+    // Persist `meta.locale: "ar"` directly. The session join already
+    // surfaces it on `users.meta`; no admin RPC exists yet (slice 3 of #669).
+    const { users } = await import("../../db/schema/users.js");
+    const { eq } = await import("drizzle-orm");
+    await h.db
+      .update(users)
+      .set({ meta: { locale: "ar" } })
+      .where(eq(users.id, author.id));
+
+    await h.factory.entry.create({
+      type: "post",
+      slug: "public",
+      title: "Public",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const request = await h.authenticateRequest(
+      new Request("https://cms.example/post/public"),
+      author.id,
+    );
+    const response = await h.dispatch(request, author);
+    const body = await response.text();
+    // Even with user.meta.locale = "ar", public routes don't call
+    // `withUser`, so `ctx.locale` stays at the site default.
+    expect(body).toContain('<html lang="en" dir="ltr">');
+  });
+
   test("site's i18n defaultLocale drives <html lang dir> (RTL example)", async () => {
     const theme = defineTheme({
       templates: {

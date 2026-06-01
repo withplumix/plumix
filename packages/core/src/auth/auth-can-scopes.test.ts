@@ -26,7 +26,7 @@ function buildCtx(args: {
   });
   return withUser(
     baseCtx,
-    { id: 1, email: "u@cms.example", role: args.role },
+    { id: 1, email: "u@cms.example", role: args.role, meta: {} },
     args.tokenScopes ?? null,
   );
 }
