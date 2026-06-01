@@ -1,4 +1,5 @@
 import { RPCHandler } from "@orpc/server/fetch";
+import { ResponseHeadersPlugin } from "@orpc/server/plugins";
 
 import type { BlockRegistry, HtmlAllowlist, MarkSpec } from "@plumix/blocks";
 import {
@@ -262,7 +263,9 @@ export async function buildApp(
     config,
     hooks,
     plugins: registry,
-    rpcHandler: new RPCHandler(mergedRouter as unknown as typeof appRouter),
+    rpcHandler: new RPCHandler(mergedRouter as unknown as typeof appRouter, {
+      plugins: [new ResponseHeadersPlugin()],
+    }),
     origin: passkey.origin,
     passkey,
     sessionPolicy: config.auth.sessions ?? DEFAULT_SESSION_POLICY,

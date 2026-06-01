@@ -18,6 +18,7 @@ import type {
   AnyPluginDescriptor,
   PluginRegistry,
   PlumixManifest,
+  ResolvedI18n,
 } from "@plumix/core";
 import {
   buildManifest,
@@ -342,7 +343,7 @@ async function regenerate(
 
   const { manifest, registry } = await computeManifestAndRegistry(
     config.plugins,
-    config.theme,
+    { tokens: config.theme.tokens, i18n: config.i18n },
   );
 
   return { configPath, manifest, registry, plugins: config.plugins };
@@ -360,13 +361,13 @@ type PluginDescriptors = Parameters<typeof installPlugins>[0]["plugins"];
 // so plugins should keep setup free of IO.
 async function computeManifestAndRegistry(
   plugins: PluginDescriptors,
-  theme: { readonly tokens?: ThemeTokens },
+  options: { readonly tokens?: ThemeTokens; readonly i18n?: ResolvedI18n },
 ): Promise<{ manifest: PlumixManifest; registry: PluginRegistry }> {
   const { registry } = await installPlugins({
     hooks: new HookRegistry(),
     plugins,
   });
-  return { manifest: buildManifest(registry, theme), registry };
+  return { manifest: buildManifest(registry, options), registry };
 }
 
 // Copies the compiled admin SPA from plumix/dist/admin-app into the effective

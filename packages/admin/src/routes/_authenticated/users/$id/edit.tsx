@@ -7,6 +7,7 @@ import {
   AdminApiTokensCard,
   SelfApiTokensCard,
 } from "@/components/profile/api-tokens-card.js";
+import { LanguageCard } from "@/components/profile/language-card.js";
 import { PasskeysCard } from "@/components/profile/passkeys-card.js";
 import { SessionsCard } from "@/components/profile/sessions-card.js";
 import { UserEmailField } from "@/components/profile/user-email-field.js";
@@ -425,6 +426,7 @@ function UserEditForm({
           Cross-user passkey/session management is intentionally not
           available, even to admins, since both surfaces are second-
           factor security primitives. */}
+      {isSelf ? <LanguageCard userLocale={target.meta.locale} /> : null}
       {isSelf ? <PasskeysCard userEmail={target.email} /> : null}
       {isSelf ? <SessionsCard /> : null}
 

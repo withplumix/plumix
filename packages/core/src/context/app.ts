@@ -195,6 +195,13 @@ export interface AppContextBase<
   readonly i18n: ResolvedI18n;
   readonly locale: ResolvedLocale;
   /**
+   * Response headers writable from inside an RPC procedure. Populated by
+   * `@orpc/server/plugins`'s `ResponseHeadersPlugin` at handle-time, so
+   * outside the RPC path this is undefined. Procedures append `Set-Cookie`
+   * / custom headers here; the dispatcher folds them into the Response.
+   */
+  readonly resHeaders?: Headers;
+  /**
    * Set by the public-route resolver after URL → entity matching;
    * `null` for non-public routes (admin, RPC, etc.) and on cold-start.
    * Consumers (breadcrumbs, canonical tags, menu plugin's `isCurrent`)
