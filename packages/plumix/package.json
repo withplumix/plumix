@@ -142,6 +142,8 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
+    "@lingui/core": "catalog:",
+    "@lingui/react": "catalog:",
     "@plumix/blocks": "workspace:*",
     "@plumix/core": "workspace:*",
     "@tailwindcss/node": "catalog:tailwind",

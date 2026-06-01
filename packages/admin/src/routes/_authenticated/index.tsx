@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/empty.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import { visibleEntryTypes } from "@/lib/manifest.js";
+import { Trans } from "@lingui/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, FileText, Puzzle } from "lucide-react";
 
@@ -83,7 +84,12 @@ function DashboardIndex(): ReactNode {
               <EmptyMedia variant="icon">
                 <Puzzle />
               </EmptyMedia>
-              <EmptyTitle>No content types yet</EmptyTitle>
+              <EmptyTitle>
+                <Trans
+                  id="dashboard.empty.title"
+                  message="No content types yet"
+                />
+              </EmptyTitle>
               <EmptyDescription>
                 Add a plugin that registers a post type (e.g.{" "}
                 <code>@plumix/plugin-blog</code>) to see it here.
