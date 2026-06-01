@@ -14,10 +14,10 @@ export const authenticated = base.middleware(
     );
     if (!result) throw errors.UNAUTHORIZED();
 
-    const { id, email, role } = result.user;
+    const { id, email, role, meta } = result.user;
     const tokenScopes = result.tokenScopes ?? null;
     return next({
-      context: withUser(context, { id, email, role }, tokenScopes),
+      context: withUser(context, { id, email, role, meta }, tokenScopes),
     });
   },
 );

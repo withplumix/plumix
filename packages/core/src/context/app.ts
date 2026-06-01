@@ -9,7 +9,7 @@ import type { KnownCapability } from "../auth/rbac.js";
 import type * as coreSchema from "../db/schema/index.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { HookExecutor } from "../hooks/registry.js";
-import type { ResolvedI18n } from "../i18n/locale-registry.js";
+import type { ResolvedI18n, ResolvedLocale } from "../i18n/locale-registry.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { ResolvedEntity } from "../route/current.js";
 import type { OAuthProviderSummary } from "../runtime/app.js";
@@ -22,6 +22,7 @@ import type {
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
 import { resolveLocales } from "../i18n/locale-registry.js";
+import { resolveLocale } from "../i18n/resolve-locale.js";
 
 const EMPTY_BLOCK_REGISTRY: BlockRegistry = createBlockRegistry([]);
 const EMPTY_MARK_LIST: readonly MarkSpec[] = Object.freeze([]);
@@ -39,6 +40,7 @@ export interface AuthenticatedUser {
   readonly id: number;
   readonly email: string;
   readonly role: UserRole;
+  readonly meta: Record<string, unknown>;
 }
 
 export interface Logger {
@@ -191,6 +193,7 @@ export interface AppContextBase<
    */
   readonly siteName?: string;
   readonly i18n: ResolvedI18n;
+  readonly locale: ResolvedLocale;
   /**
    * Set by the public-route resolver after URL → entity matching;
    * `null` for non-public routes (admin, RPC, etc.) and on cold-start.
@@ -315,6 +318,8 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
   const resolver = createCapabilityResolver(args.plugins);
   const user = args.user ?? null;
   const tokenScopes = args.tokenScopes ?? null;
+  const i18n = args.i18n ?? DEFAULT_I18N;
+  const locale = resolveLocale({ request: args.request, user, i18n });
   const base: AppContextBase<TSchema> = {
     db: args.db,
     env: args.env,
@@ -334,7 +339,8 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     storage: args.storage,
     imageDelivery: args.imageDelivery,
     mailer: args.mailer,
-    i18n: args.i18n ?? DEFAULT_I18N,
+    i18n,
+    locale,
     oauthProviders: args.oauthProviders ?? [],
     authenticator: args.authenticator ?? defaultAuthenticator(),
     bootstrapAllowed: args.bootstrapAllowed ?? false,
@@ -386,6 +392,10 @@ export function withUser<TSchema extends Record<string, unknown>>(
       can: makeAuthCan(resolver, user, tokenScopes),
     },
     oauthProviders: ctx.oauthProviders,
+    // Re-resolve locale now that the user is known — production paths build
+    // the AppContext before auth, so step 1 (user.meta.locale) is only
+    // reachable from here.
+    locale: resolveLocale({ request: ctx.request, user, i18n: ctx.i18n }),
   };
 }
 

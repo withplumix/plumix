@@ -10,7 +10,13 @@ export interface LocaleInput {
 export interface I18nInput {
   readonly defaultLocale: string;
   readonly locales: readonly (string | LocaleInput)[];
+  readonly resolveLocale?: LocaleResolverOverride;
 }
+
+export type LocaleResolverOverride = (
+  request: Request,
+  user: { readonly meta: Record<string, unknown> } | null,
+) => ResolvedLocale | null;
 
 export interface ResolvedLocale {
   readonly code: string;
@@ -22,6 +28,7 @@ export interface ResolvedLocale {
 export interface ResolvedI18n {
   readonly defaultLocale: ResolvedLocale;
   readonly locales: readonly ResolvedLocale[];
+  readonly resolveLocale?: LocaleResolverOverride;
 }
 
 // `Intl.Locale.prototype.getTextInfo()` shipped in V8/Node/Workers but the
@@ -47,7 +54,7 @@ export function resolveLocales(input: I18nInput): ResolvedI18n {
       `plumix(): i18n.defaultLocale ${JSON.stringify(input.defaultLocale)} cannot be marked enabled:false.`,
     );
   }
-  return { defaultLocale, locales };
+  return { defaultLocale, locales, resolveLocale: input.resolveLocale };
 }
 
 function normalizeEntry(entry: string | LocaleInput): ResolvedLocale {

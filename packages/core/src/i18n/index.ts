@@ -6,3 +6,4 @@ export type {
   ResolvedI18n,
   ResolvedLocale,
 } from "./locale-registry.js";
+export { resolveLocale } from "./resolve-locale.js";

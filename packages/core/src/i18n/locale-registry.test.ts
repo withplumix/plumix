@@ -70,6 +70,17 @@ describe("resolveLocales", () => {
     ).toThrow(/__nope__/);
   });
 
+  test("resolveLocale override on the input passes through to the registry", () => {
+    const override = () => null;
+    const registry = resolveLocales({
+      defaultLocale: "en",
+      locales: ["en"],
+      resolveLocale: override,
+    });
+
+    expect(registry.resolveLocale).toBe(override);
+  });
+
   test("region-tagged RTL locales still derive direction rtl (ar-EG, he-IL)", () => {
     const registry = resolveLocales({
       defaultLocale: "ar-EG",

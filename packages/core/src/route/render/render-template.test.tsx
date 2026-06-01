@@ -262,6 +262,39 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(body).toContain("<body>");
   });
 
+  test("Accept-Language drives ctx.locale → <html lang dir> on an LTR-default site", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => <article>{data.entry.title}</article>,
+      },
+    });
+
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin],
+      theme,
+      i18n: { defaultLocale: "en", locales: ["en", "ar"] },
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "header",
+      title: "Header",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/header", {
+        headers: { "accept-language": "ar" },
+      }),
+    );
+    const body = await response.text();
+    expect(body).toContain('<html lang="ar" dir="rtl">');
+  });
+
   test("site's i18n defaultLocale drives <html lang dir> (RTL example)", async () => {
     const theme = defineTheme({
       templates: {

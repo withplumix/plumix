@@ -269,7 +269,14 @@ export async function handlePasskeyRegisterVerify(
           deviceType: credential.deviceType,
           isBackedUp: credential.isBackedUp,
         },
-        { actor: { id: user.id, email: user.email, role: user.role } },
+        {
+          actor: {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            meta: user.meta,
+          },
+        },
       );
       await ctx.hooks.doAction("user:signed_in", user, {
         method: "passkey",
@@ -497,7 +504,14 @@ export async function handleInviteRegisterVerify(
         deviceType: credential.deviceType,
         isBackedUp: credential.isBackedUp,
       },
-      { actor: { id: user.id, email: user.email, role: user.role } },
+      {
+        actor: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          meta: user.meta,
+        },
+      },
     );
     await ctx.hooks.doAction("user:signed_in", user, {
       method: "invite",
