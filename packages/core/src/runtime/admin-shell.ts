@@ -3,7 +3,11 @@ import type { ResolvedI18n, ResolvedLocale } from "../i18n/locale-registry.js";
 import { readSessionCookie } from "../auth/cookies.js";
 import { findEnabledLocale } from "../i18n/locale-registry.js";
 
-const ADMIN_LOCALE_COOKIE = "plumix-locale";
+// Underscore-cased to match `plumix_session` (the existing session-cookie
+// prior art in `auth/cookies.ts`). The slice-8 writer should set
+// `Path=/_plumix/admin/` so the browser never sends it on public-route
+// requests — keeps public HTML identical across visitors for cache layers.
+const ADMIN_LOCALE_COOKIE = "plumix_locale";
 
 // Real Accept-Language headers carry 1–4 entries; cap defensively so a
 // hostile client can't burn CPU on N×`Intl.Locale` allocations per GET.
@@ -20,7 +24,7 @@ export function rewriteAdminShellLangDir(
 }
 
 // `?lang=` query → `user.meta.locale` (WP `get_user_locale` parity) →
-// `plumix-locale` cookie (WP `wp_lang` parity) → Accept-Language (emdash
+// `plumix_locale` cookie (WP `wp_lang` parity) → Accept-Language (emdash
 // 3-tier matcher) → site default. `i18n.resolveLocale` override is
 // intentionally NOT consulted here; admin uses this chain, the public-route
 // resolver is the place to layer custom resolution.

@@ -52,7 +52,7 @@ describe("resolveAdminShellLocale", () => {
     const resolved = resolveAdminShellLocale({
       request: adminRequest({
         url: "https://cms.example/_plumix/admin/?lang=ar",
-        cookie: "plumix-locale=fr",
+        cookie: "plumix_locale=fr",
       }),
       user: user({ locale: "fr" }),
       i18n: enArFr,
@@ -61,9 +61,9 @@ describe("resolveAdminShellLocale", () => {
     expect(resolved.code).toBe("ar");
   });
 
-  test("user.meta.locale wins over the plumix-locale cookie for authenticated users", () => {
+  test("user.meta.locale wins over the plumix_locale cookie for authenticated users", () => {
     const resolved = resolveAdminShellLocale({
-      request: adminRequest({ cookie: "plumix-locale=fr" }),
+      request: adminRequest({ cookie: "plumix_locale=fr" }),
       user: user({ locale: "ar" }),
       i18n: enArFr,
     });
@@ -71,9 +71,9 @@ describe("resolveAdminShellLocale", () => {
     expect(resolved.code).toBe("ar");
   });
 
-  test("plumix-locale cookie applies for anonymous visitors (WP wp_lang parity)", () => {
+  test("plumix_locale cookie applies for anonymous visitors (WP wp_lang parity)", () => {
     const resolved = resolveAdminShellLocale({
-      request: adminRequest({ cookie: "plumix-locale=fr" }),
+      request: adminRequest({ cookie: "plumix_locale=fr" }),
       user: null,
       i18n: enArFr,
     });
@@ -93,7 +93,7 @@ describe("resolveAdminShellLocale", () => {
 
   test("cookie pointing at an unsupported code falls through to the default", () => {
     const resolved = resolveAdminShellLocale({
-      request: adminRequest({ cookie: "plumix-locale=de" }),
+      request: adminRequest({ cookie: "plumix_locale=de" }),
       user: null,
       i18n: enArFr,
     });
@@ -173,7 +173,7 @@ describe("resolveAdminShellLocale", () => {
 
   test("cookie still wins over Accept-Language when both are present", () => {
     const request = new Request("https://cms.example/_plumix/admin/", {
-      headers: { cookie: "plumix-locale=fr", "accept-language": "ar" },
+      headers: { cookie: "plumix_locale=fr", "accept-language": "ar" },
     });
     const resolved = resolveAdminShellLocale({
       request,
