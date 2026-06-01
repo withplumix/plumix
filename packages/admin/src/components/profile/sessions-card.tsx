@@ -20,9 +20,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.js";
-import { formatRelative, toDate } from "@/lib/dates.js";
+import { toDate } from "@/lib/dates.js";
 import { extractCode, extractReason } from "@/lib/orpc-errors.js";
 import { orpc } from "@/lib/orpc.js";
+import { useFormatters } from "@/lib/use-formatters.js";
 import { parseUserAgent } from "@/lib/user-agent.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -129,6 +130,7 @@ function SessionRow({ session, onChanged }: SessionRowProps): ReactNode {
   const ua = parseUserAgent(session.userAgent);
   const Icon = ua.icon;
   const createdAt = toDate(session.createdAt);
+  const { formatRelative } = useFormatters();
 
   const revoke = useMutation({
     mutationFn: () => orpc.auth.sessions.revoke.call({ id: session.id }),

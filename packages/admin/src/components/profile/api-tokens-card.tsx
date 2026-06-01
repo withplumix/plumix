@@ -44,9 +44,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table.js";
-import { formatRelative, toDate } from "@/lib/dates.js";
+import { toDate } from "@/lib/dates.js";
 import { orpc } from "@/lib/orpc.js";
 import { parseScopesText } from "@/lib/scopes.js";
+import { useFormatters } from "@/lib/use-formatters.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, Plus } from "lucide-react";
@@ -215,6 +216,7 @@ function ApiTokensCardView({
   onRevoke: (id: string, callbacks?: MutationCallbacks<unknown>) => void;
   revokePending: boolean;
 }): ReactNode {
+  const { formatRelative } = useFormatters();
   const [mintedSecret, setMintedSecret] = useState<{
     secret: string;
     name: string;

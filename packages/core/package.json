@@ -36,6 +36,10 @@
       "types": "./dist/plugin/fields/index.d.ts",
       "default": "./dist/plugin/fields/index.js"
     },
+    "./i18n": {
+      "types": "./dist/i18n/index.d.ts",
+      "default": "./dist/i18n/index.js"
+    },
     "./slugify": {
       "types": "./dist/slugify.d.ts",
       "default": "./dist/slugify.js"
@@ -52,6 +56,7 @@
   },
   "dependencies": {
     "@libsql/client": "catalog:",
+    "@lingui/core": "catalog:",
     "@orpc/server": "catalog:",
     "@oslojs/crypto": "^1.0.1",
     "@oslojs/encoding": "^1.1.0",

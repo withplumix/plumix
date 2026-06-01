@@ -27,7 +27,7 @@ import {
 } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { getRegisteredBlocks } from "@/lib/plugin-registry.js";
-import { formatRelativeTime } from "@/lib/relative-time.js";
+import { useFormatters } from "@/lib/use-formatters.js";
 import { ORPCError } from "@orpc/client";
 import { Puck } from "@puckeditor/core";
 import {
@@ -226,6 +226,7 @@ function PuckSpikeRouteInner({
   userId,
   backHref,
 }: PuckSpikeRouteInnerProps): ReactNode {
+  const { formatRelative } = useFormatters();
   const starterCandidates = useMemo(
     () =>
       entryType ? selectStarterPatterns(getPatterns(), entryType.name) : [],
@@ -587,7 +588,7 @@ function PuckSpikeRouteInner({
           coAuthors.length > 0 ? (
             <CoAuthorIndicator
               users={coAuthors}
-              relativeTime={formatRelativeTime}
+              relativeTime={formatRelative}
             />
           ) : null
         }
@@ -606,6 +607,7 @@ function PuckSpikeRouteInner({
       coAuthors,
       draftModeProp,
       starterCandidates,
+      formatRelative,
     ],
   );
 
@@ -673,6 +675,7 @@ function PuckPreviewRouteInner({
   capabilities,
   backHref,
 }: PuckPreviewRouteInnerProps): ReactNode {
+  const { formatRelative } = useFormatters();
   const { data: liveEntry } = useSuspenseQuery(
     orpc.entry.get.queryOptions({ input: { id } }),
   );
@@ -763,7 +766,7 @@ function PuckPreviewRouteInner({
           <PreviewBanner
             revisionUpdatedAt={revision.updatedAt}
             revisionAuthor={revisionAuthor}
-            relativeTime={formatRelativeTime}
+            relativeTime={formatRelative}
             onBackToLive={handleBackToLive}
             onRestore={handleRestore}
             isRestoring={restore.isPending}
@@ -782,6 +785,7 @@ function PuckPreviewRouteInner({
       handleRestore,
       restore.isPending,
       restoreError,
+      formatRelative,
     ],
   );
 
