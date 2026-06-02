@@ -72,7 +72,7 @@ export interface EntryTypeOptions {
 }
 
 export interface TermTaxonomyOptions {
-  readonly label: string;
+  readonly label: Label;
   readonly labels?: { readonly singular?: Label };
   readonly description?: string;
   readonly isHierarchical?: boolean;
@@ -1357,7 +1357,7 @@ export interface UserMetaBoxManifestEntry extends MetaBoxBaseManifestEntry {
  */
 export interface TermTaxonomyManifestEntry {
   readonly name: string;
-  readonly label: string;
+  readonly label: Label;
   readonly labels?: { readonly singular?: Label };
   readonly description?: string;
   readonly isHierarchical?: boolean;

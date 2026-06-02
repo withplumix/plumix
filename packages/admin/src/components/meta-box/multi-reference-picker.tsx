@@ -17,6 +17,8 @@ import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
 
+import { LookupLabel } from "./lookup-label.js";
+
 // Multi-value counterpart to `ReferencePicker`. Shares the same
 // `kind` / `scope` dispatch shape — same lookup RPC, same adapter
 // — but the UX is different: selected rows render as a sortable
@@ -113,7 +115,7 @@ export function MultiReferencePicker({
   const resolvedById = useMemo(() => {
     const map = new Map<
       string,
-      { id: string; label: string; subtitle?: string }
+      { id: string; label: string | null; subtitle?: string }
     >();
     for (const row of resolveQuery.data?.items ?? []) map.set(row.id, row);
     return map;
@@ -208,7 +210,9 @@ export function MultiReferencePicker({
             if (item.result) {
               return (
                 <div className="text-sm">
-                  <p className="truncate font-medium">{item.result.label}</p>
+                  <p className="truncate font-medium">
+                    <LookupLabel value={item.result.label} />
+                  </p>
                   {item.result.subtitle ? (
                     <p className="text-muted-foreground truncate text-xs">
                       {item.result.subtitle}
@@ -298,7 +302,7 @@ export function MultiReferencePicker({
               return (
                 <CommandItem
                   key={item.id}
-                  value={`${item.label} ${item.subtitle ?? ""}`}
+                  value={`${item.label ?? ""} ${item.subtitle ?? ""}`}
                   disabled={alreadySelected || atMax}
                   onSelect={() => {
                     handlePick(item.id);
@@ -307,7 +311,7 @@ export function MultiReferencePicker({
                 >
                   <div className="flex flex-col gap-0.5">
                     <span className="text-sm font-medium">
-                      {item.label}
+                      <LookupLabel value={item.label} />
                       {alreadySelected ? " ✓" : ""}
                     </span>
                     {item.subtitle ? (

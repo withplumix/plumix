@@ -9,7 +9,14 @@ import type { AppContext } from "../context/app.js";
 
 export interface LookupResult {
   readonly id: string;
-  readonly label: string;
+  /**
+   * `null` signals the underlying row had no human-authored label and
+   * the consumer should render its own localized fallback (e.g. the
+   * admin picker renders an "Untitled" descriptor). Adapters that
+   * can guarantee a non-empty string (term name, user email) keep
+   * returning strings — only the entry adapter currently emits `null`.
+   */
+  readonly label: string | null;
   readonly subtitle?: string;
   /**
    * Adapter-provided cached fields. When the field's

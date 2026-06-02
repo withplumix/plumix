@@ -16,6 +16,8 @@ import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
 
+import { LookupLabel } from "./lookup-label.js";
+
 // Generic picker for reference fields (`user`, future `entry` /
 // `term` / `media`). The field's `referenceTarget.kind` selects the
 // adapter; `referenceTarget.scope` rides through to the lookup RPC
@@ -194,7 +196,7 @@ export function ReferencePicker({
 
 interface LookupItem {
   readonly id: string;
-  readonly label: string;
+  readonly label: string | null;
   readonly subtitle?: string;
 }
 
@@ -222,7 +224,9 @@ function renderDisplay({
   if (selected) {
     return (
       <div className="text-sm" data-testid={`${testId}-selected`}>
-        <p className="truncate font-medium">{selected.label}</p>
+        <p className="truncate font-medium">
+          <LookupLabel value={selected.label} />
+        </p>
         {selected.subtitle ? (
           <p className="text-muted-foreground truncate text-xs">
             {selected.subtitle}
@@ -284,14 +288,16 @@ function renderListBody({
   return items.map((item) => (
     <CommandItem
       key={item.id}
-      value={`${item.label} ${item.subtitle ?? ""}`}
+      value={`${item.label ?? ""} ${item.subtitle ?? ""}`}
       onSelect={() => {
         onSelect(item.id);
       }}
       data-testid={`${testId}-option-${item.id}`}
     >
       <div className="flex flex-col gap-0.5">
-        <span className="text-sm font-medium">{item.label}</span>
+        <span className="text-sm font-medium">
+          <LookupLabel value={item.label} />
+        </span>
         {item.subtitle ? (
           <span className="text-muted-foreground text-xs">{item.subtitle}</span>
         ) : null}

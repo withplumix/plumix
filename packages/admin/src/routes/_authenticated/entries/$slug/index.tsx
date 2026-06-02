@@ -940,6 +940,7 @@ function TaxonomyFilter({
   onChange: (slugs: readonly string[]) => void;
 }): ReactNode {
   const { i18n } = useLingui();
+  const renderLabel = useLabel();
   const taxonomy = findTermTaxonomyByName(taxonomyName);
   const termsQuery = useQuery(
     orpc.term.list.queryOptions({
@@ -953,7 +954,9 @@ function TaxonomyFilter({
     [termsQuery.data, isHierarchical],
   );
 
-  const pluralLower = (taxonomy?.label ?? taxonomyName).toLowerCase();
+  const pluralLower = (
+    taxonomy?.label !== undefined ? renderLabel(taxonomy.label) : taxonomyName
+  ).toLowerCase();
   return (
     <MultiSelect
       options={options}

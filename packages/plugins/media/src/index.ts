@@ -1,3 +1,4 @@
+import type { Label } from "plumix/i18n";
 import type { PluginDescriptor } from "plumix/plugin";
 import { definePlugin } from "plumix/plugin";
 
@@ -18,6 +19,13 @@ export { DEFAULT_ACCEPTED_TYPES };
 
 /** Default max upload size — 25 MiB. */
 export const DEFAULT_MAX_UPLOAD_SIZE = 25 * 1024 * 1024;
+
+// Plain descriptor literals — see `plugin-pages/src/index.ts` for the
+// "no Babel macro server-side" rationale.
+const MEDIA_LABELS = {
+  media: { id: "plugin.media.media.plural", message: "Media" },
+  asset: { id: "plugin.media.media.singular", message: "Asset" },
+} satisfies Record<string, Label>;
 
 // Re-export the canonical list from `media-blocks.ts` (server-clean).
 export { mediaBlocks } from "./media-blocks.js";
@@ -104,8 +112,8 @@ export function media(
       ctx.registerBlock(fileBlock);
 
       ctx.registerEntryType("media", {
-        label: "Media",
-        labels: { singular: "Asset", plural: "Media" },
+        label: MEDIA_LABELS.media,
+        labels: { singular: MEDIA_LABELS.asset, plural: MEDIA_LABELS.media },
         description: "Uploaded files — images, video, documents",
         supports: ["title", "excerpt"],
         // `isPublic: false` cascades to `showUI: false` and

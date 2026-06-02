@@ -6,19 +6,10 @@ import { reactConfig } from "@plumix/eslint-config/react";
 
 // `lingui/no-unlocalized-strings` is on for `src/**` by default. The
 // list below opts surfaces out until their strings are wrapped — wrap
-// a surface, drop its entry. When empty, delete the override block
-// (the `defineConfig` spread below) and the gate is implicit.
-const STRICT_UNWRAPPED_FILES = [
-  // Logic-only helpers — every flagged string is a developer-facing
-  // console message, DOM event name, or framework config
-  // discriminator (TanStack `defaultPreload: "intent"`), not user
-  // chrome. Adding ignore-regex would risk over-suppression of real
-  // chrome elsewhere; explicit denylist entry is the safer call.
-  "src/lib/errors.ts",
-  "src/lib/wait-for-plugin-chunks.ts",
-  "src/providers/router.ts",
-  "src/providers/theme.tsx",
-];
+// a surface, drop its entry. The list lives in `.mjs` so
+// `scripts/ratchet-drift-check.mjs` can import it without a TS
+// compile step; both consumers stay in lockstep.
+import { STRICT_UNWRAPPED_FILES } from "./scripts/strict-unwrapped-files.mjs";
 
 export default defineConfig(
   baseConfig,

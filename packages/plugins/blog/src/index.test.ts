@@ -12,7 +12,10 @@ describe("@plumix/plugin-blog", () => {
     const { registry } = await install();
     const post = registry.entryTypes.get("post");
     expect(post).toBeDefined();
-    expect(post?.label).toBe("Posts");
+    expect(post?.label).toEqual({
+      id: "plugin.blog.post.plural",
+      message: "Posts",
+    });
     expect(post?.isPublic).toBe(true);
     expect(post?.hasArchive).toBe(true);
     expect(post?.termTaxonomies).toEqual(["category", "tag"]);

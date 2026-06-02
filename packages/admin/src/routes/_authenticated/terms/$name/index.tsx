@@ -261,7 +261,7 @@ function TaxonomyListRoute(): ReactNode {
             data-testid="taxonomy-list-heading"
             className="text-2xl font-semibold capitalize"
           >
-            {taxonomy.label}
+            {renderLabel(taxonomy.label)}
           </h1>
           {taxonomy.description ? (
             <p className="text-muted-foreground text-sm">
