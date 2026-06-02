@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -30,11 +31,15 @@ import {
   FormMessage,
 } from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
-import { Label } from "@/components/ui/label.js";
+import { Label as UILabel } from "@/components/ui/label.js";
 import { hasCap } from "@/lib/caps.js";
 import { visibleUserMetaBoxes } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
+import { useLabel } from "@/lib/use-label.js";
+import { ROLE_LABEL, ROLE_LABEL_LONG } from "@/lib/user-role-labels.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
 import {
   useMutation,
   useQuery,
@@ -63,6 +68,54 @@ import {
   USERS_LIST_DEFAULT_SEARCH,
 } from "../-constants.js";
 
+// Descriptors needed outside their natural `<Trans>` callsite — pending
+// / error component aria labels, state setters, `mapUserError` fallbacks.
+// The three per-surface error bundles (`UPDATE_/STATUS_/DELETE_ERROR_MESSAGES`)
+// hold their own reason-specific descriptors directly. Chrome strings
+// stay inline at their `<Trans>` callsite.
+const M = {
+  loadingAria: defineMessage({
+    id: "userEdit.loading.aria",
+    message: "Loading user",
+  }),
+  loadFailed: defineMessage({
+    id: "userEdit.loadFailed",
+    message: "Couldn't load that user. They may have been deleted.",
+  }),
+  errUpdateFallback: defineMessage({
+    id: "userEdit.error.updateFallback",
+    message: "Couldn't save the changes. Try again.",
+  }),
+  errStatusFallback: defineMessage({
+    id: "userEdit.error.statusFallback",
+    message: "Couldn't change the account status. Try again.",
+  }),
+  errDeleteFallback: defineMessage({
+    id: "userEdit.error.deleteFallback",
+    message: "Couldn't delete the user. Try again.",
+  }),
+  toggleEnabling: defineMessage({
+    id: "userEdit.status.toggle.enabling",
+    message: "Enabling…",
+  }),
+  toggleDisabling: defineMessage({
+    id: "userEdit.status.toggle.disabling",
+    message: "Disabling…",
+  }),
+  toggleEnable: defineMessage({
+    id: "userEdit.status.toggle.enable",
+    message: "Re-enable user",
+  }),
+  toggleDisable: defineMessage({
+    id: "userEdit.status.toggle.disable",
+    message: "Disable user",
+  }),
+  reassignKeepAsIs: defineMessage({
+    id: "userEdit.delete.reassign.keepAsIs",
+    message: "Keep entries as-is (none to reassign)",
+  }),
+} satisfies Record<string, MessageDescriptor>;
+
 async function invalidateUserCaches(
   queryClient: QueryClient,
   id: number,
@@ -74,17 +127,6 @@ async function invalidateUserCaches(
     queryClient.invalidateQueries({ queryKey: orpc.user.list.key() }),
   ]);
 }
-
-// Long-form labels for the role dropdown — same rationale as the invite
-// form (the picker benefits from affordance copy, unlike the list view's
-// compact badges).
-const ROLE_LABEL: Record<UserRole, string> = {
-  admin: "Administrator — full control",
-  editor: "Editor — publish + edit any post",
-  author: "Author — publish own entries",
-  contributor: "Contributor — draft, no publish",
-  subscriber: "Subscriber — read only",
-};
 
 const profileFormSchema = v.object({
   name: v.pipe(v.string(), v.trim(), v.maxLength(100)),
@@ -124,14 +166,24 @@ export const Route = createFileRoute("/_authenticated/users/$id/edit")({
     context.queryClient.ensureQueryData(
       orpc.user.get.queryOptions({ input: { id: params.id } }),
     ),
-  pendingComponent: () => (
-    <FormEditSkeleton ariaLabel="Loading user" testId="user-edit-loading" />
-  ),
-  errorComponent: () => (
-    <NotFoundPlaceholder message="Couldn't load that user. They may have been deleted." />
-  ),
+  pendingComponent: UserEditLoading,
+  errorComponent: UserEditLoadError,
   component: UserEditRoute,
 });
+
+function UserEditLoading(): ReactNode {
+  const label = useLabel();
+  return (
+    <FormEditSkeleton
+      ariaLabel={label(M.loadingAria)}
+      testId="user-edit-loading"
+    />
+  );
+}
+
+function UserEditLoadError(): ReactNode {
+  return <NotFoundPlaceholder message={M.loadFailed} />;
+}
 
 function UserEditRoute(): ReactNode {
   const { id: userId } = Route.useParams();
@@ -191,7 +243,7 @@ function useUserUpdateMutation({
   canPromote: boolean;
   metaBoxes: readonly UserMetaBoxManifestEntry[];
   queryClient: QueryClient;
-  setServerError: (message: string | null) => void;
+  setServerError: (message: MessageDescriptor | null) => void;
 }) {
   return useMutation({
     mutationFn: (values: {
@@ -221,11 +273,7 @@ function useUserUpdateMutation({
     },
     onError: (err) => {
       setServerError(
-        mapUserError(
-          err,
-          UPDATE_ERROR_MESSAGES,
-          "Couldn't save the changes. Try again.",
-        ),
+        mapUserError(err, UPDATE_ERROR_MESSAGES, M.errUpdateFallback),
       );
     },
   });
@@ -251,8 +299,11 @@ function UserEditForm({
   metaBoxes: readonly UserMetaBoxManifestEntry[];
 }): ReactNode {
   const navigate = useNavigate();
+  const label = useLabel();
   const queryClient = useQueryClient();
-  const [serverError, setServerError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<MessageDescriptor | null>(
+    null,
+  );
 
   const updateUser = useUserUpdateMutation({
     target,
@@ -284,20 +335,36 @@ function UserEditForm({
         data-testid="user-edit-back-link"
       >
         <ArrowLeft className="size-4" />
-        Back to users
+        <Trans id="userEdit.backToList" message="Back to users" />
       </Link>
 
       <Card>
         <CardHeader>
           <CardTitle>
             <h1 data-testid="user-edit-heading">
-              {isSelf ? "Your profile" : `Edit ${target.email}`}
+              {isSelf ? (
+                <Trans id="userEdit.title.self" message="Your profile" />
+              ) : (
+                <Trans
+                  id="userEdit.title.other"
+                  message="Edit {email}"
+                  values={{ email: target.email }}
+                />
+              )}
             </h1>
           </CardTitle>
           <CardDescription>
-            {isSelf
-              ? "Update your display name. Role and account state are managed by administrators."
-              : "Update this account's details. Role changes invalidate existing sessions immediately."}
+            {isSelf ? (
+              <Trans
+                id="userEdit.description.self"
+                message="Update your display name. Role and account state are managed by administrators."
+              />
+            ) : (
+              <Trans
+                id="userEdit.description.other"
+                message="Update this account's details. Role changes invalidate existing sessions immediately."
+              />
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -314,7 +381,9 @@ function UserEditForm({
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel>
+                      <Trans id="userEdit.name.label" message="Name" />
+                    </FormLabel>
                     <FormControl>
                       <Input
                         type="text"
@@ -335,7 +404,9 @@ function UserEditForm({
                   name="role"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Role</FormLabel>
+                      <FormLabel>
+                        <Trans id="userEdit.role.label" message="Role" />
+                      </FormLabel>
                       <FormControl>
                         <select
                           value={field.value}
@@ -350,7 +421,7 @@ function UserEditForm({
                         >
                           {USER_ROLES.map((role) => (
                             <option key={role} value={role}>
-                              {ROLE_LABEL[role]}
+                              {label(ROLE_LABEL_LONG[role])}
                             </option>
                           ))}
                         </select>
@@ -361,13 +432,18 @@ function UserEditForm({
                 />
               ) : (
                 <div className="flex flex-col gap-2">
-                  <Label>Role</Label>
-                  <Badge variant="secondary" className="w-fit capitalize">
-                    {target.role}
+                  <UILabel>
+                    <Trans id="userEdit.role.label" message="Role" />
+                  </UILabel>
+                  <Badge variant="secondary" className="w-fit">
+                    {label(ROLE_LABEL[target.role])}
                   </Badge>
                   {isSelf ? (
                     <p className="text-muted-foreground text-xs">
-                      Only another administrator can change your role.
+                      <Trans
+                        id="userEdit.role.selfReadonly"
+                        message="Only another administrator can change your role."
+                      />
                     </p>
                   ) : null}
                 </div>
@@ -387,7 +463,7 @@ function UserEditForm({
                   variant="destructive"
                   data-testid="user-edit-server-error"
                 >
-                  <AlertDescription>{serverError}</AlertDescription>
+                  <AlertDescription>{label(serverError)}</AlertDescription>
                 </Alert>
               ) : null}
 
@@ -403,14 +479,18 @@ function UserEditForm({
                   }}
                   disabled={updateUser.isPending}
                 >
-                  Cancel
+                  <Trans id="userEdit.cancel" message="Cancel" />
                 </Button>
                 <Button
                   type="submit"
                   disabled={updateUser.isPending || !canSave}
                   data-testid="user-edit-submit"
                 >
-                  {updateUser.isPending ? "Saving…" : "Save changes"}
+                  {updateUser.isPending ? (
+                    <Trans id="userEdit.submit.pending" message="Saving…" />
+                  ) : (
+                    <Trans id="userEdit.submit.idle" message="Save changes" />
+                  )}
                 </Button>
               </div>
             </form>
@@ -442,8 +522,11 @@ function UserEditForm({
 }
 
 function StatusCard({ target }: { target: User }): ReactNode {
+  const label = useLabel();
   const queryClient = useQueryClient();
-  const [serverError, setServerError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<MessageDescriptor | null>(
+    null,
+  );
   const isDisabled = target.disabledAt != null;
 
   const toggle = useMutation({
@@ -459,11 +542,7 @@ function StatusCard({ target }: { target: User }): ReactNode {
     },
     onError: (err) => {
       setServerError(
-        mapUserError(
-          err,
-          STATUS_ERROR_MESSAGES,
-          "Couldn't change the account status. Try again.",
-        ),
+        mapUserError(err, STATUS_ERROR_MESSAGES, M.errStatusFallback),
       );
     },
   });
@@ -471,17 +550,32 @@ function StatusCard({ target }: { target: User }): ReactNode {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Account status</CardTitle>
+        <CardTitle>
+          <Trans id="userEdit.status.title" message="Account status" />
+        </CardTitle>
         <CardDescription>
-          {isDisabled
-            ? "Disabled accounts can't sign in. Re-enabling restores access; their passkey is still registered."
-            : "Disabling signs the user out immediately and blocks future sign-ins. Their entries stay published."}
+          {isDisabled ? (
+            <Trans
+              id="userEdit.status.description.disabled"
+              message="Disabled accounts can't sign in. Re-enabling restores access; their passkey is still registered."
+            />
+          ) : (
+            <Trans
+              id="userEdit.status.description.active"
+              message="Disabling signs the user out immediately and blocks future sign-ins. Their entries stay published."
+            />
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-4">
+          {/* Reuse `users.list.row.*` IDs — same English, same translation. */}
           <Badge variant={isDisabled ? "destructive" : "secondary"}>
-            {isDisabled ? "Disabled" : "Active"}
+            {isDisabled ? (
+              <Trans id="users.list.row.disabled" message="Disabled" />
+            ) : (
+              <Trans id="users.list.row.active" message="Active" />
+            )}
           </Badge>
           <Button
             variant={isDisabled ? "default" : "outline"}
@@ -495,12 +589,12 @@ function StatusCard({ target }: { target: User }): ReactNode {
                 : "user-edit-disable-button"
             }
           >
-            {toggleButtonLabel(isDisabled, toggle.isPending)}
+            {label(toggleButtonLabel(isDisabled, toggle.isPending))}
           </Button>
         </div>
         {serverError ? (
           <Alert variant="destructive" data-testid="user-status-error">
-            <AlertDescription>{serverError}</AlertDescription>
+            <AlertDescription>{label(serverError)}</AlertDescription>
           </Alert>
         ) : null}
       </CardContent>
@@ -508,17 +602,23 @@ function StatusCard({ target }: { target: User }): ReactNode {
   );
 }
 
-function toggleButtonLabel(isDisabled: boolean, isPending: boolean): string {
-  if (isPending) return isDisabled ? "Enabling…" : "Disabling…";
-  return isDisabled ? "Re-enable user" : "Disable user";
+function toggleButtonLabel(
+  isDisabled: boolean,
+  isPending: boolean,
+): MessageDescriptor {
+  if (isPending) return isDisabled ? M.toggleEnabling : M.toggleDisabling;
+  return isDisabled ? M.toggleEnable : M.toggleDisable;
 }
 
 function DeleteCard({ target }: { target: User }): ReactNode {
   const navigate = useNavigate();
+  const label = useLabel();
   const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState(false);
   const [reassignTo, setReassignTo] = useState<number | null>(null);
-  const [serverError, setServerError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<MessageDescriptor | null>(
+    null,
+  );
 
   // Everyone except the user being deleted — populates the reassign
   // dropdown. 100-item cap is fine for the single-site MVP; larger
@@ -552,11 +652,7 @@ function DeleteCard({ target }: { target: User }): ReactNode {
     },
     onError: (err) => {
       setServerError(
-        mapUserError(
-          err,
-          DELETE_ERROR_MESSAGES,
-          "Couldn't delete the user. Try again.",
-        ),
+        mapUserError(err, DELETE_ERROR_MESSAGES, M.errDeleteFallback),
       );
     },
   });
@@ -565,10 +661,14 @@ function DeleteCard({ target }: { target: User }): ReactNode {
     return (
       <Card className="border-destructive/50">
         <CardHeader>
-          <CardTitle className="text-destructive">Delete user</CardTitle>
+          <CardTitle className="text-destructive">
+            <Trans id="userEdit.delete.title" message="Delete user" />
+          </CardTitle>
           <CardDescription>
-            Permanent. Their entries stay, but you'll choose who inherits
-            authorship.
+            <Trans
+              id="userEdit.delete.description"
+              message="Permanent. Their entries stay, but you'll choose who inherits authorship."
+            />
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -579,7 +679,7 @@ function DeleteCard({ target }: { target: User }): ReactNode {
             }}
             data-testid="user-edit-delete-button"
           >
-            Delete user
+            <Trans id="userEdit.delete.button" message="Delete user" />
           </Button>
         </CardContent>
       </Card>
@@ -590,16 +690,27 @@ function DeleteCard({ target }: { target: User }): ReactNode {
     <Card className="border-destructive">
       <CardHeader>
         <CardTitle className="text-destructive">
-          Confirm delete: {target.email}
+          <Trans
+            id="userEdit.delete.confirm.title"
+            message="Confirm delete: {email}"
+            values={{ email: target.email }}
+          />
         </CardTitle>
         <CardDescription>
-          If this user authored any entries, the next step reassigns them. Leave
-          "Keep entries as-is" if they have none.
+          <Trans
+            id="userEdit.delete.confirm.description"
+            message='If this user authored any entries, the next step reassigns them. Leave "Keep entries as-is" if they have none.'
+          />
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="reassign-to">Reassign entries to</Label>
+          <UILabel htmlFor="reassign-to">
+            <Trans
+              id="userEdit.delete.reassign.label"
+              message="Reassign entries to"
+            />
+          </UILabel>
           <select
             id="reassign-to"
             value={reassignTo == null ? "" : String(reassignTo)}
@@ -611,7 +722,7 @@ function DeleteCard({ target }: { target: User }): ReactNode {
             data-testid="user-delete-reassign-select"
             className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <option value="">Keep entries as-is (none to reassign)</option>
+            <option value="">{label(M.reassignKeepAsIs)}</option>
             {reassignOptions.map((u) => (
               <option key={u.id} value={String(u.id)}>
                 {u.name ?? u.email} ({u.email})
@@ -622,7 +733,7 @@ function DeleteCard({ target }: { target: User }): ReactNode {
 
         {serverError ? (
           <Alert variant="destructive" data-testid="user-delete-error">
-            <AlertDescription>{serverError}</AlertDescription>
+            <AlertDescription>{label(serverError)}</AlertDescription>
           </Alert>
         ) : null}
 
@@ -637,7 +748,7 @@ function DeleteCard({ target }: { target: User }): ReactNode {
             }}
             disabled={deleteUser.isPending}
           >
-            Cancel
+            <Trans id="userEdit.cancel" message="Cancel" />
           </Button>
           <Button
             type="button"
@@ -648,7 +759,14 @@ function DeleteCard({ target }: { target: User }): ReactNode {
             disabled={deleteUser.isPending}
             data-testid="user-delete-confirm-button"
           >
-            {deleteUser.isPending ? "Deleting…" : "Delete forever"}
+            {deleteUser.isPending ? (
+              <Trans id="userEdit.delete.confirm.pending" message="Deleting…" />
+            ) : (
+              <Trans
+                id="userEdit.delete.confirm.idle"
+                message="Delete forever"
+              />
+            )}
           </Button>
         </div>
       </CardContent>
@@ -656,58 +774,74 @@ function DeleteCard({ target }: { target: User }): ReactNode {
   );
 }
 
+type ErrorMessages = Partial<Record<string, MessageDescriptor>>;
+
 // CONFLICT→friendly-copy lookup for user-mutation surfaces. Each caller
 // passes its own `overrides` for per-action phrasing (the `last_admin`
 // message reads differently depending on whether you're demoting,
-// disabling, or deleting) plus a `fallback` for unmapped errors. Server
-// reasons not present in `overrides` fall through to `err.message` then
-// `fallback`.
+// disabling, or deleting) plus a `fallback` for unmapped errors.
 function mapUserError(
   err: unknown,
-  overrides: Partial<Record<string, string>>,
-  fallback: string,
-): string {
-  const reason = extractReason(err);
-  if (reason != null && reason in overrides) {
-    const message = overrides[reason];
-    if (message != null) return message;
-  }
-  if (err instanceof Error) return err.message;
-  return fallback;
-}
-
-function extractReason(err: unknown): string | undefined {
-  if (err && typeof err === "object" && "data" in err) {
-    const data = (err as { data?: { reason?: string } }).data;
-    return data?.reason;
-  }
-  return undefined;
+  overrides: ErrorMessages,
+  fallback: MessageDescriptor,
+): MessageDescriptor {
+  const reason =
+    err && typeof err === "object" && "data" in err
+      ? (err as { data?: { reason?: string } }).data?.reason
+      : undefined;
+  const descriptor = reason != null ? overrides[reason] : undefined;
+  return descriptor ?? fallback;
 }
 
 // Per-surface message bundles. Kept near the call sites (not inline at
 // `onError`) so adding a new reason is a one-line edit per surface.
-const UPDATE_ERROR_MESSAGES: Partial<Record<string, string>> = {
-  last_admin:
-    "Can't do that — this is the last administrator. Promote someone else first.",
-  email_taken: "A user with that email already exists.",
+// `last_admin` reads differently per action, hence the three records.
+const UPDATE_ERROR_MESSAGES: ErrorMessages = {
+  last_admin: defineMessage({
+    id: "userEdit.error.lastAdmin.update",
+    message:
+      "Can't do that — this is the last administrator. Promote someone else first.",
+  }),
+  email_taken: defineMessage({
+    id: "userEdit.error.emailTaken",
+    message: "A user with that email already exists.",
+  }),
 };
-const STATUS_ERROR_MESSAGES: Partial<Record<string, string>> = {
-  last_admin:
-    "Can't disable the last administrator. Promote someone else first.",
+const STATUS_ERROR_MESSAGES: ErrorMessages = {
+  last_admin: defineMessage({
+    id: "userEdit.error.lastAdmin.status",
+    message:
+      "Can't disable the last administrator. Promote someone else first.",
+  }),
 };
-const DELETE_ERROR_MESSAGES: Partial<Record<string, string>> = {
-  last_admin:
-    "Can't delete the last administrator. Promote someone else first.",
-  has_entries:
-    "This user has authored entries. Pick someone to reassign them to above.",
-  reassign_to_self: "Can't reassign to the user being deleted.",
+const DELETE_ERROR_MESSAGES: ErrorMessages = {
+  last_admin: defineMessage({
+    id: "userEdit.error.lastAdmin.delete",
+    message: "Can't delete the last administrator. Promote someone else first.",
+  }),
+  has_entries: defineMessage({
+    id: "userEdit.error.hasEntries",
+    message:
+      "This user has authored entries. Pick someone to reassign them to above.",
+  }),
+  reassign_to_self: defineMessage({
+    id: "userEdit.error.reassignToSelf",
+    message: "Can't reassign to the user being deleted.",
+  }),
 };
 
-function NotFoundPlaceholder({ message }: { message: string }): ReactNode {
+function NotFoundPlaceholder({
+  message,
+}: {
+  readonly message: MessageDescriptor;
+}): ReactNode {
+  const label = useLabel();
   return (
     <div className="flex flex-col gap-2">
-      <h1 className="text-2xl font-semibold">Not found</h1>
-      <p className="text-muted-foreground text-sm">{message}</p>
+      <h1 className="text-2xl font-semibold">
+        <Trans id="userEdit.notFound.title" message="Not found" />
+      </h1>
+      <p className="text-muted-foreground text-sm">{label(message)}</p>
     </div>
   );
 }

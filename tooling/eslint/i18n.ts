@@ -67,6 +67,10 @@ export const i18nStrictOverrides: Linter.Config = {
           // attribute itself is in `ignoreNames`, but values inside a
           // record literal need a content match.
           "^(default|secondary|outline|ghost|destructive|link)$",
+          // Capability identifiers — colon-namespaced lowercase tokens
+          // passed to `hasCap` / `otherUserCap` and similar gates.
+          // Matches `user:edit_own`, `entry:post:read`, etc.
+          "^[a-z]+(:[a-z_]+)+$",
         ],
         // Bare strings compile via `new RegExp(s)`; the `{regex:{pattern,flags?}}`
         // form is required only when flags are needed. Most entries are
@@ -130,6 +134,9 @@ export const i18nStrictOverrides: Linter.Config = {
           // literals here are picklist discriminators (`<option value="inherit">`),
           // never user copy.
           "value",
+          // RHF field-path prefix forwarded by metabox / form-section
+          // primitives.
+          "basePath",
           // Brand constants used as document-title suffix. Localizing
           // the product name is out of scope.
           "TITLE_BRAND",

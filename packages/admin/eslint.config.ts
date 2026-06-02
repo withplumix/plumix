@@ -27,6 +27,7 @@ const STRICT_WRAPPED_FILES = [
   "src/routes/_authenticated/mailer/index.tsx",
   "src/routes/_authenticated/settings/$page.tsx",
   "src/routes/_authenticated/settings/index.tsx",
+  "src/routes/_authenticated/users/$id/edit.tsx",
   "src/routes/_authenticated/users/create.tsx",
   "src/routes/_authenticated/users/index.tsx",
   // `src/lib/breadcrumbs.ts` is intentionally excluded — `Create {singular}`
