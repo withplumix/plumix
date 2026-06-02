@@ -29,7 +29,8 @@
     "./fields": {
       "types": "./dist/fields.d.ts",
       "default": "./dist/fields.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",

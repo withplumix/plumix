@@ -29,7 +29,8 @@
     "./server": {
       "types": "./dist/server/index.d.ts",
       "default": "./dist/server/index.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",

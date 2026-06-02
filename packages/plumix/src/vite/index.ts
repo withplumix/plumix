@@ -44,6 +44,7 @@ import {
   transformUseClientModule,
 } from "./island-transform.js";
 import { plumixPathAliases } from "./path-aliases.js";
+import { findPluginPackageRoot } from "./plugin-catalog-resolve.js";
 import { stageUserPublic } from "./public-staging.js";
 
 // `import.meta.url` for this module lives at plumix/dist/vite/index.js in
@@ -500,22 +501,23 @@ async function stagePluginCatalogs(
       // was filtered out by site-locale intersection in `buildManifest`.
       if (!entry || !plugin.i18n) return;
       const { catalogPath } = plugin.i18n;
-      // TODO(#697 follow-up): `catalogPath` is documented as
-      // plugin-package-root-relative but currently resolves against
-      // the consumer's `projectRoot`. Workspace plugins land their
-      // catalogs at `packages/plugins/<id>/locales/<locale>.mjs`,
-      // which is invisible from the consumer's root — they're already
-      // baked into admin via `import.meta.glob` in `i18n-boot.ts`,
-      // so missing-here skips silently. Third-party plugins shipped
-      // via npm need a `createRequire(projectRoot).resolve` mechanism
-      // before they can reach this copy path; tracked as a follow-up.
-      const candidate = isAbsolute(catalogPath)
-        ? catalogPath
-        : resolve(projectRoot, catalogPath);
-      try {
-        await stat(candidate);
-      } catch {
-        return;
+      const candidate = await resolveCatalogDir(
+        plugin.id,
+        catalogPath,
+        projectRoot,
+      );
+      if (candidate === null) {
+        // `buildManifest` already committed to emitting catalog URLs
+        // for this plugin — if the resolver can't reach the source
+        // directory, admin's runtime fetch will 404 in production.
+        // Fail the build with the same error shape `adminChunk` /
+        // `adminCss` use so plugin authors see it during `plumix build`.
+        throw VitePluginError.adminAssetNotFound({
+          pluginId: plugin.id,
+          field: "i18n.catalogPath",
+          declared: catalogPath,
+          resolved: catalogPath,
+        });
       }
       await Promise.all(
         Object.keys(entry.catalogs).map(async (locale) => {
@@ -540,6 +542,36 @@ async function stagePluginCatalogs(
       );
     }),
   );
+}
+
+// Resolve the per-plugin catalog source directory. The npm-name
+// convention (workspace + npm-installed plugins) is the only supported
+// path; absolute `catalogPath` values are honored verbatim. Returns
+// `null` when nothing resolves to an existing directory —
+// `stagePluginCatalogs` then throws `adminAssetNotFound` because the
+// manifest already committed to a URL admin will fetch.
+async function resolveCatalogDir(
+  pluginId: string,
+  catalogPath: string,
+  projectRoot: string,
+): Promise<string | null> {
+  if (isAbsolute(catalogPath)) {
+    try {
+      await stat(catalogPath);
+      return catalogPath;
+    } catch {
+      return null;
+    }
+  }
+  const conventional = findPluginPackageRoot({ pluginId, projectRoot });
+  if (conventional === null) return null;
+  const dir = resolve(conventional, catalogPath);
+  try {
+    await stat(dir);
+    return dir;
+  } catch {
+    return null;
+  }
 }
 
 async function resolvePluginAsset(
