@@ -5,6 +5,7 @@
 // redundant with the compiler's auto-detection and CodeQL flags it as
 // unknown. The warning is informational, not an error.
 
+import type { MessageDescriptor } from "@lingui/core";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton.js";
@@ -16,12 +17,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table.js";
+import { useLabel } from "@/lib/use-label.js";
 import { cn } from "@/lib/utils.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
 import {
   flexRender,
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+
+const M = {
+  loading: defineMessage({
+    id: "dataTable.loading",
+    message: "Loading",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 // Per-column alignment + className passthrough. Column defs opt in via
 // `meta: { className: "text-right" }`; both the header cell and every
@@ -39,15 +50,18 @@ export function DataTable<TData>({
   data,
   isLoading = false,
   emptyState,
-  loadingLabel = "Loading",
+  loadingLabel,
 }: {
   readonly columns: ColumnDef<TData>[];
   readonly data: readonly TData[];
   readonly isLoading?: boolean;
   readonly emptyState?: ReactNode;
-  /** Screen-reader label for the loading region when `isLoading`. */
+  /** Screen-reader label for the loading region when `isLoading`.
+   *  Defaults to the localized "Loading" descriptor. */
   readonly loadingLabel?: string;
 }): ReactNode {
+  const label = useLabel();
+  const resolvedLoadingLabel = loadingLabel ?? label(M.loading);
   // `useReactTable` returns a non-stable table instance — React Compiler
   // can't memoize the surrounding render. The instance is the documented
   // contract (its methods and state are read by row/cell components)
@@ -66,7 +80,7 @@ export function DataTable<TData>({
       className="bg-card rounded-md border"
       aria-busy={isLoading || undefined}
       role={isLoading ? "region" : undefined}
-      aria-label={isLoading ? loadingLabel : undefined}
+      aria-label={isLoading ? resolvedLoadingLabel : undefined}
       data-testid={isLoading ? "data-table-loading" : "data-table"}
     >
       <Table>
@@ -116,7 +130,9 @@ export function DataTable<TData>({
                 colSpan={columns.length}
                 className="text-muted-foreground h-32 text-center"
               >
-                {emptyState ?? "No results."}
+                {emptyState ?? (
+                  <Trans id="dataTable.emptyState" message="No results." />
+                )}
               </TableCell>
             </TableRow>
           )}

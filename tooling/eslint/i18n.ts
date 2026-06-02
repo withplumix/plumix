@@ -57,6 +57,11 @@ export const i18nStrictOverrides: Linter.Config = {
           // Error / loading discriminator codes returned from async
           // mutations (passkey errors, query states, etc.).
           "^(unknown|pending|idle|loading|success|error)$",
+          // Entry / autosave state machine + manifest support flags.
+          "^(saved|saving|live|none|autosave|draft|published|scheduled|private|revisions|edit-with-draft|trashed|inherit)$",
+          // Plumix internal storage / version keys (`plumix.v2`,
+          // `plumix.v2.draft.<slug>.<id>`).
+          "^plumix\\.",
           // User-role identifiers (valibot picklist discriminators) —
           // matches `UserRole` from `@plumix/core/schema`. The role's
           // display label lives in a separate `MessageDescriptor`.
@@ -71,6 +76,10 @@ export const i18nStrictOverrides: Linter.Config = {
           // passed to `hasCap` / `otherUserCap` and similar gates.
           // Matches `user:edit_own`, `entry:post:read`, etc.
           "^[a-z]+(:[a-z_]+)+$",
+          // WebAuthn `AuthenticatorTransport` tokens from the W3C spec
+          // — used as protocol discriminators in passkey UI (e.g.
+          // `transports.includes("internal")`), never user copy.
+          "^(internal|hybrid|usb|nfc|ble|smart-card)$",
         ],
         // Bare strings compile via `new RegExp(s)`; the `{regex:{pattern,flags?}}`
         // form is required only when flags are needed. Most entries are
@@ -124,6 +133,7 @@ export const i18nStrictOverrides: Linter.Config = {
           "code",
           "slug",
           "kind",
+          "mode",
           "scope",
           "displayName",
           "$$typeof",

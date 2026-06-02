@@ -1,4 +1,9 @@
+import type { MessageDescriptor } from "@lingui/core";
+import { defineMessage } from "@lingui/core/macro";
+
 import type { PasskeyErrorCode as CorePasskeyErrorCode } from "@plumix/core";
+
+import { useLabel } from "./use-label.js";
 
 // Codes thrown from core's `PasskeyError` class. Drift-guarded
 // against core's `PasskeyErrorCode` by the assertion below.
@@ -85,72 +90,155 @@ export class PasskeyError extends Error {
   }
 }
 
-const MESSAGES: Record<PasskeyErrorCode, string> = {
+const MESSAGES: Record<PasskeyErrorCode, MessageDescriptor> = {
   // --- browser-side ---
-  user_cancelled: "Sign-in was cancelled.",
-  no_authenticator:
-    "No passkey is available on this device. Try signing in on the device where you registered.",
-  network_error:
-    "Couldn't reach the server. Check your connection and try again.",
-  unknown: "Something went wrong. Please try again.",
+  user_cancelled: defineMessage({
+    id: "passkey.error.userCancelled",
+    message: "Sign-in was cancelled.",
+  }),
+  no_authenticator: defineMessage({
+    id: "passkey.error.noAuthenticator",
+    message:
+      "No passkey is available on this device. Try signing in on the device where you registered.",
+  }),
+  network_error: defineMessage({
+    id: "passkey.error.networkError",
+    message: "Couldn't reach the server. Check your connection and try again.",
+  }),
+  unknown: defineMessage({
+    id: "passkey.error.unknown",
+    message: "Something went wrong. Please try again.",
+  }),
 
   // --- server-side: challenge/session ---
-  challenge_not_found: "That sign-in attempt timed out. Please try again.",
-  challenge_not_bound_to_user:
-    "That sign-in attempt timed out. Please try again.",
+  challenge_not_found: defineMessage({
+    id: "passkey.error.challengeNotFound",
+    message: "That sign-in attempt timed out. Please try again.",
+  }),
+  challenge_not_bound_to_user: defineMessage({
+    id: "passkey.error.challengeNotBoundToUser",
+    message: "That sign-in attempt timed out. Please try again.",
+  }),
 
   // --- server-side: request shape ---
-  invalid_input:
-    "Something went wrong with the form. Please reload and try again.",
-  invalid_response:
-    "Your device returned an unexpected response. Please try again.",
-  invalid_client_data:
-    "Your device returned an unexpected response. Please try again.",
+  invalid_input: defineMessage({
+    id: "passkey.error.invalidInput",
+    message: "Something went wrong with the form. Please reload and try again.",
+  }),
+  invalid_response: defineMessage({
+    id: "passkey.error.invalidResponse",
+    message: "Your device returned an unexpected response. Please try again.",
+  }),
+  invalid_client_data: defineMessage({
+    id: "passkey.error.invalidClientData",
+    message: "Your device returned an unexpected response. Please try again.",
+  }),
 
   // --- server-side: origin/rp mismatch ---
-  invalid_origin: "This passkey isn't usable on this site.",
-  invalid_rp_id: "This passkey isn't usable on this site.",
+  invalid_origin: defineMessage({
+    id: "passkey.error.invalidOrigin",
+    message: "This passkey isn't usable on this site.",
+  }),
+  invalid_rp_id: defineMessage({
+    id: "passkey.error.invalidRpId",
+    message: "This passkey isn't usable on this site.",
+  }),
 
   // --- server-side: user verification ---
-  user_presence_missing:
-    "Your device didn't confirm your presence. Please try again.",
+  user_presence_missing: defineMessage({
+    id: "passkey.error.userPresenceMissing",
+    message: "Your device didn't confirm your presence. Please try again.",
+  }),
 
   // --- server-side: algorithm/attestation ---
-  unsupported_attestation_format:
-    "Your device's response format isn't supported.",
-  unsupported_algorithm: "Your device's signing algorithm isn't supported.",
+  unsupported_attestation_format: defineMessage({
+    id: "passkey.error.unsupportedAttestationFormat",
+    message: "Your device's response format isn't supported.",
+  }),
+  unsupported_algorithm: defineMessage({
+    id: "passkey.error.unsupportedAlgorithm",
+    message: "Your device's signing algorithm isn't supported.",
+  }),
 
   // --- server-side: credential storage ---
-  credential_already_registered:
-    "That passkey is already registered on this site.",
-  credential_limit_reached:
-    "You've reached the limit of passkeys for this account.",
-  credential_not_found:
-    "That passkey isn't registered on this site. Try a different one.",
-  credential_storage_corrupt:
-    "Your saved passkey data is corrupt. Please register a new one.",
+  credential_already_registered: defineMessage({
+    id: "passkey.error.credentialAlreadyRegistered",
+    message: "That passkey is already registered on this site.",
+  }),
+  credential_limit_reached: defineMessage({
+    id: "passkey.error.credentialLimitReached",
+    message: "You've reached the limit of passkeys for this account.",
+  }),
+  credential_not_found: defineMessage({
+    id: "passkey.error.credentialNotFound",
+    message: "That passkey isn't registered on this site. Try a different one.",
+  }),
+  credential_storage_corrupt: defineMessage({
+    id: "passkey.error.credentialStorageCorrupt",
+    message: "Your saved passkey data is corrupt. Please register a new one.",
+  }),
 
   // --- server-side: signature verification ---
-  invalid_signature: "Your device's signature didn't verify. Please try again.",
-  counter_replay:
-    "Your passkey appears to have been used on another device. Please re-register.",
+  invalid_signature: defineMessage({
+    id: "passkey.error.invalidSignature",
+    message: "Your device's signature didn't verify. Please try again.",
+  }),
+  counter_replay: defineMessage({
+    id: "passkey.error.counterReplay",
+    message:
+      "Your passkey appears to have been used on another device. Please re-register.",
+  }),
 
   // --- server-side: users ---
-  user_not_found: "No account found for that email.",
-  registration_closed: "Sign-up is not open on this site.",
-  email_mismatch: "That email doesn't match your signed-in account.",
+  user_not_found: defineMessage({
+    id: "passkey.error.userNotFound",
+    message: "No account found for that email.",
+  }),
+  registration_closed: defineMessage({
+    id: "passkey.error.registrationClosed",
+    message: "Sign-up is not open on this site.",
+  }),
+  email_mismatch: defineMessage({
+    id: "passkey.error.emailMismatch",
+    message: "That email doesn't match your signed-in account.",
+  }),
 
   // --- server-side: invite acceptance ---
-  invalid_token:
-    "This invite link is no longer valid. Ask your admin to send a new one.",
-  token_expired:
-    "This invite link has expired. Ask your admin to send a new one.",
-  challenge_mismatch:
-    "The passkey was created for a different invite. Please reload and try again.",
+  invalid_token: defineMessage({
+    id: "passkey.error.invalidToken",
+    message:
+      "This invite link is no longer valid. Ask your admin to send a new one.",
+  }),
+  token_expired: defineMessage({
+    id: "passkey.error.tokenExpired",
+    message: "This invite link has expired. Ask your admin to send a new one.",
+  }),
+  challenge_mismatch: defineMessage({
+    id: "passkey.error.challengeMismatch",
+    message:
+      "The passkey was created for a different invite. Please reload and try again.",
+  }),
 };
 
-export function getPasskeyErrorMessage(code: string): string {
+/**
+ * Resolves a PasskeyError wire code to a localizable
+ * `MessageDescriptor`. Unknown codes fall back to the generic
+ * `unknown` descriptor — including ones the server might add in
+ * future versions without a matching client update.
+ */
+export function passkeyErrorDescriptor(code: string): MessageDescriptor {
   return code in MESSAGES
     ? MESSAGES[code as PasskeyErrorCode]
     : MESSAGES.unknown;
+}
+
+/**
+ * Convenience hook for the three passkey routes (`login`, `bootstrap`,
+ * `accept-invite`) that all render `passkeyErrorDescriptor(code)`
+ * through the same `useLabel()` resolver. Collapses two imports and
+ * one `useLingui` call per consumer.
+ */
+export function usePasskeyErrorMessage(): (code: string) => string {
+  const label = useLabel();
+  return (code) => label(passkeyErrorDescriptor(code));
 }

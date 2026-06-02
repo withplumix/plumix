@@ -18,10 +18,11 @@ import {
   FormMessage,
 } from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
-import { getPasskeyErrorMessage, PasskeyError } from "@/lib/passkey-errors.js";
+import { PasskeyError, usePasskeyErrorMessage } from "@/lib/passkey-errors.js";
 import { registerWithPasskey } from "@/lib/passkey.js";
 import { SESSION_QUERY_KEY, sessionQueryOptions } from "@/lib/session.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { Trans } from "@lingui/react";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
@@ -45,6 +46,7 @@ export const Route = createFileRoute("/_auth/bootstrap")({
 });
 
 function BootstrapRoute(): ReactNode {
+  const renderPasskeyError = usePasskeyErrorMessage();
   const router = useRouter();
   const [errorCode, setErrorCode] = useState<string | null>(null);
 
@@ -79,10 +81,15 @@ function BootstrapRoute(): ReactNode {
     <Card>
       <CardHeader>
         <CardTitle>
-          <h1 data-testid="bootstrap-heading">Create admin account</h1>
+          <h1 data-testid="bootstrap-heading">
+            <Trans id="auth.bootstrap.title" message="Create admin account" />
+          </h1>
         </CardTitle>
         <CardDescription>
-          Set up your site — this email becomes the admin account.
+          <Trans
+            id="auth.bootstrap.description"
+            message="Set up your site — this email becomes the admin account."
+          />
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -93,7 +100,9 @@ function BootstrapRoute(): ReactNode {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>
+                    <Trans id="auth.bootstrap.email" message="Email" />
+                  </FormLabel>
                   <FormControl>
                     <Input
                       type="email"
@@ -113,7 +122,9 @@ function BootstrapRoute(): ReactNode {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>
+                    <Trans id="auth.bootstrap.name" message="Name" />
+                  </FormLabel>
                   <FormControl>
                     <Input
                       type="text"
@@ -130,15 +141,23 @@ function BootstrapRoute(): ReactNode {
             {errorCode ? (
               <Alert variant="destructive">
                 <AlertDescription>
-                  {getPasskeyErrorMessage(errorCode)}
+                  {renderPasskeyError(errorCode)}
                 </AlertDescription>
               </Alert>
             ) : null}
 
             <Button type="submit" disabled={createAccount.isPending}>
-              {createAccount.isPending
-                ? "Creating account…"
-                : "Create account with passkey"}
+              {createAccount.isPending ? (
+                <Trans
+                  id="auth.bootstrap.submit.pending"
+                  message="Creating account…"
+                />
+              ) : (
+                <Trans
+                  id="auth.bootstrap.submit.idle"
+                  message="Create account with passkey"
+                />
+              )}
             </Button>
           </form>
         </Form>

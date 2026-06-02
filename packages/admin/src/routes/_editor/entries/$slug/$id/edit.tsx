@@ -1,4 +1,5 @@
 import type { AutosaveStatus } from "@/editor/AutosaveStatus.js";
+import type { MessageDescriptor } from "@lingui/core";
 import type { Config, Data } from "@puckeditor/core";
 import type { ReactElement, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -29,6 +30,8 @@ import { orpc } from "@/lib/orpc.js";
 import { getRegisteredBlocks } from "@/lib/plugin-registry.js";
 import { useFormatters } from "@/lib/use-formatters.js";
 import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react";
 import { ORPCError } from "@orpc/client";
 import { Puck } from "@puckeditor/core";
 import {
@@ -40,11 +43,31 @@ import {
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import * as v from "valibot";
 
+import type { Label } from "@plumix/core/i18n";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { coreMarkExtensions, createBlockRegistry } from "@plumix/blocks";
 import { idPathParam } from "@plumix/core/validation";
 
 import "@puckeditor/core/puck.css";
+
+const M = {
+  conflict: defineMessage({
+    id: "editor.entry.edit.restore.conflict",
+    message: "Another editor changed this entry. Reload and try again.",
+  }),
+  saveFailed: defineMessage({
+    id: "editor.entry.edit.saveFailed",
+    message: "Couldn't save.",
+  }),
+  staleLoading: defineMessage({
+    id: "editor.entry.edit.stale.loading",
+    message: "Loading…",
+  }),
+  editHeadline: defineMessage({
+    id: "editor.entry.edit.headline",
+    message: "Edit {singular}",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 const EMPTY_DATA: Data = { content: [], root: {} };
 
@@ -129,7 +152,7 @@ function PendingScreen(): ReactNode {
       className="text-muted-foreground p-6 text-sm"
       data-testid="plumix-editor-pending"
     >
-      Loading entry…
+      <Trans id="editor.entry.edit.loading" message="Loading entry…" />
     </div>
   );
 }
@@ -140,7 +163,10 @@ function ErrorScreen(): ReactNode {
       className="text-muted-foreground p-6 text-sm"
       data-testid="plumix-editor-error"
     >
-      Couldn't load this entry.
+      <Trans
+        id="editor.entry.edit.loadFailed"
+        message="Couldn't load this entry."
+      />
     </div>
   );
 }
@@ -228,6 +254,7 @@ function PuckSpikeRouteInner({
   backHref,
 }: PuckSpikeRouteInnerProps): ReactNode {
   const { formatRelative } = useFormatters();
+  const renderLabel = useLabel();
   const starterCandidates = useMemo(
     () =>
       entryType ? selectStarterPatterns(getPatterns(), entryType.name) : [],
@@ -640,7 +667,11 @@ function PuckSpikeRouteInner({
                 content: liveSnapshotQuery.data.content,
                 excerpt: liveSnapshotQuery.data.excerpt,
               }
-            : { title: "Loading…", content: null, excerpt: null }
+            : {
+                title: renderLabel(M.staleLoading),
+                content: null,
+                excerpt: null,
+              }
         }
         onUseMine={handleUseMine}
         onUseTheirs={handleUseTheirs}
@@ -677,6 +708,7 @@ function PuckPreviewRouteInner({
   backHref,
 }: PuckPreviewRouteInnerProps): ReactNode {
   const { formatRelative } = useFormatters();
+  const renderLabel = useLabel();
   const { data: liveEntry } = useSuspenseQuery(
     orpc.entry.get.queryOptions({ input: { id } }),
   );
@@ -739,13 +771,18 @@ function PuckPreviewRouteInner({
   const handleRestore = useCallback(() => restore.mutate(), [restore]);
   // Surface the most useful detail for the user. CONFLICT (stale
   // `expectedLiveUpdatedAt`) is the common case when another tab
-  // edited the live entry after this preview loaded.
-  const restoreError =
+  // edited the live entry after this preview loaded. PreviewBanner
+  // takes a rendered string — resolve here via `useLabel` so the
+  // descriptor branch and the runtime-Error string branch both
+  // funnel through the same shape.
+  const restoreErrorLabel: Label | null =
     restore.error instanceof ORPCError && restore.error.code === "CONFLICT"
-      ? "Another editor changed this entry. Reload and try again."
+      ? M.conflict
       : restore.error instanceof Error
         ? restore.error.message
         : null;
+  const restoreError =
+    restoreErrorLabel !== null ? renderLabel(restoreErrorLabel) : null;
   const revisionAuthor =
     revision.authorName ?? revision.authorEmail ?? `#${String(revisionId)}`;
   const Layout = useCallback(
@@ -815,12 +852,15 @@ function PlainFormRouteInner({
   capabilities,
 }: PlainFormRouteInnerProps): ReactNode {
   const renderLabel = useLabel();
+  const { i18n } = useLingui();
   const { data: entry } = useSuspenseQuery(
     orpc.entry.get.queryOptions({ input: { id } }),
   );
   const queryClient = useQueryClient();
   const liveUpdatedAtRef = useRef<Date>(entry.updatedAt);
-  const [serverError, setServerError] = useState<string | null>(null);
+  // String branch carries plugin-author `err.message` verbatim; the
+  // descriptor branch surfaces the localized fallback.
+  const [serverError, setServerError] = useState<Label | null>(null);
 
   const metaBoxes = entryMetaBoxesForType(entryType.name, capabilities);
 
@@ -845,7 +885,7 @@ function PlainFormRouteInner({
       });
     },
     onError: (err) => {
-      setServerError(err instanceof Error ? err.message : "Couldn't save.");
+      setServerError(err instanceof Error ? err.message : M.saveFailed);
     },
   });
 
@@ -873,14 +913,29 @@ function PlainFormRouteInner({
     parentId: entry.parentId,
   };
 
+  const singular = (
+    entryType.labels?.singular ?? renderLabel(entryType.label)
+  ).toLowerCase();
+  // PlainFormLayout takes a rendered string headline; ICU placeholder
+  // substitution via the 3-arg `i18n._` form.
+  const headline = i18n._(
+    M.editHeadline.id,
+    { singular },
+    { message: M.editHeadline.message },
+  );
+  const renderedError =
+    updateMutation.isPending || serverError === null
+      ? null
+      : renderLabel(serverError);
+
   return (
     <PlainFormLayout
       key={String(id)}
       initialValues={initialValues}
       metaBoxes={metaBoxes}
-      headline={`Edit ${(entryType.labels?.singular ?? renderLabel(entryType.label)).toLowerCase()}`}
+      headline={headline}
       isSubmitting={updateMutation.isPending}
-      serverError={updateMutation.isPending ? null : serverError}
+      serverError={renderedError}
       autosaveMs={500}
       revisionsTrigger={revisionsTrigger}
       onSubmit={(values) =>

@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import {
@@ -21,19 +22,90 @@ import {
   CardTitle,
 } from "@/components/ui/card.js";
 import { Input } from "@/components/ui/input.js";
-import { Label } from "@/components/ui/label.js";
+import { Label as UILabel } from "@/components/ui/label.js";
 import { toDate } from "@/lib/dates.js";
 import { extractCode, extractReason } from "@/lib/orpc-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { PasskeyError } from "@/lib/passkey-errors.js";
 import { registerWithPasskey } from "@/lib/passkey.js";
 import { useFormatters } from "@/lib/use-formatters.js";
+import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-// Wire shape from `auth.credentials.list`. Mirrors the columns the RPC
-// handler picks — keep in sync if the projection there changes. Dates
-// arrive as ISO strings or Date depending on cache state, so the
-// display sites coerce via `toDate`.
+import type { Label } from "@plumix/core/i18n";
+
+const M = {
+  unnamed: defineMessage({
+    id: "profile.passkeys.unnamed",
+    message: "Unnamed passkey",
+  }),
+  // Transport labels — WebAuthn-derived display copy.
+  transportInternal: defineMessage({
+    id: "profile.passkeys.transport.internal",
+    message: "This device",
+  }),
+  transportHybrid: defineMessage({
+    id: "profile.passkeys.transport.hybrid",
+    message: "Cross-device",
+  }),
+  transportSecurityKey: defineMessage({
+    id: "profile.passkeys.transport.securityKey",
+    message: "Security key",
+  }),
+  // Validation / rename inline error.
+  nameEmpty: defineMessage({
+    id: "profile.passkeys.rename.nameEmpty",
+    message: "Name can't be empty.",
+  }),
+  // Shared "this passkey is gone" — surfaced by both the rename and
+  // delete error helpers when the server returns NOT_FOUND.
+  notFound: defineMessage({
+    id: "profile.passkeys.notFound",
+    message: "This passkey no longer exists. Refresh the list.",
+  }),
+  // Shared "must keep one" copy — used as both the delete-disabled
+  // tooltip on the row button and the explicit `last_credential`
+  // reason returned by the server.
+  lastCredential: defineMessage({
+    id: "profile.passkeys.lastCredential",
+    message: "You can't delete your last passkey. Add another one first.",
+  }),
+  renameFallback: defineMessage({
+    id: "profile.passkeys.rename.fallback",
+    message: "Couldn't rename the passkey. Try again.",
+  }),
+  deleteFallback: defineMessage({
+    id: "profile.passkeys.delete.fallback",
+    message: "Couldn't delete the passkey. Try again.",
+  }),
+  enrollCancelled: defineMessage({
+    id: "profile.passkeys.enroll.cancelled",
+    message: "Cancelled. Tap Add passkey when you're ready.",
+  }),
+  enrollAlreadyRegistered: defineMessage({
+    id: "profile.passkeys.enroll.alreadyRegistered",
+    message: "That passkey is already registered on this account.",
+  }),
+  enrollNoAuthenticator: defineMessage({
+    id: "profile.passkeys.enroll.noAuthenticator",
+    message: "This device doesn't support passkeys.",
+  }),
+  enrollNetworkError: defineMessage({
+    id: "profile.passkeys.enroll.networkError",
+    message: "Network error. Check your connection and try again.",
+  }),
+  enrollEmailMismatch: defineMessage({
+    id: "profile.passkeys.enroll.emailMismatch",
+    message: "Couldn't enrol — re-sign-in and try again.",
+  }),
+  enrollFallback: defineMessage({
+    id: "profile.passkeys.enroll.fallback",
+    message: "Couldn't enrol the passkey. Try again.",
+  }),
+} satisfies Record<string, MessageDescriptor>;
+
 interface PasskeyWire {
   readonly id: string;
   readonly name: string | null;
@@ -54,8 +126,9 @@ interface PasskeysCardProps {
 }
 
 export function PasskeysCard({ userEmail }: PasskeysCardProps): ReactNode {
+  const label = useLabel();
   const queryClient = useQueryClient();
-  const [enrollError, setEnrollError] = useState<string | null>(null);
+  const [enrollError, setEnrollError] = useState<Label | null>(null);
 
   const list = useQuery(orpc.auth.credentials.list.queryOptions({ input: {} }));
 
@@ -78,19 +151,28 @@ export function PasskeysCard({ userEmail }: PasskeysCardProps): ReactNode {
   return (
     <Card data-testid="profile-passkeys-card">
       <CardHeader>
-        <CardTitle>Passkeys</CardTitle>
+        <CardTitle>
+          <Trans id="profile.passkeys.title" message="Passkeys" />
+        </CardTitle>
         <CardDescription>
-          Devices that can sign in to this account. Add a new one before
-          deleting an old one — at least one passkey must remain.
+          <Trans
+            id="profile.passkeys.description"
+            message="Devices that can sign in to this account. Add a new one before deleting an old one — at least one passkey must remain."
+          />
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {list.isPending ? (
-          <p className="text-muted-foreground text-sm">Loading…</p>
+          <p className="text-muted-foreground text-sm">
+            <Trans id="profile.passkeys.loading" message="Loading…" />
+          </p>
         ) : list.error ? (
           <Alert variant="destructive">
             <AlertDescription>
-              Couldn't load your passkeys. Refresh and try again.
+              <Trans
+                id="profile.passkeys.loadFailed"
+                message="Couldn't load your passkeys. Refresh and try again."
+              />
             </AlertDescription>
           </Alert>
         ) : list.data.length > 0 ? (
@@ -109,7 +191,10 @@ export function PasskeysCard({ userEmail }: PasskeysCardProps): ReactNode {
           </ul>
         ) : (
           <p className="text-muted-foreground text-sm">
-            No passkeys registered. Add one to enable sign-in.
+            <Trans
+              id="profile.passkeys.empty"
+              message="No passkeys registered. Add one to enable sign-in."
+            />
           </p>
         )}
 
@@ -118,7 +203,7 @@ export function PasskeysCard({ userEmail }: PasskeysCardProps): ReactNode {
             variant="destructive"
             data-testid="profile-passkeys-enroll-error"
           >
-            <AlertDescription>{enrollError}</AlertDescription>
+            <AlertDescription>{label(enrollError)}</AlertDescription>
           </Alert>
         ) : null}
 
@@ -132,7 +217,11 @@ export function PasskeysCard({ userEmail }: PasskeysCardProps): ReactNode {
             disabled={enroll.isPending}
             data-testid="profile-passkeys-enroll-button"
           >
-            {enroll.isPending ? "Adding…" : "Add passkey"}
+            {enroll.isPending ? (
+              <Trans id="profile.passkeys.enroll.pending" message="Adding…" />
+            ) : (
+              <Trans id="profile.passkeys.enroll.idle" message="Add passkey" />
+            )}
           </Button>
         </div>
       </CardContent>
@@ -147,14 +236,15 @@ interface PasskeyRowProps {
 }
 
 function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
+  const label = useLabel();
   const { formatDate } = useFormatters();
   const createdAt = toDate(cred.createdAt);
   const lastUsedAt = toDate(cred.lastUsedAt);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(cred.name ?? "");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [renameError, setRenameError] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [renameError, setRenameError] = useState<Label | null>(null);
+  const [deleteError, setDeleteError] = useState<Label | null>(null);
 
   const rename = useMutation({
     mutationFn: (name: string) =>
@@ -185,8 +275,8 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
     },
   });
 
-  const displayName = cred.name ?? "Unnamed passkey";
-  const transportLabel = formatTransport(cred);
+  const displayName = cred.name ?? label(M.unnamed);
+  const transportDescriptor = pickTransportDescriptor(cred);
 
   return (
     <li className="flex flex-col gap-2 py-3" data-testid="profile-passkey-row">
@@ -199,18 +289,21 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
                 e.preventDefault();
                 const trimmed = draft.trim();
                 if (trimmed.length === 0) {
-                  setRenameError("Name can't be empty.");
+                  setRenameError(M.nameEmpty);
                   return;
                 }
                 rename.mutate(trimmed);
               }}
             >
-              <Label
+              <UILabel
                 htmlFor={`passkey-name-${cred.id}`}
                 className="text-muted-foreground text-xs"
               >
-                Rename passkey
-              </Label>
+                <Trans
+                  id="profile.passkeys.rename.label"
+                  message="Rename passkey"
+                />
+              </UILabel>
               <Input
                 id={`passkey-name-${cred.id}`}
                 value={draft}
@@ -226,7 +319,7 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
                   variant="destructive"
                   data-testid="profile-passkey-rename-error"
                 >
-                  <AlertDescription>{renameError}</AlertDescription>
+                  <AlertDescription>{label(renameError)}</AlertDescription>
                 </Alert>
               ) : null}
               <div className="flex justify-end gap-2">
@@ -241,7 +334,7 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
                   }}
                   disabled={rename.isPending}
                 >
-                  Cancel
+                  <Trans id="profile.passkeys.rename.cancel" message="Cancel" />
                 </Button>
                 <Button
                   type="submit"
@@ -249,7 +342,14 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
                   disabled={rename.isPending}
                   data-testid="profile-passkey-rename-submit"
                 >
-                  {rename.isPending ? "Saving…" : "Save"}
+                  {rename.isPending ? (
+                    <Trans
+                      id="profile.passkeys.rename.pending"
+                      message="Saving…"
+                    />
+                  ) : (
+                    <Trans id="profile.passkeys.rename.save" message="Save" />
+                  )}
                 </Button>
               </div>
             </form>
@@ -262,13 +362,29 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
                 {displayName}
               </p>
               <div className="text-muted-foreground flex flex-wrap gap-2 text-xs">
-                {transportLabel ? <span>{transportLabel}</span> : null}
-                {cred.isBackedUp ? (
-                  <Badge variant="secondary">Synced</Badge>
+                {transportDescriptor ? (
+                  <span>{label(transportDescriptor)}</span>
                 ) : null}
-                <span>Added {formatDate(createdAt)}</span>
+                {cred.isBackedUp ? (
+                  <Badge variant="secondary">
+                    <Trans id="profile.passkeys.synced" message="Synced" />
+                  </Badge>
+                ) : null}
+                <span>
+                  <Trans
+                    id="profile.passkeys.added"
+                    message="Added {date}"
+                    values={{ date: formatDate(createdAt) }}
+                  />
+                </span>
                 {lastUsedAt.getTime() !== createdAt.getTime() ? (
-                  <span>Last used {formatDate(lastUsedAt)}</span>
+                  <span>
+                    <Trans
+                      id="profile.passkeys.lastUsed"
+                      message="Last used {date}"
+                      values={{ date: formatDate(lastUsedAt) }}
+                    />
+                  </span>
                 ) : null}
               </div>
             </>
@@ -286,7 +402,7 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
               }}
               data-testid="profile-passkey-rename-button"
             >
-              Rename
+              <Trans id="profile.passkeys.rename.button" message="Rename" />
             </Button>
             <Button
               type="button"
@@ -297,14 +413,10 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
                 setConfirmingDelete(true);
               }}
               disabled={isLast}
-              title={
-                isLast
-                  ? "You can't delete your last passkey. Add another one first."
-                  : undefined
-              }
+              title={isLast ? label(M.lastCredential) : undefined}
               data-testid="profile-passkey-delete-button"
             >
-              Delete
+              <Trans id="profile.passkeys.delete.button" message="Delete" />
             </Button>
           </div>
         ) : null}
@@ -321,10 +433,18 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this passkey?</AlertDialogTitle>
+            <AlertDialogTitle>
+              <Trans
+                id="profile.passkeys.delete.title"
+                message="Delete this passkey?"
+              />
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              The device that registered &quot;{displayName}&quot; will no
-              longer be able to sign in. You can re-enrol it later.
+              <Trans
+                id="profile.passkeys.delete.description"
+                message='The device that registered "{name}" will no longer be able to sign in. You can re-enrol it later.'
+                values={{ name: displayName }}
+              />
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError ? (
@@ -332,12 +452,12 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
               variant="destructive"
               data-testid="profile-passkey-delete-error"
             >
-              <AlertDescription>{deleteError}</AlertDescription>
+              <AlertDescription>{label(deleteError)}</AlertDescription>
             </Alert>
           ) : null}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={remove.isPending}>
-              Cancel
+              <Trans id="profile.passkeys.delete.cancel" message="Cancel" />
             </AlertDialogCancel>
             <AlertDialogAction
               data-testid="profile-passkey-delete-confirm"
@@ -347,7 +467,17 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
                 remove.mutate();
               }}
             >
-              {remove.isPending ? "Deleting…" : "Delete passkey"}
+              {remove.isPending ? (
+                <Trans
+                  id="profile.passkeys.delete.pending"
+                  message="Deleting…"
+                />
+              ) : (
+                <Trans
+                  id="profile.passkeys.delete.confirm"
+                  message="Delete passkey"
+                />
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -356,7 +486,7 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
   );
 }
 
-function formatTransport(cred: PasskeyWire): string | null {
+function pickTransportDescriptor(cred: PasskeyWire): MessageDescriptor | null {
   const transports = cred.transports;
   if (!transports || transports.length === 0) return null;
   // Map WebAuthn transport tokens to readable copy. "internal" = platform
@@ -364,28 +494,22 @@ function formatTransport(cred: PasskeyWire): string | null {
   // ceremony; everything else (`usb`, `nfc`, `ble`) is some flavour of
   // hardware security key — collapse to one bucket rather than expose
   // raw transport tokens to end users.
-  if (transports.includes("internal")) return "This device";
-  if (transports.includes("hybrid")) return "Cross-device";
-  return "Security key";
+  if (transports.includes("internal")) return M.transportInternal;
+  if (transports.includes("hybrid")) return M.transportHybrid;
+  return M.transportSecurityKey;
 }
 
-function formatRenameError(err: unknown): string {
-  if (extractCode(err) === "NOT_FOUND") {
-    return "This passkey no longer exists. Refresh the list.";
-  }
+function formatRenameError(err: unknown): Label {
+  if (extractCode(err) === "NOT_FOUND") return M.notFound;
   if (err instanceof Error) return err.message;
-  return "Couldn't rename the passkey. Try again.";
+  return M.renameFallback;
 }
 
-function formatDeleteError(err: unknown): string {
-  if (extractReason(err) === "last_credential") {
-    return "You can't delete your last passkey. Add another one first.";
-  }
-  if (extractCode(err) === "NOT_FOUND") {
-    return "This passkey no longer exists. Refresh the list.";
-  }
+function formatDeleteError(err: unknown): Label {
+  if (extractReason(err) === "last_credential") return M.lastCredential;
+  if (extractCode(err) === "NOT_FOUND") return M.notFound;
   if (err instanceof Error) return err.message;
-  return "Couldn't delete the passkey. Try again.";
+  return M.deleteFallback;
 }
 
 // Surface-specific copy for `registerWithPasskey` failures during add-
@@ -393,23 +517,21 @@ function formatDeleteError(err: unknown): string {
 // table but tuned to the "you're already signed in, adding a device"
 // flow (no `registration_closed` because authed users always pass that
 // check).
-function formatPasskeyEnrollError(err: unknown): string {
+function formatPasskeyEnrollError(err: unknown): Label {
   if (err instanceof PasskeyError) {
     switch (err.code) {
       case "user_cancelled":
-        return "Cancelled. Tap Add passkey when you're ready.";
+        return M.enrollCancelled;
       case "credential_already_registered":
-        return "That passkey is already registered on this account.";
+        return M.enrollAlreadyRegistered;
       case "no_authenticator":
-        return "This device doesn't support passkeys.";
+        return M.enrollNoAuthenticator;
       case "network_error":
-        return "Network error. Check your connection and try again.";
+        return M.enrollNetworkError;
       case "email_mismatch":
-        return "Couldn't enrol — re-sign-in and try again.";
+        return M.enrollEmailMismatch;
     }
-    // Unknown PasskeyError code → fall through to err.message below for
-    // a slightly more informative message than a generic fallback.
   }
   if (err instanceof Error) return err.message;
-  return "Couldn't enrol the passkey. Try again.";
+  return M.enrollFallback;
 }

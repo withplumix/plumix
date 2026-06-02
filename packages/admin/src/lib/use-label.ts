@@ -10,7 +10,13 @@ import { resolveLabel } from "@plumix/core/i18n";
  *  Lingui descriptors round-trip identically. Memoized on `locale` so
  *  consumers can safely include the returned function in `useMemo` /
  *  `useCallback` dep arrays without invalidating on every render —
- *  same shape as `useFormatters`. */
+ *  same shape as `useFormatters`.
+ *
+ *  This resolver passes `label` straight to `i18n._()` with no `values`
+ *  argument, so descriptors that interpolate ICU placeholders render
+ *  the template literally. Values-bearing descriptors must call
+ *  `i18n._(id, values, { message })` directly (descriptor still lives
+ *  in a `defineMessage` block so the extractor sees it). */
 export function useLabel(): (label: Label) => string {
   const { i18n } = useLingui();
   const locale = i18n.locale;

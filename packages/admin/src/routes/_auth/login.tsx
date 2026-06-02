@@ -27,7 +27,7 @@ import {
 } from "@/lib/magic-link.js";
 import { getOAuthErrorMessage } from "@/lib/oauth-errors.js";
 import { orpc } from "@/lib/orpc.js";
-import { getPasskeyErrorMessage, PasskeyError } from "@/lib/passkey-errors.js";
+import { PasskeyError, usePasskeyErrorMessage } from "@/lib/passkey-errors.js";
 import { signInWithPasskey } from "@/lib/passkey.js";
 import { SESSION_QUERY_KEY, sessionQueryOptions } from "@/lib/session.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
@@ -69,6 +69,7 @@ function LoginRoute(): ReactNode {
   const router = useRouter();
   const search = Route.useSearch();
   const { i18n } = useLingui();
+  const renderPasskeyError = usePasskeyErrorMessage();
   const [passkeyError, setPasskeyError] = useState<string | null>(null);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [magicLinkError, setMagicLinkError] = useState<string | null>(null);
@@ -210,7 +211,7 @@ function LoginRoute(): ReactNode {
             {passkeyError ? (
               <Alert variant="destructive" data-testid="login-passkey-error">
                 <AlertDescription>
-                  {getPasskeyErrorMessage(passkeyError)}
+                  {renderPasskeyError(passkeyError)}
                 </AlertDescription>
               </Alert>
             ) : null}

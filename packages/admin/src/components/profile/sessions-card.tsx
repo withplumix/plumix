@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import {
@@ -24,8 +25,43 @@ import { toDate } from "@/lib/dates.js";
 import { extractCode, extractReason } from "@/lib/orpc-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { useFormatters } from "@/lib/use-formatters.js";
+import { useLabel } from "@/lib/use-label.js";
 import { parseUserAgent } from "@/lib/user-agent.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+import type { Label } from "@plumix/core/i18n";
+
+const M = {
+  unknownDevice: defineMessage({
+    id: "profile.sessions.unknownDevice",
+    message: "Unknown device",
+  }),
+  // Compact "{browser} on {os}" — vendor names interpolate verbatim,
+  // the connector word is localizable.
+  browserOnOs: defineMessage({
+    id: "profile.sessions.device.browserOnOs",
+    message: "{browser} on {os}",
+  }),
+  // Mutation error fallbacks.
+  revokeAllFallback: defineMessage({
+    id: "profile.sessions.revokeAll.fallback",
+    message: "Couldn't revoke sessions. Try again.",
+  }),
+  revokeCurrent: defineMessage({
+    id: "profile.sessions.revoke.current",
+    message: "You can't revoke the session you're using right now.",
+  }),
+  revokeNotFound: defineMessage({
+    id: "profile.sessions.revoke.notFound",
+    message: "This session no longer exists. Refresh the list.",
+  }),
+  revokeFallback: defineMessage({
+    id: "profile.sessions.revoke.fallback",
+    message: "Couldn't revoke the session. Try again.",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 interface SessionWire {
   readonly id: string;
@@ -37,9 +73,10 @@ interface SessionWire {
 }
 
 export function SessionsCard(): ReactNode {
+  const label = useLabel();
   const queryClient = useQueryClient();
   const [revokeAllFeedback, setRevokeAllFeedback] = useState<
-    { kind: "ok"; revoked: number } | { kind: "error"; message: string } | null
+    { kind: "ok"; revoked: number } | { kind: "error"; message: Label } | null
   >(null);
 
   const list = useQuery(orpc.auth.sessions.list.queryOptions({ input: {} }));
@@ -61,10 +98,7 @@ export function SessionsCard(): ReactNode {
     onError: (err) => {
       setRevokeAllFeedback({
         kind: "error",
-        message:
-          err instanceof Error
-            ? err.message
-            : "Couldn't revoke sessions. Try again.",
+        message: err instanceof Error ? err.message : M.revokeAllFallback,
       });
     },
   });
@@ -75,10 +109,14 @@ export function SessionsCard(): ReactNode {
   return (
     <Card data-testid="profile-sessions-card">
       <CardHeader>
-        <CardTitle>Active sessions</CardTitle>
+        <CardTitle>
+          <Trans id="profile.sessions.title" message="Active sessions" />
+        </CardTitle>
         <CardDescription>
-          Devices signed in to this account. Revoke any you don't recognise, or
-          sign out everywhere except this browser if you suspect a leak.
+          <Trans
+            id="profile.sessions.description"
+            message="Devices signed in to this account. Revoke any you don't recognise, or sign out everywhere except this browser if you suspect a leak."
+          />
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -87,13 +125,19 @@ export function SessionsCard(): ReactNode {
         {revokeAllFeedback?.kind === "ok" ? (
           <Alert data-testid="profile-sessions-revoke-feedback">
             <AlertDescription>
-              {formatRevokedCount(revokeAllFeedback.revoked)}
+              <Trans
+                id="profile.sessions.revokeAll.count"
+                message="{revoked, plural, =0 {No other sessions to sign out.} one {Signed out # other session.} other {Signed out # other sessions.}}"
+                values={{ revoked: revokeAllFeedback.revoked }}
+              />
             </AlertDescription>
           </Alert>
         ) : null}
         {revokeAllFeedback?.kind === "error" ? (
           <Alert variant="destructive" data-testid="profile-sessions-error">
-            <AlertDescription>{revokeAllFeedback.message}</AlertDescription>
+            <AlertDescription>
+              {label(revokeAllFeedback.message)}
+            </AlertDescription>
           </Alert>
         ) : null}
 
@@ -108,9 +152,17 @@ export function SessionsCard(): ReactNode {
               disabled={revokeOthers.isPending}
               data-testid="profile-sessions-revoke-button"
             >
-              {revokeOthers.isPending
-                ? "Signing out…"
-                : "Sign out other devices"}
+              {revokeOthers.isPending ? (
+                <Trans
+                  id="profile.sessions.revokeAll.pending"
+                  message="Signing out…"
+                />
+              ) : (
+                <Trans
+                  id="profile.sessions.revokeAll.idle"
+                  message="Sign out other devices"
+                />
+              )}
             </Button>
           </div>
         ) : null}
@@ -126,11 +178,13 @@ interface SessionRowProps {
 
 function SessionRow({ session, onChanged }: SessionRowProps): ReactNode {
   const [confirming, setConfirming] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Label | null>(null);
   const ua = parseUserAgent(session.userAgent);
   const Icon = ua.icon;
   const createdAt = toDate(session.createdAt);
   const { formatRelative } = useFormatters();
+  const label = useLabel();
+  const deviceLabel = useDeviceLabel(ua);
 
   const revoke = useMutation({
     mutationFn: () => orpc.auth.sessions.revoke.call({ id: session.id }),
@@ -161,15 +215,23 @@ function SessionRow({ session, onChanged }: SessionRowProps): ReactNode {
             className="text-sm font-medium"
             data-testid="profile-session-label"
           >
-            {ua.label}
+            {deviceLabel}
           </span>
           {session.current ? (
-            <Badge variant="secondary">This device</Badge>
+            <Badge variant="secondary">
+              <Trans id="profile.sessions.thisDevice" message="This device" />
+            </Badge>
           ) : null}
         </div>
         <div className="text-muted-foreground flex flex-wrap gap-2 text-xs">
           {session.ipAddress ? <span>{session.ipAddress}</span> : null}
-          <span>Signed in {formatRelative(createdAt)}</span>
+          <span>
+            <Trans
+              id="profile.sessions.signedIn"
+              message="Signed in {when}"
+              values={{ when: formatRelative(createdAt) }}
+            />
+          </span>
         </div>
       </div>
       {!session.current ? (
@@ -183,7 +245,7 @@ function SessionRow({ session, onChanged }: SessionRowProps): ReactNode {
           }}
           data-testid="profile-session-revoke-button"
         >
-          Revoke
+          <Trans id="profile.sessions.revoke.button" message="Revoke" />
         </Button>
       ) : null}
 
@@ -198,11 +260,33 @@ function SessionRow({ session, onChanged }: SessionRowProps): ReactNode {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Sign out this device?</AlertDialogTitle>
+            <AlertDialogTitle>
+              <Trans
+                id="profile.sessions.revoke.title"
+                message="Sign out this device?"
+              />
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              {ua.label} signed in {formatRelative(createdAt)}
-              {session.ipAddress ? ` from ${session.ipAddress}` : ""}. The
-              device will need to sign in again next time.
+              {session.ipAddress ? (
+                <Trans
+                  id="profile.sessions.revoke.descriptionWithIp"
+                  message="{device} signed in {when} from {ip}. The device will need to sign in again next time."
+                  values={{
+                    device: deviceLabel,
+                    when: formatRelative(createdAt),
+                    ip: session.ipAddress,
+                  }}
+                />
+              ) : (
+                <Trans
+                  id="profile.sessions.revoke.description"
+                  message="{device} signed in {when}. The device will need to sign in again next time."
+                  values={{
+                    device: deviceLabel,
+                    when: formatRelative(createdAt),
+                  }}
+                />
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {error ? (
@@ -210,12 +294,12 @@ function SessionRow({ session, onChanged }: SessionRowProps): ReactNode {
               variant="destructive"
               data-testid="profile-session-revoke-error"
             >
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{label(error)}</AlertDescription>
             </Alert>
           ) : null}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={revoke.isPending}>
-              Cancel
+              <Trans id="profile.sessions.revoke.cancel" message="Cancel" />
             </AlertDialogCancel>
             <AlertDialogAction
               data-testid="profile-session-revoke-confirm"
@@ -225,7 +309,17 @@ function SessionRow({ session, onChanged }: SessionRowProps): ReactNode {
                 revoke.mutate();
               }}
             >
-              {revoke.isPending ? "Signing out…" : "Sign out device"}
+              {revoke.isPending ? (
+                <Trans
+                  id="profile.sessions.revoke.pending"
+                  message="Signing out…"
+                />
+              ) : (
+                <Trans
+                  id="profile.sessions.revoke.confirm"
+                  message="Sign out device"
+                />
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -243,13 +337,20 @@ function renderSessionsBody(
   invalidateList: () => Promise<void>,
 ): ReactNode {
   if (list.isPending) {
-    return <p className="text-muted-foreground text-sm">Loading…</p>;
+    return (
+      <p className="text-muted-foreground text-sm">
+        <Trans id="profile.sessions.loading" message="Loading…" />
+      </p>
+    );
   }
   if (list.error) {
     return (
       <Alert variant="destructive">
         <AlertDescription>
-          Couldn't load your sessions. Refresh and try again.
+          <Trans
+            id="profile.sessions.loadFailed"
+            message="Couldn't load your sessions. Refresh and try again."
+          />
         </AlertDescription>
       </Alert>
     );
@@ -260,8 +361,10 @@ function renderSessionsBody(
     // doesn't think the page is broken.
     return (
       <p className="text-muted-foreground text-sm">
-        No plumix-managed sessions. Your sign-in is handled by an external
-        identity provider.
+        <Trans
+          id="profile.sessions.empty"
+          message="No plumix-managed sessions. Your sign-in is handled by an external identity provider."
+        />
       </p>
     );
   }
@@ -278,19 +381,28 @@ function renderSessionsBody(
   );
 }
 
-function formatRevokedCount(revoked: number): string {
-  if (revoked === 0) return "No other sessions to sign out.";
-  if (revoked === 1) return "Signed out 1 other session.";
-  return `Signed out ${revoked} other sessions.`;
+// Picks the right "{browser} on {os}" / "{browser}" / "{os}" / fallback
+// message for the parsed UA. Browser + OS vendor names stay verbatim;
+// only the connector ("on") and the unknown-device fallback get
+// localized.
+function useDeviceLabel(ua: ReturnType<typeof parseUserAgent>): string {
+  const { i18n } = useLingui();
+  const label = useLabel();
+  if (ua.browser && ua.os) {
+    return i18n._(
+      M.browserOnOs.id,
+      { browser: ua.browser, os: ua.os },
+      { message: M.browserOnOs.message },
+    );
+  }
+  if (ua.browser) return ua.browser;
+  if (ua.os) return ua.os;
+  return label(M.unknownDevice);
 }
 
-function formatRevokeError(err: unknown): string {
-  if (extractReason(err) === "current_session") {
-    return "You can't revoke the session you're using right now.";
-  }
-  if (extractCode(err) === "NOT_FOUND") {
-    return "This session no longer exists. Refresh the list.";
-  }
+function formatRevokeError(err: unknown): Label {
+  if (extractReason(err) === "current_session") return M.revokeCurrent;
+  if (extractCode(err) === "NOT_FOUND") return M.revokeNotFound;
   if (err instanceof Error) return err.message;
-  return "Couldn't revoke the session. Try again.";
+  return M.revokeFallback;
 }

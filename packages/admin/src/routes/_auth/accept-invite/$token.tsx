@@ -18,9 +18,10 @@ import {
   FormMessage,
 } from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
-import { getPasskeyErrorMessage, PasskeyError } from "@/lib/passkey-errors.js";
+import { PasskeyError, usePasskeyErrorMessage } from "@/lib/passkey-errors.js";
 import { acceptInviteWithPasskey } from "@/lib/passkey.js";
 import { SESSION_QUERY_KEY, sessionQueryOptions } from "@/lib/session.js";
+import { Trans } from "@lingui/react";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
@@ -44,6 +45,7 @@ export const Route = createFileRoute("/_auth/accept-invite/$token")({
 });
 
 function AcceptInviteRoute(): ReactNode {
+  const renderPasskeyError = usePasskeyErrorMessage();
   const { token } = Route.useParams();
   const router = useRouter();
   const [errorCode, setErrorCode] = useState<string | null>(null);
@@ -83,11 +85,15 @@ function AcceptInviteRoute(): ReactNode {
     <Card>
       <CardHeader>
         <CardTitle>
-          <h1 data-testid="accept-invite-heading">Accept your invite</h1>
+          <h1 data-testid="accept-invite-heading">
+            <Trans id="auth.acceptInvite.title" message="Accept your invite" />
+          </h1>
         </CardTitle>
         <CardDescription>
-          Set up a passkey to finish creating your account. Your browser or
-          device will guide you through the prompt.
+          <Trans
+            id="auth.acceptInvite.description"
+            message="Set up a passkey to finish creating your account. Your browser or device will guide you through the prompt."
+          />
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -98,7 +104,9 @@ function AcceptInviteRoute(): ReactNode {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>
+                    <Trans id="auth.acceptInvite.name" message="Name" />
+                  </FormLabel>
                   <FormControl>
                     <Input
                       type="text"
@@ -116,7 +124,7 @@ function AcceptInviteRoute(): ReactNode {
             {errorCode ? (
               <Alert variant="destructive" data-testid="accept-invite-error">
                 <AlertDescription>
-                  {getPasskeyErrorMessage(errorCode)}
+                  {renderPasskeyError(errorCode)}
                 </AlertDescription>
               </Alert>
             ) : null}
@@ -126,7 +134,17 @@ function AcceptInviteRoute(): ReactNode {
               disabled={accept.isPending}
               data-testid="accept-invite-submit"
             >
-              {accept.isPending ? "Setting up…" : "Create passkey"}
+              {accept.isPending ? (
+                <Trans
+                  id="auth.acceptInvite.submit.pending"
+                  message="Setting up…"
+                />
+              ) : (
+                <Trans
+                  id="auth.acceptInvite.submit.idle"
+                  message="Create passkey"
+                />
+              )}
             </Button>
           </form>
         </Form>
