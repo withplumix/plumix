@@ -89,6 +89,10 @@ function taxonomiesCrumbs(parts: readonly string[]): readonly Crumb[] {
   const label = tax?.label ?? name;
   const singular = (tax?.labels?.singular ?? label).toLowerCase();
   const list: Crumb = { label, to: `/terms/${name}` };
+  // TODO(#684 follow-up): widen `Crumb` to carry `values` so these
+  // template literals can become descriptors with placeholder
+  // substitution at render time (e.g. `Create {singular}`). Until
+  // then, `breadcrumbs.ts` stays out of the strict-mode ratchet.
   if (parts[2] === "create")
     return [{ label: M.terms }, list, { label: `Create ${singular}` }];
   if (parts[3] === "edit")
@@ -116,7 +120,11 @@ function pluginPagesCrumbs(parts: readonly string[]): readonly Crumb[] {
   if (item) return [{ label: item.label }];
   // Unknown plugin path — keep the URL slug as a placeholder so the
   // user doesn't see an opaque "Admin" header during a 404.
-  const tail = parts[parts.length - 1] ?? "Admin";
+  const tail = parts[parts.length - 1];
+  // Caller enters via `case "pages"` in `pathToCrumbs`, so `parts`
+  // is non-empty in practice; the guard exists to satisfy
+  // `noUncheckedIndexedAccess` without leaning on `!`.
+  if (tail === undefined) return [{ label: M.admin }];
   return [{ label: tail }];
 }
 
