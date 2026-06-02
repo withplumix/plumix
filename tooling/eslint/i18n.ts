@@ -85,6 +85,21 @@ export const i18nStrictOverrides: Linter.Config = {
           // `M.uncategorized` descriptor; the constant is only an
           // internal grouping key.
           "^(uncategorized|other)$",
+          // Multi-token kebab identifiers — testid prefixes / suffixes
+          // (`meta-box-field-`, `-input`), W3C input-type tokens
+          // (`datetime-local`), capability segments. The trailing
+          // hyphen variant covers template-literal quasi parts:
+          // `\`meta-box-field-${field.key}\`` exposes `meta-box-field-`
+          // as a quasi the rule sees as a bare literal.
+          "^[a-z]+(-[a-z0-9]+)+-?$",
+          "^-[a-z]+$",
+          // Internal `__sentinel__` strings (e.g. unserializable-value
+          // marker on a meta-field reset key).
+          "^__[a-z_]+__$",
+          // Single-word HTML5 `<input type>` values used as protocol
+          // discriminators / fallbacks in input dispatchers — never
+          // user copy.
+          "^(text|password|email|url|number|tel|search|date|time|color|file|range|checkbox|radio)$",
         ],
         // Bare strings compile via `new RegExp(s)`; the `{regex:{pattern,flags?}}`
         // form is required only when flags are needed. Most entries are
@@ -164,6 +179,9 @@ export const i18nStrictOverrides: Linter.Config = {
           "ariaLabel",
         ],
         ignoreFunctions: [
+          // Tailwind class composition — `cn(...)` arguments are
+          // always class strings, never user copy.
+          "cn",
           // Validators
           "v.picklist",
           "v.literal",

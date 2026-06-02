@@ -340,11 +340,6 @@ msgid "userEdit.error.reassignToSelf"
 msgstr "Can't reassign to the user being deleted."
 
 #. js-lingui-explicit-id
-#: src/components/taxonomy/term-form.tsx
-msgid "termForm.cancel"
-msgstr "Cancel"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.cancel"
 msgstr "Cancel"
@@ -367,6 +362,11 @@ msgstr "Cancel"
 #. js-lingui-explicit-id
 #: src/editor/BlockScopePicker.tsx
 msgid "blockScopePicker.cancel"
+msgstr "Cancel"
+
+#. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.cancel"
 msgstr "Cancel"
 
 #. js-lingui-explicit-id
@@ -1092,6 +1092,11 @@ msgid "apiTokens.scope.inheritRole"
 msgstr "Inherit role"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/meta-box-field.tsx
+msgid "metaBox.field.json.invalid"
+msgstr "Invalid JSON"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.success.another"
 msgstr "Invite another"
@@ -1232,11 +1237,6 @@ msgid "apiTokens.create.submit.pending"
 msgstr "Minting…"
 
 #. js-lingui-explicit-id
-#: src/components/taxonomy/term-form.tsx
-msgid "termForm.name"
-msgstr "Name"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.name.label"
 msgstr "Name"
@@ -1254,6 +1254,11 @@ msgstr "Name"
 #. js-lingui-explicit-id
 #: src/routes/_auth/accept-invite/$token.tsx
 msgid "auth.acceptInvite.name"
+msgstr "Name"
+
+#. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.name"
 msgstr "Name"
 
 #. js-lingui-explicit-id
@@ -1649,11 +1654,6 @@ msgid "settings.page.saved"
 msgstr "Saved."
 
 #. js-lingui-explicit-id
-#: src/components/taxonomy/term-form.tsx
-msgid "termForm.submitting"
-msgstr "Saving…"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.submit.pending"
 msgstr "Saving…"
@@ -1661,6 +1661,11 @@ msgstr "Saving…"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.submit.pending"
+msgstr "Saving…"
+
+#. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.submitting"
 msgstr "Saving…"
 
 #. js-lingui-explicit-id
