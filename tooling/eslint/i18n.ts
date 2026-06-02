@@ -66,6 +66,9 @@ export const i18nStrictOverrides: Linter.Config = {
           // so future shadcn upgrades don't add new entries here.
           { regex: { pattern: "^data-" } },
           { regex: { pattern: "^aria-" } },
+          // Admin convention: `testId` prop is forwarded to `data-testid`
+          // by primitives like `FormEditSkeleton`.
+          "testId",
           "type",
           "role",
           "name",

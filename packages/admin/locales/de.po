@@ -60,6 +60,16 @@ msgid "settings.empty.description"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.loadFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.saveFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.error.fallback"
 msgstr ""
@@ -130,6 +140,11 @@ msgid "profile.language.title"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.loading"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.title"
 msgstr ""
@@ -137,6 +152,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.empty.title"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -152,6 +172,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/__root.tsx
 msgid "notFound.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.notFound.title"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -177,6 +202,21 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.recipient.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.submit.idle"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.saved"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.submit.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -267,6 +307,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/__root.tsx
 msgid "notFound.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.empty.description"
 msgstr ""
 
 #. js-lingui-explicit-id

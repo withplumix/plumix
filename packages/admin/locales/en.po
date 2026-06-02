@@ -64,6 +64,16 @@ msgstr "Core ships no settings by design — plugins (or your own plumix.config)
 "card per page."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.loadFailed"
+msgstr "Couldn't load these settings. Try again."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.saveFailed"
+msgstr "Couldn't save settings."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.error.fallback"
 msgstr "Couldn't send the test message. Try again."
@@ -135,6 +145,11 @@ msgid "profile.language.title"
 msgstr "Language"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.loading"
+msgstr "Loading settings"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.title"
 msgstr "Mailer"
@@ -143,6 +158,11 @@ msgstr "Mailer"
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.title"
 msgstr "No content types yet"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.empty.title"
+msgstr "No groups on this page"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
@@ -158,6 +178,11 @@ msgstr "No settings registered yet"
 #. js-lingui-explicit-id
 #: src/routes/__root.tsx
 msgid "notFound.title"
+msgstr "Not found"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.notFound.title"
 msgstr "Not found"
 
 #. js-lingui-explicit-id
@@ -184,6 +209,21 @@ msgstr "Profile"
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.recipient.label"
 msgstr "Recipient"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.submit.idle"
+msgstr "Save changes"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.saved"
+msgstr "Saved."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.submit.pending"
+msgstr "Saving…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
@@ -282,6 +322,13 @@ msgstr "The mailer adapter threw an error during send. Check the worker logs "
 msgid "notFound.description"
 msgstr "The page you're looking for doesn't exist or the resource isn't "
 "registered. Check the URL and try again."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.empty.description"
+msgstr "This settings page doesn't reference any registered groups yet. Plugins "
+"compose pages with <0>ctx.registerSettingsPage(name, { groups: [...] "
+"})</0>."
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
