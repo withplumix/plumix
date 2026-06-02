@@ -1,7 +1,18 @@
 import type { Fields } from "@puckeditor/core";
 import type { Extensions } from "@tiptap/core";
+import { i18n } from "@lingui/core";
+import { defineMessage } from "@lingui/core/macro";
 
 import type { BlockInput } from "@plumix/blocks";
+
+const YES_LABEL = defineMessage({
+  id: "fieldTypes.boolean.yes",
+  message: "Yes",
+});
+const NO_LABEL = defineMessage({
+  id: "fieldTypes.boolean.no",
+  message: "No",
+});
 
 interface TranslateFieldOptions {
   // Extra Tiptap mark / node extensions to inject into any `richtext`
@@ -52,8 +63,8 @@ export function translateField(
         type: "radio",
         label: input.label,
         options: [
-          { label: "Yes", value: true },
-          { label: "No", value: false },
+          { label: i18n._(YES_LABEL), value: true },
+          { label: i18n._(NO_LABEL), value: false },
         ],
       };
     default:

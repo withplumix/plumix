@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { useId } from "react";
+import { Trans } from "@lingui/react";
 
 import type { ThemeTokenGroup } from "@plumix/blocks";
 
@@ -36,7 +37,7 @@ export function TokenSwatchList({
           className="sr-only"
           data-testid={`${testIdPrefix}-clear`}
         />
-        None
+        <Trans id="tokenSwatch.none" message="None" />
       </label>
       {Object.entries(tokens).map(([id, entry]) => (
         <label

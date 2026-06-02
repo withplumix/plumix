@@ -1,9 +1,10 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { ThemeTokenGroup } from "@plumix/blocks";
 
+import { renderWithI18n } from "../../test/render-with-i18n.js";
 import { TokenSwatchList } from "./TokenSwatchList.js";
 
 afterEach(() => {
@@ -17,7 +18,7 @@ const colorTokens: ThemeTokenGroup = {
 
 describe("TokenSwatchList", () => {
   test("renders one radio per token plus a 'None' clear, inside a labelled radiogroup", () => {
-    render(
+    renderWithI18n(
       <TokenSwatchList
         tokens={colorTokens}
         value=""
@@ -36,7 +37,7 @@ describe("TokenSwatchList", () => {
   });
 
   test("emits the token's resolved CSS value as the swatch background-color", () => {
-    render(
+    renderWithI18n(
       <TokenSwatchList
         tokens={colorTokens}
         value=""
@@ -52,7 +53,7 @@ describe("TokenSwatchList", () => {
 
   test("renders a colorless swatch when the token has no value (label-only)", () => {
     const labelOnly: ThemeTokenGroup = { brand: { label: "Brand" } };
-    render(
+    renderWithI18n(
       <TokenSwatchList
         tokens={labelOnly}
         value=""
@@ -67,7 +68,7 @@ describe("TokenSwatchList", () => {
   });
 
   test("marks the active token as the checked radio", () => {
-    render(
+    renderWithI18n(
       <TokenSwatchList
         tokens={colorTokens}
         value="primary"
@@ -88,7 +89,7 @@ describe("TokenSwatchList", () => {
   test("invokes onChange with the token id when its swatch is clicked", async () => {
     const onChange = vi.fn();
     const user = userEvent.setup();
-    render(
+    renderWithI18n(
       <TokenSwatchList
         tokens={colorTokens}
         value=""
@@ -106,7 +107,7 @@ describe("TokenSwatchList", () => {
   test("invokes onChange with undefined when the 'None' radio is clicked", async () => {
     const onChange = vi.fn();
     const user = userEvent.setup();
-    render(
+    renderWithI18n(
       <TokenSwatchList
         tokens={colorTokens}
         value="primary"

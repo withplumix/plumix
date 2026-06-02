@@ -1,10 +1,11 @@
 import type { ComponentData } from "@puckeditor/core";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { ThemeTokens } from "@plumix/blocks";
 
+import { renderWithI18n } from "../../test/render-with-i18n.js";
 import { StyleTab } from "./StyleTab.js";
 
 afterEach(() => {
@@ -28,7 +29,7 @@ function makeItem(props: Record<string, unknown> = {}): ComponentData {
 
 describe("StyleTab", () => {
   test("renders the empty-state when no block is selected", () => {
-    render(
+    renderWithI18n(
       <StyleTab
         tokens={tokens}
         selectedItem={null}
@@ -41,7 +42,7 @@ describe("StyleTab", () => {
   });
 
   test("lists every spacing token as a dropdown option (plus a 'None' clear)", () => {
-    render(
+    renderWithI18n(
       <StyleTab
         tokens={tokens}
         selectedItem={makeItem()}
@@ -58,7 +59,7 @@ describe("StyleTab", () => {
   });
 
   test("renders the active bucket label so authors know which viewport they're editing", () => {
-    render(
+    renderWithI18n(
       <StyleTab
         tokens={tokens}
         selectedItem={makeItem()}
@@ -73,7 +74,7 @@ describe("StyleTab", () => {
   });
 
   test("seeds the dropdown from the active bucket's stored token id", () => {
-    render(
+    renderWithI18n(
       <StyleTab
         tokens={tokens}
         selectedItem={makeItem({ style: { large: { padding: "md" } } })}
@@ -89,7 +90,7 @@ describe("StyleTab", () => {
   test("editing on Desktop writes the new token id to style.large.padding", async () => {
     const onStyleChange = vi.fn();
     const user = userEvent.setup();
-    render(
+    renderWithI18n(
       <StyleTab
         tokens={tokens}
         selectedItem={makeItem()}
@@ -109,7 +110,7 @@ describe("StyleTab", () => {
   test("editing on Mobile writes the new token id to style.small.padding and preserves desktop", async () => {
     const onStyleChange = vi.fn();
     const user = userEvent.setup();
-    render(
+    renderWithI18n(
       <StyleTab
         tokens={tokens}
         selectedItem={makeItem({ style: { large: { padding: "lg" } } })}
@@ -132,7 +133,7 @@ describe("StyleTab", () => {
   test("selecting 'None' clears the property from the active bucket", async () => {
     const onStyleChange = vi.fn();
     const user = userEvent.setup();
-    render(
+    renderWithI18n(
       <StyleTab
         tokens={tokens}
         selectedItem={makeItem({ style: { large: { padding: "md" } } })}
@@ -150,7 +151,7 @@ describe("StyleTab", () => {
   });
 
   test("omits sections whose token category isn't declared on the theme", () => {
-    render(
+    renderWithI18n(
       <StyleTab
         tokens={tokens}
         selectedItem={makeItem()}
@@ -171,7 +172,7 @@ describe("StyleTab", () => {
     };
     const onStyleChange = vi.fn();
     const user = userEvent.setup();
-    render(
+    renderWithI18n(
       <StyleTab
         tokens={fullTokens}
         selectedItem={makeItem()}
@@ -193,7 +194,7 @@ describe("StyleTab", () => {
     };
     const onStyleChange = vi.fn();
     const user = userEvent.setup();
-    render(
+    renderWithI18n(
       <StyleTab
         tokens={fullTokens}
         selectedItem={makeItem()}
@@ -212,7 +213,7 @@ describe("StyleTab", () => {
   test("clicking a section's trigger collapses its inner control", async () => {
     const onStyleChange = vi.fn();
     const user = userEvent.setup();
-    render(
+    renderWithI18n(
       <StyleTab
         tokens={tokens}
         selectedItem={makeItem()}
@@ -234,7 +235,7 @@ describe("StyleTab", () => {
     };
     const onStyleChange = vi.fn();
     const user = userEvent.setup();
-    render(
+    renderWithI18n(
       <StyleTab
         tokens={fullTokens}
         selectedItem={makeItem()}

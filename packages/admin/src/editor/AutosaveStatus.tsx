@@ -1,19 +1,29 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { createContext, useContext } from "react";
+import { useLabel } from "@/lib/use-label.js";
 import { cn } from "@/lib/utils.js";
+import { defineMessage } from "@lingui/core/macro";
 
 export type AutosaveStatus = "saved" | "saving" | "error";
 
 export const AutosaveStatusContext = createContext<AutosaveStatus>("saved");
 
-const LABEL: Readonly<Record<AutosaveStatus, string>> = {
-  saved: "Saved",
-  saving: "Saving...",
-  error: "Failed to save",
+const LABEL: Readonly<Record<AutosaveStatus, MessageDescriptor>> = {
+  saved: defineMessage({ id: "editor.autosave.saved", message: "Saved" }),
+  saving: defineMessage({
+    id: "editor.autosave.saving",
+    message: "Saving...",
+  }),
+  error: defineMessage({
+    id: "editor.autosave.error",
+    message: "Failed to save",
+  }),
 };
 
 export function AutosaveStatusPill(): ReactElement {
   const status = useContext(AutosaveStatusContext);
+  const label = useLabel();
   return (
     <span
       className={cn(
@@ -23,7 +33,7 @@ export function AutosaveStatusPill(): ReactElement {
       data-testid="plumix-autosave-pill"
       data-status={status}
     >
-      {LABEL[status]}
+      {label(LABEL[status])}
     </span>
   );
 }
