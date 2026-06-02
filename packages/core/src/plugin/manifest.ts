@@ -1521,6 +1521,28 @@ export type PluginI18nManifest = Readonly<
   Record<string, { readonly catalogs: Readonly<Record<string, string>> }>
 >;
 
+/** URL the admin runtime fetches to load a plugin's compiled catalog
+ *  for a given locale. Same-origin under `/_plumix/admin/...` so the
+ *  default CSP `script-src 'self'` covers the dynamic import. Widening
+ *  to absolute URLs (CDN-hosted catalogs) would need a CSP review.
+ *
+ *  Paired with `pluginCatalogStagedPath` — the plumix Vite plugin stages
+ *  each plugin's `.mjs` at that filesystem path so the URL resolves. */
+export function pluginCatalogUrl(pluginId: string, locale: string): string {
+  return `/_plumix/admin/${pluginCatalogStagedPath(pluginId, locale)}`;
+}
+
+/** Filesystem path (relative to the admin asset root) where the plumix
+ *  Vite plugin must stage `<plugin.i18n.catalogPath>/<locale>.mjs`.
+ *  Mirrors `pluginCatalogUrl` so a single edit retargets both ends of
+ *  the runtime fetch. */
+export function pluginCatalogStagedPath(
+  pluginId: string,
+  locale: string,
+): string {
+  return `plugins/${pluginId}/locales/${locale}.mjs`;
+}
+
 export interface I18nManifest {
   readonly defaultLocale: string;
   readonly locales: readonly ResolvedLocale[];
@@ -1691,12 +1713,7 @@ function projectPluginI18n(
       // i18n configured, trust the plugin's list so tests without
       // site config still exercise the URL shape.
       if (siteLocales.size > 0 && !siteLocales.has(locale)) continue;
-      // URL is intentionally same-origin (`/_plumix/admin/...`) so
-      // default CSP `script-src 'self'` covers the dynamic import.
-      // Widening to absolute URLs (CDN-hosted catalogs) would need
-      // a CSP review.
-      catalogs[locale] =
-        `/_plumix/admin/plugins/${plugin.id}/locales/${locale}.mjs`;
+      catalogs[locale] = pluginCatalogUrl(plugin.id, locale);
     }
     // Skip plugins whose entire locale set was intersected/dropped —
     // a manifest entry with empty catalogs is wire noise that admin's
