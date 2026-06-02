@@ -14,10 +14,20 @@ msgstr ""
 "Language-Team: \n"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.row.noName"
+msgstr "(no name)"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.test.tsx
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.pageSummary"
 msgstr "{count, plural, one {# group} other {# groups}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.row.active"
+msgstr "Active"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
@@ -36,6 +46,11 @@ msgid "allowedDomains.add.title"
 msgstr "Add domain"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.invite"
+msgstr "Add new"
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.addNew"
 msgstr "Add new"
@@ -51,9 +66,14 @@ msgid "breadcrumb.admin"
 msgstr "Admin"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
+#: src/lib/user-role-labels.ts
 msgid "userRole.admin"
 msgstr "Administrator"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.roleFilter.all"
+msgstr "All roles"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
@@ -61,7 +81,7 @@ msgid "allowedDomains.title"
 msgstr "Allowed domains"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
+#: src/lib/user-role-labels.ts
 msgid "userRole.author"
 msgstr "Author"
 
@@ -86,6 +106,11 @@ msgid "login.magicLink.sent.title"
 msgstr "Check your email"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.empty.description"
+msgstr "Clear the filter, or invite someone new to join."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.list.title"
 msgstr "Configured domains"
@@ -101,7 +126,7 @@ msgid "login.oauth.continueWith"
 msgstr "Continue with {label}"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
+#: src/lib/user-role-labels.ts
 msgid "userRole.contributor"
 msgstr "Contributor"
 
@@ -117,6 +142,11 @@ msgstr "Core ships no settings by design — plugins (or your own plumix.config)
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.loadFailed"
 msgstr "Couldn't load these settings. Try again."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.loadFailed"
+msgstr "Couldn't load users. Try again."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
@@ -144,6 +174,11 @@ msgid "breadcrumb.create"
 msgstr "Create"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.column.created"
+msgstr "Created"
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.dashboard"
 msgstr "Dashboard"
@@ -157,6 +192,11 @@ msgstr "Default role"
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.deleteAria"
 msgstr "Delete {domain}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.row.disabled"
+msgstr "Disabled"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
@@ -179,7 +219,7 @@ msgid "breadcrumb.editUser"
 msgstr "Edit user"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
+#: src/lib/user-role-labels.ts
 msgid "userRole.editor"
 msgstr "Editor"
 
@@ -226,10 +266,20 @@ msgid "allowedDomains.add.placeholder"
 msgstr "example.com"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.roleFilter.aria"
+msgstr "Filter by role"
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.sent.description"
 msgstr "If an account exists for this email, we sent a sign-in link. The link "
 "expires in 15 minutes."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.empty.invite"
+msgstr "Invite user"
 
 #. js-lingui-explicit-id
 #: src/components/locale-switcher.tsx
@@ -242,9 +292,19 @@ msgid "profile.language.title"
 msgstr "Language"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.column.lastSignIn"
+msgstr "Last sign-in"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.loading"
 msgstr "Loading settings"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.loading"
+msgstr "Loading users"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
@@ -255,6 +315,11 @@ msgstr "Loading…"
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.title"
 msgstr "Mailer"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.row.lastSignIn.never"
+msgstr "Never"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
@@ -282,6 +347,11 @@ msgstr "No mailer adapter is configured. Pass a `mailer:` to `plumix({...})` "
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.empty.title"
 msgstr "No settings registered yet"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.empty.title"
+msgstr "No users match your filter"
 
 #. js-lingui-explicit-id
 #: src/routes/__root.tsx
@@ -319,6 +389,11 @@ msgid "mailer.test.recipient.label"
 msgstr "Recipient"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.column.role"
+msgstr "Role"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.submit.idle"
 msgstr "Save changes"
@@ -332,6 +407,11 @@ msgstr "Saved."
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.submit.pending"
 msgstr "Saving…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.searchPlaceholder"
+msgstr "Search by email…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
@@ -402,7 +482,12 @@ msgid "menu.signOut.pending"
 msgstr "Signing out…"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.column.status"
+msgstr "Status"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
 msgid "userRole.subscriber"
 msgstr "Subscriber"
 
@@ -460,6 +545,16 @@ msgid "allowedDomains.add.description"
 msgstr "Use the bare domain — no protocol, no path."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.column.user"
+msgstr "User"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.title"
+msgstr "Users"
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.users"
 msgstr "Users"
@@ -478,6 +573,11 @@ msgstr "What would you like to work on today?"
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.tile.description"
 msgstr "Write, edit, and publish {labelLower}."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.row.you"
+msgstr "You"
 
 #. js-lingui-explicit-id
 #: src/components/profile/language-card.tsx

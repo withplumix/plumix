@@ -30,6 +30,7 @@ import { Toggle } from "@/components/ui/toggle.js";
 import { hasCap } from "@/lib/caps.js";
 import { orpc } from "@/lib/orpc.js";
 import { useLabel } from "@/lib/use-label.js";
+import { ROLE_LABEL } from "@/lib/user-role-labels.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
@@ -49,23 +50,6 @@ const USER_ROLES = [
   "editor",
   "admin",
 ] as const satisfies readonly UserRole[];
-
-// `userRole.*` IDs are workspace-wide. The upcoming `users/*.tsx`
-// slices (#684) reuse these descriptors verbatim — when those wraps
-// land, hoist this record to a shared module rather than redefining.
-const ROLE_LABEL: Record<UserRole, MessageDescriptor> = {
-  subscriber: defineMessage({
-    id: "userRole.subscriber",
-    message: "Subscriber",
-  }),
-  contributor: defineMessage({
-    id: "userRole.contributor",
-    message: "Contributor",
-  }),
-  author: defineMessage({ id: "userRole.author", message: "Author" }),
-  editor: defineMessage({ id: "userRole.editor", message: "Editor" }),
-  admin: defineMessage({ id: "userRole.admin", message: "Administrator" }),
-};
 
 // Descriptors that need runtime indirection — used outside JSX (string
 // props, aria labels with placeholders, state setters).
