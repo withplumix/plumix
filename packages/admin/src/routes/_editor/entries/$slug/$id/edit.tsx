@@ -913,8 +913,8 @@ function PlainFormRouteInner({
     parentId: entry.parentId,
   };
 
-  const singular = (
-    entryType.labels?.singular ?? renderLabel(entryType.label)
+  const singular = renderLabel(
+    entryType.labels?.singular ?? entryType.label,
   ).toLowerCase();
   // PlainFormLayout takes a rendered string headline; ICU placeholder
   // substitution via the 3-arg `i18n._` form.

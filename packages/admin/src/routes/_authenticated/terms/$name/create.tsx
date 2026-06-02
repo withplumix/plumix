@@ -12,6 +12,7 @@ import {
 import { hasCap } from "@/lib/caps.js";
 import { findTermTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
+import { useLabel } from "@/lib/use-label.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFileRoute,
@@ -57,6 +58,7 @@ function NewTermRoute(): ReactNode {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { taxonomy } = Route.useRouteContext();
+  const renderLabel = useLabel();
   const [serverError, setServerError] = useState<string | null>(null);
 
   // For hierarchical termTaxonomies we pull the existing term set so the
@@ -112,8 +114,8 @@ function NewTermRoute(): ReactNode {
     },
   });
 
-  const singularLower = (
-    taxonomy.labels?.singular ?? taxonomy.label
+  const singularLower = renderLabel(
+    taxonomy.labels?.singular ?? taxonomy.label,
   ).toLowerCase();
 
   return (

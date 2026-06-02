@@ -17,6 +17,7 @@ import {
 import { hasCap } from "@/lib/caps.js";
 import { findTermTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
+import { useLabel } from "@/lib/use-label.js";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
@@ -131,6 +132,7 @@ function useTaxonomyListNavActions(): TaxonomyListNavActions {
 function TaxonomyListRoute(): ReactNode {
   const search = Route.useSearch();
   const { user, taxonomy } = Route.useRouteContext();
+  const renderLabel = useLabel();
   const isHierarchical = taxonomy.isHierarchical === true;
   const pageSize = isHierarchical ? TREE_PAGE_SIZE : FLAT_PAGE_SIZE;
 
@@ -163,10 +165,10 @@ function TaxonomyListRoute(): ReactNode {
   const canNext = (rawRows?.length ?? 0) === pageSize;
 
   const canEdit = hasCap(user.capabilities, `term:${taxonomy.name}:edit`);
-  const singularLower = (
-    taxonomy.labels?.singular ?? taxonomy.label
+  const singularLower = renderLabel(
+    taxonomy.labels?.singular ?? taxonomy.label,
   ).toLowerCase();
-  const pluralLower = taxonomy.label.toLowerCase();
+  const pluralLower = renderLabel(taxonomy.label).toLowerCase();
 
   const columns = useMemo<ColumnDef<TermRow>[]>(() => {
     return [

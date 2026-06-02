@@ -35,8 +35,8 @@ export interface EntryTypeOptions {
    * irregular plurals should set `labels.plural` explicitly.
    */
   readonly labels?: {
-    readonly singular?: string;
-    readonly plural?: string;
+    readonly singular?: Label;
+    readonly plural?: Label;
   };
   readonly description?: string;
   readonly supports?: readonly string[];
@@ -73,7 +73,7 @@ export interface EntryTypeOptions {
 
 export interface TermTaxonomyOptions {
   readonly label: string;
-  readonly labels?: { readonly singular?: string };
+  readonly labels?: { readonly singular?: Label };
   readonly description?: string;
   readonly isHierarchical?: boolean;
   readonly entryTypes?: readonly string[];
@@ -1212,8 +1212,8 @@ export interface EntryTypeManifestEntry {
   readonly adminSlug: string;
   readonly label: Label;
   readonly labels?: {
-    readonly singular?: string;
-    readonly plural?: string;
+    readonly singular?: Label;
+    readonly plural?: Label;
   };
   readonly description?: string;
   readonly supports?: readonly string[];
@@ -1358,7 +1358,7 @@ export interface UserMetaBoxManifestEntry extends MetaBoxBaseManifestEntry {
 export interface TermTaxonomyManifestEntry {
   readonly name: string;
   readonly label: string;
-  readonly labels?: { readonly singular?: string };
+  readonly labels?: { readonly singular?: Label };
   readonly description?: string;
   readonly isHierarchical?: boolean;
   readonly entryTypes?: readonly string[];
@@ -2168,7 +2168,10 @@ function toEntryTypeManifest(pt: RegisteredEntryType): EntryTypeManifestEntry {
   const visibility = resolveEntryTypeVisibility(pt);
   return {
     name,
-    adminSlug: deriveAdminSlug(name, labels?.plural),
+    adminSlug: deriveAdminSlug(
+      name,
+      labels?.plural !== undefined ? labelSourceText(labels.plural) : undefined,
+    ),
     label,
     labels,
     description,

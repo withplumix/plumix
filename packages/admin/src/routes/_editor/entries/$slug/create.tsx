@@ -78,7 +78,7 @@ function CreateEntryRoute(): ReactNode {
         id="editor.entry.create.pending"
         message="Creating new {singular}…"
         values={{
-          singular: entryType.labels?.singular ?? renderLabel(entryType.label),
+          singular: renderLabel(entryType.labels?.singular ?? entryType.label),
         }}
       />
     </div>

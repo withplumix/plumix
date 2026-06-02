@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import { i18n } from "@lingui/core";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -141,6 +142,32 @@ describe("pathToCrumbs", () => {
     const editLeaf = pathToCrumbs("/terms/category/7/edit").at(-1);
     expect(typeof editLeaf?.label).toBe("object");
     expect(editLeaf?.values).toEqual({ singular: "category" });
+  });
+
+  test("descriptor-typed labels.singular resolves through the locale", () => {
+    // A plugin emitting `labels.singular: defineMessage({...})` should
+    // see the descriptor flow through to the same `i18n._` resolution
+    // path as every other Label-typed crumb field. The pre-widening
+    // call site did `(tax?.labels?.singular ?? label).toLowerCase()`
+    // which throws on an object — and crucially the schema forced
+    // singular to be `string`, blocking the descriptor variant
+    // entirely. This test pins the behavior post-widening: a
+    // descriptor-typed singular resolves to its `.message` string
+    // before the lowercase pass.
+    const descriptor: MessageDescriptor = {
+      id: "test.taxonomy.singular",
+      message: "Category",
+    };
+    const tax = FIXTURE.termTaxonomies?.[0];
+    if (!tax?.labels) throw new Error("fixture invariant violated");
+    const original = tax.labels.singular;
+    (tax.labels as { singular: unknown }).singular = descriptor;
+    try {
+      const createLeaf = pathToCrumbs("/terms/category/create").at(-1);
+      expect(createLeaf?.values).toEqual({ singular: "category" });
+    } finally {
+      (tax.labels as { singular: unknown }).singular = original;
+    }
   });
 
   test("users edit: list crumb is a link", () => {

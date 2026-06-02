@@ -316,7 +316,9 @@ async function resolveTaxonomy(
       databaseId: term.id,
     },
     data,
-    title: taxonomy?.labels?.singular ?? taxonomy?.label ?? term.name,
+    title: taxonomy
+      ? labelSourceText(taxonomy.labels?.singular ?? taxonomy.label)
+      : term.name,
   });
   return new Response(html, {
     headers: { "content-type": "text/html; charset=utf-8" },
@@ -397,10 +399,9 @@ async function resolveArchive(
   // SSR-side: descriptor labels fall back to source text until the
   // ctx.i18n route wiring lands (slice 11 #680 covered tRPC errors;
   // route titles pending).
-  const title =
-    registered?.labels?.plural ??
-    (registered ? labelSourceText(registered.label) : undefined) ??
-    intent.entryType;
+  const title = registered
+    ? labelSourceText(registered.labels?.plural ?? registered.label)
+    : intent.entryType;
 
   const initial: ArchiveData = {
     contentType: intent.entryType,

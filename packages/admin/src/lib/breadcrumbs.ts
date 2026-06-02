@@ -1,5 +1,9 @@
 import type { MessageDescriptor } from "@lingui/core";
+import { i18n } from "@lingui/core";
 import { defineMessage } from "@lingui/core/macro";
+
+import type { Label } from "@plumix/core/i18n";
+import { resolveLabel } from "@plumix/core/i18n";
 
 import {
   findEntryTypeBySlug,
@@ -10,10 +14,12 @@ import {
 
 export interface Crumb {
   /**
-   * Either a `MessageDescriptor` (for chrome-owned labels like "Dashboard",
-   * "Entries") or a plain string (for manifest-derived labels like an
-   * entry type's plural). Slice 5/#674 widens manifest labels to descriptors
-   * too — when that lands, this type can narrow to `MessageDescriptor`.
+   * Either a `MessageDescriptor` (chrome-owned labels) or a plain
+   * string (manifest-derived labels that plugin authors haven't
+   * migrated to `defineMessage(...)` yet). Both variants resolve
+   * through `i18n._` at render time in `shell-header.tsx`; never
+   * narrows because plain-string manifest labels remain a valid
+   * `Label` per #730.
    */
   readonly label: string | MessageDescriptor;
   /** ICU placeholder values threaded into `i18n._` at render time —
@@ -86,7 +92,7 @@ function entriesCrumbs(parts: readonly string[]): readonly Crumb[] {
   const slug = parts[1];
   if (slug === undefined) return [{ label: M.entries }];
   const entry = findEntryTypeBySlug(slug);
-  const label = entry?.labels?.plural ?? entry?.label ?? slug;
+  const label: Label = entry?.labels?.plural ?? entry?.label ?? slug;
   const list: Crumb = { label, to: `/entries/${slug}` };
   if (parts[2] === "create")
     return [{ label: M.entries }, list, { label: M.create }];
@@ -99,8 +105,11 @@ function taxonomiesCrumbs(parts: readonly string[]): readonly Crumb[] {
   const name = parts[1];
   if (name === undefined) return [{ label: M.terms }];
   const tax = findTermTaxonomyByName(name);
-  const label = tax?.label ?? name;
-  const singular = (tax?.labels?.singular ?? label).toLowerCase();
+  const label: Label = tax?.label ?? name;
+  const singular = resolveLabel(
+    tax?.labels?.singular ?? label,
+    i18n,
+  ).toLowerCase();
   const list: Crumb = { label, to: `/terms/${name}` };
   if (parts[2] === "create")
     return [

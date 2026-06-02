@@ -55,7 +55,7 @@ function DashboardIndex(): ReactNode {
       {tiles.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {tiles.map((pt) => {
-            const label = pt.labels?.plural ?? renderLabel(pt.label);
+            const label = renderLabel(pt.labels?.plural ?? pt.label);
             const labelLower = label.toLowerCase();
             return (
               <Card key={pt.name} data-testid={`dashboard-tile-${pt.name}`}>
