@@ -60,6 +60,11 @@ msgid "settings.empty.description"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.error.fallback"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/language-card.tsx
 msgid "profile.language.error"
 msgstr ""
@@ -125,8 +130,18 @@ msgid "profile.language.title"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.error.notConfigured"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -137,6 +152,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/__root.tsx
 msgid "notFound.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.recipient.placeholder"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -155,8 +175,33 @@ msgid "menu.profile"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.recipient.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.submit.idle"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.submit.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.description"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -203,6 +248,21 @@ msgstr ""
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.terms"
 msgstr "Begriffe"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.feedback.ok"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.error.sendFailed"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/__root.tsx
