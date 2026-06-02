@@ -84,6 +84,7 @@ export const i18nStrictOverrides: Linter.Config = {
           "name",
           "id",
           "key",
+          "htmlFor",
           "to",
           "href",
           "src",
@@ -183,6 +184,9 @@ export const i18nStrictOverrides: Linter.Config = {
           "URLSearchParams",
           "Symbol",
           "fetch",
+          // DOM queries — id / selector args, never user copy.
+          "document.getElementById",
+          "document.querySelectorAll",
           // Capability + auth
           "hasCap",
           // Routing actions

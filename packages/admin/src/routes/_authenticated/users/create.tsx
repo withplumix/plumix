@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
@@ -18,11 +19,14 @@ import {
   FormMessage,
 } from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
-import { Label } from "@/components/ui/label.js";
+import { Label as UILabel } from "@/components/ui/label.js";
 import { hasCap } from "@/lib/caps.js";
 import { ADMIN_BASE_PATH } from "@/lib/constants.js";
 import { orpc } from "@/lib/orpc.js";
+import { useLabel } from "@/lib/use-label.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react";
 import { useMutation } from "@tanstack/react-query";
 import {
   createFileRoute,
@@ -34,6 +38,7 @@ import { ArrowLeft, Check, Copy } from "lucide-react";
 import { useForm } from "react-hook-form";
 import * as v from "valibot";
 
+import type { Label } from "@plumix/core/i18n";
 import type { User, UserRole } from "@plumix/core/schema";
 
 import {
@@ -42,16 +47,51 @@ import {
   USERS_LIST_DEFAULT_SEARCH,
 } from "./-constants.js";
 
-// Long-form labels for the invite-flow dropdown — users picking a role
-// for someone else want the trade-offs spelled out. The list view uses
-// the short form (just the noun) since a badge has no room for copy.
-const ROLE_LABEL: Record<UserRole, string> = {
-  admin: "Administrator — full control",
-  editor: "Editor — publish + edit any post",
-  author: "Author — publish own entries",
-  contributor: "Contributor — draft, no publish",
-  subscriber: "Subscriber — read only",
+// Option text for the invite-form role picker — long-form labels with
+// the trade-offs spelled out. The list view's short labels live in
+// `@/lib/user-role-labels` (a badge has no room for explanation copy).
+//
+// TODO: promote to `user-role-labels.ts` when `users/$id/edit.tsx`
+// wraps — that surface's role-change picker is the same "assign a role
+// to someone else" framing and will reuse these descriptors verbatim.
+const INVITE_ROLE_OPTION: Record<UserRole, MessageDescriptor> = {
+  admin: defineMessage({
+    id: "userInvite.role.admin",
+    message: "Administrator — full control",
+  }),
+  editor: defineMessage({
+    id: "userInvite.role.editor",
+    message: "Editor — publish + edit any post",
+  }),
+  author: defineMessage({
+    id: "userInvite.role.author",
+    message: "Author — publish own entries",
+  }),
+  contributor: defineMessage({
+    id: "userInvite.role.contributor",
+    message: "Contributor — draft, no publish",
+  }),
+  subscriber: defineMessage({
+    id: "userInvite.role.subscriber",
+    message: "Subscriber — read only",
+  }),
 };
+
+// Descriptors used outside JSX — error setters, copy-button aria label.
+const M = {
+  copyAria: defineMessage({
+    id: "userInvite.copy.aria",
+    message: "Copy invite link",
+  }),
+  errEmailTaken: defineMessage({
+    id: "userInvite.error.emailTaken",
+    message: "A user with that email already exists.",
+  }),
+  errFallback: defineMessage({
+    id: "userInvite.error.fallback",
+    message: "Couldn't send invite. Try again.",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 // Client-side validation mirrors `userInviteInputSchema` on the server so
 // the user gets instant feedback; the server remains the authoritative
@@ -60,6 +100,8 @@ const inviteFormSchema = v.object({
   email: v.pipe(
     v.string(),
     v.trim(),
+    // TODO(slice 9 vMessage): swap to a translatable validator message
+    // once the lazy `t` descriptor pattern lands in `@plumix/core`.
     v.email("Enter a valid email address"),
     v.maxLength(255),
   ),
@@ -91,8 +133,10 @@ type ViewState =
 
 function InviteUserRoute(): ReactNode {
   const navigate = useNavigate();
+  const label = useLabel();
   const [view, setView] = useState<ViewState>({ status: "idle" });
-  const [serverError, setServerError] = useState<string | null>(null);
+  // String branch carries plugin-author `err.message` verbatim.
+  const [serverError, setServerError] = useState<Label | null>(null);
 
   const inviteUser = useMutation({
     mutationFn: (input: { email: string; name: string; role: UserRole }) =>
@@ -152,16 +196,20 @@ function InviteUserRoute(): ReactNode {
         data-testid="invite-back-link"
       >
         <ArrowLeft className="size-4" />
-        Back to users
+        <Trans id="userInvite.backToList" message="Back to users" />
       </Link>
       <Card>
         <CardHeader>
           <CardTitle>
-            <h1 data-testid="invite-heading">Invite user</h1>
+            <h1 data-testid="invite-heading">
+              <Trans id="userInvite.title" message="Invite user" />
+            </h1>
           </CardTitle>
           <CardDescription>
-            They'll enrol a passkey the first time they open the invite link. No
-            password required.
+            <Trans
+              id="userInvite.description"
+              message="They'll enrol a passkey the first time they open the invite link. No password required."
+            />
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -172,7 +220,9 @@ function InviteUserRoute(): ReactNode {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>
+                      <Trans id="userInvite.email.label" message="Email" />
+                    </FormLabel>
                     <FormControl>
                       <Input
                         type="email"
@@ -193,7 +243,9 @@ function InviteUserRoute(): ReactNode {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel>
+                      <Trans id="userInvite.name.label" message="Name" />
+                    </FormLabel>
                     <FormControl>
                       <Input
                         type="text"
@@ -213,16 +265,16 @@ function InviteUserRoute(): ReactNode {
                 name="role"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Role</FormLabel>
+                    <FormLabel>
+                      <Trans id="userInvite.role.label" message="Role" />
+                    </FormLabel>
                     <FormControl>
                       <select
                         value={field.value}
                         onBlur={field.onBlur}
                         onChange={(e) => {
-                          // `<option>` values come from `USER_ROLES`, but the
-                          // DOM types `e.target.value` as a bare string. Guard
-                          // via `includes` so a future refactor that adds a
-                          // raw option can't silently slip a bad role past TS.
+                          // DOM types `e.target.value` as a bare string —
+                          // narrow back to `UserRole` before forwarding.
                           const next = e.target.value;
                           if (isUserRole(next)) field.onChange(next);
                         }}
@@ -232,7 +284,7 @@ function InviteUserRoute(): ReactNode {
                       >
                         {USER_ROLES.map((role) => (
                           <option key={role} value={role}>
-                            {ROLE_LABEL[role]}
+                            {label(INVITE_ROLE_OPTION[role])}
                           </option>
                         ))}
                       </select>
@@ -244,7 +296,7 @@ function InviteUserRoute(): ReactNode {
 
               {serverError ? (
                 <Alert variant="destructive" data-testid="invite-server-error">
-                  <AlertDescription>{serverError}</AlertDescription>
+                  <AlertDescription>{label(serverError)}</AlertDescription>
                 </Alert>
               ) : null}
 
@@ -260,14 +312,18 @@ function InviteUserRoute(): ReactNode {
                   }}
                   disabled={inviteUser.isPending}
                 >
-                  Cancel
+                  <Trans id="userInvite.cancel" message="Cancel" />
                 </Button>
                 <Button
                   type="submit"
                   disabled={inviteUser.isPending}
                   data-testid="invite-submit"
                 >
-                  {inviteUser.isPending ? "Inviting…" : "Send invite"}
+                  {inviteUser.isPending ? (
+                    <Trans id="userInvite.submit.pending" message="Inviting…" />
+                  ) : (
+                    <Trans id="userInvite.submit.idle" message="Send invite" />
+                  )}
                 </Button>
               </div>
             </form>
@@ -288,15 +344,13 @@ function buildInviteUrl(token: string): string {
 // Surface server-side errors with a human-friendly message where we can.
 // The RPC layer throws with `.data.reason` on CONFLICT — everything else
 // falls through as a generic "try again".
-function mapInviteError(err: unknown): string {
+function mapInviteError(err: unknown): Label {
   if (err && typeof err === "object" && "data" in err) {
     const data = (err as { data?: { reason?: string } }).data;
-    if (data?.reason === "email_taken") {
-      return "A user with that email already exists.";
-    }
+    if (data?.reason === "email_taken") return M.errEmailTaken;
   }
   if (err instanceof Error) return err.message;
-  return "Couldn't send invite. Try again.";
+  return M.errFallback;
 }
 
 function InviteSuccess({
@@ -310,6 +364,7 @@ function InviteSuccess({
   onInviteAnother: () => void;
   onBackToList: () => void;
 }): ReactNode {
+  const { i18n } = useLingui();
   const [copied, setCopied] = useState(false);
 
   const copy = async (): Promise<void> => {
@@ -336,16 +391,23 @@ function InviteSuccess({
       <Card>
         <CardHeader>
           <CardTitle>
-            <h1 data-testid="invite-success-heading">Invite ready</h1>
+            <h1 data-testid="invite-success-heading">
+              <Trans id="userInvite.success.title" message="Invite ready" />
+            </h1>
           </CardTitle>
           <CardDescription>
-            Share the link below with {user.email}. They'll enrol a passkey the
-            first time they open it. Link expires in 7 days.
+            <Trans
+              id="userInvite.success.description"
+              message="Share the link below with {email}. They'll enrol a passkey the first time they open it. Link expires in 7 days."
+              values={{ email: user.email }}
+            />
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="invite-url">Invite link</Label>
+            <UILabel htmlFor="invite-url">
+              <Trans id="userInvite.success.link.label" message="Invite link" />
+            </UILabel>
             <div className="flex gap-2">
               <input
                 id="invite-url"
@@ -364,17 +426,23 @@ function InviteSuccess({
                   void copy();
                 }}
                 data-testid="invite-copy-button"
-                aria-label="Copy invite link"
+                aria-label={i18n._(M.copyAria.id, undefined, {
+                  message: M.copyAria.message,
+                })}
               >
                 {copied ? (
                   <>
                     <Check />
-                    <span>Copied</span>
+                    <span>
+                      <Trans id="userInvite.copy.copied" message="Copied" />
+                    </span>
                   </>
                 ) : (
                   <>
                     <Copy />
-                    <span>Copy</span>
+                    <span>
+                      <Trans id="userInvite.copy.idle" message="Copy" />
+                    </span>
                   </>
                 )}
               </Button>
@@ -387,14 +455,17 @@ function InviteSuccess({
               onClick={onInviteAnother}
               data-testid="invite-another-button"
             >
-              Invite another
+              <Trans id="userInvite.success.another" message="Invite another" />
             </Button>
             <Button
               type="button"
               onClick={onBackToList}
               data-testid="invite-done-button"
             >
-              Back to users
+              <Trans
+                id="userInvite.success.backToList"
+                message="Back to users"
+              />
             </Button>
           </div>
         </CardContent>
