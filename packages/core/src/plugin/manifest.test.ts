@@ -74,6 +74,47 @@ describe("buildManifest", () => {
     );
   });
 
+  test("buildManifest skips pluginI18n URLs for ids in adminBundledPluginIds", () => {
+    // Admin's `import.meta.glob("../../../plugins/*/locales/*.mjs")` in
+    // `i18n-boot.ts` already bakes workspace plugin catalogs into the
+    // bundle. Emitting URLs for them would mean admin double-loads —
+    // once via the inlined glob, again via the runtime URL fetch.
+    // The bundler signals which ids admin already covers;
+    // `projectPluginI18n` drops them.
+    const bundled = definePlugin("bundled-plug", {
+      i18n: {
+        sourceLocale: "en",
+        locales: ["en", "de"],
+        catalogPath: "./locales",
+      },
+      setup: () => undefined,
+    });
+    const thirdParty = definePlugin("third-party-plug", {
+      i18n: {
+        sourceLocale: "en",
+        locales: ["en", "de"],
+        catalogPath: "./locales",
+      },
+      setup: () => undefined,
+    });
+    const i18n = resolveLocales({
+      defaultLocale: "en",
+      locales: ["en", "de"],
+    });
+    const manifest = buildManifest(createPluginRegistry(), {
+      i18n,
+      plugins: [bundled, thirdParty],
+      adminBundledPluginIds: new Set(["bundled-plug"]),
+    });
+    expect(manifest.pluginI18n).toEqual({
+      "third-party-plug": {
+        catalogs: {
+          de: "/_plumix/admin/plugins/third-party-plug/locales/de.mjs",
+        },
+      },
+    });
+  });
+
   test("buildManifest omits pluginI18n when no plugin declares an i18n slot", () => {
     const plugin = definePlugin("untranslated", () => undefined);
     const manifest = buildManifest(createPluginRegistry(), {

@@ -1,9 +1,19 @@
-import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  realpath,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { findPluginPackageRoot } from "./plugin-catalog-resolve.js";
+import {
+  findPluginPackageRoot,
+  isWorkspaceSymlinkedPlugin,
+} from "./plugin-catalog-resolve.js";
 
 describe("findPluginPackageRoot", () => {
   test("resolves via the `@plumix/plugin-<id>` convention", () => {
@@ -81,6 +91,57 @@ describe("findPluginPackageRoot — real FS", () => {
 
     const root = findPluginPackageRoot({ pluginId: "real", projectRoot });
     expect(root).toBe(pluginDir);
+  });
+
+  test("isWorkspaceSymlinkedPlugin returns true when the package dir is a symlink (pnpm workspace)", async () => {
+    // pnpm symlinks `node_modules/@plumix/plugin-real` to the
+    // workspace's `packages/plugins/real`. The `lstat` check
+    // distinguishes a real symlink from a symlinked ancestor path
+    // (which macOS tmpdir always exhibits).
+    const realPluginDir = join(projectRoot, "packages/plugins/real");
+    await mkdir(realPluginDir, { recursive: true });
+    await writeFile(
+      join(realPluginDir, "package.json"),
+      JSON.stringify({
+        name: "@plumix/plugin-real",
+        type: "module",
+        exports: { "./package.json": "./package.json" },
+      }),
+    );
+    const scopeDir = join(projectRoot, "node_modules/@plumix");
+    await mkdir(scopeDir, { recursive: true });
+    await symlink(realPluginDir, join(scopeDir, "plugin-real"), "dir");
+
+    expect(isWorkspaceSymlinkedPlugin({ pluginId: "real", projectRoot })).toBe(
+      true,
+    );
+  });
+
+  test("isWorkspaceSymlinkedPlugin returns false for a real (non-symlink) install", async () => {
+    // Third-party npm install — no symlink, real directory.
+    const pluginDir = join(projectRoot, "node_modules/@plumix/plugin-vendor");
+    await mkdir(pluginDir, { recursive: true });
+    await writeFile(
+      join(pluginDir, "package.json"),
+      JSON.stringify({
+        name: "@plumix/plugin-vendor",
+        type: "module",
+        exports: { "./package.json": "./package.json" },
+      }),
+    );
+
+    expect(
+      isWorkspaceSymlinkedPlugin({ pluginId: "vendor", projectRoot }),
+    ).toBe(false);
+  });
+
+  test("isWorkspaceSymlinkedPlugin returns false when the package isn't found at all", () => {
+    // `lstatSync` throws ENOENT; the helper's catch swallows it and
+    // returns false. Distinct from the "real install" path above,
+    // which exercises the `isSymbolicLink() === false` branch.
+    expect(isWorkspaceSymlinkedPlugin({ pluginId: "ghost", projectRoot })).toBe(
+      false,
+    );
   });
 
   test("returns null when a plugin package omits exports.['./package.json']", async () => {

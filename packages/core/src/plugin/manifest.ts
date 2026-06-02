@@ -1602,6 +1602,15 @@ export function buildManifest(
       readonly id: string;
       readonly i18n?: PluginI18nSlot;
     }[];
+    /** Plugin ids whose catalogs admin already bakes into its bundle
+     *  via `import.meta.glob("../../../plugins/*"/locales/*.mjs")` —
+     *  emitting URLs for them double-loads at runtime. The plumix
+     *  vite plugin computes this set by inspecting which plugins
+     *  resolve through the `@plumix/plugin-<id>` convention against
+     *  the consumer's `node_modules`. Empty / omitted means every
+     *  i18n-slot plugin gets a URL. Only consulted alongside
+     *  `plugins`; passing this set without `plugins` is a no-op. */
+    readonly adminBundledPluginIds?: ReadonlySet<string>;
   },
 ): BuiltManifest {
   const entries = Array.from(registry.entryTypes.values())
@@ -1688,7 +1697,11 @@ export function buildManifest(
       // affordance can be re-introduced when there's a consumer.
       locales: (options?.i18n?.locales ?? []).filter((l) => l.enabled),
     },
-    pluginI18n: projectPluginI18n(options?.plugins, options?.i18n),
+    pluginI18n: projectPluginI18n(
+      options?.plugins,
+      options?.i18n,
+      options?.adminBundledPluginIds,
+    ),
   };
 }
 
@@ -1697,6 +1710,7 @@ function projectPluginI18n(
     | readonly { readonly id: string; readonly i18n?: PluginI18nSlot }[]
     | undefined,
   siteI18n: ResolvedI18n | undefined,
+  adminBundledPluginIds: ReadonlySet<string> | undefined,
 ): PluginI18nManifest {
   if (!plugins) return {};
   const siteLocales = new Set(
@@ -1705,6 +1719,9 @@ function projectPluginI18n(
   const out: Record<string, { catalogs: Record<string, string> }> = {};
   for (const plugin of plugins) {
     if (!plugin.i18n) continue;
+    // Workspace plugins are baked into admin via `import.meta.glob` —
+    // emitting URLs would mean admin double-loads at boot.
+    if (adminBundledPluginIds?.has(plugin.id)) continue;
     const catalogs: Record<string, string> = {};
     for (const locale of plugin.i18n.locales) {
       if (locale === plugin.i18n.sourceLocale) continue;
