@@ -39,7 +39,10 @@ describe("@plumix/plugin-media — registration", () => {
     const { registry } = await install();
     const m = registry.entryTypes.get("media");
     expect(m).toBeDefined();
-    expect(m?.label).toBe("Media");
+    expect(m?.label).toEqual({
+      id: "plugin.media.media.plural",
+      message: "Media",
+    });
     expect(m?.isPublic).toBe(false);
     expect(m?.hasArchive).toBe(false);
     expect(m?.registeredBy).toBe("media");

@@ -1,8 +1,20 @@
+import type { Label } from "plumix/i18n";
 import { definePlugin } from "plumix/plugin";
 
 import type { ResolvedMenu, ResolvedMenuItem } from "./server/types.js";
 import { createMenuRouter } from "./rpc.js";
 import { getMenuByName } from "./server/getMenuByName.js";
+
+// Plain descriptor literals — plugin source runs server-side without
+// the Babel macro pipeline; admin's chrome uses `defineMessage(...)`.
+// Translation catalogs for built-in plugins land under #697; until
+// then descriptors resolve to source text.
+const LABELS = {
+  menus: { id: "plugin.menu.menu.plural", message: "Menus" },
+  menu: { id: "plugin.menu.menu.singular", message: "Menu" },
+  menuItems: { id: "plugin.menu.menuItem.plural", message: "Menu items" },
+  menuItem: { id: "plugin.menu.menuItem.singular", message: "Menu item" },
+} satisfies Record<string, Label>;
 
 // `@plumix/plugin-menu` augments the core option shapes with
 // menu-eligibility flags and the hook registries with three menu
@@ -82,8 +94,8 @@ export const menu = definePlugin("menu", {
   adminEntry: ADMIN_ENTRY_PATH,
   setup: (ctx) => {
     ctx.registerEntryType("menu_item", {
-      label: "Menu items",
-      labels: { singular: "Menu item", plural: "Menu items" },
+      label: LABELS.menuItems,
+      labels: { singular: LABELS.menuItem, plural: LABELS.menuItems },
       description: "Items belonging to a navigation menu",
       supports: ["title"],
       termTaxonomies: ["menu"],
@@ -93,8 +105,8 @@ export const menu = definePlugin("menu", {
     });
 
     ctx.registerTermTaxonomy("menu", {
-      label: "Menus",
-      labels: { singular: "Menu" },
+      label: LABELS.menus,
+      labels: { singular: LABELS.menu },
       isHierarchical: false,
       entryTypes: ["menu_item"],
       isPublic: false,

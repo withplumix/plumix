@@ -119,12 +119,13 @@ async function toLookupResult(
   row: EntryLookupRow,
 ): Promise<LookupResult> {
   const trimmedTitle = row.title.trim();
-  const label = trimmedTitle !== "" ? trimmedTitle : `Untitled ${row.type}`;
-  // Resolve the public URL when the type has one; falls back to omitted
-  // `cached.href` for `isPublic: false` types (e.g. `menu_item`). The meta
-  // pipeline merges `cached.{label,href}` into stored meta on every write
-  // so consumers (menu plugin, reference fields) have last-known fallbacks
-  // when the linked entity is later deleted.
+  // `null` (not an English "Untitled <type>" string) so consumers
+  // render their own localized fallback. cached.label snapshots the
+  // wire shape so the meta-pipeline doesn't pin source-locale English
+  // into entry meta forever; menu items and reference fields fall
+  // through to their own deletion-resilient fallback chain when the
+  // linked entity is later deleted.
+  const label: string | null = trimmedTitle !== "" ? trimmedTitle : null;
   const href = await buildEntryPermalink(ctx, {
     type: row.type,
     slug: row.slug,

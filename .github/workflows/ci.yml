@@ -71,6 +71,14 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm i18n:check
 
+  i18n-ratchet:
+    name: i18n ratchet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+      - run: pnpm i18n:ratchet:check
+
   test:
     name: Test
     runs-on: ubuntu-latest

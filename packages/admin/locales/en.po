@@ -3115,6 +3115,11 @@ msgid "profile.passkeys.unnamed"
 msgstr "Unnamed passkey"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/lookup-label.tsx
+msgid "metaBox.reference.untitled"
+msgstr "Untitled"
+
+#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/create.tsx
 msgid "editor.entry.create.untitled"
 msgstr "Untitled"

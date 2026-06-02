@@ -187,7 +187,7 @@ describe("entryLookupAdapter", () => {
     ).toBeNull();
   });
 
-  test("falls back to 'Untitled <type>' label when title is empty", async () => {
+  test("returns null label when title is empty so the admin can localize", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const e = await entryFactory
       .transient({ db: h.context.db })
@@ -197,6 +197,10 @@ describe("entryLookupAdapter", () => {
       String(e.id),
       POST,
     );
-    expect(result?.label).toBe("Untitled post");
+    expect(result?.label).toBeNull();
+    // cached.label snapshots the wire shape — null too — so menu items +
+    // reference fields render their own deletion-resilient fallback
+    // rather than ship a stale English "Untitled post" in stored meta.
+    expect((result?.cached as { label?: unknown }).label).toBeNull();
   });
 });

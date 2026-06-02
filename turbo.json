@@ -48,6 +48,9 @@
     "i18n:check": {
       "dependsOn": ["plumix#build"],
       "cache": false
+    },
+    "i18n:ratchet:check": {
+      "cache": false
     }
   },
   "globalPassThroughEnv": [

@@ -283,7 +283,7 @@ function EditTermContent({
         <Trans
           id="terms.edit.backLink"
           message="Back to {pluralLower}"
-          values={{ pluralLower: taxonomy.label.toLowerCase() }}
+          values={{ pluralLower: renderLabel(taxonomy.label).toLowerCase() }}
         />
       </Link>
 
