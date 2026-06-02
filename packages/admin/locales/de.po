@@ -331,11 +331,6 @@ msgid "userEdit.error.reassignToSelf"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/taxonomy/term-form.tsx
-msgid "termForm.cancel"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.cancel"
 msgstr ""
@@ -358,6 +353,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/editor/BlockScopePicker.tsx
 msgid "blockScopePicker.cancel"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.cancel"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1067,6 +1067,11 @@ msgid "apiTokens.scope.inheritRole"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/meta-box-field.tsx
+msgid "metaBox.field.json.invalid"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.success.another"
 msgstr ""
@@ -1207,11 +1212,6 @@ msgid "apiTokens.create.submit.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/taxonomy/term-form.tsx
-msgid "termForm.name"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.name.label"
 msgstr ""
@@ -1229,6 +1229,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_auth/accept-invite/$token.tsx
 msgid "auth.acceptInvite.name"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.name"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1617,11 +1622,6 @@ msgid "settings.page.saved"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/taxonomy/term-form.tsx
-msgid "termForm.submitting"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.submit.pending"
 msgstr ""
@@ -1629,6 +1629,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.submit.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.submitting"
 msgstr ""
 
 #. js-lingui-explicit-id

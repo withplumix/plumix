@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 import { useState } from "react";
@@ -14,7 +15,9 @@ import { Input } from "@/components/ui/input.js";
 import { Slider } from "@/components/ui/slider.js";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group.js";
 import { getPluginFieldType } from "@/lib/plugin-registry.js";
+import { useLabel } from "@/lib/use-label.js";
 import { cn } from "@/lib/utils";
+import { defineMessage } from "@lingui/core/macro";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 
@@ -22,6 +25,13 @@ import { MultiReferencePicker } from "./multi-reference-picker.js";
 import { PluginFieldErrorBoundary } from "./plugin-field-error-boundary.js";
 import { ReferencePicker } from "./reference-picker.js";
 import { RepeaterField } from "./repeater-field.js";
+
+const M = {
+  invalidJson: defineMessage({
+    id: "metaBox.field.json.invalid",
+    message: "Invalid JSON",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 // Schema-driven field renderer wired to react-hook-form. Each meta-box
 // field becomes a shadcn `FormField` under the supplied `name` path so
@@ -115,8 +125,12 @@ export function MetaBoxField({
 // Base classes shared by <textarea> and <select> — mirror the shadcn
 // <Input> look (same border, ring, disabled states) so all three line
 // up visually in a dense sidebar.
-const CONTROL_BASE_CLASS =
-  "border-input bg-background focus-visible:ring-ring rounded-md border text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50";
+const CONTROL_BASE_CLASS = cn(
+  "border-input bg-background focus-visible:ring-ring",
+  "rounded-md border text-sm",
+  "focus-visible:ring-2 focus-visible:outline-none",
+  "disabled:cursor-not-allowed disabled:opacity-50",
+);
 
 // Returns the native-element body for the given field. Must render a
 // single element so shadcn's `<FormControl>` (which uses Radix `Slot`)
@@ -571,6 +585,7 @@ function JsonControl({
   disabled: boolean;
   testId: string;
 }): React.ReactNode {
+  const labelFn = useLabel();
   const initialFormatted = formatInitial(value);
   const [draft, setDraft] = useState(initialFormatted);
   const [error, setError] = useState<string | null>(null);
@@ -606,7 +621,9 @@ function JsonControl({
             setError(null);
             onChange(parsed);
           } catch (err) {
-            setError(err instanceof Error ? err.message : "Invalid JSON");
+            setError(
+              err instanceof Error ? err.message : labelFn(M.invalidJson),
+            );
           }
         }}
         rows={6}

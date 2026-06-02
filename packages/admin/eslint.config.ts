@@ -14,6 +14,7 @@ const STRICT_WRAPPED_FILES = [
   "src/components/data-table/list-pagination.tsx",
   "src/components/form/search-input.tsx",
   "src/components/locale-switcher.tsx",
+  "src/components/meta-box/meta-box-field.tsx",
   "src/components/meta-box/meta-box.tsx",
   "src/components/meta-box/multi-reference-picker.tsx",
   "src/components/meta-box/plugin-field-error-boundary.tsx",
