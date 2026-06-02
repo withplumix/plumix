@@ -3,7 +3,7 @@ import { defineMessage } from "@lingui/core/macro";
 
 import type { MagicLinkErrorCode } from "@plumix/core";
 
-import { useLabel } from "./use-label.js";
+import { createNullableErrorDescriptorRegistry } from "./error-descriptor-registry.js";
 
 const MESSAGES: Record<MagicLinkErrorCode, MessageDescriptor> = {
   missing_token: defineMessage({
@@ -41,37 +41,11 @@ const FALLBACK = defineMessage({
   message: "Couldn't sign in. Try again.",
 });
 
-/**
- * Resolves a magic-link error code to a localizable
- * `MessageDescriptor`. Returns `null` for empty / undefined codes so
- * the caller can skip rendering an alert entirely. Unknown codes
- * surface the generic `FALLBACK` descriptor.
- */
-export function magicLinkErrorDescriptor(
-  code: string | undefined,
-): MessageDescriptor | null {
-  if (!code) return null;
-  return Object.hasOwn(MESSAGES, code)
-    ? MESSAGES[code as MagicLinkErrorCode]
-    : FALLBACK;
-}
+const registry = createNullableErrorDescriptorRegistry(MESSAGES, FALLBACK);
 
-/**
- * Convenience hook — resolves the descriptor and runs it through
- * `useLabel()` so the consumer renders a flat localized string.
- * Returns `null` when there's no error to show.
- */
-export function useMagicLinkErrorMessage(): (
-  code: string | undefined,
-) => string | null {
-  const label = useLabel();
-  return (code) => {
-    const descriptor = magicLinkErrorDescriptor(code);
-    if (descriptor === null) return null;
-    return label(descriptor);
-  };
-}
+export const magicLinkErrorDescriptor = registry.descriptor;
+export const useMagicLinkErrorMessage = registry.useMessage;
 
 // Test-only export so the unit test can assert every code in
 // `MAGIC_LINK_ERROR_CODES` is mapped (no silent fallbacks).
-export const MAGIC_LINK_ERROR_MESSAGES = MESSAGES;
+export const MAGIC_LINK_ERROR_MESSAGES = registry._messages;

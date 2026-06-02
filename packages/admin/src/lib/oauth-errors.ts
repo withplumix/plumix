@@ -3,7 +3,7 @@ import { defineMessage } from "@lingui/core/macro";
 
 import type { OAuthErrorCode } from "@plumix/core";
 
-import { useLabel } from "./use-label.js";
+import { createNullableErrorDescriptorRegistry } from "./error-descriptor-registry.js";
 
 const MESSAGES: Record<OAuthErrorCode, MessageDescriptor> = {
   state_invalid: defineMessage({
@@ -60,37 +60,11 @@ const FALLBACK = defineMessage({
   message: "Couldn't sign in. Try again.",
 });
 
-/**
- * Resolves an OAuth error code to a localizable `MessageDescriptor`.
- * Returns `null` for empty / undefined codes so the caller can skip
- * rendering an alert entirely. Unknown codes surface the generic
- * `FALLBACK` descriptor.
- */
-export function oauthErrorDescriptor(
-  code: string | undefined,
-): MessageDescriptor | null {
-  if (!code) return null;
-  return Object.hasOwn(MESSAGES, code)
-    ? MESSAGES[code as OAuthErrorCode]
-    : FALLBACK;
-}
+const registry = createNullableErrorDescriptorRegistry(MESSAGES, FALLBACK);
 
-/**
- * Convenience hook — resolves the descriptor and runs it through
- * `useLabel()` so the consumer renders a flat localized string.
- * Returns `null` when there's no error to show.
- */
-export function useOAuthErrorMessage(): (
-  code: string | undefined,
-) => string | null {
-  const label = useLabel();
-  return (code) => {
-    const descriptor = oauthErrorDescriptor(code);
-    if (descriptor === null) return null;
-    return label(descriptor);
-  };
-}
+export const oauthErrorDescriptor = registry.descriptor;
+export const useOAuthErrorMessage = registry.useMessage;
 
 // Test-only export so the unit test can assert every code in
 // `OAUTH_ERROR_CODES` is mapped (no silent fallbacks).
-export const OAUTH_ERROR_MESSAGES = MESSAGES;
+export const OAUTH_ERROR_MESSAGES = registry._messages;

@@ -540,6 +540,11 @@ msgid "auth.device.approve.error.fallback"
 msgstr "Couldn't complete the request. Try again."
 
 #. js-lingui-explicit-id
+#: src/lib/email-change-errors.ts
+msgid "emailChange.error.fallback"
+msgstr "Couldn't confirm the email change. Try again."
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.fallback"
 msgstr "Couldn't delete the passkey. Try again."
@@ -1894,6 +1899,12 @@ msgid "termForm.slug.format"
 msgstr "Slug may only contain lowercase letters, digits, and hyphens."
 
 #. js-lingui-explicit-id
+#: src/lib/email-change-errors.ts
+msgid "emailChange.error.emailTaken"
+msgstr "Someone else claimed that email between the request and your click. "
+"Request a new change to a different address."
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.invalidInput"
 msgstr "Something went wrong with the form. Please reload and try again."
@@ -1967,6 +1978,22 @@ msgid "oauth.error.accountDisabled"
 msgstr "That account is disabled."
 
 #. js-lingui-explicit-id
+#: src/lib/email-change-errors.ts
+msgid "emailChange.error.tokenExpired"
+msgstr "That confirmation link expired. Request a new email change."
+
+#. js-lingui-explicit-id
+#: src/lib/email-change-errors.ts
+msgid "emailChange.error.missingToken"
+msgstr "That confirmation link is missing its token. Request a new email "
+"change."
+
+#. js-lingui-explicit-id
+#: src/lib/email-change-errors.ts
+msgid "emailChange.error.tokenInvalid"
+msgstr "That confirmation link isn't valid. It may have already been used."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.error.domainExists"
 msgstr "That domain is already configured."
@@ -2027,6 +2054,16 @@ msgstr "That sign-in link is missing its token. Request a new one and try "
 msgid "magicLink.error.tokenInvalid"
 msgstr "That sign-in link isn't valid. It may have already been used. Request a "
 "new one."
+
+#. js-lingui-explicit-id
+#: src/lib/email-change-errors.ts
+msgid "emailChange.error.userNotFound"
+msgstr "The account this confirmation belongs to has been removed."
+
+#. js-lingui-explicit-id
+#: src/lib/email-change-errors.ts
+msgid "emailChange.error.accountDisabled"
+msgstr "The account this confirmation belongs to is disabled."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx

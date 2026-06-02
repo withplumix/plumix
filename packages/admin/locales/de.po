@@ -526,6 +526,11 @@ msgid "auth.device.approve.error.fallback"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/email-change-errors.ts
+msgid "emailChange.error.fallback"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.fallback"
 msgstr ""
@@ -1857,6 +1862,11 @@ msgid "termForm.slug.format"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/email-change-errors.ts
+msgid "emailChange.error.emailTaken"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.invalidInput"
 msgstr ""
@@ -1927,6 +1937,21 @@ msgid "oauth.error.accountDisabled"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/email-change-errors.ts
+msgid "emailChange.error.tokenExpired"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/email-change-errors.ts
+msgid "emailChange.error.missingToken"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/email-change-errors.ts
+msgid "emailChange.error.tokenInvalid"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.error.domainExists"
 msgstr ""
@@ -1984,6 +2009,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.tokenInvalid"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/email-change-errors.ts
+msgid "emailChange.error.userNotFound"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/email-change-errors.ts
+msgid "emailChange.error.accountDisabled"
 msgstr ""
 
 #. js-lingui-explicit-id
