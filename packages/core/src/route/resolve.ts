@@ -24,6 +24,7 @@ import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
 import { users } from "../db/schema/users.js";
+import { labelSourceText } from "../i18n/label.js";
 import { notFound } from "../runtime/http.js";
 import { paginate } from "./paginate.js";
 import { findEntryByPath, findTermByPath } from "./path-chain.js";
@@ -393,17 +394,13 @@ async function resolveArchive(
   // reads it.
   ctx.resolvedEntity = { kind: "archive", entryType: intent.entryType };
 
-  // Take `descriptor.message` as the SSR fallback for descriptor-form
-  // labels until the SSR-side `ctx.i18n` wiring lands (slice 11 #680
-  // closed core's tRPC translation; SSR title resolution is pending).
-  const registeredLabel: string | undefined =
-    registered === undefined
-      ? undefined
-      : typeof registered.label === "string"
-        ? registered.label
-        : registered.label.message;
+  // SSR-side: descriptor labels fall back to source text until the
+  // ctx.i18n route wiring lands (slice 11 #680 covered tRPC errors;
+  // route titles pending).
   const title =
-    registered?.labels?.plural ?? registeredLabel ?? intent.entryType;
+    registered?.labels?.plural ??
+    (registered ? labelSourceText(registered.label) : undefined) ??
+    intent.entryType;
 
   const initial: ArchiveData = {
     contentType: intent.entryType,

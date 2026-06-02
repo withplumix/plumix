@@ -21,6 +21,7 @@ import type { ResolvedI18n, ResolvedLocale } from "../i18n/locale-registry.js";
 import type { RouteIntent } from "../route/intent.js";
 import type { RegisteredTemplateDep } from "../template-deps.js";
 import type { RegisteredLookupAdapter } from "./lookup.js";
+import { labelSourceText } from "../i18n/label.js";
 import { DuplicateAdminSlugError, PluginDefinitionError } from "./errors.js";
 
 export interface EntryTypeOptions {
@@ -1817,14 +1818,9 @@ function compareByOrderThenLabel(
 ): number {
   const ao = a.order ?? Number.POSITIVE_INFINITY;
   const bo = b.order ?? Number.POSITIVE_INFINITY;
-  // Server-side sort uses `descriptor.message` (source-locale form)
-  // as the comparable key. The runtime sort in admin can re-sort by
-  // the locale-resolved string once labels are rendered.
-  const aLabel =
-    typeof a.label === "string" ? a.label : (a.label.message ?? "");
-  const bLabel =
-    typeof b.label === "string" ? b.label : (b.label.message ?? "");
-  return ao - bo || aLabel.localeCompare(bLabel);
+  return (
+    ao - bo || labelSourceText(a.label).localeCompare(labelSourceText(b.label))
+  );
 }
 
 function compareByPriorityThenId(

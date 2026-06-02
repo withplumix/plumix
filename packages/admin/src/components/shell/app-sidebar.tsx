@@ -73,7 +73,10 @@ export function AppSidebar({
                     : Puzzle;
                   return (
                     <SidebarMenuItem key={item.to}>
-                      <SidebarMenuButton asChild tooltip={item.label}>
+                      <SidebarMenuButton
+                        asChild
+                        tooltip={renderLabel(item.label)}
+                      >
                         <Link
                           to={item.to}
                           activeProps={{ "data-active": "true" }}

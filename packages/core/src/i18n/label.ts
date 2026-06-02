@@ -6,11 +6,18 @@ import type { I18n, MessageDescriptor } from "@lingui/core";
  *  go through `resolveLabel` to flatten both to a string. */
 export type Label = string | MessageDescriptor;
 
-/** Resolve a `Label` to a rendered string against the given `i18n`
- *  instance. Strings pass through; descriptors hit Lingui's resolver,
- *  which falls back to `descriptor.message` when the active catalog
- *  has no translation for the id. */
+/** Flatten `Label` → string via Lingui's resolver. */
 export function resolveLabel(label: Label, instance: I18n): string {
   if (typeof label === "string") return label;
   return instance._(label);
+}
+
+/** Source-locale form of a `Label`. SSR-side companion to
+ *  `resolveLabel` for contexts without an `i18n` instance — server
+ *  sort comparators, route titles, plugin-eligibility predicates.
+ *  Plain strings pass through; descriptors return `.message` (the
+ *  English source the descriptor was authored with). */
+export function labelSourceText(label: Label): string {
+  if (typeof label === "string") return label;
+  return label.message ?? "";
 }
