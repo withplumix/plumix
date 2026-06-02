@@ -126,6 +126,10 @@ export const i18nStrictOverrides: Linter.Config = {
           // Tanstack query / router / table
           "queryKey",
           "accessorKey",
+          // JSX `value` is the state-bound input/option value — string
+          // literals here are picklist discriminators (`<option value="inherit">`),
+          // never user copy.
+          "value",
           // Brand constants used as document-title suffix. Localizing
           // the product name is out of scope.
           "TITLE_BRAND",

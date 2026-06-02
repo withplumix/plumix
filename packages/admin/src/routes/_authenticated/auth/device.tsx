@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
@@ -18,15 +19,81 @@ import {
   FormMessage,
 } from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
-import { Label } from "@/components/ui/label.js";
+import { Label as UILabel } from "@/components/ui/label.js";
 import { extractCode, extractReason } from "@/lib/orpc-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { parseScopesText } from "@/lib/scopes.js";
+import { useLabel } from "@/lib/use-label.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useForm, useWatch } from "react-hook-form";
 import * as v from "valibot";
+
+// Descriptors used outside JSX — error helpers + the textarea
+// placeholder. Chrome strings stay inline at their `<Trans>` callsite
+// per admin convention.
+const M = {
+  userCodePlaceholder: defineMessage({
+    id: "auth.device.userCode.placeholder",
+    message: "ABCD-EFGH",
+  }),
+  tokenNamePlaceholder: defineMessage({
+    id: "auth.device.tokenName.placeholder",
+    message: "claude-code / github-actions / mcp-prod",
+  }),
+  scopesPlaceholder: defineMessage({
+    id: "auth.device.scopes.placeholder",
+    message: "entry:post:read\nentry:post:edit_own",
+  }),
+  defaultTokenName: defineMessage({
+    id: "auth.device.tokenName.default",
+    message: "CLI",
+  }),
+  errLookupNotFound: defineMessage({
+    id: "auth.device.lookup.error.notFound",
+    message: "Code not found. Check it matches what your CLI printed.",
+  }),
+  errLookupExpired: defineMessage({
+    id: "auth.device.lookup.error.expired",
+    message: "This code has expired. Re-run your CLI to get a new one.",
+  }),
+  errLookupAlreadyApproved: defineMessage({
+    id: "auth.device.lookup.error.alreadyApproved",
+    message:
+      "This code has already been approved. Re-run your CLI if it didn't pick the token up.",
+  }),
+  errLookupAlreadyDenied: defineMessage({
+    id: "auth.device.lookup.error.alreadyDenied",
+    message: "This code has already been denied.",
+  }),
+  errLookupFallback: defineMessage({
+    id: "auth.device.lookup.error.fallback",
+    message: "Couldn't look up that code. Try again.",
+  }),
+  errApproveExpired: defineMessage({
+    id: "auth.device.approve.error.expired",
+    message: "This code expired before you could finish — re-run your CLI.",
+  }),
+  errApproveAlreadyApproved: defineMessage({
+    id: "auth.device.approve.error.alreadyApproved",
+    message: "This code was already approved on another tab.",
+  }),
+  errApproveAlreadyDenied: defineMessage({
+    id: "auth.device.approve.error.alreadyDenied",
+    message: "This code was already denied.",
+  }),
+  errApproveFallback: defineMessage({
+    id: "auth.device.approve.error.fallback",
+    message: "Couldn't complete the request. Try again.",
+  }),
+} satisfies Record<string, MessageDescriptor>;
+
+// OAuth 2.0 RFC 8628 §3.5 error response token. Not user copy.
+// eslint-disable-next-line lingui/no-unlocalized-strings -- OAuth wire-level identifier
+const ACCESS_DENIED = "access_denied";
 
 // Admin-side approval page for OAuth 2.0 Device Authorization Grant
 // (RFC 8628). The CLI prints a URL like
@@ -49,6 +116,8 @@ const approveSchema = v.object({
   tokenName: v.pipe(
     v.string(),
     v.trim(),
+    // TODO(slice 9 vMessage): swap to translatable validator messages
+    // once the lazy `t` descriptor pattern lands in `@plumix/core`.
     v.minLength(1, "Name is required."),
     v.maxLength(64, "Name must be ≤ 64 characters."),
   ),
@@ -78,7 +147,9 @@ function DeviceApprovalRoute(): ReactNode {
       ? { kind: "approve", userCode: search.user_code }
       : { kind: "lookup" },
   );
-  const [lookupError, setLookupError] = useState<string | null>(null);
+  const [lookupError, setLookupError] = useState<MessageDescriptor | null>(
+    null,
+  );
 
   // Deep-link case: when the page mounts with `?user_code=...`,
   // pre-validate the code so the approval form only renders for
@@ -105,11 +176,13 @@ function DeviceApprovalRoute(): ReactNode {
           className="text-2xl font-semibold"
           data-testid="auth-device-heading"
         >
-          Authorize CLI access
+          <Trans id="auth.device.title" message="Authorize CLI access" />
         </h1>
         <p className="text-muted-foreground text-sm">
-          A CLI is requesting an API token for your account. Confirm the code
-          your CLI is showing matches the one below before approving.
+          <Trans
+            id="auth.device.description"
+            message="A CLI is requesting an API token for your account. Confirm the code your CLI is showing matches the one below before approving."
+          />
         </p>
       </header>
 
@@ -135,8 +208,10 @@ function DeviceApprovalRoute(): ReactNode {
       {phase.kind === "approved" ? (
         <Alert data-testid="auth-device-approved-alert">
           <AlertDescription>
-            Approved. Your CLI should pick up the token within a few seconds —
-            you can close this tab.
+            <Trans
+              id="auth.device.approved"
+              message="Approved. Your CLI should pick up the token within a few seconds — you can close this tab."
+            />
           </AlertDescription>
         </Alert>
       ) : null}
@@ -144,7 +219,16 @@ function DeviceApprovalRoute(): ReactNode {
       {phase.kind === "denied" ? (
         <Alert variant="destructive" data-testid="auth-device-denied-alert">
           <AlertDescription>
-            Denied. The CLI will get an access_denied response and stop polling.
+            {/* `access_denied` is the OAuth 2.0 RFC 8628 §3.5 wire-level
+                error code the polling client receives — keep it as a raw
+                `<code>` outside `<Trans>` so translators can't accidentally
+                drift the localized copy away from the actual API value. */}
+            <Trans
+              id="auth.device.denied"
+              message="Denied. The CLI will get a(n) <0>{accessDenied}</0> response and stop polling."
+              values={{ accessDenied: ACCESS_DENIED }}
+              components={{ 0: <code className="font-mono text-xs" /> }}
+            />
           </AlertDescription>
         </Alert>
       ) : null}
@@ -156,10 +240,11 @@ function LookupCard({
   initialError,
   onValid,
 }: {
-  initialError: string | null;
-  onValid: (userCode: string) => void;
+  readonly initialError: MessageDescriptor | null;
+  readonly onValid: (userCode: string) => void;
 }): ReactNode {
-  const [error, setError] = useState<string | null>(initialError);
+  const label = useLabel();
+  const [error, setError] = useState<MessageDescriptor | null>(initialError);
   const form = useForm({
     resolver: valibotResolver(lookupSchema),
     defaultValues: { userCode: "" },
@@ -179,10 +264,17 @@ function LookupCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Enter the code from your CLI</CardTitle>
+        <CardTitle>
+          <Trans
+            id="auth.device.lookup.title"
+            message="Enter the code from your CLI"
+          />
+        </CardTitle>
         <CardDescription>
-          The CLI shows an 8-character code split with a dash — "ABCD-EFGH".
-          Letters and digits only, no zeros or ones.
+          <Trans
+            id="auth.device.lookup.description"
+            message='The CLI shows an 8-character code split with a dash — "ABCD-EFGH". Letters and digits only, no zeros or ones.'
+          />
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -198,12 +290,17 @@ function LookupCard({
               name="userCode"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>User code</FormLabel>
+                  <FormLabel>
+                    <Trans
+                      id="auth.device.lookup.userCode.label"
+                      message="User code"
+                    />
+                  </FormLabel>
                   <FormControl>
                     <Input
                       autoFocus
                       autoComplete="off"
-                      placeholder="ABCD-EFGH"
+                      placeholder={label(M.userCodePlaceholder)}
                       disabled={lookup.isPending}
                       data-testid="auth-device-usercode-input"
                       {...field}
@@ -219,7 +316,7 @@ function LookupCard({
                 variant="destructive"
                 data-testid="auth-device-lookup-error"
               >
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription>{label(error)}</AlertDescription>
               </Alert>
             ) : null}
 
@@ -229,7 +326,17 @@ function LookupCard({
                 disabled={lookup.isPending}
                 data-testid="auth-device-lookup-submit"
               >
-                {lookup.isPending ? "Checking…" : "Continue"}
+                {lookup.isPending ? (
+                  <Trans
+                    id="auth.device.lookup.submit.pending"
+                    message="Checking…"
+                  />
+                ) : (
+                  <Trans
+                    id="auth.device.lookup.submit.idle"
+                    message="Continue"
+                  />
+                )}
               </Button>
             </div>
           </form>
@@ -245,16 +352,17 @@ function ApproveCard({
   onDenied,
   onCancel,
 }: {
-  userCode: string;
-  onApproved: () => void;
-  onDenied: () => void;
-  onCancel: () => void;
+  readonly userCode: string;
+  readonly onApproved: () => void;
+  readonly onDenied: () => void;
+  readonly onCancel: () => void;
 }): ReactNode {
-  const [error, setError] = useState<string | null>(null);
+  const label = useLabel();
+  const [error, setError] = useState<MessageDescriptor | null>(null);
   const form = useForm({
     resolver: valibotResolver(approveSchema),
     defaultValues: {
-      tokenName: "CLI",
+      tokenName: label(M.defaultTokenName),
       scopeMode: "inherit" as const,
       scopesText: "",
     },
@@ -293,11 +401,18 @@ function ApproveCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Confirm "{userCode}"</CardTitle>
+        <CardTitle>
+          <Trans
+            id="auth.device.approve.confirmTitle"
+            message={'Confirm "{userCode}"'}
+            values={{ userCode }}
+          />
+        </CardTitle>
         <CardDescription>
-          A new API token will be minted for your account and handed to the CLI.
-          Name it so you can find it later under your profile, and optionally
-          restrict what it can do.
+          <Trans
+            id="auth.device.approve.description"
+            message="A new API token will be minted for your account and handed to the CLI. Name it so you can find it later under your profile, and optionally restrict what it can do."
+          />
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -317,10 +432,15 @@ function ApproveCard({
               name="tokenName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Token name</FormLabel>
+                  <FormLabel>
+                    <Trans
+                      id="auth.device.tokenName.label"
+                      message="Token name"
+                    />
+                  </FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="claude-code / github-actions / mcp-prod"
+                      placeholder={label(M.tokenNamePlaceholder)}
                       disabled={pending}
                       data-testid="auth-device-tokenname-input"
                       {...field}
@@ -336,10 +456,15 @@ function ApproveCard({
               name="scopeMode"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Permissions</FormLabel>
+                  <FormLabel>
+                    <Trans
+                      id="auth.device.scopeMode.label"
+                      message="Permissions"
+                    />
+                  </FormLabel>
                   <FormControl>
                     <div className="flex flex-col gap-2">
-                      <Label className="flex items-center gap-2 font-normal">
+                      <UILabel className="flex items-center gap-2 font-normal">
                         <input
                           type="radio"
                           name={field.name}
@@ -349,9 +474,12 @@ function ApproveCard({
                           disabled={pending}
                           data-testid="auth-device-scope-inherit-radio"
                         />
-                        Inherit all my permissions
-                      </Label>
-                      <Label className="flex items-center gap-2 font-normal">
+                        <Trans
+                          id="auth.device.scopeMode.inherit"
+                          message="Inherit all my permissions"
+                        />
+                      </UILabel>
+                      <UILabel className="flex items-center gap-2 font-normal">
                         <input
                           type="radio"
                           name={field.name}
@@ -361,8 +489,11 @@ function ApproveCard({
                           disabled={pending}
                           data-testid="auth-device-scope-restrict-radio"
                         />
-                        Restrict to specific capabilities
-                      </Label>
+                        <Trans
+                          id="auth.device.scopeMode.restrict"
+                          message="Restrict to specific capabilities"
+                        />
+                      </UILabel>
                     </div>
                   </FormControl>
                   <FormMessage />
@@ -376,11 +507,16 @@ function ApproveCard({
                 name="scopesText"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Capabilities</FormLabel>
+                    <FormLabel>
+                      <Trans
+                        id="auth.device.scopes.label"
+                        message="Capabilities"
+                      />
+                    </FormLabel>
                     <FormControl>
                       <textarea
                         rows={4}
-                        placeholder={"entry:post:read\nentry:post:edit_own"}
+                        placeholder={label(M.scopesPlaceholder)}
                         disabled={pending}
                         data-testid="auth-device-scopes-textarea"
                         className="border-input bg-background focus-visible:ring-ring rounded-md border px-3 py-2 font-mono text-sm focus-visible:ring-2 focus-visible:outline-none"
@@ -395,7 +531,7 @@ function ApproveCard({
 
             {error ? (
               <Alert variant="destructive" data-testid="auth-device-error">
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription>{label(error)}</AlertDescription>
               </Alert>
             ) : null}
 
@@ -407,7 +543,7 @@ function ApproveCard({
                 onClick={onCancel}
                 data-testid="auth-device-cancel-button"
               >
-                Cancel
+                <Trans id="auth.device.cancel" message="Cancel" />
               </Button>
               <Button
                 type="button"
@@ -416,14 +552,25 @@ function ApproveCard({
                 onClick={() => deny.mutate()}
                 data-testid="auth-device-deny-button"
               >
-                {deny.isPending ? "Denying…" : "Deny"}
+                {deny.isPending ? (
+                  <Trans id="auth.device.deny.pending" message="Denying…" />
+                ) : (
+                  <Trans id="auth.device.deny.idle" message="Deny" />
+                )}
               </Button>
               <Button
                 type="submit"
                 disabled={pending}
                 data-testid="auth-device-approve-button"
               >
-                {approve.isPending ? "Approving…" : "Approve"}
+                {approve.isPending ? (
+                  <Trans
+                    id="auth.device.approve.pending"
+                    message="Approving…"
+                  />
+                ) : (
+                  <Trans id="auth.device.approve.idle" message="Approve" />
+                )}
               </Button>
             </div>
           </form>
@@ -433,42 +580,28 @@ function ApproveCard({
   );
 }
 
-function formatLookupError(err: unknown): string {
+function formatLookupError(err: unknown): MessageDescriptor {
   // CONFLICT carries the lifecycle reason (expired / already_approved /
   // already_denied); NOT_FOUND signals "no row matches this user_code".
   // Branch on code first so a future CONFLICT/reason addition doesn't
   // silently fall through to the generic message.
   const code = extractCode(err);
-  if (code === "NOT_FOUND") {
-    return "Code not found. Check it matches what your CLI printed.";
-  }
+  if (code === "NOT_FOUND") return M.errLookupNotFound;
   if (code === "CONFLICT") {
     const reason = extractReason(err);
-    if (reason === "expired") {
-      return "This code has expired. Re-run your CLI to get a new one.";
-    }
-    if (reason === "already_approved") {
-      return "This code has already been approved. Re-run your CLI if it didn't pick the token up.";
-    }
-    if (reason === "already_denied") {
-      return "This code has already been denied.";
-    }
+    if (reason === "expired") return M.errLookupExpired;
+    if (reason === "already_approved") return M.errLookupAlreadyApproved;
+    if (reason === "already_denied") return M.errLookupAlreadyDenied;
   }
-  return "Couldn't look up that code. Try again.";
+  return M.errLookupFallback;
 }
 
-function formatApproveError(err: unknown): string {
+function formatApproveError(err: unknown): MessageDescriptor {
   if (extractCode(err) === "CONFLICT") {
     const reason = extractReason(err);
-    if (reason === "expired") {
-      return "This code expired before you could finish — re-run your CLI.";
-    }
-    if (reason === "already_approved") {
-      return "This code was already approved on another tab.";
-    }
-    if (reason === "already_denied") {
-      return "This code was already denied.";
-    }
+    if (reason === "expired") return M.errApproveExpired;
+    if (reason === "already_approved") return M.errApproveAlreadyApproved;
+    if (reason === "already_denied") return M.errApproveAlreadyDenied;
   }
-  return "Couldn't complete the request. Try again.";
+  return M.errApproveFallback;
 }
