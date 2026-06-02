@@ -44,7 +44,10 @@ import {
   transformUseClientModule,
 } from "./island-transform.js";
 import { plumixPathAliases } from "./path-aliases.js";
-import { findPluginPackageRoot } from "./plugin-catalog-resolve.js";
+import {
+  findPluginPackageRoot,
+  isWorkspaceSymlinkedPlugin,
+} from "./plugin-catalog-resolve.js";
 import { stageUserPublic } from "./public-staging.js";
 
 // `import.meta.url` for this module lives at plumix/dist/vite/index.js in
@@ -346,6 +349,7 @@ async function regenerate(
   const { manifest, registry } = await computeManifestAndRegistry(
     config.plugins,
     { tokens: config.theme.tokens, i18n: config.i18n },
+    cwd,
   );
 
   return { configPath, manifest, registry, plugins: config.plugins };
@@ -364,16 +368,48 @@ type PluginDescriptors = Parameters<typeof installPlugins>[0]["plugins"];
 async function computeManifestAndRegistry(
   plugins: PluginDescriptors,
   options: { readonly tokens?: ThemeTokens; readonly i18n?: ResolvedI18n },
+  projectRoot: string,
 ): Promise<{ manifest: PlumixManifest; registry: PluginRegistry }> {
   const { registry } = await installPlugins({
     hooks: new HookRegistry(),
     plugins,
   });
+  // Plugins whose `@plumix/plugin-<id>` package is a pnpm symlink in
+  // `node_modules` are workspace-mounted — admin's `import.meta.glob`
+  // already bakes their catalogs into the bundle. Skipping URL
+  // emission for them avoids a runtime double-load (#724).
+  //
+  // Caveat: the bundler's symlink detection here and admin's pre-baked
+  // glob are computed at different times. If `packages/plumix/dist/admin-app`
+  // is stale (a new workspace plugin was added since the last plumix
+  // build), the symlink exists but admin's glob doesn't cover it —
+  // the plugin's strings fall back to `descriptor.message` silently.
+  // Rebuild plumix to refresh. The warning below makes that
+  // debuggable.
+  const adminBundledPluginIds = new Set(
+    plugins
+      .filter(
+        (p) =>
+          p.i18n !== undefined &&
+          isWorkspaceSymlinkedPlugin({ pluginId: p.id, projectRoot }),
+      )
+      .map((p) => p.id),
+  );
+  if (adminBundledPluginIds.size > 0) {
+    // eslint-disable-next-line no-console -- build-time dev signal
+    console.info(
+      `[plumix] skipping pluginI18n URLs for workspace-bundled plugins (admin's import.meta.glob is expected to cover): ${Array.from(adminBundledPluginIds).join(", ")}`,
+    );
+  }
   // Forward plugin descriptors so `buildManifest` can emit
   // `pluginI18n` URL maps for plugins declaring an `i18n` slot
   // (slice 17 #697 runtime catalog registry).
   return {
-    manifest: buildManifest(registry, { ...options, plugins }),
+    manifest: buildManifest(registry, {
+      ...options,
+      plugins,
+      adminBundledPluginIds,
+    }),
     registry,
   };
 }
