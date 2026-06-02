@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { MetaBoxCard } from "@/components/meta-box/meta-box.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
@@ -11,12 +12,16 @@ import {
   FormMessage,
 } from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
+import { useLabel } from "@/lib/use-label.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
 import { useForm } from "react-hook-form";
 import * as v from "valibot";
 
+import type { Label } from "@plumix/core/i18n";
 import type { TermMetaBoxManifestEntry } from "@plumix/core/manifest";
-import { idParam } from "@plumix/core/validation";
+import { idParam, vMessage } from "@plumix/core/validation";
 
 /** Normalised input shape consumed by both create + update paths. */
 interface TermFormValues {
@@ -29,6 +34,17 @@ interface TermFormValues {
   readonly meta: Readonly<Record<string, unknown>>;
 }
 
+const M = {
+  slugFormat: defineMessage({
+    id: "termForm.slug.format",
+    message: "Slug may only contain lowercase letters, digits, and hyphens.",
+  }),
+  rootOption: defineMessage({
+    id: "termForm.parent.rootOption",
+    message: "— root —",
+  }),
+} satisfies Record<string, MessageDescriptor>;
+
 // Client-side shape mirrors `termCreateInputSchema` / `termUpdateInputSchema`
 // on the server. Slug is optional at the form level — the server derives
 // it from the name if omitted (see `term.create` handler).
@@ -38,10 +54,7 @@ const termFormSchema = v.object({
     v.string(),
     v.trim(),
     v.maxLength(200),
-    v.regex(
-      /^[a-z0-9-]*$/,
-      "Slug may only contain lowercase letters, digits, and hyphens.",
-    ),
+    v.regex(/^[a-z0-9-]*$/, vMessage(M.slugFormat)),
   ),
   description: v.pipe(v.string(), v.trim(), v.maxLength(2000)),
   parentId: v.nullable(idParam),
@@ -81,8 +94,12 @@ export function TermForm({
   readonly isHierarchical: boolean;
   readonly parentOptions: readonly ParentOption[];
   readonly isSubmitting: boolean;
-  readonly serverError: string | null;
-  readonly submitLabel: string;
+  /** Server-side error. Pass a localized descriptor (`Label`) or a raw
+   *  `err.message` string; resolved through `useLabel()` at render. */
+  readonly serverError: Label | null;
+  /** Submit-button copy when not pending. Caller picks "Create" vs
+   *  "Save changes" and passes a localized `Label`. */
+  readonly submitLabel: Label;
   /** Plugin-registered meta boxes for this taxonomy — rendered inside
    *  the form so the single Save button submits row fields + meta
    *  together via one `term.update` call. Pass an empty array when no
@@ -91,6 +108,7 @@ export function TermForm({
   readonly onSubmit: (values: TermFormValues) => void;
   readonly onCancel: () => void;
 }): ReactNode {
+  const labelFn = useLabel();
   const form = useForm({
     resolver: valibotResolver(termFormSchema),
     defaultValues: initialValues,
@@ -108,7 +126,9 @@ export function TermForm({
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Name</FormLabel>
+              <FormLabel>
+                <Trans id="termForm.name" message="Name" />
+              </FormLabel>
               <FormControl>
                 <Input
                   type="text"
@@ -128,7 +148,9 @@ export function TermForm({
           name="slug"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Slug</FormLabel>
+              <FormLabel>
+                <Trans id="termForm.slug" message="Slug" />
+              </FormLabel>
               <FormControl>
                 <Input
                   type="text"
@@ -148,7 +170,9 @@ export function TermForm({
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Description</FormLabel>
+              <FormLabel>
+                <Trans id="termForm.description" message="Description" />
+              </FormLabel>
               <FormControl>
                 <textarea
                   {...field}
@@ -169,7 +193,9 @@ export function TermForm({
             name="parentId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Parent</FormLabel>
+                <FormLabel>
+                  <Trans id="termForm.parent" message="Parent" />
+                </FormLabel>
                 <FormControl>
                   <select
                     value={field.value == null ? "" : String(field.value)}
@@ -182,7 +208,7 @@ export function TermForm({
                     data-testid="term-form-parent-select"
                     className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <option value="">— root —</option>
+                    <option value="">{labelFn(M.rootOption)}</option>
                     {parentOptions.map((opt) => (
                       <option key={opt.id} value={String(opt.id)}>
                         {opt.label}
@@ -207,7 +233,7 @@ export function TermForm({
 
         {serverError ? (
           <Alert variant="destructive" data-testid="term-form-server-error">
-            <AlertDescription>{serverError}</AlertDescription>
+            <AlertDescription>{labelFn(serverError)}</AlertDescription>
           </Alert>
         ) : null}
 
@@ -218,14 +244,18 @@ export function TermForm({
             onClick={onCancel}
             disabled={isSubmitting}
           >
-            Cancel
+            <Trans id="termForm.cancel" message="Cancel" />
           </Button>
           <Button
             type="submit"
             disabled={isSubmitting}
             data-testid="term-form-submit"
           >
-            {isSubmitting ? "Saving…" : submitLabel}
+            {isSubmitting ? (
+              <Trans id="termForm.submitting" message="Saving…" />
+            ) : (
+              labelFn(submitLabel)
+            )}
           </Button>
         </div>
       </form>
