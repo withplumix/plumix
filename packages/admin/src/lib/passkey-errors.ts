@@ -3,7 +3,7 @@ import { defineMessage } from "@lingui/core/macro";
 
 import type { PasskeyErrorCode as CorePasskeyErrorCode } from "@plumix/core";
 
-import { useLabel } from "./use-label.js";
+import { createStrictErrorDescriptorRegistry } from "./error-descriptor-registry.js";
 
 // Codes thrown from core's `PasskeyError` class. Drift-guarded
 // against core's `PasskeyErrorCode` by the assertion below.
@@ -220,25 +220,7 @@ const MESSAGES: Record<PasskeyErrorCode, MessageDescriptor> = {
   }),
 };
 
-/**
- * Resolves a PasskeyError wire code to a localizable
- * `MessageDescriptor`. Unknown codes fall back to the generic
- * `unknown` descriptor — including ones the server might add in
- * future versions without a matching client update.
- */
-export function passkeyErrorDescriptor(code: string): MessageDescriptor {
-  return code in MESSAGES
-    ? MESSAGES[code as PasskeyErrorCode]
-    : MESSAGES.unknown;
-}
+const registry = createStrictErrorDescriptorRegistry(MESSAGES, "unknown");
 
-/**
- * Convenience hook for the three passkey routes (`login`, `bootstrap`,
- * `accept-invite`) that all render `passkeyErrorDescriptor(code)`
- * through the same `useLabel()` resolver. Collapses two imports and
- * one `useLingui` call per consumer.
- */
-export function usePasskeyErrorMessage(): (code: string) => string {
-  const label = useLabel();
-  return (code) => label(passkeyErrorDescriptor(code));
-}
+export const passkeyErrorDescriptor = registry.descriptor;
+export const usePasskeyErrorMessage = registry.useMessage;

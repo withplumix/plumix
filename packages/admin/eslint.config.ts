@@ -25,7 +25,6 @@ const STRICT_UNWRAPPED_FILES = [
   "src/editor/StaleDraftDialog.tsx",
   "src/editor/StyleTab.tsx",
   "src/editor/TokenSwatchList.tsx",
-  "src/lib/email-change-errors.ts",
   "src/lib/errors.ts",
   "src/lib/magic-link.ts",
   "src/lib/manifest.ts",

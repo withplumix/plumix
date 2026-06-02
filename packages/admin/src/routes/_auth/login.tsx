@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
 import { Separator } from "@/components/ui/separator.js";
-import { getEmailChangeErrorMessage } from "@/lib/email-change-errors.js";
+import { useEmailChangeErrorMessage } from "@/lib/email-change-errors.js";
 import { useMagicLinkErrorMessage } from "@/lib/magic-link-errors.js";
 import {
   getMagicLinkRequestErrorMessage,
@@ -72,6 +72,7 @@ function LoginRoute(): ReactNode {
   const renderPasskeyError = usePasskeyErrorMessage();
   const renderMagicLinkError = useMagicLinkErrorMessage();
   const renderOAuthError = useOAuthErrorMessage();
+  const renderEmailChangeError = useEmailChangeErrorMessage();
   const [passkeyError, setPasskeyError] = useState<string | null>(null);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [magicLinkError, setMagicLinkError] = useState<string | null>(null);
@@ -127,9 +128,7 @@ function LoginRoute(): ReactNode {
 
   const oauthErrorMessage = renderOAuthError(search.oauth_error);
   const magicLinkUrlError = renderMagicLinkError(search.magic_link_error);
-  const emailChangeUrlError = getEmailChangeErrorMessage(
-    search.email_change_error,
-  );
+  const emailChangeUrlError = renderEmailChangeError(search.email_change_error);
   // Treat any non-empty value as success. The verify route emits
   // `?email_change_success=1`, but TanStack Router can serialize a
   // round-tripped search through other routes — e.g. an OAuth start
