@@ -15,12 +15,9 @@ import {
 } from "@/components/ui/empty.js";
 import { hasCap } from "@/lib/caps.js";
 import { visibleSettingsPages } from "@/lib/manifest.js";
+import { Trans } from "@lingui/react";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Settings as SettingsIcon } from "lucide-react";
-
-function pageSummary(groupCount: number): string {
-  return `${groupCount} ${groupCount === 1 ? "group" : "groups"}`;
-}
 
 export const Route = createFileRoute("/_authenticated/settings/")({
   // The settings surface is admin-only at the floor — `settings:manage`
@@ -40,30 +37,37 @@ function SettingsIndexRoute(): ReactNode {
   const { user } = Route.useRouteContext();
   const pages = visibleSettingsPages(user.capabilities);
 
+  const heading = (
+    <h1 className="text-2xl font-semibold" data-testid="settings-heading">
+      <Trans id="settings.title" message="Settings" />
+    </h1>
+  );
+
   if (pages.length === 0) {
     return (
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-        <h1 className="text-2xl font-semibold" data-testid="settings-heading">
-          Settings
-        </h1>
+        {heading}
         <Card data-testid="settings-empty-state">
           <Empty>
             <EmptyHeader>
               <EmptyMedia variant="icon">
                 <SettingsIcon />
               </EmptyMedia>
-              <EmptyTitle>No settings registered yet</EmptyTitle>
+              <EmptyTitle>
+                <Trans
+                  id="settings.empty.title"
+                  message="No settings registered yet"
+                />
+              </EmptyTitle>
               <EmptyDescription>
-                Core ships no settings by design — plugins (or your own
-                plumix.config) declare pages + groups via{" "}
-                <code className="font-mono text-xs">
-                  ctx.registerSettingsPage
-                </code>{" "}
-                and{" "}
-                <code className="font-mono text-xs">
-                  ctx.registerSettingsGroup
-                </code>
-                . Registered pages appear here with one card per page.
+                <Trans
+                  id="settings.empty.description"
+                  message="Core ships no settings by design — plugins (or your own plumix.config) declare pages + groups via <0>ctx.registerSettingsPage</0> and <1>ctx.registerSettingsGroup</1>. Registered pages appear here with one card per page."
+                  components={{
+                    0: <code className="font-mono text-xs" />,
+                    1: <code className="font-mono text-xs" />,
+                  }}
+                />
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -74,9 +78,7 @@ function SettingsIndexRoute(): ReactNode {
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-      <h1 className="text-2xl font-semibold" data-testid="settings-heading">
-        Settings
-      </h1>
+      {heading}
       <div className="grid gap-3" data-testid="settings-page-list">
         {pages.map((page) => (
           <Link
@@ -97,7 +99,11 @@ function SettingsIndexRoute(): ReactNode {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground text-xs">
-                  {pageSummary(page.groups.length)}
+                  <Trans
+                    id="settings.pageSummary"
+                    message="{count, plural, one {# group} other {# groups}}"
+                    values={{ count: page.groups.length }}
+                  />
                 </p>
               </CardContent>
             </Card>
