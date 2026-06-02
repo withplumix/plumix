@@ -24,10 +24,10 @@ function useBreadcrumbs(): readonly Crumb[] {
 export function ShellHeader(): ReactNode {
   const crumbs = useBreadcrumbs();
   const { i18n } = useLingui();
-  const text = (label: Crumb["label"]): string =>
-    typeof label === "string"
-      ? label
-      : i18n._(label.id, undefined, { message: label.message });
+  const text = (crumb: Crumb): string =>
+    typeof crumb.label === "string"
+      ? crumb.label
+      : i18n._(crumb.label.id, crumb.values, { message: crumb.label.message });
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
       <SidebarTrigger className="-ml-1" />
@@ -36,7 +36,7 @@ export function ShellHeader(): ReactNode {
         <BreadcrumbList>
           {crumbs.map((crumb, index) => {
             const isLast = index === crumbs.length - 1;
-            const label = text(crumb.label);
+            const label = text(crumb);
             return (
               <Fragment key={`${String(index)}-${label}`}>
                 {index > 0 ? <BreadcrumbSeparator /> : null}

@@ -13,6 +13,7 @@ const STRICT_WRAPPED_FILES = [
   "src/components/locale-switcher.tsx",
   "src/components/profile/language-card.tsx",
   "src/components/shell/user-menu.tsx",
+  "src/lib/breadcrumbs.ts",
   "src/lib/dates.ts",
   "src/lib/i18n-boot.ts",
   "src/lib/plugin-catalogs.ts",
@@ -30,9 +31,6 @@ const STRICT_WRAPPED_FILES = [
   "src/routes/_authenticated/users/$id/edit.tsx",
   "src/routes/_authenticated/users/create.tsx",
   "src/routes/_authenticated/users/index.tsx",
-  // `src/lib/breadcrumbs.ts` is intentionally excluded — `Create {singular}`
-  // / `Edit {singular}` literals there need a `Crumb`-shape rework to
-  // carry placeholder values before strict mode can enforce.
 ];
 
 export default defineConfig(

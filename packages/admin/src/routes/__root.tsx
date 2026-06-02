@@ -47,7 +47,7 @@ function useDocumentTitle(): void {
     const label =
       typeof leaf.label === "string"
         ? leaf.label
-        : i18n._(leaf.label.id, undefined, { message: leaf.label.message });
+        : i18n._(leaf.label.id, leaf.values, { message: leaf.label.message });
     document.title = `${label} · ${TITLE_BRAND}`;
   }, [pathname, i18n]);
 }
