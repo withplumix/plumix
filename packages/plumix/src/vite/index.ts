@@ -27,6 +27,7 @@ import {
   HookRegistry,
   injectManifestIntoHtml,
   installPlugins,
+  pluginCatalogStagedPath,
 } from "@plumix/core";
 
 import type { DiscoveredIsland } from "./island-transform.js";
@@ -516,8 +517,6 @@ async function stagePluginCatalogs(
       } catch {
         return;
       }
-      const localeDestDir = resolve(adminDest, "plugins", plugin.id, "locales");
-      await mkdir(localeDestDir, { recursive: true });
       await Promise.all(
         Object.keys(entry.catalogs).map(async (locale) => {
           const sourceFile = resolve(candidate, `${locale}.mjs`);
@@ -531,7 +530,12 @@ async function stagePluginCatalogs(
               resolved: sourceFile,
             });
           }
-          await copyFile(sourceFile, resolve(localeDestDir, `${locale}.mjs`));
+          const destFile = resolve(
+            adminDest,
+            pluginCatalogStagedPath(plugin.id, locale),
+          );
+          await mkdir(dirname(destFile), { recursive: true });
+          await copyFile(sourceFile, destFile);
         }),
       );
     }),
