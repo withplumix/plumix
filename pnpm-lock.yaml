@@ -1275,6 +1275,9 @@ importers:
       eslint-plugin-import-x:
         specifier: ^4
         version: 4.16.2(@typescript-eslint/utils@8.60.0(eslint@10.4.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.0(jiti@2.7.0))
+      eslint-plugin-lingui:
+        specifier: ^0.13.1
+        version: 0.13.1(eslint@10.4.0(jiti@2.7.0))(typescript@6.0.3)
       eslint-plugin-react:
         specifier: ^7.37.5
         version: 7.37.5(eslint@10.4.0(jiti@2.7.0))
@@ -5256,6 +5259,13 @@ packages:
       eslint-import-resolver-node:
         optional: true
 
+  eslint-plugin-lingui@0.13.1:
+    resolution: {integrity: sha512-tnMmVXRwXK32ks5GFzAftC6CCSOkQ77z8obwDclgOEulzMpOjjKjNL7/BV1X74KQhnkHBCr/PA0wwX/h6ZZMcg==}
+    engines: {node: '>=16.0.0'}
+    peerDependencies:
+      eslint: ^8.37.0 || ^9 || ^10
+      typescript: ^5.0.0 || ^6.0.0
+
   eslint-plugin-react-hooks@7.1.1:
     resolution: {integrity: sha512-f2I7Gw6JbvCexzIInuSbZpfdQ44D7iqdWX01FKLvrPgqxoE7oMj8clOfto8U6vYiz4yd5oKu39rRSVOe1zRu0g==}
     engines: {node: '>=18'}
@@ -7222,7 +7232,7 @@ snapshots:
       commander: 10.0.1
       marked: 9.1.6
       marked-terminal: 7.3.0(marked@9.1.6)
-      semver: 7.8.0
+      semver: 7.8.1
 
   '@arethetypeswrong/core@0.18.2':
     dependencies:
@@ -7231,7 +7241,7 @@ snapshots:
       cjs-module-lexer: 1.4.3
       fflate: 0.8.2
       lru-cache: 11.3.6
-      semver: 7.8.0
+      semver: 7.8.1
       typescript: 5.6.1-rc
       validate-npm-package-name: 5.0.1
 
@@ -10172,7 +10182,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.1.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.7(@types/node@25.6.0)(@vitest/coverage-v8@4.1.7)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.0.9(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
+      vitest: 4.1.7(@types/node@24.12.2)(@vitest/coverage-v8@4.1.7)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.0.9(@types/node@24.12.2)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
 
   '@vitest/expect@4.1.7':
     dependencies:
@@ -10940,6 +10950,15 @@ snapshots:
       unrs-resolver: 1.11.1
     optionalDependencies:
       '@typescript-eslint/utils': 8.60.0(eslint@10.4.0(jiti@2.7.0))(typescript@6.0.3)
+    transitivePeerDependencies:
+      - supports-color
+
+  eslint-plugin-lingui@0.13.1(eslint@10.4.0(jiti@2.7.0))(typescript@6.0.3):
+    dependencies:
+      '@typescript-eslint/utils': 8.60.0(eslint@10.4.0(jiti@2.7.0))(typescript@6.0.3)
+      eslint: 10.4.0(jiti@2.7.0)
+      micromatch: 4.0.8
+      typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
 
