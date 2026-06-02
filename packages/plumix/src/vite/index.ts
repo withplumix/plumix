@@ -397,6 +397,9 @@ async function stageAdminAssets(
     await cp(ADMIN_SOURCE_DIR, dest, { recursive: true });
   }
   const chunks = await stagePluginChunks(dest, plugins, projectRoot);
+  // Separate from chunk staging: a server-side-only plugin (no `adminChunk`)
+  // can still contribute admin-rendered labels and needs its catalogs shipped.
+  await stagePluginCatalogs(dest, plugins, manifest, projectRoot);
   // Plugins that ship `adminEntry` (TS source) get assembled into a
   // single per-site bundle with the runtime alias seam. Legacy
   // `adminChunk` (pre-built JS) plugins keep their existing path.
@@ -473,6 +476,66 @@ async function stagePluginChunks(
   );
   chunks.push(...staged);
   return chunks;
+}
+
+// Copies each plugin's compiled `<catalogPath>/<locale>.mjs` to the
+// admin-served path `buildManifest` published in `pluginI18n[id].catalogs[locale]`
+// — admin's runtime loader (#697) does `import(url)` against same-origin paths
+// under the default CSP. A missing `.mjs` for a manifest-declared locale is a
+// build-time error; the runtime's `descriptor.message` fallback only catches
+// post-fetch failures.
+async function stagePluginCatalogs(
+  adminDest: string,
+  plugins: readonly AnyPluginDescriptor[],
+  manifest: PlumixManifest,
+  projectRoot: string,
+): Promise<void> {
+  const pluginI18n = manifest.pluginI18n;
+  if (!pluginI18n) return;
+  await Promise.all(
+    plugins.map(async (plugin) => {
+      const entry = pluginI18n[plugin.id];
+      // No manifest entry = no `i18n` slot, or every declared locale
+      // was filtered out by site-locale intersection in `buildManifest`.
+      if (!entry || !plugin.i18n) return;
+      const { catalogPath } = plugin.i18n;
+      // TODO(#697 follow-up): `catalogPath` is documented as
+      // plugin-package-root-relative but currently resolves against
+      // the consumer's `projectRoot`. Workspace plugins land their
+      // catalogs at `packages/plugins/<id>/locales/<locale>.mjs`,
+      // which is invisible from the consumer's root — they're already
+      // baked into admin via `import.meta.glob` in `i18n-boot.ts`,
+      // so missing-here skips silently. Third-party plugins shipped
+      // via npm need a `createRequire(projectRoot).resolve` mechanism
+      // before they can reach this copy path; tracked as a follow-up.
+      const candidate = isAbsolute(catalogPath)
+        ? catalogPath
+        : resolve(projectRoot, catalogPath);
+      try {
+        await stat(candidate);
+      } catch {
+        return;
+      }
+      const localeDestDir = resolve(adminDest, "plugins", plugin.id, "locales");
+      await mkdir(localeDestDir, { recursive: true });
+      await Promise.all(
+        Object.keys(entry.catalogs).map(async (locale) => {
+          const sourceFile = resolve(candidate, `${locale}.mjs`);
+          try {
+            await stat(sourceFile);
+          } catch {
+            throw VitePluginError.adminAssetNotFound({
+              pluginId: plugin.id,
+              field: `i18n.catalogs[${locale}]`,
+              declared: `${catalogPath}/${locale}.mjs`,
+              resolved: sourceFile,
+            });
+          }
+          await copyFile(sourceFile, resolve(localeDestDir, `${locale}.mjs`));
+        }),
+      );
+    }),
+  );
 }
 
 async function resolvePluginAsset(

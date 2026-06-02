@@ -20,9 +20,12 @@ export interface PluginI18nSlot {
    *  site's enabled locales before any URL is generated — declaring
    *  more locales than the site enables doesn't expand the dropdown. */
   readonly locales: readonly string[];
-  /** Directory containing the compiled `<locale>.json` catalogs,
+  /** Directory containing the compiled `<locale>.mjs` catalogs,
    *  relative to the plugin's package root. Admin (via slice 17
-   *  #697) resolves and lazy-loads catalogs from here. */
+   *  #697) resolves and lazy-loads catalogs from here. Workspace
+   *  plugins' catalogs are baked into the admin bundle via
+   *  `import.meta.glob`; third-party plugins are reached via the
+   *  manifest's `pluginI18n[id].catalogs[locale]` URL. */
   readonly catalogPath: string;
 }
 
