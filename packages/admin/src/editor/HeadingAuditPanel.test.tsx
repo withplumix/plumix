@@ -1,9 +1,10 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, test } from "vitest";
 
 import type { BlockNode } from "@plumix/blocks";
 
+import { renderWithI18n } from "../../test/render-with-i18n.js";
 import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
 
 afterEach(() => {
@@ -12,7 +13,7 @@ afterEach(() => {
 
 describe("HeadingAuditPanel", () => {
   test("renders the empty-state when no violations exist", () => {
-    render(<HeadingAuditPanel tree={[]} />);
+    renderWithI18n(<HeadingAuditPanel tree={[]} />);
 
     expect(screen.getByTestId("heading-audit-empty").textContent).toBe(
       "No heading-structure issues detected.",
@@ -25,7 +26,7 @@ describe("HeadingAuditPanel", () => {
       { id: "b", name: "core/heading", attrs: { level: 4, text: "skip" } },
     ];
 
-    render(<HeadingAuditPanel tree={tree} />);
+    renderWithI18n(<HeadingAuditPanel tree={tree} />);
 
     expect(screen.getByTestId("heading-audit-list")).toBeDefined();
     expect(
@@ -42,7 +43,7 @@ describe("HeadingAuditPanel", () => {
       { id: "b", name: "core/heading", attrs: { level: 3, text: "Skip" } },
     ];
 
-    render(<HeadingAuditPanel tree={tree} />);
+    renderWithI18n(<HeadingAuditPanel tree={tree} />);
 
     const item = screen.getByTestId("heading-audit-violation-skipped-level");
     expect(item.textContent).toContain("Heading jumps from h1 to h3.");
@@ -55,7 +56,7 @@ describe("HeadingAuditPanel", () => {
       { id: "b", name: "core/heading", attrs: { level: 1, text: "Second" } },
     ];
 
-    render(<HeadingAuditPanel tree={tree} />);
+    renderWithI18n(<HeadingAuditPanel tree={tree} />);
 
     const item = screen.getByTestId("heading-audit-violation-multiple-h1");
     expect(item.textContent).toContain("Multiple <h1> on the page (2 found).");
@@ -69,7 +70,7 @@ describe("HeadingAuditPanel", () => {
       { id: "skip", name: "core/heading", attrs: { level: 4, text: "B" } },
     ];
 
-    render(
+    renderWithI18n(
       <HeadingAuditPanel
         tree={tree}
         onSelect={(nodeId) => calls.push(nodeId)}
@@ -86,7 +87,7 @@ describe("HeadingAuditPanel", () => {
       { id: "h", name: "core/heading", attrs: { level: 1, text: "" } },
     ];
 
-    render(<HeadingAuditPanel tree={tree} />);
+    renderWithI18n(<HeadingAuditPanel tree={tree} />);
 
     expect(screen.queryByTestId("heading-audit-jump-empty-heading")).toBeNull();
     expect(
@@ -101,7 +102,7 @@ describe("HeadingAuditPanel", () => {
       { id: "skip", name: "core/heading", attrs: { level: 4, text: "C" } },
     ];
 
-    render(<HeadingAuditPanel tree={tree} />);
+    renderWithI18n(<HeadingAuditPanel tree={tree} />);
 
     expect(
       screen

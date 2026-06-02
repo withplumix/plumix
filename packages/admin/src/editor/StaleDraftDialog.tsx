@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button.js";
@@ -9,6 +10,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog.js";
+import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
+
+const M = {
+  // Compare-pane row labels — passed into the inner `ComparePane`
+  // helper as a pre-resolved string so that helper stays display-
+  // only.
+  yourDraft: defineMessage({
+    id: "editor.staleDraft.yourDraft",
+    message: "Your draft",
+  }),
+  liveNow: defineMessage({
+    id: "editor.staleDraft.liveNow",
+    message: "Live now",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 interface StaleDraftDialogProps {
   readonly open: boolean;
@@ -39,6 +57,7 @@ export function StaleDraftDialog({
   isResolving,
 }: StaleDraftDialogProps): ReactElement {
   const [comparing, setComparing] = useState(false);
+  const label = useLabel();
   return (
     <Dialog open={open}>
       <DialogContent
@@ -54,10 +73,17 @@ export function StaleDraftDialog({
         onPointerDownOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>Your draft is out of date</DialogTitle>
+          <DialogTitle>
+            <Trans
+              id="editor.staleDraft.title"
+              message="Your draft is out of date"
+            />
+          </DialogTitle>
           <DialogDescription>
-            Someone else published changes to this entry while you had pending
-            edits. Pick which version to keep before continuing.
+            <Trans
+              id="editor.staleDraft.description"
+              message="Someone else published changes to this entry while you had pending edits. Pick which version to keep before continuing."
+            />
           </DialogDescription>
         </DialogHeader>
         {comparing ? (
@@ -69,8 +95,11 @@ export function StaleDraftDialog({
             aria-live="polite"
             className="grid grid-cols-1 gap-3 md:grid-cols-2"
           >
-            <ComparePane label="Your draft" snapshot={autosaveSnapshot} />
-            <ComparePane label="Live now" snapshot={liveSnapshot} />
+            <ComparePane
+              label={label(M.yourDraft)}
+              snapshot={autosaveSnapshot}
+            />
+            <ComparePane label={label(M.liveNow)} snapshot={liveSnapshot} />
           </div>
         ) : null}
         <DialogFooter className="sm:justify-between">
@@ -80,7 +109,14 @@ export function StaleDraftDialog({
             data-testid="stale-draft-compare"
             onClick={() => setComparing((prev) => !prev)}
           >
-            {comparing ? "Hide comparison" : "Compare"}
+            {comparing ? (
+              <Trans
+                id="editor.staleDraft.hideComparison"
+                message="Hide comparison"
+              />
+            ) : (
+              <Trans id="editor.staleDraft.compare" message="Compare" />
+            )}
           </Button>
           <div className="flex gap-2">
             <Button
@@ -90,7 +126,14 @@ export function StaleDraftDialog({
               onClick={onUseTheirs}
               disabled={isResolving}
             >
-              {isResolving ? "Discarding…" : "Use theirs"}
+              {isResolving ? (
+                <Trans
+                  id="editor.staleDraft.discarding"
+                  message="Discarding…"
+                />
+              ) : (
+                <Trans id="editor.staleDraft.useTheirs" message="Use theirs" />
+              )}
             </Button>
             <Button
               variant="default"
@@ -99,7 +142,7 @@ export function StaleDraftDialog({
               onClick={onUseMine}
               disabled={isResolving}
             >
-              Use mine
+              <Trans id="editor.staleDraft.useMine" message="Use mine" />
             </Button>
           </div>
         </DialogFooter>

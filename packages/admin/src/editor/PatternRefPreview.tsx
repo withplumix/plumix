@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { createContext, useCallback, useContext, useMemo } from "react";
+import { Trans } from "@lingui/react";
 import { usePuck } from "@puckeditor/core";
 import { Link, Unlink } from "lucide-react";
 
@@ -75,7 +76,12 @@ export function PatternRefPreview(props: PatternRefPreviewProps): ReactElement {
         data-pattern-ref-state="unresolved"
         data-testid={`plumix-pattern-ref-unresolved-${slug}`}
       >
-        Pattern not registered: <code>{slug}</code>
+        <Trans
+          id="editor.patternRef.unresolved"
+          message="Pattern not registered: <code>{slug}</code>"
+          values={{ slug }}
+          components={{ code: <code /> }}
+        />
       </div>
     );
   }
@@ -96,7 +102,7 @@ export function PatternRefPreview(props: PatternRefPreviewProps): ReactElement {
           className="hover:underline"
           data-testid="plumix-pattern-ref-copy-slug"
         >
-          Open source
+          <Trans id="editor.patternRef.openSource" message="Open source" />
         </button>
         <button
           type="button"
@@ -105,7 +111,7 @@ export function PatternRefPreview(props: PatternRefPreviewProps): ReactElement {
           data-testid="plumix-pattern-ref-detach"
         >
           <Unlink className="h-3 w-3" aria-hidden />
-          Detach
+          <Trans id="editor.patternRef.detach" message="Detach" />
         </button>
       </div>
       <div className="pointer-events-none p-3">{body}</div>

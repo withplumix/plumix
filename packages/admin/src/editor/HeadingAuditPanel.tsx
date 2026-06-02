@@ -1,7 +1,28 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
+import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react";
 
 import type { BlockNode, HeadingAuditViolation } from "@plumix/blocks";
 import { analyzeHeadingStructure } from "@plumix/blocks";
+
+const M = {
+  multipleH1: defineMessage({
+    id: "editor.headingAudit.multipleH1",
+    message:
+      "Multiple <h1> on the page ({count} found). Keep only one top-level heading.",
+  }),
+  skippedLevel: defineMessage({
+    id: "editor.headingAudit.skippedLevel",
+    message:
+      "Heading jumps from h{from} to h{to}. Insert an h{between} between them.",
+  }),
+  emptyHeading: defineMessage({
+    id: "editor.headingAudit.emptyHeading",
+    message: "Empty heading. Add text or remove the block.",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 interface HeadingAuditPanelProps {
   readonly tree: readonly BlockNode[];
@@ -13,6 +34,8 @@ export function HeadingAuditPanel({
   onSelect,
 }: HeadingAuditPanelProps): ReactNode {
   const violations = analyzeHeadingStructure(tree);
+  const { i18n } = useLingui();
+  const label = useLabel();
 
   if (violations.length === 0) {
     return (
@@ -20,7 +43,10 @@ export function HeadingAuditPanel({
         className="text-muted-foreground p-4 text-sm"
         data-testid="heading-audit-empty"
       >
-        No heading-structure issues detected.
+        <Trans
+          id="editor.headingAudit.empty"
+          message="No heading-structure issues detected."
+        />
       </div>
     );
   }
@@ -32,7 +58,13 @@ export function HeadingAuditPanel({
         const primaryId = nodeIds[0];
         const message = (
           <>
-            <strong>Warning:</strong> {describe(violation)}
+            <strong>
+              <Trans
+                id="editor.headingAudit.warningPrefix"
+                message="Warning:"
+              />
+            </strong>{" "}
+            {describe(violation, i18n, label)}
           </>
         );
         return (
@@ -72,13 +104,33 @@ function nodeIdsFor(violation: HeadingAuditViolation): readonly string[] {
   }
 }
 
-function describe(violation: HeadingAuditViolation): string {
+// Three message shapes, three ICU placeholder sets. Resolved via the
+// 3-arg `i18n._` form so the descriptor's `.message` flows in as
+// extractor-visible fallback; `useLabel` handles the placeholder-free
+// `emptyHeading` branch.
+function describe(
+  violation: HeadingAuditViolation,
+  i18n: ReturnType<typeof useLingui>["i18n"],
+  label: (l: MessageDescriptor) => string,
+): string {
   switch (violation.kind) {
     case "multiple-h1":
-      return `Multiple <h1> on the page (${violation.nodeIds.length} found). Keep only one top-level heading.`;
+      return i18n._(
+        M.multipleH1.id,
+        { count: violation.nodeIds.length },
+        { message: M.multipleH1.message },
+      );
     case "skipped-level":
-      return `Heading jumps from h${violation.from} to h${violation.to}. Insert an h${violation.from + 1} between them.`;
+      return i18n._(
+        M.skippedLevel.id,
+        {
+          from: violation.from,
+          to: violation.to,
+          between: violation.from + 1,
+        },
+        { message: M.skippedLevel.message },
+      );
     case "empty-heading":
-      return "Empty heading. Add text or remove the block.";
+      return label(M.emptyHeading);
   }
 }

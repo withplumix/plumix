@@ -451,6 +451,11 @@ msgid "auth.device.lookup.error.notFound"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.compare"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.list.title"
 msgstr ""
@@ -831,6 +836,11 @@ msgid "termForm.description"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/PatternRefPreview.tsx
+msgid "editor.patternRef.detach"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.description"
 msgstr ""
@@ -869,6 +879,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.status.toggle.disabling"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.discarding"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -962,6 +977,11 @@ msgid "login.magicLink.submit"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+msgid "editor.headingAudit.emptyHeading"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.enabled"
 msgstr ""
@@ -977,11 +997,6 @@ msgid "userInvite.email.invalid"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/lib/magic-link.ts
-msgid "magicLinkRequest.error.invalidInput"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.recipient.invalid"
 msgstr ""
@@ -989,6 +1004,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_auth/-schemas.ts
 msgid "login.email.invalid"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link.ts
+msgid "magicLinkRequest.error.invalidInput"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1064,6 +1084,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/data-table/list-pagination.tsx
 msgid "listPagination.prev.aria"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+msgid "editor.headingAudit.skippedLevel"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.hideComparison"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1157,6 +1187,11 @@ msgid "profile.passkeys.lastUsed"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.liveNow"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/data-table/data-table.tsx
 msgid "dataTable.loading"
 msgstr ""
@@ -1239,6 +1274,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.submit.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+msgid "editor.headingAudit.multipleH1"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1367,6 +1407,11 @@ msgid "settings.page.empty.title"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+msgid "editor.headingAudit.empty"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/mailer-errors.ts
 msgid "mailer.test.error.notConfigured"
 msgstr ""
@@ -1472,6 +1517,11 @@ msgid "userEdit.role.selfReadonly"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/PatternRefPreview.tsx
+msgid "editor.patternRef.openSource"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.recipient.placeholder"
 msgstr ""
@@ -1499,6 +1549,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/PatternRefPreview.tsx
+msgid "editor.patternRef.unresolved"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1932,6 +1987,11 @@ msgid "emailChange.error.emailTaken"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.invalidInput"
 msgstr ""
@@ -2292,8 +2352,18 @@ msgid "login.description"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.useMine"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.useTheirs"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2315,6 +2385,11 @@ msgstr ""
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.users"
 msgstr "Benutzer"
+
+#. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+msgid "editor.headingAudit.warningPrefix"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
@@ -2394,6 +2469,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.unsupportedAlgorithm"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.yourDraft"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.title"
 msgstr ""
 
 #. js-lingui-explicit-id

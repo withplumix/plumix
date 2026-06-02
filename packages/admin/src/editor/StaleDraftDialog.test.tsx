@@ -1,6 +1,7 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import { renderWithI18n } from "../../test/render-with-i18n.js";
 import { StaleDraftDialog } from "./StaleDraftDialog.js";
 
 afterEach(() => {
@@ -23,7 +24,7 @@ const LIVE: Snapshot = {
 
 describe("StaleDraftDialog", () => {
   test("renders the three actions when open", () => {
-    render(
+    renderWithI18n(
       <StaleDraftDialog
         open={true}
         autosaveSnapshot={AUTOSAVE}
@@ -39,7 +40,7 @@ describe("StaleDraftDialog", () => {
   });
 
   test("does not render anything when open=false", () => {
-    render(
+    renderWithI18n(
       <StaleDraftDialog
         open={false}
         autosaveSnapshot={AUTOSAVE}
@@ -56,7 +57,7 @@ describe("StaleDraftDialog", () => {
 
   test("clicking Use mine fires onUseMine", () => {
     const onUseMine = vi.fn();
-    render(
+    renderWithI18n(
       <StaleDraftDialog
         open={true}
         autosaveSnapshot={AUTOSAVE}
@@ -72,7 +73,7 @@ describe("StaleDraftDialog", () => {
 
   test("clicking Use theirs fires onUseTheirs", () => {
     const onUseTheirs = vi.fn();
-    render(
+    renderWithI18n(
       <StaleDraftDialog
         open={true}
         autosaveSnapshot={AUTOSAVE}
@@ -87,7 +88,7 @@ describe("StaleDraftDialog", () => {
   });
 
   test("clicking Compare expands an inline side-by-side JSON diff", () => {
-    render(
+    renderWithI18n(
       <StaleDraftDialog
         open={true}
         autosaveSnapshot={AUTOSAVE}
@@ -107,7 +108,7 @@ describe("StaleDraftDialog", () => {
   });
 
   test("Use mine and Use theirs disable while a resolution is in flight", () => {
-    render(
+    renderWithI18n(
       <StaleDraftDialog
         open={true}
         autosaveSnapshot={AUTOSAVE}
