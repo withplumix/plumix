@@ -30,6 +30,43 @@ describe("buildManifest", () => {
     expect(manifest.tokens).toEqual(tokens);
   });
 
+  test("buildManifest projects plugin i18n catalog URLs intersected with site locales", () => {
+    const plugin = definePlugin("translated", {
+      i18n: {
+        sourceLocale: "en",
+        locales: ["en", "de", "fr"],
+        catalogPath: "./locales",
+      },
+      setup: () => undefined,
+    });
+    const i18n = resolveLocales({
+      defaultLocale: "en",
+      locales: ["en", "de"],
+    });
+    const manifest = buildManifest(createPluginRegistry(), {
+      i18n,
+      plugins: [plugin],
+    });
+    // German is in both plugin.locales and site.locales → URL emitted.
+    // English is the source locale → no URL (Lingui renders descriptor.message).
+    // French is plugin-declared but not site-enabled → dropped.
+    expect(manifest.pluginI18n).toEqual({
+      translated: {
+        catalogs: {
+          de: "/_plumix/admin/plugins/translated/locales/de.mjs",
+        },
+      },
+    });
+  });
+
+  test("buildManifest omits pluginI18n when no plugin declares an i18n slot", () => {
+    const plugin = definePlugin("untranslated", () => undefined);
+    const manifest = buildManifest(createPluginRegistry(), {
+      plugins: [plugin],
+    });
+    expect(manifest.pluginI18n).toEqual({});
+  });
+
   test("buildManifest projects the site's i18n config — defaultLocale + enabled locales", () => {
     const i18n = resolveLocales({
       defaultLocale: "en",
