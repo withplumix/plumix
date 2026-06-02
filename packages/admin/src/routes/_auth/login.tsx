@@ -20,7 +20,7 @@ import {
 import { Input } from "@/components/ui/input.js";
 import { Separator } from "@/components/ui/separator.js";
 import { getEmailChangeErrorMessage } from "@/lib/email-change-errors.js";
-import { getMagicLinkErrorMessage } from "@/lib/magic-link-errors.js";
+import { useMagicLinkErrorMessage } from "@/lib/magic-link-errors.js";
 import {
   getMagicLinkRequestErrorMessage,
   requestMagicLink,
@@ -70,6 +70,7 @@ function LoginRoute(): ReactNode {
   const search = Route.useSearch();
   const { i18n } = useLingui();
   const renderPasskeyError = usePasskeyErrorMessage();
+  const renderMagicLinkError = useMagicLinkErrorMessage();
   const [passkeyError, setPasskeyError] = useState<string | null>(null);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [magicLinkError, setMagicLinkError] = useState<string | null>(null);
@@ -124,7 +125,7 @@ function LoginRoute(): ReactNode {
   };
 
   const oauthErrorMessage = getOAuthErrorMessage(search.oauth_error);
-  const magicLinkUrlError = getMagicLinkErrorMessage(search.magic_link_error);
+  const magicLinkUrlError = renderMagicLinkError(search.magic_link_error);
   const emailChangeUrlError = getEmailChangeErrorMessage(
     search.email_change_error,
   );
