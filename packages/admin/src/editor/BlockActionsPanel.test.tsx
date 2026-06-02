@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
@@ -6,6 +6,7 @@ import type { BlockSpec } from "@plumix/blocks";
 import { createBlockRegistry } from "@plumix/blocks";
 
 import type { TransformOption } from "./available-transforms.js";
+import { renderWithI18n } from "../../test/render-with-i18n.js";
 import { BlockActionsPanel } from "./BlockActionsPanel.js";
 
 afterEach(() => {
@@ -31,7 +32,7 @@ const paragraphWithTransforms = createBlockRegistry([
 
 describe("BlockActionsPanel", () => {
   test("renders the empty-state when no spec name is provided", () => {
-    render(
+    renderWithI18n(
       <BlockActionsPanel
         specName={undefined}
         registry={paragraphWithTransforms}
@@ -43,7 +44,7 @@ describe("BlockActionsPanel", () => {
   });
 
   test("renders one button per available transform target with the target title", () => {
-    render(
+    renderWithI18n(
       <BlockActionsPanel
         specName="core/paragraph"
         registry={paragraphWithTransforms}
@@ -62,7 +63,7 @@ describe("BlockActionsPanel", () => {
   test("invokes onTransform with the option when its button is clicked", async () => {
     const onTransform = vi.fn<(option: TransformOption) => void>();
     const user = userEvent.setup();
-    render(
+    renderWithI18n(
       <BlockActionsPanel
         specName="core/paragraph"
         registry={paragraphWithTransforms}
@@ -83,7 +84,7 @@ describe("BlockActionsPanel", () => {
       spec({ name: "core/spacer", title: "Spacer" }),
     ]);
 
-    render(
+    renderWithI18n(
       <BlockActionsPanel
         specName="core/spacer"
         registry={noTransforms}
@@ -97,7 +98,7 @@ describe("BlockActionsPanel", () => {
   test("renders a Duplicate button that fires onDuplicate when clicked", async () => {
     const onDuplicate = vi.fn();
     const user = userEvent.setup();
-    render(
+    renderWithI18n(
       <BlockActionsPanel
         specName="core/paragraph"
         registry={paragraphWithTransforms}
@@ -114,7 +115,7 @@ describe("BlockActionsPanel", () => {
   test("renders a Delete button that fires onDelete when clicked", async () => {
     const onDelete = vi.fn();
     const user = userEvent.setup();
-    render(
+    renderWithI18n(
       <BlockActionsPanel
         specName="core/paragraph"
         registry={paragraphWithTransforms}
@@ -131,7 +132,7 @@ describe("BlockActionsPanel", () => {
   test("renders a Copy JSON button that fires onCopyJson when clicked", async () => {
     const onCopyJson = vi.fn();
     const user = userEvent.setup();
-    render(
+    renderWithI18n(
       <BlockActionsPanel
         specName="core/paragraph"
         registry={paragraphWithTransforms}
@@ -146,7 +147,7 @@ describe("BlockActionsPanel", () => {
   });
 
   test("omits a button entirely when its callback is undefined", () => {
-    render(
+    renderWithI18n(
       <BlockActionsPanel
         specName="core/paragraph"
         registry={paragraphWithTransforms}
@@ -165,7 +166,7 @@ describe("BlockActionsPanel", () => {
       spec({ name: "core/spacer", title: "Spacer" }),
     ]);
 
-    render(
+    renderWithI18n(
       <BlockActionsPanel
         specName="core/spacer"
         registry={noTransforms}
@@ -183,7 +184,7 @@ describe("BlockActionsPanel", () => {
       spec({ name: "core/spacer", title: "Spacer" }),
     ]);
 
-    render(
+    renderWithI18n(
       <BlockActionsPanel
         specName="core/spacer"
         registry={noTransforms}
@@ -207,7 +208,7 @@ describe("BlockActionsPanel", () => {
       spec({ name: "core/spacer", title: "Spacer" }),
     ]);
 
-    render(
+    renderWithI18n(
       <BlockActionsPanel
         specName="core/spacer"
         registry={noTransforms}
@@ -241,7 +242,7 @@ describe("BlockActionsPanel", () => {
         ],
       }),
     ]);
-    render(
+    renderWithI18n(
       <BlockActionsPanel
         specName="core/columns"
         registry={columnsWithTwoVariations}
@@ -261,7 +262,7 @@ describe("BlockActionsPanel", () => {
       spec({ name: "core/spacer", title: "Spacer" }),
     ]);
 
-    render(
+    renderWithI18n(
       <BlockActionsPanel
         specName="core/spacer"
         registry={noTransforms}

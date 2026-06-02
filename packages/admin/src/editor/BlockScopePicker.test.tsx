@@ -1,10 +1,11 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { BlockVariation } from "@plumix/blocks";
 import { createBlockRegistry, createPatternRegistry } from "@plumix/blocks";
 
+import { renderWithI18n } from "../../test/render-with-i18n.js";
 import { BlockScopePicker } from "./BlockScopePicker.js";
 import { installFakeIntersectionObserver } from "./intersection-observer-harness.js";
 
@@ -35,7 +36,7 @@ const threeUp: BlockVariation = {
 
 describe("BlockScopePicker", () => {
   test("renders one card per variation with title and description", () => {
-    render(
+    renderWithI18n(
       <BlockScopePicker
         blockTitle="Columns"
         parentBlockName="core/columns"
@@ -56,7 +57,7 @@ describe("BlockScopePicker", () => {
   });
 
   test("renders a placeholder for each thumbnail before the card scrolls into view", () => {
-    render(
+    renderWithI18n(
       <BlockScopePicker
         blockTitle="Columns"
         parentBlockName="core/columns"
@@ -78,7 +79,7 @@ describe("BlockScopePicker", () => {
   });
 
   test("mounts the live thumbnail once the placeholder intersects the viewport", () => {
-    render(
+    renderWithI18n(
       <BlockScopePicker
         blockTitle="Columns"
         parentBlockName="core/columns"
@@ -100,7 +101,7 @@ describe("BlockScopePicker", () => {
 
   test("clicking a card calls onSelect with the chosen variation", async () => {
     const onSelect = vi.fn();
-    render(
+    renderWithI18n(
       <BlockScopePicker
         blockTitle="Columns"
         parentBlockName="core/columns"
@@ -119,7 +120,7 @@ describe("BlockScopePicker", () => {
 
   test("clicking the cancel link calls onDismiss", async () => {
     const onDismiss = vi.fn();
-    render(
+    renderWithI18n(
       <BlockScopePicker
         blockTitle="Columns"
         parentBlockName="core/columns"

@@ -80,6 +80,11 @@ export const i18nStrictOverrides: Linter.Config = {
           // — used as protocol discriminators in passkey UI (e.g.
           // `transports.includes("internal")`), never user copy.
           "^(internal|hybrid|usb|nfc|ble|smart-card)$",
+          // Sort-stable Map-bucket sentinels — the rendered heading
+          // for missing-category groups goes through a localized
+          // `M.uncategorized` descriptor; the constant is only an
+          // internal grouping key.
+          "^(uncategorized|other)$",
         ],
         // Bare strings compile via `new RegExp(s)`; the `{regex:{pattern,flags?}}`
         // form is required only when flags are needed. Most entries are
@@ -90,8 +95,11 @@ export const i18nStrictOverrides: Linter.Config = {
           { regex: { pattern: "^data-" } },
           { regex: { pattern: "^aria-" } },
           // Admin convention: `testId` prop is forwarded to `data-testid`
-          // by primitives like `FormEditSkeleton`.
+          // by primitives like `FormEditSkeleton`. `placeholderTestId`
+          // is the analog on `LazyMount` for the pre-intersection
+          // placeholder span.
           "testId",
+          "placeholderTestId",
           "type",
           "role",
           "name",

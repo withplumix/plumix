@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog.js";
+import { Trans } from "@lingui/react";
 
 import type { BlockRegistry, PatternRegistry } from "@plumix/blocks";
 import type { PatternManifestEntry } from "@plumix/core/manifest";
@@ -43,9 +44,14 @@ export function StarterModal({
         showCloseButton={false}
       >
         <DialogHeader>
-          <DialogTitle>Start from a pattern</DialogTitle>
+          <DialogTitle>
+            <Trans id="starterModal.title" message="Start from a pattern" />
+          </DialogTitle>
           <DialogDescription>
-            Pick a starting layout, or begin from a blank canvas.
+            <Trans
+              id="starterModal.description"
+              message="Pick a starting layout, or begin from a blank canvas."
+            />
           </DialogDescription>
         </DialogHeader>
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -86,7 +92,7 @@ export function StarterModal({
             data-testid="plumix-starter-modal-start-blank"
             onClick={onDismiss}
           >
-            Start from blank
+            <Trans id="starterModal.startBlank" message="Start from blank" />
           </Button>
         </div>
       </DialogContent>

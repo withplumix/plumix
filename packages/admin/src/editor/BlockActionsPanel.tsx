@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { useMemo } from "react";
+import { Trans } from "@lingui/react";
 
 import type { BlockRegistry } from "@plumix/blocks";
 
@@ -40,7 +41,10 @@ export function BlockActionsPanel({
         className="text-muted-foreground p-4 text-xs"
         data-testid="block-actions-empty"
       >
-        Select a block to see actions.
+        <Trans
+          id="blockActions.empty"
+          message="Select a block to see actions."
+        />
       </div>
     );
   }
@@ -73,7 +77,9 @@ export function BlockActionsPanel({
       ) : null}
       {options.length > 0 ? (
         <div className="space-y-1">
-          <div className="text-muted-foreground text-xs">Transform to</div>
+          <div className="text-muted-foreground text-xs">
+            <Trans id="blockActions.transformTo" message="Transform to" />
+          </div>
           <ul className="flex flex-wrap gap-1" data-testid="block-actions-list">
             {options.map((option) => (
               <li key={option.key}>
@@ -99,7 +105,7 @@ export function BlockActionsPanel({
               className="rounded border px-2 py-1 text-xs"
               data-testid="block-action-duplicate"
             >
-              Duplicate
+              <Trans id="blockActions.duplicate" message="Duplicate" />
             </button>
           ) : null}
           {onDelete ? (
@@ -109,7 +115,7 @@ export function BlockActionsPanel({
               className="rounded border px-2 py-1 text-xs"
               data-testid="block-action-delete"
             >
-              Delete
+              <Trans id="blockActions.delete" message="Delete" />
             </button>
           ) : null}
           {onCopyJson ? (
@@ -119,7 +125,7 @@ export function BlockActionsPanel({
               className="rounded border px-2 py-1 text-xs"
               data-testid="block-action-copy-json"
             >
-              Copy JSON
+              <Trans id="blockActions.copyJson" message="Copy JSON" />
             </button>
           ) : null}
         </div>

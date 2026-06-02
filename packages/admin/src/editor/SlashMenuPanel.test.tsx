@@ -1,10 +1,11 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { createBlockRegistry, createPatternRegistry } from "@plumix/blocks";
 
 import type { SlashMenuItem } from "./slash-menu-items.js";
+import { renderWithI18n } from "../../test/render-with-i18n.js";
 import { installFakeIntersectionObserver } from "./intersection-observer-harness.js";
 import { SlashMenuPanel } from "./SlashMenuPanel.js";
 
@@ -84,7 +85,7 @@ describe("SlashMenuPanel", () => {
         category: "tabs",
       },
     };
-    render(
+    renderWithI18n(
       <SlashMenuPanel
         items={[listBullet, tabsBullet]}
         query=""
@@ -104,7 +105,7 @@ describe("SlashMenuPanel", () => {
   });
 
   test("marks pattern entries with a distinct card-style testid", () => {
-    render(
+    renderWithI18n(
       <SlashMenuPanel
         items={[heading, heroPattern]}
         query=""
@@ -124,7 +125,7 @@ describe("SlashMenuPanel", () => {
   });
 
   test("renders one item per resolved entry with stable testids and category headings", () => {
-    render(
+    renderWithI18n(
       <SlashMenuPanel
         items={[heading, quote]}
         query=""
@@ -142,7 +143,7 @@ describe("SlashMenuPanel", () => {
   });
 
   test("renders an empty-state when no items resolve", () => {
-    render(
+    renderWithI18n(
       <SlashMenuPanel
         items={[]}
         query="xyz"
@@ -160,7 +161,7 @@ describe("SlashMenuPanel", () => {
   test("calls onSelect with the clicked item", async () => {
     const onSelect = vi.fn();
     const user = userEvent.setup();
-    render(
+    renderWithI18n(
       <SlashMenuPanel
         items={[heading, quote]}
         query=""
@@ -180,7 +181,7 @@ describe("SlashMenuPanel", () => {
   test("calls onQueryChange when the input value changes", async () => {
     const onQueryChange = vi.fn();
     const user = userEvent.setup();
-    render(
+    renderWithI18n(
       <SlashMenuPanel
         items={[heading]}
         query=""
@@ -202,7 +203,7 @@ describe("SlashMenuPanel", () => {
   test("calls onDismiss when Escape is pressed inside the panel", async () => {
     const onDismiss = vi.fn();
     const user = userEvent.setup();
-    render(
+    renderWithI18n(
       <SlashMenuPanel
         items={[heading]}
         query=""
@@ -223,7 +224,7 @@ describe("SlashMenuPanel", () => {
   test("selects the highlighted item when Enter is pressed", async () => {
     const onSelect = vi.fn();
     const user = userEvent.setup();
-    render(
+    renderWithI18n(
       <SlashMenuPanel
         items={[heading, quote]}
         query=""
@@ -242,7 +243,7 @@ describe("SlashMenuPanel", () => {
   });
 
   test("variation block items get a lazy-mounted thumbnail placeholder before scroll-in", () => {
-    render(
+    renderWithI18n(
       <SlashMenuPanel
         items={[bulletListVariation]}
         query=""
@@ -262,7 +263,7 @@ describe("SlashMenuPanel", () => {
   });
 
   test("variation block items mount the live thumbnail once the placeholder intersects", () => {
-    render(
+    renderWithI18n(
       <SlashMenuPanel
         items={[bulletListVariation]}
         query=""

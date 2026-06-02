@@ -286,6 +286,11 @@ msgid "userEdit.error.reassignToSelf"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/BlockScopePicker.tsx
+msgid "blockScopePicker.cancel"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.cancel"
 msgstr ""
@@ -376,6 +381,11 @@ msgid "auth.device.lookup.submit.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/BlockScopePicker.tsx
+msgid "blockScopePicker.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.placeholder"
 msgstr ""
@@ -453,6 +463,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.copy.aria"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+msgid "blockActions.copyJson"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -666,6 +681,11 @@ msgid "allowedDomains.add.defaultRole.label"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+msgid "blockActions.delete"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.button"
 msgstr ""
@@ -774,6 +794,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.secret.done"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+msgid "blockActions.duplicate"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1222,6 +1247,11 @@ msgid "mailer.test.error.notConfigured"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/SlashMenuPanel.tsx
+msgid "slashMenu.empty"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.noAuthenticator"
 msgstr ""
@@ -1292,6 +1322,11 @@ msgid "login.oauth.separator"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/SlashMenuPanel.tsx
+msgid "slashMenu.uncategorized"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/data-table/list-pagination.tsx
 msgid "listPagination.page"
 msgstr ""
@@ -1299,6 +1334,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/PatternsSection.tsx
+msgid "patternsSection.heading"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1324,6 +1364,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.description.self"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/BlockScopePicker.tsx
+msgid "blockScopePicker.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/StarterModal.tsx
+msgid "starterModal.description"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1462,6 +1512,11 @@ msgid "apiTokens.col.scopes"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/SlashMenuPanel.tsx
+msgid "slashMenu.searchAria"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.searchPlaceholder"
 msgstr ""
@@ -1469,6 +1524,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.transport.securityKey"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+msgid "blockActions.empty"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1619,6 +1679,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.unknown"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/StarterModal.tsx
+msgid "starterModal.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/StarterModal.tsx
+msgid "starterModal.startBlank"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1839,6 +1909,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.description.admin"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+msgid "blockActions.transformTo"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/PatternsSection.tsx
+msgid "patternsSection.uncategorized"
 msgstr ""
 
 #. js-lingui-explicit-id

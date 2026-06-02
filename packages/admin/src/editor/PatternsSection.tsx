@@ -1,5 +1,9 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { useMemo } from "react";
+import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
 
 import type { BlockRegistry, PatternRegistry } from "@plumix/blocks";
 import type { PatternManifestEntry } from "@plumix/core/manifest";
@@ -15,7 +19,17 @@ interface PatternsSectionProps {
   readonly patternRegistry: PatternRegistry;
 }
 
+// Sort-stable sentinel for patterns missing a category. Compared by
+// identity in the bucket Map; the visible heading uses
+// `M.uncategorized` so the rendered label localizes.
 const UNCATEGORIZED = "uncategorized";
+
+const M = {
+  uncategorized: defineMessage({
+    id: "patternsSection.uncategorized",
+    message: "Uncategorized",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 export function PatternsSection({
   patterns,
@@ -23,6 +37,7 @@ export function PatternsSection({
   blocks,
   patternRegistry,
 }: PatternsSectionProps): ReactElement | null {
+  const label = useLabel();
   const grouped = useMemo(() => {
     const map = new Map<string, PatternManifestEntry[]>();
     for (const pattern of patterns) {
@@ -45,7 +60,7 @@ export function PatternsSection({
       data-testid="plumix-patterns-section"
     >
       <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-        Patterns
+        <Trans id="patternsSection.heading" message="Patterns" />
       </h3>
       {Array.from(grouped.entries()).map(([category, entries]) => (
         <div
@@ -54,7 +69,7 @@ export function PatternsSection({
           className="flex flex-col gap-1"
         >
           <h4 className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
-            {category}
+            {category === UNCATEGORIZED ? label(M.uncategorized) : category}
           </h4>
           <ul className="flex flex-col gap-1">
             {entries.map((entry) => (
