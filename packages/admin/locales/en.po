@@ -461,6 +461,11 @@ msgid "auth.device.lookup.error.notFound"
 msgstr "Code not found. Check it matches what your CLI printed."
 
 #. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.compare"
+msgstr "Compare"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.list.title"
 msgstr "Configured domains"
@@ -846,6 +851,11 @@ msgid "termForm.description"
 msgstr "Description"
 
 #. js-lingui-explicit-id
+#: src/editor/PatternRefPreview.tsx
+msgid "editor.patternRef.detach"
+msgstr "Detach"
+
+#. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.description"
 msgstr "Devices signed in to this account. Revoke any you don't recognise, or "
@@ -889,6 +899,11 @@ msgstr "Disabling signs the user out immediately and blocks future sign-ins. "
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.status.toggle.disabling"
 msgstr "Disabling…"
+
+#. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.discarding"
+msgstr "Discarding…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
@@ -984,6 +999,11 @@ msgid "login.magicLink.submit"
 msgstr "Email me a link"
 
 #. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+msgid "editor.headingAudit.emptyHeading"
+msgstr "Empty heading. Add text or remove the block."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.enabled"
 msgstr "Enabled"
@@ -999,11 +1019,6 @@ msgid "userInvite.email.invalid"
 msgstr "Enter a valid email address"
 
 #. js-lingui-explicit-id
-#: src/lib/magic-link.ts
-msgid "magicLinkRequest.error.invalidInput"
-msgstr "Enter a valid email address."
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.recipient.invalid"
 msgstr "Enter a valid email address."
@@ -1011,6 +1026,11 @@ msgstr "Enter a valid email address."
 #. js-lingui-explicit-id
 #: src/routes/_auth/-schemas.ts
 msgid "login.email.invalid"
+msgstr "Enter a valid email address."
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link.ts
+msgid "magicLinkRequest.error.invalidInput"
 msgstr "Enter a valid email address."
 
 #. js-lingui-explicit-id
@@ -1089,6 +1109,16 @@ msgstr "Go to next page"
 #: src/components/data-table/list-pagination.tsx
 msgid "listPagination.prev.aria"
 msgstr "Go to previous page"
+
+#. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+msgid "editor.headingAudit.skippedLevel"
+msgstr "Heading jumps from h{from} to h{to}. Insert an h{between} between them."
+
+#. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.hideComparison"
+msgstr "Hide comparison"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -1183,6 +1213,11 @@ msgid "profile.passkeys.lastUsed"
 msgstr "Last used {date}"
 
 #. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.liveNow"
+msgstr "Live now"
+
+#. js-lingui-explicit-id
 #: src/components/data-table/data-table.tsx
 msgid "dataTable.loading"
 msgstr "Loading"
@@ -1266,6 +1301,12 @@ msgstr "Mint token"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.submit.pending"
 msgstr "Minting…"
+
+#. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+msgid "editor.headingAudit.multipleH1"
+msgstr "Multiple <h1> on the page ({count} found). Keep only one top-level "
+"heading."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -1394,6 +1435,11 @@ msgid "settings.page.empty.title"
 msgstr "No groups on this page"
 
 #. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+msgid "editor.headingAudit.empty"
+msgstr "No heading-structure issues detected."
+
+#. js-lingui-explicit-id
 #: src/lib/mailer-errors.ts
 msgid "mailer.test.error.notConfigured"
 msgstr "No mailer adapter is configured. Pass a `mailer:` to `plumix({...})` "
@@ -1503,6 +1549,11 @@ msgid "userEdit.role.selfReadonly"
 msgstr "Only another administrator can change your role."
 
 #. js-lingui-explicit-id
+#: src/editor/PatternRefPreview.tsx
+msgid "editor.patternRef.openSource"
+msgstr "Open source"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.recipient.placeholder"
 msgstr "ops@example.com"
@@ -1531,6 +1582,11 @@ msgstr "Parent"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.title"
 msgstr "Passkeys"
+
+#. js-lingui-explicit-id
+#: src/editor/PatternRefPreview.tsx
+msgid "editor.patternRef.unresolved"
+msgstr "Pattern not registered: <code>{slug}</code>"
 
 #. js-lingui-explicit-id
 #: src/editor/PatternsSection.tsx
@@ -1971,6 +2027,12 @@ msgstr "Someone else claimed that email between the request and your click. "
 "Request a new change to a different address."
 
 #. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.description"
+msgstr "Someone else published changes to this entry while you had pending "
+"edits. Pick which version to keep before continuing."
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.invalidInput"
 msgstr "Something went wrong with the form. Please reload and try again."
@@ -2350,9 +2412,19 @@ msgid "login.description"
 msgstr "Use a passkey, get a one-time email link, or continue with a provider."
 
 #. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.useMine"
+msgstr "Use mine"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.description"
 msgstr "Use the bare domain — no protocol, no path."
+
+#. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.useTheirs"
+msgstr "Use theirs"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
@@ -2373,6 +2445,11 @@ msgstr "Users"
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.users"
 msgstr "Users"
+
+#. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+msgid "editor.headingAudit.warningPrefix"
+msgstr "Warning:"
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
@@ -2456,6 +2533,16 @@ msgstr "Your device's signature didn't verify. Please try again."
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.unsupportedAlgorithm"
 msgstr "Your device's signing algorithm isn't supported."
+
+#. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.yourDraft"
+msgstr "Your draft"
+
+#. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.title"
+msgstr "Your draft is out of date"
 
 #. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
