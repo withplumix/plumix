@@ -3,7 +3,10 @@ export {
   formatDate,
   formatNumber,
   formatRelative,
+  labelSourceText,
+  resolveLabel,
   type FormatRelativeOptions,
+  type Label,
 } from "@plumix/core";
-export { i18n } from "@lingui/core";
+export { i18n, type MessageDescriptor } from "@lingui/core";
 export { I18nProvider, Trans } from "@lingui/react";

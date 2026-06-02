@@ -23,10 +23,6 @@ const PLUGIN_CATALOGS = import.meta.glob<{ messages: Messages }>(
 // back here. Mirrors `lingui.config.ts:sourceLocale`.
 const SOURCE_LOCALE = "en";
 
-function adminCatalogPath(locale: string): string {
-  return `../../locales/${locale}.mjs`;
-}
-
 /** Load and activate the compiled catalog for the user's active locale.
  *  Merges admin's own catalog with every workspace plugin catalog
  *  that has a matching `<locale>.mjs`. The admin shell rewrites
@@ -38,8 +34,8 @@ function adminCatalogPath(locale: string): string {
  *  throws, never blanks. */
 export async function bootI18n(): Promise<void> {
   const tag = document.documentElement.lang.toLowerCase().split("-")[0] ?? "";
-  const requested = ADMIN_CATALOGS[adminCatalogPath(tag)];
-  const fallback = ADMIN_CATALOGS[adminCatalogPath(SOURCE_LOCALE)];
+  const requested = ADMIN_CATALOGS[`../../locales/${tag}.mjs`];
+  const fallback = ADMIN_CATALOGS[`../../locales/${SOURCE_LOCALE}.mjs`];
   const adminLoader = requested ?? fallback;
   if (!adminLoader) return;
   const locale = requested ? tag : SOURCE_LOCALE;

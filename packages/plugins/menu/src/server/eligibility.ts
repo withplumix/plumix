@@ -1,4 +1,6 @@
+import type { Label } from "plumix/i18n";
 import type { PluginRegistry } from "plumix/plugin";
+import { labelSourceText } from "plumix/i18n";
 
 /**
  * One picker tab in the admin's "Add menu items" rail. The tab label
@@ -69,7 +71,7 @@ export function getEligibleMenuKinds(registry: PluginRegistry): PickerTab[] {
 
 interface MenuEligibleEntryType {
   readonly name: string;
-  readonly label: string | { readonly id?: string; readonly message?: string };
+  readonly label: Label;
   readonly labels?: { readonly plural?: string };
   readonly isPublic?: boolean;
   readonly isShownInMenus?: boolean;
@@ -81,14 +83,11 @@ function isMenuEligibleType(entryType: MenuEligibleEntryType): boolean {
 }
 
 function pickerLabelForEntryType(entryType: MenuEligibleEntryType): string {
-  // Server-side tab label uses `descriptor.message` (English fallback)
-  // for descriptor-form labels — SSR-side `ctx.t` resolution is a
-  // future slice. Plain strings pass through unchanged.
-  const labelText =
-    typeof entryType.label === "string"
-      ? entryType.label
-      : (entryType.label.message ?? entryType.name);
-  return entryType.menuPickerLabel ?? entryType.labels?.plural ?? labelText;
+  return (
+    entryType.menuPickerLabel ??
+    entryType.labels?.plural ??
+    labelSourceText(entryType.label)
+  );
 }
 
 interface MenuEligibleTaxonomy {
