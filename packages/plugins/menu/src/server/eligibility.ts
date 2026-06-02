@@ -69,7 +69,7 @@ export function getEligibleMenuKinds(registry: PluginRegistry): PickerTab[] {
 
 interface MenuEligibleEntryType {
   readonly name: string;
-  readonly label: string;
+  readonly label: string | { readonly id?: string; readonly message?: string };
   readonly labels?: { readonly plural?: string };
   readonly isPublic?: boolean;
   readonly isShownInMenus?: boolean;
@@ -81,9 +81,14 @@ function isMenuEligibleType(entryType: MenuEligibleEntryType): boolean {
 }
 
 function pickerLabelForEntryType(entryType: MenuEligibleEntryType): string {
-  return (
-    entryType.menuPickerLabel ?? entryType.labels?.plural ?? entryType.label
-  );
+  // Server-side tab label uses `descriptor.message` (English fallback)
+  // for descriptor-form labels — SSR-side `ctx.t` resolution is a
+  // future slice. Plain strings pass through unchanged.
+  const labelText =
+    typeof entryType.label === "string"
+      ? entryType.label
+      : (entryType.label.message ?? entryType.name);
+  return entryType.menuPickerLabel ?? entryType.labels?.plural ?? labelText;
 }
 
 interface MenuEligibleTaxonomy {

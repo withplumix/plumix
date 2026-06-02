@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { hasCap } from "@/lib/caps.js";
 import { findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
+import { useLabel } from "@/lib/use-label.js";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/_editor/entries/$slug/create")({
 
 function CreateEntryRoute(): ReactNode {
   const { entryType } = Route.useRouteContext();
+  const renderLabel = useLabel();
   const navigate = useNavigate();
   // The route mounts once per visit; create the draft, redirect, done.
   // The redirect lands in edit.tsx which then handles autosave.
@@ -61,7 +63,7 @@ function CreateEntryRoute(): ReactNode {
       className="text-muted-foreground flex flex-1 items-center justify-center text-sm"
       data-testid="create-entry-pending"
     >
-      Creating new {entryType.labels?.singular ?? entryType.label}…
+      Creating new {entryType.labels?.singular ?? renderLabel(entryType.label)}…
     </div>
   );
 }

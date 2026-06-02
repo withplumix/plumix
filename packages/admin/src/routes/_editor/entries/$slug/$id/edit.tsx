@@ -28,6 +28,7 @@ import {
 import { orpc } from "@/lib/orpc.js";
 import { getRegisteredBlocks } from "@/lib/plugin-registry.js";
 import { useFormatters } from "@/lib/use-formatters.js";
+import { useLabel } from "@/lib/use-label.js";
 import { ORPCError } from "@orpc/client";
 import { Puck } from "@puckeditor/core";
 import {
@@ -813,6 +814,7 @@ function PlainFormRouteInner({
   supportsRevisions,
   capabilities,
 }: PlainFormRouteInnerProps): ReactNode {
+  const renderLabel = useLabel();
   const { data: entry } = useSuspenseQuery(
     orpc.entry.get.queryOptions({ input: { id } }),
   );
@@ -876,7 +878,7 @@ function PlainFormRouteInner({
       key={String(id)}
       initialValues={initialValues}
       metaBoxes={metaBoxes}
-      headline={`Edit ${(entryType.labels?.singular ?? entryType.label).toLowerCase()}`}
+      headline={`Edit ${(entryType.labels?.singular ?? renderLabel(entryType.label)).toLowerCase()}`}
       isSubmitting={updateMutation.isPending}
       serverError={updateMutation.isPending ? null : serverError}
       autosaveMs={500}

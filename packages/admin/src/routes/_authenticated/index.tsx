@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/empty.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import { visibleEntryTypes } from "@/lib/manifest.js";
+import { useLabel } from "@/lib/use-label.js";
 import { Trans } from "@lingui/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, FileText, Puzzle } from "lucide-react";
@@ -28,6 +29,7 @@ function DashboardIndex(): ReactNode {
   const { user } = Route.useRouteContext();
   const greeting = user.name ?? user.email;
   const tiles = visibleEntryTypes(user.capabilities);
+  const renderLabel = useLabel();
 
   return (
     <div className="flex flex-col gap-6">
@@ -53,7 +55,7 @@ function DashboardIndex(): ReactNode {
       {tiles.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {tiles.map((pt) => {
-            const label = pt.labels?.plural ?? pt.label;
+            const label = pt.labels?.plural ?? renderLabel(pt.label);
             const labelLower = label.toLowerCase();
             return (
               <Card key={pt.name} data-testid={`dashboard-tile-${pt.name}`}>

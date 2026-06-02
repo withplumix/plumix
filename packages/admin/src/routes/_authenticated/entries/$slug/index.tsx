@@ -38,6 +38,7 @@ import { toDate } from "@/lib/dates.js";
 import { findEntryTypeBySlug, findTermTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { buildFilterTermOptions } from "@/lib/terms.js";
+import { useLabel } from "@/lib/use-label.js";
 import { cn } from "@/lib/utils.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
@@ -365,8 +366,10 @@ function ContentListRoute(): ReactNode {
   // doesn't expose a total count today; accept the edge case until it does.
   const canNext = rows.length === PAGE_SIZE;
 
-  const pluralLabel = entryType.labels?.plural ?? entryType.label;
-  const singularLabel = entryType.labels?.singular ?? entryType.label;
+  const renderLabel = useLabel();
+  const pluralLabel = entryType.labels?.plural ?? renderLabel(entryType.label);
+  const singularLabel =
+    entryType.labels?.singular ?? renderLabel(entryType.label);
   const pluralLower = pluralLabel.toLowerCase();
   const singularLower = singularLabel.toLowerCase();
 
