@@ -1,30 +1,94 @@
+import type { MessageDescriptor } from "@lingui/core";
+import { defineMessage } from "@lingui/core/macro";
+
 import type { OAuthErrorCode } from "@plumix/core";
 
-const MESSAGES: Record<OAuthErrorCode, string> = {
-  state_invalid: "Sign-in expired or invalid. Try again.",
-  state_expired: "Sign-in expired. Try again.",
-  code_exchange_failed: "Couldn't reach the provider. Try again.",
-  profile_fetch_failed: "Couldn't read your profile. Try again.",
-  email_missing: "The provider didn't return an email address.",
-  email_unverified:
-    "The provider hasn't verified your email yet. Verify it there, then try again.",
-  domain_not_allowed:
-    "Your email domain isn't on the allowlist. Ask an administrator to add it.",
-  account_disabled: "That account is disabled.",
-  link_broken:
-    "That account can't be reached. Contact an administrator to re-link it.",
-  registration_closed:
-    "OAuth signup is unavailable until an admin has finished setup.",
-  provider_not_configured: "That provider isn't configured.",
+import { useLabel } from "./use-label.js";
+
+const MESSAGES: Record<OAuthErrorCode, MessageDescriptor> = {
+  state_invalid: defineMessage({
+    id: "oauth.error.stateInvalid",
+    message: "Sign-in expired or invalid. Try again.",
+  }),
+  state_expired: defineMessage({
+    id: "oauth.error.stateExpired",
+    message: "Sign-in expired. Try again.",
+  }),
+  code_exchange_failed: defineMessage({
+    id: "oauth.error.codeExchangeFailed",
+    message: "Couldn't reach the provider. Try again.",
+  }),
+  profile_fetch_failed: defineMessage({
+    id: "oauth.error.profileFetchFailed",
+    message: "Couldn't read your profile. Try again.",
+  }),
+  email_missing: defineMessage({
+    id: "oauth.error.emailMissing",
+    message: "The provider didn't return an email address.",
+  }),
+  email_unverified: defineMessage({
+    id: "oauth.error.emailUnverified",
+    message:
+      "The provider hasn't verified your email yet. Verify it there, then try again.",
+  }),
+  domain_not_allowed: defineMessage({
+    id: "oauth.error.domainNotAllowed",
+    message:
+      "Your email domain isn't on the allowlist. Ask an administrator to add it.",
+  }),
+  account_disabled: defineMessage({
+    id: "oauth.error.accountDisabled",
+    message: "That account is disabled.",
+  }),
+  link_broken: defineMessage({
+    id: "oauth.error.linkBroken",
+    message:
+      "That account can't be reached. Contact an administrator to re-link it.",
+  }),
+  registration_closed: defineMessage({
+    id: "oauth.error.registrationClosed",
+    message: "OAuth signup is unavailable until an admin has finished setup.",
+  }),
+  provider_not_configured: defineMessage({
+    id: "oauth.error.providerNotConfigured",
+    message: "That provider isn't configured.",
+  }),
 };
 
-const FALLBACK = "Couldn't sign in. Try again.";
+const FALLBACK = defineMessage({
+  id: "oauth.error.fallback",
+  message: "Couldn't sign in. Try again.",
+});
 
-export function getOAuthErrorMessage(code: string | undefined): string | null {
+/**
+ * Resolves an OAuth error code to a localizable `MessageDescriptor`.
+ * Returns `null` for empty / undefined codes so the caller can skip
+ * rendering an alert entirely. Unknown codes surface the generic
+ * `FALLBACK` descriptor.
+ */
+export function oauthErrorDescriptor(
+  code: string | undefined,
+): MessageDescriptor | null {
   if (!code) return null;
   return Object.hasOwn(MESSAGES, code)
     ? MESSAGES[code as OAuthErrorCode]
     : FALLBACK;
+}
+
+/**
+ * Convenience hook — resolves the descriptor and runs it through
+ * `useLabel()` so the consumer renders a flat localized string.
+ * Returns `null` when there's no error to show.
+ */
+export function useOAuthErrorMessage(): (
+  code: string | undefined,
+) => string | null {
+  const label = useLabel();
+  return (code) => {
+    const descriptor = oauthErrorDescriptor(code);
+    if (descriptor === null) return null;
+    return label(descriptor);
+  };
 }
 
 // Test-only export so the unit test can assert every code in

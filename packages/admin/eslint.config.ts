@@ -47,7 +47,6 @@ const STRICT_UNWRAPPED_FILES = [
   "src/lib/errors.ts",
   "src/lib/magic-link.ts",
   "src/lib/manifest.ts",
-  "src/lib/oauth-errors.ts",
   "src/lib/passkey-errors.ts",
   "src/lib/passkey.ts",
   "src/lib/plugin-error-boundary.tsx",
