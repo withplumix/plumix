@@ -57,6 +57,10 @@ export const i18nStrictOverrides: Linter.Config = {
           // Error / loading discriminator codes returned from async
           // mutations (passkey errors, query states, etc.).
           "^(unknown|pending|idle|loading|success|error)$",
+          // User-role identifiers (valibot picklist discriminators) —
+          // matches `UserRole` from `@plumix/core/schema`. The role's
+          // display label lives in a separate `MessageDescriptor`.
+          "^(subscriber|contributor|author|editor|admin)$",
         ],
         // Bare strings compile via `new RegExp(s)`; the `{regex:{pattern,flags?}}`
         // form is required only when flags are needed. Most entries are

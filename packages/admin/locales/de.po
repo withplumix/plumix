@@ -20,8 +20,18 @@ msgid "settings.pageSummary"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.submit.idle"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.title"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -30,9 +40,29 @@ msgid "breadcrumb.addNew"
 msgstr "Neu hinzufügen"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.submit.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.admin"
 msgstr "Verwaltung"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "userRole.admin"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "userRole.author"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -45,13 +75,33 @@ msgid "dashboard.tile.browse"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.row.deleteCancel"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.sent.title"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.list.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.row.deleteConfirm"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.oauth.continueWith"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "userRole.contributor"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -67,6 +117,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.saveFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.error.fallback"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -90,6 +145,26 @@ msgid "breadcrumb.dashboard"
 msgstr "Übersicht"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.defaultRole.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.row.deleteAria"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.row.disabled"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.domain.label"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.edit"
 msgstr "Bearbeiten"
@@ -98,6 +173,11 @@ msgstr "Bearbeiten"
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.editUser"
 msgstr "Benutzer bearbeiten"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "userRole.editor"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -110,8 +190,18 @@ msgid "login.emailChange.success"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.submit"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.row.enabled"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -123,6 +213,11 @@ msgstr ""
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.entries"
 msgstr "Einträge"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.placeholder"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -145,6 +240,11 @@ msgid "settings.page.loading"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.list.loading"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.title"
 msgstr ""
@@ -152,6 +252,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.list.empty"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -285,6 +390,11 @@ msgid "menu.signOut.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "userRole.subscriber"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.terms"
 msgstr "Begriffe"
@@ -300,6 +410,11 @@ msgid "mailer.description"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.error.domainExists"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.error.sendFailed"
 msgstr ""
@@ -310,6 +425,7 @@ msgid "notFound.description"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.test.tsx
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.empty.description"
 msgstr ""
@@ -317,6 +433,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.description"
 msgstr ""
 
 #. js-lingui-explicit-id
