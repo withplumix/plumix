@@ -1,6 +1,8 @@
 import type { Messages } from "@lingui/core";
 import { i18n } from "@lingui/core";
 
+import { setI18nResolver } from "@plumix/core/validation";
+
 import { readManifest } from "./manifest.js";
 import { createPluginCatalogLoader } from "./plugin-catalogs.js";
 
@@ -63,6 +65,13 @@ export async function bootI18n(): Promise<void> {
   // not enforced here yet).
   i18n.load(locale, { ...workspaceMessages, ...adminMessages });
   i18n.activate(locale);
+
+  // valibot validator messages registered via `vMessage(descriptor)`
+  // resolve through this hook at issue-construction time. Server-side
+  // bundles skip this registration and fall back to descriptor.message.
+  // Forward the full descriptor — `i18n._(MessageDescriptor)` carries
+  // any `values` / `comment` field through Lingui's resolution.
+  setI18nResolver((d) => i18n._(d));
 
   // Third-party plugins: manifest-driven runtime fetch + merge.
   const pluginI18n = readManifest().pluginI18n ?? {};

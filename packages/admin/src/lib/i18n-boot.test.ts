@@ -1,12 +1,15 @@
 import { i18n } from "@lingui/core";
 import { afterEach, describe, expect, test } from "vitest";
 
+import { setI18nResolver, vMessage } from "@plumix/core/validation";
+
 import { bootI18n } from "./i18n-boot.js";
 
 const originalLang = document.documentElement.lang;
 
 afterEach(() => {
   document.documentElement.lang = originalLang;
+  setI18nResolver(null);
 });
 
 describe("bootI18n", () => {
@@ -32,5 +35,20 @@ describe("bootI18n", () => {
     document.documentElement.lang = "";
     await bootI18n();
     expect(i18n.locale).toBe("en");
+  });
+
+  test("registers a Lingui-backed resolver for valibot vMessage", async () => {
+    // Sentinel: pre-boot, no real resolver. Post-boot, vMessage should
+    // route through Lingui — for a descriptor with no catalog entry,
+    // i18n._ falls back to `descriptor.message`, not the sentinel.
+    setI18nResolver(() => "SENTINEL");
+    document.documentElement.lang = "en";
+    await bootI18n();
+    const message = vMessage({
+      id: "vmessage.boot.test",
+      message: "Boot-test fallback",
+    });
+    expect(message()).toBe("Boot-test fallback");
+    expect(message()).not.toBe("SENTINEL");
   });
 });

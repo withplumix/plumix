@@ -41,6 +41,7 @@ import * as v from "valibot";
 
 import type { Label } from "@plumix/core/i18n";
 import type { User, UserRole } from "@plumix/core/schema";
+import { vMessage } from "@plumix/core/validation";
 
 import {
   isUserRole,
@@ -71,9 +72,14 @@ const inviteFormSchema = v.object({
   email: v.pipe(
     v.string(),
     v.trim(),
-    // TODO(slice 9 vMessage): swap to a translatable validator message
-    // once the lazy `t` descriptor pattern lands in `@plumix/core`.
-    v.email("Enter a valid email address"),
+    v.email(
+      vMessage(
+        defineMessage({
+          id: "userInvite.email.invalid",
+          message: "Enter a valid email address",
+        }),
+      ),
+    ),
     v.maxLength(255),
   ),
   name: v.pipe(v.string(), v.trim(), v.maxLength(100)),

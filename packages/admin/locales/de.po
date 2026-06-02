@@ -537,6 +537,26 @@ msgid "userEdit.status.toggle.enabling"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.email.invalid"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.recipient.invalid"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/-schemas.ts
+msgid "login.email.invalid"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.domain.invalid"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.title"
 msgstr ""
@@ -664,6 +684,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.name.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.tokenName.required"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.tokenName.tooLong"
 msgstr ""
 
 #. js-lingui-explicit-id

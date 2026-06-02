@@ -161,9 +161,6 @@ export const i18nStrictOverrides: Linter.Config = {
           "v.number",
           "v.record",
           "v.looseObject",
-          "v.email",
-          "v.minLength",
-          "v.maxLength",
           "v.trim",
           "v.toLowerCase",
           "v.transform",
@@ -215,6 +212,9 @@ export const i18nStrictOverrides: Linter.Config = {
           // API; the `message` fallback is extracted by `lingui extract`.
           "defineMessage",
           "i18n._",
+          // valibot vMessage: argument is a `MessageDescriptor` literal
+          // whose `message` field is the source-locale fallback.
+          "vMessage",
         ],
       },
     ],

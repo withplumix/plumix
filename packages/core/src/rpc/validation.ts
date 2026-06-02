@@ -1,10 +1,21 @@
 import * as v from "valibot";
 
+export { setI18nResolver, vMessage } from "./vmessage.js";
+export type { I18nResolver } from "./vmessage.js";
+
 // Shared leaf-level field schemas. Consumed server-side by RPC procedure
 // input schemas AND client-side by admin forms — same rules on both ends so
 // a submit that passes client validation can't then fail server validation
 // on shape alone. Messages are user-facing: they surface unchanged in admin
 // forms and in RPC error payloads when validation rejects.
+//
+// These shared-schema messages stay in English. Wrapping them in
+// `vMessage(defineMessage(...))` requires the `@lingui/core/macro`
+// runtime, which depends on babel-plugin-lingui-macro processing —
+// core's plain `tsc` build can't run that. Per-callsite admin schemas
+// (mailer, allowed-domains, users/create, auth/device, login) DO use
+// `vMessage` and translate. Server-side schema translation is its own
+// slice, requiring a lingui pipeline for the core package.
 
 /** RFC 5321 caps email at 254 chars. */
 export const emailField = v.pipe(

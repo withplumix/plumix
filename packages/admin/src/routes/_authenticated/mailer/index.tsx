@@ -32,15 +32,21 @@ import { useForm } from "react-hook-form";
 import * as v from "valibot";
 
 import type { Label } from "@plumix/core/i18n";
+import { vMessage } from "@plumix/core/validation";
 
 const formSchema = v.object({
   to: v.pipe(
     v.string(),
     v.trim(),
     v.toLowerCase(),
-    // TODO(#721 vMessage): swap to a translatable validator message
-    // once the lazy `t` descriptor pattern lands in `@plumix/core`.
-    v.email("Enter a valid email address."),
+    v.email(
+      vMessage(
+        defineMessage({
+          id: "mailer.test.recipient.invalid",
+          message: "Enter a valid email address.",
+        }),
+      ),
+    ),
   ),
 });
 

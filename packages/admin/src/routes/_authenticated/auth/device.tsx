@@ -32,6 +32,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useForm, useWatch } from "react-hook-form";
 import * as v from "valibot";
 
+import { vMessage } from "@plumix/core/validation";
+
 // Descriptors used outside JSX — error helpers + the textarea
 // placeholder. Chrome strings stay inline at their `<Trans>` callsite
 // per admin convention.
@@ -116,10 +118,24 @@ const approveSchema = v.object({
   tokenName: v.pipe(
     v.string(),
     v.trim(),
-    // TODO(slice 9 vMessage): swap to translatable validator messages
-    // once the lazy `t` descriptor pattern lands in `@plumix/core`.
-    v.minLength(1, "Name is required."),
-    v.maxLength(64, "Name must be ≤ 64 characters."),
+    v.minLength(
+      1,
+      vMessage(
+        defineMessage({
+          id: "auth.device.tokenName.required",
+          message: "Name is required.",
+        }),
+      ),
+    ),
+    v.maxLength(
+      64,
+      vMessage(
+        defineMessage({
+          id: "auth.device.tokenName.tooLong",
+          message: "Name must be ≤ 64 characters.",
+        }),
+      ),
+    ),
   ),
   scopeMode: v.picklist(["inherit", "restrict"]),
   scopesText: v.pipe(v.string(), v.maxLength(4096)),
