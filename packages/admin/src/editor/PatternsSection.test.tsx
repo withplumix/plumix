@@ -1,9 +1,10 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { createBlockRegistry, createPatternRegistry } from "@plumix/blocks";
 
+import { renderWithI18n } from "../../test/render-with-i18n.js";
 import { installFakeIntersectionObserver } from "./intersection-observer-harness.js";
 import { PatternsSection } from "./PatternsSection.js";
 
@@ -19,7 +20,7 @@ const patterns = createPatternRegistry([]);
 
 describe("PatternsSection", () => {
   test("renders nothing when no patterns are registered", () => {
-    const { container } = render(
+    const { container } = renderWithI18n(
       <PatternsSection
         patterns={[]}
         onSelect={noop}
@@ -31,7 +32,7 @@ describe("PatternsSection", () => {
   });
 
   test("renders title rows for each pattern, grouped under category headers", () => {
-    render(
+    renderWithI18n(
       <PatternsSection
         onSelect={noop}
         blocks={blocks}
@@ -76,7 +77,7 @@ describe("PatternsSection", () => {
   });
 
   test("patterns without a category fall under an 'uncategorized' group", () => {
-    render(
+    renderWithI18n(
       <PatternsSection
         onSelect={noop}
         blocks={blocks}
@@ -117,7 +118,7 @@ describe("PatternsSection", () => {
       content: [],
     };
 
-    render(
+    renderWithI18n(
       <PatternsSection
         patterns={[hero, cta]}
         onSelect={noop}
@@ -152,7 +153,7 @@ describe("PatternsSection", () => {
       category: "hero" as const,
       content: [],
     };
-    render(
+    renderWithI18n(
       <PatternsSection
         patterns={[hero]}
         onSelect={onSelect}

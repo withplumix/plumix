@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { useMemo } from "react";
 import {
@@ -7,6 +8,9 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command.js";
+import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
 import { Command as CommandPrimitive } from "cmdk";
 
 import type { BlockRegistry, PatternRegistry } from "@plumix/blocks";
@@ -17,6 +21,22 @@ import { LazyMount } from "./LazyMount.js";
 import { SLASH_THUMBNAIL_MIN_HEIGHT } from "./thumbnail-min-height.js";
 import { VariationThumbnail } from "./VariationThumbnail.js";
 
+// Sort-stable sentinel for items missing a category. Compared by
+// identity in the bucket Map; the rendered heading uses
+// `M.uncategorized` instead so the visible label localizes.
+const UNCATEGORIZED = "other";
+
+const M = {
+  searchAria: defineMessage({
+    id: "slashMenu.searchAria",
+    message: "Search blocks and patterns",
+  }),
+  uncategorized: defineMessage({
+    id: "slashMenu.uncategorized",
+    message: "Other",
+  }),
+} satisfies Record<string, MessageDescriptor>;
+
 interface SlashMenuPanelProps {
   readonly items: readonly SlashMenuItem[];
   readonly query: string;
@@ -26,8 +46,6 @@ interface SlashMenuPanelProps {
   readonly blocks: BlockRegistry;
   readonly patterns: PatternRegistry;
 }
-
-const UNCATEGORIZED = "other";
 
 function renderMember(
   item: SlashMenuItem,
@@ -126,6 +144,7 @@ export function SlashMenuPanel({
   blocks,
   patterns,
 }: SlashMenuPanelProps): ReactElement {
+  const label = useLabel();
   const buckets = useMemo(() => {
     const map = new Map<string, SlashMenuItem[]>();
     for (const item of items) {
@@ -155,14 +174,18 @@ export function SlashMenuPanel({
         data-testid="slash-menu-input"
         autoFocus
         className="sr-only"
-        aria-label="Search blocks and patterns"
+        aria-label={label(M.searchAria)}
       />
       <CommandList>
-        <CommandEmpty data-testid="slash-menu-empty">No matches</CommandEmpty>
+        <CommandEmpty data-testid="slash-menu-empty">
+          <Trans id="slashMenu.empty" message="No matches" />
+        </CommandEmpty>
         {buckets.map(([category, members]) => (
           <CommandGroup
             key={category}
-            heading={category}
+            heading={
+              category === UNCATEGORIZED ? label(M.uncategorized) : category
+            }
             data-testid={`slash-menu-group-${category}`}
           >
             {members.map((item) =>

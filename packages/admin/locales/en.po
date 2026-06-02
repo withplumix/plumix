@@ -295,6 +295,11 @@ msgid "userEdit.error.reassignToSelf"
 msgstr "Can't reassign to the user being deleted."
 
 #. js-lingui-explicit-id
+#: src/editor/BlockScopePicker.tsx
+msgid "blockScopePicker.cancel"
+msgstr "Cancel"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.cancel"
 msgstr "Cancel"
@@ -385,6 +390,11 @@ msgid "auth.device.lookup.submit.pending"
 msgstr "Checking…"
 
 #. js-lingui-explicit-id
+#: src/editor/BlockScopePicker.tsx
+msgid "blockScopePicker.title"
+msgstr "Choose a {blockTitle} layout"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.placeholder"
 msgstr "claude-code / github-actions / mcp-prod"
@@ -464,6 +474,11 @@ msgstr "Copy"
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.copy.aria"
 msgstr "Copy invite link"
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+msgid "blockActions.copyJson"
+msgstr "Copy JSON"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -680,6 +695,11 @@ msgid "allowedDomains.add.defaultRole.label"
 msgstr "Default role"
 
 #. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+msgid "blockActions.delete"
+msgstr "Delete"
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.button"
 msgstr "Delete"
@@ -793,6 +813,11 @@ msgstr "Domain"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.secret.done"
 msgstr "Done"
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+msgid "blockActions.duplicate"
+msgstr "Duplicate"
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
@@ -1249,6 +1274,11 @@ msgstr "No mailer adapter is configured. Pass a `mailer:` to `plumix({...})` "
 "(e.g. consoleMailer() for dev, or your Resend/Postmark/SES wrapper)."
 
 #. js-lingui-explicit-id
+#: src/editor/SlashMenuPanel.tsx
+msgid "slashMenu.empty"
+msgstr "No matches"
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.noAuthenticator"
 msgstr "No passkey is available on this device. Try signing in on the device "
@@ -1322,6 +1352,11 @@ msgid "login.oauth.separator"
 msgstr "or"
 
 #. js-lingui-explicit-id
+#: src/editor/SlashMenuPanel.tsx
+msgid "slashMenu.uncategorized"
+msgstr "Other"
+
+#. js-lingui-explicit-id
 #: src/components/data-table/list-pagination.tsx
 msgid "listPagination.page"
 msgstr "Page {page}"
@@ -1330,6 +1365,11 @@ msgstr "Page {page}"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.title"
 msgstr "Passkeys"
+
+#. js-lingui-explicit-id
+#: src/editor/PatternsSection.tsx
+msgid "patternsSection.heading"
+msgstr "Patterns"
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
@@ -1357,6 +1397,16 @@ msgstr "Permissions"
 msgid "apiTokens.description.self"
 msgstr "Personal access tokens for CLIs, MCP servers, CI bots, or any other "
 "non-browser client. The full secret is shown once at mint time."
+
+#. js-lingui-explicit-id
+#: src/editor/BlockScopePicker.tsx
+msgid "blockScopePicker.description"
+msgstr "Pick a layout to insert, or cancel to start from a blank {blockTitle}."
+
+#. js-lingui-explicit-id
+#: src/editor/StarterModal.tsx
+msgid "starterModal.description"
+msgstr "Pick a starting layout, or begin from a blank canvas."
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -1494,6 +1544,11 @@ msgid "apiTokens.col.scopes"
 msgstr "Scopes"
 
 #. js-lingui-explicit-id
+#: src/editor/SlashMenuPanel.tsx
+msgid "slashMenu.searchAria"
+msgstr "Search blocks and patterns"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.searchPlaceholder"
 msgstr "Search by email…"
@@ -1502,6 +1557,11 @@ msgstr "Search by email…"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.transport.securityKey"
 msgstr "Security key"
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+msgid "blockActions.empty"
+msgstr "Select a block to see actions."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
@@ -1657,6 +1717,16 @@ msgstr "Something went wrong with the form. Please reload and try again."
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.unknown"
 msgstr "Something went wrong. Please try again."
+
+#. js-lingui-explicit-id
+#: src/editor/StarterModal.tsx
+msgid "starterModal.title"
+msgstr "Start from a pattern"
+
+#. js-lingui-explicit-id
+#: src/editor/StarterModal.tsx
+msgid "starterModal.startBlank"
+msgstr "Start from blank"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
@@ -1890,6 +1960,16 @@ msgstr "Token name"
 msgid "apiTokens.description.admin"
 msgstr "Tokens minted by this user. You can revoke any of them — minting "
 "requires the owner's authenticated browser session."
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+msgid "blockActions.transformTo"
+msgstr "Transform to"
+
+#. js-lingui-explicit-id
+#: src/editor/PatternsSection.tsx
+msgid "patternsSection.uncategorized"
+msgstr "Uncategorized"
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx

@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog.js";
+import { Trans } from "@lingui/react";
 
 import type {
   BlockRegistry,
@@ -54,10 +55,19 @@ export function BlockScopePicker({
         showCloseButton={false}
       >
         <DialogHeader>
-          <DialogTitle>Choose a {blockTitle} layout</DialogTitle>
+          <DialogTitle>
+            <Trans
+              id="blockScopePicker.title"
+              message="Choose a {blockTitle} layout"
+              values={{ blockTitle }}
+            />
+          </DialogTitle>
           <DialogDescription>
-            Pick a layout to insert, or cancel to start from a blank{" "}
-            {blockTitle}.
+            <Trans
+              id="blockScopePicker.description"
+              message="Pick a layout to insert, or cancel to start from a blank {blockTitle}."
+              values={{ blockTitle }}
+            />
           </DialogDescription>
         </DialogHeader>
         {/* Raw `variation.slug` is safe here — the picker scopes to one
@@ -109,7 +119,7 @@ export function BlockScopePicker({
             data-testid="plumix-block-scope-picker-cancel"
             onClick={onDismiss}
           >
-            Cancel
+            <Trans id="blockScopePicker.cancel" message="Cancel" />
           </Button>
         </div>
       </DialogContent>

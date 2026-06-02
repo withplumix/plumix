@@ -5,6 +5,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import type { PatternManifestEntry } from "@plumix/core/manifest";
 import { createBlockRegistry, createPatternRegistry } from "@plumix/blocks";
 
+import { renderWithI18n } from "../../test/render-with-i18n.js";
 import { StarterModal } from "./StarterModal.js";
 
 afterEach(() => {
@@ -56,7 +57,7 @@ describe("StarterModal", () => {
   });
 
   test("renders one card per candidate plus a Start-from-blank action", () => {
-    render(
+    renderWithI18n(
       <StarterModal
         candidates={[hero, cta]}
         blocks={blocks}
@@ -80,7 +81,7 @@ describe("StarterModal", () => {
 
   test("clicking a card calls onSelect with the chosen pattern", async () => {
     const onSelect = vi.fn();
-    render(
+    renderWithI18n(
       <StarterModal
         candidates={[hero, cta]}
         blocks={blocks}
@@ -100,7 +101,7 @@ describe("StarterModal", () => {
 
   test("pressing Enter on a focused card calls onSelect (keyboard path)", async () => {
     const onSelect = vi.fn();
-    render(
+    renderWithI18n(
       <StarterModal
         candidates={[hero]}
         blocks={blocks}
@@ -119,7 +120,7 @@ describe("StarterModal", () => {
 
   test("clicking Start from blank calls onDismiss", async () => {
     const onDismiss = vi.fn();
-    render(
+    renderWithI18n(
       <StarterModal
         candidates={[hero]}
         blocks={blocks}
