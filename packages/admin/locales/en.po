@@ -64,6 +64,11 @@ msgstr "Core ships no settings by design — plugins (or your own plumix.config)
 "card per page."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.error.fallback"
+msgstr "Couldn't send the test message. Try again."
+
+#. js-lingui-explicit-id
 #: src/components/profile/language-card.tsx
 msgid "profile.language.error"
 msgstr "Couldn't switch language. Please try again."
@@ -130,9 +135,20 @@ msgid "profile.language.title"
 msgstr "Language"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.title"
+msgstr "Mailer"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.title"
 msgstr "No content types yet"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.error.notConfigured"
+msgstr "No mailer adapter is configured. Pass a `mailer:` to `plumix({...})` "
+"(e.g. consoleMailer() for dev, or your Resend/Postmark/SES wrapper)."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.tsx
@@ -143,6 +159,11 @@ msgstr "No settings registered yet"
 #: src/routes/__root.tsx
 msgid "notFound.title"
 msgstr "Not found"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.recipient.placeholder"
+msgstr "ops@example.com"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -160,9 +181,37 @@ msgid "menu.profile"
 msgstr "Profile"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.recipient.label"
+msgstr "Recipient"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.title"
+msgstr "Send a test message"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.submit.idle"
+msgstr "Send test"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.submit.pending"
+msgstr "Sending…"
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.pending"
 msgstr "Sending…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.description"
+msgstr "Sends a one-off message via the same transport magic-link uses. "
+"Failures surface here verbatim — distinct from the magic-link request "
+"flow, which intentionally swallows mailer errors so the response shape "
+"can't leak whether an email is registered."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.tsx
@@ -208,6 +257,25 @@ msgstr "Signing out…"
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.terms"
 msgstr "Terms"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.feedback.ok"
+msgstr "Test message sent to {to}. If it doesn't arrive within a minute, check "
+"your transport adapter's logs."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.description"
+msgstr "Test that the configured outbound-email transport actually delivers. "
+"Used by magic-link sign-in, invite emails, and any plugin that opts "
+"into the shared mailer."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.error.sendFailed"
+msgstr "The mailer adapter threw an error during send. Check the worker logs "
+"for the underlying error."
 
 #. js-lingui-explicit-id
 #: src/routes/__root.tsx

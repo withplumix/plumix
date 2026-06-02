@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
@@ -22,6 +23,8 @@ import { hasCap } from "@/lib/caps.js";
 import { extractReason } from "@/lib/orpc-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
@@ -32,9 +35,33 @@ const formSchema = v.object({
     v.string(),
     v.trim(),
     v.toLowerCase(),
+    // TODO(slice 9 vMessage): swap to a translatable validator message
+    // once the lazy `t` descriptor pattern lands in `@plumix/core`. The
+    // current literal renders in English regardless of admin locale.
     v.email("Enter a valid email address."),
   ),
 });
+
+const M = {
+  placeholder: defineMessage({
+    id: "mailer.test.recipient.placeholder",
+    message: "ops@example.com",
+  }),
+  errNotConfigured: defineMessage({
+    id: "mailer.test.error.notConfigured",
+    message:
+      "No mailer adapter is configured. Pass a `mailer:` to `plumix({...})` (e.g. consoleMailer() for dev, or your Resend/Postmark/SES wrapper).",
+  }),
+  errSendFailed: defineMessage({
+    id: "mailer.test.error.sendFailed",
+    message:
+      "The mailer adapter threw an error during send. Check the worker logs for the underlying error.",
+  }),
+  errFallback: defineMessage({
+    id: "mailer.test.error.fallback",
+    message: "Couldn't send the test message. Try again.",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 export const Route = createFileRoute("/_authenticated/mailer/")({
   beforeLoad: ({ context }) => {
@@ -48,8 +75,11 @@ export const Route = createFileRoute("/_authenticated/mailer/")({
 
 function MailerRoute(): ReactNode {
   const { user } = Route.useRouteContext();
+  const { i18n } = useLingui();
   const [feedback, setFeedback] = useState<
-    { kind: "ok"; to: string } | { kind: "error"; message: string } | null
+    | { kind: "ok"; to: string }
+    | { kind: "error"; message: MessageDescriptor }
+    | null
   >(null);
 
   const form = useForm({
@@ -68,7 +98,7 @@ function MailerRoute(): ReactNode {
       setFeedback({ kind: "ok", to: variables.to });
     },
     onError: (err) => {
-      setFeedback({ kind: "error", message: formatTestSendError(err) });
+      setFeedback({ kind: "error", message: testSendErrorMessage(err) });
     },
   });
 
@@ -80,23 +110,26 @@ function MailerRoute(): ReactNode {
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold" data-testid="mailer-heading">
-          Mailer
+          <Trans id="mailer.title" message="Mailer" />
         </h1>
         <p className="text-muted-foreground text-sm">
-          Test that the configured outbound-email transport actually delivers.
-          Used by magic-link sign-in, invite emails, and any plugin that opts
-          into the shared mailer.
+          <Trans
+            id="mailer.description"
+            message="Test that the configured outbound-email transport actually delivers. Used by magic-link sign-in, invite emails, and any plugin that opts into the shared mailer."
+          />
         </p>
       </header>
 
       <Card>
         <CardHeader>
-          <CardTitle>Send a test message</CardTitle>
+          <CardTitle>
+            <Trans id="mailer.test.title" message="Send a test message" />
+          </CardTitle>
           <CardDescription>
-            Sends a one-off message via the same transport magic-link uses.
-            Failures surface here verbatim — distinct from the magic-link
-            request flow, which intentionally swallows mailer errors so the
-            response shape can't leak whether an email is registered.
+            <Trans
+              id="mailer.test.description"
+              message="Sends a one-off message via the same transport magic-link uses. Failures surface here verbatim — distinct from the magic-link request flow, which intentionally swallows mailer errors so the response shape can't leak whether an email is registered."
+            />
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -107,12 +140,19 @@ function MailerRoute(): ReactNode {
                 name="to"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Recipient</FormLabel>
+                    <FormLabel>
+                      <Trans
+                        id="mailer.test.recipient.label"
+                        message="Recipient"
+                      />
+                    </FormLabel>
                     <FormControl>
                       <Input
                         type="email"
                         autoComplete="email"
-                        placeholder="ops@example.com"
+                        placeholder={i18n._(M.placeholder.id, undefined, {
+                          message: M.placeholder.message,
+                        })}
                         disabled={testSend.isPending}
                         data-testid="mailer-test-recipient"
                         {...field}
@@ -126,14 +166,21 @@ function MailerRoute(): ReactNode {
               {feedback?.kind === "ok" ? (
                 <Alert data-testid="mailer-test-feedback">
                   <AlertDescription>
-                    Test message sent to {feedback.to}. If it doesn't arrive
-                    within a minute, check your transport adapter's logs.
+                    <Trans
+                      id="mailer.test.feedback.ok"
+                      message="Test message sent to {to}. If it doesn't arrive within a minute, check your transport adapter's logs."
+                      values={{ to: feedback.to }}
+                    />
                   </AlertDescription>
                 </Alert>
               ) : null}
               {feedback?.kind === "error" ? (
                 <Alert variant="destructive" data-testid="mailer-test-error">
-                  <AlertDescription>{feedback.message}</AlertDescription>
+                  <AlertDescription>
+                    {i18n._(feedback.message.id, undefined, {
+                      message: feedback.message.message,
+                    })}
+                  </AlertDescription>
                 </Alert>
               ) : null}
 
@@ -143,7 +190,11 @@ function MailerRoute(): ReactNode {
                   disabled={testSend.isPending}
                   data-testid="mailer-test-submit"
                 >
-                  {testSend.isPending ? "Sending…" : "Send test"}
+                  {testSend.isPending ? (
+                    <Trans id="mailer.test.submit.pending" message="Sending…" />
+                  ) : (
+                    <Trans id="mailer.test.submit.idle" message="Send test" />
+                  )}
                 </Button>
               </div>
             </form>
@@ -154,20 +205,16 @@ function MailerRoute(): ReactNode {
   );
 }
 
-function formatTestSendError(err: unknown): string {
+function testSendErrorMessage(err: unknown): MessageDescriptor {
   const reason = extractReason(err);
-  if (reason === "mailer_not_configured") {
-    return (
-      "No mailer adapter is configured. Pass a `mailer:` to `plumix({...})` " +
-      "(e.g. consoleMailer() for dev, or your Resend/Postmark/SES wrapper)."
-    );
+  if (reason === "mailer_not_configured") return M.errNotConfigured;
+  if (reason === "mailer_send_failed") return M.errSendFailed;
+  // Non-tagged Error: inline `{id, message}` isn't visited by `lingui
+  // extract` (only macro callsites are), so this id is never registered
+  // and `i18n._` falls through to `err.message` verbatim — the right
+  // shape for plugin-author text until a translatable error path lands.
+  if (err instanceof Error) {
+    return { id: "mailer.test.error.runtime", message: err.message };
   }
-  if (reason === "mailer_send_failed") {
-    return (
-      "The mailer adapter threw an error during send. Check the worker logs " +
-      "for the underlying error."
-    );
-  }
-  if (err instanceof Error) return err.message;
-  return "Couldn't send the test message. Try again.";
+  return M.errFallback;
 }
