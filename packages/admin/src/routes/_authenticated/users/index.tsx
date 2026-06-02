@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import { useCallback, useMemo } from "react";
@@ -25,11 +26,16 @@ import { hasCap } from "@/lib/caps.js";
 import { toDate } from "@/lib/dates.js";
 import { orpc } from "@/lib/orpc.js";
 import { useFormatters } from "@/lib/use-formatters.js";
+import { useLabel } from "@/lib/use-label.js";
+import { ROLE_LABEL } from "@/lib/user-role-labels.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Plus, UserPlus } from "lucide-react";
 import * as v from "valibot";
 
+import type { Label } from "@plumix/core/i18n";
 import type { User, UserRole } from "@plumix/core/schema";
 
 import { USER_ROLES } from "./-constants.js";
@@ -71,22 +77,42 @@ const ROLE_VARIANT: Record<UserRole, "default" | "secondary" | "outline"> = {
   subscriber: "outline",
 };
 
-const ROLE_LABEL: Record<UserRole, string> = {
-  admin: "Administrator",
-  editor: "Editor",
-  author: "Author",
-  contributor: "Contributor",
-  subscriber: "Subscriber",
-};
-
-const ROLE_FILTER_OPTIONS: { value: RoleFilter; label: string }[] = [
-  { value: "all", label: "All roles" },
-  ...USER_ROLES.map((role) => ({ value: role, label: ROLE_LABEL[role] })),
-];
-
-const dateFormatter = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "medium",
-});
+const M = {
+  searchPlaceholder: defineMessage({
+    id: "users.list.searchPlaceholder",
+    message: "Search by email…",
+  }),
+  loadingLabel: defineMessage({
+    id: "users.list.loading",
+    message: "Loading users",
+  }),
+  loadFailed: defineMessage({
+    id: "users.list.loadFailed",
+    message: "Couldn't load users. Try again.",
+  }),
+  roleFilterAria: defineMessage({
+    id: "users.list.roleFilter.aria",
+    message: "Filter by role",
+  }),
+  roleFilterAll: defineMessage({
+    id: "users.list.roleFilter.all",
+    message: "All roles",
+  }),
+  columnUser: defineMessage({ id: "users.list.column.user", message: "User" }),
+  columnRole: defineMessage({ id: "users.list.column.role", message: "Role" }),
+  columnStatus: defineMessage({
+    id: "users.list.column.status",
+    message: "Status",
+  }),
+  columnLastSignIn: defineMessage({
+    id: "users.list.column.lastSignIn",
+    message: "Last sign-in",
+  }),
+  columnCreated: defineMessage({
+    id: "users.list.column.created",
+    message: "Created",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 export const Route = createFileRoute("/_authenticated/users/")({
   validateSearch: (search) => v.parse(searchSchema, search),
@@ -134,6 +160,7 @@ function useUsersListNavActions(): UsersListNavActions {
 function UsersListRoute(): ReactNode {
   const search = Route.useSearch();
   const { user } = Route.useRouteContext();
+  const label = useLabel();
 
   const query = useQuery(
     orpc.user.list.queryOptions({
@@ -148,7 +175,7 @@ function UsersListRoute(): ReactNode {
 
   const { setRole, setPage, setSearch } = useUsersListNavActions();
 
-  const rows: readonly UserListRow[] = query.data ?? [];
+  const rows = query.data ?? [];
   const canPrev = search.page > 1;
   // Heuristic "next page exists": full page came back. `user.list` doesn't
   // return a total, same tradeoff as `entry.list` — accept the occasional
@@ -160,10 +187,16 @@ function UsersListRoute(): ReactNode {
   // `beforeLoad` for defense-in-depth.
   const canInvite = hasCap(user.capabilities, "user:create");
 
-  const { formatRelative } = useFormatters();
+  const { formatDate, formatRelative } = useFormatters();
   const columns = useMemo(
-    () => buildColumns({ currentUserId: user.id, formatRelative }),
-    [user.id, formatRelative],
+    () =>
+      buildColumns({
+        currentUserId: user.id,
+        formatDate,
+        formatRelative,
+        label,
+      }),
+    [user.id, formatDate, formatRelative, label],
   );
 
   return (
@@ -174,14 +207,14 @@ function UsersListRoute(): ReactNode {
             data-testid="users-list-heading"
             className="text-2xl font-semibold"
           >
-            Users
+            <Trans id="users.list.title" message="Users" />
           </h1>
         </div>
         {canInvite ? (
           <Button asChild>
             <Link to="/users/create" data-testid="users-list-invite-button">
               <UserPlus />
-              Add new
+              <Trans id="users.list.invite" message="Add new" />
             </Link>
           </Button>
         ) : null}
@@ -196,7 +229,7 @@ function UsersListRoute(): ReactNode {
             // desynchronising from the URL.
             key={search.q ?? ""}
             initialValue={search.q ?? ""}
-            placeholder="Search by email…"
+            placeholder={label(M.searchPlaceholder)}
             testId="users-list-search-input"
             onCommit={setSearch}
           />
@@ -206,9 +239,9 @@ function UsersListRoute(): ReactNode {
       {query.isError ? (
         <Alert variant="destructive">
           <AlertDescription>
-            {query.error instanceof Error
-              ? query.error.message
-              : "Couldn't load users. Try again."}
+            {label(
+              query.error instanceof Error ? query.error.message : M.loadFailed,
+            )}
           </AlertDescription>
         </Alert>
       ) : (
@@ -216,7 +249,7 @@ function UsersListRoute(): ReactNode {
           columns={columns}
           data={rows}
           isLoading={query.isPending}
-          loadingLabel="Loading users"
+          loadingLabel={label(M.loadingLabel)}
           emptyState={<EmptyState canInvite={canInvite} />}
         />
       )}
@@ -243,15 +276,19 @@ type UserListRow = User & {
 
 function buildColumns({
   currentUserId,
+  formatDate,
   formatRelative,
+  label,
 }: {
   currentUserId: number;
+  formatDate: (value: Date, options?: Intl.DateTimeFormatOptions) => string;
   formatRelative: (value: Date) => string;
+  label: (l: Label) => string;
 }): ColumnDef<UserListRow>[] {
   return [
     {
       accessorKey: "name",
-      header: "User",
+      header: label(M.columnUser),
       cell: ({ row }) => {
         const u = row.original;
         const isSelf = u.id === currentUserId;
@@ -262,11 +299,13 @@ function buildColumns({
           >
             <span className="flex items-center gap-2 font-medium">
               {u.name ?? (
-                <span className="text-muted-foreground italic">(no name)</span>
+                <span className="text-muted-foreground italic">
+                  <Trans id="users.list.row.noName" message="(no name)" />
+                </span>
               )}
               {isSelf ? (
                 <Badge variant="outline" className="text-xs">
-                  You
+                  <Trans id="users.list.row.you" message="You" />
                 </Badge>
               ) : null}
             </span>
@@ -277,21 +316,25 @@ function buildColumns({
     },
     {
       accessorKey: "role",
-      header: "Role",
+      header: label(M.columnRole),
       cell: ({ row }) => (
         <Badge variant={ROLE_VARIANT[row.original.role]} className="capitalize">
-          {ROLE_LABEL[row.original.role]}
+          {label(ROLE_LABEL[row.original.role])}
         </Badge>
       ),
     },
     {
       accessorKey: "disabledAt",
-      header: "Status",
+      header: label(M.columnStatus),
       cell: ({ row }) => {
         const disabled = row.original.disabledAt != null;
         return (
           <Badge variant={disabled ? "destructive" : "secondary"}>
-            {disabled ? "Disabled" : "Active"}
+            {disabled ? (
+              <Trans id="users.list.row.disabled" message="Disabled" />
+            ) : (
+              <Trans id="users.list.row.active" message="Active" />
+            )}
           </Badge>
         );
       },
@@ -299,12 +342,14 @@ function buildColumns({
     {
       accessorKey: "lastSignInAt",
       meta: { className: "text-right" },
-      header: "Last sign-in",
+      header: label(M.columnLastSignIn),
       cell: ({ row }) => {
         const value = row.original.lastSignInAt;
         if (value == null) {
           return (
-            <span className="text-muted-foreground text-sm italic">Never</span>
+            <span className="text-muted-foreground text-sm italic">
+              <Trans id="users.list.row.lastSignIn.never" message="Never" />
+            </span>
           );
         }
         return (
@@ -317,10 +362,10 @@ function buildColumns({
     {
       accessorKey: "createdAt",
       meta: { className: "text-right" },
-      header: "Created",
+      header: label(M.columnCreated),
       cell: ({ row }) => (
         <span className="text-muted-foreground text-sm">
-          {dateFormatter.format(toDate(row.original.createdAt))}
+          {formatDate(toDate(row.original.createdAt), { dateStyle: "medium" })}
         </span>
       ),
     },
@@ -334,6 +379,7 @@ function RoleFilter({
   value: RoleFilter;
   onChange: (next: RoleFilter) => void;
 }): ReactNode {
+  const label = useLabel();
   return (
     <Select
       value={value}
@@ -343,20 +389,23 @@ function RoleFilter({
     >
       <SelectTrigger
         size="sm"
-        aria-label="Filter by role"
+        aria-label={label(M.roleFilterAria)}
         data-testid="users-role-filter"
         className="w-[180px]"
       >
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        {ROLE_FILTER_OPTIONS.map((opt) => (
+        <SelectItem value="all" data-testid="users-role-filter-all">
+          {label(M.roleFilterAll)}
+        </SelectItem>
+        {USER_ROLES.map((role) => (
           <SelectItem
-            key={opt.value}
-            value={opt.value}
-            data-testid={`users-role-filter-${opt.value}`}
+            key={role}
+            value={role}
+            data-testid={`users-role-filter-${role}`}
           >
-            {opt.label}
+            {label(ROLE_LABEL[role])}
           </SelectItem>
         ))}
       </SelectContent>
@@ -368,9 +417,17 @@ function EmptyState({ canInvite }: { canInvite: boolean }): ReactNode {
   return (
     <Empty data-testid="users-list-empty-state" className="border">
       <EmptyHeader>
-        <EmptyTitle>No users match your filter</EmptyTitle>
+        <EmptyTitle>
+          <Trans
+            id="users.list.empty.title"
+            message="No users match your filter"
+          />
+        </EmptyTitle>
         <EmptyDescription>
-          Clear the filter, or invite someone new to join.
+          <Trans
+            id="users.list.empty.description"
+            message="Clear the filter, or invite someone new to join."
+          />
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
@@ -378,13 +435,13 @@ function EmptyState({ canInvite }: { canInvite: boolean }): ReactNode {
           <Button asChild>
             <Link to="/users/create">
               <Plus />
-              Invite user
+              <Trans id="users.list.empty.invite" message="Invite user" />
             </Link>
           </Button>
         ) : (
           <Button disabled>
             <Plus />
-            Invite user
+            <Trans id="users.list.empty.invite" message="Invite user" />
           </Button>
         )}
       </EmptyContent>

@@ -61,6 +61,12 @@ export const i18nStrictOverrides: Linter.Config = {
           // matches `UserRole` from `@plumix/core/schema`. The role's
           // display label lives in a separate `MessageDescriptor`.
           "^(subscriber|contributor|author|editor|admin)$",
+          // shadcn primitive variant values used everywhere as
+          // attribute / record values: `<Badge variant="outline">`,
+          // `Record<Role, "default" | "secondary" | …>`. The `variant`
+          // attribute itself is in `ignoreNames`, but values inside a
+          // record literal need a content match.
+          "^(default|secondary|outline|ghost|destructive|link)$",
         ],
         // Bare strings compile via `new RegExp(s)`; the `{regex:{pattern,flags?}}`
         // form is required only when flags are needed. Most entries are
@@ -116,8 +122,9 @@ export const i18nStrictOverrides: Linter.Config = {
           "scope",
           "displayName",
           "$$typeof",
-          // Tanstack query / router
+          // Tanstack query / router / table
           "queryKey",
+          "accessorKey",
           // Brand constants used as document-title suffix. Localizing
           // the product name is out of scope.
           "TITLE_BRAND",
