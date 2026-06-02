@@ -16,6 +16,10 @@ import { ADMIN_BASE_PATH } from "./src/lib/constants.js";
 const ADMIN_DEV_PORT = 5174;
 const BACKEND_URL = process.env.PLUMIX_BACKEND_URL ?? "http://localhost:5173";
 
+// Explicit cwd so tools evaluating this config from the repo root
+// (knip) still find `packages/admin/lingui.config.ts`.
+const PACKAGE_DIR = fileURLToPath(new URL(".", import.meta.url));
+
 export default defineConfig({
   base: `${ADMIN_BASE_PATH}/`,
   // tanstackRouter must run before @vitejs/plugin-react. quoteStyle +
@@ -29,20 +33,9 @@ export default defineConfig({
     }),
     tailwindcss(),
     react(),
-    // `@lingui/vite-plugin` compiles catalogs on-the-fly during dev and
-    // emits per-locale chunks for prod. `@rolldown/plugin-babel` runs
-    // Lingui's macro transform (`defineMessage`, `t`, `<Trans>`, etc.)
-    // alongside plugin-react v6's OXC pipeline — v6 dropped its own
-    // Babel hook, so this is the canonical path back. Both need an
-    // explicit `cwd` so tools evaluating this config from the repo
-    // root (knip) still find `packages/admin/lingui.config.ts`.
-    lingui({ cwd: fileURLToPath(new URL(".", import.meta.url)) }),
+    lingui({ cwd: PACKAGE_DIR }),
     babel({
-      presets: [
-        linguiTransformerBabelPreset(undefined, {
-          cwd: fileURLToPath(new URL(".", import.meta.url)),
-        }),
-      ],
+      presets: [linguiTransformerBabelPreset(undefined, { cwd: PACKAGE_DIR })],
     }),
   ],
   server: {
