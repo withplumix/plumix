@@ -94,7 +94,6 @@ const M = {
 } satisfies Record<string, MessageDescriptor>;
 
 // OAuth 2.0 RFC 8628 §3.5 error response token. Not user copy.
-// eslint-disable-next-line lingui/no-unlocalized-strings -- OAuth wire-level identifier
 const ACCESS_DENIED = "access_denied";
 
 // Admin-side approval page for OAuth 2.0 Device Authorization Grant
