@@ -1,3 +1,8 @@
+import type { MessageDescriptor } from "@lingui/core";
+import { defineMessage } from "@lingui/core/macro";
+
+import { createStrictErrorDescriptorRegistry } from "./error-descriptor-registry.js";
+
 // Client wrapper for the magic-link request endpoint. Not an oRPC
 // procedure (the verify side is a top-level GET navigation, and the
 // always-success response shape is intentionally hand-rolled rather
@@ -61,15 +66,30 @@ export class MagicLinkRequestError extends Error {
   }
 }
 
-const REQUEST_ERROR_MESSAGES: Record<MagicLinkRequestErrorCode, string> = {
-  not_configured: "Magic-link sign-in isn't configured on this site.",
-  invalid_input: "Enter a valid email address.",
-  network: "Couldn't send the link. Try again.",
+const MESSAGES: Record<MagicLinkRequestErrorCode, MessageDescriptor> = {
+  not_configured: defineMessage({
+    id: "magicLinkRequest.error.notConfigured",
+    message: "Magic-link sign-in isn't configured on this site.",
+  }),
+  invalid_input: defineMessage({
+    id: "magicLinkRequest.error.invalidInput",
+    message: "Enter a valid email address.",
+  }),
+  network: defineMessage({
+    id: "magicLinkRequest.error.network",
+    message: "Couldn't send the link. Try again.",
+  }),
 };
 
-export function getMagicLinkRequestErrorMessage(error: unknown): string {
-  if (error instanceof MagicLinkRequestError) {
-    return REQUEST_ERROR_MESSAGES[error.code];
-  }
-  return REQUEST_ERROR_MESSAGES.network;
+const registry = createStrictErrorDescriptorRegistry(MESSAGES, "network");
+
+/** Convenience hook for the login route — resolves a thrown
+ *  `MagicLinkRequestError` (or any unknown thrown value) through
+ *  `useLabel` so the consumer renders a flat localized string.
+ *  Unknown / non-MagicLinkRequestError values surface the generic
+ *  `network` fallback descriptor. */
+export function useMagicLinkRequestErrorMessage(): (error: unknown) => string {
+  const resolve = registry.useMessage();
+  return (error) =>
+    resolve(error instanceof MagicLinkRequestError ? error.code : "network");
 }
