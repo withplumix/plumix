@@ -681,6 +681,11 @@ msgid "mailer.test.error.fallback"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.fallback"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/language-card.tsx
 msgid "profile.language.error"
 msgstr ""
@@ -1697,6 +1702,11 @@ msgid "blockActions.empty"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.registrationClosed"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.title"
 msgstr ""
@@ -1902,6 +1912,11 @@ msgid "mailer.description"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.accountDisabled"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.error.domainExists"
 msgstr ""
@@ -1939,6 +1954,21 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.challengeNotBoundToUser"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.tokenExpired"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.missingToken"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.tokenInvalid"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2229,6 +2259,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.unsupportedAlgorithm"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.domainNotAllowed"
 msgstr ""
 
 #. js-lingui-explicit-id

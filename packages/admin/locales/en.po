@@ -695,6 +695,11 @@ msgid "mailer.test.error.fallback"
 msgstr "Couldn't send the test message. Try again."
 
 #. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.fallback"
+msgstr "Couldn't sign in. Try again."
+
+#. js-lingui-explicit-id
 #: src/components/profile/language-card.tsx
 msgid "profile.language.error"
 msgstr "Couldn't switch language. Please try again."
@@ -1729,6 +1734,11 @@ msgid "blockActions.empty"
 msgstr "Select a block to see actions."
 
 #. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.registrationClosed"
+msgstr "Self-signup is unavailable until an administrator has finished setup."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.title"
 msgstr "Send a test message"
@@ -1942,6 +1952,11 @@ msgstr "Test that the configured outbound-email transport actually delivers. "
 "into the shared mailer."
 
 #. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.accountDisabled"
+msgstr "That account is disabled."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.error.domainExists"
 msgstr "That domain is already configured."
@@ -1980,6 +1995,23 @@ msgstr "That sign-in attempt timed out. Please try again."
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.challengeNotBoundToUser"
 msgstr "That sign-in attempt timed out. Please try again."
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.tokenExpired"
+msgstr "That sign-in link expired. Request a new one."
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.missingToken"
+msgstr "That sign-in link is missing its token. Request a new one and try "
+"again."
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.tokenInvalid"
+msgstr "That sign-in link isn't valid. It may have already been used. Request a "
+"new one."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
@@ -2285,6 +2317,12 @@ msgstr "Your device's signature didn't verify. Please try again."
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.unsupportedAlgorithm"
 msgstr "Your device's signing algorithm isn't supported."
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.domainNotAllowed"
+msgstr "Your email domain isn't on the allowlist anymore. Ask an administrator "
+"to add it."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts

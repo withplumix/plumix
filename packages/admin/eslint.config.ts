@@ -45,7 +45,6 @@ const STRICT_UNWRAPPED_FILES = [
   "src/lib/email-change-errors.ts",
   "src/lib/entries.ts",
   "src/lib/errors.ts",
-  "src/lib/magic-link-errors.ts",
   "src/lib/magic-link.ts",
   "src/lib/manifest.ts",
   "src/lib/oauth-errors.ts",
