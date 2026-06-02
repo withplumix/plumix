@@ -20,10 +20,20 @@ msgid "settings.pageSummary"
 msgstr "{count, plural, one {# group} other {# groups}}"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.submit.idle"
+msgstr "Add"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.description"
 msgstr "Add a plugin that registers a post type (e.g. "
 "<0>@plumix/plugin-blog</0>) to see it here."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.title"
+msgstr "Add domain"
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
@@ -31,9 +41,29 @@ msgid "breadcrumb.addNew"
 msgstr "Add new"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.submit.pending"
+msgstr "Adding…"
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.admin"
 msgstr "Admin"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "userRole.admin"
+msgstr "Administrator"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.title"
+msgstr "Allowed domains"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "userRole.author"
+msgstr "Author"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -46,14 +76,34 @@ msgid "dashboard.tile.browse"
 msgstr "Browse {labelLower}"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.row.deleteCancel"
+msgstr "Cancel"
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.sent.title"
 msgstr "Check your email"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.list.title"
+msgstr "Configured domains"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.row.deleteConfirm"
+msgstr "Confirm delete"
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.oauth.continueWith"
 msgstr "Continue with {label}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "userRole.contributor"
+msgstr "Contributor"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.tsx
@@ -72,6 +122,11 @@ msgstr "Couldn't load these settings. Try again."
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.saveFailed"
 msgstr "Couldn't save settings."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.error.fallback"
+msgstr "Couldn't save the domain. Try again."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
@@ -94,6 +149,26 @@ msgid "breadcrumb.dashboard"
 msgstr "Dashboard"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.defaultRole.label"
+msgstr "Default role"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.row.deleteAria"
+msgstr "Delete {domain}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.row.disabled"
+msgstr "Disabled"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.domain.label"
+msgstr "Domain"
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.edit"
 msgstr "Edit"
@@ -102,6 +177,11 @@ msgstr "Edit"
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.editUser"
 msgstr "Edit user"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "userRole.editor"
+msgstr "Editor"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -114,9 +194,21 @@ msgid "login.emailChange.success"
 msgstr "Email confirmed. Sign in with the new address."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.description"
+msgstr "Email domains permitted to sign up via OAuth. New OAuth accounts are "
+"created with the role set here. Disabled rows reject signup but "
+"preserve their role mapping."
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.submit"
 msgstr "Email me a link"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.row.enabled"
+msgstr "Enabled"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -127,6 +219,11 @@ msgstr "Enter your email above first."
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.entries"
 msgstr "Entries"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.placeholder"
+msgstr "example.com"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -150,6 +247,11 @@ msgid "settings.page.loading"
 msgstr "Loading settings"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.list.loading"
+msgstr "Loading…"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.title"
 msgstr "Mailer"
@@ -158,6 +260,12 @@ msgstr "Mailer"
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.title"
 msgstr "No content types yet"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.list.empty"
+msgstr "No domains configured. OAuth signup is closed until at least one "
+"enabled domain is added."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
@@ -294,6 +402,11 @@ msgid "menu.signOut.pending"
 msgstr "Signing out…"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "userRole.subscriber"
+msgstr "Subscriber"
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.terms"
 msgstr "Terms"
@@ -312,6 +425,11 @@ msgstr "Test that the configured outbound-email transport actually delivers. "
 "into the shared mailer."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.error.domainExists"
+msgstr "That domain is already configured."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.error.sendFailed"
 msgstr "The mailer adapter threw an error during send. Check the worker logs "
@@ -324,6 +442,7 @@ msgstr "The page you're looking for doesn't exist or the resource isn't "
 "registered. Check the URL and try again."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.test.tsx
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.empty.description"
 msgstr "This settings page doesn't reference any registered groups yet. Plugins "
@@ -334,6 +453,11 @@ msgstr "This settings page doesn't reference any registered groups yet. Plugins 
 #: src/routes/_auth/login.tsx
 msgid "login.description"
 msgstr "Use a passkey, get a one-time email link, or continue with a provider."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.description"
+msgstr "Use the bare domain — no protocol, no path."
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts

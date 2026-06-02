@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
@@ -28,13 +29,17 @@ import {
 import { Toggle } from "@/components/ui/toggle.js";
 import { hasCap } from "@/lib/caps.js";
 import { orpc } from "@/lib/orpc.js";
+import { useLabel } from "@/lib/use-label.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import * as v from "valibot";
 
+import type { Label } from "@plumix/core/i18n";
 import type { AllowedDomain, UserRole } from "@plumix/core/schema";
 
 const USER_ROLES = [
@@ -45,13 +50,43 @@ const USER_ROLES = [
   "admin",
 ] as const satisfies readonly UserRole[];
 
-const ROLE_LABEL: Record<UserRole, string> = {
-  subscriber: "Subscriber",
-  contributor: "Contributor",
-  author: "Author",
-  editor: "Editor",
-  admin: "Administrator",
+// `userRole.*` IDs are workspace-wide. The upcoming `users/*.tsx`
+// slices (#684) reuse these descriptors verbatim — when those wraps
+// land, hoist this record to a shared module rather than redefining.
+const ROLE_LABEL: Record<UserRole, MessageDescriptor> = {
+  subscriber: defineMessage({
+    id: "userRole.subscriber",
+    message: "Subscriber",
+  }),
+  contributor: defineMessage({
+    id: "userRole.contributor",
+    message: "Contributor",
+  }),
+  author: defineMessage({ id: "userRole.author", message: "Author" }),
+  editor: defineMessage({ id: "userRole.editor", message: "Editor" }),
+  admin: defineMessage({ id: "userRole.admin", message: "Administrator" }),
 };
+
+// Descriptors that need runtime indirection — used outside JSX (string
+// props, aria labels with placeholders, state setters).
+const M = {
+  domainPlaceholder: defineMessage({
+    id: "allowedDomains.add.placeholder",
+    message: "example.com",
+  }),
+  deleteAria: defineMessage({
+    id: "allowedDomains.row.deleteAria",
+    message: "Delete {domain}",
+  }),
+  errDomainExists: defineMessage({
+    id: "allowedDomains.error.domainExists",
+    message: "That domain is already configured.",
+  }),
+  errFallback: defineMessage({
+    id: "allowedDomains.error.fallback",
+    message: "Couldn't save the domain. Try again.",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 // Mirrors the server schema in
 // packages/core/src/rpc/procedures/auth/allowed-domains/schemas.ts.
@@ -63,6 +98,9 @@ const createFormSchema = v.object({
     v.string(),
     v.trim(),
     v.toLowerCase(),
+    // TODO(slice 9 vMessage): swap to a translatable validator message
+    // once the lazy `t` descriptor pattern lands in `@plumix/core`.
+    // eslint-disable-next-line lingui/no-unlocalized-strings
     v.regex(DOMAIN_REGEX, "Enter a valid hostname (e.g. example.com)."),
   ),
   defaultRole: v.picklist(USER_ROLES),
@@ -79,8 +117,10 @@ export const Route = createFileRoute("/_authenticated/allowed-domains/")({
 });
 
 function AllowedDomainsRoute(): ReactNode {
+  const label = useLabel();
   const queryClient = useQueryClient();
-  const [serverError, setServerError] = useState<string | null>(null);
+  // String branch is plugin-author text rendered verbatim.
+  const [serverError, setServerError] = useState<Label | null>(null);
 
   const list = useQuery(
     orpc.auth.allowedDomains.list.queryOptions({ input: {} }),
@@ -134,22 +174,28 @@ function AllowedDomainsRoute(): ReactNode {
           className="text-2xl font-semibold"
           data-testid="allowed-domains-heading"
         >
-          Allowed domains
+          <Trans id="allowedDomains.title" message="Allowed domains" />
         </h1>
         <p className="text-muted-foreground text-sm">
-          Email domains permitted to sign up via OAuth. New OAuth accounts are
-          created with the role set here. Disabled rows reject signup but
-          preserve their role mapping.
+          <Trans
+            id="allowedDomains.description"
+            message="Email domains permitted to sign up via OAuth. New OAuth accounts are created with the role set here. Disabled rows reject signup but preserve their role mapping."
+          />
         </p>
       </header>
 
       <Card>
         <CardHeader>
           <CardTitle>
-            <h2 className="text-base font-semibold">Add domain</h2>
+            <h2 className="text-base font-semibold">
+              <Trans id="allowedDomains.add.title" message="Add domain" />
+            </h2>
           </CardTitle>
           <CardDescription>
-            Use the bare domain — no protocol, no path.
+            <Trans
+              id="allowedDomains.add.description"
+              message="Use the bare domain — no protocol, no path."
+            />
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -163,11 +209,16 @@ function AllowedDomainsRoute(): ReactNode {
                 name="domain"
                 render={({ field }) => (
                   <FormItem className="flex-1">
-                    <FormLabel>Domain</FormLabel>
+                    <FormLabel>
+                      <Trans
+                        id="allowedDomains.add.domain.label"
+                        message="Domain"
+                      />
+                    </FormLabel>
                     <FormControl>
                       <Input
                         type="text"
-                        placeholder="example.com"
+                        placeholder={label(M.domainPlaceholder)}
                         autoComplete="off"
                         spellCheck={false}
                         data-testid="allowed-domains-domain-input"
@@ -184,7 +235,12 @@ function AllowedDomainsRoute(): ReactNode {
                 name="defaultRole"
                 render={({ field }) => (
                   <FormItem className="sm:w-48">
-                    <FormLabel>Default role</FormLabel>
+                    <FormLabel>
+                      <Trans
+                        id="allowedDomains.add.defaultRole.label"
+                        message="Default role"
+                      />
+                    </FormLabel>
                     <FormControl>
                       <Select
                         value={field.value}
@@ -197,7 +253,7 @@ function AllowedDomainsRoute(): ReactNode {
                         <SelectContent>
                           {USER_ROLES.map((role) => (
                             <SelectItem key={role} value={role}>
-                              {ROLE_LABEL[role]}
+                              {label(ROLE_LABEL[role])}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -212,7 +268,14 @@ function AllowedDomainsRoute(): ReactNode {
                 disabled={create.isPending}
                 data-testid="allowed-domains-add-button"
               >
-                {create.isPending ? "Adding…" : "Add"}
+                {create.isPending ? (
+                  <Trans
+                    id="allowedDomains.add.submit.pending"
+                    message="Adding…"
+                  />
+                ) : (
+                  <Trans id="allowedDomains.add.submit.idle" message="Add" />
+                )}
               </Button>
             </form>
           </Form>
@@ -222,7 +285,7 @@ function AllowedDomainsRoute(): ReactNode {
               className="mt-4"
               data-testid="allowed-domains-error"
             >
-              <AlertDescription>{serverError}</AlertDescription>
+              <AlertDescription>{label(serverError)}</AlertDescription>
             </Alert>
           ) : null}
         </CardContent>
@@ -231,7 +294,12 @@ function AllowedDomainsRoute(): ReactNode {
       <Card>
         <CardHeader>
           <CardTitle>
-            <h2 className="text-base font-semibold">Configured domains</h2>
+            <h2 className="text-base font-semibold">
+              <Trans
+                id="allowedDomains.list.title"
+                message="Configured domains"
+              />
+            </h2>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -240,15 +308,17 @@ function AllowedDomainsRoute(): ReactNode {
               className="text-muted-foreground text-sm"
               data-testid="allowed-domains-loading"
             >
-              Loading…
+              <Trans id="allowedDomains.list.loading" message="Loading…" />
             </p>
           ) : (list.data ?? []).length === 0 ? (
             <p
               className="text-muted-foreground text-sm"
               data-testid="allowed-domains-empty"
             >
-              No domains configured. OAuth signup is closed until at least one
-              enabled domain is added.
+              <Trans
+                id="allowedDomains.list.empty"
+                message="No domains configured. OAuth signup is closed until at least one enabled domain is added."
+              />
             </p>
           ) : (
             <ul
@@ -292,6 +362,8 @@ function DomainRow({
   onDelete: () => void;
   busy: boolean;
 }): ReactNode {
+  const { i18n } = useLingui();
+  const label = useLabel();
   const [confirming, setConfirming] = useState(false);
   return (
     <li
@@ -314,7 +386,7 @@ function DomainRow({
           <SelectContent>
             {USER_ROLES.map((role) => (
               <SelectItem key={role} value={role}>
-                {ROLE_LABEL[role]}
+                {label(ROLE_LABEL[role])}
               </SelectItem>
             ))}
           </SelectContent>
@@ -327,7 +399,11 @@ function DomainRow({
           disabled={busy}
           data-testid={`allowed-domains-row-toggle-${row.domain}`}
         >
-          {row.isEnabled ? "Enabled" : "Disabled"}
+          {row.isEnabled ? (
+            <Trans id="allowedDomains.row.enabled" message="Enabled" />
+          ) : (
+            <Trans id="allowedDomains.row.disabled" message="Disabled" />
+          )}
         </Toggle>
         {confirming ? (
           <>
@@ -342,7 +418,10 @@ function DomainRow({
               disabled={busy}
               data-testid={`allowed-domains-row-delete-confirm-${row.domain}`}
             >
-              Confirm delete
+              <Trans
+                id="allowedDomains.row.deleteConfirm"
+                message="Confirm delete"
+              />
             </Button>
             <Button
               type="button"
@@ -352,7 +431,7 @@ function DomainRow({
               disabled={busy}
               data-testid={`allowed-domains-row-delete-cancel-${row.domain}`}
             >
-              Cancel
+              <Trans id="allowedDomains.row.deleteCancel" message="Cancel" />
             </Button>
           </>
         ) : (
@@ -362,7 +441,11 @@ function DomainRow({
             size="icon"
             onClick={() => setConfirming(true)}
             disabled={busy}
-            aria-label={`Delete ${row.domain}`}
+            aria-label={i18n._(
+              M.deleteAria.id,
+              { domain: row.domain },
+              { message: M.deleteAria.message },
+            )}
             data-testid={`allowed-domains-row-delete-${row.domain}`}
           >
             <Trash2 className="size-4" />
@@ -373,13 +456,11 @@ function DomainRow({
   );
 }
 
-function mapError(err: unknown): string {
+function mapError(err: unknown): Label {
   if (err && typeof err === "object" && "data" in err) {
     const data = (err as { data?: { reason?: string } }).data;
-    if (data?.reason === "domain_exists") {
-      return "That domain is already configured.";
-    }
+    if (data?.reason === "domain_exists") return M.errDomainExists;
   }
   if (err instanceof Error) return err.message;
-  return "Couldn't save the domain. Try again.";
+  return M.errFallback;
 }
