@@ -72,7 +72,7 @@ export function getEligibleMenuKinds(registry: PluginRegistry): PickerTab[] {
 interface MenuEligibleEntryType {
   readonly name: string;
   readonly label: Label;
-  readonly labels?: { readonly plural?: string };
+  readonly labels?: { readonly plural?: Label };
   readonly isPublic?: boolean;
   readonly isShownInMenus?: boolean;
   readonly menuPickerLabel?: string;
@@ -85,14 +85,13 @@ function isMenuEligibleType(entryType: MenuEligibleEntryType): boolean {
 function pickerLabelForEntryType(entryType: MenuEligibleEntryType): string {
   return (
     entryType.menuPickerLabel ??
-    entryType.labels?.plural ??
-    labelSourceText(entryType.label)
+    labelSourceText(entryType.labels?.plural ?? entryType.label)
   );
 }
 
 interface MenuEligibleTaxonomy {
   readonly name: string;
-  readonly label: string;
+  readonly label: Label;
   readonly isPublic?: boolean;
   readonly isShownInMenus?: boolean;
   readonly menuPickerLabel?: string;
@@ -103,5 +102,5 @@ function isMenuEligibleTaxonomy(taxonomy: MenuEligibleTaxonomy): boolean {
 }
 
 function pickerLabelForTaxonomy(taxonomy: MenuEligibleTaxonomy): string {
-  return taxonomy.menuPickerLabel ?? taxonomy.label;
+  return taxonomy.menuPickerLabel ?? labelSourceText(taxonomy.label);
 }

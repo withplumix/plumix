@@ -31,6 +31,7 @@ import {
   termMetaBoxesForTermTaxonomy,
 } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
+import { useLabel } from "@/lib/use-label.js";
 import {
   useMutation,
   useQuery,
@@ -172,6 +173,7 @@ function EditTermContent({
 }): ReactNode {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const renderLabel = useLabel();
   const [serverError, setServerError] = useState<string | null>(null);
   const { user } = Route.useRouteContext();
   const metaBoxes = termMetaBoxesForTermTaxonomy(
@@ -224,8 +226,8 @@ function EditTermContent({
     },
   });
 
-  const singularLower = (
-    taxonomy.labels?.singular ?? taxonomy.label
+  const singularLower = renderLabel(
+    taxonomy.labels?.singular ?? taxonomy.label,
   ).toLowerCase();
 
   return (

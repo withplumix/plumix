@@ -367,9 +367,10 @@ function ContentListRoute(): ReactNode {
   const canNext = rows.length === PAGE_SIZE;
 
   const renderLabel = useLabel();
-  const typeLabel = renderLabel(entryType.label);
-  const pluralLabel = entryType.labels?.plural ?? typeLabel;
-  const singularLabel = entryType.labels?.singular ?? typeLabel;
+  const pluralLabel = renderLabel(entryType.labels?.plural ?? entryType.label);
+  const singularLabel = renderLabel(
+    entryType.labels?.singular ?? entryType.label,
+  );
   const pluralLower = pluralLabel.toLowerCase();
   const singularLower = singularLabel.toLowerCase();
 
