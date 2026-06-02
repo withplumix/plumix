@@ -16,6 +16,11 @@ export interface Crumb {
    * too — when that lands, this type can narrow to `MessageDescriptor`.
    */
   readonly label: string | MessageDescriptor;
+  /** ICU placeholder values threaded into `i18n._` at render time —
+   *  e.g. `{ singular: "category" }` substitutes into a descriptor
+   *  whose message is `Create {singular}`. Only populated when the
+   *  descriptor declares placeholders; ignored otherwise. */
+  readonly values?: Readonly<Record<string, string>>;
   /** Absolute admin path for non-leaf crumbs that link to a real list
    *  page. Omitted for group labels (no list route exists) and for
    *  the leaf crumb. */
@@ -37,6 +42,14 @@ const M = {
   edit: defineMessage({ id: "breadcrumb.edit", message: "Edit" }),
   addNew: defineMessage({ id: "breadcrumb.addNew", message: "Add new" }),
   editUser: defineMessage({ id: "breadcrumb.editUser", message: "Edit user" }),
+  createTerm: defineMessage({
+    id: "breadcrumb.createTerm",
+    message: "Create {singular}",
+  }),
+  editTerm: defineMessage({
+    id: "breadcrumb.editTerm",
+    message: "Edit {singular}",
+  }),
 } satisfies Record<string, MessageDescriptor>;
 
 /**
@@ -89,14 +102,18 @@ function taxonomiesCrumbs(parts: readonly string[]): readonly Crumb[] {
   const label = tax?.label ?? name;
   const singular = (tax?.labels?.singular ?? label).toLowerCase();
   const list: Crumb = { label, to: `/terms/${name}` };
-  // TODO(#684 follow-up): widen `Crumb` to carry `values` so these
-  // template literals can become descriptors with placeholder
-  // substitution at render time (e.g. `Create {singular}`). Until
-  // then, `breadcrumbs.ts` stays out of the strict-mode ratchet.
   if (parts[2] === "create")
-    return [{ label: M.terms }, list, { label: `Create ${singular}` }];
+    return [
+      { label: M.terms },
+      list,
+      { label: M.createTerm, values: { singular } },
+    ];
   if (parts[3] === "edit")
-    return [{ label: M.terms }, list, { label: `Edit ${singular}` }];
+    return [
+      { label: M.terms },
+      list,
+      { label: M.editTerm, values: { singular } },
+    ];
   return [{ label: M.terms }, { ...list, to: undefined }];
 }
 

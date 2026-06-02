@@ -69,7 +69,7 @@ function labels(crumbs: readonly Crumb[]): readonly {
     label:
       typeof c.label === "string"
         ? c.label
-        : i18n._(c.label.id, undefined, { message: c.label.message }),
+        : i18n._(c.label.id, c.values, { message: c.label.message }),
     ...(c.to !== undefined ? { to: c.to } : {}),
   }));
 }
@@ -124,6 +124,23 @@ describe("pathToCrumbs", () => {
       { label: "Categories", to: "/terms/category" },
       { label: "Edit category" },
     ]);
+  });
+
+  test("terms create/edit leaf carries an ICU descriptor + `{singular}` value", () => {
+    // The taxonomy-specific singular ("Create category") used to be a
+    // raw template literal that blocked `breadcrumbs.ts` from joining
+    // admin's strict-mode ratchet. The leaf now ships as a
+    // `MessageDescriptor` plus a `values` map; the render path threads
+    // `values` into `i18n._` for placeholder substitution. Shape test
+    // — separate from the rendering tests above — pins the contract.
+    const createLeaf = pathToCrumbs("/terms/category/create").at(-1);
+    expect(createLeaf).toBeDefined();
+    expect(typeof createLeaf?.label).toBe("object");
+    expect(createLeaf?.values).toEqual({ singular: "category" });
+
+    const editLeaf = pathToCrumbs("/terms/category/7/edit").at(-1);
+    expect(typeof editLeaf?.label).toBe("object");
+    expect(editLeaf?.values).toEqual({ singular: "category" });
   });
 
   test("users edit: list crumb is a link", () => {

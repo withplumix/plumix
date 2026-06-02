@@ -376,6 +376,11 @@ msgid "breadcrumb.create"
 msgstr "Erstellen"
 
 #. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.createTerm"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.column.created"
 msgstr ""
@@ -474,6 +479,11 @@ msgstr "Bearbeiten"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.title.other"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.editTerm"
 msgstr ""
 
 #. js-lingui-explicit-id
