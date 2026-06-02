@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
@@ -25,6 +26,8 @@ import {
   groupsForSettingsPage,
 } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react";
 import {
   useMutation,
   useQueryClient,
@@ -38,6 +41,28 @@ import type {
   SettingsPageManifestEntry,
 } from "@plumix/core/manifest";
 import { seedFromMetaBoxes } from "@plumix/core/manifest";
+
+// Descriptors that need runtime indirection — used outside JSX (aria
+// string, state setters). Pure-JSX strings stay inline at their `<Trans>`
+// callsite per the rest of admin's style.
+const M = {
+  loadingAria: defineMessage({
+    id: "settings.page.loading",
+    message: "Loading settings",
+  }),
+  loadFailed: defineMessage({
+    id: "settings.page.loadFailed",
+    message: "Couldn't load these settings. Try again.",
+  }),
+  saved: defineMessage({
+    id: "settings.page.saved",
+    message: "Saved.",
+  }),
+  saveFailed: defineMessage({
+    id: "settings.page.saveFailed",
+    message: "Couldn't save settings.",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 export const Route = createFileRoute("/_authenticated/settings/$page")({
   beforeLoad: ({ context, params }): { page: SettingsPageManifestEntry } => {
@@ -67,17 +92,26 @@ export const Route = createFileRoute("/_authenticated/settings/$page")({
       ),
     );
   },
-  pendingComponent: () => (
-    <FormEditSkeleton
-      ariaLabel="Loading settings"
-      testId="settings-page-loading"
-    />
-  ),
-  errorComponent: () => (
-    <NotFoundPlaceholder message="Couldn't load these settings. Try again." />
-  ),
+  pendingComponent: SettingsPageLoading,
+  errorComponent: SettingsPageLoadError,
   component: SettingsPageRoute,
 });
+
+function SettingsPageLoading(): ReactNode {
+  const { i18n } = useLingui();
+  return (
+    <FormEditSkeleton
+      ariaLabel={i18n._(M.loadingAria.id, undefined, {
+        message: M.loadingAria.message,
+      })}
+      testId="settings-page-loading"
+    />
+  );
+}
+
+function SettingsPageLoadError(): ReactNode {
+  return <NotFoundPlaceholder message={M.loadFailed} />;
+}
 
 function SettingsPageRoute(): ReactNode {
   const { page } = Route.useRouteContext();
@@ -113,9 +147,13 @@ function SettingsGroupCard({
 }: {
   readonly group: SettingsGroupManifestEntry;
 }): ReactNode {
+  const { i18n } = useLingui();
   const queryClient = useQueryClient();
-  const [serverError, setServerError] = useState<string | null>(null);
-  const [saveNotice, setSaveNotice] = useState<string | null>(null);
+  // String branch is plugin-author text rendered verbatim.
+  const [serverError, setServerError] = useState<
+    MessageDescriptor | string | null
+  >(null);
+  const [saveNotice, setSaveNotice] = useState<MessageDescriptor | null>(null);
 
   const { data: stored } = useSuspenseQuery(
     orpc.settings.get.queryOptions({ input: { group: group.name } }),
@@ -145,12 +183,10 @@ function SettingsGroupCard({
           input: { group: group.name },
         }).queryKey,
       });
-      setSaveNotice("Saved.");
+      setSaveNotice(M.saved);
     },
     onError: (err) => {
-      setServerError(
-        err instanceof Error ? err.message : "Couldn't save settings.",
-      );
+      setServerError(err instanceof Error ? err.message : M.saveFailed);
     },
   });
 
@@ -200,7 +236,13 @@ function SettingsGroupCard({
                 role="alert"
                 data-testid={`settings-server-error-${group.name}`}
               >
-                <AlertDescription>{serverError}</AlertDescription>
+                <AlertDescription>
+                  {typeof serverError === "string"
+                    ? serverError
+                    : i18n._(serverError.id, undefined, {
+                        message: serverError.message,
+                      })}
+                </AlertDescription>
               </Alert>
             ) : null}
 
@@ -210,7 +252,11 @@ function SettingsGroupCard({
                 aria-live="polite"
                 data-testid={`settings-save-notice-${group.name}`}
               >
-                <AlertDescription>{saveNotice}</AlertDescription>
+                <AlertDescription>
+                  {i18n._(saveNotice.id, undefined, {
+                    message: saveNotice.message,
+                  })}
+                </AlertDescription>
               </Alert>
             ) : null}
           </CardContent>
@@ -220,7 +266,11 @@ function SettingsGroupCard({
               disabled={save.isPending}
               data-testid={`settings-submit-${group.name}`}
             >
-              {save.isPending ? "Saving…" : "Save changes"}
+              {save.isPending ? (
+                <Trans id="settings.page.submit.pending" message="Saving…" />
+              ) : (
+                <Trans id="settings.page.submit.idle" message="Save changes" />
+              )}
             </Button>
           </div>
         </form>
@@ -234,14 +284,23 @@ function EmptyPagePlaceholder(): ReactNode {
     <Card>
       <Empty>
         <EmptyHeader>
-          <EmptyTitle>No groups on this page</EmptyTitle>
+          <EmptyTitle>
+            <Trans
+              id="settings.page.empty.title"
+              message="No groups on this page"
+            />
+          </EmptyTitle>
           <EmptyDescription>
-            This settings page doesn't reference any registered groups yet.
-            Plugins compose pages with{" "}
-            <code className="font-mono text-xs">
-              ctx.registerSettingsPage(name, {"{"} groups: [...] {"}"})
-            </code>
-            .
+            <Trans
+              id="settings.page.empty.description"
+              // Literal `{` / `}` in the source would be parsed as ICU
+              // placeholders by Lingui's MessageFormat compiler at
+              // render time, throwing `invalid syntax` and falling back
+              // to the source string. Escape with single-quotes —
+              // `'{' ... '}'` — the ICU `quote-literal` convention.
+              message="This settings page doesn't reference any registered groups yet. Plugins compose pages with <0>ctx.registerSettingsPage(name, '{' groups: [...] '}')</0>."
+              components={{ 0: <code className="font-mono text-xs" /> }}
+            />
           </EmptyDescription>
         </EmptyHeader>
       </Empty>
@@ -249,11 +308,20 @@ function EmptyPagePlaceholder(): ReactNode {
   );
 }
 
-function NotFoundPlaceholder({ message }: { message: string }): ReactNode {
+function NotFoundPlaceholder({
+  message,
+}: {
+  readonly message: MessageDescriptor;
+}): ReactNode {
+  const { i18n } = useLingui();
   return (
     <div className="flex flex-col gap-2">
-      <h1 className="text-2xl font-semibold">Not found</h1>
-      <p className="text-muted-foreground text-sm">{message}</p>
+      <h1 className="text-2xl font-semibold">
+        <Trans id="settings.page.notFound.title" message="Not found" />
+      </h1>
+      <p className="text-muted-foreground text-sm">
+        {i18n._(message.id, undefined, { message: message.message })}
+      </p>
     </div>
   );
 }

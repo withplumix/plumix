@@ -23,6 +23,7 @@ const STRICT_WRAPPED_FILES = [
   "src/routes/_auth/login.tsx",
   "src/routes/_authenticated/index.tsx",
   "src/routes/_authenticated/mailer/index.tsx",
+  "src/routes/_authenticated/settings/$page.tsx",
   "src/routes/_authenticated/settings/index.tsx",
   // `src/lib/breadcrumbs.ts` is intentionally excluded — `Create {singular}`
   // / `Edit {singular}` literals there need a `Crumb`-shape rework to
