@@ -100,6 +100,57 @@ export const i18nStrictOverrides: Linter.Config = {
           // discriminators / fallbacks in input dispatchers — never
           // user copy.
           "^(text|password|email|url|number|tel|search|date|time|color|file|range|checkbox|radio)$",
+          // Container-query Tailwind responsive variants used in the
+          // meta-box grid dict — `@sm:col-span-N`, `@md:col-span-N`,
+          // `@lg:col-span-N`. Pure CSS class tokens.
+          "^@[a-z]+:col-span-(1[0-2]|[1-9])$",
+          // Theme + sidebar / shadcn variant attribute values that
+          // appear inside JSX prop expressions or top-level config:
+          // `defaultTheme="system"`, `variant="inset"`, `collapsible="icon"`,
+          // `orientation="vertical"`. The values themselves are
+          // discriminators, not user copy.
+          "^(system|inset|icon|vertical|horizontal)$",
+          // Entry / autosave state machine extension — `stale` /
+          // `fresh` autosave bucket, viewport size buckets (`small` /
+          // `medium` / `large`), plus the SQL ordering pair (`asc` /
+          // `desc`) used as RPC input discriminators.
+          "^(stale|fresh|asc|desc|small|medium|large)$",
+          // Single-token testid-prefix quasi parts (`puck-`,
+          // `foo-` in `\`foo-${idx}\``).
+          "^[a-z]+-$",
+          // Entry status discriminator (`trash` for soft-deleted) —
+          // sibling of the `trashed` token already covered.
+          "^trash$",
+          // Generic snake_case wire identifiers — SQL column names
+          // (`updated_at`), OAuth/RFC8628 response codes
+          // (`access_denied`), passkey error reasons
+          // (`user_cancelled`), plugin error names
+          // (`duplicate_key`). Real user copy never has underscores
+          // between words.
+          "^[a-z]+(_[a-z]+)+$",
+          // Block-name protocol values (`core/pattern-ref`,
+          // `starter/<slug>`). Already partially covered by the
+          // kebab regex above, but namespaced slug shapes need their
+          // own anchor.
+          "^[a-z]+/[a-z][a-z0-9-]*$",
+          // Puck protocol zone identifier.
+          "^root:default-zone$",
+          // Capability template-literal quasi joins — `entry:` /
+          // `user:` prefixes that appear when a template builds a
+          // colon-namespaced capability or sort key (the rule joins
+          // every quasi piece, so `\`type:${x}:${y}\`` resolves to
+          // `type::`). One or more trailing colons.
+          "^[a-z]+:+$",
+          // Internal sort key prefix from the revision diff helper.
+          // `id:` and `type:` quasis are already covered by the
+          // colon-namespaced regex above; `$$index:` needs its own
+          // anchor.
+          "^\\$\\$index:$",
+          // Style-section discriminators in the editor StyleTab —
+          // CSS property names used as picklist keys.
+          "^(background|fontSize|padding|transform)$",
+          // Puck slot key constant.
+          "^content$",
         ],
         // Bare strings compile via `new RegExp(s)`; the `{regex:{pattern,flags?}}`
         // form is required only when flags are needed. Most entries are
@@ -139,6 +190,19 @@ export const i18nStrictOverrides: Linter.Config = {
           "variant",
           "size",
           "color",
+          // shadcn primitive discriminator props — value is a fixed
+          // enum (`<ThemeProvider defaultTheme="system">`,
+          // `<Sidebar collapsible="icon">`, `<Separator
+          // orientation="vertical">`, `<Tabs defaultValue="blocks">`,
+          // `<Sheet triggerSide="left">`). Never user copy.
+          "defaultTheme",
+          "collapsible",
+          "orientation",
+          "defaultValue",
+          "triggerSide",
+          // StyleTab section dispatcher — `property="background"`
+          // selects which CSS prop the section edits.
+          "property",
           "fill",
           "stroke",
           "viewBox",
@@ -231,8 +295,12 @@ export const i18nStrictOverrides: Linter.Config = {
           // DOM queries — id / selector args, never user copy.
           "document.getElementById",
           "document.querySelectorAll",
-          // Capability + auth
+          // Capability + auth — `capabilities.has("entry:post:edit_any")`
+          // is a Set lookup; `hasCap` is the React hook variant.
           "hasCap",
+          "capabilities.has",
+          // Vitest mock helper — first arg is the global name to stub.
+          "vi.stubGlobal",
           // Routing actions
           "redirect",
           "notFound",
