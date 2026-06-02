@@ -24,6 +24,7 @@ import { hasCap } from "@/lib/caps.js";
 import { ADMIN_BASE_PATH } from "@/lib/constants.js";
 import { orpc } from "@/lib/orpc.js";
 import { useLabel } from "@/lib/use-label.js";
+import { ROLE_LABEL_LONG } from "@/lib/user-role-labels.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
@@ -46,36 +47,6 @@ import {
   USER_ROLES,
   USERS_LIST_DEFAULT_SEARCH,
 } from "./-constants.js";
-
-// Option text for the invite-form role picker — long-form labels with
-// the trade-offs spelled out. The list view's short labels live in
-// `@/lib/user-role-labels` (a badge has no room for explanation copy).
-//
-// TODO: promote to `user-role-labels.ts` when `users/$id/edit.tsx`
-// wraps — that surface's role-change picker is the same "assign a role
-// to someone else" framing and will reuse these descriptors verbatim.
-const INVITE_ROLE_OPTION: Record<UserRole, MessageDescriptor> = {
-  admin: defineMessage({
-    id: "userInvite.role.admin",
-    message: "Administrator — full control",
-  }),
-  editor: defineMessage({
-    id: "userInvite.role.editor",
-    message: "Editor — publish + edit any post",
-  }),
-  author: defineMessage({
-    id: "userInvite.role.author",
-    message: "Author — publish own entries",
-  }),
-  contributor: defineMessage({
-    id: "userInvite.role.contributor",
-    message: "Contributor — draft, no publish",
-  }),
-  subscriber: defineMessage({
-    id: "userInvite.role.subscriber",
-    message: "Subscriber — read only",
-  }),
-};
 
 // Descriptors used outside JSX — error setters, copy-button aria label.
 const M = {
@@ -284,7 +255,7 @@ function InviteUserRoute(): ReactNode {
                       >
                         {USER_ROLES.map((role) => (
                           <option key={role} value={role}>
-                            {label(INVITE_ROLE_OPTION[role])}
+                            {label(ROLE_LABEL_LONG[role])}
                           </option>
                         ))}
                       </select>

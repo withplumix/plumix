@@ -40,11 +40,22 @@ msgid "userInvite.error.emailTaken"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.emailTaken"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.userCode.placeholder"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.status.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.active"
 msgstr ""
@@ -90,8 +101,8 @@ msgid "userRole.admin"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/users/create.tsx
-msgid "userInvite.role.admin"
+#: src/lib/user-role-labels.ts
+msgid "userRole.long.admin"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -125,8 +136,8 @@ msgid "userRole.author"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/users/create.tsx
-msgid "userInvite.role.author"
+#: src/lib/user-role-labels.ts
+msgid "userRole.long.author"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -150,13 +161,43 @@ msgid "userInvite.success.backToList"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.backToList"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.tile.browse"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.lastAdmin.delete"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.lastAdmin.status"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.lastAdmin.update"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.reassignToSelf"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.cancel"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.cancel"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -220,6 +261,11 @@ msgid "allowedDomains.row.deleteConfirm"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.confirm.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.submit.idle"
 msgstr ""
@@ -235,8 +281,8 @@ msgid "userRole.contributor"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/users/create.tsx
-msgid "userInvite.role.contributor"
+#: src/lib/user-role-labels.ts
+msgid "userRole.long.contributor"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -260,8 +306,23 @@ msgid "settings.empty.description"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.statusFallback"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.error.fallback"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.deleteFallback"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.loadFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -282,6 +343,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.saveFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.updateFallback"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -330,6 +396,26 @@ msgid "allowedDomains.row.deleteAria"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.confirm.idle"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.button"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.confirm.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.denied"
 msgstr ""
@@ -345,6 +431,12 @@ msgid "auth.device.deny.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.status.toggle.disable"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.disabled"
 msgstr ""
@@ -352,6 +444,21 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.disabled"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.status.description.disabled"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.status.description.active"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.status.toggle.disabling"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -365,6 +472,11 @@ msgid "breadcrumb.edit"
 msgstr "Bearbeiten"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.title.other"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.editUser"
 msgstr "Benutzer bearbeiten"
@@ -375,8 +487,8 @@ msgid "userRole.editor"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/users/create.tsx
-msgid "userInvite.role.editor"
+#: src/lib/user-role-labels.ts
+msgid "userRole.long.editor"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -407,6 +519,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.enabled"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.status.toggle.enabling"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -445,6 +562,11 @@ msgid "login.magicLink.sent.description"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.confirm.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopeMode.inherit"
 msgstr ""
@@ -480,6 +602,11 @@ msgid "userInvite.submit.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.reassign.keepAsIs"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/locale-switcher.tsx
 msgid "profile.language.aria"
 msgstr ""
@@ -500,6 +627,11 @@ msgid "settings.page.loading"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.loading.aria"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.loading"
 msgstr ""
@@ -517,6 +649,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.name.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.name.label"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -560,8 +697,18 @@ msgid "notFound.title"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.notFound.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.notFound.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.role.selfReadonly"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -572,6 +719,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.oauth.separator"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.description"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -587,6 +739,16 @@ msgstr "Profil"
 #. js-lingui-explicit-id
 #: src/components/shell/user-menu.tsx
 msgid "menu.profile"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.status.toggle.enable"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.reassign.label"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -610,6 +772,16 @@ msgid "users.list.column.role"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.role.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.submit.idle"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.submit.idle"
 msgstr ""
@@ -617,6 +789,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.saved"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.submit.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -715,8 +892,8 @@ msgid "userRole.subscriber"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/users/create.tsx
-msgid "userInvite.role.subscriber"
+#: src/lib/user-role-labels.ts
+msgid "userRole.long.subscriber"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -795,8 +972,23 @@ msgid "settings.page.empty.description"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.hasEntries"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.description.other"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.description.self"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -852,4 +1044,9 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/profile/language-card.tsx
 msgid "profile.language.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.title.self"
 msgstr ""

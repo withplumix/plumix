@@ -43,11 +43,22 @@ msgid "userInvite.error.emailTaken"
 msgstr "A user with that email already exists."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.emailTaken"
+msgstr "A user with that email already exists."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.userCode.placeholder"
 msgstr "ABCD-EFGH"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.status.title"
+msgstr "Account status"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.active"
 msgstr "Active"
@@ -94,8 +105,8 @@ msgid "userRole.admin"
 msgstr "Administrator"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/users/create.tsx
-msgid "userInvite.role.admin"
+#: src/lib/user-role-labels.ts
+msgid "userRole.long.admin"
 msgstr "Administrator — full control"
 
 #. js-lingui-explicit-id
@@ -130,8 +141,8 @@ msgid "userRole.author"
 msgstr "Author"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/users/create.tsx
-msgid "userInvite.role.author"
+#: src/lib/user-role-labels.ts
+msgid "userRole.long.author"
 msgstr "Author — publish own entries"
 
 #. js-lingui-explicit-id
@@ -155,13 +166,44 @@ msgid "userInvite.success.backToList"
 msgstr "Back to users"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.backToList"
+msgstr "Back to users"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.tile.browse"
 msgstr "Browse {labelLower}"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.lastAdmin.delete"
+msgstr "Can't delete the last administrator. Promote someone else first."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.lastAdmin.status"
+msgstr "Can't disable the last administrator. Promote someone else first."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.lastAdmin.update"
+msgstr "Can't do that — this is the last administrator. Promote someone else "
+"first."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.reassignToSelf"
+msgstr "Can't reassign to the user being deleted."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.cancel"
+msgstr "Cancel"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.cancel"
 msgstr "Cancel"
 
 #. js-lingui-explicit-id
@@ -225,6 +267,11 @@ msgid "allowedDomains.row.deleteConfirm"
 msgstr "Confirm delete"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.confirm.title"
+msgstr "Confirm delete: {email}"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.submit.idle"
 msgstr "Continue"
@@ -240,8 +287,8 @@ msgid "userRole.contributor"
 msgstr "Contributor"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/users/create.tsx
-msgid "userInvite.role.contributor"
+#: src/lib/user-role-labels.ts
+msgid "userRole.long.contributor"
 msgstr "Contributor — draft, no publish"
 
 #. js-lingui-explicit-id
@@ -268,9 +315,24 @@ msgstr "Core ships no settings by design — plugins (or your own plumix.config)
 "card per page."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.statusFallback"
+msgstr "Couldn't change the account status. Try again."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.error.fallback"
 msgstr "Couldn't complete the request. Try again."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.deleteFallback"
+msgstr "Couldn't delete the user. Try again."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.loadFailed"
+msgstr "Couldn't load that user. They may have been deleted."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
@@ -291,6 +353,11 @@ msgstr "Couldn't look up that code. Try again."
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.saveFailed"
 msgstr "Couldn't save settings."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.updateFallback"
+msgstr "Couldn't save the changes. Try again."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
@@ -338,6 +405,26 @@ msgid "allowedDomains.row.deleteAria"
 msgstr "Delete {domain}"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.confirm.idle"
+msgstr "Delete forever"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.title"
+msgstr "Delete user"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.button"
+msgstr "Delete user"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.confirm.pending"
+msgstr "Deleting…"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.denied"
 msgstr "Denied. The CLI will get an access_denied response and stop polling."
@@ -353,6 +440,12 @@ msgid "auth.device.deny.pending"
 msgstr "Denying…"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.status.toggle.disable"
+msgstr "Disable user"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.disabled"
 msgstr "Disabled"
@@ -361,6 +454,23 @@ msgstr "Disabled"
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.disabled"
 msgstr "Disabled"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.status.description.disabled"
+msgstr "Disabled accounts can't sign in. Re-enabling restores access; their "
+"passkey is still registered."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.status.description.active"
+msgstr "Disabling signs the user out immediately and blocks future sign-ins. "
+"Their entries stay published."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.status.toggle.disabling"
+msgstr "Disabling…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
@@ -373,6 +483,11 @@ msgid "breadcrumb.edit"
 msgstr "Edit"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.title.other"
+msgstr "Edit {email}"
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.editUser"
 msgstr "Edit user"
@@ -383,8 +498,8 @@ msgid "userRole.editor"
 msgstr "Editor"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/users/create.tsx
-msgid "userInvite.role.editor"
+#: src/lib/user-role-labels.ts
+msgid "userRole.long.editor"
 msgstr "Editor — publish + edit any post"
 
 #. js-lingui-explicit-id
@@ -418,6 +533,11 @@ msgstr "Email me a link"
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.enabled"
 msgstr "Enabled"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.status.toggle.enabling"
+msgstr "Enabling…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
@@ -457,6 +577,12 @@ msgstr "If an account exists for this email, we sent a sign-in link. The link "
 "expires in 15 minutes."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.confirm.description"
+msgstr "If this user authored any entries, the next step reassigns them. Leave "
+"\"Keep entries as-is\" if they have none."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopeMode.inherit"
 msgstr "Inherit all my permissions"
@@ -492,6 +618,11 @@ msgid "userInvite.submit.pending"
 msgstr "Inviting…"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.reassign.keepAsIs"
+msgstr "Keep entries as-is (none to reassign)"
+
+#. js-lingui-explicit-id
 #: src/components/locale-switcher.tsx
 msgid "profile.language.aria"
 msgstr "Language"
@@ -512,6 +643,11 @@ msgid "settings.page.loading"
 msgstr "Loading settings"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.loading.aria"
+msgstr "Loading user"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.loading"
 msgstr "Loading users"
@@ -529,6 +665,11 @@ msgstr "Mailer"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.name.label"
+msgstr "Name"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.name.label"
 msgstr "Name"
 
 #. js-lingui-explicit-id
@@ -574,9 +715,19 @@ msgid "notFound.title"
 msgstr "Not found"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.notFound.title"
+msgstr "Not found"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.notFound.title"
 msgstr "Not found"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.role.selfReadonly"
+msgstr "Only another administrator can change your role."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
@@ -587,6 +738,12 @@ msgstr "ops@example.com"
 #: src/routes/_auth/login.tsx
 msgid "login.oauth.separator"
 msgstr "or"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.description"
+msgstr "Permanent. Their entries stay, but you'll choose who inherits "
+"authorship."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
@@ -602,6 +759,16 @@ msgstr "Profile"
 #: src/components/shell/user-menu.tsx
 msgid "menu.profile"
 msgstr "Profile"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.status.toggle.enable"
+msgstr "Re-enable user"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.reassign.label"
+msgstr "Reassign entries to"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
@@ -624,6 +791,16 @@ msgid "users.list.column.role"
 msgstr "Role"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.role.label"
+msgstr "Role"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.submit.idle"
+msgstr "Save changes"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.submit.idle"
 msgstr "Save changes"
@@ -632,6 +809,11 @@ msgstr "Save changes"
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.saved"
 msgstr "Saved."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.submit.pending"
+msgstr "Saving…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
@@ -733,8 +915,8 @@ msgid "userRole.subscriber"
 msgstr "Subscriber"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/users/create.tsx
-msgid "userInvite.role.subscriber"
+#: src/lib/user-role-labels.ts
+msgid "userRole.long.subscriber"
 msgstr "Subscriber — read only"
 
 #. js-lingui-explicit-id
@@ -822,9 +1004,26 @@ msgstr "This settings page doesn't reference any registered groups yet. Plugins 
 "compose pages with the registerSettingsPage helper:"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.hasEntries"
+msgstr "This user has authored entries. Pick someone to reassign them to above."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.label"
 msgstr "Token name"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.description.other"
+msgstr "Update this account's details. Role changes invalidate existing "
+"sessions immediately."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.description.self"
+msgstr "Update your display name. Role and account state are managed by "
+"administrators."
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -881,3 +1080,8 @@ msgstr "You"
 msgid "profile.language.description"
 msgstr "Your admin chrome renders in this language. The page reloads after you "
 "switch so the new translations apply everywhere."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.title.self"
+msgstr "Your profile"
