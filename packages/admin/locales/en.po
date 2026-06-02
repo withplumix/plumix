@@ -14,6 +14,11 @@ msgstr ""
 "Language-Team: \n"
 
 #. js-lingui-explicit-id
+#: src/editor/build-copy-pattern-source.ts
+#~ msgid "editor.copyPattern.untitled"
+#~ msgstr "Untitled"
+
+#. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.countSuffixMax"
 msgstr " / max {max}"
@@ -1040,6 +1045,11 @@ msgid "apiTokens.create.expires"
 msgstr "Expires"
 
 #. js-lingui-explicit-id
+#: src/editor/AutosaveStatus.tsx
+msgid "editor.autosave.error"
+msgstr "Failed to save"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.roleFilter.aria"
 msgstr "Filter by role"
@@ -1327,6 +1337,11 @@ msgid "listPagination.next.label"
 msgstr "Next"
 
 #. js-lingui-explicit-id
+#: src/editor/field-type-translator.ts
+msgid "fieldTypes.boolean.no"
+msgstr "No"
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.userNotFound"
 msgstr "No account found for that email."
@@ -1414,6 +1429,11 @@ msgstr "No tokens yet"
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.empty.title"
 msgstr "No users match your filter"
+
+#. js-lingui-explicit-id
+#: src/editor/TokenSwatchList.tsx
+msgid "tokenSwatch.none"
+msgstr "None"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
@@ -1649,9 +1669,19 @@ msgid "settings.page.submit.idle"
 msgstr "Save changes"
 
 #. js-lingui-explicit-id
+#: src/editor/AutosaveStatus.tsx
+msgid "editor.autosave.saved"
+msgstr "Saved"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.saved"
 msgstr "Saved."
+
+#. js-lingui-explicit-id
+#: src/editor/AutosaveStatus.tsx
+msgid "editor.autosave.saving"
+msgstr "Saving..."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -2324,6 +2354,11 @@ msgstr "What would you like to work on today?"
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.tile.description"
 msgstr "Write, edit, and publish {labelLower}."
+
+#. js-lingui-explicit-id
+#: src/editor/field-type-translator.ts
+msgid "fieldTypes.boolean.yes"
+msgstr "Yes"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx

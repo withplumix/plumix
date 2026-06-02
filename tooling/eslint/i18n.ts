@@ -121,6 +121,13 @@ export const i18nStrictOverrides: Linter.Config = {
           // Entry status discriminator (`trash` for soft-deleted) —
           // sibling of the `trashed` token already covered.
           "^trash$",
+          // Pattern-source slug fallback (lowercase URL component
+          // in `starter/untitled`) — renders only into the generated
+          // TS-source snippet the editor copies to the clipboard,
+          // never to UI chrome. Title-cased `"Untitled"` stays
+          // wrap-required since it's a real form-field placeholder
+          // elsewhere.
+          "^untitled$",
           // Generic snake_case wire identifiers — SQL column names
           // (`updated_at`), OAuth/RFC8628 response codes
           // (`access_denied`), passkey error reasons
@@ -131,8 +138,10 @@ export const i18nStrictOverrides: Linter.Config = {
           // Block-name protocol values (`core/pattern-ref`,
           // `starter/<slug>`). Already partially covered by the
           // kebab regex above, but namespaced slug shapes need their
-          // own anchor.
-          "^[a-z]+/[a-z][a-z0-9-]*$",
+          // own anchor. Trailing-slash variant covers template-
+          // literal quasi heads (`\`starter/${suffix}\`` joins to
+          // `starter/`).
+          "^[a-z]+/([a-z][a-z0-9-]*)?$",
           // Puck protocol zone identifier.
           "^root:default-zone$",
           // Capability template-literal quasi joins — `entry:` /

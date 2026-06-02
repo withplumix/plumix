@@ -937,6 +937,9 @@ function PlumixCanvasWithSlashMenu({
       title: entryTitle,
       data: puck.appState.data,
       selectedItem: puck.selectedItem ?? null,
+      // EditorLayout still in denylist — passes the raw fallback for
+      // now; flips to `useLabel(M.untitled)` when this surface wraps.
+      untitledTitle: "Untitled",
     });
     navigator.clipboard.writeText(source).catch((error: unknown) => {
       console.error(

@@ -14,6 +14,11 @@ msgstr ""
 "Language-Team: \n"
 
 #. js-lingui-explicit-id
+#: src/editor/build-copy-pattern-source.ts
+#~ msgid "editor.copyPattern.untitled"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.countSuffixMax"
 msgstr ""
@@ -1017,6 +1022,11 @@ msgid "apiTokens.create.expires"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/AutosaveStatus.tsx
+msgid "editor.autosave.error"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.roleFilter.aria"
 msgstr ""
@@ -1302,6 +1312,11 @@ msgid "listPagination.next.label"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/field-type-translator.ts
+msgid "fieldTypes.boolean.no"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.userNotFound"
 msgstr ""
@@ -1384,6 +1399,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.empty.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/TokenSwatchList.tsx
+msgid "tokenSwatch.none"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1617,8 +1637,18 @@ msgid "settings.page.submit.idle"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/AutosaveStatus.tsx
+msgid "editor.autosave.saved"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.saved"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/AutosaveStatus.tsx
+msgid "editor.autosave.saving"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2264,6 +2294,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.tile.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/field-type-translator.ts
+msgid "fieldTypes.boolean.yes"
 msgstr ""
 
 #. js-lingui-explicit-id

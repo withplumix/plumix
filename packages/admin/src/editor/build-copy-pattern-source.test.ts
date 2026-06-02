@@ -10,12 +10,18 @@ const data: Pick<Data, "content"> = {
   ] as Data["content"],
 };
 
+// Caller-supplied placeholder for untitled entries — fixed ASCII
+// in tests; admin's renderer threads `useLabel(M.untitled)` through
+// this parameter.
+const untitledTitle = "Untitled";
+
 describe("buildCopyPatternSource", () => {
   test("serializes the whole document when no item is selected", () => {
     const source = buildCopyPatternSource({
       title: "My Hero",
       data,
       selectedItem: null,
+      untitledTitle,
     });
     expect(source).toContain('name: "starter/my-hero"');
     expect(source).toContain('title: "My Hero"');
@@ -29,16 +35,18 @@ describe("buildCopyPatternSource", () => {
       title: "Heading",
       data,
       selectedItem,
+      untitledTitle,
     });
     expect(source).toContain('block("core/heading"');
     expect(source).not.toContain('block("core/rich-text"');
   });
 
-  test("substitutes a placeholder title when the entry is untitled", () => {
+  test("substitutes the supplied placeholder when the title is empty", () => {
     const source = buildCopyPatternSource({
       title: "",
       data,
       selectedItem: null,
+      untitledTitle,
     });
     expect(source).toContain('name: "starter/untitled"');
     expect(source).toContain('title: "Untitled"');
