@@ -25,9 +25,27 @@ msgid "settings.pageSummary"
 msgstr "{count, plural, one {# group} other {# groups}}"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.description"
+msgstr "A CLI is requesting an API token for your account. Confirm the code "
+"your CLI is showing matches the one below before approving."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.approve.description"
+msgstr "A new API token will be minted for your account and handed to the CLI. "
+"Name it so you can find it later under your profile, and optionally "
+"restrict what it can do."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.error.emailTaken"
 msgstr "A user with that email already exists."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.userCode.placeholder"
+msgstr "ABCD-EFGH"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
@@ -91,6 +109,22 @@ msgid "allowedDomains.title"
 msgstr "Allowed domains"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.approve.idle"
+msgstr "Approve"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.approved"
+msgstr "Approved. Your CLI should pick up the token within a few seconds — you "
+"can close this tab."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.approve.pending"
+msgstr "Approving…"
+
+#. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
 msgid "userRole.author"
 msgstr "Author"
@@ -99,6 +133,11 @@ msgstr "Author"
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.role.author"
 msgstr "Author — publish own entries"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.title"
+msgstr "Authorize CLI access"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -126,9 +165,19 @@ msgid "userInvite.cancel"
 msgstr "Cancel"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.cancel"
+msgstr "Cancel"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.deleteCancel"
 msgstr "Cancel"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.scopes.label"
+msgstr "Capabilities"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -136,9 +185,29 @@ msgid "login.magicLink.sent.title"
 msgstr "Check your email"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.lookup.submit.pending"
+msgstr "Checking…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.tokenName.placeholder"
+msgstr "claude-code / github-actions / mcp-prod"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.empty.description"
 msgstr "Clear the filter, or invite someone new to join."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.tokenName.default"
+msgstr "CLI"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.lookup.error.notFound"
+msgstr "Code not found. Check it matches what your CLI printed."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
@@ -146,9 +215,19 @@ msgid "allowedDomains.list.title"
 msgstr "Configured domains"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.approve.confirmTitle"
+msgstr "Confirm \"{userCode}\""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.deleteConfirm"
 msgstr "Confirm delete"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.lookup.submit.idle"
+msgstr "Continue"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -189,6 +268,11 @@ msgstr "Core ships no settings by design — plugins (or your own plumix.config)
 "card per page."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.approve.error.fallback"
+msgstr "Couldn't complete the request. Try again."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.loadFailed"
 msgstr "Couldn't load these settings. Try again."
@@ -197,6 +281,11 @@ msgstr "Couldn't load these settings. Try again."
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.loadFailed"
 msgstr "Couldn't load users. Try again."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.lookup.error.fallback"
+msgstr "Couldn't look up that code. Try again."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
@@ -247,6 +336,21 @@ msgstr "Default role"
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.deleteAria"
 msgstr "Delete {domain}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.denied"
+msgstr "Denied. The CLI will get an access_denied response and stop polling."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.deny.idle"
+msgstr "Deny"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.deny.pending"
+msgstr "Denying…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
@@ -316,6 +420,11 @@ msgid "allowedDomains.row.enabled"
 msgstr "Enabled"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.lookup.title"
+msgstr "Enter the code from your CLI"
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.emailRequired"
 msgstr "Enter your email above first."
@@ -324,6 +433,12 @@ msgstr "Enter your email above first."
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.entries"
 msgstr "Entries"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.scopes.placeholder"
+msgstr "entry:post:read\n"
+"entry:post:edit_own"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
@@ -340,6 +455,11 @@ msgstr "Filter by role"
 msgid "login.magicLink.sent.description"
 msgstr "If an account exists for this email, we sent a sign-in link. The link "
 "expires in 15 minutes."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.scopeMode.inherit"
+msgstr "Inherit all my permissions"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -469,6 +589,11 @@ msgid "login.oauth.separator"
 msgstr "or"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.scopeMode.label"
+msgstr "Permissions"
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.profile"
 msgstr "Profile"
@@ -482,6 +607,11 @@ msgstr "Profile"
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.recipient.label"
 msgstr "Recipient"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.scopeMode.restrict"
+msgstr "Restrict to specific capabilities"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -631,6 +761,12 @@ msgid "allowedDomains.error.domainExists"
 msgstr "That domain is already configured."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.lookup.description"
+msgstr "The CLI shows an 8-character code split with a dash — \"ABCD-EFGH\". "
+"Letters and digits only, no zeros or ones."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.error.sendFailed"
 msgstr "The mailer adapter threw an error during send. Check the worker logs "
@@ -649,10 +785,46 @@ msgstr "They'll enrol a passkey the first time they open the invite link. No "
 "password required."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.approve.error.expired"
+msgstr "This code expired before you could finish — re-run your CLI."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.lookup.error.alreadyApproved"
+msgstr "This code has already been approved. Re-run your CLI if it didn't pick "
+"the token up."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.lookup.error.alreadyDenied"
+msgstr "This code has already been denied."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.lookup.error.expired"
+msgstr "This code has expired. Re-run your CLI to get a new one."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.approve.error.alreadyApproved"
+msgstr "This code was already approved on another tab."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.approve.error.alreadyDenied"
+msgstr "This code was already denied."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.empty.description"
 msgstr "This settings page doesn't reference any registered groups yet. Plugins "
 "compose pages with the registerSettingsPage helper:"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.tokenName.label"
+msgstr "Token name"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -668,6 +840,11 @@ msgstr "Use the bare domain — no protocol, no path."
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.column.user"
 msgstr "User"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.lookup.userCode.label"
+msgstr "User code"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
