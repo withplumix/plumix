@@ -25,6 +25,11 @@ msgid "settings.pageSummary"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.error.emailTaken"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.active"
 msgstr ""
@@ -70,6 +75,11 @@ msgid "userRole.admin"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.role.admin"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.roleFilter.all"
 msgstr ""
@@ -85,13 +95,33 @@ msgid "userRole.author"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.role.author"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.back"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.backToList"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.success.backToList"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.tile.browse"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.cancel"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -130,6 +160,26 @@ msgid "userRole.contributor"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.role.contributor"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.copy.copied"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.copy.idle"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.copy.aria"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.empty.description"
 msgstr ""
@@ -152,6 +202,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.error.fallback"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.error.fallback"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -220,6 +275,16 @@ msgid "userRole.editor"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.role.editor"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.email.label"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.email.label"
 msgstr ""
@@ -270,8 +335,33 @@ msgid "login.magicLink.sent.description"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.success.another"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.success.link.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.success.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.empty.invite"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.submit.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -307,6 +397,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.name.label"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -380,6 +475,11 @@ msgid "mailer.test.recipient.label"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.role.label"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.column.role"
 msgstr ""
@@ -407,6 +507,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.submit.idle"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -445,6 +550,11 @@ msgid "menu.settings"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.success.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.title"
 msgstr ""
@@ -480,6 +590,11 @@ msgid "userRole.subscriber"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.role.subscriber"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.terms"
 msgstr "Begriffe"
@@ -507,6 +622,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/__root.tsx
 msgid "notFound.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.description"
 msgstr ""
 
 #. js-lingui-explicit-id

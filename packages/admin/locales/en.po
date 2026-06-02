@@ -25,6 +25,11 @@ msgid "settings.pageSummary"
 msgstr "{count, plural, one {# group} other {# groups}}"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.error.emailTaken"
+msgstr "A user with that email already exists."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.active"
 msgstr "Active"
@@ -71,6 +76,11 @@ msgid "userRole.admin"
 msgstr "Administrator"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.role.admin"
+msgstr "Administrator — full control"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.roleFilter.all"
 msgstr "All roles"
@@ -86,14 +96,34 @@ msgid "userRole.author"
 msgstr "Author"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.role.author"
+msgstr "Author — publish own entries"
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.back"
 msgstr "Back"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.backToList"
+msgstr "Back to users"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.success.backToList"
+msgstr "Back to users"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.tile.browse"
 msgstr "Browse {labelLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.cancel"
+msgstr "Cancel"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
@@ -131,6 +161,26 @@ msgid "userRole.contributor"
 msgstr "Contributor"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.role.contributor"
+msgstr "Contributor — draft, no publish"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.copy.copied"
+msgstr "Copied"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.copy.idle"
+msgstr "Copy"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.copy.aria"
+msgstr "Copy invite link"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.empty.description"
 msgstr "Core ships no settings by design — plugins (or your own plumix.config) "
@@ -157,6 +207,11 @@ msgstr "Couldn't save settings."
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.error.fallback"
 msgstr "Couldn't save the domain. Try again."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.error.fallback"
+msgstr "Couldn't send invite. Try again."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
@@ -224,6 +279,16 @@ msgid "userRole.editor"
 msgstr "Editor"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.role.editor"
+msgstr "Editor — publish + edit any post"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.email.label"
+msgstr "Email"
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.email.label"
 msgstr "Email"
@@ -277,9 +342,34 @@ msgstr "If an account exists for this email, we sent a sign-in link. The link "
 "expires in 15 minutes."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.success.another"
+msgstr "Invite another"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.success.link.label"
+msgstr "Invite link"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.success.title"
+msgstr "Invite ready"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.title"
+msgstr "Invite user"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.empty.invite"
 msgstr "Invite user"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.submit.pending"
+msgstr "Inviting…"
 
 #. js-lingui-explicit-id
 #: src/components/locale-switcher.tsx
@@ -315,6 +405,11 @@ msgstr "Loading…"
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.title"
 msgstr "Mailer"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.name.label"
+msgstr "Name"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
@@ -389,6 +484,11 @@ msgid "mailer.test.recipient.label"
 msgstr "Recipient"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.role.label"
+msgstr "Role"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.column.role"
 msgstr "Role"
@@ -417,6 +517,11 @@ msgstr "Search by email…"
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.title"
 msgstr "Send a test message"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.submit.idle"
+msgstr "Send invite"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
@@ -457,6 +562,12 @@ msgid "menu.settings"
 msgstr "Settings"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.success.description"
+msgstr "Share the link below with {email}. They'll enrol a passkey the first "
+"time they open it. Link expires in 7 days."
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.title"
 msgstr "Sign in"
@@ -492,6 +603,11 @@ msgid "userRole.subscriber"
 msgstr "Subscriber"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.role.subscriber"
+msgstr "Subscriber — read only"
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.terms"
 msgstr "Terms"
@@ -525,6 +641,12 @@ msgstr "The mailer adapter threw an error during send. Check the worker logs "
 msgid "notFound.description"
 msgstr "The page you're looking for doesn't exist or the resource isn't "
 "registered. Check the URL and try again."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.description"
+msgstr "They'll enrol a passkey the first time they open the invite link. No "
+"password required."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.test.tsx
