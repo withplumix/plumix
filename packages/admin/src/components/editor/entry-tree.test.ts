@@ -116,13 +116,17 @@ describe("descendantIds", () => {
 });
 
 describe("parentPickerOptions", () => {
+  // Caller-supplied placeholder for untitled entries — passed as a
+  // pre-resolved string so this module stays React-free.
+  const untitledLabel = "(no title)";
+
   test("returns all entries with depth-prefixed labels", () => {
     const entries: Entry[] = [
       entry({ id: 1, title: "About" }),
       entry({ id: 2, title: "Team", parentId: 1 }),
       entry({ id: 3, title: "Eng", parentId: 2 }),
     ];
-    expect(parentPickerOptions(entries)).toEqual([
+    expect(parentPickerOptions(entries, { untitledLabel })).toEqual([
       { id: 1, label: "About" },
       { id: 2, label: "— Team" },
       { id: 3, label: "— — Eng" },
@@ -136,13 +140,16 @@ describe("parentPickerOptions", () => {
       entry({ id: 3, title: "Eng", parentId: 2 }),
       entry({ id: 4, title: "Press", parentId: 1 }),
     ];
-    const ids = parentPickerOptions(entries, new Set([2, 3])).map((o) => o.id);
+    const ids = parentPickerOptions(entries, {
+      untitledLabel,
+      exclude: new Set([2, 3]),
+    }).map((o) => o.id);
     expect(ids).toEqual([1, 4]);
   });
 
-  test("falls back to a placeholder label when the title is empty", () => {
+  test("falls back to the supplied placeholder when the title is empty", () => {
     const entries: Entry[] = [entry({ id: 1, title: "" })];
-    expect(parentPickerOptions(entries)).toEqual([
+    expect(parentPickerOptions(entries, { untitledLabel })).toEqual([
       { id: 1, label: "(no title)" },
     ]);
   });

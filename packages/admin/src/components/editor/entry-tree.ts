@@ -5,13 +5,6 @@ interface EntryNode {
   readonly children: readonly EntryNode[];
 }
 
-const UNTITLED_PLACEHOLDER = "(no title)";
-
-function entryLabel(entry: Entry): string {
-  const trimmed = entry.title.trim();
-  return trimmed.length > 0 ? trimmed : UNTITLED_PLACEHOLDER;
-}
-
 // Orphans (children whose parent isn't in the input set) get promoted
 // to roots so a paginated `entry.list` page never silently drops rows.
 export function buildEntryTree(
@@ -29,8 +22,11 @@ export function buildEntryTree(
     childMap.set(parentKey, bucket);
   }
 
+  // Empty / whitespace-only titles compare as `""` so they cluster at
+  // the start of each bucket; the displayed label is resolved
+  // separately at `parentPickerOptions`.
   for (const bucket of childMap.values()) {
-    bucket.sort((a, b) => entryLabel(a).localeCompare(entryLabel(b)));
+    bucket.sort((a, b) => a.title.trim().localeCompare(b.title.trim()));
   }
 
   function build(parentId: number | null): EntryNode[] {
@@ -89,17 +85,32 @@ interface ParentPickerOption {
   readonly label: string;
 }
 
+/**
+ * Build labelled options for an entry parent-picker. Caller passes
+ * `untitledLabel` (a pre-resolved string) for entries with empty or
+ * whitespace-only titles; this module is logic-only, so localization
+ * stays at the consumer boundary.
+ *
+ * Options-object shape so future flags (e.g. `maxDepth`) compose
+ * without the positional-placeholder trap.
+ */
 export function parentPickerOptions(
   entries: readonly Entry[],
-  exclude: ReadonlySet<number> = new Set(),
+  options: {
+    readonly untitledLabel: string;
+    readonly exclude?: ReadonlySet<number>;
+  },
 ): readonly ParentPickerOption[] {
+  const exclude = options.exclude ?? new Set();
   return flattenTree(buildEntryTree(entries))
     .filter((entry) => !exclude.has(entry.entry.id))
-    .map((entry) => ({
-      id: entry.entry.id,
-      label:
-        entry.depth === 0
-          ? entryLabel(entry.entry)
-          : `${"— ".repeat(entry.depth)}${entryLabel(entry.entry)}`,
-    }));
+    .map((entry) => {
+      const trimmed = entry.entry.title.trim();
+      const display = trimmed.length > 0 ? trimmed : options.untitledLabel;
+      return {
+        id: entry.entry.id,
+        label:
+          entry.depth === 0 ? display : `${"— ".repeat(entry.depth)}${display}`,
+      };
+    });
 }

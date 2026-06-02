@@ -59,6 +59,11 @@ msgid "metaBox.repeater.countSuffixBoth"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.parent.rootOption"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.noName"
 msgstr ""
@@ -323,6 +328,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.error.reassignToSelf"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.cancel"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -801,6 +811,11 @@ msgid "auth.device.deny.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.description"
 msgstr ""
@@ -1192,6 +1207,11 @@ msgid "apiTokens.create.submit.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.name"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.name.label"
 msgstr ""
@@ -1422,6 +1442,11 @@ msgid "listPagination.page"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.parent"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.title"
 msgstr ""
@@ -1589,6 +1614,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.saved"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.submitting"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1799,6 +1829,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.slug"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.slug.format"
 msgstr ""
 
 #. js-lingui-explicit-id

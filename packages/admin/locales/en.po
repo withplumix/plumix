@@ -59,6 +59,11 @@ msgid "metaBox.repeater.countSuffixBoth"
 msgstr " / min {min} / max {max}"
 
 #. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.parent.rootOption"
+msgstr "— root —"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.noName"
 msgstr "(no name)"
@@ -333,6 +338,11 @@ msgstr "Can't do that — this is the last administrator. Promote someone else "
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.error.reassignToSelf"
 msgstr "Can't reassign to the user being deleted."
+
+#. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.cancel"
+msgstr "Cancel"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -815,6 +825,11 @@ msgid "auth.device.deny.pending"
 msgstr "Denying…"
 
 #. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.description"
+msgstr "Description"
+
+#. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.description"
 msgstr "Devices signed in to this account. Revoke any you don't recognise, or "
@@ -1217,6 +1232,11 @@ msgid "apiTokens.create.submit.pending"
 msgstr "Minting…"
 
 #. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.name"
+msgstr "Name"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.name.label"
 msgstr "Name"
@@ -1452,6 +1472,11 @@ msgid "listPagination.page"
 msgstr "Page {page}"
 
 #. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.parent"
+msgstr "Parent"
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.title"
 msgstr "Passkeys"
@@ -1622,6 +1647,11 @@ msgstr "Save changes"
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.saved"
 msgstr "Saved."
+
+#. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.submitting"
+msgstr "Saving…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -1837,6 +1867,16 @@ msgstr "Signing out…"
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.pending"
 msgstr "Signing out…"
+
+#. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.slug"
+msgstr "Slug"
+
+#. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.slug.format"
+msgstr "Slug may only contain lowercase letters, digits, and hyphens."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
