@@ -3,6 +3,7 @@ import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 import { useId } from "react";
 import { Button } from "@/components/ui/button.js";
 import { SortableList } from "@/components/ui/sortable.js";
+import { Trans } from "@lingui/react";
 import { PlusIcon } from "lucide-react";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
@@ -93,7 +94,7 @@ export function RepeaterField({
           className="text-muted-foreground text-sm"
           data-testid={`${testId}-empty`}
         >
-          No rows
+          <Trans id="metaBox.repeater.empty" message="No rows" />
         </p>
       ) : (
         <SortableList
@@ -122,7 +123,11 @@ export function RepeaterField({
           data-testid={`${testId}-add`}
         >
           <PlusIcon className="size-4" />
-          {rows.length === 0 ? "Add row" : "Add another"}
+          {rows.length === 0 ? (
+            <Trans id="metaBox.repeater.addFirst" message="Add row" />
+          ) : (
+            <Trans id="metaBox.repeater.addAnother" message="Add another" />
+          )}
         </Button>
         {max !== undefined || min !== undefined ? (
           <span
@@ -130,13 +135,55 @@ export function RepeaterField({
             data-testid={`${testId}-count`}
           >
             {rows.length}
-            {min !== undefined ? ` / min ${min}` : ""}
-            {max !== undefined ? ` / max ${max}` : ""}
+            <CountSuffix min={min} max={max} />
           </span>
         ) : null}
       </div>
     </div>
   );
+}
+
+// `{rows.length} / min {min} / max {max}` rendered as one cohesive
+// message per shape so translators see the whole template, not a
+// leading-whitespace fragment. Returns null when neither bound is
+// set — the caller's outer guard prevents that path anyway, but the
+// component handles it defensively so the type signature stays
+// loose.
+function CountSuffix({
+  min,
+  max,
+}: {
+  readonly min: number | undefined;
+  readonly max: number | undefined;
+}): ReactNode {
+  if (min !== undefined && max !== undefined) {
+    return (
+      <Trans
+        id="metaBox.repeater.countSuffixBoth"
+        message=" / min {min} / max {max}"
+        values={{ min, max }}
+      />
+    );
+  }
+  if (min !== undefined) {
+    return (
+      <Trans
+        id="metaBox.repeater.countSuffixMin"
+        message=" / min {min}"
+        values={{ min }}
+      />
+    );
+  }
+  if (max !== undefined) {
+    return (
+      <Trans
+        id="metaBox.repeater.countSuffixMax"
+        message=" / max {max}"
+        values={{ max }}
+      />
+    );
+  }
+  return null;
 }
 
 function RepeaterRowFields({
