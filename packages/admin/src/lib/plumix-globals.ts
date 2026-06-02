@@ -8,6 +8,7 @@ import * as ReactRouterNs from "@tanstack/react-router";
 import * as ReactDomNs from "react-dom";
 import * as ReactDomClientNs from "react-dom/client";
 
+import { pluginCatalogLoaderRef } from "./i18n-boot.js";
 import {
   registerPluginBlock,
   registerPluginBlockEditor,
@@ -31,6 +32,17 @@ const runtime = {
   orpcTanstackQuery: OrpcTanstackQueryNs,
 } as const;
 
+interface PlumixI18nGlobal {
+  /** Load a third-party plugin's compiled catalog for the active
+   *  locale. Plugins that mount admin chunks after initial boot call
+   *  this from their entry to merge their catalog into the same
+   *  Lingui instance the admin uses. */
+  readonly loadPluginCatalog: (
+    pluginId: string,
+    locale: string,
+  ) => Promise<void>;
+}
+
 declare global {
   interface Window {
     plumix?: {
@@ -41,6 +53,7 @@ declare global {
       readonly registerPluginBlock: typeof registerPluginBlock;
       readonly registerPluginMarkSchema: typeof registerPluginMarkSchema;
       readonly runtime: typeof runtime;
+      readonly i18n: PlumixI18nGlobal;
     };
   }
 }
@@ -56,5 +69,15 @@ export function bootPlumixGlobals(): void {
     registerPluginBlock,
     registerPluginMarkSchema,
     runtime,
+    // Indirection through the ref so the manifest-bound loader
+    // installed by `bootI18n` is reachable from plugin chunks that
+    // load post-boot. Pre-boot callers hit the no-op default; the
+    // call is then a silent miss (the chunk's `<Trans>` falls back
+    // to `descriptor.message`). Plugin authors should call this
+    // from `useEffect`, not module top-level.
+    i18n: {
+      loadPluginCatalog: (pluginId, locale) =>
+        pluginCatalogLoaderRef.current(pluginId, locale),
+    },
   };
 }

@@ -65,6 +65,9 @@ function normalize(value: unknown): PlumixManifest {
   if (v.i18n && typeof v.i18n === "object") {
     (result as Record<string, unknown>).i18n = v.i18n;
   }
+  if (v.pluginI18n && typeof v.pluginI18n === "object") {
+    (result as Record<string, unknown>).pluginI18n = v.pluginI18n;
+  }
   return result;
 }
 

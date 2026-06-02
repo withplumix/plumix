@@ -20,6 +20,7 @@ import type { Label } from "../i18n/label.js";
 import type { ResolvedI18n, ResolvedLocale } from "../i18n/locale-registry.js";
 import type { RouteIntent } from "../route/intent.js";
 import type { RegisteredTemplateDep } from "../template-deps.js";
+import type { PluginI18nSlot } from "./define.js";
 import type { RegisteredLookupAdapter } from "./lookup.js";
 import { labelSourceText } from "../i18n/label.js";
 import { DuplicateAdminSlugError, PluginDefinitionError } from "./errors.js";
@@ -1501,7 +1502,24 @@ export interface PlumixManifest {
    * `tokens`: the precompiled admin shell can't import the user's config.
    */
   readonly i18n?: I18nManifest;
+  /**
+   * Per-plugin catalog URL maps for the i18n runtime registry (#697).
+   * Admin fetches `pluginI18n[id].catalogs[locale]` at boot, merges the
+   * loaded `messages` into the active Lingui instance. The source
+   * locale never has an entry (Lingui returns `descriptor.message`
+   * when active === source). Locales are intersected with the site's
+   * enabled list before emission. Plugins without an `i18n` slot
+   * don't appear here.
+   */
+  readonly pluginI18n?: PluginI18nManifest;
 }
+
+/** Per-plugin catalog URL maps. Flat record keyed by plugin id so
+ *  `manifest.pluginI18n[id]` is direct lookup; admin reads this
+ *  shape verbatim. */
+export type PluginI18nManifest = Readonly<
+  Record<string, { readonly catalogs: Readonly<Record<string, string>> }>
+>;
 
 export interface I18nManifest {
   readonly defaultLocale: string;
@@ -1537,6 +1555,7 @@ export function emptyManifest(): PlumixManifest {
     patterns: [],
     tokens: {},
     i18n: { defaultLocale: "en", locales: [] },
+    pluginI18n: {},
   };
 }
 
@@ -1557,6 +1576,10 @@ export function buildManifest(
   options?: {
     readonly tokens?: ThemeTokens;
     readonly i18n?: ResolvedI18n;
+    readonly plugins?: readonly {
+      readonly id: string;
+      readonly i18n?: PluginI18nSlot;
+    }[];
   },
 ): BuiltManifest {
   const entries = Array.from(registry.entryTypes.values())
@@ -1643,7 +1666,44 @@ export function buildManifest(
       // affordance can be re-introduced when there's a consumer.
       locales: (options?.i18n?.locales ?? []).filter((l) => l.enabled),
     },
+    pluginI18n: projectPluginI18n(options?.plugins, options?.i18n),
   };
+}
+
+function projectPluginI18n(
+  plugins:
+    | readonly { readonly id: string; readonly i18n?: PluginI18nSlot }[]
+    | undefined,
+  siteI18n: ResolvedI18n | undefined,
+): PluginI18nManifest {
+  if (!plugins) return {};
+  const siteLocales = new Set(
+    (siteI18n?.locales ?? []).filter((l) => l.enabled).map((l) => l.code),
+  );
+  const out: Record<string, { catalogs: Record<string, string> }> = {};
+  for (const plugin of plugins) {
+    if (!plugin.i18n) continue;
+    const catalogs: Record<string, string> = {};
+    for (const locale of plugin.i18n.locales) {
+      if (locale === plugin.i18n.sourceLocale) continue;
+      // Site-locale intersection: when the site declares i18n,
+      // emit URLs only for locales it has enabled. With no site
+      // i18n configured, trust the plugin's list so tests without
+      // site config still exercise the URL shape.
+      if (siteLocales.size > 0 && !siteLocales.has(locale)) continue;
+      // URL is intentionally same-origin (`/_plumix/admin/...`) so
+      // default CSP `script-src 'self'` covers the dynamic import.
+      // Widening to absolute URLs (CDN-hosted catalogs) would need
+      // a CSP review.
+      catalogs[locale] =
+        `/_plumix/admin/plugins/${plugin.id}/locales/${locale}.mjs`;
+    }
+    // Skip plugins whose entire locale set was intersected/dropped —
+    // a manifest entry with empty catalogs is wire noise that admin's
+    // boot loop would still iterate.
+    if (Object.keys(catalogs).length > 0) out[plugin.id] = { catalogs };
+  }
+  return out;
 }
 
 interface MutableAdminNavGroup {

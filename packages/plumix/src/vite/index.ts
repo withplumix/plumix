@@ -367,7 +367,13 @@ async function computeManifestAndRegistry(
     hooks: new HookRegistry(),
     plugins,
   });
-  return { manifest: buildManifest(registry, options), registry };
+  // Forward plugin descriptors so `buildManifest` can emit
+  // `pluginI18n` URL maps for plugins declaring an `i18n` slot
+  // (slice 17 #697 runtime catalog registry).
+  return {
+    manifest: buildManifest(registry, { ...options, plugins }),
+    registry,
+  };
 }
 
 // Copies the compiled admin SPA from plumix/dist/admin-app into the effective
