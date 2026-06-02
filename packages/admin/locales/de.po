@@ -13,45 +13,26 @@ msgstr ""
 "Last-Translator: \n"
 "Language-Team: \n"
 
-#. Hand-maintained: defined in src/lib/breadcrumbs.ts as a plain
-#. descriptor (no macro), so `lingui extract` cannot discover it.
 #. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
+#: src/routes/_authenticated/settings/index.test.tsx
+#: src/routes/_authenticated/settings/index.tsx
+msgid "settings.pageSummary"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.description"
 msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.addNew"
+msgstr "Neu hinzufügen"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.admin"
+msgstr "Verwaltung"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -74,9 +55,34 @@ msgid "login.oauth.continueWith"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/index.tsx
+msgid "settings.empty.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/language-card.tsx
 msgid "profile.language.error"
 msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.create"
+msgstr "Erstellen"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.dashboard"
+msgstr "Übersicht"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.edit"
+msgstr "Bearbeiten"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.editUser"
+msgstr "Benutzer bearbeiten"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -99,6 +105,11 @@ msgid "login.magicLink.emailRequired"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.entries"
+msgstr "Einträge"
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.sent.description"
 msgstr ""
@@ -119,6 +130,11 @@ msgid "dashboard.empty.title"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/index.tsx
+msgid "settings.empty.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/__root.tsx
 msgid "notFound.title"
 msgstr ""
@@ -129,6 +145,11 @@ msgid "login.oauth.separator"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.profile"
+msgstr "Profil"
+
+#. js-lingui-explicit-id
 #: src/components/shell/user-menu.tsx
 msgid "menu.profile"
 msgstr ""
@@ -137,6 +158,16 @@ msgstr ""
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.pending"
 msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/index.tsx
+msgid "settings.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.settings"
+msgstr "Einstellungen"
 
 #. js-lingui-explicit-id
 #: src/components/shell/user-menu.tsx
@@ -169,6 +200,11 @@ msgid "menu.signOut.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.terms"
+msgstr "Begriffe"
+
+#. js-lingui-explicit-id
 #: src/routes/__root.tsx
 msgid "notFound.description"
 msgstr ""
@@ -177,6 +213,11 @@ msgstr ""
 #: src/routes/_auth/login.tsx
 msgid "login.description"
 msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.users"
+msgstr "Benutzer"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
@@ -197,58 +238,3 @@ msgstr ""
 #: src/components/profile/language-card.tsx
 msgid "profile.language.description"
 msgstr ""
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.addNew"
-msgstr "Neu hinzufügen"
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.admin"
-msgstr "Verwaltung"
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.create"
-msgstr "Erstellen"
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.dashboard"
-msgstr "Übersicht"
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.edit"
-msgstr "Bearbeiten"
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.editUser"
-msgstr "Benutzer bearbeiten"
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.entries"
-msgstr "Einträge"
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.profile"
-msgstr "Profil"
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.settings"
-msgstr "Einstellungen"
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.terms"
-msgstr "Begriffe"
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.users"
-msgstr "Benutzer"

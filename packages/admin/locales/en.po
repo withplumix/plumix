@@ -13,46 +13,27 @@ msgstr ""
 "Last-Translator: \n"
 "Language-Team: \n"
 
-#. Hand-maintained: defined in src/lib/breadcrumbs.ts as a plain
-#. descriptor (no macro), so `lingui extract` cannot discover it.
 #. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
+#: src/routes/_authenticated/settings/index.test.tsx
+#: src/routes/_authenticated/settings/index.tsx
+msgid "settings.pageSummary"
+msgstr "{count, plural, one {# group} other {# groups}}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.description"
 msgstr "Add a plugin that registers a post type (e.g. "
 "<0>@plumix/plugin-blog</0>) to see it here."
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.addNew"
+msgstr "Add new"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.admin"
+msgstr "Admin"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -75,9 +56,37 @@ msgid "login.oauth.continueWith"
 msgstr "Continue with {label}"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/index.tsx
+msgid "settings.empty.description"
+msgstr "Core ships no settings by design — plugins (or your own plumix.config) "
+"declare pages + groups via <0>ctx.registerSettingsPage</0> and "
+"<1>ctx.registerSettingsGroup</1>. Registered pages appear here with one "
+"card per page."
+
+#. js-lingui-explicit-id
 #: src/components/profile/language-card.tsx
 msgid "profile.language.error"
 msgstr "Couldn't switch language. Please try again."
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.create"
+msgstr "Create"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.dashboard"
+msgstr "Dashboard"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.edit"
+msgstr "Edit"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.editUser"
+msgstr "Edit user"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -98,6 +107,11 @@ msgstr "Email me a link"
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.emailRequired"
 msgstr "Enter your email above first."
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.entries"
+msgstr "Entries"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -121,6 +135,11 @@ msgid "dashboard.empty.title"
 msgstr "No content types yet"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/index.tsx
+msgid "settings.empty.title"
+msgstr "No settings registered yet"
+
+#. js-lingui-explicit-id
 #: src/routes/__root.tsx
 msgid "notFound.title"
 msgstr "Not found"
@@ -131,6 +150,11 @@ msgid "login.oauth.separator"
 msgstr "or"
 
 #. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.profile"
+msgstr "Profile"
+
+#. js-lingui-explicit-id
 #: src/components/shell/user-menu.tsx
 msgid "menu.profile"
 msgstr "Profile"
@@ -139,6 +163,16 @@ msgstr "Profile"
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.pending"
 msgstr "Sending…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/index.tsx
+msgid "settings.title"
+msgstr "Settings"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.settings"
+msgstr "Settings"
 
 #. js-lingui-explicit-id
 #: src/components/shell/user-menu.tsx
@@ -171,6 +205,11 @@ msgid "menu.signOut.pending"
 msgstr "Signing out…"
 
 #. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.terms"
+msgstr "Terms"
+
+#. js-lingui-explicit-id
 #: src/routes/__root.tsx
 msgid "notFound.description"
 msgstr "The page you're looking for doesn't exist or the resource isn't "
@@ -180,6 +219,11 @@ msgstr "The page you're looking for doesn't exist or the resource isn't "
 #: src/routes/_auth/login.tsx
 msgid "login.description"
 msgstr "Use a passkey, get a one-time email link, or continue with a provider."
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.users"
+msgstr "Users"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
@@ -201,58 +245,3 @@ msgstr "Write, edit, and publish {labelLower}."
 msgid "profile.language.description"
 msgstr "Your admin chrome renders in this language. The page reloads after you "
 "switch so the new translations apply everywhere."
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.addNew"
-msgstr "Add new"
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.admin"
-msgstr "Admin"
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.create"
-msgstr "Create"
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.dashboard"
-msgstr "Dashboard"
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.edit"
-msgstr "Edit"
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.editUser"
-msgstr "Edit user"
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.entries"
-msgstr "Entries"
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.profile"
-msgstr "Profile"
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.settings"
-msgstr "Settings"
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.terms"
-msgstr "Terms"
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.users"
-msgstr "Users"

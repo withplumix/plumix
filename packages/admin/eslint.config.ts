@@ -22,6 +22,7 @@ const STRICT_WRAPPED_FILES = [
   "src/routes/__root.tsx",
   "src/routes/_auth/login.tsx",
   "src/routes/_authenticated/index.tsx",
+  "src/routes/_authenticated/settings/index.tsx",
   // `src/lib/breadcrumbs.ts` is intentionally excluded — `Create {singular}`
   // / `Edit {singular}` literals there need a `Crumb`-shape rework to
   // carry placeholder values before strict mode can enforce.
