@@ -21,6 +21,7 @@ const STRICT_WRAPPED_FILES = [
   "src/lib/use-formatters.ts",
   "src/lib/use-label.ts",
   "src/routes/__root.tsx",
+  "src/routes/_auth/-schemas.ts",
   "src/routes/_auth/login.tsx",
   "src/routes/_authenticated/allowed-domains/index.tsx",
   "src/routes/_authenticated/auth/device.tsx",

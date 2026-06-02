@@ -42,6 +42,7 @@ import * as v from "valibot";
 
 import type { Label } from "@plumix/core/i18n";
 import type { AllowedDomain, UserRole } from "@plumix/core/schema";
+import { vMessage } from "@plumix/core/validation";
 
 const USER_ROLES = [
   "subscriber",
@@ -82,10 +83,15 @@ const createFormSchema = v.object({
     v.string(),
     v.trim(),
     v.toLowerCase(),
-    // TODO(slice 9 vMessage): swap to a translatable validator message
-    // once the lazy `t` descriptor pattern lands in `@plumix/core`.
-    // eslint-disable-next-line lingui/no-unlocalized-strings
-    v.regex(DOMAIN_REGEX, "Enter a valid hostname (e.g. example.com)."),
+    v.regex(
+      DOMAIN_REGEX,
+      vMessage(
+        defineMessage({
+          id: "allowedDomains.add.domain.invalid",
+          message: "Enter a valid hostname (e.g. example.com).",
+        }),
+      ),
+    ),
   ),
   defaultRole: v.picklist(USER_ROLES),
 });
