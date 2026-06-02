@@ -649,12 +649,10 @@ msgstr "They'll enrol a passkey the first time they open the invite link. No "
 "password required."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/$page.test.tsx
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.empty.description"
 msgstr "This settings page doesn't reference any registered groups yet. Plugins "
-"compose pages with <0>ctx.registerSettingsPage(name, { groups: [...] "
-"})</0>."
+"compose pages with the registerSettingsPage helper:"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx

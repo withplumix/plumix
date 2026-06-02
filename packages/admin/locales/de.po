@@ -630,7 +630,6 @@ msgid "userInvite.description"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/$page.test.tsx
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.empty.description"
 msgstr ""

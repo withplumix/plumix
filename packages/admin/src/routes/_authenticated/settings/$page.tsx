@@ -64,6 +64,13 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
+// Literal API signature rendered inside the empty-state `<code>`.
+// Pulled to a module-scope const so the strict rule sees one string
+// expression instead of three JSX text fragments split by `{"{"}` /
+// `{"}"}` escapes.
+// eslint-disable-next-line lingui/no-unlocalized-strings -- API signature, not user copy
+const API_SIGNATURE = "ctx.registerSettingsPage(name, { groups: [...] })";
+
 export const Route = createFileRoute("/_authenticated/settings/$page")({
   beforeLoad: ({ context, params }): { page: SettingsPageManifestEntry } => {
     const page = findSettingsPageByName(params.page);
@@ -291,16 +298,18 @@ function EmptyPagePlaceholder(): ReactNode {
             />
           </EmptyTitle>
           <EmptyDescription>
+            {/* The literal-brace code example sits outside `<Trans>` —
+                braces inside the message string are ICU-parsed by Lingui's
+                MessageFormat compiler at extract / compile time even when
+                they appear inside a `<0>` placeholder, and the single-
+                quote `'{' '}'` escape doesn't survive `lingui extract`'s
+                normalization. Keeping the example as raw JSX side-steps
+                the whole pipeline. */}
             <Trans
               id="settings.page.empty.description"
-              // Literal `{` / `}` in the source would be parsed as ICU
-              // placeholders by Lingui's MessageFormat compiler at
-              // render time, throwing `invalid syntax` and falling back
-              // to the source string. Escape with single-quotes —
-              // `'{' ... '}'` — the ICU `quote-literal` convention.
-              message="This settings page doesn't reference any registered groups yet. Plugins compose pages with <0>ctx.registerSettingsPage(name, '{' groups: [...] '}')</0>."
-              components={{ 0: <code className="font-mono text-xs" /> }}
-            />
+              message="This settings page doesn't reference any registered groups yet. Plugins compose pages with the registerSettingsPage helper:"
+            />{" "}
+            <code className="font-mono text-xs">{API_SIGNATURE}</code>
           </EmptyDescription>
         </EmptyHeader>
       </Empty>
