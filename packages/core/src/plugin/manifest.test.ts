@@ -591,6 +591,45 @@ describe("buildManifest", () => {
     expect(entry.registeredBy).toBeUndefined();
   });
 
+  test("entry meta box accepts MessageDescriptor labels on the box, field, and option surfaces", async () => {
+    // Pin the descriptor pass-through end-to-end: panel title, field
+    // label, and select option label all flow as `MessageDescriptor`
+    // through `registerEntryMetaBox` → manifest projection. The admin's
+    // meta-box renderer pipes each through `useLabel` at render time.
+    const boxLabel = { id: "plugin.seo.meta.label", message: "SEO" };
+    const fieldLabel = {
+      id: "plugin.seo.meta.title.label",
+      message: "Meta title",
+    };
+    const optionLabel = {
+      id: "plugin.seo.meta.title.option.lt60",
+      message: "Under 60 chars",
+    };
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("seo", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts" });
+      ctx.registerEntryMetaBox("seo-meta", {
+        label: boxLabel,
+        entryTypes: ["post"],
+        fields: [
+          {
+            key: "title",
+            label: fieldLabel,
+            type: "string",
+            inputType: "select",
+            options: [{ value: "lt60", label: optionLabel }],
+          },
+        ],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    const [box] = manifest.entryMetaBoxes;
+    expect(box?.label).toEqual(boxLabel);
+    expect(box?.fields[0]?.label).toEqual(fieldLabel);
+    expect(box?.fields[0]?.options?.[0]?.label).toEqual(optionLabel);
+  });
+
   test("projects registered term meta boxes, keyed by taxonomy", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("branding", (ctx) => {
@@ -1397,6 +1436,74 @@ describe("buildManifest adminNav projection", () => {
       (g) => g.id === "content",
     )?.items[0];
     expect(item?.coreIcon).toBe("content");
+  });
+
+  test("plugins can register admin page nav.label as a MessageDescriptor", async () => {
+    // Translator-friendly path: a plugin emits a Lingui descriptor for
+    // the sidebar label, and the manifest preserves the descriptor
+    // shape through to the rendered nav item so the admin's `useLabel`
+    // hook can resolve it at the visiting user's locale.
+    const navLabel = {
+      id: "plugin.x.menus.nav",
+      message: "Menus",
+    };
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("x", (ctx) => {
+      ctx.registerAdminPage({
+        path: "/menus",
+        title: "Menus",
+        nav: { group: "appearance", label: navLabel },
+        component: "MenusPage",
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    const appearance = manifest.adminNav.find((g) => g.id === "appearance");
+    expect(appearance?.items[0]?.label).toEqual(navLabel);
+  });
+
+  test("core nav groups ship their labels as descriptors so the sidebar localizes", async () => {
+    // The four built-in groups (Overview / Entries / Taxonomies /
+    // Management) are the chrome an empty-registry install renders.
+    // After widening the labels become Lingui descriptors so the
+    // sidebar's `useLabel` resolves them at the visiting user's
+    // locale rather than shipping English source.
+    const { registry } = await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [],
+    });
+    const manifest = buildManifest(registry);
+    const overview = manifest.adminNav.find((g) => g.id === "overview");
+    expect(typeof overview?.label).toBe("object");
+    expect(overview?.label).toMatchObject({ message: "Overview" });
+  });
+
+  test("plugins can register an admin nav group label as a MessageDescriptor", async () => {
+    // Per-plugin custom group with a descriptor label flows through
+    // `ensureNavGroup` without being flattened to a string. The
+    // first-occurrence-wins semantics still hold.
+    const groupLabel = {
+      id: "plugin.x.appearance",
+      message: "Appearance",
+    };
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("x", (ctx) => {
+      ctx.registerAdminPage({
+        path: "/menus",
+        title: "Menus",
+        nav: {
+          group: { id: "appearance", label: groupLabel, priority: 40 },
+          label: "Menus",
+        },
+        component: "MenusPage",
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const appearance = buildManifest(registry).adminNav.find(
+      (g) => g.id === "appearance",
+    );
+    expect(appearance?.label).toEqual(groupLabel);
+    expect(appearance?.priority).toBe(40);
   });
 });
 

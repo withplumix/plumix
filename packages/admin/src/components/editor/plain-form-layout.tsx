@@ -190,7 +190,7 @@ export function PlainFormLayout({
                   className="text-lg leading-none font-semibold"
                   data-testid={`plain-form-meta-box-heading-${box.id}`}
                 >
-                  {box.label}
+                  {renderLabel(box.label)}
                 </h2>
                 {box.description ? (
                   <CardDescription>{box.description}</CardDescription>

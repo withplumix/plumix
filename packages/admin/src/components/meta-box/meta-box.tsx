@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.js";
+import { useLabel } from "@/lib/use-label.js";
 
 import type {
   EntryMetaBoxManifestEntry,
@@ -46,6 +47,7 @@ export function MetaBoxCard({
   basePath,
   disabled = false,
 }: MetaBoxProps): ReactNode {
+  const renderLabel = useLabel();
   return (
     // Container-query root so field spans resolve against the card's
     // own width — same span renders consistently in a full-width route
@@ -57,7 +59,7 @@ export function MetaBoxCard({
             className="text-lg font-semibold"
             data-testid={`meta-box-heading-${box.id}`}
           >
-            {box.label}
+            {renderLabel(box.label)}
           </h2>
         </CardTitle>
         {box.description ? (
@@ -93,13 +95,14 @@ export function MetaBoxAccordionItem({
   basePath,
   disabled = false,
 }: MetaBoxAccordionItemProps): ReactNode {
+  const renderLabel = useLabel();
   return (
     <AccordionItem value={box.id} data-testid={`meta-box-${box.id}`}>
       <AccordionTrigger
         className="px-4 py-3 text-sm font-semibold"
         data-testid={`meta-box-heading-${box.id}`}
       >
-        {box.label}
+        {renderLabel(box.label)}
       </AccordionTrigger>
       <AccordionContent className="px-4 pb-4">
         {box.description ? (

@@ -1,0 +1,39 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-02\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.plural"
+msgstr "Posts"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.singular"
+msgstr "Post"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.plural"
+msgstr "Categories"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.singular"
+msgstr "Category"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.plural"
+msgstr "Tags"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.singular"
+msgstr "Tag"

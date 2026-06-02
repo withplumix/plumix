@@ -57,6 +57,8 @@ export function MetaBoxField({
   readonly disabled?: boolean;
   readonly className?: string;
 }): ReactNode {
+  const renderLabel = useLabel();
+  const labelText = renderLabel(field.label);
   const testIdPrefix = `meta-box-field-${field.key}`;
   const inputTestId = `${testIdPrefix}-input`;
 
@@ -86,7 +88,7 @@ export function MetaBoxField({
                     data-testid={inputTestId}
                   />
                 </FormControl>
-                <FormLabel>{field.label}</FormLabel>
+                <FormLabel>{labelText}</FormLabel>
               </div>
               {field.description ? (
                 <FormDescription data-testid={`${testIdPrefix}-description`}>
@@ -100,13 +102,14 @@ export function MetaBoxField({
 
         return (
           <FormItem className={className} data-testid={testIdPrefix}>
-            <FormLabel>{field.label}</FormLabel>
+            <FormLabel>{labelText}</FormLabel>
             <FormControl>
               {renderNativeInput({
                 field,
                 rhf,
                 disabled,
                 testId: inputTestId,
+                renderLabel,
               })}
             </FormControl>
             {field.description ? (
@@ -140,12 +143,15 @@ function renderNativeInput({
   rhf,
   disabled,
   testId,
+  renderLabel,
 }: {
   field: MetaBoxFieldManifestEntry;
   rhf: ControllerRenderProps<FieldValues, string>;
   disabled: boolean;
   testId: string;
+  renderLabel: ReturnType<typeof useLabel>;
 }): ReactNode {
+  const labelText = renderLabel(field.label);
   // Plugin-supplied field renderers slot in here, BEFORE the built-in
   // switch. A plugin's admin chunk calls `window.plumix.
   // registerPluginFieldType(inputType, Component)` at module load —
@@ -265,7 +271,7 @@ function renderNativeInput({
             }
           }}
           onBlur={rhf.onBlur}
-          aria-label={field.label}
+          aria-label={labelText}
           aria-required={field.required}
           data-testid={`${testId}-slider`}
           className="flex-1"
@@ -311,7 +317,7 @@ function renderNativeInput({
         max={typeof field.max === "number" ? field.max : undefined}
         disabled={disabled}
         required={field.required}
-        label={field.label}
+        label={labelText}
         testId={testId}
       />
     );
@@ -337,7 +343,7 @@ function renderNativeInput({
         }
         disabled={disabled}
         required={field.required}
-        label={field.label}
+        label={labelText}
         testId={testId}
       />
     );
@@ -358,7 +364,7 @@ function renderNativeInput({
           rhf.onChange(next);
         }}
         onBlur={rhf.onBlur}
-        aria-label={field.label}
+        aria-label={labelText}
         data-testid={testId}
       >
         {(field.options ?? []).map((opt) => (
@@ -367,7 +373,7 @@ function renderNativeInput({
             value={opt.value}
             data-testid={`${testId}-${opt.value}`}
           >
-            {opt.label}
+            {renderLabel(opt.label)}
           </ToggleGroupItem>
         ))}
       </ToggleGroup>
@@ -403,7 +409,7 @@ function renderNativeInput({
           rhf.onChange(e.target.value)
         }
         disabled={disabled}
-        aria-label={field.label}
+        aria-label={labelText}
         data-testid={`meta-box-field-${field.key}-input`}
       />
     );
@@ -449,7 +455,7 @@ function renderNativeInput({
       >
         {(field.options ?? []).map((opt) => (
           <option key={opt.value} value={opt.value}>
-            {opt.label}
+            {renderLabel(opt.label)}
           </option>
         ))}
       </select>
@@ -480,7 +486,7 @@ function renderNativeInput({
               }}
               data-testid={`${testId}-${opt.value}`}
             />
-            {opt.label}
+            {renderLabel(opt.label)}
           </label>
         ))}
       </div>

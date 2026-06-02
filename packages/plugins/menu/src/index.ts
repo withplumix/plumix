@@ -14,6 +14,7 @@ const LABELS = {
   menu: { id: "plugin.menu.menu.singular", message: "Menu" },
   menuItems: { id: "plugin.menu.menuItem.plural", message: "Menu items" },
   menuItem: { id: "plugin.menu.menuItem.singular", message: "Menu item" },
+  appearance: { id: "core.adminNav.appearance", message: "Appearance" },
 } satisfies Record<string, Label>;
 
 // `@plumix/plugin-menu` augments the core option shapes with
@@ -92,6 +93,11 @@ const ADMIN_ENTRY_PATH = "node_modules/@plumix/plugin-menu/dist/admin/index.js";
  */
 export const menu = definePlugin("menu", {
   adminEntry: ADMIN_ENTRY_PATH,
+  i18n: {
+    sourceLocale: "en",
+    locales: ["en"],
+    catalogPath: "./locales",
+  },
   setup: (ctx) => {
     ctx.registerEntryType("menu_item", {
       label: LABELS.menuItems,
@@ -128,11 +134,11 @@ export const menu = definePlugin("menu", {
 
     ctx.registerAdminPage({
       path: "/menus",
-      title: "Menus",
+      title: LABELS.menus,
       capability: "term:menu:manage",
       nav: {
-        group: { id: "appearance", label: "Appearance", priority: 175 },
-        label: "Menus",
+        group: { id: "appearance", label: LABELS.appearance, priority: 175 },
+        label: LABELS.menus,
         order: 10,
       },
       component: "MenusShell",

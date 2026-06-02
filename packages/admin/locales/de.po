@@ -286,6 +286,11 @@ msgid "users.list.roleFilter.all"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.item.allowedDomains"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.title"
 msgstr ""
@@ -956,6 +961,11 @@ msgid "userEdit.email.dialog.currentLabel"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.item.dashboard"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.dashboard"
 msgstr "Übersicht"
@@ -1302,6 +1312,11 @@ msgid "login.magicLink.emailRequired"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.content"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.entries"
 msgstr "Einträge"
@@ -1632,8 +1647,18 @@ msgid "magicLinkRequest.error.notConfigured"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.item.mailer"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.management"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2009,6 +2034,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.tab.outline"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.overview"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2517,6 +2547,11 @@ msgid "auth.acceptInvite.submit.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.item.settings"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.title"
 msgstr ""
@@ -2699,6 +2734,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/editor/device-labels.ts
 msgid "editor.device.tablet"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.termTaxonomies"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -3052,11 +3092,6 @@ msgid "profile.passkeys.unnamed"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/meta-box/lookup-label.tsx
-msgid "metaBox.reference.untitled"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/create.tsx
 msgid "editor.entry.create.untitled"
 msgstr ""
@@ -3069,6 +3104,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.copyAsPattern.untitledFallback"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup-label.tsx
+msgid "metaBox.reference.untitled"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -3119,6 +3159,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.userCode.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.item.users"
 msgstr ""
 
 #. js-lingui-explicit-id
