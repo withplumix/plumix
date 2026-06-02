@@ -386,6 +386,11 @@ msgid "users.list.column.created"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+msgid "editor.entry.create.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.dashboard"
 msgstr "Übersicht"
@@ -1019,6 +1024,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+msgid "editor.entry.create.untitled"
 msgstr ""
 
 #. js-lingui-explicit-id

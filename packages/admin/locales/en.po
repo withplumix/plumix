@@ -395,6 +395,11 @@ msgid "users.list.column.created"
 msgstr "Created"
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+msgid "editor.entry.create.pending"
+msgstr "Creating new {singular}…"
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.dashboard"
 msgstr "Dashboard"
@@ -1052,6 +1057,11 @@ msgstr "This user has authored entries. Pick someone to reassign them to above."
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.label"
 msgstr "Token name"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+msgid "editor.entry.create.untitled"
+msgstr "Untitled"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx

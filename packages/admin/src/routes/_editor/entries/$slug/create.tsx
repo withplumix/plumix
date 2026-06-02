@@ -1,14 +1,24 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { hasCap } from "@/lib/caps.js";
 import { findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { slugify } from "@plumix/core/slugify";
+
+const M = {
+  untitled: defineMessage({
+    id: "editor.entry.create.untitled",
+    message: "Untitled",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 export const Route = createFileRoute("/_editor/entries/$slug/create")({
   beforeLoad: ({ context, params }): { entryType: EntryTypeManifestEntry } => {
@@ -39,7 +49,8 @@ function CreateEntryRoute(): ReactNode {
     mutationFn: () =>
       orpc.entry.create.call({
         type: entryType.name,
-        title: "Untitled",
+        // Persisted once at create — locale switches don't rewrite stored data.
+        title: renderLabel(M.untitled),
         slug: slugify(`untitled-${Date.now().toString(36)}`),
         status: "draft",
       }),
@@ -63,7 +74,13 @@ function CreateEntryRoute(): ReactNode {
       className="text-muted-foreground flex flex-1 items-center justify-center text-sm"
       data-testid="create-entry-pending"
     >
-      Creating new {entryType.labels?.singular ?? renderLabel(entryType.label)}…
+      <Trans
+        id="editor.entry.create.pending"
+        message="Creating new {singular}…"
+        values={{
+          singular: entryType.labels?.singular ?? renderLabel(entryType.label),
+        }}
+      />
     </div>
   );
 }
