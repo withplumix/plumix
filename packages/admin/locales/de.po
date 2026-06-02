@@ -14,36 +14,6 @@ msgstr ""
 "Language-Team: \n"
 
 #. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
-#~ msgid "profile.passkeys.rename.notFound"
-#~ msgstr ""
-
-#. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
-#~ msgid "profile.passkeys.delete.notFound"
-#~ msgstr ""
-
-#. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
-#~ msgid "profile.passkeys.delete.lastTooltip"
-#~ msgstr ""
-
-#. js-lingui-explicit-id
-#: src/components/profile/passkeys-card.tsx
-#~ msgid "profile.passkeys.delete.lastCredential"
-#~ msgstr ""
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/repeater-field.tsx
-#~ msgid "metaBox.repeater.maxSuffix"
-#~ msgstr ""
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/repeater-field.tsx
-#~ msgid "metaBox.repeater.minSuffix"
-#~ msgstr ""
-
-#. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.countSuffixMax"
 msgstr ""
@@ -621,8 +591,18 @@ msgid "apiTokens.mint.fallback"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.codeExchangeFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.networkError"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.profileFetchFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -683,6 +663,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.fallback"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.fallback"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1422,6 +1407,11 @@ msgid "settings.page.notFound.title"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.registrationClosed"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.capabilities.help"
 msgstr ""
@@ -1812,6 +1802,16 @@ msgid "profile.sessions.revoke.title"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.stateInvalid"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.stateExpired"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.userCancelled"
 msgstr ""
@@ -1912,8 +1912,18 @@ msgid "mailer.description"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.linkBroken"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.accountDisabled"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.accountDisabled"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1944,6 +1954,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.credentialNotFound"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.providerNotConfigured"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1994,6 +2009,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.challengeMismatch"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.emailMissing"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.emailUnverified"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2264,6 +2289,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.domainNotAllowed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.domainNotAllowed"
 msgstr ""
 
 #. js-lingui-explicit-id

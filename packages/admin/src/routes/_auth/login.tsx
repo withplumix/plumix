@@ -25,7 +25,7 @@ import {
   getMagicLinkRequestErrorMessage,
   requestMagicLink,
 } from "@/lib/magic-link.js";
-import { getOAuthErrorMessage } from "@/lib/oauth-errors.js";
+import { useOAuthErrorMessage } from "@/lib/oauth-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { PasskeyError, usePasskeyErrorMessage } from "@/lib/passkey-errors.js";
 import { signInWithPasskey } from "@/lib/passkey.js";
@@ -71,6 +71,7 @@ function LoginRoute(): ReactNode {
   const { i18n } = useLingui();
   const renderPasskeyError = usePasskeyErrorMessage();
   const renderMagicLinkError = useMagicLinkErrorMessage();
+  const renderOAuthError = useOAuthErrorMessage();
   const [passkeyError, setPasskeyError] = useState<string | null>(null);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [magicLinkError, setMagicLinkError] = useState<string | null>(null);
@@ -124,7 +125,7 @@ function LoginRoute(): ReactNode {
     magicLink.mutate({ email });
   };
 
-  const oauthErrorMessage = getOAuthErrorMessage(search.oauth_error);
+  const oauthErrorMessage = renderOAuthError(search.oauth_error);
   const magicLinkUrlError = renderMagicLinkError(search.magic_link_error);
   const emailChangeUrlError = getEmailChangeErrorMessage(
     search.email_change_error,
