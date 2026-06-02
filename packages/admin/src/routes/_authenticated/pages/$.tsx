@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
@@ -6,7 +7,16 @@ import { findPluginPageByPath } from "@/lib/manifest.js";
 import { PluginErrorBoundary } from "@/lib/plugin-error-boundary.js";
 import { getPluginPage } from "@/lib/plugin-registry.js";
 import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react";
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
+
+const M = {
+  loadingAria: defineMessage({
+    id: "pluginPage.loading.aria",
+    message: "Loading {label}",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 export const Route = createFileRoute("/_authenticated/pages/$")({
   beforeLoad: ({ context, params }) => {
@@ -34,6 +44,7 @@ export const Route = createFileRoute("/_authenticated/pages/$")({
 
 function PluginPageRoute(): ReactNode {
   const { navItem } = Route.useRouteContext();
+  const { i18n } = useLingui();
   const renderLabel = useLabel();
   const labelText = renderLabel(navItem.label);
   // navItem.to is `/pages/<plugin-path>` — derive the plugin's own
@@ -48,7 +59,11 @@ function PluginPageRoute(): ReactNode {
       <Suspense
         fallback={
           <FormEditSkeleton
-            ariaLabel={`Loading ${labelText}`}
+            ariaLabel={i18n._(
+              M.loadingAria.id,
+              { label: labelText },
+              { message: M.loadingAria.message },
+            )}
             testId={`plugin-page__loading__${pluginPath}`}
           />
         }
@@ -66,11 +81,16 @@ function PluginNotLoaded({ path }: { path: string }): ReactNode {
       className="mx-auto max-w-2xl py-12"
       data-testid={`plugin-page__not-loaded__${path}`}
     >
-      <h1 className="text-2xl font-semibold">Plugin not loaded</h1>
+      <h1 className="text-2xl font-semibold">
+        <Trans id="pluginPage.notLoaded.title" message="Plugin not loaded" />
+      </h1>
       <p className="text-muted-foreground mt-2 text-sm">
-        The admin manifest declares a page at{" "}
-        <code className="font-mono">{path}</code> but no React component has
-        been registered for it.
+        <Trans
+          id="pluginPage.notLoaded.body"
+          message="The admin manifest declares a page at <code>{path}</code> but no React component has been registered for it."
+          values={{ path }}
+          components={{ code: <code className="font-mono" /> }}
+        />
       </p>
     </div>
   );

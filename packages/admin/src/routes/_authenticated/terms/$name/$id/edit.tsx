@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
@@ -32,6 +33,8 @@ import {
 } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
 import {
   useMutation,
   useQuery,
@@ -52,7 +55,34 @@ import { seedFromMetaBoxes } from "@plumix/core/manifest";
 import { idPathParam } from "@plumix/core/validation";
 
 import { TAXONOMY_LIST_DEFAULT_SEARCH } from "../-constants.js";
-import { mapTermError } from "../-errors.js";
+import { useTermErrorMessage } from "../-errors.js";
+
+const M = {
+  saveFallback: defineMessage({
+    id: "terms.edit.error.saveFallback",
+    message: "Couldn't save the changes. Try again.",
+  }),
+  deleteFallback: defineMessage({
+    id: "terms.edit.error.deleteFallback",
+    message: "Couldn't delete the term. Try again.",
+  }),
+  notFoundMessage: defineMessage({
+    id: "terms.edit.notFound.message",
+    message: "Couldn't load that term. It may have been deleted.",
+  }),
+  loadingAria: defineMessage({
+    id: "terms.edit.loadingAria",
+    message: "Loading term",
+  }),
+  descendantsHint: defineMessage({
+    id: "terms.edit.descendantsHint",
+    message: " — descendants can't be picked as parent.",
+  }),
+  submit: defineMessage({
+    id: "terms.edit.submit",
+    message: "Save changes",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 export const Route = createFileRoute("/_authenticated/terms/$name/$id/edit")({
   // Reject invalid ids as a router 404 before `beforeLoad` / `loader`
@@ -91,14 +121,25 @@ export const Route = createFileRoute("/_authenticated/terms/$name/$id/edit")({
     context.queryClient.ensureQueryData(
       orpc.term.get.queryOptions({ input: { id: params.id } }),
     ),
-  pendingComponent: () => (
-    <FormEditSkeleton ariaLabel="Loading term" testId="term-edit-loading" />
-  ),
-  errorComponent: () => (
-    <NotFoundPlaceholder message="Couldn't load that term. It may have been deleted." />
-  ),
+  pendingComponent: PendingComponent,
+  errorComponent: ErrorComponent,
   component: EditTermRoute,
 });
+
+function PendingComponent(): ReactNode {
+  const renderLabel = useLabel();
+  return (
+    <FormEditSkeleton
+      ariaLabel={renderLabel(M.loadingAria)}
+      testId="term-edit-loading"
+    />
+  );
+}
+
+function ErrorComponent(): ReactNode {
+  const renderLabel = useLabel();
+  return <NotFoundPlaceholder message={renderLabel(M.notFoundMessage)} />;
+}
 
 function EditTermRoute(): ReactNode {
   const { id: termId } = Route.useParams();
@@ -174,6 +215,7 @@ function EditTermContent({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const renderLabel = useLabel();
+  const mapTermError = useTermErrorMessage();
   const [serverError, setServerError] = useState<string | null>(null);
   const { user } = Route.useRouteContext();
   const metaBoxes = termMetaBoxesForTermTaxonomy(
@@ -220,9 +262,7 @@ function EditTermContent({
       ]);
     },
     onError: (err) => {
-      setServerError(
-        mapTermError(err, "Couldn't save the changes. Try again."),
-      );
+      setServerError(mapTermError(err, renderLabel(M.saveFallback)));
     },
   });
 
@@ -240,17 +280,27 @@ function EditTermContent({
         data-testid="term-edit-back-link"
       >
         <ArrowLeft className="size-4" />
-        Back to {taxonomy.label.toLowerCase()}
+        <Trans
+          id="terms.edit.backLink"
+          message="Back to {pluralLower}"
+          values={{ pluralLower: taxonomy.label.toLowerCase() }}
+        />
       </Link>
 
       <Card>
         <CardHeader>
           <CardTitle>
-            <h1 data-testid="term-edit-heading">Edit {singularLower}</h1>
+            <h1 data-testid="term-edit-heading">
+              <Trans
+                id="terms.edit.heading"
+                message="Edit {singularLower}"
+                values={{ singularLower }}
+              />
+            </h1>
           </CardTitle>
           <CardDescription>
             {term.name}
-            {isHierarchical ? " — descendants can't be picked as parent." : ""}
+            {isHierarchical ? renderLabel(M.descendantsHint) : ""}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -266,7 +316,7 @@ function EditTermContent({
             parentOptions={parentOptions}
             isSubmitting={updateTerm.isPending || !canEdit}
             serverError={serverError}
-            submitLabel="Save changes"
+            submitLabel={renderLabel(M.submit)}
             metaBoxes={metaBoxes}
             onSubmit={(values) => {
               updateTerm.mutate(values);
@@ -304,6 +354,8 @@ function DeleteCard({
 }): ReactNode {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const renderLabel = useLabel();
+  const mapTermError = useTermErrorMessage();
   const [confirming, setConfirming] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -327,7 +379,7 @@ function DeleteCard({
       });
     },
     onError: (err) => {
-      setServerError(mapTermError(err, "Couldn't delete the term. Try again."));
+      setServerError(mapTermError(err, renderLabel(M.deleteFallback)));
     },
   });
 
@@ -335,11 +387,14 @@ function DeleteCard({
     <>
       <Card className="border-destructive/50">
         <CardHeader>
-          <CardTitle className="text-destructive">Delete term</CardTitle>
+          <CardTitle className="text-destructive">
+            <Trans id="terms.edit.delete.cardTitle" message="Delete term" />
+          </CardTitle>
           <CardDescription>
-            Removes this term and unassigns it from any entries that use it.
-            Descendants are promoted to root level (their entries keep their
-            other term assignments).
+            <Trans
+              id="terms.edit.delete.cardDescription"
+              message="Removes this term and unassigns it from any entries that use it. Descendants are promoted to root level (their entries keep their other term assignments)."
+            />
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -350,7 +405,7 @@ function DeleteCard({
             }}
             data-testid="term-edit-delete-button"
           >
-            Delete term
+            <Trans id="terms.edit.delete.button" message="Delete term" />
           </Button>
         </CardContent>
       </Card>
@@ -366,10 +421,18 @@ function DeleteCard({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {termName}?</AlertDialogTitle>
+            <AlertDialogTitle>
+              <Trans
+                id="terms.edit.delete.dialogTitle"
+                message="Delete {termName}?"
+                values={{ termName }}
+              />
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Entry assignments to this term are removed. If the term has
-              children, they become root-level automatically.
+              <Trans
+                id="terms.edit.delete.dialogDescription"
+                message="Entry assignments to this term are removed. If the term has children, they become root-level automatically."
+              />
             </AlertDialogDescription>
           </AlertDialogHeader>
           {serverError ? (
@@ -379,7 +442,7 @@ function DeleteCard({
           ) : null}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteTerm.isPending}>
-              Cancel
+              <Trans id="terms.edit.delete.cancel" message="Cancel" />
             </AlertDialogCancel>
             <AlertDialogAction
               data-testid="term-delete-confirm-button"
@@ -390,7 +453,14 @@ function DeleteCard({
                 deleteTerm.mutate();
               }}
             >
-              {deleteTerm.isPending ? "Deleting…" : "Delete forever"}
+              {deleteTerm.isPending ? (
+                <Trans id="terms.edit.delete.deleting" message="Deleting…" />
+              ) : (
+                <Trans
+                  id="terms.edit.delete.confirm"
+                  message="Delete forever"
+                />
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -402,7 +472,9 @@ function DeleteCard({
 function NotFoundPlaceholder({ message }: { message: string }): ReactNode {
   return (
     <div className="flex flex-col gap-2">
-      <h1 className="text-2xl font-semibold">Not found</h1>
+      <h1 className="text-2xl font-semibold">
+        <Trans id="terms.edit.notFound.title" message="Not found" />
+      </h1>
       <p className="text-muted-foreground text-sm">{message}</p>
     </div>
   );

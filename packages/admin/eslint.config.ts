@@ -9,20 +9,6 @@ import { reactConfig } from "@plumix/eslint-config/react";
 // a surface, drop its entry. When empty, delete the override block
 // (the `defineConfig` spread below) and the gate is implicit.
 const STRICT_UNWRAPPED_FILES = [
-  "src/components/editor/plain-form-layout.tsx",
-  "src/components/form/multi-select.tsx",
-  "src/editor/EditorLayout.tsx",
-  "src/editor/revisions/PreviewBanner.tsx",
-  "src/editor/revisions/RevisionDiffDialog.tsx",
-  "src/editor/revisions/RevisionDiffPanel.tsx",
-  "src/editor/revisions/RevisionsSheet.tsx",
-  "src/editor/StyleTab.tsx",
-  "src/routes/_authenticated/entries/$slug/index.tsx",
-  "src/routes/_authenticated/pages/$.tsx",
-  "src/routes/_authenticated/terms/$name/-errors.ts",
-  "src/routes/_authenticated/terms/$name/$id/edit.tsx",
-  "src/routes/_authenticated/terms/$name/create.tsx",
-  "src/routes/_authenticated/terms/$name/index.tsx",
   // Logic-only helpers — every flagged string is a developer-facing
   // console message, DOM event name, or framework config
   // discriminator (TanStack `defaultPreload: "intent"`), not user

@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ComponentData } from "@puckeditor/core";
 import type { ReactElement, ReactNode } from "react";
 import {
@@ -6,6 +7,9 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion.js";
+import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
 
 import type {
   ResponsiveStyleSlot,
@@ -14,6 +18,7 @@ import type {
 } from "@plumix/blocks";
 
 import type { StyleBucket } from "./viewport-bucket.js";
+import { DEVICE_LABEL } from "./device-labels.js";
 import { setStyleProperty } from "./style-edit.js";
 import { TokenSwatchList } from "./TokenSwatchList.js";
 
@@ -26,11 +31,24 @@ interface StyleTabProps {
   readonly onStyleChange: (nextStyle: ResponsiveStyleSlot | undefined) => void;
 }
 
-const BUCKET_LABEL: Readonly<Record<StyleBucket, string>> = {
-  small: "Mobile",
-  medium: "Tablet",
-  large: "Desktop",
-};
+const M = {
+  background: defineMessage({
+    id: "editor.styleTab.section.background",
+    message: "Background",
+  }),
+  textColor: defineMessage({
+    id: "editor.styleTab.section.textColor",
+    message: "Text color",
+  }),
+  fontSize: defineMessage({
+    id: "editor.styleTab.section.fontSize",
+    message: "Font size",
+  }),
+  padding: defineMessage({
+    id: "editor.styleTab.section.padding",
+    message: "Padding",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 const SECTION_VALUES = ["background", "color", "fontSize", "padding"] as const;
 
@@ -40,13 +58,14 @@ export function StyleTab({
   bucket,
   onStyleChange,
 }: StyleTabProps): ReactElement {
+  const renderLabel = useLabel();
   if (!selectedItem) {
     return (
       <div
         className="text-muted-foreground p-4 text-sm"
         data-testid="style-tab-empty"
       >
-        Select a block to style.
+        <Trans id="editor.styleTab.empty" message="Select a block to style." />
       </div>
     );
   }
@@ -65,32 +84,36 @@ export function StyleTab({
         className="bg-muted rounded px-2 py-1 text-xs"
         data-testid="style-tab-active-bucket"
       >
-        Editing for: {BUCKET_LABEL[bucket]}
+        <Trans
+          id="editor.styleTab.activeBucket"
+          message="Editing for: {device}"
+          values={{ device: renderLabel(DEVICE_LABEL[bucket]) }}
+        />
       </div>
       <Accordion type="multiple" defaultValue={[...SECTION_VALUES]}>
         <SwatchSection
-          heading="Background"
+          heading={renderLabel(M.background)}
           property="background"
           tokens={tokens.colors}
           activeToken={style?.[bucket]?.background ?? ""}
           onWrite={writeProperty}
         />
         <SwatchSection
-          heading="Text color"
+          heading={renderLabel(M.textColor)}
           property="color"
           tokens={tokens.colors}
           activeToken={style?.[bucket]?.color ?? ""}
           onWrite={writeProperty}
         />
         <SelectSection
-          heading="Font size"
+          heading={renderLabel(M.fontSize)}
           property="fontSize"
           tokens={tokens.typography}
           activeToken={style?.[bucket]?.fontSize ?? ""}
           onWrite={writeProperty}
         />
         <SelectSection
-          heading="Padding"
+          heading={renderLabel(M.padding)}
           property="padding"
           tokens={tokens.spacing}
           activeToken={style?.[bucket]?.padding ?? ""}
@@ -178,7 +201,9 @@ function SelectSection({
         className="w-full rounded border px-2 py-1 text-sm"
         data-testid={`style-tab-${property}-select`}
       >
-        <option value="">None</option>
+        <option value="">
+          <Trans id="editor.styleTab.select.none" message="None" />
+        </option>
         {Object.entries(tokens).map(([id, entry]) => (
           <option key={id} value={id}>
             {entry.label ?? id}

@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { useId, useState } from "react";
 import {
@@ -8,7 +9,21 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog.js";
 import { Skeleton } from "@/components/ui/skeleton.js";
+import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
+
+const M = {
+  thisRevision: defineMessage({
+    id: "editor.revisions.diffDialog.pane.thisRevision",
+    message: "This revision",
+  }),
+  current: defineMessage({
+    id: "editor.revisions.diffDialog.pane.current",
+    message: "Current",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 interface DiffSnapshot {
   readonly title: string;
@@ -33,6 +48,7 @@ export function RevisionDiffDialog({
   fetchRevision,
   fetchCurrent,
 }: RevisionDiffDialogProps): ReactElement {
+  const renderLabel = useLabel();
   // Sticky id keeps query results visible during Radix's close
   // animation: once `revisionId` flips to null the queries would
   // disable and the panes would flash to "Loading…" while the
@@ -65,19 +81,27 @@ export function RevisionDiffDialog({
         showCloseButton
       >
         <DialogHeader>
-          <DialogTitle>Revision JSON diff</DialogTitle>
+          <DialogTitle>
+            <Trans
+              id="editor.revisions.diffDialog.title"
+              message="Revision JSON diff"
+            />
+          </DialogTitle>
           <DialogDescription>
-            Side-by-side: this revision (left) vs. the current entry (right).
+            <Trans
+              id="editor.revisions.diffDialog.description"
+              message="Side-by-side: this revision (left) vs. the current entry (right)."
+            />
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <DiffPane
-            label="This revision"
+            label={renderLabel(M.thisRevision)}
             snapshot={revisionQuery.data}
             isError={revisionQuery.isError}
           />
           <DiffPane
-            label="Current"
+            label={renderLabel(M.current)}
             snapshot={currentQuery.data}
             isError={currentQuery.isError}
           />
@@ -110,7 +134,10 @@ function DiffPane({
           className="bg-muted max-h-96 overflow-auto rounded-md p-2 text-xs"
           data-testid="revision-diff-modal-error"
         >
-          Failed to load snapshot.
+          <Trans
+            id="editor.revisions.diffDialog.pane.error"
+            message="Failed to load snapshot."
+          />
         </pre>
       </section>
     );

@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type {
   ReactElement,
   KeyboardEvent as ReactKeyboardEvent,
@@ -27,7 +28,10 @@ import {
 } from "@/components/ui/tabs.js";
 import { useIsMobile } from "@/hooks/use-mobile.js";
 import { getPatterns } from "@/lib/manifest.js";
+import { useLabel } from "@/lib/use-label.js";
 import { cn } from "@/lib/utils.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
 import { Puck, usePuck } from "@puckeditor/core";
 import { Minus, Monitor, Plus, Smartphone, Tablet } from "lucide-react";
 
@@ -55,6 +59,7 @@ import { deriveBlockIdentity } from "./block-identity.js";
 import { BlockActionsPanel } from "./BlockActionsPanel.js";
 import { BlockScopePicker } from "./BlockScopePicker.js";
 import { buildCopyPatternSource } from "./build-copy-pattern-source.js";
+import { DEVICE_LABEL } from "./device-labels.js";
 import { HeadingAuditPanel } from "./HeadingAuditPanel.js";
 import { insertPattern } from "./insert-pattern.js";
 import { dispatchVariationInsert } from "./insert-variation.js";
@@ -127,13 +132,15 @@ const EMPTY_CAPS: ReadonlySet<string> = new Set();
 const EMPTY_TOKENS: ThemeTokens = {};
 
 const TOOLBAR_BTN =
+  // Tailwind class string, not user copy.
+  // eslint-disable-next-line lingui/no-unlocalized-strings
   "inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40";
 const ZOOM_STEPS: readonly number[] = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 interface ViewportPreset {
   readonly width: number;
   readonly height: "auto";
-  readonly label: string;
+  readonly label: MessageDescriptor;
   readonly icon: ReactElement;
 }
 
@@ -141,22 +148,107 @@ const VIEWPORT_PRESETS: readonly ViewportPreset[] = [
   {
     width: 360,
     height: "auto",
-    label: "Mobile",
+    label: DEVICE_LABEL.small,
     icon: <Smartphone className="h-4 w-4" aria-hidden />,
   },
   {
     width: 768,
     height: "auto",
-    label: "Tablet",
+    label: DEVICE_LABEL.medium,
     icon: <Tablet className="h-4 w-4" aria-hidden />,
   },
   {
     width: 1280,
     height: "auto",
-    label: "Desktop",
+    label: DEVICE_LABEL.large,
     icon: <Monitor className="h-4 w-4" aria-hidden />,
   },
 ];
+
+const M = {
+  pickStarter: defineMessage({
+    id: "editor.layout.canvas.pickStarter",
+    message: "Pick a starter…",
+  }),
+  copyAsPatternSource: defineMessage({
+    id: "editor.layout.canvas.copyAsPatternSource",
+    message: "Copy as pattern source",
+  }),
+  draftDiscarding: defineMessage({
+    id: "editor.layout.draft.discarding",
+    message: "Discarding…",
+  }),
+  draftDiscard: defineMessage({
+    id: "editor.layout.draft.discard",
+    message: "Discard",
+  }),
+  draftSaving: defineMessage({
+    id: "editor.layout.draft.saving",
+    message: "Saving…",
+  }),
+  draftSave: defineMessage({
+    id: "editor.layout.draft.save",
+    message: "Save Draft",
+  }),
+  draftPublishing: defineMessage({
+    id: "editor.layout.draft.publishing",
+    message: "Publishing…",
+  }),
+  draftPublish: defineMessage({
+    id: "editor.layout.draft.publish",
+    message: "Publish",
+  }),
+  livePublish: defineMessage({
+    id: "editor.layout.publish",
+    message: "Publish",
+  }),
+  zoomOut: defineMessage({
+    id: "editor.layout.canvas.zoomOut",
+    message: "Zoom out",
+  }),
+  zoomIn: defineMessage({
+    id: "editor.layout.canvas.zoomIn",
+    message: "Zoom in",
+  }),
+  backToList: defineMessage({
+    id: "editor.layout.header.backToList",
+    message: "Back to list",
+  }),
+  titlePlaceholder: defineMessage({
+    id: "editor.layout.header.titlePlaceholder",
+    message: "Untitled",
+  }),
+  copyUntitledFallback: defineMessage({
+    id: "editor.layout.copyAsPattern.untitledFallback",
+    message: "Untitled",
+  }),
+  blocksTriggerLabel: defineMessage({
+    id: "editor.layout.mobile.blocksTrigger",
+    message: "Blocks",
+  }),
+  blocksSheetTitle: defineMessage({
+    id: "editor.layout.mobile.blocksSheetTitle",
+    message: "Blocks",
+  }),
+  blocksSheetDescription: defineMessage({
+    id: "editor.layout.mobile.blocksSheetDescription",
+    message:
+      "Insertable blocks, outline, and the heading audit for this entry.",
+  }),
+  inspectorTriggerLabel: defineMessage({
+    id: "editor.layout.mobile.inspectorTrigger",
+    message: "Inspector",
+  }),
+  inspectorSheetTitle: defineMessage({
+    id: "editor.layout.mobile.inspectorSheetTitle",
+    message: "Inspector",
+  }),
+  inspectorSheetDescription: defineMessage({
+    id: "editor.layout.mobile.inspectorSheetDescription",
+    message:
+      "Block actions, fields, and style controls for the selected block.",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 // Puck hardcodes initial `viewports.current` to its bundled Smartphone
 // (360px) preset, which lands authors in mobile preview — open on
@@ -186,6 +278,7 @@ function CanvasToolbar({
   onCopyAsPatternSource,
 }: CanvasToolbarProps): ReactElement {
   const puck = usePuck();
+  const renderLabel = useLabel();
   const { viewports } = puck.appState.ui;
   const currentWidth = viewports.current.width;
   const dispatch = puck.dispatch;
@@ -245,7 +338,7 @@ function CanvasToolbar({
               )}
               data-testid={`plumix-editor-viewport-${v.width}`}
               data-active={isActive ? "true" : "false"}
-              aria-label={v.label}
+              aria-label={renderLabel(v.label)}
               aria-pressed={isActive}
               onClick={() => setViewport(v.width, v.height)}
             >
@@ -260,7 +353,7 @@ function CanvasToolbar({
           type="button"
           className={TOOLBAR_BTN}
           data-testid="plumix-editor-zoom-out"
-          aria-label="Zoom out"
+          aria-label={renderLabel(M.zoomOut)}
           onClick={() => stepZoom(-1)}
           disabled={atMin}
         >
@@ -270,7 +363,7 @@ function CanvasToolbar({
           type="button"
           className={TOOLBAR_BTN}
           data-testid="plumix-editor-zoom-in"
-          aria-label="Zoom in"
+          aria-label={renderLabel(M.zoomIn)}
           onClick={() => stepZoom(1)}
           disabled={atMax}
         >
@@ -293,7 +386,10 @@ function CanvasToolbar({
             data-testid="plumix-editor-replace-starter"
             onClick={onReopenStarter}
           >
-            Pick a starter…
+            <Trans
+              id="editor.layout.canvas.pickStarter"
+              message="Pick a starter…"
+            />
           </button>
         </>
       ) : null}
@@ -304,7 +400,10 @@ function CanvasToolbar({
         data-testid="plumix-editor-copy-as-pattern-source"
         onClick={onCopyAsPatternSource}
       >
-        Copy as pattern source
+        <Trans
+          id="editor.layout.canvas.copyAsPatternSource"
+          message="Copy as pattern source"
+        />
       </button>
     </div>
   );
@@ -343,7 +442,7 @@ function LivePublishButton({
       onClick={onPublish}
       disabled={isPublishing || isPublished}
     >
-      Publish
+      <Trans id="editor.layout.publish" message="Publish" />
     </button>
   );
 }
@@ -357,6 +456,7 @@ interface DraftActionsProps {
 // NO_PENDING_DRAFT shape); Save Draft stays available so a pristine
 // published row can be edited and saved as the first draft.
 function DraftActions({ draftMode }: DraftActionsProps): ReactElement {
+  const renderLabel = useLabel();
   const anyInFlight =
     draftMode.isSaving || draftMode.isPublishing || draftMode.isDiscarding;
   return (
@@ -368,7 +468,9 @@ function DraftActions({ draftMode }: DraftActionsProps): ReactElement {
         onClick={draftMode.onDiscardDraft}
         disabled={anyInFlight || !draftMode.hasPendingDraft}
       >
-        {draftMode.isDiscarding ? "Discarding…" : "Discard"}
+        {draftMode.isDiscarding
+          ? renderLabel(M.draftDiscarding)
+          : renderLabel(M.draftDiscard)}
       </Button>
       <Button
         variant="outline"
@@ -377,7 +479,9 @@ function DraftActions({ draftMode }: DraftActionsProps): ReactElement {
         onClick={draftMode.onSaveDraft}
         disabled={anyInFlight}
       >
-        {draftMode.isSaving ? "Saving…" : "Save Draft"}
+        {draftMode.isSaving
+          ? renderLabel(M.draftSaving)
+          : renderLabel(M.draftSave)}
       </Button>
       <Button
         variant="default"
@@ -386,7 +490,9 @@ function DraftActions({ draftMode }: DraftActionsProps): ReactElement {
         onClick={draftMode.onPublishDraft}
         disabled={anyInFlight || !draftMode.hasPendingDraft}
       >
-        {draftMode.isPublishing ? "Publishing…" : "Publish"}
+        {draftMode.isPublishing
+          ? renderLabel(M.draftPublishing)
+          : renderLabel(M.draftPublish)}
       </Button>
     </div>
   );
@@ -409,6 +515,7 @@ export function PlumixEditorLayout({
   previewBanner,
   draftMode,
 }: PlumixEditorLayoutProps): ReactElement {
+  const renderLabel = useLabel();
   const isPreview = previewBanner !== undefined;
   const isDraftMode = draftMode !== undefined;
   const showDraftBanner = isDraftMode && draftMode.hasPendingDraft;
@@ -433,9 +540,17 @@ export function PlumixEditorLayout({
             className="flex shrink-0 items-center gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:bg-amber-900/30 dark:text-amber-100"
           >
             <span className="font-medium">
-              You have unpublished draft changes.
+              <Trans
+                id="editor.layout.draftBanner.title"
+                message="You have unpublished draft changes."
+              />
             </span>
-            <span>Click Publish to push them live, or Discard to revert.</span>
+            <span>
+              <Trans
+                id="editor.layout.draftBanner.body"
+                message="Click Publish to push them live, or Discard to revert."
+              />
+            </span>
             <Button
               variant="ghost"
               size="sm"
@@ -444,7 +559,9 @@ export function PlumixEditorLayout({
               disabled={draftMode.isDiscarding}
               className="ml-auto"
             >
-              {draftMode.isDiscarding ? "Discarding…" : "Discard"}
+              {draftMode.isDiscarding
+                ? renderLabel(M.draftDiscarding)
+                : renderLabel(M.draftDiscard)}
             </Button>
           </div>
         ) : null}
@@ -454,7 +571,7 @@ export function PlumixEditorLayout({
         >
           <a
             href={backHref}
-            aria-label="Back to list"
+            aria-label={renderLabel(M.backToList)}
             className="text-muted-foreground hover:bg-accent hover:text-foreground inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-sm"
             data-testid="plumix-editor-back-button"
           >
@@ -462,7 +579,7 @@ export function PlumixEditorLayout({
           </a>
           <input
             type="text"
-            placeholder="Untitled"
+            placeholder={renderLabel(M.titlePlaceholder)}
             aria-label="Entry title"
             className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent px-2 text-base font-medium outline-none disabled:cursor-not-allowed disabled:opacity-60"
             data-testid="plumix-editor-title-input"
@@ -549,18 +666,19 @@ function BlocksBody({
   patterns,
 }: BlocksBodyProps): ReactElement {
   const isMobile = useIsMobile();
+  const renderLabel = useLabel();
   const content = (
     <Tabs defaultValue="blocks" className="h-full">
       <div className="px-4 pt-4">
         <TabsList className="w-full">
           <TabsTrigger value="blocks" data-testid="plumix-editor-tab-blocks">
-            Blocks
+            <Trans id="editor.layout.tab.blocks" message="Blocks" />
           </TabsTrigger>
           <TabsTrigger value="outline" data-testid="plumix-editor-tab-outline">
-            Outline
+            <Trans id="editor.layout.tab.outline" message="Outline" />
           </TabsTrigger>
           <TabsTrigger value="audit" data-testid="plumix-editor-tab-audit">
-            Audit
+            <Trans id="editor.layout.tab.audit" message="Audit" />
           </TabsTrigger>
         </TabsList>
       </div>
@@ -583,11 +701,11 @@ function BlocksBody({
   if (isMobile) {
     return (
       <MobileSidebarSheet
-        triggerLabel="Blocks"
+        triggerLabel={renderLabel(M.blocksTriggerLabel)}
         triggerTestId="plumix-editor-mobile-blocks-trigger"
         triggerSide="left"
-        sheetTitle="Blocks"
-        sheetDescription="Insertable blocks, outline, and the heading audit for this entry."
+        sheetTitle={renderLabel(M.blocksSheetTitle)}
+        sheetDescription={renderLabel(M.blocksSheetDescription)}
       >
         {content}
       </MobileSidebarSheet>
@@ -748,6 +866,7 @@ interface InspectorBodyProps {
 
 function InspectorBody({ registry, tokens }: InspectorBodyProps): ReactElement {
   const isMobile = useIsMobile();
+  const renderLabel = useLabel();
   const content = (
     <>
       <PlumixBlockActions registry={registry} />
@@ -755,10 +874,10 @@ function InspectorBody({ registry, tokens }: InspectorBodyProps): ReactElement {
         <div className="px-4 pt-4">
           <TabsList className="w-full">
             <TabsTrigger value="block" data-testid="plumix-editor-tab-block">
-              Block
+              <Trans id="editor.layout.tab.block" message="Block" />
             </TabsTrigger>
             <TabsTrigger value="style" data-testid="plumix-editor-tab-style">
-              Style
+              <Trans id="editor.layout.tab.style" message="Style" />
             </TabsTrigger>
           </TabsList>
         </div>
@@ -774,11 +893,11 @@ function InspectorBody({ registry, tokens }: InspectorBodyProps): ReactElement {
   if (isMobile) {
     return (
       <MobileSidebarSheet
-        triggerLabel="Inspector"
+        triggerLabel={renderLabel(M.inspectorTriggerLabel)}
         triggerTestId="plumix-editor-mobile-inspector-trigger"
         triggerSide="right"
-        sheetTitle="Inspector"
-        sheetDescription="Block actions, fields, and style controls for the selected block."
+        sheetTitle={renderLabel(M.inspectorSheetTitle)}
+        sheetDescription={renderLabel(M.inspectorSheetDescription)}
       >
         {content}
       </MobileSidebarSheet>
@@ -814,6 +933,7 @@ function PlumixCanvasWithSlashMenu({
   entryTitle,
 }: PlumixCanvasWithSlashMenuProps): ReactElement {
   const puck = usePuck();
+  const renderLabel = useLabel();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   // Captured once at mount: the modal's initial open state must reflect
@@ -856,6 +976,8 @@ function PlumixCanvasWithSlashMenu({
       const target = event.target as HTMLElement;
       if (
         target.matches(
+          // DOM selector string, not user copy.
+          // eslint-disable-next-line lingui/no-unlocalized-strings
           'input, textarea, [contenteditable=""], [contenteditable="true"]',
         )
       ) {
@@ -937,9 +1059,7 @@ function PlumixCanvasWithSlashMenu({
       title: entryTitle,
       data: puck.appState.data,
       selectedItem: puck.selectedItem ?? null,
-      // EditorLayout still in denylist — passes the raw fallback for
-      // now; flips to `useLabel(M.untitled)` when this surface wraps.
-      untitledTitle: "Untitled",
+      untitledTitle: renderLabel(M.copyUntitledFallback),
     });
     navigator.clipboard.writeText(source).catch((error: unknown) => {
       console.error(
@@ -947,7 +1067,7 @@ function PlumixCanvasWithSlashMenu({
         error,
       );
     });
-  }, [puck, entryTitle]);
+  }, [puck, entryTitle, renderLabel]);
 
   return (
     <div
@@ -986,10 +1106,17 @@ function PlumixCanvasWithSlashMenu({
           showCloseButton={false}
         >
           <DialogHeader className="sr-only">
-            <DialogTitle>Insert block or pattern</DialogTitle>
+            <DialogTitle>
+              <Trans
+                id="editor.layout.slashMenu.title"
+                message="Insert block or pattern"
+              />
+            </DialogTitle>
             <DialogDescription>
-              Search blocks and patterns by title or keyword and press Enter to
-              insert.
+              <Trans
+                id="editor.layout.slashMenu.description"
+                message="Search blocks and patterns by title or keyword and press Enter to insert."
+              />
             </DialogDescription>
           </DialogHeader>
           <SlashMenuPanel

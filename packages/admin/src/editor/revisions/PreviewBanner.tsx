@@ -1,5 +1,20 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { Button } from "@/components/ui/button.js";
+import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
+
+const M = {
+  restoring: defineMessage({
+    id: "editor.revisions.preview.restoring",
+    message: "Restoring…",
+  }),
+  restore: defineMessage({
+    id: "editor.revisions.preview.restore",
+    message: "Restore this revision",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 interface PreviewBannerProps {
   readonly revisionUpdatedAt: Date;
@@ -24,15 +39,28 @@ export function PreviewBanner({
   isRestoring,
   restoreError = null,
 }: PreviewBannerProps): ReactElement {
+  const renderLabel = useLabel();
   return (
     <div
       data-testid="revision-preview-banner"
       role="status"
       className="flex shrink-0 flex-wrap items-center gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
     >
-      <span className="font-medium">Previewing revision</span>
+      <span className="font-medium">
+        <Trans
+          id="editor.revisions.preview.title"
+          message="Previewing revision"
+        />
+      </span>
       <span>
-        from {relativeTime(revisionUpdatedAt)} by {revisionAuthor}
+        <Trans
+          id="editor.revisions.preview.subtitle"
+          message="from {when} by {author}"
+          values={{
+            when: relativeTime(revisionUpdatedAt),
+            author: revisionAuthor,
+          }}
+        />
       </span>
       <div className="ml-auto flex gap-2">
         <Button
@@ -41,7 +69,10 @@ export function PreviewBanner({
           data-testid="revision-preview-back-to-live"
           onClick={onBackToLive}
         >
-          ← Back to live
+          <Trans
+            id="editor.revisions.preview.backToLive"
+            message="← Back to live"
+          />
         </Button>
         <Button
           variant="default"
@@ -50,7 +81,7 @@ export function PreviewBanner({
           onClick={onRestore}
           disabled={isRestoring}
         >
-          {isRestoring ? "Restoring…" : "Restore this revision"}
+          {isRestoring ? renderLabel(M.restoring) : renderLabel(M.restore)}
         </Button>
       </div>
       {restoreError !== null ? (

@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import { useCallback, useMemo, useState } from "react";
@@ -40,6 +41,8 @@ import { orpc } from "@/lib/orpc.js";
 import { buildFilterTermOptions } from "@/lib/terms.js";
 import { useLabel } from "@/lib/use-label.js";
 import { cn } from "@/lib/utils.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowDown, ArrowUp, ArrowUpDown, Plus } from "lucide-react";
@@ -71,6 +74,10 @@ type StatusFilter = (typeof STATUS_FILTER_VALUES)[number];
 const ORDER_BY_VALUES = [
   "updated_at",
   "published_at",
+  // SQL column name (orderBy picklist code, not a display label) —
+  // single-token English word that collides with real chrome
+  // elsewhere; narrow disable beats widening the workspace regex.
+  // eslint-disable-next-line lingui/no-unlocalized-strings
   "title",
   "sort_order",
 ] as const;
@@ -125,12 +132,118 @@ const STATUS_VARIANT: Record<
   trash: "destructive",
 };
 
-const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "published", label: "Published" },
-  { value: "draft", label: "Draft" },
-  { value: "scheduled", label: "Scheduled" },
-  { value: "trash", label: "Trash" },
+const M = {
+  columnTitle: defineMessage({
+    id: "entries.list.column.title",
+    message: "Title",
+  }),
+  columnStatus: defineMessage({
+    id: "entries.list.column.status",
+    message: "Status",
+  }),
+  columnUpdated: defineMessage({
+    id: "entries.list.column.updated",
+    message: "Updated",
+  }),
+  statusAll: defineMessage({
+    id: "entries.list.statusFilter.all",
+    message: "All",
+  }),
+  statusPublished: defineMessage({
+    id: "entries.list.statusFilter.published",
+    message: "Published",
+  }),
+  statusDraft: defineMessage({
+    id: "entries.list.statusFilter.draft",
+    message: "Draft",
+  }),
+  statusScheduled: defineMessage({
+    id: "entries.list.statusFilter.scheduled",
+    message: "Scheduled",
+  }),
+  statusTrash: defineMessage({
+    id: "entries.list.statusFilter.trash",
+    message: "Trash",
+  }),
+  authorAll: defineMessage({
+    id: "entries.list.authorFilter.all",
+    message: "All authors",
+  }),
+  authorMine: defineMessage({
+    id: "entries.list.authorFilter.mine",
+    message: "Mine",
+  }),
+  filterStatusAria: defineMessage({
+    id: "entries.list.filterStatusAria",
+    message: "Filter by status",
+  }),
+  filterAuthorAria: defineMessage({
+    id: "entries.list.filterAuthorAria",
+    message: "Filter by author",
+  }),
+  sortAria: defineMessage({
+    id: "entries.list.sortAria",
+    message: "Sort by {label} ({direction})",
+  }),
+  noTitle: defineMessage({
+    id: "entries.list.noTitle",
+    message: "(no title)",
+  }),
+  rowEdit: defineMessage({
+    id: "entries.list.row.edit",
+    message: "Edit",
+  }),
+  rowTrash: defineMessage({
+    id: "entries.list.row.trash",
+    message: "Trash",
+  }),
+  rowTrashing: defineMessage({
+    id: "entries.list.row.trashing",
+    message: "Trashing…",
+  }),
+  searchPlaceholder: defineMessage({
+    id: "entries.list.searchPlaceholder",
+    message: "Search {pluralLower}…",
+  }),
+  loadError: defineMessage({
+    id: "entries.list.loadError",
+    message: "Couldn't load {pluralLower}. Try again.",
+  }),
+  loadingLabel: defineMessage({
+    id: "entries.list.loadingLabel",
+    message: "Loading {pluralLower}",
+  }),
+  taxonomyAll: defineMessage({
+    id: "entries.list.taxonomyFilter.all",
+    message: "All {pluralLower}",
+  }),
+  taxonomySearch: defineMessage({
+    id: "entries.list.taxonomyFilter.search",
+    message: "Search {pluralLower}…",
+  }),
+  taxonomyEmpty: defineMessage({
+    id: "entries.list.taxonomyFilter.empty",
+    message: "No {pluralLower} match.",
+  }),
+  trashingMove: defineMessage({
+    id: "entries.list.trashDialog.moving",
+    message: "Moving…",
+  }),
+  trashingConfirm: defineMessage({
+    id: "entries.list.trashDialog.confirm",
+    message: "Move to trash",
+  }),
+} satisfies Record<string, MessageDescriptor>;
+
+const STATUS_FILTER_OPTIONS: {
+  value: StatusFilter;
+  label: MessageDescriptor;
+}[] = [
+  { value: "all", label: M.statusAll },
+  { value: "published", label: M.statusPublished },
+  { value: "draft", label: M.statusDraft },
+  { value: "scheduled", label: M.statusScheduled },
+  { value: "trash", label: M.statusTrash },
 ];
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
@@ -146,6 +259,7 @@ function buildColumns({
   canDelete,
   onTrash,
   trashingId,
+  renderLabel,
 }: {
   activeOrderBy: OrderBy;
   activeOrder: Order;
@@ -154,13 +268,14 @@ function buildColumns({
   canDelete: boolean;
   onTrash: (id: number) => void;
   trashingId: number | null;
+  renderLabel: (label: MessageDescriptor) => string;
 }): ColumnDef<Entry>[] {
   return [
     {
       accessorKey: "title",
       header: () => (
         <SortableHeader
-          label="Title"
+          label={renderLabel(M.columnTitle)}
           column="title"
           defaultDirection="asc"
           activeOrderBy={activeOrderBy}
@@ -180,7 +295,7 @@ function buildColumns({
     },
     {
       accessorKey: "status",
-      header: "Status",
+      header: renderLabel(M.columnStatus),
       cell: ({ row }) => (
         <Badge
           variant={STATUS_VARIANT[row.original.status]}
@@ -195,7 +310,7 @@ function buildColumns({
       meta: { className: "text-right" },
       header: () => (
         <SortableHeader
-          label="Updated"
+          label={renderLabel(M.columnUpdated)}
           column="updated_at"
           defaultDirection="desc"
           activeOrderBy={activeOrderBy}
@@ -366,6 +481,7 @@ function ContentListRoute(): ReactNode {
   // doesn't expose a total count today; accept the edge case until it does.
   const canNext = rows.length === PAGE_SIZE;
 
+  const { i18n } = useLingui();
   const renderLabel = useLabel();
   const pluralLabel = renderLabel(entryType.labels?.plural ?? entryType.label);
   const singularLabel = renderLabel(
@@ -399,9 +515,12 @@ function ContentListRoute(): ReactNode {
       setPendingTrashId(null);
     },
   });
-  const onTrash = useCallback((id: number): void => {
-    setPendingTrashId(id);
-  }, []);
+  const onTrash = useCallback(
+    (id: number): void => {
+      setPendingTrashId(id);
+    },
+    [setPendingTrashId],
+  );
   const trashingId =
     trash.isPending && typeof trash.variables === "number"
       ? trash.variables
@@ -417,6 +536,7 @@ function ContentListRoute(): ReactNode {
         canDelete,
         onTrash,
         trashingId,
+        renderLabel,
       }),
     [
       search.orderBy,
@@ -426,6 +546,7 @@ function ContentListRoute(): ReactNode {
       canDelete,
       onTrash,
       trashingId,
+      renderLabel,
     ],
   );
 
@@ -448,7 +569,11 @@ function ContentListRoute(): ReactNode {
               data-testid="content-list-new-button"
             >
               <Plus />
-              New {singularLower}
+              <Trans
+                id="entries.list.newButton"
+                message="New {singularLower}"
+                values={{ singularLower }}
+              />
             </Link>
           </Button>
         ) : null}
@@ -475,7 +600,11 @@ function ContentListRoute(): ReactNode {
             // desynchronising from the URL.
             key={search.q ?? ""}
             initialValue={search.q ?? ""}
-            placeholder={`Search ${pluralLower}…`}
+            placeholder={i18n._(
+              M.searchPlaceholder.id,
+              { pluralLower },
+              { message: M.searchPlaceholder.message },
+            )}
             testId="content-list-search-input"
             onCommit={setSearch}
           />
@@ -487,7 +616,11 @@ function ContentListRoute(): ReactNode {
           <AlertDescription>
             {query.error instanceof Error
               ? query.error.message
-              : `Couldn't load ${pluralLower}. Try again.`}
+              : i18n._(
+                  M.loadError.id,
+                  { pluralLower },
+                  { message: M.loadError.message },
+                )}
           </AlertDescription>
         </Alert>
       ) : (
@@ -495,7 +628,11 @@ function ContentListRoute(): ReactNode {
           columns={columns}
           data={rows}
           isLoading={query.isPending}
-          loadingLabel={`Loading ${pluralLower}`}
+          loadingLabel={i18n._(
+            M.loadingLabel.id,
+            { pluralLower },
+            { message: M.loadingLabel.message },
+          )}
           emptyState={
             <EmptyState
               singularLower={singularLower}
@@ -523,14 +660,23 @@ function ContentListRoute(): ReactNode {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Move {singularLower} to trash?</AlertDialogTitle>
+            <AlertDialogTitle>
+              <Trans
+                id="entries.list.trashDialog.title"
+                message="Move {singularLower} to trash?"
+                values={{ singularLower }}
+              />
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              You can restore it from the Trash view later.
+              <Trans
+                id="entries.list.trashDialog.description"
+                message="You can restore it from the Trash view later."
+              />
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={trash.isPending}>
-              Cancel
+              <Trans id="entries.list.trashDialog.cancel" message="Cancel" />
             </AlertDialogCancel>
             <AlertDialogAction
               data-testid="content-list-trash-confirm"
@@ -540,7 +686,9 @@ function ContentListRoute(): ReactNode {
                 if (pendingTrashId !== null) trash.mutate(pendingTrashId);
               }}
             >
-              {trash.isPending ? "Moving…" : "Move to trash"}
+              {trash.isPending
+                ? renderLabel(M.trashingMove)
+                : renderLabel(M.trashingConfirm)}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -593,6 +741,7 @@ function SortableHeader({
   onSort: (column: OrderBy, defaultDirection: Order) => void;
   align?: "left" | "right";
 }): ReactNode {
+  const { i18n } = useLingui();
   const isActive = activeOrderBy === column;
   const nextDirection = nextSortOrder(isActive, activeOrder, defaultDirection);
   return (
@@ -606,7 +755,11 @@ function SortableHeader({
         "hover:text-foreground inline-flex items-center gap-1 rounded px-2 py-1 font-medium transition-colors",
         align === "right" ? "-mr-2 text-right" : "-ml-2 text-left",
       )}
-      aria-label={`Sort by ${label} (${nextDirection})`}
+      aria-label={i18n._(
+        M.sortAria.id,
+        { label, direction: nextDirection },
+        { message: M.sortAria.message },
+      )}
       aria-pressed={isActive}
     >
       {label}
@@ -631,6 +784,7 @@ function TitleCell({
   onTrash: (id: number) => void;
   isTrashing: boolean;
 }): ReactNode {
+  const renderLabel = useLabel();
   const showTrashAction = canDelete && entry.status !== "trash";
   return (
     <div className="flex flex-col gap-0.5">
@@ -641,7 +795,9 @@ function TitleCell({
         className="hover:text-primary font-medium transition-colors"
       >
         {entry.title || (
-          <span className="text-muted-foreground italic">(no title)</span>
+          <span className="text-muted-foreground italic">
+            <Trans id="entries.list.noTitle" message="(no title)" />
+          </span>
         )}
       </Link>
       <span className="text-muted-foreground text-xs">{entry.slug}</span>
@@ -657,7 +813,7 @@ function TitleCell({
           params={{ slug: adminSlug, id: entry.id }}
           className="text-muted-foreground hover:text-foreground"
         >
-          Edit
+          <Trans id="entries.list.row.edit" message="Edit" />
         </Link>
         {showTrashAction ? (
           <>
@@ -673,7 +829,9 @@ function TitleCell({
               className="text-muted-foreground hover:text-destructive disabled:opacity-50"
               data-testid={`content-list-row-trash-${String(entry.id)}`}
             >
-              {isTrashing ? "Trashing…" : "Trash"}
+              {isTrashing
+                ? renderLabel(M.rowTrashing)
+                : renderLabel(M.rowTrash)}
             </button>
           </>
         ) : null}
@@ -690,6 +848,7 @@ function StatusViews({
   value: StatusFilter;
   onChange: (next: StatusFilter) => void;
 }): ReactNode {
+  const renderLabel = useLabel();
   return (
     <ToggleGroup
       type="single"
@@ -701,7 +860,7 @@ function StatusViews({
         // empty state.
         onChange((next || "all") as StatusFilter);
       }}
-      aria-label="Filter by status"
+      aria-label={renderLabel(M.filterStatusAria)}
     >
       {STATUS_FILTER_OPTIONS.map((opt) => (
         <ToggleGroupItem
@@ -709,7 +868,7 @@ function StatusViews({
           value={opt.value}
           data-testid={`status-view-${opt.value}`}
         >
-          {opt.label}
+          {renderLabel(opt.label)}
         </ToggleGroupItem>
       ))}
     </ToggleGroup>
@@ -726,11 +885,13 @@ const EMPTY_TERMS: readonly Term[] = [];
 // invalidates every tick when termTaxonomies is undefined).
 const EMPTY_TAXONOMY_NAMES: readonly string[] = [];
 
-const AUTHOR_FILTER_OPTIONS: readonly { value: AuthorFilter; label: string }[] =
-  [
-    { value: "all", label: "All authors" },
-    { value: "mine", label: "Mine" },
-  ];
+const AUTHOR_FILTER_OPTIONS: readonly {
+  value: AuthorFilter;
+  label: MessageDescriptor;
+}[] = [
+  { value: "all", label: M.authorAll },
+  { value: "mine", label: M.authorMine },
+];
 
 function AuthorSelect({
   value,
@@ -739,6 +900,7 @@ function AuthorSelect({
   value: AuthorFilter;
   onChange: (next: AuthorFilter) => void;
 }): ReactNode {
+  const renderLabel = useLabel();
   return (
     <Select
       value={value}
@@ -748,7 +910,7 @@ function AuthorSelect({
     >
       <SelectTrigger
         size="sm"
-        aria-label="Filter by author"
+        aria-label={renderLabel(M.filterAuthorAria)}
         data-testid="author-filter"
       >
         <SelectValue />
@@ -760,7 +922,7 @@ function AuthorSelect({
             value={opt.value}
             data-testid={`author-filter-${opt.value}`}
           >
-            {opt.label}
+            {renderLabel(opt.label)}
           </SelectItem>
         ))}
       </SelectContent>
@@ -777,6 +939,7 @@ function TaxonomyFilter({
   value: readonly string[];
   onChange: (slugs: readonly string[]) => void;
 }): ReactNode {
+  const { i18n } = useLingui();
   const taxonomy = findTermTaxonomyByName(taxonomyName);
   const termsQuery = useQuery(
     orpc.term.list.queryOptions({
@@ -796,9 +959,21 @@ function TaxonomyFilter({
       options={options}
       value={value}
       onChange={onChange}
-      placeholder={`All ${pluralLower}`}
-      searchPlaceholder={`Search ${pluralLower}…`}
-      emptyText={`No ${pluralLower} match.`}
+      placeholder={i18n._(
+        M.taxonomyAll.id,
+        { pluralLower },
+        { message: M.taxonomyAll.message },
+      )}
+      searchPlaceholder={i18n._(
+        M.taxonomySearch.id,
+        { pluralLower },
+        { message: M.taxonomySearch.message },
+      )}
+      emptyText={i18n._(
+        M.taxonomyEmpty.id,
+        { pluralLower },
+        { message: M.taxonomyEmpty.message },
+      )}
       testId={`taxonomy-filter-${taxonomyName}`}
     />
   );
@@ -818,9 +993,19 @@ function EmptyState({
   return (
     <Empty data-testid="content-list-empty-state" className="border">
       <EmptyHeader>
-        <EmptyTitle>No {pluralLower} yet</EmptyTitle>
+        <EmptyTitle>
+          <Trans
+            id="entries.list.empty.title"
+            message="No {pluralLower} yet"
+            values={{ pluralLower }}
+          />
+        </EmptyTitle>
         <EmptyDescription>
-          Create your first {singularLower} to see it here.
+          <Trans
+            id="entries.list.empty.description"
+            message="Create your first {singularLower} to see it here."
+            values={{ singularLower }}
+          />
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
@@ -828,13 +1013,21 @@ function EmptyState({
           <Button asChild>
             <Link to="/entries/$slug/create" params={{ slug: entryTypeSlug }}>
               <Plus />
-              New {singularLower}
+              <Trans
+                id="entries.list.empty.cta"
+                message="New {singularLower}"
+                values={{ singularLower }}
+              />
             </Link>
           </Button>
         ) : (
           <Button disabled>
             <Plus />
-            New {singularLower}
+            <Trans
+              id="entries.list.empty.cta"
+              message="New {singularLower}"
+              values={{ singularLower }}
+            />
           </Button>
         )}
       </EmptyContent>

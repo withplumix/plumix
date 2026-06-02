@@ -1,6 +1,7 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 
+import { renderWithI18n } from "../../../test/render-with-i18n.js";
 import { RevisionDiffPanel } from "./RevisionDiffPanel.js";
 
 afterEach(() => {
@@ -52,7 +53,7 @@ function fixture(
 describe("RevisionDiffPanel", () => {
   test("renders the Visual tab by default with empty state when content matches", () => {
     const { revision, current } = fixture();
-    render(<RevisionDiffPanel revision={revision} current={current} />);
+    renderWithI18n(<RevisionDiffPanel revision={revision} current={current} />);
     expect(screen.getByTestId("revision-diff-pane-visual")).toBeInTheDocument();
     expect(screen.getByTestId("revision-diff-empty")).toBeInTheDocument();
   });
@@ -61,7 +62,7 @@ describe("RevisionDiffPanel", () => {
     const { revision, current } = fixture({
       current: { title: "New title" },
     });
-    render(<RevisionDiffPanel revision={revision} current={current} />);
+    renderWithI18n(<RevisionDiffPanel revision={revision} current={current} />);
     expect(screen.getByTestId("revision-diff-field-title")).toBeInTheDocument();
     expect(
       screen.queryByTestId("revision-diff-field-slug"),
@@ -82,7 +83,7 @@ describe("RevisionDiffPanel", () => {
         },
       },
     });
-    render(
+    renderWithI18n(
       <RevisionDiffPanel
         revision={revision}
         current={current}

@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import { useCallback, useMemo } from "react";
@@ -18,6 +19,8 @@ import { hasCap } from "@/lib/caps.js";
 import { findTermTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
@@ -25,6 +28,29 @@ import * as v from "valibot";
 
 import type { TermTaxonomyManifestEntry } from "@plumix/core/manifest";
 import type { Term } from "@plumix/core/schema";
+
+const M = {
+  columnName: defineMessage({
+    id: "terms.list.column.name",
+    message: "Name",
+  }),
+  columnDescription: defineMessage({
+    id: "terms.list.column.description",
+    message: "Description",
+  }),
+  searchPlaceholder: defineMessage({
+    id: "terms.list.searchPlaceholder",
+    message: "Search {pluralLower}…",
+  }),
+  loadError: defineMessage({
+    id: "terms.list.loadError",
+    message: "Couldn't load {pluralLower}. Try again.",
+  }),
+  loadingLabel: defineMessage({
+    id: "terms.list.loadingLabel",
+    message: "Loading {pluralLower}",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 // Flat (non-hierarchical) lists paginate conventionally. Hierarchical
 // lists fetch a larger page so the tree renders as a coherent unit; the
@@ -132,6 +158,7 @@ function useTaxonomyListNavActions(): TaxonomyListNavActions {
 function TaxonomyListRoute(): ReactNode {
   const search = Route.useSearch();
   const { user, taxonomy } = Route.useRouteContext();
+  const { i18n } = useLingui();
   const renderLabel = useLabel();
   const isHierarchical = taxonomy.isHierarchical === true;
   const pageSize = isHierarchical ? TREE_PAGE_SIZE : FLAT_PAGE_SIZE;
@@ -174,7 +201,7 @@ function TaxonomyListRoute(): ReactNode {
     return [
       {
         accessorKey: "name",
-        header: "Name",
+        header: renderLabel(M.columnName),
         cell: ({ row }) => {
           const term = row.original.term;
           const depth = row.original.displayDepth;
@@ -206,7 +233,7 @@ function TaxonomyListRoute(): ReactNode {
       },
       {
         accessorKey: "description",
-        header: "Description",
+        header: renderLabel(M.columnDescription),
         cell: ({ row }) => {
           const value = row.original.term.description;
           if (value === null || value.length === 0) {
@@ -224,7 +251,7 @@ function TaxonomyListRoute(): ReactNode {
         },
       },
     ];
-  }, [taxonomy.name]);
+  }, [taxonomy.name, renderLabel]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -250,7 +277,11 @@ function TaxonomyListRoute(): ReactNode {
               data-testid="taxonomy-list-new-button"
             >
               <Plus />
-              New {singularLower}
+              <Trans
+                id="terms.list.newButton"
+                message="New {singularLower}"
+                values={{ singularLower }}
+              />
             </Link>
           </Button>
         ) : null}
@@ -261,7 +292,11 @@ function TaxonomyListRoute(): ReactNode {
           <DebouncedSearchInput
             key={search.q ?? ""}
             initialValue={search.q ?? ""}
-            placeholder={`Search ${pluralLower}…`}
+            placeholder={i18n._(
+              M.searchPlaceholder.id,
+              { pluralLower },
+              { message: M.searchPlaceholder.message },
+            )}
             testId="taxonomy-list-search-input"
             onCommit={setSearch}
           />
@@ -273,7 +308,11 @@ function TaxonomyListRoute(): ReactNode {
           <AlertDescription>
             {query.error instanceof Error
               ? query.error.message
-              : `Couldn't load ${pluralLower}. Try again.`}
+              : i18n._(
+                  M.loadError.id,
+                  { pluralLower },
+                  { message: M.loadError.message },
+                )}
           </AlertDescription>
         </Alert>
       ) : (
@@ -281,7 +320,11 @@ function TaxonomyListRoute(): ReactNode {
           columns={columns}
           data={rows}
           isLoading={query.isPending}
-          loadingLabel={`Loading ${pluralLower}`}
+          loadingLabel={i18n._(
+            M.loadingLabel.id,
+            { pluralLower },
+            { message: M.loadingLabel.message },
+          )}
           emptyState={
             <EmptyState
               singularLower={singularLower}
@@ -315,9 +358,19 @@ function EmptyState({
   return (
     <Empty data-testid="taxonomy-list-empty-state" className="border">
       <EmptyHeader>
-        <EmptyTitle>No {singularLower} yet</EmptyTitle>
+        <EmptyTitle>
+          <Trans
+            id="terms.list.empty.title"
+            message="No {singularLower} yet"
+            values={{ singularLower }}
+          />
+        </EmptyTitle>
         <EmptyDescription>
-          Create your first {singularLower} to see it here.
+          <Trans
+            id="terms.list.empty.description"
+            message="Create your first {singularLower} to see it here."
+            values={{ singularLower }}
+          />
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
@@ -325,13 +378,21 @@ function EmptyState({
           <Button asChild>
             <Link to="/terms/$name/create" params={{ name: taxonomyName }}>
               <Plus />
-              New {singularLower}
+              <Trans
+                id="terms.list.empty.cta"
+                message="New {singularLower}"
+                values={{ singularLower }}
+              />
             </Link>
           </Button>
         ) : (
           <Button disabled>
             <Plus />
-            New {singularLower}
+            <Trans
+              id="terms.list.empty.cta"
+              message="New {singularLower}"
+              values={{ singularLower }}
+            />
           </Button>
         )}
       </EmptyContent>

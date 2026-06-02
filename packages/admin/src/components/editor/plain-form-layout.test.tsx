@@ -1,15 +1,10 @@
 import { createQueryClient } from "@/providers/query-client.js";
 import { QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { PostEditorValues } from "./post-editor-form.js";
+import { renderWithI18n } from "../../../test/render-with-i18n.js";
 import { PlainFormLayout } from "./plain-form-layout.js";
 
 afterEach(() => {
@@ -37,7 +32,7 @@ function wrap(children: React.ReactNode) {
 
 describe("PlainFormLayout", () => {
   test("renders revisionsTrigger in the header when provided", () => {
-    render(
+    renderWithI18n(
       wrap(
         <PlainFormLayout
           initialValues={initialValues}
@@ -59,7 +54,7 @@ describe("PlainFormLayout", () => {
 
   test("autosave debounces field edits and fires onSubmit", async () => {
     const onSubmit = vi.fn();
-    render(
+    renderWithI18n(
       wrap(
         <PlainFormLayout
           initialValues={initialValues}
