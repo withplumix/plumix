@@ -10,8 +10,15 @@ import { reactConfig } from "@plumix/eslint-config/react";
 // (#684) is the umbrella tracking the expansion of this list to the
 // rest of admin chrome.
 const STRICT_WRAPPED_FILES = [
+  "src/components/data-table/data-table.tsx",
+  "src/components/data-table/list-pagination.tsx",
+  "src/components/form/search-input.tsx",
   "src/components/locale-switcher.tsx",
   "src/components/profile/language-card.tsx",
+  "src/components/profile/api-tokens-card.tsx",
+  "src/components/profile/passkeys-card.tsx",
+  "src/components/profile/sessions-card.tsx",
+  "src/components/profile/user-email-field.tsx",
   "src/components/shell/user-menu.tsx",
   "src/lib/breadcrumbs.ts",
   "src/lib/dates.ts",
@@ -21,7 +28,12 @@ const STRICT_WRAPPED_FILES = [
   "src/lib/use-formatters.ts",
   "src/lib/use-label.ts",
   "src/routes/__root.tsx",
+  "src/routes/_editor.tsx",
+  "src/routes/_editor/entries/$slug/$id/edit.tsx",
+  "src/routes/_editor/entries/$slug/create.tsx",
   "src/routes/_auth/-schemas.ts",
+  "src/routes/_auth/accept-invite/$token.tsx",
+  "src/routes/_auth/bootstrap.tsx",
   "src/routes/_auth/login.tsx",
   "src/routes/_authenticated/allowed-domains/index.tsx",
   "src/routes/_authenticated/auth/device.tsx",

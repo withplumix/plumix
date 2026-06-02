@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import {
@@ -21,15 +22,21 @@ import {
   FormMessage,
 } from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
-import { Label } from "@/components/ui/label.js";
+import { Label as UILabel } from "@/components/ui/label.js";
 import { toDate } from "@/lib/dates.js";
 import { extractCode, extractReason } from "@/lib/orpc-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { useFormatters } from "@/lib/use-formatters.js";
+import { useLabel } from "@/lib/use-label.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import * as v from "valibot";
+
+import type { Label } from "@plumix/core/i18n";
+import { vMessage } from "@plumix/core/validation";
 
 // Email field on the user-edit page. Three states:
 //
@@ -43,12 +50,51 @@ import * as v from "valibot";
 // Self vs admin behaves identically — the server's per-procedure
 // auth gate decides what's allowed. The UI just renders + dispatches.
 
+const M = {
+  invalidEmail: defineMessage({
+    id: "userEdit.email.invalid",
+    message: "Enter a valid email address.",
+  }),
+  // Confirmation success — formatted via `i18n._` so `{email}` can
+  // interpolate dynamically.
+  confirmationSent: defineMessage({
+    id: "userEdit.email.confirmationSent",
+    message:
+      "Confirmation sent to {email}. The change takes effect once they click the link.",
+  }),
+  // Placeholder is locale-sensitive (some locales prefer a different
+  // example domain). Resolved via `useLabel()` for the `placeholder`
+  // attribute (string-only).
+  newEmailPlaceholder: defineMessage({
+    id: "userEdit.email.placeholder",
+    message: "new@example.com",
+  }),
+  // Mutation error fallbacks.
+  emailTaken: defineMessage({
+    id: "userEdit.email.error.taken",
+    message: "That email is already in use on another account.",
+  }),
+  mailerNotConfigured: defineMessage({
+    id: "userEdit.email.error.mailerNotConfigured",
+    message:
+      "Email change requires a magic-link mailer to be configured server-side. Pass `auth.magicLink` and `mailer:` to `plumix({...})` to enable.",
+  }),
+  accountDisabled: defineMessage({
+    id: "userEdit.email.error.accountDisabled",
+    message: "This account is disabled.",
+  }),
+  requestFallback: defineMessage({
+    id: "userEdit.email.error.requestFallback",
+    message: "Couldn't request the change. Try again.",
+  }),
+} satisfies Record<string, MessageDescriptor>;
+
 const formSchema = v.object({
   newEmail: v.pipe(
     v.string(),
     v.trim(),
     v.toLowerCase(),
-    v.email("Enter a valid email address."),
+    v.email(vMessage(M.invalidEmail)),
     v.maxLength(255),
   ),
 });
@@ -62,10 +108,12 @@ export function UserEmailField({
   email: string;
   canEdit: boolean;
 }): ReactNode {
+  const { i18n } = useLingui();
   const queryClient = useQueryClient();
   const { formatRelative } = useFormatters();
+  const label = useLabel();
   const [open, setOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Label | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const pendingQuery = useQuery(
@@ -85,7 +133,11 @@ export function UserEmailField({
       setOpen(false);
       setError(null);
       setSuccess(
-        `Confirmation sent to ${newEmail}. The change takes effect once they click the link.`,
+        i18n._(
+          M.confirmationSent.id,
+          { email: newEmail },
+          { message: M.confirmationSent.message },
+        ),
       );
       await invalidate();
     },
@@ -104,7 +156,9 @@ export function UserEmailField({
 
   return (
     <div className="flex flex-col gap-2">
-      <Label>Email</Label>
+      <UILabel>
+        <Trans id="userEdit.email.label" message="Email" />
+      </UILabel>
       <div className="flex flex-wrap items-center gap-2">
         <p
           className="text-muted-foreground font-mono text-sm"
@@ -124,7 +178,7 @@ export function UserEmailField({
             }}
             data-testid="user-edit-email-change-button"
           >
-            Change email
+            <Trans id="userEdit.email.changeButton" message="Change email" />
           </Button>
         ) : null}
       </div>
@@ -140,9 +194,15 @@ export function UserEmailField({
         <Alert data-testid="user-edit-email-pending">
           <AlertDescription className="flex flex-wrap items-center gap-2">
             <span>
-              Pending change to{" "}
-              <code className="font-mono">{pending.newEmail}</code> — expires{" "}
-              {formatRelative(toDate(pending.expiresAt))}
+              <Trans
+                id="userEdit.email.pending"
+                message="Pending change to <code>{newEmail}</code> — expires {expiresAt}"
+                values={{
+                  newEmail: pending.newEmail,
+                  expiresAt: formatRelative(toDate(pending.expiresAt)),
+                }}
+                components={{ code: <code className="font-mono" /> }}
+              />
             </span>
             {canEdit ? (
               <Button
@@ -153,7 +213,17 @@ export function UserEmailField({
                 disabled={cancel.isPending}
                 data-testid="user-edit-email-cancel-pending"
               >
-                {cancel.isPending ? "Cancelling…" : "Cancel"}
+                {cancel.isPending ? (
+                  <Trans
+                    id="userEdit.email.cancelPending.pending"
+                    message="Cancelling…"
+                  />
+                ) : (
+                  <Trans
+                    id="userEdit.email.cancelPending.idle"
+                    message="Cancel"
+                  />
+                )}
               </Button>
             ) : null}
           </AlertDescription>
@@ -174,6 +244,7 @@ export function UserEmailField({
         onSubmit={(newEmail) => request.mutate(newEmail)}
         pending={request.isPending}
         error={error}
+        placeholder={label(M.newEmailPlaceholder)}
       />
     </div>
   );
@@ -186,14 +257,17 @@ function ChangeEmailDialog({
   onSubmit,
   pending,
   error,
+  placeholder,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currentEmail: string;
   onSubmit: (newEmail: string) => void;
   pending: boolean;
-  error: string | null;
+  error: Label | null;
+  placeholder: string;
 }): ReactNode {
+  const label = useLabel();
   const form = useForm({
     resolver: valibotResolver(formSchema),
     defaultValues: { newEmail: "" },
@@ -204,11 +278,14 @@ function ChangeEmailDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent data-testid="user-edit-email-change-dialog">
         <AlertDialogHeader>
-          <AlertDialogTitle>Change email</AlertDialogTitle>
+          <AlertDialogTitle>
+            <Trans id="userEdit.email.dialog.title" message="Change email" />
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            We'll send a confirmation link to the new address. The change takes
-            effect after the link is clicked. Sessions on this account are
-            signed out at that point — re-sign-in uses the new email.
+            <Trans
+              id="userEdit.email.dialog.description"
+              message="We'll send a confirmation link to the new address. The change takes effect after the link is clicked. Sessions on this account are signed out at that point — re-sign-in uses the new email."
+            />
           </AlertDialogDescription>
         </AlertDialogHeader>
         <Form {...form}>
@@ -219,9 +296,12 @@ function ChangeEmailDialog({
             })}
           >
             <div className="flex flex-col gap-2">
-              <Label className="text-muted-foreground text-xs">
-                Current email
-              </Label>
+              <UILabel className="text-muted-foreground text-xs">
+                <Trans
+                  id="userEdit.email.dialog.currentLabel"
+                  message="Current email"
+                />
+              </UILabel>
               <p
                 className="text-muted-foreground font-mono text-sm"
                 data-testid="user-edit-email-change-current"
@@ -234,12 +314,17 @@ function ChangeEmailDialog({
               name="newEmail"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>New email</FormLabel>
+                  <FormLabel>
+                    <Trans
+                      id="userEdit.email.dialog.newLabel"
+                      message="New email"
+                    />
+                  </FormLabel>
                   <FormControl>
                     <Input
                       type="email"
                       autoComplete="email"
-                      placeholder="new@example.com"
+                      placeholder={placeholder}
                       disabled={pending}
                       data-testid="user-edit-email-change-input"
                       {...field}
@@ -254,7 +339,7 @@ function ChangeEmailDialog({
                 variant="destructive"
                 data-testid="user-edit-email-change-error"
               >
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription>{label(error)}</AlertDescription>
               </Alert>
             ) : null}
             <AlertDialogFooter>
@@ -262,14 +347,24 @@ function ChangeEmailDialog({
                 disabled={pending}
                 data-testid="user-edit-email-change-cancel"
               >
-                Cancel
+                <Trans id="userEdit.email.dialog.cancel" message="Cancel" />
               </AlertDialogCancel>
               <AlertDialogAction
                 type="submit"
                 disabled={pending}
                 data-testid="user-edit-email-change-submit"
               >
-                {pending ? "Sending…" : "Send confirmation"}
+                {pending ? (
+                  <Trans
+                    id="userEdit.email.dialog.submit.pending"
+                    message="Sending…"
+                  />
+                ) : (
+                  <Trans
+                    id="userEdit.email.dialog.submit.idle"
+                    message="Send confirmation"
+                  />
+                )}
               </AlertDialogAction>
             </AlertDialogFooter>
           </form>
@@ -279,22 +374,13 @@ function ChangeEmailDialog({
   );
 }
 
-function formatRequestError(err: unknown): string {
+function formatRequestError(err: unknown): Label {
   if (extractCode(err) === "CONFLICT") {
     const reason = extractReason(err);
-    if (reason === "email_taken") {
-      return "That email is already in use on another account.";
-    }
-    if (reason === "mailer_not_configured") {
-      return (
-        "Email change requires a magic-link mailer to be configured server-side. " +
-        "Pass `auth.magicLink` and `mailer:` to `plumix({...})` to enable."
-      );
-    }
-    if (reason === "account_disabled") {
-      return "This account is disabled.";
-    }
+    if (reason === "email_taken") return M.emailTaken;
+    if (reason === "mailer_not_configured") return M.mailerNotConfigured;
+    if (reason === "account_disabled") return M.accountDisabled;
   }
   if (err instanceof Error) return err.message;
-  return "Couldn't request the change. Try again.";
+  return M.requestFallback;
 }

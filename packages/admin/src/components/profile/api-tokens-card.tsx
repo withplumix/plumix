@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import {
@@ -35,7 +36,7 @@ import {
   FormMessage,
 } from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
-import { Label } from "@/components/ui/label.js";
+import { Label as UILabel } from "@/components/ui/label.js";
 import {
   Table,
   TableBody,
@@ -48,11 +49,17 @@ import { toDate } from "@/lib/dates.js";
 import { orpc } from "@/lib/orpc.js";
 import { parseScopesText } from "@/lib/scopes.js";
 import { useFormatters } from "@/lib/use-formatters.js";
+import { useLabel } from "@/lib/use-label.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, Plus } from "lucide-react";
 import { useForm, useWatch } from "react-hook-form";
 import * as v from "valibot";
+
+import type { Label } from "@plumix/core/i18n";
+import { vMessage } from "@plumix/core/validation";
 
 // Renders the API-token surface for a target user. Two modes:
 //
@@ -69,12 +76,59 @@ import * as v from "valibot";
 // revoked user X's", and lets the create form be omitted entirely on
 // the admin path.
 
+const M = {
+  // Validator messages
+  nameRequired: defineMessage({
+    id: "apiTokens.create.nameRequired",
+    message: "Name is required.",
+  }),
+  nameTooLong: defineMessage({
+    id: "apiTokens.create.nameTooLong",
+    message: "Name must be ≤ 64 characters.",
+  }),
+  // Expiry option labels.
+  expires7: defineMessage({ id: "apiTokens.expiry.7", message: "7 days" }),
+  expires30: defineMessage({ id: "apiTokens.expiry.30", message: "30 days" }),
+  expires90: defineMessage({ id: "apiTokens.expiry.90", message: "90 days" }),
+  expiresNever: defineMessage({
+    id: "apiTokens.expiry.never",
+    message: "Never",
+  }),
+  // Mutation error fallbacks.
+  mintFallback: defineMessage({
+    id: "apiTokens.mint.fallback",
+    message: "Couldn't mint token. Try again.",
+  }),
+  revokeFallback: defineMessage({
+    id: "apiTokens.revoke.fallback",
+    message: "Couldn't revoke. Try again.",
+  }),
+  // Placeholder copy.
+  namePlaceholder: defineMessage({
+    id: "apiTokens.create.namePlaceholder",
+    message: "github-actions / claude-code / mcp-prod",
+  }),
+  // Copy-to-clipboard button aria-label.
+  copyAria: defineMessage({
+    id: "apiTokens.secret.copyAria",
+    message: "Copy token",
+  }),
+  // Multi-line example capabilities for the textarea placeholder.
+  // The tokens themselves (`entry:post:read`) are protocol-defined
+  // identifiers and stay verbatim across locales; this exists so the
+  // newline-joined literal isn't an unwrapped string at the callsite.
+  capabilitiesPlaceholder: defineMessage({
+    id: "apiTokens.create.capabilities.placeholder",
+    message: "entry:post:read\nentry:post:edit_own",
+  }),
+} satisfies Record<string, MessageDescriptor>;
+
 const createFormSchema = v.object({
   name: v.pipe(
     v.string(),
     v.trim(),
-    v.minLength(1, "Name is required."),
-    v.maxLength(64, "Name must be ≤ 64 characters."),
+    v.minLength(1, vMessage(M.nameRequired)),
+    v.maxLength(64, vMessage(M.nameTooLong)),
   ),
   expires: v.picklist(["7", "30", "90", "never"]),
   scopeMode: v.picklist(["inherit", "restrict"]),
@@ -83,11 +137,14 @@ const createFormSchema = v.object({
 
 type CreateFormValues = v.InferOutput<typeof createFormSchema>;
 
-const EXPIRY_LABEL: Record<CreateFormValues["expires"], string> = {
-  "7": "7 days",
-  "30": "30 days",
-  "90": "90 days",
-  never: "Never",
+const EXPIRY_DESCRIPTOR: Record<
+  CreateFormValues["expires"],
+  MessageDescriptor
+> = {
+  "7": M.expires7,
+  "30": M.expires30,
+  "90": M.expires90,
+  never: M.expiresNever,
 };
 
 const EXPIRY_DAYS: Record<CreateFormValues["expires"], number | null> = {
@@ -216,26 +273,36 @@ function ApiTokensCardView({
   onRevoke: (id: string, callbacks?: MutationCallbacks<unknown>) => void;
   revokePending: boolean;
 }): ReactNode {
-  const { formatRelative } = useFormatters();
+  const label = useLabel();
   const [mintedSecret, setMintedSecret] = useState<{
     secret: string;
     name: string;
   } | null>(null);
-  const [createError, setCreateError] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<Label | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<{
     id: string;
     name: string;
   } | null>(null);
-  const [revokeError, setRevokeError] = useState<string | null>(null);
+  const [revokeError, setRevokeError] = useState<Label | null>(null);
 
   return (
     <Card data-testid="api-tokens-card">
       <CardHeader>
-        <CardTitle>API tokens</CardTitle>
+        <CardTitle>
+          <Trans id="apiTokens.title" message="API tokens" />
+        </CardTitle>
         <CardDescription>
-          {mode === "self"
-            ? "Personal access tokens for CLIs, MCP servers, CI bots, or any other non-browser client. The full secret is shown once at mint time."
-            : "Tokens minted by this user. You can revoke any of them — minting requires the owner's authenticated browser session."}
+          {mode === "self" ? (
+            <Trans
+              id="apiTokens.description.self"
+              message="Personal access tokens for CLIs, MCP servers, CI bots, or any other non-browser client. The full secret is shown once at mint time."
+            />
+          ) : (
+            <Trans
+              id="apiTokens.description.admin"
+              message="Tokens minted by this user. You can revoke any of them — minting requires the owner's authenticated browser session."
+            />
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
@@ -262,9 +329,7 @@ function ApiTokensCardView({
                   },
                   onError: (err) => {
                     setCreateError(
-                      err instanceof Error
-                        ? err.message
-                        : "Couldn't mint token. Try again.",
+                      err instanceof Error ? err.message : M.mintFallback,
                     );
                   },
                 },
@@ -280,16 +345,26 @@ function ApiTokensCardView({
             className="text-muted-foreground text-sm"
             data-testid="api-tokens-loading"
           >
-            Loading tokens…
+            <Trans id="apiTokens.loading" message="Loading tokens…" />
           </p>
         ) : tokens.length === 0 ? (
           <Empty data-testid="api-tokens-empty">
             <EmptyHeader>
-              <EmptyTitle>No tokens yet</EmptyTitle>
+              <EmptyTitle>
+                <Trans id="apiTokens.empty.title" message="No tokens yet" />
+              </EmptyTitle>
               <EmptyDescription>
-                {mode === "self"
-                  ? "Mint one above for your CLI / MCP server / CI bot."
-                  : "This user hasn't minted any API tokens."}
+                {mode === "self" ? (
+                  <Trans
+                    id="apiTokens.empty.description.self"
+                    message="Mint one above for your CLI / MCP server / CI bot."
+                  />
+                ) : (
+                  <Trans
+                    id="apiTokens.empty.description.admin"
+                    message="This user hasn't minted any API tokens."
+                  />
+                )}
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -297,12 +372,24 @@ function ApiTokensCardView({
           <Table data-testid="api-tokens-table">
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Prefix</TableHead>
-                <TableHead>Scopes</TableHead>
-                <TableHead>Last used</TableHead>
-                <TableHead>Expires</TableHead>
-                <TableHead className="w-[1%] text-right">Actions</TableHead>
+                <TableHead>
+                  <Trans id="apiTokens.col.name" message="Name" />
+                </TableHead>
+                <TableHead>
+                  <Trans id="apiTokens.col.prefix" message="Prefix" />
+                </TableHead>
+                <TableHead>
+                  <Trans id="apiTokens.col.scopes" message="Scopes" />
+                </TableHead>
+                <TableHead>
+                  <Trans id="apiTokens.col.lastUsed" message="Last used" />
+                </TableHead>
+                <TableHead>
+                  <Trans id="apiTokens.col.expires" message="Expires" />
+                </TableHead>
+                <TableHead className="w-[1%] text-right">
+                  <Trans id="apiTokens.col.actions" message="Actions" />
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -323,14 +410,10 @@ function ApiTokensCardView({
                     <ScopeBadges scopes={token.scopes} />
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
-                    {token.lastUsedAt
-                      ? formatRelative(toDate(token.lastUsedAt))
-                      : "Never"}
+                    <RelativeOrNever when={token.lastUsedAt} />
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
-                    {token.expiresAt
-                      ? formatRelative(toDate(token.expiresAt))
-                      : "Never"}
+                    <RelativeOrNever when={token.expiresAt} />
                   </TableCell>
                   <TableCell className="text-right">
                     <Button
@@ -341,7 +424,7 @@ function ApiTokensCardView({
                       }
                       data-testid={`api-tokens-revoke-${token.id}`}
                     >
-                      Revoke
+                      <Trans id="apiTokens.revoke.button" message="Revoke" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -368,20 +451,28 @@ function ApiTokensCardView({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Revoke "{revokeTarget?.name}"?</AlertDialogTitle>
+            <AlertDialogTitle>
+              <Trans
+                id="apiTokens.revoke.title"
+                message='Revoke "{name}"?'
+                values={{ name: revokeTarget?.name ?? "" }}
+              />
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              The token stops working immediately. Any client using it will
-              start getting 401s on the next request.
+              <Trans
+                id="apiTokens.revoke.description"
+                message="The token stops working immediately. Any client using it will start getting 401s on the next request."
+              />
             </AlertDialogDescription>
           </AlertDialogHeader>
           {revokeError ? (
             <Alert variant="destructive" data-testid="api-tokens-revoke-error">
-              <AlertDescription>{revokeError}</AlertDescription>
+              <AlertDescription>{label(revokeError)}</AlertDescription>
             </Alert>
           ) : null}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={revokePending}>
-              Cancel
+              <Trans id="apiTokens.revoke.cancel" message="Cancel" />
             </AlertDialogCancel>
             <AlertDialogAction
               data-testid="api-tokens-revoke-confirm-button"
@@ -395,15 +486,17 @@ function ApiTokensCardView({
                   onSuccess: () => setRevokeTarget(null),
                   onError: (err) => {
                     setRevokeError(
-                      err instanceof Error
-                        ? err.message
-                        : "Couldn't revoke. Try again.",
+                      err instanceof Error ? err.message : M.revokeFallback,
                     );
                   },
                 });
               }}
             >
-              {revokePending ? "Revoking…" : "Revoke"}
+              {revokePending ? (
+                <Trans id="apiTokens.revoke.pending" message="Revoking…" />
+              ) : (
+                <Trans id="apiTokens.revoke.confirm" message="Revoke" />
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -419,8 +512,9 @@ function CreateTokenForm({
 }: {
   onSubmit: (values: CreateFormValues) => void;
   pending: boolean;
-  error: string | null;
+  error: Label | null;
 }): ReactNode {
+  const label = useLabel();
   const form = useForm({
     resolver: valibotResolver(createFormSchema),
     defaultValues: {
@@ -447,10 +541,12 @@ function CreateTokenForm({
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Name</FormLabel>
+              <FormLabel>
+                <Trans id="apiTokens.create.name" message="Name" />
+              </FormLabel>
               <FormControl>
                 <Input
-                  placeholder="github-actions / claude-code / mcp-prod"
+                  placeholder={label(M.namePlaceholder)}
                   disabled={pending}
                   data-testid="api-tokens-create-name-input"
                   {...field}
@@ -466,7 +562,9 @@ function CreateTokenForm({
           name="expires"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Expires</FormLabel>
+              <FormLabel>
+                <Trans id="apiTokens.create.expires" message="Expires" />
+              </FormLabel>
               <FormControl>
                 <select
                   value={field.value}
@@ -477,10 +575,12 @@ function CreateTokenForm({
                   className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
                 >
                   {(
-                    Object.keys(EXPIRY_LABEL) as CreateFormValues["expires"][]
+                    Object.keys(
+                      EXPIRY_DESCRIPTOR,
+                    ) as CreateFormValues["expires"][]
                   ).map((value) => (
                     <option key={value} value={value}>
-                      {EXPIRY_LABEL[value]}
+                      {label(EXPIRY_DESCRIPTOR[value])}
                     </option>
                   ))}
                 </select>
@@ -495,10 +595,15 @@ function CreateTokenForm({
           name="scopeMode"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Permissions</FormLabel>
+              <FormLabel>
+                <Trans
+                  id="apiTokens.create.permissions"
+                  message="Permissions"
+                />
+              </FormLabel>
               <FormControl>
                 <div className="flex flex-col gap-2">
-                  <Label className="flex items-center gap-2 font-normal">
+                  <UILabel className="flex items-center gap-2 font-normal">
                     <input
                       type="radio"
                       name={field.name}
@@ -508,9 +613,12 @@ function CreateTokenForm({
                       disabled={pending}
                       data-testid="api-tokens-create-scope-inherit-radio"
                     />
-                    Inherit all your permissions
-                  </Label>
-                  <Label className="flex items-center gap-2 font-normal">
+                    <Trans
+                      id="apiTokens.create.scope.inherit"
+                      message="Inherit all your permissions"
+                    />
+                  </UILabel>
+                  <UILabel className="flex items-center gap-2 font-normal">
                     <input
                       type="radio"
                       name={field.name}
@@ -520,8 +628,11 @@ function CreateTokenForm({
                       disabled={pending}
                       data-testid="api-tokens-create-scope-restrict-radio"
                     />
-                    Restrict to specific capabilities
-                  </Label>
+                    <Trans
+                      id="apiTokens.create.scope.restrict"
+                      message="Restrict to specific capabilities"
+                    />
+                  </UILabel>
                 </div>
               </FormControl>
               <FormMessage />
@@ -535,11 +646,16 @@ function CreateTokenForm({
             name="scopesText"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Capabilities</FormLabel>
+                <FormLabel>
+                  <Trans
+                    id="apiTokens.create.capabilities"
+                    message="Capabilities"
+                  />
+                </FormLabel>
                 <FormControl>
                   <textarea
                     rows={4}
-                    placeholder={"entry:post:read\nentry:post:edit_own"}
+                    placeholder={label(M.capabilitiesPlaceholder)}
                     disabled={pending}
                     data-testid="api-tokens-create-scopes-textarea"
                     className="border-input bg-background focus-visible:ring-ring rounded-md border px-3 py-2 font-mono text-sm focus-visible:ring-2 focus-visible:outline-none"
@@ -547,8 +663,10 @@ function CreateTokenForm({
                   />
                 </FormControl>
                 <p className="text-muted-foreground text-xs">
-                  One capability per line. The token can never exceed the caps
-                  your role grants — this is an additional narrowing.
+                  <Trans
+                    id="apiTokens.create.capabilities.help"
+                    message="One capability per line. The token can never exceed the caps your role grants — this is an additional narrowing."
+                  />
                 </p>
                 <FormMessage />
               </FormItem>
@@ -558,7 +676,7 @@ function CreateTokenForm({
 
         {error ? (
           <Alert variant="destructive" data-testid="api-tokens-create-error">
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{label(error)}</AlertDescription>
           </Alert>
         ) : null}
 
@@ -569,7 +687,11 @@ function CreateTokenForm({
             data-testid="api-tokens-create-submit"
           >
             <Plus className="size-4" />
-            {pending ? "Minting…" : "Mint token"}
+            {pending ? (
+              <Trans id="apiTokens.create.submit.pending" message="Minting…" />
+            ) : (
+              <Trans id="apiTokens.create.submit.idle" message="Mint token" />
+            )}
           </Button>
         </div>
       </form>
@@ -586,6 +708,7 @@ function SecretShownDialog({
   name: string;
   onClose: () => void;
 }): ReactNode {
+  const label = useLabel();
   const [copied, setCopied] = useState(false);
 
   const copy = async (): Promise<void> => {
@@ -615,10 +738,18 @@ function SecretShownDialog({
     >
       <AlertDialogContent data-testid="api-tokens-secret-dialog">
         <AlertDialogHeader>
-          <AlertDialogTitle>Token "{name}" minted</AlertDialogTitle>
+          <AlertDialogTitle>
+            <Trans
+              id="apiTokens.secret.title"
+              message='Token "{name}" minted'
+              values={{ name }}
+            />
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            Copy the secret now. We won't show it again — losing it means
-            revoking and re-minting.
+            <Trans
+              id="apiTokens.secret.description"
+              message="Copy the secret now. We won't show it again — losing it means revoking and re-minting."
+            />
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="flex gap-2">
@@ -637,7 +768,7 @@ function SecretShownDialog({
               void copy();
             }}
             data-testid="api-tokens-secret-copy-button"
-            aria-label="Copy token"
+            aria-label={label(M.copyAria)}
           >
             {copied ? (
               <Check className="size-4" />
@@ -651,12 +782,22 @@ function SecretShownDialog({
             onClick={onClose}
             data-testid="api-tokens-secret-done-button"
           >
-            Done
+            <Trans id="apiTokens.secret.done" message="Done" />
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   );
+}
+
+// Renders a relative-time string when the timestamp is set, otherwise
+// the localized "Never" placeholder. Used by both the lastUsed and
+// expires columns — they share the formatter call so the table row
+// pulls `useFormatters` once at this seam instead of in the parent.
+function RelativeOrNever({ when }: { when: Date | string | null }): ReactNode {
+  const { formatRelative } = useFormatters();
+  if (when === null) return <Trans id="apiTokens.never" message="Never" />;
+  return <>{formatRelative(toDate(when))}</>;
 }
 
 function ScopeBadges({
@@ -667,14 +808,14 @@ function ScopeBadges({
   if (scopes === null) {
     return (
       <Badge variant="outline" data-testid="api-tokens-scope-inherit">
-        Inherit role
+        <Trans id="apiTokens.scope.inheritRole" message="Inherit role" />
       </Badge>
     );
   }
   if (scopes.length === 0) {
     return (
       <Badge variant="outline" data-testid="api-tokens-scope-empty">
-        No caps
+        <Trans id="apiTokens.scope.empty" message="No caps" />
       </Badge>
     );
   }

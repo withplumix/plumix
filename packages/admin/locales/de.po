@@ -14,14 +14,69 @@ msgstr ""
 "Language-Team: \n"
 
 #. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+#~ msgid "profile.passkeys.rename.notFound"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+#~ msgid "profile.passkeys.delete.notFound"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+#~ msgid "profile.passkeys.delete.lastTooltip"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+#~ msgid "profile.passkeys.delete.lastCredential"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.noName"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.device.browserOnOs"
 msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.test.tsx
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.pageSummary"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revoke.descriptionWithIp"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revoke.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revokeAll.count"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.expiry.30"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.expiry.7"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.expiry.90"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -50,14 +105,29 @@ msgid "auth.device.userCode.placeholder"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_auth/accept-invite/$token.tsx
+msgid "auth.acceptInvite.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.status.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.col.actions"
 msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.active"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.title"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -86,8 +156,23 @@ msgid "breadcrumb.addNew"
 msgstr "Neu hinzufügen"
 
 #. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.enroll.idle"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.added"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.submit.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.enroll.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -113,6 +198,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.restore.conflict"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.title"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -211,8 +306,63 @@ msgid "allowedDomains.row.deleteCancel"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.revoke.cancel"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.rename.cancel"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.delete.cancel"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revoke.cancel"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.cancelPending.idle"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.dialog.cancel"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.enroll.cancelled"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.cancelPending.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopes.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.capabilities"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.changeButton"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.dialog.title"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -266,6 +416,11 @@ msgid "userEdit.delete.confirm.title"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.confirmationSent"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.submit.idle"
 msgstr ""
@@ -301,6 +456,16 @@ msgid "userInvite.copy.aria"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.secret.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.secret.copyAria"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.empty.description"
 msgstr ""
@@ -316,8 +481,23 @@ msgid "auth.device.approve.error.fallback"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.delete.fallback"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.error.deleteFallback"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.enroll.emailMismatch"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.enroll.fallback"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -331,13 +511,63 @@ msgid "settings.page.loadFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.loadFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.loadFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.loadFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.loadFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.error.fallback"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.mint.fallback"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.networkError"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.rename.fallback"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.error.requestFallback"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revokeAll.fallback"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revoke.fallback"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.revoke.fallback"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -353,6 +583,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.error.fallback"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.saveFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -381,8 +616,43 @@ msgid "breadcrumb.createTerm"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_auth/bootstrap.tsx
+msgid "auth.bootstrap.submit.idle"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/bootstrap.tsx
+msgid "auth.bootstrap.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/accept-invite/$token.tsx
+msgid "auth.acceptInvite.submit.idle"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.column.created"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/bootstrap.tsx
+msgid "auth.bootstrap.submit.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+msgid "editor.entry.create.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.transport.hybrid"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.dialog.currentLabel"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -396,6 +666,11 @@ msgid "allowedDomains.add.defaultRole.label"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.delete.button"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.deleteAria"
 msgstr ""
@@ -403,6 +678,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.confirm.idle"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.delete.confirm"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.delete.title"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -421,6 +706,11 @@ msgid "userEdit.delete.confirm.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.delete.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.denied"
 msgstr ""
@@ -433,6 +723,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.deny.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.description"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -472,6 +772,11 @@ msgid "allowedDomains.add.domain.label"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.secret.done"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.edit"
 msgstr "Bearbeiten"
@@ -479,6 +784,11 @@ msgstr "Bearbeiten"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.title.other"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.headline"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -507,8 +817,23 @@ msgid "userInvite.email.label"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_auth/bootstrap.tsx
+msgid "auth.bootstrap.email"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.email.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.error.mailerNotConfigured"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -552,6 +877,11 @@ msgid "login.email.invalid"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.invalid"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.domain.invalid"
 msgstr ""
@@ -577,13 +907,43 @@ msgid "auth.device.scopes.placeholder"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.capabilities.placeholder"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.placeholder"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.col.expires"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.expires"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.roleFilter.aria"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.namePlaceholder"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/data-table/list-pagination.tsx
+msgid "listPagination.next.aria"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/data-table/list-pagination.tsx
+msgid "listPagination.prev.aria"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -599,6 +959,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopeMode.inherit"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.scope.inherit"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.scope.inheritRole"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -652,8 +1022,33 @@ msgid "users.list.column.lastSignIn"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.col.lastUsed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.lastUsed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/data-table/data-table.tsx
+msgid "dataTable.loading"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.loading"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.loading"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.loading"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -667,13 +1062,43 @@ msgid "users.list.loading"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.stale.loading"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.list.loading"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.loading"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.loading"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.empty.description.self"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.submit.idle"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.submit.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -687,8 +1112,38 @@ msgid "userEdit.name.label"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_auth/bootstrap.tsx
+msgid "auth.bootstrap.name"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/accept-invite/$token.tsx
+msgid "auth.acceptInvite.name"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.col.name"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.name"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.rename.nameEmpty"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.required"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.nameRequired"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -697,8 +1152,53 @@ msgid "auth.device.tokenName.tooLong"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.nameTooLong"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.enroll.networkError"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.lastSignIn.never"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.expiry.never"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.never"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.dialog.newLabel"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.placeholder"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/data-table/list-pagination.tsx
+msgid "listPagination.next.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.userNotFound"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.scope.empty"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -722,8 +1222,33 @@ msgid "mailer.test.error.notConfigured"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.noAuthenticator"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.empty"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.empty"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/data-table/data-table.tsx
+msgid "dataTable.emptyState"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.empty.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.empty.title"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -747,6 +1272,11 @@ msgid "settings.page.notFound.title"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.capabilities.help"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.role.selfReadonly"
 msgstr ""
@@ -762,6 +1292,21 @@ msgid "login.oauth.separator"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/data-table/list-pagination.tsx
+msgid "listPagination.page"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.description"
 msgstr ""
@@ -769,6 +1314,26 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopeMode.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.permissions"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.description.self"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.col.prefix"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/data-table/list-pagination.tsx
+msgid "listPagination.prev.label"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -797,8 +1362,48 @@ msgid "mailer.test.recipient.label"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.rename.button"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.rename.label"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopeMode.restrict"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.scope.restrict"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.revoke.button"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.revoke.confirm"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revoke.button"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.revoke.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.revoke.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -814,6 +1419,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.role.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.rename.save"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -842,13 +1452,33 @@ msgid "settings.page.submit.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.rename.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.col.scopes"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.searchPlaceholder"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.transport.securityKey"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.dialog.submit.idle"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -872,8 +1502,28 @@ msgid "login.magicLink.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.dialog.submit.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/accept-invite/$token.tsx
+msgid "auth.acceptInvite.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/bootstrap.tsx
+msgid "auth.bootstrap.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/accept-invite/$token.tsx
+msgid "auth.acceptInvite.submit.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -912,6 +1562,36 @@ msgid "menu.signOut"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revoke.confirm"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revokeAll.idle"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revoke.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.userCancelled"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.registrationClosed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.signedIn"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.passkey.pending"
 msgstr ""
@@ -919,6 +1599,26 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/shell/user-menu.tsx
 msgid "menu.signOut.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revokeAll.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revoke.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.invalidInput"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.unknown"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -934,6 +1634,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
 msgid "userRole.long.subscriber"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.synced"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -957,8 +1662,48 @@ msgid "allowedDomains.error.domainExists"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.emailMismatch"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.error.taken"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.enroll.alreadyRegistered"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.credentialAlreadyRegistered"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.credentialNotFound"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.challengeNotFound"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.challengeNotBoundToUser"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.delete.description"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -972,8 +1717,23 @@ msgid "notFound.description"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.challengeMismatch"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.revoke.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.error.accountDisabled"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1007,6 +1767,51 @@ msgid "auth.device.approve.error.alreadyDenied"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.transport.internal"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.thisDevice"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.enroll.noAuthenticator"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.tokenExpired"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.invalidToken"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.invalidOrigin"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.invalidRpId"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.notFound"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revoke.notFound"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.empty.description"
 msgstr ""
@@ -1017,8 +1822,38 @@ msgid "userEdit.error.hasEntries"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.empty.description.admin"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.secret.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.description.admin"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.unknownDevice"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.unnamed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+msgid "editor.entry.create.untitled"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1062,6 +1897,11 @@ msgid "breadcrumb.users"
 msgstr "Benutzer"
 
 #. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.dialog.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.welcome"
 msgstr ""
@@ -1082,11 +1922,66 @@ msgid "users.list.row.you"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.lastCredential"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revoke.current"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.credentialLimitReached"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/language-card.tsx
 msgid "profile.language.description"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.userPresenceMissing"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.invalidResponse"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.invalidClientData"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.unsupportedAttestationFormat"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.invalidSignature"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.unsupportedAlgorithm"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.counterReplay"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.title.self"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.credentialStorageCorrupt"
 msgstr ""

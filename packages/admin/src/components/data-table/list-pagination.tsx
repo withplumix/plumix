@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button.js";
 import {
@@ -5,7 +6,21 @@ import {
   PaginationContent,
   PaginationItem,
 } from "@/components/ui/pagination.js";
+import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+
+const M = {
+  prevAria: defineMessage({
+    id: "listPagination.prev.aria",
+    message: "Go to previous page",
+  }),
+  nextAria: defineMessage({
+    id: "listPagination.next.aria",
+    message: "Go to next page",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 export function ListPagination({
   page,
@@ -20,9 +35,16 @@ export function ListPagination({
   isLoading: boolean;
   onPageChange: (page: number) => void;
 }): ReactNode {
+  const label = useLabel();
   return (
     <Pagination className="justify-between">
-      <span className="text-muted-foreground text-sm">Page {page}</span>
+      <span className="text-muted-foreground text-sm">
+        <Trans
+          id="listPagination.page"
+          message="Page {page}"
+          values={{ page }}
+        />
+      </span>
       <PaginationContent>
         <PaginationItem>
           <Button
@@ -32,10 +54,12 @@ export function ListPagination({
             onClick={() => {
               onPageChange(page - 1);
             }}
-            aria-label="Go to previous page"
+            aria-label={label(M.prevAria)}
           >
             <ChevronLeft />
-            <span className="hidden sm:inline">Previous</span>
+            <span className="hidden sm:inline">
+              <Trans id="listPagination.prev.label" message="Previous" />
+            </span>
           </Button>
         </PaginationItem>
         <PaginationItem>
@@ -46,9 +70,11 @@ export function ListPagination({
             onClick={() => {
               onPageChange(page + 1);
             }}
-            aria-label="Go to next page"
+            aria-label={label(M.nextAria)}
           >
-            <span className="hidden sm:inline">Next</span>
+            <span className="hidden sm:inline">
+              <Trans id="listPagination.next.label" message="Next" />
+            </span>
             <ChevronRight />
           </Button>
         </PaginationItem>

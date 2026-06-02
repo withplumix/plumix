@@ -9,8 +9,12 @@ import { UAParser } from "ua-parser-js";
 // current with new browsers/OSes via admin redeploys.
 
 interface ParsedUserAgent {
-  /** Compact "Browser on OS" label, or "Unknown device" when the UA is unparseable / null. */
-  readonly label: string;
+  /** Vendor browser name (`"Chrome"`, `"Safari"`); null when ua-parser
+   *  can't identify one. Vendor names are universal — consumers
+   *  interpolate them into a localized "{browser} on {os}" template. */
+  readonly browser: string | null;
+  /** OS family name (`"macOS"`, `"iPhone"`); null when unidentified. */
+  readonly os: string | null;
   /** Lucide icon matching the device class (desktop/tablet/mobile/etc). */
   readonly icon: LucideIcon;
   /** Raw UA string for tooltips / advanced display. Null when input was null. */
@@ -19,27 +23,15 @@ interface ParsedUserAgent {
 
 export function parseUserAgent(ua: string | null): ParsedUserAgent {
   if (!ua) {
-    return { label: "Unknown device", icon: Globe, raw: null };
+    return { browser: null, os: null, icon: Globe, raw: null };
   }
   const parsed = UAParser(ua);
-  const browser = parsed.browser.name;
-  const os = parsed.os.name;
-  const label = formatLabel(browser, os);
   return {
-    label,
+    browser: parsed.browser.name ?? null,
+    os: parsed.os.name ?? null,
     icon: pickIcon(parsed.device.type),
     raw: ua,
   };
-}
-
-function formatLabel(
-  browser: string | undefined,
-  os: string | undefined,
-): string {
-  if (browser && os) return `${browser} on ${os}`;
-  if (browser) return browser;
-  if (os) return os;
-  return "Unknown device";
 }
 
 // ua-parser-js's `device.type` is undefined for desktop browsers and
