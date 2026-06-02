@@ -370,7 +370,7 @@ msgid "userInvite.error.fallback"
 msgstr "Couldn't send invite. Try again."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/lib/mailer-errors.ts
 msgid "mailer.test.error.fallback"
 msgstr "Couldn't send the test message. Try again."
 
@@ -694,7 +694,7 @@ msgid "settings.page.empty.title"
 msgstr "No groups on this page"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/lib/mailer-errors.ts
 msgid "mailer.test.error.notConfigured"
 msgstr "No mailer adapter is configured. Pass a `mailer:` to `plumix({...})` "
 "(e.g. consoleMailer() for dev, or your Resend/Postmark/SES wrapper)."
@@ -949,7 +949,7 @@ msgstr "The CLI shows an 8-character code split with a dash — \"ABCD-EFGH\". "
 "Letters and digits only, no zeros or ones."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/lib/mailer-errors.ts
 msgid "mailer.test.error.sendFailed"
 msgstr "The mailer adapter threw an error during send. Check the worker logs "
 "for the underlying error."

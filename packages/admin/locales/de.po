@@ -361,7 +361,7 @@ msgid "userInvite.error.fallback"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/lib/mailer-errors.ts
 msgid "mailer.test.error.fallback"
 msgstr ""
 
@@ -677,7 +677,7 @@ msgid "settings.page.empty.title"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/lib/mailer-errors.ts
 msgid "mailer.test.error.notConfigured"
 msgstr ""
 
@@ -922,7 +922,7 @@ msgid "auth.device.lookup.description"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/lib/mailer-errors.ts
 msgid "mailer.test.error.sendFailed"
 msgstr ""
 

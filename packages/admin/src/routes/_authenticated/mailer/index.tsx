@@ -20,24 +20,26 @@ import {
 } from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
 import { hasCap } from "@/lib/caps.js";
-import { extractReason } from "@/lib/orpc-errors.js";
+import { testSendErrorMessage } from "@/lib/mailer-errors.js";
 import { orpc } from "@/lib/orpc.js";
+import { useLabel } from "@/lib/use-label.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { defineMessage } from "@lingui/core/macro";
-import { Trans, useLingui } from "@lingui/react";
+import { Trans } from "@lingui/react";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import * as v from "valibot";
+
+import type { Label } from "@plumix/core/i18n";
 
 const formSchema = v.object({
   to: v.pipe(
     v.string(),
     v.trim(),
     v.toLowerCase(),
-    // TODO(slice 9 vMessage): swap to a translatable validator message
-    // once the lazy `t` descriptor pattern lands in `@plumix/core`. The
-    // current literal renders in English regardless of admin locale.
+    // TODO(#721 vMessage): swap to a translatable validator message
+    // once the lazy `t` descriptor pattern lands in `@plumix/core`.
     v.email("Enter a valid email address."),
   ),
 });
@@ -46,20 +48,6 @@ const M = {
   placeholder: defineMessage({
     id: "mailer.test.recipient.placeholder",
     message: "ops@example.com",
-  }),
-  errNotConfigured: defineMessage({
-    id: "mailer.test.error.notConfigured",
-    message:
-      "No mailer adapter is configured. Pass a `mailer:` to `plumix({...})` (e.g. consoleMailer() for dev, or your Resend/Postmark/SES wrapper).",
-  }),
-  errSendFailed: defineMessage({
-    id: "mailer.test.error.sendFailed",
-    message:
-      "The mailer adapter threw an error during send. Check the worker logs for the underlying error.",
-  }),
-  errFallback: defineMessage({
-    id: "mailer.test.error.fallback",
-    message: "Couldn't send the test message. Try again.",
   }),
 } satisfies Record<string, MessageDescriptor>;
 
@@ -75,11 +63,9 @@ export const Route = createFileRoute("/_authenticated/mailer/")({
 
 function MailerRoute(): ReactNode {
   const { user } = Route.useRouteContext();
-  const { i18n } = useLingui();
+  const label = useLabel();
   const [feedback, setFeedback] = useState<
-    | { kind: "ok"; to: string }
-    | { kind: "error"; message: MessageDescriptor }
-    | null
+    { kind: "ok"; to: string } | { kind: "error"; message: Label } | null
   >(null);
 
   const form = useForm({
@@ -150,9 +136,7 @@ function MailerRoute(): ReactNode {
                       <Input
                         type="email"
                         autoComplete="email"
-                        placeholder={i18n._(M.placeholder.id, undefined, {
-                          message: M.placeholder.message,
-                        })}
+                        placeholder={label(M.placeholder)}
                         disabled={testSend.isPending}
                         data-testid="mailer-test-recipient"
                         {...field}
@@ -176,11 +160,7 @@ function MailerRoute(): ReactNode {
               ) : null}
               {feedback?.kind === "error" ? (
                 <Alert variant="destructive" data-testid="mailer-test-error">
-                  <AlertDescription>
-                    {i18n._(feedback.message.id, undefined, {
-                      message: feedback.message.message,
-                    })}
-                  </AlertDescription>
+                  <AlertDescription>{label(feedback.message)}</AlertDescription>
                 </Alert>
               ) : null}
 
@@ -203,18 +183,4 @@ function MailerRoute(): ReactNode {
       </Card>
     </div>
   );
-}
-
-function testSendErrorMessage(err: unknown): MessageDescriptor {
-  const reason = extractReason(err);
-  if (reason === "mailer_not_configured") return M.errNotConfigured;
-  if (reason === "mailer_send_failed") return M.errSendFailed;
-  // Non-tagged Error: inline `{id, message}` isn't visited by `lingui
-  // extract` (only macro callsites are), so this id is never registered
-  // and `i18n._` falls through to `err.message` verbatim — the right
-  // shape for plugin-author text until a translatable error path lands.
-  if (err instanceof Error) {
-    return { id: "mailer.test.error.runtime", message: err.message };
-  }
-  return M.errFallback;
 }
