@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge.js";
@@ -15,8 +16,30 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover.js";
+import { useLabel } from "@/lib/use-label.js";
 import { cn } from "@/lib/utils.js";
+import { defineMessage } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
 import { Check, ChevronsUpDown } from "lucide-react";
+
+const M = {
+  defaultTriggerPlaceholder: defineMessage({
+    id: "form.multiSelect.placeholder",
+    message: "Select…",
+  }),
+  defaultSearchPlaceholder: defineMessage({
+    id: "form.multiSelect.search",
+    message: "Search…",
+  }),
+  defaultEmpty: defineMessage({
+    id: "form.multiSelect.empty",
+    message: "No matches.",
+  }),
+  selectedCount: defineMessage({
+    id: "form.multiSelect.selectedCount",
+    message: "{count} selected",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 export interface MultiSelectOption {
   readonly value: string;
@@ -29,9 +52,9 @@ export function MultiSelect({
   options,
   value,
   onChange,
-  placeholder = "Select…",
-  searchPlaceholder = "Search…",
-  emptyText = "No matches.",
+  placeholder,
+  searchPlaceholder,
+  emptyText,
   className,
   testId,
   disabled = false,
@@ -47,13 +70,24 @@ export function MultiSelect({
   readonly disabled?: boolean;
 }): ReactNode {
   const [open, setOpen] = useState(false);
+  const { i18n } = useLingui();
+  const renderLabel = useLabel();
+  const resolvedPlaceholder =
+    placeholder ?? renderLabel(M.defaultTriggerPlaceholder);
+  const resolvedSearchPlaceholder =
+    searchPlaceholder ?? renderLabel(M.defaultSearchPlaceholder);
+  const resolvedEmptyText = emptyText ?? renderLabel(M.defaultEmpty);
   const selected = new Set(value);
   const triggerLabel =
     value.length === 0
-      ? placeholder
+      ? resolvedPlaceholder
       : value.length === 1
         ? (options.find((o) => o.value === value[0])?.label ?? value[0])
-        : `${String(value.length)} selected`;
+        : i18n._(
+            M.selectedCount.id,
+            { count: value.length },
+            { message: M.selectedCount.message },
+          );
 
   const toggle = (optValue: string): void => {
     if (selected.has(optValue)) {
@@ -91,9 +125,9 @@ export function MultiSelect({
       </PopoverTrigger>
       <PopoverContent className="w-64 p-0" align="start">
         <Command>
-          <CommandInput placeholder={searchPlaceholder} />
+          <CommandInput placeholder={resolvedSearchPlaceholder} />
           <CommandList>
-            <CommandEmpty>{emptyText}</CommandEmpty>
+            <CommandEmpty>{resolvedEmptyText}</CommandEmpty>
             <CommandGroup>
               {options.map((opt) => {
                 const checked = selected.has(opt.value);

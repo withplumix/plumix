@@ -1,6 +1,7 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import { renderWithI18n } from "../../../test/render-with-i18n.js";
 import { PreviewBanner } from "./PreviewBanner.js";
 
 afterEach(() => {
@@ -11,7 +12,7 @@ const T0 = new Date("2026-05-22T12:00:00Z");
 
 describe("PreviewBanner", () => {
   test("renders the revision metadata so the user knows what they're previewing", () => {
-    render(
+    renderWithI18n(
       <PreviewBanner
         revisionUpdatedAt={T0}
         revisionAuthor="Ada Lovelace"
@@ -28,7 +29,7 @@ describe("PreviewBanner", () => {
 
   test("clicking Back to live fires onBackToLive", () => {
     const onBackToLive = vi.fn();
-    render(
+    renderWithI18n(
       <PreviewBanner
         revisionUpdatedAt={T0}
         revisionAuthor="Ada"
@@ -44,7 +45,7 @@ describe("PreviewBanner", () => {
 
   test("clicking Restore fires onRestore", () => {
     const onRestore = vi.fn();
-    render(
+    renderWithI18n(
       <PreviewBanner
         revisionUpdatedAt={T0}
         revisionAuthor="Ada"
@@ -59,7 +60,7 @@ describe("PreviewBanner", () => {
   });
 
   test("Restore button disables while a restore is in flight", () => {
-    render(
+    renderWithI18n(
       <PreviewBanner
         revisionUpdatedAt={T0}
         revisionAuthor="Ada"
@@ -74,7 +75,7 @@ describe("PreviewBanner", () => {
   });
 
   test("surfaces restoreError inline so a stale-token CONFLICT doesn't look like a silent no-op", () => {
-    render(
+    renderWithI18n(
       <PreviewBanner
         revisionUpdatedAt={T0}
         revisionAuthor="Ada"

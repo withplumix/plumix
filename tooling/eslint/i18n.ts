@@ -200,6 +200,15 @@ export const i18nStrictOverrides: Linter.Config = {
           "^(background|fontSize|padding|transform)$",
           // Puck slot key constant.
           "^content$",
+          // Revision diff tab discriminators — picklist values for the
+          // `defaultTab` prop on `RevisionDiffPanel`, never user copy.
+          // (The visible tab labels are wrapped via `<Trans>`.)
+          "^(visual|json)$",
+          // Entry list valibot picklist values for sort-column
+          // (`title` is the orderBy code) and author-filter (`mine`).
+          // Visible column / option labels go through `M.columnTitle`
+          // and `M.authorMine` respectively.
+          "^mine$",
         ],
         // Bare strings compile via `new RegExp(s)`; the `{regex:{pattern,flags?}}`
         // form is required only when flags are needed. Most entries are
@@ -276,6 +285,10 @@ export const i18nStrictOverrides: Linter.Config = {
           // Tanstack query / router / table
           "queryKey",
           "accessorKey",
+          // Sortable-header column-id prop value (e.g.
+          // `<SortableHeader column="title">`). The column id is the
+          // picklist key, not the visible label.
+          "column",
           // JSX `value` is the state-bound input/option value — string
           // literals here are picklist discriminators (`<option value="inherit">`),
           // never user copy.

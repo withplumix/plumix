@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import {
   Tabs,
@@ -5,9 +6,27 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs.js";
+import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
 
 import type { TextDiffSegment } from "./diff.js";
 import { diffJson, diffText, extractPlainText } from "./diff.js";
+
+const M = {
+  fieldTitle: defineMessage({
+    id: "editor.revisions.diff.field.title",
+    message: "Title",
+  }),
+  fieldSlug: defineMessage({
+    id: "editor.revisions.diff.field.slug",
+    message: "Slug",
+  }),
+  fieldExcerpt: defineMessage({
+    id: "editor.revisions.diff.field.excerpt",
+    message: "Excerpt",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 interface RevisionDiffSnapshot {
   readonly title: string;
@@ -17,11 +36,13 @@ interface RevisionDiffSnapshot {
   readonly meta: Readonly<Record<string, unknown>>;
 }
 
+type DiffTab = "visual" | "json";
+
 interface RevisionDiffPanelProps {
   readonly revision: RevisionDiffSnapshot;
   readonly current: RevisionDiffSnapshot;
   /** Initial active tab. Exposed for tests + deep-linking. */
-  readonly defaultTab?: "visual" | "json";
+  readonly defaultTab?: DiffTab;
 }
 
 export function RevisionDiffPanel({
@@ -29,6 +50,7 @@ export function RevisionDiffPanel({
   current,
   defaultTab = "visual",
 }: RevisionDiffPanelProps): ReactElement {
+  const renderLabel = useLabel();
   const visualBody = diffText(
     extractPlainText(revision.content),
     extractPlainText(current.content),
@@ -37,10 +59,18 @@ export function RevisionDiffPanel({
 
   return (
     <div data-plumix-revision-diff="" className="space-y-4 px-1 py-3">
-      <FieldDiff label="Title" a={revision.title} b={current.title} />
-      <FieldDiff label="Slug" a={revision.slug} b={current.slug} />
       <FieldDiff
-        label="Excerpt"
+        label={renderLabel(M.fieldTitle)}
+        a={revision.title}
+        b={current.title}
+      />
+      <FieldDiff
+        label={renderLabel(M.fieldSlug)}
+        a={revision.slug}
+        b={current.slug}
+      />
+      <FieldDiff
+        label={renderLabel(M.fieldExcerpt)}
         a={revision.excerpt ?? ""}
         b={current.excerpt ?? ""}
       />
@@ -48,10 +78,10 @@ export function RevisionDiffPanel({
       <Tabs defaultValue={defaultTab} className="gap-3">
         <TabsList data-testid="revision-diff-tabs">
           <TabsTrigger value="visual" data-testid="revision-diff-tab-visual">
-            Visual
+            <Trans id="editor.revisions.diff.tab.visual" message="Visual" />
           </TabsTrigger>
           <TabsTrigger value="json" data-testid="revision-diff-tab-json">
-            Raw JSON
+            <Trans id="editor.revisions.diff.tab.json" message="Raw JSON" />
           </TabsTrigger>
         </TabsList>
         <TabsContent value="visual" data-testid="revision-diff-pane-visual">
@@ -101,7 +131,7 @@ function DiffBody({
         data-testid="revision-diff-empty"
         className="text-muted-foreground text-sm"
       >
-        No changes.
+        <Trans id="editor.revisions.diff.empty" message="No changes." />
       </p>
     );
   }

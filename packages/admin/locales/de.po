@@ -19,6 +19,11 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.descendantsHint"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.countSuffixMax"
 msgstr ""
@@ -39,8 +44,18 @@ msgid "termForm.parent.rootOption"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.commentSaving"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.noName"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.noTitle"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -52,6 +67,11 @@ msgstr ""
 #: src/routes/_authenticated/settings/index.test.tsx
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.pageSummary"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/form/multi-select.tsx
+msgid "form.multiSelect.selectedCount"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -80,6 +100,11 @@ msgid "profile.sessions.revokeAll.count"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/PreviewBanner.tsx
+msgid "editor.revisions.preview.backToLive"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.expiry.30"
 msgstr ""
@@ -102,6 +127,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/-errors.ts
+msgid "terms.error.parentSelfOrCycle"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/-errors.ts
+msgid "terms.error.slugTaken"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -153,6 +188,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.addMore"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+msgid "terms.create.description.flat"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -221,6 +261,26 @@ msgid "userRole.long.admin"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.statusFilter.all"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.tab.all"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.taxonomyFilter.all"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.authorFilter.all"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.roleFilter.all"
 msgstr ""
@@ -256,6 +316,11 @@ msgid "auth.device.approve.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.tab.audit"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
 msgid "userRole.author"
 msgstr ""
@@ -271,8 +336,33 @@ msgid "auth.device.title"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.tab.autosaves"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.autosavesEmpty"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.back"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+msgid "terms.create.backLink"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.backLink"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.header.backToList"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -288,6 +378,36 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.backToList"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+msgid "editor.styleTab.section.background"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.tab.block"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.mobile.inspectorSheetDescription"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.mobile.blocksTrigger"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.mobile.blocksSheetTitle"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.tab.blocks"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -326,6 +446,16 @@ msgid "userEdit.cancel"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.cancel"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.trashDialog.cancel"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.cancel"
 msgstr ""
@@ -338,6 +468,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/editor/BlockScopePicker.tsx
 msgid "blockScopePicker.cancel"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.commentCancel"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -446,6 +581,11 @@ msgid "auth.device.tokenName.default"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draftBanner.body"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.error.notFound"
 msgstr ""
@@ -511,6 +651,11 @@ msgid "userInvite.copy.idle"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.canvas.copyAsPatternSource"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.copy.aria"
 msgstr ""
@@ -551,13 +696,28 @@ msgid "emailChange.error.fallback"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+msgid "terms.create.error.createFallback"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.fallback"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.error.deleteFallback"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.error.deleteFallback"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+msgid "terms.create.error.emptySlug"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -571,8 +731,23 @@ msgid "profile.passkeys.enroll.fallback"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+msgid "terms.list.loadError"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.loadError"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.resolveError"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.notFound.message"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -666,6 +841,11 @@ msgid "userEdit.error.updateFallback"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.error.saveFallback"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.error.fallback"
 msgstr ""
@@ -716,6 +896,11 @@ msgid "breadcrumb.createTerm"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+msgid "terms.create.submit"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/bootstrap.tsx
 msgid "auth.bootstrap.submit.idle"
 msgstr ""
@@ -728,6 +913,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_auth/accept-invite/$token.tsx
 msgid "auth.acceptInvite.submit.idle"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+msgid "terms.list.empty.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.empty.description"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -748,6 +943,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.transport.hybrid"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffDialog.tsx
+msgid "editor.revisions.diffDialog.pane.current"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -781,13 +981,33 @@ msgid "allowedDomains.row.deleteAria"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.dialogTitle"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.confirm.idle"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.confirm"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.confirm"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.cardTitle"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.button"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -811,6 +1031,11 @@ msgid "userEdit.delete.confirm.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.deleting"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.pending"
 msgstr ""
@@ -831,8 +1056,23 @@ msgid "auth.device.deny.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.commentPlaceholder"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+msgid "terms.list.column.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/device-labels.ts
+msgid "editor.device.desktop"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -882,6 +1122,16 @@ msgid "userEdit.status.toggle.disabling"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draft.discard"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draft.discarding"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.discarding"
 msgstr ""
@@ -897,8 +1147,18 @@ msgid "apiTokens.secret.done"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.statusFilter.draft"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/BlockActionsPanel.tsx
 msgid "blockActions.duplicate"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.edit"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -922,9 +1182,19 @@ msgid "breadcrumb.editTerm"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.heading"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.editUser"
 msgstr "Benutzer bearbeiten"
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+msgid "editor.styleTab.activeBucket"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
@@ -1037,6 +1307,11 @@ msgid "breadcrumb.entries"
 msgstr "Einträge"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.dialogDescription"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopes.placeholder"
 msgstr ""
@@ -1047,8 +1322,18 @@ msgid "apiTokens.create.capabilities.placeholder"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.placeholder"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+msgid "editor.revisions.diff.field.excerpt"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1062,13 +1347,48 @@ msgid "apiTokens.create.expires"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.error"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffDialog.tsx
+msgid "editor.revisions.diffDialog.pane.error"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/AutosaveStatus.tsx
 msgid "editor.autosave.error"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/editor/plain-form-layout.tsx
+msgid "editor.plainForm.status.error"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.filterAuthorAria"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.roleFilter.aria"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.filterStatusAria"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+msgid "editor.styleTab.section.fontSize"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/PreviewBanner.tsx
+msgid "editor.revisions.preview.subtitle"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1119,6 +1439,26 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.scope.inheritRole"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.slashMenu.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.mobile.blocksSheetDescription"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.mobile.inspectorTrigger"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.mobile.inspectorSheetTitle"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1192,8 +1532,28 @@ msgid "editor.staleDraft.liveNow"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.loadMore"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/data-table/data-table.tsx
 msgid "dataTable.loading"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/pages/$.tsx
+msgid "pluginPage.loading.aria"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+msgid "terms.list.loadingLabel"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.loadingLabel"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1202,8 +1562,18 @@ msgid "editor.entry.edit.loading"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.loadingAria"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.loading"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.loadingAria"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1229,6 +1599,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.list.loading"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.loadingMore"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1262,6 +1637,11 @@ msgid "mailer.title"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.authorFilter.mine"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.empty.description.self"
 msgstr ""
@@ -1277,6 +1657,26 @@ msgid "apiTokens.create.submit.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/device-labels.ts
+msgid "editor.device.mobile"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.trashDialog.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.trashDialog.confirm"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.trashDialog.moving"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/HeadingAuditPanel.tsx
 msgid "editor.headingAudit.multipleH1"
 msgstr ""
@@ -1289,6 +1689,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.name.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+msgid "terms.list.column.name"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1362,6 +1767,31 @@ msgid "apiTokens.never"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+msgid "terms.create.heading"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+msgid "terms.list.newButton"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+msgid "terms.list.empty.cta"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.newButton"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.empty.cta"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.dialog.newLabel"
 msgstr ""
@@ -1382,6 +1812,21 @@ msgid "fieldTypes.boolean.no"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.taxonomyFilter.empty"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.empty.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+msgid "terms.list.empty.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.userNotFound"
 msgstr ""
@@ -1389,6 +1834,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.scope.empty"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+msgid "editor.revisions.diff.empty"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1432,6 +1882,11 @@ msgid "metaBox.reference.noMatches"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/form/multi-select.tsx
+msgid "form.multiSelect.empty"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.noAuthenticator"
 msgstr ""
@@ -1452,6 +1907,11 @@ msgid "dataTable.emptyState"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.empty"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.empty"
 msgstr ""
@@ -1469,6 +1929,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.empty.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+msgid "editor.styleTab.select.none"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1494,6 +1959,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.notFound.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.notFound.title"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1534,6 +2004,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/editor/SlashMenuPanel.tsx
 msgid "slashMenu.uncategorized"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.tab.outline"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+msgid "editor.styleTab.section.padding"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1592,6 +2072,16 @@ msgid "blockScopePicker.description"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+msgid "terms.create.description.hierarchical"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.canvas.pickStarter"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/StarterModal.tsx
 msgid "starterModal.description"
 msgstr ""
@@ -1602,6 +2092,11 @@ msgid "plugin.errorBoundary.iconAria"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/pages/$.tsx
+msgid "pluginPage.notLoaded.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
 msgid "plugin.errorBoundary.pageTitle"
 msgstr ""
@@ -1609,6 +2104,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.col.prefix"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/PreviewBanner.tsx
+msgid "editor.revisions.preview.title"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1624,6 +2124,41 @@ msgstr "Profil"
 #. js-lingui-explicit-id
 #: src/components/shell/user-menu.tsx
 msgid "menu.profile"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draft.publish"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.publish"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/editor/plain-form-layout.tsx
+msgid "editor.plainForm.publish"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.statusFilter.published"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.tab.publishes"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draft.publishing"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+msgid "editor.revisions.diff.tab.json"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1652,6 +2187,11 @@ msgid "metaBox.multiReference.orphan"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.cardDescription"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.rename.button"
 msgstr ""
@@ -1662,6 +2202,16 @@ msgid "profile.passkeys.rename.label"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/PreviewBanner.tsx
+msgid "editor.revisions.preview.restore"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/PreviewBanner.tsx
+msgid "editor.revisions.preview.restoring"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopeMode.restrict"
 msgstr ""
@@ -1669,6 +2219,21 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.scope.restrict"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffDialog.tsx
+msgid "editor.revisions.diffDialog.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.trigger"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.title"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1712,8 +2277,18 @@ msgid "userEdit.role.label"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.commentSave"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.rename.save"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/editor/plain-form-layout.tsx
+msgid "editor.plainForm.save"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1722,13 +2297,28 @@ msgid "userEdit.submit.idle"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.submit"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.submit.idle"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draft.save"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/AutosaveStatus.tsx
 msgid "editor.autosave.saved"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/editor/plain-form-layout.tsx
+msgid "editor.plainForm.status.saved"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1742,6 +2332,11 @@ msgid "editor.autosave.saving"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/editor/plain-form-layout.tsx
+msgid "editor.plainForm.status.saving"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.submit.pending"
 msgstr ""
@@ -1752,6 +2347,11 @@ msgid "settings.page.submit.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draft.saving"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.submitting"
 msgstr ""
@@ -1759,6 +2359,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.rename.pending"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.statusFilter.scheduled"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1777,6 +2382,21 @@ msgid "metaBox.reference.searchPlaceholder"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+msgid "terms.list.searchPlaceholder"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.searchPlaceholder"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.taxonomyFilter.search"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.dialogDescription"
 msgstr ""
@@ -1792,8 +2412,18 @@ msgid "slashMenu.searchAria"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.slashMenu.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.searchPlaceholder"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/form/multi-select.tsx
+msgid "form.multiSelect.search"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1814,6 +2444,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/editor/BlockActionsPanel.tsx
 msgid "blockActions.empty"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+msgid "editor.styleTab.empty"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/form/multi-select.tsx
+msgid "form.multiSelect.placeholder"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1897,6 +2537,11 @@ msgid "userInvite.success.description"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffDialog.tsx
+msgid "editor.revisions.diffDialog.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.title"
 msgstr ""
@@ -1972,6 +2617,11 @@ msgid "profile.sessions.revoke.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+msgid "editor.revisions.diff.field.slug"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.slug"
 msgstr ""
@@ -2002,6 +2652,11 @@ msgid "passkey.error.unknown"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.sortAria"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/StarterModal.tsx
 msgid "starterModal.title"
 msgstr ""
@@ -2014,6 +2669,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.column.status"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.column.status"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.tab.style"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2032,6 +2697,11 @@ msgid "profile.passkeys.synced"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/device-labels.ts
+msgid "editor.device.tablet"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.terms"
 msgstr "Begriffe"
@@ -2044,6 +2714,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+msgid "editor.styleTab.section.textColor"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2147,6 +2822,11 @@ msgid "emailChange.error.accountDisabled"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/pages/$.tsx
+msgid "pluginPage.notLoaded.body"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.description"
 msgstr ""
@@ -2179,6 +2859,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.emailUnverified"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/-errors.ts
+msgid "terms.error.parentMismatch"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2277,6 +2962,11 @@ msgid "plugin.errorBoundary.unknownPlugin"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffDialog.tsx
+msgid "editor.revisions.diffDialog.pane.thisRevision"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.notFound"
 msgstr ""
@@ -2294,6 +2984,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.empty.description.admin"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.column.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+msgid "editor.revisions.diff.field.title"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2317,8 +3017,28 @@ msgid "blockActions.transformTo"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.statusFilter.trash"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.trash"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.trashing"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/PatternsSection.tsx
 msgid "patternsSection.uncategorized"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.unknownAuthor"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2337,6 +3057,21 @@ msgid "editor.entry.create.untitled"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.header.titlePlaceholder"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.copyAsPattern.untitledFallback"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/editor/plain-form-layout.tsx
+msgid "editor.plainForm.titlePlaceholder"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.description.other"
 msgstr ""
@@ -2344,6 +3079,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.description.self"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.column.updated"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2387,6 +3127,11 @@ msgid "breadcrumb.users"
 msgstr "Benutzer"
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+msgid "editor.revisions.diff.tab.visual"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/HeadingAuditPanel.tsx
 msgid "editor.headingAudit.warningPrefix"
 msgstr ""
@@ -2422,6 +3167,11 @@ msgid "users.list.row.you"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.trashDialog.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.lastCredential"
 msgstr ""
@@ -2429,6 +3179,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.current"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draftBanner.title"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2504,4 +3259,14 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.credentialStorageCorrupt"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.canvas.zoomIn"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.canvas.zoomOut"
 msgstr ""

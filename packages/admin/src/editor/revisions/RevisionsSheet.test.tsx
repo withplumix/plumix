@@ -1,14 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import { renderWithI18n } from "../../../test/render-with-i18n.js";
 import { RevisionsSheet } from "./RevisionsSheet.js";
 
 afterEach(() => {
@@ -34,7 +29,7 @@ function wrap(child: React.ReactNode) {
 
 describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
   test("renders three tabs (All / Publishes / Autosaves) when open", async () => {
-    render(
+    renderWithI18n(
       wrap(
         <RevisionsSheet
           entryId={1}
@@ -56,7 +51,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
   });
 
   test("switching to the Autosaves tab shows the empty-state stub, not the row list", async () => {
-    render(
+    renderWithI18n(
       wrap(
         <RevisionsSheet
           entryId={1}
@@ -106,7 +101,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
   test("dialog does not fetch before the user clicks the diff icon", async () => {
     const fetchRevision = vi.fn();
     const fetchCurrent = vi.fn();
-    render(
+    renderWithI18n(
       wrap(
         <RevisionsSheet
           entryId={1}
@@ -143,7 +138,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
   });
 
   test("closing the sheet also closes an open diff modal", async () => {
-    render(
+    renderWithI18n(
       wrap(
         <RevisionsSheet
           entryId={1}
@@ -204,7 +199,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
   });
 
   test("modal surfaces an error state when snapshot fetch fails", async () => {
-    render(
+    renderWithI18n(
       wrap(
         <RevisionsSheet
           entryId={1}
@@ -257,7 +252,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
       content: { blocks: [{ id: "a", name: "core/rich-text", attrs: {} }] },
       meta: {},
     };
-    render(
+    renderWithI18n(
       wrap(
         <RevisionsSheet
           entryId={1}
@@ -305,7 +300,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
 
 describe("RevisionsSheet", () => {
   test("renders nothing in the DOM tree before the trigger opens it", () => {
-    render(
+    renderWithI18n(
       wrap(
         <RevisionsSheet
           entryId={1}
@@ -351,7 +346,7 @@ describe("RevisionsSheet", () => {
         nextCursor: null,
       }),
     );
-    render(
+    renderWithI18n(
       wrap(
         <RevisionsSheet
           entryId={42}
@@ -412,7 +407,7 @@ describe("RevisionsSheet", () => {
         ],
         nextCursor: null,
       });
-    render(
+    renderWithI18n(
       wrap(
         <RevisionsSheet
           entryId={42}
@@ -456,7 +451,7 @@ describe("RevisionsSheet", () => {
       }),
     );
     const onPreview = vi.fn();
-    render(
+    renderWithI18n(
       wrap(
         <RevisionsSheet
           entryId={42}
@@ -497,7 +492,7 @@ describe("RevisionsSheet", () => {
         nextCursor: null,
       }),
     );
-    render(
+    renderWithI18n(
       wrap(
         <RevisionsSheet
           entryId={42}
@@ -540,7 +535,7 @@ describe("RevisionsSheet — comment editing (#289 slice 3)", () => {
         nextCursor: null,
       }),
     );
-    render(
+    renderWithI18n(
       wrap(
         <RevisionsSheet
           entryId={42}
@@ -577,7 +572,7 @@ describe("RevisionsSheet — comment editing (#289 slice 3)", () => {
         nextCursor: null,
       }),
     );
-    render(
+    renderWithI18n(
       wrap(
         <RevisionsSheet
           entryId={42}
@@ -617,7 +612,7 @@ describe("RevisionsSheet — comment editing (#289 slice 3)", () => {
       }),
     );
     const onSaveMessage = vi.fn(() => Promise.resolve());
-    render(
+    renderWithI18n(
       wrap(
         <RevisionsSheet
           entryId={42}
@@ -662,7 +657,7 @@ describe("RevisionsSheet — comment editing (#289 slice 3)", () => {
       }),
     );
     const onSaveMessage = vi.fn(() => Promise.resolve());
-    render(
+    renderWithI18n(
       wrap(
         <RevisionsSheet
           entryId={42}
@@ -707,7 +702,7 @@ describe("RevisionsSheet — comment editing (#289 slice 3)", () => {
       }),
     );
     const onSaveMessage = vi.fn();
-    render(
+    renderWithI18n(
       wrap(
         <RevisionsSheet
           entryId={42}
@@ -753,7 +748,7 @@ describe("RevisionsSheet — comment editing (#289 slice 3)", () => {
       }),
     );
     const onSaveMessage = vi.fn();
-    render(
+    renderWithI18n(
       wrap(
         <RevisionsSheet
           entryId={42}

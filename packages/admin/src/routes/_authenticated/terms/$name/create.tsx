@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { TermForm } from "@/components/taxonomy/term-form.js";
@@ -13,6 +14,8 @@ import { hasCap } from "@/lib/caps.js";
 import { findTermTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFileRoute,
@@ -27,7 +30,36 @@ import type { TermTaxonomyManifestEntry } from "@plumix/core/manifest";
 import { slugify } from "@plumix/core/slugify";
 
 import { TAXONOMY_LIST_DEFAULT_SEARCH } from "./-constants.js";
-import { mapTermError } from "./-errors.js";
+import { useTermErrorMessage } from "./-errors.js";
+
+const M = {
+  createFallback: defineMessage({
+    id: "terms.create.error.createFallback",
+    message: "Couldn't create the term. Try again.",
+  }),
+  emptySlug: defineMessage({
+    id: "terms.create.error.emptySlug",
+    message:
+      "Couldn't derive a slug from that name — please type one manually.",
+  }),
+  hierarchicalDescription: defineMessage({
+    id: "terms.create.description.hierarchical",
+    message:
+      "Pick a parent to nest this term, or leave empty for a root-level term.",
+  }),
+  flatDescription: defineMessage({
+    id: "terms.create.description.flat",
+    message: "Add a new {singularLower} for grouping content.",
+  }),
+  submit: defineMessage({
+    id: "terms.create.submit",
+    message: "Create {singularLower}",
+  }),
+  heading: defineMessage({
+    id: "terms.create.heading",
+    message: "New {singularLower}",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 export const Route = createFileRoute("/_authenticated/terms/$name/create")({
   beforeLoad: ({
@@ -58,7 +90,9 @@ function NewTermRoute(): ReactNode {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { taxonomy } = Route.useRouteContext();
+  const { i18n } = useLingui();
   const renderLabel = useLabel();
+  const mapTermError = useTermErrorMessage();
   const [serverError, setServerError] = useState<string | null>(null);
 
   // For hierarchical termTaxonomies we pull the existing term set so the
@@ -110,7 +144,7 @@ function NewTermRoute(): ReactNode {
       });
     },
     onError: (err) => {
-      setServerError(mapTermError(err, "Couldn't create the term. Try again."));
+      setServerError(mapTermError(err, renderLabel(M.createFallback)));
     },
   });
 
@@ -128,18 +162,32 @@ function NewTermRoute(): ReactNode {
         data-testid="term-new-back-link"
       >
         <ArrowLeft className="size-4" />
-        Back to {taxonomy.label.toLowerCase()}
+        <Trans
+          id="terms.create.backLink"
+          message="Back to {pluralLower}"
+          values={{ pluralLower: taxonomy.label.toLowerCase() }}
+        />
       </Link>
 
       <Card>
         <CardHeader>
           <CardTitle>
-            <h1 data-testid="term-new-heading">New {singularLower}</h1>
+            <h1 data-testid="term-new-heading">
+              <Trans
+                id="terms.create.heading"
+                message="New {singularLower}"
+                values={{ singularLower }}
+              />
+            </h1>
           </CardTitle>
           <CardDescription>
             {isHierarchical
-              ? "Pick a parent to nest this term, or leave empty for a root-level term."
-              : `Add a new ${singularLower} for grouping content.`}
+              ? renderLabel(M.hierarchicalDescription)
+              : i18n._(
+                  M.flatDescription.id,
+                  { singularLower },
+                  { message: M.flatDescription.message },
+                )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -155,7 +203,11 @@ function NewTermRoute(): ReactNode {
             parentOptions={parentOptions}
             isSubmitting={createTerm.isPending}
             serverError={serverError}
-            submitLabel={`Create ${singularLower}`}
+            submitLabel={i18n._(
+              M.submit.id,
+              { singularLower },
+              { message: M.submit.message },
+            )}
             // Meta-on-create lands in a follow-up; today meta only
             // renders on the edit screen because empty boxes still
             // confuse plugin authors expecting meaningful defaults.
@@ -169,9 +221,7 @@ function NewTermRoute(): ReactNode {
                 values.slug.length === 0 &&
                 slugify(values.name).length === 0
               ) {
-                setServerError(
-                  "Couldn't derive a slug from that name — please type one manually.",
-                );
+                setServerError(renderLabel(M.emptySlug));
                 return;
               }
               createTerm.mutate(values);

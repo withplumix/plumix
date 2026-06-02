@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button.js";
@@ -17,10 +18,44 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs.js";
+import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { MessageCircle, MessageCircleMore } from "lucide-react";
 
 import { RevisionDiffDialog } from "./RevisionDiffDialog.js";
+
+const M = {
+  loadingAria: defineMessage({
+    id: "editor.revisions.sheet.loadingAria",
+    message: "Loading revisions",
+  }),
+  unknownAuthor: defineMessage({
+    id: "editor.revisions.sheet.unknownAuthor",
+    message: "Unknown",
+  }),
+  loadingMore: defineMessage({
+    id: "editor.revisions.sheet.loadingMore",
+    message: "Loading…",
+  }),
+  loadMore: defineMessage({
+    id: "editor.revisions.sheet.loadMore",
+    message: "Load more",
+  }),
+  commentPlaceholder: defineMessage({
+    id: "editor.revisions.sheet.commentPlaceholder",
+    message: "Describe this revision…",
+  }),
+  commentSaving: defineMessage({
+    id: "editor.revisions.sheet.commentSaving",
+    message: "…",
+  }),
+  commentSave: defineMessage({
+    id: "editor.revisions.sheet.commentSave",
+    message: "Save",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 interface RevisionListItem {
   readonly id: number;
@@ -118,7 +153,7 @@ export function RevisionsSheet({
           size="sm"
           data-testid="revisions-sheet-trigger"
         >
-          Revisions
+          <Trans id="editor.revisions.sheet.trigger" message="Revisions" />
         </Button>
       </SheetTrigger>
       <SheetContent
@@ -127,9 +162,14 @@ export function RevisionsSheet({
         className="overflow-y-auto"
       >
         <SheetHeader>
-          <SheetTitle>Revisions</SheetTitle>
+          <SheetTitle>
+            <Trans id="editor.revisions.sheet.title" message="Revisions" />
+          </SheetTitle>
           <SheetDescription>
-            Every save creates a new revision. Newest first.
+            <Trans
+              id="editor.revisions.sheet.description"
+              message="Every save creates a new revision. Newest first."
+            />
           </SheetDescription>
         </SheetHeader>
         {(() => {
@@ -154,19 +194,25 @@ export function RevisionsSheet({
             <Tabs defaultValue="all" className="mt-2">
               <TabsList className="w-full">
                 <TabsTrigger value="all" data-testid="revisions-tab-all">
-                  All
+                  <Trans id="editor.revisions.sheet.tab.all" message="All" />
                 </TabsTrigger>
                 <TabsTrigger
                   value="publishes"
                   data-testid="revisions-tab-publishes"
                 >
-                  Publishes
+                  <Trans
+                    id="editor.revisions.sheet.tab.publishes"
+                    message="Publishes"
+                  />
                 </TabsTrigger>
                 <TabsTrigger
                   value="autosaves"
                   data-testid="revisions-tab-autosaves"
                 >
-                  Autosaves
+                  <Trans
+                    id="editor.revisions.sheet.tab.autosaves"
+                    message="Autosaves"
+                  />
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="all">{listPanel}</TabsContent>
@@ -176,7 +222,10 @@ export function RevisionsSheet({
                   data-testid="revisions-autosaves-empty"
                   className="text-muted-foreground px-4 py-6 text-sm"
                 >
-                  Autosaves will appear here once drafts-of-published lands.
+                  <Trans
+                    id="editor.revisions.sheet.autosavesEmpty"
+                    message="Autosaves will appear here once drafts-of-published lands."
+                  />
                 </div>
               </TabsContent>
             </Tabs>
@@ -224,12 +273,13 @@ function ListSection({
   isFetchingNextPage,
   fetchNextPage,
 }: ListSectionProps): ReactElement {
+  const renderLabel = useLabel();
   return (
     <>
       {isLoading ? (
         <ul
           data-testid="revisions-sheet-loading"
-          aria-label="Loading revisions"
+          aria-label={renderLabel(M.loadingAria)}
           aria-busy="true"
           className="divide-y px-4 py-2"
         >
@@ -249,12 +299,18 @@ function ListSection({
           data-testid="revisions-sheet-error"
           className="text-destructive px-4 py-6"
         >
-          Failed to load revisions.
+          <Trans
+            id="editor.revisions.sheet.error"
+            message="Failed to load revisions."
+          />
         </div>
       ) : null}
       {!isLoading && allRevisions.length === 0 ? (
         <div data-testid="revisions-sheet-empty" className="px-4 py-6">
-          No revisions yet.
+          <Trans
+            id="editor.revisions.sheet.empty"
+            message="No revisions yet."
+          />
         </div>
       ) : null}
       {allRevisions.length > 0 ? (
@@ -280,7 +336,9 @@ function ListSection({
             onClick={fetchNextPage}
             disabled={isFetchingNextPage}
           >
-            {isFetchingNextPage ? "Loading…" : "Load more"}
+            {isFetchingNextPage
+              ? renderLabel(M.loadingMore)
+              : renderLabel(M.loadMore)}
           </Button>
         </div>
       ) : null}
@@ -306,6 +364,7 @@ function RevisionRow({
   onOpenDiff,
   onSaveMessage,
 }: RevisionRowProps): ReactElement {
+  const renderLabel = useLabel();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(revision.message ?? "");
   const [saving, setSaving] = useState(false);
@@ -351,7 +410,9 @@ function RevisionRow({
           <div className="truncate text-sm font-medium">{revision.title}</div>
           <div className="text-muted-foreground text-xs">
             <span>
-              {revision.authorName ?? revision.authorEmail ?? "Unknown"}
+              {revision.authorName ??
+                revision.authorEmail ??
+                renderLabel(M.unknownAuthor)}
             </span>
             {" · "}
             <span>{relativeTime(revision.updatedAt)}</span>
@@ -396,7 +457,7 @@ function RevisionRow({
             data-testid={`revisions-sheet-item-${revision.id}-comment-input`}
             value={draft}
             maxLength={280}
-            placeholder="Describe this revision…"
+            placeholder={renderLabel(M.commentPlaceholder)}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Escape") setEditing(false);
@@ -417,7 +478,7 @@ function RevisionRow({
             onClick={() => void save()}
             disabled={saving}
           >
-            {saving ? "…" : "Save"}
+            {saving ? renderLabel(M.commentSaving) : renderLabel(M.commentSave)}
           </Button>
           <Button
             variant="outline"
@@ -426,7 +487,7 @@ function RevisionRow({
             onClick={() => setEditing(false)}
             disabled={saving}
           >
-            Cancel
+            <Trans id="editor.revisions.sheet.commentCancel" message="Cancel" />
           </Button>
         </div>
       ) : revision.message !== null ? (

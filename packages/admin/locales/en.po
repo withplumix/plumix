@@ -19,6 +19,11 @@ msgstr ""
 #~ msgstr "Untitled"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.descendantsHint"
+msgstr " — descendants can't be picked as parent."
+
+#. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.countSuffixMax"
 msgstr " / max {max}"
@@ -39,9 +44,19 @@ msgid "termForm.parent.rootOption"
 msgstr "— root —"
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.commentSaving"
+msgstr "…"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.noName"
 msgstr "(no name)"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.noTitle"
+msgstr "(no title)"
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
@@ -53,6 +68,11 @@ msgstr "{browser} on {os}"
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.pageSummary"
 msgstr "{count, plural, one {# group} other {# groups}}"
+
+#. js-lingui-explicit-id
+#: src/components/form/multi-select.tsx
+msgid "form.multiSelect.selectedCount"
+msgstr "{count} selected"
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
@@ -84,6 +104,11 @@ msgstr "{revoked, plural, =0 {No other sessions to sign out.} one {Signed out # 
 "other session.} other {Signed out # other sessions.}}"
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/PreviewBanner.tsx
+msgid "editor.revisions.preview.backToLive"
+msgstr "← Back to live"
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.expiry.30"
 msgstr "30 days"
@@ -110,6 +135,16 @@ msgid "auth.device.approve.description"
 msgstr "A new API token will be minted for your account and handed to the CLI. "
 "Name it so you can find it later under your profile, and optionally "
 "restrict what it can do."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/-errors.ts
+msgid "terms.error.parentSelfOrCycle"
+msgstr "A term can't be its own ancestor — pick a different parent."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/-errors.ts
+msgid "terms.error.slugTaken"
+msgstr "A term with that slug already exists in this taxonomy."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -161,6 +196,11 @@ msgstr "Add"
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.addMore"
 msgstr "Add"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+msgid "terms.create.description.flat"
+msgstr "Add a new {singularLower} for grouping content."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
@@ -229,6 +269,26 @@ msgid "userRole.long.admin"
 msgstr "Administrator — full control"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.statusFilter.all"
+msgstr "All"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.tab.all"
+msgstr "All"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.taxonomyFilter.all"
+msgstr "All {pluralLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.authorFilter.all"
+msgstr "All authors"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.roleFilter.all"
 msgstr "All roles"
@@ -265,6 +325,11 @@ msgid "auth.device.approve.pending"
 msgstr "Approving…"
 
 #. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.tab.audit"
+msgstr "Audit"
+
+#. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
 msgid "userRole.author"
 msgstr "Author"
@@ -280,9 +345,34 @@ msgid "auth.device.title"
 msgstr "Authorize CLI access"
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.tab.autosaves"
+msgstr "Autosaves"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.autosavesEmpty"
+msgstr "Autosaves will appear here once drafts-of-published lands."
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.back"
 msgstr "Back"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+msgid "terms.create.backLink"
+msgstr "Back to {pluralLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.backLink"
+msgstr "Back to {pluralLower}"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.header.backToList"
+msgstr "Back to list"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -298,6 +388,36 @@ msgstr "Back to users"
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.backToList"
 msgstr "Back to users"
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+msgid "editor.styleTab.section.background"
+msgstr "Background"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.tab.block"
+msgstr "Block"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.mobile.inspectorSheetDescription"
+msgstr "Block actions, fields, and style controls for the selected block."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.mobile.blocksTrigger"
+msgstr "Blocks"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.mobile.blocksSheetTitle"
+msgstr "Blocks"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.tab.blocks"
+msgstr "Blocks"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
@@ -336,6 +456,16 @@ msgid "userEdit.cancel"
 msgstr "Cancel"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.cancel"
+msgstr "Cancel"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.trashDialog.cancel"
+msgstr "Cancel"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.cancel"
 msgstr "Cancel"
@@ -348,6 +478,11 @@ msgstr "Cancel"
 #. js-lingui-explicit-id
 #: src/editor/BlockScopePicker.tsx
 msgid "blockScopePicker.cancel"
+msgstr "Cancel"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.commentCancel"
 msgstr "Cancel"
 
 #. js-lingui-explicit-id
@@ -456,6 +591,11 @@ msgid "auth.device.tokenName.default"
 msgstr "CLI"
 
 #. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draftBanner.body"
+msgstr "Click Publish to push them live, or Discard to revert."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.error.notFound"
 msgstr "Code not found. Check it matches what your CLI printed."
@@ -522,6 +662,11 @@ msgid "userInvite.copy.idle"
 msgstr "Copy"
 
 #. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.canvas.copyAsPatternSource"
+msgstr "Copy as pattern source"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.copy.aria"
 msgstr "Copy invite link"
@@ -566,14 +711,29 @@ msgid "emailChange.error.fallback"
 msgstr "Couldn't confirm the email change. Try again."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+msgid "terms.create.error.createFallback"
+msgstr "Couldn't create the term. Try again."
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.fallback"
 msgstr "Couldn't delete the passkey. Try again."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.error.deleteFallback"
+msgstr "Couldn't delete the term. Try again."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.error.deleteFallback"
 msgstr "Couldn't delete the user. Try again."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+msgid "terms.create.error.emptySlug"
+msgstr "Couldn't derive a slug from that name — please type one manually."
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -586,9 +746,24 @@ msgid "profile.passkeys.enroll.fallback"
 msgstr "Couldn't enrol the passkey. Try again."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+msgid "terms.list.loadError"
+msgstr "Couldn't load {pluralLower}. Try again."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.loadError"
+msgstr "Couldn't load {pluralLower}. Try again."
+
+#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.resolveError"
 msgstr "Couldn’t load selected items — refresh to retry."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.notFound.message"
+msgstr "Couldn't load that term. It may have been deleted."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -681,6 +856,11 @@ msgid "userEdit.error.updateFallback"
 msgstr "Couldn't save the changes. Try again."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.error.saveFallback"
+msgstr "Couldn't save the changes. Try again."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.error.fallback"
 msgstr "Couldn't save the domain. Try again."
@@ -731,6 +911,11 @@ msgid "breadcrumb.createTerm"
 msgstr "Create {singular}"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+msgid "terms.create.submit"
+msgstr "Create {singularLower}"
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/bootstrap.tsx
 msgid "auth.bootstrap.submit.idle"
 msgstr "Create account with passkey"
@@ -744,6 +929,16 @@ msgstr "Create admin account"
 #: src/routes/_auth/accept-invite/$token.tsx
 msgid "auth.acceptInvite.submit.idle"
 msgstr "Create passkey"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+msgid "terms.list.empty.description"
+msgstr "Create your first {singularLower} to see it here."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.empty.description"
+msgstr "Create your first {singularLower} to see it here."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
@@ -764,6 +959,11 @@ msgstr "Creating new {singular}…"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.transport.hybrid"
 msgstr "Cross-device"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffDialog.tsx
+msgid "editor.revisions.diffDialog.pane.current"
+msgstr "Current"
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
@@ -796,14 +996,34 @@ msgid "allowedDomains.row.deleteAria"
 msgstr "Delete {domain}"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.dialogTitle"
+msgstr "Delete {termName}?"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.confirm.idle"
+msgstr "Delete forever"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.confirm"
 msgstr "Delete forever"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.confirm"
 msgstr "Delete passkey"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.cardTitle"
+msgstr "Delete term"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.button"
+msgstr "Delete term"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -823,6 +1043,11 @@ msgstr "Delete user"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.confirm.pending"
+msgstr "Deleting…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.deleting"
 msgstr "Deleting…"
 
 #. js-lingui-explicit-id
@@ -846,9 +1071,24 @@ msgid "auth.device.deny.pending"
 msgstr "Denying…"
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.commentPlaceholder"
+msgstr "Describe this revision…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+msgid "terms.list.column.description"
+msgstr "Description"
+
+#. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.description"
 msgstr "Description"
+
+#. js-lingui-explicit-id
+#: src/editor/device-labels.ts
+msgid "editor.device.desktop"
+msgstr "Desktop"
 
 #. js-lingui-explicit-id
 #: src/editor/PatternRefPreview.tsx
@@ -901,6 +1141,16 @@ msgid "userEdit.status.toggle.disabling"
 msgstr "Disabling…"
 
 #. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draft.discard"
+msgstr "Discard"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draft.discarding"
+msgstr "Discarding…"
+
+#. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.discarding"
 msgstr "Discarding…"
@@ -916,9 +1166,19 @@ msgid "apiTokens.secret.done"
 msgstr "Done"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.statusFilter.draft"
+msgstr "Draft"
+
+#. js-lingui-explicit-id
 #: src/editor/BlockActionsPanel.tsx
 msgid "blockActions.duplicate"
 msgstr "Duplicate"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.edit"
+msgstr "Edit"
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
@@ -941,9 +1201,19 @@ msgid "breadcrumb.editTerm"
 msgstr "Edit {singular}"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.heading"
+msgstr "Edit {singularLower}"
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.editUser"
 msgstr "Edit user"
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+msgid "editor.styleTab.activeBucket"
+msgstr "Editing for: {device}"
 
 #. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
@@ -1059,6 +1329,12 @@ msgid "breadcrumb.entries"
 msgstr "Entries"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.dialogDescription"
+msgstr "Entry assignments to this term are removed. If the term has children, "
+"they become root-level automatically."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopes.placeholder"
 msgstr "entry:post:read\n"
@@ -1071,9 +1347,19 @@ msgstr "entry:post:read\n"
 "entry:post:edit_own"
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.description"
+msgstr "Every save creates a new revision. Newest first."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.placeholder"
 msgstr "example.com"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+msgid "editor.revisions.diff.field.excerpt"
+msgstr "Excerpt"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -1086,14 +1372,49 @@ msgid "apiTokens.create.expires"
 msgstr "Expires"
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.error"
+msgstr "Failed to load revisions."
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffDialog.tsx
+msgid "editor.revisions.diffDialog.pane.error"
+msgstr "Failed to load snapshot."
+
+#. js-lingui-explicit-id
 #: src/editor/AutosaveStatus.tsx
 msgid "editor.autosave.error"
 msgstr "Failed to save"
 
 #. js-lingui-explicit-id
+#: src/components/editor/plain-form-layout.tsx
+msgid "editor.plainForm.status.error"
+msgstr "Failed to save"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.filterAuthorAria"
+msgstr "Filter by author"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.roleFilter.aria"
 msgstr "Filter by role"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.filterStatusAria"
+msgstr "Filter by status"
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+msgid "editor.styleTab.section.fontSize"
+msgstr "Font size"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/PreviewBanner.tsx
+msgid "editor.revisions.preview.subtitle"
+msgstr "from {when} by {author}"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -1146,6 +1467,26 @@ msgstr "Inherit all your permissions"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.scope.inheritRole"
 msgstr "Inherit role"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.slashMenu.title"
+msgstr "Insert block or pattern"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.mobile.blocksSheetDescription"
+msgstr "Insertable blocks, outline, and the heading audit for this entry."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.mobile.inspectorTrigger"
+msgstr "Inspector"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.mobile.inspectorSheetTitle"
+msgstr "Inspector"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/meta-box-field.tsx
@@ -1218,9 +1559,29 @@ msgid "editor.staleDraft.liveNow"
 msgstr "Live now"
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.loadMore"
+msgstr "Load more"
+
+#. js-lingui-explicit-id
 #: src/components/data-table/data-table.tsx
 msgid "dataTable.loading"
 msgstr "Loading"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/pages/$.tsx
+msgid "pluginPage.loading.aria"
+msgstr "Loading {label}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+msgid "terms.list.loadingLabel"
+msgstr "Loading {pluralLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.loadingLabel"
+msgstr "Loading {pluralLower}"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
@@ -1228,9 +1589,19 @@ msgid "editor.entry.edit.loading"
 msgstr "Loading entry…"
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.loadingAria"
+msgstr "Loading revisions"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.loading"
 msgstr "Loading settings"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.loadingAria"
+msgstr "Loading term"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -1255,6 +1626,11 @@ msgstr "Loading…"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.list.loading"
+msgstr "Loading…"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.loadingMore"
 msgstr "Loading…"
 
 #. js-lingui-explicit-id
@@ -1288,6 +1664,11 @@ msgid "mailer.title"
 msgstr "Mailer"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.authorFilter.mine"
+msgstr "Mine"
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.empty.description.self"
 msgstr "Mint one above for your CLI / MCP server / CI bot."
@@ -1303,6 +1684,26 @@ msgid "apiTokens.create.submit.pending"
 msgstr "Minting…"
 
 #. js-lingui-explicit-id
+#: src/editor/device-labels.ts
+msgid "editor.device.mobile"
+msgstr "Mobile"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.trashDialog.title"
+msgstr "Move {singularLower} to trash?"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.trashDialog.confirm"
+msgstr "Move to trash"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.trashDialog.moving"
+msgstr "Moving…"
+
+#. js-lingui-explicit-id
 #: src/editor/HeadingAuditPanel.tsx
 msgid "editor.headingAudit.multipleH1"
 msgstr "Multiple <h1> on the page ({count} found). Keep only one top-level "
@@ -1316,6 +1717,11 @@ msgstr "Name"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.name.label"
+msgstr "Name"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+msgid "terms.list.column.name"
 msgstr "Name"
 
 #. js-lingui-explicit-id
@@ -1389,6 +1795,31 @@ msgid "apiTokens.never"
 msgstr "Never"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+msgid "terms.create.heading"
+msgstr "New {singularLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+msgid "terms.list.newButton"
+msgstr "New {singularLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+msgid "terms.list.empty.cta"
+msgstr "New {singularLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.newButton"
+msgstr "New {singularLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.empty.cta"
+msgstr "New {singularLower}"
+
+#. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.dialog.newLabel"
 msgstr "New email"
@@ -1409,6 +1840,21 @@ msgid "fieldTypes.boolean.no"
 msgstr "No"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.taxonomyFilter.empty"
+msgstr "No {pluralLower} match."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.empty.title"
+msgstr "No {pluralLower} yet"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+msgid "terms.list.empty.title"
+msgstr "No {singularLower} yet"
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.userNotFound"
 msgstr "No account found for that email."
@@ -1417,6 +1863,11 @@ msgstr "No account found for that email."
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.scope.empty"
 msgstr "No caps"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+msgid "editor.revisions.diff.empty"
+msgstr "No changes."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
@@ -1461,6 +1912,11 @@ msgid "metaBox.reference.noMatches"
 msgstr "No matches"
 
 #. js-lingui-explicit-id
+#: src/components/form/multi-select.tsx
+msgid "form.multiSelect.empty"
+msgstr "No matches."
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.noAuthenticator"
 msgstr "No passkey is available on this device. Try signing in on the device "
@@ -1483,6 +1939,11 @@ msgid "dataTable.emptyState"
 msgstr "No results."
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.empty"
+msgstr "No revisions yet."
+
+#. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.empty"
 msgstr "No rows"
@@ -1501,6 +1962,11 @@ msgstr "No tokens yet"
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.empty.title"
 msgstr "No users match your filter"
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+msgid "editor.styleTab.select.none"
+msgstr "None"
 
 #. js-lingui-explicit-id
 #: src/editor/TokenSwatchList.tsx
@@ -1525,6 +1991,11 @@ msgstr "Not found"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.notFound.title"
+msgstr "Not found"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.notFound.title"
 msgstr "Not found"
 
 #. js-lingui-explicit-id
@@ -1567,6 +2038,16 @@ msgstr "or"
 #: src/editor/SlashMenuPanel.tsx
 msgid "slashMenu.uncategorized"
 msgstr "Other"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.tab.outline"
+msgstr "Outline"
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+msgid "editor.styleTab.section.padding"
+msgstr "Padding"
 
 #. js-lingui-explicit-id
 #: src/components/data-table/list-pagination.tsx
@@ -1626,6 +2107,16 @@ msgid "blockScopePicker.description"
 msgstr "Pick a layout to insert, or cancel to start from a blank {blockTitle}."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+msgid "terms.create.description.hierarchical"
+msgstr "Pick a parent to nest this term, or leave empty for a root-level term."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.canvas.pickStarter"
+msgstr "Pick a starter…"
+
+#. js-lingui-explicit-id
 #: src/editor/StarterModal.tsx
 msgid "starterModal.description"
 msgstr "Pick a starting layout, or begin from a blank canvas."
@@ -1636,6 +2127,11 @@ msgid "plugin.errorBoundary.iconAria"
 msgstr "Plugin icon failed to render"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/pages/$.tsx
+msgid "pluginPage.notLoaded.title"
+msgstr "Plugin not loaded"
+
+#. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
 msgid "plugin.errorBoundary.pageTitle"
 msgstr "Plugin page failed to render"
@@ -1644,6 +2140,11 @@ msgstr "Plugin page failed to render"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.col.prefix"
 msgstr "Prefix"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/PreviewBanner.tsx
+msgid "editor.revisions.preview.title"
+msgstr "Previewing revision"
 
 #. js-lingui-explicit-id
 #: src/components/data-table/list-pagination.tsx
@@ -1659,6 +2160,41 @@ msgstr "Profile"
 #: src/components/shell/user-menu.tsx
 msgid "menu.profile"
 msgstr "Profile"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draft.publish"
+msgstr "Publish"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.publish"
+msgstr "Publish"
+
+#. js-lingui-explicit-id
+#: src/components/editor/plain-form-layout.tsx
+msgid "editor.plainForm.publish"
+msgstr "Publish"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.statusFilter.published"
+msgstr "Published"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.tab.publishes"
+msgstr "Publishes"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draft.publishing"
+msgstr "Publishing…"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+msgid "editor.revisions.diff.tab.json"
+msgstr "Raw JSON"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -1686,6 +2222,13 @@ msgid "metaBox.multiReference.orphan"
 msgstr "Reference missing — remove or re-pick"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.cardDescription"
+msgstr "Removes this term and unassigns it from any entries that use it. "
+"Descendants are promoted to root level (their entries keep their other "
+"term assignments)."
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.rename.button"
 msgstr "Rename"
@@ -1696,6 +2239,16 @@ msgid "profile.passkeys.rename.label"
 msgstr "Rename passkey"
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/PreviewBanner.tsx
+msgid "editor.revisions.preview.restore"
+msgstr "Restore this revision"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/PreviewBanner.tsx
+msgid "editor.revisions.preview.restoring"
+msgstr "Restoring…"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopeMode.restrict"
 msgstr "Restrict to specific capabilities"
@@ -1704,6 +2257,21 @@ msgstr "Restrict to specific capabilities"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.scope.restrict"
 msgstr "Restrict to specific capabilities"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffDialog.tsx
+msgid "editor.revisions.diffDialog.title"
+msgstr "Revision JSON diff"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.trigger"
+msgstr "Revisions"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.title"
+msgstr "Revisions"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -1746,8 +2314,18 @@ msgid "userEdit.role.label"
 msgstr "Role"
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.commentSave"
+msgstr "Save"
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.rename.save"
+msgstr "Save"
+
+#. js-lingui-explicit-id
+#: src/components/editor/plain-form-layout.tsx
+msgid "editor.plainForm.save"
 msgstr "Save"
 
 #. js-lingui-explicit-id
@@ -1756,13 +2334,28 @@ msgid "userEdit.submit.idle"
 msgstr "Save changes"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.submit"
+msgstr "Save changes"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.submit.idle"
 msgstr "Save changes"
 
 #. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draft.save"
+msgstr "Save Draft"
+
+#. js-lingui-explicit-id
 #: src/editor/AutosaveStatus.tsx
 msgid "editor.autosave.saved"
+msgstr "Saved"
+
+#. js-lingui-explicit-id
+#: src/components/editor/plain-form-layout.tsx
+msgid "editor.plainForm.status.saved"
 msgstr "Saved"
 
 #. js-lingui-explicit-id
@@ -1776,6 +2369,11 @@ msgid "editor.autosave.saving"
 msgstr "Saving..."
 
 #. js-lingui-explicit-id
+#: src/components/editor/plain-form-layout.tsx
+msgid "editor.plainForm.status.saving"
+msgstr "Saving..."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.submit.pending"
 msgstr "Saving…"
@@ -1783,6 +2381,11 @@ msgstr "Saving…"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.submit.pending"
+msgstr "Saving…"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draft.saving"
 msgstr "Saving…"
 
 #. js-lingui-explicit-id
@@ -1794,6 +2397,11 @@ msgstr "Saving…"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.rename.pending"
 msgstr "Saving…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.statusFilter.scheduled"
+msgstr "Scheduled"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -1811,6 +2419,21 @@ msgid "metaBox.reference.searchPlaceholder"
 msgstr "Search {kind}…"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+msgid "terms.list.searchPlaceholder"
+msgstr "Search {pluralLower}…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.searchPlaceholder"
+msgstr "Search {pluralLower}…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.taxonomyFilter.search"
+msgstr "Search {pluralLower}…"
+
+#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.dialogDescription"
 msgstr "Search and pick {kind} entries"
@@ -1826,9 +2449,20 @@ msgid "slashMenu.searchAria"
 msgstr "Search blocks and patterns"
 
 #. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.slashMenu.description"
+msgstr "Search blocks and patterns by title or keyword and press Enter to "
+"insert."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.searchPlaceholder"
 msgstr "Search by email…"
+
+#. js-lingui-explicit-id
+#: src/components/form/multi-select.tsx
+msgid "form.multiSelect.search"
+msgstr "Search…"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -1849,6 +2483,16 @@ msgstr "Select"
 #: src/editor/BlockActionsPanel.tsx
 msgid "blockActions.empty"
 msgstr "Select a block to see actions."
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+msgid "editor.styleTab.empty"
+msgstr "Select a block to style."
+
+#. js-lingui-explicit-id
+#: src/components/form/multi-select.tsx
+msgid "form.multiSelect.placeholder"
+msgstr "Select…"
 
 #. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
@@ -1936,6 +2580,11 @@ msgstr "Share the link below with {email}. They'll enrol a passkey the first "
 "time they open it. Link expires in 7 days."
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffDialog.tsx
+msgid "editor.revisions.diffDialog.description"
+msgstr "Side-by-side: this revision (left) vs. the current entry (right)."
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.title"
 msgstr "Sign in"
@@ -2011,6 +2660,11 @@ msgid "profile.sessions.revoke.pending"
 msgstr "Signing out…"
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+msgid "editor.revisions.diff.field.slug"
+msgstr "Slug"
+
+#. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.slug"
 msgstr "Slug"
@@ -2043,6 +2697,11 @@ msgid "passkey.error.unknown"
 msgstr "Something went wrong. Please try again."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.sortAria"
+msgstr "Sort by {label} ({direction})"
+
+#. js-lingui-explicit-id
 #: src/editor/StarterModal.tsx
 msgid "starterModal.title"
 msgstr "Start from a pattern"
@@ -2058,6 +2717,16 @@ msgid "users.list.column.status"
 msgstr "Status"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.column.status"
+msgstr "Status"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.tab.style"
+msgstr "Style"
+
+#. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
 msgid "userRole.subscriber"
 msgstr "Subscriber"
@@ -2071,6 +2740,11 @@ msgstr "Subscriber — read only"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.synced"
 msgstr "Synced"
+
+#. js-lingui-explicit-id
+#: src/editor/device-labels.ts
+msgid "editor.device.tablet"
+msgstr "Tablet"
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
@@ -2089,6 +2763,11 @@ msgid "mailer.description"
 msgstr "Test that the configured outbound-email transport actually delivers. "
 "Used by magic-link sign-in, invite emails, and any plugin that opts "
 "into the shared mailer."
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+msgid "editor.styleTab.section.textColor"
+msgstr "Text color"
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
@@ -2194,6 +2873,12 @@ msgid "emailChange.error.accountDisabled"
 msgstr "The account this confirmation belongs to is disabled."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/pages/$.tsx
+msgid "pluginPage.notLoaded.body"
+msgstr "The admin manifest declares a page at <code>{path}</code> but no React "
+"component has been registered for it."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.description"
 msgstr "The CLI shows an 8-character code split with a dash — \"ABCD-EFGH\". "
@@ -2233,6 +2918,11 @@ msgstr "The provider didn't return an email address."
 msgid "oauth.error.emailUnverified"
 msgstr "The provider hasn't verified your email yet. Verify it there, then try "
 "again."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/-errors.ts
+msgid "terms.error.parentMismatch"
+msgstr "The selected parent belongs to a different taxonomy."
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -2333,6 +3023,11 @@ msgid "plugin.errorBoundary.unknownPlugin"
 msgstr "this plugin"
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffDialog.tsx
+msgid "editor.revisions.diffDialog.pane.thisRevision"
+msgstr "This revision"
+
+#. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.notFound"
 msgstr "This session no longer exists. Refresh the list."
@@ -2352,6 +3047,16 @@ msgstr "This user has authored entries. Pick someone to reassign them to above."
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.empty.description.admin"
 msgstr "This user hasn't minted any API tokens."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.column.title"
+msgstr "Title"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+msgid "editor.revisions.diff.field.title"
+msgstr "Title"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -2375,9 +3080,29 @@ msgid "blockActions.transformTo"
 msgstr "Transform to"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.statusFilter.trash"
+msgstr "Trash"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.trash"
+msgstr "Trash"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.trashing"
+msgstr "Trashing…"
+
+#. js-lingui-explicit-id
 #: src/editor/PatternsSection.tsx
 msgid "patternsSection.uncategorized"
 msgstr "Uncategorized"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.unknownAuthor"
+msgstr "Unknown"
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
@@ -2395,6 +3120,21 @@ msgid "editor.entry.create.untitled"
 msgstr "Untitled"
 
 #. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.header.titlePlaceholder"
+msgstr "Untitled"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.copyAsPattern.untitledFallback"
+msgstr "Untitled"
+
+#. js-lingui-explicit-id
+#: src/components/editor/plain-form-layout.tsx
+msgid "editor.plainForm.titlePlaceholder"
+msgstr "Untitled"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.description.other"
 msgstr "Update this account's details. Role changes invalidate existing "
@@ -2405,6 +3145,11 @@ msgstr "Update this account's details. Role changes invalidate existing "
 msgid "userEdit.description.self"
 msgstr "Update your display name. Role and account state are managed by "
 "administrators."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.column.updated"
+msgstr "Updated"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -2447,6 +3192,11 @@ msgid "breadcrumb.users"
 msgstr "Users"
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+msgid "editor.revisions.diff.tab.visual"
+msgstr "Visual"
+
+#. js-lingui-explicit-id
 #: src/editor/HeadingAuditPanel.tsx
 msgid "editor.headingAudit.warningPrefix"
 msgstr "Warning:"
@@ -2484,6 +3234,11 @@ msgid "users.list.row.you"
 msgstr "You"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.trashDialog.description"
+msgstr "You can restore it from the Trash view later."
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.lastCredential"
 msgstr "You can't delete your last passkey. Add another one first."
@@ -2492,6 +3247,11 @@ msgstr "You can't delete your last passkey. Add another one first."
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.current"
 msgstr "You can't revoke the session you're using right now."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draftBanner.title"
+msgstr "You have unpublished draft changes."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
@@ -2571,3 +3331,13 @@ msgstr "Your profile"
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.credentialStorageCorrupt"
 msgstr "Your saved passkey data is corrupt. Please register a new one."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.canvas.zoomIn"
+msgstr "Zoom in"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.canvas.zoomOut"
+msgstr "Zoom out"

@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement, ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { MetaBoxField } from "@/components/meta-box/meta-box-field.js";
@@ -15,7 +16,10 @@ import {
   FormItem,
 } from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
+import { useLabel } from "@/lib/use-label.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
 import { useForm, useWatch } from "react-hook-form";
 
 import type { EntryMetaBoxManifestEntry } from "@plumix/core/manifest";
@@ -24,6 +28,25 @@ import type { PostEditorValues } from "./post-editor-form.js";
 import { postEditorSchema } from "./post-editor-form.js";
 
 type SaveStatus = "saved" | "saving" | "error";
+
+const M = {
+  statusSaved: defineMessage({
+    id: "editor.plainForm.status.saved",
+    message: "Saved",
+  }),
+  statusSaving: defineMessage({
+    id: "editor.plainForm.status.saving",
+    message: "Saving...",
+  }),
+  statusError: defineMessage({
+    id: "editor.plainForm.status.error",
+    message: "Failed to save",
+  }),
+  titlePlaceholder: defineMessage({
+    id: "editor.plainForm.titlePlaceholder",
+    message: "Untitled",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 interface PlainFormLayoutProps {
   readonly initialValues: PostEditorValues;
@@ -43,10 +66,10 @@ interface PlainFormLayoutProps {
   readonly autosaveMs?: number;
 }
 
-const LABEL: Readonly<Record<SaveStatus, string>> = {
-  saved: "Saved",
-  saving: "Saving...",
-  error: "Failed to save",
+const LABEL: Readonly<Record<SaveStatus, MessageDescriptor>> = {
+  saved: M.statusSaved,
+  saving: M.statusSaving,
+  error: M.statusError,
 };
 
 function resolveStatus(
@@ -68,6 +91,7 @@ export function PlainFormLayout({
   revisionsTrigger,
   autosaveMs = 0,
 }: PlainFormLayoutProps): ReactElement {
+  const renderLabel = useLabel();
   const form = useForm({
     resolver: valibotResolver(postEditorSchema),
     defaultValues: initialValues,
@@ -117,7 +141,7 @@ export function PlainFormLayout({
                   <Input
                     {...field}
                     type="text"
-                    placeholder="Untitled"
+                    placeholder={renderLabel(M.titlePlaceholder)}
                     aria-label="Entry title"
                     data-testid="plain-form-title-input"
                   />
@@ -130,7 +154,7 @@ export function PlainFormLayout({
             data-testid="plain-form-status-pill"
             data-status={saveStatus}
           >
-            {LABEL[saveStatus]}
+            {renderLabel(LABEL[saveStatus])}
           </span>
           {revisionsTrigger}
           <Button
@@ -139,7 +163,7 @@ export function PlainFormLayout({
             data-testid="plain-form-save-button"
             disabled={isSubmitting}
           >
-            Save
+            <Trans id="editor.plainForm.save" message="Save" />
           </Button>
           <Button
             type="button"
@@ -150,7 +174,7 @@ export function PlainFormLayout({
               void form.handleSubmit(onSubmit)();
             }}
           >
-            Publish
+            <Trans id="editor.plainForm.publish" message="Publish" />
           </Button>
         </header>
         {metaBoxes.map((box) => (
