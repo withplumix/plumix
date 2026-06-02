@@ -67,6 +67,17 @@ msgstr "{device} signed in {when}. The device will need to sign in again next "
 "time."
 
 #. js-lingui-explicit-id
+#: src/lib/plugin-error-boundary.tsx
+msgid "plugin.errorBoundary.inlineStub"
+msgstr "{label} {kind} failed"
+
+#. js-lingui-explicit-id
+#: src/lib/plugin-error-boundary.tsx
+msgid "plugin.errorBoundary.pageBody"
+msgstr "{label} threw an error while rendering. The rest of the admin is "
+"unaffected."
+
+#. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revokeAll.count"
 msgstr "{revoked, plural, =0 {No other sessions to sign out.} one {Signed out # "
@@ -680,6 +691,11 @@ msgid "userInvite.error.fallback"
 msgstr "Couldn't send invite. Try again."
 
 #. js-lingui-explicit-id
+#: src/lib/magic-link.ts
+msgid "magicLinkRequest.error.network"
+msgstr "Couldn't send the link. Try again."
+
+#. js-lingui-explicit-id
 #: src/lib/mailer-errors.ts
 msgid "mailer.test.error.fallback"
 msgstr "Couldn't send the test message. Try again."
@@ -983,6 +999,11 @@ msgid "userInvite.email.invalid"
 msgstr "Enter a valid email address"
 
 #. js-lingui-explicit-id
+#: src/lib/magic-link.ts
+msgid "magicLinkRequest.error.invalidInput"
+msgstr "Enter a valid email address."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.recipient.invalid"
 msgstr "Enter a valid email address."
@@ -1220,6 +1241,11 @@ msgstr "Loading…"
 #: src/components/meta-box/reference-picker.tsx
 msgid "metaBox.reference.loading"
 msgstr "Loading…"
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link.ts
+msgid "magicLinkRequest.error.notConfigured"
+msgstr "Magic-link sign-in isn't configured on this site."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
@@ -1547,6 +1573,16 @@ msgstr "Pick a layout to insert, or cancel to start from a blank {blockTitle}."
 #: src/editor/StarterModal.tsx
 msgid "starterModal.description"
 msgstr "Pick a starting layout, or begin from a blank canvas."
+
+#. js-lingui-explicit-id
+#: src/lib/plugin-error-boundary.tsx
+msgid "plugin.errorBoundary.iconAria"
+msgstr "Plugin icon failed to render"
+
+#. js-lingui-explicit-id
+#: src/lib/plugin-error-boundary.tsx
+msgid "plugin.errorBoundary.pageTitle"
+msgstr "Plugin page failed to render"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -2228,6 +2264,11 @@ msgstr "This passkey isn't usable on this site."
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.notFound"
 msgstr "This passkey no longer exists. Refresh the list."
+
+#. js-lingui-explicit-id
+#: src/lib/plugin-error-boundary.tsx
+msgid "plugin.errorBoundary.unknownPlugin"
+msgstr "this plugin"
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx

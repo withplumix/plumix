@@ -65,6 +65,16 @@ msgid "profile.sessions.revoke.description"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/plugin-error-boundary.tsx
+msgid "plugin.errorBoundary.inlineStub"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/plugin-error-boundary.tsx
+msgid "plugin.errorBoundary.pageBody"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revokeAll.count"
 msgstr ""
@@ -666,6 +676,11 @@ msgid "userInvite.error.fallback"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/magic-link.ts
+msgid "magicLinkRequest.error.network"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/mailer-errors.ts
 msgid "mailer.test.error.fallback"
 msgstr ""
@@ -962,6 +977,11 @@ msgid "userInvite.email.invalid"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/magic-link.ts
+msgid "magicLinkRequest.error.invalidInput"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.recipient.invalid"
 msgstr ""
@@ -1194,6 +1214,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/meta-box/reference-picker.tsx
 msgid "metaBox.reference.loading"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link.ts
+msgid "magicLinkRequest.error.notConfigured"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1514,6 +1539,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/editor/StarterModal.tsx
 msgid "starterModal.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/plugin-error-boundary.tsx
+msgid "plugin.errorBoundary.iconAria"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/plugin-error-boundary.tsx
+msgid "plugin.errorBoundary.pageTitle"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2174,6 +2209,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.notFound"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/plugin-error-boundary.tsx
+msgid "plugin.errorBoundary.unknownPlugin"
 msgstr ""
 
 #. js-lingui-explicit-id

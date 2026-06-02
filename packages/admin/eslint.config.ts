@@ -20,21 +20,21 @@ const STRICT_UNWRAPPED_FILES = [
   "src/editor/revisions/RevisionsSheet.tsx",
   "src/editor/StaleDraftDialog.tsx",
   "src/editor/StyleTab.tsx",
-  "src/lib/errors.ts",
-  "src/lib/magic-link.ts",
-  "src/lib/manifest.ts",
-  "src/lib/passkey.ts",
-  "src/lib/plugin-error-boundary.tsx",
-  "src/lib/plugin-registry.ts",
-  "src/lib/wait-for-plugin-chunks.ts",
-  "src/providers/router.ts",
-  "src/providers/theme.tsx",
   "src/routes/_authenticated/entries/$slug/index.tsx",
   "src/routes/_authenticated/pages/$.tsx",
   "src/routes/_authenticated/terms/$name/-errors.ts",
   "src/routes/_authenticated/terms/$name/$id/edit.tsx",
   "src/routes/_authenticated/terms/$name/create.tsx",
   "src/routes/_authenticated/terms/$name/index.tsx",
+  // Logic-only helpers — every flagged string is a developer-facing
+  // console message, DOM event name, or framework config
+  // discriminator (TanStack `defaultPreload: "intent"`), not user
+  // chrome. Adding ignore-regex would risk over-suppression of real
+  // chrome elsewhere; explicit denylist entry is the safer call.
+  "src/lib/errors.ts",
+  "src/lib/wait-for-plugin-chunks.ts",
+  "src/providers/router.ts",
+  "src/providers/theme.tsx",
 ];
 
 export default defineConfig(

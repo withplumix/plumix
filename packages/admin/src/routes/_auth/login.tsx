@@ -22,8 +22,8 @@ import { Separator } from "@/components/ui/separator.js";
 import { useEmailChangeErrorMessage } from "@/lib/email-change-errors.js";
 import { useMagicLinkErrorMessage } from "@/lib/magic-link-errors.js";
 import {
-  getMagicLinkRequestErrorMessage,
   requestMagicLink,
+  useMagicLinkRequestErrorMessage,
 } from "@/lib/magic-link.js";
 import { useOAuthErrorMessage } from "@/lib/oauth-errors.js";
 import { orpc } from "@/lib/orpc.js";
@@ -73,6 +73,7 @@ function LoginRoute(): ReactNode {
   const renderMagicLinkError = useMagicLinkErrorMessage();
   const renderOAuthError = useOAuthErrorMessage();
   const renderEmailChangeError = useEmailChangeErrorMessage();
+  const renderMagicLinkRequestError = useMagicLinkRequestErrorMessage();
   const [passkeyError, setPasskeyError] = useState<string | null>(null);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [magicLinkError, setMagicLinkError] = useState<string | null>(null);
@@ -100,7 +101,7 @@ function LoginRoute(): ReactNode {
       setMagicLinkSent(false);
     },
     onSuccess: () => setMagicLinkSent(true),
-    onError: (err) => setMagicLinkError(getMagicLinkRequestErrorMessage(err)),
+    onError: (err) => setMagicLinkError(renderMagicLinkRequestError(err)),
   });
 
   const form = useForm({

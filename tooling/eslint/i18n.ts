@@ -96,10 +96,13 @@ export const i18nStrictOverrides: Linter.Config = {
           // Internal `__sentinel__` strings (e.g. unserializable-value
           // marker on a meta-field reset key).
           "^__[a-z_]+__$",
-          // Single-word HTML5 `<input type>` values used as protocol
-          // discriminators / fallbacks in input dispatchers — never
-          // user copy.
-          "^(text|password|email|url|number|tel|search|date|time|color|file|range|checkbox|radio)$",
+          // Plumix meta-box `inputType` discriminators — HTML5
+          // baseline plus admin's custom input kinds (multiselect,
+          // richtext, repeater, json) and the reference-target kinds
+          // (user/entry/term/userList/entryList/termList). Used as
+          // protocol values across the input dispatcher + registry,
+          // never user copy.
+          "^(text|password|email|url|number|tel|search|date|datetime|time|color|file|range|checkbox|radio|textarea|select|multiselect|richtext|repeater|json|user|entry|term|userList|entryList|termList)$",
           // Container-query Tailwind responsive variants used in the
           // meta-box grid dict — `@sm:col-span-N`, `@md:col-span-N`,
           // `@lg:col-span-N`. Pure CSS class tokens.
@@ -128,6 +131,42 @@ export const i18nStrictOverrides: Linter.Config = {
           // wrap-required since it's a real form-field placeholder
           // elsewhere.
           "^untitled$",
+          // camelCase JS identifiers — registry kind names
+          // (`registerPluginPage`), manifest section keys
+          // (`entryTypes`, `settingsPages`), local variable / option
+          // names. Real user copy never camelCases between words.
+          "^[a-z]+([A-Z][a-z0-9]*)+$",
+          // PascalCase `*Error` class identifiers — DOMException
+          // names (`NotAllowedError`, `AbortError`) and admin's
+          // own throwable classes used as error-code discriminators.
+          "^[A-Z][a-zA-Z0-9]*Error$",
+          // HTTP method discriminators in `fetch(...)` options.
+          "^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)$",
+          // CSS class single-word tokens for the theme provider —
+          // `"light"` / `"dark"` are CSS class identifiers used
+          // alongside the system/inset/icon discriminator group.
+          // Acceptable single-word ambiguity because the only
+          // strict-default callsite is `root.classList.add("dark")`.
+          "^(light|dark)$",
+          // CSS media-query strings — bracketed expressions never
+          // surface as user copy.
+          "^\\([a-z-]+:\\s*[a-z-]+\\)$",
+          // CSS attribute selectors (`script[data-plumix-plugin]`).
+          "^[a-z][a-z0-9-]*\\[[a-z][a-z0-9-]*\\]$",
+          // Same-origin fetch credentials discriminator.
+          "^same-origin$",
+          // URL scheme prefix used in `.startsWith("https://")` /
+          // `"http://"` guards.
+          "^https?://$",
+          // Plumix manifest top-level section discriminators —
+          // lowercase singletons that don't match the camelCase /
+          // multi-token regexes above.
+          "^(blocks|marks|patterns)$",
+          // Magic-link wire-fallback code — `"network"` is the sole
+          // lowercase singleton discriminator that lands in
+          // `MagicLinkRequestError("network")` and the registry
+          // fallback key.
+          "^network$",
           // Generic snake_case wire identifiers — SQL column names
           // (`updated_at`), OAuth/RFC8628 response codes
           // (`access_denied`), passkey error reasons
@@ -146,10 +185,11 @@ export const i18nStrictOverrides: Linter.Config = {
           "^root:default-zone$",
           // Capability template-literal quasi joins — `entry:` /
           // `user:` prefixes that appear when a template builds a
-          // colon-namespaced capability or sort key (the rule joins
-          // every quasi piece, so `\`type:${x}:${y}\`` resolves to
-          // `type::`). One or more trailing colons.
-          "^[a-z]+:+$",
+          // colon-namespaced capability or sort key. The rule joins
+          // every quasi piece, so `\`entry:${x}:edit_own\`` becomes
+          // `entry::edit_own` and `\`type:${x}:${y}\`` becomes
+          // `type::`. Handles all shapes via colon-grouped suffixes.
+          "^[a-z_]+(:+[a-z_]*)+$",
           // Internal sort key prefix from the revision diff helper.
           // `id:` and `type:` quasis are already covered by the
           // colon-namespaced regex above; `$$index:` needs its own
