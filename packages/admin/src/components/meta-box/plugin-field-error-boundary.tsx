@@ -1,5 +1,6 @@
 import type { ErrorInfo, ReactNode } from "react";
 import { Component } from "react";
+import { Trans } from "@lingui/react";
 
 // Render-time crash containment for plugin-supplied field components.
 // One bad plugin field shouldn't take down the whole entry editor —
@@ -67,8 +68,10 @@ export class PluginFieldErrorBoundary extends Component<Props, State> {
           className="text-destructive text-sm"
           data-testid={`${this.props.testId}-plugin-error`}
         >
-          This field couldn&rsquo;t render. Check the browser console for
-          details.
+          <Trans
+            id="metaBox.pluginField.crashed"
+            message="This field couldn’t render. Check the browser console for details."
+          />
         </p>
       );
     }

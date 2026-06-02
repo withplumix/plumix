@@ -12,13 +12,19 @@ import { render } from "@testing-library/react";
 i18n.load({ en: {} });
 i18n.activate("en");
 
+function I18nWrapper({ children }: { children: ReactNode }): ReactNode {
+  return <I18nProvider i18n={i18n}>{children}</I18nProvider>;
+}
+
 /**
  * Wraps `@testing-library/react`'s `render` with the Lingui
  * `I18nProvider` so a `<Trans>` / `useLingui` / `useLabel` consumer
- * mounts without throwing "rendered without I18nProvider".
+ * mounts without throwing "rendered without I18nProvider". Passed via
+ * the `wrapper` option so the wrapper survives `rerender` calls
+ * returned by the result.
  *
  * Use over `render` for any component that uses Lingui internally.
  */
 export function renderWithI18n(node: ReactNode): ReturnType<typeof render> {
-  return render(<I18nProvider i18n={i18n}>{node}</I18nProvider>);
+  return render(node, { wrapper: I18nWrapper });
 }

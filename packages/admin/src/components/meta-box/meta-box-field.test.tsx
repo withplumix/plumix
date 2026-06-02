@@ -7,13 +7,14 @@ import {
 } from "@/lib/plugin-registry.js";
 import { createQueryClient } from "@/providers/query-client.js";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useForm, useWatch } from "react-hook-form";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 
+import { renderWithI18n } from "../../../test/render-with-i18n.js";
 import { MetaBoxField } from "./meta-box-field.js";
 
 afterEach(() => {
@@ -91,7 +92,7 @@ function Spy({
 describe("MetaBoxField dispatcher", () => {
   test("text: renders an <input type=text>, forwards value + onChange", async () => {
     const onChange = vi.fn();
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={field({ inputType: "text", placeholder: "Type here" })}
         initial=""
@@ -109,7 +110,7 @@ describe("MetaBoxField dispatcher", () => {
   });
 
   test("textarea: renders a <textarea>, honours maxLength + rows", () => {
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={field({ inputType: "textarea", maxLength: 50 })}
         initial="existing"
@@ -123,7 +124,7 @@ describe("MetaBoxField dispatcher", () => {
 
   test("number: coerces empty string to null, numeric to Number", async () => {
     const onChange = vi.fn();
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={field({ inputType: "number", min: 0, max: 100 })}
         initial={42}
@@ -144,7 +145,7 @@ describe("MetaBoxField dispatcher", () => {
 
   test("number: partial input like '-' does not propagate NaN", async () => {
     const onChange = vi.fn();
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={field({ inputType: "number" })}
         initial={null}
@@ -162,7 +163,7 @@ describe("MetaBoxField dispatcher", () => {
   });
 
   test("email / url: emit the matching native HTML5 input type", () => {
-    const { rerender } = render(
+    const { rerender } = renderWithI18n(
       <Harness fieldDef={field({ inputType: "email" })} initial="" />,
     );
     expect(screen.getByTestId("meta-box-field-k-input")).toHaveAttribute(
@@ -183,7 +184,7 @@ describe("MetaBoxField dispatcher", () => {
     });
 
     const onDateChange = vi.fn();
-    const { rerender } = render(
+    const { rerender } = renderWithI18n(
       <Harness
         fieldDef={field({
           inputType: "date",
@@ -215,7 +216,7 @@ describe("MetaBoxField dispatcher", () => {
 
   test("date: empty input clears the value to null, otherwise propagates the ISO string", async () => {
     const onChange = vi.fn();
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={field({ inputType: "date" })}
         initial="2026-05-03"
@@ -230,7 +231,7 @@ describe("MetaBoxField dispatcher", () => {
   });
 
   test("user reference: empty state shows 'None selected' + 'Select' button", () => {
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={field({
           inputType: "user",
@@ -249,7 +250,7 @@ describe("MetaBoxField dispatcher", () => {
   });
 
   test("user reference: required fields hide the Clear button when populated", () => {
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={field({
           inputType: "user",
@@ -266,7 +267,7 @@ describe("MetaBoxField dispatcher", () => {
   });
 
   test("multi reference (userList): empty state + Add button + max counter", () => {
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={field({
           inputType: "userList",
@@ -289,7 +290,7 @@ describe("MetaBoxField dispatcher", () => {
   });
 
   test("multi reference: Add button switches label + disables at max", () => {
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={field({
           inputType: "userList",
@@ -310,7 +311,7 @@ describe("MetaBoxField dispatcher", () => {
 
   test("multiselect: clicking a toggle item emits the updated array", async () => {
     const onChange = vi.fn();
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={field({
           inputType: "multiselect",
@@ -331,7 +332,7 @@ describe("MetaBoxField dispatcher", () => {
 
   test("json: parses textarea on change, surfaces parse errors inline", async () => {
     const onChange = vi.fn();
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={field({ inputType: "json", type: "json" })}
         initial={{ a: 1 }}
@@ -362,7 +363,7 @@ describe("MetaBoxField dispatcher", () => {
 
   test("color: swatch + hex input share the same value via react-colorful", async () => {
     const onChange = vi.fn();
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={field({ inputType: "color" })}
         initial="#1a2b3c"
@@ -382,7 +383,7 @@ describe("MetaBoxField dispatcher", () => {
   });
 
   test("range: slider exposes value via the inline display + carries bounds on root", () => {
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={field({ inputType: "range", min: 0, max: 100, step: 5 })}
         initial={20}
@@ -404,7 +405,7 @@ describe("MetaBoxField dispatcher", () => {
       // would-be unknown-inputType warning; should not fire
     });
     const onChange = vi.fn();
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={field({
           inputType: "password",
@@ -431,7 +432,7 @@ describe("MetaBoxField dispatcher", () => {
 
   test("select: renders settings, selection fires onChange with the value", async () => {
     const onChange = vi.fn();
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={field({
           inputType: "select",
@@ -454,7 +455,7 @@ describe("MetaBoxField dispatcher", () => {
 
   test("radio: renders one input per option, click fires onChange", async () => {
     const onChange = vi.fn();
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={field({
           inputType: "radio",
@@ -476,7 +477,7 @@ describe("MetaBoxField dispatcher", () => {
 
   test("checkbox: renders as inline label, toggles emit the checked boolean", async () => {
     const onChange = vi.fn();
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={field({ inputType: "checkbox", label: "Featured" })}
         initial={false}
@@ -494,7 +495,9 @@ describe("MetaBoxField dispatcher", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {
       // silence expected warning
     });
-    render(<Harness fieldDef={field({ inputType: "mystery" })} initial="" />);
+    renderWithI18n(
+      <Harness fieldDef={field({ inputType: "mystery" })} initial="" />,
+    );
     const input = screen.getByTestId("meta-box-field-k-input");
     expect(input.tagName).toBe("INPUT");
     expect(input).toHaveAttribute("type", "text");
@@ -504,7 +507,7 @@ describe("MetaBoxField dispatcher", () => {
   });
 
   test("description renders under the field and is referenced by aria-describedby", () => {
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={field({
           inputType: "text",
@@ -526,7 +529,7 @@ describe("MetaBoxField dispatcher", () => {
   });
 
   test("required flag propagates to the native input", () => {
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={field({ inputType: "text", required: true })}
         initial=""
@@ -539,7 +542,7 @@ describe("MetaBoxField dispatcher", () => {
     registerPluginFieldType("custom-stub", ({ field, testId }) => (
       <span data-testid={`${testId}-plugin`}>plugin:{field.inputType}</span>
     ));
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={field({ inputType: "custom-stub" })}
         initial="value"
@@ -559,7 +562,7 @@ describe("MetaBoxField dispatcher", () => {
     registerPluginFieldType("crashy", () => {
       throw new Error("boom");
     });
-    render(
+    renderWithI18n(
       <Harness fieldDef={field({ inputType: "crashy" })} initial="value" />,
     );
     expect(
@@ -574,7 +577,9 @@ describe("MetaBoxField dispatcher", () => {
     const consoleWarn = vi
       .spyOn(console, "warn")
       .mockImplementation(() => undefined);
-    render(<Harness fieldDef={field({ inputType: "unknown" })} initial="" />);
+    renderWithI18n(
+      <Harness fieldDef={field({ inputType: "unknown" })} initial="" />,
+    );
     expect(screen.getByTestId("meta-box-field-k-input")).toBeInTheDocument();
     consoleWarn.mockRestore();
   });
@@ -615,7 +620,7 @@ describe("MetaBoxField dispatcher", () => {
       );
     }
 
-    render(<ResetHarness />);
+    renderWithI18n(<ResetHarness />);
     // Initial render with "bad" → boundary catches the throw.
     expect(
       screen.getByTestId("meta-box-field-k-input-plugin-error"),
@@ -651,7 +656,7 @@ describe("MetaBoxField — repeater dispatch", () => {
   }
 
   test("renders empty placeholder + Add row button when value is missing", () => {
-    render(<Harness fieldDef={repeaterField()} initial={undefined} />);
+    renderWithI18n(<Harness fieldDef={repeaterField()} initial={undefined} />);
     expect(
       screen.getByTestId("meta-box-field-links-input-empty"),
     ).toBeInTheDocument();
@@ -662,7 +667,7 @@ describe("MetaBoxField — repeater dispatch", () => {
 
   test("Add row appends a row whose subfields render via the same dispatcher", async () => {
     const onChange = vi.fn();
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={repeaterField()}
         initial={[]}
@@ -681,7 +686,7 @@ describe("MetaBoxField — repeater dispatch", () => {
 
   test("typing into a subfield writes to the form's nested path", async () => {
     const onChange = vi.fn();
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={repeaterField()}
         initial={[{ label: "", href: "" }]}
@@ -696,7 +701,7 @@ describe("MetaBoxField — repeater dispatch", () => {
   });
 
   test("max bound disables Add row at capacity", () => {
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={repeaterField({ max: 1 })}
         initial={[{ label: "", href: "" }]}
@@ -706,7 +711,7 @@ describe("MetaBoxField — repeater dispatch", () => {
   });
 
   test("count display shows current / min / max", () => {
-    render(
+    renderWithI18n(
       <Harness
         fieldDef={repeaterField({ min: 1, max: 3 })}
         initial={[
@@ -721,7 +726,9 @@ describe("MetaBoxField — repeater dispatch", () => {
   });
 
   test("non-array initial value renders empty (defensive normalize)", () => {
-    render(<Harness fieldDef={repeaterField()} initial="not an array" />);
+    renderWithI18n(
+      <Harness fieldDef={repeaterField()} initial="not an array" />,
+    );
     expect(
       screen.getByTestId("meta-box-field-links-input-empty"),
     ).toBeInTheDocument();

@@ -34,6 +34,31 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+#~ msgid "metaBox.repeater.maxSuffix"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+#~ msgid "metaBox.repeater.minSuffix"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.countSuffixMax"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.countSuffixMin"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.countSuffixBoth"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.noName"
 msgstr ""
@@ -136,8 +161,18 @@ msgid "allowedDomains.add.submit.idle"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.addMore"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.addAnother"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -158,6 +193,11 @@ msgstr "Neu hinzufügen"
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.idle"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.addFirst"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -286,11 +326,6 @@ msgid "userEdit.error.reassignToSelf"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/editor/BlockScopePicker.tsx
-msgid "blockScopePicker.cancel"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.cancel"
 msgstr ""
@@ -308,6 +343,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.deleteCancel"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/BlockScopePicker.tsx
+msgid "blockScopePicker.cancel"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -361,6 +401,11 @@ msgid "apiTokens.create.capabilities"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.selectChange"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.changeButton"
 msgstr ""
@@ -388,6 +433,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.placeholder"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.clear"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -513,6 +563,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.fallback"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.resolveError"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1107,6 +1162,16 @@ msgid "profile.sessions.loading"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.loading"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.loading"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.title"
 msgstr ""
@@ -1252,6 +1317,16 @@ msgid "slashMenu.empty"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.noMatches"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.noMatches"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.noAuthenticator"
 msgstr ""
@@ -1272,6 +1347,11 @@ msgid "dataTable.emptyState"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.empty"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.empty.title"
 msgstr ""
@@ -1284,6 +1364,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.empty.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.emptyValue"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.emptyValue"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1412,6 +1502,16 @@ msgid "mailer.test.recipient.label"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.orphan"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.orphan"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.rename.button"
 msgstr ""
@@ -1512,6 +1612,26 @@ msgid "apiTokens.col.scopes"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.searchPlaceholder"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.searchPlaceholder"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.dialogDescription"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.dialogDescription"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/SlashMenuPanel.tsx
 msgid "slashMenu.searchAria"
 msgstr ""
@@ -1524,6 +1644,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.transport.securityKey"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.selectIdle"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.selectIdle"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1849,6 +1979,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.noAuthenticator"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/plugin-field-error-boundary.tsx
+msgid "metaBox.pluginField.crashed"
 msgstr ""
 
 #. js-lingui-explicit-id

@@ -34,6 +34,31 @@ msgstr ""
 #~ msgstr "You can't delete your last passkey. Add another one first."
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+#~ msgid "metaBox.repeater.maxSuffix"
+#~ msgstr " / max {max}"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+#~ msgid "metaBox.repeater.minSuffix"
+#~ msgstr " / min {min}"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.countSuffixMax"
+msgstr " / max {max}"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.countSuffixMin"
+msgstr " / min {min}"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.countSuffixBoth"
+msgstr " / min {min} / max {max}"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.noName"
 msgstr "(no name)"
@@ -142,10 +167,20 @@ msgid "allowedDomains.add.submit.idle"
 msgstr "Add"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.addMore"
+msgstr "Add"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.description"
 msgstr "Add a plugin that registers a post type (e.g. "
 "<0>@plumix/plugin-blog</0>) to see it here."
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.addAnother"
+msgstr "Add another"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
@@ -166,6 +201,11 @@ msgstr "Add new"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.idle"
 msgstr "Add passkey"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.addFirst"
+msgstr "Add row"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -295,11 +335,6 @@ msgid "userEdit.error.reassignToSelf"
 msgstr "Can't reassign to the user being deleted."
 
 #. js-lingui-explicit-id
-#: src/editor/BlockScopePicker.tsx
-msgid "blockScopePicker.cancel"
-msgstr "Cancel"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.cancel"
 msgstr "Cancel"
@@ -317,6 +352,11 @@ msgstr "Cancel"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.deleteCancel"
+msgstr "Cancel"
+
+#. js-lingui-explicit-id
+#: src/editor/BlockScopePicker.tsx
+msgid "blockScopePicker.cancel"
 msgstr "Cancel"
 
 #. js-lingui-explicit-id
@@ -370,6 +410,11 @@ msgid "apiTokens.create.capabilities"
 msgstr "Capabilities"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.selectChange"
+msgstr "Change"
+
+#. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.changeButton"
 msgstr "Change email"
@@ -398,6 +443,11 @@ msgstr "Choose a {blockTitle} layout"
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.placeholder"
 msgstr "claude-code / github-actions / mcp-prod"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.clear"
+msgstr "Clear"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
@@ -528,6 +578,11 @@ msgstr "Couldn't enrol — re-sign-in and try again."
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.fallback"
 msgstr "Couldn't enrol the passkey. Try again."
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.resolveError"
+msgstr "Couldn’t load selected items — refresh to retry."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -1132,6 +1187,16 @@ msgid "profile.sessions.loading"
 msgstr "Loading…"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.loading"
+msgstr "Loading…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.loading"
+msgstr "Loading…"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.title"
 msgstr "Mailer"
@@ -1279,6 +1344,16 @@ msgid "slashMenu.empty"
 msgstr "No matches"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.noMatches"
+msgstr "No matches"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.noMatches"
+msgstr "No matches"
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.noAuthenticator"
 msgstr "No passkey is available on this device. Try signing in on the device "
@@ -1301,6 +1376,11 @@ msgid "dataTable.emptyState"
 msgstr "No results."
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.empty"
+msgstr "No rows"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.empty.title"
 msgstr "No settings registered yet"
@@ -1314,6 +1394,16 @@ msgstr "No tokens yet"
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.empty.title"
 msgstr "No users match your filter"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.emptyValue"
+msgstr "None selected"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.emptyValue"
+msgstr "None selected"
 
 #. js-lingui-explicit-id
 #: src/routes/__root.tsx
@@ -1444,6 +1534,16 @@ msgid "mailer.test.recipient.label"
 msgstr "Recipient"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.orphan"
+msgstr "Reference missing — re-pick or clear"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.orphan"
+msgstr "Reference missing — remove or re-pick"
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.rename.button"
 msgstr "Rename"
@@ -1544,6 +1644,26 @@ msgid "apiTokens.col.scopes"
 msgstr "Scopes"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.searchPlaceholder"
+msgstr "Search {kind}…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.searchPlaceholder"
+msgstr "Search {kind}…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.dialogDescription"
+msgstr "Search and pick {kind} entries"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.dialogDescription"
+msgstr "Search and pick a {kind}"
+
+#. js-lingui-explicit-id
 #: src/editor/SlashMenuPanel.tsx
 msgid "slashMenu.searchAria"
 msgstr "Search blocks and patterns"
@@ -1557,6 +1677,16 @@ msgstr "Search by email…"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.transport.securityKey"
 msgstr "Security key"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.selectIdle"
+msgstr "Select"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.selectIdle"
+msgstr "Select"
 
 #. js-lingui-explicit-id
 #: src/editor/BlockActionsPanel.tsx
@@ -1898,6 +2028,11 @@ msgstr "This device"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.noAuthenticator"
 msgstr "This device doesn't support passkeys."
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/plugin-field-error-boundary.tsx
+msgid "metaBox.pluginField.crashed"
+msgstr "This field couldn’t render. Check the browser console for details."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts

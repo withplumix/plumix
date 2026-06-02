@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button.js";
@@ -11,6 +12,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton.js";
 import { SortableList } from "@/components/ui/sortable.js";
 import { orpc } from "@/lib/orpc.js";
+import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
 
 // Multi-value counterpart to `ReferencePicker`. Shares the same
@@ -21,6 +25,49 @@ import { useQuery } from "@tanstack/react-query";
 // re-clicking "Add"), and `max` caps the array length both in the
 // "Add" button (disables when full) and inside the dialog (no-op
 // on item click).
+
+// User-facing copy. `dialogDescription` and `searchPlaceholder`
+// interpolate `{kind}` raw (`user`, `entry`, `term`, `media` — the
+// wire identifier). A real kind→localized-noun map is deferred under
+// the manifest-label widening tracked in #730.
+const M = {
+  resolveError: defineMessage({
+    id: "metaBox.multiReference.resolveError",
+    message: "Couldn’t load selected items — refresh to retry.",
+  }),
+  emptyValue: defineMessage({
+    id: "metaBox.multiReference.emptyValue",
+    message: "None selected",
+  }),
+  orphan: defineMessage({
+    id: "metaBox.multiReference.orphan",
+    message: "Reference missing — remove or re-pick",
+  }),
+  selectIdle: defineMessage({
+    id: "metaBox.multiReference.selectIdle",
+    message: "Select",
+  }),
+  addMore: defineMessage({
+    id: "metaBox.multiReference.addMore",
+    message: "Add",
+  }),
+  loading: defineMessage({
+    id: "metaBox.multiReference.loading",
+    message: "Loading…",
+  }),
+  noMatches: defineMessage({
+    id: "metaBox.multiReference.noMatches",
+    message: "No matches",
+  }),
+  dialogDescription: defineMessage({
+    id: "metaBox.multiReference.dialogDescription",
+    message: "Search and pick {kind} entries",
+  }),
+  searchPlaceholder: defineMessage({
+    id: "metaBox.multiReference.searchPlaceholder",
+    message: "Search {kind}…",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 interface MultiReferencePickerProps {
   readonly value: readonly string[];
@@ -45,6 +92,8 @@ export function MultiReferencePicker({
   label,
   testId,
 }: MultiReferencePickerProps): ReactNode {
+  const { i18n } = useLingui();
+  const labelFn = useLabel();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -113,6 +162,17 @@ export function MultiReferencePicker({
     };
   });
 
+  const dialogDescription = i18n._(
+    M.dialogDescription.id,
+    { kind },
+    { message: M.dialogDescription.message },
+  );
+  const searchPlaceholder = i18n._(
+    M.searchPlaceholder.id,
+    { kind },
+    { message: M.searchPlaceholder.message },
+  );
+
   return (
     <div className="flex flex-col gap-2" data-testid={testId}>
       {resolveQuery.isError ? (
@@ -123,7 +183,10 @@ export function MultiReferencePicker({
           className="text-destructive text-sm"
           data-testid={`${testId}-resolve-error`}
         >
-          Couldn&rsquo;t load selected items — refresh to retry.
+          <Trans
+            id="metaBox.multiReference.resolveError"
+            message="Couldn’t load selected items — refresh to retry."
+          />
         </p>
       ) : null}
       {value.length === 0 ? (
@@ -131,7 +194,10 @@ export function MultiReferencePicker({
           className="text-muted-foreground text-sm"
           data-testid={`${testId}-empty`}
         >
-          None selected
+          <Trans
+            id="metaBox.multiReference.emptyValue"
+            message="None selected"
+          />
         </p>
       ) : (
         <SortableList
@@ -168,7 +234,10 @@ export function MultiReferencePicker({
                 className="text-destructive text-sm"
                 data-testid={`${testId}-orphan-${item.id}`}
               >
-                Reference missing — remove or re-pick
+                <Trans
+                  id="metaBox.multiReference.orphan"
+                  message="Reference missing — remove or re-pick"
+                />
               </p>
             );
           }}
@@ -188,7 +257,7 @@ export function MultiReferencePicker({
           }}
           data-testid={`${testId}-add`}
         >
-          {value.length === 0 ? "Select" : "Add"}
+          {value.length === 0 ? labelFn(M.selectIdle) : labelFn(M.addMore)}
         </Button>
         {max !== undefined ? (
           <span
@@ -203,19 +272,26 @@ export function MultiReferencePicker({
         open={open}
         onOpenChange={setOpen}
         title={label}
-        description={`Search and pick ${kind} entries`}
+        description={dialogDescription}
       >
         <CommandInput
-          placeholder={`Search ${kind}…`}
+          placeholder={searchPlaceholder}
           value={query}
           onValueChange={setQuery}
           data-testid={`${testId}-search`}
         />
         <CommandList>
           {listQuery.isLoading ? (
-            <CommandEmpty>Loading…</CommandEmpty>
+            <CommandEmpty>
+              <Trans id="metaBox.multiReference.loading" message="Loading…" />
+            </CommandEmpty>
           ) : items.length === 0 ? (
-            <CommandEmpty>No matches</CommandEmpty>
+            <CommandEmpty>
+              <Trans
+                id="metaBox.multiReference.noMatches"
+                message="No matches"
+              />
+            </CommandEmpty>
           ) : (
             items.map((item) => {
               const alreadySelected = selectedSet.has(item.id);
