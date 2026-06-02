@@ -112,6 +112,10 @@ const config: KnipConfig = {
         // via a template-literal dynamic import that knip can't follow.
         "lingui.config.ts",
         "locales/*.mjs",
+        // Catalog-extractor mirror for `@plumix/core` chrome descriptors
+        // (CORE_NAV_GROUPS + CORE_NAV_ITEMS). Exists so `lingui extract`
+        // picks the ids into admin's `.po`; never imported at runtime.
+        "src/lib/core-nav-i18n.ts",
       ],
       // playwright.config.ts imports `@plumix/core/test/playwright` whose
       // dist may not exist on a fresh clone. Knip's playwright plugin

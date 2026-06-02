@@ -299,6 +299,11 @@ msgid "allowedDomains.title"
 msgstr "Allowed domains"
 
 #. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.item.allowedDomains"
+msgstr "Allowed domains"
+
+#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.entry.edit.restore.conflict"
 msgstr "Another editor changed this entry. Reload and try again."
@@ -976,6 +981,11 @@ msgid "breadcrumb.dashboard"
 msgstr "Dashboard"
 
 #. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.item.dashboard"
+msgstr "Dashboard"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.defaultRole.label"
 msgstr "Default role"
@@ -1329,6 +1339,11 @@ msgid "breadcrumb.entries"
 msgstr "Entries"
 
 #. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.content"
+msgstr "Entries"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.dialogDescription"
 msgstr "Entry assignments to this term are removed. If the term has children, "
@@ -1662,6 +1677,16 @@ msgstr "Magic-link sign-in isn't configured on this site."
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.title"
 msgstr "Mailer"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.item.mailer"
+msgstr "Mailer"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.management"
+msgstr "Management"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -2043,6 +2068,11 @@ msgstr "Other"
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.tab.outline"
 msgstr "Outline"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.overview"
+msgstr "Overview"
 
 #. js-lingui-explicit-id
 #: src/editor/StyleTab.tsx
@@ -2569,6 +2599,11 @@ msgid "breadcrumb.settings"
 msgstr "Settings"
 
 #. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.item.settings"
+msgstr "Settings"
+
+#. js-lingui-explicit-id
 #: src/components/shell/user-menu.tsx
 msgid "menu.settings"
 msgstr "Settings"
@@ -2745,6 +2780,11 @@ msgstr "Synced"
 #: src/editor/device-labels.ts
 msgid "editor.device.tablet"
 msgstr "Tablet"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.termTaxonomies"
+msgstr "Taxonomies"
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
@@ -3115,11 +3155,6 @@ msgid "profile.passkeys.unnamed"
 msgstr "Unnamed passkey"
 
 #. js-lingui-explicit-id
-#: src/components/meta-box/lookup-label.tsx
-msgid "metaBox.reference.untitled"
-msgstr "Untitled"
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/create.tsx
 msgid "editor.entry.create.untitled"
 msgstr "Untitled"
@@ -3132,6 +3167,11 @@ msgstr "Untitled"
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.copyAsPattern.untitledFallback"
+msgstr "Untitled"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup-label.tsx
+msgid "metaBox.reference.untitled"
 msgstr "Untitled"
 
 #. js-lingui-explicit-id
@@ -3194,6 +3234,11 @@ msgstr "Users"
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.users"
+msgstr "Users"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.item.users"
 msgstr "Users"
 
 #. js-lingui-explicit-id

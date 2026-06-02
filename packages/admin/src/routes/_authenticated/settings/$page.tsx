@@ -26,6 +26,7 @@ import {
   groupsForSettingsPage,
 } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
+import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
 import {
@@ -155,6 +156,7 @@ function SettingsGroupCard({
   readonly group: SettingsGroupManifestEntry;
 }): ReactNode {
   const { i18n } = useLingui();
+  const renderLabel = useLabel();
   const queryClient = useQueryClient();
   // String branch is plugin-author text rendered verbatim.
   const [serverError, setServerError] = useState<
@@ -217,7 +219,7 @@ function SettingsGroupCard({
                 className="text-lg font-semibold"
                 data-testid={`settings-group-heading-${group.name}`}
               >
-                {group.label}
+                {renderLabel(group.label)}
               </h2>
             </CardTitle>
             {group.description ? (

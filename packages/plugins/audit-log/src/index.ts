@@ -1,3 +1,4 @@
+import type { Label } from "plumix/i18n";
 import { definePlugin } from "plumix/plugin";
 
 import type { AuditExtension } from "./server/auditExtension.js";
@@ -66,6 +67,14 @@ const ADMIN_ENTRY_PATH =
 
 const AUDIT_LOG_READ_CAPABILITY = "audit_log:read";
 
+// Plain descriptor literals — plugin source runs server-side without
+// the Babel macro pipeline; the manifest payload is identical to a
+// `defineMessage(...)` call. Catalogs ship under #697.
+const AUDIT_LABELS = {
+  auditLog: { id: "plugin.auditLog.adminPage.title", message: "Audit log" },
+  tools: { id: "core.adminNav.tools", message: "Tools" },
+} satisfies Record<string, Label>;
+
 /**
  * `@plumix/plugin-audit-log` — captures lifecycle events to a queryable
  * activity feed. v0.1 covers entry events; #179+ add user, term, and
@@ -123,6 +132,11 @@ export function auditLog(options: AuditLogPluginOptions = {}) {
 
   return definePlugin("audit_log", {
     adminEntry: ADMIN_ENTRY_PATH,
+    i18n: {
+      sourceLocale: "en",
+      locales: ["en"],
+      catalogPath: "./locales",
+    },
     schema: storage.schemaModule ?? schema,
     // Module specifier `plumix migrate generate` uses to include this
     // plugin's table in the host's drizzle-kit codegen. Without it the
@@ -141,11 +155,11 @@ export function auditLog(options: AuditLogPluginOptions = {}) {
 
       ctx.registerAdminPage({
         path: "/audit-log",
-        title: "Audit log",
+        title: AUDIT_LABELS.auditLog,
         capability: AUDIT_LOG_READ_CAPABILITY,
         nav: {
-          group: { id: "tools", label: "Tools", priority: 600 },
-          label: "Audit log",
+          group: { id: "tools", label: AUDIT_LABELS.tools, priority: 600 },
+          label: AUDIT_LABELS.auditLog,
           order: 10,
         },
         component: "AuditLogShell",

@@ -71,17 +71,23 @@ describe("@plumix/plugin-media — registration", () => {
     const { registry } = await install();
     const page = registry.adminPages.get("/media");
     expect(page).toBeDefined();
-    expect(page?.title).toBe("Media Library");
+    expect(page?.title).toEqual({
+      id: "plugin.media.adminPage.title",
+      message: "Media Library",
+    });
     expect(page?.capability).toBe("entry:media:read");
     // Custom nav group between Entries (100) and Taxonomies (200) —
     // media isn't a content surface like Posts/Pages, so it doesn't
     // belong nested under "Entries".
     expect(page?.nav?.group).toEqual({
       id: "library",
-      label: "Library",
+      label: { id: "core.adminNav.library", message: "Library" },
       priority: 150,
     });
-    expect(page?.nav?.label).toBe("Media Library");
+    expect(page?.nav?.label).toEqual({
+      id: "plugin.media.adminPage.title",
+      message: "Media Library",
+    });
     expect(page?.component).toBe("MediaLibrary");
   });
 

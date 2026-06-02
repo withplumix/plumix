@@ -16,39 +16,46 @@ const LABELS = {
   tag: { id: "plugin.blog.tag.singular", message: "Tag" },
 } satisfies Record<string, Label>;
 
-export const blog = definePlugin("blog", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: LABELS.posts,
-    labels: { singular: LABELS.post, plural: LABELS.posts },
-    description: "Standard blog posts",
-    supports: ["title", "editor", "excerpt", "revisions", "autosave"],
-    versioning: { maxRevisions: 25, autosaveIntervalSeconds: 60 },
-    termTaxonomies: ["category", "tag"],
-    isHierarchical: false,
-    isPublic: true,
-    hasArchive: true,
-    rewrite: { slug: "posts" },
-    capabilityType: "post",
-    menuIcon: "file-text",
-  });
+export const blog = definePlugin("blog", {
+  i18n: {
+    sourceLocale: "en",
+    locales: ["en"],
+    catalogPath: "./locales",
+  },
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: LABELS.posts,
+      labels: { singular: LABELS.post, plural: LABELS.posts },
+      description: "Standard blog posts",
+      supports: ["title", "editor", "excerpt", "revisions", "autosave"],
+      versioning: { maxRevisions: 25, autosaveIntervalSeconds: 60 },
+      termTaxonomies: ["category", "tag"],
+      isHierarchical: false,
+      isPublic: true,
+      hasArchive: true,
+      rewrite: { slug: "posts" },
+      capabilityType: "post",
+      menuIcon: "file-text",
+    });
 
-  ctx.registerTermTaxonomy("category", {
-    label: LABELS.categories,
-    labels: { singular: LABELS.category },
-    isHierarchical: true,
-    entryTypes: ["post"],
-    isPublic: true,
-    hasAdminColumn: true,
-    rewrite: { slug: "category", isHierarchical: true },
-  });
+    ctx.registerTermTaxonomy("category", {
+      label: LABELS.categories,
+      labels: { singular: LABELS.category },
+      isHierarchical: true,
+      entryTypes: ["post"],
+      isPublic: true,
+      hasAdminColumn: true,
+      rewrite: { slug: "category", isHierarchical: true },
+    });
 
-  ctx.registerTermTaxonomy("tag", {
-    label: LABELS.tags,
-    labels: { singular: LABELS.tag },
-    isHierarchical: false,
-    entryTypes: ["post"],
-    isPublic: true,
-    hasAdminColumn: true,
-    rewrite: { slug: "tag" },
-  });
+    ctx.registerTermTaxonomy("tag", {
+      label: LABELS.tags,
+      labels: { singular: LABELS.tag },
+      isHierarchical: false,
+      entryTypes: ["post"],
+      isPublic: true,
+      hasAdminColumn: true,
+      rewrite: { slug: "tag" },
+    });
+  },
 });

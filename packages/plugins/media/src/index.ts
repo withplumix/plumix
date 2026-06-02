@@ -25,6 +25,11 @@ export const DEFAULT_MAX_UPLOAD_SIZE = 25 * 1024 * 1024;
 const MEDIA_LABELS = {
   media: { id: "plugin.media.media.plural", message: "Media" },
   asset: { id: "plugin.media.media.singular", message: "Asset" },
+  mediaLibrary: {
+    id: "plugin.media.adminPage.title",
+    message: "Media Library",
+  },
+  libraryGroup: { id: "core.adminNav.library", message: "Library" },
 } satisfies Record<string, Label>;
 
 // Re-export the canonical list from `media-blocks.ts` (server-clean).
@@ -167,20 +172,31 @@ export function media(
 
       ctx.registerAdminPage({
         path: "/media",
-        title: "Media Library",
+        title: MEDIA_LABELS.mediaLibrary,
         capability: "entry:media:read",
         nav: {
           // Own group between Entries (priority 100) and Taxonomies
           // (priority 200). Media isn't a content surface like Posts/
           // Pages — putting it under "Entries" reads as nesting, which
           // doesn't match the WordPress mental model.
-          group: { id: "library", label: "Library", priority: 150 },
-          label: "Media Library",
+          group: {
+            id: "library",
+            label: MEDIA_LABELS.libraryGroup,
+            priority: 150,
+          },
+          label: MEDIA_LABELS.mediaLibrary,
           order: 50,
         },
         component: "MediaLibrary",
       });
     },
-    { adminEntry: ADMIN_ENTRY_PATH },
+    {
+      adminEntry: ADMIN_ENTRY_PATH,
+      i18n: {
+        sourceLocale: "en",
+        locales: ["en"],
+        catalogPath: "./locales",
+      },
+    },
   );
 }

@@ -149,7 +149,7 @@ export type MetaScalarType = "string" | "number" | "boolean" | "json";
 
 export interface MetaBoxFieldOption {
   readonly value: string;
-  readonly label: string;
+  readonly label: Label;
 }
 
 /**
@@ -177,7 +177,7 @@ export type MetaBoxFieldSpan =
  */
 export interface MetaBoxFieldBase {
   readonly key: string;
-  readonly label: string;
+  readonly label: Label;
   /**
    * Storage type. Drives server-side sanitization on write and
    * coercion on read (`entry.meta` / `term.meta` columns store JSON,
@@ -674,7 +674,7 @@ export type MetaBoxField =
  *   — the manifest wire contract strips callbacks before shipping.
  */
 export interface MetaBoxBaseOptions {
-  readonly label: string;
+  readonly label: Label;
   readonly description?: string;
   readonly priority?: number;
   readonly capability?: string;
@@ -866,16 +866,16 @@ export type AdminNavGroupRef =
   | string
   | {
       readonly id: string;
-      readonly label?: string;
+      readonly label?: Label;
       readonly priority?: number;
     };
 
 export interface AdminPageOptions {
   readonly path: string;
-  readonly title: string;
+  readonly title: Label;
   readonly nav?: {
     readonly group: AdminNavGroupRef;
-    readonly label: string;
+    readonly label: Label;
     readonly icon?: PluginComponentRef;
     readonly order?: number;
   };
@@ -926,17 +926,42 @@ const TAXONOMY_MENU_ICONS: ReadonlySet<CoreIconName> = new Set<CoreIconName>([
 /**
  * Built-in nav groups core ships. Plugins target their items at these
  * ids via `nav.group`, and can interleave their own groups by picking
- * priorities between or around these defaults.
+ * priorities between or around these defaults. Labels are
+ * `MessageDescriptor`s so the sidebar localizes at render time via
+ * the admin's `useLabel` hook.
+ *
+ * Convention: plugin-declared groups keep their label descriptor id
+ * under the same `core.adminNav.<groupId>` namespace (see
+ * `@plumix/plugin-menu` → `appearance`, `@plumix/plugin-media` →
+ * `library`, `@plumix/plugin-audit-log` → `tools`). The id space is
+ * the concept, not the owner — translators see one "Appearance"
+ * entry rather than one per plugin sharing the group.
  */
 export const CORE_NAV_GROUPS: readonly {
   readonly id: string;
-  readonly label: string;
+  readonly label: Label;
   readonly priority: number;
 }[] = [
-  { id: "overview", label: "Overview", priority: 0 },
-  { id: "content", label: "Entries", priority: 100 },
-  { id: "term-taxonomies", label: "Taxonomies", priority: 200 },
-  { id: "management", label: "Management", priority: 1000 },
+  {
+    id: "overview",
+    label: { id: "core.adminNav.overview", message: "Overview" },
+    priority: 0,
+  },
+  {
+    id: "content",
+    label: { id: "core.adminNav.content", message: "Entries" },
+    priority: 100,
+  },
+  {
+    id: "term-taxonomies",
+    label: { id: "core.adminNav.termTaxonomies", message: "Taxonomies" },
+    priority: 200,
+  },
+  {
+    id: "management",
+    label: { id: "core.adminNav.management", message: "Management" },
+    priority: 1000,
+  },
 ];
 
 /**
@@ -1254,7 +1279,7 @@ export interface EntryTypeManifestEntry {
  */
 export interface MetaBoxFieldManifestEntry {
   readonly key: string;
-  readonly label: string;
+  readonly label: Label;
   readonly type: MetaScalarType;
   readonly inputType: string;
   readonly description?: string;
@@ -1307,7 +1332,7 @@ export interface MetaBoxFieldManifestEntry {
  * specific layout + scope fields.
  */
 export interface MetaBoxBaseManifestEntry {
-  readonly label: string;
+  readonly label: Label;
   readonly description?: string;
   readonly priority?: number;
   readonly capability?: string;
@@ -1421,7 +1446,7 @@ export interface AdminNavItem {
 
 export interface AdminNavGroup {
   readonly id: string;
-  readonly label: string;
+  readonly label: Label;
   readonly priority?: number;
   readonly icon?: PluginComponentRef;
   readonly coreIcon?: CoreIconName;
@@ -1742,7 +1767,7 @@ function projectPluginI18n(
 
 interface MutableAdminNavGroup {
   id: string;
-  label: string;
+  label: Label;
   priority?: number;
   icon?: PluginComponentRef;
   coreIcon?: CoreIconName;
@@ -1758,7 +1783,7 @@ const CORE_NAV_ITEMS: readonly { groupId: string; item: AdminNavItem }[] = [
     groupId: "overview",
     item: {
       to: "/",
-      label: "Dashboard",
+      label: { id: "core.adminNav.item.dashboard", message: "Dashboard" },
       coreIcon: "dashboard",
       order: 0,
       exact: true,
@@ -1768,7 +1793,7 @@ const CORE_NAV_ITEMS: readonly { groupId: string; item: AdminNavItem }[] = [
     groupId: "management",
     item: {
       to: "/users",
-      label: "Users",
+      label: { id: "core.adminNav.item.users", message: "Users" },
       coreIcon: "users",
       order: 100,
       capability: "user:list",
@@ -1778,7 +1803,10 @@ const CORE_NAV_ITEMS: readonly { groupId: string; item: AdminNavItem }[] = [
     groupId: "management",
     item: {
       to: "/allowed-domains",
-      label: "Allowed domains",
+      label: {
+        id: "core.adminNav.item.allowedDomains",
+        message: "Allowed domains",
+      },
       coreIcon: "users",
       order: 150,
       capability: "settings:manage",
@@ -1788,7 +1816,7 @@ const CORE_NAV_ITEMS: readonly { groupId: string; item: AdminNavItem }[] = [
     groupId: "management",
     item: {
       to: "/mailer",
-      label: "Mailer",
+      label: { id: "core.adminNav.item.mailer", message: "Mailer" },
       coreIcon: "mail",
       order: 175,
       capability: "settings:manage",
@@ -1798,7 +1826,7 @@ const CORE_NAV_ITEMS: readonly { groupId: string; item: AdminNavItem }[] = [
     groupId: "management",
     item: {
       to: "/settings",
-      label: "Settings",
+      label: { id: "core.adminNav.item.settings", message: "Settings" },
       coreIcon: "settings",
       order: 200,
       capability: "settings:manage",
@@ -1870,7 +1898,7 @@ function addTaxonomyNavItems(
 
 function ensureNavGroup(
   groups: Map<string, MutableAdminNavGroup>,
-  groupRef: string | { id: string; label?: string; priority?: number },
+  groupRef: AdminNavGroupRef,
 ): MutableAdminNavGroup {
   const groupId = typeof groupRef === "string" ? groupRef : groupRef.id;
   const existing = groups.get(groupId);

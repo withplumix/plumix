@@ -40,14 +40,20 @@ describe("@plumix/plugin-menu", () => {
     const { registry } = await install();
     const page = registry.adminPages.get("/menus");
     expect(page).toBeDefined();
-    expect(page?.title).toBe("Menus");
+    expect(page?.title).toEqual({
+      id: "plugin.menu.menu.plural",
+      message: "Menus",
+    });
     expect(page?.capability).toBe("term:menu:manage");
     expect(page?.nav?.group).toEqual({
       id: "appearance",
-      label: "Appearance",
+      label: { id: "core.adminNav.appearance", message: "Appearance" },
       priority: 175,
     });
-    expect(page?.nav?.label).toBe("Menus");
+    expect(page?.nav?.label).toEqual({
+      id: "plugin.menu.menu.plural",
+      message: "Menus",
+    });
     expect(page?.nav?.order).toBe(10);
     expect(page?.component).toBe("MenusShell");
   });

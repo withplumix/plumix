@@ -1,0 +1,29 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-02\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.plural"
+msgstr "Media"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.singular"
+msgstr "Asset"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.adminPage.title"
+msgstr "Media Library"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "core.adminNav.library"
+msgstr "Library"
