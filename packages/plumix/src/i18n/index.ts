@@ -9,6 +9,7 @@ export {
   formatRelative,
   labelSourceText,
   resolveLabel,
+  tx,
   withContext,
   type FormatRelativeOptions,
   type Label,

@@ -158,6 +158,7 @@ const M = {
   statusDraft: defineMessage({
     id: "entries.list.statusFilter.draft",
     message: "Draft",
+    context: "entry status",
   }),
   statusScheduled: defineMessage({
     id: "entries.list.statusFilter.scheduled",

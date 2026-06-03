@@ -27,3 +27,4 @@ export type {
   ResolvedLocale,
 } from "./locale-registry.js";
 export { resolveLocale } from "./resolve-locale.js";
+export { tx } from "./tx.js";

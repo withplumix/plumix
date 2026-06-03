@@ -18,6 +18,12 @@ import { definePlugin } from "plumix/plugin";
 // see the `X-Generator: hand-authored` header. `withContext` is not
 // macro-visible, so any future `lingui extract` integration here would
 // regress those lines silently.
+//
+// Action-phrase labels (`Add Post`, `Edit Tag`) intentionally OMIT
+// context — the leading English verb fixes the polyseme as a noun in
+// every target locale, matching WP gettext convention (only the
+// standalone singular/plural carry `_x()`). See
+// `docs/plugin-author.md#disambiguating-polysemes`.
 const POST_LABELS = {
   singular: withContext(
     { id: "plugin.blog.post.singular", message: "Post" },
