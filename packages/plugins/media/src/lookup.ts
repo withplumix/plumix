@@ -163,6 +163,7 @@ function toLookupResult(id: number, title: string, mime: string): LookupResult {
   return {
     id: String(id),
     label,
+    targetType: MEDIA_ENTRY_TYPE,
     subtitle: mime,
     cached: { mime, filename: title },
   };

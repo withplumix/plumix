@@ -1401,6 +1401,143 @@ describe("buildManifest adminNav projection", () => {
     expect(tax?.items[0]?.to).toBe("/terms/category");
   });
 
+  test("entry type accepts WP-style per-type chrome labels and projects them through the manifest", async () => {
+    // WordPress-style `labels` table: per-type translations for chrome
+    // strings the admin would otherwise interpolate via lowercase noun
+    // substitution. Each label flows through unchanged so the admin can
+    // cascade `labels[key] ?? genericFallback` at every call site —
+    // languages with morphological agreement (DE, RU, PL, UK, AR) read
+    // correctly without ever lowercasing a translated noun.
+    const labels = {
+      singular: { id: "blog.post.singular", message: "Post" },
+      plural: { id: "blog.post.plural", message: "Posts" },
+      addNewItem: { id: "blog.post.addNewItem", message: "Add Post" },
+      searchItems: { id: "blog.post.searchItems", message: "Search Posts…" },
+      notFound: { id: "blog.post.notFound", message: "No posts yet" },
+      loadingItems: { id: "blog.post.loadingItems", message: "Loading posts" },
+      loadErrorItems: {
+        id: "blog.post.loadErrorItems",
+        message: "Couldn’t load posts. Try again.",
+      },
+      allItems: { id: "blog.post.allItems", message: "All posts" },
+      noMatch: { id: "blog.post.noMatch", message: "No posts match" },
+      untitledItem: {
+        id: "blog.post.untitledItem",
+        message: "Untitled Post",
+      },
+      moveToTrash: {
+        id: "blog.post.moveToTrash",
+        message: "Move post to trash?",
+      },
+    };
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("blog", (ctx) => {
+      // Inline literal so TypeScript's excess-property check fires —
+      // the test simultaneously pins the type contract (compiles only
+      // when the new keys are part of EntryTypeOptions.labels) and the
+      // runtime pass-through (manifest projection preserves the keys).
+      ctx.registerEntryType("post", {
+        label: "Posts",
+        labels: {
+          singular: { id: "blog.post.singular", message: "Post" },
+          plural: { id: "blog.post.plural", message: "Posts" },
+          addNewItem: { id: "blog.post.addNewItem", message: "Add Post" },
+          searchItems: {
+            id: "blog.post.searchItems",
+            message: "Search Posts…",
+          },
+          notFound: { id: "blog.post.notFound", message: "No posts yet" },
+          loadingItems: {
+            id: "blog.post.loadingItems",
+            message: "Loading posts",
+          },
+          loadErrorItems: {
+            id: "blog.post.loadErrorItems",
+            message: "Couldn’t load posts. Try again.",
+          },
+          allItems: { id: "blog.post.allItems", message: "All posts" },
+          noMatch: { id: "blog.post.noMatch", message: "No posts match" },
+          untitledItem: {
+            id: "blog.post.untitledItem",
+            message: "Untitled Post",
+          },
+          moveToTrash: {
+            id: "blog.post.moveToTrash",
+            message: "Move post to trash?",
+          },
+        },
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const entry = buildManifest(registry).entryTypes.find(
+      (e) => e.name === "post",
+    );
+    expect(entry?.labels).toEqual(labels);
+  });
+
+  test("term taxonomy accepts WP-style per-type chrome labels", async () => {
+    const labels = {
+      singular: { id: "blog.cat.singular", message: "Category" },
+      addNewItem: { id: "blog.cat.addNewItem", message: "Add Category" },
+      searchItems: {
+        id: "blog.cat.searchItems",
+        message: "Search Categories…",
+      },
+      notFound: { id: "blog.cat.notFound", message: "No categories yet" },
+      loadingItems: {
+        id: "blog.cat.loadingItems",
+        message: "Loading categories",
+      },
+      loadErrorItems: {
+        id: "blog.cat.loadErrorItems",
+        message: "Couldn’t load categories. Try again.",
+      },
+      allItems: { id: "blog.cat.allItems", message: "All categories" },
+      noMatch: { id: "blog.cat.noMatch", message: "No categories match" },
+    };
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("blog", (ctx) => {
+      ctx.registerTermTaxonomy("category", {
+        label: "Categories",
+        // Inline literal — same excess-property-check rationale as the
+        // entry-type test above.
+        labels: {
+          singular: { id: "blog.cat.singular", message: "Category" },
+          addNewItem: {
+            id: "blog.cat.addNewItem",
+            message: "Add Category",
+          },
+          searchItems: {
+            id: "blog.cat.searchItems",
+            message: "Search Categories…",
+          },
+          notFound: {
+            id: "blog.cat.notFound",
+            message: "No categories yet",
+          },
+          loadingItems: {
+            id: "blog.cat.loadingItems",
+            message: "Loading categories",
+          },
+          loadErrorItems: {
+            id: "blog.cat.loadErrorItems",
+            message: "Couldn’t load categories. Try again.",
+          },
+          allItems: { id: "blog.cat.allItems", message: "All categories" },
+          noMatch: {
+            id: "blog.cat.noMatch",
+            message: "No categories match",
+          },
+        },
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const taxonomy = buildManifest(registry).termTaxonomies.find(
+      (t) => t.name === "category",
+    );
+    expect(taxonomy?.labels).toEqual(labels);
+  });
+
   test("plugin menuIcon plumbs through to the sidebar item's coreIcon", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("blog", (ctx) => {

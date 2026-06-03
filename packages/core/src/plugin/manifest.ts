@@ -25,6 +25,82 @@ import type { RegisteredLookupAdapter } from "./lookup.js";
 import { labelSourceText } from "../i18n/label.js";
 import { DuplicateAdminSlugError, PluginDefinitionError } from "./errors.js";
 
+/**
+ * WP-style per-type chrome labels shared between `EntryTypeOptions.labels`
+ * and `EntryTypeManifestEntry.labels`. Every field is optional on the
+ * options side; `buildManifest` resolves the cascade server-side so the
+ * projection (`ResolvedEntryTypeLabels`) ships every key fully populated.
+ * Consumers read `entry.labels.editItem` directly — no per-call-site
+ * fallback boilerplate.
+ *
+ * Key set mirrors WP's `register_post_type()` labels table where the
+ * mental model carries (`searchItems`, `notFound`, `addNewItem`, etc.)
+ * plus plumix-specific SPA chrome (`loadingItems`, `loadErrorItems`,
+ * `untitledItem`, `noMatch`) that PHP-WP doesn't need. Deliberately
+ * excludes `menu_name` (already covered by `label`/`plural`),
+ * `name_admin_bar` (plumix has no admin bar), media-specific keys
+ * (`featured_image`, `insert_into_item`, …) that belong on the media
+ * plugin, and tag-cloud affordances (`popular_items`, `most_used`)
+ * that plumix's picker UX doesn't surface.
+ */
+export interface EntryTypeLabels {
+  // Identity
+  readonly singular?: Label;
+  readonly plural?: Label;
+  // Create / read / update / delete actions
+  /** "Add Post" — primary create CTA on list pages and slash menu. */
+  readonly addNewItem?: Label;
+  /** "Edit Post" — list-table row action and editor heading. */
+  readonly editItem?: Label;
+  /** "New Post" — quick-create affordance distinct from `addNewItem`. */
+  readonly newItem?: Label;
+  /** "View Post" — list-table row action and post-save toast link. */
+  readonly viewItem?: Label;
+  // List page chrome
+  /** "Search Posts…" — list-page search input placeholder. */
+  readonly searchItems?: Label;
+  /** "No posts yet" — list-page empty state title (no rows registered). */
+  readonly notFound?: Label;
+  /** "No posts found in Trash" — trash view empty state. */
+  readonly notFoundInTrash?: Label;
+  /** "Loading posts" — aria-busy state during list fetch. */
+  readonly loadingItems?: Label;
+  /** "Couldn't load posts. Try again." — list-page fetch-failure banner. */
+  readonly loadErrorItems?: Label;
+  /** "All posts" — "all-types" filter chip label. */
+  readonly allItems?: Label;
+  /** "No posts match" — empty state after a search returns zero rows. */
+  readonly noMatch?: Label;
+  /** "Parent Post" — hierarchical parent picker option label. */
+  readonly parentItem?: Label;
+  // Reference picker / lookup
+  /** "Untitled Post" — reference-picker label when an entry has no title. */
+  readonly untitledItem?: Label;
+  // Trash / status flow
+  /** "Move post to trash?" — confirmation prompt on trash action. */
+  readonly moveToTrash?: Label;
+  // Status-change toasts (mirror WP's `item_*` family from 5.0+)
+  /** "Post updated" — toast after autosave or explicit save. */
+  readonly itemUpdated?: Label;
+  /** "Post published" — toast after first publish. */
+  readonly itemPublished?: Label;
+  /** "Post published privately" — toast for private visibility. */
+  readonly itemPublishedPrivately?: Label;
+  /** "Post scheduled" — toast after scheduling a future publish. */
+  readonly itemScheduled?: Label;
+  /** "Post moved to trash" — toast after trash action completes. */
+  readonly itemTrashed?: Label;
+  /** "Post reverted to draft" — toast after unpublish. */
+  readonly itemRevertedToDraft?: Label;
+  // Accessibility region labels (SR-only)
+  /** "Posts list" — SR-only region label for the data table. */
+  readonly itemsList?: Label;
+  /** "Posts list navigation" — SR-only region label for pagination. */
+  readonly itemsListNavigation?: Label;
+  /** "Filter posts list" — SR-only label for the filter row. */
+  readonly filterItemsList?: Label;
+}
+
 export interface EntryTypeOptions {
   readonly label: Label;
   /**
@@ -33,11 +109,16 @@ export interface EntryTypeOptions {
    * falls back to `${name}s`, which is acceptable for English-named types
    * but surfaces an "anglos" for `name: "angle"` etc. — plugins with
    * irregular plurals should set `labels.plural` explicitly.
+   *
+   * The other keys mirror WordPress's `register_post_type()` labels table:
+   * per-type chrome strings the admin would otherwise produce by
+   * lowercase-noun substitution. Substitution breaks in languages with
+   * gender/case agreement (DE, RU, PL, UK, AR), and lowercasing translated
+   * nouns is wrong in DE (Beiträge → beiträge is a typo). Each label is
+   * optional and the admin falls back to a generic noun-less catalog
+   * string when missing.
    */
-  readonly labels?: {
-    readonly singular?: Label;
-    readonly plural?: Label;
-  };
+  readonly labels?: EntryTypeLabels;
   readonly description?: string;
   readonly supports?: readonly string[];
   readonly termTaxonomies?: readonly string[];
@@ -71,9 +152,47 @@ export interface EntryTypeOptions {
   readonly archivePerPage?: number;
 }
 
+/**
+ * WP-style per-type chrome labels for term taxonomies. Same cascade
+ * semantics as `EntryTypeLabels` — `buildManifest` resolves into
+ * `ResolvedTermTaxonomyLabels` server-side. Terms always have a
+ * server-supplied `name` so `untitledItem` doesn't apply here.
+ */
+export interface TermTaxonomyLabels {
+  readonly singular?: Label;
+  /** "Add Category" — primary create CTA. */
+  readonly addNewItem?: Label;
+  /** "Edit Category" — term-edit form heading. */
+  readonly editItem?: Label;
+  /** "New Category Name" — placeholder for the create-form name input. */
+  readonly newItemName?: Label;
+  /** "Search categories…" — list-page search input placeholder. */
+  readonly searchItems?: Label;
+  /** "No categories yet" — list-page empty state title. */
+  readonly notFound?: Label;
+  /** "Loading categories" — aria-busy state during fetch. */
+  readonly loadingItems?: Label;
+  /** "Couldn't load categories. Try again." — fetch-failure banner. */
+  readonly loadErrorItems?: Label;
+  /** "All categories" — filter chip label. */
+  readonly allItems?: Label;
+  /** "No categories match" — empty state after zero-match search. */
+  readonly noMatch?: Label;
+  /** "Parent Category" — hierarchical parent picker option label. */
+  readonly parentItem?: Label;
+  /** "Parent Category:" — colon-suffixed variant for form labels. */
+  readonly parentItemColon?: Label;
+  /** "No categories" — entry-list cell empty placeholder. */
+  readonly noTerms?: Label;
+  /** "Filter by category" — SR-only label on filter dropdown. */
+  readonly filterByItem?: Label;
+  /** "← Go to Categories" — back-link from term edit to list. */
+  readonly backToItems?: Label;
+}
+
 export interface TermTaxonomyOptions {
   readonly label: Label;
-  readonly labels?: { readonly singular?: Label };
+  readonly labels?: TermTaxonomyLabels;
   readonly description?: string;
   readonly isHierarchical?: boolean;
   readonly entryTypes?: readonly string[];
@@ -1236,10 +1355,11 @@ export interface EntryTypeManifestEntry {
   readonly name: string;
   readonly adminSlug: string;
   readonly label: Label;
-  readonly labels?: {
-    readonly singular?: Label;
-    readonly plural?: Label;
-  };
+  /** Plugin-author-declared per-type labels. Admin consumers resolve
+   *  the cascade via `entryTypeLabel(entry, key)` which falls back to
+   *  `GENERIC_ENTRY_TYPE_LABELS[key]` when a key is unset — keeping
+   *  the wire shape narrow (only author-declared keys serialize). */
+  readonly labels?: EntryTypeLabels;
   readonly description?: string;
   readonly supports?: readonly string[];
   readonly termTaxonomies?: readonly string[];
@@ -1383,7 +1503,9 @@ export interface UserMetaBoxManifestEntry extends MetaBoxBaseManifestEntry {
 export interface TermTaxonomyManifestEntry {
   readonly name: string;
   readonly label: Label;
-  readonly labels?: { readonly singular?: Label };
+  /** Plugin-author-declared per-type labels — see
+   *  `EntryTypeManifestEntry.labels` for the cascade contract. */
+  readonly labels?: TermTaxonomyLabels;
   readonly description?: string;
   readonly isHierarchical?: boolean;
   readonly entryTypes?: readonly string[];

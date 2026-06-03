@@ -19,6 +19,151 @@ msgstr ""
 #~ msgstr "Untitled"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.taxonomyFilter.all"
+#~ msgstr "All {pluralLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+#~ msgid "terms.create.backLink"
+#~ msgstr "Back to {pluralLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+#~ msgid "terms.edit.backLink"
+#~ msgstr "Back to {pluralLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+#~ msgid "dashboard.tile.browse"
+#~ msgstr "Browse {labelLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+#~ msgid "terms.list.loadError"
+#~ msgstr "Couldn't load {pluralLower}. Try again."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.loadError"
+#~ msgstr "Couldn't load {pluralLower}. Try again."
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+#~ msgid "breadcrumb.createTerm"
+#~ msgstr "Create {singular}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+#~ msgid "terms.create.submit"
+#~ msgstr "Create {singularLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+#~ msgid "editor.entry.create.pending"
+#~ msgstr "Creating new {singular}…"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.headline"
+#~ msgstr "Edit {singular}"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+#~ msgid "breadcrumb.editTerm"
+#~ msgstr "Edit {singular}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+#~ msgid "terms.edit.heading"
+#~ msgstr "Edit {singularLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+#~ msgid "terms.list.loadingLabel"
+#~ msgstr "Loading {pluralLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.loadingLabel"
+#~ msgstr "Loading {pluralLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.trashDialog.title"
+#~ msgstr "Move {singularLower} to trash?"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+#~ msgid "terms.create.heading"
+#~ msgstr "New {singularLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+#~ msgid "terms.list.newButton"
+#~ msgstr "New {singularLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+#~ msgid "terms.list.empty.cta"
+#~ msgstr "New {singularLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.newButton"
+#~ msgstr "New {singularLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.empty.cta"
+#~ msgstr "New {singularLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.taxonomyFilter.empty"
+#~ msgstr "No {pluralLower} match."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.empty.title"
+#~ msgstr "No {pluralLower} yet"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+#~ msgid "terms.list.empty.title"
+#~ msgstr "No {singularLower} yet"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+#~ msgid "terms.list.searchPlaceholder"
+#~ msgstr "Search {pluralLower}…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.searchPlaceholder"
+#~ msgstr "Search {pluralLower}…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.taxonomyFilter.search"
+#~ msgstr "Search {pluralLower}…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup-label.tsx
+#~ msgid "metaBox.reference.untitled"
+#~ msgstr "Untitled"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+#~ msgid "dashboard.tile.description"
+#~ msgstr "Write, edit, and publish {labelLower}."
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.headline.generic"
+#~ msgstr "Edit"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — descendants can't be picked as parent."
@@ -198,11 +343,6 @@ msgid "metaBox.multiReference.addMore"
 msgstr "Add"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/create.tsx
-msgid "terms.create.description.flat"
-msgstr "Add a new {singularLower} for grouping content."
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.description"
 msgstr "Add a plugin that registers a post type (e.g. "
@@ -277,11 +417,6 @@ msgstr "All"
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.tab.all"
 msgstr "All"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.taxonomyFilter.all"
-msgstr "All {pluralLower}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -365,16 +500,6 @@ msgid "login.magicLink.back"
 msgstr "Back"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/create.tsx
-msgid "terms.create.backLink"
-msgstr "Back to {pluralLower}"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/$id/edit.tsx
-msgid "terms.edit.backLink"
-msgstr "Back to {pluralLower}"
-
-#. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.header.backToList"
 msgstr "Back to list"
@@ -426,8 +551,8 @@ msgstr "Blocks"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
-msgid "dashboard.tile.browse"
-msgstr "Browse {labelLower}"
+msgid "dashboard.tile.browse.generic"
+msgstr "Browse"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -751,16 +876,6 @@ msgid "profile.passkeys.enroll.fallback"
 msgstr "Couldn't enrol the passkey. Try again."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/index.tsx
-msgid "terms.list.loadError"
-msgstr "Couldn't load {pluralLower}. Try again."
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.loadError"
-msgstr "Couldn't load {pluralLower}. Try again."
-
-#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.resolveError"
 msgstr "Couldn’t load selected items — refresh to retry."
@@ -911,16 +1026,6 @@ msgid "breadcrumb.create"
 msgstr "Create"
 
 #. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.createTerm"
-msgstr "Create {singular}"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/create.tsx
-msgid "terms.create.submit"
-msgstr "Create {singularLower}"
-
-#. js-lingui-explicit-id
 #: src/routes/_auth/bootstrap.tsx
 msgid "auth.bootstrap.submit.idle"
 msgstr "Create account with passkey"
@@ -931,19 +1036,19 @@ msgid "auth.bootstrap.title"
 msgstr "Create admin account"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/accept-invite/$token.tsx
-msgid "auth.acceptInvite.submit.idle"
-msgstr "Create passkey"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/index.tsx
 msgid "terms.list.empty.description"
-msgstr "Create your first {singularLower} to see it here."
+msgstr "Create one to see it here."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.empty.description"
-msgstr "Create your first {singularLower} to see it here."
+msgstr "Create one to see it here."
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/accept-invite/$token.tsx
+msgid "auth.acceptInvite.submit.idle"
+msgstr "Create passkey"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
@@ -957,8 +1062,8 @@ msgstr "Creating account…"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/create.tsx
-msgid "editor.entry.create.pending"
-msgstr "Creating new {singular}…"
+msgid "editor.entry.create.pending.generic"
+msgstr "Creating…"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -1201,21 +1306,6 @@ msgid "userEdit.title.other"
 msgstr "Edit {email}"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.headline"
-msgstr "Edit {singular}"
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.editTerm"
-msgstr "Edit {singular}"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/$id/edit.tsx
-msgid "terms.edit.heading"
-msgstr "Edit {singularLower}"
-
-#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.editUser"
 msgstr "Edit user"
@@ -1447,6 +1537,11 @@ msgid "listPagination.prev.aria"
 msgstr "Go to previous page"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+msgid "terms.create.description.flat"
+msgstr "Group content by adding a new term."
+
+#. js-lingui-explicit-id
 #: src/editor/HeadingAuditPanel.tsx
 msgid "editor.headingAudit.skippedLevel"
 msgstr "Heading jumps from h{from} to h{to}. Insert an h{between} between them."
@@ -1589,16 +1684,6 @@ msgid "pluginPage.loading.aria"
 msgstr "Loading {label}"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/index.tsx
-msgid "terms.list.loadingLabel"
-msgstr "Loading {pluralLower}"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.loadingLabel"
-msgstr "Loading {pluralLower}"
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.entry.edit.loading"
 msgstr "Loading entry…"
@@ -1715,11 +1800,6 @@ msgstr "Mobile"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.trashDialog.title"
-msgstr "Move {singularLower} to trash?"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.confirm"
 msgstr "Move to trash"
 
@@ -1820,31 +1900,6 @@ msgid "apiTokens.never"
 msgstr "Never"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/create.tsx
-msgid "terms.create.heading"
-msgstr "New {singularLower}"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/index.tsx
-msgid "terms.list.newButton"
-msgstr "New {singularLower}"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/index.tsx
-msgid "terms.list.empty.cta"
-msgstr "New {singularLower}"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.newButton"
-msgstr "New {singularLower}"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.empty.cta"
-msgstr "New {singularLower}"
-
-#. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.dialog.newLabel"
 msgstr "New email"
@@ -1863,21 +1918,6 @@ msgstr "Next"
 #: src/editor/field-type-translator.ts
 msgid "fieldTypes.boolean.no"
 msgstr "No"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.taxonomyFilter.empty"
-msgstr "No {pluralLower} match."
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.empty.title"
-msgstr "No {pluralLower} yet"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/index.tsx
-msgid "terms.list.empty.title"
-msgstr "No {singularLower} yet"
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
@@ -2447,21 +2487,6 @@ msgstr "Search {kind}…"
 #: src/components/meta-box/reference-picker.tsx
 msgid "metaBox.reference.searchPlaceholder"
 msgstr "Search {kind}…"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/index.tsx
-msgid "terms.list.searchPlaceholder"
-msgstr "Search {pluralLower}…"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.searchPlaceholder"
-msgstr "Search {pluralLower}…"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.taxonomyFilter.search"
-msgstr "Search {pluralLower}…"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
@@ -3170,11 +3195,6 @@ msgid "editor.layout.copyAsPattern.untitledFallback"
 msgstr "Untitled"
 
 #. js-lingui-explicit-id
-#: src/components/meta-box/lookup-label.tsx
-msgid "metaBox.reference.untitled"
-msgstr "Untitled"
-
-#. js-lingui-explicit-id
 #: src/components/editor/plain-form-layout.tsx
 msgid "editor.plainForm.titlePlaceholder"
 msgstr "Untitled"
@@ -3270,8 +3290,8 @@ msgstr "What would you like to work on today?"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
-msgid "dashboard.tile.description"
-msgstr "Write, edit, and publish {labelLower}."
+msgid "dashboard.tile.description.generic"
+msgstr "Write, edit, and publish."
 
 #. js-lingui-explicit-id
 #: src/editor/field-type-translator.ts

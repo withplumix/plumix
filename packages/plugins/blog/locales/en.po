@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"POT-Creation-Date: 2026-06-02\n"
+"POT-Creation-Date: 2026-06-03\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -37,3 +37,123 @@ msgstr "Tags"
 #: src/index.ts
 msgid "plugin.blog.tag.singular"
 msgstr "Tag"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.addNewItem"
+msgstr "Add Post"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.editItem"
+msgstr "Edit Post"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.newItem"
+msgstr "New Post"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.viewItem"
+msgstr "View Post"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.searchItems"
+msgstr "Search Posts…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.notFound"
+msgstr "No posts yet"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.notFoundInTrash"
+msgstr "Trash is empty"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.allItems"
+msgstr "All Posts"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.noMatch"
+msgstr "No posts match"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.untitledItem"
+msgstr "Untitled Post"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.moveToTrash"
+msgstr "Move post to trash?"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.addNewItem"
+msgstr "Add Category"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.editItem"
+msgstr "Edit Category"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.searchItems"
+msgstr "Search Categories…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.notFound"
+msgstr "No categories yet"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.allItems"
+msgstr "All Categories"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.parentItem"
+msgstr "Parent Category"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.backToItems"
+msgstr "← Back to Categories"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.addNewItem"
+msgstr "Add Tag"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.editItem"
+msgstr "Edit Tag"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.searchItems"
+msgstr "Search Tags…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.notFound"
+msgstr "No tags yet"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.allItems"
+msgstr "All Tags"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.backToItems"
+msgstr "← Back to Tags"

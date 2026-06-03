@@ -90,6 +90,19 @@ export function findEntryTypeBySlug(
   return (source.entryTypes ?? []).find((pt) => pt.adminSlug === slug);
 }
 
+/**
+ * Find an entry type by its registered `name` (`"post"`, `"page"`).
+ * The lookup adapter emits the row's type name as `LookupResult.
+ * targetType`, so the admin reference picker uses this to resolve
+ * `labels.untitledItem` from the manifest at render time.
+ */
+export function findEntryTypeByName(
+  name: string,
+  source: PlumixManifest = manifest,
+): EntryTypeManifestEntry | undefined {
+  return (source.entryTypes ?? []).find((pt) => pt.name === name);
+}
+
 export function visibleEntryTypes(
   capabilities: readonly string[],
   source: PlumixManifest = manifest,

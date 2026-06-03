@@ -28,10 +28,11 @@ import {
 } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { getRegisteredBlocks } from "@/lib/plugin-registry.js";
+import { entryTypeLabel } from "@/lib/type-labels.js";
 import { useFormatters } from "@/lib/use-formatters.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
-import { Trans, useLingui } from "@lingui/react";
+import { Trans } from "@lingui/react";
 import { ORPCError } from "@orpc/client";
 import { Puck } from "@puckeditor/core";
 import {
@@ -62,10 +63,6 @@ const M = {
   staleLoading: defineMessage({
     id: "editor.entry.edit.stale.loading",
     message: "Loading…",
-  }),
-  editHeadline: defineMessage({
-    id: "editor.entry.edit.headline",
-    message: "Edit {singular}",
   }),
 } satisfies Record<string, MessageDescriptor>;
 
@@ -852,7 +849,6 @@ function PlainFormRouteInner({
   capabilities,
 }: PlainFormRouteInnerProps): ReactNode {
   const renderLabel = useLabel();
-  const { i18n } = useLingui();
   const { data: entry } = useSuspenseQuery(
     orpc.entry.get.queryOptions({ input: { id } }),
   );
@@ -913,16 +909,14 @@ function PlainFormRouteInner({
     parentId: entry.parentId,
   };
 
-  const singular = renderLabel(
-    entryType.labels?.singular ?? entryType.label,
-  ).toLowerCase();
-  // PlainFormLayout takes a rendered string headline; ICU placeholder
-  // substitution via the 3-arg `i18n._` form.
-  const headline = i18n._(
-    M.editHeadline.id,
-    { singular },
-    { message: M.editHeadline.message },
-  );
+  // Use the entry's title as the headline when available; cascade
+  // through the type's `labels.editItem` ("Edit Post" / "Edit Page")
+  // otherwise. Substitution-free — the per-type label declares the
+  // noun explicitly so DE/RU/PL/UK/AR morphology stays correct.
+  const headline =
+    entry.title.trim() === ""
+      ? renderLabel(entryTypeLabel(entryType, "editItem"))
+      : entry.title;
   const renderedError =
     updateMutation.isPending || serverError === null
       ? null

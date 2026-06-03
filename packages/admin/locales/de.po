@@ -19,6 +19,151 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.taxonomyFilter.all"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+#~ msgid "terms.create.backLink"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+#~ msgid "terms.edit.backLink"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+#~ msgid "dashboard.tile.browse"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+#~ msgid "terms.list.loadError"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.loadError"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+#~ msgid "breadcrumb.createTerm"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+#~ msgid "terms.create.submit"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+#~ msgid "editor.entry.create.pending"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.headline"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+#~ msgid "breadcrumb.editTerm"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+#~ msgid "terms.edit.heading"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+#~ msgid "terms.list.loadingLabel"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.loadingLabel"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.trashDialog.title"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+#~ msgid "terms.create.heading"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+#~ msgid "terms.list.newButton"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+#~ msgid "terms.list.empty.cta"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.newButton"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.empty.cta"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.taxonomyFilter.empty"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.empty.title"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+#~ msgid "terms.list.empty.title"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+#~ msgid "terms.list.searchPlaceholder"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.searchPlaceholder"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.taxonomyFilter.search"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup-label.tsx
+#~ msgid "metaBox.reference.untitled"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+#~ msgid "dashboard.tile.description"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.headline.generic"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr ""
@@ -191,11 +336,6 @@ msgid "metaBox.multiReference.addMore"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/create.tsx
-msgid "terms.create.description.flat"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.description"
 msgstr ""
@@ -272,11 +412,6 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.taxonomyFilter.all"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.authorFilter.all"
 msgstr ""
 
@@ -286,13 +421,13 @@ msgid "users.list.roleFilter.all"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.item.allowedDomains"
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.title"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/allowed-domains/index.tsx
-msgid "allowedDomains.title"
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.item.allowedDomains"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -356,16 +491,6 @@ msgid "login.magicLink.back"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/create.tsx
-msgid "terms.create.backLink"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/$id/edit.tsx
-msgid "terms.edit.backLink"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.header.backToList"
 msgstr ""
@@ -417,7 +542,7 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
-msgid "dashboard.tile.browse"
+msgid "dashboard.tile.browse.generic"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -736,16 +861,6 @@ msgid "profile.passkeys.enroll.fallback"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/index.tsx
-msgid "terms.list.loadError"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.loadError"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.resolveError"
 msgstr ""
@@ -896,16 +1011,6 @@ msgid "breadcrumb.create"
 msgstr "Erstellen"
 
 #. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.createTerm"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/create.tsx
-msgid "terms.create.submit"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_auth/bootstrap.tsx
 msgid "auth.bootstrap.submit.idle"
 msgstr ""
@@ -916,11 +1021,6 @@ msgid "auth.bootstrap.title"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/accept-invite/$token.tsx
-msgid "auth.acceptInvite.submit.idle"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/index.tsx
 msgid "terms.list.empty.description"
 msgstr ""
@@ -928,6 +1028,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.empty.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/accept-invite/$token.tsx
+msgid "auth.acceptInvite.submit.idle"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -942,7 +1047,7 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/create.tsx
-msgid "editor.entry.create.pending"
+msgid "editor.entry.create.pending.generic"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -961,14 +1066,14 @@ msgid "userEdit.email.dialog.currentLabel"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.item.dashboard"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.dashboard"
 msgstr "Übersicht"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.item.dashboard"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
@@ -1182,21 +1287,6 @@ msgid "userEdit.title.other"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.headline"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/lib/breadcrumbs.ts
-msgid "breadcrumb.editTerm"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/$id/edit.tsx
-msgid "terms.edit.heading"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.editUser"
 msgstr "Benutzer bearbeiten"
@@ -1312,14 +1402,14 @@ msgid "login.magicLink.emailRequired"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.content"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.entries"
 msgstr "Einträge"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.content"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
@@ -1419,6 +1509,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/data-table/list-pagination.tsx
 msgid "listPagination.prev.aria"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+msgid "terms.create.description.flat"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1562,16 +1657,6 @@ msgid "pluginPage.loading.aria"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/index.tsx
-msgid "terms.list.loadingLabel"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.loadingLabel"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.entry.edit.loading"
 msgstr ""
@@ -1647,13 +1732,13 @@ msgid "magicLinkRequest.error.notConfigured"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.item.mailer"
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.title"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
-msgid "mailer.title"
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.item.mailer"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1684,11 +1769,6 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/editor/device-labels.ts
 msgid "editor.device.mobile"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.trashDialog.title"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1792,31 +1872,6 @@ msgid "apiTokens.never"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/create.tsx
-msgid "terms.create.heading"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/index.tsx
-msgid "terms.list.newButton"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/index.tsx
-msgid "terms.list.empty.cta"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.newButton"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.empty.cta"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.dialog.newLabel"
 msgstr ""
@@ -1834,21 +1889,6 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/editor/field-type-translator.ts
 msgid "fieldTypes.boolean.no"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.taxonomyFilter.empty"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.empty.title"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/index.tsx
-msgid "terms.list.empty.title"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2412,21 +2452,6 @@ msgid "metaBox.reference.searchPlaceholder"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/terms/$name/index.tsx
-msgid "terms.list.searchPlaceholder"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.searchPlaceholder"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.taxonomyFilter.search"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.dialogDescription"
 msgstr ""
@@ -2547,11 +2572,6 @@ msgid "auth.acceptInvite.submit.pending"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.item.settings"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.title"
 msgstr ""
@@ -2560,6 +2580,11 @@ msgstr ""
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.settings"
 msgstr "Einstellungen"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.item.settings"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/shell/user-menu.tsx
@@ -3107,11 +3132,6 @@ msgid "editor.layout.copyAsPattern.untitledFallback"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/meta-box/lookup-label.tsx
-msgid "metaBox.reference.untitled"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/components/editor/plain-form-layout.tsx
 msgid "editor.plainForm.titlePlaceholder"
 msgstr ""
@@ -3162,11 +3182,6 @@ msgid "auth.device.lookup.userCode.label"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/lib/core-nav-i18n.ts
-msgid "core.adminNav.item.users"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.title"
 msgstr ""
@@ -3175,6 +3190,11 @@ msgstr ""
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.users"
 msgstr "Benutzer"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.item.users"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffPanel.tsx
@@ -3203,7 +3223,7 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
-msgid "dashboard.tile.description"
+msgid "dashboard.tile.description.generic"
 msgstr ""
 
 #. js-lingui-explicit-id

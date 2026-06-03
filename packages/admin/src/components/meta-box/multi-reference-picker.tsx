@@ -13,11 +13,10 @@ import { Skeleton } from "@/components/ui/skeleton.js";
 import { SortableList } from "@/components/ui/sortable.js";
 import { orpc } from "@/lib/orpc.js";
 import { useLabel } from "@/lib/use-label.js";
+import { useUntitledLabel } from "@/lib/use-untitled-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
-
-import { LookupLabel } from "./lookup-label.js";
 
 // Multi-value counterpart to `ReferencePicker`. Shares the same
 // `kind` / `scope` dispatch shape — same lookup RPC, same adapter
@@ -96,6 +95,7 @@ export function MultiReferencePicker({
 }: MultiReferencePickerProps): ReactNode {
   const { i18n } = useLingui();
   const labelFn = useLabel();
+  const untitledLabel = useUntitledLabel();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -115,7 +115,12 @@ export function MultiReferencePicker({
   const resolvedById = useMemo(() => {
     const map = new Map<
       string,
-      { id: string; label: string | null; subtitle?: string }
+      {
+        id: string;
+        label: string | null;
+        targetType?: string;
+        subtitle?: string;
+      }
     >();
     for (const row of resolveQuery.data?.items ?? []) map.set(row.id, row);
     return map;
@@ -211,7 +216,7 @@ export function MultiReferencePicker({
               return (
                 <div className="text-sm">
                   <p className="truncate font-medium">
-                    <LookupLabel value={item.result.label} />
+                    {untitledLabel(item.result.label, item.result.targetType)}
                   </p>
                   {item.result.subtitle ? (
                     <p className="text-muted-foreground truncate text-xs">
@@ -311,7 +316,7 @@ export function MultiReferencePicker({
                 >
                   <div className="flex flex-col gap-0.5">
                     <span className="text-sm font-medium">
-                      <LookupLabel value={item.label} />
+                      {untitledLabel(item.label, item.targetType)}
                       {alreadySelected ? " ✓" : ""}
                     </span>
                     {item.subtitle ? (

@@ -32,6 +32,7 @@ import {
   termMetaBoxesForTermTaxonomy,
 } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
+import { termTaxonomyLabel } from "@/lib/type-labels.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
@@ -266,10 +267,6 @@ function EditTermContent({
     },
   });
 
-  const singularLower = renderLabel(
-    taxonomy.labels?.singular ?? taxonomy.label,
-  ).toLowerCase();
-
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
       <Link
@@ -280,23 +277,13 @@ function EditTermContent({
         data-testid="term-edit-back-link"
       >
         <ArrowLeft className="size-4" />
-        <Trans
-          id="terms.edit.backLink"
-          message="Back to {pluralLower}"
-          values={{ pluralLower: renderLabel(taxonomy.label).toLowerCase() }}
-        />
+        {renderLabel(termTaxonomyLabel(taxonomy, "allItems"))}
       </Link>
 
       <Card>
         <CardHeader>
           <CardTitle>
-            <h1 data-testid="term-edit-heading">
-              <Trans
-                id="terms.edit.heading"
-                message="Edit {singularLower}"
-                values={{ singularLower }}
-              />
-            </h1>
+            <h1 data-testid="term-edit-heading">{term.name}</h1>
           </CardTitle>
           <CardDescription>
             {term.name}

@@ -136,6 +136,7 @@ async function toLookupResult(
   return {
     id: String(row.id),
     label,
+    targetType: row.type,
     subtitle: `${row.type} · ${row.status}`,
     cached,
   };

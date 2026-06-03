@@ -1,9 +1,7 @@
 import type { MessageDescriptor } from "@lingui/core";
-import { i18n } from "@lingui/core";
 import { defineMessage } from "@lingui/core/macro";
 
 import type { Label } from "@plumix/core/i18n";
-import { resolveLabel } from "@plumix/core/i18n";
 
 import {
   findEntryTypeBySlug,
@@ -48,14 +46,6 @@ const M = {
   edit: defineMessage({ id: "breadcrumb.edit", message: "Edit" }),
   addNew: defineMessage({ id: "breadcrumb.addNew", message: "Add new" }),
   editUser: defineMessage({ id: "breadcrumb.editUser", message: "Edit user" }),
-  createTerm: defineMessage({
-    id: "breadcrumb.createTerm",
-    message: "Create {singular}",
-  }),
-  editTerm: defineMessage({
-    id: "breadcrumb.editTerm",
-    message: "Edit {singular}",
-  }),
 } satisfies Record<string, MessageDescriptor>;
 
 /**
@@ -106,23 +96,14 @@ function taxonomiesCrumbs(parts: readonly string[]): readonly Crumb[] {
   if (name === undefined) return [{ label: M.terms }];
   const tax = findTermTaxonomyByName(name);
   const label: Label = tax?.label ?? name;
-  const singular = resolveLabel(
-    tax?.labels?.singular ?? label,
-    i18n,
-  ).toLowerCase();
   const list: Crumb = { label, to: `/terms/${name}` };
+  // Generic `Create` / `Edit` leaf — the parent crumb already carries
+  // the taxonomy's plural label so the trail reads "Taxonomies ›
+  // Categories › Create" rather than "Create category". Drops the
+  // last interpolation site in breadcrumbs.
   if (parts[2] === "create")
-    return [
-      { label: M.terms },
-      list,
-      { label: M.createTerm, values: { singular } },
-    ];
-  if (parts[3] === "edit")
-    return [
-      { label: M.terms },
-      list,
-      { label: M.editTerm, values: { singular } },
-    ];
+    return [{ label: M.terms }, list, { label: M.create }];
+  if (parts[3] === "edit") return [{ label: M.terms }, list, { label: M.edit }];
   return [{ label: M.terms }, { ...list, to: undefined }];
 }
 

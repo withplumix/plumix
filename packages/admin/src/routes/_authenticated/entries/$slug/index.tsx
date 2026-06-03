@@ -39,6 +39,7 @@ import { toDate } from "@/lib/dates.js";
 import { findEntryTypeBySlug, findTermTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { buildFilterTermOptions } from "@/lib/terms.js";
+import { entryTypeLabel, termTaxonomyLabelOr } from "@/lib/type-labels.js";
 import { useLabel } from "@/lib/use-label.js";
 import { cn } from "@/lib/utils.js";
 import { defineMessage } from "@lingui/core/macro";
@@ -201,30 +202,12 @@ const M = {
     id: "entries.list.row.trashing",
     message: "Trashing…",
   }),
-  searchPlaceholder: defineMessage({
-    id: "entries.list.searchPlaceholder",
-    message: "Search {pluralLower}…",
-  }),
-  loadError: defineMessage({
-    id: "entries.list.loadError",
-    message: "Couldn't load {pluralLower}. Try again.",
-  }),
-  loadingLabel: defineMessage({
-    id: "entries.list.loadingLabel",
-    message: "Loading {pluralLower}",
-  }),
-  taxonomyAll: defineMessage({
-    id: "entries.list.taxonomyFilter.all",
-    message: "All {pluralLower}",
-  }),
-  taxonomySearch: defineMessage({
-    id: "entries.list.taxonomyFilter.search",
-    message: "Search {pluralLower}…",
-  }),
-  taxonomyEmpty: defineMessage({
-    id: "entries.list.taxonomyFilter.empty",
-    message: "No {pluralLower} match.",
-  }),
+  // Search placeholder / load error / loading aria / taxonomy filter
+  // chrome resolve via the WP-style cascade — `labels[<key>]` when the
+  // plugin author declared it, else the noun-less generic descriptor
+  // exported from `type-labels.ts`. The deleted substitution patterns
+  // ("Search {pluralLower}…" etc.) broke morphology in DE/RU/PL/UK/AR
+  // and improperly lowercased translated nouns.
   trashingMove: defineMessage({
     id: "entries.list.trashDialog.moving",
     message: "Moving…",
@@ -260,6 +243,7 @@ function buildColumns({
   onTrash,
   trashingId,
   renderLabel,
+  editLabel,
 }: {
   activeOrderBy: OrderBy;
   activeOrder: Order;
@@ -269,6 +253,7 @@ function buildColumns({
   onTrash: (id: number) => void;
   trashingId: number | null;
   renderLabel: (label: MessageDescriptor) => string;
+  editLabel: string;
 }): ColumnDef<Entry>[] {
   return [
     {
@@ -290,6 +275,7 @@ function buildColumns({
           canDelete={canDelete}
           onTrash={onTrash}
           isTrashing={trashingId === row.original.id}
+          editLabel={editLabel}
         />
       ),
     },
@@ -481,14 +467,8 @@ function ContentListRoute(): ReactNode {
   // doesn't expose a total count today; accept the edge case until it does.
   const canNext = rows.length === PAGE_SIZE;
 
-  const { i18n } = useLingui();
   const renderLabel = useLabel();
   const pluralLabel = renderLabel(entryType.labels?.plural ?? entryType.label);
-  const singularLabel = renderLabel(
-    entryType.labels?.singular ?? entryType.label,
-  );
-  const pluralLower = pluralLabel.toLowerCase();
-  const singularLower = singularLabel.toLowerCase();
 
   // Capability gate for the "New" button. Uses the capability namespace
   // derived by core (`capabilityType ?? name`). Missing the cap? Hide the
@@ -526,6 +506,7 @@ function ContentListRoute(): ReactNode {
       ? trash.variables
       : null;
 
+  const editLabel = renderLabel(entryTypeLabel(entryType, "editItem"));
   const columns = useMemo(
     () =>
       buildColumns({
@@ -537,6 +518,7 @@ function ContentListRoute(): ReactNode {
         onTrash,
         trashingId,
         renderLabel,
+        editLabel,
       }),
     [
       search.orderBy,
@@ -547,6 +529,7 @@ function ContentListRoute(): ReactNode {
       onTrash,
       trashingId,
       renderLabel,
+      editLabel,
     ],
   );
 
@@ -569,11 +552,7 @@ function ContentListRoute(): ReactNode {
               data-testid="content-list-new-button"
             >
               <Plus />
-              <Trans
-                id="entries.list.newButton"
-                message="New {singularLower}"
-                values={{ singularLower }}
-              />
+              {renderLabel(entryTypeLabel(entryType, "addNewItem"))}
             </Link>
           </Button>
         ) : null}
@@ -600,11 +579,7 @@ function ContentListRoute(): ReactNode {
             // desynchronising from the URL.
             key={search.q ?? ""}
             initialValue={search.q ?? ""}
-            placeholder={i18n._(
-              M.searchPlaceholder.id,
-              { pluralLower },
-              { message: M.searchPlaceholder.message },
-            )}
+            placeholder={renderLabel(entryTypeLabel(entryType, "searchItems"))}
             testId="content-list-search-input"
             onCommit={setSearch}
           />
@@ -616,11 +591,7 @@ function ContentListRoute(): ReactNode {
           <AlertDescription>
             {query.error instanceof Error
               ? query.error.message
-              : i18n._(
-                  M.loadError.id,
-                  { pluralLower },
-                  { message: M.loadError.message },
-                )}
+              : renderLabel(entryTypeLabel(entryType, "loadErrorItems"))}
           </AlertDescription>
         </Alert>
       ) : (
@@ -628,15 +599,10 @@ function ContentListRoute(): ReactNode {
           columns={columns}
           data={rows}
           isLoading={query.isPending}
-          loadingLabel={i18n._(
-            M.loadingLabel.id,
-            { pluralLower },
-            { message: M.loadingLabel.message },
-          )}
+          loadingLabel={renderLabel(entryTypeLabel(entryType, "loadingItems"))}
           emptyState={
             <EmptyState
-              singularLower={singularLower}
-              pluralLower={pluralLower}
+              entryType={entryType}
               canCreate={canCreate}
               entryTypeSlug={entryType.adminSlug}
             />
@@ -661,11 +627,7 @@ function ContentListRoute(): ReactNode {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              <Trans
-                id="entries.list.trashDialog.title"
-                message="Move {singularLower} to trash?"
-                values={{ singularLower }}
-              />
+              {renderLabel(entryTypeLabel(entryType, "moveToTrash"))}
             </AlertDialogTitle>
             <AlertDialogDescription>
               <Trans
@@ -777,12 +739,14 @@ function TitleCell({
   canDelete,
   onTrash,
   isTrashing,
+  editLabel,
 }: {
   entry: Entry;
   adminSlug: string;
   canDelete: boolean;
   onTrash: (id: number) => void;
   isTrashing: boolean;
+  editLabel: string;
 }): ReactNode {
   const renderLabel = useLabel();
   const showTrashAction = canDelete && entry.status !== "trash";
@@ -813,7 +777,7 @@ function TitleCell({
           params={{ slug: adminSlug, id: entry.id }}
           className="text-muted-foreground hover:text-foreground"
         >
-          <Trans id="entries.list.row.edit" message="Edit" />
+          {editLabel}
         </Link>
         {showTrashAction ? (
           <>
@@ -939,7 +903,6 @@ function TaxonomyFilter({
   value: readonly string[];
   onChange: (slugs: readonly string[]) => void;
 }): ReactNode {
-  const { i18n } = useLingui();
   const renderLabel = useLabel();
   const taxonomy = findTermTaxonomyByName(taxonomyName);
   const termsQuery = useQuery(
@@ -954,60 +917,46 @@ function TaxonomyFilter({
     [termsQuery.data, isHierarchical],
   );
 
-  const pluralLower = (
-    taxonomy?.label !== undefined ? renderLabel(taxonomy.label) : taxonomyName
-  ).toLowerCase();
+  // Undefined-tolerant variant of `termTaxonomyLabel` keeps the
+  // cascade single-line for call sites where the taxonomy resolves
+  // lazily (HMR boundary, dynamic name from the URL segment).
+  const allLabel = renderLabel(termTaxonomyLabelOr(taxonomy, "allItems"));
+  const searchLabel = renderLabel(termTaxonomyLabelOr(taxonomy, "searchItems"));
+  const emptyLabel = renderLabel(termTaxonomyLabelOr(taxonomy, "noMatch"));
   return (
     <MultiSelect
       options={options}
       value={value}
       onChange={onChange}
-      placeholder={i18n._(
-        M.taxonomyAll.id,
-        { pluralLower },
-        { message: M.taxonomyAll.message },
-      )}
-      searchPlaceholder={i18n._(
-        M.taxonomySearch.id,
-        { pluralLower },
-        { message: M.taxonomySearch.message },
-      )}
-      emptyText={i18n._(
-        M.taxonomyEmpty.id,
-        { pluralLower },
-        { message: M.taxonomyEmpty.message },
-      )}
+      placeholder={allLabel}
+      searchPlaceholder={searchLabel}
+      emptyText={emptyLabel}
       testId={`taxonomy-filter-${taxonomyName}`}
     />
   );
 }
 
 function EmptyState({
-  singularLower,
-  pluralLower,
+  entryType,
   canCreate,
   entryTypeSlug,
 }: {
-  singularLower: string;
-  pluralLower: string;
+  entryType: EntryTypeManifestEntry;
   canCreate: boolean;
   entryTypeSlug: string;
 }): ReactNode {
+  const renderLabel = useLabel();
+  const addLabel = renderLabel(entryTypeLabel(entryType, "addNewItem"));
   return (
     <Empty data-testid="content-list-empty-state" className="border">
       <EmptyHeader>
         <EmptyTitle>
-          <Trans
-            id="entries.list.empty.title"
-            message="No {pluralLower} yet"
-            values={{ pluralLower }}
-          />
+          {renderLabel(entryTypeLabel(entryType, "notFound"))}
         </EmptyTitle>
         <EmptyDescription>
           <Trans
             id="entries.list.empty.description"
-            message="Create your first {singularLower} to see it here."
-            values={{ singularLower }}
+            message="Create one to see it here."
           />
         </EmptyDescription>
       </EmptyHeader>
@@ -1016,21 +965,13 @@ function EmptyState({
           <Button asChild>
             <Link to="/entries/$slug/create" params={{ slug: entryTypeSlug }}>
               <Plus />
-              <Trans
-                id="entries.list.empty.cta"
-                message="New {singularLower}"
-                values={{ singularLower }}
-              />
+              {addLabel}
             </Link>
           </Button>
         ) : (
           <Button disabled>
             <Plus />
-            <Trans
-              id="entries.list.empty.cta"
-              message="New {singularLower}"
-              values={{ singularLower }}
-            />
+            {addLabel}
           </Button>
         )}
       </EmptyContent>

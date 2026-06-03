@@ -6,7 +6,6 @@ import { findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
-import { Trans } from "@lingui/react";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 
@@ -17,6 +16,14 @@ const M = {
   untitled: defineMessage({
     id: "editor.entry.create.untitled",
     message: "Untitled",
+  }),
+  // Noun-less pending indicator — replaces the "Creating new {singular}…"
+  // substitution. Pre-redirect transient surface; the next view shows
+  // the entry's own title or a per-type fallback via the lookup label
+  // cascade.
+  pendingGeneric: defineMessage({
+    id: "editor.entry.create.pending.generic",
+    message: "Creating…",
   }),
 } satisfies Record<string, MessageDescriptor>;
 
@@ -74,13 +81,7 @@ function CreateEntryRoute(): ReactNode {
       className="text-muted-foreground flex flex-1 items-center justify-center text-sm"
       data-testid="create-entry-pending"
     >
-      <Trans
-        id="editor.entry.create.pending"
-        message="Creating new {singular}…"
-        values={{
-          singular: renderLabel(entryType.labels?.singular ?? entryType.label),
-        }}
-      />
+      {renderLabel(M.pendingGeneric)}
     </div>
   );
 }

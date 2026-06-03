@@ -1,4 +1,3 @@
-import type { MessageDescriptor } from "@lingui/core";
 import { i18n } from "@lingui/core";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -111,63 +110,40 @@ describe("pathToCrumbs", () => {
     ]);
   });
 
-  test("terms create: taxonomy crumb is a link", () => {
+  test("terms create: leaf is the generic Create crumb (no noun interpolation)", () => {
+    // Per WP-style per-type-labels refactor, taxonomy breadcrumbs drop
+    // the "Create category" / "Edit category" interpolation. The
+    // parent crumb already carries the taxonomy's plural label
+    // ("Categories"), so the trail reads "Terms › Categories › Create"
+    // — substitution-free, locale-safe.
     expect(labels(pathToCrumbs("/terms/category/create"))).toEqual([
       { label: "Terms" },
       { label: "Categories", to: "/terms/category" },
-      { label: "Create category" },
+      { label: "Create" },
     ]);
   });
 
-  test("terms edit: taxonomy crumb is a link, action uses singular label", () => {
+  test("terms edit: leaf is the generic Edit crumb (no noun interpolation)", () => {
     expect(labels(pathToCrumbs("/terms/category/7/edit"))).toEqual([
       { label: "Terms" },
       { label: "Categories", to: "/terms/category" },
-      { label: "Edit category" },
+      { label: "Edit" },
     ]);
   });
 
-  test("terms create/edit leaf carries an ICU descriptor + `{singular}` value", () => {
-    // The taxonomy-specific singular ("Create category") used to be a
-    // raw template literal that blocked `breadcrumbs.ts` from joining
-    // admin's strict-mode ratchet. The leaf now ships as a
-    // `MessageDescriptor` plus a `values` map; the render path threads
-    // `values` into `i18n._` for placeholder substitution. Shape test
-    // — separate from the rendering tests above — pins the contract.
+  test("terms create/edit leaf carries no ICU `values` map post-widening", () => {
+    // After the chrome widening dropped the `{singular}` interpolation
+    // the leaf descriptor stays noun-less — `values` is intentionally
+    // omitted so the render path doesn't try to substitute placeholders
+    // that no longer exist in the message.
     const createLeaf = pathToCrumbs("/terms/category/create").at(-1);
     expect(createLeaf).toBeDefined();
     expect(typeof createLeaf?.label).toBe("object");
-    expect(createLeaf?.values).toEqual({ singular: "category" });
+    expect(createLeaf?.values).toBeUndefined();
 
     const editLeaf = pathToCrumbs("/terms/category/7/edit").at(-1);
     expect(typeof editLeaf?.label).toBe("object");
-    expect(editLeaf?.values).toEqual({ singular: "category" });
-  });
-
-  test("descriptor-typed labels.singular resolves through the locale", () => {
-    // A plugin emitting `labels.singular: defineMessage({...})` should
-    // see the descriptor flow through to the same `i18n._` resolution
-    // path as every other Label-typed crumb field. The pre-widening
-    // call site did `(tax?.labels?.singular ?? label).toLowerCase()`
-    // which throws on an object — and crucially the schema forced
-    // singular to be `string`, blocking the descriptor variant
-    // entirely. This test pins the behavior post-widening: a
-    // descriptor-typed singular resolves to its `.message` string
-    // before the lowercase pass.
-    const descriptor: MessageDescriptor = {
-      id: "test.taxonomy.singular",
-      message: "Category",
-    };
-    const tax = FIXTURE.termTaxonomies?.[0];
-    if (!tax?.labels) throw new Error("fixture invariant violated");
-    const original = tax.labels.singular;
-    (tax.labels as { singular: unknown }).singular = descriptor;
-    try {
-      const createLeaf = pathToCrumbs("/terms/category/create").at(-1);
-      expect(createLeaf?.values).toEqual({ singular: "category" });
-    } finally {
-      (tax.labels as { singular: unknown }).singular = original;
-    }
+    expect(editLeaf?.values).toBeUndefined();
   });
 
   test("users edit: list crumb is a link", () => {

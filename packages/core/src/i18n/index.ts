@@ -4,6 +4,10 @@ export {
   formatRelative,
   type FormatRelativeOptions,
 } from "./format.js";
+export {
+  GENERIC_ENTRY_TYPE_LABELS,
+  GENERIC_TERM_TAXONOMY_LABELS,
+} from "./generic-type-labels.js";
 export { labelSourceText, resolveLabel, type Label } from "./label.js";
 export {
   CatalogParseError,
