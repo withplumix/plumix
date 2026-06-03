@@ -456,6 +456,7 @@ function ApiTokensCardView({
                 id="apiTokens.revoke.title"
                 message='Revoke "{name}"?'
                 values={{ name: revokeTarget?.name ?? "" }}
+                comment="name: the user-chosen token nickname (e.g. 'CI deploy key')"
               />
             </AlertDialogTitle>
             <AlertDialogDescription>
@@ -743,6 +744,7 @@ function SecretShownDialog({
               id="apiTokens.secret.title"
               message='Token "{name}" minted'
               values={{ name }}
+              comment="name: the user-chosen token nickname (e.g. 'CI deploy key')"
             />
           </AlertDialogTitle>
           <AlertDialogDescription>
