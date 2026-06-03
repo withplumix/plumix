@@ -260,6 +260,9 @@ importers:
       '@puckeditor/core':
         specifier: 0.21.2
         version: 0.21.2(@floating-ui/dom@1.7.6)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(use-sync-external-store@1.6.0(react@19.2.6))
+      '@radix-ui/react-direction':
+        specifier: 1.1.1
+        version: 1.1.1(@types/react@19.2.14)(react@19.2.6)
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.100.14(react@19.2.6)

@@ -89,7 +89,7 @@ function DashboardIndex(): ReactNode {
                         id="dashboard.tile.browse.generic"
                         message="Browse"
                       />
-                      <ArrowRight />
+                      <ArrowRight className="rtl:rotate-180" />
                     </Link>
                   </Button>
                 </CardContent>

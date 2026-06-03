@@ -65,7 +65,7 @@ export function StarterModal({
               <div
                 role="button"
                 tabIndex={0}
-                className="hover:bg-muted/40 flex w-full flex-col gap-2 rounded border p-2 text-left focus:outline-none focus-visible:ring"
+                className="hover:bg-muted/40 flex w-full flex-col gap-2 rounded border p-2 text-start focus:outline-none focus-visible:ring"
                 data-testid={`plumix-starter-modal-card-${entry.name}`}
                 onClick={() => onSelect(entry)}
                 onKeyDown={(e) => {

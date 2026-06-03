@@ -204,7 +204,7 @@ function TaxonomyListRoute(): ReactNode {
                 {depth > 0 ? (
                   <span
                     aria-hidden
-                    className="text-muted-foreground/60 mr-1 font-normal select-none"
+                    className="text-muted-foreground/60 me-1 font-normal select-none"
                   >
                     {"— ".repeat(depth)}
                   </span>

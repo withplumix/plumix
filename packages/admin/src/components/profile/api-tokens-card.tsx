@@ -387,7 +387,7 @@ function ApiTokensCardView({
                 <TableHead>
                   <Trans id="apiTokens.col.expires" message="Expires" />
                 </TableHead>
-                <TableHead className="w-[1%] text-right">
+                <TableHead className="w-[1%] text-end">
                   <Trans id="apiTokens.col.actions" message="Actions" />
                 </TableHead>
               </TableRow>
@@ -415,7 +415,7 @@ function ApiTokensCardView({
                   <TableCell className="text-muted-foreground text-sm">
                     <RelativeOrNever when={token.expiresAt} />
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-end">
                     <Button
                       variant="ghost"
                       size="sm"

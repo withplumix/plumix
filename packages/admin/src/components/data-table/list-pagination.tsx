@@ -57,7 +57,7 @@ export function ListPagination({
             }}
             aria-label={label(M.prevAria)}
           >
-            <ChevronLeft />
+            <ChevronLeft className="rtl:rotate-180" />
             <span className="hidden sm:inline">
               <Trans id="listPagination.prev.label" message="Previous" />
             </span>
@@ -76,7 +76,7 @@ export function ListPagination({
             <span className="hidden sm:inline">
               <Trans id="listPagination.next.label" message="Next" />
             </span>
-            <ChevronRight />
+            <ChevronRight className="rtl:rotate-180" />
           </Button>
         </PaginationItem>
       </PaginationContent>

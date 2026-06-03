@@ -276,7 +276,7 @@ function EditTermContent({
         className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
         data-testid="term-edit-back-link"
       >
-        <ArrowLeft className="size-4" />
+        <ArrowLeft className="size-4 rtl:rotate-180" />
         {renderLabel(termTaxonomyLabel(taxonomy, "allItems"))}
       </Link>
 
