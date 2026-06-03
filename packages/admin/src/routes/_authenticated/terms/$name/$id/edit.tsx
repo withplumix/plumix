@@ -283,7 +283,9 @@ function EditTermContent({
       <Card>
         <CardHeader>
           <CardTitle>
-            <h1 data-testid="term-edit-heading">{term.name}</h1>
+            <h1 data-testid="term-edit-heading">
+              {renderLabel(termTaxonomyLabel(taxonomy, "editItem"))}
+            </h1>
           </CardTitle>
           <CardDescription>
             {term.name}
