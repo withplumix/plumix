@@ -1,4 +1,5 @@
 import type { EntryTypeLabels, TermTaxonomyLabels } from "plumix/plugin";
+import { withContext } from "plumix/i18n";
 import { definePlugin } from "plumix/plugin";
 
 // Plain descriptor literals — server-side plugin code can't run the
@@ -11,9 +12,21 @@ import { definePlugin } from "plumix/plugin";
 // schema so typo-renames silently falling through to the generic
 // fallback aren't possible.
 
+// Singular/plural carry WP `_x()` contexts so verb-shaped reuses
+// (`Post a comment`, `Draft this`) can diverge in translation.
+// The matching `msgctxt` lines in `locales/en.po` are hand-authored —
+// see the `X-Generator: hand-authored` header. `withContext` is not
+// macro-visible, so any future `lingui extract` integration here would
+// regress those lines silently.
 const POST_LABELS = {
-  singular: { id: "plugin.blog.post.singular", message: "Post" },
-  plural: { id: "plugin.blog.post.plural", message: "Posts" },
+  singular: withContext(
+    { id: "plugin.blog.post.singular", message: "Post" },
+    "post type singular name",
+  ),
+  plural: withContext(
+    { id: "plugin.blog.post.plural", message: "Posts" },
+    "post type general name",
+  ),
   addNewItem: { id: "plugin.blog.post.addNewItem", message: "Add Post" },
   editItem: { id: "plugin.blog.post.editItem", message: "Edit Post" },
   newItem: { id: "plugin.blog.post.newItem", message: "New Post" },
@@ -40,7 +53,10 @@ const POST_LABELS = {
 } satisfies EntryTypeLabels;
 
 const CATEGORY_LABELS = {
-  singular: { id: "plugin.blog.category.singular", message: "Category" },
+  singular: withContext(
+    { id: "plugin.blog.category.singular", message: "Category" },
+    "taxonomy singular name",
+  ),
   addNewItem: {
     id: "plugin.blog.category.addNewItem",
     message: "Add Category",
@@ -72,7 +88,10 @@ const CATEGORY_LABELS = {
 } satisfies TermTaxonomyLabels;
 
 const TAG_LABELS = {
-  singular: { id: "plugin.blog.tag.singular", message: "Tag" },
+  singular: withContext(
+    { id: "plugin.blog.tag.singular", message: "Tag" },
+    "taxonomy singular name",
+  ),
   addNewItem: { id: "plugin.blog.tag.addNewItem", message: "Add Tag" },
   editItem: { id: "plugin.blog.tag.editItem", message: "Edit Tag" },
   searchItems: {
@@ -90,11 +109,14 @@ const TAG_LABELS = {
 // Plural for the term-taxonomy root `label` field — `TermTaxonomyLabels`
 // doesn't include `plural` (taxonomies only carry singular on the
 // labels table), so the plural lives alongside the table.
-const CATEGORY_PLURAL = {
-  id: "plugin.blog.category.plural",
-  message: "Categories",
-};
-const TAG_PLURAL = { id: "plugin.blog.tag.plural", message: "Tags" };
+const CATEGORY_PLURAL = withContext(
+  { id: "plugin.blog.category.plural", message: "Categories" },
+  "taxonomy general name",
+);
+const TAG_PLURAL = withContext(
+  { id: "plugin.blog.tag.plural", message: "Tags" },
+  "taxonomy general name",
+);
 
 export const blog = definePlugin("blog", {
   i18n: {

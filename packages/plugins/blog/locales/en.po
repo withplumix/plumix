@@ -10,31 +10,37 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/index.ts
+msgctxt "post type general name"
 msgid "plugin.blog.post.plural"
 msgstr "Posts"
 
 #. js-lingui-explicit-id
 #: src/index.ts
+msgctxt "post type singular name"
 msgid "plugin.blog.post.singular"
 msgstr "Post"
 
 #. js-lingui-explicit-id
 #: src/index.ts
+msgctxt "taxonomy general name"
 msgid "plugin.blog.category.plural"
 msgstr "Categories"
 
 #. js-lingui-explicit-id
 #: src/index.ts
+msgctxt "taxonomy singular name"
 msgid "plugin.blog.category.singular"
 msgstr "Category"
 
 #. js-lingui-explicit-id
 #: src/index.ts
+msgctxt "taxonomy general name"
 msgid "plugin.blog.tag.plural"
 msgstr "Tags"
 
 #. js-lingui-explicit-id
 #: src/index.ts
+msgctxt "taxonomy singular name"
 msgid "plugin.blog.tag.singular"
 msgstr "Tag"
 
