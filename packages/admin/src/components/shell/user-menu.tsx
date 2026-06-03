@@ -65,13 +65,13 @@ export function UserMenu({ user }: { user: UserIdentity }): ReactNode {
               {initials}
             </AvatarFallback>
           </Avatar>
-          <div className="grid flex-1 text-left text-sm leading-tight">
+          <div className="grid flex-1 text-start text-sm leading-tight">
             <span className="truncate font-medium">{displayName}</span>
             <span className="text-muted-foreground truncate text-xs">
               {user.email}
             </span>
           </div>
-          <ChevronsUpDown className="ml-auto size-4" />
+          <ChevronsUpDown className="ms-auto size-4" />
         </SidebarMenuButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -81,14 +81,14 @@ export function UserMenu({ user }: { user: UserIdentity }): ReactNode {
         sideOffset={4}
       >
         <DropdownMenuLabel className="p-0 font-normal">
-          <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+          <div className="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
             <div
               aria-hidden
               className="bg-sidebar-accent text-sidebar-accent-foreground flex size-8 items-center justify-center rounded-md text-xs font-semibold"
             >
               {initials}
             </div>
-            <div className="grid flex-1 text-left text-sm leading-tight">
+            <div className="grid flex-1 text-start text-sm leading-tight">
               <span className="truncate font-medium">{displayName}</span>
               <span className="text-muted-foreground truncate text-xs">
                 {user.email}

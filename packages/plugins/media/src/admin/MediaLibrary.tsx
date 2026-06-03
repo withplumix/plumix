@@ -986,7 +986,7 @@ function FileTypeBadge({ mime }: { mime: string }): ReactNode {
   const label = badgeLabel(mime);
   if (!label) return null;
   return (
-    <span className="absolute top-2 right-2 rounded-sm bg-black/75 px-1.5 py-0.5 text-[0.65rem] font-semibold tracking-wider text-white">
+    <span className="absolute end-2 top-2 rounded-sm bg-black/75 px-1.5 py-0.5 text-[0.65rem] font-semibold tracking-wider text-white">
       {label}
     </span>
   );
@@ -1390,7 +1390,7 @@ function AltEditor({
         <span
           data-testid={`${testIdPrefix}-${String(cardId)}-alt-saved`}
           aria-live="polite"
-          className="text-primary pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-[0.65rem]"
+          className="text-primary pointer-events-none absolute end-2 top-1/2 -translate-y-1/2 text-[0.65rem]"
         >
           <Trans id="plugin.media.altEditor.saved" message="✓ Saved" />
         </span>

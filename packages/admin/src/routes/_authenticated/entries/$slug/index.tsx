@@ -294,7 +294,7 @@ function buildColumns({
     },
     {
       accessorKey: "updatedAt",
-      meta: { className: "text-right" },
+      meta: { className: "text-end" },
       header: () => (
         <SortableHeader
           label={renderLabel(M.columnUpdated)}
@@ -722,7 +722,7 @@ function SortableHeader({
       data-testid={`content-list-sort-${column}`}
       className={cn(
         "hover:text-foreground inline-flex items-center gap-1 rounded px-2 py-1 font-medium transition-colors",
-        align === "right" ? "-mr-2 text-right" : "-ml-2 text-left",
+        align === "right" ? "-me-2 text-end" : "-ms-2 text-start",
       )}
       aria-label={i18n._(
         M.sortAria.id,

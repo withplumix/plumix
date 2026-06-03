@@ -82,7 +82,7 @@ export function HeadingAuditPanel({
               <button
                 type="button"
                 onClick={() => onSelect(primaryId)}
-                className="w-full text-left"
+                className="w-full text-start"
                 data-testid={`heading-audit-jump-${violation.kind}`}
               >
                 {message}

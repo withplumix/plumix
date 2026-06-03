@@ -81,7 +81,7 @@ export function PatternsSection({
                 <div
                   role="button"
                   tabIndex={0}
-                  className="text-foreground hover:bg-muted flex w-full flex-col gap-1 rounded border p-2 text-left text-sm focus:outline-none focus-visible:ring"
+                  className="text-foreground hover:bg-muted flex w-full flex-col gap-1 rounded border p-2 text-start text-sm focus:outline-none focus-visible:ring"
                   data-testid={`plumix-patterns-row-${entry.name}`}
                   onClick={() => onSelect(entry)}
                   onKeyDown={(e) => {

@@ -40,8 +40,8 @@ describe("MobileSidebarSheet", () => {
     );
 
     const trigger = screen.getByTestId("example-trigger");
-    expect(trigger.className).toContain("left-4");
-    expect(trigger.className).not.toContain("right-4");
+    expect(trigger.className).toContain("start-4");
+    expect(trigger.className).not.toContain("end-4");
   });
 
   test("positions the trigger on the right when triggerSide='right'", () => {
@@ -58,8 +58,8 @@ describe("MobileSidebarSheet", () => {
     );
 
     const trigger = screen.getByTestId("example-trigger");
-    expect(trigger.className).toContain("right-4");
-    expect(trigger.className).not.toContain("left-4");
+    expect(trigger.className).toContain("end-4");
+    expect(trigger.className).not.toContain("start-4");
   });
 
   test("reveals the children inside the sheet content after the trigger is clicked", async () => {

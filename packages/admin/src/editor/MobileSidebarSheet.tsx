@@ -18,8 +18,8 @@ interface MobileSidebarSheetProps {
 }
 
 const SIDE_CLASS: Readonly<Record<"left" | "right", string>> = {
-  left: "left-4",
-  right: "right-4",
+  left: "start-4",
+  right: "end-4",
 };
 
 export function MobileSidebarSheet({

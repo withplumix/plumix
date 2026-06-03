@@ -561,7 +561,7 @@ export function PlumixEditorLayout({
               data-testid="unpublished-changes-banner-discard"
               onClick={draftMode.onDiscardDraft}
               disabled={draftMode.isDiscarding}
-              className="ml-auto"
+              className="ms-auto"
             >
               {draftMode.isDiscarding
                 ? renderLabel(M.draftDiscarding)
@@ -717,7 +717,7 @@ function BlocksBody({
   }
   return (
     <aside
-      className="overflow-y-auto border-r"
+      className="overflow-y-auto border-e"
       data-testid="plumix-editor-left"
     >
       {content}
@@ -910,7 +910,7 @@ function InspectorBody({ registry, tokens }: InspectorBodyProps): ReactElement {
   }
   return (
     <aside
-      className="overflow-y-auto border-l"
+      className="overflow-y-auto border-s"
       data-testid="plumix-editor-right"
     >
       {content}
