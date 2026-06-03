@@ -1,9 +1,10 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { InsertableBlockEntry } from "@plumix/blocks";
 import { createBlockRegistry, createPatternRegistry } from "@plumix/blocks";
 
+import { renderWithI18n } from "../../test/render-with-i18n.js";
 import { InsertableEntryRow } from "./InsertableEntryRow.js";
 import { installFakeIntersectionObserver } from "./intersection-observer-harness.js";
 
@@ -28,7 +29,7 @@ describe("InsertableEntryRow", () => {
       slug: "bullet",
       title: "Bulleted tabs",
     };
-    render(
+    renderWithI18n(
       <>
         <InsertableEntryRow
           entry={listBullet}
@@ -59,7 +60,7 @@ describe("InsertableEntryRow", () => {
       title: "Heading",
       icon: "Heading",
     };
-    render(
+    renderWithI18n(
       <InsertableEntryRow
         entry={entry}
         blocks={blocks}
@@ -84,7 +85,7 @@ describe("InsertableEntryRow", () => {
       title: "Bulleted list",
       attrs: { variant: "bullet" },
     };
-    render(
+    renderWithI18n(
       <InsertableEntryRow
         entry={entry}
         blocks={blocks}

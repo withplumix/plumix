@@ -1,9 +1,11 @@
 import type { Config } from "@puckeditor/core";
 import type { Extensions } from "@tiptap/core";
 import { createElement, Fragment } from "react";
+import { i18n } from "@lingui/core";
 
 import type { BlockSpec } from "@plumix/blocks";
 import { DEFAULT_BLOCK_CONTEXT } from "@plumix/blocks";
+import { resolveLabel } from "@plumix/core/i18n";
 
 import { translateFields } from "./field-type-translator.js";
 import { PatternRefPreview } from "./PatternRefPreview.js";
@@ -22,7 +24,7 @@ export function blockSpecsToPuckComponents(
   for (const spec of specs) {
     if (spec.name === PATTERN_REF_BLOCK) {
       out[spec.name] = {
-        label: spec.title ?? spec.name,
+        label: spec.title ? resolveLabel(spec.title, i18n) : spec.name,
         fields: spec.inputs ? translateFields(spec.inputs, options) : {},
         defaultProps: spec.defaults,
         render: (props) =>
@@ -34,7 +36,7 @@ export function blockSpecsToPuckComponents(
       continue;
     }
     out[spec.name] = {
-      label: spec.title ?? spec.name,
+      label: spec.title ? resolveLabel(spec.title, i18n) : spec.name,
       fields: spec.inputs ? translateFields(spec.inputs, options) : {},
       defaultProps: spec.defaults,
       render: (props) =>

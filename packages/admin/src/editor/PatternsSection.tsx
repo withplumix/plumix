@@ -103,7 +103,7 @@ export function PatternsSection({
                       />
                     </div>
                   </LazyMount>
-                  <span className="truncate">{entry.title}</span>
+                  <span className="truncate">{label(entry.title)}</span>
                 </div>
               </li>
             ))}

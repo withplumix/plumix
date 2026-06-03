@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog.js";
+import { useLabel } from "@/lib/use-label.js";
 import { Trans } from "@lingui/react";
 
 import type {
@@ -41,6 +42,7 @@ export function BlockScopePicker({
   onSelect,
   onDismiss,
 }: BlockScopePickerProps): ReactElement | null {
+  const renderLabel = useLabel();
   if (variations.length === 0) return null;
   return (
     <Dialog
@@ -104,10 +106,12 @@ export function BlockScopePicker({
                     />
                   </div>
                 </LazyMount>
-                <span className="text-sm font-medium">{variation.title}</span>
+                <span className="text-sm font-medium">
+                  {renderLabel(variation.title)}
+                </span>
                 {variation.description ? (
                   <span className="text-muted-foreground text-xs">
-                    {variation.description}
+                    {renderLabel(variation.description)}
                   </span>
                 ) : null}
               </div>

@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog.js";
+import { useLabel } from "@/lib/use-label.js";
 import { Trans } from "@lingui/react";
 
 import type { BlockRegistry, PatternRegistry } from "@plumix/blocks";
@@ -29,6 +30,7 @@ export function StarterModal({
   onSelect,
   onDismiss,
 }: StarterModalProps): ReactElement | null {
+  const renderLabel = useLabel();
   if (candidates.length === 0) return null;
 
   return (
@@ -80,7 +82,9 @@ export function StarterModal({
                     patterns={patterns}
                   />
                 </div>
-                <span className="text-sm font-medium">{entry.title}</span>
+                <span className="text-sm font-medium">
+                  {renderLabel(entry.title)}
+                </span>
               </div>
             </li>
           ))}

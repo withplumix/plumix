@@ -49,6 +49,25 @@ describe("resolveSlashMenuItems", () => {
     ).toBe("layout");
   });
 
+  test("matches a descriptor title via its source-locale message", () => {
+    // Slash-menu search keys on `labelSourceText(entry.title)` so plugin
+    // authors can pass `MessageDescriptor` titles without breaking the
+    // matcher. Search stays locale-stable regardless of UI locale.
+    const registry = createBlockRegistry([
+      spec({
+        name: "acme/hero",
+        title: { id: "block.acme.hero.title", message: "Hero banner" },
+      }),
+    ]);
+
+    const items = resolveSlashMenuItems(registry, {
+      capabilities: new Set(),
+      query: "hero",
+    });
+
+    expect(items.map((i) => i.entry.name)).toEqual(["acme/hero"]);
+  });
+
   test("matches blocks by title (substring) and name (substring), case-insensitive", () => {
     const registry = createBlockRegistry([
       spec({ name: "core/heading", title: "Heading" }),

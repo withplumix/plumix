@@ -4,6 +4,7 @@ import { i18n } from "@lingui/core";
 import { defineMessage } from "@lingui/core/macro";
 
 import type { BlockInput } from "@plumix/blocks";
+import { resolveLabel } from "@plumix/core/i18n";
 
 const YES_LABEL = defineMessage({
   id: "fieldTypes.boolean.yes",
@@ -26,27 +27,32 @@ export function translateField(
   input: BlockInput,
   options: TranslateFieldOptions = {},
 ): Fields[string] {
+  // Puck's Fields shape is `label: string`. Resolve at adapter-
+  // construction time (per route-module evaluation) — `language-card.tsx`
+  // calls `window.location.reload()` on locale change, reseating the
+  // route module and re-resolving every label.
+  const label = input.label ? resolveLabel(input.label, i18n) : undefined;
   switch (input.type) {
     case "text":
     case "textarea":
     case "number":
-      return { type: input.type, label: input.label };
+      return { type: input.type, label };
     case "select":
     case "radio":
       return {
         type: input.type,
-        label: input.label,
+        label,
         options: (input.options ?? []).map((opt) => ({
-          label: opt.label,
+          label: resolveLabel(opt.label, i18n),
           value: opt.value,
         })),
       };
     case "slot":
-      return { type: "slot", label: input.label };
+      return { type: "slot", label };
     case "richtext":
       return {
         type: "richtext",
-        label: input.label,
+        label,
         // contentEditable: true lets authors type directly on the canvas
         // (Puck's inline-edit mode); without it the field is sidebar-only,
         // which is the wrong UX for a paragraph body.
@@ -61,7 +67,7 @@ export function translateField(
       // text input that returns strings the block's `=== true` check rejects.
       return {
         type: "radio",
-        label: input.label,
+        label,
         options: [
           { label: i18n._(YES_LABEL), value: true },
           { label: i18n._(NO_LABEL), value: false },
@@ -76,7 +82,7 @@ export function translateField(
           `[plumix:admin] field-type-translator: unknown input type "${input.type}" — falling back to text. Register the type via ctx.registerFieldType or pick a Puck-native type.`,
         );
       }
-      return { type: "text", label: input.label };
+      return { type: "text", label };
   }
 }
 
