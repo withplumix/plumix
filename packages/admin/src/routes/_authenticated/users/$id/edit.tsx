@@ -349,6 +349,7 @@ function UserEditForm({
                   id="userEdit.title.other"
                   message="Edit {email}"
                   values={{ email: target.email }}
+                  comment="email: the user being edited"
                 />
               )}
             </h1>
@@ -694,6 +695,7 @@ function DeleteCard({ target }: { target: User }): ReactNode {
             id="userEdit.delete.confirm.title"
             message="Confirm delete: {email}"
             values={{ email: target.email }}
+            comment="email: the user account being deleted"
           />
         </CardTitle>
         <CardDescription>

@@ -42,6 +42,7 @@ function DashboardIndex(): ReactNode {
             id="dashboard.welcome"
             message="Welcome, {greeting}"
             values={{ greeting }}
+            comment="greeting: the user's display name or email"
           />
         </h1>
         <p className="text-muted-foreground text-sm">

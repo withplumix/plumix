@@ -168,16 +168,19 @@ msgstr ""
 msgid "terms.edit.descendantsHint"
 msgstr " — descendants can't be picked as parent."
 
+#. max: upper bound on the repeater row count
 #. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.countSuffixMax"
 msgstr " / max {max}"
 
+#. min: lower bound on the repeater row count
 #. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.countSuffixMin"
 msgstr " / min {min}"
 
+#. min, max: integers bounding the repeater row count
 #. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.countSuffixBoth"
@@ -203,28 +206,33 @@ msgstr "(no name)"
 msgid "entries.list.noTitle"
 msgstr "(no title)"
 
+#. browser: e.g. 'Safari', 'Chrome'; os: e.g. 'macOS', 'Windows 11'. Vendor names interpolate verbatim; the connector word is localizable.
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.device.browserOnOs"
 msgstr "{browser} on {os}"
 
+#. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.test.tsx
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.pageSummary"
 msgstr "{count, plural, one {# group} other {# groups}}"
 
+#. count: number of selected options in the multi-select
 #. js-lingui-explicit-id
 #: src/components/form/multi-select.tsx
 msgid "form.multiSelect.selectedCount"
 msgstr "{count} selected"
 
+#. device: 'Safari on macOS' style label; when: relative-time string; ip: IPv4/IPv6 address
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.descriptionWithIp"
 msgstr "{device} signed in {when} from {ip}. The device will need to sign in "
 "again next time."
 
+#. device: 'Safari on macOS' style label; when: relative-time string
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.description"
@@ -237,17 +245,20 @@ msgstr "{device} signed in {when}. The device will need to sign in again next "
 msgid "editor.coAuthorIndicator.presenceAriaLabel"
 msgstr "{display} · last seen {lastSeen}"
 
+#. label: a plugin-author-provided name (e.g. 'SEO meta', 'Hero block'); kind: the extension type ('field', 'block', 'mark') left as the raw protocol identifier
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
 msgid "plugin.errorBoundary.inlineStub"
 msgstr "{label} {kind} failed"
 
+#. label: a plugin-author-provided name (e.g. 'SEO meta', 'Hero block')
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
 msgid "plugin.errorBoundary.pageBody"
 msgstr "{label} threw an error while rendering. The rest of the admin is "
 "unaffected."
 
+#. revoked: number of OTHER sessions just signed out (excluding the current device)
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revokeAll.count"
@@ -389,6 +400,7 @@ msgstr "Add passkey"
 msgid "metaBox.repeater.addFirst"
 msgstr "Add row"
 
+#. date: a locale-formatted date string
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.added"
@@ -706,6 +718,7 @@ msgstr "Check your email"
 msgid "auth.device.lookup.submit.pending"
 msgstr "Checking…"
 
+#. blockTitle: the parent block's registered title (e.g. 'Cover', 'Gallery')
 #. js-lingui-explicit-id
 #: src/editor/BlockScopePicker.tsx
 msgid "blockScopePicker.title"
@@ -751,6 +764,7 @@ msgstr "Compare"
 msgid "allowedDomains.list.title"
 msgstr "Configured domains"
 
+#. userCode: the short device-flow code the CLI displayed (e.g. 'WDJB-MJHT'); pass through verbatim
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.confirmTitle"
@@ -761,11 +775,13 @@ msgstr "Confirm \"{userCode}\""
 msgid "allowedDomains.row.deleteConfirm"
 msgstr "Confirm delete"
 
+#. email: the user account being deleted
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.confirm.title"
 msgstr "Confirm delete: {email}"
 
+#. email: the address the confirmation link was sent to
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.confirmationSent"
@@ -777,6 +793,7 @@ msgstr "Confirmation sent to {email}. The change takes effect once they click "
 msgid "auth.device.lookup.submit.idle"
 msgstr "Continue"
 
+#. label: the OAuth provider's display name (e.g. 'Google', 'GitHub')
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.oauth.continueWith"
@@ -1116,11 +1133,13 @@ msgstr "Delete"
 msgid "profile.passkeys.delete.button"
 msgstr "Delete"
 
+#. domain: the hostname being removed from the allowlist
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.deleteAria"
 msgstr "Delete {domain}"
 
+#. termName: the taxonomy term being deleted
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.dialogTitle"
@@ -1181,6 +1200,7 @@ msgstr "Deleting…"
 msgid "profile.passkeys.delete.pending"
 msgstr "Deleting…"
 
+#. accessDenied: the literal OAuth error code string (e.g. 'access_denied') — do not translate
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.denied"
@@ -1311,6 +1331,7 @@ msgstr "Edit"
 msgid "breadcrumb.edit"
 msgstr "Edit"
 
+#. email: the user being edited
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.title.other"
@@ -1321,6 +1342,7 @@ msgstr "Edit {email}"
 msgid "breadcrumb.editUser"
 msgstr "Edit user"
 
+#. device: pre-resolved viewport label like 'Desktop', 'Tablet', 'Mobile'
 #. js-lingui-explicit-id
 #: src/editor/StyleTab.tsx
 msgid "editor.styleTab.activeBucket"
@@ -1537,6 +1559,7 @@ msgstr "Filter by status"
 msgid "editor.styleTab.section.fontSize"
 msgstr "Font size"
 
+#. when: pre-formatted relative-time like '2 hours ago'; author: the user's display name or email
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
 msgid "editor.revisions.preview.subtitle"
@@ -1562,6 +1585,7 @@ msgstr "Go to previous page"
 msgid "terms.create.description.flat"
 msgstr "Group content by adding a new term."
 
+#. from, to, between: integer heading levels 1-6; e.g. from=2, to=4, between=3
 #. js-lingui-explicit-id
 #: src/editor/HeadingAuditPanel.tsx
 msgid "editor.headingAudit.skippedLevel"
@@ -1679,6 +1703,7 @@ msgstr "Last sign-in"
 msgid "apiTokens.col.lastUsed"
 msgstr "Last used"
 
+#. date: a locale-formatted date string
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.lastUsed"
@@ -1699,6 +1724,7 @@ msgstr "Load more"
 msgid "dataTable.loading"
 msgstr "Loading"
 
+#. label: the plugin page's registered label (e.g. 'Audit Log')
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/pages/$.tsx
 msgid "pluginPage.loading.aria"
@@ -1829,6 +1855,7 @@ msgstr "Move to trash"
 msgid "entries.list.trashDialog.moving"
 msgstr "Moving…"
 
+#. count: number of h1 elements detected in the editor tree
 #. js-lingui-explicit-id
 #: src/editor/HeadingAuditPanel.tsx
 msgid "editor.headingAudit.multipleH1"
@@ -2140,6 +2167,7 @@ msgstr "Overview"
 msgid "editor.styleTab.section.padding"
 msgstr "Padding"
 
+#. page: 1-based current page number in the list
 #. js-lingui-explicit-id
 #: src/components/data-table/list-pagination.tsx
 msgid "listPagination.page"
@@ -2155,6 +2183,7 @@ msgstr "Parent"
 msgid "profile.passkeys.title"
 msgstr "Passkeys"
 
+#. slug: the pattern's registered slug (e.g. 'core/three-columns'); pass through verbatim
 #. js-lingui-explicit-id
 #: src/editor/PatternRefPreview.tsx
 msgid "editor.patternRef.unresolved"
@@ -2165,6 +2194,7 @@ msgstr "Pattern not registered: <code>{slug}</code>"
 msgid "patternsSection.heading"
 msgstr "Patterns"
 
+#. newEmail: the new address awaiting confirmation; expiresAt: pre-formatted relative-time like 'in 2 hours'
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.pending"
@@ -2192,6 +2222,7 @@ msgid "apiTokens.description.self"
 msgstr "Personal access tokens for CLIs, MCP servers, CI bots, or any other "
 "non-browser client. The full secret is shown once at mint time."
 
+#. blockTitle: the parent block's registered title (e.g. 'Cover', 'Gallery')
 #. js-lingui-explicit-id
 #: src/editor/BlockScopePicker.tsx
 msgid "blockScopePicker.description"
@@ -2499,21 +2530,25 @@ msgstr "Scheduled"
 msgid "apiTokens.col.scopes"
 msgstr "Scopes"
 
+#. kind: the entity type being searched (e.g. 'posts', 'tags')
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.searchPlaceholder"
 msgstr "Search {kind}…"
 
+#. kind: the entity type being searched (e.g. 'posts', 'tags')
 #. js-lingui-explicit-id
 #: src/components/meta-box/reference-picker.tsx
 msgid "metaBox.reference.searchPlaceholder"
 msgstr "Search {kind}…"
 
+#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.dialogDescription"
 msgstr "Search and pick {kind} entries"
 
+#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
 #. js-lingui-explicit-id
 #: src/components/meta-box/reference-picker.tsx
 msgid "metaBox.reference.dialogDescription"
@@ -2654,6 +2689,7 @@ msgstr "Settings"
 msgid "menu.settings"
 msgstr "Settings"
 
+#. email: the invited user's address
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.success.description"
@@ -2715,6 +2751,7 @@ msgstr "Sign-in was cancelled."
 msgid "passkey.error.registrationClosed"
 msgstr "Sign-up is not open on this site."
 
+#. when: pre-formatted relative-time string like '2 hours ago'
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.signedIn"
@@ -2777,6 +2814,7 @@ msgstr "Something went wrong with the form. Please reload and try again."
 msgid "passkey.error.unknown"
 msgstr "Something went wrong. Please try again."
 
+#. label: the column being sorted (e.g. 'Title', 'Status', 'Updated'); direction: pre-resolved direction word like 'ascending' or 'descending'
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.sortAria"
@@ -2837,6 +2875,7 @@ msgstr "Taxonomies"
 msgid "breadcrumb.terms"
 msgstr "Terms"
 
+#. to: the recipient email address the test was sent to
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.feedback.ok"
@@ -2958,6 +2997,7 @@ msgstr "The account this confirmation belongs to has been removed."
 msgid "emailChange.error.accountDisabled"
 msgstr "The account this confirmation belongs to is disabled."
 
+#. path: the manifest-declared admin-route path (e.g. '/audit-log'); pass through verbatim
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/pages/$.tsx
 msgid "pluginPage.notLoaded.body"
@@ -2970,6 +3010,7 @@ msgid "auth.device.lookup.description"
 msgstr "The CLI shows an 8-character code split with a dash — \"ABCD-EFGH\". "
 "Letters and digits only, no zeros or ones."
 
+#. name: the user-chosen passkey nickname (e.g. 'MacBook', 'iPhone')
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.description"
@@ -3304,6 +3345,7 @@ msgstr "We'll send a confirmation link to the new address. The change takes "
 "effect after the link is clicked. Sessions on this account are signed "
 "out at that point — re-sign-in uses the new email."
 
+#. greeting: the user's display name or email
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.welcome"

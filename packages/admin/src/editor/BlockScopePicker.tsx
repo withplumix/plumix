@@ -60,6 +60,7 @@ export function BlockScopePicker({
               id="blockScopePicker.title"
               message="Choose a {blockTitle} layout"
               values={{ blockTitle }}
+              comment="blockTitle: the parent block's registered title (e.g. 'Cover', 'Gallery')"
             />
           </DialogTitle>
           <DialogDescription>
@@ -67,6 +68,7 @@ export function BlockScopePicker({
               id="blockScopePicker.description"
               message="Pick a layout to insert, or cancel to start from a blank {blockTitle}."
               values={{ blockTitle }}
+              comment="blockTitle: the parent block's registered title (e.g. 'Cover', 'Gallery')"
             />
           </DialogDescription>
         </DialogHeader>

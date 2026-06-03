@@ -377,6 +377,7 @@ function InviteSuccess({
               id="userInvite.success.description"
               message="Share the link below with {email}. They'll enrol a passkey the first time they open it. Link expires in 7 days."
               values={{ email: user.email }}
+              comment="email: the invited user's address"
             />
           </CardDescription>
         </CardHeader>

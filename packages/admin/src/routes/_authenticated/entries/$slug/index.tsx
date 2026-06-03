@@ -186,6 +186,8 @@ const M = {
   sortAria: defineMessage({
     id: "entries.list.sortAria",
     message: "Sort by {label} ({direction})",
+    comment:
+      "label: the column being sorted (e.g. 'Title', 'Status', 'Updated'); direction: pre-resolved direction word like 'ascending' or 'descending'",
   }),
   noTitle: defineMessage({
     id: "entries.list.noTitle",

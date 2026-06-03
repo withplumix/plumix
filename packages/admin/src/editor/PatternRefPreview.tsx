@@ -81,6 +81,7 @@ export function PatternRefPreview(props: PatternRefPreviewProps): ReactElement {
           message="Pattern not registered: <code>{slug}</code>"
           values={{ slug }}
           components={{ code: <code /> }}
+          comment="slug: the pattern's registered slug (e.g. 'core/three-columns'); pass through verbatim"
         />
       </div>
     );

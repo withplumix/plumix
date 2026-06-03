@@ -38,6 +38,7 @@ const M = {
   selectedCount: defineMessage({
     id: "form.multiSelect.selectedCount",
     message: "{count} selected",
+    comment: "count: number of selected options in the multi-select",
   }),
 } satisfies Record<string, MessageDescriptor>;
 

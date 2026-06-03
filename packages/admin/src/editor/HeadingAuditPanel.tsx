@@ -12,11 +12,14 @@ const M = {
     id: "editor.headingAudit.multipleH1",
     message:
       "Multiple <h1> on the page ({count} found). Keep only one top-level heading.",
+    comment: "count: number of h1 elements detected in the editor tree",
   }),
   skippedLevel: defineMessage({
     id: "editor.headingAudit.skippedLevel",
     message:
       "Heading jumps from h{from} to h{to}. Insert an h{between} between them.",
+    comment:
+      "from, to, between: integer heading levels 1-6; e.g. from=2, to=4, between=3",
   }),
   emptyHeading: defineMessage({
     id: "editor.headingAudit.emptyHeading",

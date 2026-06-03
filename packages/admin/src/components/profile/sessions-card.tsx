@@ -43,6 +43,8 @@ const M = {
   browserOnOs: defineMessage({
     id: "profile.sessions.device.browserOnOs",
     message: "{browser} on {os}",
+    comment:
+      "browser: e.g. 'Safari', 'Chrome'; os: e.g. 'macOS', 'Windows 11'. Vendor names interpolate verbatim; the connector word is localizable.",
   }),
   // Mutation error fallbacks.
   revokeAllFallback: defineMessage({
@@ -129,6 +131,7 @@ export function SessionsCard(): ReactNode {
                 id="profile.sessions.revokeAll.count"
                 message="{revoked, plural, =0 {No other sessions to sign out.} one {Signed out # other session.} other {Signed out # other sessions.}}"
                 values={{ revoked: revokeAllFeedback.revoked }}
+                comment="revoked: number of OTHER sessions just signed out (excluding the current device)"
               />
             </AlertDescription>
           </Alert>
@@ -230,6 +233,7 @@ function SessionRow({ session, onChanged }: SessionRowProps): ReactNode {
               id="profile.sessions.signedIn"
               message="Signed in {when}"
               values={{ when: formatRelative(createdAt) }}
+              comment="when: pre-formatted relative-time string like '2 hours ago'"
             />
           </span>
         </div>
@@ -276,6 +280,7 @@ function SessionRow({ session, onChanged }: SessionRowProps): ReactNode {
                     when: formatRelative(createdAt),
                     ip: session.ipAddress,
                   }}
+                  comment="device: 'Safari on macOS' style label; when: relative-time string; ip: IPv4/IPv6 address"
                 />
               ) : (
                 <Trans
@@ -285,6 +290,7 @@ function SessionRow({ session, onChanged }: SessionRowProps): ReactNode {
                     device: deviceLabel,
                     when: formatRelative(createdAt),
                   }}
+                  comment="device: 'Safari on macOS' style label; when: relative-time string"
                 />
               )}
             </AlertDialogDescription>

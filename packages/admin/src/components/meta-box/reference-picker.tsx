@@ -63,10 +63,13 @@ const M = {
   dialogDescription: defineMessage({
     id: "metaBox.reference.dialogDescription",
     message: "Search and pick a {kind}",
+    comment:
+      "kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')",
   }),
   searchPlaceholder: defineMessage({
     id: "metaBox.reference.searchPlaceholder",
     message: "Search {kind}…",
+    comment: "kind: the entity type being searched (e.g. 'posts', 'tags')",
   }),
 } satisfies Record<string, MessageDescriptor>;
 

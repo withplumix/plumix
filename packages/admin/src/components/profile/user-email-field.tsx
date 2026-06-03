@@ -61,6 +61,7 @@ const M = {
     id: "userEdit.email.confirmationSent",
     message:
       "Confirmation sent to {email}. The change takes effect once they click the link.",
+    comment: "email: the address the confirmation link was sent to",
   }),
   // Placeholder is locale-sensitive (some locales prefer a different
   // example domain). Resolved via `useLabel()` for the `placeholder`
@@ -202,6 +203,7 @@ export function UserEmailField({
                   expiresAt: formatRelative(toDate(pending.expiresAt)),
                 }}
                 components={{ code: <code className="font-mono" /> }}
+                comment="newEmail: the new address awaiting confirmation; expiresAt: pre-formatted relative-time like 'in 2 hours'"
               />
             </span>
             {canEdit ? (

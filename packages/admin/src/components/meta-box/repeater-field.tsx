@@ -162,6 +162,7 @@ function CountSuffix({
         id="metaBox.repeater.countSuffixBoth"
         message=" / min {min} / max {max}"
         values={{ min, max }}
+        comment="min, max: integers bounding the repeater row count"
       />
     );
   }
@@ -171,6 +172,7 @@ function CountSuffix({
         id="metaBox.repeater.countSuffixMin"
         message=" / min {min}"
         values={{ min }}
+        comment="min: lower bound on the repeater row count"
       />
     );
   }
@@ -180,6 +182,7 @@ function CountSuffix({
         id="metaBox.repeater.countSuffixMax"
         message=" / max {max}"
         values={{ max }}
+        comment="max: upper bound on the repeater row count"
       />
     );
   }
