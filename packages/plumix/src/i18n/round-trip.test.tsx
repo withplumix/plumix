@@ -2,7 +2,7 @@ import { i18n } from "@lingui/core";
 import { renderToString } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import { I18nProvider, Trans } from "./index.js";
+import { I18nProvider, Trans, withContext } from "./index.js";
 
 describe("plumix/i18n — Lingui round-trip", () => {
   test("Trans renders the German message when the de catalog is active", () => {
@@ -19,5 +19,13 @@ describe("plumix/i18n — Lingui round-trip", () => {
     );
 
     expect(html).toContain("Übersicht");
+  });
+
+  test("withContext is re-exported as a runtime helper from plumix/i18n", () => {
+    const tagged = withContext(
+      { id: "post.singular", message: "Post" },
+      "noun",
+    );
+    expect(tagged.context).toBe("noun");
   });
 });

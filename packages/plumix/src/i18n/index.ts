@@ -5,6 +5,7 @@ export {
   formatRelative,
   labelSourceText,
   resolveLabel,
+  withContext,
   type FormatRelativeOptions,
   type Label,
 } from "@plumix/core";

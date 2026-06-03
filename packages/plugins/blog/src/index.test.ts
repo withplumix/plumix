@@ -15,6 +15,7 @@ describe("@plumix/plugin-blog", () => {
     expect(post?.label).toEqual({
       id: "plugin.blog.post.plural",
       message: "Posts",
+      context: "post type general name",
     });
     expect(post?.isPublic).toBe(true);
     expect(post?.hasArchive).toBe(true);
