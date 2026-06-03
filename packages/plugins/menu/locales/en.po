@@ -117,3 +117,130 @@ msgstr "← Back to Menus"
 #: src/index.ts
 msgid "core.adminNav.appearance"
 msgstr "Appearance"
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.tab.edit"
+msgstr "Edit Menus"
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.tab.locations"
+msgstr "Manage Locations"
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.createPrompt"
+msgstr "Menu name"
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.emptyState"
+msgstr "No menus yet. Create your first menu to get started."
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.createButton"
+msgstr "+ Create new menu"
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.editEmpty"
+msgstr "Select a menu to start editing."
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.unassigned"
+msgstr "— Unassigned —"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.deleteConfirm"
+msgstr "Delete this menu?"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.brokenLinkAria"
+msgstr "broken link"
+
+#. js-lingui-explicit-id
+#. title: the item's display title, or a translated 'item' fallback
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.reorderAria"
+msgstr "Reorder {title}"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.reorderFallbackTitle"
+msgstr "item"
+
+#. js-lingui-explicit-id
+#. label: the broken item's resolved-label or original title
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.relinkBanner"
+msgstr "Pick replacement for {label}"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.emptyState"
+msgstr "No items yet."
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.conflictBanner"
+msgstr "Another editor saved changes since you loaded this menu."
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.conflictReload"
+msgstr "Reload to see latest"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.saveButton"
+msgstr "Save menu"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.maxDepthLabel"
+msgstr "Max depth"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.maxDepthRejected"
+msgstr "Cannot set below the current deepest item."
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.deleteButton"
+msgstr "Delete menu"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.cancelButton"
+msgstr "Cancel"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.customReplaceButton"
+msgstr "Replace link"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.customAddButton"
+msgstr "Add to menu"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.relinkButton"
+msgstr "Re-link…"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.convertButton"
+msgstr "Convert to Custom URL"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.removeButton"
+msgstr "Remove"

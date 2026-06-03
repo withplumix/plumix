@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { i18n, I18nProvider } from "plumix/i18n";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { MenusShell } from "./MenusShell.js";
@@ -79,12 +80,16 @@ function parseRpcInput<T>(call: FetchCall): T {
 }
 
 function renderShell(): void {
+  i18n.load({ en: {} });
+  i18n.activate("en");
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   function Wrapper({ children }: { readonly children: ReactNode }): ReactNode {
     return (
-      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      <I18nProvider i18n={i18n}>
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      </I18nProvider>
     );
   }
   render(<MenusShell />, { wrapper: Wrapper });
