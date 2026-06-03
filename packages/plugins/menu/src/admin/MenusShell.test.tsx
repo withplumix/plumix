@@ -448,6 +448,16 @@ describe("MenusShell", () => {
       // Reload and must actually see the new server state, not the
       // stale local one. The fresh fixture has a new row with id 42.
       expect(await screen.findByTestId("menu-item-row-42")).toBeInTheDocument();
+
+      // The banner must re-arm after the reload + a SECOND racing save
+      // also hits version_mismatch (different editor took a third bite).
+      // Earlier `dismissed` boolean stayed `true` forever after the first
+      // reload click and suppressed every subsequent banner — that's the
+      // silent-data-loss regression this assertion guards.
+      await user.click(await screen.findByTestId("menu-save-button"));
+      expect(
+        await screen.findByTestId("menu-conflict-banner"),
+      ).toBeInTheDocument();
     });
 
     test("Save button posts current items + version to menu.save", async () => {

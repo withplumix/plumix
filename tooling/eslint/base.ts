@@ -6,6 +6,9 @@ import turboPlugin from "eslint-plugin-turbo";
 import { defineConfig } from "eslint/config";
 import tseslint from "typescript-eslint";
 
+// Exported so consumer configs that extend `no-restricted-syntax` for their
+// own selectors can re-include this entry — ESLint flat config replaces the
+// rule wholesale rather than merging selector lists.
 export const NO_THROW_NEW_ERROR_SELECTOR = {
   selector: "ThrowStatement > NewExpression[callee.name='Error']",
   message:
@@ -52,9 +55,6 @@ export const baseConfig = defineConfig(
   },
   // Named-errors convention (umbrella #232): production `src/` code may not
   // `throw new Error(...)` — use a factory from the area's errors.ts.
-  // Exported so consumer configs that extend `no-restricted-syntax` for their
-  // own selectors can re-include this entry (ESLint flat config replaces the
-  // rule wholesale rather than merging selector lists).
   {
     files: ["src/**/*.ts", "src/**/*.tsx"],
     ignores: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/test/**"],

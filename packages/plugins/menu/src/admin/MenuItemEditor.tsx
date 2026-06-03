@@ -167,14 +167,16 @@ function MenuSettingsPanel({
   const save = useSaveMenu();
   const queryClient = useQueryClient();
   // The conflict banner persists past the mutation's transient error
-  // state (mutation goes idle on dismiss/refetch). A separate flag lets
-  // the user explicitly dismiss via the reload action.
-  const [conflict, setConflict] = useState(false);
+  // state (mutation goes idle on dismiss/refetch). Dismissal is keyed
+  // to the data version that was active when the user dismissed —
+  // after invalidateQueries lands a newer version and the reducer
+  // advances `state.version`, the comparison naturally re-arms so a
+  // SECOND `version_mismatch` (different racing editor) shows the
+  // banner again.
+  const [dismissedAt, setDismissedAt] = useState<number | null>(null);
   const isVersionMismatch =
     save.error instanceof Error && save.error.message === "version_mismatch";
-  useEffect(() => {
-    if (isVersionMismatch) setConflict(true);
-  }, [isVersionMismatch]);
+  const conflict = isVersionMismatch && dismissedAt !== state.version;
   return (
     <div data-testid="menu-settings-panel">
       <LocationsBindings termId={state.termId} slug={state.slug} />
@@ -189,7 +191,7 @@ function MenuSettingsPanel({
             type="button"
             data-testid="menu-conflict-reload"
             onClick={() => {
-              setConflict(false);
+              setDismissedAt(state.version);
               save.reset();
               void queryClient.invalidateQueries({
                 queryKey: ["menu", "get", state.termId] as const,
@@ -251,11 +253,15 @@ function MaxDepthField({
   // A local draft buys the user a transient empty string while editing —
   // without it, controlled-input + reject-on-NaN traps the field on the
   // last valid value. The reducer is still the source of truth: when
-  // state.maxDepth changes (load, undo, etc.) the draft snaps back.
+  // state.maxDepth changes (load, undo, etc.) the draft snaps back via
+  // an adjusting-state-during-render compare (React 19 idiomatic — no
+  // setState-in-effect).
   const [draft, setDraft] = useState(String(state.maxDepth));
-  useEffect(() => {
+  const [lastSeen, setLastSeen] = useState(state.maxDepth);
+  if (state.maxDepth !== lastSeen) {
+    setLastSeen(state.maxDepth);
     setDraft(String(state.maxDepth));
-  }, [state.maxDepth]);
+  }
   // The reducer no-ops `updateMaxDepth` below the deepest-existing
   // depth. Surface that explicitly so the user can tell their value
   // didn't take — without this the input keeps showing a number that

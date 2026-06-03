@@ -423,10 +423,15 @@ export function MediaLibrary({
   // disappear silently when the row briefly drops out of the page
   // window or while a refetch is in flight. We refresh from the list
   // by id when a fresh copy is available, never null it from absence.
+  //
+  // setState-in-effect is the intentional pattern here: we DO want the
+  // mirrored copy so the drawer survives a refetch window. The settled-
+  // and-gone branch is the only path that nulls.
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
   useEffect(() => {
     if (selectedItem === null) return;
     const fresh = items.find((it) => it.id === selectedItem.id);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mirroring is intentional; see block comment above.
     if (fresh && fresh !== selectedItem) setSelectedItem(fresh);
     // If the row was deleted (not in items AND list is settled), close.
     if (!fresh && list.status === "success" && !list.isFetching) {
@@ -981,7 +986,7 @@ function FileTypeBadge({ mime }: { mime: string }): ReactNode {
   const label = badgeLabel(mime);
   if (!label) return null;
   return (
-    <span className="absolute top-2 right-2 rounded-sm bg-black/75 px-1.5 py-0.5 text-[0.65rem] font-semibold tracking-wider text-white">
+    <span className="absolute end-2 top-2 rounded-sm bg-black/75 px-1.5 py-0.5 text-[0.65rem] font-semibold tracking-wider text-white">
       {label}
     </span>
   );
@@ -1385,7 +1390,7 @@ function AltEditor({
         <span
           data-testid={`${testIdPrefix}-${String(cardId)}-alt-saved`}
           aria-live="polite"
-          className="text-primary pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-[0.65rem]"
+          className="text-primary pointer-events-none absolute end-2 top-1/2 -translate-y-1/2 text-[0.65rem]"
         >
           <Trans id="plugin.media.altEditor.saved" message="✓ Saved" />
         </span>
