@@ -1,14 +1,15 @@
+import type { Label } from "../../i18n/label.js";
 import type { MetaBoxFieldSpan, NumberMetaBoxField } from "../manifest.js";
 
 export interface NumberFieldOptions {
   readonly key: string;
-  readonly label: string;
-  readonly placeholder?: string;
+  readonly label: Label;
+  readonly placeholder?: Label;
   readonly min?: number;
   readonly max?: number;
   readonly step?: number;
   readonly required?: boolean;
-  readonly description?: string;
+  readonly description?: Label;
   readonly default?: number;
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;

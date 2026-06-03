@@ -193,7 +193,9 @@ export function PlainFormLayout({
                   {renderLabel(box.label)}
                 </h2>
                 {box.description ? (
-                  <CardDescription>{box.description}</CardDescription>
+                  <CardDescription>
+                    {renderLabel(box.description)}
+                  </CardDescription>
                 ) : null}
               </CardHeader>
               <CardContent className="flex flex-col gap-4">

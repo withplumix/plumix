@@ -63,7 +63,7 @@ export function MetaBoxCard({
           </h2>
         </CardTitle>
         {box.description ? (
-          <CardDescription>{box.description}</CardDescription>
+          <CardDescription>{renderLabel(box.description)}</CardDescription>
         ) : null}
       </CardHeader>
       <CardContent>
@@ -107,7 +107,7 @@ export function MetaBoxAccordionItem({
       <AccordionContent className="px-4 pb-4">
         {box.description ? (
           <p className="text-muted-foreground mb-3 text-sm">
-            {box.description}
+            {renderLabel(box.description)}
           </p>
         ) : null}
         <div className="flex flex-col gap-4">

@@ -1,3 +1,4 @@
+import type { Label } from "../../i18n/label.js";
 import type {
   MetaBoxField,
   MetaBoxFieldSpan,
@@ -8,9 +9,9 @@ import { walkRepeaterRows } from "./repeater-validate.js";
 
 export interface RepeaterFieldOptions {
   readonly key: string;
-  readonly label: string;
+  readonly label: Label;
   readonly required?: boolean;
-  readonly description?: string;
+  readonly description?: Label;
   readonly default?: unknown;
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;

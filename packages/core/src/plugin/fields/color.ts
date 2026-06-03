@@ -1,10 +1,11 @@
+import type { Label } from "../../i18n/label.js";
 import type { ColorMetaBoxField, MetaBoxFieldSpan } from "../manifest.js";
 
 export interface ColorFieldOptions {
   readonly key: string;
-  readonly label: string;
+  readonly label: Label;
   readonly required?: boolean;
-  readonly description?: string;
+  readonly description?: Label;
   /** Hex string `#xxxxxx` (or `#xxx` shorthand). Must match `HEX_COLOR`. */
   readonly default?: string;
   readonly span?: MetaBoxFieldSpan;

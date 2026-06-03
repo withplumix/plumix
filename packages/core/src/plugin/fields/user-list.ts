@@ -1,12 +1,13 @@
 import type { UserRole } from "../../db/schema/users.js";
+import type { Label } from "../../i18n/label.js";
 import type { MetaBoxFieldSpan, UserListMetaBoxField } from "../manifest.js";
 import type { UserFieldScope } from "./user.js";
 
 export interface UserListFieldOptions {
   readonly key: string;
-  readonly label: string;
+  readonly label: Label;
   readonly required?: boolean;
-  readonly description?: string;
+  readonly description?: Label;
   readonly default?: readonly string[];
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;

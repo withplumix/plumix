@@ -124,6 +124,7 @@ function SettingsPageLoadError(): ReactNode {
 function SettingsPageRoute(): ReactNode {
   const { page } = Route.useRouteContext();
   const groups = groupsForSettingsPage(page);
+  const renderLabel = useLabel();
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
@@ -132,10 +133,12 @@ function SettingsPageRoute(): ReactNode {
           className="text-2xl font-semibold"
           data-testid="settings-page-heading"
         >
-          {page.label}
+          {renderLabel(page.label)}
         </h1>
         {page.description ? (
-          <p className="text-muted-foreground text-sm">{page.description}</p>
+          <p className="text-muted-foreground text-sm">
+            {renderLabel(page.description)}
+          </p>
         ) : null}
       </header>
 
@@ -223,7 +226,9 @@ function SettingsGroupCard({
               </h2>
             </CardTitle>
             {group.description ? (
-              <CardDescription>{group.description}</CardDescription>
+              <CardDescription>
+                {renderLabel(group.description)}
+              </CardDescription>
             ) : null}
           </CardHeader>
           <CardContent className="flex flex-col gap-4">

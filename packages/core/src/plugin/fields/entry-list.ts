@@ -1,11 +1,12 @@
+import type { Label } from "../../i18n/label.js";
 import type { EntryListMetaBoxField, MetaBoxFieldSpan } from "../manifest.js";
 import type { EntryFieldScope } from "./entry.js";
 
 export interface EntryListFieldOptions {
   readonly key: string;
-  readonly label: string;
+  readonly label: Label;
   readonly required?: boolean;
-  readonly description?: string;
+  readonly description?: Label;
   readonly default?: readonly string[];
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;

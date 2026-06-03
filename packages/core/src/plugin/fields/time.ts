@@ -1,14 +1,15 @@
+import type { Label } from "../../i18n/label.js";
 import type { MetaBoxFieldSpan, TimeMetaBoxField } from "../manifest.js";
 
 export interface TimeFieldOptions {
   readonly key: string;
-  readonly label: string;
+  readonly label: Label;
   /** Lower bound `HH:MM` (with optional `:SS`). */
   readonly min?: string;
   /** Upper bound `HH:MM` (with optional `:SS`). */
   readonly max?: string;
   readonly required?: boolean;
-  readonly description?: string;
+  readonly description?: Label;
   readonly default?: string;
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/empty.js";
 import { hasCap } from "@/lib/caps.js";
 import { visibleSettingsPages } from "@/lib/manifest.js";
+import { useLabel } from "@/lib/use-label.js";
 import { Trans } from "@lingui/react";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Settings as SettingsIcon } from "lucide-react";
@@ -36,6 +37,7 @@ export const Route = createFileRoute("/_authenticated/settings/")({
 function SettingsIndexRoute(): ReactNode {
   const { user } = Route.useRouteContext();
   const pages = visibleSettingsPages(user.capabilities);
+  const renderLabel = useLabel();
 
   const heading = (
     <h1 className="text-2xl font-semibold" data-testid="settings-heading">
@@ -91,10 +93,14 @@ function SettingsIndexRoute(): ReactNode {
             <Card className="hover:border-primary transition-colors">
               <CardHeader>
                 <CardTitle>
-                  <h2 className="text-base font-semibold">{page.label}</h2>
+                  <h2 className="text-base font-semibold">
+                    {renderLabel(page.label)}
+                  </h2>
                 </CardTitle>
                 {page.description ? (
-                  <CardDescription>{page.description}</CardDescription>
+                  <CardDescription>
+                    {renderLabel(page.description)}
+                  </CardDescription>
                 ) : null}
               </CardHeader>
               <CardContent>

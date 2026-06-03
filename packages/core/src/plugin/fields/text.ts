@@ -1,3 +1,4 @@
+import type { Label } from "../../i18n/label.js";
 import type { MetaBoxFieldSpan, TextMetaBoxField } from "../manifest.js";
 
 /**
@@ -9,11 +10,11 @@ import type { MetaBoxFieldSpan, TextMetaBoxField } from "../manifest.js";
  */
 export interface TextFieldOptions {
   readonly key: string;
-  readonly label: string;
-  readonly placeholder?: string;
+  readonly label: Label;
+  readonly placeholder?: Label;
   readonly maxLength?: number;
   readonly required?: boolean;
-  readonly description?: string;
+  readonly description?: Label;
   readonly default?: string;
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;

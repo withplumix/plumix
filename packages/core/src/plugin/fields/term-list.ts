@@ -1,11 +1,12 @@
+import type { Label } from "../../i18n/label.js";
 import type { MetaBoxFieldSpan, TermListMetaBoxField } from "../manifest.js";
 import type { TermFieldScope } from "./term.js";
 
 export interface TermListFieldOptions {
   readonly key: string;
-  readonly label: string;
+  readonly label: Label;
   readonly required?: boolean;
-  readonly description?: string;
+  readonly description?: Label;
   readonly default?: readonly string[];
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;

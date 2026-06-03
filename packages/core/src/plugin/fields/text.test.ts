@@ -73,6 +73,32 @@ describe("text() field builder", () => {
     });
   });
 
+  test("accepts MessageDescriptor for label, placeholder, description", () => {
+    const labelDescriptor = { id: "field.title.label", message: "Title" };
+    const placeholderDescriptor = {
+      id: "field.title.placeholder",
+      message: "Enter a title",
+    };
+    const descriptionDescriptor = {
+      id: "field.title.description",
+      message: "Shown at the top of the entry",
+    };
+
+    const field = text({
+      key: "title",
+      label: labelDescriptor,
+      placeholder: placeholderDescriptor,
+      description: descriptionDescriptor,
+    });
+
+    // Descriptors travel through unchanged — the renderer resolves them
+    // at the consume site via useLabel(). Pinning identity here catches
+    // any accidental .toString() / spread that would lose the id.
+    expect(field.label).toBe(labelDescriptor);
+    expect(field.placeholder).toBe(placeholderDescriptor);
+    expect(field.description).toBe(descriptionDescriptor);
+  });
+
   test("survives manifest serialization with the right wire shape", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("test", (ctx) => {

@@ -1,3 +1,4 @@
+import type { Label } from "../../i18n/label.js";
 import type {
   MetaBoxFieldSpan,
   TermReferenceMetaBoxField,
@@ -20,9 +21,9 @@ export interface TermFieldScope {
 
 export interface TermFieldOptions {
   readonly key: string;
-  readonly label: string;
+  readonly label: Label;
   readonly required?: boolean;
-  readonly description?: string;
+  readonly description?: Label;
   readonly default?: string;
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;

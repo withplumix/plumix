@@ -1,3 +1,4 @@
+import type { Label } from "../../i18n/label.js";
 import type {
   MetaBoxFieldOption,
   MetaBoxFieldSpan,
@@ -6,10 +7,10 @@ import type {
 
 export interface RadioFieldOptions {
   readonly key: string;
-  readonly label: string;
+  readonly label: Label;
   readonly options: readonly MetaBoxFieldOption[];
   readonly required?: boolean;
-  readonly description?: string;
+  readonly description?: Label;
   readonly default?: string;
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;
