@@ -231,6 +231,12 @@ msgid "profile.sessions.revoke.description"
 msgstr "{device} signed in {when}. The device will need to sign in again next "
 "time."
 
+#. display: user's name or email; lastSeen: pre-formatted relative-time string like '2 minutes ago'
+#. js-lingui-explicit-id
+#: src/editor/CoAuthorIndicator.tsx
+msgid "editor.coAuthorIndicator.presenceAriaLabel"
+msgstr "{display} · last seen {lastSeen}"
+
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
 msgid "plugin.errorBoundary.inlineStub"
@@ -326,6 +332,11 @@ msgstr "Actions"
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.active"
 msgstr "Active"
+
+#. js-lingui-explicit-id
+#: src/editor/CoAuthorIndicator.tsx
+msgid "editor.coAuthorIndicator.activeAriaLabel"
+msgstr "Active co-authors"
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
@@ -1438,6 +1449,16 @@ msgstr "Entries"
 msgid "terms.edit.delete.dialogDescription"
 msgstr "Entry assignments to this term are removed. If the term has children, "
 "they become root-level automatically."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.titleAriaLabel"
+msgstr "Entry title"
+
+#. js-lingui-explicit-id
+#: src/components/editor/plain-form-layout.tsx
+msgid "editor.plainForm.titleAriaLabel"
+msgstr "Entry title"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
@@ -3260,6 +3281,11 @@ msgstr "Users"
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.item.users"
 msgstr "Users"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.diffAriaLabel"
+msgstr "View JSON diff"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffPanel.tsx

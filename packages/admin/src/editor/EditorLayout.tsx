@@ -248,6 +248,10 @@ const M = {
     message:
       "Block actions, fields, and style controls for the selected block.",
   }),
+  titleAriaLabel: defineMessage({
+    id: "editor.layout.titleAriaLabel",
+    message: "Entry title",
+  }),
 } satisfies Record<string, MessageDescriptor>;
 
 // Puck hardcodes initial `viewports.current` to its bundled Smartphone
@@ -580,7 +584,7 @@ export function PlumixEditorLayout({
           <input
             type="text"
             placeholder={renderLabel(M.titlePlaceholder)}
-            aria-label="Entry title"
+            aria-label={renderLabel(M.titleAriaLabel)}
             className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent px-2 text-base font-medium outline-none disabled:cursor-not-allowed disabled:opacity-60"
             data-testid="plumix-editor-title-input"
             value={title}

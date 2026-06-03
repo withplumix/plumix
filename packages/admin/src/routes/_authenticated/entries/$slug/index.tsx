@@ -40,6 +40,7 @@ import { findEntryTypeBySlug, findTermTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { buildFilterTermOptions } from "@/lib/terms.js";
 import { entryTypeLabel, termTaxonomyLabelOr } from "@/lib/type-labels.js";
+import { useFormatters } from "@/lib/use-formatters.js";
 import { useLabel } from "@/lib/use-label.js";
 import { cn } from "@/lib/utils.js";
 import { defineMessage } from "@lingui/core/macro";
@@ -229,11 +230,6 @@ const STATUS_FILTER_OPTIONS: {
   { value: "trash", label: M.statusTrash },
 ];
 
-const dateFormatter = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
-
 function buildColumns({
   activeOrderBy,
   activeOrder,
@@ -244,6 +240,7 @@ function buildColumns({
   trashingId,
   renderLabel,
   editLabel,
+  formatDate,
 }: {
   activeOrderBy: OrderBy;
   activeOrder: Order;
@@ -254,6 +251,7 @@ function buildColumns({
   trashingId: number | null;
   renderLabel: (label: MessageDescriptor) => string;
   editLabel: string;
+  formatDate: (value: Date, options?: Intl.DateTimeFormatOptions) => string;
 }): ColumnDef<Entry>[] {
   return [
     {
@@ -307,7 +305,10 @@ function buildColumns({
       ),
       cell: ({ row }) => (
         <span className="text-muted-foreground text-sm">
-          {dateFormatter.format(toDate(row.original.updatedAt))}
+          {formatDate(toDate(row.original.updatedAt), {
+            dateStyle: "medium",
+            timeStyle: "short",
+          })}
         </span>
       ),
     },
@@ -507,6 +508,7 @@ function ContentListRoute(): ReactNode {
       : null;
 
   const editLabel = renderLabel(entryTypeLabel(entryType, "editItem"));
+  const { formatDate } = useFormatters();
   const columns = useMemo(
     () =>
       buildColumns({
@@ -519,6 +521,7 @@ function ContentListRoute(): ReactNode {
         trashingId,
         renderLabel,
         editLabel,
+        formatDate,
       }),
     [
       search.orderBy,
@@ -530,6 +533,7 @@ function ContentListRoute(): ReactNode {
       trashingId,
       renderLabel,
       editLabel,
+      formatDate,
     ],
   );
 

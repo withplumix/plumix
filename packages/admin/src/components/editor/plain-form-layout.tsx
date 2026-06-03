@@ -46,6 +46,10 @@ const M = {
     id: "editor.plainForm.titlePlaceholder",
     message: "Untitled",
   }),
+  titleAriaLabel: defineMessage({
+    id: "editor.plainForm.titleAriaLabel",
+    message: "Entry title",
+  }),
 } satisfies Record<string, MessageDescriptor>;
 
 interface PlainFormLayoutProps {
@@ -142,7 +146,7 @@ export function PlainFormLayout({
                     {...field}
                     type="text"
                     placeholder={renderLabel(M.titlePlaceholder)}
-                    aria-label="Entry title"
+                    aria-label={renderLabel(M.titleAriaLabel)}
                     data-testid="plain-form-title-input"
                   />
                 </FormControl>
