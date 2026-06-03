@@ -11,7 +11,7 @@ packages:
   - "tooling/*"
 
 catalog:
-  "@arethetypeswrong/cli": ^0.18.2
+  "@arethetypeswrong/cli": ^0.18.3
   "@cloudflare/workers-types": ^4.20260526.1
   "@dnd-kit/core": ^6.3.1
   "@dnd-kit/sortable": ^10.0.0
@@ -19,35 +19,35 @@ catalog:
   "@libsql/client": ^0.17.3
   "@lingui/core": ^6.2.0
   "@lingui/react": ^6.2.0
-  "@orpc/client": ^1.14.3
-  "@orpc/server": ^1.14.3
-  "@orpc/tanstack-query": ^1.14.3
+  "@orpc/client": ^1.14.4
+  "@orpc/server": ^1.14.4
+  "@orpc/tanstack-query": ^1.14.4
   "@playwright/test": ^1.59.1
   "@tanstack/react-query": ^5.100.14
   "@tanstack/react-router": ^1.169.1
   "@testing-library/jest-dom": ^6.9.1
   "@testing-library/react": ^16.3.2
   "@testing-library/user-event": ^14.6.1
-  "@tiptap/core": ^3.23.6
+  "@tiptap/core": ^3.25.0
   "@types/node": ^24.12.2
-  "@types/react": ^19.2.14
+  "@types/react": ^19.2.16
   "@types/react-dom": ^19.2.3
   "@vitejs/plugin-react": ^6.0.1
-  "@vitest/coverage-v8": ^4.1.7
+  "@vitest/coverage-v8": ^4.1.8
   drizzle-kit: ^0.31.10
   drizzle-orm: ^0.45.2
   drizzle-valibot: ^0.4.2
   esbuild: ^0.27.7
-  eslint: ^10.4.0
+  eslint: ^10.4.1
   jsdom: ^29.1.1
   prettier: ^3.8.3
   publint: ^0.3.21
-  react: ^19.2.6
-  react-dom: ^19.2.6
+  react: ^19.2.7
+  react-dom: ^19.2.7
   typescript: ^6.0.3
   valibot: ^1.4.1
   vite: ^8.0.9
-  vitest: ^4.1.7
+  vitest: ^4.1.8
   wrangler: ^4.94.0
 
 catalogs:
