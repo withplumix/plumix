@@ -167,14 +167,13 @@ function MenuSettingsPanel({
   const save = useSaveMenu();
   const queryClient = useQueryClient();
   // The conflict banner persists past the mutation's transient error
-  // state (mutation goes idle on dismiss/refetch). A separate flag lets
-  // the user explicitly dismiss via the reload action.
-  const [conflict, setConflict] = useState(false);
+  // state (mutation goes idle on dismiss/refetch). `dismissed` lets the
+  // user explicitly close via the reload action; the banner shows while
+  // a mismatch is observed AND the user hasn't dismissed it.
+  const [dismissed, setDismissed] = useState(false);
   const isVersionMismatch =
     save.error instanceof Error && save.error.message === "version_mismatch";
-  useEffect(() => {
-    if (isVersionMismatch) setConflict(true);
-  }, [isVersionMismatch]);
+  const conflict = isVersionMismatch && !dismissed;
   return (
     <div data-testid="menu-settings-panel">
       <LocationsBindings termId={state.termId} slug={state.slug} />
@@ -189,7 +188,7 @@ function MenuSettingsPanel({
             type="button"
             data-testid="menu-conflict-reload"
             onClick={() => {
-              setConflict(false);
+              setDismissed(true);
               save.reset();
               void queryClient.invalidateQueries({
                 queryKey: ["menu", "get", state.termId] as const,
@@ -251,11 +250,15 @@ function MaxDepthField({
   // A local draft buys the user a transient empty string while editing —
   // without it, controlled-input + reject-on-NaN traps the field on the
   // last valid value. The reducer is still the source of truth: when
-  // state.maxDepth changes (load, undo, etc.) the draft snaps back.
+  // state.maxDepth changes (load, undo, etc.) the draft snaps back via
+  // an adjusting-state-during-render compare (React 19 idiomatic — no
+  // setState-in-effect).
   const [draft, setDraft] = useState(String(state.maxDepth));
-  useEffect(() => {
+  const [lastSeen, setLastSeen] = useState(state.maxDepth);
+  if (state.maxDepth !== lastSeen) {
+    setLastSeen(state.maxDepth);
     setDraft(String(state.maxDepth));
-  }, [state.maxDepth]);
+  }
   // The reducer no-ops `updateMaxDepth` below the deepest-existing
   // depth. Surface that explicitly so the user can tell their value
   // didn't take — without this the input keeps showing a number that

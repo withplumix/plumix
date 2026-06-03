@@ -95,19 +95,14 @@ export function MediaListPickerField({
   const max = readMax(field);
   const atMax = max !== undefined && value.length >= max;
 
-  // Auto-close when the array hits `max` — picker shouldn't stay
-  // open if there's nowhere to put the next pick. `handlePick` is
-  // sync today; if it ever becomes async (e.g. server-side accept
-  // re-validation before commit), this effect will close the modal
-  // before the pick lands. Defer that fix until the async path
-  // actually exists.
-  useEffect(() => {
-    if (open && atMax) setOpen(false);
-  }, [open, atMax]);
-
   const updateAt = (next: readonly MediaValue[]): void => {
     rhf.onChange(next);
     rhf.onBlur();
+    // Auto-close when the array hits `max` — picker shouldn't stay
+    // open if there's nowhere to put the next pick. Driven from the
+    // commit path so async server-side accept-revalidation (if ever
+    // added) closes the modal AFTER the pick lands, not before.
+    if (max !== undefined && next.length >= max) setOpen(false);
   };
 
   const handlePick = (id: string): void => {

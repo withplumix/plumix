@@ -423,10 +423,15 @@ export function MediaLibrary({
   // disappear silently when the row briefly drops out of the page
   // window or while a refetch is in flight. We refresh from the list
   // by id when a fresh copy is available, never null it from absence.
+  //
+  // setState-in-effect is the intentional pattern here: we DO want the
+  // mirrored copy so the drawer survives a refetch window. The settled-
+  // and-gone branch is the only path that nulls.
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
   useEffect(() => {
     if (selectedItem === null) return;
     const fresh = items.find((it) => it.id === selectedItem.id);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mirroring is intentional; see block comment above.
     if (fresh && fresh !== selectedItem) setSelectedItem(fresh);
     // If the row was deleted (not in items AND list is settled), close.
     if (!fresh && list.status === "success" && !list.isFetching) {
