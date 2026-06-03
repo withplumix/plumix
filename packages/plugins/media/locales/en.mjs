@@ -1,3 +1,3 @@
 /*eslint-disable*/ export const messages = JSON.parse(
-  '{"plugin.media.media.plural":["Media"],"plugin.media.media.singular":["Asset"],"plugin.media.adminPage.title":["Media Library"],"core.adminNav.library":["Library"]}',
+  '{"plugin.media.media.singular":["Asset"],"plugin.media.media.plural":["Media"],"plugin.media.media.addNew":["Add New"],"plugin.media.media.addNewItem":["Upload Media"],"plugin.media.media.editItem":["Edit Media"],"plugin.media.media.newItem":["New Media"],"plugin.media.media.viewItem":["View Media"],"plugin.media.media.searchItems":["Search media\\u2026"],"plugin.media.media.notFound":["No media yet"],"plugin.media.media.notFoundInTrash":["Trash is empty"],"plugin.media.media.allItems":["All Media"],"plugin.media.media.untitledItem":["Untitled Media"],"plugin.media.media.moveToTrash":["Move media to trash?"],"plugin.media.adminPage.title":["Media Library"],"core.adminNav.library":["Library"]}',
 );

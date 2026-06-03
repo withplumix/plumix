@@ -1,4 +1,5 @@
 import type { Label } from "plumix/i18n";
+import type { EntryTypeLabels, TermTaxonomyLabels } from "plumix/plugin";
 import { definePlugin } from "plumix/plugin";
 
 import type { ResolvedMenu, ResolvedMenuItem } from "./server/types.js";
@@ -6,16 +7,84 @@ import { createMenuRouter } from "./rpc.js";
 import { getMenuByName } from "./server/getMenuByName.js";
 
 // Plain descriptor literals — plugin source runs server-side without
-// the Babel macro pipeline; admin's chrome uses `defineMessage(...)`.
-// Translation catalogs for built-in plugins land under #697; until
-// then descriptors resolve to source text.
-const LABELS = {
-  menus: { id: "plugin.menu.menu.plural", message: "Menus" },
-  menu: { id: "plugin.menu.menu.singular", message: "Menu" },
-  menuItems: { id: "plugin.menu.menuItem.plural", message: "Menu items" },
-  menuItem: { id: "plugin.menu.menuItem.singular", message: "Menu item" },
-  appearance: { id: "core.adminNav.appearance", message: "Appearance" },
-} satisfies Record<string, Label>;
+// the Babel macro pipeline. Per-entity tables (`MENU_ITEM_LABELS` /
+// `MENU_LABELS`) `satisfies` the matching schema so typo-renames in
+// label keys fail compile rather than silently cascade to generic.
+
+const MENU_ITEM_LABELS = {
+  singular: {
+    id: "plugin.menu.menuItem.singular",
+    message: "Menu item",
+  },
+  plural: { id: "plugin.menu.menuItem.plural", message: "Menu items" },
+  addNew: { id: "plugin.menu.menuItem.addNew", message: "Add New" },
+  addNewItem: {
+    id: "plugin.menu.menuItem.addNewItem",
+    message: "Add Menu Item",
+  },
+  editItem: {
+    id: "plugin.menu.menuItem.editItem",
+    message: "Edit Menu Item",
+  },
+  newItem: {
+    id: "plugin.menu.menuItem.newItem",
+    message: "New Menu Item",
+  },
+  searchItems: {
+    id: "plugin.menu.menuItem.searchItems",
+    message: "Search menu items…",
+  },
+  notFound: {
+    id: "plugin.menu.menuItem.notFound",
+    message: "No menu items yet",
+  },
+  parentItem: {
+    id: "plugin.menu.menuItem.parentItem",
+    message: "Parent Item",
+  },
+} satisfies EntryTypeLabels;
+
+const MENU_LABELS = {
+  singular: { id: "plugin.menu.menu.singular", message: "Menu" },
+  plural: { id: "plugin.menu.menu.plural", message: "Menus" },
+  addNew: { id: "plugin.menu.menu.addNew", message: "Add New" },
+  addNewItem: {
+    id: "plugin.menu.menu.addNewItem",
+    message: "Add Menu",
+  },
+  editItem: {
+    id: "plugin.menu.menu.editItem",
+    message: "Edit Menu",
+  },
+  viewItem: {
+    id: "plugin.menu.menu.viewItem",
+    message: "View Menu",
+  },
+  updateItem: {
+    id: "plugin.menu.menu.updateItem",
+    message: "Update Menu",
+  },
+  newItemName: {
+    id: "plugin.menu.menu.newItemName",
+    message: "New Menu Name",
+  },
+  searchItems: {
+    id: "plugin.menu.menu.searchItems",
+    message: "Search menus…",
+  },
+  notFound: { id: "plugin.menu.menu.notFound", message: "No menus yet" },
+  allItems: { id: "plugin.menu.menu.allItems", message: "All Menus" },
+  backToItems: {
+    id: "plugin.menu.menu.backToItems",
+    message: "← Back to Menus",
+  },
+} satisfies TermTaxonomyLabels;
+
+// Shared admin-nav group label (cross-plugin convention).
+const APPEARANCE_LABEL: Label = {
+  id: "core.adminNav.appearance",
+  message: "Appearance",
+};
 
 // `@plumix/plugin-menu` augments the core option shapes with
 // menu-eligibility flags and the hook registries with three menu
@@ -100,8 +169,8 @@ export const menu = definePlugin("menu", {
   },
   setup: (ctx) => {
     ctx.registerEntryType("menu_item", {
-      label: LABELS.menuItems,
-      labels: { singular: LABELS.menuItem, plural: LABELS.menuItems },
+      label: MENU_ITEM_LABELS.plural,
+      labels: MENU_ITEM_LABELS,
       description: "Items belonging to a navigation menu",
       supports: ["title"],
       termTaxonomies: ["menu"],
@@ -111,8 +180,8 @@ export const menu = definePlugin("menu", {
     });
 
     ctx.registerTermTaxonomy("menu", {
-      label: LABELS.menus,
-      labels: { singular: LABELS.menu },
+      label: MENU_LABELS.plural,
+      labels: MENU_LABELS,
       isHierarchical: false,
       entryTypes: ["menu_item"],
       isPublic: false,
@@ -134,11 +203,11 @@ export const menu = definePlugin("menu", {
 
     ctx.registerAdminPage({
       path: "/menus",
-      title: LABELS.menus,
+      title: MENU_LABELS.plural,
       capability: "term:menu:manage",
       nav: {
-        group: { id: "appearance", label: LABELS.appearance, priority: 175 },
-        label: LABELS.menus,
+        group: { id: "appearance", label: APPEARANCE_LABEL, priority: 175 },
+        label: MENU_LABELS.plural,
         order: 10,
       },
       component: "MenusShell",

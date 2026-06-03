@@ -48,6 +48,8 @@ export interface EntryTypeLabels {
   readonly singular?: Label;
   readonly plural?: Label;
   // Create / read / update / delete actions
+  /** "Add New" — short-form CTA for the admin bar quick-create overflow. */
+  readonly addNew?: Label;
   /** "Add Post" — primary create CTA on list pages and slash menu. */
   readonly addNewItem?: Label;
   /** "Edit Post" — list-table row action and editor heading. */
@@ -56,6 +58,8 @@ export interface EntryTypeLabels {
   readonly newItem?: Label;
   /** "View Post" — list-table row action and post-save toast link. */
   readonly viewItem?: Label;
+  /** "View Posts" — plural archive-link variant of `viewItem`. */
+  readonly viewItems?: Label;
   // List page chrome
   /** "Search Posts…" — list-page search input placeholder. */
   readonly searchItems?: Label;
@@ -73,6 +77,8 @@ export interface EntryTypeLabels {
   readonly noMatch?: Label;
   /** "Parent Post" — hierarchical parent picker option label. */
   readonly parentItem?: Label;
+  /** "Parent Post:" — colon-suffixed variant for form labels. */
+  readonly parentItemColon?: Label;
   // Reference picker / lookup
   /** "Untitled Post" — reference-picker label when an entry has no title. */
   readonly untitledItem?: Label;
@@ -160,10 +166,18 @@ export interface EntryTypeOptions {
  */
 export interface TermTaxonomyLabels {
   readonly singular?: Label;
+  /** "Categories" — plural form (symmetric with `EntryTypeLabels.plural`). */
+  readonly plural?: Label;
+  /** "Add New" — short-form CTA paired with `addNewItem`. */
+  readonly addNew?: Label;
   /** "Add Category" — primary create CTA. */
   readonly addNewItem?: Label;
   /** "Edit Category" — term-edit form heading. */
   readonly editItem?: Label;
+  /** "View Category" — list-table row action linking to the public archive. */
+  readonly viewItem?: Label;
+  /** "Update Category" — save-button text on the term edit form. */
+  readonly updateItem?: Label;
   /** "New Category Name" — placeholder for the create-form name input. */
   readonly newItemName?: Label;
   /** "Search categories…" — list-page search input placeholder. */
@@ -188,6 +202,15 @@ export interface TermTaxonomyLabels {
   readonly filterByItem?: Label;
   /** "← Go to Categories" — back-link from term edit to list. */
   readonly backToItems?: Label;
+  /** "Categories list" — SR-only region label for the data table. */
+  readonly itemsList?: Label;
+  /** "Categories list navigation" — SR-only region label for pagination. */
+  readonly itemsListNavigation?: Label;
+  /** "Separate tags with commas" — help text for chip-style multi-input
+   *  pickers (non-hierarchical only; categories don't use it). */
+  readonly separateItemsWithCommas?: Label;
+  /** "Add or remove tags" — help text for chip-style picker controls. */
+  readonly addOrRemoveItems?: Label;
 }
 
 export interface TermTaxonomyOptions {

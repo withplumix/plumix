@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"POT-Creation-Date: 2026-06-01\n"
+"POT-Creation-Date: 2026-06-03\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -10,5 +10,85 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/index.ts
-msgid "plugin.pages.label"
+msgid "plugin.pages.page.singular"
+msgstr "Page"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.plural"
 msgstr "Pages"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.addNew"
+msgstr "Add New"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.addNewItem"
+msgstr "Add Page"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.editItem"
+msgstr "Edit Page"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.newItem"
+msgstr "New Page"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.viewItem"
+msgstr "View Page"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.viewItems"
+msgstr "View Pages"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.searchItems"
+msgstr "Search Pages…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.notFound"
+msgstr "No pages yet"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.notFoundInTrash"
+msgstr "Trash is empty"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.allItems"
+msgstr "All Pages"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.noMatch"
+msgstr "No pages match"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.parentItem"
+msgstr "Parent Page"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.parentItemColon"
+msgstr "Parent Page:"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.untitledItem"
+msgstr "Untitled Page"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.moveToTrash"
+msgstr "Move page to trash?"

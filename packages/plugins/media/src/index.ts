@@ -1,5 +1,5 @@
 import type { Label } from "plumix/i18n";
-import type { PluginDescriptor } from "plumix/plugin";
+import type { EntryTypeLabels, PluginDescriptor } from "plumix/plugin";
 import { definePlugin } from "plumix/plugin";
 
 import { audioBlock } from "./blocks/audio/index.js";
@@ -20,17 +20,66 @@ export { DEFAULT_ACCEPTED_TYPES };
 /** Default max upload size — 25 MiB. */
 export const DEFAULT_MAX_UPLOAD_SIZE = 25 * 1024 * 1024;
 
-// Plain descriptor literals — see `plugin-pages/src/index.ts` for the
-// "no Babel macro server-side" rationale.
+// Per-entity label table; `satisfies EntryTypeLabels` catches typo-
+// renames at compile time. See `plugin-pages/src/index.ts` for the
+// "no Babel macro server-side" rationale on the literal `{id,message}`
+// shape.
 const MEDIA_LABELS = {
-  media: { id: "plugin.media.media.plural", message: "Media" },
-  asset: { id: "plugin.media.media.singular", message: "Asset" },
-  mediaLibrary: {
-    id: "plugin.media.adminPage.title",
-    message: "Media Library",
+  singular: { id: "plugin.media.media.singular", message: "Asset" },
+  plural: { id: "plugin.media.media.plural", message: "Media" },
+  addNew: { id: "plugin.media.media.addNew", message: "Add New" },
+  addNewItem: {
+    id: "plugin.media.media.addNewItem",
+    message: "Upload Media",
   },
-  libraryGroup: { id: "core.adminNav.library", message: "Library" },
-} satisfies Record<string, Label>;
+  editItem: {
+    id: "plugin.media.media.editItem",
+    message: "Edit Media",
+  },
+  newItem: {
+    id: "plugin.media.media.newItem",
+    message: "New Media",
+  },
+  viewItem: {
+    id: "plugin.media.media.viewItem",
+    message: "View Media",
+  },
+  searchItems: {
+    id: "plugin.media.media.searchItems",
+    message: "Search media…",
+  },
+  notFound: {
+    id: "plugin.media.media.notFound",
+    message: "No media yet",
+  },
+  notFoundInTrash: {
+    id: "plugin.media.media.notFoundInTrash",
+    message: "Trash is empty",
+  },
+  allItems: {
+    id: "plugin.media.media.allItems",
+    message: "All Media",
+  },
+  untitledItem: {
+    id: "plugin.media.media.untitledItem",
+    message: "Untitled Media",
+  },
+  moveToTrash: {
+    id: "plugin.media.media.moveToTrash",
+    message: "Move media to trash?",
+  },
+} satisfies EntryTypeLabels;
+
+// Admin-page chrome (separate from per-type labels because the
+// "Media Library" page heading isn't an entry-type label).
+const MEDIA_LIBRARY_LABEL: Label = {
+  id: "plugin.media.adminPage.title",
+  message: "Media Library",
+};
+const LIBRARY_GROUP_LABEL: Label = {
+  id: "core.adminNav.library",
+  message: "Library",
+};
 
 // Re-export the canonical list from `media-blocks.ts` (server-clean).
 export { mediaBlocks } from "./media-blocks.js";
@@ -117,8 +166,8 @@ export function media(
       ctx.registerBlock(fileBlock);
 
       ctx.registerEntryType("media", {
-        label: MEDIA_LABELS.media,
-        labels: { singular: MEDIA_LABELS.asset, plural: MEDIA_LABELS.media },
+        label: MEDIA_LABELS.plural,
+        labels: MEDIA_LABELS,
         description: "Uploaded files — images, video, documents",
         supports: ["title", "excerpt"],
         // `isPublic: false` cascades to `showUI: false` and
@@ -172,7 +221,7 @@ export function media(
 
       ctx.registerAdminPage({
         path: "/media",
-        title: MEDIA_LABELS.mediaLibrary,
+        title: MEDIA_LIBRARY_LABEL,
         capability: "entry:media:read",
         nav: {
           // Own group between Entries (priority 100) and Taxonomies
@@ -181,10 +230,10 @@ export function media(
           // doesn't match the WordPress mental model.
           group: {
             id: "library",
-            label: MEDIA_LABELS.libraryGroup,
+            label: LIBRARY_GROUP_LABEL,
             priority: 150,
           },
-          label: MEDIA_LABELS.mediaLibrary,
+          label: MEDIA_LIBRARY_LABEL,
           order: 50,
         },
         component: "MediaLibrary",

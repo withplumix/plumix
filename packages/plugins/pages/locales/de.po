@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"POT-Creation-Date: 2026-06-01\n"
+"POT-Creation-Date: 2026-06-03\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -10,5 +10,85 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/index.ts
-msgid "plugin.pages.label"
+msgid "plugin.pages.page.singular"
+msgstr "Seite"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.plural"
 msgstr "Seiten"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.addNew"
+msgstr "Neu hinzufügen"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.addNewItem"
+msgstr "Neue Seite"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.editItem"
+msgstr "Seite bearbeiten"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.newItem"
+msgstr "Neue Seite"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.viewItem"
+msgstr "Seite ansehen"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.viewItems"
+msgstr "Seiten ansehen"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.searchItems"
+msgstr "Seiten suchen…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.notFound"
+msgstr "Noch keine Seiten"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.notFoundInTrash"
+msgstr "Papierkorb ist leer"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.allItems"
+msgstr "Alle Seiten"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.noMatch"
+msgstr "Keine passenden Seiten"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.parentItem"
+msgstr "Übergeordnete Seite"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.parentItemColon"
+msgstr "Übergeordnete Seite:"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.untitledItem"
+msgstr "Unbenannte Seite"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.moveToTrash"
+msgstr "Seite in den Papierkorb verschieben?"

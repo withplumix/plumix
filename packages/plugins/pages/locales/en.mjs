@@ -1,3 +1,3 @@
 /*eslint-disable*/ export const messages = JSON.parse(
-  '{"plugin.pages.label":["Pages"]}',
+  '{"plugin.pages.page.singular":["Page"],"plugin.pages.page.plural":["Pages"],"plugin.pages.page.addNew":["Add New"],"plugin.pages.page.addNewItem":["Add Page"],"plugin.pages.page.editItem":["Edit Page"],"plugin.pages.page.newItem":["New Page"],"plugin.pages.page.viewItem":["View Page"],"plugin.pages.page.viewItems":["View Pages"],"plugin.pages.page.searchItems":["Search Pages\\u2026"],"plugin.pages.page.notFound":["No pages yet"],"plugin.pages.page.notFoundInTrash":["Trash is empty"],"plugin.pages.page.allItems":["All Pages"],"plugin.pages.page.noMatch":["No pages match"],"plugin.pages.page.parentItem":["Parent Page"],"plugin.pages.page.parentItemColon":["Parent Page:"],"plugin.pages.page.untitledItem":["Untitled Page"],"plugin.pages.page.moveToTrash":["Move page to trash?"]}',
 );
