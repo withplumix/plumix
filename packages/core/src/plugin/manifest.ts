@@ -336,7 +336,7 @@ export interface MetaBoxFieldBase {
   /** Default surfaced in the admin form when the key has no saved value. */
   readonly default?: unknown;
   /** Optional help text rendered under the label on every input type. */
-  readonly description?: string;
+  readonly description?: Label;
   /** Renders `required` on the native input; server validation is separate. */
   readonly required?: boolean;
   /**
@@ -366,7 +366,7 @@ export interface MetaBoxFieldBase {
 export interface TextMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "text";
   readonly type: "string";
-  readonly placeholder?: string;
+  readonly placeholder?: Label;
   readonly maxLength?: number;
 }
 
@@ -374,7 +374,7 @@ export interface TextMetaBoxField extends MetaBoxFieldBase {
 export interface TextareaMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "textarea";
   readonly type: "string";
-  readonly placeholder?: string;
+  readonly placeholder?: Label;
   readonly maxLength?: number;
 }
 
@@ -382,7 +382,7 @@ export interface TextareaMetaBoxField extends MetaBoxFieldBase {
 export interface NumberMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "number";
   readonly type: "number";
-  readonly placeholder?: string;
+  readonly placeholder?: Label;
   readonly min?: number;
   readonly max?: number;
   readonly step?: number;
@@ -392,7 +392,7 @@ export interface NumberMetaBoxField extends MetaBoxFieldBase {
 export interface EmailMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "email";
   readonly type: "string";
-  readonly placeholder?: string;
+  readonly placeholder?: Label;
   readonly maxLength?: number;
 }
 
@@ -400,7 +400,7 @@ export interface EmailMetaBoxField extends MetaBoxFieldBase {
 export interface UrlMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "url";
   readonly type: "string";
-  readonly placeholder?: string;
+  readonly placeholder?: Label;
   readonly maxLength?: number;
 }
 
@@ -412,7 +412,7 @@ export interface UrlMetaBoxField extends MetaBoxFieldBase {
 export interface PasswordMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "password";
   readonly type: "string";
-  readonly placeholder?: string;
+  readonly placeholder?: Label;
   readonly maxLength?: number;
 }
 
@@ -748,7 +748,7 @@ export interface CheckboxMetaBoxField extends MetaBoxFieldBase {
  */
 export interface LegacyMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: string;
-  readonly placeholder?: string;
+  readonly placeholder?: Label;
   readonly maxLength?: number;
   readonly min?: number;
   readonly max?: number;
@@ -817,7 +817,7 @@ export type MetaBoxField =
  */
 export interface MetaBoxBaseOptions {
   readonly label: Label;
-  readonly description?: string;
+  readonly description?: Label;
   readonly priority?: number;
   readonly capability?: string;
   readonly fields: readonly MetaBoxField[];
@@ -913,8 +913,8 @@ export type SettingsGroupOptions = MetaBoxBaseOptions;
  * referenced from multiple pages if useful).
  */
 export interface SettingsPageOptions {
-  readonly label: string;
-  readonly description?: string;
+  readonly label: Label;
+  readonly description?: Label;
   readonly groups: readonly string[];
   /**
    * Admin menu ordering. Unspecified positions sort last (in
@@ -1425,9 +1425,9 @@ export interface MetaBoxFieldManifestEntry {
   readonly label: Label;
   readonly type: MetaScalarType;
   readonly inputType: string;
-  readonly description?: string;
+  readonly description?: Label;
   readonly required?: boolean;
-  readonly placeholder?: string;
+  readonly placeholder?: Label;
   readonly maxLength?: number;
   /**
    * Lower bound. `number` carries it as a number; `date` / `datetime`
@@ -1476,7 +1476,7 @@ export interface MetaBoxFieldManifestEntry {
  */
 export interface MetaBoxBaseManifestEntry {
   readonly label: Label;
-  readonly description?: string;
+  readonly description?: Label;
   readonly priority?: number;
   readonly capability?: string;
   readonly fields: readonly MetaBoxFieldManifestEntry[];
@@ -1556,8 +1556,8 @@ export interface SettingsGroupManifestEntry extends MetaBoxBaseManifestEntry {
  */
 export interface SettingsPageManifestEntry {
   readonly name: string;
-  readonly label: string;
-  readonly description?: string;
+  readonly label: Label;
+  readonly description?: Label;
   readonly groups: readonly string[];
   readonly priority?: number;
 }
@@ -2614,7 +2614,7 @@ function toMarkEntry(mark: RegisteredMark): MarkManifestEntry {
 // ISO-string bounds while `number` stores numeric bounds; the wire
 // shape mirrors that union and renderers branch on `inputType`.
 interface MetaBoxFieldOptionView {
-  readonly placeholder?: string;
+  readonly placeholder?: Label;
   readonly maxLength?: number;
   readonly min?: number | string;
   readonly max?: number | string;

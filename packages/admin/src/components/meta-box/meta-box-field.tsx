@@ -92,7 +92,7 @@ export function MetaBoxField({
               </div>
               {field.description ? (
                 <FormDescription data-testid={`${testIdPrefix}-description`}>
-                  {field.description}
+                  {renderLabel(field.description)}
                 </FormDescription>
               ) : null}
               <FormMessage />
@@ -114,7 +114,7 @@ export function MetaBoxField({
             </FormControl>
             {field.description ? (
               <FormDescription data-testid={`${testIdPrefix}-description`}>
-                {field.description}
+                {renderLabel(field.description)}
               </FormDescription>
             ) : null}
             <FormMessage />
@@ -152,6 +152,9 @@ function renderNativeInput({
   renderLabel: ReturnType<typeof useLabel>;
 }): ReactNode {
   const labelText = renderLabel(field.label);
+  const placeholderText = field.placeholder
+    ? renderLabel(field.placeholder)
+    : undefined;
   // Plugin-supplied field renderers slot in here, BEFORE the built-in
   // switch. A plugin's admin chunk calls `window.plumix.
   // registerPluginFieldType(inputType, Component)` at module load —
@@ -198,7 +201,7 @@ function renderNativeInput({
         {...common}
         value={asString(rhf.value)}
         maxLength={field.maxLength}
-        placeholder={field.placeholder}
+        placeholder={placeholderText}
         rows={3}
         onChange={(e) => {
           rhf.onChange(e.target.value);
@@ -214,7 +217,7 @@ function renderNativeInput({
         {...common}
         type="number"
         value={asNumberInputValue(rhf.value)}
-        placeholder={field.placeholder}
+        placeholder={placeholderText}
         min={field.min}
         max={field.max}
         step={field.step ?? 1}
@@ -523,7 +526,7 @@ function renderNativeInput({
       {...common}
       type={htmlType}
       value={asString(rhf.value)}
-      placeholder={field.placeholder}
+      placeholder={placeholderText}
       maxLength={field.maxLength}
       onChange={(e) => {
         rhf.onChange(e.target.value);

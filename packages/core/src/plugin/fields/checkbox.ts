@@ -1,10 +1,11 @@
+import type { Label } from "../../i18n/label.js";
 import type { CheckboxMetaBoxField, MetaBoxFieldSpan } from "../manifest.js";
 
 export interface CheckboxFieldOptions {
   readonly key: string;
-  readonly label: string;
+  readonly label: Label;
   readonly required?: boolean;
-  readonly description?: string;
+  readonly description?: Label;
   readonly default?: boolean;
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;

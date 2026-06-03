@@ -1,14 +1,15 @@
+import type { Label } from "../../i18n/label.js";
 import type { DateTimeMetaBoxField, MetaBoxFieldSpan } from "../manifest.js";
 
 export interface DateTimeFieldOptions {
   readonly key: string;
-  readonly label: string;
+  readonly label: Label;
   /** ISO 8601 datetime-local string (`YYYY-MM-DDTHH:MM`). */
   readonly min?: string;
   /** ISO 8601 datetime-local string (`YYYY-MM-DDTHH:MM`). */
   readonly max?: string;
   readonly required?: boolean;
-  readonly description?: string;
+  readonly description?: Label;
   readonly default?: string;
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;

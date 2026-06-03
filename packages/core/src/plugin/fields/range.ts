@@ -1,14 +1,15 @@
+import type { Label } from "../../i18n/label.js";
 import type { MetaBoxFieldSpan, RangeMetaBoxField } from "../manifest.js";
 import { FieldConfigError } from "./errors.js";
 
 export interface RangeFieldOptions {
   readonly key: string;
-  readonly label: string;
+  readonly label: Label;
   readonly min: number;
   readonly max: number;
   readonly step?: number;
   readonly required?: boolean;
-  readonly description?: string;
+  readonly description?: Label;
   readonly default?: number;
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;
