@@ -1,3 +1,1 @@
-/*eslint-disable*/ export const messages = JSON.parse(
-  '{"plugin.auditLog.adminPage.title":["Audit log"],"core.adminNav.tools":["Tools"]}',
-);
+/*eslint-disable*/export const messages=JSON.parse("{\"core.adminNav.tools\":[\"Tools\"],\"plugin.auditLog.adminPage.title\":[\"Audit log\"]}");

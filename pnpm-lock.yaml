@@ -621,6 +621,12 @@ importers:
       '@libsql/client':
         specifier: 'catalog:'
         version: 0.17.3
+      '@lingui/cli':
+        specifier: ^6.2.0
+        version: 6.2.0
+      '@lingui/format-po':
+        specifier: ^6.2.0
+        version: 6.2.0
       '@orpc/server':
         specifier: 'catalog:'
         version: 1.14.3(ws@8.20.1)
@@ -727,6 +733,12 @@ importers:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
         version: 0.18.2
+      '@lingui/cli':
+        specifier: ^6.2.0
+        version: 6.2.0
+      '@lingui/format-po':
+        specifier: ^6.2.0
+        version: 6.2.0
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.59.1
@@ -807,6 +819,12 @@ importers:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
         version: 0.18.2
+      '@lingui/cli':
+        specifier: ^6.2.0
+        version: 6.2.0
+      '@lingui/format-po':
+        specifier: ^6.2.0
+        version: 6.2.0
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.59.1
@@ -908,6 +926,12 @@ importers:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
         version: 0.18.2
+      '@lingui/cli':
+        specifier: ^6.2.0
+        version: 6.2.0
+      '@lingui/format-po':
+        specifier: ^6.2.0
+        version: 6.2.0
       '@orpc/server':
         specifier: 'catalog:'
         version: 1.14.3(ws@8.20.1)
@@ -1014,6 +1038,12 @@ importers:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
         version: 0.18.2
+      '@lingui/cli':
+        specifier: ^6.2.0
+        version: 6.2.0
+      '@lingui/format-po':
+        specifier: ^6.2.0
+        version: 6.2.0
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.59.1
