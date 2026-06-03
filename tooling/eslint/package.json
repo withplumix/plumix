@@ -6,6 +6,7 @@
   "exports": {
     "./base": "./base.ts",
     "./i18n": "./i18n.ts",
+    "./plugin": "./plugin.ts",
     "./react": "./react.ts"
   },
   "scripts": {
