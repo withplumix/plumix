@@ -81,6 +81,14 @@
       "types": "./dist/admin/orpc-tanstack-query.d.ts",
       "default": "./dist/admin/orpc-tanstack-query.js"
     },
+    "./admin/lingui-core": {
+      "types": "./dist/admin/lingui-core.d.ts",
+      "default": "./dist/admin/lingui-core.js"
+    },
+    "./admin/lingui-react": {
+      "types": "./dist/admin/lingui-react.d.ts",
+      "default": "./dist/admin/lingui-react.js"
+    },
     "./test/playwright": {
       "types": "./dist/test/playwright.d.ts",
       "default": "./dist/test/playwright.js"

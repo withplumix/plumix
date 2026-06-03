@@ -1,5 +1,7 @@
 import * as ReactNs from "react";
 import * as ReactJsxRuntimeNs from "react/jsx-runtime";
+import * as LinguiCoreNs from "@lingui/core";
+import * as LinguiReactNs from "@lingui/react";
 import * as OrpcClientNs from "@orpc/client";
 import * as OrpcClientFetchNs from "@orpc/client/fetch";
 import * as OrpcTanstackQueryNs from "@orpc/tanstack-query";
@@ -30,6 +32,8 @@ const runtime = {
   orpcClient: OrpcClientNs,
   orpcClientFetch: OrpcClientFetchNs,
   orpcTanstackQuery: OrpcTanstackQueryNs,
+  linguiCore: LinguiCoreNs,
+  linguiReact: LinguiReactNs,
 } as const;
 
 interface PlumixI18nGlobal {

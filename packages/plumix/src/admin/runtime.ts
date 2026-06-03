@@ -3,6 +3,8 @@
 // to `runtime`). This module is just the runtime slice plugin chunks
 // see, plus the throw if it's missing.
 
+import type * as LinguiCoreNs from "@lingui/core";
+import type * as LinguiReactNs from "@lingui/react";
 import type * as OrpcClientNs from "@orpc/client";
 import type * as OrpcClientFetchNs from "@orpc/client/fetch";
 import type * as OrpcTanstackQueryNs from "@orpc/tanstack-query";
@@ -25,6 +27,8 @@ export interface PlumixAdminRuntime {
   readonly orpcClient: typeof OrpcClientNs;
   readonly orpcClientFetch: typeof OrpcClientFetchNs;
   readonly orpcTanstackQuery: typeof OrpcTanstackQueryNs;
+  readonly linguiCore: typeof LinguiCoreNs;
+  readonly linguiReact: typeof LinguiReactNs;
 }
 
 export interface PlumixGlobal {
