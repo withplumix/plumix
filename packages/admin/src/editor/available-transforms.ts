@@ -1,4 +1,5 @@
 import type { BlockRegistry, BlockShortcutMode } from "@plumix/blocks";
+import type { Label } from "@plumix/core/i18n";
 import { resolveBlockTransforms } from "@plumix/blocks";
 
 export interface TransformOption {
@@ -8,7 +9,7 @@ export interface TransformOption {
   // them distinct.
   readonly key: string;
   readonly targetName: string;
-  readonly targetTitle: string;
+  readonly targetTitle: Label;
   readonly mapAttrs?: (
     attrs: Readonly<Record<string, unknown>>,
   ) => Readonly<Record<string, unknown>>;

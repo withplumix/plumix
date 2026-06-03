@@ -744,6 +744,7 @@ function PlumixBlocksTab({
   patterns,
 }: PlumixBlocksTabProps): ReactElement {
   const puck = usePuck();
+  const renderLabel = useLabel();
   const [pendingPick, setPendingPick] = useState<PendingPick | undefined>();
   const entries = useMemo(() => {
     const eligible: BlockSpec[] = [];
@@ -850,7 +851,7 @@ function PlumixBlocksTab({
       />
       {pendingPick ? (
         <BlockScopePicker
-          blockTitle={pendingPick.entry.title}
+          blockTitle={renderLabel(pendingPick.entry.title)}
           parentBlockName={pendingPick.entry.name}
           variations={pendingPick.variations}
           blocks={registry}

@@ -1,17 +1,18 @@
 import type { ReactNode } from "react";
 
+import type { Label } from "./i18n-label.js";
 import type { BlockLoaderRecord } from "./loaders.js";
 import type { BlockNode, BlockNodeComponent } from "./render-block-tree.js";
 
 export interface BlockInputOption {
-  readonly label: string;
+  readonly label: Label;
   readonly value: string | number | boolean;
 }
 
 export interface BlockInput {
   readonly name: string;
   readonly type: string;
-  readonly label?: string;
+  readonly label?: Label;
   readonly options?: readonly BlockInputOption[];
 }
 
@@ -31,10 +32,10 @@ export type BlockVariationIsActive =
 
 export interface BlockVariation {
   readonly slug: string;
-  readonly title: string;
+  readonly title: Label;
   readonly icon?: string;
-  readonly description?: string;
-  readonly keywords?: readonly string[];
+  readonly description?: Label;
+  readonly keywords?: readonly Label[];
   readonly attrs?: Readonly<Record<string, unknown>>;
   // Default body for the parent block's conventional `content` slot.
   // Inserted as a deep-cloned, ID-rewritten tree — source remains
@@ -96,9 +97,9 @@ export interface BlockSpec<
   Loaders extends BlockLoaderRecord = BlockLoaderRecord,
 > {
   readonly name: string;
-  readonly title?: string;
-  readonly description?: string;
-  readonly keywords?: readonly string[];
+  readonly title?: Label;
+  readonly description?: Label;
+  readonly keywords?: readonly Label[];
   readonly icon?: string;
   readonly category?: string;
   readonly inserter?: boolean;

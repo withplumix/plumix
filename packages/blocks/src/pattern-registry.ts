@@ -1,4 +1,5 @@
 import type { BlockRegistry } from "./block-registry.js";
+import type { Label } from "./i18n-label.js";
 import type { BlockNode } from "./render-block-tree.js";
 import type { ResponsiveStyleSlot } from "./styles/style-emitter.js";
 import { commitBlockVariations } from "./commit-block-variations.js";
@@ -51,9 +52,9 @@ export type PatternTarget = "post-content";
 
 export interface BlockPattern {
   readonly name: string;
-  readonly title: string;
+  readonly title: Label;
   readonly category?: keyof PatternCategoryRegistry;
-  readonly keywords?: readonly string[];
+  readonly keywords?: readonly Label[];
   // Defaults to "copy" when unset — the inserter splices a deep-cloned
   // body. "reference" inserts a single `core/pattern-ref` node the
   // walker resolves at render.

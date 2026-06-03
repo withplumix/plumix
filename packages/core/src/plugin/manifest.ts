@@ -1605,11 +1605,11 @@ export interface FieldTypeManifestEntry {
 
 export interface BlockManifestEntry {
   readonly name: string;
-  readonly title: string;
+  readonly title: Label;
   readonly category?: string;
   readonly icon?: string;
-  readonly description?: string;
-  readonly keywords?: readonly string[];
+  readonly description?: Label;
+  readonly keywords?: readonly Label[];
   readonly inserter?: boolean;
   readonly variations?: readonly BlockVariation[];
 }
@@ -1627,9 +1627,9 @@ export interface MarkManifestEntry {
 
 export interface PatternManifestEntry {
   readonly name: string;
-  readonly title: string;
+  readonly title: Label;
   readonly category?: string;
-  readonly keywords?: readonly string[];
+  readonly keywords?: readonly Label[];
   // `buildManifest` always populates this with the spec's value or
   // `"copy"`; consumers that read raw manifest fixtures may still see
   // `undefined`.

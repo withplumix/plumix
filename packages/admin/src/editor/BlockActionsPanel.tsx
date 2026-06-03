@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { useMemo } from "react";
+import { useLabel } from "@/lib/use-label.js";
 import { Trans } from "@lingui/react";
 
 import type { BlockRegistry } from "@plumix/blocks";
@@ -30,6 +31,7 @@ export function BlockActionsPanel({
   onDelete,
   onCopyJson,
 }: BlockActionsPanelProps): ReactElement | null {
+  const renderLabel = useLabel();
   const options = useMemo(
     () => (specName ? availableTransforms(specName, registry) : []),
     [specName, registry],
@@ -65,11 +67,11 @@ export function BlockActionsPanel({
               className="truncate text-sm font-medium"
               data-testid="block-actions-identity-title"
             >
-              {identity.title}
+              {renderLabel(identity.title)}
             </div>
             {identity.description ? (
               <div className="text-muted-foreground truncate text-xs">
-                {identity.description}
+                {renderLabel(identity.description)}
               </div>
             ) : null}
           </div>
@@ -89,7 +91,7 @@ export function BlockActionsPanel({
                   className="rounded border px-2 py-1 text-xs"
                   data-testid={`block-action-transform-${option.key}`}
                 >
-                  {option.targetTitle}
+                  {renderLabel(option.targetTitle)}
                 </button>
               </li>
             ))}
