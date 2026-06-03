@@ -1,4 +1,5 @@
 import type { DragEndEvent, DragMoveEvent } from "@dnd-kit/core";
+import type { MessageDescriptor } from "plumix/i18n";
 import type { CSSProperties, Dispatch, ReactNode } from "react";
 import { useEffect, useReducer, useState } from "react";
 import {
@@ -17,6 +18,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useQueryClient } from "@tanstack/react-query";
+import { Trans, useLingui } from "plumix/i18n";
 
 import type {
   EditorAction,
@@ -42,6 +44,34 @@ import {
 import { dragEndToAction, getProjection } from "./tree-state.js";
 
 const INDENTATION_WIDTH = 24;
+
+// Descriptors that need runtime indirection — used outside JSX (aria
+// strings, window.confirm text) or inside attributes. JSX-text strings
+// stay inline at their <Trans> callsite for extraction discoverability.
+const M = {
+  deleteConfirm: {
+    id: "plugin.menu.itemEditor.deleteConfirm",
+    message: "Delete this menu?",
+  },
+  brokenLinkAria: {
+    id: "plugin.menu.itemEditor.brokenLinkAria",
+    message: "broken link",
+  },
+  reorderItemAria: {
+    id: "plugin.menu.itemEditor.reorderAria",
+    message: "Reorder {title}",
+    comment: "title: the item's display title, or a translated 'item' fallback",
+  },
+  reorderFallbackTitle: {
+    id: "plugin.menu.itemEditor.reorderFallbackTitle",
+    message: "item",
+  },
+  relinkBanner: {
+    id: "plugin.menu.itemEditor.relinkBanner",
+    message: "Pick replacement for {label}",
+    comment: "label: the broken item's resolved-label or original title",
+  },
+} satisfies Record<string, MessageDescriptor>;
 
 export function MenuItemEditor({
   termId,
@@ -75,7 +105,12 @@ export function MenuItemEditor({
         dispatch={dispatch}
       />
       {state.items.length === 0 ? (
-        <div data-testid="menu-item-list-empty">No items yet.</div>
+        <div data-testid="menu-item-list-empty">
+          <Trans
+            id="plugin.menu.itemEditor.emptyState"
+            message="No items yet."
+          />
+        </div>
       ) : (
         <MenuTree state={state} dispatch={dispatch} />
       )}
@@ -146,7 +181,10 @@ function MenuSettingsPanel({
       <MaxDepthField state={state} dispatch={dispatch} />
       {conflict ? (
         <div data-testid="menu-conflict-banner" role="alert">
-          Another editor saved changes since you loaded this menu.
+          <Trans
+            id="plugin.menu.itemEditor.conflictBanner"
+            message="Another editor saved changes since you loaded this menu."
+          />
           <button
             type="button"
             data-testid="menu-conflict-reload"
@@ -158,7 +196,10 @@ function MenuSettingsPanel({
               });
             }}
           >
-            Reload to see latest
+            <Trans
+              id="plugin.menu.itemEditor.conflictReload"
+              message="Reload to see latest"
+            />
           </button>
         </div>
       ) : null}
@@ -193,7 +234,7 @@ function MenuSettingsPanel({
           );
         }}
       >
-        Save menu
+        <Trans id="plugin.menu.itemEditor.saveButton" message="Save menu" />
       </button>
       <DeleteMenuButton termId={state.termId} />
     </div>
@@ -223,7 +264,7 @@ function MaxDepthField({
   const rejected = Number.isFinite(parsed) && parsed !== state.maxDepth;
   return (
     <label data-testid="menu-settings-max-depth-row">
-      Max depth
+      <Trans id="plugin.menu.itemEditor.maxDepthLabel" message="Max depth" />
       <input
         type="number"
         data-testid="menu-settings-max-depth"
@@ -240,7 +281,10 @@ function MaxDepthField({
       />
       {rejected ? (
         <span data-testid="menu-settings-max-depth-error">
-          Cannot set below the current deepest item.
+          <Trans
+            id="plugin.menu.itemEditor.maxDepthRejected"
+            message="Cannot set below the current deepest item."
+          />
         </span>
       ) : null}
     </label>
@@ -248,6 +292,7 @@ function MaxDepthField({
 }
 
 function DeleteMenuButton({ termId }: { readonly termId: number }): ReactNode {
+  const { i18n } = useLingui();
   const remove = useDeleteMenu();
   return (
     <button
@@ -257,14 +302,14 @@ function DeleteMenuButton({ termId }: { readonly termId: number }): ReactNode {
       onClick={() => {
         if (
           typeof window !== "undefined" &&
-          !window.confirm("Delete this menu?")
+          !window.confirm(i18n._(M.deleteConfirm))
         ) {
           return;
         }
         remove.mutate({ termId });
       }}
     >
-      Delete menu
+      <Trans id="plugin.menu.itemEditor.deleteButton" message="Delete menu" />
     </button>
   );
 }
@@ -278,6 +323,7 @@ function ItemsPicker({
   readonly state: EditorState;
   readonly dispatch: Dispatch<EditorAction>;
 }): ReactNode {
+  const { i18n } = useLingui();
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const relinkTarget =
     state.relinkTargetKey === null
@@ -288,7 +334,13 @@ function ItemsPicker({
     <div data-testid="menu-items-picker">
       {relinkTarget !== null ? (
         <div data-testid="menu-picker-relink-banner">
-          <span>Pick replacement for {relinkTarget.resolvedLabel}</span>
+          <span>
+            {i18n._(
+              M.relinkBanner.id,
+              { label: relinkTarget.resolvedLabel },
+              { message: M.relinkBanner.message },
+            )}
+          </span>
           <button
             type="button"
             data-testid="menu-picker-relink-cancel"
@@ -296,7 +348,7 @@ function ItemsPicker({
               dispatch({ type: "cancelRelink" });
             }}
           >
-            Cancel
+            <Trans id="plugin.menu.itemEditor.cancelButton" message="Cancel" />
           </button>
         </div>
       ) : null}
@@ -375,7 +427,17 @@ function CustomUrlPickerPanel({
           setLabel("");
         }}
       >
-        {isRelink ? "Replace link" : "Add to menu"}
+        {isRelink ? (
+          <Trans
+            id="plugin.menu.itemEditor.customReplaceButton"
+            message="Replace link"
+          />
+        ) : (
+          <Trans
+            id="plugin.menu.itemEditor.customAddButton"
+            message="Add to menu"
+          />
+        )}
       </button>
     </div>
   );
@@ -490,6 +552,7 @@ function SortableTreeRow({
   readonly selected: boolean;
   readonly dispatch: Dispatch<EditorAction>;
 }): ReactNode {
+  const { i18n } = useLingui();
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: item.key });
   const id = item.id ?? item.key;
@@ -502,6 +565,7 @@ function SortableTreeRow({
     opacity: isUnauthorized ? 0.5 : undefined,
   };
   const displayLabel = item.title ?? item.resolvedLabel;
+  const reorderTitle = item.title ?? i18n._(M.reorderFallbackTitle);
   return (
     <div
       ref={setNodeRef}
@@ -517,7 +581,11 @@ function SortableTreeRow({
       <button
         type="button"
         data-testid={`menu-item-drag-${String(id)}`}
-        aria-label={`Reorder ${item.title ?? "item"}`}
+        aria-label={i18n._(
+          M.reorderItemAria.id,
+          { title: reorderTitle },
+          { message: M.reorderItemAria.message },
+        )}
         disabled={isUnauthorized}
         // dnd-kit's listeners attach pointerdown handlers; omitting
         // them when unauthorized prevents drag activation on a row
@@ -533,7 +601,7 @@ function SortableTreeRow({
       {isBroken ? (
         <span
           data-testid={`menu-item-warning-${String(id)}`}
-          aria-label="broken link"
+          aria-label={i18n._(M.brokenLinkAria)}
         >
           ⚠
         </span>
@@ -549,7 +617,10 @@ function SortableTreeRow({
               dispatch({ type: "startRelink", key: item.key });
             }}
           >
-            Re-link…
+            <Trans
+              id="plugin.menu.itemEditor.relinkButton"
+              message="Re-link…"
+            />
           </button>
           <button
             type="button"
@@ -559,7 +630,10 @@ function SortableTreeRow({
               dispatch({ type: "convertToCustom", key: item.key });
             }}
           >
-            Convert to Custom URL
+            <Trans
+              id="plugin.menu.itemEditor.convertButton"
+              message="Convert to Custom URL"
+            />
           </button>
         </>
       ) : null}
@@ -572,7 +646,7 @@ function SortableTreeRow({
           dispatch({ type: "removeItem", key: item.key });
         }}
       >
-        Remove
+        <Trans id="plugin.menu.itemEditor.removeButton" message="Remove" />
       </button>
     </div>
   );

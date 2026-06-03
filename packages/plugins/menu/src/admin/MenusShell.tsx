@@ -1,5 +1,7 @@
+import type { MessageDescriptor } from "plumix/i18n";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { Trans, useLingui } from "plumix/i18n";
 
 import type { MenuListItem, MenuLocationRow } from "./rpc.js";
 import type { TabId } from "./url-state.js";
@@ -17,19 +19,45 @@ import {
   setSelectedTab,
 } from "./url-state.js";
 
-const TABS: readonly { readonly id: TabId; readonly label: string }[] = [
-  { id: "edit", label: "Edit Menus" },
-  { id: "locations", label: "Manage Locations" },
+// Plain descriptor literals — the plugin package builds with plain
+// `tsc`, no Lingui macro pass, so we author the `{ id, message }`
+// shape directly. Resolved at the consume site via `useLingui()._()`.
+const M = {
+  tabEdit: {
+    id: "plugin.menu.shell.tab.edit",
+    message: "Edit Menus",
+  },
+  tabLocations: {
+    id: "plugin.menu.shell.tab.locations",
+    message: "Manage Locations",
+  },
+  createPrompt: {
+    id: "plugin.menu.shell.createPrompt",
+    message: "Menu name",
+  },
+  unassigned: {
+    id: "plugin.menu.shell.unassigned",
+    message: "— Unassigned —",
+  },
+} satisfies Record<string, MessageDescriptor>;
+
+const TABS: readonly {
+  readonly id: TabId;
+  readonly label: MessageDescriptor;
+}[] = [
+  { id: "edit", label: M.tabEdit },
+  { id: "locations", label: M.tabLocations },
 ];
 
 export function MenusShell(): ReactNode {
+  const { i18n } = useLingui();
   const menus = useMenuList();
   const createMenu = useCreateMenu();
   const [tab, setTab] = useState<TabId>(getSelectedTab());
   const [slug, setSlug] = useState<string | null>(getSelectedMenuSlug());
 
   function handleCreate(): void {
-    const name = window.prompt("Menu name")?.trim();
+    const name = window.prompt(i18n._(M.createPrompt))?.trim();
     if (!name) return;
     createMenu.mutate(
       { name },
@@ -73,7 +101,10 @@ export function MenusShell(): ReactNode {
       )}
       {menuList.length === 0 ? (
         <div data-testid="menus-empty-cta">
-          No menus yet. Create your first menu to get started.
+          <Trans
+            id="plugin.menu.shell.emptyState"
+            message="No menus yet. Create your first menu to get started."
+          />
         </div>
       ) : null}
     </div>
@@ -108,7 +139,10 @@ function MenuSelector({
         data-testid="menus-selector-create-new"
         onClick={onCreate}
       >
-        + Create new menu
+        <Trans
+          id="plugin.menu.shell.createButton"
+          message="+ Create new menu"
+        />
       </button>
     </div>
   );
@@ -121,6 +155,7 @@ function Tabs({
   readonly activeTab: TabId;
   readonly onChange: (next: TabId) => void;
 }): ReactNode {
+  const { i18n } = useLingui();
   return (
     <div data-testid="menus-tabs">
       {TABS.map((entry) => (
@@ -133,7 +168,7 @@ function Tabs({
             onChange(entry.id);
           }}
         >
-          {entry.label}
+          {i18n._(entry.label)}
         </button>
       ))}
     </div>
@@ -149,7 +184,10 @@ function EditPanel({
     <div data-testid="menus-tab-edit-panel">
       {selectedMenu === null ? (
         <p data-testid="menus-edit-no-selection">
-          Select a menu to start editing.
+          <Trans
+            id="plugin.menu.shell.editEmpty"
+            message="Select a menu to start editing."
+          />
         </p>
       ) : (
         <MenuItemEditor termId={selectedMenu.id} />
@@ -199,6 +237,7 @@ function LocationRow({
   readonly currentSlug: string;
   readonly onChange: (termSlug: string | null) => void;
 }): ReactNode {
+  const { i18n } = useLingui();
   return (
     <div data-testid={`menus-location-row-${row.id}`}>
       <span data-testid={`menus-location-label-${row.id}`}>{row.label}</span>
@@ -210,7 +249,7 @@ function LocationRow({
           onChange(value === "" ? null : value);
         }}
       >
-        <option value="">— Unassigned —</option>
+        <option value="">{i18n._(M.unassigned)}</option>
         {menus.map((menu) => (
           <option key={menu.id} value={menu.slug}>
             {menu.name}
