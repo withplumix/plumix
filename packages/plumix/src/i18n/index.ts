@@ -13,5 +13,9 @@ export {
   type FormatRelativeOptions,
   type Label,
 } from "@plumix/core/i18n";
+// `@lingui/*` re-exports are bare specifiers — the plugin-chunk
+// bundler rewrites them to `plumix/admin/lingui-*` via
+// `SHARED_ADMIN_RUNTIME_SPECIFIERS` so plugin chunks share admin's
+// i18n singleton + provider. Admin/server import the real packages.
 export { i18n, type MessageDescriptor } from "@lingui/core";
-export { I18nProvider, Trans } from "@lingui/react";
+export { I18nProvider, Trans, useLingui } from "@lingui/react";

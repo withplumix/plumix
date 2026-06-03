@@ -19,6 +19,12 @@ const SHIM_SLUGS = {
   "@orpc/client": "orpc-client",
   "@orpc/client/fetch": "orpc-client-fetch",
   "@orpc/tanstack-query": "orpc-tanstack-query",
+  // Lingui — must share `@lingui/core`'s i18n singleton (catalogs + active
+  // locale) AND `@lingui/react`'s context (the I18nProvider admin mounts
+  // at boot). Without these shims plugin chunks see a separate Lingui
+  // instance and `useLingui()` returns null inside plugin routes.
+  "@lingui/core": "lingui-core",
+  "@lingui/react": "lingui-react",
 } as const satisfies Record<string, string>;
 
 export type SharedAdminRuntimeSpecifier = keyof typeof SHIM_SLUGS;

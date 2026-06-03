@@ -1,5 +1,7 @@
 import * as ReactNs from "react";
 import * as ReactJsxRuntimeNs from "react/jsx-runtime";
+import * as LinguiCoreNs from "@lingui/core";
+import * as LinguiReactNs from "@lingui/react";
 import * as OrpcClientNs from "@orpc/client";
 import * as OrpcClientFetchNs from "@orpc/client/fetch";
 import * as OrpcTanstackQueryNs from "@orpc/tanstack-query";
@@ -26,6 +28,8 @@ beforeAll(() => {
       orpcClient: OrpcClientNs,
       orpcClientFetch: OrpcClientFetchNs,
       orpcTanstackQuery: OrpcTanstackQueryNs,
+      linguiCore: LinguiCoreNs,
+      linguiReact: LinguiReactNs,
     },
   };
 });
@@ -232,6 +236,16 @@ const SHIMS: readonly ShimSpec[] = [
       // a plugin actually wants it.
       "experimental_serializableStreamedQuery",
     ]),
+  },
+  {
+    name: "@lingui/core",
+    upstream: LinguiCoreNs,
+    load: () => import("./lingui-core.js"),
+  },
+  {
+    name: "@lingui/react",
+    upstream: LinguiReactNs,
+    load: () => import("./lingui-react.js"),
   },
 ];
 

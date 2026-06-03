@@ -9,6 +9,8 @@ import {
 describe("SHARED_ADMIN_RUNTIME_SPECIFIERS", () => {
   test("covers every shared library plugin chunks may need", () => {
     expect(Object.keys(SHARED_ADMIN_RUNTIME_SPECIFIERS).sort()).toEqual([
+      "@lingui/core",
+      "@lingui/react",
       "@orpc/client",
       "@orpc/client/fetch",
       "@orpc/tanstack-query",
@@ -47,6 +49,8 @@ describe("adminRuntimeShimSlug", () => {
     expect(adminRuntimeShimSlug("@orpc/tanstack-query")).toBe(
       "orpc-tanstack-query",
     );
+    expect(adminRuntimeShimSlug("@lingui/core")).toBe("lingui-core");
+    expect(adminRuntimeShimSlug("@lingui/react")).toBe("lingui-react");
   });
 
   test("slug is a filename-safe segment (used as `<slug>.js`)", () => {
