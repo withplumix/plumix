@@ -139,6 +139,11 @@ const config: KnipConfig = {
         "src/admin/MediaLibrary.tsx",
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
+        // `lingui.config.ts` is loaded by the `@lingui/cli` binary
+        // (extract/compile) — never statically imported. Same pattern
+        // as the `packages/admin` entry above.
+        "lingui.config.ts",
+        "locales/*.mjs",
       ],
       // @plumix/runtime-cloudflare is consumed by the plugin's playground
       // (a sibling workspace), not by `src/`. Declared as a devDep so
@@ -160,6 +165,8 @@ const config: KnipConfig = {
         "src/server/index.ts",
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
+        "lingui.config.ts",
+        "locales/*.mjs",
       ],
       ignoreDependencies: ["@plumix/runtime-cloudflare"],
       playwright: false,
@@ -171,7 +178,13 @@ const config: KnipConfig = {
     // RPC) — its package.json already declares the entry. The e2e
     // rig follows the same shape as the other plugin suites.
     "packages/plugins/blog": {
-      entry: ["src/index.ts", "e2e/globalSetup.ts", "e2e/*.spec.ts"],
+      entry: [
+        "src/index.ts",
+        "e2e/globalSetup.ts",
+        "e2e/*.spec.ts",
+        "lingui.config.ts",
+        "locales/*.mjs",
+      ],
       ignoreDependencies: ["@plumix/runtime-cloudflare"],
       playwright: false,
     },
@@ -179,7 +192,13 @@ const config: KnipConfig = {
     // no schema, no RPC). The e2e rig follows the same pattern as
     // the other plugin suites.
     "packages/plugins/pages": {
-      entry: ["src/index.ts", "e2e/globalSetup.ts", "e2e/*.spec.ts"],
+      entry: [
+        "src/index.ts",
+        "e2e/globalSetup.ts",
+        "e2e/*.spec.ts",
+        "lingui.config.ts",
+        "locales/*.mjs",
+      ],
       ignoreDependencies: ["@plumix/runtime-cloudflare"],
       playwright: false,
     },
@@ -190,6 +209,8 @@ const config: KnipConfig = {
         "src/server/index.ts",
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
+        "lingui.config.ts",
+        "locales/*.mjs",
       ],
       ignoreDependencies: ["@plumix/runtime-cloudflare"],
       // See packages/admin above for why the playwright plugin is off.
