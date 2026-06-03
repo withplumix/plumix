@@ -1,7 +1,46 @@
 import * as v from "valibot";
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 
-import { idParam, idPathParam } from "./validation.js";
+import {
+  emailField,
+  idParam,
+  idPathParam,
+  nameField,
+  setI18nResolver,
+} from "./validation.js";
+
+describe("shared schema messages — translatable via setI18nResolver", () => {
+  afterEach(() => setI18nResolver(null));
+
+  test("emailField resolves through the registered resolver", () => {
+    setI18nResolver((d) => `[de] ${d.id}`);
+    const result = v.safeParse(emailField, "");
+    expect(result.success).toBe(false);
+    const messages = result.issues?.map((i) => i.message) ?? [];
+    // Whichever leaf fires (minLength or email), the message comes from
+    // the resolver — proof the shared schema is no longer hardcoded.
+    expect(messages.some((m) => m.startsWith("[de] validate."))).toBe(true);
+  });
+
+  test("nameField max-length resolves via the resolver with the expected id", () => {
+    setI18nResolver((d) => `name-err:${d.id}`);
+    const result = v.safeParse(nameField, "x".repeat(201));
+    expect(result.success).toBe(false);
+    // Capturing the id catches descriptor renames; a typo in
+    // `validate.name.maxLength` would surface here, not just in
+    // catalog tooling.
+    expect(result.issues?.[0]?.message).toBe(
+      "name-err:validate.name.maxLength",
+    );
+  });
+
+  test("idPathParam regex error resolves via the resolver", () => {
+    setI18nResolver((d) => `id-err:${d.id}`);
+    const result = v.safeParse(idPathParam, "abc");
+    expect(result.success).toBe(false);
+    expect(result.issues?.[0]?.message).toBe("id-err:validate.id.format");
+  });
+});
 
 describe("idParam", () => {
   test("accepts positive integers", () => {

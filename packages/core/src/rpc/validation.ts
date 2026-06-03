@@ -1,4 +1,7 @@
+import type { MessageDescriptor } from "@lingui/core";
 import * as v from "valibot";
+
+import { vMessage } from "./vmessage.js";
 
 export { setI18nResolver, vMessage } from "./vmessage.js";
 export type { I18nResolver } from "./vmessage.js";
@@ -6,24 +9,45 @@ export type { I18nResolver } from "./vmessage.js";
 // Shared leaf-level field schemas. Consumed server-side by RPC procedure
 // input schemas AND client-side by admin forms — same rules on both ends so
 // a submit that passes client validation can't then fail server validation
-// on shape alone. Messages are user-facing: they surface unchanged in admin
-// forms and in RPC error payloads when validation rejects.
+// on shape alone. Messages flow through `vMessage` so admin's `bootI18n`
+// resolver can translate them; descriptors are inlined plain literals (not
+// `defineMessage(...)`) because core builds with plain `tsc`, no Lingui
+// macro pass.
 //
-// These shared-schema messages stay in English. Wrapping them in
-// `vMessage(defineMessage(...))` requires the `@lingui/core/macro`
-// runtime, which depends on babel-plugin-lingui-macro processing —
-// core's plain `tsc` build can't run that. Per-callsite admin schemas
-// (mailer, allowed-domains, users/create, auth/device, login) DO use
-// `vMessage` and translate. Server-side schema translation is its own
-// slice, requiring a lingui pipeline for the core package.
+// Per-callsite procedure schemas (`procedures/auth/**/schemas.ts`) stay in
+// English — they only surface to direct RPC consumers, not admin forms,
+// which build their own client-side schemas with locally-wrapped messages.
+
+const M = {
+  emailRequired: {
+    id: "validate.email.required",
+    message: "Enter an email address.",
+  },
+  emailMaxLength: {
+    id: "validate.email.maxLength",
+    message: "Email is too long.",
+  },
+  emailInvalid: {
+    id: "validate.email.invalid",
+    message: "Enter a valid email address.",
+  },
+  nameMaxLength: {
+    id: "validate.name.maxLength",
+    message: "Name is too long.",
+  },
+  idFormat: {
+    id: "validate.id.format",
+    message: "id must be a positive decimal integer",
+  },
+} satisfies Record<string, MessageDescriptor>;
 
 /** RFC 5321 caps email at 254 chars. */
 export const emailField = v.pipe(
   v.string(),
   v.trim(),
-  v.minLength(1, "Enter an email address."),
-  v.maxLength(254, "Email is too long."),
-  v.email("Enter a valid email address."),
+  v.minLength(1, vMessage(M.emailRequired)),
+  v.maxLength(254, vMessage(M.emailMaxLength)),
+  v.email(vMessage(M.emailInvalid)),
 );
 
 /** Display name. Empty is allowed at the schema level; required-ness is
@@ -31,7 +55,7 @@ export const emailField = v.pipe(
 export const nameField = v.pipe(
   v.string(),
   v.trim(),
-  v.maxLength(200, "Name is too long."),
+  v.maxLength(200, vMessage(M.nameMaxLength)),
 );
 
 /**
@@ -54,7 +78,7 @@ export const idParam = v.pipe(
  */
 export const idPathParam = v.pipe(
   v.string(),
-  v.regex(/^[1-9]\d*$/, "id must be a positive decimal integer"),
+  v.regex(/^[1-9]\d*$/, vMessage(M.idFormat)),
   v.transform((s) => Number(s)),
   v.number(),
   v.integer(),
