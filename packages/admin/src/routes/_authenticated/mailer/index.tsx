@@ -160,6 +160,7 @@ function MailerRoute(): ReactNode {
                       id="mailer.test.feedback.ok"
                       message="Test message sent to {to}. If it doesn't arrive within a minute, check your transport adapter's logs."
                       values={{ to: feedback.to }}
+                      comment="to: the recipient email address the test was sent to"
                     />
                   </AlertDescription>
                 </Alert>

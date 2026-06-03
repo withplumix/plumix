@@ -43,6 +43,7 @@ export function ListPagination({
           id="listPagination.page"
           message="Page {page}"
           values={{ page }}
+          comment="page: 1-based current page number in the list"
         />
       </span>
       <PaginationContent>

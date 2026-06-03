@@ -375,6 +375,7 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
                     id="profile.passkeys.added"
                     message="Added {date}"
                     values={{ date: formatDate(createdAt) }}
+                    comment="date: a locale-formatted date string"
                   />
                 </span>
                 {lastUsedAt.getTime() !== createdAt.getTime() ? (
@@ -383,6 +384,7 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
                       id="profile.passkeys.lastUsed"
                       message="Last used {date}"
                       values={{ date: formatDate(lastUsedAt) }}
+                      comment="date: a locale-formatted date string"
                     />
                   </span>
                 ) : null}
@@ -444,6 +446,7 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
                 id="profile.passkeys.delete.description"
                 message='The device that registered "{name}" will no longer be able to sign in. You can re-enrol it later.'
                 values={{ name: displayName }}
+                comment="name: the user-chosen passkey nickname (e.g. 'MacBook', 'iPhone')"
               />
             </AlertDialogDescription>
           </AlertDialogHeader>

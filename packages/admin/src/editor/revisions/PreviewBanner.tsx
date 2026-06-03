@@ -60,6 +60,7 @@ export function PreviewBanner({
             when: relativeTime(revisionUpdatedAt),
             author: revisionAuthor,
           }}
+          comment="when: pre-formatted relative-time like '2 hours ago'; author: the user's display name or email"
         />
       </span>
       <div className="ml-auto flex gap-2">

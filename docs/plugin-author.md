@@ -180,6 +180,75 @@ test("newsletter metabox is registered for post entries", async () => {
 For block-only tests use `plumix/blocks/test` (see
 [block-authoring guide's testing section](./block-authoring.md#testing)).
 
+## Translations
+
+Plugin labels and admin-chunk copy translate through Lingui. Three
+authoring shapes share the same `.po` pipeline:
+
+- **Plain `{id, message}` literals** for server-side and ambient code.
+  The plugin package builds with plain `tsc`, no Lingui macro pass, so
+  manifest labels and bridge-emitted messages use this shape:
+  ```ts
+  const POST_LABELS = {
+    singular: { id: "plugin.blog.post.singular", message: "Post" },
+    // ...
+  };
+  ```
+- **`defineMessage()` descriptors** (`M`-map) for admin-chunk text
+  outside JSX — aria-labels, `placeholder`, alert fallbacks routed
+  through `i18n._()`. Extractor sees these via the macro.
+- **`<Trans>` JSX** for admin-chunk render-time text. Plugin chunks
+  share admin's i18n instance via the runtime shim (`@lingui/core` and
+  `@lingui/react` are aliased to `plumix/admin/lingui-*`).
+
+### Placeholders need a translator comment
+
+Any descriptor or `<Trans>` whose `message` carries an ICU placeholder
+must declare a `comment` describing each placeholder. Lingui extracts
+`comment` as a `#.` line in the `.po`, so translators see the
+placeholder contract without reading source.
+
+```ts
+// Descriptor form
+M.deleteAria = defineMessage({
+  id: "row.deleteAria",
+  message: "Delete {domain}",
+  comment: "domain: the hostname being removed from the allowlist",
+});
+
+// JSX form
+<Trans
+  id="dashboard.welcome"
+  message="Welcome, {greeting}"
+  values={{ greeting }}
+  comment="greeting: the user's display name or email"
+/>;
+```
+
+Without comments, translators guess at placeholder semantics — a
+template like `{label} {kind} failed` is meaningless until you know
+`label` is plugin-author-supplied and `kind` is a protocol identifier.
+
+### Hand-authored catalogs
+
+First-party plugins hand-author `locales/en.po` because manifest labels
+and `M`-map descriptor literals aren't extractor-visible without the
+Babel macro pipeline. `lingui compile` (wired via `plumix i18n init`)
+regenerates `locales/en.mjs` on every build, so the runtime catalog
+stays in sync with the `.po`.
+
+`plumix i18n init` scaffolds `lingui.config.ts`, the compile-error gate
+script, and the `i18n:*` package.json entries. Run it once per plugin:
+
+```sh
+pnpm --filter @plumix/plugin-newsletter exec plumix i18n init
+```
+
+`i18n:check` is deliberately omitted from the scaffolded scripts —
+`lingui extract --clean` would orphan every entry the extractor can't
+see. The full extract/check loop becomes available once a plugin
+migrates to macro-aware authoring.
+
 ## See also
 
 - [Block authoring](./block-authoring.md) — the full `defineBlock` surface.

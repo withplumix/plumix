@@ -34,6 +34,8 @@ const M = {
     id: "plugin.errorBoundary.pageBody",
     message:
       "{label} threw an error while rendering. The rest of the admin is unaffected.",
+    comment:
+      "label: a plugin-author-provided name (e.g. 'SEO meta', 'Hero block')",
   }),
   // Inline stub for blocks / field renderers — `{kind}` is the
   // protocol discriminator (block / field) verbatim. Localizing it
@@ -42,6 +44,8 @@ const M = {
   inlineStub: defineMessage({
     id: "plugin.errorBoundary.inlineStub",
     message: "{label} {kind} failed",
+    comment:
+      "label: a plugin-author-provided name (e.g. 'SEO meta', 'Hero block'); kind: the extension type ('field', 'block', 'mark') left as the raw protocol identifier",
   }),
   // Icon aria-label.
   iconAria: defineMessage({

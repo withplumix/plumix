@@ -15,6 +15,7 @@ const M = {
   loadingAria: defineMessage({
     id: "pluginPage.loading.aria",
     message: "Loading {label}",
+    comment: "label: the plugin page's registered label (e.g. 'Audit Log')",
   }),
 } satisfies Record<string, MessageDescriptor>;
 
@@ -90,6 +91,7 @@ function PluginNotLoaded({ path }: { path: string }): ReactNode {
           message="The admin manifest declares a page at <code>{path}</code> but no React component has been registered for it."
           values={{ path }}
           components={{ code: <code className="font-mono" /> }}
+          comment="path: the manifest-declared admin-route path (e.g. '/audit-log'); pass through verbatim"
         />
       </p>
     </div>

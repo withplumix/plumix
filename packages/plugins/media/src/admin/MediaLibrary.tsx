@@ -868,6 +868,7 @@ function UploadProgressBar({
             id="plugin.media.upload.progress"
             message="Uploading {count, plural, one {# file} other {# files}}…"
             values={{ count: pending.length }}
+            comment="count: number of files currently uploading"
           />
         </span>
         <span data-testid="media-library-progress-pct">{pct}%</span>

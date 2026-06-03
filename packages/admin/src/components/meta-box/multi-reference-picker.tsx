@@ -63,10 +63,13 @@ const M = {
   dialogDescription: defineMessage({
     id: "metaBox.multiReference.dialogDescription",
     message: "Search and pick {kind} entries",
+    comment:
+      "kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')",
   }),
   searchPlaceholder: defineMessage({
     id: "metaBox.multiReference.searchPlaceholder",
     message: "Search {kind}…",
+    comment: "kind: the entity type being searched (e.g. 'posts', 'tags')",
   }),
 } satisfies Record<string, MessageDescriptor>;
 

@@ -415,6 +415,7 @@ function DeleteCard({
                 id="terms.edit.delete.dialogTitle"
                 message="Delete {termName}?"
                 values={{ termName }}
+                comment="termName: the taxonomy term being deleted"
               />
             </AlertDialogTitle>
             <AlertDialogDescription>

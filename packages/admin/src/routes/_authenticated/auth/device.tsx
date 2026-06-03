@@ -243,6 +243,7 @@ function DeviceApprovalRoute(): ReactNode {
               message="Denied. The CLI will get a(n) <0>{accessDenied}</0> response and stop polling."
               values={{ accessDenied: ACCESS_DENIED }}
               components={{ 0: <code className="font-mono text-xs" /> }}
+              comment="accessDenied: the literal OAuth error code string (e.g. 'access_denied') — do not translate"
             />
           </AlertDescription>
         </Alert>
@@ -421,6 +422,7 @@ function ApproveCard({
             id="auth.device.approve.confirmTitle"
             message={'Confirm "{userCode}"'}
             values={{ userCode }}
+            comment="userCode: the short device-flow code the CLI displayed (e.g. 'WDJB-MJHT'); pass through verbatim"
           />
         </CardTitle>
         <CardDescription>

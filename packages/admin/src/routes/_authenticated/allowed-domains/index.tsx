@@ -62,6 +62,7 @@ const M = {
   deleteAria: defineMessage({
     id: "allowedDomains.row.deleteAria",
     message: "Delete {domain}",
+    comment: "domain: the hostname being removed from the allowlist",
   }),
   errDomainExists: defineMessage({
     id: "allowedDomains.error.domainExists",

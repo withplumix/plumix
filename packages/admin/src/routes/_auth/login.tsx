@@ -320,6 +320,7 @@ function LoginRoute(): ReactNode {
                     id="login.oauth.continueWith"
                     message="Continue with {label}"
                     values={{ label }}
+                    comment="label: the OAuth provider's display name (e.g. 'Google', 'GitHub')"
                   />
                 </a>
               </Button>

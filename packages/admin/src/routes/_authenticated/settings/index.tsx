@@ -109,6 +109,7 @@ function SettingsIndexRoute(): ReactNode {
                     id="settings.pageSummary"
                     message="{count, plural, one {# group} other {# groups}}"
                     values={{ count: page.groups.length }}
+                    comment="count: number of settings groups this page surfaces"
                   />
                 </p>
               </CardContent>

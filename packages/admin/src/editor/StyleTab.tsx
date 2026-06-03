@@ -88,6 +88,7 @@ export function StyleTab({
           id="editor.styleTab.activeBucket"
           message="Editing for: {device}"
           values={{ device: renderLabel(DEVICE_LABEL[bucket]) }}
+          comment="device: pre-resolved viewport label like 'Desktop', 'Tablet', 'Mobile'"
         />
       </div>
       <Accordion type="multiple" defaultValue={[...SECTION_VALUES]}>
