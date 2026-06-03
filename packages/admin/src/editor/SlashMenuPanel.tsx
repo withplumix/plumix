@@ -14,6 +14,7 @@ import { Trans } from "@lingui/react";
 import { Command as CommandPrimitive } from "cmdk";
 
 import type { BlockRegistry, PatternRegistry } from "@plumix/blocks";
+import type { Label } from "@plumix/core/i18n";
 
 import type { SlashMenuItem } from "./slash-menu-items.js";
 import { entryKey, isVariation } from "./is-variation.js";
@@ -52,6 +53,7 @@ function renderMember(
   onSelect: (item: SlashMenuItem) => void,
   blocks: BlockRegistry,
   patterns: PatternRegistry,
+  renderLabel: (label: Label) => string,
 ): ReactElement {
   if (item.kind === "pattern") {
     const { entry } = item;
@@ -80,7 +82,7 @@ function renderMember(
             data-testid={`slash-menu-pattern-card-placeholder-${entry.name}`}
           />
         )}
-        <span className="text-sm font-medium">{entry.title}</span>
+        <span className="text-sm font-medium">{renderLabel(entry.title)}</span>
       </CommandItem>
     );
   }
@@ -111,7 +113,7 @@ function renderMember(
             />
           </div>
         </LazyMount>
-        <span className="text-sm font-medium">{entry.title}</span>
+        <span className="text-sm font-medium">{renderLabel(entry.title)}</span>
       </CommandItem>
     );
   }
@@ -124,10 +126,10 @@ function renderMember(
       className="flex items-start gap-2"
     >
       <span className="flex min-w-0 flex-col">
-        <span className="text-sm font-medium">{entry.title}</span>
+        <span className="text-sm font-medium">{renderLabel(entry.title)}</span>
         {entry.description ? (
           <span className="text-muted-foreground text-xs">
-            {entry.description}
+            {renderLabel(entry.description)}
           </span>
         ) : null}
       </span>
@@ -189,7 +191,7 @@ export function SlashMenuPanel({
             data-testid={`slash-menu-group-${category}`}
           >
             {members.map((item) =>
-              renderMember(item, onSelect, blocks, patterns),
+              renderMember(item, onSelect, blocks, patterns, label),
             )}
           </CommandGroup>
         ))}

@@ -5,6 +5,7 @@ import type {
 } from "@plumix/blocks";
 import type { PatternManifestEntry } from "@plumix/core/manifest";
 import { expandBlockVariations } from "@plumix/blocks";
+import { labelSourceText } from "@plumix/core/i18n";
 
 import { PUCK_ROOT_ZONE } from "./puck-zones.js";
 
@@ -72,10 +73,19 @@ function isInsertableForCapabilities(
 // surface category as an alias today. Prefix semantics mirror the
 // keyword scorer so typing "her" matches a pattern with category
 // "hero", not just the exact slug.
+// Search keys the source-locale (English) representation regardless of
+// UI locale. `labelSourceText` returns `message` for descriptors and
+// the string itself for plain strings — keeps matching predictable.
 function matchScore(item: SlashMenuItem, needle: string): number {
   const { entry } = item;
-  if (entry.title.toLowerCase().includes(needle)) return TITLE_MATCH;
-  if (entry.keywords?.some((k) => k.toLowerCase().startsWith(needle))) {
+  if (labelSourceText(entry.title).toLowerCase().includes(needle)) {
+    return TITLE_MATCH;
+  }
+  if (
+    entry.keywords?.some((k) =>
+      labelSourceText(k).toLowerCase().startsWith(needle),
+    )
+  ) {
     return KEYWORD_MATCH;
   }
   if (

@@ -43,7 +43,7 @@ const cta: PatternManifestEntry = {
 
 describe("StarterModal", () => {
   test("renders nothing when there are no candidates", () => {
-    const { container } = render(
+    const { container } = renderWithI18n(
       <StarterModal
         candidates={[]}
         blocks={blocks}

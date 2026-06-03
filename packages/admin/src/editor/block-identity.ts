@@ -1,10 +1,11 @@
 import type { BlockSpec } from "@plumix/blocks";
+import type { Label } from "@plumix/core/i18n";
 import { resolveActiveVariation } from "@plumix/blocks";
 
 export interface BlockIdentity {
-  readonly title: string;
+  readonly title: Label;
   readonly icon?: string;
-  readonly description?: string;
+  readonly description?: Label;
 }
 
 // Variations override the parent block's display identity on instances

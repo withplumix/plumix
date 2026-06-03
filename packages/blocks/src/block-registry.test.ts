@@ -78,4 +78,39 @@ describe("defineBlock", () => {
 
     expect(spec.defaults).toEqual({ level: 2, text: "Untitled" });
   });
+
+  test("text slots accept MessageDescriptor for translation", () => {
+    // The four BlockSpec text slots (`title`, `description`,
+    // `placeholder`, `keywords[]`) and BlockVariation (`title`,
+    // `description`, `keywords[]`) widen to `Label` so plugin authors
+    // can pass Lingui descriptors. String callers still work
+    // (backwards-compat through the union).
+    const spec = defineBlock({
+      name: "acme/hero",
+      title: { id: "block.hero.title", message: "Hero" },
+      description: { id: "block.hero.description", message: "A hero block." },
+      keywords: [
+        "banner",
+        { id: "block.hero.kw.cta", message: "call to action" },
+      ],
+      render: noopRender,
+      variations: [
+        {
+          slug: "split",
+          title: { id: "block.hero.split.title", message: "Split Hero" },
+          description: {
+            id: "block.hero.split.description",
+            message: "Two columns.",
+          },
+          keywords: ["split"],
+        },
+      ],
+    });
+
+    expect(spec.title).toEqual({ id: "block.hero.title", message: "Hero" });
+    expect(spec.variations?.[0]?.title).toEqual({
+      id: "block.hero.split.title",
+      message: "Split Hero",
+    });
+  });
 });

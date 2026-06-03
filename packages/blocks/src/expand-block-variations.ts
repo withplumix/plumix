@@ -1,14 +1,15 @@
 import type { BlockSpec, BlockVariationExample } from "./block-registry.js";
+import type { Label } from "./i18n-label.js";
 import type { BlockNode } from "./render-block-tree.js";
 
 export interface InsertableBlockEntry {
   readonly name: string;
   readonly slug: string;
-  readonly title: string;
-  readonly description?: string;
+  readonly title: Label;
+  readonly description?: Label;
   readonly category?: string;
   readonly icon?: string;
-  readonly keywords?: readonly string[];
+  readonly keywords?: readonly Label[];
   readonly attrs?: Readonly<Record<string, unknown>>;
   // Default body for the parent block's conventional `content` slot.
   // Caller deep-clones + ID-rewrites before merging into a block instance.

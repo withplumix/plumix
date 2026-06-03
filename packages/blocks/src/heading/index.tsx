@@ -3,17 +3,28 @@ import { createElement } from "react";
 
 import { defineBlock } from "../block-registry.js";
 
+// Proving-ground conversion to MessageDescriptor literals. Admin's
+// adapter resolves `Label` slots via `resolveLabel(label, i18n)` at
+// adapter-construction time; locale changes reload the route so a single
+// resolution per route-module evaluation is sufficient. Catalog extraction
+// from `@plumix/blocks` is a follow-up — until wired, ids fall back to
+// `descriptor.message` in every locale. Other core blocks remain on plain
+// strings until they need to translate.
 export const headingBlock = defineBlock({
   name: "core/heading",
-  title: "Heading",
+  title: { id: "block.core.heading.title", message: "Heading" },
   icon: "Heading",
   category: "text",
   inputs: [
-    { name: "text", type: "text", label: "Text" },
+    {
+      name: "text",
+      type: "text",
+      label: { id: "block.core.heading.input.text", message: "Text" },
+    },
     {
       name: "level",
       type: "select",
-      label: "Level",
+      label: { id: "block.core.heading.input.level", message: "Level" },
       options: [
         { label: "H1", value: 1 },
         { label: "H2", value: 2 },

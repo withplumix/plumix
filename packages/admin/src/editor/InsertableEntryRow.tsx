@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { useLabel } from "@/lib/use-label.js";
 
 import type {
   BlockRegistry,
@@ -25,6 +26,7 @@ export function InsertableEntryRow({
   patterns,
   onClick,
 }: InsertableEntryRowProps): ReactElement {
+  const renderLabel = useLabel();
   if (!isVariation(entry)) {
     return (
       <button
@@ -34,7 +36,7 @@ export function InsertableEntryRow({
         onClick={onClick}
       >
         <BlockIcon name={entry.icon} />
-        <span className="truncate">{entry.title}</span>
+        <span className="truncate">{renderLabel(entry.title)}</span>
       </button>
     );
   }
@@ -74,7 +76,7 @@ export function InsertableEntryRow({
       </LazyMount>
       <span className="flex items-center gap-2 truncate">
         <BlockIcon name={entry.icon} />
-        <span className="truncate">{entry.title}</span>
+        <span className="truncate">{renderLabel(entry.title)}</span>
       </span>
     </div>
   );
