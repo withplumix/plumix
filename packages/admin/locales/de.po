@@ -229,6 +229,12 @@ msgstr ""
 msgid "profile.sessions.revoke.description"
 msgstr ""
 
+#. display: user's name or email; lastSeen: pre-formatted relative-time string like '2 minutes ago'
+#. js-lingui-explicit-id
+#: src/editor/CoAuthorIndicator.tsx
+msgid "editor.coAuthorIndicator.presenceAriaLabel"
+msgstr ""
+
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
 msgid "plugin.errorBoundary.inlineStub"
@@ -318,6 +324,11 @@ msgstr ""
 #: src/routes/_authenticated/users/$id/edit.tsx
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.active"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/CoAuthorIndicator.tsx
+msgid "editor.coAuthorIndicator.activeAriaLabel"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1414,6 +1425,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.dialogDescription"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.titleAriaLabel"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/editor/plain-form-layout.tsx
+msgid "editor.plainForm.titleAriaLabel"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -3194,6 +3215,11 @@ msgstr "Benutzer"
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.item.users"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.diffAriaLabel"
 msgstr ""
 
 #. js-lingui-explicit-id

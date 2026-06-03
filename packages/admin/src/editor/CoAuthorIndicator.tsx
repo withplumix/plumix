@@ -1,5 +1,9 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar.js";
+import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
 
 interface CoAuthor {
   readonly id: number;
@@ -13,6 +17,19 @@ interface CoAuthorIndicatorProps {
   readonly relativeTime: (date: Date) => string;
 }
 
+const M = {
+  activeCoAuthors: defineMessage({
+    id: "editor.coAuthorIndicator.activeAriaLabel",
+    message: "Active co-authors",
+  }),
+  presence: defineMessage({
+    id: "editor.coAuthorIndicator.presenceAriaLabel",
+    message: "{display} · last seen {lastSeen}",
+    comment:
+      "display: user's name or email; lastSeen: pre-formatted relative-time string like '2 minutes ago'",
+  }),
+} satisfies Record<string, MessageDescriptor>;
+
 // Shown next to the autosave pill when one or more co-authors are
 // actively editing the same entry. Renders nothing when the list is
 // empty so the header stays uncluttered for solo editing — which is
@@ -21,6 +38,8 @@ export function CoAuthorIndicator({
   users,
   relativeTime,
 }: CoAuthorIndicatorProps): ReactElement | null {
+  const renderLabel = useLabel();
+  const { i18n } = useLingui();
   if (users.length === 0) return null;
   return (
     <div
@@ -34,7 +53,10 @@ export function CoAuthorIndicator({
         mobile users (where the visible list is hidden for space) still
         get the SR text — `hidden` would also strip it from a11y.
        */}
-      <ul className="flex -space-x-1.5" aria-label="Active co-authors">
+      <ul
+        className="flex -space-x-1.5"
+        aria-label={renderLabel(M.activeCoAuthors)}
+      >
         {users.map((user) => {
           const display = user.name ?? user.email;
           const lastSeen = relativeTime(user.lastSeenAt);
@@ -43,7 +65,11 @@ export function CoAuthorIndicator({
               <Avatar
                 size="sm"
                 className="ring-background ring-2"
-                aria-label={`${display} · last seen ${lastSeen}`}
+                aria-label={i18n._(
+                  M.presence.id,
+                  { display, lastSeen },
+                  { message: M.presence.message },
+                )}
               >
                 <AvatarFallback
                   data-testid={`coauthor-avatar-fallback-${String(user.id)}`}

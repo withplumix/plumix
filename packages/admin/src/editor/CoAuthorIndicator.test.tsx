@@ -1,11 +1,22 @@
+import { i18n } from "@lingui/core";
+import { I18nProvider } from "@lingui/react";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { CoAuthorIndicator } from "./CoAuthorIndicator.js";
+
+beforeEach(() => {
+  i18n.load({ en: {} });
+  i18n.activate("en");
+});
 
 afterEach(() => {
   cleanup();
 });
+
+function renderInProvider(node: React.ReactNode) {
+  return render(<I18nProvider i18n={i18n}>{node}</I18nProvider>);
+}
 
 const T_NOW = new Date("2026-05-22T12:00:00Z");
 const T_30S_AGO = new Date("2026-05-22T11:59:30Z");
@@ -13,14 +24,14 @@ const T_2M_AGO = new Date("2026-05-22T11:58:00Z");
 
 describe("CoAuthorIndicator", () => {
   test("renders nothing when there are no co-authors (no visual noise)", () => {
-    const { container } = render(
+    const { container } = renderInProvider(
       <CoAuthorIndicator users={[]} relativeTime={() => "now"} />,
     );
     expect(container.firstChild).toBeNull();
   });
 
   test("renders an avatar + count for a single co-author", () => {
-    render(
+    renderInProvider(
       <CoAuthorIndicator
         users={[
           {
@@ -39,7 +50,7 @@ describe("CoAuthorIndicator", () => {
   });
 
   test("renders multiple co-authors with their individual last-seen labels", () => {
-    render(
+    renderInProvider(
       <CoAuthorIndicator
         users={[
           {
@@ -70,7 +81,7 @@ describe("CoAuthorIndicator", () => {
   });
 
   test("each avatar carries an aria-label with identity + last-seen so screen readers get per-item context", () => {
-    render(
+    renderInProvider(
       <CoAuthorIndicator
         users={[
           {
@@ -83,6 +94,10 @@ describe("CoAuthorIndicator", () => {
         relativeTime={() => "30 seconds ago"}
       />,
     );
+    // List-level aria-label gives screen-reader users a count cue
+    // before they descend into the per-item identities.
+    const list = screen.getByTestId("coauthor-indicator").querySelector("ul");
+    expect(list?.getAttribute("aria-label")).toBe("Active co-authors");
     const avatar = screen
       .getByTestId("coauthor-avatar-fallback-7")
       .closest("[data-slot=avatar]");
@@ -91,7 +106,7 @@ describe("CoAuthorIndicator", () => {
   });
 
   test("avatar fallback uses the first letter of name or email (initials surface)", () => {
-    render(
+    renderInProvider(
       <CoAuthorIndicator
         users={[
           {

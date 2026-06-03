@@ -55,6 +55,10 @@ const M = {
     id: "editor.revisions.sheet.commentSave",
     message: "Save",
   }),
+  diffAriaLabel: defineMessage({
+    id: "editor.revisions.sheet.diffAriaLabel",
+    message: "View JSON diff",
+  }),
 } satisfies Record<string, MessageDescriptor>;
 
 interface RevisionListItem {
@@ -440,7 +444,7 @@ function RevisionRow({
         <button
           type="button"
           data-testid={`revisions-sheet-item-${revision.id}-diff`}
-          aria-label="View JSON diff"
+          aria-label={renderLabel(M.diffAriaLabel)}
           onClick={() => onOpenDiff(revision.id)}
           className="text-muted-foreground hover:bg-accent hover:text-foreground inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md font-mono text-xs"
         >
