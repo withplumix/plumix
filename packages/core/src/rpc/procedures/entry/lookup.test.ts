@@ -175,6 +175,11 @@ describe("entryLookupAdapter", () => {
     );
     expect(result?.id).toBe(String(e.id));
     expect(result?.label).toBe("Specific");
+    // Wire-contract pin: every entry adapter row carries `targetType`
+    // so the admin picker can cascade through `labels.untitledItem`
+    // per type. Drop this field and the admin silently regresses
+    // every row's "Untitled" fallback to the generic descriptor.
+    expect(result?.targetType).toBe("post");
   });
 
   test("resolve() returns null when the id exists but fails scope", async () => {

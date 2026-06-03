@@ -149,13 +149,27 @@ export const MANIFEST_WITH_TAXONOMIES: PlumixManifest = {
     {
       name: "category",
       label: "Categories",
-      labels: { singular: "Category" },
+      // Per-type chrome labels (WP-aligned) the admin reads via the
+      // `termTaxonomyLabel` cascade. Without these, the heading
+      // would fall back to the generic noun-less "Add" / "Edit"
+      // descriptors — fine in production but the e2e contracts pin
+      // the per-type names so a regression in the cascade lookup
+      // gets caught here.
+      labels: {
+        singular: "Category",
+        addNewItem: "New category",
+        editItem: "Edit category",
+      },
       isHierarchical: true,
     },
     {
       name: "tag",
       label: "Tags",
-      labels: { singular: "Tag" },
+      labels: {
+        singular: "Tag",
+        addNewItem: "New tag",
+        editItem: "Edit tag",
+      },
     },
   ],
 };

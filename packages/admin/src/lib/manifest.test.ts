@@ -43,6 +43,9 @@ describe("readManifest", () => {
   });
 
   test("parses the injected JSON payload", () => {
+    // Raw JSON payload — readManifest doesn't synthesize labels; the
+    // tested behaviour is "round-trip a posted JSON shape", separate
+    // from the wire-required `labels` field on manifest entries.
     const doc = withManifestScript(
       JSON.stringify({
         entryTypes: [{ name: "post", label: "Posts" }],
@@ -177,7 +180,11 @@ describe("findEntryTypeBySlug", () => {
 describe("visibleEntryTypes", () => {
   const source: PlumixManifest = {
     entryTypes: [
-      { name: "post", adminSlug: "posts", label: "Posts" },
+      {
+        name: "post",
+        adminSlug: "posts",
+        label: "Posts",
+      },
       {
         name: "product",
         adminSlug: "products",
@@ -214,7 +221,11 @@ describe("visibleEntryTypes", () => {
     // shouldn't show up here.
     const sourceWithHidden: PlumixManifest = {
       entryTypes: [
-        { name: "post", adminSlug: "posts", label: "Posts" },
+        {
+          name: "post",
+          adminSlug: "posts",
+          label: "Posts",
+        },
         {
           name: "media",
           adminSlug: "media",

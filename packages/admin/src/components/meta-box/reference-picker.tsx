@@ -12,11 +12,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton.js";
 import { orpc } from "@/lib/orpc.js";
 import { useLabel } from "@/lib/use-label.js";
+import { useUntitledLabel } from "@/lib/use-untitled-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
-
-import { LookupLabel } from "./lookup-label.js";
 
 // Generic picker for reference fields (`user`, future `entry` /
 // `term` / `media`). The field's `referenceTarget.kind` selects the
@@ -94,6 +93,7 @@ export function ReferencePicker({
 }: ReferencePickerProps): ReactNode {
   const { i18n } = useLingui();
   const labelFn = useLabel();
+  const untitledLabel = useUntitledLabel();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -137,6 +137,7 @@ export function ReferencePicker({
           value,
           selected,
           isResolving: resolveQuery.isLoading,
+          untitledLabel,
         })}
       </div>
       <Button
@@ -187,6 +188,7 @@ export function ReferencePicker({
               onChange(id);
               setOpen(false);
             },
+            untitledLabel,
           })}
         </CommandList>
       </CommandDialog>
@@ -197,6 +199,7 @@ export function ReferencePicker({
 interface LookupItem {
   readonly id: string;
   readonly label: string | null;
+  readonly targetType?: string;
   readonly subtitle?: string;
 }
 
@@ -205,11 +208,13 @@ function renderDisplay({
   value,
   selected,
   isResolving,
+  untitledLabel,
 }: {
   testId: string;
   value: string | null;
   selected: LookupItem | null;
   isResolving: boolean;
+  untitledLabel: ReturnType<typeof useUntitledLabel>;
 }): ReactNode {
   if (value === null) {
     return (
@@ -225,7 +230,7 @@ function renderDisplay({
     return (
       <div className="text-sm" data-testid={`${testId}-selected`}>
         <p className="truncate font-medium">
-          <LookupLabel value={selected.label} />
+          {untitledLabel(selected.label, selected.targetType)}
         </p>
         {selected.subtitle ? (
           <p className="text-muted-foreground truncate text-xs">
@@ -265,11 +270,13 @@ function renderListBody({
   items,
   testId,
   onSelect,
+  untitledLabel,
 }: {
   isLoading: boolean;
   items: readonly LookupItem[];
   testId: string;
   onSelect: (id: string) => void;
+  untitledLabel: ReturnType<typeof useUntitledLabel>;
 }): ReactNode {
   if (isLoading) {
     return (
@@ -296,7 +303,7 @@ function renderListBody({
     >
       <div className="flex flex-col gap-0.5">
         <span className="text-sm font-medium">
-          <LookupLabel value={item.label} />
+          {untitledLabel(item.label, item.targetType)}
         </span>
         {item.subtitle ? (
           <span className="text-muted-foreground text-xs">{item.subtitle}</span>

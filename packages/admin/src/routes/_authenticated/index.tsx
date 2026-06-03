@@ -56,7 +56,10 @@ function DashboardIndex(): ReactNode {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {tiles.map((pt) => {
             const label = renderLabel(pt.labels?.plural ?? pt.label);
-            const labelLower = label.toLowerCase();
+            // Tile description + browse-button copy stay noun-less so
+            // the lowercase-the-plural substitution can't reach DE/RU/
+            // PL/UK/AR users. The tile title already carries the type's
+            // plural label up top.
             return (
               <Card key={pt.name} data-testid={`dashboard-tile-${pt.name}`}>
                 <CardHeader>
@@ -67,9 +70,8 @@ function DashboardIndex(): ReactNode {
                   <CardDescription>
                     {pt.description ?? (
                       <Trans
-                        id="dashboard.tile.description"
-                        message="Write, edit, and publish {labelLower}."
-                        values={{ labelLower }}
+                        id="dashboard.tile.description.generic"
+                        message="Write, edit, and publish."
                       />
                     )}
                   </CardDescription>
@@ -83,9 +85,8 @@ function DashboardIndex(): ReactNode {
                       data-testid={`dashboard-tile-${pt.name}-link`}
                     >
                       <Trans
-                        id="dashboard.tile.browse"
-                        message="Browse {labelLower}"
-                        values={{ labelLower }}
+                        id="dashboard.tile.browse.generic"
+                        message="Browse"
                       />
                       <ArrowRight />
                     </Link>

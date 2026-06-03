@@ -13,9 +13,9 @@ import {
 import { hasCap } from "@/lib/caps.js";
 import { findTermTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
+import { termTaxonomyLabel } from "@/lib/type-labels.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
-import { Trans, useLingui } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFileRoute,
@@ -49,15 +49,7 @@ const M = {
   }),
   flatDescription: defineMessage({
     id: "terms.create.description.flat",
-    message: "Add a new {singularLower} for grouping content.",
-  }),
-  submit: defineMessage({
-    id: "terms.create.submit",
-    message: "Create {singularLower}",
-  }),
-  heading: defineMessage({
-    id: "terms.create.heading",
-    message: "New {singularLower}",
+    message: "Group content by adding a new term.",
   }),
 } satisfies Record<string, MessageDescriptor>;
 
@@ -90,7 +82,6 @@ function NewTermRoute(): ReactNode {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { taxonomy } = Route.useRouteContext();
-  const { i18n } = useLingui();
   const renderLabel = useLabel();
   const mapTermError = useTermErrorMessage();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -148,10 +139,6 @@ function NewTermRoute(): ReactNode {
     },
   });
 
-  const singularLower = renderLabel(
-    taxonomy.labels?.singular ?? taxonomy.label,
-  ).toLowerCase();
-
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
       <Link
@@ -162,32 +149,20 @@ function NewTermRoute(): ReactNode {
         data-testid="term-new-back-link"
       >
         <ArrowLeft className="size-4" />
-        <Trans
-          id="terms.create.backLink"
-          message="Back to {pluralLower}"
-          values={{ pluralLower: renderLabel(taxonomy.label).toLowerCase() }}
-        />
+        {renderLabel(termTaxonomyLabel(taxonomy, "allItems"))}
       </Link>
 
       <Card>
         <CardHeader>
           <CardTitle>
             <h1 data-testid="term-new-heading">
-              <Trans
-                id="terms.create.heading"
-                message="New {singularLower}"
-                values={{ singularLower }}
-              />
+              {renderLabel(termTaxonomyLabel(taxonomy, "addNewItem"))}
             </h1>
           </CardTitle>
           <CardDescription>
-            {isHierarchical
-              ? renderLabel(M.hierarchicalDescription)
-              : i18n._(
-                  M.flatDescription.id,
-                  { singularLower },
-                  { message: M.flatDescription.message },
-                )}
+            {renderLabel(
+              isHierarchical ? M.hierarchicalDescription : M.flatDescription,
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -203,11 +178,7 @@ function NewTermRoute(): ReactNode {
             parentOptions={parentOptions}
             isSubmitting={createTerm.isPending}
             serverError={serverError}
-            submitLabel={i18n._(
-              M.submit.id,
-              { singularLower },
-              { message: M.submit.message },
-            )}
+            submitLabel={renderLabel(termTaxonomyLabel(taxonomy, "addNewItem"))}
             // Meta-on-create lands in a follow-up; today meta only
             // renders on the edit screen because empty boxes still
             // confuse plugin authors expecting meaningful defaults.

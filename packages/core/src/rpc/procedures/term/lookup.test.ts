@@ -167,6 +167,10 @@ describe("termLookupAdapter", () => {
     );
     expect(result?.id).toBe(String(t.id));
     expect(result?.label).toBe("Resolved");
+    // Wire-contract pin — every term row carries `targetType` (the
+    // taxonomy name) so the admin picker can cascade through the
+    // taxonomy's per-type labels. Mirrors the entry adapter test.
+    expect(result?.targetType).toBe("category");
   });
 
   test("resolve() returns null when the id exists but fails scope", async () => {

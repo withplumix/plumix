@@ -17,6 +17,15 @@ export interface LookupResult {
    * returning strings — only the entry adapter currently emits `null`.
    */
   readonly label: string | null;
+  /**
+   * Adapter-specific sub-kind for the row — entry type name (`"post"`,
+   * `"page"`) for the entry adapter, taxonomy name (`"category"`) for
+   * the term adapter. Lets the admin picker resolve per-type chrome
+   * via the WP-style `labels[key]` cascade (e.g. `labels.untitledItem`
+   * when `label === null`) without parsing the subtitle string.
+   * Omitted for adapters whose universe is single-typed (`user`).
+   */
+  readonly targetType?: string;
   readonly subtitle?: string;
   /**
    * Adapter-provided cached fields. When the field's

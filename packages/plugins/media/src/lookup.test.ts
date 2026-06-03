@@ -71,6 +71,7 @@ describe("mediaLookupAdapter", () => {
     expect(cat).toEqual({
       id: String(a.id),
       label: "cat.png",
+      targetType: "media",
       subtitle: "image/png",
       cached: { mime: "image/png", filename: "cat.png" },
     });
@@ -183,6 +184,7 @@ describe("mediaLookupAdapter", () => {
     expect(result).toEqual({
       id: String(a.id),
       label: "logo.svg",
+      targetType: "media",
       subtitle: "image/svg+xml",
       cached: { mime: "image/svg+xml", filename: "logo.svg" },
     });
