@@ -51,7 +51,7 @@
     "attw": "attw --pack . --profile esm-only",
     "build": "node scripts/i18n-compile-check.mjs && tsc -p tsconfig.build.json",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
-    "format": "prettier --check . --ignore-path ../../../.gitignore",
+    "format": "prettier --check . --ignore-path ../../../.gitignore --ignore-path .prettierignore",
     "lint": "eslint",
     "publint": "publint",
     "test": "vitest run",
