@@ -409,7 +409,7 @@ function RevisionRow({
           type="button"
           data-testid={`revisions-sheet-item-${revision.id}-select`}
           onClick={() => onPreview(revision.id)}
-          className="hover:bg-accent min-w-0 flex-1 rounded-md p-2 text-left"
+          className="hover:bg-accent min-w-0 flex-1 rounded-md p-2 text-start"
         >
           <div className="truncate text-sm font-medium">{revision.title}</div>
           <div className="text-muted-foreground text-xs">

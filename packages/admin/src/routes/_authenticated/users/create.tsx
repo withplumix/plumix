@@ -172,7 +172,7 @@ function InviteUserRoute(): ReactNode {
         className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
         data-testid="invite-back-link"
       >
-        <ArrowLeft className="size-4" />
+        <ArrowLeft className="size-4 rtl:rotate-180" />
         <Trans id="userInvite.backToList" message="Back to users" />
       </Link>
       <Card>

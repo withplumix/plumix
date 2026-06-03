@@ -117,11 +117,11 @@ export function MultiSelect({
         >
           <span className="truncate">{triggerLabel}</span>
           {value.length > 1 ? (
-            <Badge variant="secondary" className="ml-1">
+            <Badge variant="secondary" className="ms-1">
               {value.length}
             </Badge>
           ) : null}
-          <ChevronsUpDown className="ml-auto opacity-50" />
+          <ChevronsUpDown className="ms-auto opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-64 p-0" align="start">
@@ -145,14 +145,16 @@ export function MultiSelect({
                   >
                     <Check
                       className={cn(
-                        "mr-2 size-4",
+                        "me-2 size-4",
                         checked ? "opacity-100" : "opacity-0",
                       )}
                     />
                     <span
                       style={
                         opt.depth && opt.depth > 0
-                          ? { paddingLeft: `${String(opt.depth * 12)}px` }
+                          ? {
+                              paddingInlineStart: `${String(opt.depth * 12)}px`,
+                            }
                           : undefined
                       }
                     >

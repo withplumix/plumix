@@ -63,7 +63,7 @@ export function PreviewBanner({
           comment="when: pre-formatted relative-time like '2 hours ago'; author: the user's display name or email"
         />
       </span>
-      <div className="ml-auto flex gap-2">
+      <div className="ms-auto flex gap-2">
         <Button
           variant="outline"
           size="sm"

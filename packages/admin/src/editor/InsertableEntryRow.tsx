@@ -31,7 +31,7 @@ export function InsertableEntryRow({
     return (
       <button
         type="button"
-        className="hover:bg-muted flex w-full items-center gap-2 rounded border px-3 py-2 text-left text-sm"
+        className="hover:bg-muted flex w-full items-center gap-2 rounded border px-3 py-2 text-start text-sm"
         data-testid={`plumix-blocks-tab-item-${entryKey(entry)}`}
         onClick={onClick}
       >
@@ -48,7 +48,7 @@ export function InsertableEntryRow({
     <div
       role="button"
       tabIndex={0}
-      className="hover:bg-muted flex w-full flex-col gap-2 rounded border p-2 text-left text-sm focus:outline-none focus-visible:ring"
+      className="hover:bg-muted flex w-full flex-col gap-2 rounded border p-2 text-start text-sm focus:outline-none focus-visible:ring"
       data-testid={`plumix-blocks-tab-item-${entryKey(entry)}`}
       onClick={onClick}
       onKeyDown={(e) => {
