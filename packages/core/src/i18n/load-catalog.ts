@@ -6,19 +6,24 @@ import { join } from "node:path";
  *  with placeholders / JSX). Structural match for Lingui's `Messages`
  *  type — kept free of `@lingui/core` to avoid pulling Lingui into
  *  `@plumix/core`'s dep tree; consumers can pass the result straight
- *  to `i18n.load(locale, catalog)`. */
-export type CatalogJSON = Readonly<
+ *  to `i18n.load(locale, catalog)`.
+ *
+ *  Internal because load-catalog is server-only and the i18n barrel
+ *  intentionally stays browser-safe ([[core-subpath-imports]]). A
+ *  future server consumer that imports load-catalog.ts directly picks
+ *  the type up via TypeScript inference from `createCatalogLoader`'s
+ *  return type.
+ */
+type CatalogJSON = Readonly<
   Record<string, string | readonly (string | readonly unknown[])[]>
 >;
 
-export interface LoadCatalogInput {
+interface LoadCatalogInput {
   readonly locale: string;
   readonly bundledPath: string;
 }
 
-export type CatalogLoader = (
-  input: LoadCatalogInput,
-) => Promise<CatalogJSON | null>;
+type CatalogLoader = (input: LoadCatalogInput) => Promise<CatalogJSON | null>;
 
 export class CatalogParseError extends Error {
   readonly path: string;
