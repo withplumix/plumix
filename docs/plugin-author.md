@@ -229,29 +229,6 @@ Without comments, translators guess at placeholder semantics — a
 template like `{label} {kind} failed` is meaningless until you know
 `label` is plugin-author-supplied and `kind` is a protocol identifier.
 
-### Disambiguating polysemes
-
-English collapses several CMS terms across grammatical categories: `Post`
-(noun: content type / verb: publish), `Draft`, `Tag`, `Comment`, `Read`,
-`Home`, `Order`. Target locales split them into distinct words; a catalog
-with one entry per polyseme produces visible wrong renderings.
-
-Attach a `context:` field — Lingui emits `msgctxt` in the `.po`, gettext's
-mechanism for splitting a source string into per-sense buckets (WordPress
-`_x()` parity). Three helpers, same emission:
-
-| Helper | When to use |
-|---|---|
-| `withContext(desc, ctx)` | Plugin label tables with explicit ids — wraps an existing descriptor literal so the table source reads one entry per line. |
-| `defineMessage({ ..., context })` | Admin descriptors — the Babel macro extracts `context:` directly. |
-| `tx({ message, context })` / `` tx`Post`("noun") `` | Ad-hoc plugin runtime — tagged-template form is the terse one-liner. |
-
-When a polyseme appears inside an action phrase whose English verb makes
-the sense unambiguous in every locale (`Add Post`, `Edit Tag`, `Search
-Tags…`), it's fine to omit `context:` — but call the convention out
-explicitly with a block comment on the label table so the reviewer trail
-is documented.
-
 ### Hand-authored catalogs
 
 First-party plugins hand-author `locales/en.po` because manifest labels
