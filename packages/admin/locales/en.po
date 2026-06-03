@@ -1313,6 +1313,7 @@ msgstr "Done"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
+msgctxt "entry status"
 msgid "entries.list.statusFilter.draft"
 msgstr "Draft"
 
