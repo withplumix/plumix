@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { LoginLocaleSwitcher } from "@/components/login-locale-switcher.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Button } from "@/components/ui/button.js";
 import {
@@ -25,6 +26,7 @@ import {
   requestMagicLink,
   useMagicLinkRequestErrorMessage,
 } from "@/lib/magic-link.js";
+import { readManifest } from "@/lib/manifest.js";
 import { useOAuthErrorMessage } from "@/lib/oauth-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { PasskeyError, usePasskeyErrorMessage } from "@/lib/passkey-errors.js";
@@ -37,6 +39,7 @@ import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import * as v from "valibot";
 
+import { nextSearchForLang, writeLocaleCookie } from "./-locale-param.js";
 import { loginSchema } from "./-schemas.js";
 
 const loginSearchSchema = v.object({
@@ -49,6 +52,10 @@ const loginSearchSchema = v.object({
   // a boolean — pinning to `v.string()` here would error the route
   // when the verify route emits a numeric-looking flag.
   email_change_success: v.optional(v.union([v.string(), v.number()])),
+  // Pre-auth locale override. Server-side `resolveAdminShellLocale`
+  // consumes this same param to set `<html lang dir>`; the dropdown
+  // below lets the user flip it from inside the form.
+  lang: v.optional(v.string()),
 });
 
 export const Route = createFileRoute("/_auth/login")({
@@ -68,6 +75,7 @@ export const Route = createFileRoute("/_auth/login")({
 function LoginRoute(): ReactNode {
   const router = useRouter();
   const search = Route.useSearch();
+  const manifest = readManifest();
   const { i18n } = useLingui();
   const renderPasskeyError = usePasskeyErrorMessage();
   const renderMagicLinkError = useMagicLinkErrorMessage();
@@ -125,6 +133,22 @@ function LoginRoute(): ReactNode {
       return;
     }
     magicLink.mutate({ email });
+  };
+
+  // Persist the pick via cookie (WP `wp_lang` parity, scoped to admin
+  // path so public-route caching stays clean) AND pin the URL so the
+  // first reload resolves to the same locale before the cookie is
+  // visible on the next request. Full page reload — admin shell is
+  // server-rendered with `<html lang dir>` per the resolved locale.
+  const handleLocaleSelect = (code: string): void => {
+    writeLocaleCookie(code);
+    const nextSearch = nextSearchForLang(search, code);
+    const params = new URLSearchParams();
+    for (const [k, raw] of Object.entries(nextSearch)) {
+      if (typeof raw === "string") params.set(k, raw);
+      else if (typeof raw === "number") params.set(k, String(raw));
+    }
+    window.location.assign(`${window.location.pathname}?${params.toString()}`);
   };
 
   const oauthErrorMessage = renderOAuthError(search.oauth_error);
@@ -327,6 +351,11 @@ function LoginRoute(): ReactNode {
             ))}
           </div>
         ) : null}
+        <LoginLocaleSwitcher
+          currentCode={i18n.locale}
+          manifest={manifest}
+          onSelect={handleLocaleSelect}
+        />
       </CardContent>
     </Card>
   );

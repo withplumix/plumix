@@ -1685,6 +1685,11 @@ msgid "userEdit.delete.reassign.keepAsIs"
 msgstr "Keep entries as-is (none to reassign)"
 
 #. js-lingui-explicit-id
+#: src/components/login-locale-switcher.tsx
+msgid "login.locale.aria"
+msgstr "Language"
+
+#. js-lingui-explicit-id
 #: src/components/locale-switcher.tsx
 msgid "profile.language.aria"
 msgstr "Language"
@@ -2411,6 +2416,7 @@ msgstr "Revoke"
 msgid "profile.sessions.revoke.button"
 msgstr "Revoke"
 
+#. name: the user-chosen token nickname (e.g. 'CI deploy key')
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.revoke.title"
@@ -3186,6 +3192,7 @@ msgstr "Title"
 msgid "editor.revisions.diff.field.title"
 msgstr "Title"
 
+#. name: the user-chosen token nickname (e.g. 'CI deploy key')
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.secret.title"
