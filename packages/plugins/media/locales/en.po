@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"POT-Creation-Date: 2026-06-02\n"
+"POT-Creation-Date: 2026-06-03\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -10,13 +10,68 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/index.ts
+msgid "plugin.media.media.singular"
+msgstr "Asset"
+
+#. js-lingui-explicit-id
+#: src/index.ts
 msgid "plugin.media.media.plural"
 msgstr "Media"
 
 #. js-lingui-explicit-id
 #: src/index.ts
-msgid "plugin.media.media.singular"
-msgstr "Asset"
+msgid "plugin.media.media.addNew"
+msgstr "Add New"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.addNewItem"
+msgstr "Upload Media"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.editItem"
+msgstr "Edit Media"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.newItem"
+msgstr "New Media"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.viewItem"
+msgstr "View Media"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.searchItems"
+msgstr "Search media…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.notFound"
+msgstr "No media yet"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.notFoundInTrash"
+msgstr "Trash is empty"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.allItems"
+msgstr "All Media"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.untitledItem"
+msgstr "Untitled Media"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.moveToTrash"
+msgstr "Move media to trash?"
 
 #. js-lingui-explicit-id
 #: src/index.ts

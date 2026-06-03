@@ -15,7 +15,7 @@ describe("@plumix/plugin-pages", () => {
     // Label is a `MessageDescriptor` (slice 5 #674): plugins ship
     // descriptors so admin can resolve the translated string at render.
     expect(page?.label).toEqual({
-      id: "plugin.pages.label",
+      id: "plugin.pages.page.plural",
       message: "Pages",
     });
     expect(page?.isHierarchical).toBe(true);
