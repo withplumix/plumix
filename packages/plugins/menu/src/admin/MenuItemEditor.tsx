@@ -167,13 +167,16 @@ function MenuSettingsPanel({
   const save = useSaveMenu();
   const queryClient = useQueryClient();
   // The conflict banner persists past the mutation's transient error
-  // state (mutation goes idle on dismiss/refetch). `dismissed` lets the
-  // user explicitly close via the reload action; the banner shows while
-  // a mismatch is observed AND the user hasn't dismissed it.
-  const [dismissed, setDismissed] = useState(false);
+  // state (mutation goes idle on dismiss/refetch). Dismissal is keyed
+  // to the data version that was active when the user dismissed —
+  // after invalidateQueries lands a newer version and the reducer
+  // advances `state.version`, the comparison naturally re-arms so a
+  // SECOND `version_mismatch` (different racing editor) shows the
+  // banner again.
+  const [dismissedAt, setDismissedAt] = useState<number | null>(null);
   const isVersionMismatch =
     save.error instanceof Error && save.error.message === "version_mismatch";
-  const conflict = isVersionMismatch && !dismissed;
+  const conflict = isVersionMismatch && dismissedAt !== state.version;
   return (
     <div data-testid="menu-settings-panel">
       <LocationsBindings termId={state.termId} slug={state.slug} />
@@ -188,7 +191,7 @@ function MenuSettingsPanel({
             type="button"
             data-testid="menu-conflict-reload"
             onClick={() => {
-              setDismissed(true);
+              setDismissedAt(state.version);
               save.reset();
               void queryClient.invalidateQueries({
                 queryKey: ["menu", "get", state.termId] as const,
