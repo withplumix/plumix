@@ -42,8 +42,10 @@
     "provenance": true
   },
   "scripts": {
+    "i18n:extract": "lingui extract",
+    "i18n:compile": "lingui compile --namespace es",
     "attw": "attw --pack . --profile esm-only",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "node scripts/i18n-compile-check.mjs && tsc -p tsconfig.build.json",
     "clean": "git clean -xdf .cache .turbo dist node_modules e2e/playwright-report e2e/test-results",
     "format": "prettier --check . --ignore-path ../../../.gitignore",
     "lint": "eslint",
@@ -66,6 +68,8 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
+    "@lingui/cli": "^6.2.0",
+    "@lingui/format-po": "^6.2.0",
     "@orpc/server": "catalog:",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",
