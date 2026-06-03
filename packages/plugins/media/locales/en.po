@@ -82,3 +82,212 @@ msgstr "Media Library"
 #: src/index.ts
 msgid "core.adminNav.library"
 msgstr "Library"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.title.library"
+msgstr "Media Library"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.title.picker"
+msgstr "Select media"
+
+#. js-lingui-explicit-id
+#. title: the media item's display title
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.pickItemAria"
+msgstr "Pick {title}"
+
+#. js-lingui-explicit-id
+#. title: the media item's display title
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.openDetailsAria"
+msgstr "Open details for {title}"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.failedToLoad"
+msgstr "Failed to load media."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.loadingMore"
+msgstr "Loading more…"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.pickerCancel"
+msgstr "Cancel"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.pickerUseSelection"
+msgstr "Use selection"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.banner.dismiss"
+msgstr "Dismiss"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.dropzone.headline"
+msgstr "Your library is empty. Add files to get started."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.dropzone.subline"
+msgstr "Drag and drop or <0>select from computer</0>"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.upload.button"
+msgstr "Upload"
+
+#. js-lingui-explicit-id
+#. count: number of files currently uploading
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.upload.progress"
+msgstr "Uploading {count, plural, one {# file} other {# files}}…"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.heading"
+msgstr "ASSET DETAILS"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.closeAria"
+msgstr "Close details"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.field.assetType"
+msgstr "ASSET TYPE"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.field.fileSize"
+msgstr "FILE SIZE"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.field.uploaded"
+msgstr "UPLOADED"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.field.altText"
+msgstr "ALT TEXT"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.altPlaceholderImage"
+msgstr "Describe this image…"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.altPlaceholderOther"
+msgstr "Add a description…"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.field.url"
+msgstr "URL"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.copied"
+msgstr "Copied"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.copy"
+msgstr "Copy"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.download"
+msgstr "Download"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.delete"
+msgstr "Delete"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.deleteTitle"
+msgstr "Delete this asset?"
+
+#. js-lingui-explicit-id
+#. title: the media item being deleted
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.deleteDescription"
+msgstr "\"{title}\" will be removed permanently. Pages or posts that embed it will show a broken link."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.deleteConfirm"
+msgstr "Delete"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.dialog.cancel"
+msgstr "Cancel"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.dialog.confirm"
+msgstr "Confirm"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.altEditor.saved"
+msgstr "✓ Saved"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.storageNotConfigured"
+msgstr "No storage adapter is wired up — set `storage:` in plumix.config.ts."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.payloadTooLarge"
+msgstr "File exceeds the configured maxUploadSize."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.unsupportedMediaType"
+msgstr "This file type isn't allowed by the media plugin's acceptedTypes."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.mimeMismatch"
+msgstr "The uploaded bytes don't match the declared file type."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.objectNotFound"
+msgstr "Upload didn't reach storage — check your bucket's CORS rules."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.alreadyConfirmed"
+msgstr "This upload was already confirmed by another tab or device."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.serverCouldntProcess"
+msgstr "Server couldn't process this upload. Try again."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.contentLengthRequired"
+msgstr "Upload missing Content-Length — your browser/proxy may be using chunked transfer."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.csrfTokenMissing"
+msgstr "Request blocked by CSRF check. Reload the page and try again."

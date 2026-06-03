@@ -1,3 +1,4 @@
+import type { MessageDescriptor } from "plumix/i18n";
 import type { DragEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -5,6 +6,54 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
+import { Trans, useLingui } from "plumix/i18n";
+
+// Descriptors that need runtime indirection — used outside JSX (aria
+// strings, native attribute values). JSX-text strings stay inline at
+// their `<Trans>` callsite for extraction discoverability.
+const M = {
+  titleLibrary: {
+    id: "plugin.media.library.title.library",
+    message: "Media Library",
+  },
+  titlePicker: {
+    id: "plugin.media.library.title.picker",
+    message: "Select media",
+  },
+  pickItemAria: {
+    id: "plugin.media.library.pickItemAria",
+    message: "Pick {title}",
+    comment: "title: the media item's display title",
+  },
+  openDetailsAria: {
+    id: "plugin.media.library.openDetailsAria",
+    message: "Open details for {title}",
+    comment: "title: the media item's display title",
+  },
+  closeDetailsAria: {
+    id: "plugin.media.detail.closeAria",
+    message: "Close details",
+  },
+  describeImage: {
+    id: "plugin.media.detail.altPlaceholderImage",
+    message: "Describe this image…",
+  },
+  describeAsset: {
+    id: "plugin.media.detail.altPlaceholderOther",
+    message: "Add a description…",
+  },
+  confirmDeleteDescription: {
+    id: "plugin.media.detail.deleteDescription",
+    message:
+      '"{title}" will be removed permanently. Pages or posts that embed it will show a broken link.',
+    comment: "title: the media item being deleted",
+  },
+  uploadingFiles: {
+    id: "plugin.media.upload.progress",
+    message: "Uploading {count, plural, one {# file} other {# files}}…",
+    comment: "count: number of files currently uploading",
+  },
+} satisfies Record<string, MessageDescriptor>;
 
 const PAGE_SIZE = 24;
 const UPLOAD_CONCURRENCY = 4;
@@ -285,6 +334,7 @@ export function MediaLibrary({
   onCancel,
 }: MediaLibraryProps = {}): ReactNode {
   const queryClient = useQueryClient();
+  const { i18n } = useLingui();
   const [dragging, setDragging] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const isPicker = mode === "picker";
@@ -433,7 +483,7 @@ export function MediaLibrary({
             data-testid="media-library-title"
             className={`${isPicker ? "text-xl" : "text-3xl"} font-semibold tracking-tight`}
           >
-            {isPicker ? "Select media" : "Media Library"}
+            {isPicker ? i18n._(M.titlePicker) : i18n._(M.titleLibrary)}
           </h1>
           <UploadButton onSelect={(files) => void startUpload(files)} />
         </header>
@@ -447,7 +497,10 @@ export function MediaLibrary({
             data-testid="media-library-error"
             className="text-destructive text-sm"
           >
-            Failed to load media.
+            <Trans
+              id="plugin.media.library.failedToLoad"
+              message="Failed to load media."
+            />
           </div>
         )}
 
@@ -482,8 +535,16 @@ export function MediaLibrary({
                   }
                   ariaActionLabel={
                     isPicker
-                      ? `Pick ${item.title}`
-                      : `Open details for ${item.title}`
+                      ? i18n._(
+                          M.pickItemAria.id,
+                          { title: item.title },
+                          { message: M.pickItemAria.message },
+                        )
+                      : i18n._(
+                          M.openDetailsAria.id,
+                          { title: item.title },
+                          { message: M.openDetailsAria.message },
+                        )
                   }
                 />
               );
@@ -498,7 +559,10 @@ export function MediaLibrary({
             data-testid="media-library-loading-more"
             className="text-muted-foreground text-center text-sm"
           >
-            Loading more…
+            <Trans
+              id="plugin.media.library.loadingMore"
+              message="Loading more…"
+            />
           </div>
         )}
 
@@ -524,7 +588,7 @@ export function MediaLibrary({
               onClick={() => onCancel?.()}
               data-testid="media-library-picker-cancel"
             >
-              Cancel
+              <Trans id="plugin.media.library.pickerCancel" message="Cancel" />
             </button>
             <button
               type="button"
@@ -537,7 +601,10 @@ export function MediaLibrary({
               }}
               data-testid="media-library-picker-confirm"
             >
-              Use selection
+              <Trans
+                id="plugin.media.library.pickerUseSelection"
+                message="Use selection"
+              />
             </button>
           </footer>
         )}
@@ -561,7 +628,7 @@ export function MediaLibrary({
       {errorMsg && (
         <ErrorBanner
           testIdRoot="media-library-banner-error"
-          message={friendlyError(errorMsg)}
+          message={friendlyError(errorMsg, (d) => i18n._(d))}
           onDismiss={() => setErrorMsg(null)}
         />
       )}
@@ -573,35 +640,80 @@ function hasFiles(e: DragEvent): boolean {
   return Array.from(e.dataTransfer.types).includes("Files");
 }
 
-// Map opaque RPC `reason` codes to actionable text. The error banner is
-// the only surface a user sees when an upload fails — raw reasons like
-// `mime_mismatch` read like 404s.
-const FRIENDLY_ERRORS: Readonly<Record<string, string>> = {
-  storage_not_configured:
-    "No storage adapter is wired up — set `storage:` in plumix.config.ts.",
-  payload_too_large: "File exceeds the configured maxUploadSize.",
-  rpc_413: "File exceeds the configured maxUploadSize.",
-  unsupported_media_type:
-    "This file type isn't allowed by the media plugin's acceptedTypes.",
-  rpc_415: "This file type isn't allowed by the media plugin's acceptedTypes.",
-  content_type_mismatch:
-    "This file type isn't allowed by the media plugin's acceptedTypes.",
-  mime_mismatch: "The uploaded bytes don't match the declared file type.",
-  object_not_found:
-    "Upload didn't reach storage — check your bucket's CORS rules.",
-  already_confirmed:
-    "This upload was already confirmed by another tab or device.",
-  media_meta_invalid: "Server couldn't process this upload. Try again.",
-  db_insert_failed: "Server couldn't process this upload. Try again.",
-  storage_put_failed: "Server couldn't process this upload. Try again.",
-  content_length_required:
-    "Upload missing Content-Length — your browser/proxy may be using chunked transfer.",
-  csrf_token_missing:
-    "Request blocked by CSRF check. Reload the page and try again.",
+// Map opaque RPC `reason` codes to actionable, translatable text. The
+// error banner is the only surface a user sees when an upload fails —
+// raw reasons like `mime_mismatch` read like 404s. Several codes share
+// a descriptor (`payload_too_large` + `rpc_413` etc.) — the translator
+// translates one message, the lookup serves it for every aliased code.
+const ERROR_DESCRIPTORS = {
+  storageNotConfigured: {
+    id: "plugin.media.error.storageNotConfigured",
+    message:
+      "No storage adapter is wired up — set `storage:` in plumix.config.ts.",
+  },
+  payloadTooLarge: {
+    id: "plugin.media.error.payloadTooLarge",
+    message: "File exceeds the configured maxUploadSize.",
+  },
+  unsupportedMediaType: {
+    id: "plugin.media.error.unsupportedMediaType",
+    message:
+      "This file type isn't allowed by the media plugin's acceptedTypes.",
+  },
+  mimeMismatch: {
+    id: "plugin.media.error.mimeMismatch",
+    message: "The uploaded bytes don't match the declared file type.",
+  },
+  objectNotFound: {
+    id: "plugin.media.error.objectNotFound",
+    message: "Upload didn't reach storage — check your bucket's CORS rules.",
+  },
+  alreadyConfirmed: {
+    id: "plugin.media.error.alreadyConfirmed",
+    message: "This upload was already confirmed by another tab or device.",
+  },
+  serverCouldntProcess: {
+    id: "plugin.media.error.serverCouldntProcess",
+    message: "Server couldn't process this upload. Try again.",
+  },
+  contentLengthRequired: {
+    id: "plugin.media.error.contentLengthRequired",
+    message:
+      "Upload missing Content-Length — your browser/proxy may be using chunked transfer.",
+  },
+  csrfTokenMissing: {
+    id: "plugin.media.error.csrfTokenMissing",
+    message: "Request blocked by CSRF check. Reload the page and try again.",
+  },
+} satisfies Record<string, MessageDescriptor>;
+
+const FRIENDLY_ERRORS: Readonly<Record<string, MessageDescriptor>> = {
+  storage_not_configured: ERROR_DESCRIPTORS.storageNotConfigured,
+  payload_too_large: ERROR_DESCRIPTORS.payloadTooLarge,
+  rpc_413: ERROR_DESCRIPTORS.payloadTooLarge,
+  unsupported_media_type: ERROR_DESCRIPTORS.unsupportedMediaType,
+  rpc_415: ERROR_DESCRIPTORS.unsupportedMediaType,
+  content_type_mismatch: ERROR_DESCRIPTORS.unsupportedMediaType,
+  mime_mismatch: ERROR_DESCRIPTORS.mimeMismatch,
+  object_not_found: ERROR_DESCRIPTORS.objectNotFound,
+  already_confirmed: ERROR_DESCRIPTORS.alreadyConfirmed,
+  media_meta_invalid: ERROR_DESCRIPTORS.serverCouldntProcess,
+  db_insert_failed: ERROR_DESCRIPTORS.serverCouldntProcess,
+  storage_put_failed: ERROR_DESCRIPTORS.serverCouldntProcess,
+  content_length_required: ERROR_DESCRIPTORS.contentLengthRequired,
+  csrf_token_missing: ERROR_DESCRIPTORS.csrfTokenMissing,
 };
 
-function friendlyError(raw: string): string {
-  return FRIENDLY_ERRORS[raw] ?? raw;
+/**
+ * Resolve a server `reason` code to a translated string. Returns the
+ * raw code when no descriptor matches (developer-facing fallback).
+ */
+function friendlyError(
+  raw: string,
+  render: (d: MessageDescriptor) => string,
+): string {
+  const descriptor = FRIENDLY_ERRORS[raw];
+  return descriptor ? render(descriptor) : raw;
 }
 
 function ErrorBanner({
@@ -626,7 +738,7 @@ function ErrorBanner({
         onClick={onDismiss}
         className="text-xs underline"
       >
-        Dismiss
+        <Trans id="plugin.media.banner.dismiss" message="Dismiss" />
       </button>
     </div>
   );
@@ -674,11 +786,19 @@ function Dropzone({
       <CloudUploadGlyph />
       <div className="flex flex-col gap-1">
         <p className="m-0 text-sm font-medium">
-          Your library is empty. Add files to get started.
+          <Trans
+            id="plugin.media.dropzone.headline"
+            message="Your library is empty. Add files to get started."
+          />
         </p>
         <p className="text-muted-foreground m-0 text-xs">
-          Drag and drop or{" "}
-          <span className="underline">select from computer</span>
+          <Trans
+            id="plugin.media.dropzone.subline"
+            message="Drag and drop or <0>select from computer</0>"
+            components={{
+              0: <span className="underline" />,
+            }}
+          />
         </p>
       </div>
     </label>
@@ -724,7 +844,7 @@ function UploadButton({
           event.target.value = "";
         }}
       />
-      Upload
+      <Trans id="plugin.media.upload.button" message="Upload" />
     </label>
   );
 }
@@ -744,8 +864,11 @@ function UploadProgressBar({
     >
       <div className="flex items-center justify-between">
         <span>
-          Uploading {String(pending.length)} file
-          {pending.length === 1 ? "" : "s"}…
+          <Trans
+            id="plugin.media.upload.progress"
+            message="Uploading {count, plural, one {# file} other {# files}}…"
+            values={{ count: pending.length }}
+          />
         </span>
         <span data-testid="media-library-progress-pct">{pct}%</span>
       </div>
@@ -915,6 +1038,7 @@ function MediaDetailDrawer({
   onAltChange: (alt: string) => void;
   onDelete: () => void;
 }): ReactNode {
+  const { i18n } = useLingui();
   const [copied, setCopied] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const isImage = item.mime.startsWith("image/");
@@ -935,11 +1059,13 @@ function MediaDetailDrawer({
       className="border-border bg-card sticky top-8 flex max-h-[calc(100vh-4rem)] w-80 flex-shrink-0 flex-col self-start overflow-y-auto rounded-lg border"
     >
       <div className="border-border flex items-center justify-between border-b px-4 py-3">
-        <span className="text-xs tracking-wider opacity-70">ASSET DETAILS</span>
+        <span className="text-xs tracking-wider opacity-70">
+          <Trans id="plugin.media.detail.heading" message="ASSET DETAILS" />
+        </span>
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close details"
+          aria-label={i18n._(M.closeDetailsAria)}
           data-testid="media-detail-close"
           className="cursor-pointer rounded px-1.5 py-0.5 text-base leading-none"
         >
@@ -966,25 +1092,50 @@ function MediaDetailDrawer({
           </h2>
         </div>
 
-        <DetailField label="ASSET TYPE" value={item.mime} />
-        <DetailField label="FILE SIZE" value={formatSize(item.size)} />
-        <DetailField label="UPLOADED" value={formatLongDate(item.uploadedAt)} />
+        <DetailField
+          label={
+            <Trans
+              id="plugin.media.detail.field.assetType"
+              message="ASSET TYPE"
+            />
+          }
+          value={item.mime}
+        />
+        <DetailField
+          label={
+            <Trans
+              id="plugin.media.detail.field.fileSize"
+              message="FILE SIZE"
+            />
+          }
+          value={formatSize(item.size)}
+        />
+        <DetailField
+          label={
+            <Trans id="plugin.media.detail.field.uploaded" message="UPLOADED" />
+          }
+          value={formatLongDate(item.uploadedAt)}
+        />
 
         <div>
-          <DetailLabel>ALT TEXT</DetailLabel>
+          <DetailLabel>
+            <Trans id="plugin.media.detail.field.altText" message="ALT TEXT" />
+          </DetailLabel>
           <AltEditor
             cardId={item.id}
             testIdPrefix="media-detail"
             value={item.alt ?? ""}
             placeholder={
-              isImage ? "Describe this image…" : "Add a description…"
+              isImage ? i18n._(M.describeImage) : i18n._(M.describeAsset)
             }
             onSave={onAltChange}
           />
         </div>
 
         <div>
-          <DetailLabel>URL</DetailLabel>
+          <DetailLabel>
+            <Trans id="plugin.media.detail.field.url" message="URL" />
+          </DetailLabel>
           <div className="flex items-center gap-2">
             <code
               data-testid="media-detail-url"
@@ -999,7 +1150,11 @@ function MediaDetailDrawer({
               data-testid="media-detail-copy"
               className="border-border flex-shrink-0 cursor-pointer rounded border bg-transparent px-2 py-1 text-[0.7rem]"
             >
-              {copied ? "Copied" : "Copy"}
+              {copied ? (
+                <Trans id="plugin.media.detail.copied" message="Copied" />
+              ) : (
+                <Trans id="plugin.media.detail.copy" message="Copy" />
+              )}
             </button>
           </div>
         </div>
@@ -1017,7 +1172,7 @@ function MediaDetailDrawer({
             data-testid="media-detail-download"
             className="bg-card hover:bg-muted flex-1 rounded border px-3 py-2 text-center text-xs no-underline"
           >
-            Download
+            <Trans id="plugin.media.detail.download" message="Download" />
           </a>
           <button
             type="button"
@@ -1025,15 +1180,26 @@ function MediaDetailDrawer({
             onClick={() => setConfirmingDelete(true)}
             className="border-border flex-1 cursor-pointer rounded border bg-transparent px-3 py-2 text-xs"
           >
-            Delete
+            <Trans id="plugin.media.detail.delete" message="Delete" />
           </button>
         </div>
       </div>
       {confirmingDelete && (
         <ConfirmDialog
-          title="Delete this asset?"
-          description={`"${item.title}" will be removed permanently. Pages or posts that embed it will show a broken link.`}
-          confirmLabel="Delete"
+          title={
+            <Trans
+              id="plugin.media.detail.deleteTitle"
+              message="Delete this asset?"
+            />
+          }
+          description={i18n._(
+            M.confirmDeleteDescription.id,
+            { title: item.title },
+            { message: M.confirmDeleteDescription.message },
+          )}
+          confirmLabel={
+            <Trans id="plugin.media.detail.deleteConfirm" message="Delete" />
+          }
           danger
           onCancel={() => setConfirmingDelete(false)}
           onConfirm={() => {
@@ -1049,16 +1215,16 @@ function MediaDetailDrawer({
 function ConfirmDialog({
   title,
   description,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel,
+  cancelLabel,
   danger = false,
   onCancel,
   onConfirm,
 }: {
-  title: string;
+  title: ReactNode;
   description?: string;
-  confirmLabel?: string;
-  cancelLabel?: string;
+  confirmLabel?: ReactNode;
+  cancelLabel?: ReactNode;
   danger?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
@@ -1101,7 +1267,9 @@ function ConfirmDialog({
             onClick={onCancel}
             className="border-border cursor-pointer rounded border bg-transparent px-3.5 py-2 text-[0.8rem]"
           >
-            {cancelLabel}
+            {cancelLabel ?? (
+              <Trans id="plugin.media.dialog.cancel" message="Cancel" />
+            )}
           </button>
           <button
             type="button"
@@ -1114,7 +1282,9 @@ function ConfirmDialog({
                 : "border-primary bg-primary text-primary-foreground"
             }`}
           >
-            {confirmLabel}
+            {confirmLabel ?? (
+              <Trans id="plugin.media.dialog.confirm" message="Confirm" />
+            )}
           </button>
         </div>
       </div>
@@ -1134,7 +1304,7 @@ function DetailField({
   label,
   value,
 }: {
-  label: string;
+  label: ReactNode;
   value: string;
 }): ReactNode {
   return (
@@ -1216,7 +1386,7 @@ function AltEditor({
           aria-live="polite"
           className="text-primary pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-[0.65rem]"
         >
-          ✓ Saved
+          <Trans id="plugin.media.altEditor.saved" message="✓ Saved" />
         </span>
       )}
     </div>
