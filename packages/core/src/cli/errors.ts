@@ -14,6 +14,8 @@ type CliErrorCode =
   | "config_load_failed"
   | "config_invalid"
   | "i18n_check_drift"
+  | "i18n_init_no_package_json"
+  | "i18n_init_invalid_package_json"
   | "tooling_command_no_app";
 
 export class CliError extends Error {
@@ -206,6 +208,27 @@ export class CliError extends Error {
       `Translation catalogs out of sync — ${ctx.ids.length} msgid(s) drifted (+ added, - removed):\n  ${ctx.ids.join("\n  ")}`,
       "Run `plumix i18n extract` locally and commit the updated `.po` file(s).",
       undefined,
+    );
+  }
+
+  static i18nInitNoPackageJson(ctx: { cwd: string }): CliError {
+    return new CliError(
+      "i18n_init_no_package_json",
+      `No package.json at ${ctx.cwd}`,
+      "Run `plumix i18n init` from a package root, or scaffold one first with `pnpm init`.",
+      undefined,
+    );
+  }
+
+  static i18nInitInvalidPackageJson(ctx: {
+    cwd: string;
+    cause: unknown;
+  }): CliError {
+    return new CliError(
+      "i18n_init_invalid_package_json",
+      `Cannot parse package.json at ${ctx.cwd}`,
+      "Fix the JSON syntax before re-running `plumix i18n init` — refusing to overwrite a malformed file.",
+      ctx.cause,
     );
   }
 }

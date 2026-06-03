@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { CommandContext, PlumixApp } from "@plumix/core";
 
-import { i18nCommand, i18nDeps } from "./i18n.js";
+import { i18nCommand, i18nDeps, LINGUI_DEP_RANGE } from "./i18n.js";
 
 function fakeApp(): PlumixApp {
   return {
@@ -221,6 +221,148 @@ describe("i18nCommand", () => {
         process.execPath,
         ["/fake/lingui.js", "extract", "--clean"],
         { cwd: dir },
+      );
+    });
+  });
+
+  describe("init", () => {
+    interface PartialPackageJson {
+      scripts?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    }
+    const readPkg = (cwd: string): PartialPackageJson =>
+      JSON.parse(
+        readFileSync(join(cwd, "package.json"), "utf8"),
+      ) as PartialPackageJson;
+
+    beforeEach(() => {
+      // `report.info` writes to stdout; silence it in tests.
+      vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    });
+
+    test("scaffolds lingui.config.ts at the package root", async () => {
+      await i18nCommand.run(ctx({ cwd: dir, argv: ["init"] }));
+      const configPath = join(dir, "lingui.config.ts");
+      expect(existsSync(configPath)).toBe(true);
+      const config = readFileSync(configPath, "utf8");
+      expect(config).toContain('sourceLocale: "en"');
+      expect(config).toContain('path: "<rootDir>/locales/{locale}"');
+      expect(config).toContain('include: ["src"]');
+      expect(config).toContain("formatter({ lineNumbers: false })");
+    });
+
+    test("scaffolds scripts/i18n-compile-check.mjs with the parse-error gate", async () => {
+      await i18nCommand.run(ctx({ cwd: dir, argv: ["init"] }));
+      const scriptPath = join(dir, "scripts", "i18n-compile-check.mjs");
+      expect(existsSync(scriptPath)).toBe(true);
+      const script = readFileSync(scriptPath, "utf8");
+      // Same contract as admin's: spawn `lingui compile` without
+      // `--strict` (the args array literally doesn't include it),
+      // grep stdout for "Compilation error", exit 1 on parse error.
+      expect(script).toMatch(/spawn\([\s\S]*"lingui",\s*"compile"/);
+      expect(script).not.toMatch(/"--strict"/);
+      expect(script).toMatch(/Compilation error/);
+    });
+
+    test("patches package.json with i18n scripts pinned to LINGUI_DEP_RANGE", async () => {
+      await i18nCommand.run(ctx({ cwd: dir, argv: ["init"] }));
+      const pkg = readPkg(dir);
+      expect(pkg.scripts).toMatchObject({
+        "i18n:extract": "lingui extract",
+        "i18n:compile": "lingui compile --namespace es",
+        "i18n:check": "plumix i18n extract --check",
+      });
+      // Pinning to the constant — a version bump must be a deliberate
+      // test change so the gate against silent drift stays loud.
+      expect(pkg.devDependencies?.["@lingui/cli"]).toBe(LINGUI_DEP_RANGE);
+      expect(pkg.devDependencies?.["@lingui/format-po"]).toBe(LINGUI_DEP_RANGE);
+    });
+
+    test("re-running init preserves user edits to scaffolded files", async () => {
+      await i18nCommand.run(ctx({ cwd: dir, argv: ["init"] }));
+      const scriptBefore = readFileSync(
+        join(dir, "scripts", "i18n-compile-check.mjs"),
+        "utf8",
+      );
+      const pkgBefore = readFileSync(join(dir, "package.json"), "utf8");
+
+      // Mutate the scaffolded files; re-running init must not clobber.
+      writeFileSync(join(dir, "lingui.config.ts"), "// user edit\n");
+
+      await i18nCommand.run(ctx({ cwd: dir, argv: ["init"] }));
+
+      expect(readFileSync(join(dir, "lingui.config.ts"), "utf8")).toBe(
+        "// user edit\n",
+      );
+      // The other targets were already in place, so they stay identical.
+      expect(
+        readFileSync(join(dir, "scripts", "i18n-compile-check.mjs"), "utf8"),
+      ).toBe(scriptBefore);
+      expect(readFileSync(join(dir, "package.json"), "utf8")).toBe(pkgBefore);
+    });
+
+    test("preserves user scripts and devDeps when patching package.json", async () => {
+      writeFileSync(
+        join(dir, "package.json"),
+        JSON.stringify(
+          {
+            name: "test",
+            scripts: { build: "tsc", test: "vitest" },
+            devDependencies: { typescript: "^5" },
+          },
+          null,
+          2,
+        ),
+      );
+
+      await i18nCommand.run(ctx({ cwd: dir, argv: ["init"] }));
+
+      const pkg = readPkg(dir);
+      expect(pkg.scripts?.build).toBe("tsc");
+      expect(pkg.scripts?.test).toBe("vitest");
+      expect(pkg.devDependencies?.typescript).toBe("^5");
+      expect(pkg.scripts?.["i18n:extract"]).toBe("lingui extract");
+      expect(pkg.devDependencies?.["@lingui/cli"]).toBe(LINGUI_DEP_RANGE);
+    });
+
+    test("user values win on collision — never overwrite a customized script", async () => {
+      writeFileSync(
+        join(dir, "package.json"),
+        JSON.stringify(
+          {
+            name: "test",
+            scripts: { "i18n:extract": "my-custom-extract" },
+            devDependencies: { "@lingui/cli": "5.0.0" },
+          },
+          null,
+          2,
+        ),
+      );
+
+      await i18nCommand.run(ctx({ cwd: dir, argv: ["init"] }));
+
+      const pkg = readPkg(dir);
+      expect(pkg.scripts?.["i18n:extract"]).toBe("my-custom-extract");
+      expect(pkg.devDependencies?.["@lingui/cli"]).toBe("5.0.0");
+    });
+
+    test("errors clearly when package.json is missing", async () => {
+      rmSync(join(dir, "package.json"));
+      await expect(
+        i18nCommand.run(ctx({ cwd: dir, argv: ["init"] })),
+      ).rejects.toThrow(/No package\.json at /);
+      // Other targets still landed before the package.json step — that's
+      // fine; re-running after `pnpm init` completes the scaffold.
+    });
+
+    test("refuses to overwrite a malformed package.json", async () => {
+      writeFileSync(join(dir, "package.json"), "{ not valid json");
+      await expect(
+        i18nCommand.run(ctx({ cwd: dir, argv: ["init"] })),
+      ).rejects.toThrow(/Cannot parse package\.json/);
+      // The broken file is left untouched for the user to fix.
+      expect(readFileSync(join(dir, "package.json"), "utf8")).toBe(
+        "{ not valid json",
       );
     });
   });
