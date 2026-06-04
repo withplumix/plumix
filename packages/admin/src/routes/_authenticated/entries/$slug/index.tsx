@@ -167,6 +167,7 @@ const M = {
   statusTrash: defineMessage({
     id: "entries.list.statusFilter.trash",
     message: "Trash",
+    context: "entry status",
   }),
   authorAll: defineMessage({
     id: "entries.list.authorFilter.all",
@@ -201,10 +202,12 @@ const M = {
   rowTrash: defineMessage({
     id: "entries.list.row.trash",
     message: "Trash",
+    context: "action verb",
   }),
   rowTrashing: defineMessage({
     id: "entries.list.row.trashing",
     message: "Trashing…",
+    context: "action verb",
   }),
   // Search placeholder / load error / loading aria / taxonomy filter
   // chrome resolve via the WP-style cascade — `labels[<key>]` when the

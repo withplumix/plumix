@@ -168,6 +168,8 @@ async function resolveFrontPage(
 
     node: { kind: "front-page" },
     data,
+    // Public-route content i18n is a deferred userland seam; "Home"
+    // (site root) stays English here.
     title: "Home",
   });
   return new Response(html, {
