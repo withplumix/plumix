@@ -567,7 +567,9 @@ function SortableTreeRow({
   const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    paddingLeft: `${String(depth * INDENTATION_WIDTH)}px`,
+    // `paddingInlineStart` flips with `<html dir>` so the tree indent
+    // reads correctly in RTL admin (Arabic indent reverses).
+    paddingInlineStart: `${String(depth * INDENTATION_WIDTH)}px`,
     opacity: isUnauthorized ? 0.5 : undefined,
   };
   const displayLabel = item.title ?? item.resolvedLabel;
