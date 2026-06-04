@@ -13,6 +13,22 @@ export function nextSearchForLang(
   return { ...rest, lang: nextCode };
 }
 
+/** Pins `?lang=` so the next SSR resolves to the chosen locale
+ *  before the cookie is visible on the wire, preserving sibling
+ *  search params (`oauth_error`, `redirect_to`, etc.). */
+export function buildLocaleSwitchUrl(
+  currentSearch: Record<string, unknown>,
+  nextCode: string,
+): string {
+  const nextSearch = nextSearchForLang(currentSearch, nextCode);
+  const params = new URLSearchParams();
+  for (const [k, raw] of Object.entries(nextSearch)) {
+    if (typeof raw === "string") params.set(k, raw);
+    else if (typeof raw === "number") params.set(k, String(raw));
+  }
+  return `${window.location.pathname}?${params.toString()}`;
+}
+
 /** `secure` defaults to the current scheme; tests pass `false` to
  *  bypass HTTPS-only enforcement in jsdom. */
 export function writeLocaleCookie(
