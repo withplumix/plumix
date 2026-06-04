@@ -1573,6 +1573,11 @@ msgid "editor.staleDraft.hideComparison"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/error-boundary-fallback.tsx
+msgid "errorBoundary.hideError"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.sent.description"
 msgstr ""
@@ -2661,6 +2666,11 @@ msgid "userInvite.success.description"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/error-boundary-fallback.tsx
+msgid "errorBoundary.showError"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffDialog.tsx
 msgid "editor.revisions.diffDialog.description"
 msgstr ""
@@ -2764,6 +2774,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/error-boundary-fallback.tsx
+msgid "errorBoundary.title"
 msgstr ""
 
 #. js-lingui-explicit-id
