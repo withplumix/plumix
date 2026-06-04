@@ -1,0 +1,117 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-04\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: zh-CN\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.auditLog.adminPage.title"
+msgstr "审计日志"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "core.adminNav.tools"
+msgstr "工具"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.shell.title"
+msgstr "审计日志"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.shell.empty"
+msgstr "没有匹配的审计事件。"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.shell.loadMore"
+msgstr "加载更多"
+
+#. message: the underlying error message from the RPC failure
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.shell.error"
+msgstr "无法加载审计日志：{message}"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.column.time"
+msgstr "时间"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.column.actor"
+msgstr "操作者"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.column.event"
+msgstr "事件"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.column.subject"
+msgstr "对象"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.column.changes"
+msgstr "变更"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.preset.all"
+msgstr "全部时间"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.preset.today"
+msgstr "今天"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.preset.last7"
+msgstr "最近 7 天"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.preset.last30"
+msgstr "最近 30 天"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.actorPlaceholder"
+msgstr "操作者用户 ID"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.subjectAny"
+msgstr "任意对象类型"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.eventAny"
+msgstr "任意事件"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.reset"
+msgstr "重置"
+
+#. Fallback label when an audit row has no associated actor user
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.row.systemActor"
+msgstr "（系统）"
+
+#. count: number of additional changed fields beyond the preview limit
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.diff.overflow"
+msgstr " 还有 +{count} 项"

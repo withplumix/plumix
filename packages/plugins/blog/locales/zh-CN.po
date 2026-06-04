@@ -1,0 +1,165 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-03\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: zh-CN\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgctxt "post type general name"
+msgid "plugin.blog.post.plural"
+msgstr "文章"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgctxt "post type singular name"
+msgid "plugin.blog.post.singular"
+msgstr "文章"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgctxt "taxonomy general name"
+msgid "plugin.blog.category.plural"
+msgstr "分类"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgctxt "taxonomy singular name"
+msgid "plugin.blog.category.singular"
+msgstr "分类"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgctxt "taxonomy general name"
+msgid "plugin.blog.tag.plural"
+msgstr "标签"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgctxt "taxonomy singular name"
+msgid "plugin.blog.tag.singular"
+msgstr "标签"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.addNewItem"
+msgstr "添加文章"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.editItem"
+msgstr "编辑文章"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.newItem"
+msgstr "新文章"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.viewItem"
+msgstr "查看文章"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.searchItems"
+msgstr "搜索文章…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.notFound"
+msgstr "暂无文章"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.notFoundInTrash"
+msgstr "回收站为空"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.allItems"
+msgstr "所有文章"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.noMatch"
+msgstr "没有匹配的文章"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.untitledItem"
+msgstr "未命名文章"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.moveToTrash"
+msgstr "将文章移至回收站？"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.addNewItem"
+msgstr "添加分类"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.editItem"
+msgstr "编辑分类"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.searchItems"
+msgstr "搜索分类…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.notFound"
+msgstr "暂无分类"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.allItems"
+msgstr "所有分类"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.parentItem"
+msgstr "父分类"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.backToItems"
+msgstr "← 返回分类"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.addNewItem"
+msgstr "添加标签"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.editItem"
+msgstr "编辑标签"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.searchItems"
+msgstr "搜索标签…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.notFound"
+msgstr "暂无标签"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.allItems"
+msgstr "所有标签"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.backToItems"
+msgstr "← 返回标签"
