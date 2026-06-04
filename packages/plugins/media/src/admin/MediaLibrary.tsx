@@ -908,6 +908,7 @@ function MediaCard({
   // detail drawer now (matches the WP/screenshot pattern: card is
   // the index, drawer is the detail editor).
 }): ReactNode {
+  const { i18n } = useLingui();
   const isImage = item.mime.startsWith("image/");
 
   return (
@@ -950,9 +951,9 @@ function MediaCard({
         {item.title}
       </div>
       <div className="flex gap-2 text-[0.7rem] opacity-60">
-        <span>{formatShortDate(item.uploadedAt)}</span>
+        <span>{formatShortDate(i18n.locale, item.uploadedAt)}</span>
         <span>·</span>
-        <span>{formatSize(item.size)}</span>
+        <span>{formatSize(i18n.locale, item.size)}</span>
       </div>
     </article>
   );
@@ -1015,22 +1016,27 @@ function badgeLabel(mime: string): string | null {
   return tail.replace(/^x-/, "").toUpperCase().slice(0, 5);
 }
 
-function formatShortDate(iso: string): string {
+function formatShortDate(locale: string, iso: string): string {
+  // Locale comes from `i18n.locale`, NOT browser default — a German user
+  // on a Spanish-default browser sees German chrome but otherwise would
+  // see Spanish dates. `.toUpperCase()` is skipped — Turkish dotless-i
+  // breaks; the card grid is already small-caps via CSS.
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d
-    .toLocaleDateString(undefined, { month: "short", day: "numeric" })
-    .toUpperCase();
+  return new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+  }).format(d);
 }
 
-function formatLongDate(iso: string): string {
+function formatLongDate(locale: string, iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString(undefined, {
+  return new Intl.DateTimeFormat(locale, {
     year: "numeric",
     month: "short",
     day: "numeric",
-  });
+  }).format(d);
 }
 
 function MediaDetailDrawer({
@@ -1114,13 +1120,13 @@ function MediaDetailDrawer({
               message="FILE SIZE"
             />
           }
-          value={formatSize(item.size)}
+          value={formatSize(i18n.locale, item.size)}
         />
         <DetailField
           label={
             <Trans id="plugin.media.detail.field.uploaded" message="UPLOADED" />
           }
-          value={formatLongDate(item.uploadedAt)}
+          value={formatLongDate(i18n.locale, item.uploadedAt)}
         />
 
         <div>
@@ -1460,9 +1466,12 @@ function mimeGlyph(mime: string): string {
   return "DOC";
 }
 
-function formatSize(bytes: number | undefined): string {
+function formatSize(locale: string, bytes: number | undefined): string {
+  // Unit labels (B/KB/MB) are SI/IEC and conventionally untranslated;
+  // the locale governs decimal separator (German "1,5 MB" vs US "1.5 MB").
   if (typeof bytes !== "number" || !Number.isFinite(bytes)) return "—";
-  if (bytes < 1024) return `${String(bytes)} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  const nf = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
+  if (bytes < 1024) return `${nf.format(bytes)} B`;
+  if (bytes < 1024 * 1024) return `${nf.format(bytes / 1024)} KB`;
+  return `${nf.format(bytes / 1024 / 1024)} MB`;
 }
