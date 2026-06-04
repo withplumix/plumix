@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import {
+  CATALOG_RESOLUTIONS,
   resolveTemplateRoot,
   rewriteDeps,
   scaffold,
@@ -202,8 +203,8 @@ describe("rewriteDeps", () => {
         wrangler: "catalog:",
       }),
     ).toEqual({
-      typescript: "^6.0.3",
-      wrangler: "^4.86.0",
+      typescript: CATALOG_RESOLUTIONS.typescript,
+      wrangler: CATALOG_RESOLUTIONS.wrangler,
     });
   });
 
@@ -264,3 +265,96 @@ describe("shouldCopyTemplateEntry", () => {
     ).toBe(true);
   });
 });
+
+describe("CATALOG_RESOLUTIONS drift gate", () => {
+  // Resolve the workspace root from the package's known position:
+  // packages/create-plumix-app/src/scaffold.test.ts → ../../..
+  const here = new URL(".", import.meta.url).pathname;
+  const repoRoot = join(here, "..", "..", "..");
+
+  const minimalPkg = JSON.parse(
+    readFileSync(join(repoRoot, "examples", "minimal", "package.json"), "utf8"),
+  ) as {
+    readonly dependencies?: Record<string, string>;
+    readonly devDependencies?: Record<string, string>;
+  };
+
+  const workspaceCatalog = parseWorkspaceCatalog(
+    readFileSync(join(repoRoot, "pnpm-workspace.yaml"), "utf8"),
+  );
+
+  const minimalCatalogDeps = collectCatalogDeps(minimalPkg);
+
+  test("every `catalog:` dep in examples/minimal has a CATALOG_RESOLUTIONS entry", () => {
+    const missing = [...minimalCatalogDeps].filter(
+      (name) => !(name in CATALOG_RESOLUTIONS),
+    );
+    expect(missing).toEqual([]);
+  });
+
+  test("CATALOG_RESOLUTIONS has no orphan entries unused by the minimal template", () => {
+    const orphans = Object.keys(CATALOG_RESOLUTIONS).filter(
+      (name) => !minimalCatalogDeps.has(name),
+    );
+    expect(orphans).toEqual([]);
+  });
+
+  test("each CATALOG_RESOLUTIONS entry used by minimal matches pnpm-workspace.yaml", () => {
+    const drift: { name: string; scaffolder: string; workspace: string }[] = [];
+    for (const name of minimalCatalogDeps) {
+      const scaffolder = CATALOG_RESOLUTIONS[name];
+      const workspace = workspaceCatalog[name];
+      if (scaffolder !== workspace) {
+        drift.push({
+          name,
+          scaffolder: scaffolder ?? "<missing>",
+          workspace: workspace ?? "<missing>",
+        });
+      }
+    }
+    expect(drift).toEqual([]);
+  });
+});
+
+function collectCatalogDeps(pkg: {
+  readonly dependencies?: Record<string, string>;
+  readonly devDependencies?: Record<string, string>;
+}): Set<string> {
+  const out = new Set<string>();
+  for (const block of [pkg.dependencies ?? {}, pkg.devDependencies ?? {}]) {
+    for (const [name, range] of Object.entries(block)) {
+      if (typeof range === "string" && range.startsWith("catalog:")) {
+        out.add(name);
+      }
+    }
+  }
+  return out;
+}
+
+// Parses the top-level `catalog:` map out of pnpm-workspace.yaml. The
+// format is stable (we control it) so a tiny line-scanner is enough —
+// avoids pulling a YAML parser into the scaffolder tests.
+function parseWorkspaceCatalog(yaml: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  const lines = yaml.split("\n");
+  let inCatalog = false;
+  for (const line of lines) {
+    if (line === "catalog:") {
+      inCatalog = true;
+      continue;
+    }
+    if (inCatalog) {
+      // The catalog block ends at the next top-level key (no leading space).
+      if (line.length > 0 && !line.startsWith(" ") && !line.startsWith("#")) {
+        inCatalog = false;
+        continue;
+      }
+      const match = /^\s+"?([^":\s]+)"?\s*:\s*(\S+)\s*$/.exec(line);
+      const [, name, version] = match ?? [];
+      if (name && version) {
+        out[name] = version;
+      }
+    }
+  }
+  return out;
+}

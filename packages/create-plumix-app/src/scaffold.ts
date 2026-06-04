@@ -69,15 +69,15 @@ export function resolveTemplateRoot(): string {
 // Bump these together with the corresponding workspace catalog
 // (`pnpm-workspace.yaml`) and the next plumix release.
 const PLUMIX_PACKAGE_VERSION = "^0.1.0";
-const CATALOG_RESOLUTIONS: Record<string, string> = {
-  "@cloudflare/workers-types": "^4.20260421.1",
+// Mirrors `pnpm-workspace.yaml`'s `catalog:` for every package that
+// `examples/minimal/package.json` references via `catalog:`. The
+// drift-gate test in `scaffold.test.ts` keeps these locked in step.
+// Bump together with the workspace catalog and the next plumix release.
+export const CATALOG_RESOLUTIONS: Record<string, string> = {
+  "@cloudflare/workers-types": "^4.20260526.1",
   "@types/node": "^24.12.2",
-  "@types/react": "^19.2.14",
-  "@types/react-dom": "^19.2.3",
-  react: "^19.2.6",
-  "react-dom": "^19.2.6",
   typescript: "^6.0.3",
-  wrangler: "^4.86.0",
+  wrangler: "^4.94.0",
 };
 
 // `@plumix/typescript-config` is a private dev-only workspace package,
