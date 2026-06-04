@@ -20,6 +20,7 @@ const user = {
 
 const request = new Request("https://cms.example/");
 const auth: AuthNamespace = { can: () => true };
+const entryTypes = new Map();
 
 describe("PlumixAdminBar", () => {
   test("renders nothing when user is null", () => {
@@ -32,6 +33,7 @@ describe("PlumixAdminBar", () => {
           request={request}
           siteName="My Site"
           auth={auth}
+          entryTypes={entryTypes}
         />
       </PlumixProvider>,
     );
@@ -49,11 +51,40 @@ describe("PlumixAdminBar", () => {
           request={request}
           siteName="My Site"
           auth={auth}
+          entryTypes={entryTypes}
         />
       </PlumixProvider>,
     );
 
     expect(html).toContain('data-testid="plumix-admin-bar"');
+  });
+
+  test("renders the +new group as a <details>/<summary> with one child per entry type", () => {
+    const hooks = new HookRegistry();
+    registerCoreAdminBarContributors(hooks);
+    const types = new Map([
+      ["post", { name: "post" } as never],
+      ["page", { name: "page" } as never],
+    ]);
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: emptyRegistry, user }}>
+        <PlumixAdminBar
+          hooks={hooks}
+          request={request}
+          siteName="My Site"
+          auth={auth}
+          entryTypes={types}
+        />
+      </PlumixProvider>,
+    );
+
+    expect(html).toContain("<details>");
+    expect(html).toContain("<summary>+ New</summary>");
+    expect(html).toContain('data-testid="plumix-admin-bar-node-+new:post"');
+    expect(html).toContain('data-testid="plumix-admin-bar-node-+new:page"');
+    expect(html).toContain('href="/_plumix/admin/entries/post/create"');
+    expect(html).toContain('href="/_plumix/admin/entries/page/create"');
   });
 
   test("renders core contributor nodes as anchors with stable testids", () => {
@@ -67,6 +98,7 @@ describe("PlumixAdminBar", () => {
           request={request}
           siteName="My Site"
           auth={auth}
+          entryTypes={entryTypes}
         />
       </PlumixProvider>,
     );

@@ -300,6 +300,7 @@ function renderTree({
       siteName: ctx.siteName ?? "Site",
       auth: ctx.auth,
       queriedEntryDetails,
+      entryTypes: ctx.plugins.entryTypes,
     }),
     createElement(TemplateAdapter),
   );
