@@ -343,6 +343,62 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(body).toContain('<html lang="en" dir="ltr">');
   });
 
+  test("authenticated public render carries the PlumixAdminBar empty shell", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => <article>{data.entry.title}</article>,
+      },
+    });
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "public",
+      title: "Public",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const request = await h.authenticateRequest(
+      new Request("https://cms.example/post/public"),
+      author.id,
+    );
+    const response = await h.dispatch(request);
+    const body = await response.text();
+
+    expect(body).toContain('data-testid="plumix-admin-bar"');
+  });
+
+  test("anonymous public render does NOT carry the PlumixAdminBar", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => <article>{data.entry.title}</article>,
+      },
+    });
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "public",
+      title: "Public",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/public"),
+    );
+    const body = await response.text();
+
+    expect(body).not.toContain('data-testid="plumix-admin-bar"');
+  });
+
   test("site's i18n defaultLocale drives <html lang dir> (RTL example)", async () => {
     const theme = defineTheme({
       templates: {

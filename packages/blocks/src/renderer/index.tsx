@@ -45,7 +45,7 @@ export function PlumixProvider({
   children,
 }: {
   readonly value: PlumixContextValue;
-  readonly children: ReactNode;
+  readonly children?: ReactNode;
 }): ReactNode {
   return (
     <PlumixContext.Provider value={value}>{children}</PlumixContext.Provider>

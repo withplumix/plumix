@@ -45,6 +45,18 @@ export interface HookExecutor {
     input: FilterInput<TName>,
     ...rest: FilterRest<TName>
   ): FilterInput<TName>;
+  /**
+   * Sorted snapshot of a filter's registered handlers — for surfaces that
+   * want full per-handler control (try/catch boundary, return-shape
+   * validation, custom accumulator) instead of the linear pipeline that
+   * `applyFilterSync` provides. Admin-bar is the first consumer.
+   */
+  getFilterHandlers<TName extends FilterName>(
+    name: TName,
+  ): readonly {
+    readonly fn: FilterFn<TName>;
+    readonly plugin: string | null;
+  }[];
   doAction<TName extends ActionName>(
     name: TName,
     ...args: ActionArgs<TName>
@@ -147,6 +159,20 @@ export class HookRegistry implements HookExecutor {
       current = next;
     }
     return current as FilterInput<TName>;
+  }
+
+  getFilterHandlers<TName extends FilterName>(
+    name: TName,
+  ): readonly {
+    readonly fn: FilterFn<TName>;
+    readonly plugin: string | null;
+  }[] {
+    const entries = this.#filters.get(name);
+    if (!entries || entries.length === 0) return [];
+    return sortEntries(entries).map((entry) => ({
+      fn: entry.fn as FilterFn<TName>,
+      plugin: entry.plugin,
+    }));
   }
 
   async doAction<TName extends ActionName>(
