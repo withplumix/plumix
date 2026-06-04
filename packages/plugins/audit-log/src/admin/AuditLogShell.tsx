@@ -1,10 +1,63 @@
+import type { MessageDescriptor } from "plumix/i18n";
 import type { ReactNode } from "react";
 import { useCallback, useSyncExternalStore } from "react";
+import { formatDate, Trans, useLingui } from "plumix/i18n";
 
 import type { AuditLogFilter, AuditLogRowDTO, DateRangePreset } from "./rpc.js";
 import { presetToRange, useAuditLogList } from "./rpc.js";
 
 const MAX_DIFF_PREVIEW_FIELDS = 3;
+
+// Descriptors that need runtime indirection — used outside JSX
+// (placeholder attribute, option labels, error template with embedded
+// value). JSX-text strings stay inline at their `<Trans>` callsite for
+// extraction discoverability.
+const M = {
+  errorTemplate: {
+    id: "plugin.auditLog.shell.error",
+    message: "Failed to load audit log: {message}",
+    comment: "message: the underlying error message from the RPC failure",
+  },
+  filterDatePresetAll: {
+    id: "plugin.auditLog.filter.preset.all",
+    message: "All time",
+  },
+  filterDatePresetToday: {
+    id: "plugin.auditLog.filter.preset.today",
+    message: "Today",
+  },
+  filterDatePresetLast7: {
+    id: "plugin.auditLog.filter.preset.last7",
+    message: "Last 7 days",
+  },
+  filterDatePresetLast30: {
+    id: "plugin.auditLog.filter.preset.last30",
+    message: "Last 30 days",
+  },
+  filterActorPlaceholder: {
+    id: "plugin.auditLog.filter.actorPlaceholder",
+    message: "Actor user id",
+  },
+  filterSubjectAny: {
+    id: "plugin.auditLog.filter.subjectAny",
+    message: "Any subject type",
+  },
+  filterEventAny: {
+    id: "plugin.auditLog.filter.eventAny",
+    message: "Any event",
+  },
+  systemActor: {
+    id: "plugin.auditLog.row.systemActor",
+    message: "(system)",
+    comment: "Fallback label when an audit row has no associated actor user",
+  },
+  diffOverflow: {
+    id: "plugin.auditLog.diff.overflow",
+    message: " +{count} more",
+    comment:
+      "count: number of additional changed fields beyond the preview limit",
+  },
+} satisfies Record<string, MessageDescriptor>;
 
 // Curated lists — keep the v1 admin discoverable. Plugins shipping new
 // subject types / event namespaces can grow these in a follow-up by
@@ -148,12 +201,15 @@ function useFilterUrlState(): readonly [
 export function AuditLogShell(): ReactNode {
   const [filters, setFilters] = useFilterUrlState();
   const list = useAuditLogList(filterToRpcInput(filters));
+  const { i18n } = useLingui();
 
   const rows = list.data?.pages.flatMap((p) => p.rows) ?? [];
 
   return (
     <div data-testid="audit-log-shell">
-      <h1>Audit log</h1>
+      <h1>
+        <Trans id="plugin.auditLog.shell.title" message="Audit log" />
+      </h1>
       <FilterRow
         filters={filters}
         onChange={setFilters}
@@ -165,19 +221,38 @@ export function AuditLogShell(): ReactNode {
         <div data-testid="audit-log-loading" />
       ) : list.error instanceof Error ? (
         <div data-testid="audit-log-error">
-          Failed to load audit log: {list.error.message}
+          {i18n._(
+            M.errorTemplate.id,
+            { message: list.error.message },
+            { message: M.errorTemplate.message },
+          )}
         </div>
       ) : rows.length === 0 ? (
-        <p data-testid="audit-log-empty">No audit events match.</p>
+        <p data-testid="audit-log-empty">
+          <Trans
+            id="plugin.auditLog.shell.empty"
+            message="No audit events match."
+          />
+        </p>
       ) : (
         <table data-testid="audit-log-table">
           <thead>
             <tr>
-              <th>Time</th>
-              <th>Actor</th>
-              <th>Event</th>
-              <th>Subject</th>
-              <th>Changes</th>
+              <th>
+                <Trans id="plugin.auditLog.column.time" message="Time" />
+              </th>
+              <th>
+                <Trans id="plugin.auditLog.column.actor" message="Actor" />
+              </th>
+              <th>
+                <Trans id="plugin.auditLog.column.event" message="Event" />
+              </th>
+              <th>
+                <Trans id="plugin.auditLog.column.subject" message="Subject" />
+              </th>
+              <th>
+                <Trans id="plugin.auditLog.column.changes" message="Changes" />
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -196,7 +271,7 @@ export function AuditLogShell(): ReactNode {
             void list.fetchNextPage();
           }}
         >
-          Load more
+          <Trans id="plugin.auditLog.shell.loadMore" message="Load more" />
         </button>
       ) : null}
     </div>
@@ -212,6 +287,7 @@ function FilterRow({
   readonly onChange: (next: FilterState) => void;
   readonly onReset: () => void;
 }): ReactNode {
+  const { i18n } = useLingui();
   return (
     <div data-testid="audit-log-filters">
       <select
@@ -224,15 +300,15 @@ function FilterRow({
           });
         }}
       >
-        <option value="all">All time</option>
-        <option value="today">Today</option>
-        <option value="last7">Last 7 days</option>
-        <option value="last30">Last 30 days</option>
+        <option value="all">{i18n._(M.filterDatePresetAll)}</option>
+        <option value="today">{i18n._(M.filterDatePresetToday)}</option>
+        <option value="last7">{i18n._(M.filterDatePresetLast7)}</option>
+        <option value="last30">{i18n._(M.filterDatePresetLast30)}</option>
       </select>
       <input
         type="number"
         data-testid="audit-log-filter-actor"
-        placeholder="Actor user id"
+        placeholder={i18n._(M.filterActorPlaceholder)}
         value={filters.actorId}
         onChange={(e) => {
           onChange({ ...filters, actorId: e.target.value });
@@ -245,7 +321,9 @@ function FilterRow({
           onChange({ ...filters, subjectType: e.target.value });
         }}
       >
-        <option value="">Any subject type</option>
+        <option value="">{i18n._(M.filterSubjectAny)}</option>
+        {/* Subject-type values are protocol identifiers, kept verbatim
+            across locales. */}
         {SUBJECT_TYPES.map((t) => (
           <option key={t} value={t}>
             {t}
@@ -259,7 +337,9 @@ function FilterRow({
           onChange({ ...filters, eventPrefix: e.target.value });
         }}
       >
-        <option value="">Any event</option>
+        <option value="">{i18n._(M.filterEventAny)}</option>
+        {/* Event prefixes are protocol identifiers, kept verbatim across
+            locales. */}
         {EVENT_PREFIXES.map((p) => (
           <option key={p} value={p}>
             {p}
@@ -271,17 +351,18 @@ function FilterRow({
         data-testid="audit-log-filter-reset"
         onClick={onReset}
       >
-        Reset
+        <Trans id="plugin.auditLog.filter.reset" message="Reset" />
       </button>
     </div>
   );
 }
 
 function AuditLogRow({ row }: { readonly row: AuditLogRowDTO }): ReactNode {
+  const { i18n } = useLingui();
   return (
     <tr data-testid={`audit-log-row-${String(row.id)}`}>
-      <td>{formatTimestamp(row.occurredAt)}</td>
-      <td>{row.actorLabel ?? "(system)"}</td>
+      <td>{formatTimestamp(i18n.locale, row.occurredAt)}</td>
+      <td>{row.actorLabel ?? i18n._(M.systemActor)}</td>
       <td data-testid={`audit-log-event-${String(row.id)}`}>{row.event}</td>
       <td data-testid={`audit-log-subject-${String(row.id)}`}>
         {row.subjectLabel}
@@ -298,6 +379,7 @@ function DiffPreview({
 }: {
   readonly properties: Record<string, unknown>;
 }): ReactNode {
+  const { i18n } = useLingui();
   const diff = properties.diff;
   if (!diff || typeof diff !== "object" || Array.isArray(diff)) return null;
   const fields = Object.keys(diff);
@@ -307,19 +389,23 @@ function DiffPreview({
   return (
     <span data-testid="audit-log-diff-preview">
       {preview}
-      {overflow > 0 ? ` +${String(overflow)} more` : null}
+      {overflow > 0
+        ? i18n._(
+            M.diffOverflow.id,
+            { count: overflow },
+            { message: M.diffOverflow.message },
+          )
+        : null}
     </span>
   );
 }
 
-function formatTimestamp(iso: string): string {
-  // Inputs land here as ISO strings via the RPC's JSON encoder. Keep
-  // formatting minimal — operators with locale needs can swap in their
-  // own component without touching the data path.
+function formatTimestamp(locale: string, iso: string): string {
+  // Inputs land here as ISO strings via the RPC's JSON encoder. Delegate
+  // to plumix's locale-aware formatter so a German viewer sees German
+  // month abbreviations and a 24h clock automatically; falls back to the
+  // raw ISO on parse failure.
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
-  return date
-    .toISOString()
-    .replace("T", " ")
-    .replace(/\.\d+Z$/, "Z");
+  return formatDate(locale, date, { dateStyle: "medium", timeStyle: "medium" });
 }
