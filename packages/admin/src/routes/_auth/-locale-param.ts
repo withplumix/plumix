@@ -1,3 +1,6 @@
+// `buildLocaleCookie` produces the same byte-string as the server-side
+// `Set-Cookie` writer (`Path=/_plumix/`) so a pre-auth pick and a post-auth
+// pick are byte-identical and the unified `resolveLocale` reads either.
 import { buildLocaleCookie } from "@plumix/core/i18n";
 
 /** Builds the next search-param object when the login locale dropdown

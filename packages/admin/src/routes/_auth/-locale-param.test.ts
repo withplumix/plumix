@@ -15,8 +15,8 @@ describe("nextSearchForLang", () => {
 
   test("sets `?lang=` even when the chosen code is the site default", () => {
     // The user's currently-rendered locale may have come from
-    // Accept-Language (the admin shell's 4th-tier fallback), so the
-    // site default isn't necessarily what they see. Picking "en"
+    // Accept-Language (the resolver's 5th tier on `/_plumix/*` paths),
+    // so the site default isn't necessarily what they see. Picking "en"
     // explicitly must pin the URL or the next reload reverts to
     // whatever Accept-Language resolves.
     expect(nextSearchForLang({ lang: "uk" }, "en")).toEqual({ lang: "en" });
@@ -61,7 +61,7 @@ describe("buildLocaleSwitchUrl", () => {
 });
 
 describe("writeLocaleCookie", () => {
-  // jsdom respects the cookie `Path` attribute, so `document.cookie` at
+  // jsdom respects the cookie `Path` attribute (`/_plumix/`), so `document.cookie` at
   // the test's location `/` won't read a cookie scoped to
   // `/_plumix/admin/`. Spy on the setter to capture the raw write.
   let writes: string[] = [];

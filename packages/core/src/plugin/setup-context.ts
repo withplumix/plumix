@@ -166,7 +166,11 @@ export interface PluginSetupContextBase {
   /** Mounted at `/_plumix/rpc/<pluginId>/*`. */
   registerRpcRouter(router: PluginRpcRouter): void;
 
-  /** Mounted at `/_plumix/<pluginId><path>`. CSRF is enforced by the dispatcher. */
+  /** Mounted at `/_plumix/<pluginId><path>`. CSRF is enforced by the
+   *  dispatcher. `ctx.locale` reflects the visitor's pick (cookie +
+   *  Accept-Language) since the route sits under `/_plumix/`; if the
+   *  handler emits locale-bearing HTML, set `Vary: Cookie, Accept-Language`
+   *  yourself — the dispatcher can't infer it from `ctx`. */
   registerRoute(options: {
     readonly method: PluginRouteMethod;
     readonly path: string;

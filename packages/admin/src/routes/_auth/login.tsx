@@ -52,9 +52,9 @@ const loginSearchSchema = v.object({
   // a boolean — pinning to `v.string()` here would error the route
   // when the verify route emits a numeric-looking flag.
   email_change_success: v.optional(v.union([v.string(), v.number()])),
-  // Pre-auth locale override. Server-side `resolveAdminShellLocale`
-  // consumes this same param to set `<html lang dir>`; the dropdown
-  // below lets the user flip it from inside the form.
+  // Pre-auth locale override. Server-side `resolveLocale` consumes this
+  // same param to set `<html lang dir>`; the dropdown below lets the
+  // user flip it from inside the form.
   lang: v.optional(v.string()),
 });
 
@@ -135,10 +135,9 @@ function LoginRoute(): ReactNode {
     magicLink.mutate({ email });
   };
 
-  // Persist via cookie (WP `wp_lang` parity, admin-path scoped so the
-  // public-route cache stays clean) AND pin `?lang=` so the first SSR
-  // after reload resolves to the same locale before the cookie is on
-  // the wire.
+  // Persist via cookie (WP `wp_lang` parity, `Path=/_plumix/` so public
+  // routes never see it) AND pin `?lang=` so the first SSR after reload
+  // resolves to the same locale before the cookie is on the wire.
   const handleLocaleSelect = (code: string): void => {
     writeLocaleCookie(code);
     window.location.assign(buildLocaleSwitchUrl(search, code));

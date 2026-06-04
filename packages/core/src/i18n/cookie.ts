@@ -1,9 +1,11 @@
 // Underscore-cased to match `plumix_session` prior art in `auth/cookies.ts`.
-// `Path=/_plumix/admin/` keeps the browser from sending the cookie on
-// public-route requests — public HTML stays identical across visitors so
-// cache layers don't fragment.
+// `Path=/_plumix/` keeps the browser from sending the cookie on public-route
+// requests (public HTML stays identical across visitors so cache layers
+// don't fragment) while letting it reach all internal endpoints — the admin
+// shell SSR, auth POSTs (magic-link, OAuth callbacks), and the RPC pipeline.
+// `resolveLocale` reads the same cookie across all three surfaces.
 export const ADMIN_LOCALE_COOKIE = "plumix_locale";
-const ADMIN_LOCALE_COOKIE_PATH = "/_plumix/admin/";
+const ADMIN_LOCALE_COOKIE_PATH = "/_plumix/";
 const ONE_YEAR_SECONDS = 31_536_000;
 
 /** `code` is written raw — caller is the validation seam (only
