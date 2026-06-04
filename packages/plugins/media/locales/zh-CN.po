@@ -1,0 +1,368 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-03\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: zh-CN\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.singular"
+msgstr "媒体"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.plural"
+msgstr "媒体"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.addNew"
+msgstr "新建"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.addNewItem"
+msgstr "上传媒体"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.editItem"
+msgstr "编辑媒体"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.newItem"
+msgstr "新媒体"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.viewItem"
+msgstr "查看媒体"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.searchItems"
+msgstr "搜索媒体…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.notFound"
+msgstr "暂无媒体"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.notFoundInTrash"
+msgstr "回收站为空"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.allItems"
+msgstr "所有媒体"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.untitledItem"
+msgstr "未命名媒体"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.moveToTrash"
+msgstr "将媒体移至回收站？"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.adminPage.title"
+msgstr "媒体库"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "core.adminNav.library"
+msgstr "媒体库"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.title.library"
+msgstr "媒体库"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.title.picker"
+msgstr "选择媒体"
+
+#. js-lingui-explicit-id
+#. title: the media item's display title
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.pickItemAria"
+msgstr "选择 {title}"
+
+#. js-lingui-explicit-id
+#. title: the media item's display title
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.openDetailsAria"
+msgstr "打开 {title} 的详细信息"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.failedToLoad"
+msgstr "媒体加载失败。"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.loadingMore"
+msgstr "加载中…"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.pickerCancel"
+msgstr "取消"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.pickerUseSelection"
+msgstr "使用所选"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.banner.dismiss"
+msgstr "关闭"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.dropzone.headline"
+msgstr "您的媒体库为空。添加文件以开始。"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.dropzone.subline"
+msgstr "拖放或<0>从电脑选择</0>"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.upload.button"
+msgstr "上传"
+
+#. js-lingui-explicit-id
+#. count: number of files currently uploading
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.upload.progress"
+msgstr "正在上传 {count, plural, other {# 个文件}}…"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.heading"
+msgstr "媒体详细信息"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.closeAria"
+msgstr "关闭详细信息"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.field.assetType"
+msgstr "媒体类型"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.field.fileSize"
+msgstr "文件大小"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.field.uploaded"
+msgstr "上传时间"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.field.altText"
+msgstr "替代文本"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.altPlaceholderImage"
+msgstr "描述此图片…"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.altPlaceholderOther"
+msgstr "添加描述…"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.field.url"
+msgstr "网址"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.copied"
+msgstr "已复制"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.copy"
+msgstr "复制"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.download"
+msgstr "下载"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.delete"
+msgstr "删除"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.deleteTitle"
+msgstr "删除此媒体？"
+
+#. js-lingui-explicit-id
+#. title: the media item being deleted
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.deleteDescription"
+msgstr "\"{title}\" 将被永久删除。嵌入它的页面或文章将显示失效链接。"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.deleteConfirm"
+msgstr "删除"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.dialog.cancel"
+msgstr "取消"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.dialog.confirm"
+msgstr "确认"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.altEditor.saved"
+msgstr "✓ 已保存"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.storageNotConfigured"
+msgstr "未配置存储适配器 — 请在 plumix.config.ts 中设置 `storage:`。"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.payloadTooLarge"
+msgstr "文件超出了配置的 maxUploadSize。"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.unsupportedMediaType"
+msgstr "媒体插件的 acceptedTypes 不允许此文件类型。"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.mimeMismatch"
+msgstr "上传的字节与声明的文件类型不匹配。"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.objectNotFound"
+msgstr "上传未到达存储 — 请检查存储桶的 CORS 规则。"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.alreadyConfirmed"
+msgstr "此上传已被另一个标签页或设备确认。"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.serverCouldntProcess"
+msgstr "服务器无法处理此上传。请重试。"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.contentLengthRequired"
+msgstr "上传缺少 Content-Length — 您的浏览器/代理可能使用分块传输。"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.csrfTokenMissing"
+msgstr "请求被 CSRF 检查拦截。请重新加载页面并重试。"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.empty"
+msgstr "未选择媒体"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.button.change"
+msgstr "更改"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.button.select"
+msgstr "选择"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.clear"
+msgstr "清除"
+
+#. id: the media item's numeric id, shown while filename loads
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.pending"
+msgstr "已选择（id {id}）"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.modalAria"
+msgstr "选择媒体"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.empty"
+msgstr "未选择媒体"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.button.select"
+msgstr "选择"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.button.addMore"
+msgstr "添加更多"
+
+#. id: the media item's numeric id, shown while filename loads
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.pending"
+msgstr "已选择（id {id}）"
+
+#. name: the row's display name (filename or id)
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.moveUpAria"
+msgstr "将 {name} 上移"
+
+#. name: the row's display name (filename or id)
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.moveDownAria"
+msgstr "将 {name} 下移"
+
+#. name: the row's display name (filename or id)
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.removeAria"
+msgstr "移除 {name}"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.modalAria"
+msgstr "添加媒体"

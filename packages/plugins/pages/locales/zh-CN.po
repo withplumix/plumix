@@ -1,0 +1,94 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-03\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: zh-CN\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.singular"
+msgstr "页面"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.plural"
+msgstr "页面"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.addNew"
+msgstr "新建"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.addNewItem"
+msgstr "新建页面"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.editItem"
+msgstr "编辑页面"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.newItem"
+msgstr "新页面"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.viewItem"
+msgstr "查看页面"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.viewItems"
+msgstr "查看页面"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.searchItems"
+msgstr "搜索页面…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.notFound"
+msgstr "暂无页面"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.notFoundInTrash"
+msgstr "回收站为空"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.allItems"
+msgstr "所有页面"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.noMatch"
+msgstr "没有匹配的页面"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.parentItem"
+msgstr "父页面"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.parentItemColon"
+msgstr "父页面："
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.untitledItem"
+msgstr "未命名页面"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.moveToTrash"
+msgstr "将页面移至回收站？"
