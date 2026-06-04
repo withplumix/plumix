@@ -7,9 +7,13 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { i18n, I18nProvider } from "plumix/i18n";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { AuditLogShell } from "./AuditLogShell.js";
+
+i18n.load({ en: {} });
+i18n.activate("en");
 
 interface CapturedCall {
   readonly url: string;
@@ -70,7 +74,9 @@ function renderShell(): void {
   });
   function Wrapper({ children }: { readonly children: ReactNode }): ReactNode {
     return (
-      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      <I18nProvider i18n={i18n}>
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      </I18nProvider>
     );
   }
   render(<AuditLogShell />, { wrapper: Wrapper });
