@@ -445,7 +445,7 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
               <Trans
                 id="profile.passkeys.delete.description"
                 message='The device that registered "{name}" will no longer be able to sign in. You can re-enrol it later.'
-                values={{ name: displayName }}
+                values={{ name: <bdi>{displayName}</bdi> }}
                 comment="name: the user-chosen passkey nickname (e.g. 'MacBook', 'iPhone')"
               />
             </AlertDialogDescription>

@@ -98,6 +98,10 @@ function MailerRoute(): ReactNode {
     testSend.mutate({ to: value.to });
   });
 
+  // Hoisted: lingui/no-expression-in-message rejects member exprs inline.
+  const bdiFeedbackTo =
+    feedback?.kind === "ok" ? <bdi>{feedback.to}</bdi> : null;
+
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <header className="flex flex-col gap-1">
@@ -159,7 +163,7 @@ function MailerRoute(): ReactNode {
                     <Trans
                       id="mailer.test.feedback.ok"
                       message="Test message sent to {to}. If it doesn't arrive within a minute, check your transport adapter's logs."
-                      values={{ to: feedback.to }}
+                      values={{ to: bdiFeedbackTo }}
                       comment="to: the recipient email address the test was sent to"
                     />
                   </AlertDescription>

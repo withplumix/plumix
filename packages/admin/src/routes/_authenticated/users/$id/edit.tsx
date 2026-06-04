@@ -326,6 +326,9 @@ function UserEditForm({
     updateUser.mutate(value);
   });
 
+  // Hoisted: lingui/no-expression-in-message rejects member exprs inline.
+  const bdiEmail = <bdi>{target.email}</bdi>;
+
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
       <Link
@@ -348,7 +351,7 @@ function UserEditForm({
                 <Trans
                   id="userEdit.title.other"
                   message="Edit {email}"
-                  values={{ email: target.email }}
+                  values={{ email: bdiEmail }}
                   comment="email: the user being edited"
                 />
               )}
@@ -658,6 +661,9 @@ function DeleteCard({ target }: { target: User }): ReactNode {
     },
   });
 
+  // Hoisted: lingui/no-expression-in-message rejects member exprs inline.
+  const bdiEmail = <bdi>{target.email}</bdi>;
+
   if (!confirming) {
     return (
       <Card className="border-destructive/50">
@@ -694,7 +700,7 @@ function DeleteCard({ target }: { target: User }): ReactNode {
           <Trans
             id="userEdit.delete.confirm.title"
             message="Confirm delete: {email}"
-            values={{ email: target.email }}
+            values={{ email: bdiEmail }}
             comment="email: the user account being deleted"
           />
         </CardTitle>

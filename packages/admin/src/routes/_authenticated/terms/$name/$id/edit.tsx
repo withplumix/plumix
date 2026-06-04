@@ -414,7 +414,7 @@ function DeleteCard({
               <Trans
                 id="terms.edit.delete.dialogTitle"
                 message="Delete {termName}?"
-                values={{ termName }}
+                values={{ termName: <bdi>{termName}</bdi> }}
                 comment="termName: the taxonomy term being deleted"
               />
             </AlertDialogTitle>

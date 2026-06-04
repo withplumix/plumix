@@ -58,7 +58,7 @@ export function PreviewBanner({
           message="from {when} by {author}"
           values={{
             when: relativeTime(revisionUpdatedAt),
-            author: revisionAuthor,
+            author: <bdi>{revisionAuthor}</bdi>,
           }}
           comment="when: pre-formatted relative-time like '2 hours ago'; author: the user's display name or email"
         />

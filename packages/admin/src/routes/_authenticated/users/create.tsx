@@ -363,6 +363,9 @@ function InviteSuccess({
     }
   };
 
+  // Hoisted: lingui/no-expression-in-message rejects member exprs inline.
+  const bdiEmail = <bdi>{user.email}</bdi>;
+
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
       <Card>
@@ -376,7 +379,7 @@ function InviteSuccess({
             <Trans
               id="userInvite.success.description"
               message="Share the link below with {email}. They'll enrol a passkey the first time they open it. Link expires in 7 days."
-              values={{ email: user.email }}
+              values={{ email: bdiEmail }}
               comment="email: the invited user's address"
             />
           </CardDescription>

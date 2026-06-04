@@ -335,7 +335,7 @@ function LoginRoute(): ReactNode {
                   <Trans
                     id="login.oauth.continueWith"
                     message="Continue with {label}"
-                    values={{ label }}
+                    values={{ label: <bdi>{label}</bdi> }}
                     comment="label: the OAuth provider's display name (e.g. 'Google', 'GitHub')"
                   />
                 </a>
