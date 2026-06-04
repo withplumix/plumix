@@ -25,6 +25,7 @@ import type { ContextExtensionEntry } from "../plugin/provides-context.js";
 import type { RouteRule } from "../route/intent.js";
 import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type { DocumentManifest } from "../theme.js";
+import { registerCoreAdminBarContributors } from "../admin-bar/core-contributors.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
@@ -168,6 +169,7 @@ export async function buildApp(
   runtime: RuntimeContext = {},
 ): Promise<PlumixApp> {
   const hooks = new HookRegistry();
+  registerCoreAdminBarContributors(hooks);
   const seededRegistry = createPluginRegistry();
   registerCoreLookupAdapters(seededRegistry);
   registerCoreTemplateDeps(seededRegistry);

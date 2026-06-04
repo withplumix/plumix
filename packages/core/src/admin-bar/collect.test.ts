@@ -8,6 +8,8 @@ const baseCtx: BarRenderContext = {
   user: { id: 1, email: "u@x", role: "admin", meta: {} },
   queriedEntry: null,
   request: new Request("https://cms.example/"),
+  siteName: "Site",
+  auth: { can: () => true },
 };
 
 describe("collectAdminBarNodes", () => {

@@ -1,4 +1,4 @@
-import type { AuthenticatedUser } from "../context/app.js";
+import type { AuthenticatedUser, AuthNamespace } from "../context/app.js";
 import type { ResolvedEntity } from "../route/current.ts";
 
 export const ADMIN_BAR_GROUPS = [
@@ -17,12 +17,30 @@ export interface AdminBarNode {
   readonly href?: string;
   readonly group: AdminBarGroup;
   readonly parent?: string;
+  readonly position?: number;
+}
+
+export interface AdminBarTreeNode extends AdminBarNode {
+  readonly children: readonly AdminBarTreeNode[];
 }
 
 export interface BarRenderContext {
   readonly user: AuthenticatedUser;
   readonly queriedEntry: ResolvedEntity | null;
+  /**
+   * Pre-resolved details for `queriedEntry.kind === "entry"` — the
+   * entry's registered type and `authorId`. Populated by the renderer
+   * before the bar collects nodes so sync filter handlers (e.g. the
+   * core edit-this contributor) can check capabilities without async
+   * DB lookups.
+   */
+  readonly queriedEntryDetails?: {
+    readonly type: string;
+    readonly authorId: number;
+  };
   readonly request: Request;
+  readonly siteName: string;
+  readonly auth: AuthNamespace;
 }
 
 declare module "../hooks/types.js" {

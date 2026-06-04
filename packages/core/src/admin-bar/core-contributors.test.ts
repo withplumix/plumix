@@ -1,0 +1,135 @@
+import { describe, expect, test } from "vitest";
+
+import type { BarRenderContext } from "./types.js";
+import { HookRegistry } from "../hooks/registry.js";
+import { collectAdminBarNodes } from "./collect.js";
+import { registerCoreAdminBarContributors } from "./core-contributors.js";
+
+const allow = (): boolean => true;
+const deny = (): boolean => false;
+
+function ctx(overrides: Partial<BarRenderContext> = {}): BarRenderContext {
+  return {
+    user: {
+      id: 1,
+      email: "editor@cms.example",
+      role: "editor",
+      meta: {},
+    },
+    queriedEntry: null,
+    request: new Request("https://cms.example/"),
+    siteName: "My Site",
+    auth: { can: allow },
+    ...overrides,
+  };
+}
+
+function withCore(): HookRegistry {
+  const hooks = new HookRegistry();
+  registerCoreAdminBarContributors(hooks);
+  return hooks;
+}
+
+describe("registerCoreAdminBarContributors — site link", () => {
+  test("adds a 'site' node pointing at the admin root with the resolved site name", () => {
+    const nodes = collectAdminBarNodes(withCore(), ctx());
+
+    const site = nodes.find((n) => n.id === "site");
+    expect(site).toEqual({
+      id: "site",
+      title: "My Site",
+      href: "/_plumix/admin",
+      group: "root",
+      position: 10,
+    });
+  });
+});
+
+describe("registerCoreAdminBarContributors — account link", () => {
+  test("adds an 'account' node titled with the user's email", () => {
+    const nodes = collectAdminBarNodes(withCore(), ctx());
+
+    const account = nodes.find((n) => n.id === "account");
+    expect(account).toEqual({
+      id: "account",
+      title: "editor@cms.example",
+      href: "/_plumix/admin/profile",
+      group: "account",
+      position: 10,
+    });
+  });
+});
+
+describe("registerCoreAdminBarContributors — edit-this link", () => {
+  test("does not appear when there is no queried entry", () => {
+    const nodes = collectAdminBarNodes(withCore(), ctx());
+    expect(nodes.find((n) => n.id === "edit-this")).toBeUndefined();
+  });
+
+  test("does not appear when queried entry lacks pre-resolved details", () => {
+    const nodes = collectAdminBarNodes(
+      withCore(),
+      ctx({ queriedEntry: { kind: "entry", id: 42 } }),
+    );
+    expect(nodes.find((n) => n.id === "edit-this")).toBeUndefined();
+  });
+
+  test("appears for a non-author when auth allows edit_any", () => {
+    const seen: string[] = [];
+    const nodes = collectAdminBarNodes(
+      withCore(),
+      ctx({
+        queriedEntry: { kind: "entry", id: 42 },
+        queriedEntryDetails: { type: "post", authorId: 999 },
+        auth: {
+          can: (cap: string) => {
+            seen.push(cap);
+            return cap === "entry:post:edit_any";
+          },
+        },
+      }),
+    );
+
+    expect(nodes.find((n) => n.id === "edit-this")).toEqual({
+      id: "edit-this",
+      title: "Edit",
+      href: "/_plumix/admin/entries/post/42/edit",
+      group: "primary",
+      position: 20,
+    });
+    expect(seen).toContain("entry:post:edit_any");
+  });
+
+  test("appears for the entry's author when auth allows edit_own", () => {
+    const seen: string[] = [];
+    const nodes = collectAdminBarNodes(
+      withCore(),
+      ctx({
+        queriedEntry: { kind: "entry", id: 7 },
+        queriedEntryDetails: { type: "post", authorId: 1 },
+        auth: {
+          can: (cap: string) => {
+            seen.push(cap);
+            return cap === "entry:post:edit_own";
+          },
+        },
+      }),
+    );
+
+    expect(nodes.find((n) => n.id === "edit-this")).toBeDefined();
+    expect(seen).toContain("entry:post:edit_own");
+  });
+
+  test("does not appear when user lacks the capability for own or any", () => {
+    const nodes = collectAdminBarNodes(
+      withCore(),
+      ctx({
+        queriedEntry: { kind: "entry", id: 7 },
+        queriedEntryDetails: { type: "post", authorId: 999 },
+        auth: { can: deny },
+      }),
+    );
+
+    expect(nodes.find((n) => n.id === "edit-this")).toBeUndefined();
+  });
+});
