@@ -1,0 +1,165 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-03\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: uk\n"
+"Plural-Forms: nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || (n%100>=11 && n%100<=14) ? 2 : 3);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgctxt "post type general name"
+msgid "plugin.blog.post.plural"
+msgstr "Записи"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgctxt "post type singular name"
+msgid "plugin.blog.post.singular"
+msgstr "Запис"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgctxt "taxonomy general name"
+msgid "plugin.blog.category.plural"
+msgstr "Категорії"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgctxt "taxonomy singular name"
+msgid "plugin.blog.category.singular"
+msgstr "Категорія"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgctxt "taxonomy general name"
+msgid "plugin.blog.tag.plural"
+msgstr "Позначки"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgctxt "taxonomy singular name"
+msgid "plugin.blog.tag.singular"
+msgstr "Позначка"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.addNewItem"
+msgstr "Додати запис"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.editItem"
+msgstr "Редагувати запис"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.newItem"
+msgstr "Новий запис"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.viewItem"
+msgstr "Переглянути запис"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.searchItems"
+msgstr "Пошук записів…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.notFound"
+msgstr "Записів ще немає"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.notFoundInTrash"
+msgstr "Кошик порожній"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.allItems"
+msgstr "Усі записи"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.noMatch"
+msgstr "Записів не знайдено"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.untitledItem"
+msgstr "Запис без назви"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.moveToTrash"
+msgstr "Перенести запис у кошик?"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.addNewItem"
+msgstr "Додати категорію"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.editItem"
+msgstr "Редагувати категорію"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.searchItems"
+msgstr "Пошук категорій…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.notFound"
+msgstr "Категорій ще немає"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.allItems"
+msgstr "Усі категорії"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.parentItem"
+msgstr "Батьківська категорія"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.backToItems"
+msgstr "← До категорій"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.addNewItem"
+msgstr "Додати позначку"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.editItem"
+msgstr "Редагувати позначку"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.searchItems"
+msgstr "Пошук позначок…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.notFound"
+msgstr "Позначок ще немає"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.allItems"
+msgstr "Усі позначки"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.backToItems"
+msgstr "← До позначок"
