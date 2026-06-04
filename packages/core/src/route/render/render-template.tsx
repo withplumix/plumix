@@ -279,6 +279,10 @@ function renderTree({
   // silently clobber the canonical args.
   const TemplateAdapter = (): ReactNode =>
     template.render({ ...deps, data, ctx });
+  const queriedEntryDetails =
+    "entry" in data
+      ? { type: data.entry.type, authorId: data.entry.authorId }
+      : undefined;
   const templateTree: ReactNode = createElement(
     PlumixProvider,
     {
@@ -290,7 +294,13 @@ function renderTree({
         queriedEntry: ctx.resolvedEntity,
       },
     },
-    createElement(PlumixAdminBar, { hooks: ctx.hooks, request: ctx.request }),
+    createElement(PlumixAdminBar, {
+      hooks: ctx.hooks,
+      request: ctx.request,
+      siteName: ctx.siteName ?? "Site",
+      auth: ctx.auth,
+      queriedEntryDetails,
+    }),
     createElement(TemplateAdapter),
   );
   const rendered = renderToString(templateTree);
