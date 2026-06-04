@@ -1598,6 +1598,11 @@ msgid "editor.staleDraft.hideComparison"
 msgstr "Hide comparison"
 
 #. js-lingui-explicit-id
+#: src/components/error-boundary-fallback.tsx
+msgid "errorBoundary.hideError"
+msgstr "Hide error"
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.sent.description"
 msgstr "If an account exists for this email, we sent a sign-in link. The link "
@@ -2704,6 +2709,11 @@ msgstr "Share the link below with {email}. They'll enrol a passkey the first "
 "time they open it. Link expires in 7 days."
 
 #. js-lingui-explicit-id
+#: src/components/error-boundary-fallback.tsx
+msgid "errorBoundary.showError"
+msgstr "Show error"
+
+#. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffDialog.tsx
 msgid "editor.revisions.diffDialog.description"
 msgstr "Side-by-side: this revision (left) vs. the current entry (right)."
@@ -2810,6 +2820,11 @@ msgstr "Someone else claimed that email between the request and your click. "
 msgid "editor.staleDraft.description"
 msgstr "Someone else published changes to this entry while you had pending "
 "edits. Pick which version to keep before continuing."
+
+#. js-lingui-explicit-id
+#: src/components/error-boundary-fallback.tsx
+msgid "errorBoundary.title"
+msgstr "Something went wrong"
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts

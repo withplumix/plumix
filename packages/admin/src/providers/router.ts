@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { createRouter as createTanstackRouter } from "@tanstack/react-router";
 
+import { ErrorBoundaryFallback } from "../components/error-boundary-fallback.js";
 import { ADMIN_BASE_PATH } from "../lib/constants.js";
 import { routeTree } from "../routeTree.gen.js";
 
@@ -15,6 +16,9 @@ export function createRouter(queryClient: QueryClient) {
     // SWR policies fighting over the same data.
     defaultPreloadStaleTime: 0,
     scrollRestoration: true,
+    // Routes without their own `errorComponent` fall here instead of
+    // TanStack's hardcoded-English `ErrorComponent`.
+    defaultErrorComponent: ErrorBoundaryFallback,
     context: { queryClient },
   });
 }
