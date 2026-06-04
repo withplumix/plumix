@@ -1,0 +1,117 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-04\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.auditLog.adminPage.title"
+msgstr "Audit-Log"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "core.adminNav.tools"
+msgstr "Werkzeuge"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.shell.title"
+msgstr "Audit-Log"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.shell.empty"
+msgstr "Keine passenden Audit-Ereignisse."
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.shell.loadMore"
+msgstr "Mehr laden"
+
+#. message: the underlying error message from the RPC failure
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.shell.error"
+msgstr "Audit-Log konnte nicht geladen werden: {message}"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.column.time"
+msgstr "Zeit"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.column.actor"
+msgstr "Benutzer"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.column.event"
+msgstr "Ereignis"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.column.subject"
+msgstr "Objekt"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.column.changes"
+msgstr "Änderungen"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.preset.all"
+msgstr "Gesamter Zeitraum"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.preset.today"
+msgstr "Heute"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.preset.last7"
+msgstr "Letzte 7 Tage"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.preset.last30"
+msgstr "Letzte 30 Tage"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.actorPlaceholder"
+msgstr "Benutzer-ID"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.subjectAny"
+msgstr "Beliebiger Objekttyp"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.eventAny"
+msgstr "Beliebiges Ereignis"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.reset"
+msgstr "Zurücksetzen"
+
+#. Fallback label when an audit row has no associated actor user
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.row.systemActor"
+msgstr "(System)"
+
+#. count: number of additional changed fields beyond the preview limit
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.diff.overflow"
+msgstr " +{count} weitere"
