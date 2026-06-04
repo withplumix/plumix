@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { LoginLocaleSwitcher } from "@/components/login-locale-switcher.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Button } from "@/components/ui/button.js";
 import {
@@ -18,18 +19,21 @@ import {
   FormMessage,
 } from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
+import { readManifest } from "@/lib/manifest.js";
 import { PasskeyError, usePasskeyErrorMessage } from "@/lib/passkey-errors.js";
 import { registerWithPasskey } from "@/lib/passkey.js";
 import { SESSION_QUERY_KEY, sessionQueryOptions } from "@/lib/session.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { Trans } from "@lingui/react";
+import { Trans, useLingui } from "@lingui/react";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 
-import { bootstrapSchema } from "./-schemas.js";
+import { buildLocaleSwitchUrl, writeLocaleCookie } from "./-locale-param.js";
+import { bootstrapSchema, langOnlySearchSchema } from "./-schemas.js";
 
 export const Route = createFileRoute("/_auth/bootstrap")({
+  validateSearch: langOnlySearchSchema,
   beforeLoad: async ({ context }) => {
     const session = await context.queryClient.ensureQueryData(
       sessionQueryOptions(),
@@ -48,7 +52,15 @@ export const Route = createFileRoute("/_auth/bootstrap")({
 function BootstrapRoute(): ReactNode {
   const renderPasskeyError = usePasskeyErrorMessage();
   const router = useRouter();
+  const search = Route.useSearch();
+  const manifest = readManifest();
+  const { i18n } = useLingui();
   const [errorCode, setErrorCode] = useState<string | null>(null);
+
+  const handleLocaleSelect = (code: string): void => {
+    writeLocaleCookie(code);
+    window.location.assign(buildLocaleSwitchUrl(search, code));
+  };
 
   const createAccount = useMutation({
     mutationFn: registerWithPasskey,
@@ -161,6 +173,11 @@ function BootstrapRoute(): ReactNode {
             </Button>
           </form>
         </Form>
+        <LoginLocaleSwitcher
+          currentCode={i18n.locale}
+          manifest={manifest}
+          onSelect={handleLocaleSelect}
+        />
       </CardContent>
     </Card>
   );

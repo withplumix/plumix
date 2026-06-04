@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { buildLocaleCookie } from "@plumix/core/i18n";
 
-import { nextSearchForLang, writeLocaleCookie } from "./-locale-param.js";
+import {
+  buildLocaleSwitchUrl,
+  nextSearchForLang,
+  writeLocaleCookie,
+} from "./-locale-param.js";
 
 describe("nextSearchForLang", () => {
   test("sets `?lang=` to the chosen code", () => {
@@ -32,6 +36,27 @@ describe("nextSearchForLang", () => {
       oauth_error: "access_denied",
       redirect_to: "/",
     });
+  });
+});
+
+describe("buildLocaleSwitchUrl", () => {
+  test("emits `?lang=<code>` against the current pathname", () => {
+    expect(buildLocaleSwitchUrl({}, "uk")).toBe(
+      `${window.location.pathname}?lang=uk`,
+    );
+  });
+
+  test("preserves sibling search params and coerces numeric values", () => {
+    // Mirrors login's `email_change_success` round-trip: TanStack
+    // Router's search parser hands back number-typed values that need
+    // to land in `URLSearchParams` as strings.
+    const url = buildLocaleSwitchUrl(
+      { redirect_to: "/", email_change_success: 1 },
+      "de",
+    );
+    expect(url).toContain("lang=de");
+    expect(url).toContain("redirect_to=%2F");
+    expect(url).toContain("email_change_success=1");
   });
 });
 

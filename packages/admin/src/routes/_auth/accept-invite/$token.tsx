@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { LoginLocaleSwitcher } from "@/components/login-locale-switcher.js";
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Button } from "@/components/ui/button.js";
 import {
@@ -18,13 +19,17 @@ import {
   FormMessage,
 } from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
+import { readManifest } from "@/lib/manifest.js";
 import { PasskeyError, usePasskeyErrorMessage } from "@/lib/passkey-errors.js";
 import { acceptInviteWithPasskey } from "@/lib/passkey.js";
 import { SESSION_QUERY_KEY, sessionQueryOptions } from "@/lib/session.js";
-import { Trans } from "@lingui/react";
+import { Trans, useLingui } from "@lingui/react";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
+
+import { buildLocaleSwitchUrl, writeLocaleCookie } from "../-locale-param.js";
+import { langOnlySearchSchema } from "../-schemas.js";
 
 // The invite flow lands unauthenticated users here — any existing session
 // is a red flag (you don't accept an invite while already signed in, and
@@ -32,6 +37,7 @@ import { useForm } from "react-hook-form";
 // them to the dashboard; if they want to switch accounts they can sign
 // out first.
 export const Route = createFileRoute("/_auth/accept-invite/$token")({
+  validateSearch: langOnlySearchSchema,
   beforeLoad: async ({ context }) => {
     const session = await context.queryClient.ensureQueryData(
       sessionQueryOptions(),
@@ -47,8 +53,16 @@ export const Route = createFileRoute("/_auth/accept-invite/$token")({
 function AcceptInviteRoute(): ReactNode {
   const renderPasskeyError = usePasskeyErrorMessage();
   const { token } = Route.useParams();
+  const search = Route.useSearch();
+  const manifest = readManifest();
+  const { i18n } = useLingui();
   const router = useRouter();
   const [errorCode, setErrorCode] = useState<string | null>(null);
+
+  const handleLocaleSelect = (code: string): void => {
+    writeLocaleCookie(code);
+    window.location.assign(buildLocaleSwitchUrl(search, code));
+  };
 
   const accept = useMutation({
     mutationFn: (input: { name?: string }) =>
@@ -148,6 +162,11 @@ function AcceptInviteRoute(): ReactNode {
             </Button>
           </form>
         </Form>
+        <LoginLocaleSwitcher
+          currentCode={i18n.locale}
+          manifest={manifest}
+          onSelect={handleLocaleSelect}
+        />
       </CardContent>
     </Card>
   );

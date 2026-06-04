@@ -39,7 +39,7 @@ import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import * as v from "valibot";
 
-import { nextSearchForLang, writeLocaleCookie } from "./-locale-param.js";
+import { buildLocaleSwitchUrl, writeLocaleCookie } from "./-locale-param.js";
 import { loginSchema } from "./-schemas.js";
 
 const loginSearchSchema = v.object({
@@ -135,20 +135,13 @@ function LoginRoute(): ReactNode {
     magicLink.mutate({ email });
   };
 
-  // Persist the pick via cookie (WP `wp_lang` parity, scoped to admin
-  // path so public-route caching stays clean) AND pin the URL so the
-  // first reload resolves to the same locale before the cookie is
-  // visible on the next request. Full page reload — admin shell is
-  // server-rendered with `<html lang dir>` per the resolved locale.
+  // Persist via cookie (WP `wp_lang` parity, admin-path scoped so the
+  // public-route cache stays clean) AND pin `?lang=` so the first SSR
+  // after reload resolves to the same locale before the cookie is on
+  // the wire.
   const handleLocaleSelect = (code: string): void => {
     writeLocaleCookie(code);
-    const nextSearch = nextSearchForLang(search, code);
-    const params = new URLSearchParams();
-    for (const [k, raw] of Object.entries(nextSearch)) {
-      if (typeof raw === "string") params.set(k, raw);
-      else if (typeof raw === "number") params.set(k, String(raw));
-    }
-    window.location.assign(`${window.location.pathname}?${params.toString()}`);
+    window.location.assign(buildLocaleSwitchUrl(search, code));
   };
 
   const oauthErrorMessage = renderOAuthError(search.oauth_error);
