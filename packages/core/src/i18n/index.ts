@@ -1,4 +1,5 @@
 export { withContext } from "./context.js";
+export { buildLocaleCookie } from "./cookie.js";
 export {
   formatDate,
   formatNumber,

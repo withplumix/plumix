@@ -1,14 +1,8 @@
 import type { AuthenticatedUser } from "../context/app.js";
 import type { ResolvedI18n, ResolvedLocale } from "../i18n/locale-registry.js";
 import { readSessionCookie } from "../auth/cookies.js";
+import { ADMIN_LOCALE_COOKIE } from "../i18n/cookie.js";
 import { findEnabledLocale } from "../i18n/locale-registry.js";
-
-// Underscore-cased to match `plumix_session` (the existing session-cookie
-// prior art in `auth/cookies.ts`). The slice-8 writer should set
-// `Path=/_plumix/admin/` so the browser never sends it on public-route
-// requests — keeps public HTML identical across visitors for cache layers.
-export const ADMIN_LOCALE_COOKIE = "plumix_locale";
-export const ADMIN_LOCALE_COOKIE_PATH = "/_plumix/admin/";
 
 // Real Accept-Language headers carry 1–4 entries; cap defensively so a
 // hostile client can't burn CPU on N×`Intl.Locale` allocations per GET.

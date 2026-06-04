@@ -1,11 +1,8 @@
 import * as v from "valibot";
 
 import { isSecureRequest } from "../../../auth/cookies.js";
+import { buildLocaleCookie } from "../../../i18n/cookie.js";
 import { findEnabledLocale } from "../../../i18n/locale-registry.js";
-import {
-  ADMIN_LOCALE_COOKIE,
-  ADMIN_LOCALE_COOKIE_PATH,
-} from "../../../runtime/admin-shell.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { writeUserMeta } from "./meta.js";
@@ -14,7 +11,6 @@ const inputSchema = v.object({
   code: v.pipe(v.string(), v.minLength(1)),
 });
 
-const ONE_YEAR_SECONDS = 31_536_000;
 const EDIT_OWN_CAPABILITY = "user:edit_own";
 
 export const setLocale = base
@@ -43,14 +39,3 @@ export const setLocale = base
       buildLocaleCookie(match.code, isSecureRequest(context.request)),
     );
   });
-
-function buildLocaleCookie(code: string, secure: boolean): string {
-  const parts = [
-    `${ADMIN_LOCALE_COOKIE}=${code}`,
-    `Path=${ADMIN_LOCALE_COOKIE_PATH}`,
-    `Max-Age=${ONE_YEAR_SECONDS}`,
-    "SameSite=Lax",
-  ];
-  if (secure) parts.push("Secure");
-  return parts.join("; ");
-}
