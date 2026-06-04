@@ -1,0 +1,94 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-03\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: uk\n"
+"Plural-Forms: nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || (n%100>=11 && n%100<=14) ? 2 : 3);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.singular"
+msgstr "Сторінка"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.plural"
+msgstr "Сторінки"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.addNew"
+msgstr "Додати"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.addNewItem"
+msgstr "Додати сторінку"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.editItem"
+msgstr "Редагувати сторінку"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.newItem"
+msgstr "Нова сторінка"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.viewItem"
+msgstr "Переглянути сторінку"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.viewItems"
+msgstr "Переглянути сторінки"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.searchItems"
+msgstr "Пошук сторінок…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.notFound"
+msgstr "Сторінок ще немає"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.notFoundInTrash"
+msgstr "Кошик порожній"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.allItems"
+msgstr "Усі сторінки"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.noMatch"
+msgstr "Сторінки не знайдено"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.parentItem"
+msgstr "Батьківська сторінка"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.parentItemColon"
+msgstr "Батьківська сторінка:"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.untitledItem"
+msgstr "Сторінка без назви"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.moveToTrash"
+msgstr "Перенести сторінку в кошик?"

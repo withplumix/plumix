@@ -1,0 +1,246 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-03\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: uk\n"
+"Plural-Forms: nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || (n%100>=11 && n%100<=14) ? 2 : 3);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menuItem.singular"
+msgstr "Пункт меню"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menuItem.plural"
+msgstr "Пункти меню"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menuItem.addNew"
+msgstr "Додати"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menuItem.addNewItem"
+msgstr "Додати пункт меню"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menuItem.editItem"
+msgstr "Редагувати пункт меню"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menuItem.newItem"
+msgstr "Новий пункт меню"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menuItem.searchItems"
+msgstr "Пошук пунктів меню…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menuItem.notFound"
+msgstr "Пунктів меню ще немає"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menuItem.parentItem"
+msgstr "Батьківський пункт"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.singular"
+msgstr "Меню"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.plural"
+msgstr "Меню"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.addNew"
+msgstr "Додати"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.addNewItem"
+msgstr "Додати меню"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.editItem"
+msgstr "Редагувати меню"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.viewItem"
+msgstr "Переглянути меню"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.updateItem"
+msgstr "Оновити меню"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.newItemName"
+msgstr "Назва нового меню"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.searchItems"
+msgstr "Пошук меню…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.notFound"
+msgstr "Меню ще немає"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.allItems"
+msgstr "Усі меню"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.backToItems"
+msgstr "← До меню"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "core.adminNav.appearance"
+msgstr "Зовнішній вигляд"
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.tab.edit"
+msgstr "Редагувати меню"
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.tab.locations"
+msgstr "Керування розташуваннями"
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.createPrompt"
+msgstr "Назва меню"
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.emptyState"
+msgstr "Меню ще немає. Створіть перше меню, щоб почати."
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.createButton"
+msgstr "+ Створити нове меню"
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.editEmpty"
+msgstr "Виберіть меню, щоб почати редагування."
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.unassigned"
+msgstr "— Не призначено —"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.deleteConfirm"
+msgstr "Видалити це меню?"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.brokenLinkAria"
+msgstr "несправне посилання"
+
+#. js-lingui-explicit-id
+#. title: the item's display title, or a translated 'item' fallback
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.reorderAria"
+msgstr "Перевпорядкувати {title}"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.reorderFallbackTitle"
+msgstr "пункт"
+
+#. js-lingui-explicit-id
+#. label: the broken item's resolved-label or original title
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.relinkBanner"
+msgstr "Виберіть заміну для {label}"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.emptyState"
+msgstr "Пунктів ще немає."
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.conflictBanner"
+msgstr "Інший користувач зберіг зміни, відколи ви відкрили це меню."
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.conflictReload"
+msgstr "Перезавантажити, щоб побачити останнє"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.saveButton"
+msgstr "Зберегти меню"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.maxDepthLabel"
+msgstr "Максимальна глибина"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.maxDepthRejected"
+msgstr "Не можна встановити нижче поточного найглибшого пункту."
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.deleteButton"
+msgstr "Видалити меню"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.cancelButton"
+msgstr "Скасувати"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.customReplaceButton"
+msgstr "Замінити посилання"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.customAddButton"
+msgstr "Додати до меню"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.relinkButton"
+msgstr "Перепов'язати…"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.convertButton"
+msgstr "Перетворити на користувацьку URL"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.removeButton"
+msgstr "Видалити"

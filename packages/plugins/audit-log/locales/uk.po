@@ -1,0 +1,117 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-04\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: uk\n"
+"Plural-Forms: nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || (n%100>=11 && n%100<=14) ? 2 : 3);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.auditLog.adminPage.title"
+msgstr "Журнал подій"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "core.adminNav.tools"
+msgstr "Інструменти"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.shell.title"
+msgstr "Журнал подій"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.shell.empty"
+msgstr "Подій за заданими умовами немає."
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.shell.loadMore"
+msgstr "Завантажити ще"
+
+#. message: the underlying error message from the RPC failure
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.shell.error"
+msgstr "Не вдалося завантажити журнал: {message}"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.column.time"
+msgstr "Час"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.column.actor"
+msgstr "Користувач"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.column.event"
+msgstr "Подія"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.column.subject"
+msgstr "Об'єкт"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.column.changes"
+msgstr "Зміни"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.preset.all"
+msgstr "За весь час"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.preset.today"
+msgstr "Сьогодні"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.preset.last7"
+msgstr "Останні 7 днів"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.preset.last30"
+msgstr "Останні 30 днів"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.actorPlaceholder"
+msgstr "ID користувача"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.subjectAny"
+msgstr "Будь-який тип об'єкта"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.eventAny"
+msgstr "Будь-яка подія"
+
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.filter.reset"
+msgstr "Скинути"
+
+#. Fallback label when an audit row has no associated actor user
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.row.systemActor"
+msgstr "(система)"
+
+#. count: number of additional changed fields beyond the preview limit
+#. js-lingui-explicit-id
+#: src/admin/AuditLogShell.tsx
+msgid "plugin.auditLog.diff.overflow"
+msgstr " +ще {count}"
