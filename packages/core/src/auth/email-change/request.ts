@@ -4,6 +4,7 @@ import type { Mailer } from "../mailer/types.js";
 import { and, eq, ne } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { users } from "../../db/schema/users.js";
+import { emailStringsFor } from "../email/messages.js";
 import { generateToken, hashToken } from "../tokens.js";
 import { EmailChangeError } from "./errors.js";
 
@@ -24,6 +25,12 @@ export interface RequestEmailChangeInput {
   readonly mailer: Mailer;
   readonly siteName: string;
   readonly ttlSeconds?: number;
+  /**
+   * Locale for the email body. Post-auth flow: caller passes
+   * `user.meta.locale`. Falls back to English when omitted or unknown.
+   * See `auth/email/messages.ts`.
+   */
+  readonly locale?: string;
   /**
    * Optional logger for swallowed mailer errors. Same rationale as
    * magic-link: never throw out of the request — the verification
@@ -112,16 +119,17 @@ export async function requestEmailChange(
   verifyUrl.searchParams.set("token", token);
 
   try {
+    const strings = emailStringsFor(input.locale);
     await input.mailer.send({
       to: newEmail,
-      subject: `Confirm your new email for ${input.siteName}`,
-      text: composeText(
-        input.siteName,
-        user.email,
+      subject: strings.emailChange.subject(input.siteName),
+      text: strings.emailChange.body({
+        siteName: input.siteName,
+        oldEmail: user.email,
         newEmail,
-        verifyUrl.toString(),
+        url: verifyUrl.toString(),
         ttlSeconds,
-      ),
+      }),
     });
   } catch (error) {
     // Don't leak transport failures to the caller — the request still
@@ -131,27 +139,4 @@ export async function requestEmailChange(
   }
 
   return { user, token, expiresAt };
-}
-
-function composeText(
-  siteName: string,
-  oldEmail: string,
-  newEmail: string,
-  url: string,
-  ttlSeconds: number,
-): string {
-  return [
-    `Someone — hopefully you — asked to change the email on your ${siteName} account.`,
-    "",
-    `From: ${oldEmail}`,
-    `To:   ${newEmail}`,
-    "",
-    `Confirm the change by opening this link:`,
-    "",
-    url,
-    "",
-    `The link expires in ${Math.round(ttlSeconds / 3600)} hour(s).`,
-    "",
-    `If you didn't request this, you can ignore this email — your account stays on ${oldEmail}.`,
-  ].join("\n");
 }

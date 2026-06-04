@@ -4,6 +4,7 @@ import { eq } from "../../db/index.js";
 import { allowedDomains } from "../../db/schema/allowed_domains.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { users } from "../../db/schema/users.js";
+import { emailStringsFor } from "../email/messages.js";
 import { extractDomain } from "../identity.js";
 import { generateToken, hashToken } from "../tokens.js";
 
@@ -27,6 +28,13 @@ interface RequestMagicLinkInput {
   readonly mailer: Mailer;
   readonly siteName: string;
   readonly ttlSeconds?: number;
+  /**
+   * Locale for the email body. Pre-auth flow: caller supplies the
+   * resolved admin-shell locale (Accept-Language fallback chain) since
+   * the recipient has no stored preference yet. Falls back to English
+   * when omitted or unknown. See `auth/email/messages.ts`.
+   */
+  readonly locale?: string;
   /**
    * Optional logger for swallowed mailer errors. The function never
    * throws (so the response can stay shape-identical on every code
@@ -145,10 +153,15 @@ async function issueAndSend(
     // Plain-text body only. Branded HTML / template rendering is the
     // operator's call — they wrap their `Mailer` adapter and template
     // however they like. Plumix is not in the email-design business.
+    const strings = emailStringsFor(input.locale);
     await input.mailer.send({
       to: target.email,
-      subject: `Sign in to ${input.siteName}`,
-      text: composeText(input.siteName, verifyUrl.toString(), ttlSeconds),
+      subject: strings.magicLink.subject(input.siteName),
+      text: strings.magicLink.body(
+        input.siteName,
+        verifyUrl.toString(),
+        ttlSeconds,
+      ),
     });
   } catch (error) {
     // Swallow toward the caller — surfacing this would leak that the
@@ -156,22 +169,6 @@ async function issueAndSend(
     // the failure (otherwise broken mail config would be silent).
     input.logger?.warn("magic_link_mailer_failed", { error });
   }
-}
-
-function composeText(
-  siteName: string,
-  url: string,
-  ttlSeconds: number,
-): string {
-  return [
-    `Sign in to ${siteName} by opening this link:`,
-    "",
-    url,
-    "",
-    `The link expires in ${Math.round(ttlSeconds / 60)} minutes.`,
-    "",
-    "If you didn't request this, you can ignore this email.",
-  ].join("\n");
 }
 
 function timingDelay(): Promise<void> {
