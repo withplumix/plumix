@@ -14,6 +14,7 @@ type CliErrorCode =
   | "config_load_failed"
   | "config_invalid"
   | "i18n_check_drift"
+  | "i18n_verify_drift"
   | "i18n_init_no_package_json"
   | "i18n_init_invalid_package_json"
   | "tooling_command_no_app";
@@ -207,6 +208,22 @@ export class CliError extends Error {
       "i18n_check_drift",
       `Translation catalogs out of sync — ${ctx.ids.length} msgid(s) drifted (+ added, - removed):\n  ${ctx.ids.join("\n  ")}`,
       "Run `plumix i18n extract` locally and commit the updated `.po` file(s).",
+      undefined,
+    );
+  }
+
+  static i18nVerifyDrift(ctx: {
+    missingInCatalog: readonly string[];
+    orphanedInCatalog: readonly string[];
+  }): CliError {
+    const lines: string[] = [];
+    for (const id of ctx.missingInCatalog) lines.push(`+ ${id}`);
+    for (const id of ctx.orphanedInCatalog) lines.push(`- ${id}`);
+    const total = ctx.missingInCatalog.length + ctx.orphanedInCatalog.length;
+    return new CliError(
+      "i18n_verify_drift",
+      `Source ↔ catalog drift — ${total} msgid(s) (+ missing from catalog, - orphaned in catalog):\n  ${lines.join("\n  ")}`,
+      "Add missing entries to `locales/en.po` (translators won't see them otherwise) and drop orphaned ones (dead translation work).",
       undefined,
     );
   }

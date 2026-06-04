@@ -15,7 +15,7 @@ import { CliError, spawnInherit } from "@plumix/core";
 
 import { report } from "../report.js";
 
-const SUPPORTED = ["extract", "compile", "init"] as const;
+const SUPPORTED = ["extract", "compile", "init", "verify"] as const;
 export const LINGUI_DEP_RANGE = "^6.2.0";
 
 export const i18nCommand: CommandDefinition = {
@@ -31,6 +31,10 @@ export const i18nCommand: CommandDefinition = {
     }
     if (sub === "init") {
       runInit(ctx);
+      return;
+    }
+    if (sub === "verify") {
+      runVerify(ctx);
       return;
     }
     if (sub !== "extract" && sub !== "compile") {
@@ -203,7 +207,11 @@ function mergePackageJson(pkg: PackageJsonShape): {
   const newScripts: Record<string, string> = {
     "i18n:extract": "lingui extract",
     "i18n:compile": "lingui compile --namespace es",
-    "i18n:check": "plumix i18n extract --check",
+    // `verify` is the source↔catalog drift gate — works for both
+    // lingui-extracted catalogs and the hand-authored manifest pattern
+    // plumix's own plugins use. Catches JSX `<Trans id="..." message="...">`
+    // and object-literal `{ id, message }` descriptors uniformly.
+    "i18n:check": "plumix i18n verify",
   };
   const newDeps: Record<string, string> = {
     "@lingui/cli": LINGUI_DEP_RANGE,
@@ -275,6 +283,155 @@ async function runExtractCheck(
       if (!snapshot.has(path)) rmSync(path);
     }
   }
+}
+
+/** Drift gate for hand-authored plugin catalogs. Unlike `extract --check`
+ *  (which assumes the Lingui extractor sees every descriptor), `verify`
+ *  scans source for any `{ id, message }`-shape literal — so descriptors
+ *  wrapped in `withContext(...)` or declared as plain manifest fields
+ *  count too. Exits non-zero with a sorted drift report when source and
+ *  `locales/en.po` disagree. */
+function runVerify(ctx: CommandContext): void {
+  const localesDir = resolve(ctx.cwd, "locales");
+  const srcDir = resolve(ctx.cwd, "src");
+  const sourceIds = new Set<string>();
+  for (const file of listSourceFiles(srcDir)) {
+    for (const id of sourceDescriptorIds(readFileSync(file, "utf8"))) {
+      sourceIds.add(id);
+    }
+  }
+  const catalogIds: string[] = [];
+  for (const path of listPoFiles(localesDir)) {
+    for (const id of activeMsgids(readFileSync(path, "utf8"))) {
+      catalogIds.push(id);
+    }
+  }
+  const drift = computeIdDrift(sourceIds, catalogIds);
+  if (drift.missingInCatalog.length > 0 || drift.orphanedInCatalog.length > 0) {
+    throw CliError.i18nVerifyDrift(drift);
+  }
+}
+
+function listSourceFiles(dir: string): readonly string[] {
+  const out: string[] = [];
+  try {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, e.name);
+      if (e.isDirectory()) {
+        if (e.name === "node_modules" || e.name === "dist") continue;
+        out.push(...listSourceFiles(full));
+      } else if (
+        e.isFile() &&
+        (e.name.endsWith(".ts") || e.name.endsWith(".tsx")) &&
+        // Test files often declare fixture descriptors (`{ id: "test.x",
+        // message: "fixture" }`) that shouldn't count as shipped strings.
+        // Gate scope is production source.
+        !e.name.endsWith(".test.ts") &&
+        !e.name.endsWith(".test.tsx")
+      ) {
+        out.push(full);
+      }
+    }
+  } catch {
+    // Missing src/ dir is fine — a package may ship catalogs without code yet.
+  }
+  return out;
+}
+
+/** Sorted so CI failures read deterministically. `missingInCatalog`
+ *  blocks translators from seeing the string; `orphanedInCatalog` is
+ *  dead translation work. */
+export function computeIdDrift(
+  sourceIds: ReadonlySet<string>,
+  catalogIds: readonly string[],
+): { missingInCatalog: string[]; orphanedInCatalog: string[] } {
+  const catalog = new Set(catalogIds);
+  const missingInCatalog: string[] = [];
+  const orphanedInCatalog: string[] = [];
+  for (const id of sourceIds) if (!catalog.has(id)) missingInCatalog.push(id);
+  for (const id of catalog) if (!sourceIds.has(id)) orphanedInCatalog.push(id);
+  return {
+    missingInCatalog: missingInCatalog.sort(),
+    orphanedInCatalog: orphanedInCatalog.sort(),
+  };
+}
+
+/** Finds `{ id: "...", message: "..." }`-shaped descriptor literals
+ *  (covers `defineMessage`, `withContext`, manifest objects) and
+ *  `<Trans id="..." message="..." />` JSX. `id` and `message` must be
+ *  siblings at the same nesting depth — a nav-group descriptor like
+ *  `{ id: "x", label: { id, message } }` doesn't count. Dynamic ids
+ *  (`id: prefix + ".x"`) are ignored — neither the extractor nor the
+ *  catalog can represent them. */
+export function sourceDescriptorIds(text: string): ReadonlySet<string> {
+  const ids = new Set<string>();
+  // Object-literal form: `id: "X"` — accept only when the enclosing
+  // `{...}` has `message:` at the SAME nesting depth (a sibling `id:`
+  // next to a nested `label: { id, message }` is a nav-group descriptor,
+  // not a translation descriptor).
+  const objRe = /\bid:\s*["']([^"'\n]+)["']/g;
+  let m: RegExpExecArray | null;
+  while ((m = objRe.exec(text)) !== null) {
+    if (hasSiblingMessageKey(text, m.index)) ids.add(m[1] ?? "");
+  }
+  // JSX-attribute form: `id="X"` inside a `<Trans ... message="..." />`
+  // (or `<Trans ... message={...} />`) tag, possibly across multiple
+  // lines. The tag begins with the most recent `<` to the left and ends
+  // at the next `>` (no nested elements inside an opening tag).
+  const jsxRe = /\bid=["']([^"'\n]+)["']/g;
+  while ((m = jsxRe.exec(text)) !== null) {
+    const tag = enclosingJsxTag(text, m.index);
+    if (tag && /\bmessage[:=]/.test(tag)) ids.add(m[1] ?? "");
+  }
+  ids.delete("");
+  return ids;
+}
+
+function hasSiblingMessageKey(text: string, pos: number): boolean {
+  // Find the nearest unbalanced `{` to the left of pos.
+  let depth = 0;
+  let start = -1;
+  for (let i = pos; i >= 0; i--) {
+    const c = text[i];
+    if (c === "}") depth += 1;
+    else if (c === "{") {
+      if (depth === 0) {
+        start = i;
+        break;
+      }
+      depth -= 1;
+    }
+  }
+  if (start === -1) return false;
+  // Scan forward from `start`, tracking nested `{...}` depth. Match
+  // `message:` only when depth === 1 (sibling level of the `{` body).
+  depth = 0;
+  for (let i = start; i < text.length; i++) {
+    const c = text[i];
+    if (c === "{") depth += 1;
+    else if (c === "}") {
+      depth -= 1;
+      if (depth === 0) return false;
+    } else if (
+      depth === 1 &&
+      text.startsWith("message", i) &&
+      /\s*:/.test(text.slice(i + "message".length))
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Opening JSX tags don't nest, so a simple `<...>` window is enough. */
+function enclosingJsxTag(text: string, pos: number): string | null {
+  const lt = text.lastIndexOf("<", pos);
+  if (lt === -1) return null;
+  const gt = text.indexOf(">", pos);
+  if (gt === -1) return null;
+  // Reject the case where another tag closed between `lt` and `pos`.
+  if (text.lastIndexOf(">", pos - 1) > lt) return null;
+  return text.slice(lt, gt + 1);
 }
 
 /** Extract active (non-obsolete) msgid values from a .po file. Handles

@@ -10,6 +10,8 @@ A headless CMS for the edge, built on Cloudflare Workers.
   overrides.
 - [Plugin author guide](./plugin-author.md) — registering metaboxes,
   blocks, field types, RPC routers from a plugin.
+- [Translation guide](./translation.md) — adding a locale, reading
+  `.po` entries, ICU plurals, RTL smoke-testing.
 
 ## Reference
 
