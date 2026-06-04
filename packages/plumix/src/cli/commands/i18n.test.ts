@@ -12,7 +12,13 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { CommandContext, PlumixApp } from "@plumix/core";
 
-import { i18nCommand, i18nDeps, LINGUI_DEP_RANGE } from "./i18n.js";
+import {
+  computeIdDrift,
+  i18nCommand,
+  i18nDeps,
+  LINGUI_DEP_RANGE,
+  sourceDescriptorIds,
+} from "./i18n.js";
 
 function fakeApp(): PlumixApp {
   return {
@@ -35,6 +41,110 @@ function ctx(
     ...overrides,
   };
 }
+
+describe("sourceDescriptorIds", () => {
+  test("finds an id in a plain object literal that also has message", () => {
+    const ids = sourceDescriptorIds(
+      'const M = { foo: { id: "plugin.blog.post.singular", message: "Post" } };',
+    );
+    expect([...ids]).toEqual(["plugin.blog.post.singular"]);
+  });
+
+  test("finds an id inside withContext({ id, message }, ctx)", () => {
+    const ids = sourceDescriptorIds(
+      'const POST = withContext({ id: "plugin.blog.post.singular", message: "Post" }, "post type singular name");',
+    );
+    expect([...ids]).toEqual(["plugin.blog.post.singular"]);
+  });
+
+  test("finds an id inside defineMessage({...}) spanning multiple lines", () => {
+    const ids = sourceDescriptorIds(
+      `defineMessage({
+         id: "entries.list.row.trash",
+         message: "Trash",
+         context: "action verb",
+       })`,
+    );
+    expect([...ids]).toEqual(["entries.list.row.trash"]);
+  });
+
+  test("ignores object literals that have id but no message", () => {
+    // e.g. <Trans id="x" /> as a runtime ref, or { id: 1 } DB record
+    const ids = sourceDescriptorIds('const ref = { id: "some.id" };');
+    expect([...ids]).toEqual([]);
+  });
+
+  test('finds an id in a <Trans id="..." message="..." /> JSX element', () => {
+    const ids = sourceDescriptorIds(
+      `<Trans id="plugin.auditLog.column.actor" message="Actor" />`,
+    );
+    expect([...ids]).toEqual(["plugin.auditLog.column.actor"]);
+  });
+
+  test("finds an id in a multiline <Trans> tag", () => {
+    const ids = sourceDescriptorIds(
+      `<Trans
+         id="entries.list.statusFilter.draft"
+         message="Draft"
+         context="entry status"
+       />`,
+    );
+    expect([...ids]).toEqual(["entries.list.statusFilter.draft"]);
+  });
+
+  test("does NOT match an outer { id: ... } whose message: lives in a nested child block", () => {
+    // Real false positive: a nav-group descriptor `{ id: "library",
+    // label: { id: "...", message: "Library" } }` has both keys but
+    // `message:` belongs to a nested object, so the outer `id:` is not
+    // a translation descriptor.
+    const ids = sourceDescriptorIds(`{
+       id: "library",
+       label: { id: "core.adminNav.library", message: "Library" },
+       priority: 150,
+     }`);
+    expect([...ids]).toEqual(["core.adminNav.library"]);
+  });
+
+  test("collects every descriptor in a file (no duplicates)", () => {
+    const ids = sourceDescriptorIds(
+      `const A = { id: "a.x", message: "A" };
+       const B = { id: "b.y", message: "B" };
+       const C = { id: "a.x", message: "duplicate" };`,
+    );
+    expect([...ids].sort()).toEqual(["a.x", "b.y"]);
+  });
+});
+
+describe("computeIdDrift", () => {
+  test("returns empty arrays when source and catalog ids match exactly", () => {
+    const drift = computeIdDrift(new Set(["a.x", "b.y"]), ["a.x", "b.y"]);
+    expect(drift).toEqual({ missingInCatalog: [], orphanedInCatalog: [] });
+  });
+
+  test("flags an id declared in source but absent from the catalog", () => {
+    const drift = computeIdDrift(new Set(["a.x", "b.y"]), ["a.x"]);
+    expect(drift).toEqual({
+      missingInCatalog: ["b.y"],
+      orphanedInCatalog: [],
+    });
+  });
+
+  test("flags a msgid in the catalog with no source declaration", () => {
+    const drift = computeIdDrift(new Set(["a.x"]), ["a.x", "b.y"]);
+    expect(drift).toEqual({
+      missingInCatalog: [],
+      orphanedInCatalog: ["b.y"],
+    });
+  });
+
+  test("sorts both lists for stable CI output", () => {
+    const drift = computeIdDrift(new Set(["c", "a"]), ["d", "b"]);
+    expect(drift).toEqual({
+      missingInCatalog: ["a", "c"],
+      orphanedInCatalog: ["b", "d"],
+    });
+  });
+});
 
 describe("i18nCommand", () => {
   let dir: string;
@@ -83,6 +193,59 @@ describe("i18nCommand", () => {
     await expect(
       i18nCommand.run(ctx({ cwd: dir, argv: ["extract"] })),
     ).rejects.toThrow(/@lingui\/cli not found/);
+  });
+
+  describe("verify", () => {
+    function seedPlugin(args: {
+      readonly sourceIds: readonly string[];
+      readonly catalogIds: readonly string[];
+    }): void {
+      const localesDir = join(dir, "locales");
+      const srcDir = join(dir, "src");
+      mkdirSync(localesDir, { recursive: true });
+      mkdirSync(srcDir, { recursive: true });
+      const src = args.sourceIds
+        .map(
+          (id) =>
+            `const _${id.replace(/\W/g, "_")} = { id: "${id}", message: "msg" };`,
+        )
+        .join("\n");
+      writeFileSync(join(srcDir, "index.ts"), src);
+      const po = `msgid ""\nmsgstr ""\n\n${args.catalogIds
+        .map((id) => `msgid "${id}"\nmsgstr ""`)
+        .join("\n\n")}\n`;
+      writeFileSync(join(localesDir, "en.po"), po);
+    }
+
+    test("passes silently when source ids and catalog msgids match", async () => {
+      seedPlugin({
+        sourceIds: ["plugin.x.foo", "plugin.x.bar"],
+        catalogIds: ["plugin.x.foo", "plugin.x.bar"],
+      });
+      await expect(
+        i18nCommand.run(ctx({ cwd: dir, argv: ["verify"] })),
+      ).resolves.toBeUndefined();
+    });
+
+    test("throws a drift error listing ids missing from the catalog", async () => {
+      seedPlugin({
+        sourceIds: ["plugin.x.foo", "plugin.x.bar"],
+        catalogIds: ["plugin.x.foo"],
+      });
+      await expect(
+        i18nCommand.run(ctx({ cwd: dir, argv: ["verify"] })),
+      ).rejects.toThrow(/plugin\.x\.bar/);
+    });
+
+    test("throws on orphaned msgids in the catalog with no source declaration", async () => {
+      seedPlugin({
+        sourceIds: ["plugin.x.foo"],
+        catalogIds: ["plugin.x.foo", "plugin.x.dead"],
+      });
+      await expect(
+        i18nCommand.run(ctx({ cwd: dir, argv: ["verify"] })),
+      ).rejects.toThrow(/plugin\.x\.dead/);
+    });
   });
 
   describe("extract --check", () => {
@@ -270,7 +433,7 @@ describe("i18nCommand", () => {
       expect(pkg.scripts).toMatchObject({
         "i18n:extract": "lingui extract",
         "i18n:compile": "lingui compile --namespace es",
-        "i18n:check": "plumix i18n extract --check",
+        "i18n:check": "plumix i18n verify",
       });
       // Pinning to the constant — a version bump must be a deliberate
       // test change so the gate against silent drift stays loud.
