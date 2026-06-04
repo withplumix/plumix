@@ -925,6 +925,11 @@ msgstr "Couldn't load these settings. Try again."
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.loadFailedTitle"
+msgstr "Couldn't load this entry"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.entry.edit.loadFailed"
 msgstr "Couldn't load this entry."
 

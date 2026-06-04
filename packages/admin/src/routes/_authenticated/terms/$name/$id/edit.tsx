@@ -1,6 +1,7 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { ErrorPlaceholder } from "@/components/error-placeholder.js";
 import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
 import { TermForm } from "@/components/taxonomy/term-form.js";
 import {
@@ -461,11 +462,9 @@ function DeleteCard({
 
 function NotFoundPlaceholder({ message }: { message: string }): ReactNode {
   return (
-    <div className="flex flex-col gap-2">
-      <h1 className="text-2xl font-semibold">
-        <Trans id="terms.edit.notFound.title" message="Not found" />
-      </h1>
-      <p className="text-muted-foreground text-sm">{message}</p>
-    </div>
+    <ErrorPlaceholder
+      title={<Trans id="terms.edit.notFound.title" message="Not found" />}
+      description={message}
+    />
   );
 }

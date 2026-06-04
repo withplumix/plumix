@@ -1,6 +1,7 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { ErrorPlaceholder } from "@/components/error-placeholder.js";
 import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
 import { MetaBoxField } from "@/components/meta-box/meta-box-field.js";
 import { metaBoxFieldColSpanClass } from "@/components/meta-box/meta-box-grid.js";
@@ -331,13 +332,9 @@ function NotFoundPlaceholder({
 }): ReactNode {
   const { i18n } = useLingui();
   return (
-    <div className="flex flex-col gap-2">
-      <h1 className="text-2xl font-semibold">
-        <Trans id="settings.page.notFound.title" message="Not found" />
-      </h1>
-      <p className="text-muted-foreground text-sm">
-        {i18n._(message.id, undefined, { message: message.message })}
-      </p>
-    </div>
+    <ErrorPlaceholder
+      title={<Trans id="settings.page.notFound.title" message="Not found" />}
+      description={i18n._(message.id, undefined, { message: message.message })}
+    />
   );
 }
