@@ -52,7 +52,7 @@ describe("user.setLocale", () => {
     expect(setCookie).toContain("Secure");
   });
 
-  test("attaches Set-Cookie: plumix_locale=<code>; Path=/_plumix/admin/ on success", async () => {
+  test("attaches Set-Cookie: plumix_locale=<code>; Path=/_plumix/ on success", async () => {
     const h = await createDispatcherHarness({
       i18n: { defaultLocale: "en", locales: ["en", "ar"] },
     });
@@ -71,7 +71,7 @@ describe("user.setLocale", () => {
     expect(response.status).toBe(200);
     const setCookie = response.headers.get("set-cookie") ?? "";
     expect(setCookie).toContain("plumix_locale=ar");
-    expect(setCookie).toContain("Path=/_plumix/admin/");
+    expect(setCookie).toContain("Path=/_plumix/");
     expect(setCookie).toContain("SameSite=Lax");
     expect(setCookie).toContain("Max-Age=31536000");
   });

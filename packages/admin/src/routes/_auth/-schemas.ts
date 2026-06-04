@@ -26,7 +26,7 @@ export const bootstrapSchema = v.object({
   name: v.optional(nameField, ""),
 });
 
-// Server-side `resolveAdminShellLocale` reads `?lang=` directly to set
+// Server-side `resolveLocale` reads `?lang=` directly to set
 // `<html lang dir>` on the initial SSR; routes that mount the pre-auth
 // dropdown extend this so `Route.useSearch()` hands the value back.
 export const langOnlySearchSchema = v.object({

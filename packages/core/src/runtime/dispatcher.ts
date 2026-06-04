@@ -27,13 +27,11 @@ import {
   handleSignout,
 } from "../auth/passkey/routes.js";
 import { withUser } from "../context/app.js";
+import { resolveLocale } from "../i18n/resolve-locale.js";
 import { matchRoute } from "../route/match.js";
 import { renderErrorThroughTheme } from "../route/render/render-template.js";
 import { resolvePublicRoute } from "../route/resolve.js";
-import {
-  resolveAdminShellLocale,
-  rewriteAdminShellLangDir,
-} from "./admin-shell.js";
+import { rewriteAdminShellLangDir } from "./admin-shell.js";
 import { forbidden, jsonResponse, methodNotAllowed, notFound } from "./http.js";
 
 const RPC_PREFIX = "/_plumix/rpc";
@@ -384,7 +382,7 @@ async function serveAdmin(ctx: AppContext): Promise<Response> {
   const auth = readSessionCookie(ctx.request)
     ? await ctx.authenticator.authenticate(ctx.request, ctx.db)
     : null;
-  const locale = resolveAdminShellLocale({
+  const locale = resolveLocale({
     request: ctx.request,
     user: auth?.user ?? null,
     i18n: ctx.i18n,
