@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
+import { ErrorPlaceholder } from "@/components/error-placeholder.js";
 import { pathToCrumbs } from "@/lib/breadcrumbs.js";
 import { sessionQueryOptions } from "@/lib/session.js";
 import { Trans, useLingui } from "@lingui/react";
@@ -54,19 +55,15 @@ function useDocumentTitle(): void {
 
 function NotFound(): ReactNode {
   return (
-    <div
-      data-testid="not-found-page"
-      className="flex h-screen flex-col items-center justify-center gap-2 p-6 text-center"
-    >
-      <h1 className="text-2xl font-semibold">
-        <Trans id="notFound.title" message="Not found" />
-      </h1>
-      <p className="text-muted-foreground text-sm">
+    <ErrorPlaceholder
+      testId="not-found-page"
+      title={<Trans id="notFound.title" message="Not found" />}
+      description={
         <Trans
           id="notFound.description"
           message="The page you're looking for doesn't exist or the resource isn't registered. Check the URL and try again."
         />
-      </p>
-    </div>
+      }
+    />
   );
 }

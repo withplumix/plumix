@@ -931,6 +931,11 @@ msgstr "Не вдалося завантажити ці налаштування
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.loadFailedTitle"
+msgstr "Не вдалося завантажити цей запис"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.entry.edit.loadFailed"
 msgstr "Не вдалося завантажити цей запис."
 

@@ -910,6 +910,11 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.loadFailedTitle"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.entry.edit.loadFailed"
 msgstr ""
 

@@ -2,6 +2,7 @@ import type { MessageDescriptor } from "@lingui/core";
 import type { QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { ErrorPlaceholder } from "@/components/error-placeholder.js";
 import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
 import { MetaBoxCard } from "@/components/meta-box/meta-box.js";
 import {
@@ -845,11 +846,9 @@ function NotFoundPlaceholder({
 }): ReactNode {
   const label = useLabel();
   return (
-    <div className="flex flex-col gap-2">
-      <h1 className="text-2xl font-semibold">
-        <Trans id="userEdit.notFound.title" message="Not found" />
-      </h1>
-      <p className="text-muted-foreground text-sm">{label(message)}</p>
-    </div>
+    <ErrorPlaceholder
+      title={<Trans id="userEdit.notFound.title" message="Not found" />}
+      description={label(message)}
+    />
   );
 }

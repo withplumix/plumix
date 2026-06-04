@@ -4,6 +4,7 @@ import type { Config, Data } from "@puckeditor/core";
 import type { ReactElement, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PlainFormLayout } from "@/components/editor/plain-form-layout.js";
+import { ErrorPlaceholder } from "@/components/error-placeholder.js";
 import { buildAdminPatternRegistry } from "@/editor/admin-pattern-registry.js";
 import { AutosaveStatusContext } from "@/editor/AutosaveStatus.js";
 import { blockSpecsToPuckComponents } from "@/editor/block-adapter.js";
@@ -156,15 +157,21 @@ function PendingScreen(): ReactNode {
 
 function ErrorScreen(): ReactNode {
   return (
-    <div
-      className="text-muted-foreground p-6 text-sm"
-      data-testid="plumix-editor-error"
-    >
-      <Trans
-        id="editor.entry.edit.loadFailed"
-        message="Couldn't load this entry."
-      />
-    </div>
+    <ErrorPlaceholder
+      testId="plumix-editor-error"
+      title={
+        <Trans
+          id="editor.entry.edit.loadFailedTitle"
+          message="Couldn't load this entry"
+        />
+      }
+      description={
+        <Trans
+          id="editor.entry.edit.loadFailed"
+          message="Couldn't load this entry."
+        />
+      }
+    />
   );
 }
 
