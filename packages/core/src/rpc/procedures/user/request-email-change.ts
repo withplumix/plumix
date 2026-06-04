@@ -60,6 +60,14 @@ export const requestEmailChangeProc = base
         origin: context.origin,
         mailer: context.mailer,
         siteName: context.siteName,
+        // Email body locale follows the recipient's persisted preference
+        // (`user.meta.locale`), not the actor's. An admin in English
+        // editing a German user's email still mails the German user
+        // in German.
+        locale:
+          typeof target.meta.locale === "string"
+            ? target.meta.locale
+            : undefined,
         logger: context.logger,
       });
 

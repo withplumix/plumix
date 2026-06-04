@@ -254,4 +254,47 @@ describe("requestMagicLink", () => {
       }),
     ).resolves.toBeUndefined();
   });
+
+  test("renders the email body in the recipient's locale when supplied", async () => {
+    // Pre-auth flow: the caller (routes.ts) supplies the resolved
+    // admin-shell locale. With "de", subject + body should be German.
+    const db = await createTestDb();
+    await userFactory.transient({ db }).create({
+      email: "klaus@example.com",
+      role: "editor",
+    });
+    const { mailer, sent } = captureMailer();
+
+    await requestMagicLink(db, {
+      email: "klaus@example.com",
+      origin: "https://cms.example",
+      mailer,
+      siteName: "Test Site",
+      locale: "de",
+    });
+
+    const [message] = sent;
+    expect(message?.subject).toBe("Bei Test Site anmelden");
+    expect(message?.text).toContain("Melden Sie sich bei Test Site");
+  });
+
+  test("falls back to English when locale is omitted or unknown", async () => {
+    const db = await createTestDb();
+    await userFactory.transient({ db }).create({
+      email: "fallback@example.com",
+      role: "editor",
+    });
+    const { mailer, sent } = captureMailer();
+
+    await requestMagicLink(db, {
+      email: "fallback@example.com",
+      origin: "https://cms.example",
+      mailer,
+      siteName: "Test Site",
+      locale: "xx-INVALID",
+    });
+
+    const [message] = sent;
+    expect(message?.subject).toBe("Sign in to Test Site");
+  });
 });

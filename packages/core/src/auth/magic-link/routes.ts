@@ -72,6 +72,13 @@ export async function handleMagicLinkRequest(
       mailer: ctx.mailer,
       siteName: app.config.auth.magicLink.siteName,
       ttlSeconds: app.config.auth.magicLink.ttlSeconds,
+      // Pre-auth magic-link: `ctx.locale` is whatever the public-route
+      // resolver returned (override → site default — no Accept-Language
+      // by design). For a recipient who has no `user.meta.locale` yet
+      // this is the best signal we have without client-supplied input.
+      // Future: accept `lang` in the request body so the login form's
+      // dropdown choice flows through to the email.
+      locale: ctx.locale.code,
       logger: ctx.logger,
       bootstrapAllowed: ctx.bootstrapAllowed,
     });
