@@ -1,10 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import {
-  buildLocaleCookie,
-  nextSearchForLang,
-  writeLocaleCookie,
-} from "./-locale-param.js";
+import { buildLocaleCookie } from "@plumix/core/i18n";
+
+import { nextSearchForLang, writeLocaleCookie } from "./-locale-param.js";
 
 describe("nextSearchForLang", () => {
   test("sets `?lang=` to the chosen code", () => {
@@ -35,28 +33,6 @@ describe("nextSearchForLang", () => {
       redirect_to: "/",
     });
   });
-});
-
-describe("buildLocaleCookie", () => {
-  test("serializes the full cookie attribute set without Secure", () => {
-    // Matches the post-auth `user.setLocale` server writer; a drift
-    // means pre-auth picks and post-auth picks would write different
-    // cookies and break each other's persistence.
-    expect(buildLocaleCookie("uk", false)).toBe(
-      "plumix_locale=uk; Path=/_plumix/admin/; Max-Age=31536000; SameSite=Lax",
-    );
-  });
-
-  test("appends Secure when called over HTTPS", () => {
-    expect(buildLocaleCookie("uk", true)).toBe(
-      "plumix_locale=uk; Path=/_plumix/admin/; Max-Age=31536000; SameSite=Lax; Secure",
-    );
-  });
-
-  // Note: `code` is written raw to match the server-side builder
-  // (`packages/core/src/rpc/procedures/user/set-locale.ts:47-56`). The
-  // dropdown is the validation seam — only registry-matched codes reach
-  // either builder, so smuggling defense lives upstream.
 });
 
 describe("writeLocaleCookie", () => {
