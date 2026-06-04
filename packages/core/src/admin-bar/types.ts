@@ -1,6 +1,7 @@
 import type { AuthenticatedUser, AuthNamespace } from "../context/app.js";
 import type { RegisteredEntryType } from "../plugin/manifest.js";
 import type { ResolvedEntity } from "../route/current.ts";
+import type { BarLocale } from "./i18n.js";
 
 export const ADMIN_BAR_GROUPS = [
   "primary",
@@ -48,6 +49,15 @@ export interface BarRenderContext {
    * its child menu without a separate discovery API.
    */
   readonly entryTypes: ReadonlyMap<string, RegisteredEntryType>;
+  /**
+   * Resolved bar locale (WP-style — read from `user.meta.locale`, falls
+   * back to `en` for unrecognised values). Core contributors translate
+   * their literals through this; plugin contributors stay responsible
+   * for their own catalogs and pass already-translated `title` strings.
+   */
+  readonly locale: BarLocale;
+  /** Text direction for the bar element — `rtl` for `ar`, `ltr` elsewhere. */
+  readonly direction: "ltr" | "rtl";
 }
 
 declare module "../hooks/types.js" {

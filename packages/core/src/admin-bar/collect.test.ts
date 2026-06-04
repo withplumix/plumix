@@ -11,6 +11,8 @@ const baseCtx: BarRenderContext = {
   siteName: "Site",
   auth: { can: () => true },
   entryTypes: new Map(),
+  locale: "en",
+  direction: "ltr",
 };
 
 describe("collectAdminBarNodes", () => {
