@@ -12,6 +12,10 @@ export function sanitizeHref(raw: unknown): string | undefined {
 }
 
 export function formatSize(bytes: unknown): string | undefined {
+  // Public-site SSR render. Decimal separator stays `.` until content
+  // i18n lands — the visitor-facing locale resolver is the seam where
+  // this should pull from. Admin-side formatting (MediaLibrary card +
+  // detail) uses `Intl.NumberFormat(locale, ...)` against `i18n.locale`.
   if (typeof bytes !== "number" || !Number.isFinite(bytes) || bytes < 0) {
     return undefined;
   }
