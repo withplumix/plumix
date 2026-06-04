@@ -66,7 +66,7 @@ describe("resolveLocale", () => {
     });
 
     const resolved = resolveLocale({
-      request: REQUEST,
+      request: adminRequest(),
       user: user({ locale: "fr" }),
       i18n,
     });
@@ -87,7 +87,7 @@ describe("resolveLocale", () => {
     });
 
     const resolved = resolveLocale({
-      request: REQUEST,
+      request: adminRequest(),
       user: user({ locale: "fr" }),
       i18n,
     });
@@ -138,13 +138,22 @@ describe("resolveLocale", () => {
     expect(resolved.code).toBe("en");
   });
 
-  test("user.meta.locale wins over site default (WP get_user_locale parity)", () => {
+  test("user.meta.locale wins over site default on admin paths (WP get_user_locale parity)", () => {
+    const resolved = resolveLocale({
+      request: adminRequest(),
+      user: user({ locale: "fr" }),
+      i18n: enFr,
+    });
+    expect(resolved.code).toBe("fr");
+  });
+
+  test("user.meta.locale is ignored on public paths so CDN caching stays per-URL (WP frontend/admin split)", () => {
     const resolved = resolveLocale({
       request: REQUEST,
       user: user({ locale: "fr" }),
       i18n: enFr,
     });
-    expect(resolved.code).toBe("fr");
+    expect(resolved.code).toBe("en");
   });
 
   test("plumix_locale cookie applies for anonymous visitors (WP wp_lang parity)", () => {

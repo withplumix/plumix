@@ -14,7 +14,7 @@ describe("withUser — locale re-resolution", () => {
     const baseCtx = createAppContext({
       db: {} as never,
       env: {},
-      request: new Request("https://cms.example/"),
+      request: new Request("https://cms.example/_plumix/admin/"),
       hooks: new HookRegistry(),
       plugins: createPluginRegistry(),
       i18n,

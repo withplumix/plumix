@@ -8,10 +8,26 @@ import type { ThemeTokens } from "../styles/types.js";
 import { renderBlockTree } from "../render-block-tree.js";
 import { RendererError } from "./errors.js";
 
+// `@plumix/core` depends on `@plumix/blocks`, not the reverse — these
+// mirror `AuthenticatedUser` / `ResolvedEntity` structurally.
+export interface RendererUser {
+  readonly id: number;
+  readonly email: string;
+  readonly role: string;
+  readonly meta: Record<string, unknown>;
+}
+
+export type RendererQueriedEntry =
+  | { readonly kind: "entry"; readonly id: number }
+  | { readonly kind: "term"; readonly id: number }
+  | { readonly kind: "archive"; readonly entryType: string };
+
 export interface PlumixContextValue {
   readonly registry: BlockRegistry;
   readonly tokens?: ThemeTokens;
   readonly loaderData?: ResolvedBlockLoaders;
+  readonly user?: RendererUser | null;
+  readonly queriedEntry?: RendererQueriedEntry | null;
 }
 
 const PlumixContext = createContext<PlumixContextValue | null>(null);
@@ -50,4 +66,12 @@ export function BlockRenderer({
 
 export function useTokens(): ThemeTokens | undefined {
   return usePlumixContext("useTokens").tokens;
+}
+
+export function useUser(): RendererUser | null {
+  return usePlumixContext("useUser").user ?? null;
+}
+
+export function useQueriedEntry(): RendererQueriedEntry | null {
+  return usePlumixContext("useQueriedEntry").queriedEntry ?? null;
 }
