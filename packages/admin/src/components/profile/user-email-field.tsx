@@ -155,6 +155,9 @@ export function UserEmailField({
     },
   });
 
+  // Hoisted: lingui/no-expression-in-message rejects member exprs inline.
+  const bdiPendingNewEmail = pending ? <bdi>{pending.newEmail}</bdi> : null;
+
   return (
     <div className="flex flex-col gap-2">
       <UILabel>
@@ -199,7 +202,7 @@ export function UserEmailField({
                 id="userEdit.email.pending"
                 message="Pending change to <code>{newEmail}</code> — expires {expiresAt}"
                 values={{
-                  newEmail: pending.newEmail,
+                  newEmail: bdiPendingNewEmail,
                   expiresAt: formatRelative(toDate(pending.expiresAt)),
                 }}
                 components={{ code: <code className="font-mono" /> }}

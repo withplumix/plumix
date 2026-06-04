@@ -276,7 +276,7 @@ function SessionRow({ session, onChanged }: SessionRowProps): ReactNode {
                   id="profile.sessions.revoke.descriptionWithIp"
                   message="{device} signed in {when} from {ip}. The device will need to sign in again next time."
                   values={{
-                    device: deviceLabel,
+                    device: <bdi>{deviceLabel}</bdi>,
                     when: formatRelative(createdAt),
                     ip: session.ipAddress,
                   }}
@@ -287,7 +287,7 @@ function SessionRow({ session, onChanged }: SessionRowProps): ReactNode {
                   id="profile.sessions.revoke.description"
                   message="{device} signed in {when}. The device will need to sign in again next time."
                   values={{
-                    device: deviceLabel,
+                    device: <bdi>{deviceLabel}</bdi>,
                     when: formatRelative(createdAt),
                   }}
                   comment="device: 'Safari on macOS' style label; when: relative-time string"

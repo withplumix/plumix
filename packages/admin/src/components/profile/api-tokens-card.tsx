@@ -285,6 +285,9 @@ function ApiTokensCardView({
   } | null>(null);
   const [revokeError, setRevokeError] = useState<Label | null>(null);
 
+  // Hoisted: lingui/no-expression-in-message rejects member exprs inline.
+  const bdiRevokeName = <bdi>{revokeTarget?.name ?? ""}</bdi>;
+
   return (
     <Card data-testid="api-tokens-card">
       <CardHeader>
@@ -455,7 +458,7 @@ function ApiTokensCardView({
               <Trans
                 id="apiTokens.revoke.title"
                 message='Revoke "{name}"?'
-                values={{ name: revokeTarget?.name ?? "" }}
+                values={{ name: bdiRevokeName }}
                 comment="name: the user-chosen token nickname (e.g. 'CI deploy key')"
               />
             </AlertDialogTitle>
@@ -743,7 +746,7 @@ function SecretShownDialog({
             <Trans
               id="apiTokens.secret.title"
               message='Token "{name}" minted'
-              values={{ name }}
+              values={{ name: <bdi>{name}</bdi> }}
               comment="name: the user-chosen token nickname (e.g. 'CI deploy key')"
             />
           </AlertDialogTitle>

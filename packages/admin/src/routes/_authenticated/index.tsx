@@ -41,7 +41,7 @@ function DashboardIndex(): ReactNode {
           <Trans
             id="dashboard.welcome"
             message="Welcome, {greeting}"
-            values={{ greeting }}
+            values={{ greeting: <bdi>{greeting}</bdi> }}
             comment="greeting: the user's display name or email"
           />
         </h1>

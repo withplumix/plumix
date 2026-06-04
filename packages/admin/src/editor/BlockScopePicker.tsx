@@ -61,7 +61,7 @@ export function BlockScopePicker({
             <Trans
               id="blockScopePicker.title"
               message="Choose a {blockTitle} layout"
-              values={{ blockTitle }}
+              values={{ blockTitle: <bdi>{blockTitle}</bdi> }}
               comment="blockTitle: the parent block's registered title (e.g. 'Cover', 'Gallery')"
             />
           </DialogTitle>
@@ -69,7 +69,7 @@ export function BlockScopePicker({
             <Trans
               id="blockScopePicker.description"
               message="Pick a layout to insert, or cancel to start from a blank {blockTitle}."
-              values={{ blockTitle }}
+              values={{ blockTitle: <bdi>{blockTitle}</bdi> }}
               comment="blockTitle: the parent block's registered title (e.g. 'Cover', 'Gallery')"
             />
           </DialogDescription>
