@@ -126,6 +126,46 @@ describe("applyFilterSync", () => {
   });
 });
 
+describe("getFilterHandlers", () => {
+  test("returns an empty array when no filters are registered", () => {
+    const registry = new HookRegistry();
+    expect(registry.getFilterHandlers("test:passthrough")).toEqual([]);
+  });
+
+  test("returns handlers sorted by priority (lower first) then insertion order", () => {
+    const registry = new HookRegistry();
+    const fnB = (v: string) => v + "-b";
+    const fnA = (v: string) => v + "-a";
+    const fnC = (v: string) => v + "-c";
+    registry.addFilter("test:passthrough", fnB, {
+      priority: 100,
+      plugin: "b",
+    });
+    registry.addFilter("test:passthrough", fnA, { priority: 50, plugin: "a" });
+    registry.addFilter("test:passthrough", fnC, {
+      priority: 100,
+      plugin: "c",
+    });
+
+    const [first, ...rest] = registry.getFilterHandlers("test:passthrough");
+    if (!first) throw new Error("expected at least one handler");
+
+    expect(first.plugin).toBe("a");
+    expect(first.fn("start")).toBe("start-a");
+    expect(rest.map((h) => h.plugin)).toEqual(["b", "c"]);
+  });
+
+  test("plugin is null when handler is registered without one", () => {
+    const registry = new HookRegistry();
+    registry.addFilter("test:passthrough", (v) => v);
+
+    const [first] = registry.getFilterHandlers("test:passthrough");
+    if (!first) throw new Error("expected at least one handler");
+
+    expect(first.plugin).toBeNull();
+  });
+});
+
 describe("doAction", () => {
   test("invokes all handlers even if one throws", async () => {
     const registry = new HookRegistry({

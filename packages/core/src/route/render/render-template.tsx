@@ -26,6 +26,7 @@ import type {
 import type { AssetManifest } from "./asset-manifest.js";
 import type { ErrorData } from "./resolved-entry.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
+import { PlumixAdminBar } from "../../admin-bar/component.js";
 import { mergeDocumentManifest } from "../../document-merge.js";
 import {
   loadTemplateDeps,
@@ -278,16 +279,20 @@ function renderTree({
   // silently clobber the canonical args.
   const TemplateAdapter = (): ReactNode =>
     template.render({ ...deps, data, ctx });
-  const templateTree: ReactNode = createElement(PlumixProvider, {
-    value: {
-      registry: ctx.blocks,
-      tokens,
-      loaderData,
-      user: ctx.user,
-      queriedEntry: ctx.resolvedEntity,
+  const templateTree: ReactNode = createElement(
+    PlumixProvider,
+    {
+      value: {
+        registry: ctx.blocks,
+        tokens,
+        loaderData,
+        user: ctx.user,
+        queriedEntry: ctx.resolvedEntity,
+      },
     },
-    children: createElement(TemplateAdapter),
-  });
+    createElement(PlumixAdminBar, { hooks: ctx.hooks, request: ctx.request }),
+    createElement(TemplateAdapter),
+  );
   const rendered = renderToString(templateTree);
   const { hoisted, body } = splitHoistedMetadata(rendered);
 
