@@ -1,0 +1,246 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-03\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: ar\n"
+"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menuItem.singular"
+msgstr "عنصر القائمة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menuItem.plural"
+msgstr "عناصر القائمة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menuItem.addNew"
+msgstr "إضافة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menuItem.addNewItem"
+msgstr "إضافة عنصر قائمة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menuItem.editItem"
+msgstr "تحرير عنصر القائمة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menuItem.newItem"
+msgstr "عنصر قائمة جديد"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menuItem.searchItems"
+msgstr "البحث في عناصر القائمة…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menuItem.notFound"
+msgstr "لا توجد عناصر قائمة بعد"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menuItem.parentItem"
+msgstr "العنصر الأب"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.singular"
+msgstr "قائمة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.plural"
+msgstr "القوائم"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.addNew"
+msgstr "إضافة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.addNewItem"
+msgstr "إضافة قائمة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.editItem"
+msgstr "تحرير القائمة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.viewItem"
+msgstr "عرض القائمة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.updateItem"
+msgstr "تحديث القائمة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.newItemName"
+msgstr "اسم القائمة الجديدة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.searchItems"
+msgstr "البحث في القوائم…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.notFound"
+msgstr "لا توجد قوائم بعد"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.allItems"
+msgstr "كل القوائم"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.menu.backToItems"
+msgstr "→ العودة إلى القوائم"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "core.adminNav.appearance"
+msgstr "المظهر"
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.tab.edit"
+msgstr "تحرير القوائم"
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.tab.locations"
+msgstr "إدارة المواقع"
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.createPrompt"
+msgstr "اسم القائمة"
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.emptyState"
+msgstr "لا توجد قوائم بعد. أنشئ قائمتك الأولى للبدء."
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.createButton"
+msgstr "+ إنشاء قائمة جديدة"
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.editEmpty"
+msgstr "اختر قائمة لبدء التحرير."
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.unassigned"
+msgstr "— غير معيَّن —"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.deleteConfirm"
+msgstr "حذف هذه القائمة؟"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.brokenLinkAria"
+msgstr "رابط معطوب"
+
+#. js-lingui-explicit-id
+#. title: the item's display title, or a translated 'item' fallback
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.reorderAria"
+msgstr "إعادة ترتيب {title}"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.reorderFallbackTitle"
+msgstr "عنصر"
+
+#. js-lingui-explicit-id
+#. label: the broken item's resolved-label or original title
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.relinkBanner"
+msgstr "اختر بديلاً لـ {label}"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.emptyState"
+msgstr "لا توجد عناصر بعد."
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.conflictBanner"
+msgstr "حفظ محرر آخر تغييرات منذ تحميلك لهذه القائمة."
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.conflictReload"
+msgstr "إعادة التحميل لعرض الأحدث"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.saveButton"
+msgstr "حفظ القائمة"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.maxDepthLabel"
+msgstr "الحد الأقصى للعمق"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.maxDepthRejected"
+msgstr "لا يمكن التعيين أقل من العنصر الأعمق الحالي."
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.deleteButton"
+msgstr "حذف القائمة"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.cancelButton"
+msgstr "إلغاء"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.customReplaceButton"
+msgstr "استبدال الرابط"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.customAddButton"
+msgstr "إضافة إلى القائمة"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.relinkButton"
+msgstr "إعادة الربط…"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.convertButton"
+msgstr "تحويل إلى رابط مخصص"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.removeButton"
+msgstr "إزالة"

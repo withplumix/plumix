@@ -1,0 +1,3423 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-01\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (slice 3 tracer; slice 6 wires plumix i18n extract)\n"
+"Language: ar\n"
+"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5);\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+
+#. js-lingui-explicit-id
+#: src/editor/build-copy-pattern-source.ts
+#~ msgid "editor.copyPattern.untitled"
+#~ msgstr "Untitled"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.taxonomyFilter.all"
+#~ msgstr "All {pluralLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+#~ msgid "terms.create.backLink"
+#~ msgstr "Back to {pluralLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+#~ msgid "terms.edit.backLink"
+#~ msgstr "Back to {pluralLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+#~ msgid "dashboard.tile.browse"
+#~ msgstr "Browse {labelLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+#~ msgid "terms.list.loadError"
+#~ msgstr "Couldn't load {pluralLower}. Try again."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.loadError"
+#~ msgstr "Couldn't load {pluralLower}. Try again."
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+#~ msgid "breadcrumb.createTerm"
+#~ msgstr "Create {singular}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+#~ msgid "terms.create.submit"
+#~ msgstr "Create {singularLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+#~ msgid "editor.entry.create.pending"
+#~ msgstr "Creating new {singular}…"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.headline"
+#~ msgstr "Edit {singular}"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+#~ msgid "breadcrumb.editTerm"
+#~ msgstr "Edit {singular}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+#~ msgid "terms.edit.heading"
+#~ msgstr "Edit {singularLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+#~ msgid "terms.list.loadingLabel"
+#~ msgstr "Loading {pluralLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.loadingLabel"
+#~ msgstr "Loading {pluralLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.trashDialog.title"
+#~ msgstr "Move {singularLower} to trash?"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+#~ msgid "terms.create.heading"
+#~ msgstr "New {singularLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+#~ msgid "terms.list.newButton"
+#~ msgstr "New {singularLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+#~ msgid "terms.list.empty.cta"
+#~ msgstr "New {singularLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.newButton"
+#~ msgstr "New {singularLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.empty.cta"
+#~ msgstr "New {singularLower}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.taxonomyFilter.empty"
+#~ msgstr "No {pluralLower} match."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.empty.title"
+#~ msgstr "No {pluralLower} yet"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+#~ msgid "terms.list.empty.title"
+#~ msgstr "No {singularLower} yet"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+#~ msgid "terms.list.searchPlaceholder"
+#~ msgstr "Search {pluralLower}…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.searchPlaceholder"
+#~ msgstr "Search {pluralLower}…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+#~ msgid "entries.list.taxonomyFilter.search"
+#~ msgstr "Search {pluralLower}…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/lookup-label.tsx
+#~ msgid "metaBox.reference.untitled"
+#~ msgstr "Untitled"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+#~ msgid "dashboard.tile.description"
+#~ msgstr "Write, edit, and publish {labelLower}."
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.headline.generic"
+#~ msgstr "Edit"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.descendantsHint"
+msgstr " — لا يمكن اختيار الأبناء كأب."
+
+#. max: upper bound on the repeater row count
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.countSuffixMax"
+msgstr " / الحد الأقصى {max}"
+
+#. min: lower bound on the repeater row count
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.countSuffixMin"
+msgstr " / الحد الأدنى {min}"
+
+#. min, max: integers bounding the repeater row count
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.countSuffixBoth"
+msgstr " / الحد الأدنى {min} / الحد الأقصى {max}"
+
+#. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.parent.rootOption"
+msgstr "— جذر —"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.commentSaving"
+msgstr "…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.row.noName"
+msgstr "(بدون اسم)"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.noTitle"
+msgstr "(بدون عنوان)"
+
+#. browser: e.g. 'Safari', 'Chrome'; os: e.g. 'macOS', 'Windows 11'. Vendor names interpolate verbatim; the connector word is localizable.
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.device.browserOnOs"
+msgstr "{browser} على {os}"
+
+#. count: number of settings groups this page surfaces
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/index.test.tsx
+#: src/routes/_authenticated/settings/index.tsx
+msgid "settings.pageSummary"
+msgstr "{count, plural, zero {لا توجد مجموعات} one {مجموعة واحدة} two {مجموعتان} few {# مجموعات} many {# مجموعة} other {# مجموعة}}"
+
+#. count: number of selected options in the multi-select
+#. js-lingui-explicit-id
+#: src/components/form/multi-select.tsx
+msgid "form.multiSelect.selectedCount"
+msgstr "تم اختيار {count}"
+
+#. device: 'Safari on macOS' style label; when: relative-time string; ip: IPv4/IPv6 address
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revoke.descriptionWithIp"
+msgstr "سجّل {device} الدخول {when} من {ip}. سيحتاج الجهاز إلى تسجيل الدخول مجدداً في المرة القادمة."
+
+#. device: 'Safari on macOS' style label; when: relative-time string
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revoke.description"
+msgstr "سجّل {device} الدخول {when}. سيحتاج الجهاز إلى تسجيل الدخول مجدداً في المرة القادمة."
+
+#. display: user's name or email; lastSeen: pre-formatted relative-time string like '2 minutes ago'
+#. js-lingui-explicit-id
+#: src/editor/CoAuthorIndicator.tsx
+msgid "editor.coAuthorIndicator.presenceAriaLabel"
+msgstr "{display} · آخر ظهور {lastSeen}"
+
+#. label: a plugin-author-provided name (e.g. 'SEO meta', 'Hero block'); kind: the extension type ('field', 'block', 'mark') left as the raw protocol identifier
+#. js-lingui-explicit-id
+#: src/lib/plugin-error-boundary.tsx
+msgid "plugin.errorBoundary.inlineStub"
+msgstr "فشل {label} {kind}"
+
+#. label: a plugin-author-provided name (e.g. 'SEO meta', 'Hero block')
+#. js-lingui-explicit-id
+#: src/lib/plugin-error-boundary.tsx
+msgid "plugin.errorBoundary.pageBody"
+msgstr "حدث خطأ في {label} أثناء العرض. بقية لوحة الإدارة لم تتأثر."
+
+#. revoked: number of OTHER sessions just signed out (excluding the current device)
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revokeAll.count"
+msgstr "{revoked, plural, =0 {لا توجد جلسات أخرى لتسجيل الخروج منها.} zero {تم تسجيل الخروج من # جلسة.} one {تم تسجيل الخروج من جلسة واحدة.} two {تم تسجيل الخروج من جلستين.} few {تم تسجيل الخروج من # جلسات.} many {تم تسجيل الخروج من # جلسة.} other {تم تسجيل الخروج من # جلسة.}}"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/PreviewBanner.tsx
+msgid "editor.revisions.preview.backToLive"
+msgstr "→ العودة إلى النسخة الحالية"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.expiry.30"
+msgstr "30 يوماً"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.expiry.7"
+msgstr "7 أيام"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.expiry.90"
+msgstr "90 يوماً"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.description"
+msgstr "تطلب CLI رمز API لحسابك. تأكد من تطابق الرمز الذي يعرضه CLI مع الرمز أدناه قبل الموافقة."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.approve.description"
+msgstr "سيتم إنشاء رمز API جديد لحسابك وتسليمه إلى CLI. سمّه لتجده لاحقاً ضمن ملفك الشخصي، واختيارياً قيّد ما يمكنه فعله."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/-errors.ts
+msgid "terms.error.parentSelfOrCycle"
+msgstr "لا يمكن أن يكون المصطلح سلفاً لنفسه — اختر أباً مختلفاً."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/-errors.ts
+msgid "terms.error.slugTaken"
+msgstr "يوجد مصطلح بهذا الـ slug في هذا التصنيف."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.error.emailTaken"
+msgstr "يوجد مستخدم بهذا البريد الإلكتروني بالفعل."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.emailTaken"
+msgstr "يوجد مستخدم بهذا البريد الإلكتروني بالفعل."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.userCode.placeholder"
+msgstr "ABCD-EFGH"
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/accept-invite/$token.tsx
+msgid "auth.acceptInvite.title"
+msgstr "قبول الدعوة"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.status.title"
+msgstr "حالة الحساب"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.col.actions"
+msgstr "الإجراءات"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.row.active"
+msgstr "نشط"
+
+#. js-lingui-explicit-id
+#: src/editor/CoAuthorIndicator.tsx
+msgid "editor.coAuthorIndicator.activeAriaLabel"
+msgstr "المؤلفون المشاركون النشطون"
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.title"
+msgstr "الجلسات النشطة"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.submit.idle"
+msgstr "إضافة"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.addMore"
+msgstr "إضافة"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.empty.description"
+msgstr "أضف إضافة تسجّل نوع منشور (مثل <0>@plumix/plugin-blog</0>) لرؤيته هنا."
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.addAnother"
+msgstr "إضافة أخرى"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.title"
+msgstr "إضافة نطاق"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.invite"
+msgstr "إضافة"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.addNew"
+msgstr "إضافة"
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.enroll.idle"
+msgstr "إضافة passkey"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.addFirst"
+msgstr "إضافة صف"
+
+#. date: a locale-formatted date string
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.added"
+msgstr "أُضيف في {date}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.submit.pending"
+msgstr "جارٍ الإضافة…"
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.enroll.pending"
+msgstr "جارٍ الإضافة…"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.admin"
+msgstr "لوحة الإدارة"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+msgid "userRole.admin"
+msgstr "مدير"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+msgid "userRole.long.admin"
+msgstr "مدير — تحكم كامل"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.statusFilter.all"
+msgstr "الكل"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.tab.all"
+msgstr "الكل"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.authorFilter.all"
+msgstr "كل المؤلفين"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.roleFilter.all"
+msgstr "كل الأدوار"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.title"
+msgstr "النطاقات المسموح بها"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.item.allowedDomains"
+msgstr "النطاقات المسموح بها"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.restore.conflict"
+msgstr "غيّر محرر آخر هذا المنشور. أعد التحميل وحاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.title"
+msgstr "رموز API"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.approve.idle"
+msgstr "الموافقة"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.approved"
+msgstr "تمت الموافقة. سيلتقط CLI الرمز خلال ثوانٍ — يمكنك إغلاق هذه التبويبة."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.approve.pending"
+msgstr "جارٍ الموافقة…"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.tab.audit"
+msgstr "تدقيق"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+msgid "userRole.author"
+msgstr "مؤلف"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+msgid "userRole.long.author"
+msgstr "مؤلف — نشر مدخلاته الخاصة"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.title"
+msgstr "السماح بوصول CLI"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.tab.autosaves"
+msgstr "الحفظ التلقائي"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.autosavesEmpty"
+msgstr "ستظهر عمليات الحفظ التلقائي هنا بعد إطلاق مسودات المنشورات المنشورة."
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.back"
+msgstr "رجوع"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.header.backToList"
+msgstr "العودة إلى القائمة"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.backToList"
+msgstr "العودة إلى المستخدمين"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.success.backToList"
+msgstr "العودة إلى المستخدمين"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.backToList"
+msgstr "العودة إلى المستخدمين"
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+msgid "editor.styleTab.section.background"
+msgstr "الخلفية"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.tab.block"
+msgstr "كتلة"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.mobile.inspectorSheetDescription"
+msgstr "إجراءات الكتلة، الحقول، وعناصر تحكم الأسلوب للكتلة المحددة."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.mobile.blocksTrigger"
+msgstr "الكتل"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.mobile.blocksSheetTitle"
+msgstr "الكتل"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.tab.blocks"
+msgstr "الكتل"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.tile.browse.generic"
+msgstr "تصفّح"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.lastAdmin.delete"
+msgstr "لا يمكن حذف آخر مدير. رقّ مستخدماً آخر أولاً."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.lastAdmin.status"
+msgstr "لا يمكن تعطيل آخر مدير. رقّ مستخدماً آخر أولاً."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.lastAdmin.update"
+msgstr "لا يمكن القيام بذلك — هذا هو آخر مدير. رقّ مستخدماً آخر أولاً."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.reassignToSelf"
+msgstr "لا يمكن إعادة التعيين للمستخدم الذي يتم حذفه."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.cancel"
+msgstr "إلغاء"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.cancel"
+msgstr "إلغاء"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.cancel"
+msgstr "إلغاء"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.trashDialog.cancel"
+msgstr "إلغاء"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.cancel"
+msgstr "إلغاء"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.row.deleteCancel"
+msgstr "إلغاء"
+
+#. js-lingui-explicit-id
+#: src/editor/BlockScopePicker.tsx
+msgid "blockScopePicker.cancel"
+msgstr "إلغاء"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.commentCancel"
+msgstr "إلغاء"
+
+#. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.cancel"
+msgstr "إلغاء"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.revoke.cancel"
+msgstr "إلغاء"
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.rename.cancel"
+msgstr "إلغاء"
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.delete.cancel"
+msgstr "إلغاء"
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revoke.cancel"
+msgstr "إلغاء"
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.cancelPending.idle"
+msgstr "إلغاء"
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.dialog.cancel"
+msgstr "إلغاء"
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.enroll.cancelled"
+msgstr "أُلغي. اضغط «إضافة passkey» عندما تكون جاهزاً."
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.cancelPending.pending"
+msgstr "جارٍ الإلغاء…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.scopes.label"
+msgstr "القدرات"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.capabilities"
+msgstr "القدرات"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.selectChange"
+msgstr "تغيير"
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.changeButton"
+msgstr "تغيير البريد"
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.dialog.title"
+msgstr "تغيير البريد الإلكتروني"
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.sent.title"
+msgstr "تحقق من بريدك"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.lookup.submit.pending"
+msgstr "جارٍ التحقق…"
+
+#. blockTitle: the parent block's registered title (e.g. 'Cover', 'Gallery')
+#. js-lingui-explicit-id
+#: src/editor/BlockScopePicker.tsx
+msgid "blockScopePicker.title"
+msgstr "اختر تخطيطاً لـ {blockTitle}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.tokenName.placeholder"
+msgstr "claude-code / github-actions / mcp-prod"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.clear"
+msgstr "مسح"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.empty.description"
+msgstr "امسح الفلتر، أو ادعُ شخصاً جديداً للانضمام."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.tokenName.default"
+msgstr "CLI"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draftBanner.body"
+msgstr "اضغط «نشر» لإطلاقها، أو «تجاهل» للتراجع."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.lookup.error.notFound"
+msgstr "الرمز غير موجود. تحقق من تطابقه مع ما طبعه CLI."
+
+#. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.compare"
+msgstr "مقارنة"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.list.title"
+msgstr "النطاقات المُكوَّنة"
+
+#. userCode: the short device-flow code the CLI displayed (e.g. 'WDJB-MJHT'); pass through verbatim
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.approve.confirmTitle"
+msgstr "تأكيد \"{userCode}\""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.row.deleteConfirm"
+msgstr "تأكيد الحذف"
+
+#. email: the user account being deleted
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.confirm.title"
+msgstr "تأكيد حذف: {email}"
+
+#. email: the address the confirmation link was sent to
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.confirmationSent"
+msgstr "أُرسل التأكيد إلى {email}. يدخل التغيير حيز التنفيذ بعد النقر على الرابط."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.lookup.submit.idle"
+msgstr "متابعة"
+
+#. label: the OAuth provider's display name (e.g. 'Google', 'GitHub')
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.oauth.continueWith"
+msgstr "المتابعة بـ {label}"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+msgid "userRole.contributor"
+msgstr "مساهم"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+msgid "userRole.long.contributor"
+msgstr "مساهم — يكتب مسودات بدون نشر"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.copy.copied"
+msgstr "نُسخ"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.copy.idle"
+msgstr "نسخ"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.canvas.copyAsPatternSource"
+msgstr "نسخ كمصدر نمط"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.copy.aria"
+msgstr "نسخ رابط الدعوة"
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+msgid "blockActions.copyJson"
+msgstr "نسخ JSON"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.secret.description"
+msgstr "انسخ السرّ الآن. لن نعرضه مرة أخرى — فقدانه يعني إلغاءه وإصدار رمز جديد."
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.secret.copyAria"
+msgstr "نسخ الرمز"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/index.tsx
+msgid "settings.empty.description"
+msgstr "النواة لا تشحن أي إعدادات عمداً — الإضافات (أو ملف plumix.config الخاص بك) تعلن صفحات + مجموعات عبر <0>ctx.registerSettingsPage</0> و <1>ctx.registerSettingsGroup</1>. الصفحات المسجلة تظهر هنا ببطاقة واحدة لكل صفحة."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.statusFallback"
+msgstr "تعذّر تغيير حالة الحساب. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.approve.error.fallback"
+msgstr "تعذّر إكمال الطلب. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/lib/email-change-errors.ts
+msgid "emailChange.error.fallback"
+msgstr "تعذّر تأكيد تغيير البريد. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+msgid "terms.create.error.createFallback"
+msgstr "تعذّر إنشاء المصطلح. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.delete.fallback"
+msgstr "تعذّر حذف passkey. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.error.deleteFallback"
+msgstr "تعذّر حذف المصطلح. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.deleteFallback"
+msgstr "تعذّر حذف المستخدم. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+msgid "terms.create.error.emptySlug"
+msgstr "تعذّر اشتقاق slug من ذلك الاسم — يرجى كتابة واحد يدوياً."
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.enroll.emailMismatch"
+msgstr "تعذّر التسجيل — سجّل الدخول من جديد وحاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.enroll.fallback"
+msgstr "تعذّر تسجيل passkey. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.resolveError"
+msgstr "تعذّر تحميل العناصر المحددة — حدّث للمحاولة مجدداً."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.notFound.message"
+msgstr "تعذّر تحميل ذلك المصطلح. ربما تم حذفه."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.loadFailed"
+msgstr "تعذّر تحميل ذلك المستخدم. ربما تم حذفه."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.loadFailed"
+msgstr "تعذّر تحميل هذه الإعدادات. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.loadFailed"
+msgstr "تعذّر تحميل هذا المنشور."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.loadFailed"
+msgstr "تعذّر تحميل المستخدمين. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.loadFailed"
+msgstr "تعذّر تحميل passkeys. حدّث وحاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.loadFailed"
+msgstr "تعذّر تحميل جلساتك. حدّث وحاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.lookup.error.fallback"
+msgstr "تعذّر البحث عن ذلك الرمز. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.mint.fallback"
+msgstr "تعذّر إنشاء الرمز. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.codeExchangeFailed"
+msgstr "تعذّر الوصول إلى المزود. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.networkError"
+msgstr "تعذّر الوصول إلى الخادم. تحقق من اتصالك وحاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.profileFetchFailed"
+msgstr "تعذّر قراءة ملفك الشخصي. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.rename.fallback"
+msgstr "تعذّر إعادة تسمية passkey. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.error.requestFallback"
+msgstr "تعذّر طلب التغيير. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revokeAll.fallback"
+msgstr "تعذّر إبطال الجلسات. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revoke.fallback"
+msgstr "تعذّر إبطال الجلسة. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.revoke.fallback"
+msgstr "تعذّر الإلغاء. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.saveFailed"
+msgstr "تعذّر حفظ الإعدادات."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.updateFallback"
+msgstr "تعذّر حفظ التغييرات. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.error.saveFallback"
+msgstr "تعذّر حفظ التغييرات. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.error.fallback"
+msgstr "تعذّر حفظ النطاق. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.saveFailed"
+msgstr "تعذّر الحفظ."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.error.fallback"
+msgstr "تعذّر إرسال الدعوة. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link.ts
+msgid "magicLinkRequest.error.network"
+msgstr "تعذّر إرسال الرابط. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/lib/mailer-errors.ts
+msgid "mailer.test.error.fallback"
+msgstr "تعذّر إرسال الرسالة التجريبية. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.fallback"
+msgstr "تعذّر تسجيل الدخول. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.fallback"
+msgstr "تعذّر تسجيل الدخول. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/components/profile/language-card.tsx
+msgid "profile.language.error"
+msgstr "تعذّر تبديل اللغة. يرجى المحاولة مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.create"
+msgstr "إنشاء"
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/bootstrap.tsx
+msgid "auth.bootstrap.submit.idle"
+msgstr "إنشاء حساب بـ passkey"
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/bootstrap.tsx
+msgid "auth.bootstrap.title"
+msgstr "إنشاء حساب مدير"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+msgid "terms.list.empty.description"
+msgstr "أنشئ واحداً لرؤيته هنا."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.empty.description"
+msgstr "أنشئ واحداً لرؤيته هنا."
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/accept-invite/$token.tsx
+msgid "auth.acceptInvite.submit.idle"
+msgstr "إنشاء passkey"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.column.created"
+msgstr "أُنشئ"
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/bootstrap.tsx
+msgid "auth.bootstrap.submit.pending"
+msgstr "جارٍ إنشاء الحساب…"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+msgid "editor.entry.create.pending.generic"
+msgstr "جارٍ الإنشاء…"
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.transport.hybrid"
+msgstr "بين الأجهزة"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffDialog.tsx
+msgid "editor.revisions.diffDialog.pane.current"
+msgstr "الحالي"
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.dialog.currentLabel"
+msgstr "البريد الإلكتروني الحالي"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.dashboard"
+msgstr "لوحة التحكم"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.item.dashboard"
+msgstr "لوحة التحكم"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.defaultRole.label"
+msgstr "الدور الافتراضي"
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+msgid "blockActions.delete"
+msgstr "حذف"
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.delete.button"
+msgstr "حذف"
+
+#. domain: the hostname being removed from the allowlist
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.row.deleteAria"
+msgstr "حذف {domain}"
+
+#. termName: the taxonomy term being deleted
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.dialogTitle"
+msgstr "حذف {termName}؟"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.confirm.idle"
+msgstr "حذف نهائي"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.confirm"
+msgstr "حذف نهائي"
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.delete.confirm"
+msgstr "حذف passkey"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.cardTitle"
+msgstr "حذف المصطلح"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.button"
+msgstr "حذف المصطلح"
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.delete.title"
+msgstr "حذف هذا passkey؟"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.title"
+msgstr "حذف المستخدم"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.button"
+msgstr "حذف المستخدم"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.confirm.pending"
+msgstr "جارٍ الحذف…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.deleting"
+msgstr "جارٍ الحذف…"
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.delete.pending"
+msgstr "جارٍ الحذف…"
+
+#. accessDenied: the literal OAuth error code string (e.g. 'access_denied') — do not translate
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.denied"
+msgstr "تم الرفض. سيتلقى CLI استجابة access_denied ويتوقف عن الاستطلاع."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.deny.idle"
+msgstr "رفض"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.deny.pending"
+msgstr "جارٍ الرفض…"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.commentPlaceholder"
+msgstr "صف هذه المراجعة…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+msgid "terms.list.column.description"
+msgstr "الوصف"
+
+#. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.description"
+msgstr "الوصف"
+
+#. js-lingui-explicit-id
+#: src/editor/device-labels.ts
+msgid "editor.device.desktop"
+msgstr "سطح المكتب"
+
+#. js-lingui-explicit-id
+#: src/editor/PatternRefPreview.tsx
+msgid "editor.patternRef.detach"
+msgstr "فصل"
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.description"
+msgstr "الأجهزة التي سجّلت الدخول إلى هذا الحساب. أبطل أي جهاز لا تتعرفه، أو سجّل الخروج من كل مكان عدا هذا المتصفح إذا اشتبهت في تسريب."
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.description"
+msgstr "الأجهزة التي يمكنها تسجيل الدخول إلى هذا الحساب. أضف جهازاً جديداً قبل حذف جهاز قديم — يجب أن يبقى passkey واحد على الأقل."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.status.toggle.disable"
+msgstr "تعطيل المستخدم"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.row.disabled"
+msgstr "معطّل"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.row.disabled"
+msgstr "معطّل"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.status.description.disabled"
+msgstr "الحسابات المعطّلة لا يمكنها تسجيل الدخول. إعادة التفعيل تستعيد الوصول؛ يبقى passkey الخاص بهم مسجلاً."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.status.description.active"
+msgstr "التعطيل يسجّل خروج المستخدم فوراً ويمنع تسجيل الدخول مستقبلاً. تبقى منشوراتهم منشورة."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.status.toggle.disabling"
+msgstr "جارٍ التعطيل…"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draft.discard"
+msgstr "تجاهل"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draft.discarding"
+msgstr "جارٍ التجاهل…"
+
+#. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.discarding"
+msgstr "جارٍ التجاهل…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.domain.label"
+msgstr "النطاق"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.secret.done"
+msgstr "تم"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgctxt "entry status"
+msgid "entries.list.statusFilter.draft"
+msgstr "مسودة"
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+msgid "blockActions.duplicate"
+msgstr "تكرار"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.edit"
+msgstr "تحرير"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.edit"
+msgstr "تحرير"
+
+#. email: the user being edited
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.title.other"
+msgstr "تحرير {email}"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.editUser"
+msgstr "تحرير المستخدم"
+
+#. device: pre-resolved viewport label like 'Desktop', 'Tablet', 'Mobile'
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+msgid "editor.styleTab.activeBucket"
+msgstr "التحرير لـ: {device}"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+msgid "userRole.editor"
+msgstr "محرر"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+msgid "userRole.long.editor"
+msgstr "محرر — نشر وتحرير أي منشور"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.email.label"
+msgstr "البريد الإلكتروني"
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/bootstrap.tsx
+msgid "auth.bootstrap.email"
+msgstr "البريد الإلكتروني"
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.email.label"
+msgstr "البريد الإلكتروني"
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.label"
+msgstr "البريد الإلكتروني"
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.error.mailerNotConfigured"
+msgstr "تغيير البريد يتطلب تكوين magic-link mailer على الخادم. مرّر `auth.magicLink` و `mailer:` إلى `plumix({...})` للتفعيل."
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.emailChange.success"
+msgstr "تم تأكيد البريد. سجّل الدخول بالعنوان الجديد."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.description"
+msgstr "نطاقات البريد المسموح بها للتسجيل عبر OAuth. تُنشأ حسابات OAuth الجديدة بالدور المعيّن هنا. الصفوف المعطّلة ترفض التسجيل لكنها تحتفظ بتعيين دورها."
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.submit"
+msgstr "أرسل لي رابطاً بالبريد"
+
+#. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+msgid "editor.headingAudit.emptyHeading"
+msgstr "عنوان فارغ. أضف نصاً أو احذف الكتلة."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.row.enabled"
+msgstr "مُمكَّن"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.status.toggle.enabling"
+msgstr "جارٍ التمكين…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.email.invalid"
+msgstr "أدخل بريداً إلكترونياً صالحاً"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.recipient.invalid"
+msgstr "أدخل بريداً إلكترونياً صالحاً."
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/-schemas.ts
+msgid "login.email.invalid"
+msgstr "أدخل بريداً إلكترونياً صالحاً."
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link.ts
+msgid "magicLinkRequest.error.invalidInput"
+msgstr "أدخل بريداً إلكترونياً صالحاً."
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.invalid"
+msgstr "أدخل بريداً إلكترونياً صالحاً."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.domain.invalid"
+msgstr "أدخل اسم مضيف صالح (مثل example.com)."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.lookup.title"
+msgstr "أدخل الرمز من CLI"
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.emailRequired"
+msgstr "أدخل بريدك الإلكتروني أعلاه أولاً."
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.entries"
+msgstr "المنشورات"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.content"
+msgstr "المنشورات"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.dialogDescription"
+msgstr "تُحذف ارتباطات المنشورات بهذا المصطلح. إذا كان للمصطلح أبناء، يصبحون على المستوى الجذر تلقائياً."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.titleAriaLabel"
+msgstr "عنوان المنشور"
+
+#. js-lingui-explicit-id
+#: src/components/editor/plain-form-layout.tsx
+msgid "editor.plainForm.titleAriaLabel"
+msgstr "عنوان المنشور"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.scopes.placeholder"
+msgstr "entry:post:read\n"
+"entry:post:edit_own"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.capabilities.placeholder"
+msgstr "entry:post:read\n"
+"entry:post:edit_own"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.description"
+msgstr "كل عملية حفظ تنشئ مراجعة جديدة. الأحدث أولاً."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.placeholder"
+msgstr "example.com"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+msgid "editor.revisions.diff.field.excerpt"
+msgstr "المقتطف"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.col.expires"
+msgstr "ينتهي"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.expires"
+msgstr "ينتهي"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.error"
+msgstr "فشل تحميل المراجعات."
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffDialog.tsx
+msgid "editor.revisions.diffDialog.pane.error"
+msgstr "فشل تحميل اللقطة."
+
+#. js-lingui-explicit-id
+#: src/editor/AutosaveStatus.tsx
+msgid "editor.autosave.error"
+msgstr "فشل الحفظ"
+
+#. js-lingui-explicit-id
+#: src/components/editor/plain-form-layout.tsx
+msgid "editor.plainForm.status.error"
+msgstr "فشل الحفظ"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.filterAuthorAria"
+msgstr "تصفية حسب المؤلف"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.roleFilter.aria"
+msgstr "تصفية حسب الدور"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.filterStatusAria"
+msgstr "تصفية حسب الحالة"
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+msgid "editor.styleTab.section.fontSize"
+msgstr "حجم الخط"
+
+#. when: pre-formatted relative-time like '2 hours ago'; author: the user's display name or email
+#. js-lingui-explicit-id
+#: src/editor/revisions/PreviewBanner.tsx
+msgid "editor.revisions.preview.subtitle"
+msgstr "{when} بواسطة {author}"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.namePlaceholder"
+msgstr "github-actions / claude-code / mcp-prod"
+
+#. js-lingui-explicit-id
+#: src/components/data-table/list-pagination.tsx
+msgid "listPagination.next.aria"
+msgstr "الذهاب إلى الصفحة التالية"
+
+#. js-lingui-explicit-id
+#: src/components/data-table/list-pagination.tsx
+msgid "listPagination.prev.aria"
+msgstr "الذهاب إلى الصفحة السابقة"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+msgid "terms.create.description.flat"
+msgstr "جمّع المحتوى بإضافة مصطلح جديد."
+
+#. from, to, between: integer heading levels 1-6; e.g. from=2, to=4, between=3
+#. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+msgid "editor.headingAudit.skippedLevel"
+msgstr "العنوان يقفز من h{from} إلى h{to}. أدرج h{between} بينهما."
+
+#. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.hideComparison"
+msgstr "إخفاء المقارنة"
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.sent.description"
+msgstr "إذا كان هناك حساب بهذا البريد، فقد أرسلنا رابط تسجيل الدخول. ينتهي الرابط خلال 15 دقيقة."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.confirm.description"
+msgstr "إذا أنشأ هذا المستخدم أي منشورات، فإن الخطوة التالية تعيد تعيينها. اترك «الإبقاء على المنشورات كما هي» إذا لم يكن لديه شيء."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.scopeMode.inherit"
+msgstr "وراثة جميع صلاحياتي"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.scope.inherit"
+msgstr "وراثة جميع صلاحياتك"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.scope.inheritRole"
+msgstr "وراثة الدور"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.slashMenu.title"
+msgstr "إدراج كتلة أو نمط"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.mobile.blocksSheetDescription"
+msgstr "كتل قابلة للإدراج، مخطط تفصيلي، وتدقيق العناوين لهذا المنشور."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.mobile.inspectorTrigger"
+msgstr "المفتش"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.mobile.inspectorSheetTitle"
+msgstr "المفتش"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/meta-box-field.tsx
+msgid "metaBox.field.json.invalid"
+msgstr "JSON غير صالح"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.success.another"
+msgstr "دعوة آخر"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.success.link.label"
+msgstr "رابط الدعوة"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.success.title"
+msgstr "الدعوة جاهزة"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.title"
+msgstr "دعوة مستخدم"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.empty.invite"
+msgstr "دعوة مستخدم"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.submit.pending"
+msgstr "جارٍ الدعوة…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.reassign.keepAsIs"
+msgstr "الإبقاء على المنشورات كما هي (لا شيء لإعادة تعيينه)"
+
+#. js-lingui-explicit-id
+#: src/components/locale-switcher.tsx
+msgid "profile.language.aria"
+msgstr "اللغة"
+
+#. js-lingui-explicit-id
+#: src/components/login-locale-switcher.tsx
+msgid "login.locale.aria"
+msgstr "اللغة"
+
+#. js-lingui-explicit-id
+#: src/components/profile/language-card.tsx
+msgid "profile.language.title"
+msgstr "اللغة"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.column.lastSignIn"
+msgstr "آخر دخول"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.col.lastUsed"
+msgstr "آخر استخدام"
+
+#. date: a locale-formatted date string
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.lastUsed"
+msgstr "آخر استخدام {date}"
+
+#. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.liveNow"
+msgstr "النسخة الحالية"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.loadMore"
+msgstr "تحميل المزيد"
+
+#. js-lingui-explicit-id
+#: src/components/data-table/data-table.tsx
+msgid "dataTable.loading"
+msgstr "جارٍ التحميل"
+
+#. label: the plugin page's registered label (e.g. 'Audit Log')
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/pages/$.tsx
+msgid "pluginPage.loading.aria"
+msgstr "جارٍ تحميل {label}"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.loading"
+msgstr "جارٍ تحميل المنشور…"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.loadingAria"
+msgstr "جارٍ تحميل المراجعات"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.loading"
+msgstr "جارٍ تحميل الإعدادات"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.loadingAria"
+msgstr "جارٍ تحميل المصطلح"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.loading"
+msgstr "جارٍ تحميل الرموز…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.loading.aria"
+msgstr "جارٍ تحميل المستخدم"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.loading"
+msgstr "جارٍ تحميل المستخدمين"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.stale.loading"
+msgstr "جارٍ التحميل…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.list.loading"
+msgstr "جارٍ التحميل…"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.loadingMore"
+msgstr "جارٍ التحميل…"
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.loading"
+msgstr "جارٍ التحميل…"
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.loading"
+msgstr "جارٍ التحميل…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.loading"
+msgstr "جارٍ التحميل…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.loading"
+msgstr "جارٍ التحميل…"
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link.ts
+msgid "magicLinkRequest.error.notConfigured"
+msgstr "تسجيل الدخول بـ magic-link غير مكوَّن على هذا الموقع."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.title"
+msgstr "البريد"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.item.mailer"
+msgstr "البريد"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.management"
+msgstr "الإدارة"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.authorFilter.mine"
+msgstr "مِلكي"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.empty.description.self"
+msgstr "أصدر رمزاً أعلاه لـ CLI / خادم MCP / بوت CI الخاص بك."
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.submit.idle"
+msgstr "إصدار الرمز"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.submit.pending"
+msgstr "جارٍ الإصدار…"
+
+#. js-lingui-explicit-id
+#: src/editor/device-labels.ts
+msgid "editor.device.mobile"
+msgstr "الجوال"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.trashDialog.confirm"
+msgstr "نقل إلى المهملات"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.trashDialog.moving"
+msgstr "جارٍ النقل…"
+
+#. count: number of h1 elements detected in the editor tree
+#. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+msgid "editor.headingAudit.multipleH1"
+msgstr "عناصر <h1> متعددة في الصفحة (تم العثور على {count}). أبقِ على عنوان واحد فقط في المستوى الأعلى."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.name.label"
+msgstr "الاسم"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.name.label"
+msgstr "الاسم"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+msgid "terms.list.column.name"
+msgstr "الاسم"
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/bootstrap.tsx
+msgid "auth.bootstrap.name"
+msgstr "الاسم"
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/accept-invite/$token.tsx
+msgid "auth.acceptInvite.name"
+msgstr "الاسم"
+
+#. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.name"
+msgstr "الاسم"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.col.name"
+msgstr "الاسم"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.name"
+msgstr "الاسم"
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.rename.nameEmpty"
+msgstr "لا يمكن أن يكون الاسم فارغاً."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.tokenName.required"
+msgstr "الاسم مطلوب."
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.nameRequired"
+msgstr "الاسم مطلوب."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.tokenName.tooLong"
+msgstr "يجب أن يكون الاسم ≤ 64 حرفاً."
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.nameTooLong"
+msgstr "يجب أن يكون الاسم ≤ 64 حرفاً."
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.enroll.networkError"
+msgstr "خطأ شبكة. تحقق من اتصالك وحاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.row.lastSignIn.never"
+msgstr "أبداً"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.expiry.never"
+msgstr "أبداً"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.never"
+msgstr "أبداً"
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.dialog.newLabel"
+msgstr "البريد الإلكتروني الجديد"
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.placeholder"
+msgstr "new@example.com"
+
+#. js-lingui-explicit-id
+#: src/components/data-table/list-pagination.tsx
+msgid "listPagination.next.label"
+msgstr "التالي"
+
+#. js-lingui-explicit-id
+#: src/editor/field-type-translator.ts
+msgid "fieldTypes.boolean.no"
+msgstr "لا"
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.userNotFound"
+msgstr "لم يُعثر على حساب لهذا البريد."
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.scope.empty"
+msgstr "بدون قدرات"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+msgid "editor.revisions.diff.empty"
+msgstr "لا تغييرات."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.empty.title"
+msgstr "لا أنواع محتوى بعد"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.list.empty"
+msgstr "لا توجد نطاقات مُكوَّنة. تسجيل OAuth مغلق حتى تُضاف نطاقات مفعّلة."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.empty.title"
+msgstr "لا توجد مجموعات في هذه الصفحة"
+
+#. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+msgid "editor.headingAudit.empty"
+msgstr "لم تُكتشف مشكلات في بنية العناوين."
+
+#. js-lingui-explicit-id
+#: src/lib/mailer-errors.ts
+msgid "mailer.test.error.notConfigured"
+msgstr "لم يتم تكوين محوّل بريد. مرّر `mailer:` إلى `plumix({...})` (مثل consoleMailer() للتطوير، أو مغلف Resend/Postmark/SES الخاص بك)."
+
+#. js-lingui-explicit-id
+#: src/editor/SlashMenuPanel.tsx
+msgid "slashMenu.empty"
+msgstr "لا مطابقات"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.noMatches"
+msgstr "لا مطابقات"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.noMatches"
+msgstr "لا مطابقات"
+
+#. js-lingui-explicit-id
+#: src/components/form/multi-select.tsx
+msgid "form.multiSelect.empty"
+msgstr "لا مطابقات."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.noAuthenticator"
+msgstr "لا يتوفر passkey على هذا الجهاز. جرّب تسجيل الدخول من الجهاز الذي سجّلت فيه."
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.empty"
+msgstr "لا توجد passkeys مسجَّلة. أضف واحدة لتفعيل تسجيل الدخول."
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.empty"
+msgstr "لا توجد جلسات يديرها plumix. تسجيل دخولك يتم بواسطة مزود هوية خارجي."
+
+#. js-lingui-explicit-id
+#: src/components/data-table/data-table.tsx
+msgid "dataTable.emptyState"
+msgstr "لا نتائج."
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.empty"
+msgstr "لا مراجعات بعد."
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.empty"
+msgstr "لا صفوف"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/index.tsx
+msgid "settings.empty.title"
+msgstr "لا إعدادات مسجَّلة بعد"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.empty.title"
+msgstr "لا رموز بعد"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.empty.title"
+msgstr "لا يوجد مستخدمون يطابقون فلترك"
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+msgid "editor.styleTab.select.none"
+msgstr "بدون"
+
+#. js-lingui-explicit-id
+#: src/editor/TokenSwatchList.tsx
+msgid "tokenSwatch.none"
+msgstr "بدون"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.emptyValue"
+msgstr "لم يتم الاختيار"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.emptyValue"
+msgstr "لم يتم الاختيار"
+
+#. js-lingui-explicit-id
+#: src/routes/__root.tsx
+msgid "notFound.title"
+msgstr "غير موجود"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.notFound.title"
+msgstr "غير موجود"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.notFound.title"
+msgstr "غير موجود"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.notFound.title"
+msgstr "غير موجود"
+
+#. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.registrationClosed"
+msgstr "تسجيل OAuth غير متاح حتى ينتهي المدير من الإعداد."
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.capabilities.help"
+msgstr "قدرة واحدة في كل سطر. الرمز لا يمكن أن يتجاوز قدرات دورك أبداً — هذا تضييق إضافي."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.role.selfReadonly"
+msgstr "فقط مدير آخر يستطيع تغيير دورك."
+
+#. js-lingui-explicit-id
+#: src/editor/PatternRefPreview.tsx
+msgid "editor.patternRef.openSource"
+msgstr "فتح المصدر"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.recipient.placeholder"
+msgstr "ops@example.com"
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.oauth.separator"
+msgstr "أو"
+
+#. js-lingui-explicit-id
+#: src/editor/SlashMenuPanel.tsx
+msgid "slashMenu.uncategorized"
+msgstr "أخرى"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.tab.outline"
+msgstr "المخطط"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.overview"
+msgstr "نظرة عامة"
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+msgid "editor.styleTab.section.padding"
+msgstr "الحشو"
+
+#. page: 1-based current page number in the list
+#. js-lingui-explicit-id
+#: src/components/data-table/list-pagination.tsx
+msgid "listPagination.page"
+msgstr "الصفحة {page}"
+
+#. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.parent"
+msgstr "الأب"
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.title"
+msgstr "Passkeys"
+
+#. slug: the pattern's registered slug (e.g. 'core/three-columns'); pass through verbatim
+#. js-lingui-explicit-id
+#: src/editor/PatternRefPreview.tsx
+msgid "editor.patternRef.unresolved"
+msgstr "النمط غير مسجَّل: <code>{slug}</code>"
+
+#. js-lingui-explicit-id
+#: src/editor/PatternsSection.tsx
+msgid "patternsSection.heading"
+msgstr "الأنماط"
+
+#. newEmail: the new address awaiting confirmation; expiresAt: pre-formatted relative-time like 'in 2 hours'
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.pending"
+msgstr "تغيير معلَّق إلى <code>{newEmail}</code> — ينتهي {expiresAt}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.description"
+msgstr "نهائي. تبقى منشوراتهم، لكنك ستختار من يرث المؤلفية."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.scopeMode.label"
+msgstr "الصلاحيات"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.permissions"
+msgstr "الصلاحيات"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.description.self"
+msgstr "رموز وصول شخصية لـ CLI، خوادم MCP، بوتات CI، أو أي عملاء خارج المتصفح. يُعرض السر الكامل مرة واحدة فقط عند الإنشاء."
+
+#. blockTitle: the parent block's registered title (e.g. 'Cover', 'Gallery')
+#. js-lingui-explicit-id
+#: src/editor/BlockScopePicker.tsx
+msgid "blockScopePicker.description"
+msgstr "اختر تخطيطاً لإدراجه، أو ألغِ للبدء من {blockTitle} فارغة."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/create.tsx
+msgid "terms.create.description.hierarchical"
+msgstr "اختر أباً لتعشيش هذا المصطلح، أو اتركه فارغاً لمصطلح في المستوى الجذر."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.canvas.pickStarter"
+msgstr "اختر قالباً مبدئياً…"
+
+#. js-lingui-explicit-id
+#: src/editor/StarterModal.tsx
+msgid "starterModal.description"
+msgstr "اختر تخطيطاً مبدئياً، أو ابدأ من لوحة فارغة."
+
+#. js-lingui-explicit-id
+#: src/lib/plugin-error-boundary.tsx
+msgid "plugin.errorBoundary.iconAria"
+msgstr "فشل عرض أيقونة الإضافة"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/pages/$.tsx
+msgid "pluginPage.notLoaded.title"
+msgstr "الإضافة غير محمَّلة"
+
+#. js-lingui-explicit-id
+#: src/lib/plugin-error-boundary.tsx
+msgid "plugin.errorBoundary.pageTitle"
+msgstr "فشل عرض صفحة الإضافة"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.col.prefix"
+msgstr "البادئة"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/PreviewBanner.tsx
+msgid "editor.revisions.preview.title"
+msgstr "معاينة المراجعة"
+
+#. js-lingui-explicit-id
+#: src/components/data-table/list-pagination.tsx
+msgid "listPagination.prev.label"
+msgstr "السابق"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.profile"
+msgstr "الملف الشخصي"
+
+#. js-lingui-explicit-id
+#: src/components/shell/user-menu.tsx
+msgid "menu.profile"
+msgstr "الملف الشخصي"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draft.publish"
+msgstr "نشر"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.publish"
+msgstr "نشر"
+
+#. js-lingui-explicit-id
+#: src/components/editor/plain-form-layout.tsx
+msgid "editor.plainForm.publish"
+msgstr "نشر"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.statusFilter.published"
+msgstr "منشور"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.tab.publishes"
+msgstr "المنشورات"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draft.publishing"
+msgstr "جارٍ النشر…"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+msgid "editor.revisions.diff.tab.json"
+msgstr "JSON خام"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.status.toggle.enable"
+msgstr "إعادة تفعيل المستخدم"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.delete.reassign.label"
+msgstr "إعادة تعيين المنشورات إلى"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.recipient.label"
+msgstr "المستلم"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.orphan"
+msgstr "المرجع مفقود — اختر مجدداً أو امسح"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.orphan"
+msgstr "المرجع مفقود — احذف أو اختر مجدداً"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.delete.cardDescription"
+msgstr "يحذف هذا المصطلح ويفصل ارتباطه عن أي منشورات تستخدمه. يُرفّع الأبناء إلى المستوى الجذر (تبقى منشوراتهم محتفظة بارتباطاتها الأخرى)."
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.rename.button"
+msgstr "إعادة تسمية"
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.rename.label"
+msgstr "إعادة تسمية passkey"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/PreviewBanner.tsx
+msgid "editor.revisions.preview.restore"
+msgstr "استعادة هذه المراجعة"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/PreviewBanner.tsx
+msgid "editor.revisions.preview.restoring"
+msgstr "جارٍ الاستعادة…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.scopeMode.restrict"
+msgstr "تقييد بقدرات محددة"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.scope.restrict"
+msgstr "تقييد بقدرات محددة"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffDialog.tsx
+msgid "editor.revisions.diffDialog.title"
+msgstr "JSON diff للمراجعة"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.trigger"
+msgstr "المراجعات"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.title"
+msgstr "المراجعات"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.revoke.button"
+msgstr "إبطال"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.revoke.confirm"
+msgstr "إبطال"
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revoke.button"
+msgstr "إبطال"
+
+#. name: the user-chosen token nickname (e.g. 'CI deploy key')
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.revoke.title"
+msgstr "إبطال \"{name}\"؟"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.revoke.pending"
+msgstr "جارٍ الإبطال…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.role.label"
+msgstr "الدور"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.column.role"
+msgstr "الدور"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.role.label"
+msgstr "الدور"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.commentSave"
+msgstr "حفظ"
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.rename.save"
+msgstr "حفظ"
+
+#. js-lingui-explicit-id
+#: src/components/editor/plain-form-layout.tsx
+msgid "editor.plainForm.save"
+msgstr "حفظ"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.submit.idle"
+msgstr "حفظ التغييرات"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/$id/edit.tsx
+msgid "terms.edit.submit"
+msgstr "حفظ التغييرات"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.submit.idle"
+msgstr "حفظ التغييرات"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draft.save"
+msgstr "حفظ المسودة"
+
+#. js-lingui-explicit-id
+#: src/editor/AutosaveStatus.tsx
+msgid "editor.autosave.saved"
+msgstr "تم الحفظ"
+
+#. js-lingui-explicit-id
+#: src/components/editor/plain-form-layout.tsx
+msgid "editor.plainForm.status.saved"
+msgstr "تم الحفظ"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.saved"
+msgstr "تم الحفظ."
+
+#. js-lingui-explicit-id
+#: src/editor/AutosaveStatus.tsx
+msgid "editor.autosave.saving"
+msgstr "جارٍ الحفظ..."
+
+#. js-lingui-explicit-id
+#: src/components/editor/plain-form-layout.tsx
+msgid "editor.plainForm.status.saving"
+msgstr "جارٍ الحفظ..."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.submit.pending"
+msgstr "جارٍ الحفظ…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.submit.pending"
+msgstr "جارٍ الحفظ…"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draft.saving"
+msgstr "جارٍ الحفظ…"
+
+#. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.submitting"
+msgstr "جارٍ الحفظ…"
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.rename.pending"
+msgstr "جارٍ الحفظ…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.statusFilter.scheduled"
+msgstr "مجدول"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.col.scopes"
+msgstr "الصلاحيات"
+
+#. kind: the entity type being searched (e.g. 'posts', 'tags')
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.searchPlaceholder"
+msgstr "البحث في {kind}…"
+
+#. kind: the entity type being searched (e.g. 'posts', 'tags')
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.searchPlaceholder"
+msgstr "البحث في {kind}…"
+
+#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.dialogDescription"
+msgstr "ابحث واختر إدخالات {kind}"
+
+#. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.dialogDescription"
+msgstr "ابحث واختر {kind}"
+
+#. js-lingui-explicit-id
+#: src/editor/SlashMenuPanel.tsx
+msgid "slashMenu.searchAria"
+msgstr "البحث في الكتل والأنماط"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.slashMenu.description"
+msgstr "ابحث عن الكتل والأنماط بالعنوان أو الكلمة المفتاحية واضغط Enter للإدراج."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.searchPlaceholder"
+msgstr "البحث بالبريد…"
+
+#. js-lingui-explicit-id
+#: src/components/form/multi-select.tsx
+msgid "form.multiSelect.search"
+msgstr "بحث…"
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.transport.securityKey"
+msgstr "مفتاح أمان"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.selectIdle"
+msgstr "اختيار"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/reference-picker.tsx
+msgid "metaBox.reference.selectIdle"
+msgstr "اختيار"
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+msgid "blockActions.empty"
+msgstr "اختر كتلة لرؤية الإجراءات."
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+msgid "editor.styleTab.empty"
+msgstr "اختر كتلة لتنسيقها."
+
+#. js-lingui-explicit-id
+#: src/components/form/multi-select.tsx
+msgid "form.multiSelect.placeholder"
+msgstr "اختر…"
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.registrationClosed"
+msgstr "التسجيل الذاتي غير متاح حتى ينتهي المدير من الإعداد."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.title"
+msgstr "إرسال رسالة تجريبية"
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.dialog.submit.idle"
+msgstr "إرسال التأكيد"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.submit.idle"
+msgstr "إرسال الدعوة"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.submit.idle"
+msgstr "إرسال تجريبي"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.submit.pending"
+msgstr "جارٍ الإرسال…"
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.magicLink.pending"
+msgstr "جارٍ الإرسال…"
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.dialog.submit.pending"
+msgstr "جارٍ الإرسال…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.description"
+msgstr "يرسل رسالة لمرة واحدة عبر نفس النقل الذي يستخدمه magic-link. تظهر الإخفاقات هنا حرفياً — بخلاف تدفق طلب magic-link الذي يبتلع أخطاء mailer عمداً حتى لا يكشف شكل الاستجابة عن تسجيل البريد."
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/accept-invite/$token.tsx
+msgid "auth.acceptInvite.description"
+msgstr "اضبط passkey لإنهاء إنشاء حسابك. سيرشدك متصفحك أو جهازك خلال المطالبة."
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/bootstrap.tsx
+msgid "auth.bootstrap.description"
+msgstr "اضبط موقعك — هذا البريد يصبح حساب المدير."
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/accept-invite/$token.tsx
+msgid "auth.acceptInvite.submit.pending"
+msgstr "جارٍ الإعداد…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/index.tsx
+msgid "settings.title"
+msgstr "الإعدادات"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.settings"
+msgstr "الإعدادات"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.item.settings"
+msgstr "الإعدادات"
+
+#. js-lingui-explicit-id
+#: src/components/shell/user-menu.tsx
+msgid "menu.settings"
+msgstr "الإعدادات"
+
+#. email: the invited user's address
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.success.description"
+msgstr "شارك الرابط أدناه مع {email}. سيسجّلون passkey في أول فتح. ينتهي الرابط خلال 7 أيام."
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffDialog.tsx
+msgid "editor.revisions.diffDialog.description"
+msgstr "جنباً إلى جنب: هذه المراجعة (يساراً) مقابل المنشور الحالي (يميناً)."
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.title"
+msgstr "تسجيل الدخول"
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.passkey.submit"
+msgstr "تسجيل الدخول بـ passkey"
+
+#. js-lingui-explicit-id
+#: src/components/shell/user-menu.tsx
+msgid "menu.signOut"
+msgstr "تسجيل الخروج"
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revoke.confirm"
+msgstr "تسجيل خروج الجهاز"
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revokeAll.idle"
+msgstr "تسجيل الخروج من الأجهزة الأخرى"
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revoke.title"
+msgstr "تسجيل الخروج من هذا الجهاز؟"
+
+#. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.stateInvalid"
+msgstr "انتهت صلاحية تسجيل الدخول أو أنه غير صالح. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.stateExpired"
+msgstr "انتهت صلاحية تسجيل الدخول. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.userCancelled"
+msgstr "تم إلغاء تسجيل الدخول."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.registrationClosed"
+msgstr "التسجيل مغلق على هذا الموقع."
+
+#. when: pre-formatted relative-time string like '2 hours ago'
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.signedIn"
+msgstr "سجّل الدخول {when}"
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.passkey.pending"
+msgstr "جارٍ تسجيل الدخول…"
+
+#. js-lingui-explicit-id
+#: src/components/shell/user-menu.tsx
+msgid "menu.signOut.pending"
+msgstr "جارٍ تسجيل الخروج…"
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revokeAll.pending"
+msgstr "جارٍ تسجيل الخروج…"
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revoke.pending"
+msgstr "جارٍ تسجيل الخروج…"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+msgid "editor.revisions.diff.field.slug"
+msgstr "Slug"
+
+#. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.slug"
+msgstr "Slug"
+
+#. js-lingui-explicit-id
+#: src/components/taxonomy/term-form.tsx
+msgid "termForm.slug.format"
+msgstr "Slug يحتوي فقط على أحرف صغيرة وأرقام وشرطات."
+
+#. js-lingui-explicit-id
+#: src/lib/email-change-errors.ts
+msgid "emailChange.error.emailTaken"
+msgstr "أخذ شخص آخر هذا البريد بين الطلب ونقرك. اطلب تغييراً جديداً إلى عنوان مختلف."
+
+#. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.description"
+msgstr "نشر شخص آخر تغييرات على هذا المنشور بينما كانت لديك تعديلات معلَّقة. اختر أي إصدار تحتفظ به قبل المتابعة."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.invalidInput"
+msgstr "حدث خطأ في النموذج. أعد التحميل وحاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.unknown"
+msgstr "حدث خطأ. حاول مرة أخرى."
+
+#. label: the column being sorted (e.g. 'Title', 'Status', 'Updated'); direction: pre-resolved direction word like 'ascending' or 'descending'
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.sortAria"
+msgstr "ترتيب حسب {label} ({direction})"
+
+#. js-lingui-explicit-id
+#: src/editor/StarterModal.tsx
+msgid "starterModal.title"
+msgstr "البدء من نمط"
+
+#. js-lingui-explicit-id
+#: src/editor/StarterModal.tsx
+msgid "starterModal.startBlank"
+msgstr "البدء من فارغ"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.column.status"
+msgstr "الحالة"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.column.status"
+msgstr "الحالة"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.tab.style"
+msgstr "الأسلوب"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+msgid "userRole.subscriber"
+msgstr "مشترك"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+msgid "userRole.long.subscriber"
+msgstr "مشترك — قراءة فقط"
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.synced"
+msgstr "متزامن"
+
+#. js-lingui-explicit-id
+#: src/editor/device-labels.ts
+msgid "editor.device.tablet"
+msgstr "الجهاز اللوحي"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.termTaxonomies"
+msgstr "التصنيفات"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.terms"
+msgstr "المصطلحات"
+
+#. to: the recipient email address the test was sent to
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.test.feedback.ok"
+msgstr "أُرسلت رسالة تجريبية إلى {to}. إذا لم تصل خلال دقيقة، تحقق من سجلات محوّل النقل."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/index.tsx
+msgid "mailer.description"
+msgstr "اختبار أن نقل البريد الصادر المُكوَّن يسلّم فعلاً. يُستخدم بواسطة تسجيل دخول magic-link، رسائل الدعوات، وأي إضافة تستخدم mailer المشترك."
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+msgid "editor.styleTab.section.textColor"
+msgstr "لون النص"
+
+#. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.linkBroken"
+msgstr "لا يمكن الوصول إلى ذلك الحساب. اتصل بالمدير لإعادة ربطه."
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.accountDisabled"
+msgstr "هذا الحساب معطّل."
+
+#. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.accountDisabled"
+msgstr "هذا الحساب معطّل."
+
+#. js-lingui-explicit-id
+#: src/lib/email-change-errors.ts
+msgid "emailChange.error.tokenExpired"
+msgstr "انتهت صلاحية رابط التأكيد. اطلب تغيير بريد جديد."
+
+#. js-lingui-explicit-id
+#: src/lib/email-change-errors.ts
+msgid "emailChange.error.missingToken"
+msgstr "رابط التأكيد يفتقد رمزه. اطلب تغيير بريد جديد."
+
+#. js-lingui-explicit-id
+#: src/lib/email-change-errors.ts
+msgid "emailChange.error.tokenInvalid"
+msgstr "رابط التأكيد غير صالح. ربما تم استخدامه بالفعل."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.error.domainExists"
+msgstr "هذا النطاق مُكوَّن بالفعل."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.emailMismatch"
+msgstr "هذا البريد لا يطابق حسابك الذي سجّلت دخوله."
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.error.taken"
+msgstr "هذا البريد مستخدَم في حساب آخر."
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.enroll.alreadyRegistered"
+msgstr "هذا passkey مسجَّل بالفعل في هذا الحساب."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.credentialAlreadyRegistered"
+msgstr "هذا passkey مسجَّل بالفعل على هذا الموقع."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.credentialNotFound"
+msgstr "هذا passkey غير مسجَّل على هذا الموقع. جرّب آخر."
+
+#. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.providerNotConfigured"
+msgstr "هذا المزود غير مكوَّن."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.challengeNotFound"
+msgstr "انتهت محاولة تسجيل الدخول. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.challengeNotBoundToUser"
+msgstr "انتهت محاولة تسجيل الدخول. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.tokenExpired"
+msgstr "انتهت صلاحية رابط تسجيل الدخول. اطلب آخر."
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.missingToken"
+msgstr "رابط تسجيل الدخول يفتقد رمزه. اطلب آخر وحاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.tokenInvalid"
+msgstr "رابط تسجيل الدخول غير صالح. ربما تم استخدامه بالفعل. اطلب آخر."
+
+#. js-lingui-explicit-id
+#: src/lib/email-change-errors.ts
+msgid "emailChange.error.userNotFound"
+msgstr "تم حذف الحساب الذي ينتمي إليه هذا التأكيد."
+
+#. js-lingui-explicit-id
+#: src/lib/email-change-errors.ts
+msgid "emailChange.error.accountDisabled"
+msgstr "الحساب الذي ينتمي إليه هذا التأكيد معطّل."
+
+#. path: the manifest-declared admin-route path (e.g. '/audit-log'); pass through verbatim
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/pages/$.tsx
+msgid "pluginPage.notLoaded.body"
+msgstr "يُعلن بيان لوحة الإدارة عن صفحة في <code>{path}</code> لكن لم يُسجَّل مكون React لها."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.lookup.description"
+msgstr "يعرض CLI رمزاً من 8 أحرف مفصولاً بشرطة — «ABCD-EFGH». أحرف وأرقام فقط، بدون أصفار ولا آحاد."
+
+#. name: the user-chosen passkey nickname (e.g. 'MacBook', 'iPhone')
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.delete.description"
+msgstr "الجهاز الذي سجّل \"{name}\" لن يتمكن من تسجيل الدخول. يمكنك إعادة تسجيله لاحقاً."
+
+#. js-lingui-explicit-id
+#: src/lib/mailer-errors.ts
+msgid "mailer.test.error.sendFailed"
+msgstr "ألقى محوّل mailer خطأً أثناء الإرسال. تحقق من سجلات worker للخطأ الأساسي."
+
+#. js-lingui-explicit-id
+#: src/routes/__root.tsx
+msgid "notFound.description"
+msgstr "الصفحة التي تبحث عنها غير موجودة أو لم يتم تسجيل المورد. تحقق من الرابط وحاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.challengeMismatch"
+msgstr "تم إنشاء passkey لدعوة مختلفة. أعد التحميل وحاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.emailMissing"
+msgstr "لم يُرجع المزود عنوان بريد إلكتروني."
+
+#. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.emailUnverified"
+msgstr "لم يتحقق المزود من بريدك بعد. تحقق منه هناك ثم حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/-errors.ts
+msgid "terms.error.parentMismatch"
+msgstr "الأب المختار ينتمي إلى تصنيف مختلف."
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.revoke.description"
+msgstr "يتوقف الرمز عن العمل فوراً. أي عميل يستخدمه سيبدأ بتلقي 401 في الطلب التالي."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/create.tsx
+msgid "userInvite.description"
+msgstr "سيسجّلون passkey في أول فتح لرابط الدعوة. لا حاجة لكلمة مرور."
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.error.accountDisabled"
+msgstr "هذا الحساب معطّل."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.approve.error.expired"
+msgstr "انتهى هذا الرمز قبل أن تنتهي — أعد تشغيل CLI."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.lookup.error.alreadyApproved"
+msgstr "تمت الموافقة على هذا الرمز بالفعل. أعد تشغيل CLI إذا لم يلتقط الرمز."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.lookup.error.alreadyDenied"
+msgstr "تم رفض هذا الرمز بالفعل."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.lookup.error.expired"
+msgstr "انتهت صلاحية هذا الرمز. أعد تشغيل CLI للحصول على واحد جديد."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.approve.error.alreadyApproved"
+msgstr "تمت الموافقة على هذا الرمز في تبويبة أخرى."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.approve.error.alreadyDenied"
+msgstr "تم رفض هذا الرمز بالفعل."
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.transport.internal"
+msgstr "هذا الجهاز"
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.thisDevice"
+msgstr "هذا الجهاز"
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.enroll.noAuthenticator"
+msgstr "هذا الجهاز لا يدعم passkeys."
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/plugin-field-error-boundary.tsx
+msgid "metaBox.pluginField.crashed"
+msgstr "تعذّر عرض هذا الحقل. تحقق من وحدة تحكم المتصفح للتفاصيل."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.tokenExpired"
+msgstr "انتهت صلاحية رابط الدعوة. اطلب من المدير إرسال آخر."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.invalidToken"
+msgstr "رابط الدعوة لم يعد صالحاً. اطلب من المدير إرسال آخر."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.invalidOrigin"
+msgstr "هذا passkey غير قابل للاستخدام على هذا الموقع."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.invalidRpId"
+msgstr "هذا passkey غير قابل للاستخدام على هذا الموقع."
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.notFound"
+msgstr "لم يعد هذا passkey موجوداً. حدّث القائمة."
+
+#. js-lingui-explicit-id
+#: src/lib/plugin-error-boundary.tsx
+msgid "plugin.errorBoundary.unknownPlugin"
+msgstr "هذه الإضافة"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffDialog.tsx
+msgid "editor.revisions.diffDialog.pane.thisRevision"
+msgstr "هذه المراجعة"
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revoke.notFound"
+msgstr "لم تعد هذه الجلسة موجودة. حدّث القائمة."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/settings/$page.tsx
+msgid "settings.page.empty.description"
+msgstr "صفحة الإعدادات هذه لا تشير إلى أي مجموعات مسجَّلة بعد. الإضافات تركّب الصفحات باستخدام مساعد registerSettingsPage:"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.hasEntries"
+msgstr "هذا المستخدم كتب منشورات. اختر شخصاً أعلاه لإعادة تعيينها إليه."
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.empty.description.admin"
+msgstr "هذا المستخدم لم يصدر رموز API."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.column.title"
+msgstr "العنوان"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+msgid "editor.revisions.diff.field.title"
+msgstr "العنوان"
+
+#. name: the user-chosen token nickname (e.g. 'CI deploy key')
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.secret.title"
+msgstr "تم إصدار الرمز \"{name}\""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.tokenName.label"
+msgstr "اسم الرمز"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.description.admin"
+msgstr "الرموز التي أصدرها هذا المستخدم. يمكنك إبطال أي منها — الإصدار يتطلب جلسة متصفح موثقة لصاحب الحساب."
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+msgid "blockActions.transformTo"
+msgstr "تحويل إلى"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgctxt "action verb"
+msgid "entries.list.row.trash"
+msgstr "نقل إلى المهملات"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgctxt "entry status"
+msgid "entries.list.statusFilter.trash"
+msgstr "المهملات"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgctxt "action verb"
+msgid "entries.list.row.trashing"
+msgstr "جارٍ النقل إلى المهملات…"
+
+#. js-lingui-explicit-id
+#: src/editor/PatternsSection.tsx
+msgid "patternsSection.uncategorized"
+msgstr "غير مصنَّف"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.unknownAuthor"
+msgstr "غير معروف"
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.unknownDevice"
+msgstr "جهاز غير معروف"
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.unnamed"
+msgstr "passkey بدون اسم"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+msgid "editor.entry.create.untitled"
+msgstr "بدون عنوان"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.header.titlePlaceholder"
+msgstr "بدون عنوان"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.copyAsPattern.untitledFallback"
+msgstr "بدون عنوان"
+
+#. js-lingui-explicit-id
+#: src/components/editor/plain-form-layout.tsx
+msgid "editor.plainForm.titlePlaceholder"
+msgstr "بدون عنوان"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.description.other"
+msgstr "حدّث تفاصيل هذا الحساب. تغيير الدور يبطل الجلسات القائمة فوراً."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.description.self"
+msgstr "حدّث اسمك الظاهر. الدور وحالة الحساب يديرهما المدراء."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.column.updated"
+msgstr "آخر تحديث"
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/login.tsx
+msgid "login.description"
+msgstr "استخدم passkey، أو احصل على رابط برسالة لمرة واحدة، أو تابع مع مزود."
+
+#. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.useMine"
+msgstr "استخدم مسودتي"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/allowed-domains/index.tsx
+msgid "allowedDomains.add.description"
+msgstr "استخدم النطاق المجرد — بدون بروتوكول، بدون مسار."
+
+#. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.useTheirs"
+msgstr "استخدم النسخة الأخرى"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.column.user"
+msgstr "المستخدم"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/device.tsx
+msgid "auth.device.lookup.userCode.label"
+msgstr "رمز المستخدم"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.title"
+msgstr "المستخدمون"
+
+#. js-lingui-explicit-id
+#: src/lib/breadcrumbs.ts
+msgid "breadcrumb.users"
+msgstr "المستخدمون"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.item.users"
+msgstr "المستخدمون"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.diffAriaLabel"
+msgstr "عرض JSON diff"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+msgid "editor.revisions.diff.tab.visual"
+msgstr "مرئي"
+
+#. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+msgid "editor.headingAudit.warningPrefix"
+msgstr "تحذير:"
+
+#. js-lingui-explicit-id
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.dialog.description"
+msgstr "سنرسل رابط تأكيد إلى العنوان الجديد. يدخل التغيير حيز التنفيذ بعد النقر على الرابط. الجلسات على هذا الحساب تنتهي في تلك اللحظة — تسجيل الدخول من جديد يستخدم البريد الجديد."
+
+#. greeting: the user's display name or email
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.welcome"
+msgstr "مرحباً، {greeting}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.tagline"
+msgstr "ما الذي تريد العمل عليه اليوم؟"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.tile.description.generic"
+msgstr "اكتب، حرّر، انشر."
+
+#. js-lingui-explicit-id
+#: src/editor/field-type-translator.ts
+msgid "fieldTypes.boolean.yes"
+msgstr "نعم"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/index.tsx
+msgid "users.list.row.you"
+msgstr "أنت"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.trashDialog.description"
+msgstr "يمكنك استعادته من المهملات لاحقاً."
+
+#. js-lingui-explicit-id
+#: src/components/profile/passkeys-card.tsx
+msgid "profile.passkeys.lastCredential"
+msgstr "لا يمكن حذف آخر passkey لديك. أضف واحداً آخر أولاً."
+
+#. js-lingui-explicit-id
+#: src/components/profile/sessions-card.tsx
+msgid "profile.sessions.revoke.current"
+msgstr "لا يمكنك إبطال الجلسة التي تستخدمها الآن."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.draftBanner.title"
+msgstr "لديك تغييرات مسودة غير منشورة."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.credentialLimitReached"
+msgstr "وصلت إلى حد passkeys لهذا الحساب."
+
+#. js-lingui-explicit-id
+#: src/components/profile/language-card.tsx
+msgid "profile.language.description"
+msgstr "لوحة الإدارة تُعرض بهذه اللغة. تُعاد الصفحة بعد التبديل لتطبيق الترجمات الجديدة في كل مكان."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.userPresenceMissing"
+msgstr "لم يؤكد جهازك حضورك. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.invalidResponse"
+msgstr "أعاد جهازك استجابة غير متوقعة. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.invalidClientData"
+msgstr "أعاد جهازك استجابة غير متوقعة. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.unsupportedAttestationFormat"
+msgstr "تنسيق استجابة جهازك غير مدعوم."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.invalidSignature"
+msgstr "لم يتم التحقق من توقيع جهازك. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.unsupportedAlgorithm"
+msgstr "خوارزمية توقيع جهازك غير مدعومة."
+
+#. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.yourDraft"
+msgstr "مسودتك"
+
+#. js-lingui-explicit-id
+#: src/editor/StaleDraftDialog.tsx
+msgid "editor.staleDraft.title"
+msgstr "مسودتك قديمة"
+
+#. js-lingui-explicit-id
+#: src/lib/magic-link-errors.ts
+msgid "magicLink.error.domainNotAllowed"
+msgstr "لم يعد نطاق بريدك في القائمة المسموح بها. اطلب من المدير إضافته."
+
+#. js-lingui-explicit-id
+#: src/lib/oauth-errors.ts
+msgid "oauth.error.domainNotAllowed"
+msgstr "نطاق بريدك ليس في القائمة المسموح بها. اطلب من المدير إضافته."
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.counterReplay"
+msgstr "يبدو أن passkey تم استخدامه على جهاز آخر. أعد التسجيل."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.title.self"
+msgstr "ملفك الشخصي"
+
+#. js-lingui-explicit-id
+#: src/lib/passkey-errors.ts
+msgid "passkey.error.credentialStorageCorrupt"
+msgstr "بيانات passkey المحفوظة تالفة. سجّل واحداً جديداً."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.canvas.zoomIn"
+msgstr "تكبير"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.canvas.zoomOut"
+msgstr "تصغير"

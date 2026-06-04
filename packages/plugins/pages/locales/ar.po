@@ -1,0 +1,94 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-03\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: ar\n"
+"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.singular"
+msgstr "صفحة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.plural"
+msgstr "الصفحات"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.addNew"
+msgstr "إضافة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.addNewItem"
+msgstr "إضافة صفحة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.editItem"
+msgstr "تحرير الصفحة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.newItem"
+msgstr "صفحة جديدة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.viewItem"
+msgstr "عرض الصفحة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.viewItems"
+msgstr "عرض الصفحات"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.searchItems"
+msgstr "البحث في الصفحات…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.notFound"
+msgstr "لا توجد صفحات بعد"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.notFoundInTrash"
+msgstr "المهملات فارغة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.allItems"
+msgstr "كل الصفحات"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.noMatch"
+msgstr "لا توجد صفحات مطابقة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.parentItem"
+msgstr "الصفحة الأم"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.parentItemColon"
+msgstr "الصفحة الأم:"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.untitledItem"
+msgstr "صفحة بدون عنوان"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.page.moveToTrash"
+msgstr "نقل الصفحة إلى المهملات؟"
