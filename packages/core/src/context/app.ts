@@ -399,9 +399,6 @@ export function withUser<TSchema extends Record<string, unknown>>(
       can: makeAuthCan(resolver, user, tokenScopes),
     },
     oauthProviders: ctx.oauthProviders,
-    // Public-route paths skip `withUser` and keep the site default; admin /
-    // RPC paths land here once auth resolves, so step 2 of the chain
-    // (user.meta.locale) is only reachable from this seam.
     locale: resolveLocale({ request: ctx.request, user, i18n: ctx.i18n }),
   };
 }

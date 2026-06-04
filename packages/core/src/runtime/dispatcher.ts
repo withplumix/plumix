@@ -33,6 +33,7 @@ import { renderErrorThroughTheme } from "../route/render/render-template.js";
 import { resolvePublicRoute } from "../route/resolve.js";
 import { rewriteAdminShellLangDir } from "./admin-shell.js";
 import { forbidden, jsonResponse, methodNotAllowed, notFound } from "./http.js";
+import { loadUserForPublicRequest } from "./load-user-for-public-request.js";
 
 const RPC_PREFIX = "/_plumix/rpc";
 const ADMIN_PREFIX = "/_plumix/admin";
@@ -189,6 +190,7 @@ async function dispatchPublicRoute(
   const templateDeps = app.plugins.templateDeps;
   const assetManifest = app.assetManifest;
   try {
+    ctx = await loadUserForPublicRequest(ctx);
     const response = await resolvePublicRouteOrFallback(app, ctx, url);
     if (response.status === 404) {
       const html = await renderErrorThroughTheme({

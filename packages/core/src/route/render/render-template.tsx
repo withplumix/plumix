@@ -279,7 +279,13 @@ function renderTree({
   const TemplateAdapter = (): ReactNode =>
     template.render({ ...deps, data, ctx });
   const templateTree: ReactNode = createElement(PlumixProvider, {
-    value: { registry: ctx.blocks, tokens, loaderData },
+    value: {
+      registry: ctx.blocks,
+      tokens,
+      loaderData,
+      user: ctx.user,
+      queriedEntry: ctx.resolvedEntity,
+    },
     children: createElement(TemplateAdapter),
   });
   const rendered = renderToString(templateTree);

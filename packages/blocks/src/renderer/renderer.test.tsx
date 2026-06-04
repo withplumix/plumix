@@ -2,7 +2,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
 import { createBlockRegistry } from "../block-registry.js";
-import { BlockRenderer, PlumixProvider, useTokens } from "./index.js";
+import {
+  BlockRenderer,
+  PlumixProvider,
+  useQueriedEntry,
+  useTokens,
+  useUser,
+} from "./index.js";
 
 const headingRegistry = createBlockRegistry([
   {
@@ -62,5 +68,79 @@ describe("useTokens", () => {
       return null;
     }
     expect(() => renderToStaticMarkup(<Probe />)).toThrow(/PlumixProvider/);
+  });
+});
+
+describe("useUser", () => {
+  test("returns the user from the active provider", () => {
+    const user = {
+      id: 12,
+      email: "author@example.com",
+      role: "author",
+      meta: {},
+    };
+
+    function Probe() {
+      const result = useUser();
+      return <span data-testid="probe">{JSON.stringify(result)}</span>;
+    }
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: headingRegistry, user }}>
+        <Probe />
+      </PlumixProvider>,
+    );
+
+    expect(html).toContain("author@example.com");
+  });
+
+  test("returns null when the provider has no user", () => {
+    function Probe() {
+      const result = useUser();
+      return <span data-testid="probe">{result === null ? "anon" : "x"}</span>;
+    }
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: headingRegistry }}>
+        <Probe />
+      </PlumixProvider>,
+    );
+
+    expect(html).toContain("anon");
+  });
+});
+
+describe("useQueriedEntry", () => {
+  test("returns the queried entry from the active provider", () => {
+    const queriedEntry = { kind: "entry" as const, id: 42 };
+
+    function Probe() {
+      const result = useQueriedEntry();
+      return <span data-testid="probe">{JSON.stringify(result)}</span>;
+    }
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: headingRegistry, queriedEntry }}>
+        <Probe />
+      </PlumixProvider>,
+    );
+
+    expect(html).toContain("&quot;kind&quot;:&quot;entry&quot;");
+    expect(html).toContain("&quot;id&quot;:42");
+  });
+
+  test("returns null when the provider has no queried entry", () => {
+    function Probe() {
+      const result = useQueriedEntry();
+      return <span data-testid="probe">{result === null ? "none" : "x"}</span>;
+    }
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: headingRegistry }}>
+        <Probe />
+      </PlumixProvider>,
+    );
+
+    expect(html).toContain("none");
   });
 });

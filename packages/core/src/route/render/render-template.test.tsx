@@ -337,8 +337,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
     );
     const response = await h.dispatch(request, author);
     const body = await response.text();
-    // Even with user.meta.locale = "ar", public routes don't call
-    // `withUser`, so `ctx.locale` stays at the site default.
+    // Even with user.meta.locale = "ar", `resolveLocale` path-gates the
+    // user-locale lookup to `/_plumix/*` — public-route HTML stays at the
+    // site default so CDN cache keys don't fragment by admin-user prefs.
     expect(body).toContain('<html lang="en" dir="ltr">');
   });
 
