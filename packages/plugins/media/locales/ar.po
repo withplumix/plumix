@@ -1,0 +1,368 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-03\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: ar\n"
+"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.singular"
+msgstr "ملف"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.plural"
+msgstr "الوسائط"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.addNew"
+msgstr "رفع"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.addNewItem"
+msgstr "رفع وسائط"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.editItem"
+msgstr "تحرير الوسائط"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.newItem"
+msgstr "وسائط جديدة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.viewItem"
+msgstr "عرض الوسائط"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.searchItems"
+msgstr "البحث في الوسائط…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.notFound"
+msgstr "لا توجد وسائط بعد"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.notFoundInTrash"
+msgstr "المهملات فارغة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.allItems"
+msgstr "كل الوسائط"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.untitledItem"
+msgstr "وسائط بدون عنوان"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.moveToTrash"
+msgstr "نقل الوسائط إلى المهملات؟"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.adminPage.title"
+msgstr "مكتبة الوسائط"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "core.adminNav.library"
+msgstr "المكتبة"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.title.library"
+msgstr "مكتبة الوسائط"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.title.picker"
+msgstr "اختر وسائط"
+
+#. js-lingui-explicit-id
+#. title: the media item's display title
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.pickItemAria"
+msgstr "اختر {title}"
+
+#. js-lingui-explicit-id
+#. title: the media item's display title
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.openDetailsAria"
+msgstr "فتح تفاصيل {title}"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.failedToLoad"
+msgstr "فشل تحميل الوسائط."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.loadingMore"
+msgstr "جارٍ تحميل المزيد…"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.pickerCancel"
+msgstr "إلغاء"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.pickerUseSelection"
+msgstr "استخدام التحديد"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.banner.dismiss"
+msgstr "إغلاق"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.dropzone.headline"
+msgstr "مكتبتك فارغة. أضف ملفات لتبدأ."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.dropzone.subline"
+msgstr "اسحب وأفلت أو <0>اختر من الحاسوب</0>"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.upload.button"
+msgstr "رفع"
+
+#. js-lingui-explicit-id
+#. count: number of files currently uploading
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.upload.progress"
+msgstr "جارٍ الرفع: {count, plural, zero {لا ملفات} one {ملف واحد} two {ملفان} few {# ملفات} many {# ملفاً} other {# ملف}}…"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.heading"
+msgstr "تفاصيل الملف"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.closeAria"
+msgstr "إغلاق التفاصيل"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.field.assetType"
+msgstr "نوع الملف"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.field.fileSize"
+msgstr "حجم الملف"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.field.uploaded"
+msgstr "تاريخ الرفع"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.field.altText"
+msgstr "النص البديل"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.altPlaceholderImage"
+msgstr "صف هذه الصورة…"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.altPlaceholderOther"
+msgstr "أضف وصفاً…"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.field.url"
+msgstr "الرابط"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.copied"
+msgstr "نُسخ"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.copy"
+msgstr "نسخ"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.download"
+msgstr "تنزيل"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.delete"
+msgstr "حذف"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.deleteTitle"
+msgstr "حذف هذا الملف؟"
+
+#. js-lingui-explicit-id
+#. title: the media item being deleted
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.deleteDescription"
+msgstr "سيتم حذف \"{title}\" نهائياً. الصفحات أو المنشورات التي تتضمنه ستعرض رابطاً معطوباً."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.deleteConfirm"
+msgstr "حذف"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.dialog.cancel"
+msgstr "إلغاء"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.dialog.confirm"
+msgstr "تأكيد"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.altEditor.saved"
+msgstr "✓ تم الحفظ"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.storageNotConfigured"
+msgstr "لم يتم تكوين محوّل التخزين — عيّن `storage:` في plumix.config.ts."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.payloadTooLarge"
+msgstr "الملف يتجاوز maxUploadSize المُكوَّن."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.unsupportedMediaType"
+msgstr "نوع الملف هذا غير مسموح به في acceptedTypes لإضافة الوسائط."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.mimeMismatch"
+msgstr "البايتات المرفوعة لا تطابق نوع الملف المُعلَن."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.objectNotFound"
+msgstr "لم يصل الرفع إلى التخزين — تحقق من قواعد CORS للـ bucket."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.alreadyConfirmed"
+msgstr "تم تأكيد هذا الرفع بالفعل من علامة تبويب أو جهاز آخر."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.serverCouldntProcess"
+msgstr "تعذر على الخادم معالجة هذا الرفع. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.contentLengthRequired"
+msgstr "الرفع يفتقد Content-Length — قد يستخدم متصفحك أو الوكيل chunked transfer."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.csrfTokenMissing"
+msgstr "تم حظر الطلب بواسطة فحص CSRF. أعد تحميل الصفحة وحاول مجدداً."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.empty"
+msgstr "لم يتم اختيار وسائط"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.button.change"
+msgstr "تغيير"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.button.select"
+msgstr "اختيار"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.clear"
+msgstr "مسح"
+
+#. id: the media item's numeric id, shown while filename loads
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.pending"
+msgstr "تم الاختيار (المعرف {id})"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.modalAria"
+msgstr "اختر وسائط"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.empty"
+msgstr "لم يتم اختيار وسائط"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.button.select"
+msgstr "اختيار"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.button.addMore"
+msgstr "إضافة المزيد"
+
+#. id: the media item's numeric id, shown while filename loads
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.pending"
+msgstr "تم الاختيار (المعرف {id})"
+
+#. name: the row's display name (filename or id)
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.moveUpAria"
+msgstr "نقل {name} لأعلى"
+
+#. name: the row's display name (filename or id)
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.moveDownAria"
+msgstr "نقل {name} لأسفل"
+
+#. name: the row's display name (filename or id)
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.removeAria"
+msgstr "إزالة {name}"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.modalAria"
+msgstr "إضافة وسائط"
