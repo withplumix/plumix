@@ -16,1027 +16,1027 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/editor/build-copy-pattern-source.ts
 #~ msgid "editor.copyPattern.untitled"
-#~ msgstr ""
+#~ msgstr "Untitled"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 #~ msgid "entries.list.taxonomyFilter.all"
-#~ msgstr ""
+#~ msgstr "All {pluralLower}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/create.tsx
 #~ msgid "terms.create.backLink"
-#~ msgstr ""
+#~ msgstr "Back to {pluralLower}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 #~ msgid "terms.edit.backLink"
-#~ msgstr ""
+#~ msgstr "Back to {pluralLower}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 #~ msgid "dashboard.tile.browse"
-#~ msgstr ""
+#~ msgstr "Browse {labelLower}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/index.tsx
 #~ msgid "terms.list.loadError"
-#~ msgstr ""
+#~ msgstr "Couldn't load {pluralLower}. Try again."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 #~ msgid "entries.list.loadError"
-#~ msgstr ""
+#~ msgstr "Couldn't load {pluralLower}. Try again."
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 #~ msgid "breadcrumb.createTerm"
-#~ msgstr ""
+#~ msgstr "Create {singular}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/create.tsx
 #~ msgid "terms.create.submit"
-#~ msgstr ""
+#~ msgstr "Create {singularLower}"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/create.tsx
 #~ msgid "editor.entry.create.pending"
-#~ msgstr ""
+#~ msgstr "Creating new {singular}…"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 #~ msgid "editor.entry.edit.headline"
-#~ msgstr ""
+#~ msgstr "Edit {singular}"
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 #~ msgid "breadcrumb.editTerm"
-#~ msgstr ""
+#~ msgstr "Edit {singular}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 #~ msgid "terms.edit.heading"
-#~ msgstr ""
+#~ msgstr "Edit {singularLower}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/index.tsx
 #~ msgid "terms.list.loadingLabel"
-#~ msgstr ""
+#~ msgstr "Loading {pluralLower}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 #~ msgid "entries.list.loadingLabel"
-#~ msgstr ""
+#~ msgstr "Loading {pluralLower}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 #~ msgid "entries.list.trashDialog.title"
-#~ msgstr ""
+#~ msgstr "Move {singularLower} to trash?"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/create.tsx
 #~ msgid "terms.create.heading"
-#~ msgstr ""
+#~ msgstr "New {singularLower}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/index.tsx
 #~ msgid "terms.list.newButton"
-#~ msgstr ""
+#~ msgstr "New {singularLower}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/index.tsx
 #~ msgid "terms.list.empty.cta"
-#~ msgstr ""
+#~ msgstr "New {singularLower}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 #~ msgid "entries.list.newButton"
-#~ msgstr ""
+#~ msgstr "New {singularLower}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 #~ msgid "entries.list.empty.cta"
-#~ msgstr ""
+#~ msgstr "New {singularLower}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 #~ msgid "entries.list.taxonomyFilter.empty"
-#~ msgstr ""
+#~ msgstr "No {pluralLower} match."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 #~ msgid "entries.list.empty.title"
-#~ msgstr ""
+#~ msgstr "No {pluralLower} yet"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/index.tsx
 #~ msgid "terms.list.empty.title"
-#~ msgstr ""
+#~ msgstr "No {singularLower} yet"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/index.tsx
 #~ msgid "terms.list.searchPlaceholder"
-#~ msgstr ""
+#~ msgstr "Search {pluralLower}…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 #~ msgid "entries.list.searchPlaceholder"
-#~ msgstr ""
+#~ msgstr "Search {pluralLower}…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 #~ msgid "entries.list.taxonomyFilter.search"
-#~ msgstr ""
+#~ msgstr "Search {pluralLower}…"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/lookup-label.tsx
 #~ msgid "metaBox.reference.untitled"
-#~ msgstr ""
+#~ msgstr "Untitled"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 #~ msgid "dashboard.tile.description"
-#~ msgstr ""
+#~ msgstr "Write, edit, and publish {labelLower}."
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 #~ msgid "editor.entry.edit.headline.generic"
-#~ msgstr ""
+#~ msgstr "Edit"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
-msgstr ""
+msgstr " — Untergeordnete können nicht als übergeordnet ausgewählt werden."
 
 #. max: upper bound on the repeater row count
 #. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.countSuffixMax"
-msgstr ""
+msgstr " / max {max}"
 
 #. min: lower bound on the repeater row count
 #. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.countSuffixMin"
-msgstr ""
+msgstr " / min {min}"
 
 #. min, max: integers bounding the repeater row count
 #. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.countSuffixBoth"
-msgstr ""
+msgstr " / min {min} / max {max}"
 
 #. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.parent.rootOption"
-msgstr ""
+msgstr "— Stamm —"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.commentSaving"
-msgstr ""
+msgstr "…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.noName"
-msgstr ""
+msgstr "(kein Name)"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.noTitle"
-msgstr ""
+msgstr "(kein Titel)"
 
 #. browser: e.g. 'Safari', 'Chrome'; os: e.g. 'macOS', 'Windows 11'. Vendor names interpolate verbatim; the connector word is localizable.
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.device.browserOnOs"
-msgstr ""
+msgstr "{browser} auf {os}"
 
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.test.tsx
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.pageSummary"
-msgstr ""
+msgstr "{count, plural, one {# Gruppe} other {# Gruppen}}"
 
 #. count: number of selected options in the multi-select
 #. js-lingui-explicit-id
 #: src/components/form/multi-select.tsx
 msgid "form.multiSelect.selectedCount"
-msgstr ""
+msgstr "{count} ausgewählt"
 
 #. device: 'Safari on macOS' style label; when: relative-time string; ip: IPv4/IPv6 address
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.descriptionWithIp"
-msgstr ""
+msgstr "{device} hat sich {when} von {ip} angemeldet. Das Gerät muss sich beim nächsten Mal erneut anmelden."
 
 #. device: 'Safari on macOS' style label; when: relative-time string
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.description"
-msgstr ""
+msgstr "{device} hat sich {when} angemeldet. Das Gerät muss sich beim nächsten Mal erneut anmelden."
 
 #. display: user's name or email; lastSeen: pre-formatted relative-time string like '2 minutes ago'
 #. js-lingui-explicit-id
 #: src/editor/CoAuthorIndicator.tsx
 msgid "editor.coAuthorIndicator.presenceAriaLabel"
-msgstr ""
+msgstr "{display} · zuletzt gesehen {lastSeen}"
 
 #. label: a plugin-author-provided name (e.g. 'SEO meta', 'Hero block'); kind: the extension type ('field', 'block', 'mark') left as the raw protocol identifier
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
 msgid "plugin.errorBoundary.inlineStub"
-msgstr ""
+msgstr "{label} {kind} fehlgeschlagen"
 
 #. label: a plugin-author-provided name (e.g. 'SEO meta', 'Hero block')
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
 msgid "plugin.errorBoundary.pageBody"
-msgstr ""
+msgstr "{label} hat beim Rendern einen Fehler verursacht. Der Rest der Administration ist nicht betroffen."
 
 #. revoked: number of OTHER sessions just signed out (excluding the current device)
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revokeAll.count"
-msgstr ""
+msgstr "{revoked, plural, =0 {Keine anderen Sitzungen zum Abmelden.} one {# andere Sitzung abgemeldet.} other {# andere Sitzungen abgemeldet.}}"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
 msgid "editor.revisions.preview.backToLive"
-msgstr ""
+msgstr "← Zurück zur aktuellen Version"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.expiry.30"
-msgstr ""
+msgstr "30 Tage"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.expiry.7"
-msgstr ""
+msgstr "7 Tage"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.expiry.90"
-msgstr ""
+msgstr "90 Tage"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.description"
-msgstr ""
+msgstr "Eine CLI fordert ein API-Token für Ihr Konto an. Bestätigen Sie, dass der von Ihrer CLI angezeigte Code mit dem untenstehenden übereinstimmt, bevor Sie zustimmen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.description"
-msgstr ""
+msgstr "Ein neues API-Token wird für Ihr Konto erstellt und an die CLI übergeben. Geben Sie ihm einen Namen, damit Sie es später in Ihrem Profil finden, und beschränken Sie optional, was es tun darf."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/-errors.ts
 msgid "terms.error.parentSelfOrCycle"
-msgstr ""
+msgstr "Ein Begriff kann nicht sein eigener Vorfahr sein — wählen Sie einen anderen übergeordneten."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/-errors.ts
 msgid "terms.error.slugTaken"
-msgstr ""
+msgstr "Ein Begriff mit diesem Slug existiert bereits in dieser Taxonomie."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.error.emailTaken"
-msgstr ""
+msgstr "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.error.emailTaken"
-msgstr ""
+msgstr "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.userCode.placeholder"
-msgstr ""
+msgstr "ABCD-EFGH"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/accept-invite/$token.tsx
 msgid "auth.acceptInvite.title"
-msgstr ""
+msgstr "Einladung annehmen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.status.title"
-msgstr ""
+msgstr "Kontostatus"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.col.actions"
-msgstr ""
+msgstr "Aktionen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.active"
-msgstr ""
+msgstr "Aktiv"
 
 #. js-lingui-explicit-id
 #: src/editor/CoAuthorIndicator.tsx
 msgid "editor.coAuthorIndicator.activeAriaLabel"
-msgstr ""
+msgstr "Aktive Co-Autoren"
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.title"
-msgstr ""
+msgstr "Aktive Sitzungen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.submit.idle"
-msgstr ""
+msgstr "Hinzufügen"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.addMore"
-msgstr ""
+msgstr "Hinzufügen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.description"
-msgstr ""
+msgstr "Fügen Sie ein Plugin hinzu, das einen Beitragstyp registriert (z. B. <0>@plumix/plugin-blog</0>), um ihn hier zu sehen."
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.addAnother"
-msgstr ""
+msgstr "Weiteres hinzufügen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.title"
-msgstr ""
+msgstr "Domain hinzufügen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.invite"
-msgstr ""
+msgstr "Hinzufügen"
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.addNew"
-msgstr "Neu hinzufügen"
+msgstr "Hinzufügen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.idle"
-msgstr ""
+msgstr "Passkey hinzufügen"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.addFirst"
-msgstr ""
+msgstr "Zeile hinzufügen"
 
 #. date: a locale-formatted date string
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.added"
-msgstr ""
+msgstr "Hinzugefügt {date}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.submit.pending"
-msgstr ""
+msgstr "Wird hinzugefügt…"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.pending"
-msgstr ""
+msgstr "Wird hinzugefügt…"
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.admin"
-msgstr "Verwaltung"
+msgstr "Administration"
 
 #. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
 msgid "userRole.admin"
-msgstr ""
+msgstr "Administrator"
 
 #. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
 msgid "userRole.long.admin"
-msgstr ""
+msgstr "Administrator — volle Kontrolle"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.statusFilter.all"
-msgstr ""
+msgstr "Alle"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.tab.all"
-msgstr ""
+msgstr "Alle"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.authorFilter.all"
-msgstr ""
+msgstr "Alle Autoren"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.roleFilter.all"
-msgstr ""
+msgstr "Alle Rollen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.title"
-msgstr ""
+msgstr "Erlaubte Domains"
 
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.item.allowedDomains"
-msgstr ""
+msgstr "Erlaubte Domains"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.entry.edit.restore.conflict"
-msgstr ""
+msgstr "Ein anderer Bearbeiter hat diesen Eintrag geändert. Neu laden und erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.title"
-msgstr ""
+msgstr "API-Tokens"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.idle"
-msgstr ""
+msgstr "Genehmigen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approved"
-msgstr ""
+msgstr "Genehmigt. Ihre CLI sollte das Token innerhalb weniger Sekunden erhalten — Sie können diesen Tab schließen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.pending"
-msgstr ""
+msgstr "Wird genehmigt…"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.tab.audit"
-msgstr ""
+msgstr "Prüfung"
 
 #. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
 msgid "userRole.author"
-msgstr ""
+msgstr "Autor"
 
 #. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
 msgid "userRole.long.author"
-msgstr ""
+msgstr "Autor — eigene Beiträge veröffentlichen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.title"
-msgstr ""
+msgstr "CLI-Zugriff autorisieren"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.tab.autosaves"
-msgstr ""
+msgstr "Automatisches Speichern"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.autosavesEmpty"
-msgstr ""
+msgstr "Automatische Speicherungen erscheinen hier, sobald Entwürfe-von-veröffentlicht verfügbar sind."
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.back"
-msgstr ""
+msgstr "Zurück"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.header.backToList"
-msgstr ""
+msgstr "Zurück zur Liste"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.backToList"
-msgstr ""
+msgstr "Zurück zu den Benutzern"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.success.backToList"
-msgstr ""
+msgstr "Zurück zu den Benutzern"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.backToList"
-msgstr ""
+msgstr "Zurück zu den Benutzern"
 
 #. js-lingui-explicit-id
 #: src/editor/StyleTab.tsx
 msgid "editor.styleTab.section.background"
-msgstr ""
+msgstr "Hintergrund"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.tab.block"
-msgstr ""
+msgstr "Block"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.mobile.inspectorSheetDescription"
-msgstr ""
+msgstr "Block-Aktionen, Felder und Stil-Steuerungen für den ausgewählten Block."
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.mobile.blocksTrigger"
-msgstr ""
+msgstr "Blöcke"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.mobile.blocksSheetTitle"
-msgstr ""
+msgstr "Blöcke"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.tab.blocks"
-msgstr ""
+msgstr "Blöcke"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.tile.browse.generic"
-msgstr ""
+msgstr "Durchsuchen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.error.lastAdmin.delete"
-msgstr ""
+msgstr "Der letzte Administrator kann nicht gelöscht werden. Befördern Sie zuerst jemand anderen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.error.lastAdmin.status"
-msgstr ""
+msgstr "Der letzte Administrator kann nicht deaktiviert werden. Befördern Sie zuerst jemand anderen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.error.lastAdmin.update"
-msgstr ""
+msgstr "Das ist nicht möglich — dies ist der letzte Administrator. Befördern Sie zuerst jemand anderen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.error.reassignToSelf"
-msgstr ""
+msgstr "Eine Neuzuweisung an den zu löschenden Benutzer ist nicht möglich."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.cancel"
-msgstr ""
+msgstr "Abbrechen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.cancel"
-msgstr ""
+msgstr "Abbrechen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.cancel"
-msgstr ""
+msgstr "Abbrechen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.cancel"
-msgstr ""
+msgstr "Abbrechen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.cancel"
-msgstr ""
+msgstr "Abbrechen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.deleteCancel"
-msgstr ""
+msgstr "Abbrechen"
 
 #. js-lingui-explicit-id
 #: src/editor/BlockScopePicker.tsx
 msgid "blockScopePicker.cancel"
-msgstr ""
+msgstr "Abbrechen"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.commentCancel"
-msgstr ""
+msgstr "Abbrechen"
 
 #. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.cancel"
-msgstr ""
+msgstr "Abbrechen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.revoke.cancel"
-msgstr ""
+msgstr "Abbrechen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.rename.cancel"
-msgstr ""
+msgstr "Abbrechen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.cancel"
-msgstr ""
+msgstr "Abbrechen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.cancel"
-msgstr ""
+msgstr "Abbrechen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.cancelPending.idle"
-msgstr ""
+msgstr "Abbrechen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.dialog.cancel"
-msgstr ""
+msgstr "Abbrechen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.cancelled"
-msgstr ""
+msgstr "Abgebrochen. Tippen Sie auf «Passkey hinzufügen», wenn Sie bereit sind."
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.cancelPending.pending"
-msgstr ""
+msgstr "Wird abgebrochen…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopes.label"
-msgstr ""
+msgstr "Berechtigungen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.capabilities"
-msgstr ""
+msgstr "Berechtigungen"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/reference-picker.tsx
 msgid "metaBox.reference.selectChange"
-msgstr ""
+msgstr "Ändern"
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.changeButton"
-msgstr ""
+msgstr "E-Mail ändern"
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.dialog.title"
-msgstr ""
+msgstr "E-Mail-Adresse ändern"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.sent.title"
-msgstr ""
+msgstr "E-Mail prüfen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.submit.pending"
-msgstr ""
+msgstr "Wird geprüft…"
 
 #. blockTitle: the parent block's registered title (e.g. 'Cover', 'Gallery')
 #. js-lingui-explicit-id
 #: src/editor/BlockScopePicker.tsx
 msgid "blockScopePicker.title"
-msgstr ""
+msgstr "Layout für {blockTitle} auswählen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.placeholder"
-msgstr ""
+msgstr "claude-code / github-actions / mcp-prod"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/reference-picker.tsx
 msgid "metaBox.reference.clear"
-msgstr ""
+msgstr "Zurücksetzen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.empty.description"
-msgstr ""
+msgstr "Filter zurücksetzen oder jemanden Neues einladen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.default"
-msgstr ""
+msgstr "CLI"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.draftBanner.body"
-msgstr ""
+msgstr "Klicken Sie auf «Veröffentlichen», um sie live zu schalten, oder auf «Verwerfen», um zurückzusetzen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.error.notFound"
-msgstr ""
+msgstr "Code nicht gefunden. Prüfen Sie, ob er mit dem von Ihrer CLI ausgegebenen übereinstimmt."
 
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.compare"
-msgstr ""
+msgstr "Vergleichen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.list.title"
-msgstr ""
+msgstr "Konfigurierte Domains"
 
 #. userCode: the short device-flow code the CLI displayed (e.g. 'WDJB-MJHT'); pass through verbatim
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.confirmTitle"
-msgstr ""
+msgstr "\"{userCode}\" bestätigen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.deleteConfirm"
-msgstr ""
+msgstr "Löschen bestätigen"
 
 #. email: the user account being deleted
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.confirm.title"
-msgstr ""
+msgstr "Löschen bestätigen: {email}"
 
 #. email: the address the confirmation link was sent to
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.confirmationSent"
-msgstr ""
+msgstr "Bestätigung an {email} gesendet. Die Änderung tritt in Kraft, sobald der Link angeklickt wurde."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.submit.idle"
-msgstr ""
+msgstr "Weiter"
 
 #. label: the OAuth provider's display name (e.g. 'Google', 'GitHub')
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.oauth.continueWith"
-msgstr ""
+msgstr "Weiter mit {label}"
 
 #. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
 msgid "userRole.contributor"
-msgstr ""
+msgstr "Mitwirkender"
 
 #. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
 msgid "userRole.long.contributor"
-msgstr ""
+msgstr "Mitwirkender — Entwürfe, keine Veröffentlichung"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.copy.copied"
-msgstr ""
+msgstr "Kopiert"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.copy.idle"
-msgstr ""
+msgstr "Kopieren"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.canvas.copyAsPatternSource"
-msgstr ""
+msgstr "Als Mustervorlage kopieren"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.copy.aria"
-msgstr ""
+msgstr "Einladungslink kopieren"
 
 #. js-lingui-explicit-id
 #: src/editor/BlockActionsPanel.tsx
 msgid "blockActions.copyJson"
-msgstr ""
+msgstr "JSON kopieren"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.secret.description"
-msgstr ""
+msgstr "Kopieren Sie das Geheimnis jetzt. Wir zeigen es nicht erneut an — wenn Sie es verlieren, müssen Sie es widerrufen und neu erstellen."
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.secret.copyAria"
-msgstr ""
+msgstr "Token kopieren"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.empty.description"
-msgstr ""
+msgstr "Der Kern liefert absichtlich keine Einstellungen — Plugins (oder Ihre eigene plumix.config) deklarieren Seiten + Gruppen über <0>ctx.registerSettingsPage</0> und <1>ctx.registerSettingsGroup</1>. Registrierte Seiten erscheinen hier mit einer Karte pro Seite."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.error.statusFallback"
-msgstr ""
+msgstr "Kontostatus konnte nicht geändert werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.error.fallback"
-msgstr ""
+msgstr "Anfrage konnte nicht abgeschlossen werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/lib/email-change-errors.ts
 msgid "emailChange.error.fallback"
-msgstr ""
+msgstr "E-Mail-Änderung konnte nicht bestätigt werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/create.tsx
 msgid "terms.create.error.createFallback"
-msgstr ""
+msgstr "Begriff konnte nicht erstellt werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.fallback"
-msgstr ""
+msgstr "Passkey konnte nicht gelöscht werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.error.deleteFallback"
-msgstr ""
+msgstr "Begriff konnte nicht gelöscht werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.error.deleteFallback"
-msgstr ""
+msgstr "Benutzer konnte nicht gelöscht werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/create.tsx
 msgid "terms.create.error.emptySlug"
-msgstr ""
+msgstr "Aus diesem Namen konnte kein Slug abgeleitet werden — bitte manuell eingeben."
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.emailMismatch"
-msgstr ""
+msgstr "Registrierung fehlgeschlagen — erneut anmelden und nochmals versuchen."
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.fallback"
-msgstr ""
+msgstr "Passkey konnte nicht registriert werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.resolveError"
-msgstr ""
+msgstr "Ausgewählte Elemente konnten nicht geladen werden — Aktualisieren zum erneuten Versuchen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.notFound.message"
-msgstr ""
+msgstr "Dieser Begriff konnte nicht geladen werden. Möglicherweise wurde er gelöscht."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.loadFailed"
-msgstr ""
+msgstr "Dieser Benutzer konnte nicht geladen werden. Möglicherweise wurde er gelöscht."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.loadFailed"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.loadFailedTitle"
-msgstr ""
+msgstr "Diese Einstellungen konnten nicht geladen werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.entry.edit.loadFailed"
-msgstr ""
+msgstr "Dieser Eintrag konnte nicht geladen werden."
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.loadFailedTitle"
+msgstr "Dieser Eintrag konnte nicht geladen werden"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.loadFailed"
-msgstr ""
+msgstr "Benutzer konnten nicht geladen werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.loadFailed"
-msgstr ""
+msgstr "Ihre Passkeys konnten nicht geladen werden. Aktualisieren und erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.loadFailed"
-msgstr ""
+msgstr "Ihre Sitzungen konnten nicht geladen werden. Aktualisieren und erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.error.fallback"
-msgstr ""
+msgstr "Dieser Code konnte nicht gefunden werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.mint.fallback"
-msgstr ""
+msgstr "Token konnte nicht erstellt werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.codeExchangeFailed"
-msgstr ""
+msgstr "Anbieter konnte nicht erreicht werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.networkError"
-msgstr ""
+msgstr "Server konnte nicht erreicht werden. Verbindung prüfen und erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.profileFetchFailed"
-msgstr ""
+msgstr "Ihr Profil konnte nicht gelesen werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.rename.fallback"
-msgstr ""
+msgstr "Passkey konnte nicht umbenannt werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.error.requestFallback"
-msgstr ""
+msgstr "Änderung konnte nicht angefordert werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revokeAll.fallback"
-msgstr ""
+msgstr "Sitzungen konnten nicht beendet werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.fallback"
-msgstr ""
+msgstr "Sitzung konnte nicht beendet werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.revoke.fallback"
-msgstr ""
+msgstr "Widerruf fehlgeschlagen. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.saveFailed"
-msgstr ""
+msgstr "Einstellungen konnten nicht gespeichert werden."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.error.updateFallback"
-msgstr ""
+msgstr "Änderungen konnten nicht gespeichert werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.error.saveFallback"
-msgstr ""
+msgstr "Änderungen konnten nicht gespeichert werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.error.fallback"
-msgstr ""
+msgstr "Domain konnte nicht gespeichert werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.entry.edit.saveFailed"
-msgstr ""
+msgstr "Speichern fehlgeschlagen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.error.fallback"
-msgstr ""
+msgstr "Einladung konnte nicht gesendet werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/lib/magic-link.ts
 msgid "magicLinkRequest.error.network"
-msgstr ""
+msgstr "Link konnte nicht gesendet werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/lib/mailer-errors.ts
 msgid "mailer.test.error.fallback"
-msgstr ""
+msgstr "Testnachricht konnte nicht gesendet werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.fallback"
-msgstr ""
+msgstr "Anmeldung fehlgeschlagen. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.fallback"
-msgstr ""
+msgstr "Anmeldung fehlgeschlagen. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/components/profile/language-card.tsx
 msgid "profile.language.error"
-msgstr ""
+msgstr "Sprache konnte nicht gewechselt werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
@@ -1046,272 +1046,272 @@ msgstr "Erstellen"
 #. js-lingui-explicit-id
 #: src/routes/_auth/bootstrap.tsx
 msgid "auth.bootstrap.submit.idle"
-msgstr ""
+msgstr "Konto mit Passkey erstellen"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/bootstrap.tsx
 msgid "auth.bootstrap.title"
-msgstr ""
+msgstr "Administrator-Konto erstellen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/index.tsx
 msgid "terms.list.empty.description"
-msgstr ""
+msgstr "Erstellen Sie einen, um ihn hier zu sehen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.empty.description"
-msgstr ""
+msgstr "Erstellen Sie einen, um ihn hier zu sehen."
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/accept-invite/$token.tsx
 msgid "auth.acceptInvite.submit.idle"
-msgstr ""
+msgstr "Passkey erstellen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.column.created"
-msgstr ""
+msgstr "Erstellt"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/bootstrap.tsx
 msgid "auth.bootstrap.submit.pending"
-msgstr ""
+msgstr "Konto wird erstellt…"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/create.tsx
 msgid "editor.entry.create.pending.generic"
-msgstr ""
+msgstr "Wird erstellt…"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.transport.hybrid"
-msgstr ""
+msgstr "Geräteübergreifend"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffDialog.tsx
 msgid "editor.revisions.diffDialog.pane.current"
-msgstr ""
+msgstr "Aktuell"
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.dialog.currentLabel"
-msgstr ""
+msgstr "Aktuelle E-Mail"
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.dashboard"
-msgstr "Übersicht"
+msgstr "Dashboard"
 
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.item.dashboard"
-msgstr ""
+msgstr "Dashboard"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.defaultRole.label"
-msgstr ""
+msgstr "Standardrolle"
 
 #. js-lingui-explicit-id
 #: src/editor/BlockActionsPanel.tsx
 msgid "blockActions.delete"
-msgstr ""
+msgstr "Löschen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.button"
-msgstr ""
+msgstr "Löschen"
 
 #. domain: the hostname being removed from the allowlist
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.deleteAria"
-msgstr ""
+msgstr "{domain} löschen"
 
 #. termName: the taxonomy term being deleted
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.dialogTitle"
-msgstr ""
+msgstr "{termName} löschen?"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.confirm.idle"
-msgstr ""
+msgstr "Endgültig löschen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.confirm"
-msgstr ""
+msgstr "Endgültig löschen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.confirm"
-msgstr ""
+msgstr "Passkey löschen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.cardTitle"
-msgstr ""
+msgstr "Begriff löschen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.button"
-msgstr ""
+msgstr "Begriff löschen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.title"
-msgstr ""
+msgstr "Diesen Passkey löschen?"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.title"
-msgstr ""
+msgstr "Benutzer löschen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.button"
-msgstr ""
+msgstr "Benutzer löschen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.confirm.pending"
-msgstr ""
+msgstr "Wird gelöscht…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.deleting"
-msgstr ""
+msgstr "Wird gelöscht…"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.pending"
-msgstr ""
+msgstr "Wird gelöscht…"
 
 #. accessDenied: the literal OAuth error code string (e.g. 'access_denied') — do not translate
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.denied"
-msgstr ""
+msgstr "Abgelehnt. Die CLI erhält eine access_denied-Antwort und stoppt die Abfragen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.deny.idle"
-msgstr ""
+msgstr "Ablehnen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.deny.pending"
-msgstr ""
+msgstr "Wird abgelehnt…"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.commentPlaceholder"
-msgstr ""
+msgstr "Diese Revision beschreiben…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/index.tsx
 msgid "terms.list.column.description"
-msgstr ""
+msgstr "Beschreibung"
 
 #. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.description"
-msgstr ""
+msgstr "Beschreibung"
 
 #. js-lingui-explicit-id
 #: src/editor/device-labels.ts
 msgid "editor.device.desktop"
-msgstr ""
+msgstr "Desktop"
 
 #. js-lingui-explicit-id
 #: src/editor/PatternRefPreview.tsx
 msgid "editor.patternRef.detach"
-msgstr ""
+msgstr "Lösen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.description"
-msgstr ""
+msgstr "Geräte, die in diesem Konto angemeldet sind. Widerrufen Sie alle, die Sie nicht erkennen, oder melden Sie sich überall ab, außer in diesem Browser, wenn Sie ein Leck vermuten."
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.description"
-msgstr ""
+msgstr "Geräte, die sich in diesem Konto anmelden können. Fügen Sie einen neuen hinzu, bevor Sie einen alten löschen — mindestens ein Passkey muss erhalten bleiben."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.status.toggle.disable"
-msgstr ""
+msgstr "Benutzer deaktivieren"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.disabled"
-msgstr ""
+msgstr "Deaktiviert"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.disabled"
-msgstr ""
+msgstr "Deaktiviert"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.status.description.disabled"
-msgstr ""
+msgstr "Deaktivierte Konten können sich nicht anmelden. Eine Reaktivierung stellt den Zugriff wieder her; der Passkey bleibt registriert."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.status.description.active"
-msgstr ""
+msgstr "Eine Deaktivierung meldet den Benutzer sofort ab und blockiert zukünftige Anmeldungen. Veröffentlichte Beiträge bleiben erhalten."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.status.toggle.disabling"
-msgstr ""
+msgstr "Wird deaktiviert…"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.draft.discard"
-msgstr ""
+msgstr "Verwerfen"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.draft.discarding"
-msgstr ""
+msgstr "Wird verworfen…"
 
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.discarding"
-msgstr ""
+msgstr "Wird verworfen…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.domain.label"
-msgstr ""
+msgstr "Domain"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.secret.done"
-msgstr ""
+msgstr "Fertig"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgctxt "entry status"
 msgid "entries.list.statusFilter.draft"
-msgstr ""
+msgstr "Entwurf"
 
 #. js-lingui-explicit-id
 #: src/editor/BlockActionsPanel.tsx
 msgid "blockActions.duplicate"
-msgstr ""
+msgstr "Duplizieren"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.row.edit"
-msgstr ""
+msgstr "Bearbeiten"
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
@@ -1322,7 +1322,7 @@ msgstr "Bearbeiten"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.title.other"
-msgstr ""
+msgstr "{email} bearbeiten"
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
@@ -1333,926 +1333,938 @@ msgstr "Benutzer bearbeiten"
 #. js-lingui-explicit-id
 #: src/editor/StyleTab.tsx
 msgid "editor.styleTab.activeBucket"
-msgstr ""
+msgstr "Bearbeiten für: {device}"
 
 #. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
 msgid "userRole.editor"
-msgstr ""
+msgstr "Redakteur"
 
 #. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
 msgid "userRole.long.editor"
-msgstr ""
+msgstr "Redakteur — alle Beiträge veröffentlichen + bearbeiten"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.email.label"
-msgstr ""
+msgstr "E-Mail"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/bootstrap.tsx
 msgid "auth.bootstrap.email"
-msgstr ""
+msgstr "E-Mail"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.email.label"
-msgstr ""
+msgstr "E-Mail"
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.label"
-msgstr ""
+msgstr "E-Mail"
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.error.mailerNotConfigured"
-msgstr ""
+msgstr "Eine E-Mail-Änderung erfordert einen serverseitig konfigurierten Magic-Link-Mailer. Übergeben Sie `auth.magicLink` und `mailer:` an `plumix({...})` zum Aktivieren."
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.emailChange.success"
-msgstr ""
+msgstr "E-Mail bestätigt. Mit der neuen Adresse anmelden."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.description"
-msgstr ""
+msgstr "E-Mail-Domains, die für die OAuth-Registrierung erlaubt sind. Neue OAuth-Konten werden mit der hier festgelegten Rolle erstellt. Deaktivierte Zeilen lehnen die Registrierung ab, behalten aber ihre Rollenzuordnung."
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.submit"
-msgstr ""
+msgstr "Link per E-Mail senden"
 
 #. js-lingui-explicit-id
 #: src/editor/HeadingAuditPanel.tsx
 msgid "editor.headingAudit.emptyHeading"
-msgstr ""
+msgstr "Leere Überschrift. Text hinzufügen oder Block entfernen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.enabled"
-msgstr ""
+msgstr "Aktiviert"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.status.toggle.enabling"
-msgstr ""
+msgstr "Wird aktiviert…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.email.invalid"
-msgstr ""
+msgstr "Gültige E-Mail-Adresse eingeben"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.recipient.invalid"
-msgstr ""
+msgstr "Gültige E-Mail-Adresse eingeben."
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/-schemas.ts
 msgid "login.email.invalid"
-msgstr ""
+msgstr "Gültige E-Mail-Adresse eingeben."
 
 #. js-lingui-explicit-id
 #: src/lib/magic-link.ts
 msgid "magicLinkRequest.error.invalidInput"
-msgstr ""
+msgstr "Gültige E-Mail-Adresse eingeben."
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.invalid"
-msgstr ""
+msgstr "Gültige E-Mail-Adresse eingeben."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.domain.invalid"
-msgstr ""
+msgstr "Gültigen Hostnamen eingeben (z. B. example.com)."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.title"
-msgstr ""
+msgstr "Code aus Ihrer CLI eingeben"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.emailRequired"
-msgstr ""
+msgstr "Zuerst Ihre E-Mail oben eingeben."
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.entries"
-msgstr "Einträge"
+msgstr "Beiträge"
 
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.content"
-msgstr ""
+msgstr "Beiträge"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.dialogDescription"
-msgstr ""
+msgstr "Beitragszuweisungen zu diesem Begriff werden entfernt. Hat der Begriff Untergeordnete, werden sie automatisch auf Stammebene gehoben."
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.titleAriaLabel"
-msgstr ""
+msgstr "Beitragstitel"
 
 #. js-lingui-explicit-id
 #: src/components/editor/plain-form-layout.tsx
 msgid "editor.plainForm.titleAriaLabel"
-msgstr ""
+msgstr "Beitragstitel"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopes.placeholder"
-msgstr ""
+msgstr "entry:post:read\n"
+"entry:post:edit_own"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.capabilities.placeholder"
-msgstr ""
+msgstr "entry:post:read\n"
+"entry:post:edit_own"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.description"
-msgstr ""
+msgstr "Jede Speicherung erstellt eine neue Revision. Neueste zuerst."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.placeholder"
-msgstr ""
+msgstr "example.com"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffPanel.tsx
 msgid "editor.revisions.diff.field.excerpt"
-msgstr ""
+msgstr "Auszug"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.col.expires"
-msgstr ""
+msgstr "Läuft ab"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.expires"
-msgstr ""
+msgstr "Läuft ab"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.error"
-msgstr ""
+msgstr "Revisionen konnten nicht geladen werden."
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffDialog.tsx
 msgid "editor.revisions.diffDialog.pane.error"
-msgstr ""
+msgstr "Snapshot konnte nicht geladen werden."
 
 #. js-lingui-explicit-id
 #: src/editor/AutosaveStatus.tsx
 msgid "editor.autosave.error"
-msgstr ""
+msgstr "Speichern fehlgeschlagen"
 
 #. js-lingui-explicit-id
 #: src/components/editor/plain-form-layout.tsx
 msgid "editor.plainForm.status.error"
-msgstr ""
+msgstr "Speichern fehlgeschlagen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.filterAuthorAria"
-msgstr ""
+msgstr "Nach Autor filtern"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.roleFilter.aria"
-msgstr ""
+msgstr "Nach Rolle filtern"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.filterStatusAria"
-msgstr ""
+msgstr "Nach Status filtern"
 
 #. js-lingui-explicit-id
 #: src/editor/StyleTab.tsx
 msgid "editor.styleTab.section.fontSize"
-msgstr ""
+msgstr "Schriftgröße"
 
 #. when: pre-formatted relative-time like '2 hours ago'; author: the user's display name or email
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
 msgid "editor.revisions.preview.subtitle"
-msgstr ""
+msgstr "{when} von {author}"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.namePlaceholder"
-msgstr ""
+msgstr "github-actions / claude-code / mcp-prod"
 
 #. js-lingui-explicit-id
 #: src/components/data-table/list-pagination.tsx
 msgid "listPagination.next.aria"
-msgstr ""
+msgstr "Zur nächsten Seite"
 
 #. js-lingui-explicit-id
 #: src/components/data-table/list-pagination.tsx
 msgid "listPagination.prev.aria"
-msgstr ""
+msgstr "Zur vorherigen Seite"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/create.tsx
 msgid "terms.create.description.flat"
-msgstr ""
+msgstr "Inhalte gruppieren, indem ein neuer Begriff hinzugefügt wird."
 
 #. from, to, between: integer heading levels 1-6; e.g. from=2, to=4, between=3
 #. js-lingui-explicit-id
 #: src/editor/HeadingAuditPanel.tsx
 msgid "editor.headingAudit.skippedLevel"
-msgstr ""
+msgstr "Überschrift springt von h{from} zu h{to}. Fügen Sie ein h{between} dazwischen ein."
 
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.hideComparison"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/components/error-boundary-fallback.tsx
-msgid "errorBoundary.hideError"
-msgstr ""
+msgstr "Vergleich ausblenden"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.sent.description"
-msgstr ""
+msgstr "Wenn ein Konto für diese E-Mail existiert, haben wir einen Anmelde-Link gesendet. Der Link läuft in 15 Minuten ab."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.confirm.description"
-msgstr ""
+msgstr "Wenn dieser Benutzer Beiträge verfasst hat, weist der nächste Schritt sie neu zu. Lassen Sie «Beiträge unverändert lassen» stehen, wenn keine vorhanden sind."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopeMode.inherit"
-msgstr ""
+msgstr "Alle meine Berechtigungen erben"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.scope.inherit"
-msgstr ""
+msgstr "Alle Ihre Berechtigungen erben"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.scope.inheritRole"
-msgstr ""
+msgstr "Rolle erben"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.slashMenu.title"
-msgstr ""
+msgstr "Block oder Muster einfügen"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.mobile.blocksSheetDescription"
-msgstr ""
+msgstr "Einfügbare Blöcke, Gliederung und Überschriften-Audit für diesen Beitrag."
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.mobile.inspectorTrigger"
-msgstr ""
+msgstr "Inspektor"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.mobile.inspectorSheetTitle"
-msgstr ""
+msgstr "Inspektor"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/meta-box-field.tsx
 msgid "metaBox.field.json.invalid"
-msgstr ""
+msgstr "Ungültiges JSON"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.success.another"
-msgstr ""
+msgstr "Weiteren einladen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.success.link.label"
-msgstr ""
+msgstr "Einladungslink"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.success.title"
-msgstr ""
+msgstr "Einladung bereit"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.title"
-msgstr ""
+msgstr "Benutzer einladen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.empty.invite"
-msgstr ""
+msgstr "Benutzer einladen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.submit.pending"
-msgstr ""
+msgstr "Wird eingeladen…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.reassign.keepAsIs"
-msgstr ""
+msgstr "Beiträge unverändert lassen (keine zur Neuzuweisung)"
 
 #. js-lingui-explicit-id
 #: src/components/locale-switcher.tsx
 msgid "profile.language.aria"
-msgstr ""
+msgstr "Sprache"
 
 #. js-lingui-explicit-id
 #: src/components/login-locale-switcher.tsx
 msgid "login.locale.aria"
-msgstr ""
+msgstr "Sprache"
 
 #. js-lingui-explicit-id
 #: src/components/profile/language-card.tsx
 msgid "profile.language.title"
-msgstr ""
+msgstr "Sprache"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.column.lastSignIn"
-msgstr ""
+msgstr "Letzte Anmeldung"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.col.lastUsed"
-msgstr ""
+msgstr "Zuletzt verwendet"
 
 #. date: a locale-formatted date string
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.lastUsed"
-msgstr ""
+msgstr "Zuletzt verwendet {date}"
 
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.liveNow"
-msgstr ""
+msgstr "Aktuelle Version"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.loadMore"
-msgstr ""
+msgstr "Mehr laden"
 
 #. js-lingui-explicit-id
 #: src/components/data-table/data-table.tsx
 msgid "dataTable.loading"
-msgstr ""
+msgstr "Wird geladen"
 
 #. label: the plugin page's registered label (e.g. 'Audit Log')
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/pages/$.tsx
 msgid "pluginPage.loading.aria"
-msgstr ""
+msgstr "{label} wird geladen"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.entry.edit.loading"
-msgstr ""
+msgstr "Beitrag wird geladen…"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.loadingAria"
-msgstr ""
+msgstr "Revisionen werden geladen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.loading"
-msgstr ""
+msgstr "Einstellungen werden geladen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.loadingAria"
-msgstr ""
+msgstr "Begriff wird geladen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.loading"
-msgstr ""
+msgstr "Tokens werden geladen…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.loading.aria"
-msgstr ""
+msgstr "Benutzer wird geladen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.loading"
-msgstr ""
+msgstr "Benutzer werden geladen"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.entry.edit.stale.loading"
-msgstr ""
+msgstr "Wird geladen…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.list.loading"
-msgstr ""
+msgstr "Wird geladen…"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.loadingMore"
-msgstr ""
+msgstr "Wird geladen…"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.loading"
-msgstr ""
+msgstr "Wird geladen…"
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.loading"
-msgstr ""
+msgstr "Wird geladen…"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.loading"
-msgstr ""
+msgstr "Wird geladen…"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/reference-picker.tsx
 msgid "metaBox.reference.loading"
-msgstr ""
+msgstr "Wird geladen…"
 
 #. js-lingui-explicit-id
 #: src/lib/magic-link.ts
 msgid "magicLinkRequest.error.notConfigured"
-msgstr ""
+msgstr "Magic-Link-Anmeldung ist auf dieser Website nicht konfiguriert."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.title"
-msgstr ""
+msgstr "Mailer"
 
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.item.mailer"
-msgstr ""
+msgstr "Mailer"
 
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.management"
-msgstr ""
+msgstr "Verwaltung"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.authorFilter.mine"
-msgstr ""
+msgstr "Meine"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.empty.description.self"
-msgstr ""
+msgstr "Erstellen Sie oben eines für Ihre CLI / Ihren MCP-Server / Ihren CI-Bot."
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.submit.idle"
-msgstr ""
+msgstr "Token erstellen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.submit.pending"
-msgstr ""
+msgstr "Wird erstellt…"
 
 #. js-lingui-explicit-id
 #: src/editor/device-labels.ts
 msgid "editor.device.mobile"
-msgstr ""
+msgstr "Mobil"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.confirm"
-msgstr ""
+msgstr "In den Papierkorb verschieben"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.moving"
-msgstr ""
+msgstr "Wird verschoben…"
 
 #. count: number of h1 elements detected in the editor tree
 #. js-lingui-explicit-id
 #: src/editor/HeadingAuditPanel.tsx
 msgid "editor.headingAudit.multipleH1"
-msgstr ""
+msgstr "Mehrere <h1> auf der Seite ({count} gefunden). Behalten Sie nur eine Überschrift der obersten Ebene."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.name.label"
-msgstr ""
+msgstr "Name"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.name.label"
-msgstr ""
+msgstr "Name"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/index.tsx
 msgid "terms.list.column.name"
-msgstr ""
+msgstr "Name"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/bootstrap.tsx
 msgid "auth.bootstrap.name"
-msgstr ""
+msgstr "Name"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/accept-invite/$token.tsx
 msgid "auth.acceptInvite.name"
-msgstr ""
+msgstr "Name"
 
 #. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.name"
-msgstr ""
+msgstr "Name"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.col.name"
-msgstr ""
+msgstr "Name"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.name"
-msgstr ""
+msgstr "Name"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.rename.nameEmpty"
-msgstr ""
+msgstr "Name darf nicht leer sein."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.required"
-msgstr ""
+msgstr "Name ist erforderlich."
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.nameRequired"
-msgstr ""
+msgstr "Name ist erforderlich."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.tooLong"
-msgstr ""
+msgstr "Name muss ≤ 64 Zeichen lang sein."
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.nameTooLong"
-msgstr ""
+msgstr "Name muss ≤ 64 Zeichen lang sein."
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.networkError"
-msgstr ""
+msgstr "Netzwerkfehler. Verbindung prüfen und erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.lastSignIn.never"
-msgstr ""
+msgstr "Nie"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.expiry.never"
-msgstr ""
+msgstr "Nie"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.never"
-msgstr ""
+msgstr "Nie"
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.dialog.newLabel"
-msgstr ""
+msgstr "Neue E-Mail"
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.placeholder"
-msgstr ""
+msgstr "new@example.com"
 
 #. js-lingui-explicit-id
 #: src/components/data-table/list-pagination.tsx
 msgid "listPagination.next.label"
-msgstr ""
+msgstr "Weiter"
 
 #. js-lingui-explicit-id
 #: src/editor/field-type-translator.ts
 msgid "fieldTypes.boolean.no"
-msgstr ""
+msgstr "Nein"
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.userNotFound"
-msgstr ""
+msgstr "Für diese E-Mail wurde kein Konto gefunden."
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.scope.empty"
-msgstr ""
+msgstr "Keine Rechte"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffPanel.tsx
 msgid "editor.revisions.diff.empty"
-msgstr ""
+msgstr "Keine Änderungen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.title"
-msgstr ""
+msgstr "Noch keine Inhaltstypen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.list.empty"
-msgstr ""
+msgstr "Keine Domains konfiguriert. OAuth-Registrierung ist geschlossen, bis mindestens eine aktivierte Domain hinzugefügt wurde."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.empty.title"
-msgstr ""
+msgstr "Keine Gruppen auf dieser Seite"
 
 #. js-lingui-explicit-id
 #: src/editor/HeadingAuditPanel.tsx
 msgid "editor.headingAudit.empty"
-msgstr ""
+msgstr "Keine Probleme mit der Überschriftenstruktur erkannt."
 
 #. js-lingui-explicit-id
 #: src/lib/mailer-errors.ts
 msgid "mailer.test.error.notConfigured"
-msgstr ""
+msgstr "Kein Mailer-Adapter konfiguriert. Übergeben Sie einen `mailer:` an `plumix({...})` (z. B. consoleMailer() für die Entwicklung oder Ihren Resend-/Postmark-/SES-Wrapper)."
 
 #. js-lingui-explicit-id
 #: src/editor/SlashMenuPanel.tsx
 msgid "slashMenu.empty"
-msgstr ""
+msgstr "Keine Treffer"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.noMatches"
-msgstr ""
+msgstr "Keine Treffer"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/reference-picker.tsx
 msgid "metaBox.reference.noMatches"
-msgstr ""
+msgstr "Keine Treffer"
 
 #. js-lingui-explicit-id
 #: src/components/form/multi-select.tsx
 msgid "form.multiSelect.empty"
-msgstr ""
+msgstr "Keine Treffer."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.noAuthenticator"
-msgstr ""
+msgstr "Auf diesem Gerät ist kein Passkey verfügbar. Versuchen Sie sich auf dem Gerät anzumelden, auf dem Sie ihn registriert haben."
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.empty"
-msgstr ""
+msgstr "Keine Passkeys registriert. Fügen Sie einen hinzu, um die Anmeldung zu aktivieren."
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.empty"
-msgstr ""
+msgstr "Keine von plumix verwalteten Sitzungen. Ihre Anmeldung wird von einem externen Identitätsanbieter verarbeitet."
 
 #. js-lingui-explicit-id
 #: src/components/data-table/data-table.tsx
 msgid "dataTable.emptyState"
-msgstr ""
+msgstr "Keine Ergebnisse."
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.empty"
-msgstr ""
+msgstr "Noch keine Revisionen."
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.empty"
-msgstr ""
+msgstr "Keine Zeilen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.empty.title"
-msgstr ""
+msgstr "Noch keine Einstellungen registriert"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.empty.title"
-msgstr ""
+msgstr "Noch keine Tokens"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.empty.title"
-msgstr ""
+msgstr "Keine Benutzer passen zu Ihrem Filter"
 
 #. js-lingui-explicit-id
 #: src/editor/StyleTab.tsx
 msgid "editor.styleTab.select.none"
-msgstr ""
+msgstr "Keiner"
 
 #. js-lingui-explicit-id
 #: src/editor/TokenSwatchList.tsx
 msgid "tokenSwatch.none"
-msgstr ""
+msgstr "Keiner"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.emptyValue"
-msgstr ""
+msgstr "Nichts ausgewählt"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/reference-picker.tsx
 msgid "metaBox.reference.emptyValue"
-msgstr ""
+msgstr "Nichts ausgewählt"
 
 #. js-lingui-explicit-id
 #: src/routes/__root.tsx
 msgid "notFound.title"
-msgstr ""
+msgstr "Nicht gefunden"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.notFound.title"
-msgstr ""
+msgstr "Nicht gefunden"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.notFound.title"
-msgstr ""
+msgstr "Nicht gefunden"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.notFound.title"
-msgstr ""
+msgstr "Nicht gefunden"
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.registrationClosed"
-msgstr ""
+msgstr "OAuth-Registrierung ist nicht verfügbar, bis ein Administrator die Einrichtung abgeschlossen hat."
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.capabilities.help"
-msgstr ""
+msgstr "Eine Berechtigung pro Zeile. Das Token kann die Rechte Ihrer Rolle niemals überschreiten — dies ist eine zusätzliche Einschränkung."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.role.selfReadonly"
-msgstr ""
+msgstr "Nur ein anderer Administrator kann Ihre Rolle ändern."
 
 #. js-lingui-explicit-id
 #: src/editor/PatternRefPreview.tsx
 msgid "editor.patternRef.openSource"
-msgstr ""
+msgstr "Quelle öffnen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.recipient.placeholder"
-msgstr ""
+msgstr "ops@example.com"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.oauth.separator"
-msgstr ""
+msgstr "oder"
 
 #. js-lingui-explicit-id
 #: src/editor/SlashMenuPanel.tsx
 msgid "slashMenu.uncategorized"
-msgstr ""
+msgstr "Sonstige"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.tab.outline"
-msgstr ""
+msgstr "Gliederung"
 
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.overview"
-msgstr ""
+msgstr "Übersicht"
 
 #. js-lingui-explicit-id
 #: src/editor/StyleTab.tsx
 msgid "editor.styleTab.section.padding"
-msgstr ""
+msgstr "Innenabstand"
 
 #. page: 1-based current page number in the list
 #. js-lingui-explicit-id
 #: src/components/data-table/list-pagination.tsx
 msgid "listPagination.page"
-msgstr ""
+msgstr "Seite {page}"
 
 #. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.parent"
-msgstr ""
+msgstr "Übergeordnet"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.title"
-msgstr ""
+msgstr "Passkeys"
 
 #. slug: the pattern's registered slug (e.g. 'core/three-columns'); pass through verbatim
 #. js-lingui-explicit-id
 #: src/editor/PatternRefPreview.tsx
 msgid "editor.patternRef.unresolved"
-msgstr ""
+msgstr "Muster nicht registriert: <code>{slug}</code>"
 
 #. js-lingui-explicit-id
 #: src/editor/PatternsSection.tsx
 msgid "patternsSection.heading"
-msgstr ""
+msgstr "Muster"
 
 #. newEmail: the new address awaiting confirmation; expiresAt: pre-formatted relative-time like 'in 2 hours'
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.pending"
-msgstr ""
+msgstr "Ausstehende Änderung zu <code>{newEmail}</code> — läuft {expiresAt} ab"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.description"
-msgstr ""
+msgstr "Endgültig. Beiträge bleiben erhalten, aber Sie wählen, wer die Urheberschaft erbt."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopeMode.label"
-msgstr ""
+msgstr "Berechtigungen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.permissions"
-msgstr ""
+msgstr "Berechtigungen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.description.self"
-msgstr ""
+msgstr "Persönliche Zugriffstokens für CLIs, MCP-Server, CI-Bots oder andere Nicht-Browser-Clients. Das vollständige Geheimnis wird einmalig zum Zeitpunkt der Erstellung angezeigt."
 
 #. blockTitle: the parent block's registered title (e.g. 'Cover', 'Gallery')
 #. js-lingui-explicit-id
 #: src/editor/BlockScopePicker.tsx
 msgid "blockScopePicker.description"
-msgstr ""
+msgstr "Wählen Sie ein Layout zum Einfügen oder brechen Sie ab, um mit einem leeren {blockTitle} zu beginnen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/create.tsx
 msgid "terms.create.description.hierarchical"
-msgstr ""
+msgstr "Wählen Sie einen übergeordneten Begriff, um diesen zu verschachteln, oder lassen Sie das Feld leer für einen Begriff auf Stammebene."
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.canvas.pickStarter"
-msgstr ""
+msgstr "Vorlage auswählen…"
 
 #. js-lingui-explicit-id
 #: src/editor/StarterModal.tsx
 msgid "starterModal.description"
-msgstr ""
+msgstr "Wählen Sie ein Start-Layout oder beginnen Sie mit einer leeren Leinwand."
+
+#. js-lingui-explicit-id
+#: src/components/error-boundary-fallback.tsx
+msgid "errorBoundary.title"
+msgstr "Etwas ist schiefgelaufen"
+
+#. js-lingui-explicit-id
+#: src/components/error-boundary-fallback.tsx
+msgid "errorBoundary.showError"
+msgstr "Fehler anzeigen"
+
+#. js-lingui-explicit-id
+#: src/components/error-boundary-fallback.tsx
+msgid "errorBoundary.hideError"
+msgstr "Fehler ausblenden"
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
 msgid "plugin.errorBoundary.iconAria"
-msgstr ""
+msgstr "Plugin-Symbol konnte nicht gerendert werden"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/pages/$.tsx
 msgid "pluginPage.notLoaded.title"
-msgstr ""
+msgstr "Plugin nicht geladen"
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
 msgid "plugin.errorBoundary.pageTitle"
-msgstr ""
+msgstr "Plugin-Seite konnte nicht gerendert werden"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.col.prefix"
-msgstr ""
+msgstr "Präfix"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
 msgid "editor.revisions.preview.title"
-msgstr ""
+msgstr "Vorschau der Revision"
 
 #. js-lingui-explicit-id
 #: src/components/data-table/list-pagination.tsx
 msgid "listPagination.prev.label"
-msgstr ""
+msgstr "Zurück"
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
@@ -2262,392 +2274,392 @@ msgstr "Profil"
 #. js-lingui-explicit-id
 #: src/components/shell/user-menu.tsx
 msgid "menu.profile"
-msgstr ""
+msgstr "Profil"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.draft.publish"
-msgstr ""
+msgstr "Veröffentlichen"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.publish"
-msgstr ""
+msgstr "Veröffentlichen"
 
 #. js-lingui-explicit-id
 #: src/components/editor/plain-form-layout.tsx
 msgid "editor.plainForm.publish"
-msgstr ""
+msgstr "Veröffentlichen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.statusFilter.published"
-msgstr ""
+msgstr "Veröffentlicht"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.tab.publishes"
-msgstr ""
+msgstr "Veröffentlichungen"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.draft.publishing"
-msgstr ""
+msgstr "Wird veröffentlicht…"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffPanel.tsx
 msgid "editor.revisions.diff.tab.json"
-msgstr ""
+msgstr "Rohes JSON"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.status.toggle.enable"
-msgstr ""
+msgstr "Benutzer reaktivieren"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.reassign.label"
-msgstr ""
+msgstr "Beiträge neu zuweisen an"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.recipient.label"
-msgstr ""
+msgstr "Empfänger"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/reference-picker.tsx
 msgid "metaBox.reference.orphan"
-msgstr ""
+msgstr "Referenz fehlt — erneut auswählen oder zurücksetzen"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.orphan"
-msgstr ""
+msgstr "Referenz fehlt — entfernen oder erneut auswählen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.cardDescription"
-msgstr ""
+msgstr "Entfernt diesen Begriff und löst die Zuweisung von allen Beiträgen, die ihn verwenden. Untergeordnete werden auf Stammebene gehoben (deren Beiträge behalten ihre anderen Begriffszuweisungen)."
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.rename.button"
-msgstr ""
+msgstr "Umbenennen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.rename.label"
-msgstr ""
+msgstr "Passkey umbenennen"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
 msgid "editor.revisions.preview.restore"
-msgstr ""
+msgstr "Diese Revision wiederherstellen"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
 msgid "editor.revisions.preview.restoring"
-msgstr ""
+msgstr "Wird wiederhergestellt…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopeMode.restrict"
-msgstr ""
+msgstr "Auf bestimmte Berechtigungen beschränken"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.scope.restrict"
-msgstr ""
+msgstr "Auf bestimmte Berechtigungen beschränken"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffDialog.tsx
 msgid "editor.revisions.diffDialog.title"
-msgstr ""
+msgstr "Revisions-JSON-Diff"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.trigger"
-msgstr ""
+msgstr "Revisionen"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.title"
-msgstr ""
+msgstr "Revisionen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.revoke.button"
-msgstr ""
+msgstr "Widerrufen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.revoke.confirm"
-msgstr ""
+msgstr "Widerrufen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.button"
-msgstr ""
+msgstr "Beenden"
 
 #. name: the user-chosen token nickname (e.g. 'CI deploy key')
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.revoke.title"
-msgstr ""
+msgstr "\"{name}\" widerrufen?"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.revoke.pending"
-msgstr ""
+msgstr "Wird widerrufen…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.role.label"
-msgstr ""
+msgstr "Rolle"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.column.role"
-msgstr ""
+msgstr "Rolle"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.role.label"
-msgstr ""
+msgstr "Rolle"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.commentSave"
-msgstr ""
+msgstr "Speichern"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.rename.save"
-msgstr ""
+msgstr "Speichern"
 
 #. js-lingui-explicit-id
 #: src/components/editor/plain-form-layout.tsx
 msgid "editor.plainForm.save"
-msgstr ""
+msgstr "Speichern"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.submit.idle"
-msgstr ""
+msgstr "Änderungen speichern"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.submit"
-msgstr ""
+msgstr "Änderungen speichern"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.submit.idle"
-msgstr ""
+msgstr "Änderungen speichern"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.draft.save"
-msgstr ""
+msgstr "Entwurf speichern"
 
 #. js-lingui-explicit-id
 #: src/editor/AutosaveStatus.tsx
 msgid "editor.autosave.saved"
-msgstr ""
+msgstr "Gespeichert"
 
 #. js-lingui-explicit-id
 #: src/components/editor/plain-form-layout.tsx
 msgid "editor.plainForm.status.saved"
-msgstr ""
+msgstr "Gespeichert"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.saved"
-msgstr ""
+msgstr "Gespeichert."
 
 #. js-lingui-explicit-id
 #: src/editor/AutosaveStatus.tsx
 msgid "editor.autosave.saving"
-msgstr ""
+msgstr "Wird gespeichert..."
 
 #. js-lingui-explicit-id
 #: src/components/editor/plain-form-layout.tsx
 msgid "editor.plainForm.status.saving"
-msgstr ""
+msgstr "Wird gespeichert..."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.submit.pending"
-msgstr ""
+msgstr "Wird gespeichert…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.submit.pending"
-msgstr ""
+msgstr "Wird gespeichert…"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.draft.saving"
-msgstr ""
+msgstr "Wird gespeichert…"
 
 #. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.submitting"
-msgstr ""
+msgstr "Wird gespeichert…"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.rename.pending"
-msgstr ""
+msgstr "Wird gespeichert…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.statusFilter.scheduled"
-msgstr ""
+msgstr "Geplant"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.col.scopes"
-msgstr ""
+msgstr "Berechtigungen"
 
 #. kind: the entity type being searched (e.g. 'posts', 'tags')
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.searchPlaceholder"
-msgstr ""
+msgstr "{kind} suchen…"
 
 #. kind: the entity type being searched (e.g. 'posts', 'tags')
 #. js-lingui-explicit-id
 #: src/components/meta-box/reference-picker.tsx
 msgid "metaBox.reference.searchPlaceholder"
-msgstr ""
+msgstr "{kind} suchen…"
 
 #. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.dialogDescription"
-msgstr ""
+msgstr "{kind}-Einträge suchen und auswählen"
 
 #. kind: the entity type the picker is constrained to (e.g. 'post', 'category', 'user')
 #. js-lingui-explicit-id
 #: src/components/meta-box/reference-picker.tsx
 msgid "metaBox.reference.dialogDescription"
-msgstr ""
+msgstr "{kind} suchen und auswählen"
 
 #. js-lingui-explicit-id
 #: src/editor/SlashMenuPanel.tsx
 msgid "slashMenu.searchAria"
-msgstr ""
+msgstr "Blöcke und Muster suchen"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.slashMenu.description"
-msgstr ""
+msgstr "Suchen Sie Blöcke und Muster nach Titel oder Stichwort und drücken Sie Eingabe zum Einfügen."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.searchPlaceholder"
-msgstr ""
+msgstr "Nach E-Mail suchen…"
 
 #. js-lingui-explicit-id
 #: src/components/form/multi-select.tsx
 msgid "form.multiSelect.search"
-msgstr ""
+msgstr "Suchen…"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.transport.securityKey"
-msgstr ""
+msgstr "Sicherheitsschlüssel"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.selectIdle"
-msgstr ""
+msgstr "Auswählen"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/reference-picker.tsx
 msgid "metaBox.reference.selectIdle"
-msgstr ""
+msgstr "Auswählen"
 
 #. js-lingui-explicit-id
 #: src/editor/BlockActionsPanel.tsx
 msgid "blockActions.empty"
-msgstr ""
+msgstr "Wählen Sie einen Block, um Aktionen anzuzeigen."
 
 #. js-lingui-explicit-id
 #: src/editor/StyleTab.tsx
 msgid "editor.styleTab.empty"
-msgstr ""
+msgstr "Wählen Sie einen Block zum Stylen aus."
 
 #. js-lingui-explicit-id
 #: src/components/form/multi-select.tsx
 msgid "form.multiSelect.placeholder"
-msgstr ""
+msgstr "Auswählen…"
 
 #. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.registrationClosed"
-msgstr ""
+msgstr "Selbstregistrierung ist nicht verfügbar, bis ein Administrator die Einrichtung abgeschlossen hat."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.title"
-msgstr ""
+msgstr "Testnachricht senden"
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.dialog.submit.idle"
-msgstr ""
+msgstr "Bestätigung senden"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.submit.idle"
-msgstr ""
+msgstr "Einladung senden"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.submit.idle"
-msgstr ""
+msgstr "Test senden"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.submit.pending"
-msgstr ""
+msgstr "Wird gesendet…"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.pending"
-msgstr ""
+msgstr "Wird gesendet…"
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.dialog.submit.pending"
-msgstr ""
+msgstr "Wird gesendet…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.description"
-msgstr ""
+msgstr "Sendet eine einmalige Nachricht über denselben Transport, den Magic-Link verwendet. Fehler erscheinen hier wortwörtlich — im Gegensatz zum Magic-Link-Anfrage-Flow, der Mailer-Fehler absichtlich verschluckt, damit die Antwortform nicht verrät, ob eine E-Mail registriert ist."
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/accept-invite/$token.tsx
 msgid "auth.acceptInvite.description"
-msgstr ""
+msgstr "Richten Sie einen Passkey ein, um die Kontoerstellung abzuschließen. Ihr Browser oder Gerät führt Sie durch die Eingabeaufforderung."
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/bootstrap.tsx
 msgid "auth.bootstrap.description"
-msgstr ""
+msgstr "Richten Sie Ihre Website ein — diese E-Mail wird das Administrator-Konto."
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/accept-invite/$token.tsx
 msgid "auth.acceptInvite.submit.pending"
-msgstr ""
+msgstr "Wird eingerichtet…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.title"
-msgstr ""
+msgstr "Einstellungen"
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
@@ -2657,200 +2669,190 @@ msgstr "Einstellungen"
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.item.settings"
-msgstr ""
+msgstr "Einstellungen"
 
 #. js-lingui-explicit-id
 #: src/components/shell/user-menu.tsx
 msgid "menu.settings"
-msgstr ""
+msgstr "Einstellungen"
 
 #. email: the invited user's address
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.success.description"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/components/error-boundary-fallback.tsx
-msgid "errorBoundary.showError"
-msgstr ""
+msgstr "Teilen Sie den untenstehenden Link mit {email}. Sie registrieren einen Passkey beim ersten Öffnen. Der Link läuft in 7 Tagen ab."
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffDialog.tsx
 msgid "editor.revisions.diffDialog.description"
-msgstr ""
+msgstr "Nebeneinander: diese Revision (links) vs. der aktuelle Eintrag (rechts)."
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.title"
-msgstr ""
+msgstr "Anmelden"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.passkey.submit"
-msgstr ""
+msgstr "Mit Passkey anmelden"
 
 #. js-lingui-explicit-id
 #: src/components/shell/user-menu.tsx
 msgid "menu.signOut"
-msgstr ""
+msgstr "Abmelden"
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.confirm"
-msgstr ""
+msgstr "Gerät abmelden"
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revokeAll.idle"
-msgstr ""
+msgstr "Andere Geräte abmelden"
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.title"
-msgstr ""
+msgstr "Dieses Gerät abmelden?"
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.stateInvalid"
-msgstr ""
+msgstr "Anmeldung abgelaufen oder ungültig. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.stateExpired"
-msgstr ""
+msgstr "Anmeldung abgelaufen. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.userCancelled"
-msgstr ""
+msgstr "Anmeldung abgebrochen."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.registrationClosed"
-msgstr ""
+msgstr "Registrierung auf dieser Website ist nicht geöffnet."
 
 #. when: pre-formatted relative-time string like '2 hours ago'
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.signedIn"
-msgstr ""
+msgstr "Angemeldet {when}"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.passkey.pending"
-msgstr ""
+msgstr "Anmeldung läuft…"
 
 #. js-lingui-explicit-id
 #: src/components/shell/user-menu.tsx
 msgid "menu.signOut.pending"
-msgstr ""
+msgstr "Abmeldung läuft…"
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revokeAll.pending"
-msgstr ""
+msgstr "Abmeldung läuft…"
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.pending"
-msgstr ""
+msgstr "Abmeldung läuft…"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffPanel.tsx
 msgid "editor.revisions.diff.field.slug"
-msgstr ""
+msgstr "Slug"
 
 #. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.slug"
-msgstr ""
+msgstr "Slug"
 
 #. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.slug.format"
-msgstr ""
+msgstr "Slug darf nur Kleinbuchstaben, Ziffern und Bindestriche enthalten."
 
 #. js-lingui-explicit-id
 #: src/lib/email-change-errors.ts
 msgid "emailChange.error.emailTaken"
-msgstr ""
+msgstr "Jemand anderes hat diese E-Mail zwischen Anfrage und Klick beansprucht. Fordern Sie eine neue Änderung auf eine andere Adresse an."
 
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.description"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/components/error-boundary-fallback.tsx
-msgid "errorBoundary.title"
-msgstr ""
+msgstr "Jemand anderes hat Änderungen an diesem Eintrag veröffentlicht, während Sie ausstehende Änderungen hatten. Wählen Sie aus, welche Version beibehalten werden soll, bevor Sie fortfahren."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.invalidInput"
-msgstr ""
+msgstr "Mit dem Formular ist etwas schiefgelaufen. Bitte neu laden und erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.unknown"
-msgstr ""
+msgstr "Etwas ist schiefgelaufen. Bitte erneut versuchen."
 
 #. label: the column being sorted (e.g. 'Title', 'Status', 'Updated'); direction: pre-resolved direction word like 'ascending' or 'descending'
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.sortAria"
-msgstr ""
+msgstr "Nach {label} sortieren ({direction})"
 
 #. js-lingui-explicit-id
 #: src/editor/StarterModal.tsx
 msgid "starterModal.title"
-msgstr ""
+msgstr "Mit einem Muster beginnen"
 
 #. js-lingui-explicit-id
 #: src/editor/StarterModal.tsx
 msgid "starterModal.startBlank"
-msgstr ""
+msgstr "Leer beginnen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.column.status"
-msgstr ""
+msgstr "Status"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.column.status"
-msgstr ""
+msgstr "Status"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.tab.style"
-msgstr ""
+msgstr "Stil"
 
 #. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
 msgid "userRole.subscriber"
-msgstr ""
+msgstr "Abonnent"
 
 #. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
 msgid "userRole.long.subscriber"
-msgstr ""
+msgstr "Abonnent — nur lesen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.synced"
-msgstr ""
+msgstr "Synchronisiert"
 
 #. js-lingui-explicit-id
 #: src/editor/device-labels.ts
 msgid "editor.device.tablet"
-msgstr ""
+msgstr "Tablet"
 
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.termTaxonomies"
-msgstr ""
+msgstr "Taxonomien"
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
@@ -2861,423 +2863,423 @@ msgstr "Begriffe"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.feedback.ok"
-msgstr ""
+msgstr "Testnachricht an {to} gesendet. Wenn sie nicht innerhalb einer Minute ankommt, prüfen Sie die Protokolle Ihres Transport-Adapters."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.description"
-msgstr ""
+msgstr "Testet, dass der konfigurierte ausgehende E-Mail-Transport tatsächlich zustellt. Verwendet von Magic-Link-Anmeldung, Einladungs-E-Mails und jedem Plugin, das den gemeinsamen Mailer nutzt."
 
 #. js-lingui-explicit-id
 #: src/editor/StyleTab.tsx
 msgid "editor.styleTab.section.textColor"
-msgstr ""
+msgstr "Textfarbe"
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.linkBroken"
-msgstr ""
+msgstr "Dieses Konto ist nicht erreichbar. Wenden Sie sich an einen Administrator, um es erneut zu verknüpfen."
 
 #. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.accountDisabled"
-msgstr ""
+msgstr "Dieses Konto ist deaktiviert."
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.accountDisabled"
-msgstr ""
+msgstr "Dieses Konto ist deaktiviert."
 
 #. js-lingui-explicit-id
 #: src/lib/email-change-errors.ts
 msgid "emailChange.error.tokenExpired"
-msgstr ""
+msgstr "Dieser Bestätigungslink ist abgelaufen. Fordern Sie eine neue E-Mail-Änderung an."
 
 #. js-lingui-explicit-id
 #: src/lib/email-change-errors.ts
 msgid "emailChange.error.missingToken"
-msgstr ""
+msgstr "Diesem Bestätigungslink fehlt das Token. Fordern Sie eine neue E-Mail-Änderung an."
 
 #. js-lingui-explicit-id
 #: src/lib/email-change-errors.ts
 msgid "emailChange.error.tokenInvalid"
-msgstr ""
+msgstr "Dieser Bestätigungslink ist nicht gültig. Möglicherweise wurde er bereits verwendet."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.error.domainExists"
-msgstr ""
+msgstr "Diese Domain ist bereits konfiguriert."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.emailMismatch"
-msgstr ""
+msgstr "Diese E-Mail stimmt nicht mit Ihrem angemeldeten Konto überein."
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.error.taken"
-msgstr ""
+msgstr "Diese E-Mail wird bereits in einem anderen Konto verwendet."
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.alreadyRegistered"
-msgstr ""
+msgstr "Dieser Passkey ist bereits in diesem Konto registriert."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.credentialAlreadyRegistered"
-msgstr ""
+msgstr "Dieser Passkey ist bereits auf dieser Website registriert."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.credentialNotFound"
-msgstr ""
+msgstr "Dieser Passkey ist auf dieser Website nicht registriert. Versuchen Sie einen anderen."
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.providerNotConfigured"
-msgstr ""
+msgstr "Dieser Anbieter ist nicht konfiguriert."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.challengeNotFound"
-msgstr ""
+msgstr "Anmeldeversuch ist abgelaufen. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.challengeNotBoundToUser"
-msgstr ""
+msgstr "Anmeldeversuch ist abgelaufen. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.tokenExpired"
-msgstr ""
+msgstr "Dieser Anmeldelink ist abgelaufen. Fordern Sie einen neuen an."
 
 #. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.missingToken"
-msgstr ""
+msgstr "Diesem Anmeldelink fehlt das Token. Fordern Sie einen neuen an und versuchen Sie es erneut."
 
 #. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.tokenInvalid"
-msgstr ""
+msgstr "Dieser Anmeldelink ist nicht gültig. Möglicherweise wurde er bereits verwendet. Fordern Sie einen neuen an."
 
 #. js-lingui-explicit-id
 #: src/lib/email-change-errors.ts
 msgid "emailChange.error.userNotFound"
-msgstr ""
+msgstr "Das Konto, zu dem diese Bestätigung gehört, wurde entfernt."
 
 #. js-lingui-explicit-id
 #: src/lib/email-change-errors.ts
 msgid "emailChange.error.accountDisabled"
-msgstr ""
+msgstr "Das Konto, zu dem diese Bestätigung gehört, ist deaktiviert."
 
 #. path: the manifest-declared admin-route path (e.g. '/audit-log'); pass through verbatim
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/pages/$.tsx
 msgid "pluginPage.notLoaded.body"
-msgstr ""
+msgstr "Das Admin-Manifest deklariert eine Seite unter <code>{path}</code>, aber für sie wurde keine React-Komponente registriert."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.description"
-msgstr ""
+msgstr "Die CLI zeigt einen 8-stelligen, durch einen Bindestrich getrennten Code — «ABCD-EFGH». Nur Buchstaben und Ziffern, keine Nullen oder Einsen."
 
 #. name: the user-chosen passkey nickname (e.g. 'MacBook', 'iPhone')
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.description"
-msgstr ""
+msgstr "Das Gerät, das \"{name}\" registriert hat, kann sich nicht mehr anmelden. Sie können es später erneut registrieren."
 
 #. js-lingui-explicit-id
 #: src/lib/mailer-errors.ts
 msgid "mailer.test.error.sendFailed"
-msgstr ""
+msgstr "Der Mailer-Adapter hat beim Senden einen Fehler ausgelöst. Prüfen Sie die Worker-Protokolle auf den zugrundeliegenden Fehler."
 
 #. js-lingui-explicit-id
 #: src/routes/__root.tsx
 msgid "notFound.description"
-msgstr ""
+msgstr "Die gesuchte Seite existiert nicht oder die Ressource ist nicht registriert. URL prüfen und erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.challengeMismatch"
-msgstr ""
+msgstr "Der Passkey wurde für eine andere Einladung erstellt. Bitte neu laden und erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.emailMissing"
-msgstr ""
+msgstr "Der Anbieter hat keine E-Mail-Adresse zurückgegeben."
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.emailUnverified"
-msgstr ""
+msgstr "Der Anbieter hat Ihre E-Mail noch nicht bestätigt. Bestätigen Sie sie dort und versuchen Sie es erneut."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/-errors.ts
 msgid "terms.error.parentMismatch"
-msgstr ""
+msgstr "Der ausgewählte übergeordnete gehört zu einer anderen Taxonomie."
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.revoke.description"
-msgstr ""
+msgstr "Das Token funktioniert sofort nicht mehr. Jeder Client, der es verwendet, erhält bei der nächsten Anfrage 401."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.description"
-msgstr ""
+msgstr "Sie registrieren einen Passkey beim ersten Öffnen des Einladungslinks. Kein Passwort erforderlich."
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.error.accountDisabled"
-msgstr ""
+msgstr "Dieses Konto ist deaktiviert."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.error.expired"
-msgstr ""
+msgstr "Dieser Code ist abgelaufen, bevor Sie fertig werden konnten — starten Sie Ihre CLI neu."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.error.alreadyApproved"
-msgstr ""
+msgstr "Dieser Code wurde bereits genehmigt. Starten Sie Ihre CLI neu, falls sie das Token nicht erhalten hat."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.error.alreadyDenied"
-msgstr ""
+msgstr "Dieser Code wurde bereits abgelehnt."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.error.expired"
-msgstr ""
+msgstr "Dieser Code ist abgelaufen. Starten Sie Ihre CLI neu, um einen neuen zu erhalten."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.error.alreadyApproved"
-msgstr ""
+msgstr "Dieser Code wurde bereits in einem anderen Tab genehmigt."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.error.alreadyDenied"
-msgstr ""
+msgstr "Dieser Code wurde bereits abgelehnt."
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.transport.internal"
-msgstr ""
+msgstr "Dieses Gerät"
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.thisDevice"
-msgstr ""
+msgstr "Dieses Gerät"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.noAuthenticator"
-msgstr ""
+msgstr "Dieses Gerät unterstützt keine Passkeys."
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/plugin-field-error-boundary.tsx
 msgid "metaBox.pluginField.crashed"
-msgstr ""
+msgstr "Dieses Feld konnte nicht gerendert werden. Details in der Browser-Konsole."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.tokenExpired"
-msgstr ""
+msgstr "Dieser Einladungslink ist abgelaufen. Bitten Sie Ihren Administrator, einen neuen zu senden."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.invalidToken"
-msgstr ""
+msgstr "Dieser Einladungslink ist nicht mehr gültig. Bitten Sie Ihren Administrator, einen neuen zu senden."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.invalidOrigin"
-msgstr ""
+msgstr "Dieser Passkey ist auf dieser Website nicht verwendbar."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.invalidRpId"
-msgstr ""
+msgstr "Dieser Passkey ist auf dieser Website nicht verwendbar."
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.notFound"
-msgstr ""
+msgstr "Dieser Passkey existiert nicht mehr. Liste aktualisieren."
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
 msgid "plugin.errorBoundary.unknownPlugin"
-msgstr ""
+msgstr "dieses Plugin"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffDialog.tsx
 msgid "editor.revisions.diffDialog.pane.thisRevision"
-msgstr ""
+msgstr "Diese Revision"
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.notFound"
-msgstr ""
+msgstr "Diese Sitzung existiert nicht mehr. Liste aktualisieren."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.empty.description"
-msgstr ""
+msgstr "Diese Einstellungsseite verweist noch nicht auf registrierte Gruppen. Plugins erstellen Seiten mit dem registerSettingsPage-Helfer:"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.error.hasEntries"
-msgstr ""
+msgstr "Dieser Benutzer hat Beiträge verfasst. Wählen Sie oben jemanden aus, dem sie neu zugewiesen werden sollen."
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.empty.description.admin"
-msgstr ""
+msgstr "Dieser Benutzer hat keine API-Tokens erstellt."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.column.title"
-msgstr ""
+msgstr "Titel"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffPanel.tsx
 msgid "editor.revisions.diff.field.title"
-msgstr ""
+msgstr "Titel"
 
 #. name: the user-chosen token nickname (e.g. 'CI deploy key')
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.secret.title"
-msgstr ""
+msgstr "Token \"{name}\" erstellt"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.label"
-msgstr ""
+msgstr "Token-Name"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.description.admin"
-msgstr ""
+msgstr "Von diesem Benutzer erstellte Tokens. Sie können jedes davon widerrufen — das Erstellen erfordert die authentifizierte Browser-Sitzung des Besitzers."
 
 #. js-lingui-explicit-id
 #: src/editor/BlockActionsPanel.tsx
 msgid "blockActions.transformTo"
-msgstr ""
+msgstr "Umwandeln in"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgctxt "action verb"
 msgid "entries.list.row.trash"
-msgstr ""
+msgstr "In den Papierkorb"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgctxt "entry status"
 msgid "entries.list.statusFilter.trash"
-msgstr ""
+msgstr "Papierkorb"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgctxt "action verb"
 msgid "entries.list.row.trashing"
-msgstr ""
+msgstr "Wird in den Papierkorb verschoben…"
 
 #. js-lingui-explicit-id
 #: src/editor/PatternsSection.tsx
 msgid "patternsSection.uncategorized"
-msgstr ""
+msgstr "Nicht kategorisiert"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.unknownAuthor"
-msgstr ""
+msgstr "Unbekannt"
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.unknownDevice"
-msgstr ""
+msgstr "Unbekanntes Gerät"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.unnamed"
-msgstr ""
+msgstr "Unbenannter Passkey"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/create.tsx
 msgid "editor.entry.create.untitled"
-msgstr ""
+msgstr "Ohne Titel"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.header.titlePlaceholder"
-msgstr ""
+msgstr "Ohne Titel"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.copyAsPattern.untitledFallback"
-msgstr ""
+msgstr "Ohne Titel"
 
 #. js-lingui-explicit-id
 #: src/components/editor/plain-form-layout.tsx
 msgid "editor.plainForm.titlePlaceholder"
-msgstr ""
+msgstr "Ohne Titel"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.description.other"
-msgstr ""
+msgstr "Aktualisieren Sie die Details dieses Kontos. Rollenänderungen machen bestehende Sitzungen sofort ungültig."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.description.self"
-msgstr ""
+msgstr "Aktualisieren Sie Ihren angezeigten Namen. Rolle und Kontostatus werden von Administratoren verwaltet."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.column.updated"
-msgstr ""
+msgstr "Aktualisiert"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.description"
-msgstr ""
+msgstr "Verwenden Sie einen Passkey, holen Sie sich einen einmaligen E-Mail-Link oder fahren Sie mit einem Anbieter fort."
 
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.useMine"
-msgstr ""
+msgstr "Meine verwenden"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.description"
-msgstr ""
+msgstr "Verwenden Sie die nackte Domain — kein Protokoll, kein Pfad."
 
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.useTheirs"
-msgstr ""
+msgstr "Ihre verwenden"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.column.user"
-msgstr ""
+msgstr "Benutzer"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.userCode.label"
-msgstr ""
+msgstr "Benutzer-Code"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.title"
-msgstr ""
+msgstr "Benutzer"
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
@@ -3287,155 +3289,155 @@ msgstr "Benutzer"
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.item.users"
-msgstr ""
+msgstr "Benutzer"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.diffAriaLabel"
-msgstr ""
+msgstr "JSON-Diff ansehen"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffPanel.tsx
 msgid "editor.revisions.diff.tab.visual"
-msgstr ""
+msgstr "Visuell"
 
 #. js-lingui-explicit-id
 #: src/editor/HeadingAuditPanel.tsx
 msgid "editor.headingAudit.warningPrefix"
-msgstr ""
+msgstr "Warnung:"
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.dialog.description"
-msgstr ""
+msgstr "Wir senden einen Bestätigungslink an die neue Adresse. Die Änderung tritt nach dem Klick auf den Link in Kraft. Sitzungen dieses Kontos werden zu diesem Zeitpunkt abgemeldet — die erneute Anmeldung verwendet die neue E-Mail."
 
 #. greeting: the user's display name or email
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.welcome"
-msgstr ""
+msgstr "Willkommen, {greeting}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.tagline"
-msgstr ""
+msgstr "Woran möchten Sie heute arbeiten?"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.tile.description.generic"
-msgstr ""
+msgstr "Schreiben, bearbeiten und veröffentlichen."
 
 #. js-lingui-explicit-id
 #: src/editor/field-type-translator.ts
 msgid "fieldTypes.boolean.yes"
-msgstr ""
+msgstr "Ja"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.you"
-msgstr ""
+msgstr "Sie"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.description"
-msgstr ""
+msgstr "Sie können ihn später aus der Papierkorb-Ansicht wiederherstellen."
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.lastCredential"
-msgstr ""
+msgstr "Sie können Ihren letzten Passkey nicht löschen. Fügen Sie zuerst einen weiteren hinzu."
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.current"
-msgstr ""
+msgstr "Sie können die Sitzung, die Sie gerade verwenden, nicht beenden."
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.draftBanner.title"
-msgstr ""
+msgstr "Sie haben nicht veröffentlichte Entwurfsänderungen."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.credentialLimitReached"
-msgstr ""
+msgstr "Sie haben das Passkey-Limit für dieses Konto erreicht."
 
 #. js-lingui-explicit-id
 #: src/components/profile/language-card.tsx
 msgid "profile.language.description"
-msgstr ""
+msgstr "Ihre Admin-Oberfläche wird in dieser Sprache angezeigt. Die Seite wird nach dem Wechsel neu geladen, damit die neuen Übersetzungen überall angewendet werden."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.userPresenceMissing"
-msgstr ""
+msgstr "Ihr Gerät hat Ihre Anwesenheit nicht bestätigt. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.invalidResponse"
-msgstr ""
+msgstr "Ihr Gerät hat eine unerwartete Antwort zurückgegeben. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.invalidClientData"
-msgstr ""
+msgstr "Ihr Gerät hat eine unerwartete Antwort zurückgegeben. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.unsupportedAttestationFormat"
-msgstr ""
+msgstr "Das Antwortformat Ihres Geräts wird nicht unterstützt."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.invalidSignature"
-msgstr ""
+msgstr "Die Signatur Ihres Geräts konnte nicht verifiziert werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.unsupportedAlgorithm"
-msgstr ""
+msgstr "Der Signatur-Algorithmus Ihres Geräts wird nicht unterstützt."
 
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.yourDraft"
-msgstr ""
+msgstr "Ihr Entwurf"
 
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.title"
-msgstr ""
+msgstr "Ihr Entwurf ist veraltet"
 
 #. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.domainNotAllowed"
-msgstr ""
+msgstr "Ihre E-Mail-Domain ist nicht mehr auf der Whitelist. Bitten Sie einen Administrator, sie hinzuzufügen."
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.domainNotAllowed"
-msgstr ""
+msgstr "Ihre E-Mail-Domain ist nicht auf der Whitelist. Bitten Sie einen Administrator, sie hinzuzufügen."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.counterReplay"
-msgstr ""
+msgstr "Ihr Passkey scheint auf einem anderen Gerät verwendet worden zu sein. Bitte erneut registrieren."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.title.self"
-msgstr ""
+msgstr "Ihr Profil"
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.credentialStorageCorrupt"
-msgstr ""
+msgstr "Ihre gespeicherten Passkey-Daten sind beschädigt. Bitte einen neuen registrieren."
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.canvas.zoomIn"
-msgstr ""
+msgstr "Hineinzoomen"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.canvas.zoomOut"
-msgstr ""
+msgstr "Herauszoomen"

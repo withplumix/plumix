@@ -1,0 +1,368 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-03\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.singular"
+msgstr "Datei"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.plural"
+msgstr "Medien"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.addNew"
+msgstr "Hochladen"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.addNewItem"
+msgstr "Medien hochladen"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.editItem"
+msgstr "Medien bearbeiten"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.newItem"
+msgstr "Neue Medien"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.viewItem"
+msgstr "Medien ansehen"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.searchItems"
+msgstr "Medien suchen…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.notFound"
+msgstr "Noch keine Medien"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.notFoundInTrash"
+msgstr "Papierkorb ist leer"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.allItems"
+msgstr "Alle Medien"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.untitledItem"
+msgstr "Medien ohne Titel"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.media.moveToTrash"
+msgstr "Medien in den Papierkorb verschieben?"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.adminPage.title"
+msgstr "Mediathek"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "core.adminNav.library"
+msgstr "Bibliothek"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.title.library"
+msgstr "Mediathek"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.title.picker"
+msgstr "Medien auswählen"
+
+#. js-lingui-explicit-id
+#. title: the media item's display title
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.pickItemAria"
+msgstr "{title} auswählen"
+
+#. js-lingui-explicit-id
+#. title: the media item's display title
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.openDetailsAria"
+msgstr "Details für {title} öffnen"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.failedToLoad"
+msgstr "Medien konnten nicht geladen werden."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.loadingMore"
+msgstr "Lade mehr…"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.pickerCancel"
+msgstr "Abbrechen"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.pickerUseSelection"
+msgstr "Auswahl übernehmen"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.banner.dismiss"
+msgstr "Schließen"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.dropzone.headline"
+msgstr "Ihre Bibliothek ist leer. Fügen Sie Dateien hinzu, um zu beginnen."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.dropzone.subline"
+msgstr "Ziehen und ablegen oder <0>vom Computer auswählen</0>"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.upload.button"
+msgstr "Hochladen"
+
+#. js-lingui-explicit-id
+#. count: number of files currently uploading
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.upload.progress"
+msgstr "Lade {count, plural, one {# Datei} other {# Dateien}} hoch…"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.heading"
+msgstr "DATEI-DETAILS"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.closeAria"
+msgstr "Details schließen"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.field.assetType"
+msgstr "DATEITYP"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.field.fileSize"
+msgstr "DATEIGRÖSSE"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.field.uploaded"
+msgstr "HOCHGELADEN"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.field.altText"
+msgstr "ALTERNATIVTEXT"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.altPlaceholderImage"
+msgstr "Dieses Bild beschreiben…"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.altPlaceholderOther"
+msgstr "Beschreibung hinzufügen…"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.field.url"
+msgstr "URL"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.copied"
+msgstr "Kopiert"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.copy"
+msgstr "Kopieren"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.download"
+msgstr "Herunterladen"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.delete"
+msgstr "Löschen"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.deleteTitle"
+msgstr "Diese Datei löschen?"
+
+#. js-lingui-explicit-id
+#. title: the media item being deleted
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.deleteDescription"
+msgstr "\"{title}\" wird endgültig entfernt. Seiten oder Beiträge, die sie einbetten, zeigen einen fehlerhaften Link."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.detail.deleteConfirm"
+msgstr "Löschen"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.dialog.cancel"
+msgstr "Abbrechen"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.dialog.confirm"
+msgstr "Bestätigen"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.altEditor.saved"
+msgstr "✓ Gespeichert"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.storageNotConfigured"
+msgstr "Kein Speicher-Adapter konfiguriert — setzen Sie `storage:` in plumix.config.ts."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.payloadTooLarge"
+msgstr "Datei überschreitet die konfigurierte maxUploadSize."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.unsupportedMediaType"
+msgstr "Dieser Dateityp ist in den acceptedTypes des Medien-Plugins nicht erlaubt."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.mimeMismatch"
+msgstr "Die hochgeladenen Bytes entsprechen nicht dem deklarierten Dateityp."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.objectNotFound"
+msgstr "Upload erreichte den Speicher nicht — prüfen Sie die CORS-Regeln Ihres Buckets."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.alreadyConfirmed"
+msgstr "Dieser Upload wurde bereits in einem anderen Tab oder Gerät bestätigt."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.serverCouldntProcess"
+msgstr "Der Server konnte diesen Upload nicht verarbeiten. Bitte erneut versuchen."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.contentLengthRequired"
+msgstr "Upload ohne Content-Length — Ihr Browser oder Proxy verwendet möglicherweise Chunked Transfer."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.csrfTokenMissing"
+msgstr "Anfrage durch CSRF-Prüfung blockiert. Seite neu laden und erneut versuchen."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.empty"
+msgstr "Keine Medien ausgewählt"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.button.change"
+msgstr "Ändern"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.button.select"
+msgstr "Auswählen"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.clear"
+msgstr "Zurücksetzen"
+
+#. id: the media item's numeric id, shown while filename loads
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.pending"
+msgstr "Ausgewählt (ID {id})"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.modalAria"
+msgstr "Medien auswählen"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.empty"
+msgstr "Keine Medien ausgewählt"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.button.select"
+msgstr "Auswählen"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.button.addMore"
+msgstr "Mehr hinzufügen"
+
+#. id: the media item's numeric id, shown while filename loads
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.pending"
+msgstr "Ausgewählt (ID {id})"
+
+#. name: the row's display name (filename or id)
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.moveUpAria"
+msgstr "{name} nach oben verschieben"
+
+#. name: the row's display name (filename or id)
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.moveDownAria"
+msgstr "{name} nach unten verschieben"
+
+#. name: the row's display name (filename or id)
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.removeAria"
+msgstr "{name} entfernen"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.modalAria"
+msgstr "Medien hinzufügen"

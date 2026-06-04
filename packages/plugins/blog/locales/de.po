@@ -1,0 +1,165 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-03\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgctxt "post type general name"
+msgid "plugin.blog.post.plural"
+msgstr "Beiträge"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgctxt "post type singular name"
+msgid "plugin.blog.post.singular"
+msgstr "Beitrag"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgctxt "taxonomy general name"
+msgid "plugin.blog.category.plural"
+msgstr "Kategorien"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgctxt "taxonomy singular name"
+msgid "plugin.blog.category.singular"
+msgstr "Kategorie"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgctxt "taxonomy general name"
+msgid "plugin.blog.tag.plural"
+msgstr "Schlagwörter"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgctxt "taxonomy singular name"
+msgid "plugin.blog.tag.singular"
+msgstr "Schlagwort"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.addNewItem"
+msgstr "Beitrag hinzufügen"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.editItem"
+msgstr "Beitrag bearbeiten"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.newItem"
+msgstr "Neuer Beitrag"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.viewItem"
+msgstr "Beitrag ansehen"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.searchItems"
+msgstr "Beiträge suchen…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.notFound"
+msgstr "Noch keine Beiträge"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.notFoundInTrash"
+msgstr "Papierkorb ist leer"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.allItems"
+msgstr "Alle Beiträge"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.noMatch"
+msgstr "Keine passenden Beiträge"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.untitledItem"
+msgstr "Beitrag ohne Titel"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.post.moveToTrash"
+msgstr "Beitrag in den Papierkorb verschieben?"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.addNewItem"
+msgstr "Kategorie hinzufügen"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.editItem"
+msgstr "Kategorie bearbeiten"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.searchItems"
+msgstr "Kategorien suchen…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.notFound"
+msgstr "Noch keine Kategorien"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.allItems"
+msgstr "Alle Kategorien"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.parentItem"
+msgstr "Übergeordnete Kategorie"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.category.backToItems"
+msgstr "← Zurück zu den Kategorien"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.addNewItem"
+msgstr "Schlagwort hinzufügen"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.editItem"
+msgstr "Schlagwort bearbeiten"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.searchItems"
+msgstr "Schlagwörter suchen…"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.notFound"
+msgstr "Noch keine Schlagwörter"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.allItems"
+msgstr "Alle Schlagwörter"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.tag.backToItems"
+msgstr "← Zurück zu den Schlagwörtern"
