@@ -1,5 +1,6 @@
 import type { HookRegistry } from "../hooks/registry.js";
 import type { AdminBarNode, BarRenderContext } from "./types.js";
+import { barMessages } from "./i18n.js";
 
 const SITE_POSITION = 10;
 const EDIT_THIS_POSITION = 20;
@@ -7,10 +8,13 @@ const NEW_GROUP_POSITION = 15;
 const ACCOUNT_POSITION = 10;
 
 /**
- * Registers the three contributors that ship with core: `site`, `edit-this`,
- * and `account`. Wired at `buildApp` time so they run before any plugin
- * filter handler (priority 10/20/30 — well under the
- * `DEFAULT_HOOK_PRIORITY` of 100 plugins land at).
+ * Registers the four core contributors (`site`, `edit-this`, `+new`,
+ * `account`). Wired at `buildApp` time so they run before any plugin
+ * filter handler.
+ *
+ * Filter priority levels (10/15/20/25/30) stay well under the
+ * `DEFAULT_HOOK_PRIORITY` of 100 plugins land at — plugins see core's
+ * contributions in their input.
  */
 export function registerCoreAdminBarContributors(hooks: HookRegistry): void {
   hooks.addFilter("admin_bar:nodes", siteContributor, {
@@ -35,11 +39,12 @@ function siteContributor(
   nodes: readonly AdminBarNode[],
   ctx: BarRenderContext,
 ): readonly AdminBarNode[] {
+  const fallback = barMessages(ctx.locale).siteFallback;
   return [
     ...nodes,
     {
       id: "site",
-      title: ctx.siteName,
+      title: ctx.siteName || fallback,
       href: "/_plumix/admin",
       group: "root",
       position: SITE_POSITION,
@@ -61,7 +66,7 @@ function editThisContributor(
     ...nodes,
     {
       id: "edit-this",
-      title: "Edit",
+      title: barMessages(ctx.locale).edit,
       href: `/_plumix/admin/entries/${details.type}/${ctx.queriedEntry.id}/edit`,
       group: "primary",
       position: EDIT_THIS_POSITION,
@@ -73,10 +78,11 @@ function newGroupContributor(
   nodes: readonly AdminBarNode[],
   ctx: BarRenderContext,
 ): readonly AdminBarNode[] {
+  const strings = barMessages(ctx.locale);
   const additions: AdminBarNode[] = [
     {
       id: "+new",
-      title: "+ New",
+      title: strings.newGroup,
       group: "+new",
       position: NEW_GROUP_POSITION,
     },

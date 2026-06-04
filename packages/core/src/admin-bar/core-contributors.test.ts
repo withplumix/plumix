@@ -21,6 +21,8 @@ function ctx(overrides: Partial<BarRenderContext> = {}): BarRenderContext {
     siteName: "My Site",
     auth: { can: allow },
     entryTypes: new Map(),
+    locale: "en",
+    direction: "ltr",
     ...overrides,
   };
 }
@@ -123,6 +125,20 @@ describe("registerCoreAdminBarContributors — edit-this link", () => {
       ctx({ queriedEntry: { kind: "entry", id: 42 } }),
     );
     expect(nodes.find((n) => n.id === "edit-this")).toBeUndefined();
+  });
+
+  test("translates the title via the bar catalog for the active locale", () => {
+    const nodes = collectAdminBarNodes(
+      withCore(),
+      ctx({
+        locale: "de",
+        direction: "ltr",
+        queriedEntry: { kind: "entry", id: 1 },
+        queriedEntryDetails: { type: "post", authorId: 1 },
+      }),
+    );
+
+    expect(nodes.find((n) => n.id === "edit-this")?.title).toBe("Bearbeiten");
   });
 
   test("appears for a non-author when auth allows edit_any", () => {

@@ -59,6 +59,204 @@ describe("PlumixAdminBar", () => {
     expect(html).toContain('data-testid="plumix-admin-bar"');
   });
 
+  test("right-anchors the account node via a dedicated class + margin-inline-start rule", () => {
+    const hooks = new HookRegistry();
+    registerCoreAdminBarContributors(hooks);
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: emptyRegistry, user }}>
+        <PlumixAdminBar
+          hooks={hooks}
+          request={request}
+          siteName="My Site"
+          auth={auth}
+          entryTypes={entryTypes}
+        />
+      </PlumixProvider>,
+    );
+
+    // Account <li> carries the right-anchor class.
+    expect(html).toMatch(
+      /<li[^>]*data-testid="plumix-admin-bar-node-account"[^>]*class="[^"]*plumix-admin-bar__end/,
+    );
+    // CSS for that class pushes it to the row's end.
+    expect(html).toMatch(
+      /\.plumix-admin-bar__end[^{]*\{[^}]*margin-inline-start:\s*auto/,
+    );
+  });
+
+  test("emits the inline CSS style block once and applies the .plumix-admin-bar class", () => {
+    const hooks = new HookRegistry();
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: emptyRegistry, user }}>
+        <PlumixAdminBar
+          hooks={hooks}
+          request={request}
+          siteName="My Site"
+          auth={auth}
+          entryTypes={entryTypes}
+        />
+      </PlumixProvider>,
+    );
+
+    expect(html).toContain('data-testid="plumix-admin-bar-style"');
+    expect(html).toContain(".plumix-admin-bar");
+    expect(html).toContain('class="plumix-admin-bar"');
+    expect(html).toContain("system-ui");
+    expect(html).toContain("Noto Sans Arabic");
+    expect(html).toContain("Noto Sans SC");
+    expect(html).toMatch(/@media\s*\(max-width:\s*639px\)/);
+    expect(html).toMatch(/text-overflow:\s*ellipsis/);
+  });
+
+  test("renders nav with the localized aria-label", () => {
+    const hooks = new HookRegistry();
+
+    const enHtml = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: emptyRegistry, user }}>
+        <PlumixAdminBar
+          hooks={hooks}
+          request={request}
+          siteName="My Site"
+          auth={auth}
+          entryTypes={entryTypes}
+        />
+      </PlumixProvider>,
+    );
+    expect(enHtml).toContain('aria-label="Admin"');
+
+    const deUser = { ...user, meta: { locale: "de" } };
+    const deHtml = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: emptyRegistry, user: deUser }}>
+        <PlumixAdminBar
+          hooks={hooks}
+          request={request}
+          siteName="Meine Seite"
+          auth={auth}
+          entryTypes={entryTypes}
+        />
+      </PlumixProvider>,
+    );
+    expect(deHtml).toContain('aria-label="Administration"');
+  });
+
+  test("translates chrome strings to Ukrainian when user locale is uk (Cyrillic snapshot)", () => {
+    const ukUser = { ...user, meta: { locale: "uk" } };
+    const hooks = new HookRegistry();
+    registerCoreAdminBarContributors(hooks);
+    const types = new Map([["post", { name: "post" } as never]]);
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: emptyRegistry, user: ukUser }}>
+        <PlumixAdminBar
+          hooks={hooks}
+          request={request}
+          siteName="Мій сайт"
+          auth={auth}
+          entryTypes={types}
+          queriedEntryDetails={{ type: "post", authorId: 7 }}
+        />
+      </PlumixProvider>,
+    );
+
+    expect(html).toContain('lang="uk"');
+    expect(html).toContain('aria-label="Адміністрування"');
+    expect(html).toContain("+ Новий");
+    expect(html).toContain('aria-label="Створити"');
+    expect(html).toContain("Мій сайт");
+  });
+
+  test("translates chrome strings to Simplified Chinese when user locale is zh-CN", () => {
+    const zhUser = { ...user, meta: { locale: "zh-CN" } };
+    const hooks = new HookRegistry();
+    registerCoreAdminBarContributors(hooks);
+    const types = new Map([["post", { name: "post" } as never]]);
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: emptyRegistry, user: zhUser }}>
+        <PlumixAdminBar
+          hooks={hooks}
+          request={request}
+          siteName="我的站点"
+          auth={auth}
+          entryTypes={types}
+          queriedEntryDetails={{ type: "post", authorId: 7 }}
+        />
+      </PlumixProvider>,
+    );
+
+    expect(html).toContain('lang="zh-CN"');
+    expect(html).toContain('aria-label="管理"');
+    expect(html).toContain("+ 新建");
+    expect(html).toContain('aria-label="新建内容"');
+    expect(html).toContain("我的站点");
+  });
+
+  test("applies dir='rtl' and lang='ar' when the user locale is Arabic", () => {
+    const arUser = { ...user, meta: { locale: "ar" } };
+    const hooks = new HookRegistry();
+    registerCoreAdminBarContributors(hooks);
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: emptyRegistry, user: arUser }}>
+        <PlumixAdminBar
+          hooks={hooks}
+          request={request}
+          siteName="موقعي"
+          auth={auth}
+          entryTypes={entryTypes}
+        />
+      </PlumixProvider>,
+    );
+
+    expect(html).toContain('dir="rtl"');
+    expect(html).toContain('lang="ar"');
+    expect(html).toContain('aria-label="الإدارة"');
+    // Site name passed in is Arabic — localized chrome surrounds it.
+    expect(html).toContain("موقعي");
+  });
+
+  test("wraps the user's account email in <bdi> so RTL chrome doesn't flip it", () => {
+    const arUser = { ...user, meta: { locale: "ar" } };
+    const hooks = new HookRegistry();
+    registerCoreAdminBarContributors(hooks);
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: emptyRegistry, user: arUser }}>
+        <PlumixAdminBar
+          hooks={hooks}
+          request={request}
+          siteName="موقعي"
+          auth={auth}
+          entryTypes={entryTypes}
+        />
+      </PlumixProvider>,
+    );
+
+    expect(html).toContain("<bdi>editor@cms.example</bdi>");
+  });
+
+  test("emits a localized +New summary aria-label for screen readers", () => {
+    const hooks = new HookRegistry();
+    registerCoreAdminBarContributors(hooks);
+    const types = new Map([["post", { name: "post" } as never]]);
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: emptyRegistry, user }}>
+        <PlumixAdminBar
+          hooks={hooks}
+          request={request}
+          siteName="My Site"
+          auth={auth}
+          entryTypes={types}
+        />
+      </PlumixProvider>,
+    );
+
+    expect(html).toContain('aria-label="Create new"');
+  });
+
   test("renders the +new group as a <details>/<summary> with one child per entry type", () => {
     const hooks = new HookRegistry();
     registerCoreAdminBarContributors(hooks);
@@ -80,7 +278,7 @@ describe("PlumixAdminBar", () => {
     );
 
     expect(html).toContain("<details>");
-    expect(html).toContain("<summary>+ New</summary>");
+    expect(html).toContain("+ New");
     expect(html).toContain('data-testid="plumix-admin-bar-node-+new:post"');
     expect(html).toContain('data-testid="plumix-admin-bar-node-+new:page"');
     expect(html).toContain('href="/_plumix/admin/entries/post/create"');
