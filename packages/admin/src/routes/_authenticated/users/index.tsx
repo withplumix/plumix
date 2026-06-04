@@ -341,7 +341,7 @@ function buildColumns({
     },
     {
       accessorKey: "lastSignInAt",
-      meta: { className: "text-right" },
+      meta: { className: "text-end" },
       header: label(M.columnLastSignIn),
       cell: ({ row }) => {
         const value = row.original.lastSignInAt;
@@ -361,7 +361,7 @@ function buildColumns({
     },
     {
       accessorKey: "createdAt",
-      meta: { className: "text-right" },
+      meta: { className: "text-end" },
       header: label(M.columnCreated),
       cell: ({ row }) => (
         <span className="text-muted-foreground text-sm">
