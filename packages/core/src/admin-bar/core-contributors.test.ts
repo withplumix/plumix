@@ -20,8 +20,13 @@ function ctx(overrides: Partial<BarRenderContext> = {}): BarRenderContext {
     request: new Request("https://cms.example/"),
     siteName: "My Site",
     auth: { can: allow },
+    entryTypes: new Map(),
     ...overrides,
   };
+}
+
+function typesMap(...slugs: readonly string[]): BarRenderContext["entryTypes"] {
+  return new Map(slugs.map((slug) => [slug, { name: slug } as never]));
 }
 
 function withCore(): HookRegistry {
@@ -42,6 +47,52 @@ describe("registerCoreAdminBarContributors — site link", () => {
       group: "root",
       position: 10,
     });
+  });
+});
+
+describe("registerCoreAdminBarContributors — +New group", () => {
+  test("emits a parent group with no children when no entry types are registered", () => {
+    const nodes = collectAdminBarNodes(withCore(), ctx());
+
+    const newGroup = nodes.find((n) => n.id === "+new");
+    expect(newGroup).toBeDefined();
+    expect(nodes.filter((n) => n.parent === "+new")).toEqual([]);
+  });
+
+  test("adds one child per registered entry type, in registration order", () => {
+    const nodes = collectAdminBarNodes(
+      withCore(),
+      ctx({ entryTypes: typesMap("post", "page", "media") }),
+    );
+
+    const children = nodes.filter((n) => n.parent === "+new");
+    expect(children.map((n) => n.id)).toEqual([
+      "+new:post",
+      "+new:page",
+      "+new:media",
+    ]);
+    expect(children.map((n) => n.href)).toEqual([
+      "/_plumix/admin/entries/post/create",
+      "/_plumix/admin/entries/page/create",
+      "/_plumix/admin/entries/media/create",
+    ]);
+  });
+
+  test("plugin can suppress its own entry type from the menu via the filter", () => {
+    const hooks = withCore();
+    hooks.addFilter(
+      "admin_bar:nodes",
+      (nodes) => nodes.filter((n) => n.id !== "+new:media"),
+      { plugin: "media", priority: 100 },
+    );
+
+    const nodes = collectAdminBarNodes(
+      hooks,
+      ctx({ entryTypes: typesMap("post", "page", "media") }),
+    );
+
+    const children = nodes.filter((n) => n.parent === "+new");
+    expect(children.map((n) => n.id)).toEqual(["+new:post", "+new:page"]);
   });
 });
 

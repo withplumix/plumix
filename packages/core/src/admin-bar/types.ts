@@ -1,4 +1,5 @@
 import type { AuthenticatedUser, AuthNamespace } from "../context/app.js";
+import type { RegisteredEntryType } from "../plugin/manifest.js";
 import type { ResolvedEntity } from "../route/current.ts";
 
 export const ADMIN_BAR_GROUPS = [
@@ -41,6 +42,12 @@ export interface BarRenderContext {
   readonly request: Request;
   readonly siteName: string;
   readonly auth: AuthNamespace;
+  /**
+   * Registered entry types in registration order — supplied by the renderer
+   * from `app.plugins.entryTypes` so the `+ New` contributor can populate
+   * its child menu without a separate discovery API.
+   */
+  readonly entryTypes: ReadonlyMap<string, RegisteredEntryType>;
 }
 
 declare module "../hooks/types.js" {

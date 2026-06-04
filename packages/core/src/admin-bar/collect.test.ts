@@ -10,6 +10,7 @@ const baseCtx: BarRenderContext = {
   request: new Request("https://cms.example/"),
   siteName: "Site",
   auth: { can: () => true },
+  entryTypes: new Map(),
 };
 
 describe("collectAdminBarNodes", () => {

@@ -14,6 +14,7 @@ interface PlumixAdminBarProps {
   readonly siteName: string;
   readonly auth: AuthNamespace;
   readonly queriedEntryDetails?: BarRenderContext["queriedEntryDetails"];
+  readonly entryTypes: BarRenderContext["entryTypes"];
 }
 
 export function PlumixAdminBar({
@@ -22,6 +23,7 @@ export function PlumixAdminBar({
   siteName,
   auth,
   queriedEntryDetails,
+  entryTypes,
 }: PlumixAdminBarProps): ReactNode {
   const user = useUser();
   const queriedEntry = useQueriedEntry();
@@ -35,6 +37,7 @@ export function PlumixAdminBar({
       request,
       siteName,
       auth,
+      entryTypes,
     }),
   );
   return (
@@ -49,19 +52,26 @@ export function PlumixAdminBar({
 }
 
 function BarItem({ node }: { readonly node: AdminBarTreeNode }): ReactNode {
+  if (node.children.length > 0) {
+    return (
+      <li data-testid={`plumix-admin-bar-node-${node.id}`}>
+        <details>
+          <summary>{node.title}</summary>
+          <ul>
+            {node.children.map((child) => (
+              <BarItem key={child.id} node={child} />
+            ))}
+          </ul>
+        </details>
+      </li>
+    );
+  }
   return (
     <li data-testid={`plumix-admin-bar-node-${node.id}`}>
       {node.href ? (
         <a href={node.href}>{node.title}</a>
       ) : (
         <span>{node.title}</span>
-      )}
-      {node.children.length > 0 && (
-        <ul>
-          {node.children.map((child) => (
-            <BarItem key={child.id} node={child} />
-          ))}
-        </ul>
       )}
     </li>
   );

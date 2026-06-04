@@ -3,6 +3,7 @@ import type { AdminBarNode, BarRenderContext } from "./types.js";
 
 const SITE_POSITION = 10;
 const EDIT_THIS_POSITION = 20;
+const NEW_GROUP_POSITION = 15;
 const ACCOUNT_POSITION = 10;
 
 /**
@@ -19,6 +20,10 @@ export function registerCoreAdminBarContributors(hooks: HookRegistry): void {
   hooks.addFilter("admin_bar:nodes", editThisContributor, {
     plugin: "core",
     priority: 20,
+  });
+  hooks.addFilter("admin_bar:nodes", newGroupContributor, {
+    plugin: "core",
+    priority: 25,
   });
   hooks.addFilter("admin_bar:nodes", accountContributor, {
     plugin: "core",
@@ -62,6 +67,33 @@ function editThisContributor(
       position: EDIT_THIS_POSITION,
     },
   ];
+}
+
+function newGroupContributor(
+  nodes: readonly AdminBarNode[],
+  ctx: BarRenderContext,
+): readonly AdminBarNode[] {
+  const additions: AdminBarNode[] = [
+    {
+      id: "+new",
+      title: "+ New",
+      group: "+new",
+      position: NEW_GROUP_POSITION,
+    },
+  ];
+  let childPosition = 10;
+  for (const [slug] of ctx.entryTypes) {
+    additions.push({
+      id: `+new:${slug}`,
+      title: slug,
+      href: `/_plumix/admin/entries/${slug}/create`,
+      group: "+new",
+      parent: "+new",
+      position: childPosition,
+    });
+    childPosition += 10;
+  }
+  return [...nodes, ...additions];
 }
 
 function accountContributor(
