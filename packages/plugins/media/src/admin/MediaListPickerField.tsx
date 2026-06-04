@@ -1,8 +1,49 @@
+import type { MessageDescriptor } from "plumix/i18n";
 import type { MetaBoxFieldManifestEntry } from "plumix/plugin";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { useLingui } from "plumix/i18n";
 
 import { MediaLibrary } from "./MediaLibrary.js";
+
+const M = {
+  empty: {
+    id: "plugin.media.listField.empty",
+    message: "No media selected",
+  },
+  buttonSelect: {
+    id: "plugin.media.listField.button.select",
+    message: "Select",
+  },
+  buttonAddMore: {
+    id: "plugin.media.listField.button.addMore",
+    message: "Add more",
+  },
+  pending: {
+    id: "plugin.media.listField.pending",
+    message: "Selected (id {id})",
+    comment: "id: the media item's numeric id, shown while filename loads",
+  },
+  moveUpAria: {
+    id: "plugin.media.listField.moveUpAria",
+    message: "Move {name} up",
+    comment: "name: the row's display name (filename or id)",
+  },
+  moveDownAria: {
+    id: "plugin.media.listField.moveDownAria",
+    message: "Move {name} down",
+    comment: "name: the row's display name (filename or id)",
+  },
+  removeAria: {
+    id: "plugin.media.listField.removeAria",
+    message: "Remove {name}",
+    comment: "name: the row's display name (filename or id)",
+  },
+  modalAria: {
+    id: "plugin.media.listField.modalAria",
+    message: "Add media",
+  },
+} satisfies Record<string, MessageDescriptor>;
 
 // `mediaList` field admin renderer. Reads the value as
 // `MediaValue[]` — `[{ id, mime?, filename? }, ...]`. Renders each
@@ -89,6 +130,7 @@ export function MediaListPickerField({
   readonly disabled: boolean;
   readonly testId: string;
 }): ReactNode {
+  const { i18n } = useLingui();
   const [open, setOpen] = useState(false);
   const value = normalizeArray(rhf.value);
   const accept = readAccept(field);
@@ -143,7 +185,7 @@ export function MediaListPickerField({
           className="text-muted-foreground text-sm"
           data-testid={`${testId}-empty`}
         >
-          No media selected
+          {i18n._(M.empty)}
         </p>
       ) : (
         <ul className="flex flex-col gap-1" data-testid={`${testId}-list`}>
@@ -174,7 +216,9 @@ export function MediaListPickerField({
           onClick={() => setOpen(true)}
           data-testid={`${testId}-add`}
         >
-          {value.length === 0 ? "Select" : "Add more"}
+          {value.length === 0
+            ? i18n._(M.buttonSelect)
+            : i18n._(M.buttonAddMore)}
         </button>
         {max !== undefined ? (
           <span
@@ -214,8 +258,10 @@ function MediaListItem({
   readonly onMove: (idx: number, direction: -1 | 1) => void;
   readonly onRemove: (idx: number) => void;
 }): ReactNode {
+  const { i18n } = useLingui();
   const rowTestId = `${testId}-row-${item.id}`;
   const displayName = item.filename ?? item.id;
+  const ariaValues = { name: displayName };
   return (
     <li
       className="border-input bg-background flex items-center gap-2 rounded-md border px-2 py-1.5"
@@ -232,7 +278,13 @@ function MediaListItem({
             ) : null}
           </>
         ) : (
-          <p data-testid={`${rowTestId}-pending`}>Selected (id {item.id})</p>
+          <p data-testid={`${rowTestId}-pending`}>
+            {i18n._(
+              M.pending.id,
+              { id: item.id },
+              { message: M.pending.message },
+            )}
+          </p>
         )}
       </div>
       <button
@@ -240,7 +292,9 @@ function MediaListItem({
         className="hover:bg-muted rounded px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
         disabled={disabled || index === 0}
         onClick={() => onMove(index, -1)}
-        aria-label={`Move ${displayName} up`}
+        aria-label={i18n._(M.moveUpAria.id, ariaValues, {
+          message: M.moveUpAria.message,
+        })}
         data-testid={`${rowTestId}-up`}
       >
         ↑
@@ -250,7 +304,9 @@ function MediaListItem({
         className="hover:bg-muted rounded px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
         disabled={disabled || index === count - 1}
         onClick={() => onMove(index, 1)}
-        aria-label={`Move ${displayName} down`}
+        aria-label={i18n._(M.moveDownAria.id, ariaValues, {
+          message: M.moveDownAria.message,
+        })}
         data-testid={`${rowTestId}-down`}
       >
         ↓
@@ -260,7 +316,9 @@ function MediaListItem({
         className="hover:bg-muted rounded px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
         disabled={disabled}
         onClick={() => onRemove(index)}
-        aria-label={`Remove ${displayName}`}
+        aria-label={i18n._(M.removeAria.id, ariaValues, {
+          message: M.removeAria.message,
+        })}
         data-testid={`${rowTestId}-remove`}
       >
         ✕
@@ -284,6 +342,7 @@ function MediaListPickerModal({
   readonly onCancel: () => void;
   readonly testId: string;
 }): ReactNode {
+  const { i18n } = useLingui();
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === "Escape") onCancel();
@@ -297,7 +356,7 @@ function MediaListPickerModal({
       data-testid={testId}
       role="dialog"
       aria-modal="true"
-      aria-label="Add media"
+      aria-label={i18n._(M.modalAria)}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onCancel();

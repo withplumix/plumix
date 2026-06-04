@@ -1,8 +1,34 @@
+import type { MessageDescriptor } from "plumix/i18n";
 import type { MetaBoxFieldManifestEntry } from "plumix/plugin";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { Trans, useLingui } from "plumix/i18n";
 
 import { MediaLibrary } from "./MediaLibrary.js";
+
+const M = {
+  empty: {
+    id: "plugin.media.pickerField.empty",
+    message: "No media selected",
+  },
+  buttonChange: {
+    id: "plugin.media.pickerField.button.change",
+    message: "Change",
+  },
+  buttonSelect: {
+    id: "plugin.media.pickerField.button.select",
+    message: "Select",
+  },
+  pending: {
+    id: "plugin.media.pickerField.pending",
+    message: "Selected (id {id})",
+    comment: "id: the media item's numeric id, shown while filename loads",
+  },
+  modalAria: {
+    id: "plugin.media.pickerField.modalAria",
+    message: "Select media",
+  },
+} satisfies Record<string, MessageDescriptor>;
 
 // `media` field admin renderer. Registered into the host admin's
 // plugin-field-type registry on module load (see admin/index.tsx),
@@ -62,6 +88,7 @@ export function MediaPickerField({
   readonly disabled: boolean;
   readonly testId: string;
 }): ReactNode {
+  const { i18n } = useLingui();
   const [open, setOpen] = useState(false);
   const value = normalizeValue(rhf.value);
   const accept = readAccept(field);
@@ -95,7 +122,7 @@ export function MediaPickerField({
             className="text-muted-foreground text-sm"
             data-testid={`${testId}-empty`}
           >
-            No media selected
+            {i18n._(M.empty)}
           </p>
         )}
       </div>
@@ -106,7 +133,7 @@ export function MediaPickerField({
         onClick={() => setOpen(true)}
         data-testid={`${testId}-open`}
       >
-        {value ? "Change" : "Select"}
+        {value ? i18n._(M.buttonChange) : i18n._(M.buttonSelect)}
       </button>
       {value && !required ? (
         <button
@@ -116,7 +143,7 @@ export function MediaPickerField({
           onClick={handleClear}
           data-testid={`${testId}-clear`}
         >
-          Clear
+          <Trans id="plugin.media.pickerField.clear" message="Clear" />
         </button>
       ) : null}
       {open ? (
@@ -138,6 +165,7 @@ function MediaPreview({
   readonly value: MediaValue;
   readonly testId: string;
 }): ReactNode {
+  const { i18n } = useLingui();
   // The cached storage gives us `mime` + `filename` directly — no
   // resolve round-trip per render. If they're missing (interim
   // bare-string state right after pick), fall back to "Selected: <id>"
@@ -145,7 +173,7 @@ function MediaPreview({
   if (!value.filename) {
     return (
       <p className="text-sm" data-testid={`${testId}-pending`}>
-        Selected (id {value.id})
+        {i18n._(M.pending.id, { id: value.id }, { message: M.pending.message })}
       </p>
     );
   }
@@ -181,6 +209,8 @@ function MediaPickerModal({
   readonly onCancel: () => void;
   readonly testId: string;
 }): ReactNode {
+  const { i18n } = useLingui();
+  const modalAria = i18n._(M.modalAria);
   // Window-level Escape listener — React's `onKeyDown` only fires when
   // focus is inside the modal. If the user clicked the backdrop (focus
   // goes to body) or focus drifted outside, the React handler misses
@@ -199,7 +229,7 @@ function MediaPickerModal({
       data-testid={testId}
       role="dialog"
       aria-modal="true"
-      aria-label="Select media"
+      aria-label={modalAria}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onCancel();

@@ -291,3 +291,78 @@ msgstr "Upload missing Content-Length — your browser/proxy may be using chunke
 #: src/admin/MediaLibrary.tsx
 msgid "plugin.media.error.csrfTokenMissing"
 msgstr "Request blocked by CSRF check. Reload the page and try again."
+
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.empty"
+msgstr "No media selected"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.button.change"
+msgstr "Change"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.button.select"
+msgstr "Select"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.clear"
+msgstr "Clear"
+
+#. id: the media item's numeric id, shown while filename loads
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.pending"
+msgstr "Selected (id {id})"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaPickerField.tsx
+msgid "plugin.media.pickerField.modalAria"
+msgstr "Select media"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.empty"
+msgstr "No media selected"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.button.select"
+msgstr "Select"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.button.addMore"
+msgstr "Add more"
+
+#. id: the media item's numeric id, shown while filename loads
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.pending"
+msgstr "Selected (id {id})"
+
+#. name: the row's display name (filename or id)
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.moveUpAria"
+msgstr "Move {name} up"
+
+#. name: the row's display name (filename or id)
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.moveDownAria"
+msgstr "Move {name} down"
+
+#. name: the row's display name (filename or id)
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.removeAria"
+msgstr "Remove {name}"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaListPickerField.tsx
+msgid "plugin.media.listField.modalAria"
+msgstr "Add media"
