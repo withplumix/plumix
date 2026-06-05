@@ -20,6 +20,11 @@ const config: KnipConfig = {
     "examples/minimal": {
       entry: ["plumix.config.ts"],
     },
+    // Admin's worker-driven e2e playground — same shape as the plugin
+    // playgrounds below.
+    "packages/admin/playground": {
+      entry: ["plumix.config.ts"],
+    },
     // Plugin playground — same shape as examples/*: `plumix.config.ts`
     // is the consumer entry, not visible to knip without an explicit
     // hint.
@@ -101,11 +106,13 @@ const config: KnipConfig = {
         // .tsx extension swap; list explicitly.
         "e2e/fixtures/runtime-proof-plugin/src/MediaLibrary.tsx",
         // With knip's playwright plugin disabled below, list the
-        // playwright config + spec/support files explicitly so they
+        // playwright configs + spec/support files explicitly so they
         // aren't flagged as unused.
         "playwright.config.ts",
         "e2e/*.spec.ts",
         "e2e/support/*.ts",
+        "e2e-live/globalSetup.ts",
+        "e2e-live/specs/**/*.ts",
         // Lingui CLI config + compiled catalogs. `lingui.config.ts` is
         // loaded by the `@lingui/cli` binary (extract/compile) — never
         // imported. Compiled `.mjs` catalogs are loaded by `i18n-boot`

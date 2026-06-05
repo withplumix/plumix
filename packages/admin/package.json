@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/i18n-compile-check.mjs && vite build",
-    "clean": "git clean -xdf .cache .turbo dist node_modules playwright-report test-results",
+    "clean": "git clean -xdf .cache .turbo dist node_modules playwright-report test-results e2e-live/playwright-report e2e-live/test-results storageState.json",
     "dev": "vite",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path .prettierignore",
     "i18n:check": "node ../plumix/bin/plumix.mjs i18n extract --check",
@@ -14,7 +14,7 @@
     "i18n:compile": "lingui compile --namespace es",
     "lint": "eslint",
     "test": "vitest run",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test && playwright test --config=e2e-live/playwright.config.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -71,6 +71,7 @@
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@testing-library/user-event": "catalog:",
+    "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",

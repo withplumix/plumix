@@ -33,6 +33,14 @@
       "dependsOn": ["build", "^build"],
       "cache": false
     },
+    // The e2e-live config boots `packages/admin/playground` via
+    // `plumix dev`, which needs plumix's dist. Admin can't declare the
+    // dependency (plumix devDeps admin for copy-admin — a cycle), so
+    // the ordering is pinned at the task level instead.
+    "@plumix/admin#test:e2e": {
+      "dependsOn": ["build", "^build", "plumix#build"],
+      "cache": false
+    },
     "clean": {
       "cache": false
     },
