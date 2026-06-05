@@ -78,7 +78,7 @@ import { StyleTab } from "./StyleTab.js";
 import { useStarterModalState } from "./use-starter-modal-state.js";
 import { viewportWidthToBucket } from "./viewport-bucket.js";
 
-interface PlumixEditorLayoutProps {
+export interface PlumixEditorLayoutProps {
   readonly registry?: BlockRegistry;
   readonly patternRegistry?: PatternRegistry;
   // Pre-filtered starter patterns surfaced in the entry-create modal.

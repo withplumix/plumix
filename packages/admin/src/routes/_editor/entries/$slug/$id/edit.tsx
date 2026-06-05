@@ -1,8 +1,17 @@
 import type { AutosaveStatus } from "@/editor/AutosaveStatus.js";
+import type { PlumixEditorLayoutProps } from "@/editor/EditorLayout.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { Config, Data } from "@puckeditor/core";
 import type { ReactElement, ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { PlainFormLayout } from "@/components/editor/plain-form-layout.js";
 import { ErrorPlaceholder } from "@/components/error-placeholder.js";
 import { buildAdminPatternRegistry } from "@/editor/admin-pattern-registry.js";
@@ -107,6 +116,26 @@ const config: Config = {
     richtextExtensions: [...coreMarkExtensions],
   }),
 };
+const IFRAME_DISABLED = { enabled: false };
+const PREVIEW_NOOP = (): void => undefined;
+// Puck derives its layout component from the `overrides.puck` identity
+// (`CustomPuck = useMemo(..., [overrides])`), so a new component per
+// render remounts the entire editor UI — Tiptap included, which ejects
+// focus and drops every keystroke after the first. The override stays
+// module-stable; per-render chrome flows through this context instead.
+const EditorChromeContext = createContext<PlumixEditorLayoutProps | null>(null);
+
+function EditorLayoutOverride(): ReactElement {
+  const chrome = useContext(EditorChromeContext);
+  if (!chrome) {
+    // Provider always wraps <Puck> (same file); unreachable in practice.
+    // eslint-disable-next-line no-restricted-syntax -- impossible state
+    throw new Error("EditorChromeContext missing above <Puck>");
+  }
+  return <PlumixEditorLayout {...chrome} />;
+}
+
+const STABLE_OVERRIDES = { puck: EditorLayoutOverride };
 
 // `?revision=<id>` switches the route into preview mode: the editor
 // loads the chosen revision's content read-only and replaces the
@@ -601,32 +630,26 @@ function PuckSpikeRouteInner({
       discardDraft.isPending,
     ],
   );
-  const Layout = useCallback(
-    (): ReactElement => (
-      <PlumixEditorLayout
-        registry={registry}
-        patternRegistry={patternRegistry}
-        starterCandidates={starterCandidates}
-        capabilities={capabilitySet}
-        tokens={themeTokens}
-        title={title}
-        onTitleChange={handleTitleChange}
-        backHref={backHref}
-        onPublish={handlePublish}
-        isPublishing={publish.isPending}
-        isPublished={isPublished}
-        revisionsTrigger={revisionsTrigger}
-        coAuthorIndicator={
-          coAuthors.length > 0 ? (
-            <CoAuthorIndicator
-              users={coAuthors}
-              relativeTime={formatRelative}
-            />
-          ) : null
-        }
-        draftMode={draftModeProp}
-      />
-    ),
+  const chrome = useMemo<PlumixEditorLayoutProps>(
+    () => ({
+      registry,
+      patternRegistry,
+      starterCandidates,
+      capabilities: capabilitySet,
+      tokens: themeTokens,
+      title,
+      onTitleChange: handleTitleChange,
+      backHref,
+      onPublish: handlePublish,
+      isPublishing: publish.isPending,
+      isPublished,
+      revisionsTrigger,
+      coAuthorIndicator:
+        coAuthors.length > 0 ? (
+          <CoAuthorIndicator users={coAuthors} relativeTime={formatRelative} />
+        ) : null,
+      draftMode: draftModeProp,
+    }),
     [
       title,
       handleTitleChange,
@@ -645,13 +668,15 @@ function PuckSpikeRouteInner({
 
   return (
     <AutosaveStatusContext.Provider value={status}>
-      <Puck
-        config={config}
-        data={initialData}
-        onChange={handleChange}
-        iframe={{ enabled: false }}
-        overrides={{ puck: Layout }}
-      />
+      <EditorChromeContext.Provider value={chrome}>
+        <Puck
+          config={config}
+          data={initialData}
+          onChange={handleChange}
+          iframe={IFRAME_DISABLED}
+          overrides={STABLE_OVERRIDES}
+        />
+      </EditorChromeContext.Provider>
       {/*
         Stale-draft resolver: blocks the canvas until the user picks
         Use mine / Use theirs when their autosave was anchored against
@@ -789,34 +814,32 @@ function PuckPreviewRouteInner({
     restoreErrorLabel !== null ? renderLabel(restoreErrorLabel) : null;
   const revisionAuthor =
     revision.authorName ?? revision.authorEmail ?? `#${String(revisionId)}`;
-  const Layout = useCallback(
-    // Preview mode never opens the starter modal — the entry being
-    // previewed is always pre-populated.
-    (): ReactElement => (
-      <PlumixEditorLayout
-        registry={registry}
-        patternRegistry={patternRegistry}
-        capabilities={capabilitySet}
-        tokens={themeTokens}
-        title={revision.title}
-        onTitleChange={() => undefined}
-        backHref={backHref}
-        onPublish={() => undefined}
-        isPublishing={false}
-        isPublished={false}
-        previewBanner={
-          <PreviewBanner
-            revisionUpdatedAt={revision.updatedAt}
-            revisionAuthor={revisionAuthor}
-            relativeTime={formatRelative}
-            onBackToLive={handleBackToLive}
-            onRestore={handleRestore}
-            isRestoring={restore.isPending}
-            restoreError={restoreError}
-          />
-        }
-      />
-    ),
+  // Preview mode never opens the starter modal — the entry being
+  // previewed is always pre-populated.
+  const chrome = useMemo<PlumixEditorLayoutProps>(
+    () => ({
+      registry,
+      patternRegistry,
+      capabilities: capabilitySet,
+      tokens: themeTokens,
+      title: revision.title,
+      onTitleChange: PREVIEW_NOOP,
+      backHref,
+      onPublish: PREVIEW_NOOP,
+      isPublishing: false,
+      isPublished: false,
+      previewBanner: (
+        <PreviewBanner
+          revisionUpdatedAt={revision.updatedAt}
+          revisionAuthor={revisionAuthor}
+          relativeTime={formatRelative}
+          onBackToLive={handleBackToLive}
+          onRestore={handleRestore}
+          isRestoring={restore.isPending}
+          restoreError={restoreError}
+        />
+      ),
+    }),
     [
       revision.title,
       revision.updatedAt,
@@ -832,13 +855,15 @@ function PuckPreviewRouteInner({
   );
 
   return (
-    <Puck
-      config={config}
-      data={initialData}
-      iframe={{ enabled: false }}
-      permissions={READ_ONLY_PERMISSIONS}
-      overrides={{ puck: Layout }}
-    />
+    <EditorChromeContext.Provider value={chrome}>
+      <Puck
+        config={config}
+        data={initialData}
+        iframe={IFRAME_DISABLED}
+        permissions={READ_ONLY_PERMISSIONS}
+        overrides={STABLE_OVERRIDES}
+      />
+    </EditorChromeContext.Provider>
   );
 }
 
