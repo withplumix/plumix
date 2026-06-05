@@ -32,7 +32,7 @@ import { useLabel } from "@/lib/use-label.js";
 import { cn } from "@/lib/utils.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
-import { Puck, usePuck } from "@puckeditor/core";
+import { Puck, useGetPuck } from "@puckeditor/core";
 import { Minus, Monitor, Plus, Smartphone, Tablet } from "lucide-react";
 
 import type {
@@ -69,6 +69,7 @@ import { MobileSidebarSheet } from "./MobileSidebarSheet.js";
 import { patchStyleAtSelector } from "./patch-style.js";
 import { PatternRefProvider } from "./PatternRefPreview.js";
 import { PatternsSection } from "./PatternsSection.js";
+import { usePuckSelector } from "./puck-hooks.js";
 import { puckDataToBlockTree } from "./puck-to-block-tree.js";
 import { PUCK_ROOT_ZONE } from "./puck-zones.js";
 import { nextInsertPoint, resolveSlashMenuItems } from "./slash-menu-items.js";
@@ -281,11 +282,11 @@ function CanvasToolbar({
   onReopenStarter,
   onCopyAsPatternSource,
 }: CanvasToolbarProps): ReactElement {
-  const puck = usePuck();
   const renderLabel = useLabel();
-  const { viewports } = puck.appState.ui;
-  const currentWidth = viewports.current.width;
-  const dispatch = puck.dispatch;
+  const currentWidth = usePuckSelector(
+    (s) => s.appState.ui.viewports.current.width,
+  );
+  const dispatch = usePuckSelector((s) => s.dispatch);
   useEffect(() => {
     const target = VIEWPORT_PRESETS[DEFAULT_VIEWPORT_INDEX];
     if (!target) return;
@@ -414,12 +415,11 @@ function CanvasToolbar({
 }
 
 function PlumixAuditTab(): ReactElement {
-  const puck = usePuck();
-  const tree = useMemo(
-    () => puckDataToBlockTree(puck.appState.data),
-    [puck.appState.data],
-  );
+  const data = usePuckSelector((s) => s.appState.data);
+  const getPuck = useGetPuck();
+  const tree = useMemo(() => puckDataToBlockTree(data), [data]);
   const handleSelect = (nodeId: string): void => {
+    const puck = getPuck();
     const itemSelector = puck.getSelectorForId(nodeId);
     if (!itemSelector) return;
     puck.dispatch({ type: "setUi", ui: { itemSelector } });
@@ -743,7 +743,7 @@ function PlumixBlocksTab({
   capabilities,
   patterns,
 }: PlumixBlocksTabProps): ReactElement {
-  const puck = usePuck();
+  const getPuck = useGetPuck();
   const renderLabel = useLabel();
   const [pendingPick, setPendingPick] = useState<PendingPick | undefined>();
   const entries = useMemo(() => {
@@ -758,13 +758,14 @@ function PlumixBlocksTab({
 
   const insertEntry = useCallback(
     (entry: InsertableBlockEntry): void => {
+      const puck = getPuck();
       dispatchVariationInsert(
         puck.dispatch,
         entry,
         puck.appState.data.content.length,
       );
     },
-    [puck],
+    [getPuck],
   );
 
   const handleInsert = useCallback(
@@ -791,13 +792,13 @@ function PlumixBlocksTab({
 
   const handlePatternInsert = useCallback(
     (pattern: PatternManifestEntry): void => {
-      puck.dispatch({
+      getPuck().dispatch({
         type: "setData",
         data: (previous) =>
           insertPattern(previous, pattern, previous.content.length),
       });
     },
-    [puck],
+    [getPuck],
   );
 
   const handlePickerSelect = useCallback(
@@ -937,29 +938,30 @@ function PlumixCanvasWithSlashMenu({
   starterCandidates,
   entryTitle,
 }: PlumixCanvasWithSlashMenuProps): ReactElement {
-  const puck = usePuck();
+  const getPuck = useGetPuck();
+  const isCanvasEmpty = usePuckSelector(
+    (s) => s.appState.data.content.length === 0,
+  );
   const renderLabel = useLabel();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   // Captured once at mount: the modal's initial open state must reflect
   // the entry as it was loaded, not later state changes that follow a
   // pattern seed.
-  const [initiallyEmpty] = useState(
-    () => puck.appState.data.content.length === 0,
-  );
+  const [initiallyEmpty] = useState(() => isCanvasEmpty);
   const starterState = useStarterModalState({
     initiallyEmpty,
     candidates: starterCandidates,
   });
   const handleStarterSelect = useCallback(
     (pattern: PatternManifestEntry): void => {
-      puck.dispatch({
+      getPuck().dispatch({
         type: "setData",
         data: (previous) => insertPattern(previous, pattern, 0),
       });
       starterState.dismiss();
     },
-    [puck, starterState],
+    [getPuck, starterState],
   );
 
   const items = useMemo(
@@ -997,6 +999,7 @@ function PlumixCanvasWithSlashMenu({
 
   const handleSelect = useCallback(
     (item: SlashMenuItem): void => {
+      const puck = getPuck();
       const { itemSelector } = puck.appState.ui;
       const { zone, index } = nextInsertPoint(
         itemSelector,
@@ -1024,10 +1027,12 @@ function PlumixCanvasWithSlashMenu({
       }
       setOpen(false);
     },
-    [puck],
+    [getPuck],
   );
 
-  const currentViewportWidth = puck.appState.ui.viewports.current.width;
+  const currentViewportWidth = usePuckSelector(
+    (s) => s.appState.ui.viewports.current.width,
+  );
   const viewportPx =
     typeof currentViewportWidth === "number"
       ? currentViewportWidth
@@ -1060,6 +1065,7 @@ function PlumixCanvasWithSlashMenu({
   const zoom = manualZoom ?? fitZoom;
 
   const handleCopyAsPatternSource = useCallback((): void => {
+    const puck = getPuck();
     const source = buildCopyPatternSource({
       title: entryTitle,
       data: puck.appState.data,
@@ -1072,7 +1078,7 @@ function PlumixCanvasWithSlashMenu({
         error,
       );
     });
-  }, [puck, entryTitle, renderLabel]);
+  }, [getPuck, entryTitle, renderLabel]);
 
   return (
     <div
@@ -1082,10 +1088,7 @@ function PlumixCanvasWithSlashMenu({
       <CanvasToolbar
         zoom={zoom}
         onZoomChange={setManualZoom}
-        canReopenStarter={
-          puck.appState.data.content.length === 0 &&
-          starterCandidates.length > 0
-        }
+        canReopenStarter={isCanvasEmpty && starterCandidates.length > 0}
         onReopenStarter={starterState.reopen}
         onCopyAsPatternSource={handleCopyAsPatternSource}
       />
@@ -1153,14 +1156,16 @@ interface PlumixStyleTabProps {
 }
 
 function PlumixStyleTab({ tokens }: PlumixStyleTabProps): ReactElement {
-  const puck = usePuck();
-  const { selectedItem } = puck;
-  const bucket = viewportWidthToBucket(
-    puck.appState.ui.viewports.current.width,
+  const getPuck = useGetPuck();
+  const selectedItem = usePuckSelector((s) => s.selectedItem);
+  const currentWidth = usePuckSelector(
+    (s) => s.appState.ui.viewports.current.width,
   );
+  const bucket = viewportWidthToBucket(currentWidth);
 
   const handleStyleChange = useCallback(
     (nextStyle: ResponsiveStyleSlot | undefined): void => {
+      const puck = getPuck();
       const { itemSelector } = puck.appState.ui;
       if (!itemSelector) return;
       puck.dispatch({
@@ -1169,7 +1174,7 @@ function PlumixStyleTab({ tokens }: PlumixStyleTabProps): ReactElement {
           patchStyleAtSelector(previous, itemSelector, nextStyle),
       });
     },
-    [puck],
+    [getPuck],
   );
 
   return (
@@ -1189,11 +1194,12 @@ interface PlumixBlockActionsProps {
 function PlumixBlockActions({
   registry,
 }: PlumixBlockActionsProps): ReactElement {
-  const puck = usePuck();
-  const { selectedItem } = puck;
+  const getPuck = useGetPuck();
+  const selectedItem = usePuckSelector((s) => s.selectedItem);
 
   const handleTransform = useCallback(
     (option: TransformOption): void => {
+      const puck = getPuck();
       const { itemSelector } = puck.appState.ui;
       if (!itemSelector || !selectedItem) return;
       const currentAttrs = selectedItem.props as Record<string, unknown>;
@@ -1213,10 +1219,11 @@ function PlumixBlockActions({
         },
       });
     },
-    [puck, selectedItem, registry],
+    [getPuck, selectedItem, registry],
   );
 
   const handleDuplicate = useCallback((): void => {
+    const puck = getPuck();
     const { itemSelector } = puck.appState.ui;
     if (!itemSelector) return;
     puck.dispatch({
@@ -1224,9 +1231,10 @@ function PlumixBlockActions({
       sourceIndex: itemSelector.index,
       sourceZone: itemSelector.zone ?? PUCK_ROOT_ZONE,
     });
-  }, [puck]);
+  }, [getPuck]);
 
   const handleDelete = useCallback((): void => {
+    const puck = getPuck();
     const { itemSelector } = puck.appState.ui;
     if (!itemSelector) return;
     puck.dispatch({
@@ -1234,7 +1242,7 @@ function PlumixBlockActions({
       index: itemSelector.index,
       zone: itemSelector.zone ?? PUCK_ROOT_ZONE,
     });
-  }, [puck]);
+  }, [getPuck]);
 
   const handleCopyJson = useCallback((): void => {
     if (!selectedItem) return;

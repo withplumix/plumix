@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { createContext, useCallback, useContext, useMemo } from "react";
 import { useLabel } from "@/lib/use-label.js";
 import { Trans } from "@lingui/react";
-import { usePuck } from "@puckeditor/core";
+import { useGetPuck } from "@puckeditor/core";
 import { Link, Unlink } from "lucide-react";
 
 import type { BlockRegistry, PatternRegistry } from "@plumix/blocks";
@@ -38,7 +38,7 @@ interface PatternRefPreviewProps {
 
 export function PatternRefPreview(props: PatternRefPreviewProps): ReactElement {
   const ctx = useContext(PatternRefContext);
-  const puck = usePuck();
+  const getPuck = useGetPuck();
   const renderLabel = useLabel();
   const slug = props.slug ?? "";
   const pattern = ctx?.patterns.get(slug);
@@ -52,7 +52,7 @@ export function PatternRefPreview(props: PatternRefPreviewProps): ReactElement {
 
   const handleDetach = useCallback(() => {
     if (!ctx) return;
-    puck.dispatch({
+    getPuck().dispatch({
       type: "setData",
       data: (previous) => {
         const idx = previous.content.findIndex(
@@ -64,7 +64,7 @@ export function PatternRefPreview(props: PatternRefPreviewProps): ReactElement {
         return detachPatternRef(previous, idx, ctx.patterns);
       },
     });
-  }, [ctx, puck, props.id]);
+  }, [ctx, getPuck, props.id]);
 
   const handleCopySlug = useCallback(() => {
     void navigator.clipboard.writeText(slug);
