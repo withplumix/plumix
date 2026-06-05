@@ -132,6 +132,60 @@ export const MANIFEST_WITH_POST: PlumixManifest = {
   ],
 };
 
+// Full editor fixture: an autosave-capable post type plus two registered
+// patterns — one copy-mode (also starter-eligible via `target`), one
+// reference-mode. Drives the patterns section, slash-menu cards, starter
+// modal, and the pattern-ref / detach surfaces, none of which render
+// without manifest patterns.
+export const MANIFEST_WITH_EDITOR_PATTERNS: PlumixManifest = {
+  ...emptyManifest(),
+  entryTypes: [
+    {
+      name: "post",
+      adminSlug: "posts",
+      label: "Posts",
+      labels: { singular: "Post", plural: "Posts" },
+      supports: ["title", "editor", "excerpt", "revisions", "autosave"],
+    },
+  ],
+  patterns: [
+    {
+      name: "e2e/hero",
+      title: "E2E Hero",
+      category: "hero",
+      insert: "copy",
+      target: "post-content",
+      entryTypes: ["post"],
+      priority: 1,
+      content: [
+        {
+          id: "p1",
+          name: "core/heading",
+          attrs: { level: 2, text: "Pattern heading" },
+        },
+        {
+          id: "p2",
+          name: "core/rich-text",
+          attrs: { body: "<p>Pattern body copy</p>" },
+        },
+      ],
+    },
+    {
+      name: "e2e/promo",
+      title: "E2E Promo",
+      category: "cta",
+      insert: "reference",
+      content: [
+        {
+          id: "p1",
+          name: "core/heading",
+          attrs: { level: 3, text: "Promo heading" },
+        },
+      ],
+    },
+  ],
+};
+
 // Manifest with two termTaxonomies — one hierarchical (category), one flat
 // (tag) — shared by the taxonomy e2e specs so both code paths can be
 // exercised from a single fixture.
