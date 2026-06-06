@@ -10,12 +10,7 @@ import type { PlumixManifest } from "@plumix/core/manifest";
 import { emptyManifest } from "@plumix/core/manifest";
 
 import { publishedEntry, publishedEntryRpcBody } from "./support/editor.js";
-import {
-  AUTHED_ADMIN,
-  mockManifest,
-  mockRpc,
-  rpcOkBody,
-} from "./support/rpc-mock.js";
+import { AUTHED_ADMIN, mockManifest, mockRpc } from "./support/rpc-mock.js";
 
 const T_LIVE = new Date("2026-05-22T12:00:00Z");
 const T_STALE = new Date("2026-05-22T10:00:00Z"); // before live
