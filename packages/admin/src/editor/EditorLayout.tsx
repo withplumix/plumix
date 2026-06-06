@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
 import { Drawer, Puck, useGetPuck } from "@puckeditor/core";
+import { Link } from "@tanstack/react-router";
 import { Minus, Monitor, Plus, Smartphone, Tablet } from "lucide-react";
 
 import type {
@@ -573,14 +574,14 @@ export function PlumixEditorLayout({
           className="bg-background flex h-12 shrink-0 items-center gap-3 border-b px-4"
           data-testid="plumix-editor-header"
         >
-          <a
-            href={backHref}
+          <Link
+            to={backHref}
             aria-label={renderLabel(M.backToList)}
             className="text-muted-foreground hover:bg-accent hover:text-foreground inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-sm"
             data-testid="plumix-editor-back-button"
           >
             ←
-          </a>
+          </Link>
           <input
             type="text"
             placeholder={renderLabel(M.titlePlaceholder)}
