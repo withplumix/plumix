@@ -323,15 +323,9 @@ test.describe("editor actions: patterns", () => {
     expect(blocks[0]?.attrs?.slug).toBe("e2e/promo");
   });
 
-  // KNOWN BROKEN: Puck's [data-puck-dnd] draggable wrapper intercepts
-  // pointer events over the whole block — even when it's selected — so
-  // the Detach / Open source buttons inside PatternRefPreview can never
-  // receive a real mouse click. Rich-text escapes through Puck's
-  // overlay portal; the ref preview doesn't.
   test("pattern-ref detach button is reachable with the mouse", async ({
     page,
   }) => {
-    test.fail();
     await installEditorMocks(page);
     await page.goto("entries/posts/1/edit");
     await dismissStarterModal(page);
@@ -345,15 +339,9 @@ test.describe("editor actions: patterns", () => {
     await expect(ref).toBeHidden();
   });
 
-  // KNOWN BROKEN: even a dispatched DOM click (which sidesteps the
-  // hit-testing bug above and verifiably fires on the button) never
-  // mutates Puck data — the ref stays put. The pure detachPatternRef
-  // helper is unit-covered, so the break sits in the wiring between
-  // the overlay-portal render and the usePuck dispatch.
   test("pattern-ref detach converts the ref into an editable copy", async ({
     page,
   }) => {
-    test.fail();
     await installEditorMocks(page);
     await page.goto("entries/posts/1/edit");
     await dismissStarterModal(page);

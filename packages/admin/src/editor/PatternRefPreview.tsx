@@ -1,8 +1,15 @@
 import type { ReactElement } from "react";
-import { createContext, useCallback, useContext, useMemo } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
 import { useLabel } from "@/lib/use-label.js";
 import { Trans } from "@lingui/react";
-import { useGetPuck } from "@puckeditor/core";
+import { registerOverlayPortal, useGetPuck } from "@puckeditor/core";
 import { Link, Unlink } from "lucide-react";
 
 import type { BlockRegistry, PatternRegistry } from "@plumix/blocks";
@@ -42,6 +49,17 @@ export function PatternRefPreview(props: PatternRefPreviewProps): ReactElement {
   const renderLabel = useLabel();
   const slug = props.slug ?? "";
   const pattern = ctx?.patterns.get(slug);
+
+  // Puck's component overlay intercepts pointer events over the whole
+  // block, so the header's Open source / Detach buttons would never
+  // receive a click. Registering the header as an overlay portal is
+  // the sanctioned escape hatch — the same mechanism Puck's inline
+  // rich-text editor uses to stay interactive on the canvas.
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const cleanup = registerOverlayPortal(headerRef.current);
+    return () => cleanup?.();
+  }, [pattern]);
 
   const body = useMemo(() => {
     if (!pattern || !ctx) return null;
@@ -96,7 +114,10 @@ export function PatternRefPreview(props: PatternRefPreviewProps): ReactElement {
       data-pattern-ref-state="resolved"
       data-testid={`plumix-pattern-ref-${slug}`}
     >
-      <div className="text-foreground flex items-center gap-2 bg-blue-500/10 px-3 py-1 text-xs">
+      <div
+        ref={headerRef}
+        className="text-foreground flex items-center gap-2 bg-blue-500/10 px-3 py-1 text-xs"
+      >
         <Link className="h-3 w-3" aria-hidden />
         <span className="flex-1">{renderLabel(pattern.title)}</span>
         <button
