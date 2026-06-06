@@ -1,8 +1,8 @@
 import type { AutosaveStatus } from "@/editor/AutosaveStatus.js";
 import type { PlumixEditorLayoutProps } from "@/editor/EditorLayout.js";
 import type { MessageDescriptor } from "@lingui/core";
-import type { Config, Data } from "@puckeditor/core";
-import type { ReactElement, ReactNode } from "react";
+import type { Config, Data, PuckAction } from "@puckeditor/core";
+import type { MutableRefObject, ReactElement, ReactNode } from "react";
 import {
   createContext,
   useCallback,
@@ -44,7 +44,7 @@ import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
 import { ORPCError } from "@orpc/client";
-import { Puck } from "@puckeditor/core";
+import { Puck, useGetPuck } from "@puckeditor/core";
 import {
   useMutation,
   useQuery,
@@ -125,7 +125,26 @@ const PREVIEW_NOOP = (): void => undefined;
 // module-stable; per-render chrome flows through this context instead.
 const EditorChromeContext = createContext<PlumixEditorLayoutProps | null>(null);
 
+// Imperative escape hatch for the route: `usePuck` only works inside
+// <Puck>, but the discard flow needs to reseed the canvas from the
+// route's mutation handler. The override (which lives inside Puck)
+// publishes its `getPuck` getter into this ref; the dispatcher's
+// remount key can't flip mid-session, so an in-place `setData` is the
+// only way to swap the canvas back to live content without remounting.
+type PuckApiBridge = () => { dispatch: (action: PuckAction) => void };
+const PuckApiBridgeContext =
+  createContext<MutableRefObject<PuckApiBridge | null> | null>(null);
+
 function EditorLayoutOverride(): ReactElement {
+  const bridgeRef = useContext(PuckApiBridgeContext);
+  const getPuck = useGetPuck();
+  useEffect(() => {
+    if (!bridgeRef) return;
+    bridgeRef.current = getPuck;
+    return () => {
+      bridgeRef.current = null;
+    };
+  }, [bridgeRef, getPuck]);
   const chrome = useContext(EditorChromeContext);
   if (!chrome) {
     // Provider always wraps <Puck> (same file); unreachable in practice.
@@ -312,6 +331,7 @@ function PuckSpikeRouteInner({
   const [title, setTitle] = useState<string>(entry.title);
   const [status, setStatus] = useState<AutosaveStatus>("saved");
   const [hasLocalDraft, setHasLocalDraft] = useState(false);
+  const puckApiRef = useRef<PuckApiBridge | null>(null);
   // Optimistic-concurrency token; trailing-response wins on overlap.
   const liveUpdatedAtRef = useRef<Date>(entry.updatedAt);
   const queryClient = useQueryClient();
@@ -566,6 +586,29 @@ function PuckSpikeRouteInner({
           queryKey: ["entry.revisions", id],
         }),
       ]);
+      // In-session discard: the dispatcher's remount key never flips
+      // (the cached preview source stays "live" throughout), so the
+      // editor would keep rendering the discarded edits. Reseed the
+      // session in place from the post-discard row via the bridge.
+      // The Use-theirs flow remounts via the key flip a beat later;
+      // this reseed is a harmless no-op there.
+      const fresh = await queryClient.fetchQuery(
+        orpc.entry.get.queryOptions({ input: { id, preview: true } }),
+      );
+      const seeded = seedPuckData(fresh.content, EMPTY_DATA);
+      puckApiRef.current?.().dispatch({ type: "setData", data: seeded });
+      dataRef.current = seeded;
+      setTitle(fresh.title);
+      titleRef.current = fresh.title;
+      lastSavedTitleRef.current = fresh.title;
+      lastSavedContentRef.current = JSON.stringify(
+        puckDataToBlockTree({ content: seeded.content }),
+      );
+      liveUpdatedAtRef.current = fresh.updatedAt;
+      // The localStorage draft still holds the discarded edits; align
+      // it so a crash-reload doesn't resurrect them.
+      writeDraft(draftKey, seeded);
+      setStatus("saved");
     },
   });
   const handlePublishDraft = useCallback(
@@ -682,15 +725,17 @@ function PuckSpikeRouteInner({
 
   return (
     <AutosaveStatusContext.Provider value={status}>
-      <EditorChromeContext.Provider value={chrome}>
-        <Puck
-          config={config}
-          data={initialData}
-          onChange={handleChange}
-          iframe={IFRAME_DISABLED}
-          overrides={STABLE_OVERRIDES}
-        />
-      </EditorChromeContext.Provider>
+      <PuckApiBridgeContext.Provider value={puckApiRef}>
+        <EditorChromeContext.Provider value={chrome}>
+          <Puck
+            config={config}
+            data={initialData}
+            onChange={handleChange}
+            iframe={IFRAME_DISABLED}
+            overrides={STABLE_OVERRIDES}
+          />
+        </EditorChromeContext.Provider>
+      </PuckApiBridgeContext.Provider>
       {/*
         Stale-draft resolver: blocks the canvas until the user picks
         Use mine / Use theirs when their autosave was anchored against
