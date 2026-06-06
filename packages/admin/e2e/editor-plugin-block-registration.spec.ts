@@ -99,8 +99,12 @@ test.describe("plugin block registered via window.plumix bridge", () => {
     // The block is wired in two places — the inserter sidebar list and
     // the slash menu. Asserting both proves the runtime registry feeds
     // every consumer that the hardcoded `coreBlocks` import used to.
+    // The Drawer renders a drag-preview twin of each row — scope
+    // through Puck's item wrapper.
     await expect(
-      page.getByTestId("plumix-blocks-tab-item-test/fake"),
+      page
+        .getByTestId("drawer-item:test/fake")
+        .getByTestId("plumix-blocks-tab-item-test/fake"),
     ).toBeVisible();
 
     const canvas = page.getByTestId("plumix-editor-canvas");

@@ -20,6 +20,7 @@ import {
   canvasOrder,
   dismissStarterModal,
   dragBelow,
+  dragOnto,
   editorEntry,
   installEditorMocks,
   lastUpdate,
@@ -46,7 +47,12 @@ test.describe("editor actions: insert", () => {
     await page.goto("entries/posts/1/edit");
     await dismissStarterModal(page);
 
-    await page.getByTestId("plumix-blocks-tab-item-core/quote").click();
+    // The Drawer renders a drag-preview twin of each row — scope the
+    // click through Puck's item wrapper.
+    await page
+      .getByTestId("drawer-item:core/quote")
+      .getByTestId("plumix-blocks-tab-item-core/quote")
+      .click();
     await expect(canvasBlocks(page, "core/quote")).toHaveCount(1);
 
     await expect.poll(() => updates.length).toBeGreaterThan(0);
@@ -54,21 +60,25 @@ test.describe("editor actions: insert", () => {
     expect(blocks.map((b) => b.name)).toEqual(["core/quote"]);
   });
 
-  // Palette rows are plain click-to-insert buttons today
-  // (InsertableEntryRow has no drag source wiring). This pins the gap:
-  // when drag-from-palette ships, flip the fixme into a real drag.
-  test.fixme("palette item drags onto the canvas drop zone", async ({
-    page,
-  }) => {
-    await installEditorMocks(page);
+  test("palette item drags onto the canvas drop zone", async ({ page }) => {
+    const updates = await installEditorMocks(page);
     await page.goto("entries/posts/1/edit");
     await dismissStarterModal(page);
-    await dragBelow(
+
+    // Puck's Drawer renders a hidden drag-preview twin of each row, so
+    // the row testid resolves twice — drag from Puck's item wrapper.
+    await dragOnto(
       page,
-      page.getByTestId("plumix-blocks-tab-item-core/separator"),
-      page.getByTestId("dropzone:root:default-zone"),
+      page.getByTestId("drawer-item:core/separator"),
+      page.getByTestId("plumix-editor-canvas-frame"),
     );
     await expect(canvasBlocks(page, "core/separator")).toHaveCount(1);
+
+    await expect
+      .poll(() =>
+        (lastUpdate(updates)?.content?.blocks ?? []).map((b) => b.name),
+      )
+      .toEqual(["core/separator"]);
   });
 });
 
