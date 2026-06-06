@@ -311,6 +311,7 @@ function PuckSpikeRouteInner({
   );
   const [title, setTitle] = useState<string>(entry.title);
   const [status, setStatus] = useState<AutosaveStatus>("saved");
+  const [hasLocalDraft, setHasLocalDraft] = useState(false);
   // Optimistic-concurrency token; trailing-response wins on overlap.
   const liveUpdatedAtRef = useRef<Date>(entry.updatedAt);
   const queryClient = useQueryClient();
@@ -372,6 +373,14 @@ function PuckSpikeRouteInner({
           // publish (the canonical bug this guard prevents).
           if (updated.type === entry.type) {
             liveUpdatedAtRef.current = updated.updatedAt;
+          } else {
+            // The save landed on the per-user autosave row (reserved
+            // type) — a pending draft now exists server-side. Surface
+            // it locally: the preview query is never refetched
+            // in-session (a refetch would flip the dispatcher's
+            // remount key mid-keystroke), so without this flag the
+            // banner and Discard/Publish stay dead until a reload.
+            setHasLocalDraft(true);
           }
           if (titleChanged) lastSavedTitleRef.current = trimmedTitle;
           if (contentChanged) lastSavedContentRef.current = serializedBlocks;
@@ -479,7 +488,10 @@ function PuckSpikeRouteInner({
     capabilities: capabilitySet,
   });
   const isEditWithDraft = editorMode === "edit-with-draft";
-  const hasPendingDraft = entry._preview?.source === "autosave";
+  // Server truth at load time, OR-ed with the in-session signal from
+  // the autosave path above — see the debouncer's setHasLocalDraft.
+  const hasPendingDraft =
+    entry._preview?.source === "autosave" || hasLocalDraft;
 
   // Stale-draft state: pending autosave was anchored against an older
   // live row than what the server has now. Show the resolver dialog
@@ -512,6 +524,7 @@ function PuckSpikeRouteInner({
       }),
     onSuccess: async (updated) => {
       liveUpdatedAtRef.current = updated.updatedAt;
+      setHasLocalDraft(false);
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
@@ -539,6 +552,7 @@ function PuckSpikeRouteInner({
   const discardDraft = useMutation({
     mutationFn: () => orpc.entry.discardDraft.call({ id }),
     onSuccess: async () => {
+      setHasLocalDraft(false);
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: orpc.entry.get.queryOptions({
