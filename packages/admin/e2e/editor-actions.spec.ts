@@ -179,26 +179,35 @@ test.describe("editor actions: edit fields", () => {
     await expect(textField).toBeFocused();
   });
 
-  // KNOWN BROKEN: the first keystroke's state update remounts the
-  // canvas Tiptap instance and ejects focus to <body>; every keystroke
-  // after the remount is dropped (and can land in global hotkey
-  // handlers). Verified live and under this mock harness — 0 of 44
-  // slow-typed chars persist.
   test("inline rich-text typing on the canvas survives a burst", async ({
     page,
   }) => {
-    test.fail();
     const updates = await installEditorMocks(page, {
       entry: editorEntry({ content: SEEDED_CONTENT }),
     });
     await page.goto("entries/posts/1/edit");
 
+    // `.tiptap` skips Puck's Suspense fallback — a transient
+    // contenteditable that the real editor replaces ~300 ms after the
+    // field mounts, destroying whatever just got focus.
     const inline = canvasBlocks(page, "core/rich-text")
       .first()
-      .locator('[contenteditable="true"]');
+      .locator('.tiptap[contenteditable="true"]');
+    // Select-then-edit, Puck's intended canvas UX: the first click
+    // selects the block (the overlay swallows it), the second enters
+    // the Tiptap editor. The pause keeps the second click outside the
+    // browser's ~500 ms dblclick window — a coalesced dblclick never
+    // enters edit mode. keyboard.type (not pressSequentially) because
+    // the latter re-focuses the element per burst, resetting the
+    // Ctrl+A selection.
     await inline.click();
+    await expect(page.getByTestId("block-actions-panel")).toBeVisible();
+    await page.waitForTimeout(600);
+    await inline.click();
+    await expect(inline).toBeFocused();
+    await page.waitForTimeout(300);
     await page.keyboard.press("ControlOrMeta+a");
-    await inline.pressSequentially(SENTENCE, { delay: 80 });
+    await page.keyboard.type(SENTENCE, { delay: 80 });
     await expect(inline.locator("p")).toHaveText(SENTENCE);
 
     await expect
@@ -209,9 +218,7 @@ test.describe("editor actions: edit fields", () => {
       .toBe(`<p>${SENTENCE}</p>`);
   });
 
-  // KNOWN BROKEN: same remount loop through the sidebar Body field.
   test("sidebar Body field typing survives a burst", async ({ page }) => {
-    test.fail();
     await installEditorMocks(page, {
       entry: editorEntry({ content: SEEDED_CONTENT }),
     });
@@ -219,13 +226,15 @@ test.describe("editor actions: edit fields", () => {
 
     await canvasBlocks(page, "core/rich-text").first().click();
     await expect(page.getByTestId("block-actions-panel")).toBeVisible();
+    // `.tiptap` skips the Suspense fallback — see the inline test.
     const body = page
       .getByTestId("plumix-editor-right")
-      .locator('[contenteditable="true"]')
+      .locator('.tiptap[contenteditable="true"]')
       .first();
     await body.click();
+    await expect(body).toBeFocused();
     await page.keyboard.press("ControlOrMeta+a");
-    await body.pressSequentially(SENTENCE, { delay: 80 });
+    await page.keyboard.type(SENTENCE, { delay: 80 });
     await expect(body.locator("p")).toHaveText(SENTENCE);
   });
 });
