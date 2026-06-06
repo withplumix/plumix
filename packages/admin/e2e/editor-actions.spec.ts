@@ -440,18 +440,9 @@ test.describe("editor actions: draft of a published entry", () => {
     await expect(page.getByTestId("editor-draft-publish")).toBeEnabled();
   });
 
-  // KNOWN BROKEN: discarding a draft created in the SAME session leaves
-  // the edited title and canvas on screen — the dispatcher's remount
-  // key (`draftKey:previewSource`) never flips because the cached
-  // preview source stays "live" throughout (the in-session banner works
-  // off a local flag, not a refetch). Server state is correct (the
-  // autosave row is deleted; reload shows live content) — the editor
-  // just keeps rendering the discarded edits. Reachable only since the
-  // in-session banner fix enabled Discard without a reload.
   test("in-session discard restores the live title and canvas", async ({
     page,
   }) => {
-    test.fail();
     const pristine = editorEntry({
       status: "published",
       content: SEEDED_CONTENT,
