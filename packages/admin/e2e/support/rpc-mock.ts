@@ -22,6 +22,23 @@ export {
   withCapabilities,
 } from "@plumix/core/test/playwright";
 
+// Defined oRPC 409 envelope with a `reason` discriminator — the shape
+// every CONFLICT surface in the admin maps to friendly copy. Core's
+// `rpcErrorBody` omits `defined`/`status`, which `isORPCErrorJson`
+// needs to decode a typed rejection.
+export function rpcConflictBody(reason: string): string {
+  return JSON.stringify({
+    json: {
+      defined: true,
+      code: "CONFLICT",
+      status: 409,
+      message: "Resource conflict",
+      data: { reason },
+    },
+    meta: [],
+  });
+}
+
 // Manifest fixture exercising capability gating across both metabox and
 // field levels. Two levels of gating in one fixture.
 export const MANIFEST_WITH_CAPABILITY_GATES: PlumixManifest = {
@@ -224,51 +241,6 @@ export const MANIFEST_WITH_TAXONOMIES: PlumixManifest = {
         addNewItem: "New tag",
         editItem: "Edit tag",
       },
-    },
-  ],
-};
-
-// Manifest with two meta boxes — one in the right rail (`side`), one in
-// the main column (`normal`) — used by editor e2e to cover both slots.
-export const MANIFEST_WITH_META_BOXES: PlumixManifest = {
-  ...emptyManifest(),
-  entryTypes: [
-    {
-      name: "post",
-      adminSlug: "posts",
-      label: "Posts",
-      labels: { singular: "Entry", plural: "Posts" },
-    },
-  ],
-  entryMetaBoxes: [
-    {
-      id: "seo",
-      label: "SEO",
-      location: "bottom",
-      entryTypes: ["post"],
-      fields: [
-        {
-          key: "meta_title",
-          label: "Meta title",
-          type: "string",
-          inputType: "text",
-          maxLength: 60,
-        },
-      ],
-    },
-    {
-      id: "featured",
-      label: "Featured",
-      location: "sidebar",
-      entryTypes: ["post"],
-      fields: [
-        {
-          key: "is_featured",
-          label: "Featured",
-          type: "boolean",
-          inputType: "checkbox",
-        },
-      ],
     },
   ],
 };

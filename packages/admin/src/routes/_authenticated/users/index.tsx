@@ -304,7 +304,11 @@ function buildColumns({
                 </span>
               )}
               {isSelf ? (
-                <Badge variant="outline" className="text-xs">
+                <Badge
+                  variant="outline"
+                  className="text-xs"
+                  data-testid="users-list-row-you"
+                >
                   <Trans id="users.list.row.you" message="You" />
                 </Badge>
               ) : null}

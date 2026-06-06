@@ -1,12 +1,17 @@
+// The plain-form route for non-editor entry types: Card-based layout,
+// publish/save envelope contracts, and capability gating across both
+// metabox and field levels.
+
 import { expect, test } from "@playwright/test";
 
 import { expectNoAxeViolations } from "./support/axe.js";
 import {
   AUTHED_ADMIN,
+  MANIFEST_WITH_CAPABILITY_GATES,
   MANIFEST_WITH_PLAIN_FORM_TYPE,
   mockManifest,
+  mockRpc,
   mockRpcWithCapture,
-  rpcOkBody,
   withCapabilities,
 } from "./support/rpc-mock.js";
 
@@ -49,23 +54,9 @@ test.describe("plain-form route for non-editor entry types", () => {
   test("renders the Card-based plain form when the entry type lacks editor support", async ({
     page,
   }) => {
-    await page.route("**/_plumix/rpc/**", (route) => {
-      const url = route.request().url();
-      if (url.endsWith("/auth/session")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody(AUTHED_AUTHOR_EDITOR),
-        });
-      }
-      if (url.endsWith("/entry/get")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({ json: authorEntry(1), meta: [] }),
-        });
-      }
-      return route.fulfill({ status: 404, body: "not-mocked" });
+    await mockRpc(page, {
+      "/auth/session": AUTHED_AUTHOR_EDITOR,
+      "/entry/get": authorEntry(1),
     });
 
     await page.goto("entries/authors/1/edit");
@@ -149,5 +140,72 @@ test.describe("plain-form route for non-editor entry types", () => {
     };
     expect(lastInput.id).toBe(1);
     expect(lastInput.status).toBe("draft");
+  });
+});
+
+test.describe("capability gating in plain-form route", () => {
+  const AUTHED_LOW_CAP = withCapabilities(
+    AUTHED_ADMIN,
+    "entry:author:edit_any",
+    "entry:author:edit_own",
+    "entry:author:read",
+  );
+
+  const AUTHED_HIGH_CAP = withCapabilities(
+    AUTHED_LOW_CAP,
+    "entry:author:manage_internal_notes",
+    "entry:author:view_secret_notes",
+  );
+
+  test.beforeEach(async ({ page }) => {
+    await mockManifest(page, MANIFEST_WITH_CAPABILITY_GATES);
+  });
+
+  test("low-cap viewer: gated metabox + gated field both absent", async ({
+    page,
+  }) => {
+    await mockRpc(page, {
+      "/auth/session": AUTHED_LOW_CAP,
+      "/entry/get": authorEntry(1),
+    });
+
+    await page.goto("entries/authors/1/edit");
+
+    await expect(
+      page.getByTestId("plain-form-meta-box-public-bio"),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId("meta-box-field-headline-input"),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId("meta-box-field-secret_note-input"),
+    ).toHaveCount(0);
+    await expect(
+      page.getByTestId("plain-form-meta-box-internal-notes"),
+    ).toHaveCount(0);
+  });
+
+  test("high-cap viewer: gated metabox and gated field both visible", async ({
+    page,
+  }) => {
+    await mockRpc(page, {
+      "/auth/session": AUTHED_HIGH_CAP,
+      "/entry/get": authorEntry(1),
+    });
+
+    await page.goto("entries/authors/1/edit");
+
+    await expect(
+      page.getByTestId("plain-form-meta-box-public-bio"),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId("meta-box-field-headline-input"),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId("meta-box-field-secret_note-input"),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId("plain-form-meta-box-internal-notes"),
+    ).toBeVisible();
   });
 });
