@@ -18,6 +18,14 @@ interface InsertableEntryRowProps {
   readonly blocks: BlockRegistry;
   readonly patterns: PatternRegistry;
   readonly onClick: () => void;
+  /**
+   * Rows nested inside a Puck `Drawer.Item` wrapper must not be
+   * interactive themselves (axe `nested-interactive`) — dnd-kit's
+   * keyboard sensor makes the wrapper a focusable role=button whose
+   * action is keyboard DRAG, not insert. The plain row carries the
+   * pointer click; keyboard insertion lives in the slash menu.
+   */
+  readonly interactive?: boolean;
 }
 
 export function InsertableEntryRow({
@@ -25,18 +33,34 @@ export function InsertableEntryRow({
   blocks,
   patterns,
   onClick,
+  interactive = true,
 }: InsertableEntryRowProps): ReactElement {
   const renderLabel = useLabel();
   if (!isVariation(entry)) {
+    const className =
+      "hover:bg-muted flex w-full cursor-pointer items-center gap-2 rounded border px-3 py-2 text-start text-sm";
+    const testId = `plumix-blocks-tab-item-${entryKey(entry)}`;
+    const content = (
+      <>
+        <BlockIcon name={entry.icon} />
+        <span className="truncate">{renderLabel(entry.title)}</span>
+      </>
+    );
+    if (!interactive) {
+      return (
+        <div className={className} data-testid={testId} onClick={onClick}>
+          {content}
+        </div>
+      );
+    }
     return (
       <button
         type="button"
-        className="hover:bg-muted flex w-full items-center gap-2 rounded border px-3 py-2 text-start text-sm"
-        data-testid={`plumix-blocks-tab-item-${entryKey(entry)}`}
+        className={className}
+        data-testid={testId}
         onClick={onClick}
       >
-        <BlockIcon name={entry.icon} />
-        <span className="truncate">{renderLabel(entry.title)}</span>
+        {content}
       </button>
     );
   }

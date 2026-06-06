@@ -32,7 +32,7 @@ import { useLabel } from "@/lib/use-label.js";
 import { cn } from "@/lib/utils.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
-import { Puck, useGetPuck } from "@puckeditor/core";
+import { Drawer, Puck, useGetPuck } from "@puckeditor/core";
 import { Minus, Monitor, Plus, Smartphone, Tablet } from "lucide-react";
 
 import type {
@@ -832,18 +832,45 @@ function PlumixBlocksTab({
 
   return (
     <div className="flex flex-col">
-      <ul className="flex flex-col gap-1 p-4" data-testid="plumix-blocks-tab">
-        {entries.map((entry) => (
-          <li key={entryKey(entry)}>
-            <InsertableEntryRow
-              entry={entry}
-              blocks={registry}
-              patterns={patternRegistry}
-              onClick={() => handleInsert(entry)}
-            />
-          </li>
-        ))}
-      </ul>
+      {/* Drawer.Item turns a row into a drag source for the canvas drop
+          zones (Puck's palette mechanism), with dnd-kit's 5 px activation
+          distance leaving plain clicks for onClick. Only plain blocks
+          wrap — a Drawer.Item maps to a component TYPE and can't carry a
+          variation's preset attrs, so variations stay click-only. */}
+      <Drawer>
+        <ul className="flex flex-col gap-1 p-4" data-testid="plumix-blocks-tab">
+          {entries.map((entry) => {
+            const row = (
+              <InsertableEntryRow
+                entry={entry}
+                blocks={registry}
+                patterns={patternRegistry}
+                onClick={() => handleInsert(entry)}
+                interactive={isVariation(entry)}
+              />
+            );
+            // A drop inserts the bare component type, which would skip
+            // the BlockScopePicker the click path opens — disable drag
+            // for blocks that still have pickable block-scope
+            // variations so the two paths can't diverge.
+            const dragDisabled =
+              !isVariation(entry) &&
+              resolveBlockScopeVariations(registry, entry.name, capabilities)
+                .length > 0;
+            return (
+              <li key={entryKey(entry)}>
+                {isVariation(entry) ? (
+                  row
+                ) : (
+                  <Drawer.Item name={entry.name} isDragDisabled={dragDisabled}>
+                    {() => row}
+                  </Drawer.Item>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </Drawer>
       <PatternsSection
         patterns={patterns}
         onSelect={handlePatternInsert}

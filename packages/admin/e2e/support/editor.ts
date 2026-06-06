@@ -98,6 +98,56 @@ export async function dismissStarterModal(page: Page): Promise<void> {
   await expect(modal).toBeHidden();
 }
 
+type BoundingBox = NonNullable<Awaited<ReturnType<Locator["boundingBox"]>>>;
+
+/** Resolves both drag endpoints' boxes, throwing if either is off-screen. */
+async function dragBoxes(
+  label: string,
+  source: Locator,
+  target: Locator,
+): Promise<{ source: BoundingBox; target: BoundingBox }> {
+  const sourceBox = await source.boundingBox();
+  const targetBox = await target.boundingBox();
+  if (!sourceBox || !targetBox) {
+    throw new Error(`${label}: source or target has no bounding box`);
+  }
+  return { source: sourceBox, target: targetBox };
+}
+
+/**
+ * Palette → canvas drag (@dnd-kit/react, 5 px mouse activation). Walks
+ * the cursor from the source's center onto the target's center with a
+ * settle pause for the drag to engage and one for the collision
+ * detector before release. Assumes the target's center is droppable —
+ * i.e. an empty canvas; on a populated one, prefer dragBelow.
+ */
+export async function dragOnto(
+  page: Page,
+  source: Locator,
+  target: Locator,
+): Promise<void> {
+  const { source: sourceBox, target: targetBox } = await dragBoxes(
+    "dragOnto",
+    source,
+    target,
+  );
+  const from = {
+    x: sourceBox.x + sourceBox.width / 2,
+    y: sourceBox.y + sourceBox.height / 2,
+  };
+  const to = {
+    x: targetBox.x + targetBox.width / 2,
+    y: targetBox.y + targetBox.height / 2,
+  };
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(from.x + 8, from.y + 8, { steps: 4 });
+  await page.waitForTimeout(300);
+  await page.mouse.move(to.x, to.y, { steps: 16 });
+  await page.waitForTimeout(300);
+  await page.mouse.up();
+}
+
 // Puck exposes only the item id on `data-puck-component` (pattern
 // inserts mint bare random ids), so block type is asserted through the
 // semantic element each core block renders — which doubles as checking
@@ -151,11 +201,11 @@ export async function dragBelow(
   source: Locator,
   target: Locator,
 ): Promise<void> {
-  const sourceBox = await source.boundingBox();
-  const targetBox = await target.boundingBox();
-  if (!sourceBox || !targetBox) {
-    throw new Error("dragBelow: source or target has no bounding box");
-  }
+  const { source: sourceBox, target: targetBox } = await dragBoxes(
+    "dragBelow",
+    source,
+    target,
+  );
   const x = sourceBox.x + Math.min(40, sourceBox.width / 2);
   const startY = sourceBox.y + sourceBox.height / 2;
   await page.mouse.move(x, startY);
