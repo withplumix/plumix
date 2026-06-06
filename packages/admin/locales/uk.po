@@ -875,6 +875,11 @@ msgid "emailChange.error.fallback"
 msgstr "Не вдалося підтвердити зміну email. Спробуйте знову."
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+msgid "editor.entry.create.failedTitle"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/create.tsx
 msgid "terms.create.error.createFallback"
 msgstr "Не вдалося створити термін. Спробуйте знову."
@@ -2848,6 +2853,11 @@ msgid "errorBoundary.title"
 msgstr "Щось пішло не так"
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+msgid "editor.entry.create.failed"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.invalidInput"
 msgstr "Щось пішло не так із формою. Перезавантажте та спробуйте знову."
@@ -3271,6 +3281,11 @@ msgstr "Кошик"
 msgctxt "action verb"
 msgid "entries.list.row.trashing"
 msgstr "Переміщення в кошик…"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+msgid "editor.entry.create.retry"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/PatternsSection.tsx

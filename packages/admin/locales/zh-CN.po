@@ -836,7 +836,8 @@ msgstr "复制令牌"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.empty.description"
-msgstr "核心刻意不提供设置 — 插件（或您自己的 plumix.config）通过 <0>ctx.registerSettingsPage</0> 和 <1>ctx.registerSettingsGroup</1> 声明页面和分组。已注册的页面将在此显示，每页一张卡片。"
+msgstr "核心刻意不提供设置 — 插件（或您自己的 plumix.config）通过 <0>ctx.registerSettingsPage</0> 和 "
+"<1>ctx.registerSettingsGroup</1> 声明页面和分组。已注册的页面将在此显示，每页一张卡片。"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -852,6 +853,11 @@ msgstr "无法完成请求。请重试。"
 #: src/lib/email-change-errors.ts
 msgid "emailChange.error.fallback"
 msgstr "无法确认电子邮箱更改。请重试。"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+msgid "editor.entry.create.failedTitle"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/create.tsx
@@ -910,13 +916,13 @@ msgstr "无法加载此设置。请重试。"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.loadFailed"
-msgstr "无法加载此条目。"
+msgid "editor.entry.edit.loadFailedTitle"
+msgstr "无法加载此条目"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.loadFailedTitle"
-msgstr "无法加载此条目"
+msgid "editor.entry.edit.loadFailed"
+msgstr "无法加载此条目。"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
@@ -1368,7 +1374,8 @@ msgstr "电子邮箱"
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.error.mailerNotConfigured"
-msgstr "电子邮箱更改需要服务器端配置 Magic Link 邮件发送器。请向 `plumix({...})` 传入 `auth.magicLink` 和 `mailer:` 以启用。"
+msgstr "电子邮箱更改需要服务器端配置 Magic Link 邮件发送器。请向 `plumix({...})` 传入 `auth.magicLink` "
+"和 `mailer:` 以启用。"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -1578,6 +1585,11 @@ msgstr "标题从 h{from} 跳到 h{to}。请在中间插入 h{between}。"
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.hideComparison"
 msgstr "隐藏对比"
+
+#. js-lingui-explicit-id
+#: src/components/error-boundary-fallback.tsx
+msgid "errorBoundary.hideError"
+msgstr "隐藏错误"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -1990,7 +2002,8 @@ msgstr "未检测到标题结构问题。"
 #. js-lingui-explicit-id
 #: src/lib/mailer-errors.ts
 msgid "mailer.test.error.notConfigured"
-msgstr "未配置邮件发送器适配器。请向 `plumix({...})` 传入 `mailer:`（例如 consoleMailer() 用于开发，或您的 Resend/Postmark/SES 封装）。"
+msgstr "未配置邮件发送器适配器。请向 `plumix({...})` 传入 `mailer:`（例如 consoleMailer() 用于开发，或您的 "
+"Resend/Postmark/SES 封装）。"
 
 #. js-lingui-explicit-id
 #: src/editor/SlashMenuPanel.tsx
@@ -2624,7 +2637,8 @@ msgstr "发送中…"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.description"
-msgstr "通过 Magic Link 使用的同一传输发送一次性消息。错误将原样显示在此处 — 与 Magic Link 请求流程不同，后者会刻意吞下邮件错误，以免响应形态泄露电子邮箱是否已注册。"
+msgstr "通过 Magic Link 使用的同一传输发送一次性消息。错误将原样显示在此处 — 与 Magic Link "
+"请求流程不同，后者会刻意吞下邮件错误，以免响应形态泄露电子邮箱是否已注册。"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/accept-invite/$token.tsx
@@ -2666,6 +2680,11 @@ msgstr "设置"
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.success.description"
 msgstr "与 {email} 分享下方链接。他们首次打开时会注册一个 Passkey。链接将在 7 天后过期。"
+
+#. js-lingui-explicit-id
+#: src/components/error-boundary-fallback.tsx
+msgid "errorBoundary.showError"
+msgstr "显示错误"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffDialog.tsx
@@ -2772,6 +2791,16 @@ msgstr "在您请求和点击之间，其他人已认领了此电子邮箱。请
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.description"
 msgstr "在您有待保存的更改时，其他人对此条目发布了更改。请选择要保留哪个版本再继续。"
+
+#. js-lingui-explicit-id
+#: src/components/error-boundary-fallback.tsx
+msgid "errorBoundary.title"
+msgstr "出错了"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+msgid "editor.entry.create.failed"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
@@ -3177,6 +3206,11 @@ msgid "entries.list.row.trashing"
 msgstr "移至回收站中…"
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+msgid "editor.entry.create.retry"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/PatternsSection.tsx
 msgid "patternsSection.uncategorized"
 msgstr "未分类"
@@ -3426,18 +3460,3 @@ msgstr "放大"
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.canvas.zoomOut"
 msgstr "缩小"
-
-#. js-lingui-explicit-id
-#: src/components/error-boundary-fallback.tsx
-msgid "errorBoundary.title"
-msgstr "出错了"
-
-#. js-lingui-explicit-id
-#: src/components/error-boundary-fallback.tsx
-msgid "errorBoundary.showError"
-msgstr "显示错误"
-
-#. js-lingui-explicit-id
-#: src/components/error-boundary-fallback.tsx
-msgid "errorBoundary.hideError"
-msgstr "隐藏错误"

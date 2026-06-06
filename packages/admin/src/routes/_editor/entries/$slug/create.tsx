@@ -1,6 +1,8 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
+import { ErrorPlaceholder } from "@/components/error-placeholder.js";
+import { Button } from "@/components/ui/button.js";
 import { hasCap } from "@/lib/caps.js";
 import { findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
@@ -24,6 +26,18 @@ const M = {
   pendingGeneric: defineMessage({
     id: "editor.entry.create.pending.generic",
     message: "Creating…",
+  }),
+  failedTitle: defineMessage({
+    id: "editor.entry.create.failedTitle",
+    message: "Couldn't create the entry",
+  }),
+  failedBody: defineMessage({
+    id: "editor.entry.create.failed",
+    message: "Something went wrong while creating a draft. Try again.",
+  }),
+  retry: defineMessage({
+    id: "editor.entry.create.retry",
+    message: "Try again",
   }),
 } satisfies Record<string, MessageDescriptor>;
 
@@ -58,7 +72,12 @@ function CreateEntryRoute(): ReactNode {
         type: entryType.name,
         // Persisted once at create — locale switches don't rewrite stored data.
         title: renderLabel(M.untitled),
-        slug: slugify(`untitled-${Date.now().toString(36)}`),
+        // Random suffix: two creates in the same millisecond (parallel
+        // tabs, double-click) would otherwise mint the same slug and
+        // 409 on the unique constraint.
+        slug: slugify(
+          `untitled-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        ),
         status: "draft",
       }),
     onSuccess: (entry) => {
@@ -75,6 +94,25 @@ function CreateEntryRoute(): ReactNode {
     started.current = true;
     create.mutate();
   }, [create]);
+
+  if (create.isError) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4">
+        <ErrorPlaceholder
+          testId="create-entry-error"
+          title={renderLabel(M.failedTitle)}
+          description={renderLabel(M.failedBody)}
+        />
+        <Button
+          variant="outline"
+          data-testid="create-entry-retry"
+          onClick={() => create.mutate()}
+        >
+          {renderLabel(M.retry)}
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div
