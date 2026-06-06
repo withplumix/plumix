@@ -1,9 +1,8 @@
-// The CI-green cutover landed an editor whose canvas had no real typing
-// coverage — slash-menu insert + sidebar styling passed, but no test
-// actually typed into a richtext field on the canvas. This spec closes
-// that hole: insert a paragraph, type into it, assert the autosave
-// envelope reaches entry.update with the typed text and the server
-// answers OK (no 500, no INVALID_BLOCK_CONTENT).
+// Autosave envelope contracts around the editor: block insert and
+// title edits must reach entry.update with a valid plumix.v2 payload.
+// Despite the original intent, nothing here types into a richtext
+// field — sustained-typing coverage (which caught the Tiptap remount
+// keystroke loss) lives in editor-actions.spec.ts under "edit fields".
 
 import { expect, test } from "@playwright/test";
 
