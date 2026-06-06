@@ -869,6 +869,11 @@ msgid "emailChange.error.fallback"
 msgstr "Couldn't confirm the email change. Try again."
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+msgid "editor.entry.create.failedTitle"
+msgstr "Couldn't create the entry"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/create.tsx
 msgid "terms.create.error.createFallback"
 msgstr "Couldn't create the term. Try again."
@@ -2832,6 +2837,11 @@ msgid "errorBoundary.title"
 msgstr "Something went wrong"
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+msgid "editor.entry.create.failed"
+msgstr "Something went wrong while creating a draft. Try again."
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.invalidInput"
 msgstr "Something went wrong with the form. Please reload and try again."
@@ -3251,6 +3261,11 @@ msgstr "Trash"
 msgctxt "action verb"
 msgid "entries.list.row.trashing"
 msgstr "Trashing…"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+msgid "editor.entry.create.retry"
+msgstr "Try again"
 
 #. js-lingui-explicit-id
 #: src/editor/PatternsSection.tsx

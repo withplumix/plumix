@@ -867,6 +867,11 @@ msgid "emailChange.error.fallback"
 msgstr "تعذّر تأكيد تغيير البريد. حاول مرة أخرى."
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+msgid "editor.entry.create.failedTitle"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/create.tsx
 msgid "terms.create.error.createFallback"
 msgstr "تعذّر إنشاء المصطلح. حاول مرة أخرى."
@@ -2824,6 +2829,11 @@ msgid "errorBoundary.title"
 msgstr "حدث خطأ ما"
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+msgid "editor.entry.create.failed"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.invalidInput"
 msgstr "حدث خطأ في النموذج. أعد التحميل وحاول مرة أخرى."
@@ -3235,6 +3245,11 @@ msgstr "المهملات"
 msgctxt "action verb"
 msgid "entries.list.row.trashing"
 msgstr "جارٍ النقل إلى المهملات…"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+msgid "editor.entry.create.retry"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/PatternsSection.tsx

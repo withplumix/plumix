@@ -506,39 +506,44 @@ test.describe("editor actions: draft of a published entry", () => {
 });
 
 test.describe("editor actions: create failure", () => {
-  // KNOWN BROKEN: create.tsx has no onError — any entry.create failure
-  // (e.g. the 409 slug collision two same-millisecond creates produce,
-  // since the slug derives from Date.now()) leaves "Creating…" up
-  // forever with no feedback and no retry.
-  test("a failed create surfaces feedback instead of hanging", async ({
+  test("a failed create surfaces an error and retry recovers", async ({
     page,
   }) => {
-    test.fail();
     await installEditorMocks(page, {
       handlers: {
         "/auth/session": AUTHED_ADMIN,
         "/entry/list": [],
       },
     });
-    await page.route("**/_plumix/rpc/entry/create", (route) =>
-      route.fulfill({
-        status: 409,
+    // First create 409s (the slug-collision shape); the retry succeeds.
+    let attempts = 0;
+    await page.route("**/_plumix/rpc/entry/create", (route) => {
+      attempts += 1;
+      if (attempts === 1) {
+        return route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: rpcErrorBody({
+            code: "CONFLICT",
+            message: "Resource conflict",
+            data: { reason: "slug_taken" },
+          }),
+        });
+      }
+      return route.fulfill({
+        status: 200,
         contentType: "application/json",
-        body: rpcErrorBody({
-          code: "CONFLICT",
-          message: "Resource conflict",
-          data: { reason: "slug_taken" },
-        }),
-      }),
-    );
+        body: JSON.stringify({ json: editorEntry(), meta: [] }),
+      });
+    });
 
     await page.goto("entries/posts");
     await page.getByTestId("content-list-new-button").click();
-    await expect(page.getByTestId("create-entry-pending")).toBeVisible();
-    // The pending indicator must resolve into something — an error
-    // surface or a navigation — within a generous window.
-    await expect(page.getByTestId("create-entry-pending")).toBeHidden({
-      timeout: 8_000,
-    });
+    await expect(page.getByTestId("create-entry-error")).toBeVisible();
+
+    await page.getByTestId("create-entry-retry").click();
+    await page.waitForURL(/\/entries\/posts\/\d+\/edit/);
+    await dismissStarterModal(page);
+    await expect(page.getByTestId("plumix-editor-canvas")).toBeVisible();
   });
 });
