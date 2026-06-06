@@ -1,4 +1,4 @@
-// Shared fixtures + interaction helpers for editor-actions.spec.ts.
+// Shared fixtures + interaction helpers for the editor specs.
 // The mock harness can't prove server persistence, so specs assert the
 // two client contracts instead: what the canvas renders, and what
 // envelope entry.update receives.
@@ -38,6 +38,66 @@ export function editorEntry(
     updatedAt: T0,
     meta: {},
   };
+}
+
+export interface PublishedEntryOptions {
+  readonly title?: string;
+  readonly content?: unknown;
+  /** Pending autosave row timestamp; omit/null = no pending autosave. */
+  readonly autosaveUpdatedAt?: Date | null;
+  readonly liveUpdatedAt?: Date;
+}
+
+/**
+ * Published entry carrying the `_preview` projection the server emits
+ * for autosave-capable entry types. A non-null `autosaveUpdatedAt`
+ * marks a pending per-user draft (`source: "autosave"`); equal to
+ * `liveUpdatedAt` is fresh, older is stale.
+ */
+export function publishedEntry(
+  options: PublishedEntryOptions = {},
+): Record<string, unknown> {
+  const liveUpdatedAt = options.liveUpdatedAt ?? T0;
+  const autosaveUpdatedAt = options.autosaveUpdatedAt ?? null;
+  return {
+    ...editorEntry({
+      status: "published",
+      content: options.content,
+      title:
+        options.title ?? (autosaveUpdatedAt ? "Pending edit" : "Live title"),
+    }),
+    publishedAt: liveUpdatedAt,
+    createdAt: liveUpdatedAt,
+    updatedAt: liveUpdatedAt,
+    _preview: autosaveUpdatedAt
+      ? { source: "autosave", autosaveUpdatedAt, liveUpdatedAt }
+      : { source: "live", autosaveUpdatedAt: null, liveUpdatedAt },
+    terms: {},
+  };
+}
+
+/**
+ * oRPC `entry/get` envelope for a `publishedEntry`, including the
+ * date-revival meta entries the serializer emits — without them the
+ * client sees strings where it expects Dates and the draft/stale
+ * machinery silently misreads the `_preview` timestamps.
+ */
+export function publishedEntryRpcBody(entry: Record<string, unknown>): string {
+  const preview = entry._preview as {
+    readonly autosaveUpdatedAt: Date | null;
+  };
+  return JSON.stringify({
+    json: entry,
+    meta: [
+      [1, "createdAt"],
+      [1, "updatedAt"],
+      [1, "publishedAt"],
+      [1, "_preview", "liveUpdatedAt"],
+      ...(preview.autosaveUpdatedAt
+        ? [[1, "_preview", "autosaveUpdatedAt"]]
+        : []),
+    ],
+  });
 }
 
 // Two visible blocks (heading text + rich-text body) so drag, select,
@@ -96,6 +156,13 @@ export async function dismissStarterModal(page: Page): Promise<void> {
   await modal.waitFor({ state: "visible" });
   await page.getByTestId("plumix-starter-modal-start-blank").click();
   await expect(modal).toBeHidden();
+}
+
+/** Opens the slash menu on the canvas and clicks the given item. */
+export async function insertViaSlash(page: Page, slug: string): Promise<void> {
+  await page.getByTestId("plumix-editor-canvas").focus();
+  await page.keyboard.press("/");
+  await page.getByTestId(`slash-menu-item-${slug}`).click();
 }
 
 type BoundingBox = NonNullable<Awaited<ReturnType<Locator["boundingBox"]>>>;

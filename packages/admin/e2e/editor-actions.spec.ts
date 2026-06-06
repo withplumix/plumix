@@ -7,12 +7,8 @@
 // The mock harness can't prove server persistence, so specs assert the
 // two client contracts instead: what the canvas renders, and what
 // envelope entry.update receives.
-//
-// Several tests are test.fail() regression pins for live-verified bugs
-// (2026-06-05). They keep the suite green today and flip to
-// "unexpectedly passed" when the fix lands — remove the annotation in
-// the same PR that fixes the bug.
 
+import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 import {
@@ -24,12 +20,16 @@ import {
   editorEntry,
   installEditorMocks,
   lastUpdate,
+  publishedEntry,
+  publishedEntryRpcBody,
   SEEDED_CONTENT,
+  T0,
 } from "./support/editor.js";
 import {
   AUTHED_ADMIN,
   MANIFEST_WITH_EDITOR_PATTERNS,
   mockManifest,
+  mockRpc,
   rpcErrorBody,
 } from "./support/rpc-mock.js";
 
@@ -333,7 +333,7 @@ test.describe("editor actions: patterns", () => {
     expect(blocks[0]?.attrs?.slug).toBe("e2e/promo");
   });
 
-  test("pattern-ref detach button is reachable with the mouse", async ({
+  test("pattern-ref detach converts the ref into an editable copy", async ({
     page,
   }) => {
     await installEditorMocks(page);
@@ -343,28 +343,13 @@ test.describe("editor actions: patterns", () => {
     await page.getByTestId("plumix-patterns-row-e2e/promo").click();
     const ref = page.getByTestId("plumix-pattern-ref-e2e/promo");
     await ref.click();
+    // Real mouse click — the detach button being unreachable under the
+    // selection overlay was a live-verified bug; dispatchEvent would
+    // mask a regression.
     await page
       .getByTestId("plumix-pattern-ref-detach")
       .click({ timeout: 5_000 });
     await expect(ref).toBeHidden();
-  });
-
-  test("pattern-ref detach converts the ref into an editable copy", async ({
-    page,
-  }) => {
-    await installEditorMocks(page);
-    await page.goto("entries/posts/1/edit");
-    await dismissStarterModal(page);
-
-    await page.getByTestId("plumix-patterns-row-e2e/promo").click();
-    await expect(
-      page.getByTestId("plumix-pattern-ref-e2e/promo"),
-    ).toBeVisible();
-
-    await page.getByTestId("plumix-pattern-ref-detach").dispatchEvent("click");
-    await expect(page.getByTestId("plumix-pattern-ref-e2e/promo")).toBeHidden({
-      timeout: 5_000,
-    });
     await expect(
       canvasBlocks(page, "core/heading").first().locator("h3"),
     ).toHaveText("Promo heading");
@@ -392,6 +377,60 @@ test.describe("editor actions: pattern authoring", () => {
 });
 
 test.describe("editor actions: draft of a published entry", () => {
+  // Static initial-state mocks: the server reports a published entry
+  // with or without a pending autosave row via `_preview`. An autosave
+  // timestamp equal to the live row's is pending but not stale, so the
+  // banner renders without the stale-draft dialog in the way.
+  async function mockPublishedEntry(
+    page: Page,
+    opts: { autosaveUpdatedAt: Date | null },
+  ): Promise<void> {
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/activity/list": { users: [] },
+    });
+    await page.route("**/_plumix/rpc/entry/get", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: publishedEntryRpcBody(
+          publishedEntry({
+            content: SEEDED_CONTENT,
+            autosaveUpdatedAt: opts.autosaveUpdatedAt,
+          }),
+        ),
+      }),
+    );
+  }
+
+  test("published entry without an autosave: three-button header, no banner, Publish + Discard disabled", async ({
+    page,
+  }) => {
+    await mockPublishedEntry(page, { autosaveUpdatedAt: null });
+
+    await page.goto("entries/posts/1/edit");
+    await expect(page.getByTestId("editor-draft-save")).toBeVisible();
+    await expect(page.getByTestId("editor-draft-publish")).toBeDisabled();
+    await expect(page.getByTestId("editor-draft-discard")).toBeDisabled();
+    await expect(page.getByTestId("unpublished-changes-banner")).toHaveCount(0);
+    // Legacy single Publish button is gone in draft mode.
+    await expect(page.getByTestId("plumix-editor-publish-button")).toHaveCount(
+      0,
+    );
+  });
+
+  test("published entry WITH an autosave: banner visible, all three buttons enabled", async ({
+    page,
+  }) => {
+    await mockPublishedEntry(page, { autosaveUpdatedAt: T0 });
+
+    await page.goto("entries/posts/1/edit");
+    await expect(page.getByTestId("unpublished-changes-banner")).toBeVisible();
+    await expect(page.getByTestId("editor-draft-save")).toBeEnabled();
+    await expect(page.getByTestId("editor-draft-publish")).toBeEnabled();
+    await expect(page.getByTestId("editor-draft-discard")).toBeEnabled();
+  });
+
   test("editing a published entry surfaces the banner without a reload", async ({
     page,
   }) => {

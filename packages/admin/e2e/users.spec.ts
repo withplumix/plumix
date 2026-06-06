@@ -6,6 +6,7 @@ import {
   AUTHED_ADMIN,
   mockRpc,
   mockRpcWithCapture,
+  rpcConflictBody,
   rpcOkBody,
 } from "./support/rpc-mock.js";
 
@@ -14,7 +15,9 @@ import {
 //   - /users/create invite form (happy path, email-taken, cap gate)
 //   - /users/$id/edit edit (admin-editing-other, self-via-profile, last-admin
 //     CONFLICT, delete-with-reassign)
-// Ordering follows the user journey: list → invite → edit.
+//   - /users/$id/edit cards: email change (self + admin oversight) and
+//     API tokens (self mint/revoke + admin oversight)
+// Ordering follows the user journey: list → invite → edit → cards.
 
 function user(overrides: Partial<User> & { id: number; email: string }): User {
   return {
@@ -29,6 +32,46 @@ function user(overrides: Partial<User> & { id: number; email: string }): User {
     ...overrides,
   };
 }
+
+const TOKEN_BASE = {
+  prefix: "pl_pat_abcd",
+  createdAt: new Date("2026-04-20T00:00:00Z"),
+  expiresAt: null,
+  lastUsedAt: null,
+  scopes: null,
+} as const;
+
+function token(
+  overrides: Partial<{
+    id: string;
+    name: string;
+    prefix: string;
+    expiresAt: Date | null;
+    lastUsedAt: Date | null;
+    scopes: readonly string[] | null;
+  }> & { id: string; name: string },
+): {
+  id: string;
+  name: string;
+  prefix: string;
+  createdAt: Date;
+  expiresAt: Date | null;
+  lastUsedAt: Date | null;
+  scopes: readonly string[] | null;
+} {
+  return {
+    ...TOKEN_BASE,
+    ...overrides,
+  };
+}
+
+// The self-edit page loads the passkeys, sessions, and API-tokens
+// cards alongside the form — every self-profile test needs these.
+const SELF_EDIT_LISTS = {
+  "/auth/credentials/list": [],
+  "/auth/sessions/list": [],
+  "/auth/apiTokens/list": [],
+} as const;
 
 test.describe("/users", () => {
   test("renders the admin's own row + invited users, gated by user:list", async ({
@@ -69,7 +112,7 @@ test.describe("/users", () => {
 
     // Admin is shown as "You" — matches WP's self-marker on the user list.
     await expect(
-      page.getByTestId("users-list-row-1").locator("text=You"),
+      page.getByTestId("users-list-row-1").getByTestId("users-list-row-you"),
     ).toBeVisible();
 
     // Invite button is visible for an admin (has `user:create`).
@@ -136,37 +179,18 @@ test.describe("/users/create", () => {
   test("invite happy path: email + role → success screen with copy-able URL", async ({
     page,
   }) => {
-    const inviteInputs: unknown[] = [];
-    await page.route("**/_plumix/rpc/**", async (route) => {
-      const url = route.request().url();
-      if (url.endsWith("/auth/session")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody(AUTHED_ADMIN),
-        });
-      }
-      if (url.endsWith("/user/invite")) {
-        const body = route.request().postDataJSON() as { json?: unknown };
-        inviteInputs.push(body.json);
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            json: {
-              user: user({
-                id: 42,
-                email: "newbie@example.test",
-                name: null,
-                role: "editor",
-              }),
-              inviteToken: "opaque-invite-token-xyz",
-            },
-            meta: [],
-          }),
-        });
-      }
-      return route.fulfill({ status: 404, body: "not-mocked" });
+    const inviteInputs = await mockRpcWithCapture(page, {
+      captureSuffix: "/user/invite",
+      captureResponse: {
+        user: user({
+          id: 42,
+          email: "newbie@example.test",
+          name: null,
+          role: "editor",
+        }),
+        inviteToken: "opaque-invite-token-xyz",
+      },
+      handlers: { "/auth/session": AUTHED_ADMIN },
     });
 
     await page.goto("users/create");
@@ -196,33 +220,14 @@ test.describe("/users/create", () => {
   test("email-taken CONFLICT surfaces a friendly message from the server", async ({
     page,
   }) => {
-    await page.route("**/_plumix/rpc/**", async (route) => {
-      const url = route.request().url();
-      if (url.endsWith("/auth/session")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody(AUTHED_ADMIN),
-        });
-      }
-      if (url.endsWith("/user/invite")) {
-        return route.fulfill({
-          status: 409,
-          contentType: "application/json",
-          body: JSON.stringify({
-            json: {
-              defined: true,
-              code: "CONFLICT",
-              status: 409,
-              message: "Resource conflict",
-              data: { reason: "email_taken" },
-            },
-            meta: [],
-          }),
-        });
-      }
-      return route.fulfill({ status: 404, body: "not-mocked" });
-    });
+    await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
+    await page.route("**/_plumix/rpc/user/invite", (route) =>
+      route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: rpcConflictBody("email_taken"),
+      }),
+    );
 
     await page.goto("users/create");
     await page.getByTestId("invite-email-input").fill("taken@example.test");
@@ -258,6 +263,7 @@ test.describe("/users/create", () => {
     await expect(page.getByTestId("users-list-heading")).toBeVisible();
   });
 });
+
 test.describe("/users/$id/edit", () => {
   test("admin editing another user: form prefilled, role dropdown visible, Disable + Delete cards present", async ({
     page,
@@ -341,55 +347,29 @@ test.describe("/users/$id/edit", () => {
     page,
   }) => {
     const target = user({ id: 1, email: "admin@example.test", role: "admin" });
-    await page.route("**/_plumix/rpc/**", async (route) => {
-      const url = route.request().url();
-      if (url.endsWith("/auth/session")) {
-        // Simulate a secondary admin viewing the primary admin's edit page
-        // so Disable is visible but the server knows it's the last admin.
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            json: {
-              user: {
-                id: 9,
-                email: "admin2@example.test",
-                name: "Admin 2",
-                avatarUrl: null,
-                role: "admin",
-                capabilities: AUTHED_ADMIN.user?.capabilities ?? [],
-              },
-              needsBootstrap: false,
-            },
-            meta: [],
-          }),
-        });
-      }
-      if (url.endsWith("/user/get")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody(target),
-        });
-      }
-      if (url.endsWith("/user/disable")) {
-        return route.fulfill({
-          status: 409,
-          contentType: "application/json",
-          body: JSON.stringify({
-            json: {
-              defined: true,
-              code: "CONFLICT",
-              status: 409,
-              message: "Resource conflict",
-              data: { reason: "last_admin" },
-            },
-            meta: [],
-          }),
-        });
-      }
-      return route.fulfill({ status: 404, body: "not-mocked" });
+    // Simulate a secondary admin viewing the primary admin's edit page
+    // so Disable is visible but the server knows it's the last admin.
+    await mockRpc(page, {
+      "/auth/session": {
+        user: {
+          id: 9,
+          email: "admin2@example.test",
+          name: "Admin 2",
+          avatarUrl: null,
+          role: "admin",
+          capabilities: AUTHED_ADMIN.user?.capabilities ?? [],
+        },
+        needsBootstrap: false,
+      },
+      "/user/get": target,
     });
+    await page.route("**/_plumix/rpc/user/disable", (route) =>
+      route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: rpcConflictBody("last_admin"),
+      }),
+    );
 
     await page.goto("users/1/edit");
     await page.getByTestId("user-edit-disable-button").click();
@@ -424,7 +404,6 @@ test.describe("/users/$id/edit", () => {
     });
 
     await page.goto("users/42/edit");
-    // Reveal confirmation → pick reassignee → confirm.
     await page.getByTestId("user-edit-delete-button").click();
     await page
       .getByTestId("user-delete-reassign-select")
@@ -448,43 +427,19 @@ test.describe("/users/$id/edit", () => {
   test("self-save never includes `role` in the payload (guards against self-promotion)", async ({
     page,
   }) => {
-    const updateInputs: unknown[] = [];
     const adminSelf = user({
       id: 1,
       email: "admin@example.test",
       name: "Admin",
       role: "admin",
     });
-    await page.route("**/_plumix/rpc/**", async (route) => {
-      const url = route.request().url();
-      if (url.endsWith("/auth/session")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody(AUTHED_ADMIN),
-        });
-      }
-      if (url.endsWith("/user/get")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: rpcOkBody(adminSelf),
-        });
-      }
-      if (url.endsWith("/user/update")) {
-        updateInputs.push(
-          (route.request().postDataJSON() as { json?: unknown }).json,
-        );
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            json: { ...adminSelf, name: "Admin 2" },
-            meta: [],
-          }),
-        });
-      }
-      return route.fulfill({ status: 404, body: "not-mocked" });
+    const updateInputs = await mockRpcWithCapture(page, {
+      captureSuffix: "/user/update",
+      captureResponse: { ...adminSelf, name: "Admin 2" },
+      handlers: {
+        "/auth/session": AUTHED_ADMIN,
+        "/user/get": adminSelf,
+      },
     });
 
     await page.goto("profile");
@@ -537,5 +492,368 @@ test.describe("/users/$id/edit", () => {
     // Someone else's row: redirected to dashboard.
     await page.goto("users/99/edit");
     await expect(page).toHaveURL(/_plumix\/admin\/?$/);
+  });
+});
+
+test.describe("/users/$id/edit — email change (self)", () => {
+  const self = user({ id: 1, email: "admin@example.test", role: "admin" });
+
+  test("requesting a change shows the success copy + posts to requestEmailChange", async ({
+    page,
+  }) => {
+    const inputs = await mockRpcWithCapture(page, {
+      captureSuffix: "/user/requestEmailChange",
+      captureResponse: {
+        ok: true,
+        expiresAt: new Date("2026-05-04T00:00:00Z"),
+      },
+      handlers: {
+        "/auth/session": AUTHED_ADMIN,
+        "/user/get": self,
+        "/user/pendingEmailChange": { pending: null },
+        ...SELF_EDIT_LISTS,
+      },
+    });
+
+    await page.goto("users/1/edit");
+    await page.getByTestId("user-edit-email-change-button").click();
+    await expect(
+      page.getByTestId("user-edit-email-change-dialog"),
+    ).toBeVisible();
+    await page
+      .getByTestId("user-edit-email-change-input")
+      .fill("admin-new@example.test");
+    await page.getByTestId("user-edit-email-change-submit").click();
+
+    await expect(
+      page.getByTestId("user-edit-email-change-success"),
+    ).toContainText("admin-new@example.test");
+
+    expect(inputs[0]).toMatchObject({
+      id: 1,
+      newEmail: "admin-new@example.test",
+    });
+  });
+
+  test("email-taken CONFLICT renders a friendly error inside the dialog", async ({
+    page,
+  }) => {
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/user/get": self,
+      "/user/pendingEmailChange": { pending: null },
+      ...SELF_EDIT_LISTS,
+    });
+    await page.route("**/_plumix/rpc/user/requestEmailChange", (route) =>
+      route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: rpcConflictBody("email_taken"),
+      }),
+    );
+
+    await page.goto("users/1/edit");
+    await page.getByTestId("user-edit-email-change-button").click();
+    await page
+      .getByTestId("user-edit-email-change-input")
+      .fill("taken@example.test");
+    await page.getByTestId("user-edit-email-change-submit").click();
+
+    await expect(
+      page.getByTestId("user-edit-email-change-error"),
+    ).toContainText("already in use");
+    // Dialog stays open so the user can retype.
+    await expect(
+      page.getByTestId("user-edit-email-change-dialog"),
+    ).toBeVisible();
+  });
+
+  test("pending change banner renders + cancel works", async ({ page }) => {
+    let cancelled = false;
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/user/get": self,
+      ...SELF_EDIT_LISTS,
+    });
+    await page.route("**/_plumix/rpc/user/pendingEmailChange", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(
+          cancelled
+            ? { pending: null }
+            : {
+                pending: {
+                  newEmail: "admin-new@example.test",
+                  expiresAt: new Date("2026-05-04T00:00:00Z"),
+                  createdAt: new Date("2026-05-03T00:00:00Z"),
+                },
+              },
+        ),
+      }),
+    );
+    await page.route("**/_plumix/rpc/user/cancelEmailChange", (route) => {
+      cancelled = true;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody({ cancelled: 1 }),
+      });
+    });
+
+    await page.goto("users/1/edit");
+    await expect(page.getByTestId("user-edit-email-pending")).toContainText(
+      "admin-new@example.test",
+    );
+    await page.getByTestId("user-edit-email-cancel-pending").click();
+    await expect(page.getByTestId("user-edit-email-pending")).toHaveCount(0);
+  });
+});
+
+test.describe("/users/$id/edit — email change (admin editing other)", () => {
+  test("admin requests change for another user; sends to new email", async ({
+    page,
+  }) => {
+    const inputs = await mockRpcWithCapture(page, {
+      captureSuffix: "/user/requestEmailChange",
+      captureResponse: {
+        ok: true,
+        expiresAt: new Date("2026-05-04T00:00:00Z"),
+      },
+      handlers: {
+        "/auth/session": AUTHED_ADMIN,
+        "/user/get": user({
+          id: 42,
+          email: "victim@example.test",
+          name: "Victim",
+          role: "editor",
+        }),
+        "/user/pendingEmailChange": { pending: null },
+        "/auth/apiTokens/adminList": {
+          items: [],
+          total: 0,
+          limit: 50,
+          offset: 0,
+        },
+      },
+    });
+
+    await page.goto("users/42/edit");
+    await page.getByTestId("user-edit-email-change-button").click();
+    await page
+      .getByTestId("user-edit-email-change-input")
+      .fill("newvictim@example.test");
+    await page.getByTestId("user-edit-email-change-submit").click();
+
+    await expect(
+      page.getByTestId("user-edit-email-change-success"),
+    ).toContainText("newvictim@example.test");
+    expect(inputs[0]).toMatchObject({
+      id: 42,
+      newEmail: "newvictim@example.test",
+    });
+  });
+});
+
+test.describe("/users/$id/edit — API tokens (self)", () => {
+  const self = user({
+    id: 1,
+    email: "admin@example.test",
+    name: "Admin",
+    role: "admin",
+  });
+
+  test("renders the self mint form + lists own tokens", async ({ page }) => {
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/user/get": self,
+      ...SELF_EDIT_LISTS,
+      "/auth/apiTokens/list": [token({ id: "tok-a", name: "github-actions" })],
+    });
+
+    await page.goto("users/1/edit");
+    await expect(page.getByTestId("api-tokens-card")).toBeVisible();
+    // Self-mode shows the create form…
+    await expect(
+      page.getByTestId("api-tokens-create-name-input"),
+    ).toBeVisible();
+    // …and the existing token row is rendered.
+    await expect(page.getByTestId("api-tokens-row-tok-a")).toBeVisible();
+  });
+
+  test("mints a token + secret panel surfaces the once-shown secret", async ({
+    page,
+  }) => {
+    const inputs = await mockRpcWithCapture(page, {
+      captureSuffix: "/auth/apiTokens/create",
+      captureResponse: {
+        secret: "pl_pat_abcdEFGHsecretxyz",
+        token: token({ id: "tok-new", name: "ci" }),
+      },
+      handlers: {
+        "/auth/session": AUTHED_ADMIN,
+        "/user/get": self,
+        ...SELF_EDIT_LISTS,
+      },
+    });
+
+    await page.goto("users/1/edit");
+    await page.getByTestId("api-tokens-create-name-input").fill("ci");
+    await page.getByTestId("api-tokens-create-submit").click();
+
+    await expect(page.getByTestId("api-tokens-secret-dialog")).toBeVisible();
+    await expect(page.getByTestId("api-tokens-secret-input")).toHaveValue(
+      "pl_pat_abcdEFGHsecretxyz",
+    );
+
+    // Server received name + default 90-day expiry + null scopes.
+    expect(inputs[0]).toMatchObject({
+      name: "ci",
+      expiresInDays: 90,
+      scopes: null,
+    });
+  });
+
+  test("restrict scope mode posts the textarea-parsed array", async ({
+    page,
+  }) => {
+    const inputs = await mockRpcWithCapture(page, {
+      captureSuffix: "/auth/apiTokens/create",
+      captureResponse: {
+        secret: "pl_pat_abcdSECRET",
+        token: token({ id: "tok-x", name: "scoped" }),
+      },
+      handlers: {
+        "/auth/session": AUTHED_ADMIN,
+        "/user/get": self,
+        ...SELF_EDIT_LISTS,
+      },
+    });
+
+    await page.goto("users/1/edit");
+    await page.getByTestId("api-tokens-create-name-input").fill("scoped");
+    await page.getByTestId("api-tokens-create-scope-restrict-radio").click();
+    await page
+      .getByTestId("api-tokens-create-scopes-textarea")
+      .fill("entry:post:read\nsettings:manage\n   ");
+    await page.getByTestId("api-tokens-create-submit").click();
+
+    await expect(page.getByTestId("api-tokens-secret-dialog")).toBeVisible();
+    expect(inputs[0]).toMatchObject({
+      name: "scoped",
+      // Trimmed + empty lines filtered out client-side.
+      scopes: ["entry:post:read", "settings:manage"],
+    });
+  });
+
+  test("revokes via confirm dialog + invalidates the list query", async ({
+    page,
+  }) => {
+    const revokes: unknown[] = [];
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/user/get": self,
+      "/auth/credentials/list": [],
+      "/auth/sessions/list": [],
+    });
+    // Pre-revoke: one token. Post-revoke: empty list (refetch returns []).
+    await page.route("**/_plumix/rpc/auth/apiTokens/list", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(
+          revokes.length === 0
+            ? [token({ id: "tok-z", name: "to-be-revoked" })]
+            : [],
+        ),
+      }),
+    );
+    await page.route("**/_plumix/rpc/auth/apiTokens/revoke", (route) => {
+      const body = route.request().postDataJSON() as { json?: unknown };
+      revokes.push(body.json);
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody({ id: "tok-z" }),
+      });
+    });
+
+    await page.goto("users/1/edit");
+    await page.getByTestId("api-tokens-revoke-tok-z").click();
+    await expect(
+      page.getByTestId("api-tokens-revoke-confirm-button"),
+    ).toBeVisible();
+    await page.getByTestId("api-tokens-revoke-confirm-button").click();
+
+    expect(revokes[0]).toMatchObject({ id: "tok-z" });
+    // Empty state surfaces after the refetch.
+    await expect(page.getByTestId("api-tokens-empty")).toBeVisible();
+  });
+});
+
+test.describe("/users/$id/edit — API tokens (admin oversight)", () => {
+  const target = user({ id: 42, email: "victim@example.test", role: "editor" });
+
+  test("admin editing another user sees their tokens but no mint form", async ({
+    page,
+  }) => {
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/user/get": target,
+      "/auth/apiTokens/adminList": {
+        items: [token({ id: "tok-v", name: "leaked-token" })],
+        total: 1,
+        limit: 50,
+        offset: 0,
+      },
+    });
+
+    await page.goto("users/42/edit");
+    await expect(page.getByTestId("api-tokens-card")).toBeVisible();
+    await expect(page.getByTestId("api-tokens-row-tok-v")).toBeVisible();
+    // Admin oversight: NO mint form (only the owner can mint).
+    await expect(page.getByTestId("api-tokens-create-name-input")).toHaveCount(
+      0,
+    );
+  });
+
+  test("admin revokes a cross-user token via adminRevoke", async ({ page }) => {
+    const revokes: unknown[] = [];
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/user/get": target,
+    });
+    await page.route("**/_plumix/rpc/auth/apiTokens/adminList", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(
+          revokes.length === 0
+            ? {
+                items: [token({ id: "tok-v", name: "leaked" })],
+                total: 1,
+                limit: 50,
+                offset: 0,
+              }
+            : { items: [], total: 0, limit: 50, offset: 0 },
+        ),
+      }),
+    );
+    await page.route("**/_plumix/rpc/auth/apiTokens/adminRevoke", (route) => {
+      const body = route.request().postDataJSON() as { json?: unknown };
+      revokes.push(body.json);
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody({ id: "tok-v" }),
+      });
+    });
+
+    await page.goto("users/42/edit");
+    await page.getByTestId("api-tokens-revoke-tok-v").click();
+    await page.getByTestId("api-tokens-revoke-confirm-button").click();
+
+    expect(revokes[0]).toMatchObject({ id: "tok-v" });
+    await expect(page.getByTestId("api-tokens-empty")).toBeVisible();
   });
 });
