@@ -51,6 +51,7 @@ const stubDatabase = {
 };
 
 export interface CreateDispatcherHarnessOptions {
+  readonly devCsrfLocalhost?: boolean;
   /**
    * Runtime environment bindings (KV, R2, Durable Objects, etc.). Exposed
    * on `h.env` so tests can assert on or interact with bindings directly —
@@ -229,6 +230,7 @@ export async function createDispatcherHarness(
   });
   const app = await buildApp(config, {
     assetManifest: options.assetManifest,
+    devCsrfLocalhost: options.devCsrfLocalhost,
   });
   const dispatcher = createPlumixDispatcher(app);
   const { assets, storage } = options;

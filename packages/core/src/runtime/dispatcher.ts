@@ -92,9 +92,31 @@ function enforcePlumixCsrf(app: PlumixApp, ctx: AppContext): Response | null {
     ctx.request.headers.has("origin") &&
     !hasMatchingOrigin(ctx.request, { allowed: [app.origin] })
   ) {
+    // devCsrfLocalhost is statically false in production builds; see its
+    // declaration on RuntimeContext for why dev needs the relaxation.
+    if (app.devCsrfLocalhost && hasLocalhostOrigin(ctx.request)) {
+      return null;
+    }
     return forbidden("csrf_origin_mismatch");
   }
   return null;
+}
+
+function hasLocalhostOrigin(request: Request): boolean {
+  const origin = request.headers.get("origin");
+  if (!origin) return false;
+  try {
+    const { hostname } = new URL(origin);
+    // The whole 127.0.0.0/8 block is loopback, not just 127.0.0.1.
+    // WHATWG URL always compresses IPv6 loopback to `[::1]`.
+    return (
+      hostname === "localhost" ||
+      hostname === "[::1]" ||
+      /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)
+    );
+  } catch {
+    return false;
+  }
 }
 
 async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {

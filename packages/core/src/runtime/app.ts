@@ -66,6 +66,8 @@ export interface PlumixApp {
    * features don't have to reach into `passkey.*` to learn it.
    */
   readonly origin: string;
+  /** See RuntimeContext.devCsrfLocalhost — false in production builds. */
+  readonly devCsrfLocalhost: boolean;
   readonly passkey: ResolvedPasskeyConfig;
   readonly sessionPolicy: SessionPolicy;
   /**
@@ -162,6 +164,14 @@ export interface PlumixApp {
 // inline object literal that structurally satisfies the type.
 interface RuntimeContext {
   readonly assetManifest?: AssetManifest;
+  /**
+   * Dev-server opt-in: treat any localhost origin as same-origin for
+   * CSRF. `plumix dev` serves through vite on a port the user's config
+   * cannot reliably predict (5173 by default, auto-incremented when
+   * taken), so the generated worker passes `import.meta.env.DEV` here —
+   * statically false in production builds.
+   */
+  readonly devCsrfLocalhost?: boolean;
 }
 
 export async function buildApp(
@@ -269,6 +279,7 @@ export async function buildApp(
       plugins: [new ResponseHeadersPlugin()],
     }),
     origin: passkey.origin,
+    devCsrfLocalhost: runtime.devCsrfLocalhost ?? false,
     passkey,
     sessionPolicy: config.auth.sessions ?? DEFAULT_SESSION_POLICY,
     authenticator,

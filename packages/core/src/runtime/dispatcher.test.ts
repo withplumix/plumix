@@ -287,6 +287,74 @@ describe("dispatcher — CSRF", () => {
     expect(body.reason).toBe("csrf_origin_mismatch");
   });
 
+  test("dev localhost CSRF: any loopback origin is allowed when the app opts in", async () => {
+    const h = await createDispatcherHarness({ devCsrfLocalhost: true });
+    for (const origin of [
+      "http://localhost:5174",
+      "http://127.0.0.1:8787",
+      "http://127.0.0.2:8787",
+      "http://[::1]:5173",
+    ]) {
+      const response = await h.dispatch(
+        plumixRequest("/_plumix/rpc/entry/list", {
+          method: "POST",
+          headers: { "content-type": "application/json", origin },
+          body: JSON.stringify({ json: {} }),
+        }),
+      );
+      expect(response.status, origin).not.toBe(403);
+    }
+  });
+
+  test("dev localhost CSRF: the relaxation cannot bypass the header gate", async () => {
+    const h = await createDispatcherHarness({ devCsrfLocalhost: true });
+    const response = await h.dispatch(
+      new Request("https://cms.example/_plumix/rpc/entry/list", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "http://localhost:5174",
+        },
+        body: JSON.stringify({ json: {} }),
+      }),
+    );
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { reason?: string };
+    expect(body.reason).toBe("csrf_header_missing");
+  });
+
+  test("dev localhost CSRF: non-localhost origins still mismatch", async () => {
+    const h = await createDispatcherHarness({ devCsrfLocalhost: true });
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/rpc/entry/list", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "https://attacker.example",
+        },
+        body: JSON.stringify({ json: {} }),
+      }),
+    );
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { reason?: string };
+    expect(body.reason).toBe("csrf_origin_mismatch");
+  });
+
+  test("without the dev opt-in, a localhost origin still mismatches", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/rpc/entry/list", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "http://localhost:5174",
+        },
+        body: JSON.stringify({ json: {} }),
+      }),
+    );
+    expect(response.status).toBe(403);
+  });
+
   test("POST with a matching Origin header passes through to the RPC layer", async () => {
     const h = await createDispatcherHarness();
     const response = await h.dispatch(
