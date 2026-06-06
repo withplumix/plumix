@@ -382,16 +382,9 @@ test.describe("editor actions: pattern authoring", () => {
 });
 
 test.describe("editor actions: draft of a published entry", () => {
-  // KNOWN BROKEN: the autosave that creates the pending-draft row never
-  // refetches entry.get in-session, so the banner stays hidden and
-  // Discard / Publish stay disabled until a full reload — the user gets
-  // no signal that their edits diverged from the live row. The mock
-  // faithfully serves the WITH-autosave shape on every entry.get after
-  // the first update; the client simply never asks again.
   test("editing a published entry surfaces the banner without a reload", async ({
     page,
   }) => {
-    test.fail();
     const pristine = editorEntry({
       status: "published",
       content: SEEDED_CONTENT,
@@ -404,6 +397,9 @@ test.describe("editor actions: draft of a published entry", () => {
         liveUpdatedAt: null,
       },
     };
+    // Server contract: an autosave-routed save responds with the
+    // per-user autosave row, whose `type` is the reserved "autosave".
+    const autosaveRow = { ...pristine, type: "autosave" };
     let saved = false;
     await page.route("**/_plumix/rpc/**", (route) => {
       const url = route.request().url();
@@ -412,7 +408,7 @@ test.describe("editor actions: draft of a published entry", () => {
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ json: pristine, meta: [] }),
+          body: JSON.stringify({ json: autosaveRow, meta: [] }),
         });
       }
       const map: Record<string, unknown> = {
@@ -440,6 +436,72 @@ test.describe("editor actions: draft of a published entry", () => {
     await expect(page.getByTestId("unpublished-changes-banner")).toBeVisible({
       timeout: 5_000,
     });
+    await expect(page.getByTestId("editor-draft-discard")).toBeEnabled();
+    await expect(page.getByTestId("editor-draft-publish")).toBeEnabled();
+  });
+
+  // KNOWN BROKEN: discarding a draft created in the SAME session leaves
+  // the edited title and canvas on screen — the dispatcher's remount
+  // key (`draftKey:previewSource`) never flips because the cached
+  // preview source stays "live" throughout (the in-session banner works
+  // off a local flag, not a refetch). Server state is correct (the
+  // autosave row is deleted; reload shows live content) — the editor
+  // just keeps rendering the discarded edits. Reachable only since the
+  // in-session banner fix enabled Discard without a reload.
+  test("in-session discard restores the live title and canvas", async ({
+    page,
+  }) => {
+    test.fail();
+    const pristine = editorEntry({
+      status: "published",
+      content: SEEDED_CONTENT,
+      title: "Live title",
+    });
+    const autosaveRow = { ...pristine, type: "autosave" };
+    await page.route("**/_plumix/rpc/**", (route) => {
+      const url = route.request().url();
+      if (url.endsWith("/entry/update")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ json: autosaveRow, meta: [] }),
+        });
+      }
+      if (url.endsWith("/entry/discardDraft")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ json: { discarded: true }, meta: [] }),
+        });
+      }
+      const map: Record<string, unknown> = {
+        "/auth/session": AUTHED_ADMIN,
+        "/entry/get": pristine,
+        "/entry/activity/list": { users: [] },
+      };
+      for (const [suffix, body] of Object.entries(map)) {
+        if (url.endsWith(suffix)) {
+          return route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({ json: body, meta: [] }),
+          });
+        }
+      }
+      return route.fulfill({ status: 404, body: "not-mocked" });
+    });
+
+    await page.goto("entries/posts/1/edit");
+    await expect(page.getByTestId("editor-draft-save")).toBeVisible();
+    await page.getByTestId("plumix-editor-title-input").fill("Edited title");
+    await expect(page.getByTestId("editor-draft-discard")).toBeEnabled();
+
+    await page.getByTestId("editor-draft-discard").click();
+    await expect(page.getByTestId("unpublished-changes-banner")).toBeHidden();
+    await expect(page.getByTestId("plumix-editor-title-input")).toHaveValue(
+      "Live title",
+      { timeout: 5_000 },
+    );
   });
 });
 
