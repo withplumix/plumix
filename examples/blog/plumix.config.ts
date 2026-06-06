@@ -13,11 +13,15 @@ import { auth, consoleMailer, defineTheme, plumix } from "plumix";
 // Derives `rpId` + `origin` from the Workers Builds env (`WORKERS_CI`,
 // `WORKERS_CI_BRANCH`): production deploys → `<worker>.<account>.workers.dev`,
 // preview deploys → `<branch>-<worker>.<account>.workers.dev`,
-// local `pnpm dev` → `http://localhost:8787`. Swap to a hardcoded
-// `{ rpId, origin }` once you wire a custom domain.
+// local `pnpm dev` → `localOrigin`. The CSRF origin-allowlist must
+// match what the browser sends: `plumix dev` serves on vite's port
+// (5173 by default), NOT wrangler's 8787 — without the override every
+// /_plumix POST 403s and the admin can't even log in. Swap to a
+// hardcoded `{ rpId, origin }` once you wire a custom domain.
 const { rpId, origin } = cloudflareDeployOrigin({
   workerName: "plumix-blog",
   accountSubdomain: "enasyrov",
+  localOrigin: "http://localhost:5173",
 });
 
 // Media R2 + image-delivery wiring is opt-in via env. With S3
