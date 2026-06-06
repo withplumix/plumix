@@ -597,7 +597,7 @@ function ContentListRoute(): ReactNode {
       </div>
 
       {query.isError ? (
-        <Alert variant="destructive">
+        <Alert variant="destructive" data-testid="content-list-load-error">
           <AlertDescription>
             {query.error instanceof Error
               ? query.error.message
