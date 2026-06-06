@@ -17,7 +17,14 @@ export function generateWorkerSource({
     'import assetManifest from "virtual:plumix/asset-manifest";',
     `import config from ${JSON.stringify(configModule)};`,
     "",
-    "const appPromise = buildApp(config, { assetManifest });",
+    // vite statically replaces `import.meta.env.DEV` (true under dev,
+    // false in production builds) — see RuntimeContext.devCsrfLocalhost.
+    // Fail-closed: a bundler that leaves `import.meta.env` intact yields
+    // undefined, which buildApp coerces to false.
+    "const appPromise = buildApp(config, {",
+    "  assetManifest,",
+    "  devCsrfLocalhost: import.meta.env.DEV,",
+    "});",
     "let fetchHandler;",
     "let scheduledHandler;",
     "",

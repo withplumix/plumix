@@ -19,6 +19,12 @@ describe("generateWorkerSource", () => {
     );
   });
 
+  test("opts into localhost CSRF only under vite dev (import.meta.env.DEV)", () => {
+    const source = generateWorkerSource({ configModule: "../plumix.config" });
+    expect(source).toContain("buildApp(config, {");
+    expect(source).toContain("devCsrfLocalhost: import.meta.env.DEV");
+  });
+
   test("exports a fetch handler default export", () => {
     const source = generateWorkerSource({ configModule: "./config.ts" });
     expect(source).toContain("export default");
@@ -47,7 +53,7 @@ describe("generateWorkerSource", () => {
     expect(source).toContain(
       'import assetManifest from "virtual:plumix/asset-manifest";',
     );
-    expect(source).toContain("buildApp(config, { assetManifest })");
+    expect(source).toContain("buildApp(config, {");
   });
 
   test("no-ops cleanly when the runtime omits buildScheduledHandler", () => {
