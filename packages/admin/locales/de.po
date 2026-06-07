@@ -222,6 +222,12 @@ msgstr "(kein Titel)"
 msgid "profile.sessions.device.browserOnOs"
 msgstr "{browser} auf {os}"
 
+#. characters: number of characters in the entry's prose blocks
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.characterCount"
+msgstr "{characters, plural, one {# Zeichen} other {# Zeichen}}"
+
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.test.tsx
@@ -274,6 +280,12 @@ msgstr "{label} hat beim Rendern einen Fehler verursacht. Der Rest der "
 msgid "profile.sessions.revokeAll.count"
 msgstr "{revoked, plural, =0 {Keine anderen Sitzungen zum Abmelden.} one {# "
 "andere Sitzung abgemeldet.} other {# andere Sitzungen abgemeldet.}}"
+
+#. words: number of words in the entry's prose blocks
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.wordCount"
+msgstr "{words, plural, one {# Wort} other {# Wörter}}"
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
@@ -2204,7 +2216,7 @@ msgid "listPagination.next.label"
 msgstr "Weiter"
 
 #. js-lingui-explicit-id
-#: src/editor/field-type-translator.ts
+#: src/editor/field-type-translator.tsx
 msgid "fieldTypes.boolean.no"
 msgstr "Nein"
 
@@ -3792,7 +3804,7 @@ msgid "dashboard.tile.description.generic"
 msgstr "Schreiben, bearbeiten und veröffentlichen."
 
 #. js-lingui-explicit-id
-#: src/editor/field-type-translator.ts
+#: src/editor/field-type-translator.tsx
 msgid "fieldTypes.boolean.yes"
 msgstr "Ja"
 

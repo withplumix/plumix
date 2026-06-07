@@ -222,6 +222,12 @@ msgstr "（无标题）"
 msgid "profile.sessions.device.browserOnOs"
 msgstr "{browser}（{os}）"
 
+#. characters: number of characters in the entry's prose blocks
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.characterCount"
+msgstr "{characters, plural, other {# 个字符}}"
+
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.test.tsx
@@ -270,6 +276,12 @@ msgstr "{label} 在渲染时抛出错误。管理后台的其余部分不受影�
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revokeAll.count"
 msgstr "{revoked, plural, =0 {没有其他会话需要登出。} other {已登出 # 个其他会话。}}"
+
+#. words: number of words in the entry's prose blocks
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.wordCount"
+msgstr "{words, plural, other {# 个词}}"
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
@@ -2155,7 +2167,7 @@ msgid "listPagination.next.label"
 msgstr "下一页"
 
 #. js-lingui-explicit-id
-#: src/editor/field-type-translator.ts
+#: src/editor/field-type-translator.tsx
 msgid "fieldTypes.boolean.no"
 msgstr "否"
 
@@ -3678,7 +3690,7 @@ msgid "dashboard.tile.description.generic"
 msgstr "写作、编辑和发布。"
 
 #. js-lingui-explicit-id
-#: src/editor/field-type-translator.ts
+#: src/editor/field-type-translator.tsx
 msgid "fieldTypes.boolean.yes"
 msgstr "是"
 
