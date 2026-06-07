@@ -23,6 +23,7 @@ export {
 } from "./procedures/entry/lifecycle.js";
 export { entryRouter } from "./procedures/entry/index.js";
 export type { EntryRouter } from "./procedures/entry/index.js";
+export { escapeLikePattern } from "./procedures/entry/search-terms.js";
 export {
   entryCreateInputSchema,
   entryGetInputSchema,

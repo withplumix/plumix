@@ -366,3 +366,13 @@ msgstr "移除 {name}"
 #: src/admin/MediaListPickerField.tsx
 msgid "plugin.media.listField.modalAria"
 msgstr "添加媒体"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.searchPlaceholder"
+msgstr "按文件名搜索…"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.noMatches"
+msgstr "没有符合搜索条件的文件。"
