@@ -104,6 +104,10 @@ export interface PlumixEditorLayoutProps {
   // surfaced next to the autosave pill. Route layer owns the
   // `entry.activity.list` polling; the layout just allocates space.
   readonly coAuthorIndicator?: ReactNode;
+  // Optional document-settings panel (slug, parent, excerpt, entry
+  // metaboxes) rendered as a third inspector tab. Route layer owns
+  // the RPC wiring; the layout only adds the tab when present.
+  readonly documentPanel?: ReactNode;
   // Optional preview-mode banner rendered above the header. When set,
   // the route is in `?revision=<id>` preview mode — the title input
   // and publish button are hidden because edits don't autosave.
@@ -517,6 +521,7 @@ export function PlumixEditorLayout({
   isPublished = false,
   revisionsTrigger,
   coAuthorIndicator,
+  documentPanel,
   previewBanner,
   draftMode,
 }: PlumixEditorLayoutProps): ReactElement {
@@ -650,7 +655,11 @@ export function PlumixEditorLayout({
               entryTitle={title}
             />
           )}
-          <InspectorBody registry={registry} tokens={tokens} />
+          <InspectorBody
+            registry={registry}
+            tokens={tokens}
+            documentPanel={documentPanel}
+          />
         </div>
       </div>
     </PatternRefProvider>
@@ -896,9 +905,14 @@ function PlumixBlocksTab({
 interface InspectorBodyProps {
   readonly registry: BlockRegistry;
   readonly tokens: ThemeTokens;
+  readonly documentPanel?: ReactNode;
 }
 
-function InspectorBody({ registry, tokens }: InspectorBodyProps): ReactElement {
+function InspectorBody({
+  registry,
+  tokens,
+  documentPanel,
+}: InspectorBodyProps): ReactElement {
   const isMobile = useIsMobile();
   const renderLabel = useLabel();
   const content = (
@@ -913,6 +927,14 @@ function InspectorBody({ registry, tokens }: InspectorBodyProps): ReactElement {
             <TabsTrigger value="style" data-testid="plumix-editor-tab-style">
               <Trans id="editor.layout.tab.style" message="Style" />
             </TabsTrigger>
+            {documentPanel !== undefined ? (
+              <TabsTrigger
+                value="document"
+                data-testid="plumix-editor-tab-document"
+              >
+                <Trans id="editor.layout.tab.document" message="Document" />
+              </TabsTrigger>
+            ) : null}
           </TabsList>
         </div>
         <TabsContent value="block">
@@ -921,6 +943,9 @@ function InspectorBody({ registry, tokens }: InspectorBodyProps): ReactElement {
         <TabsContent value="style">
           <PlumixStyleTab tokens={tokens} />
         </TabsContent>
+        {documentPanel !== undefined ? (
+          <TabsContent value="document">{documentPanel}</TabsContent>
+        ) : null}
       </Tabs>
     </>
   );

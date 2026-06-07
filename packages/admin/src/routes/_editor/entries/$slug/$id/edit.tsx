@@ -12,6 +12,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { DocumentSettingsPanel } from "@/components/editor/document-settings.js";
 import { PlainFormLayout } from "@/components/editor/plain-form-layout.js";
 import { ErrorPlaceholder } from "@/components/error-placeholder.js";
 import { buildAdminPatternRegistry } from "@/editor/admin-pattern-registry.js";
@@ -329,6 +330,7 @@ function PuckSpikeRouteInner({
     seedPuckData(entry.content, readDraft(draftKey) ?? EMPTY_DATA),
   );
   const [title, setTitle] = useState<string>(entry.title);
+  const [excerpt, setExcerpt] = useState<string>(entry.excerpt ?? "");
   const [status, setStatus] = useState<AutosaveStatus>("saved");
   const [hasLocalDraft, setHasLocalDraft] = useState(false);
   const puckApiRef = useRef<PuckApiBridge | null>(null);
@@ -336,15 +338,20 @@ function PuckSpikeRouteInner({
   const liveUpdatedAtRef = useRef<Date>(entry.updatedAt);
   const queryClient = useQueryClient();
   const titleRef = useRef(title);
+  const excerptRef = useRef(excerpt);
   const dataRef = useRef<Data>(initialData);
   useEffect(() => {
     titleRef.current = title;
+    excerptRef.current = excerpt;
   });
   // Seed dedup snapshots from the *server* entry, never from the local
   // `data` — `data` may have been hydrated from a stale localStorage
   // draft, and matching against that would skip the first autosave and
   // silently strand the draft on the client.
   const lastSavedTitleRef = useRef<string>(entry.title);
+  const lastSavedExcerptRef = useRef<string>(entry.excerpt ?? "");
+  const metaRef = useRef<Record<string, unknown>>(entry.meta);
+  const lastSavedMetaRef = useRef<string>(JSON.stringify(entry.meta));
   const lastSavedContentRef = useRef<string>(
     JSON.stringify(
       puckDataToBlockTree({
@@ -369,7 +376,16 @@ function PuckSpikeRouteInner({
         const titleChanged =
           trimmedTitle.length > 0 && trimmedTitle !== lastSavedTitleRef.current;
         const contentChanged = serializedBlocks !== lastSavedContentRef.current;
-        if (!titleChanged && !contentChanged) {
+        const nextExcerpt = excerptRef.current;
+        const excerptChanged = nextExcerpt !== lastSavedExcerptRef.current;
+        const serializedMeta = JSON.stringify(metaRef.current);
+        const metaChanged = serializedMeta !== lastSavedMetaRef.current;
+        if (
+          !titleChanged &&
+          !contentChanged &&
+          !excerptChanged &&
+          !metaChanged
+        ) {
           // Nothing actually changed since the last successful save.
           // Skip the round-trip so we don't burn revision slots or
           // generate identical rows. The pill stays on "saved".
@@ -383,6 +399,12 @@ function PuckSpikeRouteInner({
             ...(contentChanged
               ? { content: { version: "plumix.v2", blocks } }
               : {}),
+            // Empty excerpt clears the column — the DB stores null,
+            // not "".
+            ...(excerptChanged
+              ? { excerpt: nextExcerpt.length === 0 ? null : nextExcerpt }
+              : {}),
+            ...(metaChanged ? { meta: metaRef.current } : {}),
             expectedLiveUpdatedAt: liveUpdatedAtRef.current,
           });
           // Only stamp the live concurrency token when the write
@@ -404,6 +426,8 @@ function PuckSpikeRouteInner({
           }
           if (titleChanged) lastSavedTitleRef.current = trimmedTitle;
           if (contentChanged) lastSavedContentRef.current = serializedBlocks;
+          if (excerptChanged) lastSavedExcerptRef.current = nextExcerpt;
+          if (metaChanged) lastSavedMetaRef.current = serializedMeta;
           setStatus("saved");
         } catch (err) {
           setStatus("error");
@@ -443,6 +467,184 @@ function PuckSpikeRouteInner({
       debouncer.call();
     },
     [debouncer],
+  );
+  // Structural document fields (slug, parent) always write the live
+  // row — the autosave-row patch silently drops them, so routing them
+  // through the content debouncer would no-op on published entries
+  // with a pending draft.
+  const [slugValue, setSlugValue] = useState<string>(entry.slug);
+  const [parentValue, setParentValue] = useState<number | null>(entry.parentId);
+  const slugRef = useRef(slugValue);
+  const parentRef = useRef(parentValue);
+  useEffect(() => {
+    slugRef.current = slugValue;
+    parentRef.current = parentValue;
+  });
+  const lastSavedSlugRef = useRef<string>(entry.slug);
+  const lastSavedParentRef = useRef<number | null>(entry.parentId);
+  /* eslint-disable react-hooks/refs -- callback fires post-keystroke, not during render */
+  const structuralDebouncer = useMemo(
+    () =>
+      createDebouncer(async () => {
+        const nextSlug = slugRef.current.trim();
+        const nextParent = parentRef.current;
+        // Mirror the title guard: a blank slug rejects server-side, so
+        // skip it while the user is mid-edit on an empty input.
+        const slugChanged =
+          nextSlug.length > 0 && nextSlug !== lastSavedSlugRef.current;
+        const parentChanged = nextParent !== lastSavedParentRef.current;
+        if (!slugChanged && !parentChanged) {
+          setStatus("saved");
+          return;
+        }
+        try {
+          const updated = await orpc.entry.update.call({
+            id,
+            ...(slugChanged ? { slug: nextSlug } : {}),
+            ...(parentChanged ? { parentId: nextParent } : {}),
+            saveAs: "live",
+            expectedLiveUpdatedAt: liveUpdatedAtRef.current,
+          });
+          liveUpdatedAtRef.current = updated.updatedAt;
+          if (slugChanged) lastSavedSlugRef.current = updated.slug;
+          if (parentChanged) lastSavedParentRef.current = updated.parentId;
+          setStatus("saved");
+        } catch (err) {
+          setStatus("error");
+          // Same recovery as the content debouncer: a structural write
+          // can lose a same-second race against a content autosave on
+          // the live row. Without the refetch the token stays stale
+          // and every structural retry 409s — a sticky error pill.
+          if (isStaleConflictError(err)) {
+            try {
+              const fresh = await queryClient.fetchQuery({
+                ...orpc.entry.get.queryOptions({ input: { id } }),
+                staleTime: 0,
+              });
+              liveUpdatedAtRef.current = fresh.updatedAt;
+            } catch {
+              // Best-effort: pill already says "error"; next edit retries.
+            }
+          }
+        }
+      }, AUTOSAVE_DEBOUNCE_MS),
+    [id, queryClient],
+  );
+  /* eslint-enable react-hooks/refs */
+  useEffect(() => () => structuralDebouncer.flush(), [structuralDebouncer]);
+  const handleSlugChange = useCallback(
+    (next: string): void => {
+      setSlugValue(next);
+      setStatus("saving");
+      structuralDebouncer.call();
+    },
+    [structuralDebouncer, setSlugValue],
+  );
+  const handleExcerptChange = useCallback(
+    (next: string): void => {
+      setExcerpt(next);
+      setStatus("saving");
+      debouncer.call();
+    },
+    [debouncer],
+  );
+  const handleParentChange = useCallback(
+    (next: number | null): void => {
+      setParentValue(next);
+      setStatus("saving");
+      structuralDebouncer.call();
+    },
+    [structuralDebouncer, setParentValue],
+  );
+  const handleMetaChange = useCallback(
+    (next: Record<string, unknown>): void => {
+      // Mount-time emission carries the seeded values — the dedup
+      // snapshot in the debouncer turns it into a no-op.
+      metaRef.current = next;
+      if (JSON.stringify(next) === lastSavedMetaRef.current) return;
+      setStatus("saving");
+      debouncer.call();
+    },
+    [debouncer],
+  );
+  const documentMetaBoxes = useMemo(
+    () =>
+      entryTypeName ? entryMetaBoxesForType(entryTypeName, capabilities) : [],
+    [entryTypeName, capabilities],
+  );
+  const supportsExcerpt =
+    // `supports` list code, not a display label.
+    // eslint-disable-next-line lingui/no-unlocalized-strings
+    entryType?.supports?.includes("excerpt") ?? false;
+  const isHierarchical = entryType?.isHierarchical === true;
+  // Candidate parents: every entry of the same type except this one.
+  // The server walks the chain and 409s on deeper cycles.
+  const parentCandidates = useQuery({
+    ...orpc.entry.list.queryOptions({
+      input: {
+        type: entryTypeName ?? "",
+        // entry.list caps the page size at 100; deeper sites page the
+        // picker when someone actually hits the ceiling.
+        limit: 100,
+        // SQL column picklist code, not a display label.
+        // eslint-disable-next-line lingui/no-unlocalized-strings
+        orderBy: "title",
+        order: "asc",
+      },
+    }),
+    enabled: isHierarchical && entryTypeName !== undefined,
+  });
+  const parentOptions = useMemo(
+    () =>
+      (parentCandidates.data ?? [])
+        .filter((candidate) => candidate.id !== id)
+        .map((candidate) => ({ id: candidate.id, title: candidate.title })),
+    [parentCandidates.data, id],
+  );
+  const documentPanel = useMemo(
+    () => (
+      <DocumentSettingsPanel
+        slug={slugValue}
+        onSlugChange={handleSlugChange}
+        excerpt={
+          supportsExcerpt
+            ? { value: excerpt, onChange: handleExcerptChange }
+            : undefined
+        }
+        parent={
+          isHierarchical
+            ? {
+                value: parentValue,
+                options: parentOptions,
+                onChange: handleParentChange,
+              }
+            : undefined
+        }
+        metaBoxes={
+          documentMetaBoxes.length > 0
+            ? {
+                boxes: documentMetaBoxes,
+                initialMeta: entry.meta,
+                onMetaChange: handleMetaChange,
+              }
+            : undefined
+        }
+      />
+    ),
+    [
+      slugValue,
+      handleSlugChange,
+      supportsExcerpt,
+      excerpt,
+      handleExcerptChange,
+      isHierarchical,
+      parentValue,
+      parentOptions,
+      handleParentChange,
+      documentMetaBoxes,
+      entry.meta,
+      handleMetaChange,
+    ],
   );
   // Publish is a one-way state-machine transition server-side, not an
   // idempotent re-stamp — the button is disabled once status === "published".
@@ -705,6 +907,7 @@ function PuckSpikeRouteInner({
         coAuthors.length > 0 ? (
           <CoAuthorIndicator users={coAuthors} relativeTime={formatRelative} />
         ) : null,
+      documentPanel,
       draftMode: draftModeProp,
     }),
     [
@@ -717,6 +920,7 @@ function PuckSpikeRouteInner({
       capabilitySet,
       revisionsTrigger,
       coAuthors,
+      documentPanel,
       draftModeProp,
       starterCandidates,
       formatRelative,
