@@ -7,6 +7,11 @@
 
 import { expect, test } from "@playwright/test";
 
+// Title links carry `content-list-row-<id>`; the actions strip and
+// trash button reuse the prefix, so exclude them when counting rows.
+const CONTENT_ROWS =
+  "[data-testid^='content-list-row-']:not([data-testid*='-actions-']):not([data-testid*='-trash-'])";
+
 test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
   test("posts list mounts against the real worker", async ({ page }) => {
     await page.goto("entries/posts");
@@ -16,27 +21,21 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
     // block on any failure, so a strict empty-state check here would
     // cascade-fail once a later test had created a post — turning one
     // real failure into three reported ones. Admin's mock-based
-    // content.spec.ts covers the empty-state UI exhaustively.
-    const rows = page.locator(
-      "[data-testid^='content-list-row-']:not([data-testid*='-actions-']):not([data-testid*='-trash-'])",
-    );
+    // entries.spec.ts covers the empty-state UI exhaustively.
+    const rows = page.locator(CONTENT_ROWS);
     if ((await rows.count()) === 0) {
       await expect(page.getByTestId("content-list-empty-state")).toBeVisible();
     }
   });
 
   test("create a draft post → row appears in the list", async ({ page }) => {
-    // v2 flow: click New takes the user through /entries/posts/create
-    // (the redirect-on-mount route that calls entry.create + navigates
-    // to the edit URL), then we land in the Puck editor. Title is
-    // bound to the title input; autosave fires on change.
+    // Arm the URL waiter before clicking New — the create route
+    // redirects to the edit URL as soon as entry.create resolves.
     await page.goto("entries/posts");
     const navigated = page.waitForURL(/\/entries\/posts\/\d+\/edit/);
     await page.getByTestId("content-list-new-button").click();
     await navigated;
 
-    // The Puck editor mounts; title input is wired through to
-    // entry.update. Wait for autosave to confirm via response.
     await expect(page.getByTestId("plumix-editor-title-input")).toBeVisible();
     const updated = page.waitForResponse(
       (r) => r.url().endsWith("/entry/update") && r.status() === 200,
@@ -44,32 +43,24 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
     await page.getByTestId("plumix-editor-title-input").fill("Hello world");
     await updated;
 
-    // Back to the list — the new row carries the typed title.
     await page.goto("entries/posts");
-    const rows = page.locator(
-      "[data-testid^='content-list-row-']:not([data-testid*='-actions-']):not([data-testid*='-trash-'])",
-    );
+    const rows = page.locator(CONTENT_ROWS);
     await expect(rows).toHaveCount(1);
     await expect(rows.first()).toContainText("Hello world");
   });
 
-  test.skip("edit the draft → publish → status persists across reload", async ({
+  test("edit the draft → publish → status persists across reload", async ({
     page,
   }) => {
     await page.goto("entries/posts");
-    const rows = page.locator(
-      "[data-testid^='content-list-row-']:not([data-testid*='-actions-']):not([data-testid*='-trash-'])",
-    );
+    const rows = page.locator(CONTENT_ROWS);
     const rowTestid = await rows.first().getAttribute("data-testid");
     if (!rowTestid) throw new Error("expected post row to have a data-testid");
     const id = rowTestid.replace("content-list-row-", "");
 
     await page.goto(`entries/posts/${id}/edit`);
-    await expect(page.getByTestId("post-editor-form")).toBeVisible();
+    await expect(page.getByTestId("plumix-editor-layout")).toBeVisible();
 
-    await page
-      .getByTestId("post-editor-status-select")
-      .selectOption("published");
     // Arm the response waiter BEFORE the click so we never miss a fast
     // update RPC — `waitForResponse` only matches responses that arrive
     // after it's armed, and the update can resolve in <10ms against a
@@ -77,23 +68,22 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
     const updated = page.waitForResponse(
       (r) => r.url().endsWith("/entry/update") && r.status() === 200,
     );
-    await page.getByTestId("post-editor-submit").click();
+    await page.getByTestId("plumix-editor-publish-button").click();
     await updated;
 
-    await page.reload();
-    await expect(page.getByTestId("post-editor-form")).toBeVisible();
-    await expect(page.getByTestId("post-editor-status-select")).toHaveValue(
-      "published",
-    );
+    // Publishing refetches entry.get; on an autosave-capable type the
+    // header flips into the three-button draft-mode chrome once the
+    // entry is published — that flip is the visible publish receipt.
+    await expect(page.getByTestId("editor-draft-save")).toBeVisible();
 
-    // Back to the list — the row is still there and now in published
-    // state. The list defaults to "all" so a published post stays
-    // visible.
-    await page.goto("entries/posts");
-    await expect(
-      page.locator(
-        "[data-testid^='content-list-row-']:not([data-testid*='-actions-']):not([data-testid*='-trash-'])",
-      ),
-    ).toHaveCount(1);
+    await page.reload();
+    await expect(page.getByTestId("editor-draft-save")).toBeVisible();
+    // Nothing pending right after a publish.
+    await expect(page.getByTestId("editor-draft-publish")).toBeDisabled();
+
+    // The server-side status filter is the persistence proof: the row
+    // comes back under ?status=published from real D1.
+    await page.goto("entries/posts?status=published");
+    await expect(page.locator(CONTENT_ROWS)).toHaveCount(1);
   });
 });
