@@ -4,6 +4,7 @@ import { users } from "../../db/schema/users.js";
 import {
   buildAttestation,
   generatePasskeyKeyPair,
+  leadingZeroYKeyPair,
   randomCredentialId,
 } from "../../test/fixtures/webauthn.js";
 import { createTestDb } from "../../test/harness.js";
@@ -57,6 +58,38 @@ describe("finishRegistration (positive ceremony with ES256)", () => {
 
     expect(verified.publicKey).toEqual(keyPair.publicKeySec1);
     expect(verified.signatureCounter).toBe(0);
+  });
+
+  test("a Y coordinate with a leading zero byte still round-trips to a well-formed SEC1 key", async () => {
+    // ~1/256 of P-256 keys; a bigint round-trip drops the 0x00 lead and
+    // a fixed-offset encoder then left-shifts Y, silently storing a
+    // corrupted key that bricks the credential at every future login.
+    const db = await createTestDb();
+    const userId = await seedUserId(db);
+    const { challenge } = await issueChallenge(db, 60_000, userId);
+    const keyPair = leadingZeroYKeyPair();
+    const credentialId = randomCredentialId();
+
+    const att = buildAttestation({
+      keyPair,
+      rpId: config.rpId,
+      origin: config.origin,
+      challenge,
+      credentialId,
+    });
+
+    const verified = await finishRegistration(db, config, {
+      id: att.credentialIdBase64Url,
+      rawId: att.credentialIdBase64Url,
+      type: "public-key",
+      response: {
+        clientDataJSON: att.clientDataJSON,
+        attestationObject: att.attestationObject,
+      },
+    });
+
+    expect(verified.publicKey).toEqual(keyPair.publicKeySec1);
+    expect(verified.publicKey[33]).toBe(0);
   });
 });
 

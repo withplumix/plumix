@@ -1,4 +1,3 @@
-import { ECDSAPublicKey, p256 } from "@oslojs/crypto/ecdsa";
 import {
   decodeBase64urlIgnorePadding,
   encodeBase64urlNoPadding,
@@ -164,11 +163,7 @@ export async function finishRegistration(
       reason: "Expected P-256 curve",
     });
   }
-  const publicKey = new ECDSAPublicKey(
-    p256,
-    cose.x,
-    cose.y,
-  ).encodeSEC1Uncompressed();
+  const publicKey = encodeSec1Uncompressed(cose.x, cose.y);
 
   return {
     credentialId: encodeBase64urlNoPadding(credential.id),
@@ -233,4 +228,30 @@ export async function persistCredential(
   // eslint-disable-next-line no-restricted-syntax -- defensive driver-regression guard; migrate alongside auth errors in PR 2 (#234)
   if (!row) throw new Error("persistCredential: insert returned no row");
   return row;
+}
+
+// COSE delivers x/y as fixed 32-byte wire values, but oslojs's parser
+// hands them back as bigints, and its `encodeSEC1Uncompressed` places
+// a minimal-length Y at a fixed offset — a Y with a leading zero byte
+// (~1/256 of P-256 keys) comes out left-shifted, silently storing a
+// corrupted key that fails every future assertion. Encode with fixed
+// 32-byte big-endian slots instead (RFC 5480 §2.2).
+function encodeSec1Uncompressed(x: bigint, y: bigint): Uint8Array {
+  const out = new Uint8Array(65);
+  out[0] = 0x04;
+  writeFixedWidthBE(out, x, 1);
+  writeFixedWidthBE(out, y, 33);
+  return out;
+}
+
+function writeFixedWidthBE(
+  out: Uint8Array,
+  value: bigint,
+  offset: number,
+): void {
+  let v = value;
+  for (let i = 31; i >= 0; i--) {
+    out[offset + i] = Number(v & 0xffn);
+    v >>= 8n;
+  }
 }
