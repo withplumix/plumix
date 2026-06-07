@@ -17,6 +17,7 @@ Turborepo drives everything from the root:
 - `pnpm test` — vitest across every package that defines tests
 - `pnpm test:e2e` — Playwright e2e (only the packages that opt in)
 - `pnpm knip` — unused-export and dependency check
+- `pnpm i18n:check` — source↔catalog drift gate; fails when `<Trans>`/`defineMessage` strings change without `lingui extract` (run `pnpm --filter <pkg> i18n:extract` + `i18n:compile`, commit the `locales/` churn)
 - `pnpm commitlint` — conventional-commit lint
 
 **Single-package commands.** Use turbo, not pnpm, for any task with `dependsOn` set (`build`, `lint`, `typecheck`, `test`, `test:e2e`, `publint`, `attw`):
@@ -45,7 +46,7 @@ packages/
 └── runtimes/
     └── cloudflare/      @plumix/runtime-cloudflare — Cloudflare D1/R2/KV bindings
 examples/{blog,minimal}                            — playgrounds + e2e fixtures
-tooling/{eslint,prettier,typescript,vitest}        — shared configs as workspace packages
+tooling/{eslint,lingui,prettier,typescript,vitest} — shared configs as workspace packages
 ```
 
 ### The umbrella rule
@@ -58,11 +59,13 @@ This is the boundary that lets internal packages refactor freely while the publi
 
 ### Plugin model
 
-A plugin is a function returning a `PluginManifest` (defined in `@plumix/core`, exposed publicly as `plumix/plugin` and `plumix/manifest`). The manifest declares the plugin's schema (drizzle tables), routes, RPC procedures, admin routes/components, hooks, and capabilities. First-party plugins under `packages/plugins/*` are the canonical examples.
+A plugin is a descriptor built with `definePlugin` (from `plumix/plugin`); options-taking plugins export a factory returning one instead — `menu({ locations })`, `media(...)`, `auditLog(...)`. The descriptor declares the plugin's schema (drizzle tables), routes, RPC procedures, admin routes/components, hooks, and capabilities. First-party plugins under `packages/plugins/*` are the canonical examples.
 
 ### Dependency catalog
 
 `pnpm-workspace.yaml` defines a `catalog:` for deps used by multiple packages (drizzle, react, vite, vitest, etc.). A dep used by exactly one package goes direct in that package's `package.json`, **not** in the catalog — the catalog is for de-duplication, not centralization.
+
+Version families that release in lockstep get a **named catalog** under `catalogs:` (`catalogs.tailwind`, `catalogs.lingui`) and are consumed as `"catalog:tailwind"` / `"catalog:lingui"` — a bump is then a single-line change.
 
 ## Tests
 
