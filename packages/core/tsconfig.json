@@ -2,7 +2,12 @@
   "extends": "@plumix/typescript-config/library.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "types": ["node"]
+    "types": ["node"],
+    // Compiled catalogs (locales/*.mjs) resolve via the package
+    // `exports` map to their generated `.d.mts`. Without this, the
+    // base-config `allowJs` pulls the `.mjs` into the program and
+    // emits stray `.js` siblings into locales/.
+    "allowJs": false
   },
   "include": ["src"]
 }

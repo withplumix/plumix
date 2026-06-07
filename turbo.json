@@ -5,12 +5,17 @@
     "topo": {
       "dependsOn": ["^topo"]
     },
+    "i18n:compile": {
+      "inputs": ["locales/*.po"],
+      "outputs": ["locales/*.mjs", "locales/*.d.mts"]
+    },
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "i18n:compile"],
       "outputs": [".cache/tsbuildinfo.json", "dist/**"],
       "env": ["WORKERS_CI", "WORKERS_CI_BRANCH", "PLUMIX_DEV"]
     },
     "dev": {
+      "dependsOn": ["i18n:compile"],
       "cache": false,
       "persistent": true
     },
@@ -19,15 +24,15 @@
       "outputLogs": "new-only"
     },
     "lint": {
-      "dependsOn": ["^topo", "^build"],
+      "dependsOn": ["^topo", "^build", "i18n:compile"],
       "outputs": [".cache/.eslintcache"]
     },
     "typecheck": {
-      "dependsOn": ["^topo", "^build"],
+      "dependsOn": ["^topo", "^build", "i18n:compile"],
       "outputs": [".cache/tsbuildinfo.json"]
     },
     "test": {
-      "dependsOn": ["build"]
+      "dependsOn": ["build", "i18n:compile"]
     },
     "test:e2e": {
       "dependsOn": ["build", "^build"],
