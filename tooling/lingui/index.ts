@@ -17,6 +17,16 @@ export const PLUMIX_LOCALES = ["en", "uk", "ar", "de", "zh-CN"] as const;
 export interface PlumixLinguiOptions {
   /** Locale list including the "en" source. Defaults to PLUMIX_LOCALES. */
   readonly locales?: readonly string[];
+  /**
+   * Catalog path template (the `{locale}` placeholder is required).
+   * Defaults to `<rootDir>/locales/{locale}`. Packages that host more
+   * than one translatable surface name catalogs per surface — core
+   * uses `<rootDir>/locales/admin-bar-{locale}` so a later debug-bar
+   * catalog can sit beside it without colliding.
+   */
+  readonly catalogPath?: string;
+  /** Source dirs scanned for descriptors. Defaults to `["src"]`. */
+  readonly include?: readonly string[];
 }
 
 export function defineLinguiConfig(
@@ -27,8 +37,8 @@ export function defineLinguiConfig(
     locales: [...(options.locales ?? PLUMIX_LOCALES)],
     catalogs: [
       {
-        path: "<rootDir>/locales/{locale}",
-        include: ["src"],
+        path: options.catalogPath ?? "<rootDir>/locales/{locale}",
+        include: [...(options.include ?? ["src"])],
       },
     ],
     format: formatter({ lineNumbers: false }),
