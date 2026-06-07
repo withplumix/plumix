@@ -7,8 +7,12 @@
 // Not part of the public surface; tests only. node:crypto is fine here
 // (tests run on Node).
 
-import { createHash, generateKeyPairSync, sign } from "node:crypto";
-import type { createPrivateKey } from "node:crypto";
+import {
+  createHash,
+  createPrivateKey,
+  generateKeyPairSync,
+  sign,
+} from "node:crypto";
 import { encodeBase64urlNoPadding } from "@oslojs/encoding";
 
 const ATTESTED_FLAG = 0x40;
@@ -35,13 +39,40 @@ export function generatePasskeyKeyPair(): PasskeyKeyPair {
   const { privateKey, publicKey } = generateKeyPairSync("ec", {
     namedCurve: "P-256",
   });
-  const jwk = publicKey.export({ format: "jwk" });
+  return keyPairFromJwk(privateKey, publicKey.export({ format: "jwk" }));
+}
+
+// Pinned P-256 key whose Y coordinate starts with 0x00 — the ~1/256
+// case where a bigint round-trip silently drops the leading byte.
+// Deterministic regression anchor for SEC1 fixed-width encoding; the
+// random generator above only hits it probabilistically.
+const LEADING_ZERO_Y_JWK = {
+  kty: "EC",
+  crv: "P-256",
+  x: "IjI5tWqb-qMp8P20g33a1x7ztHInOfhfDz1eSkBBYcM",
+  y: "ABjCsQ39-fwI1G2ruGlDlWf75p_c6i3IFAijztON-cw",
+  d: "QMyn7kVOVwyqbLPPNV6XEUnRSIKrRkUW3P4-9DUUuBo",
+};
+
+export function leadingZeroYKeyPair(): PasskeyKeyPair {
+  const privateKey = createPrivateKey({
+    key: LEADING_ZERO_Y_JWK,
+    format: "jwk",
+  });
+  return keyPairFromJwk(privateKey, LEADING_ZERO_Y_JWK);
+}
+
+function keyPairFromJwk(
+  privateKey: PasskeyKeyPair["privateKey"],
+  jwk: { x?: string; y?: string },
+): PasskeyKeyPair {
   if (typeof jwk.x !== "string" || typeof jwk.y !== "string") {
     throw new Error("EC keypair export missing x/y");
   }
-  // JWK drops leading zero bytes from EC coordinates (~1/256 probability
-  // per coord for P-256). Left-pad back to 32 bytes so publicKeySec1 is
-  // always a well-formed 65-byte uncompressed point.
+  // Left-pad to 32 bytes so publicKeySec1 is always a well-formed
+  // 65-byte uncompressed point even for JWK
+  // sources that trim leading zero bytes (Node keeps them; not all
+  // encoders do).
   const x = padLeft(base64urlToBytes(jwk.x), 32);
   const y = padLeft(base64urlToBytes(jwk.y), 32);
   return {
