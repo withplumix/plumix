@@ -639,6 +639,11 @@ msgid "userEdit.error.reassignToSelf"
 msgstr "Не можна переназначити користувачу, якого видаляють."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.cancel"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.cancel"
 msgstr "Скасувати"
@@ -1218,6 +1223,21 @@ msgid "profile.passkeys.delete.confirm"
 msgstr "Видалити passkey"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.deletePermanently"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.confirm"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.cardTitle"
 msgstr "Видалити термін"
@@ -1241,6 +1261,11 @@ msgstr "Видалити користувача"
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.button"
 msgstr "Видалити користувача"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.deleting"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -2566,9 +2591,20 @@ msgid "profile.passkeys.rename.label"
 msgstr "Перейменувати passkey"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgctxt "action verb"
+msgid "entries.list.row.restore"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
 msgid "editor.revisions.preview.restore"
 msgstr "Відновити цю ревізію"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.restoring"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
@@ -3404,6 +3440,11 @@ msgstr "Цей passkey непридатний для цього сайту."
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.notFound"
 msgstr "Цей passkey більше не існує. Оновіть список."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.description"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx

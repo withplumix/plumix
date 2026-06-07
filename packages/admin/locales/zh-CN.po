@@ -624,6 +624,11 @@ msgid "userEdit.error.reassignToSelf"
 msgstr "无法将内容重新分配给正在删除的用户。"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.cancel"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.cancel"
 msgstr "取消"
@@ -1197,6 +1202,21 @@ msgid "profile.passkeys.delete.confirm"
 msgstr "删除 Passkey"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.deletePermanently"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.confirm"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.cardTitle"
 msgstr "删除术语"
@@ -1220,6 +1240,11 @@ msgstr "删除用户"
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.button"
 msgstr "删除用户"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.deleting"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -2520,9 +2545,20 @@ msgid "profile.passkeys.rename.label"
 msgstr "重命名 Passkey"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgctxt "action verb"
+msgid "entries.list.row.restore"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
 msgid "editor.revisions.preview.restore"
 msgstr "恢复此修订版本"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.restoring"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
@@ -3330,6 +3366,11 @@ msgstr "此 Passkey 不能在此站点使用。"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.notFound"
 msgstr "此 Passkey 不再存在。请刷新列表。"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.description"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx

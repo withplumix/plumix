@@ -464,6 +464,28 @@ describe("registerAuditEvents — entry backfill", () => {
     });
   });
 
+  test("entry:restored produces a row keyed on the entry", async () => {
+    const h = harness();
+    await h.fire("entry:restored", subjectEntry);
+    expect(h.state.rows[0]).toMatchObject({
+      event: "entry:restored",
+      subjectType: "entry",
+      subjectId: "11",
+      subjectLabel: "Some Post",
+    });
+  });
+
+  test("entry:deleted produces a row keyed on the entry", async () => {
+    const h = harness();
+    await h.fire("entry:deleted", subjectEntry);
+    expect(h.state.rows[0]).toMatchObject({
+      event: "entry:deleted",
+      subjectType: "entry",
+      subjectId: "11",
+      subjectLabel: "Some Post",
+    });
+  });
+
   test("entry:meta_changed records set/removed key names only", async () => {
     const h = harness();
     await h.fire(
@@ -697,8 +719,10 @@ describe("auditEvents table", () => {
       "credential:revoked",
       "device_code:approved",
       "device_code:denied",
+      "entry:deleted",
       "entry:meta_changed",
       "entry:published",
+      "entry:restored",
       "entry:transition",
       "entry:trashed",
       "entry:updated",

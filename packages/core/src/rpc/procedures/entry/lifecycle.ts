@@ -67,6 +67,22 @@ export async function fireEntryTrashed(
   await ctx.hooks.doAction("entry:trashed", entry);
 }
 
+export async function fireEntryRestored(
+  ctx: AppContext,
+  entry: Entry,
+): Promise<void> {
+  await ctx.hooks.doAction(`entry:${entry.type}:restored`, entry);
+  await ctx.hooks.doAction("entry:restored", entry);
+}
+
+export async function fireEntryDeleted(
+  ctx: AppContext,
+  entry: Entry,
+): Promise<void> {
+  await ctx.hooks.doAction(`entry:${entry.type}:deleted`, entry);
+  await ctx.hooks.doAction("entry:deleted", entry);
+}
+
 // Type-specific event keys on the live entry's type — the autosave row
 // itself carries `type='autosave'`, but subscribers care about the
 // type of the entry being edited (e.g. `entry:post:autosave_saved`),
@@ -114,6 +130,35 @@ export async function fireEntryRevisionRestored(
 
 export function entryCapability(type: string, action: string): string {
   return `entry:${type}:${action}`;
+}
+
+/**
+ * Shared prelude for the trash-lifecycle procedures (trash / restore /
+ * deletePermanent): load-or-404, then gate on the `delete` capability
+ * plus author-or-`edit_any`. Deliberately distinct from the edit gate in
+ * `update.ts` (`(author AND edit_own) OR edit_any`, no `delete` cap) —
+ * don't unify them.
+ */
+export async function loadDeletableEntry(
+  ctx: AuthenticatedAppContext,
+  id: number,
+  guards: {
+    readonly notFound: (id: number) => never;
+    readonly forbidden: (capability: string) => never;
+  },
+): Promise<Entry> {
+  const existing = await ctx.db.query.entries.findFirst({
+    where: eq(entries.id, id),
+  });
+  if (!existing) guards.notFound(id);
+
+  const deleteCapability = entryCapability(existing.type, "delete");
+  if (!ctx.auth.can(deleteCapability)) guards.forbidden(deleteCapability);
+  if (existing.authorId !== ctx.user.id) {
+    const editAnyCapability = entryCapability(existing.type, "edit_any");
+    if (!ctx.auth.can(editAnyCapability)) guards.forbidden(editAnyCapability);
+  }
+  return existing;
 }
 
 // Mirrors the readability rules in `entry.get`: any type-level `read` cap,

@@ -632,6 +632,11 @@ msgid "userEdit.error.reassignToSelf"
 msgstr "لا يمكن إعادة التعيين للمستخدم الذي يتم حذفه."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.cancel"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.cancel"
 msgstr "إلغاء"
@@ -1209,6 +1214,21 @@ msgid "profile.passkeys.delete.confirm"
 msgstr "حذف passkey"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.deletePermanently"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.confirm"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.cardTitle"
 msgstr "حذف المصطلح"
@@ -1232,6 +1252,11 @@ msgstr "حذف المستخدم"
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.button"
 msgstr "حذف المستخدم"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.deleting"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -2546,9 +2571,20 @@ msgid "profile.passkeys.rename.label"
 msgstr "إعادة تسمية passkey"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgctxt "action verb"
+msgid "entries.list.row.restore"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
 msgid "editor.revisions.preview.restore"
 msgstr "استعادة هذه المراجعة"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.restoring"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
@@ -3369,6 +3405,11 @@ msgstr "هذا passkey غير قابل للاستخدام على هذا المو
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.notFound"
 msgstr "لم يعد هذا passkey موجوداً. حدّث القائمة."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.description"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx

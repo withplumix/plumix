@@ -634,6 +634,11 @@ msgid "userEdit.error.reassignToSelf"
 msgstr "Can't reassign to the user being deleted."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.cancel"
+msgstr "Cancel"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.cancel"
 msgstr "Cancel"
@@ -1211,6 +1216,21 @@ msgid "profile.passkeys.delete.confirm"
 msgstr "Delete passkey"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.deletePermanently"
+msgstr "Delete permanently"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.confirm"
+msgstr "Delete permanently"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.title"
+msgstr "Delete permanently?"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.cardTitle"
 msgstr "Delete term"
@@ -1234,6 +1254,11 @@ msgstr "Delete user"
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.button"
 msgstr "Delete user"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.deleting"
+msgstr "Deleting…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -2552,9 +2577,20 @@ msgid "profile.passkeys.rename.label"
 msgstr "Rename passkey"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgctxt "action verb"
+msgid "entries.list.row.restore"
+msgstr "Restore"
+
+#. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
 msgid "editor.revisions.preview.restore"
 msgstr "Restore this revision"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.restoring"
+msgstr "Restoring…"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
@@ -3385,6 +3421,12 @@ msgstr "This passkey isn't usable on this site."
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.notFound"
 msgstr "This passkey no longer exists. Refresh the list."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.description"
+msgstr "This permanently deletes the entry and its revisions. It cannot be "
+"undone."
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx

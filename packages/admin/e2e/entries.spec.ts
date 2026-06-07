@@ -289,6 +289,85 @@ test.describe("/entries/$slug (list)", () => {
     await expect(page.getByTestId("content-list-row-2")).toBeVisible();
   });
 
+  test("trash view: Restore row action → entry.restore payload → refetched list drops the row", async ({
+    page,
+  }) => {
+    const TRASHED_ROW = entry({ id: 3, title: "Binned", status: "trash" });
+    const restored: unknown[] = [];
+    await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
+    await page.route("**/_plumix/rpc/entry/list", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(restored.length === 0 ? [TRASHED_ROW] : []),
+      }),
+    );
+    await page.route("**/_plumix/rpc/entry/restore", (route) => {
+      const body = route.request().postDataJSON() as { json?: unknown };
+      restored.push(body.json);
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody({ ...TRASHED_ROW, status: "draft" }),
+      });
+    });
+
+    await page.goto("entries/posts?status=trash");
+    await page.getByTestId("content-list-row-3").hover();
+    await page.getByTestId("content-list-row-restore-3").click();
+
+    expect(restored[0]).toMatchObject({ id: 3 });
+    await expect(page.getByTestId("content-list-row-3")).toHaveCount(0);
+  });
+
+  test("trash view: Delete permanently → confirm dialog → entry.deletePermanent payload → row gone", async ({
+    page,
+  }) => {
+    const TRASHED_ROW = entry({ id: 3, title: "Binned", status: "trash" });
+    const deleted: unknown[] = [];
+    await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
+    await page.route("**/_plumix/rpc/entry/list", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(deleted.length === 0 ? [TRASHED_ROW] : []),
+      }),
+    );
+    await page.route("**/_plumix/rpc/entry/deletePermanent", (route) => {
+      const body = route.request().postDataJSON() as { json?: unknown };
+      deleted.push(body.json);
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(TRASHED_ROW),
+      });
+    });
+
+    await page.goto("entries/posts?status=trash");
+    await page.getByTestId("content-list-row-3").hover();
+    await page.getByTestId("content-list-row-delete-3").click();
+    // Permanent delete is unrecoverable — it must go through a confirm
+    // dialog, unlike Restore which fires immediately.
+    await page.getByTestId("content-list-delete-confirm").click();
+
+    expect(deleted[0]).toMatchObject({ id: 3 });
+    await expect(page.getByTestId("content-list-row-3")).toHaveCount(0);
+  });
+
+  test("non-trash rows never surface Restore / Delete permanently", async ({
+    page,
+  }) => {
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/list": TWO_ROWS,
+    });
+    await page.goto("entries/posts");
+    await page.getByTestId("content-list-row-1").hover();
+    await expect(page.getByTestId("content-list-row-trash-1")).toBeVisible();
+    await expect(page.getByTestId("content-list-row-restore-1")).toHaveCount(0);
+    await expect(page.getByTestId("content-list-row-delete-1")).toHaveCount(0);
+  });
+
   test("without create/delete caps: New button and Trash row action are absent", async ({
     page,
   }) => {

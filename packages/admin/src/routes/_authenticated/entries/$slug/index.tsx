@@ -223,6 +223,31 @@ const M = {
     id: "entries.list.trashDialog.confirm",
     message: "Move to trash",
   }),
+  rowRestore: defineMessage({
+    id: "entries.list.row.restore",
+    message: "Restore",
+    context: "action verb",
+  }),
+  rowRestoring: defineMessage({
+    id: "entries.list.row.restoring",
+    message: "Restoring…",
+  }),
+  rowDelete: defineMessage({
+    id: "entries.list.row.deletePermanently",
+    message: "Delete permanently",
+  }),
+  deleteDialogTitle: defineMessage({
+    id: "entries.list.deleteDialog.title",
+    message: "Delete permanently?",
+  }),
+  deleteDialogDeleting: defineMessage({
+    id: "entries.list.deleteDialog.deleting",
+    message: "Deleting…",
+  }),
+  deleteDialogConfirm: defineMessage({
+    id: "entries.list.deleteDialog.confirm",
+    message: "Delete permanently",
+  }),
 } satisfies Record<string, MessageDescriptor>;
 
 const STATUS_FILTER_OPTIONS: {
@@ -244,6 +269,9 @@ function buildColumns({
   canDelete,
   onTrash,
   trashingId,
+  onRestore,
+  restoringId,
+  onDeletePermanent,
   renderLabel,
   editLabel,
   formatDate,
@@ -255,6 +283,9 @@ function buildColumns({
   canDelete: boolean;
   onTrash: (id: number) => void;
   trashingId: number | null;
+  onRestore: (id: number) => void;
+  restoringId: number | null;
+  onDeletePermanent: (id: number) => void;
   renderLabel: (label: MessageDescriptor) => string;
   editLabel: string;
   formatDate: (value: Date, options?: Intl.DateTimeFormatOptions) => string;
@@ -279,6 +310,9 @@ function buildColumns({
           canDelete={canDelete}
           onTrash={onTrash}
           isTrashing={trashingId === row.original.id}
+          onRestore={onRestore}
+          isRestoring={restoringId === row.original.id}
+          onDeletePermanent={onDeletePermanent}
           editLabel={editLabel}
         />
       ),
@@ -487,14 +521,17 @@ function ContentListRoute(): ReactNode {
   const canDelete = hasCap(user.capabilities, deleteCapability);
 
   const queryClient = useQueryClient();
+  const invalidateList = useCallback(
+    () =>
+      queryClient.invalidateQueries({
+        queryKey: orpc.entry.list.key({ input: { type: entryType.name } }),
+      }),
+    [queryClient, entryType.name],
+  );
   const [pendingTrashId, setPendingTrashId] = useState<number | null>(null);
   const trash = useMutation({
     mutationFn: (id: number) => orpc.entry.trash.call({ id }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: orpc.entry.list.key({ input: { type: entryType.name } }),
-      });
-    },
+    onSuccess: invalidateList,
     // Close the dialog regardless of outcome — keeping it open after a
     // server error left users stuck with no error surface and a still-
     // clickable Confirm button.
@@ -513,6 +550,40 @@ function ContentListRoute(): ReactNode {
       ? trash.variables
       : null;
 
+  // Restore fires immediately — it's recoverable (the row lands back in
+  // Drafts), so a confirm dialog would just add friction.
+  const restore = useMutation({
+    mutationFn: (id: number) => orpc.entry.restore.call({ id }),
+    onSuccess: invalidateList,
+  });
+  const onRestore = useCallback(
+    (id: number): void => {
+      restore.mutate(id);
+    },
+    [restore],
+  );
+  const restoringId =
+    restore.isPending && typeof restore.variables === "number"
+      ? restore.variables
+      : null;
+
+  // Permanent delete is unrecoverable, so it goes through a confirm
+  // dialog like trash does.
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const deletePermanent = useMutation({
+    mutationFn: (id: number) => orpc.entry.deletePermanent.call({ id }),
+    onSuccess: invalidateList,
+    onSettled: () => {
+      setPendingDeleteId(null);
+    },
+  });
+  const onDeletePermanent = useCallback(
+    (id: number): void => {
+      setPendingDeleteId(id);
+    },
+    [setPendingDeleteId],
+  );
+
   const editLabel = renderLabel(entryTypeLabel(entryType, "editItem"));
   const { formatDate } = useFormatters();
   const columns = useMemo(
@@ -525,6 +596,9 @@ function ContentListRoute(): ReactNode {
         canDelete,
         onTrash,
         trashingId,
+        onRestore,
+        restoringId,
+        onDeletePermanent,
         renderLabel,
         editLabel,
         formatDate,
@@ -537,6 +611,9 @@ function ContentListRoute(): ReactNode {
       canDelete,
       onTrash,
       trashingId,
+      onRestore,
+      restoringId,
+      onDeletePermanent,
       renderLabel,
       editLabel,
       formatDate,
@@ -665,6 +742,45 @@ function ContentListRoute(): ReactNode {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {renderLabel(M.deleteDialogTitle)}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              <Trans
+                id="entries.list.deleteDialog.description"
+                message="This permanently deletes the entry and its revisions. It cannot be undone."
+              />
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletePermanent.isPending}>
+              <Trans id="entries.list.deleteDialog.cancel" message="Cancel" />
+            </AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="content-list-delete-confirm"
+              disabled={deletePermanent.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (pendingDeleteId !== null)
+                  deletePermanent.mutate(pendingDeleteId);
+              }}
+            >
+              {deletePermanent.isPending
+                ? renderLabel(M.deleteDialogDeleting)
+                : renderLabel(M.deleteDialogConfirm)}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -749,6 +865,9 @@ function TitleCell({
   canDelete,
   onTrash,
   isTrashing,
+  onRestore,
+  isRestoring,
+  onDeletePermanent,
   editLabel,
 }: {
   entry: Entry;
@@ -756,10 +875,15 @@ function TitleCell({
   canDelete: boolean;
   onTrash: (id: number) => void;
   isTrashing: boolean;
+  onRestore: (id: number) => void;
+  isRestoring: boolean;
+  onDeletePermanent: (id: number) => void;
   editLabel: string;
 }): ReactNode {
   const renderLabel = useLabel();
-  const showTrashAction = canDelete && entry.status !== "trash";
+  const isTrashed = entry.status === "trash";
+  const showTrashAction = canDelete && !isTrashed;
+  const showTrashedActions = canDelete && isTrashed;
   return (
     <div className="flex flex-col gap-0.5">
       <Link
@@ -806,6 +930,39 @@ function TitleCell({
               {isTrashing
                 ? renderLabel(M.rowTrashing)
                 : renderLabel(M.rowTrash)}
+            </button>
+          </>
+        ) : null}
+        {showTrashedActions ? (
+          <>
+            <span aria-hidden className="text-muted-foreground/50">
+              |
+            </span>
+            <button
+              type="button"
+              disabled={isRestoring}
+              onClick={() => {
+                onRestore(entry.id);
+              }}
+              className="text-muted-foreground hover:text-foreground disabled:opacity-50"
+              data-testid={`content-list-row-restore-${String(entry.id)}`}
+            >
+              {isRestoring
+                ? renderLabel(M.rowRestoring)
+                : renderLabel(M.rowRestore)}
+            </button>
+            <span aria-hidden className="text-muted-foreground/50">
+              |
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                onDeletePermanent(entry.id);
+              }}
+              className="text-muted-foreground hover:text-destructive"
+              data-testid={`content-list-row-delete-${String(entry.id)}`}
+            >
+              {renderLabel(M.rowDelete)}
             </button>
           </>
         ) : null}
