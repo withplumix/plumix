@@ -71,7 +71,7 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
     "@libsql/client": "catalog:",
-    "@lingui/cli": "catalog:",
+    "@lingui/cli": "catalog:lingui",
     "@orpc/server": "catalog:",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",

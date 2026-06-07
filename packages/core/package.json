@@ -57,7 +57,7 @@
   },
   "dependencies": {
     "@libsql/client": "catalog:",
-    "@lingui/core": "catalog:",
+    "@lingui/core": "catalog:lingui",
     "@orpc/server": "catalog:",
     "@oslojs/crypto": "^1.0.1",
     "@oslojs/encoding": "^1.1.0",

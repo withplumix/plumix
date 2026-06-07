@@ -17,10 +17,6 @@ catalog:
   "@dnd-kit/sortable": ^10.0.0
   "@dnd-kit/utilities": ^3.2.2
   "@libsql/client": ^0.17.3
-  "@lingui/cli": ^6.2.0
-  "@lingui/core": ^6.2.0
-  "@lingui/format-po": ^6.2.0
-  "@lingui/react": ^6.2.0
   "@orpc/client": ^1.14.4
   "@orpc/server": ^1.14.4
   "@orpc/tanstack-query": ^1.14.4
@@ -53,6 +49,11 @@ catalog:
   wrangler: ^4.94.0
 
 catalogs:
+  lingui:
+    "@lingui/cli": ^6.2.0
+    "@lingui/core": ^6.2.0
+    "@lingui/format-po": ^6.2.0
+    "@lingui/react": ^6.2.0
   tailwind:
     "@tailwindcss/node": ^4.3.0
     "@tailwindcss/oxide": ^4.3.0

@@ -56,7 +56,7 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
-    "@lingui/cli": "catalog:",
+    "@lingui/cli": "catalog:lingui",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/lingui-config": "workspace:*",

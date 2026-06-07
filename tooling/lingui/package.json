@@ -12,8 +12,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@lingui/cli": "catalog:",
-    "@lingui/format-po": "catalog:"
+    "@lingui/cli": "catalog:lingui",
+    "@lingui/format-po": "catalog:lingui"
   },
   "devDependencies": {
     "@plumix/prettier-config": "workspace:*",
