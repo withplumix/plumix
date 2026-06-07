@@ -56,7 +56,7 @@
     "db:generate": "drizzle-kit generate",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "i18n:check": "node ../plumix/bin/plumix.mjs i18n verify --src src/admin-bar",
-    "i18n:compile": "lingui compile --namespace es",
+    "i18n:compile": "plumix-compile-catalogs --dts",
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
@@ -89,7 +89,6 @@
     }
   },
   "devDependencies": {
-    "@lingui/cli": "catalog:lingui",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/lingui-config": "workspace:*",

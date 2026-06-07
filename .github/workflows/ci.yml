@@ -61,6 +61,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
+      # Catalogs are gitignored build output; generate them so core's
+      # static catalog imports resolve before knip walks the graph.
+      - run: pnpm exec turbo run i18n:compile
       - run: pnpm knip
 
   i18n:
