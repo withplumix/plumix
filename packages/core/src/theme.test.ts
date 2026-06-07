@@ -217,6 +217,42 @@ describe("buildApp — theme:document filter", () => {
   });
 });
 
+describe("buildApp — core site settings", () => {
+  test("seeds the built-in `site` group and `general` page into the registry", async () => {
+    const app = await buildApp(
+      plumix({
+        runtime: stubAdapter,
+        database: stubDatabase,
+        auth: stubAuth,
+        theme: defineTheme({ templates: { index: () => null } }),
+      }),
+    );
+    const group = app.plugins.settingsGroups.get("site");
+    expect(group?.fields.map((f) => f.key)).toContain("title");
+    expect(app.plugins.settingsPages.get("general")?.groups).toContain("site");
+  });
+
+  test("a plugin cannot re-register the core-reserved `site` group", async () => {
+    const collide = definePlugin("collide", (ctx) => {
+      ctx.registerSettingsGroup("site", {
+        label: "Mine",
+        fields: [{ key: "x", type: "string", inputType: "text", label: "X" }],
+      });
+    });
+    await expect(
+      buildApp(
+        plumix({
+          runtime: stubAdapter,
+          database: stubDatabase,
+          auth: stubAuth,
+          theme: defineTheme({ templates: { index: () => null } }),
+          plugins: [collide],
+        }),
+      ),
+    ).rejects.toThrow(/already registered/i);
+  });
+});
+
 describe("buildApp — per-template document fragments", () => {
   test("PlumixApp.templateDocuments holds the per-template merged manifest", async () => {
     const { defineTemplate } = await import("./template.js");

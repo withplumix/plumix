@@ -224,9 +224,10 @@ msgstr "{browser} на {os}"
 
 #. characters: number of characters in the entry's prose blocks
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
+#: src/editor/WordCount.tsx
 msgid "editor.layout.characterCount"
-msgstr "{characters, plural, one {# символ} few {# символи} many {# символів} other {# символа}}"
+msgstr "{characters, plural, one {# символ} few {# символи} many {# символів} "
+"other {# символа}}"
 
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
@@ -285,9 +286,10 @@ msgstr "{revoked, plural, =0 {Інших сеансів для виходу не
 
 #. words: number of words in the entry's prose blocks
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
+#: src/editor/WordCount.tsx
 msgid "editor.layout.wordCount"
-msgstr "{words, plural, one {# слово} few {# слова} many {# слів} other {# слова}}"
+msgstr "{words, plural, one {# слово} few {# слова} many {# слів} other {# "
+"слова}}"
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
@@ -910,6 +912,11 @@ msgstr "Ядро навмисно не постачає налаштувань �
 "оголошують сторінки + групи через <0>ctx.registerSettingsPage</0> та "
 "<1>ctx.registerSettingsGroup</1>. Зареєстровані сторінки з'являються "
 "тут у вигляді карток (одна на сторінку)."
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.general.description"
+msgstr "Основна ідентичність сайту та метадані."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -1733,6 +1740,16 @@ msgid "editor.revisions.preview.subtitle"
 msgstr "{when}, автор: {author}"
 
 #. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.general.label"
+msgstr "Загальні"
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.github"
+msgstr "Посилання на GitHub"
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.namePlaceholder"
 msgstr "github-actions / claude-code / mcp-prod"
@@ -2026,6 +2043,11 @@ msgstr "Пошта"
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.management"
 msgstr "Керування"
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.mastodon"
+msgstr "Посилання на Mastodon"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -2554,6 +2576,11 @@ msgstr "Профіль"
 #: src/components/shell/user-menu.tsx
 msgid "menu.profile"
 msgstr "Профіль"
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.description"
+msgstr "Публічна назва, гасло та посилання на соцмережі."
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
@@ -3109,6 +3136,16 @@ msgid "profile.sessions.revoke.pending"
 msgstr "Вихід…"
 
 #. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.label"
+msgstr "Ідентичність сайту"
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.title"
+msgstr "Назва сайту"
+
+#. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffPanel.tsx
 msgid "editor.revisions.diff.field.slug"
 msgstr "Slug"
@@ -3210,6 +3247,11 @@ msgstr "Синхронізовано"
 #: src/editor/device-labels.ts
 msgid "editor.device.tablet"
 msgstr "Планшет"
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.tagline"
+msgstr "Гасло"
 
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
@@ -3771,6 +3813,11 @@ msgstr "Над чим хочете попрацювати сьогодні?"
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.tile.description.generic"
 msgstr "Пишіть, редагуйте та публікуйте."
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.twitter"
+msgstr "Посилання на X (Twitter)"
 
 #. js-lingui-explicit-id
 #: src/editor/field-type-translator.tsx

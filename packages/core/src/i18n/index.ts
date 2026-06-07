@@ -11,6 +11,10 @@ export {
   GENERIC_TERM_TAXONOMY_LABELS,
 } from "./generic-type-labels.js";
 export { labelSourceText, resolveLabel, type Label } from "./label.js";
+// Re-exported for the admin's extraction-mirror lockstep test. The source
+// module is runtime-safe (type-only imports), so the browser i18n barrel
+// stays clean.
+export { SITE_SETTINGS_DESCRIPTORS } from "../settings-core.js";
 // `load-catalog` is intentionally NOT re-exported from the public barrel:
 // it depends on `node:fs/promises` / `node:path`, which esbuild can't
 // resolve in browser/playground builds (plugin admin chunks, themes).

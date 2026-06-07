@@ -224,7 +224,7 @@ msgstr "{browser}（{os}）"
 
 #. characters: number of characters in the entry's prose blocks
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
+#: src/editor/WordCount.tsx
 msgid "editor.layout.characterCount"
 msgstr "{characters, plural, other {# 个字符}}"
 
@@ -279,7 +279,7 @@ msgstr "{revoked, plural, =0 {没有其他会话需要登出。} other {已登�
 
 #. words: number of words in the entry's prose blocks
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
+#: src/editor/WordCount.tsx
 msgid "editor.layout.wordCount"
 msgstr "{words, plural, other {# 个词}}"
 
@@ -890,6 +890,11 @@ msgstr "复制令牌"
 msgid "settings.empty.description"
 msgstr "核心刻意不提供设置 — 插件（或您自己的 plumix.config）通过 <0>ctx.registerSettingsPage</0> 和 "
 "<1>ctx.registerSettingsGroup</1> 声明页面和分组。已注册的页面将在此显示，每页一张卡片。"
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.general.description"
+msgstr "核心站点标识与元数据。"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -1703,6 +1708,16 @@ msgid "editor.revisions.preview.subtitle"
 msgstr "{when} 由 {author}"
 
 #. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.general.label"
+msgstr "常规"
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.github"
+msgstr "GitHub 链接"
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.namePlaceholder"
 msgstr "github-actions / claude-code / mcp-prod"
@@ -1994,6 +2009,11 @@ msgstr "邮件发送器"
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.management"
 msgstr "管理"
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.mastodon"
+msgstr "Mastodon 链接"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -2510,6 +2530,11 @@ msgstr "个人资料"
 #: src/components/shell/user-menu.tsx
 msgid "menu.profile"
 msgstr "个人资料"
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.description"
+msgstr "对外展示的名称、标语和社交链接。"
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
@@ -3056,6 +3081,16 @@ msgid "profile.sessions.revoke.pending"
 msgstr "登出中…"
 
 #. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.label"
+msgstr "站点标识"
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.title"
+msgstr "站点标题"
+
+#. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffPanel.tsx
 msgid "editor.revisions.diff.field.slug"
 msgstr "别名"
@@ -3155,6 +3190,11 @@ msgstr "已同步"
 #: src/editor/device-labels.ts
 msgid "editor.device.tablet"
 msgstr "平板"
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.tagline"
+msgstr "标语"
 
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
@@ -3688,6 +3728,11 @@ msgstr "今天想做些什么？"
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.tile.description.generic"
 msgstr "写作、编辑和发布。"
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.twitter"
+msgstr "X（Twitter）链接"
 
 #. js-lingui-explicit-id
 #: src/editor/field-type-translator.tsx

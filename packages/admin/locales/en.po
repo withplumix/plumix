@@ -224,7 +224,7 @@ msgstr "{browser} on {os}"
 
 #. characters: number of characters in the entry's prose blocks
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
+#: src/editor/WordCount.tsx
 msgid "editor.layout.characterCount"
 msgstr "{characters, plural, one {# character} other {# characters}}"
 
@@ -283,7 +283,7 @@ msgstr "{revoked, plural, =0 {No other sessions to sign out.} one {Signed out # 
 
 #. words: number of words in the entry's prose blocks
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
+#: src/editor/WordCount.tsx
 msgid "editor.layout.wordCount"
 msgstr "{words, plural, one {# word} other {# words}}"
 
@@ -904,6 +904,11 @@ msgstr "Core ships no settings by design — plugins (or your own plumix.config)
 "declare pages + groups via <0>ctx.registerSettingsPage</0> and "
 "<1>ctx.registerSettingsGroup</1>. Registered pages appear here with one "
 "card per page."
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.general.description"
+msgstr "Core site identity and metadata."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -1724,6 +1729,16 @@ msgid "editor.revisions.preview.subtitle"
 msgstr "from {when} by {author}"
 
 #. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.general.label"
+msgstr "General"
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.github"
+msgstr "GitHub URL"
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.namePlaceholder"
 msgstr "github-actions / claude-code / mcp-prod"
@@ -2017,6 +2032,11 @@ msgstr "Mailer"
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.management"
 msgstr "Management"
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.mastodon"
+msgstr "Mastodon URL"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -2540,6 +2560,11 @@ msgstr "Profile"
 #: src/components/shell/user-menu.tsx
 msgid "menu.profile"
 msgstr "Profile"
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.description"
+msgstr "Public-facing name, tagline, and social links."
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
@@ -3093,6 +3118,16 @@ msgid "profile.sessions.revoke.pending"
 msgstr "Signing out…"
 
 #. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.label"
+msgstr "Site identity"
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.title"
+msgstr "Site title"
+
+#. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffPanel.tsx
 msgid "editor.revisions.diff.field.slug"
 msgstr "Slug"
@@ -3194,6 +3229,11 @@ msgstr "Synced"
 #: src/editor/device-labels.ts
 msgid "editor.device.tablet"
 msgstr "Tablet"
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.tagline"
+msgstr "Tagline"
 
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
@@ -3750,6 +3790,11 @@ msgstr "What would you like to work on today?"
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.tile.description.generic"
 msgstr "Write, edit, and publish."
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.twitter"
+msgstr "X (Twitter) URL"
 
 #. js-lingui-explicit-id
 #: src/editor/field-type-translator.tsx
