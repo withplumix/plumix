@@ -22,8 +22,7 @@ import { definePlugin } from "plumix/plugin";
 // Action-phrase labels (`Add Post`, `Edit Tag`) intentionally OMIT
 // context — the leading English verb fixes the polyseme as a noun in
 // every target locale, matching WP gettext convention (only the
-// standalone singular/plural carry `_x()`). See
-// `docs/plugin-author.md#disambiguating-polysemes`.
+// standalone singular/plural carry `_x()`).
 const POST_LABELS = {
   singular: withContext(
     { id: "plugin.blog.post.singular", message: "Post" },

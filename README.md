@@ -10,8 +10,8 @@ A headless CMS for the edge, built on Cloudflare Workers.
 
 ## Documentation
 
-See [`docs/`](./docs/README.md) for authoring guides, the field-type
-catalog, editor-surface walkthroughs, and the keyboard shortcut map.
+Agent-facing conventions live in [`AGENTS.md`](./AGENTS.md) and
+[`docs/agents/`](./docs/agents). Authoring guides ship with 1.0.
 
 ## License
 
