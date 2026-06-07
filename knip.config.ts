@@ -159,6 +159,12 @@ const config: KnipConfig = {
     // imports knip can follow. The `./server` subpath is consumer-
     // facing (themes import server-only helpers from there); listed
     // so knip auto-discovery doesn't miss the subdir-index layout.
+    // Core's lingui config + compiled catalogs are loaded by the i18n
+    // pipeline and the self-referencing `./locales/*` subpath — knip
+    // can't see either consumer.
+    "packages/core": {
+      entry: ["lingui.config.ts", "locales/*.mjs"],
+    },
     "packages/plugins/menu": {
       entry: [
         "src/index.ts",

@@ -1,7 +1,39 @@
-// Inline catalog — 9 strings, SSR-only, fixed locale set; not worth a
-// Lingui pipeline. Wider set ships when `pnpm i18n:check` moves into core.
+// Admin-bar strings live in `locales/*.po` like every other plumix
+// surface — `plumix i18n verify` gates the descriptor↔catalog drift
+// and translators never have to find a second system. Catalogs are
+// compiled to static modules (worker-safe, no fs) and imported via
+// the package's own `./locales/*` subpath; the SSR render does a
+// direct per-request lookup, never a shared-singleton `activate()`.
+
+import { messages as arMessages } from "@plumix/core/locales/ar";
+import { messages as deMessages } from "@plumix/core/locales/de";
+import { messages as enMessages } from "@plumix/core/locales/en";
+import { messages as ukMessages } from "@plumix/core/locales/uk";
+import { messages as zhCnMessages } from "@plumix/core/locales/zh-CN";
 
 export type BarLocale = "en" | "de" | "uk" | "ar" | "zh-CN";
+
+type CompiledCatalog = Record<string, string | readonly string[]>;
+
+const CATALOGS: Readonly<Record<BarLocale, CompiledCatalog>> = {
+  en: enMessages,
+  de: deMessages,
+  uk: ukMessages,
+  ar: arMessages,
+  "zh-CN": zhCnMessages,
+};
+
+// Source descriptors — `plumix i18n verify` matches these against the
+// po catalogs; `message` is the English source and the runtime
+// fallback for locales missing an entry.
+const M = {
+  siteFallback: { id: "core.adminBar.siteFallback", message: "Site" },
+  newGroup: { id: "core.adminBar.newGroup", message: "+ New" },
+  newGroupAria: { id: "core.adminBar.newGroupAria", message: "Create new" },
+  edit: { id: "core.adminBar.edit", message: "Edit" },
+  account: { id: "core.adminBar.account", message: "Account" },
+  navAria: { id: "core.adminBar.navAria", message: "Admin" },
+} as const;
 
 export interface BarStrings {
   readonly siteFallback: string;
@@ -11,49 +43,6 @@ export interface BarStrings {
   readonly account: string;
   readonly navAria: string;
 }
-
-const CATALOGS: Readonly<Record<BarLocale, BarStrings>> = {
-  en: {
-    siteFallback: "Site",
-    newGroup: "+ New",
-    newGroupAria: "Create new",
-    edit: "Edit",
-    account: "Account",
-    navAria: "Admin",
-  },
-  de: {
-    siteFallback: "Website",
-    newGroup: "+ Neu",
-    newGroupAria: "Neu erstellen",
-    edit: "Bearbeiten",
-    account: "Konto",
-    navAria: "Administration",
-  },
-  uk: {
-    siteFallback: "Сайт",
-    newGroup: "+ Новий",
-    newGroupAria: "Створити",
-    edit: "Редагувати",
-    account: "Обліковий запис",
-    navAria: "Адміністрування",
-  },
-  ar: {
-    siteFallback: "الموقع",
-    newGroup: "+ جديد",
-    newGroupAria: "إنشاء جديد",
-    edit: "تعديل",
-    account: "الحساب",
-    navAria: "الإدارة",
-  },
-  "zh-CN": {
-    siteFallback: "站点",
-    newGroup: "+ 新建",
-    newGroupAria: "新建内容",
-    edit: "编辑",
-    account: "账户",
-    navAria: "管理",
-  },
-};
 
 const KNOWN: ReadonlySet<string> = new Set(Object.keys(CATALOGS));
 
@@ -72,8 +61,30 @@ export function resolveBarLocale(user: {
   return "en";
 }
 
+// Compiled lingui entries are token arrays (a lone string for plain
+// messages); the bar has no ICU placeholders, so anything else falls
+// back to the English source.
+function resolveMessage(
+  catalog: CompiledCatalog,
+  descriptor: { readonly id: string; readonly message: string },
+): string {
+  const value = catalog[descriptor.id];
+  const text = typeof value === "string" ? value : value?.[0];
+  return typeof text === "string" && text.length > 0
+    ? text
+    : descriptor.message;
+}
+
 export function barMessages(locale: BarLocale): BarStrings {
-  return CATALOGS[locale];
+  const catalog = CATALOGS[locale];
+  return {
+    siteFallback: resolveMessage(catalog, M.siteFallback),
+    newGroup: resolveMessage(catalog, M.newGroup),
+    newGroupAria: resolveMessage(catalog, M.newGroupAria),
+    edit: resolveMessage(catalog, M.edit),
+    account: resolveMessage(catalog, M.account),
+    navAria: resolveMessage(catalog, M.navAria),
+  };
 }
 
 export function barDirection(locale: BarLocale): "ltr" | "rtl" {

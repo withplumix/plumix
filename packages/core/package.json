@@ -41,6 +41,10 @@
       "types": "./dist/i18n/index.d.ts",
       "default": "./dist/i18n/index.js"
     },
+    "./locales/*": {
+      "types": "./locales/*.d.mts",
+      "default": "./locales/*.mjs"
+    },
     "./slugify": {
       "types": "./dist/slugify.d.ts",
       "default": "./dist/slugify.js"
@@ -51,6 +55,8 @@
     "clean": "git clean -xdf .cache .drizzle .turbo dist node_modules",
     "db:generate": "drizzle-kit generate",
     "format": "prettier --check . --ignore-path ../../.gitignore",
+    "i18n:check": "node ../plumix/bin/plumix.mjs i18n verify --src src/admin-bar",
+    "i18n:compile": "lingui compile --namespace es",
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
@@ -83,8 +89,10 @@
     }
   },
   "devDependencies": {
+    "@lingui/cli": "catalog:lingui",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",
+    "@plumix/lingui-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
     "@plumix/vitest-config": "workspace:*",
