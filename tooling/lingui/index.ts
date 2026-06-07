@@ -10,8 +10,7 @@ import { formatter } from "@lingui/format-po";
 
 /**
  * The locales plumix's own packages ship. Engineering-justified picks
- * (Slavic plurals, RTL, CJK) — see docs/translation.md; further
- * locales arrive via community PRs.
+ * (Slavic plurals, RTL, CJK); further locales arrive via community PRs.
  */
 export const PLUMIX_LOCALES = ["en", "uk", "ar", "de", "zh-CN"] as const;
 
