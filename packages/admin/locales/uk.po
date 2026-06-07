@@ -202,6 +202,11 @@ msgid "users.list.row.noName"
 msgstr "(без імені)"
 
 #. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.parent.none"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.noTitle"
 msgstr "(без назви)"
@@ -1320,6 +1325,11 @@ msgid "editor.staleDraft.discarding"
 msgstr "Скасування…"
 
 #. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.tab.document"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.domain.label"
 msgstr "Домен"
@@ -1523,6 +1533,11 @@ msgstr "Кожне збереження створює нову ревізію. 
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.placeholder"
 msgstr "example.com"
+
+#. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.excerpt"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffPanel.tsx
@@ -2206,6 +2221,11 @@ msgid "listPagination.page"
 msgstr "Сторінка {page}"
 
 #. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.parent"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.parent"
 msgstr "Батьківський"
@@ -2819,6 +2839,11 @@ msgstr "Вихід…"
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.pending"
 msgstr "Вихід…"
+
+#. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.slug"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffPanel.tsx

@@ -202,6 +202,11 @@ msgid "users.list.row.noName"
 msgstr "(no name)"
 
 #. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.parent.none"
+msgstr "(no parent)"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.noTitle"
 msgstr "(no title)"
@@ -1312,6 +1317,11 @@ msgid "editor.staleDraft.discarding"
 msgstr "Discarding…"
 
 #. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.tab.document"
+msgstr "Document"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.domain.label"
 msgstr "Domain"
@@ -1514,6 +1524,11 @@ msgstr "Every save creates a new revision. Newest first."
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.placeholder"
 msgstr "example.com"
+
+#. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.excerpt"
+msgstr "Excerpt"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffPanel.tsx
@@ -2195,6 +2210,11 @@ msgid "listPagination.page"
 msgstr "Page {page}"
 
 #. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.parent"
+msgstr "Parent"
+
+#. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.parent"
 msgstr "Parent"
@@ -2803,6 +2823,11 @@ msgstr "Signing out…"
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.pending"
 msgstr "Signing out…"
+
+#. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.slug"
+msgstr "Slug"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffPanel.tsx

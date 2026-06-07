@@ -202,6 +202,11 @@ msgid "users.list.row.noName"
 msgstr "(بدون اسم)"
 
 #. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.parent.none"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.noTitle"
 msgstr "(بدون عنوان)"
@@ -1310,6 +1315,11 @@ msgid "editor.staleDraft.discarding"
 msgstr "جارٍ التجاهل…"
 
 #. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.tab.document"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.domain.label"
 msgstr "النطاق"
@@ -1512,6 +1522,11 @@ msgstr "كل عملية حفظ تنشئ مراجعة جديدة. الأحدث أ
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.placeholder"
 msgstr "example.com"
+
+#. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.excerpt"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffPanel.tsx
@@ -2191,6 +2206,11 @@ msgid "listPagination.page"
 msgstr "الصفحة {page}"
 
 #. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.parent"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.parent"
 msgstr "الأب"
@@ -2795,6 +2815,11 @@ msgstr "جارٍ تسجيل الخروج…"
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.pending"
 msgstr "جارٍ تسجيل الخروج…"
+
+#. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.slug"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffPanel.tsx

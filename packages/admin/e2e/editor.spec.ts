@@ -275,6 +275,246 @@ test.describe("editor server-loaded content", () => {
   });
 });
 
+test.describe("editor document settings", () => {
+  test("excerpt edits ride the autosave envelope", async ({ page }) => {
+    // Excerpt is gated on the type's supports list — the beforeEach
+    // MANIFEST_WITH_POST has none, so override with one that does.
+    await mockManifest(page, {
+      ...MANIFEST_WITH_POST,
+      entryTypes: [
+        {
+          name: "post",
+          adminSlug: "posts",
+          label: "Posts",
+          labels: { singular: "Post", plural: "Posts" },
+          supports: ["title", "editor", "slug", "excerpt"],
+        },
+      ],
+    });
+    const captures = await mockRpcWithCapture(page, {
+      captureSuffix: "/entry/update",
+      captureResponse: { ...editorEntry(), updatedAt: T0 },
+      handlers: {
+        "/auth/session": AUTHED_ADMIN,
+        "/entry/get": editorEntry(),
+        "/entry/list": [],
+      },
+    });
+
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("plumix-editor-tab-document").click();
+
+    await page.getByTestId("entry-excerpt-input").fill("Hand-written summary");
+
+    await expect
+      .poll(
+        () =>
+          (captures.at(-1) as { excerpt?: string } | undefined)?.excerpt ??
+          null,
+      )
+      .toBe("Hand-written summary");
+    // Excerpt rides the normal autosave routing (the autosave-row
+    // patch honors it) — no forced live write.
+    expect(captures.at(-1)).not.toHaveProperty("saveAs");
+  });
+
+  test("excerpt input is absent when the type lacks excerpt support", async ({
+    page,
+  }) => {
+    // The beforeEach defaults already model this: MANIFEST_WITH_POST
+    // declares no supports list.
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("plumix-editor-tab-document").click();
+    await expect(page.getByTestId("entry-slug-input")).toBeVisible();
+    await expect(page.getByTestId("entry-excerpt-input")).toHaveCount(0);
+  });
+
+  test("clearing the excerpt ships null, not an empty string", async ({
+    page,
+  }) => {
+    await mockManifest(page, {
+      ...MANIFEST_WITH_POST,
+      entryTypes: [
+        {
+          name: "post",
+          adminSlug: "posts",
+          label: "Posts",
+          labels: { singular: "Post", plural: "Posts" },
+          supports: ["title", "editor", "slug", "excerpt"],
+        },
+      ],
+    });
+    const captures = await mockRpcWithCapture(page, {
+      captureSuffix: "/entry/update",
+      captureResponse: { ...editorEntry(), updatedAt: T0 },
+      handlers: {
+        "/auth/session": AUTHED_ADMIN,
+        "/entry/get": { ...editorEntry(), excerpt: "Seeded summary" },
+        "/entry/list": [],
+      },
+    });
+
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("plumix-editor-tab-document").click();
+    await page.getByTestId("entry-excerpt-input").clear();
+
+    await expect
+      .poll(() =>
+        captures.some(
+          (input) => (input as { excerpt?: unknown }).excerpt === null,
+        ),
+      )
+      .toBe(true);
+  });
+
+  test("hierarchical types expose a parent picker; picking ships a live parentId", async ({
+    page,
+  }) => {
+    await mockManifest(page, {
+      ...MANIFEST_WITH_POST,
+      entryTypes: [
+        {
+          name: "post",
+          adminSlug: "posts",
+          label: "Posts",
+          labels: { singular: "Post", plural: "Posts" },
+          supports: ["title", "editor", "slug"],
+          isHierarchical: true,
+        },
+      ],
+    });
+    const captures = await mockRpcWithCapture(page, {
+      captureSuffix: "/entry/update",
+      captureResponse: { ...editorEntry(), parentId: 2, updatedAt: T0 },
+      handlers: {
+        "/auth/session": AUTHED_ADMIN,
+        "/entry/get": editorEntry(),
+        "/entry/list": [editorEntry(), editorEntry({ id: 2, title: "About" })],
+      },
+    });
+
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("plumix-editor-tab-document").click();
+
+    const select = page.getByTestId("entry-parent-select");
+    await expect(select).toBeVisible();
+    // The entry can't be its own parent — self is excluded client-side.
+    await expect(select.locator("option[value='1']")).toHaveCount(0);
+
+    await select.selectOption({ label: "About" });
+    await expect
+      .poll(
+        () =>
+          (captures.at(-1) as { parentId?: number } | undefined)?.parentId ??
+          null,
+      )
+      .toBe(2);
+    // Structural — must write the live row.
+    expect((captures.at(-1) as { saveAs?: string }).saveAs).toBe("live");
+  });
+
+  test("parent picker is absent for non-hierarchical types", async ({
+    page,
+  }) => {
+    // beforeEach defaults: MANIFEST_WITH_POST is non-hierarchical.
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("plumix-editor-tab-document").click();
+    await expect(page.getByTestId("entry-slug-input")).toBeVisible();
+    await expect(page.getByTestId("entry-parent-select")).toHaveCount(0);
+  });
+
+  test("entry metaboxes render in the Document tab and ride the autosave meta bag", async ({
+    page,
+  }) => {
+    await mockManifest(page, {
+      ...MANIFEST_WITH_POST,
+      entryTypes: [
+        {
+          name: "post",
+          adminSlug: "posts",
+          label: "Posts",
+          labels: { singular: "Post", plural: "Posts" },
+          supports: ["title", "editor", "slug"],
+        },
+      ],
+      entryMetaBoxes: [
+        {
+          id: "seo",
+          label: "SEO",
+          entryTypes: ["post"],
+          fields: [
+            {
+              key: "meta_title",
+              label: "Meta title",
+              type: "string",
+              inputType: "text",
+              maxLength: 60,
+            },
+          ],
+        },
+      ],
+    });
+    const captures = await mockRpcWithCapture(page, {
+      captureSuffix: "/entry/update",
+      captureResponse: { ...editorEntry(), updatedAt: T0 },
+      handlers: {
+        "/auth/session": AUTHED_ADMIN,
+        "/entry/get": editorEntry(),
+        "/entry/list": [],
+      },
+    });
+
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("plumix-editor-tab-document").click();
+
+    await expect(page.getByTestId("entry-meta-box-seo")).toBeVisible();
+    await page.getByTestId("meta-box-field-meta_title-input").fill("SEO title");
+
+    await expect
+      .poll(
+        () =>
+          (captures.at(-1) as { meta?: Record<string, unknown> } | undefined)
+            ?.meta?.meta_title ?? null,
+      )
+      .toBe("SEO title");
+    // Meta rides the normal autosave routing — the autosave-row patch
+    // merges it over the live row's bag.
+    expect(captures.at(-1)).not.toHaveProperty("saveAs");
+  });
+
+  test("Document tab exposes the slug; editing it ships a live entry.update", async ({
+    page,
+  }) => {
+    const captures = await mockRpcWithCapture(page, {
+      captureSuffix: "/entry/update",
+      captureResponse: { ...editorEntry(), slug: "custom-slug", updatedAt: T0 },
+      handlers: {
+        "/auth/session": AUTHED_ADMIN,
+        "/entry/get": editorEntry(),
+        "/entry/list": [],
+      },
+    });
+
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("plumix-editor-tab-document").click();
+
+    const slug = page.getByTestId("entry-slug-input");
+    await expect(slug).toHaveValue("entry-1");
+    await slug.fill("custom-slug");
+
+    await expect
+      .poll(
+        () => (captures.at(-1) as { slug?: string } | undefined)?.slug ?? null,
+      )
+      .toBe("custom-slug");
+    // Structural fields must write the live row — the autosave-row
+    // patch silently drops slug/parentId.
+    const last = captures.at(-1) as { saveAs?: string; id?: number };
+    expect(last.saveAs).toBe("live");
+    expect(last.id).toBe(1);
+  });
+});
+
 test.describe("editor autosave and publish", () => {
   test("autosave pill cycles saved → saving → saved when a block is inserted", async ({
     page,

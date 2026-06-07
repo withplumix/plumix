@@ -46,17 +46,12 @@ test.describe.serial("@plumix/plugin-pages — worker-driven happy path", () => 
     await expect(rows.first()).toContainText("About");
   });
 
-  // Skipped pending an entry-parent surface in the v2 editor (#845).
-  // The rearchitecture (#470) dropped the v1 form's parent select and
-  // the Puck editor exposes no document-settings panel yet — `parentId`
-  // never reaches `entry.update` from the UI. This test is the canary
-  // that unskips when the parent picker lands.
-  test.skip("set a parent on a second page → hierarchy persists across reload", async ({
+  test("set a parent on a second page → hierarchy persists across reload", async ({
     page,
   }) => {
     // Create the child page. `About` from the previous test is the
     // intended parent — the parent picker exposes every existing
-    // page (minus self/descendants) as an option.
+    // page (minus self) as an option in the Document tab.
     await page.goto("entries/pages/create");
     await page.waitForURL(/\/entries\/pages\/\d+\/edit/);
     await expect(page.getByTestId("plumix-editor-title-input")).toBeVisible();
@@ -66,6 +61,7 @@ test.describe.serial("@plumix/plugin-pages — worker-driven happy path", () => 
     await page.getByTestId("plumix-editor-title-input").fill("Team");
     await titleSaved;
 
+    await page.getByTestId("plumix-editor-tab-document").click();
     const parentSaved = page.waitForResponse(
       (r) => r.url().endsWith("/entry/update") && r.status() === 200,
     );
@@ -75,6 +71,7 @@ test.describe.serial("@plumix/plugin-pages — worker-driven happy path", () => 
     await parentSaved;
 
     await page.reload();
+    await page.getByTestId("plumix-editor-tab-document").click();
     // `option:checked` reads the currently-selected option's text
     // — avoids pulling DOM lib into the plugin's typecheck for one
     // line of `HTMLSelectElement`.
