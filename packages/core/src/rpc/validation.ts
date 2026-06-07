@@ -18,7 +18,12 @@ export type { I18nResolver } from "./vmessage.js";
 // English — they only surface to direct RPC consumers, not admin forms,
 // which build their own client-side schemas with locally-wrapped messages.
 
-const M = {
+/**
+ * The descriptors behind the shared field schemas. Exported so admin's
+ * extraction mirror (`core-validation-i18n.ts`) can re-declare these ids
+ * for `lingui extract` and assert lockstep against this source.
+ */
+export const VALIDATION_DESCRIPTORS = {
   emailRequired: {
     id: "validate.email.required",
     message: "Enter an email address.",
@@ -45,9 +50,9 @@ const M = {
 export const emailField = v.pipe(
   v.string(),
   v.trim(),
-  v.minLength(1, vMessage(M.emailRequired)),
-  v.maxLength(254, vMessage(M.emailMaxLength)),
-  v.email(vMessage(M.emailInvalid)),
+  v.minLength(1, vMessage(VALIDATION_DESCRIPTORS.emailRequired)),
+  v.maxLength(254, vMessage(VALIDATION_DESCRIPTORS.emailMaxLength)),
+  v.email(vMessage(VALIDATION_DESCRIPTORS.emailInvalid)),
 );
 
 /** Display name. Empty is allowed at the schema level; required-ness is
@@ -55,7 +60,7 @@ export const emailField = v.pipe(
 export const nameField = v.pipe(
   v.string(),
   v.trim(),
-  v.maxLength(200, vMessage(M.nameMaxLength)),
+  v.maxLength(200, vMessage(VALIDATION_DESCRIPTORS.nameMaxLength)),
 );
 
 /**
@@ -78,7 +83,7 @@ export const idParam = v.pipe(
  */
 export const idPathParam = v.pipe(
   v.string(),
-  v.regex(/^[1-9]\d*$/, vMessage(M.idFormat)),
+  v.regex(/^[1-9]\d*$/, vMessage(VALIDATION_DESCRIPTORS.idFormat)),
   v.transform((s) => Number(s)),
   v.number(),
   v.integer(),
