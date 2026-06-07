@@ -6,6 +6,8 @@ import { defineMessage } from "@lingui/core/macro";
 import type { BlockInput } from "@plumix/blocks";
 import { resolveLabel } from "@plumix/core/i18n";
 
+import { ComboboxField } from "./combobox-field.js";
+
 const YES_LABEL = defineMessage({
   id: "fieldTypes.boolean.yes",
   message: "Yes",
@@ -47,6 +49,32 @@ export function translateField(
           value: opt.value,
         })),
       };
+    case "combobox": {
+      // Free-text + suggestions. Native select would drop any stored
+      // value not in `options` (e.g. legacy free-text), so a custom
+      // field backs it with a <datalist> instead.
+      // String-coerce values (unlike select, which keeps raw
+      // string|number|boolean) — a datalist + text input is string-only.
+      const comboOptions = (input.options ?? []).map((opt) => ({
+        label: resolveLabel(opt.label, i18n),
+        value: String(opt.value),
+      }));
+      return {
+        type: "custom",
+        label,
+        render: ({ value, onChange }) => (
+          <ComboboxField
+            label={label}
+            value={value as unknown}
+            options={comboOptions}
+            onChange={(next: string) => {
+              onChange(next);
+            }}
+            testId={`block-combobox-${input.name}`}
+          />
+        ),
+      };
+    }
     case "slot":
       return { type: "slot", label };
     case "richtext":

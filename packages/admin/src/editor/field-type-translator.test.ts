@@ -41,6 +41,23 @@ describe("translateField", () => {
     });
   });
 
+  test("maps combobox to a Puck custom field that renders ComboboxField", () => {
+    const out = translateField({
+      name: "language",
+      type: "combobox",
+      label: "Language",
+      options: [{ label: "TypeScript", value: "typescript" }],
+    });
+    expect(out).toMatchObject({ type: "custom", label: "Language" });
+    // The render fn must mount without throwing given Puck's render args.
+    const rendered = (
+      out as unknown as {
+        render: (p: { value: unknown; onChange: () => void }) => unknown;
+      }
+    ).render({ value: "ts", onChange: () => undefined });
+    expect(rendered).toBeTruthy();
+  });
+
   test("maps slot to Puck's slot field type", () => {
     expect(
       translateField({ name: "content", type: "slot", label: "Body" }),

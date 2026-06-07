@@ -33,4 +33,23 @@ describe("core/code", () => {
     expect(html).not.toContain("<code");
     expect(html).not.toContain("data-language");
   });
+
+  test("normalizes an alias to its canonical id at render", () => {
+    const html = renderBlockSpecToHtml(codeBlock, {
+      text: "const x = 1;",
+      language: "ts",
+    });
+
+    expect(html).toContain('data-language="typescript"');
+  });
+
+  test("exposes the language input as a combobox suggesting common languages", () => {
+    const languageInput = codeBlock.inputs?.find((i) => i.name === "language");
+    // Combobox (free text + datalist), not select — a select would drop
+    // stored values outside the suggestion list.
+    expect(languageInput?.type).toBe("combobox");
+    const values = languageInput?.options?.map((o) => o.value);
+    expect(values).toContain("typescript");
+    expect(values).toContain("rust");
+  });
 });
