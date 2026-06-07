@@ -24,12 +24,6 @@ catalogs:
     '@libsql/client':
       specifier: ^0.17.3
       version: 0.17.3
-    '@lingui/core':
-      specifier: ^6.2.0
-      version: 6.2.0
-    '@lingui/react':
-      specifier: ^6.2.0
-      version: 6.2.0
     '@orpc/client':
       specifier: ^1.14.4
       version: 1.14.4
@@ -120,6 +114,19 @@ catalogs:
     wrangler:
       specifier: ^4.94.0
       version: 4.94.0
+  lingui:
+    '@lingui/cli':
+      specifier: ^6.2.0
+      version: 6.2.0
+    '@lingui/core':
+      specifier: ^6.2.0
+      version: 6.2.0
+    '@lingui/format-po':
+      specifier: ^6.2.0
+      version: 6.2.0
+    '@lingui/react':
+      specifier: ^6.2.0
+      version: 6.2.0
   tailwind:
     '@tailwindcss/node':
       specifier: ^4.3.0
@@ -246,10 +253,10 @@ importers:
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.75.0(react@19.2.7))
       '@lingui/core':
-        specifier: 'catalog:'
+        specifier: catalog:lingui
         version: 6.2.0
       '@lingui/react':
-        specifier: 'catalog:'
+        specifier: catalog:lingui
         version: 6.2.0(react@19.2.7)
       '@orpc/client':
         specifier: 'catalog:'
@@ -325,10 +332,7 @@ importers:
         specifier: ^6.2.0
         version: 6.2.0
       '@lingui/cli':
-        specifier: ^6.2.0
-        version: 6.2.0
-      '@lingui/format-po':
-        specifier: ^6.2.0
+        specifier: catalog:lingui
         version: 6.2.0
       '@lingui/vite-plugin':
         specifier: ^6.2.0
@@ -345,6 +349,9 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
+      '@plumix/lingui-config':
+        specifier: workspace:*
+        version: link:../../tooling/lingui
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../../tooling/prettier
@@ -485,7 +492,7 @@ importers:
         specifier: 'catalog:'
         version: 0.17.3
       '@lingui/core':
-        specifier: 'catalog:'
+        specifier: catalog:lingui
         version: 6.2.0
       '@orpc/server':
         specifier: 'catalog:'
@@ -625,10 +632,7 @@ importers:
         specifier: 'catalog:'
         version: 0.17.3
       '@lingui/cli':
-        specifier: ^6.2.0
-        version: 6.2.0
-      '@lingui/format-po':
-        specifier: ^6.2.0
+        specifier: catalog:lingui
         version: 6.2.0
       '@orpc/server':
         specifier: 'catalog:'
@@ -639,6 +643,9 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
+      '@plumix/lingui-config':
+        specifier: workspace:*
+        version: link:../../../tooling/lingui
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../../../tooling/prettier
@@ -737,10 +744,7 @@ importers:
         specifier: 'catalog:'
         version: 0.18.3
       '@lingui/cli':
-        specifier: ^6.2.0
-        version: 6.2.0
-      '@lingui/format-po':
-        specifier: ^6.2.0
+        specifier: catalog:lingui
         version: 6.2.0
       '@playwright/test':
         specifier: 'catalog:'
@@ -748,6 +752,9 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
+      '@plumix/lingui-config':
+        specifier: workspace:*
+        version: link:../../../tooling/lingui
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../../../tooling/prettier
@@ -823,10 +830,7 @@ importers:
         specifier: 'catalog:'
         version: 0.18.3
       '@lingui/cli':
-        specifier: ^6.2.0
-        version: 6.2.0
-      '@lingui/format-po':
-        specifier: ^6.2.0
+        specifier: catalog:lingui
         version: 6.2.0
       '@playwright/test':
         specifier: 'catalog:'
@@ -834,6 +838,9 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
+      '@plumix/lingui-config':
+        specifier: workspace:*
+        version: link:../../../tooling/lingui
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../../../tooling/prettier
@@ -930,10 +937,7 @@ importers:
         specifier: 'catalog:'
         version: 0.18.3
       '@lingui/cli':
-        specifier: ^6.2.0
-        version: 6.2.0
-      '@lingui/format-po':
-        specifier: ^6.2.0
+        specifier: catalog:lingui
         version: 6.2.0
       '@orpc/server':
         specifier: 'catalog:'
@@ -944,6 +948,9 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
+      '@plumix/lingui-config':
+        specifier: workspace:*
+        version: link:../../../tooling/lingui
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../../../tooling/prettier
@@ -1042,10 +1049,7 @@ importers:
         specifier: 'catalog:'
         version: 0.18.3
       '@lingui/cli':
-        specifier: ^6.2.0
-        version: 6.2.0
-      '@lingui/format-po':
-        specifier: ^6.2.0
+        specifier: catalog:lingui
         version: 6.2.0
       '@playwright/test':
         specifier: 'catalog:'
@@ -1053,6 +1057,9 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
+      '@plumix/lingui-config':
+        specifier: workspace:*
+        version: link:../../../tooling/lingui
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../../../tooling/prettier
@@ -1121,10 +1128,10 @@ importers:
   packages/plumix:
     dependencies:
       '@lingui/core':
-        specifier: 'catalog:'
+        specifier: catalog:lingui
         version: 6.2.0
       '@lingui/react':
-        specifier: 'catalog:'
+        specifier: catalog:lingui
         version: 6.2.0(react@19.2.7)
       '@plumix/blocks':
         specifier: workspace:*
@@ -1333,6 +1340,28 @@ importers:
       eslint:
         specifier: 'catalog:'
         version: 10.4.1(jiti@2.7.0)
+      prettier:
+        specifier: 'catalog:'
+        version: 3.8.3
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+
+  tooling/lingui:
+    dependencies:
+      '@lingui/cli':
+        specifier: catalog:lingui
+        version: 6.2.0
+      '@lingui/format-po':
+        specifier: catalog:lingui
+        version: 6.2.0
+    devDependencies:
+      '@plumix/prettier-config':
+        specifier: workspace:*
+        version: link:../prettier
+      '@plumix/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -8356,9 +8385,9 @@ snapshots:
   '@lingui/cli@6.2.0':
     dependencies:
       '@babel/core': 7.29.7
-      '@babel/generator': 7.29.1
-      '@babel/parser': 7.29.2
-      '@babel/types': 7.29.0
+      '@babel/generator': 7.29.7
+      '@babel/parser': 7.29.7
+      '@babel/types': 7.29.7
       '@lingui/babel-plugin-extract-messages': 6.2.0
       '@lingui/babel-plugin-lingui-macro': 6.2.0
       '@lingui/conf': 6.2.0

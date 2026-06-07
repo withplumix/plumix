@@ -1,0 +1,25 @@
+{
+  "name": "@plumix/lingui-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "scripts": {
+    "clean": "git clean -xdf .cache .turbo node_modules",
+    "format": "prettier --check . --ignore-path ../../.gitignore",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@lingui/cli": "catalog:lingui",
+    "@lingui/format-po": "catalog:lingui"
+  },
+  "devDependencies": {
+    "@plumix/prettier-config": "workspace:*",
+    "@plumix/typescript-config": "workspace:*",
+    "prettier": "catalog:",
+    "typescript": "catalog:"
+  },
+  "prettier": "@plumix/prettier-config"
+}

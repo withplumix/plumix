@@ -69,11 +69,11 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
-    "@lingui/cli": "^6.2.0",
-    "@lingui/format-po": "^6.2.0",
+    "@lingui/cli": "catalog:lingui",
     "@orpc/server": "catalog:",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",
+    "@plumix/lingui-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/runtime-cloudflare": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
