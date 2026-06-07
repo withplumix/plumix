@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { ErrorPlaceholder } from "@/components/error-placeholder.js";
+import { Toaster } from "@/components/ui/sonner.js";
 import { pathToCrumbs } from "@/lib/breadcrumbs.js";
 import { sessionQueryOptions } from "@/lib/session.js";
 import { Trans, useLingui } from "@lingui/react";
@@ -30,7 +31,12 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 
 function RootLayout(): ReactNode {
   useDocumentTitle();
-  return <Outlet />;
+  return (
+    <>
+      <Outlet />
+      <Toaster />
+    </>
+  );
 }
 
 function useDocumentTitle(): void {

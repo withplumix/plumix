@@ -287,6 +287,7 @@ test.describe("/entries/$slug (list)", () => {
     // Successful trash invalidates the list query — the row disappears.
     await expect(page.getByTestId("content-list-row-1")).toHaveCount(0);
     await expect(page.getByTestId("content-list-row-2")).toBeVisible();
+    await expect(page.getByTestId("toast-success")).toBeVisible();
   });
 
   test("trash view: Restore row action → entry.restore payload → refetched list drops the row", async ({
@@ -318,6 +319,7 @@ test.describe("/entries/$slug (list)", () => {
 
     expect(restored[0]).toMatchObject({ id: 3 });
     await expect(page.getByTestId("content-list-row-3")).toHaveCount(0);
+    await expect(page.getByTestId("toast-success")).toBeVisible();
   });
 
   test("trash view: Delete permanently → confirm dialog → entry.deletePermanent payload → row gone", async ({
@@ -352,6 +354,31 @@ test.describe("/entries/$slug (list)", () => {
 
     expect(deleted[0]).toMatchObject({ id: 3 });
     await expect(page.getByTestId("content-list-row-3")).toHaveCount(0);
+    await expect(page.getByTestId("toast-success")).toBeVisible();
+  });
+
+  test("failed mutation surfaces an error toast and keeps the row", async ({
+    page,
+  }) => {
+    const TRASHED_ROW = entry({ id: 3, title: "Binned", status: "trash" });
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/list": [TRASHED_ROW],
+    });
+    await page.route("**/_plumix/rpc/entry/restore", (route) =>
+      route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: rpcErrorBody({ code: "CONFLICT", message: "not_trashed" }),
+      }),
+    );
+
+    await page.goto("entries/posts?status=trash");
+    await page.getByTestId("content-list-row-3").hover();
+    await page.getByTestId("content-list-row-restore-3").click();
+
+    await expect(page.getByTestId("toast-error")).toBeVisible();
+    await expect(page.getByTestId("content-list-row-3")).toBeVisible();
   });
 
   test("non-trash rows never surface Restore / Delete permanently", async ({

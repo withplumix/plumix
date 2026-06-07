@@ -624,11 +624,6 @@ msgid "userEdit.error.reassignToSelf"
 msgstr "无法将内容重新分配给正在删除的用户。"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.deleteDialog.cancel"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.cancel"
 msgstr "取消"
@@ -646,6 +641,11 @@ msgstr "取消"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.cancel"
+msgstr "取消"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.cancel"
 msgstr "取消"
 
 #. js-lingui-explicit-id
@@ -925,6 +925,11 @@ msgid "terms.create.error.emptySlug"
 msgstr "无法从此名称生成别名 — 请手动输入。"
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.toast.discardFailed"
+msgstr "无法放弃草稿，请重试。"
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.emailMismatch"
 msgstr "注册失败 — 请重新登录后再试。"
@@ -993,6 +998,11 @@ msgstr "无法查找此代码。请重试。"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.mint.fallback"
 msgstr "无法创建令牌。请重试。"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.toast.publishFailed"
+msgstr "无法发布，请重试。"
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
@@ -1204,17 +1214,17 @@ msgstr "删除 Passkey"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.row.deletePermanently"
-msgstr ""
+msgstr "永久删除"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.deleteDialog.confirm"
-msgstr ""
+msgstr "永久删除"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.deleteDialog.title"
-msgstr ""
+msgstr "永久删除？"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
@@ -1242,11 +1252,6 @@ msgid "userEdit.delete.button"
 msgstr "删除用户"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.deleteDialog.deleting"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.confirm.pending"
 msgstr "删除中…"
@@ -1254,6 +1259,11 @@ msgstr "删除中…"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.deleting"
+msgstr "删除中…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.deleting"
 msgstr "删除中…"
 
 #. js-lingui-explicit-id
@@ -1378,6 +1388,11 @@ msgstr "完成"
 msgctxt "entry status"
 msgid "entries.list.statusFilter.draft"
 msgstr "草稿"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.toast.draftDiscarded"
+msgstr "已放弃草稿。"
 
 #. js-lingui-explicit-id
 #: src/editor/BlockActionsPanel.tsx
@@ -1995,6 +2010,11 @@ msgstr "已移至回收站"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.toast.trashed"
+msgstr "已移至回收站。"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.moving"
 msgstr "移动中…"
 
@@ -2384,6 +2404,11 @@ msgid "userEdit.delete.description"
 msgstr "永久删除。文章会保留，但您可以选择由谁继承所有权。"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.toast.deleted"
+msgstr "已永久删除。"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopeMode.label"
 msgstr "权限"
@@ -2490,6 +2515,11 @@ msgid "type.generic.itemPublishedPrivately"
 msgstr "已私密发布"
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.toast.published"
+msgstr "已发布。"
+
+#. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.tab.publishes"
 msgstr "发布"
@@ -2548,7 +2578,7 @@ msgstr "重命名 Passkey"
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgctxt "action verb"
 msgid "entries.list.row.restore"
-msgstr ""
+msgstr "恢复"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
@@ -2557,8 +2587,13 @@ msgstr "恢复此修订版本"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.toast.restored"
+msgstr "已恢复为草稿。"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.row.restoring"
-msgstr ""
+msgstr "恢复中…"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
@@ -3161,6 +3196,11 @@ msgid "emailChange.error.tokenInvalid"
 msgstr "此确认链接无效。可能已被使用。"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.toast.failed"
+msgstr "操作失败，请重试。"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.error.domainExists"
 msgstr "此域名已配置。"
@@ -3370,7 +3410,7 @@ msgstr "此 Passkey 不再存在。请刷新列表。"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.deleteDialog.description"
-msgstr ""
+msgstr "这将永久删除该条目及其所有修订版本，且无法撤销。"
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx

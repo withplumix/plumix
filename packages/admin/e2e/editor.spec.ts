@@ -632,6 +632,35 @@ test.describe("editor autosave and publish", () => {
     expect(lastInput.id).toBe(1);
     expect(lastInput.content).toBeUndefined();
     expect(lastInput.expectedLiveUpdatedAt).toBe(T0.toISOString());
+    await expect(page.getByTestId("toast-success")).toBeVisible();
+  });
+
+  test("a failed publish surfaces an error toast instead of failing silently", async ({
+    page,
+  }) => {
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/get": editorEntry(),
+    });
+    await page.route("**/_plumix/rpc/entry/update", (route) =>
+      route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: rpcErrorBody({
+          code: "CONFLICT",
+          message: "stale_expected_updated_at",
+        }),
+      }),
+    );
+    await page.goto("entries/posts/1/edit");
+
+    const button = page.getByTestId("plumix-editor-publish-button");
+    await expect(button).toBeEnabled();
+    await button.click();
+
+    await expect(page.getByTestId("toast-error")).toBeVisible();
+    // The entry stays unpublished, so the button must remain usable.
+    await expect(button).toBeEnabled();
   });
 
   test("Publish button is disabled when the entry is already published", async ({

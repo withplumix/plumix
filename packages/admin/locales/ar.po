@@ -632,11 +632,6 @@ msgid "userEdit.error.reassignToSelf"
 msgstr "لا يمكن إعادة التعيين للمستخدم الذي يتم حذفه."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.deleteDialog.cancel"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.cancel"
 msgstr "إلغاء"
@@ -654,6 +649,11 @@ msgstr "إلغاء"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.cancel"
+msgstr "إلغاء"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.cancel"
 msgstr "إلغاء"
 
 #. js-lingui-explicit-id
@@ -937,6 +937,11 @@ msgid "terms.create.error.emptySlug"
 msgstr "تعذّر اشتقاق slug من ذلك الاسم — يرجى كتابة واحد يدوياً."
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.toast.discardFailed"
+msgstr "تعذّر تجاهل المسودة — حاول مرة أخرى."
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.emailMismatch"
 msgstr "تعذّر التسجيل — سجّل الدخول من جديد وحاول مرة أخرى."
@@ -1005,6 +1010,11 @@ msgstr "تعذّر البحث عن ذلك الرمز. حاول مرة أخرى."
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.mint.fallback"
 msgstr "تعذّر إنشاء الرمز. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.toast.publishFailed"
+msgstr "تعذّر النشر — حاول مرة أخرى."
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
@@ -1216,17 +1226,17 @@ msgstr "حذف passkey"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.row.deletePermanently"
-msgstr ""
+msgstr "حذف نهائي"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.deleteDialog.confirm"
-msgstr ""
+msgstr "حذف نهائي"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.deleteDialog.title"
-msgstr ""
+msgstr "حذف نهائي؟"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
@@ -1254,11 +1264,6 @@ msgid "userEdit.delete.button"
 msgstr "حذف المستخدم"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.deleteDialog.deleting"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.confirm.pending"
 msgstr "جارٍ الحذف…"
@@ -1266,6 +1271,11 @@ msgstr "جارٍ الحذف…"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.deleting"
+msgstr "جارٍ الحذف…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.deleting"
 msgstr "جارٍ الحذف…"
 
 #. js-lingui-explicit-id
@@ -1394,6 +1404,11 @@ msgstr "تم"
 msgctxt "entry status"
 msgid "entries.list.statusFilter.draft"
 msgstr "مسودة"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.toast.draftDiscarded"
+msgstr "تم تجاهل المسودة."
 
 #. js-lingui-explicit-id
 #: src/editor/BlockActionsPanel.tsx
@@ -2016,6 +2031,11 @@ msgstr "نُقل إلى المهملات"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.toast.trashed"
+msgstr "تم النقل إلى سلة المهملات."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.moving"
 msgstr "جارٍ النقل…"
 
@@ -2408,6 +2428,11 @@ msgid "userEdit.delete.description"
 msgstr "نهائي. تبقى منشوراتهم، لكنك ستختار من يرث المؤلفية."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.toast.deleted"
+msgstr "تم الحذف نهائيًا."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopeMode.label"
 msgstr "الصلاحيات"
@@ -2515,6 +2540,11 @@ msgid "type.generic.itemPublishedPrivately"
 msgstr "منشور بشكل خاص"
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.toast.published"
+msgstr "تم النشر."
+
+#. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.tab.publishes"
 msgstr "المنشورات"
@@ -2574,7 +2604,7 @@ msgstr "إعادة تسمية passkey"
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgctxt "action verb"
 msgid "entries.list.row.restore"
-msgstr ""
+msgstr "استعادة"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
@@ -2583,8 +2613,13 @@ msgstr "استعادة هذه المراجعة"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.toast.restored"
+msgstr "تمت الاستعادة إلى المسودات."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.row.restoring"
-msgstr ""
+msgstr "جارٍ الاستعادة…"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
@@ -3194,6 +3229,11 @@ msgid "emailChange.error.tokenInvalid"
 msgstr "رابط التأكيد غير صالح. ربما تم استخدامه بالفعل."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.toast.failed"
+msgstr "لم ينجح ذلك — حاول مرة أخرى."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.error.domainExists"
 msgstr "هذا النطاق مُكوَّن بالفعل."
@@ -3409,7 +3449,7 @@ msgstr "لم يعد هذا passkey موجوداً. حدّث القائمة."
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.deleteDialog.description"
-msgstr ""
+msgstr "سيؤدي هذا إلى حذف الإدخال ومراجعاته نهائيًا. لا يمكن التراجع عن هذا الإجراء."
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
