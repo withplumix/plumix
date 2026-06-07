@@ -44,17 +44,26 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
     await updated;
 
     await page.goto("entries/posts");
-    const rows = page.locator(CONTENT_ROWS);
-    await expect(rows).toHaveCount(1);
-    await expect(rows.first()).toContainText("Hello world");
+    // Assert by title, not an absolute count: CI retries re-run this
+    // `describe.serial` block against the same worker D1 (wiped once at
+    // webServer start, not per attempt), so a retry sees rows the prior
+    // attempt created. `toHaveCount(1)` cascade-fails with "Received: 2".
+    await expect(
+      page.locator(CONTENT_ROWS).filter({ hasText: "Hello world" }).first(),
+    ).toBeVisible();
   });
 
   test("edit the draft → publish → status persists across reload", async ({
     page,
   }) => {
     await page.goto("entries/posts");
-    const rows = page.locator(CONTENT_ROWS);
-    const rowTestid = await rows.first().getAttribute("data-testid");
+    // Target the post this suite created by title — `.first()` alone
+    // could grab a row a retry left behind (see the create test).
+    const row = page
+      .locator(CONTENT_ROWS)
+      .filter({ hasText: "Hello world" })
+      .first();
+    const rowTestid = await row.getAttribute("data-testid");
     if (!rowTestid) throw new Error("expected post row to have a data-testid");
     const id = rowTestid.replace("content-list-row-", "");
 
@@ -82,9 +91,12 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
     await expect(page.getByTestId("editor-draft-publish")).toBeDisabled();
 
     // The server-side status filter is the persistence proof: the row
-    // comes back under ?status=published from real D1.
+    // comes back under ?status=published from real D1. Match by title
+    // rather than count — a retry may have published its own copy.
     await page.goto("entries/posts?status=published");
-    await expect(page.locator(CONTENT_ROWS)).toHaveCount(1);
+    await expect(
+      page.locator(CONTENT_ROWS).filter({ hasText: "Hello world" }).first(),
+    ).toBeVisible();
   });
 
   test("the public theme page serves the admin bar in the user's locale", async ({

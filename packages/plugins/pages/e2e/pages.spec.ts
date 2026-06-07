@@ -41,9 +41,14 @@ test.describe.serial("@plumix/plugin-pages — worker-driven happy path", () => 
     await updated;
 
     await page.goto("entries/pages");
-    const rows = page.locator(CONTENT_ROWS);
-    await expect(rows).toHaveCount(1);
-    await expect(rows.first()).toContainText("About");
+    // Assert the created row exists by title, not an absolute count:
+    // CI retries re-run this `describe.serial` block against the same
+    // worker D1 (wiped once at webServer start, not per attempt), so a
+    // retry sees rows the prior attempt created. Existence survives
+    // that; `toHaveCount(1)` cascade-fails with "Received: 2".
+    await expect(
+      page.locator(CONTENT_ROWS).filter({ hasText: "About" }).first(),
+    ).toBeVisible();
   });
 
   test("set a parent on a second page → hierarchy persists across reload", async ({
