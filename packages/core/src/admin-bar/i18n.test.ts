@@ -13,8 +13,8 @@ describe("admin-bar catalogs", () => {
     // Adding a locale to the shared lingui config without shipping a
     // bar catalog would silently fall back to English — fail loud here.
     const poLocales = readdirSync(LOCALES_DIR)
-      .filter((f) => f.endsWith(".po"))
-      .map((f) => f.replace(/\.po$/, ""))
+      .filter((f) => f.startsWith("admin-bar-") && f.endsWith(".po"))
+      .map((f) => f.replace(/^admin-bar-/, "").replace(/\.po$/, ""))
       .sort();
     expect(poLocales).toEqual([...PLUMIX_LOCALES].sort());
     for (const locale of PLUMIX_LOCALES) {
