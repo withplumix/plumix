@@ -240,6 +240,40 @@ test.describe("editor server-loaded content", () => {
     await expect(canvas.locator("h2")).toHaveText("Hello from server");
   });
 
+  test("word count reflects server-loaded prose and updates as the title is unrelated", async ({
+    page,
+  }) => {
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/get": {
+        ...editorEntry(),
+        content: {
+          version: "plumix.v2",
+          blocks: [
+            {
+              id: "h1",
+              name: "core/heading",
+              attrs: { level: 2, text: "Big Title" },
+            },
+            {
+              id: "r1",
+              name: "core/rich-text",
+              attrs: { body: "<p>one two three</p>" },
+            },
+          ],
+        },
+      },
+    });
+
+    await page.goto("entries/posts/1/edit");
+
+    const count = page.getByTestId("plumix-editor-word-count");
+    // "Big Title" (2) + "one two three" (3) = 5 words; characters summed
+    // per block (9 + 13 = 22), no phantom inter-block separator.
+    await expect(count).toHaveAttribute("data-words", "5");
+    await expect(count).toHaveAttribute("data-characters", "22");
+  });
+
   test("wrapper block renders its nested children in the canvas", async ({
     page,
   }) => {

@@ -222,6 +222,12 @@ msgstr "(без назви)"
 msgid "profile.sessions.device.browserOnOs"
 msgstr "{browser} на {os}"
 
+#. characters: number of characters in the entry's prose blocks
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.characterCount"
+msgstr "{characters, plural, one {# символ} few {# символи} many {# символів} other {# символа}}"
+
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.test.tsx
@@ -276,6 +282,12 @@ msgid "profile.sessions.revokeAll.count"
 msgstr "{revoked, plural, =0 {Інших сеансів для виходу немає.} one {Завершено # "
 "інший сеанс.} few {Завершено # інші сеанси.} many {Завершено # інших "
 "сеансів.} other {Завершено # інших сеансів.}}"
+
+#. words: number of words in the entry's prose blocks
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.wordCount"
+msgstr "{words, plural, one {# слово} few {# слова} many {# слів} other {# слова}}"
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
@@ -2188,7 +2200,7 @@ msgid "listPagination.next.label"
 msgstr "Далі"
 
 #. js-lingui-explicit-id
-#: src/editor/field-type-translator.ts
+#: src/editor/field-type-translator.tsx
 msgid "fieldTypes.boolean.no"
 msgstr "Ні"
 
@@ -3761,7 +3773,7 @@ msgid "dashboard.tile.description.generic"
 msgstr "Пишіть, редагуйте та публікуйте."
 
 #. js-lingui-explicit-id
-#: src/editor/field-type-translator.ts
+#: src/editor/field-type-translator.tsx
 msgid "fieldTypes.boolean.yes"
 msgstr "Так"
 

@@ -79,6 +79,7 @@ import { StarterModal } from "./StarterModal.js";
 import { StyleTab } from "./StyleTab.js";
 import { useStarterModalState } from "./use-starter-modal-state.js";
 import { viewportWidthToBucket } from "./viewport-bucket.js";
+import { WordCount } from "./WordCount.js";
 
 export interface PlumixEditorLayoutProps {
   readonly registry?: BlockRegistry;
@@ -597,6 +598,7 @@ export function PlumixEditorLayout({
             onChange={(e) => onTitleChange(e.target.value)}
             disabled={isPreview}
           />
+          {isPreview ? null : <WordCount />}
           {isPreview ? null : <AutosaveStatusPill />}
           {isPreview ? null : coAuthorIndicator}
           {revisionsTrigger}

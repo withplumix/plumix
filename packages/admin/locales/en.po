@@ -222,6 +222,12 @@ msgstr "(no title)"
 msgid "profile.sessions.device.browserOnOs"
 msgstr "{browser} on {os}"
 
+#. characters: number of characters in the entry's prose blocks
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.characterCount"
+msgstr "{characters, plural, one {# character} other {# characters}}"
+
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.test.tsx
@@ -274,6 +280,12 @@ msgstr "{label} threw an error while rendering. The rest of the admin is "
 msgid "profile.sessions.revokeAll.count"
 msgstr "{revoked, plural, =0 {No other sessions to sign out.} one {Signed out # "
 "other session.} other {Signed out # other sessions.}}"
+
+#. words: number of words in the entry's prose blocks
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.wordCount"
+msgstr "{words, plural, one {# word} other {# words}}"
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
@@ -2179,7 +2191,7 @@ msgid "listPagination.next.label"
 msgstr "Next"
 
 #. js-lingui-explicit-id
-#: src/editor/field-type-translator.ts
+#: src/editor/field-type-translator.tsx
 msgid "fieldTypes.boolean.no"
 msgstr "No"
 
@@ -3740,7 +3752,7 @@ msgid "dashboard.tile.description.generic"
 msgstr "Write, edit, and publish."
 
 #. js-lingui-explicit-id
-#: src/editor/field-type-translator.ts
+#: src/editor/field-type-translator.tsx
 msgid "fieldTypes.boolean.yes"
 msgstr "Yes"
 
