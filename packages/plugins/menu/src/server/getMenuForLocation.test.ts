@@ -28,7 +28,7 @@ async function buildTestRegistry(): Promise<TestRegistryBundle> {
   const hooks = new HookRegistry();
   const registry = createPluginRegistry();
   registerCoreLookupAdapters(registry);
-  await installPlugins({ hooks, plugins: [menu], registry });
+  await installPlugins({ hooks, plugins: [menu()], registry });
   return { registry, hooks };
 }
 

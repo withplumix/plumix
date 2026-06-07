@@ -42,7 +42,7 @@ async function bundle(): Promise<TestBundle> {
       definePlugin("menu-host", (ctx) => {
         ctx.registerEntryType("post", { label: "Posts", isPublic: true });
       }),
-      menu,
+      menu(),
     ],
     registry,
   });
@@ -167,7 +167,7 @@ describe("@plumix/plugin-menu — end-to-end SSR", () => {
       },
     });
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, menu],
+      plugins: [blogPlugin, menu()],
       theme,
     });
     const author = await h.seedUser("admin");

@@ -81,7 +81,7 @@ async function buildHarness(role: UserRole = "editor"): Promise<Harness> {
   const hooks = new HookRegistry();
   const registry = createPluginRegistry();
   registerCoreLookupAdapters(registry);
-  await installPlugins({ hooks, plugins: [menu], registry });
+  await installPlugins({ hooks, plugins: [menu()], registry });
 
   const user =
     role === "admin"

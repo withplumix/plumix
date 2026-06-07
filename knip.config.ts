@@ -161,6 +161,7 @@ const config: KnipConfig = {
     // so knip auto-discovery doesn't miss the subdir-index layout.
     "packages/plugins/menu": {
       entry: [
+        "src/index.ts",
         "src/admin/index.tsx",
         "src/server/index.ts",
         "e2e/globalSetup.ts",
