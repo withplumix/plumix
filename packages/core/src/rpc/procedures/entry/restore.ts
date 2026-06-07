@@ -2,15 +2,15 @@ import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { fireEntryTrashed, loadDeletableEntry } from "./lifecycle.js";
-import { entryTrashInputSchema } from "./schemas.js";
+import { fireEntryRestored, loadDeletableEntry } from "./lifecycle.js";
+import { entryRestoreInputSchema } from "./schemas.js";
 
-export const trash = base
+export const restore = base
   .use(authenticated)
-  .input(entryTrashInputSchema)
+  .input(entryRestoreInputSchema)
   .handler(async ({ input, context, errors }) => {
     const filtered = await context.hooks.applyFilter(
-      "rpc:entry.trash:input",
+      "rpc:entry.restore:input",
       input,
     );
 
@@ -23,19 +23,19 @@ export const trash = base
       },
     });
 
-    if (existing.status === "trash") {
-      return context.hooks.applyFilter("rpc:entry.trash:output", existing);
+    if (existing.status !== "trash") {
+      throw errors.CONFLICT({ data: { reason: "not_trashed" } });
     }
 
-    const [trashed] = await context.db
+    const [restored] = await context.db
       .update(entries)
-      .set({ status: "trash" })
+      .set({ status: "draft" })
       .where(eq(entries.id, existing.id))
       .returning();
-    if (!trashed) {
-      throw errors.CONFLICT({ data: { reason: "trash_failed" } });
+    if (!restored) {
+      throw errors.CONFLICT({ data: { reason: "restore_failed" } });
     }
 
-    await fireEntryTrashed(context, trashed);
-    return context.hooks.applyFilter("rpc:entry.trash:output", trashed);
+    await fireEntryRestored(context, restored);
+    return context.hooks.applyFilter("rpc:entry.restore:output", restored);
   });

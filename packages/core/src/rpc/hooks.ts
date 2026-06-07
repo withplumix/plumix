@@ -67,6 +67,12 @@ declare module "../hooks/types.js" {
     "rpc:entry.trash:input": (input: { id: number }) => typeof input;
     "rpc:entry.trash:output": (output: Entry) => Entry;
 
+    "rpc:entry.restore:input": (input: { id: number }) => typeof input;
+    "rpc:entry.restore:output": (output: Entry) => Entry;
+
+    "rpc:entry.deletePermanent:input": (input: { id: number }) => typeof input;
+    "rpc:entry.deletePermanent:output": (output: Entry) => Entry;
+
     "rpc:user.list:input": (input: UserListInput) => UserListInput;
     "rpc:user.list:output": (
       output: readonly UserListRow[],
@@ -151,6 +157,8 @@ declare module "../hooks/types.js" {
     "entry:published": (entry: Entry) => void | Promise<void>;
     "entry:updated": (entry: Entry, previous: Entry) => void | Promise<void>;
     "entry:trashed": (entry: Entry) => void | Promise<void>;
+    "entry:restored": (entry: Entry) => void | Promise<void>;
+    "entry:deleted": (entry: Entry) => void | Promise<void>;
     "entry:transition": (
       entry: Entry,
       oldStatus: EntryStatus,
@@ -161,6 +169,8 @@ declare module "../hooks/types.js" {
       previous: Entry,
     ) => void | Promise<void>;
     [K: `entry:${string}:trashed`]: (entry: Entry) => void | Promise<void>;
+    [K: `entry:${string}:restored`]: (entry: Entry) => void | Promise<void>;
+    [K: `entry:${string}:deleted`]: (entry: Entry) => void | Promise<void>;
     [K: `entry:${string}:transition`]: (
       entry: Entry,
       oldStatus: EntryStatus,

@@ -283,6 +283,16 @@ export const auditEvents: readonly AuditEventDef[] = [
     actor: { kind: "ctx" },
   },
   {
+    event: "entry:restored",
+    subject: { kind: "extract", type: "entry" },
+    actor: { kind: "ctx" },
+  },
+  {
+    event: "entry:deleted",
+    subject: { kind: "extract", type: "entry" },
+    actor: { kind: "ctx" },
+  },
+  {
     event: "entry:meta_changed",
     subject: {
       kind: "inline",
