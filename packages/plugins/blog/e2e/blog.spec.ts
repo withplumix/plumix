@@ -103,14 +103,15 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
     page,
   }) => {
     // Switch the seeded admin's locale via the profile card; the
-    // setLocale RPC persists user.meta.locale in real D1.
+    // setLocale RPC persists user.meta.locale in real D1, then the card
+    // does `window.location.reload()` on success. Arm the reload's load
+    // event BEFORE selecting so the later navigation to the public page
+    // can't race that reload into net::ERR_ABORTED (the CI flake).
     await page.goto("profile");
     await page.getByTestId("locale-switcher-trigger").click();
-    const saved = page.waitForResponse(
-      (r) => r.url().endsWith("/user/setLocale") && r.status() === 200,
-    );
+    const reloaded = page.waitForEvent("load");
     await page.getByTestId("locale-switcher-option-uk").click();
-    await saved;
+    await reloaded;
 
     // The front page is the theme's SSR surface, not the admin SPA —
     // the worker resolves the session, reads meta.locale, and renders
