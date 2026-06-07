@@ -11,6 +11,17 @@
 
 import { expect, test } from "@playwright/test";
 
+// Minimal valid 1×1 transparent PNG — real signature + IHDR + IDAT +
+// IEND so the plugin's magic-byte confirm step doesn't 409.
+const PNG_1X1 = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49,
+  0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06,
+  0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x44,
+  0x41, 0x54, 0x78, 0x9c, 0x62, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0d,
+  0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42,
+  0x60, 0x82,
+]);
+
 test.describe.serial("@plumix/plugin-media — worker-driven happy path", () => {
   test("empty state → upload → card visible → delete → empty again", async ({
     page,
@@ -34,14 +45,6 @@ test.describe.serial("@plumix/plugin-media — worker-driven happy path", () => 
     //    confirm doesn't 409. The worker handles createUploadUrl →
     //    worker-routed PUT → confirm in a single round-trip; on
     //    success the list query invalidates and a card appears.
-    const PNG_1X1 = Buffer.from([
-      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
-      0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-      0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00,
-      0x0d, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x62, 0x00, 0x01, 0x00, 0x00,
-      0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49,
-      0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
-    ]);
     const fileInput = page.locator(
       '[data-testid="media-library-upload"] input[type="file"]',
     );
@@ -62,7 +65,7 @@ test.describe.serial("@plumix/plugin-media — worker-driven happy path", () => 
     // `:not(...)` filter excludes the per-card title/delete inner
     // elements that share the testid prefix.
     const cards = page.locator(
-      "[data-testid^='media-card-']:not([data-testid$='-title']):not([data-testid$='-delete']):not([data-testid$='-thumb'])",
+      "[data-testid='media-library-grid'] > [data-testid^='media-card-']",
     );
     await expect(cards).toHaveCount(1);
     await expect(cards.first()).toContainText("smoke.png");
@@ -82,5 +85,42 @@ test.describe.serial("@plumix/plugin-media — worker-driven happy path", () => 
 
     await expect(cards).toHaveCount(0);
     await expect(page.getByTestId("media-library-dropzone")).toBeVisible();
+  });
+
+  test("filename search narrows the grid and clearing restores it", async ({
+    page,
+  }) => {
+    await page.goto("pages/media");
+    const fileInput = page.locator(
+      '[data-testid="media-library-upload"] input[type="file"]',
+    );
+    const cards = page.locator(
+      "[data-testid='media-library-grid'] > [data-testid^='media-card-']",
+    );
+    // Two uploads with distinct names so the filter has something to
+    // separate. Serial suite: the previous test left the library empty.
+    for (const name of ["sunset-beach.png", "invoice-q3.png"]) {
+      const confirmed = page.waitForResponse(
+        (r) => r.url().endsWith("/media/confirm") && r.status() === 200,
+      );
+      await fileInput.setInputFiles({
+        name,
+        mimeType: "image/png",
+        buffer: PNG_1X1,
+      });
+      await confirmed;
+    }
+    await expect(cards).toHaveCount(2);
+
+    await page.getByTestId("media-library-search").fill("sunset");
+    await expect(cards).toHaveCount(1);
+    await expect(cards.first()).toContainText("sunset-beach.png");
+
+    await page.getByTestId("media-library-search").fill("zzz-no-such-file");
+    await expect(page.getByTestId("media-library-no-matches")).toBeVisible();
+    await expect(page.getByTestId("media-library-dropzone")).toHaveCount(0);
+
+    await page.getByTestId("media-library-search").fill("");
+    await expect(cards).toHaveCount(2);
   });
 });

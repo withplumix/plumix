@@ -53,6 +53,10 @@ const M = {
     message: "Uploading {count, plural, one {# file} other {# files}}…",
     comment: "count: number of files currently uploading",
   },
+  searchPlaceholder: {
+    id: "plugin.media.library.searchPlaceholder",
+    message: "Search by filename…",
+  },
 } satisfies Record<string, MessageDescriptor>;
 
 const PAGE_SIZE = 24;
@@ -63,8 +67,27 @@ const UPLOAD_CONCURRENCY = 4;
 // scoped to `accept: "image/"` never poison each other's data.
 function mediaListKey(
   accept: string | readonly string[] | undefined,
+  search: string,
 ): readonly unknown[] {
-  return ["media", "list", accept ?? null] as const;
+  return ["media", "list", accept ?? null, search] as const;
+}
+
+// Matches the admin's DebouncedSearchInput interval for list-screen parity.
+const SEARCH_DEBOUNCE_MS = 250;
+
+// Local debounce — the admin shell's DebouncedSearchInput lives behind
+// the `@/` alias and isn't part of the plugin-facing surface.
+function useDebouncedValue(value: string, delayMs: number): string {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebounced(value);
+    }, delayMs);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [value, delayMs]);
+  return debounced;
 }
 
 // Resolve a media URL to absolute form for copy/display. The plugin
@@ -339,7 +362,10 @@ export function MediaLibrary({
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const isPicker = mode === "picker";
 
-  const queryKey = mediaListKey(accept);
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search.trim(), SEARCH_DEBOUNCE_MS);
+
+  const queryKey = mediaListKey(accept, debouncedSearch);
   const list = useInfiniteQuery({
     queryKey,
     initialPageParam: 0,
@@ -350,6 +376,7 @@ export function MediaLibrary({
         // `accept` only flows through in picker mode. Page mode shows
         // the full library regardless.
         ...(isPicker && accept !== undefined ? { accept } : {}),
+        ...(debouncedSearch ? { search: debouncedSearch } : {}),
       }),
     getNextPageParam: (last, allPages) =>
       last.hasMore ? allPages.length * PAGE_SIZE : undefined,
@@ -490,7 +517,27 @@ export function MediaLibrary({
           >
             {isPicker ? i18n._(M.titlePicker) : i18n._(M.titleLibrary)}
           </h1>
-          <UploadButton onSelect={(files) => void startUpload(files)} />
+          <div className="flex items-center gap-2">
+            <input
+              type="search"
+              role="searchbox"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+              }}
+              placeholder={i18n._(M.searchPlaceholder)}
+              // Placeholder is not an accessible name (it clears on
+              // input); name the field explicitly. maxLength mirrors the
+              // server's 200-char cap on media.list's search input.
+              aria-label={i18n._(M.searchPlaceholder)}
+              maxLength={200}
+              data-testid="media-library-search"
+              // Classes mirror the admin's vendored Input (components/ui/
+              // input) — unreachable from plugin code behind the @/ alias.
+              className="border-input bg-background focus-visible:ring-ring h-9 w-56 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
+            />
+            <UploadButton onSelect={(files) => void startUpload(files)} />
+          </div>
         </header>
 
         {pending.length > 0 && <UploadProgressBar pending={pending} />}
@@ -509,12 +556,26 @@ export function MediaLibrary({
           </div>
         )}
 
-        {list.status === "success" && items.length === 0 && (
-          <Dropzone
-            onSelect={(files) => void startUpload(files)}
-            highlight={dragging}
-          />
-        )}
+        {list.status === "success" &&
+          items.length === 0 &&
+          (debouncedSearch ? (
+            // A no-match search must not show the "library is empty"
+            // dropzone — the library isn't empty, the filter is.
+            <p
+              data-testid="media-library-no-matches"
+              className="text-muted-foreground text-sm"
+            >
+              <Trans
+                id="plugin.media.library.noMatches"
+                message="No files match your search."
+              />
+            </p>
+          ) : (
+            <Dropzone
+              onSelect={(files) => void startUpload(files)}
+              highlight={dragging}
+            />
+          ))}
 
         {list.status === "success" && items.length > 0 && (
           <div

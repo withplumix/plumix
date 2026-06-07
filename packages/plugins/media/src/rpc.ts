@@ -6,6 +6,7 @@ import {
   desc,
   entries,
   eq,
+  escapeLikePattern,
   inArray,
   like,
   sql,
@@ -368,6 +369,9 @@ export function createMediaRouter(
             ),
           ]),
         ),
+        // Filename substring match. Empty string coerces to "no filter"
+        // client-side; cap mirrors the entries-list search bound.
+        search: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(200))),
       }),
     )
     .handler(async ({ input, context, errors }): Promise<MediaListResponse> => {
@@ -380,6 +384,16 @@ export function createMediaRouter(
       ];
       const acceptCondition = buildAcceptCondition(input.accept);
       if (acceptCondition) conditions.push(acceptCondition);
+      if (input.search) {
+        const pattern = `%${escapeLikePattern(input.search)}%`;
+        // Alt lives inside the meta JSON; COALESCE because rows without
+        // an alt yield NULL from json_extract, and `LIKE` on NULL is
+        // NULL — which would poison the OR for title-only matches.
+        conditions.push(sql`(
+          ${entries.title} LIKE ${pattern} ESCAPE '\\'
+          OR COALESCE(json_extract(${entries.meta}, '$.alt'), '') LIKE ${pattern} ESCAPE '\\'
+        )`);
+      }
       // Fetch one extra row so we can report `hasMore` without a
       // separate COUNT(*) query.
       const rows = await context.db

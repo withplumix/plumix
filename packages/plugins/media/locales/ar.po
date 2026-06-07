@@ -366,3 +366,13 @@ msgstr "إزالة {name}"
 #: src/admin/MediaListPickerField.tsx
 msgid "plugin.media.listField.modalAria"
 msgstr "إضافة وسائط"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.searchPlaceholder"
+msgstr "البحث باسم الملف…"
+
+#. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.noMatches"
+msgstr "لا توجد ملفات مطابقة لبحثك."

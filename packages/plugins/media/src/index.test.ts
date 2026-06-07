@@ -598,6 +598,63 @@ describe("@plumix/plugin-media — media.list", () => {
     expect(status).toBe(401);
   });
 
+  test("search filters by filename, case-insensitively", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const user = await h.seedUser("contributor");
+    await seedPublishedMedia(h, storage, user.id, "Sunset-Beach.png");
+    await seedPublishedMedia(h, storage, user.id, "invoice.png");
+
+    const result = await rpcDispatch<MediaListOutput>(
+      h,
+      "media/list",
+      { limit: 10, offset: 0, search: "sunset" },
+      user.id,
+    );
+    expect(result.output?.items.length).toBe(1);
+    expect(result.output?.items[0]?.title).toBe("Sunset-Beach.png");
+  });
+
+  test("search also matches alt text", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const user = await h.seedUser("contributor");
+    const seeded = await seedPublishedMedia(h, storage, user.id, "img-001.png");
+    await seedPublishedMedia(h, storage, user.id, "img-002.png");
+    await rpcDispatch(
+      h,
+      "media/update",
+      { id: seeded.id, alt: "golden retriever puppy" },
+      user.id,
+    );
+
+    const result = await rpcDispatch<MediaListOutput>(
+      h,
+      "media/list",
+      { limit: 10, offset: 0, search: "retriever" },
+      user.id,
+    );
+    expect(result.output?.items.length).toBe(1);
+    expect(result.output?.items[0]?.title).toBe("img-001.png");
+  });
+
+  test("search escapes LIKE wildcards — a literal % matches only itself", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const user = await h.seedUser("contributor");
+    await seedPublishedMedia(h, storage, user.id, "discount-50%.png");
+    await seedPublishedMedia(h, storage, user.id, "discount-flat.png");
+
+    const result = await rpcDispatch<MediaListOutput>(
+      h,
+      "media/list",
+      { limit: 10, offset: 0, search: "50%" },
+      user.id,
+    );
+    expect(result.output?.items.length).toBe(1);
+    expect(result.output?.items[0]?.title).toBe("discount-50%.png");
+  });
+
   test("hasMore flag fires when there are more rows than the page", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({ plugins: [media()], storage });
