@@ -265,6 +265,18 @@ const M = {
     id: "entries.list.toast.failed",
     message: "That didn't work — try again.",
   }),
+  toastDuplicated: defineMessage({
+    id: "entries.list.toast.duplicated",
+    message: "Duplicated as a draft.",
+  }),
+  rowDuplicate: defineMessage({
+    id: "entries.list.row.duplicate",
+    message: "Duplicate",
+  }),
+  rowDuplicating: defineMessage({
+    id: "entries.list.row.duplicating",
+    message: "Duplicating…",
+  }),
 } satisfies Record<string, MessageDescriptor>;
 
 const STATUS_FILTER_OPTIONS: {
@@ -284,8 +296,11 @@ function buildColumns({
   onSort,
   adminSlug,
   canDelete,
+  canCreate,
   onTrash,
   trashingId,
+  onDuplicate,
+  duplicatingId,
   onRestore,
   restoringId,
   onDeletePermanent,
@@ -298,8 +313,11 @@ function buildColumns({
   onSort: (column: OrderBy, defaultDirection: Order) => void;
   adminSlug: string;
   canDelete: boolean;
+  canCreate: boolean;
   onTrash: (id: number) => void;
   trashingId: number | null;
+  onDuplicate: (id: number) => void;
+  duplicatingId: number | null;
   onRestore: (id: number) => void;
   restoringId: number | null;
   onDeletePermanent: (id: number) => void;
@@ -325,8 +343,11 @@ function buildColumns({
           entry={row.original}
           adminSlug={adminSlug}
           canDelete={canDelete}
+          canCreate={canCreate}
           onTrash={onTrash}
           isTrashing={trashingId === row.original.id}
+          onDuplicate={onDuplicate}
+          isDuplicating={duplicatingId === row.original.id}
           onRestore={onRestore}
           isRestoring={restoringId === row.original.id}
           onDeletePermanent={onDeletePermanent}
@@ -580,6 +601,24 @@ function ContentListRoute(): ReactNode {
       ? trash.variables
       : null;
 
+  // Duplicate fires immediately — it creates a fresh draft, nothing
+  // destructive, so no confirm dialog.
+  const duplicate = useMutation({
+    mutationFn: (id: number) => orpc.entry.duplicate.call({ id }),
+    onSuccess: onListSuccess(M.toastDuplicated),
+    onError: onMutationError,
+  });
+  const onDuplicate = useCallback(
+    (id: number): void => {
+      duplicate.mutate(id);
+    },
+    [duplicate],
+  );
+  const duplicatingId =
+    duplicate.isPending && typeof duplicate.variables === "number"
+      ? duplicate.variables
+      : null;
+
   // Restore fires immediately — it's recoverable (the row lands back in
   // Drafts), so a confirm dialog would just add friction.
   const restore = useMutation({
@@ -626,8 +665,11 @@ function ContentListRoute(): ReactNode {
         onSort: setSort,
         adminSlug: entryType.adminSlug,
         canDelete,
+        canCreate,
         onTrash,
         trashingId,
+        onDuplicate,
+        duplicatingId,
         onRestore,
         restoringId,
         onDeletePermanent,
@@ -641,8 +683,11 @@ function ContentListRoute(): ReactNode {
       setSort,
       entryType.adminSlug,
       canDelete,
+      canCreate,
       onTrash,
       trashingId,
+      onDuplicate,
+      duplicatingId,
       onRestore,
       restoringId,
       onDeletePermanent,
@@ -895,8 +940,11 @@ function TitleCell({
   entry,
   adminSlug,
   canDelete,
+  canCreate,
   onTrash,
   isTrashing,
+  onDuplicate,
+  isDuplicating,
   onRestore,
   isRestoring,
   onDeletePermanent,
@@ -905,8 +953,11 @@ function TitleCell({
   entry: Entry;
   adminSlug: string;
   canDelete: boolean;
+  canCreate: boolean;
   onTrash: (id: number) => void;
   isTrashing: boolean;
+  onDuplicate: (id: number) => void;
+  isDuplicating: boolean;
   onRestore: (id: number) => void;
   isRestoring: boolean;
   onDeletePermanent: (id: number) => void;
@@ -915,6 +966,7 @@ function TitleCell({
   const renderLabel = useLabel();
   const isTrashed = entry.status === "trash";
   const showTrashAction = canDelete && !isTrashed;
+  const showDuplicateAction = canCreate && !isTrashed;
   const showTrashedActions = canDelete && isTrashed;
   return (
     <div className="flex flex-col gap-0.5">
@@ -962,6 +1014,26 @@ function TitleCell({
               {isTrashing
                 ? renderLabel(M.rowTrashing)
                 : renderLabel(M.rowTrash)}
+            </button>
+          </>
+        ) : null}
+        {showDuplicateAction ? (
+          <>
+            <span aria-hidden className="text-muted-foreground/50">
+              |
+            </span>
+            <button
+              type="button"
+              disabled={isDuplicating}
+              onClick={() => {
+                onDuplicate(entry.id);
+              }}
+              className="text-muted-foreground hover:text-foreground disabled:opacity-50"
+              data-testid={`content-list-row-duplicate-${String(entry.id)}`}
+            >
+              {isDuplicating
+                ? renderLabel(M.rowDuplicating)
+                : renderLabel(M.rowDuplicate)}
             </button>
           </>
         ) : null}

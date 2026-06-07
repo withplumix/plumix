@@ -73,6 +73,9 @@ declare module "../hooks/types.js" {
     "rpc:entry.deletePermanent:input": (input: { id: number }) => typeof input;
     "rpc:entry.deletePermanent:output": (output: Entry) => Entry;
 
+    "rpc:entry.duplicate:input": (input: { id: number }) => typeof input;
+    "rpc:entry.duplicate:output": (output: Entry) => Entry;
+
     "rpc:user.list:input": (input: UserListInput) => UserListInput;
     "rpc:user.list:output": (
       output: readonly UserListRow[],

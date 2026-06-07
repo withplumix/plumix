@@ -1432,9 +1432,24 @@ msgid "editor.entry.edit.toast.draftDiscarded"
 msgstr "Entwurf verworfen."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.duplicate"
+msgstr "Duplizieren"
+
+#. js-lingui-explicit-id
 #: src/editor/BlockActionsPanel.tsx
 msgid "blockActions.duplicate"
 msgstr "Duplizieren"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.toast.duplicated"
+msgstr "Als Entwurf dupliziert."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.duplicating"
+msgstr "Wird dupliziert…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -3513,7 +3528,8 @@ msgstr "Dieser Passkey existiert nicht mehr. Liste aktualisieren."
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.deleteDialog.description"
-msgstr "Der Eintrag und seine Revisionen werden endgültig gelöscht. Das kann nicht rückgängig gemacht werden."
+msgstr "Der Eintrag und seine Revisionen werden endgültig gelöscht. Das kann "
+"nicht rückgängig gemacht werden."
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx

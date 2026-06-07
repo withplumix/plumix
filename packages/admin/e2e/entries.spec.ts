@@ -290,6 +290,70 @@ test.describe("/entries/$slug (list)", () => {
     await expect(page.getByTestId("toast-success")).toBeVisible();
   });
 
+  test("duplicate flow: row action → entry.duplicate payload → toast + refetched list", async ({
+    page,
+  }) => {
+    const duplicated: unknown[] = [];
+    await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
+    await page.route("**/_plumix/rpc/entry/list", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(
+          duplicated.length === 0
+            ? TWO_ROWS
+            : [
+                ...TWO_ROWS,
+                entry({ id: 3, title: "Hello world (copy)", status: "draft" }),
+              ],
+        ),
+      }),
+    );
+    await page.route("**/_plumix/rpc/entry/duplicate", (route) => {
+      const body = route.request().postDataJSON() as { json?: unknown };
+      duplicated.push(body.json);
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(
+          entry({ id: 3, title: "Hello world (copy)", status: "draft" }),
+        ),
+      });
+    });
+
+    await page.goto("entries/posts");
+    await page.getByTestId("content-list-row-1").hover();
+    await page.getByTestId("content-list-row-duplicate-1").click();
+
+    expect(duplicated[0]).toMatchObject({ id: 1 });
+    await expect(page.getByTestId("toast-success")).toBeVisible();
+    await expect(page.getByTestId("content-list-row-3")).toBeVisible();
+  });
+
+  test("without create cap: Duplicate row action is absent", async ({
+    page,
+  }) => {
+    await mockRpc(page, {
+      "/auth/session": {
+        user: {
+          id: 5,
+          email: "viewer@example.test",
+          name: "Viewer",
+          avatarUrl: null,
+          role: "subscriber",
+          capabilities: ["entry:post:read"],
+        },
+        needsBootstrap: false,
+      },
+      "/entry/list": TWO_ROWS,
+    });
+    await page.goto("entries/posts");
+    await page.getByTestId("content-list-row-1").hover();
+    await expect(page.getByTestId("content-list-row-duplicate-1")).toHaveCount(
+      0,
+    );
+  });
+
   test("trash view: Restore row action → entry.restore payload → refetched list drops the row", async ({
     page,
   }) => {

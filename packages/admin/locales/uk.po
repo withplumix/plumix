@@ -1421,9 +1421,24 @@ msgid "editor.entry.edit.toast.draftDiscarded"
 msgstr "Чернетку відхилено."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.duplicate"
+msgstr "Дублювати"
+
+#. js-lingui-explicit-id
 #: src/editor/BlockActionsPanel.tsx
 msgid "blockActions.duplicate"
 msgstr "Дублювати"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.toast.duplicated"
+msgstr "Дубльовано як чернетку."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.duplicating"
+msgstr "Дублювання…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -3484,7 +3499,8 @@ msgstr "Цей passkey більше не існує. Оновіть список
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.deleteDialog.description"
-msgstr "Запис і всі його редакції буде видалено назавжди. Цю дію неможливо скасувати."
+msgstr "Запис і всі його редакції буде видалено назавжди. Цю дію неможливо "
+"скасувати."
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx

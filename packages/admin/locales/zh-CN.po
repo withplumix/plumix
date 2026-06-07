@@ -1395,9 +1395,24 @@ msgid "editor.entry.edit.toast.draftDiscarded"
 msgstr "已放弃草稿。"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.duplicate"
+msgstr "复制"
+
+#. js-lingui-explicit-id
 #: src/editor/BlockActionsPanel.tsx
 msgid "blockActions.duplicate"
 msgstr "复制"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.toast.duplicated"
+msgstr "已复制为草稿。"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.duplicating"
+msgstr "复制中…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
