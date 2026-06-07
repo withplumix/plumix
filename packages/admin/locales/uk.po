@@ -229,6 +229,13 @@ msgid "editor.layout.characterCount"
 msgstr "{characters, plural, one {# символ} few {# символи} many {# символів} "
 "other {# символа}}"
 
+#. count: number of selected entries
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.selected"
+msgstr "{count, plural, one {# запис вибрано} few {# записи вибрано} many {# записів вибрано} other {# запису вибрано}}"
+"{# вибрано}}"
+
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.test.tsx
@@ -236,6 +243,39 @@ msgstr "{characters, plural, one {# символ} few {# символи} many {#
 msgid "settings.pageSummary"
 msgstr "{count, plural, one {# група} few {# групи} many {# груп} other {# "
 "груп}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.deleteTitle"
+msgstr "{count, plural, one {Видалити # запис назавжди?} few {Видалити # записи "
+"назавжди?} many {Видалити # записів назавжди?} other {Видалити # запису "
+"назавжди?}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.bulk.toastDeleted"
+msgstr "{count, plural, one {Видалено # запис.} few {Видалено # записи.} many "
+"{Видалено # записів.} other {Видалено # запису.}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.trashTitle"
+msgstr "{count, plural, one {Перемістити # запис до кошика?} few {Перемістити # "
+"записи до кошика?} many {Перемістити # записів до кошика?} other "
+"{Перемістити # запису до кошика?}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.bulk.toastTrashed"
+msgstr "{count, plural, one {Переміщено # запис до кошика.} few {Переміщено # "
+"записи до кошика.} many {Переміщено # записів до кошика.} other "
+"{Переміщено # запису до кошика.}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.bulk.toastRestored"
+msgstr "{count, plural, one {Відновлено # запис.} few {Відновлено # записи.} "
+"many {Відновлено # записів.} other {Відновлено # запису.}}"
 
 #. count: number of selected options in the multi-select
 #. js-lingui-explicit-id
@@ -668,6 +708,11 @@ msgid "terms.edit.delete.cancel"
 msgstr "Скасувати"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.cancel"
+msgstr "Скасувати"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.cancel"
 msgstr "Скасувати"
@@ -823,6 +868,11 @@ msgstr "Порівняти"
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.list.title"
 msgstr "Налаштовані домени"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.confirm"
+msgstr "Підтвердити"
 
 #. userCode: the short device-flow code the CLI displayed (e.g. 'WDJB-MJHT'); pass through verbatim
 #. js-lingui-explicit-id
@@ -1250,6 +1300,11 @@ msgstr "Видалити назавжди"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.confirm"
 msgstr "Видалити passkey"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.delete"
+msgstr "Видалити назавжди"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -2075,6 +2130,11 @@ msgid "editor.device.mobile"
 msgstr "Мобільний"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.trash"
+msgstr "До кошика"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.confirm"
 msgstr "У кошик"
@@ -2675,6 +2735,11 @@ msgid "profile.passkeys.rename.label"
 msgstr "Перейменувати passkey"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.restore"
+msgstr "Відновити"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgctxt "action verb"
 msgid "entries.list.row.restore"
@@ -2945,6 +3010,16 @@ msgstr "Виберіть блок, щоб побачити дії."
 #: src/editor/StyleTab.tsx
 msgid "editor.styleTab.empty"
 msgstr "Виберіть блок для стилізації."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.selectAllAria"
+msgstr "Вибрати всі записи на цій сторінці"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.selectRowAria"
+msgstr "Вибрати запис"
 
 #. js-lingui-explicit-id
 #: src/components/form/multi-select.tsx
@@ -3330,6 +3405,11 @@ msgid "entries.list.toast.failed"
 msgstr "Не вдалося — спробуйте ще раз."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.bulk.toastFailed"
+msgstr "Не вдалося — спробуйте ще раз."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.error.domainExists"
 msgstr "Цей домен уже налаштовано."
@@ -3554,6 +3634,12 @@ msgstr "Цей passkey більше не існує. Оновіть список
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.deleteDialog.description"
 msgstr "Запис і всі його редакції буде видалено назавжди. Цю дію неможливо "
+"скасувати."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.deleteBody"
+msgstr "Це назавжди видалить вибрані записи та їхні редакції. Дію не можна "
 "скасувати."
 
 #. js-lingui-explicit-id

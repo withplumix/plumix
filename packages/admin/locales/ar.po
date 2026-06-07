@@ -229,6 +229,13 @@ msgid "editor.layout.characterCount"
 msgstr "{characters, plural, zero {# حرف} one {حرف واحد} two {حرفان} few {# "
 "أحرف} many {# حرفًا} other {# حرف}}"
 
+#. count: number of selected entries
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.selected"
+msgstr "{count, plural, zero {# إدخال محدد} one {# إدخال محدد} two {تم تحديد إدخالين} few {# إدخالات محددة} many {# إدخالًا محددًا} other {# إدخال محدد}}"
+"many {# محددًا} other {# محدد}}"
+
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.test.tsx
@@ -236,6 +243,43 @@ msgstr "{characters, plural, zero {# حرف} one {حرف واحد} two {حرفا
 msgid "settings.pageSummary"
 msgstr "{count, plural, zero {لا توجد مجموعات} one {مجموعة واحدة} two "
 "{مجموعتان} few {# مجموعات} many {# مجموعة} other {# مجموعة}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.deleteTitle"
+msgstr "{count, plural, zero {حذف # إدخال نهائيًا؟} one {حذف # إدخال نهائيًا؟} "
+"two {حذف إدخالين نهائيًا؟} few {حذف # إدخالات نهائيًا؟} many {حذف # "
+"إدخالًا نهائيًا؟} other {حذف # إدخال نهائيًا؟}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.bulk.toastDeleted"
+msgstr "{count, plural, zero {تم حذف # إدخال.} one {تم حذف # إدخال.} two {تم "
+"حذف إدخالين.} few {تم حذف # إدخالات.} many {تم حذف # إدخالًا.} other "
+"{تم حذف # إدخال.}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.trashTitle"
+msgstr "{count, plural, zero {نقل # إدخال إلى المهملات؟} one {نقل # إدخال إلى "
+"المهملات؟} two {نقل إدخالين إلى المهملات؟} few {نقل # إدخالات إلى "
+"المهملات؟} many {نقل # إدخالًا إلى المهملات؟} other {نقل # إدخال إلى "
+"المهملات؟}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.bulk.toastTrashed"
+msgstr "{count, plural, zero {تم نقل # إدخال إلى المهملات.} one {تم نقل # إدخال "
+"إلى المهملات.} two {تم نقل إدخالين إلى المهملات.} few {تم نقل # إدخالات "
+"إلى المهملات.} many {تم نقل # إدخالًا إلى المهملات.} other {تم نقل # "
+"إدخال إلى المهملات.}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.bulk.toastRestored"
+msgstr "{count, plural, zero {تمت استعادة # إدخال.} one {تمت استعادة # إدخال.} "
+"two {تمت استعادة إدخالين.} few {تمت استعادة # إدخالات.} many {تمت "
+"استعادة # إدخالًا.} other {تمت استعادة # إدخال.}}"
 
 #. count: number of selected options in the multi-select
 #. js-lingui-explicit-id
@@ -661,6 +705,11 @@ msgid "terms.edit.delete.cancel"
 msgstr "إلغاء"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.cancel"
+msgstr "إلغاء"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.cancel"
 msgstr "إلغاء"
@@ -815,6 +864,11 @@ msgstr "مقارنة"
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.list.title"
 msgstr "النطاقات المُكوَّنة"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.confirm"
+msgstr "تأكيد"
 
 #. userCode: the short device-flow code the CLI displayed (e.g. 'WDJB-MJHT'); pass through verbatim
 #. js-lingui-explicit-id
@@ -1241,6 +1295,11 @@ msgstr "حذف نهائي"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.confirm"
 msgstr "حذف passkey"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.delete"
+msgstr "حذف نهائي"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -2064,6 +2123,11 @@ msgid "editor.device.mobile"
 msgstr "الجوال"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.trash"
+msgstr "نقل إلى المهملات"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.confirm"
 msgstr "نقل إلى المهملات"
@@ -2655,6 +2719,11 @@ msgid "profile.passkeys.rename.label"
 msgstr "إعادة تسمية passkey"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.restore"
+msgstr "استعادة"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgctxt "action verb"
 msgid "entries.list.row.restore"
@@ -2925,6 +2994,16 @@ msgstr "اختر كتلة لرؤية الإجراءات."
 #: src/editor/StyleTab.tsx
 msgid "editor.styleTab.empty"
 msgstr "اختر كتلة لتنسيقها."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.selectAllAria"
+msgstr "تحديد كل الإدخالات في هذه الصفحة"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.selectRowAria"
+msgstr "تحديد الإدخال"
 
 #. js-lingui-explicit-id
 #: src/components/form/multi-select.tsx
@@ -3303,6 +3382,11 @@ msgid "entries.list.toast.failed"
 msgstr "لم ينجح ذلك — حاول مرة أخرى."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.bulk.toastFailed"
+msgstr "لم ينجح ذلك — حاول مرة أخرى."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.error.domainExists"
 msgstr "هذا النطاق مُكوَّن بالفعل."
@@ -3520,6 +3604,11 @@ msgstr "لم يعد هذا passkey موجوداً. حدّث القائمة."
 msgid "entries.list.deleteDialog.description"
 msgstr "سيؤدي هذا إلى حذف الإدخال ومراجعاته نهائيًا. لا يمكن التراجع عن هذا "
 "الإجراء."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.deleteBody"
+msgstr "يؤدي هذا إلى حذف الإدخالات المحددة ومراجعاتها نهائيًا. لا يمكن التراجع."
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx

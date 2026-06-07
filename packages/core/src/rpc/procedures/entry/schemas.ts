@@ -222,6 +222,15 @@ export const entryRestoreInputSchema = v.object({ id: idParam });
 export const entryDeletePermanentInputSchema = v.object({ id: idParam });
 export const entryDuplicateInputSchema = v.object({ id: idParam });
 
+// Bulk action input. Capped at 100 ids per call so a single batched
+// `WHERE id IN (…)` stays bounded; the admin selects a page at a time.
+const bulkIdsSchema = v.object({
+  ids: v.pipe(v.array(idParam), v.minLength(1), v.maxLength(100)),
+});
+export const entryTrashManyInputSchema = bulkIdsSchema;
+export const entryRestoreManyInputSchema = bulkIdsSchema;
+export const entryDeletePermanentManyInputSchema = bulkIdsSchema;
+
 export type EntryListInput = v.InferOutput<typeof entryListInputSchema>;
 export type EntryGetInput = v.InferOutput<typeof entryGetInputSchema>;
 export type EntryCreateInput = v.InferOutput<typeof entryCreateInputSchema>;

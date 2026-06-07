@@ -2,7 +2,11 @@ import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { fireEntryRestored, loadDeletableEntry } from "./lifecycle.js";
+import {
+  entryDeletableGuards,
+  fireEntryRestored,
+  loadDeletableEntry,
+} from "./lifecycle.js";
 import { entryRestoreInputSchema } from "./schemas.js";
 
 export const restore = base
@@ -14,14 +18,11 @@ export const restore = base
       input,
     );
 
-    const existing = await loadDeletableEntry(context, filtered.id, {
-      notFound: (id) => {
-        throw errors.NOT_FOUND({ data: { kind: "entry", id } });
-      },
-      forbidden: (capability) => {
-        throw errors.FORBIDDEN({ data: { capability } });
-      },
-    });
+    const existing = await loadDeletableEntry(
+      context,
+      filtered.id,
+      entryDeletableGuards(errors),
+    );
 
     if (existing.status !== "trash") {
       throw errors.CONFLICT({ data: { reason: "not_trashed" } });

@@ -6,7 +6,11 @@
 // unknown. The warning is informational, not an error.
 
 import type { MessageDescriptor } from "@lingui/core";
-import type { ColumnDef } from "@tanstack/react-table";
+import type {
+  ColumnDef,
+  OnChangeFn,
+  RowSelectionState,
+} from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton.js";
 import {
@@ -51,6 +55,9 @@ export function DataTable<TData>({
   isLoading = false,
   emptyState,
   loadingLabel,
+  rowSelection,
+  onRowSelectionChange,
+  getRowId,
 }: {
   readonly columns: ColumnDef<TData>[];
   readonly data: readonly TData[];
@@ -59,9 +66,18 @@ export function DataTable<TData>({
   /** Screen-reader label for the loading region when `isLoading`.
    *  Defaults to the localized "Loading" descriptor. */
   readonly loadingLabel?: string;
+  /** Controlled row-selection state. When provided (with
+   *  `onRowSelectionChange`), selection is enabled and a selection column
+   *  can be added by the caller via `columns`. Keyed by `getRowId`. */
+  readonly rowSelection?: RowSelectionState;
+  readonly onRowSelectionChange?: OnChangeFn<RowSelectionState>;
+  /** Stable per-row id for selection keys (e.g. the entry id) — without
+   *  it, selection keys by row index and breaks across refetches. */
+  readonly getRowId?: (row: TData) => string;
 }): ReactNode {
   const label = useLabel();
   const resolvedLoadingLabel = loadingLabel ?? label(M.loading);
+  const selectable = rowSelection !== undefined;
   // `useReactTable` returns a non-stable table instance — React Compiler
   // can't memoize the surrounding render. The instance is the documented
   // contract (its methods and state are read by row/cell components)
@@ -71,6 +87,14 @@ export function DataTable<TData>({
     data: data as TData[],
     columns,
     getCoreRowModel: getCoreRowModel(),
+    ...(selectable
+      ? {
+          enableRowSelection: true,
+          state: { rowSelection },
+          onRowSelectionChange,
+          ...(getRowId ? { getRowId } : {}),
+        }
+      : {}),
   });
 
   const rows = table.getRowModel().rows;

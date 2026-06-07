@@ -228,12 +228,47 @@ msgstr "{browser} auf {os}"
 msgid "editor.layout.characterCount"
 msgstr "{characters, plural, one {# Zeichen} other {# Zeichen}}"
 
+#. count: number of selected entries
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.selected"
+msgstr "{count, plural, one {# Eintrag ausgewählt} other {# Einträge ausgewählt}}"
+
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.test.tsx
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.pageSummary"
 msgstr "{count, plural, one {# Gruppe} other {# Gruppen}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.deleteTitle"
+msgstr "{count, plural, one {# Eintrag endgültig löschen?} other {# Einträge "
+"endgültig löschen?}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.bulk.toastDeleted"
+msgstr "{count, plural, one {# Eintrag gelöscht.} other {# Einträge gelöscht.}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.trashTitle"
+msgstr "{count, plural, one {# Eintrag in den Papierkorb verschieben?} other {# "
+"Einträge in den Papierkorb verschieben?}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.bulk.toastTrashed"
+msgstr "{count, plural, one {# Eintrag in den Papierkorb verschoben.} other {# "
+"Einträge in den Papierkorb verschoben.}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.bulk.toastRestored"
+msgstr "{count, plural, one {# Eintrag wiederhergestellt.} other {# Einträge "
+"wiederhergestellt.}}"
 
 #. count: number of selected options in the multi-select
 #. js-lingui-explicit-id
@@ -667,6 +702,11 @@ msgid "terms.edit.delete.cancel"
 msgstr "Abbrechen"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.cancel"
+msgstr "Abbrechen"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.cancel"
 msgstr "Abbrechen"
@@ -823,6 +863,11 @@ msgstr "Vergleichen"
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.list.title"
 msgstr "Konfigurierte Domains"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.confirm"
+msgstr "Bestätigen"
 
 #. userCode: the short device-flow code the CLI displayed (e.g. 'WDJB-MJHT'); pass through verbatim
 #. js-lingui-explicit-id
@@ -1257,6 +1302,11 @@ msgstr "Endgültig löschen"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.confirm"
 msgstr "Passkey löschen"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.delete"
+msgstr "Endgültig löschen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -2089,6 +2139,11 @@ msgid "editor.device.mobile"
 msgstr "Mobil"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.trash"
+msgstr "In den Papierkorb"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.confirm"
 msgstr "In den Papierkorb verschieben"
@@ -2691,6 +2746,11 @@ msgid "profile.passkeys.rename.label"
 msgstr "Passkey umbenennen"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.restore"
+msgstr "Wiederherstellen"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgctxt "action verb"
 msgid "entries.list.row.restore"
@@ -2961,6 +3021,16 @@ msgstr "Wählen Sie einen Block, um Aktionen anzuzeigen."
 #: src/editor/StyleTab.tsx
 msgid "editor.styleTab.empty"
 msgstr "Wählen Sie einen Block zum Stylen aus."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.selectAllAria"
+msgstr "Alle Einträge auf dieser Seite auswählen"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.selectRowAria"
+msgstr "Eintrag auswählen"
 
 #. js-lingui-explicit-id
 #: src/components/form/multi-select.tsx
@@ -3352,6 +3422,11 @@ msgid "entries.list.toast.failed"
 msgstr "Das hat nicht geklappt — bitte erneut versuchen."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.bulk.toastFailed"
+msgstr "Das hat nicht geklappt — bitte erneut versuchen."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.error.domainExists"
 msgstr "Diese Domain ist bereits konfiguriert."
@@ -3582,6 +3657,12 @@ msgstr "Dieser Passkey existiert nicht mehr. Liste aktualisieren."
 msgid "entries.list.deleteDialog.description"
 msgstr "Der Eintrag und seine Revisionen werden endgültig gelöscht. Das kann "
 "nicht rückgängig gemacht werden."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.deleteBody"
+msgstr "Dies löscht die ausgewählten Einträge und ihre Revisionen endgültig. "
+"Das kann nicht rückgängig gemacht werden."
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
