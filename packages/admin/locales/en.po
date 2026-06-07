@@ -634,11 +634,6 @@ msgid "userEdit.error.reassignToSelf"
 msgstr "Can't reassign to the user being deleted."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.deleteDialog.cancel"
-msgstr "Cancel"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.cancel"
 msgstr "Cancel"
@@ -656,6 +651,11 @@ msgstr "Cancel"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.cancel"
+msgstr "Cancel"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.cancel"
 msgstr "Cancel"
 
 #. js-lingui-explicit-id
@@ -939,6 +939,11 @@ msgid "terms.create.error.emptySlug"
 msgstr "Couldn't derive a slug from that name — please type one manually."
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.toast.discardFailed"
+msgstr "Couldn't discard the draft — try again."
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.emailMismatch"
 msgstr "Couldn't enrol — re-sign-in and try again."
@@ -1007,6 +1012,11 @@ msgstr "Couldn't look up that code. Try again."
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.mint.fallback"
 msgstr "Couldn't mint token. Try again."
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.toast.publishFailed"
+msgstr "Couldn't publish — try again."
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
@@ -1256,11 +1266,6 @@ msgid "userEdit.delete.button"
 msgstr "Delete user"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.deleteDialog.deleting"
-msgstr "Deleting…"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.confirm.pending"
 msgstr "Deleting…"
@@ -1268,6 +1273,11 @@ msgstr "Deleting…"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.deleting"
+msgstr "Deleting…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.deleting"
 msgstr "Deleting…"
 
 #. js-lingui-explicit-id
@@ -1396,6 +1406,11 @@ msgstr "Done"
 msgctxt "entry status"
 msgid "entries.list.statusFilter.draft"
 msgstr "Draft"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.toast.draftDiscarded"
+msgstr "Draft discarded."
 
 #. js-lingui-explicit-id
 #: src/editor/BlockActionsPanel.tsx
@@ -2018,6 +2033,11 @@ msgstr "Moved to trash"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.toast.trashed"
+msgstr "Moved to trash."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.moving"
 msgstr "Moving…"
 
@@ -2413,6 +2433,11 @@ msgstr "Permanent. Their entries stay, but you'll choose who inherits "
 "authorship."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.toast.deleted"
+msgstr "Permanently deleted."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopeMode.label"
 msgstr "Permissions"
@@ -2520,6 +2545,11 @@ msgid "type.generic.itemPublishedPrivately"
 msgstr "Published privately"
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.toast.published"
+msgstr "Published."
+
+#. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.tab.publishes"
 msgstr "Publishes"
@@ -2586,6 +2616,11 @@ msgstr "Restore"
 #: src/editor/revisions/PreviewBanner.tsx
 msgid "editor.revisions.preview.restore"
 msgstr "Restore this revision"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.toast.restored"
+msgstr "Restored to drafts."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -3202,6 +3237,11 @@ msgstr "That confirmation link is missing its token. Request a new email "
 #: src/lib/email-change-errors.ts
 msgid "emailChange.error.tokenInvalid"
 msgstr "That confirmation link isn't valid. It may have already been used."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.toast.failed"
+msgstr "That didn't work — try again."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx

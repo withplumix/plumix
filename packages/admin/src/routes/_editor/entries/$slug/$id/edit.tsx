@@ -39,6 +39,7 @@ import {
 } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { getRegisteredBlocks } from "@/lib/plugin-registry.js";
+import { toastError, toastSuccess } from "@/lib/toast.js";
 import { entryTypeLabel } from "@/lib/type-labels.js";
 import { useFormatters } from "@/lib/use-formatters.js";
 import { useLabel } from "@/lib/use-label.js";
@@ -74,6 +75,22 @@ const M = {
   staleLoading: defineMessage({
     id: "editor.entry.edit.stale.loading",
     message: "Loading…",
+  }),
+  toastPublished: defineMessage({
+    id: "editor.entry.edit.toast.published",
+    message: "Published.",
+  }),
+  toastPublishFailed: defineMessage({
+    id: "editor.entry.edit.toast.publishFailed",
+    message: "Couldn't publish — try again.",
+  }),
+  toastDraftDiscarded: defineMessage({
+    id: "editor.entry.edit.toast.draftDiscarded",
+    message: "Draft discarded.",
+  }),
+  toastDiscardFailed: defineMessage({
+    id: "editor.entry.edit.toast.discardFailed",
+    message: "Couldn't discard the draft — try again.",
   }),
 } satisfies Record<string, MessageDescriptor>;
 
@@ -658,8 +675,9 @@ function PuckSpikeRouteInner({
       liveUpdatedAtRef.current = updated.updatedAt;
       return updated;
     },
-    onSuccess: () =>
-      Promise.all([
+    onSuccess: () => {
+      toastSuccess(renderLabel(M.toastPublished));
+      return Promise.all([
         queryClient.invalidateQueries({
           queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
         }),
@@ -680,7 +698,11 @@ function PuckSpikeRouteInner({
               }),
             ]
           : []),
-      ]),
+      ]);
+    },
+    onError: () => {
+      toastError(renderLabel(M.toastPublishFailed));
+    },
   });
   const isPublished = entry.status === "published";
   const handlePublish = useCallback(() => publish.mutate(), [publish]);
@@ -745,6 +767,7 @@ function PuckSpikeRouteInner({
         expectedLiveUpdatedAt: liveUpdatedAtRef.current,
       }),
     onSuccess: async (updated) => {
+      toastSuccess(renderLabel(M.toastPublished));
       liveUpdatedAtRef.current = updated.updatedAt;
       setHasLocalDraft(false);
       await Promise.all([
@@ -770,10 +793,14 @@ function PuckSpikeRouteInner({
           : []),
       ]);
     },
+    onError: () => {
+      toastError(renderLabel(M.toastPublishFailed));
+    },
   });
   const discardDraft = useMutation({
     mutationFn: () => orpc.entry.discardDraft.call({ id }),
     onSuccess: async () => {
+      toastSuccess(renderLabel(M.toastDraftDiscarded));
       setHasLocalDraft(false);
       await Promise.all([
         queryClient.invalidateQueries({
@@ -811,6 +838,9 @@ function PuckSpikeRouteInner({
       // it so a crash-reload doesn't resurrect them.
       writeDraft(draftKey, seeded);
       setStatus("saved");
+    },
+    onError: () => {
+      toastError(renderLabel(M.toastDiscardFailed));
     },
   });
   const handlePublishDraft = useCallback(

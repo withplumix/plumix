@@ -640,11 +640,6 @@ msgid "userEdit.error.reassignToSelf"
 msgstr "Eine Neuzuweisung an den zu löschenden Benutzer ist nicht möglich."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.deleteDialog.cancel"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.cancel"
 msgstr "Abbrechen"
@@ -662,6 +657,11 @@ msgstr "Abbrechen"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.cancel"
+msgstr "Abbrechen"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.cancel"
 msgstr "Abbrechen"
 
 #. js-lingui-explicit-id
@@ -948,6 +948,11 @@ msgstr "Aus diesem Namen konnte kein Slug abgeleitet werden — bitte manuell "
 "eingeben."
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.toast.discardFailed"
+msgstr "Entwurf konnte nicht verworfen werden — bitte erneut versuchen."
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.emailMismatch"
 msgstr "Registrierung fehlgeschlagen — erneut anmelden und nochmals versuchen."
@@ -1022,6 +1027,11 @@ msgstr "Dieser Code konnte nicht gefunden werden. Bitte erneut versuchen."
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.mint.fallback"
 msgstr "Token konnte nicht erstellt werden. Bitte erneut versuchen."
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.toast.publishFailed"
+msgstr "Veröffentlichen fehlgeschlagen — bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
@@ -1234,17 +1244,17 @@ msgstr "Passkey löschen"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.row.deletePermanently"
-msgstr ""
+msgstr "Endgültig löschen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.deleteDialog.confirm"
-msgstr ""
+msgstr "Endgültig löschen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.deleteDialog.title"
-msgstr ""
+msgstr "Endgültig löschen?"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
@@ -1272,11 +1282,6 @@ msgid "userEdit.delete.button"
 msgstr "Benutzer löschen"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.deleteDialog.deleting"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.confirm.pending"
 msgstr "Wird gelöscht…"
@@ -1284,6 +1289,11 @@ msgstr "Wird gelöscht…"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.deleting"
+msgstr "Wird gelöscht…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.deleteDialog.deleting"
 msgstr "Wird gelöscht…"
 
 #. js-lingui-explicit-id
@@ -1415,6 +1425,11 @@ msgstr "Fertig"
 msgctxt "entry status"
 msgid "entries.list.statusFilter.draft"
 msgstr "Entwurf"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.toast.draftDiscarded"
+msgstr "Entwurf verworfen."
 
 #. js-lingui-explicit-id
 #: src/editor/BlockActionsPanel.tsx
@@ -2043,6 +2058,11 @@ msgstr "In den Papierkorb verschoben"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.toast.trashed"
+msgstr "In den Papierkorb verschoben."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.moving"
 msgstr "Wird verschoben…"
 
@@ -2441,6 +2461,11 @@ msgstr "Endgültig. Beiträge bleiben erhalten, aber Sie wählen, wer die "
 "Urheberschaft erbt."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.toast.deleted"
+msgstr "Endgültig gelöscht."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopeMode.label"
 msgstr "Berechtigungen"
@@ -2552,6 +2577,11 @@ msgid "type.generic.itemPublishedPrivately"
 msgstr "Privat veröffentlicht"
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.toast.published"
+msgstr "Veröffentlicht."
+
+#. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.tab.publishes"
 msgstr "Veröffentlichungen"
@@ -2612,7 +2642,7 @@ msgstr "Passkey umbenennen"
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgctxt "action verb"
 msgid "entries.list.row.restore"
-msgstr ""
+msgstr "Wiederherstellen"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
@@ -2621,8 +2651,13 @@ msgstr "Diese Revision wiederherstellen"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.toast.restored"
+msgstr "In Entwürfe wiederhergestellt."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.row.restoring"
-msgstr ""
+msgstr "Wird wiederhergestellt…"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
@@ -3245,6 +3280,11 @@ msgstr "Dieser Bestätigungslink ist nicht gültig. Möglicherweise wurde er "
 "bereits verwendet."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.toast.failed"
+msgstr "Das hat nicht geklappt — bitte erneut versuchen."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.error.domainExists"
 msgstr "Diese Domain ist bereits konfiguriert."
@@ -3473,7 +3513,7 @@ msgstr "Dieser Passkey existiert nicht mehr. Liste aktualisieren."
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.deleteDialog.description"
-msgstr ""
+msgstr "Der Eintrag und seine Revisionen werden endgültig gelöscht. Das kann nicht rückgängig gemacht werden."
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx

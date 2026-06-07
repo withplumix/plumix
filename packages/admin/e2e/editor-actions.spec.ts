@@ -542,6 +542,72 @@ test.describe("editor actions: draft of a published entry", () => {
       "Live title",
       { timeout: 5_000 },
     );
+    await expect(page.getByTestId("toast-success")).toBeVisible();
+  });
+
+  test("draft publish: a 409 surfaces an error toast, the retry a success toast", async ({
+    page,
+  }) => {
+    const pristine = editorEntry({
+      status: "published",
+      content: SEEDED_CONTENT,
+      title: "Live title",
+    });
+    const autosaveRow = { ...pristine, type: "autosave" };
+    let publishAttempts = 0;
+    await page.route("**/_plumix/rpc/**", (route) => {
+      const url = route.request().url();
+      if (url.endsWith("/entry/update")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ json: autosaveRow, meta: [] }),
+        });
+      }
+      if (url.endsWith("/entry/publish")) {
+        publishAttempts += 1;
+        if (publishAttempts === 1) {
+          return route.fulfill({
+            status: 409,
+            contentType: "application/json",
+            body: rpcErrorBody({
+              code: "CONFLICT",
+              message: "stale_expected_updated_at",
+            }),
+          });
+        }
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ json: pristine, meta: [] }),
+        });
+      }
+      const map: Record<string, unknown> = {
+        "/auth/session": AUTHED_ADMIN,
+        "/entry/get": pristine,
+        "/entry/activity/list": { users: [] },
+      };
+      for (const [suffix, body] of Object.entries(map)) {
+        if (url.endsWith(suffix)) {
+          return route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({ json: body, meta: [] }),
+          });
+        }
+      }
+      return route.fulfill({ status: 404, body: "not-mocked" });
+    });
+
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("plumix-editor-title-input").fill("Edited title");
+    await expect(page.getByTestId("editor-draft-publish")).toBeEnabled();
+
+    await page.getByTestId("editor-draft-publish").click();
+    await expect(page.getByTestId("toast-error")).toBeVisible();
+
+    await page.getByTestId("editor-draft-publish").click();
+    await expect(page.getByTestId("toast-success")).toBeVisible();
   });
 });
 

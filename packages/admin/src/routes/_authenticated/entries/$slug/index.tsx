@@ -39,6 +39,7 @@ import { toDate } from "@/lib/dates.js";
 import { findEntryTypeBySlug, findTermTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { buildFilterTermOptions } from "@/lib/terms.js";
+import { toastError, toastSuccess } from "@/lib/toast.js";
 import { entryTypeLabel, termTaxonomyLabelOr } from "@/lib/type-labels.js";
 import { useFormatters } from "@/lib/use-formatters.js";
 import { useLabel } from "@/lib/use-label.js";
@@ -247,6 +248,22 @@ const M = {
   deleteDialogConfirm: defineMessage({
     id: "entries.list.deleteDialog.confirm",
     message: "Delete permanently",
+  }),
+  toastTrashed: defineMessage({
+    id: "entries.list.toast.trashed",
+    message: "Moved to trash.",
+  }),
+  toastRestored: defineMessage({
+    id: "entries.list.toast.restored",
+    message: "Restored to drafts.",
+  }),
+  toastDeleted: defineMessage({
+    id: "entries.list.toast.deleted",
+    message: "Permanently deleted.",
+  }),
+  toastFailed: defineMessage({
+    id: "entries.list.toast.failed",
+    message: "That didn't work — try again.",
   }),
 } satisfies Record<string, MessageDescriptor>;
 
@@ -529,9 +546,22 @@ function ContentListRoute(): ReactNode {
     [queryClient, entryType.name],
   );
   const [pendingTrashId, setPendingTrashId] = useState<number | null>(null);
+  const onMutationError = useCallback(() => {
+    toastError(renderLabel(M.toastFailed));
+  }, [renderLabel]);
+  // All three list mutations share the same success shape: toast, then
+  // refetch the list so the row moves/disappears.
+  const onListSuccess = useCallback(
+    (label: MessageDescriptor) => () => {
+      toastSuccess(renderLabel(label));
+      return invalidateList();
+    },
+    [renderLabel, invalidateList],
+  );
   const trash = useMutation({
     mutationFn: (id: number) => orpc.entry.trash.call({ id }),
-    onSuccess: invalidateList,
+    onSuccess: onListSuccess(M.toastTrashed),
+    onError: onMutationError,
     // Close the dialog regardless of outcome — keeping it open after a
     // server error left users stuck with no error surface and a still-
     // clickable Confirm button.
@@ -554,7 +584,8 @@ function ContentListRoute(): ReactNode {
   // Drafts), so a confirm dialog would just add friction.
   const restore = useMutation({
     mutationFn: (id: number) => orpc.entry.restore.call({ id }),
-    onSuccess: invalidateList,
+    onSuccess: onListSuccess(M.toastRestored),
+    onError: onMutationError,
   });
   const onRestore = useCallback(
     (id: number): void => {
@@ -572,7 +603,8 @@ function ContentListRoute(): ReactNode {
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const deletePermanent = useMutation({
     mutationFn: (id: number) => orpc.entry.deletePermanent.call({ id }),
-    onSuccess: invalidateList,
+    onSuccess: onListSuccess(M.toastDeleted),
+    onError: onMutationError,
     onSettled: () => {
       setPendingDeleteId(null);
     },
