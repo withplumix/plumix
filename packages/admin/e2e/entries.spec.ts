@@ -290,6 +290,139 @@ test.describe("/entries/$slug (list)", () => {
     await expect(page.getByTestId("toast-success")).toBeVisible();
   });
 
+  test("bulk trash: select all → bar → confirm → entry.trashMany payload → rows drop", async ({
+    page,
+  }) => {
+    const trashed: unknown[] = [];
+    await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
+    await page.route("**/_plumix/rpc/entry/list", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(trashed.length === 0 ? TWO_ROWS : []),
+      }),
+    );
+    await page.route("**/_plumix/rpc/entry/trashMany", (route) => {
+      const body = route.request().postDataJSON() as {
+        json?: { ids: number[] };
+      };
+      trashed.push(body.json);
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody({ ids: body.json?.ids ?? [] }),
+      });
+    });
+
+    await page.goto("entries/posts");
+    // No bar until something is selected.
+    await expect(page.getByTestId("content-list-bulk-bar")).toHaveCount(0);
+    await page.getByTestId("content-list-select-all").check();
+    await expect(page.getByTestId("content-list-bulk-bar")).toBeVisible();
+    await expect(page.getByTestId("content-list-bulk-count")).toContainText(
+      "2",
+    );
+
+    await page.getByTestId("content-list-bulk-trash").click();
+    await page.getByTestId("content-list-bulk-confirm").click();
+
+    expect(trashed[0]).toMatchObject({ ids: [1, 2] });
+    await expect(page.getByTestId("content-list-row-1")).toHaveCount(0);
+    await expect(page.getByTestId("toast-success")).toBeVisible();
+  });
+
+  test("bulk trash uses only the individually selected rows", async ({
+    page,
+  }) => {
+    const trashed: unknown[] = [];
+    await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
+    await page.route("**/_plumix/rpc/entry/list", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(trashed.length === 0 ? TWO_ROWS : [TWO_ROWS[1]]),
+      }),
+    );
+    await page.route("**/_plumix/rpc/entry/trashMany", (route) => {
+      const body = route.request().postDataJSON() as {
+        json?: { ids: number[] };
+      };
+      trashed.push(body.json);
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody({ ids: body.json?.ids ?? [] }),
+      });
+    });
+
+    await page.goto("entries/posts");
+    await page.getByTestId("content-list-select-1").check();
+    await page.getByTestId("content-list-bulk-trash").click();
+    await page.getByTestId("content-list-bulk-confirm").click();
+
+    expect(trashed[0]).toMatchObject({ ids: [1] });
+  });
+
+  test("trash view: bulk bar offers Restore + Delete permanently, not Trash", async ({
+    page,
+  }) => {
+    const TRASHED = [
+      entry({ id: 7, title: "Binned A", status: "trash" }),
+      entry({ id: 8, title: "Binned B", status: "trash" }),
+    ];
+    const restored: unknown[] = [];
+    await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
+    await page.route("**/_plumix/rpc/entry/list", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(restored.length === 0 ? TRASHED : []),
+      }),
+    );
+    await page.route("**/_plumix/rpc/entry/restoreMany", (route) => {
+      const body = route.request().postDataJSON() as {
+        json?: { ids: number[] };
+      };
+      restored.push(body.json);
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody({ ids: body.json?.ids ?? [] }),
+      });
+    });
+
+    await page.goto("entries/posts?status=trash");
+    await page.getByTestId("content-list-select-all").check();
+    await expect(page.getByTestId("content-list-bulk-restore")).toBeVisible();
+    await expect(page.getByTestId("content-list-bulk-delete")).toBeVisible();
+    await expect(page.getByTestId("content-list-bulk-trash")).toHaveCount(0);
+
+    // Restore fires immediately (no confirm — it's recoverable).
+    await page.getByTestId("content-list-bulk-restore").click();
+    expect(restored[0]).toMatchObject({ ids: [7, 8] });
+    await expect(page.getByTestId("toast-success")).toBeVisible();
+  });
+
+  test("without delete cap: the select column is absent", async ({ page }) => {
+    await mockRpc(page, {
+      "/auth/session": {
+        user: {
+          id: 5,
+          email: "viewer@example.test",
+          name: "Viewer",
+          avatarUrl: null,
+          role: "subscriber",
+          capabilities: ["entry:post:read"],
+        },
+        needsBootstrap: false,
+      },
+      "/entry/list": TWO_ROWS,
+    });
+    await page.goto("entries/posts");
+    await expect(page.getByTestId("content-list-row-1")).toBeVisible();
+    await expect(page.getByTestId("content-list-select-all")).toHaveCount(0);
+  });
+
   test("duplicate flow: row action → entry.duplicate payload → toast + refetched list", async ({
     page,
   }) => {

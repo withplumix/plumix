@@ -1,5 +1,5 @@
 import type { MessageDescriptor } from "@lingui/core";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef, RowSelectionState } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { DataTable } from "@/components/data-table/data-table.js";
@@ -53,6 +53,8 @@ import * as v from "valibot";
 
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import type { Entry, EntryStatus, Term } from "@plumix/core/schema";
+
+import { EntriesBulkBar } from "./entries-bulk-bar.js";
 
 const PAGE_SIZE = 20;
 
@@ -277,6 +279,33 @@ const M = {
     id: "entries.list.row.duplicating",
     message: "Duplicating…",
   }),
+  selectAllAria: defineMessage({
+    id: "entries.list.selectAllAria",
+    message: "Select all entries on this page",
+  }),
+  selectRowAria: defineMessage({
+    id: "entries.list.selectRowAria",
+    message: "Select entry",
+  }),
+  bulkFailed: defineMessage({
+    id: "entries.list.bulk.toastFailed",
+    message: "That didn't work — try again.",
+  }),
+  bulkTrashed: defineMessage({
+    id: "entries.list.bulk.toastTrashed",
+    message:
+      "{count, plural, one {Moved # entry to trash.} other {Moved # entries to trash.}}",
+  }),
+  bulkRestored: defineMessage({
+    id: "entries.list.bulk.toastRestored",
+    message:
+      "{count, plural, one {Restored # entry.} other {Restored # entries.}}",
+  }),
+  bulkDeleted: defineMessage({
+    id: "entries.list.bulk.toastDeleted",
+    message:
+      "{count, plural, one {Deleted # entry.} other {Deleted # entries.}}",
+  }),
 } satisfies Record<string, MessageDescriptor>;
 
 const STATUS_FILTER_OPTIONS: {
@@ -304,6 +333,9 @@ function buildColumns({
   onRestore,
   restoringId,
   onDeletePermanent,
+  showSelect,
+  selectAllLabel,
+  selectRowLabel,
   renderLabel,
   editLabel,
   formatDate,
@@ -321,11 +353,41 @@ function buildColumns({
   onRestore: (id: number) => void;
   restoringId: number | null;
   onDeletePermanent: (id: number) => void;
+  showSelect: boolean;
+  selectAllLabel: string;
+  selectRowLabel: string;
   renderLabel: (label: MessageDescriptor) => string;
   editLabel: string;
   formatDate: (value: Date, options?: Intl.DateTimeFormatOptions) => string;
 }): ColumnDef<Entry>[] {
+  const selectColumn: ColumnDef<Entry> = {
+    id: "select",
+    meta: { className: "w-8" },
+    header: ({ table }) => (
+      <input
+        type="checkbox"
+        checked={table.getIsAllPageRowsSelected()}
+        ref={(el) => {
+          if (el) el.indeterminate = table.getIsSomePageRowsSelected();
+        }}
+        onChange={table.getToggleAllPageRowsSelectedHandler()}
+        aria-label={selectAllLabel}
+        data-testid="content-list-select-all"
+      />
+    ),
+    cell: ({ row }) => (
+      <input
+        type="checkbox"
+        checked={row.getIsSelected()}
+        disabled={!row.getCanSelect()}
+        onChange={row.getToggleSelectedHandler()}
+        aria-label={selectRowLabel}
+        data-testid={`content-list-select-${String(row.original.id)}`}
+      />
+    ),
+  };
   return [
+    ...(showSelect ? [selectColumn] : []),
     {
       accessorKey: "title",
       header: () => (
@@ -655,6 +717,58 @@ function ContentListRoute(): ReactNode {
     [setPendingDeleteId],
   );
 
+  // ── Bulk selection ──────────────────────────────────────────────
+  // Selection is page-scoped by construction: `selectedIds` intersects
+  // the row-selection map with the currently-visible rows, so a tick left
+  // over from a prior page / filter can never ride into a bulk action —
+  // no reset-on-change effect needed.
+  const { i18n } = useLingui();
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const selectedIds = useMemo(() => {
+    const visible = new Set(rows.map((row) => row.id));
+    return Object.keys(rowSelection)
+      .map(Number)
+      .filter((id) => rowSelection[String(id)] && visible.has(id));
+  }, [rowSelection, rows]);
+  const isTrashView = search.status === "trash";
+  // Bulk is gated on the same `delete` cap the per-row trash/restore/
+  // delete actions use; the select column only renders when available.
+  const showSelect = canDelete && rows.length > 0;
+
+  const bulkToast = useCallback(
+    (m: MessageDescriptor, count: number): void => {
+      toastSuccess(i18n._(m.id, { count }, { message: m.message }));
+    },
+    [i18n],
+  );
+  const onBulkSuccess = useCallback(
+    (m: MessageDescriptor) => (result: { readonly ids: readonly number[] }) => {
+      bulkToast(m, result.ids.length);
+      setRowSelection({});
+      return invalidateList();
+    },
+    [bulkToast, invalidateList],
+  );
+  const trashMany = useMutation({
+    mutationFn: (ids: number[]) => orpc.entry.trashMany.call({ ids }),
+    onSuccess: onBulkSuccess(M.bulkTrashed),
+    onError: onMutationError,
+  });
+  const restoreMany = useMutation({
+    mutationFn: (ids: number[]) => orpc.entry.restoreMany.call({ ids }),
+    onSuccess: onBulkSuccess(M.bulkRestored),
+    onError: onMutationError,
+  });
+  const deletePermanentMany = useMutation({
+    mutationFn: (ids: number[]) => orpc.entry.deletePermanentMany.call({ ids }),
+    onSuccess: onBulkSuccess(M.bulkDeleted),
+    onError: onMutationError,
+  });
+  const bulkBusy =
+    trashMany.isPending ||
+    restoreMany.isPending ||
+    deletePermanentMany.isPending;
+
   const editLabel = renderLabel(entryTypeLabel(entryType, "editItem"));
   const { formatDate } = useFormatters();
   const columns = useMemo(
@@ -673,6 +787,9 @@ function ContentListRoute(): ReactNode {
         onRestore,
         restoringId,
         onDeletePermanent,
+        showSelect,
+        selectAllLabel: renderLabel(M.selectAllAria),
+        selectRowLabel: renderLabel(M.selectRowAria),
         renderLabel,
         editLabel,
         formatDate,
@@ -691,6 +808,7 @@ function ContentListRoute(): ReactNode {
       onRestore,
       restoringId,
       onDeletePermanent,
+      showSelect,
       renderLabel,
       editLabel,
       formatDate,
@@ -750,6 +868,24 @@ function ContentListRoute(): ReactNode {
         </div>
       </div>
 
+      {showSelect && selectedIds.length > 0 ? (
+        <EntriesBulkBar
+          count={selectedIds.length}
+          // eslint-disable-next-line lingui/no-unlocalized-strings -- view discriminant, not UI copy
+          view={isTrashView ? "trash" : "active"}
+          busy={bulkBusy}
+          onTrash={() => {
+            trashMany.mutate(selectedIds);
+          }}
+          onRestore={() => {
+            restoreMany.mutate(selectedIds);
+          }}
+          onDeletePermanent={() => {
+            deletePermanentMany.mutate(selectedIds);
+          }}
+        />
+      ) : null}
+
       {query.isError ? (
         <Alert variant="destructive" data-testid="content-list-load-error">
           <AlertDescription>
@@ -764,6 +900,13 @@ function ContentListRoute(): ReactNode {
           data={rows}
           isLoading={query.isPending}
           loadingLabel={renderLabel(entryTypeLabel(entryType, "loadingItems"))}
+          {...(showSelect
+            ? {
+                rowSelection,
+                onRowSelectionChange: setRowSelection,
+                getRowId: (entry: Entry) => String(entry.id),
+              }
+            : {})}
           emptyState={
             <EmptyState
               entryType={entryType}

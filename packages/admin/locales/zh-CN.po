@@ -228,12 +228,43 @@ msgstr "{browser}（{os}）"
 msgid "editor.layout.characterCount"
 msgstr "{characters, plural, other {# 个字符}}"
 
+#. count: number of selected entries
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.selected"
+msgstr "{count, plural, other {已选择 # 个条目}}"
+
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.test.tsx
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.pageSummary"
 msgstr "{count, plural, other {# 个分组}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.deleteTitle"
+msgstr "{count, plural, other {永久删除 # 个条目？}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.bulk.toastDeleted"
+msgstr "{count, plural, other {已删除 # 个条目。}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.trashTitle"
+msgstr "{count, plural, other {将 # 个条目移至回收站？}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.bulk.toastTrashed"
+msgstr "{count, plural, other {已将 # 个条目移至回收站。}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.bulk.toastRestored"
+msgstr "{count, plural, other {已恢复 # 个条目。}}"
 
 #. count: number of selected options in the multi-select
 #. js-lingui-explicit-id
@@ -651,6 +682,11 @@ msgid "terms.edit.delete.cancel"
 msgstr "取消"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.cancel"
+msgstr "取消"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.cancel"
 msgstr "取消"
@@ -805,6 +841,11 @@ msgstr "比较"
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.list.title"
 msgstr "已配置的域名"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.confirm"
+msgstr "确认"
 
 #. userCode: the short device-flow code the CLI displayed (e.g. 'WDJB-MJHT'); pass through verbatim
 #. js-lingui-explicit-id
@@ -1227,6 +1268,11 @@ msgstr "永久删除"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.confirm"
 msgstr "删除 Passkey"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.delete"
+msgstr "永久删除"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -2041,6 +2087,11 @@ msgid "editor.device.mobile"
 msgstr "移动设备"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.trash"
+msgstr "移至回收站"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.confirm"
 msgstr "移至回收站"
@@ -2627,6 +2678,11 @@ msgid "profile.passkeys.rename.label"
 msgstr "重命名 Passkey"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.restore"
+msgstr "恢复"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgctxt "action verb"
 msgid "entries.list.row.restore"
@@ -2896,6 +2952,16 @@ msgstr "选择一个区块以查看操作。"
 #: src/editor/StyleTab.tsx
 msgid "editor.styleTab.empty"
 msgstr "选择一个区块以应用样式。"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.selectAllAria"
+msgstr "选择本页所有条目"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.selectRowAria"
+msgstr "选择条目"
 
 #. js-lingui-explicit-id
 #: src/components/form/multi-select.tsx
@@ -3268,6 +3334,11 @@ msgid "entries.list.toast.failed"
 msgstr "操作失败，请重试。"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.bulk.toastFailed"
+msgstr "操作失败，请重试。"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.error.domainExists"
 msgstr "此域名已配置。"
@@ -3478,6 +3549,11 @@ msgstr "此 Passkey 不再存在。请刷新列表。"
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.deleteDialog.description"
 msgstr "这将永久删除该条目及其所有修订版本，且无法撤销。"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+msgid "entries.list.bulk.deleteBody"
+msgstr "这将永久删除所选条目及其修订版本，且无法撤销。"
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx

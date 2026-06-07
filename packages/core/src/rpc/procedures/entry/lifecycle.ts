@@ -7,7 +7,7 @@ import type {
   EntryStatus,
   NewEntry,
 } from "../../../db/schema/entries.js";
-import { eq } from "../../../db/index.js";
+import { eq, inArray } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import {
   pruneOldRevisions,
@@ -139,26 +139,82 @@ export function entryCapability(type: string, action: string): string {
  * `update.ts` (`(author AND edit_own) OR edit_any`, no `delete` cap) —
  * don't unify them.
  */
+interface DeletableGuards {
+  readonly notFound: (id: number) => never;
+  readonly forbidden: (capability: string) => never;
+}
+
+// The trash-lifecycle procedures (single + bulk) all translate a missing
+// row into NOT_FOUND and a failed cap into FORBIDDEN. `errors` is the
+// per-handler oRPC builder, so this is a thin shared adapter.
+export function entryDeletableGuards(errors: {
+  NOT_FOUND: (opts: { data: { kind: string; id: number } }) => Error;
+  FORBIDDEN: (opts: { data: { capability: string } }) => Error;
+}): DeletableGuards {
+  return {
+    notFound: (id) => {
+      throw errors.NOT_FOUND({ data: { kind: "entry", id } });
+    },
+    forbidden: (capability) => {
+      throw errors.FORBIDDEN({ data: { capability } });
+    },
+  };
+}
+
+// Pure (no query) gate: `delete` cap plus author-or-`edit_any`. Shared by
+// the single-row and batched loaders.
+function assertDeletable(
+  ctx: AuthenticatedAppContext,
+  entry: Entry,
+  guards: DeletableGuards,
+): void {
+  const deleteCapability = entryCapability(entry.type, "delete");
+  if (!ctx.auth.can(deleteCapability)) guards.forbidden(deleteCapability);
+  if (entry.authorId !== ctx.user.id) {
+    const editAnyCapability = entryCapability(entry.type, "edit_any");
+    if (!ctx.auth.can(editAnyCapability)) guards.forbidden(editAnyCapability);
+  }
+}
+
 export async function loadDeletableEntry(
   ctx: AuthenticatedAppContext,
   id: number,
-  guards: {
-    readonly notFound: (id: number) => never;
-    readonly forbidden: (capability: string) => never;
-  },
+  guards: DeletableGuards,
 ): Promise<Entry> {
   const existing = await ctx.db.query.entries.findFirst({
     where: eq(entries.id, id),
   });
   if (!existing) guards.notFound(id);
-
-  const deleteCapability = entryCapability(existing.type, "delete");
-  if (!ctx.auth.can(deleteCapability)) guards.forbidden(deleteCapability);
-  if (existing.authorId !== ctx.user.id) {
-    const editAnyCapability = entryCapability(existing.type, "edit_any");
-    if (!ctx.auth.can(editAnyCapability)) guards.forbidden(editAnyCapability);
-  }
+  assertDeletable(ctx, existing, guards);
   return existing;
+}
+
+/**
+ * Batched sibling of `loadDeletableEntry` for the bulk procedures: one
+ * `WHERE id IN (…)` read (no N+1), then per-row gating in memory.
+ * Fail-all — any missing id or any forbidden row throws, so a bulk op
+ * never half-applies across a mix of permitted and forbidden entries.
+ */
+export async function loadDeletableEntries(
+  ctx: AuthenticatedAppContext,
+  ids: readonly number[],
+  guards: DeletableGuards,
+): Promise<Entry[]> {
+  // Dedupe so a repeated id can't double-fire lifecycle hooks or inflate
+  // the result count — bulk ops act on each entry once.
+  const uniqueIds = [...new Set(ids)];
+  const rows = await ctx.db.query.entries.findMany({
+    where: inArray(entries.id, uniqueIds),
+  });
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const ordered: Entry[] = [];
+  for (const id of uniqueIds) {
+    const row = byId.get(id);
+    if (!row) guards.notFound(id);
+    assertDeletable(ctx, row, guards);
+    ordered.push(row);
+  }
+  return ordered;
 }
 
 // Mirrors the readability rules in `entry.get`: any type-level `read` cap,

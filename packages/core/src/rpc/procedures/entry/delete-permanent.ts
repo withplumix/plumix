@@ -3,7 +3,11 @@ import { entries } from "../../../db/schema/entries.js";
 import { AUTOSAVE_TYPE, REVISION_TYPE } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { fireEntryDeleted, loadDeletableEntry } from "./lifecycle.js";
+import {
+  entryDeletableGuards,
+  fireEntryDeleted,
+  loadDeletableEntry,
+} from "./lifecycle.js";
 import { entryDeletePermanentInputSchema } from "./schemas.js";
 
 export const deletePermanent = base
@@ -15,14 +19,11 @@ export const deletePermanent = base
       input,
     );
 
-    const existing = await loadDeletableEntry(context, filtered.id, {
-      notFound: (id) => {
-        throw errors.NOT_FOUND({ data: { kind: "entry", id } });
-      },
-      forbidden: (capability) => {
-        throw errors.FORBIDDEN({ data: { capability } });
-      },
-    });
+    const existing = await loadDeletableEntry(
+      context,
+      filtered.id,
+      entryDeletableGuards(errors),
+    );
 
     if (existing.status !== "trash") {
       throw errors.CONFLICT({ data: { reason: "not_trashed" } });
