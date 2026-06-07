@@ -45,6 +45,9 @@ const config: KnipConfig = {
       entry: [
         "src/index.ts",
         "src/plugin.ts",
+        // Consumed by external plugins' lingui.config.ts (the `plumix
+        // i18n init` template); in-repo configs import core's source.
+        "src/lingui.ts",
         "src/admin/index.ts",
         // Each `plumix/admin/<lib>` shim is a leaf entry consumed by
         // plugin chunks at the consumer's build time via the alias
