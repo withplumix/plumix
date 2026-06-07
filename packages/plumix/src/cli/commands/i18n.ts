@@ -107,11 +107,20 @@ function runInit(ctx: CommandContext): void {
   );
 }
 
-// `sourceLocale: "en"`, `locales/{locale}` po catalogs extracted from
-// `src`, no line numbers — see `@plumix/core/lingui` for the shape.
-const LINGUI_CONFIG_TEMPLATE = `import { defineLinguiConfig } from "plumix/lingui";
+const LINGUI_CONFIG_TEMPLATE = `import { defineConfig } from "@lingui/cli";
+import { formatter } from "@lingui/format-po";
 
-export default defineLinguiConfig({ locales: ["en"] });
+export default defineConfig({
+  sourceLocale: "en",
+  locales: ["en"],
+  catalogs: [
+    {
+      path: "<rootDir>/locales/{locale}",
+      include: ["src"],
+    },
+  ],
+  format: formatter({ lineNumbers: false }),
+});
 `;
 
 // Cloned from packages/admin/scripts/i18n-compile-check.mjs — the

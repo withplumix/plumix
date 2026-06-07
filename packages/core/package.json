@@ -41,10 +41,6 @@
       "types": "./dist/i18n/index.d.ts",
       "default": "./dist/i18n/index.js"
     },
-    "./lingui": {
-      "types": "./dist/lingui/index.d.ts",
-      "default": "./dist/lingui/index.js"
-    },
     "./slugify": {
       "types": "./dist/slugify.d.ts",
       "default": "./dist/slugify.js"
@@ -75,18 +71,10 @@
     "valibot": "catalog:"
   },
   "peerDependencies": {
-    "@lingui/cli": "^6.2.0",
-    "@lingui/format-po": "^6.2.0",
     "@playwright/test": "^1.59.0",
     "esbuild": "^0.27.0"
   },
   "peerDependenciesMeta": {
-    "@lingui/cli": {
-      "optional": true
-    },
-    "@lingui/format-po": {
-      "optional": true
-    },
     "@playwright/test": {
       "optional": true
     },
@@ -95,8 +83,6 @@
     }
   },
   "devDependencies": {
-    "@lingui/cli": "catalog:",
-    "@lingui/format-po": "catalog:",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",

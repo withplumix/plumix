@@ -408,8 +408,10 @@ describe("i18nCommand", () => {
       const configPath = join(dir, "lingui.config.ts");
       expect(existsSync(configPath)).toBe(true);
       const config = readFileSync(configPath, "utf8");
-      expect(config).toContain('from "plumix/lingui"');
-      expect(config).toContain('defineLinguiConfig({ locales: ["en"] })');
+      expect(config).toContain('sourceLocale: "en"');
+      expect(config).toContain('path: "<rootDir>/locales/{locale}"');
+      expect(config).toContain('include: ["src"]');
+      expect(config).toContain("formatter({ lineNumbers: false })");
     });
 
     test("scaffolds scripts/i18n-compile-check.mjs with the parse-error gate", async () => {
