@@ -246,6 +246,37 @@ describe("i18nCommand", () => {
         i18nCommand.run(ctx({ cwd: dir, argv: ["verify"] })),
       ).rejects.toThrow(/plugin\.x\.dead/);
     });
+
+    test("--src narrows the scan so descriptors outside the dir don't count as drift", async () => {
+      // Mirrors core: the bar's strings live in src/bar and own the
+      // catalog; descriptors elsewhere are translated by another
+      // package and must not be reported as missing.
+      seedPlugin({
+        sourceIds: ["pkg.elsewhere.label"],
+        catalogIds: ["pkg.bar.edit"],
+      });
+      mkdirSync(join(dir, "src", "bar"), { recursive: true });
+      writeFileSync(
+        join(dir, "src", "bar", "i18n.ts"),
+        `const edit = { id: "pkg.bar.edit", message: "Edit" };`,
+      );
+      await expect(
+        i18nCommand.run(
+          ctx({ cwd: dir, argv: ["verify", "--src", "src/bar"] }),
+        ),
+      ).resolves.toBeUndefined();
+      // Unscoped, the same tree drifts in both directions.
+      await expect(
+        i18nCommand.run(ctx({ cwd: dir, argv: ["verify"] })),
+      ).rejects.toThrow(/pkg\.elsewhere\.label/);
+    });
+
+    test("--src without a directory argument throws", async () => {
+      seedPlugin({ sourceIds: [], catalogIds: [] });
+      await expect(
+        i18nCommand.run(ctx({ cwd: dir, argv: ["verify", "--src"] })),
+      ).rejects.toThrow(/missing directory/);
+    });
   });
 
   describe("extract --check", () => {
