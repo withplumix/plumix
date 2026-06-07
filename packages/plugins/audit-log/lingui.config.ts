@@ -1,14 +1,3 @@
-import { defineConfig } from "@lingui/cli";
-import { formatter } from "@lingui/format-po";
+import { defineLinguiConfig } from "plumix/lingui";
 
-export default defineConfig({
-  sourceLocale: "en",
-  locales: ["en", "uk", "ar", "de", "zh-CN"],
-  catalogs: [
-    {
-      path: "<rootDir>/locales/{locale}",
-      include: ["src"],
-    },
-  ],
-  format: formatter({ lineNumbers: false }),
-});
+export default defineLinguiConfig();

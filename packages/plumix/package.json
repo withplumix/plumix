@@ -121,6 +121,10 @@
       "types": "./dist/i18n/index.d.ts",
       "default": "./dist/i18n/index.js"
     },
+    "./lingui": {
+      "types": "./dist/lingui.d.ts",
+      "default": "./dist/lingui.js"
+    },
     "./test": {
       "types": "./dist/test/index.d.ts",
       "default": "./dist/test/index.js"
