@@ -220,6 +220,7 @@ export const entryGetInputSchema = v.object({
 export const entryTrashInputSchema = v.object({ id: idParam });
 export const entryRestoreInputSchema = v.object({ id: idParam });
 export const entryDeletePermanentInputSchema = v.object({ id: idParam });
+export const entryDuplicateInputSchema = v.object({ id: idParam });
 
 export type EntryListInput = v.InferOutput<typeof entryListInputSchema>;
 export type EntryGetInput = v.InferOutput<typeof entryGetInputSchema>;

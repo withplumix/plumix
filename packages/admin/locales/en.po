@@ -1413,9 +1413,24 @@ msgid "editor.entry.edit.toast.draftDiscarded"
 msgstr "Draft discarded."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.duplicate"
+msgstr "Duplicate"
+
+#. js-lingui-explicit-id
 #: src/editor/BlockActionsPanel.tsx
 msgid "blockActions.duplicate"
 msgstr "Duplicate"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.toast.duplicated"
+msgstr "Duplicated as a draft."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.duplicating"
+msgstr "Duplicating…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx

@@ -1411,9 +1411,24 @@ msgid "editor.entry.edit.toast.draftDiscarded"
 msgstr "تم تجاهل المسودة."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.duplicate"
+msgstr "تكرار"
+
+#. js-lingui-explicit-id
 #: src/editor/BlockActionsPanel.tsx
 msgid "blockActions.duplicate"
 msgstr "تكرار"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.toast.duplicated"
+msgstr "تم التكرار كمسودة."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.row.duplicating"
+msgstr "جارٍ التكرار…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -3449,7 +3464,8 @@ msgstr "لم يعد هذا passkey موجوداً. حدّث القائمة."
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.deleteDialog.description"
-msgstr "سيؤدي هذا إلى حذف الإدخال ومراجعاته نهائيًا. لا يمكن التراجع عن هذا الإجراء."
+msgstr "سيؤدي هذا إلى حذف الإدخال ومراجعاته نهائيًا. لا يمكن التراجع عن هذا "
+"الإجراء."
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx

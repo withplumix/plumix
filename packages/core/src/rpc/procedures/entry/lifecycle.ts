@@ -163,9 +163,13 @@ export async function loadDeletableEntry(
 
 // Mirrors the readability rules in `entry.get`: any type-level `read` cap,
 // and for non-published entries also requires `edit_any` or (author +
-// `edit_own`). Kept local because this is the only call site — `entry.get`
-// inlines its own variant that also issues an errors.NOT_FOUND directly.
-function canReadEntry(ctx: AuthenticatedAppContext, entry: Entry): boolean {
+// `edit_own`). `entry.get` inlines its own variant that also issues an
+// errors.NOT_FOUND directly; `entry.duplicate` reuses this to gate the
+// source it copies (a create cap alone would leak unreadable drafts).
+export function canReadEntry(
+  ctx: AuthenticatedAppContext,
+  entry: Entry,
+): boolean {
   if (!ctx.auth.can(entryCapability(entry.type, "read"))) return false;
   if (entry.status === "published") return true;
   if (ctx.auth.can(entryCapability(entry.type, "edit_any"))) return true;
