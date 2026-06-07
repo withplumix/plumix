@@ -187,6 +187,11 @@ msgid "metaBox.repeater.countSuffixBoth"
 msgstr " / min {min} / max {max}"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.taxonomy.noTerms"
+msgstr "—"
+
+#. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.parent.rootOption"
 msgstr "— Stamm —"
@@ -269,6 +274,11 @@ msgstr "{label} hat beim Rendern einen Fehler verursacht. Der Rest der "
 msgid "profile.sessions.revokeAll.count"
 msgstr "{revoked, plural, =0 {Keine anderen Sitzungen zum Abmelden.} one {# "
 "andere Sitzung abgemeldet.} other {# andere Sitzungen abgemeldet.}}"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.taxonomy.backToItems"
+msgstr "← Zurück"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
@@ -367,6 +377,11 @@ msgid "allowedDomains.add.submit.idle"
 msgstr "Hinzufügen"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.addNewItem"
+msgstr "Hinzufügen"
+
+#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.addMore"
 msgstr "Hinzufügen"
@@ -396,6 +411,16 @@ msgstr "Hinzufügen"
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.addNew"
 msgstr "Hinzufügen"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.addNew"
+msgstr "Neu hinzufügen"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.taxonomy.addOrRemoveItems"
+msgstr "Hinzufügen oder entfernen"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -441,6 +466,11 @@ msgstr "Administrator — volle Kontrolle"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.statusFilter.all"
+msgstr "Alle"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.allItems"
 msgstr "Alle"
 
 #. js-lingui-explicit-id
@@ -974,6 +1004,11 @@ msgstr "Ihre Sitzungen konnten nicht geladen werden. Aktualisieren und erneut "
 "versuchen."
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.loadErrorItems"
+msgstr "Konnte nicht geladen werden. Erneut versuchen."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.error.fallback"
 msgstr "Dieser Code konnte nicht gefunden werden. Bitte erneut versuchen."
@@ -1371,6 +1406,11 @@ msgstr "Bearbeiten"
 msgid "breadcrumb.edit"
 msgstr "Bearbeiten"
 
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.editItem"
+msgstr "Bearbeiten"
+
 #. email: the user being edited
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -1439,6 +1479,11 @@ msgstr "E-Mail-Domains, die für die OAuth-Registrierung erlaubt sind. Neue "
 "Rollenzuordnung."
 
 #. js-lingui-explicit-id
+#: src/lib/core-validation-i18n.ts
+msgid "validate.email.maxLength"
+msgstr "E-Mail ist zu lang."
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.submit"
 msgstr "Link per E-Mail senden"
@@ -1474,6 +1519,11 @@ msgid "login.email.invalid"
 msgstr "Gültige E-Mail-Adresse eingeben."
 
 #. js-lingui-explicit-id
+#: src/lib/core-validation-i18n.ts
+msgid "validate.email.invalid"
+msgstr "Gültige E-Mail-Adresse eingeben."
+
+#. js-lingui-explicit-id
 #: src/lib/magic-link.ts
 msgid "magicLinkRequest.error.invalidInput"
 msgstr "Gültige E-Mail-Adresse eingeben."
@@ -1487,6 +1537,11 @@ msgstr "Gültige E-Mail-Adresse eingeben."
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.domain.invalid"
 msgstr "Gültigen Hostnamen eingeben (z. B. example.com)."
+
+#. js-lingui-explicit-id
+#: src/lib/core-validation-i18n.ts
+msgid "validate.email.required"
+msgstr "E-Mail-Adresse eingeben."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
@@ -1547,14 +1602,14 @@ msgid "allowedDomains.add.placeholder"
 msgstr "example.com"
 
 #. js-lingui-explicit-id
-#: src/components/editor/document-settings.tsx
-msgid "editor.document.excerpt"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffPanel.tsx
 msgid "editor.revisions.diff.field.excerpt"
 msgstr "Auszug"
+
+#. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.excerpt"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -1587,6 +1642,11 @@ msgid "editor.plainForm.status.error"
 msgstr "Speichern fehlgeschlagen"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.taxonomy.filterByItem"
+msgstr "Filter"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.filterAuthorAria"
 msgstr "Nach Autor filtern"
@@ -1600,6 +1660,11 @@ msgstr "Nach Rolle filtern"
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.filterStatusAria"
 msgstr "Nach Status filtern"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.filterItemsList"
+msgstr "Liste filtern"
 
 #. js-lingui-explicit-id
 #: src/editor/StyleTab.tsx
@@ -1648,6 +1713,11 @@ msgstr "Vergleich ausblenden"
 #: src/components/error-boundary-fallback.tsx
 msgid "errorBoundary.hideError"
 msgstr "Fehler ausblenden"
+
+#. js-lingui-explicit-id
+#: src/lib/core-validation-i18n.ts
+msgid "validate.id.format"
+msgstr "id muss eine positive Ganzzahl sein"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -1734,6 +1804,16 @@ msgid "userInvite.submit.pending"
 msgstr "Wird eingeladen…"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.singular"
+msgstr "Eintrag"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.plural"
+msgstr "Einträge"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.reassign.keepAsIs"
 msgstr "Beiträge unverändert lassen (keine zur Neuzuweisung)"
@@ -1768,6 +1848,16 @@ msgstr "Zuletzt verwendet"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.lastUsed"
 msgstr "Zuletzt verwendet {date}"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.itemsList"
+msgstr "Liste"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.itemsListNavigation"
+msgstr "Listennavigation"
 
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
@@ -1833,6 +1923,11 @@ msgstr "Wird geladen…"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.list.loading"
+msgstr "Wird geladen…"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.loadingItems"
 msgstr "Wird geladen…"
 
 #. js-lingui-explicit-id
@@ -1912,6 +2007,16 @@ msgid "entries.list.trashDialog.confirm"
 msgstr "In den Papierkorb verschieben"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.moveToTrash"
+msgstr "In den Papierkorb verschieben?"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.itemTrashed"
+msgstr "In den Papierkorb verschoben"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.moving"
 msgstr "Wird verschoben…"
@@ -1979,6 +2084,11 @@ msgid "apiTokens.create.nameRequired"
 msgstr "Name ist erforderlich."
 
 #. js-lingui-explicit-id
+#: src/lib/core-validation-i18n.ts
+msgid "validate.name.maxLength"
+msgstr "Name ist zu lang."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.tooLong"
 msgstr "Name muss ≤ 64 Zeichen lang sein."
@@ -2009,9 +2119,19 @@ msgid "apiTokens.never"
 msgstr "Nie"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.newItem"
+msgstr "Neu"
+
+#. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.dialog.newLabel"
 msgstr "Neue E-Mail"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.taxonomy.newItemName"
+msgstr "Neuer Name"
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
@@ -2070,6 +2190,11 @@ msgid "mailer.test.error.notConfigured"
 msgstr "Kein Mailer-Adapter konfiguriert. Übergeben Sie einen `mailer:` an "
 "`plumix({...})` (z. B. consoleMailer() für die Entwicklung oder Ihren "
 "Resend-/Postmark-/SES-Wrapper)."
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.noMatch"
+msgstr "Keine Treffer"
 
 #. js-lingui-explicit-id
 #: src/editor/SlashMenuPanel.tsx
@@ -2180,6 +2305,11 @@ msgid "settings.page.notFound.title"
 msgstr "Nicht gefunden"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.notFound"
+msgstr "Noch nichts"
+
+#. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.registrationClosed"
 msgstr "OAuth-Registrierung ist nicht verfügbar, bis ein Administrator die "
@@ -2238,14 +2368,24 @@ msgid "listPagination.page"
 msgstr "Seite {page}"
 
 #. js-lingui-explicit-id
-#: src/components/editor/document-settings.tsx
-msgid "editor.document.parent"
-msgstr ""
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.parentItem"
+msgstr "Übergeordnet"
 
 #. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.parent"
 msgstr "Übergeordnet"
+
+#. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.parent"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.parentItemColon"
+msgstr "Übergeordnet:"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -2377,6 +2517,16 @@ msgid "entries.list.statusFilter.published"
 msgstr "Veröffentlicht"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.itemPublished"
+msgstr "Veröffentlicht"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.itemPublishedPrivately"
+msgstr "Privat veröffentlicht"
+
+#. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.tab.publishes"
 msgstr "Veröffentlichungen"
@@ -2452,6 +2602,11 @@ msgstr "Auf bestimmte Berechtigungen beschränken"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.scope.restrict"
 msgstr "Auf bestimmte Berechtigungen beschränken"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.itemRevertedToDraft"
+msgstr "Auf Entwurf zurückgesetzt"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffDialog.tsx
@@ -2600,6 +2755,11 @@ msgid "entries.list.statusFilter.scheduled"
 msgstr "Geplant"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.itemScheduled"
+msgstr "Geplant"
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.col.scopes"
 msgstr "Berechtigungen"
@@ -2643,6 +2803,11 @@ msgstr "Suchen Sie Blöcke und Muster nach Titel oder Stichwort und drücken Sie
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.searchPlaceholder"
 msgstr "Nach E-Mail suchen…"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.searchItems"
+msgstr "Suchen…"
 
 #. js-lingui-explicit-id
 #: src/components/form/multi-select.tsx
@@ -2728,6 +2893,11 @@ msgstr "Sendet eine einmalige Nachricht über denselben Transport, den "
 "Gegensatz zum Magic-Link-Anfrage-Flow, der Mailer-Fehler absichtlich "
 "verschluckt, damit die Antwortform nicht verrät, ob eine E-Mail "
 "registriert ist."
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.taxonomy.separateItemsWithCommas"
+msgstr "Mit Kommas trennen"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/accept-invite/$token.tsx
@@ -2861,11 +3031,6 @@ msgid "profile.sessions.revoke.pending"
 msgstr "Abmeldung läuft…"
 
 #. js-lingui-explicit-id
-#: src/components/editor/document-settings.tsx
-msgid "editor.document.slug"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffPanel.tsx
 msgid "editor.revisions.diff.field.slug"
 msgstr "Slug"
@@ -2874,6 +3039,11 @@ msgstr "Slug"
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.slug"
 msgstr "Slug"
+
+#. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.slug"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
@@ -2971,8 +3141,18 @@ msgid "core.adminNav.termTaxonomies"
 msgstr "Taxonomien"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.taxonomy.singular"
+msgstr "Begriff"
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.terms"
+msgstr "Begriffe"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.taxonomy.plural"
 msgstr "Begriffe"
 
 #. to: the recipient email address the test was sent to
@@ -3332,6 +3512,11 @@ msgid "entries.list.statusFilter.trash"
 msgstr "Papierkorb"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.notFoundInTrash"
+msgstr "Papierkorb ist leer"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgctxt "action verb"
 msgid "entries.list.row.trashing"
@@ -3368,6 +3553,11 @@ msgid "editor.entry.create.untitled"
 msgstr "Ohne Titel"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.untitledItem"
+msgstr "Ohne Titel"
+
+#. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.header.titlePlaceholder"
 msgstr "Ohne Titel"
@@ -3381,6 +3571,11 @@ msgstr "Ohne Titel"
 #: src/components/editor/plain-form-layout.tsx
 msgid "editor.plainForm.titlePlaceholder"
 msgstr "Ohne Titel"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.taxonomy.updateItem"
+msgstr "Aktualisieren"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -3397,6 +3592,11 @@ msgstr "Aktualisieren Sie Ihren angezeigten Namen. Rolle und Kontostatus werden 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.column.updated"
+msgstr "Aktualisiert"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.itemUpdated"
 msgstr "Aktualisiert"
 
 #. js-lingui-explicit-id
@@ -3444,6 +3644,16 @@ msgstr "Benutzer"
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.item.users"
 msgstr "Benutzer"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.viewItem"
+msgstr "Ansehen"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.viewItems"
+msgstr "Ansehen"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx

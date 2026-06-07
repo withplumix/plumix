@@ -187,6 +187,11 @@ msgid "metaBox.repeater.countSuffixBoth"
 msgstr " / min {min} / max {max}"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.taxonomy.noTerms"
+msgstr "—"
+
+#. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.parent.rootOption"
 msgstr "— root —"
@@ -269,6 +274,11 @@ msgstr "{label} threw an error while rendering. The rest of the admin is "
 msgid "profile.sessions.revokeAll.count"
 msgstr "{revoked, plural, =0 {No other sessions to sign out.} one {Signed out # "
 "other session.} other {Signed out # other sessions.}}"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.taxonomy.backToItems"
+msgstr "← Back"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
@@ -365,6 +375,11 @@ msgid "allowedDomains.add.submit.idle"
 msgstr "Add"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.addNewItem"
+msgstr "Add"
+
+#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.addMore"
 msgstr "Add"
@@ -394,6 +409,16 @@ msgstr "Add new"
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.addNew"
 msgstr "Add new"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.addNew"
+msgstr "Add New"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.taxonomy.addOrRemoveItems"
+msgstr "Add or remove"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -439,6 +464,11 @@ msgstr "Administrator — full control"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.statusFilter.all"
+msgstr "All"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.allItems"
 msgstr "All"
 
 #. js-lingui-explicit-id
@@ -959,6 +989,11 @@ msgid "profile.sessions.loadFailed"
 msgstr "Couldn't load your sessions. Refresh and try again."
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.loadErrorItems"
+msgstr "Couldn’t load. Try again."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.error.fallback"
 msgstr "Couldn't look up that code. Try again."
@@ -1352,6 +1387,11 @@ msgstr "Edit"
 msgid "breadcrumb.edit"
 msgstr "Edit"
 
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.editItem"
+msgstr "Edit"
+
 #. email: the user being edited
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -1418,6 +1458,11 @@ msgstr "Email domains permitted to sign up via OAuth. New OAuth accounts are "
 "preserve their role mapping."
 
 #. js-lingui-explicit-id
+#: src/lib/core-validation-i18n.ts
+msgid "validate.email.maxLength"
+msgstr "Email is too long."
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.submit"
 msgstr "Email me a link"
@@ -1453,6 +1498,11 @@ msgid "login.email.invalid"
 msgstr "Enter a valid email address."
 
 #. js-lingui-explicit-id
+#: src/lib/core-validation-i18n.ts
+msgid "validate.email.invalid"
+msgstr "Enter a valid email address."
+
+#. js-lingui-explicit-id
 #: src/lib/magic-link.ts
 msgid "magicLinkRequest.error.invalidInput"
 msgstr "Enter a valid email address."
@@ -1466,6 +1516,11 @@ msgstr "Enter a valid email address."
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.domain.invalid"
 msgstr "Enter a valid hostname (e.g. example.com)."
+
+#. js-lingui-explicit-id
+#: src/lib/core-validation-i18n.ts
+msgid "validate.email.required"
+msgstr "Enter an email address."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
@@ -1526,13 +1581,13 @@ msgid "allowedDomains.add.placeholder"
 msgstr "example.com"
 
 #. js-lingui-explicit-id
-#: src/components/editor/document-settings.tsx
-msgid "editor.document.excerpt"
+#: src/editor/revisions/RevisionDiffPanel.tsx
+msgid "editor.revisions.diff.field.excerpt"
 msgstr "Excerpt"
 
 #. js-lingui-explicit-id
-#: src/editor/revisions/RevisionDiffPanel.tsx
-msgid "editor.revisions.diff.field.excerpt"
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.excerpt"
 msgstr "Excerpt"
 
 #. js-lingui-explicit-id
@@ -1566,6 +1621,11 @@ msgid "editor.plainForm.status.error"
 msgstr "Failed to save"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.taxonomy.filterByItem"
+msgstr "Filter"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.filterAuthorAria"
 msgstr "Filter by author"
@@ -1579,6 +1639,11 @@ msgstr "Filter by role"
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.filterStatusAria"
 msgstr "Filter by status"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.filterItemsList"
+msgstr "Filter list"
 
 #. js-lingui-explicit-id
 #: src/editor/StyleTab.tsx
@@ -1626,6 +1691,11 @@ msgstr "Hide comparison"
 #: src/components/error-boundary-fallback.tsx
 msgid "errorBoundary.hideError"
 msgstr "Hide error"
+
+#. js-lingui-explicit-id
+#: src/lib/core-validation-i18n.ts
+msgid "validate.id.format"
+msgstr "id must be a positive decimal integer"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -1710,6 +1780,16 @@ msgid "userInvite.submit.pending"
 msgstr "Inviting…"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.singular"
+msgstr "Item"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.plural"
+msgstr "Items"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.reassign.keepAsIs"
 msgstr "Keep entries as-is (none to reassign)"
@@ -1744,6 +1824,16 @@ msgstr "Last used"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.lastUsed"
 msgstr "Last used {date}"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.itemsList"
+msgstr "List"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.itemsListNavigation"
+msgstr "List navigation"
 
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
@@ -1809,6 +1899,11 @@ msgstr "Loading…"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.list.loading"
+msgstr "Loading…"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.loadingItems"
 msgstr "Loading…"
 
 #. js-lingui-explicit-id
@@ -1887,6 +1982,16 @@ msgid "entries.list.trashDialog.confirm"
 msgstr "Move to trash"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.moveToTrash"
+msgstr "Move to trash?"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.itemTrashed"
+msgstr "Moved to trash"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.moving"
 msgstr "Moving…"
@@ -1954,6 +2059,11 @@ msgid "apiTokens.create.nameRequired"
 msgstr "Name is required."
 
 #. js-lingui-explicit-id
+#: src/lib/core-validation-i18n.ts
+msgid "validate.name.maxLength"
+msgstr "Name is too long."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.tooLong"
 msgstr "Name must be ≤ 64 characters."
@@ -1984,9 +2094,19 @@ msgid "apiTokens.never"
 msgstr "Never"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.newItem"
+msgstr "New"
+
+#. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.dialog.newLabel"
 msgstr "New email"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.taxonomy.newItemName"
+msgstr "New name"
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
@@ -2044,6 +2164,11 @@ msgstr "No heading-structure issues detected."
 msgid "mailer.test.error.notConfigured"
 msgstr "No mailer adapter is configured. Pass a `mailer:` to `plumix({...})` "
 "(e.g. consoleMailer() for dev, or your Resend/Postmark/SES wrapper)."
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.noMatch"
+msgstr "No matches"
 
 #. js-lingui-explicit-id
 #: src/editor/SlashMenuPanel.tsx
@@ -2153,6 +2278,11 @@ msgid "settings.page.notFound.title"
 msgstr "Not found"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.notFound"
+msgstr "Nothing yet"
+
+#. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.registrationClosed"
 msgstr "OAuth signup is unavailable until an admin has finished setup."
@@ -2210,14 +2340,24 @@ msgid "listPagination.page"
 msgstr "Page {page}"
 
 #. js-lingui-explicit-id
-#: src/components/editor/document-settings.tsx
-msgid "editor.document.parent"
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.parentItem"
 msgstr "Parent"
 
 #. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.parent"
 msgstr "Parent"
+
+#. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.parent"
+msgstr "Parent"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.parentItemColon"
+msgstr "Parent:"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -2345,6 +2485,16 @@ msgid "entries.list.statusFilter.published"
 msgstr "Published"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.itemPublished"
+msgstr "Published"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.itemPublishedPrivately"
+msgstr "Published privately"
+
+#. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.tab.publishes"
 msgstr "Publishes"
@@ -2420,6 +2570,11 @@ msgstr "Restrict to specific capabilities"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.scope.restrict"
 msgstr "Restrict to specific capabilities"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.itemRevertedToDraft"
+msgstr "Reverted to draft"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffDialog.tsx
@@ -2568,6 +2723,11 @@ msgid "entries.list.statusFilter.scheduled"
 msgstr "Scheduled"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.itemScheduled"
+msgstr "Scheduled"
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.col.scopes"
 msgstr "Scopes"
@@ -2611,6 +2771,11 @@ msgstr "Search blocks and patterns by title or keyword and press Enter to "
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.searchPlaceholder"
 msgstr "Search by email…"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.searchItems"
+msgstr "Search…"
 
 #. js-lingui-explicit-id
 #: src/components/form/multi-select.tsx
@@ -2694,6 +2859,11 @@ msgstr "Sends a one-off message via the same transport magic-link uses. "
 "Failures surface here verbatim — distinct from the magic-link request "
 "flow, which intentionally swallows mailer errors so the response shape "
 "can't leak whether an email is registered."
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.taxonomy.separateItemsWithCommas"
+msgstr "Separate with commas"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/accept-invite/$token.tsx
@@ -2825,11 +2995,6 @@ msgid "profile.sessions.revoke.pending"
 msgstr "Signing out…"
 
 #. js-lingui-explicit-id
-#: src/components/editor/document-settings.tsx
-msgid "editor.document.slug"
-msgstr "Slug"
-
-#. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffPanel.tsx
 msgid "editor.revisions.diff.field.slug"
 msgstr "Slug"
@@ -2837,6 +3002,11 @@ msgstr "Slug"
 #. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.slug"
+msgstr "Slug"
+
+#. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.slug"
 msgstr "Slug"
 
 #. js-lingui-explicit-id
@@ -2933,8 +3103,18 @@ msgid "core.adminNav.termTaxonomies"
 msgstr "Taxonomies"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.taxonomy.singular"
+msgstr "Term"
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.terms"
+msgstr "Terms"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.taxonomy.plural"
 msgstr "Terms"
 
 #. to: the recipient email address the test was sent to
@@ -3282,6 +3462,11 @@ msgid "entries.list.statusFilter.trash"
 msgstr "Trash"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.notFoundInTrash"
+msgstr "Trash is empty"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgctxt "action verb"
 msgid "entries.list.row.trashing"
@@ -3318,6 +3503,11 @@ msgid "editor.entry.create.untitled"
 msgstr "Untitled"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.untitledItem"
+msgstr "Untitled"
+
+#. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.header.titlePlaceholder"
 msgstr "Untitled"
@@ -3331,6 +3521,11 @@ msgstr "Untitled"
 #: src/components/editor/plain-form-layout.tsx
 msgid "editor.plainForm.titlePlaceholder"
 msgstr "Untitled"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.taxonomy.updateItem"
+msgstr "Update"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -3347,6 +3542,11 @@ msgstr "Update your display name. Role and account state are managed by "
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.column.updated"
+msgstr "Updated"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.itemUpdated"
 msgstr "Updated"
 
 #. js-lingui-explicit-id
@@ -3393,6 +3593,16 @@ msgstr "Users"
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.item.users"
 msgstr "Users"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.viewItem"
+msgstr "View"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.viewItems"
+msgstr "View"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
