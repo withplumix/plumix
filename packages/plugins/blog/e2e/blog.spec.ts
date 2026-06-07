@@ -86,4 +86,28 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
     await page.goto("entries/posts?status=published");
     await expect(page.locator(CONTENT_ROWS)).toHaveCount(1);
   });
+
+  test("the public theme page serves the admin bar in the user's locale", async ({
+    page,
+  }) => {
+    // Switch the seeded admin's locale via the profile card; the
+    // setLocale RPC persists user.meta.locale in real D1.
+    await page.goto("profile");
+    await page.getByTestId("locale-switcher-trigger").click();
+    const saved = page.waitForResponse(
+      (r) => r.url().endsWith("/user/setLocale") && r.status() === 200,
+    );
+    await page.getByTestId("locale-switcher-option-uk").click();
+    await saved;
+
+    // The front page is the theme's SSR surface, not the admin SPA —
+    // the worker resolves the session, reads meta.locale, and renders
+    // the bar chrome from core's compiled po catalogs. "/" resolves to
+    // the public root (baseURL's origin), not the admin base path.
+    await page.goto("/");
+    const bar = page.getByTestId("plumix-admin-bar");
+    await expect(bar).toBeVisible();
+    // The "+ New" group label comes from core's compiled uk catalog.
+    await expect(bar).toContainText("+ Новий");
+  });
 });
