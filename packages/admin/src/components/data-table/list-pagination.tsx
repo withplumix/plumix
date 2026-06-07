@@ -56,6 +56,7 @@ export function ListPagination({
               onPageChange(page - 1);
             }}
             aria-label={label(M.prevAria)}
+            data-testid="list-pagination-prev"
           >
             <ChevronLeft className="rtl:rotate-180" />
             <span className="hidden sm:inline">
@@ -72,6 +73,7 @@ export function ListPagination({
               onPageChange(page + 1);
             }}
             aria-label={label(M.nextAria)}
+            data-testid="list-pagination-next"
           >
             <span className="hidden sm:inline">
               <Trans id="listPagination.next.label" message="Next" />
