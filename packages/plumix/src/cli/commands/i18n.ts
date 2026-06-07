@@ -290,14 +290,21 @@ async function runExtractCheck(
  *  scans source for any `{ id, message }`-shape literal — so descriptors
  *  wrapped in `withContext(...)` or declared as plain manifest fields
  *  count too. Exits non-zero with a sorted drift report when source and
- *  `locales/en.po` disagree. */
+ *  `locales/en.po` disagree.
+ *
+ *  `--src <dir>` (repeatable) narrows the scan to specific directories
+ *  for packages whose catalogs own only part of their source tree —
+ *  core's po carries the SSR admin-bar strings, while its adminNav
+ *  descriptors are translated by admin's catalogs. */
 function runVerify(ctx: CommandContext): void {
   const localesDir = resolve(ctx.cwd, "locales");
-  const srcDir = resolve(ctx.cwd, "src");
+  const srcDirs = verifySrcDirs(ctx);
   const sourceIds = new Set<string>();
-  for (const file of listSourceFiles(srcDir)) {
-    for (const id of sourceDescriptorIds(readFileSync(file, "utf8"))) {
-      sourceIds.add(id);
+  for (const srcDir of srcDirs) {
+    for (const file of listSourceFiles(srcDir)) {
+      for (const id of sourceDescriptorIds(readFileSync(file, "utf8"))) {
+        sourceIds.add(id);
+      }
     }
   }
   const catalogIds: string[] = [];
@@ -310,6 +317,26 @@ function runVerify(ctx: CommandContext): void {
   if (drift.missingInCatalog.length > 0 || drift.orphanedInCatalog.length > 0) {
     throw CliError.i18nVerifyDrift(drift);
   }
+}
+
+function verifySrcDirs(ctx: CommandContext): readonly string[] {
+  const dirs: string[] = [];
+  const rest = ctx.argv.slice(1);
+  for (let i = 0; i < rest.length; i++) {
+    if (rest[i] === "--src") {
+      const dir = rest[i + 1];
+      if (dir === undefined || dir.startsWith("--")) {
+        throw CliError.unknownSubcommand({
+          command: "i18n",
+          subcommand: "verify --src (missing directory)",
+          supported: [...SUPPORTED],
+        });
+      }
+      dirs.push(resolve(ctx.cwd, dir));
+      i++;
+    }
+  }
+  return dirs.length > 0 ? dirs : [resolve(ctx.cwd, "src")];
 }
 
 function listSourceFiles(dir: string): readonly string[] {
