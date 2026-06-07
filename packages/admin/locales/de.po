@@ -224,7 +224,7 @@ msgstr "{browser} auf {os}"
 
 #. characters: number of characters in the entry's prose blocks
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
+#: src/editor/WordCount.tsx
 msgid "editor.layout.characterCount"
 msgstr "{characters, plural, one {# Zeichen} other {# Zeichen}}"
 
@@ -283,7 +283,7 @@ msgstr "{revoked, plural, =0 {Keine anderen Sitzungen zum Abmelden.} one {# "
 
 #. words: number of words in the entry's prose blocks
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
+#: src/editor/WordCount.tsx
 msgid "editor.layout.wordCount"
 msgstr "{words, plural, one {# Wort} other {# Wörter}}"
 
@@ -912,6 +912,11 @@ msgstr "Der Kern liefert absichtlich keine Einstellungen — Plugins (oder Ihre 
 "eigene plumix.config) deklarieren Seiten + Gruppen über "
 "<0>ctx.registerSettingsPage</0> und <1>ctx.registerSettingsGroup</1>. "
 "Registrierte Seiten erscheinen hier mit einer Karte pro Seite."
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.general.description"
+msgstr "Grundlegende Website-Identität und Metadaten."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -1745,6 +1750,16 @@ msgid "editor.revisions.preview.subtitle"
 msgstr "{when} von {author}"
 
 #. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.general.label"
+msgstr "Allgemein"
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.github"
+msgstr "GitHub-URL"
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.namePlaceholder"
 msgstr "github-actions / claude-code / mcp-prod"
@@ -2041,6 +2056,11 @@ msgstr "Mailer"
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.management"
 msgstr "Verwaltung"
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.mastodon"
+msgstr "Mastodon-URL"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -2572,6 +2592,11 @@ msgstr "Profil"
 #: src/components/shell/user-menu.tsx
 msgid "menu.profile"
 msgstr "Profil"
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.description"
+msgstr "Öffentlicher Name, Slogan und Social-Media-Links."
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
@@ -3129,6 +3154,16 @@ msgid "profile.sessions.revoke.pending"
 msgstr "Abmeldung läuft…"
 
 #. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.label"
+msgstr "Website-Identität"
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.title"
+msgstr "Website-Titel"
+
+#. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffPanel.tsx
 msgid "editor.revisions.diff.field.slug"
 msgstr "Slug"
@@ -3232,6 +3267,11 @@ msgstr "Synchronisiert"
 #: src/editor/device-labels.ts
 msgid "editor.device.tablet"
 msgstr "Tablet"
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.tagline"
+msgstr "Slogan"
 
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
@@ -3802,6 +3842,11 @@ msgstr "Woran möchten Sie heute arbeiten?"
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.tile.description.generic"
 msgstr "Schreiben, bearbeiten und veröffentlichen."
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.twitter"
+msgstr "X-(Twitter-)URL"
 
 #. js-lingui-explicit-id
 #: src/editor/field-type-translator.tsx

@@ -5,6 +5,7 @@ import { defineBlock } from "@plumix/blocks";
 
 import { HookRegistry } from "../hooks/registry.js";
 import { resolveLocales } from "../i18n/locale-registry.js";
+import { registerCoreSettings } from "../settings-core.js";
 import { definePlugin } from "./define.js";
 import { DuplicateAdminSlugError } from "./errors.js";
 import {
@@ -30,6 +31,16 @@ describe("buildManifest", () => {
     };
     const manifest = buildManifest(createPluginRegistry(), { tokens });
     expect(manifest.tokens).toEqual(tokens);
+  });
+
+  test("projects the core site settings group + general page for the admin", () => {
+    const registry = createPluginRegistry();
+    registerCoreSettings(registry);
+    const manifest = buildManifest(registry, { tokens: {} });
+    const site = manifest.settingsGroups.find((g) => g.name === "site");
+    expect(site?.fields.map((f) => f.key)).toContain("title");
+    const general = manifest.settingsPages.find((p) => p.name === "general");
+    expect(general?.groups).toContain("site");
   });
 
   test("buildManifest projects plugin i18n catalog URLs intersected with site locales", () => {
