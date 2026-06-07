@@ -231,6 +231,13 @@ export const entryTrashManyInputSchema = bulkIdsSchema;
 export const entryRestoreManyInputSchema = bulkIdsSchema;
 export const entryDeletePermanentManyInputSchema = bulkIdsSchema;
 
+export const entryRecentActivityInputSchema = v.object({
+  limit: v.optional(
+    v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(50)),
+    10,
+  ),
+});
+
 export type EntryListInput = v.InferOutput<typeof entryListInputSchema>;
 export type EntryGetInput = v.InferOutput<typeof entryGetInputSchema>;
 export type EntryCreateInput = v.InferOutput<typeof entryCreateInputSchema>;

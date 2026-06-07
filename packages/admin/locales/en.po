@@ -164,6 +164,11 @@ msgstr ""
 #~ msgstr "Edit"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+#~ msgid "dashboard.tile.description.generic"
+#~ msgstr "Write, edit, and publish."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — descendants can't be picked as parent."
@@ -228,6 +233,11 @@ msgstr "{browser} on {os}"
 msgid "editor.layout.characterCount"
 msgstr "{characters, plural, one {# character} other {# characters}}"
 
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.count.draft"
+msgstr "{count, plural, one {# draft} other {# drafts}}"
+
 #. count: number of selected entries
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
@@ -240,6 +250,11 @@ msgstr "{count, plural, one {# entry selected} other {# entries selected}}"
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.pageSummary"
 msgstr "{count, plural, one {# group} other {# groups}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.count.published"
+msgstr "{count, plural, one {# published} other {# published}}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
@@ -2429,6 +2444,11 @@ msgid "type.generic.notFound"
 msgstr "Nothing yet"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.recent.empty"
+msgstr "Nothing yet."
+
+#. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.registrationClosed"
 msgstr "OAuth signup is unavailable until an admin has finished setup."
@@ -2679,6 +2699,11 @@ msgstr "Re-enable user"
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.reassign.label"
 msgstr "Reassign entries to"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.recent.title"
+msgstr "Recent activity"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
@@ -3865,11 +3890,6 @@ msgstr "Welcome, {greeting}"
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.tagline"
 msgstr "What would you like to work on today?"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/index.tsx
-msgid "dashboard.tile.description.generic"
-msgstr "Write, edit, and publish."
 
 #. js-lingui-explicit-id
 #: src/lib/core-settings-i18n.ts

@@ -164,6 +164,11 @@ msgstr ""
 #~ msgstr "Edit"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+#~ msgid "dashboard.tile.description.generic"
+#~ msgstr "写作、编辑和发布。"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — 子项无法被选为父项。"
@@ -228,6 +233,11 @@ msgstr "{browser}（{os}）"
 msgid "editor.layout.characterCount"
 msgstr "{characters, plural, other {# 个字符}}"
 
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.count.draft"
+msgstr "{count, plural, other {草稿 #}}"
+
 #. count: number of selected entries
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
@@ -240,6 +250,11 @@ msgstr "{count, plural, other {已选择 # 个条目}}"
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.pageSummary"
 msgstr "{count, plural, other {# 个分组}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.count.published"
+msgstr "{count, plural, other {已发布 #}}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
@@ -2399,6 +2414,11 @@ msgid "type.generic.notFound"
 msgstr "暂无内容"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.recent.empty"
+msgstr "暂无内容。"
+
+#. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.registrationClosed"
 msgstr "OAuth 注册在管理员完成设置之前不可用。"
@@ -2646,6 +2666,11 @@ msgstr "重新激活用户"
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.reassign.label"
 msgstr "将文章重新分配给"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.recent.title"
+msgstr "最近活动"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
@@ -3799,11 +3824,6 @@ msgstr "欢迎,{greeting}"
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.tagline"
 msgstr "今天想做些什么？"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/index.tsx
-msgid "dashboard.tile.description.generic"
-msgstr "写作、编辑和发布。"
 
 #. js-lingui-explicit-id
 #: src/lib/core-settings-i18n.ts

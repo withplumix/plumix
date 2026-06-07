@@ -164,6 +164,11 @@ msgstr ""
 #~ msgstr "Edit"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+#~ msgid "dashboard.tile.description.generic"
+#~ msgstr "Schreiben, bearbeiten und veröffentlichen."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — Untergeordnete können nicht als übergeordnet ausgewählt werden."
@@ -228,11 +233,17 @@ msgstr "{browser} auf {os}"
 msgid "editor.layout.characterCount"
 msgstr "{characters, plural, one {# Zeichen} other {# Zeichen}}"
 
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.count.draft"
+msgstr "{count, plural, one {# Entwurf} other {# Entwürfe}}"
+
 #. count: number of selected entries
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
 msgid "entries.list.bulk.selected"
-msgstr "{count, plural, one {# Eintrag ausgewählt} other {# Einträge ausgewählt}}"
+msgstr "{count, plural, one {# Eintrag ausgewählt} other {# Einträge "
+"ausgewählt}}"
 
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
@@ -240,6 +251,11 @@ msgstr "{count, plural, one {# Eintrag ausgewählt} other {# Einträge ausgewäh
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.pageSummary"
 msgstr "{count, plural, one {# Gruppe} other {# Gruppen}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.count.published"
+msgstr "{count, plural, one {# veröffentlicht} other {# veröffentlicht}}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
@@ -2457,6 +2473,11 @@ msgid "type.generic.notFound"
 msgstr "Noch nichts"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.recent.empty"
+msgstr "Noch nichts."
+
+#. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.registrationClosed"
 msgstr "OAuth-Registrierung ist nicht verfügbar, bis ein Administrator die "
@@ -2712,6 +2733,11 @@ msgstr "Benutzer reaktivieren"
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.reassign.label"
 msgstr "Beiträge neu zuweisen an"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.recent.title"
+msgstr "Letzte Aktivität"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
@@ -3918,11 +3944,6 @@ msgstr "Willkommen, {greeting}"
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.tagline"
 msgstr "Woran möchten Sie heute arbeiten?"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/index.tsx
-msgid "dashboard.tile.description.generic"
-msgstr "Schreiben, bearbeiten und veröffentlichen."
 
 #. js-lingui-explicit-id
 #: src/lib/core-settings-i18n.ts

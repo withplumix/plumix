@@ -1,6 +1,7 @@
 import { list as activityList } from "./activity.js";
 import { deletePermanentMany, restoreMany, trashMany } from "./bulk.js";
 import { create } from "./create.js";
+import { recentActivity, stats } from "./dashboard.js";
 import { deletePermanent } from "./delete-permanent.js";
 import { discardDraft } from "./discard-draft.js";
 import { duplicate } from "./duplicate.js";
@@ -26,6 +27,8 @@ export const entryRouter = {
   duplicate,
   publish,
   discardDraft,
+  stats,
+  recentActivity,
   revisions: revisionsRouter,
   activity: { list: activityList },
 } as const;
