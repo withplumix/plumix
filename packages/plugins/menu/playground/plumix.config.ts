@@ -34,6 +34,15 @@ export default plumix({
       origin,
     },
   }),
-  plugins: [menu],
+  // Locations are nav slots the theme renders; the e2e locations-tab
+  // canary assigns the Primary menu into "primary".
+  plugins: [
+    menu({
+      locations: {
+        primary: { label: "Primary Nav" },
+        footer: { label: "Footer" },
+      },
+    }),
+  ],
   theme: defineTheme({ templates: { index: () => null } }),
 });

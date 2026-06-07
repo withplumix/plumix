@@ -1,10 +1,22 @@
 import type { Label } from "plumix/i18n";
-import type { EntryTypeLabels, TermTaxonomyLabels } from "plumix/plugin";
+import type {
+  EntryTypeLabels,
+  PluginDescriptor,
+  TermTaxonomyLabels,
+} from "plumix/plugin";
 import { definePlugin } from "plumix/plugin";
 
-import type { ResolvedMenu, ResolvedMenuItem } from "./server/types.js";
+import type {
+  MenuLocationOptions,
+  ResolvedMenu,
+  ResolvedMenuItem,
+} from "./server/types.js";
 import { createMenuRouter } from "./rpc.js";
 import { getMenuByName } from "./server/getMenuByName.js";
+import {
+  clearRegisteredLocations,
+  recordLocation,
+} from "./server/locations.js";
 
 // Plain descriptor literals — plugin source runs server-side without
 // the Babel macro pipeline. Per-entity tables (`MENU_ITEM_LABELS` /
@@ -153,6 +165,16 @@ declare module "plumix/plugin" {
 
 const ADMIN_ENTRY_PATH = "node_modules/@plumix/plugin-menu/dist/admin/index.js";
 
+export interface MenuPluginOptions {
+  /**
+   * Navigation slots the site's theme renders, keyed by location id;
+   * the label shows in the admin Locations tab. Replaces the
+   * registration path lost when `theme.setup` went away — the theme
+   * renders the slots, but the consumer config declares them.
+   */
+  readonly locations?: Readonly<Record<string, MenuLocationOptions>>;
+}
+
 /**
  * `@plumix/plugin-menu` — menus reuse the entries/terms/entry_term substrate
  * rather than adding tables: a menu is a `terms` row (`taxonomy = 'menu'`),
@@ -160,57 +182,69 @@ const ADMIN_ENTRY_PATH = "node_modules/@plumix/plugin-menu/dist/admin/index.js";
  * lives in `entry_term`. Both types are `isPublic: false` so they hide from
  * the generic Entries/Terms admin; the plugin owns its own admin (slices 7+).
  */
-export const menu = definePlugin("menu", {
-  adminEntry: ADMIN_ENTRY_PATH,
-  i18n: {
-    sourceLocale: "en",
-    locales: ["en"],
-    catalogPath: "./locales",
-  },
-  setup: (ctx) => {
-    ctx.registerEntryType("menu_item", {
-      label: MENU_ITEM_LABELS.plural,
-      labels: MENU_ITEM_LABELS,
-      description: "Items belonging to a navigation menu",
-      supports: ["title"],
-      termTaxonomies: ["menu"],
-      isHierarchical: true,
-      isPublic: false,
-      capabilityType: "menu_item",
-    });
+export function menu(
+  options: MenuPluginOptions = {},
+): PluginDescriptor<undefined> {
+  return definePlugin("menu", {
+    adminEntry: ADMIN_ENTRY_PATH,
+    i18n: {
+      sourceLocale: "en",
+      locales: ["en"],
+      catalogPath: "./locales",
+    },
+    setup: (ctx) => {
+      // Reset-then-populate: setup re-runs across dev rebuilds within
+      // one module lifetime, and each build must own the full location
+      // set — a removed config entry has to actually disappear.
+      clearRegisteredLocations();
+      for (const [id, location] of Object.entries(options.locations ?? {})) {
+        recordLocation(id, location);
+      }
 
-    ctx.registerTermTaxonomy("menu", {
-      label: MENU_LABELS.plural,
-      labels: MENU_LABELS,
-      isHierarchical: false,
-      entryTypes: ["menu_item"],
-      isPublic: false,
-    });
+      ctx.registerEntryType("menu_item", {
+        label: MENU_ITEM_LABELS.plural,
+        labels: MENU_ITEM_LABELS,
+        description: "Items belonging to a navigation menu",
+        supports: ["title"],
+        termTaxonomies: ["menu"],
+        isHierarchical: true,
+        isPublic: false,
+        capabilityType: "menu_item",
+      });
 
-    ctx.registerTemplateDep("menus", {
-      load: async (slugs, appCtx) => {
-        const result: Record<string, ResolvedMenu | null> = {};
-        await Promise.all(
-          slugs.map(async (slug) => {
-            result[slug] = await getMenuByName(appCtx, slug);
-          }),
-        );
-        return result;
-      },
-    });
-
-    ctx.registerRpcRouter(createMenuRouter());
-
-    ctx.registerAdminPage({
-      path: "/menus",
-      title: MENU_LABELS.plural,
-      capability: "term:menu:manage",
-      nav: {
-        group: { id: "appearance", label: APPEARANCE_LABEL, priority: 175 },
+      ctx.registerTermTaxonomy("menu", {
         label: MENU_LABELS.plural,
-        order: 10,
-      },
-      component: "MenusShell",
-    });
-  },
-});
+        labels: MENU_LABELS,
+        isHierarchical: false,
+        entryTypes: ["menu_item"],
+        isPublic: false,
+      });
+
+      ctx.registerTemplateDep("menus", {
+        load: async (slugs, appCtx) => {
+          const result: Record<string, ResolvedMenu | null> = {};
+          await Promise.all(
+            slugs.map(async (slug) => {
+              result[slug] = await getMenuByName(appCtx, slug);
+            }),
+          );
+          return result;
+        },
+      });
+
+      ctx.registerRpcRouter(createMenuRouter());
+
+      ctx.registerAdminPage({
+        path: "/menus",
+        title: MENU_LABELS.plural,
+        capability: "term:menu:manage",
+        nav: {
+          group: { id: "appearance", label: APPEARANCE_LABEL, priority: 175 },
+          label: MENU_LABELS.plural,
+          order: 10,
+        },
+        component: "MenusShell",
+      });
+    },
+  });
+}

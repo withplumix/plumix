@@ -55,7 +55,7 @@ async function setup(): Promise<Bundle> {
   const hooks = new HookRegistry();
   const registry = createPluginRegistry();
   registerCoreLookupAdapters(registry);
-  await installPlugins({ hooks, plugins: [menu], registry });
+  await installPlugins({ hooks, plugins: [menu()], registry });
   const user = await adminUser
     .transient({ db })
     .create({ email: "hooks@example.test" });

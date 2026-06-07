@@ -2,12 +2,13 @@ import type { MenuLocationOptions, RegisteredMenuLocation } from "./types.js";
 import { MenuPluginError } from "../errors.js";
 
 /**
- * Module-scoped registry of menu locations populated at boot. The
- * menu RPC's `locations.list` + `locations.assign` procedures read it
- * to validate which location slots a theme has declared. Tests reset
- * state between cases via `clearRegisteredLocations`. A re-registration
- * path for themes (lost when `theme.setup` went away) is a separate
- * follow-up.
+ * Module-scoped registry of menu locations. Populated by the menu
+ * plugin's `setup` from `menu({ locations })`, which resets it first —
+ * setup re-runs within one module lifetime (dev rebuilds boot the app
+ * more than once), so the registry must reflect the latest build's
+ * declarations, not an additive union of every boot. The menu RPC's
+ * `locations.list` + `locations.assign` procedures read it to validate
+ * which location slots the consumer has declared.
  */
 const locations = new Map<string, RegisteredMenuLocation>();
 
@@ -47,7 +48,12 @@ export function getRegisteredLocations(): ReadonlyMap<
   return locations;
 }
 
-/** Test-only: reset state between cases. Production never calls this. */
+/**
+ * Reset the registry. The plugin's `setup` calls this before
+ * re-populating so each build declaratively owns the full location
+ * set — a removed config entry actually disappears. Tests use it to
+ * isolate cases.
+ */
 export function clearRegisteredLocations(): void {
   locations.clear();
 }
