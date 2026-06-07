@@ -35,6 +35,22 @@ describe("puckDataToBlockTree", () => {
     ]);
   });
 
+  test("preserves an arbitrary string attr verbatim (e.g. a legacy code-block language)", () => {
+    // #881: the code block's language is a free-text combobox, so a
+    // value authored before the picker ("ts", or an unknown language)
+    // must survive the Puck round-trip rather than being dropped/snapped.
+    const result = puckDataToBlockTree(
+      data([
+        {
+          type: "core/code",
+          props: { id: "c1", text: "const x = 1;", language: "ts" },
+        },
+      ]),
+    );
+
+    expect(result[0]?.attrs?.language).toBe("ts");
+  });
+
   test("uses a fallback id when props.id is missing or empty", () => {
     const result = puckDataToBlockTree(
       data([
