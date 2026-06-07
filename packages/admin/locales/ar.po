@@ -164,6 +164,11 @@ msgstr ""
 #~ msgstr "Edit"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+#~ msgid "dashboard.tile.description.generic"
+#~ msgstr "اكتب، حرّر، انشر."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — لا يمكن اختيار الأبناء كأب."
@@ -229,12 +234,18 @@ msgid "editor.layout.characterCount"
 msgstr "{characters, plural, zero {# حرف} one {حرف واحد} two {حرفان} few {# "
 "أحرف} many {# حرفًا} other {# حرف}}"
 
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.count.draft"
+msgstr "{count, plural, zero {# مسودة} one {# مسودة} two {مسودتان} few {# مسودات} many {# مسودة} other {# مسودة}}"
+
 #. count: number of selected entries
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
 msgid "entries.list.bulk.selected"
-msgstr "{count, plural, zero {# إدخال محدد} one {# إدخال محدد} two {تم تحديد إدخالين} few {# إدخالات محددة} many {# إدخالًا محددًا} other {# إدخال محدد}}"
-"many {# محددًا} other {# محدد}}"
+msgstr "{count, plural, zero {# إدخال محدد} one {# إدخال محدد} two {تم تحديد "
+"إدخالين} few {# إدخالات محددة} many {# إدخالًا محددًا} other {# إدخال "
+"محدد}}many {# محددًا} other {# محدد}}"
 
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
@@ -243,6 +254,11 @@ msgstr "{count, plural, zero {# إدخال محدد} one {# إدخال محدد}
 msgid "settings.pageSummary"
 msgstr "{count, plural, zero {لا توجد مجموعات} one {مجموعة واحدة} two "
 "{مجموعتان} few {# مجموعات} many {# مجموعة} other {# مجموعة}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.count.published"
+msgstr "{count, plural, zero {# منشور} one {# منشور} two {منشوران} few {# منشورات} many {# منشورًا} other {# منشور}}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
@@ -2437,6 +2453,11 @@ msgid "type.generic.notFound"
 msgstr "لا شيء بعد"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.recent.empty"
+msgstr "لا شيء بعد."
+
+#. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.registrationClosed"
 msgstr "تسجيل OAuth غير متاح حتى ينتهي المدير من الإعداد."
@@ -2686,6 +2707,11 @@ msgstr "إعادة تفعيل المستخدم"
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.reassign.label"
 msgstr "إعادة تعيين المنشورات إلى"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.recent.title"
+msgstr "النشاط الأخير"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
@@ -3858,11 +3884,6 @@ msgstr "مرحباً، {greeting}"
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.tagline"
 msgstr "ما الذي تريد العمل عليه اليوم؟"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/index.tsx
-msgid "dashboard.tile.description.generic"
-msgstr "اكتب، حرّر، انشر."
 
 #. js-lingui-explicit-id
 #: src/lib/core-settings-i18n.ts

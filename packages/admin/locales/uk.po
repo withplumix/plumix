@@ -164,6 +164,11 @@ msgstr ""
 #~ msgstr "Edit"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+#~ msgid "dashboard.tile.description.generic"
+#~ msgstr "Пишіть, редагуйте та публікуйте."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — нащадків не можна вибрати як батьківський елемент."
@@ -229,12 +234,17 @@ msgid "editor.layout.characterCount"
 msgstr "{characters, plural, one {# символ} few {# символи} many {# символів} "
 "other {# символа}}"
 
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.count.draft"
+msgstr "{count, plural, one {# чернетка} few {# чернетки} many {# чернеток} other {# чернетки}}"
+
 #. count: number of selected entries
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
 msgid "entries.list.bulk.selected"
-msgstr "{count, plural, one {# запис вибрано} few {# записи вибрано} many {# записів вибрано} other {# запису вибрано}}"
-"{# вибрано}}"
+msgstr "{count, plural, one {# запис вибрано} few {# записи вибрано} many {# "
+"записів вибрано} other {# запису вибрано}}{# вибрано}}"
 
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
@@ -243,6 +253,11 @@ msgstr "{count, plural, one {# запис вибрано} few {# записи в
 msgid "settings.pageSummary"
 msgstr "{count, plural, one {# група} few {# групи} many {# груп} other {# "
 "груп}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.count.published"
+msgstr "{count, plural, one {# опубліковано} few {# опубліковано} many {# опубліковано} other {# опубліковано}}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
@@ -2447,6 +2462,11 @@ msgid "type.generic.notFound"
 msgstr "Поки нічого"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.recent.empty"
+msgstr "Поки нічого."
+
+#. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.registrationClosed"
 msgstr "Реєстрація через OAuth недоступна, доки адміністратор не завершив "
@@ -2701,6 +2721,11 @@ msgstr "Повторно ввімкнути користувача"
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.reassign.label"
 msgstr "Переназначити записи на"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/index.tsx
+msgid "dashboard.recent.title"
+msgstr "Нещодавня активність"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
@@ -3894,11 +3919,6 @@ msgstr "Вітаємо, {greeting}"
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.tagline"
 msgstr "Над чим хочете попрацювати сьогодні?"
-
-#. js-lingui-explicit-id
-#: src/routes/_authenticated/index.tsx
-msgid "dashboard.tile.description.generic"
-msgstr "Пишіть, редагуйте та публікуйте."
 
 #. js-lingui-explicit-id
 #: src/lib/core-settings-i18n.ts

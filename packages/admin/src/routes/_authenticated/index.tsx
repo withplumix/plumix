@@ -1,4 +1,6 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button.js";
 import {
   Card,
@@ -14,12 +16,28 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty.js";
+import { toDate } from "@/lib/dates.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import { visibleEntryTypes } from "@/lib/manifest.js";
+import { orpc } from "@/lib/orpc.js";
+import { useFormatters } from "@/lib/use-formatters.js";
 import { useLabel } from "@/lib/use-label.js";
-import { Trans } from "@lingui/react";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, FileText, Puzzle } from "lucide-react";
+
+const M = {
+  countPublished: defineMessage({
+    id: "dashboard.count.published",
+    message: "{count, plural, one {# published} other {# published}}",
+  }),
+  countDraft: defineMessage({
+    id: "dashboard.count.draft",
+    message: "{count, plural, one {# draft} other {# drafts}}",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 export const Route = createFileRoute("/_authenticated/")({
   component: DashboardIndex,
@@ -30,6 +48,22 @@ function DashboardIndex(): ReactNode {
   const greeting = user.name ?? user.email;
   const tiles = visibleEntryTypes(user.capabilities);
   const renderLabel = useLabel();
+  const { i18n } = useLingui();
+  const { formatRelative } = useFormatters();
+
+  const statsQuery = useQuery(orpc.entry.stats.queryOptions({ input: {} }));
+  const recentQuery = useQuery(
+    orpc.entry.recentActivity.queryOptions({ input: { limit: 8 } }),
+  );
+
+  // type → { status → count } for O(1) tile lookups.
+  const countsByType = useMemo(() => {
+    const map: Record<string, Record<string, number>> = {};
+    for (const row of statsQuery.data ?? []) {
+      (map[row.type] ??= {})[row.status] = row.count;
+    }
+    return map;
+  }, [statsQuery.data]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -57,10 +91,7 @@ function DashboardIndex(): ReactNode {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {tiles.map((pt) => {
             const label = renderLabel(pt.labels?.plural ?? pt.label);
-            // Tile description + browse-button copy stay noun-less so
-            // the lowercase-the-plural substitution can't reach DE/RU/
-            // PL/UK/AR users. The tile title already carries the type's
-            // plural label up top.
+            const counts = countsByType[pt.name] ?? {};
             return (
               <Card key={pt.name} data-testid={`dashboard-tile-${pt.name}`}>
                 <CardHeader>
@@ -68,12 +99,19 @@ function DashboardIndex(): ReactNode {
                     <FileText className="size-5" aria-hidden />
                   </div>
                   <CardTitle>{label}</CardTitle>
-                  <CardDescription>
-                    {pt.description ?? (
-                      <Trans
-                        id="dashboard.tile.description.generic"
-                        message="Write, edit, and publish."
-                      />
+                  <CardDescription
+                    data-testid={`dashboard-tile-${pt.name}-counts`}
+                  >
+                    {i18n._(
+                      M.countPublished.id,
+                      { count: counts.published ?? 0 },
+                      { message: M.countPublished.message },
+                    )}
+                    {" · "}
+                    {i18n._(
+                      M.countDraft.id,
+                      { count: counts.draft ?? 0 },
+                      { message: M.countDraft.message },
                     )}
                   </CardDescription>
                 </CardHeader>
@@ -121,6 +159,54 @@ function DashboardIndex(): ReactNode {
           </Empty>
         </Card>
       )}
+
+      {tiles.length > 0 ? (
+        <Card data-testid="dashboard-recent-activity">
+          <CardHeader>
+            <CardTitle>
+              <Trans id="dashboard.recent.title" message="Recent activity" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(recentQuery.data ?? []).length === 0 ? (
+              <p className="text-muted-foreground text-sm">
+                <Trans id="dashboard.recent.empty" message="Nothing yet." />
+              </p>
+            ) : (
+              <ul className="flex flex-col divide-y">
+                {(recentQuery.data ?? []).map((row) => {
+                  const tile = tiles.find((t) => t.name === row.type);
+                  const inner = (
+                    <>
+                      <span className="truncate">{row.title}</span>
+                      <span className="text-muted-foreground ms-auto shrink-0 text-xs">
+                        {formatRelative(toDate(row.updatedAt))}
+                      </span>
+                    </>
+                  );
+                  return (
+                    <li key={row.id} data-testid={`dashboard-recent-${row.id}`}>
+                      {tile ? (
+                        <Link
+                          to="/entries/$slug/$id/edit"
+                          params={{ slug: tile.adminSlug, id: row.id }}
+                          className="hover:text-primary flex items-center gap-2 py-2 text-sm"
+                        >
+                          {inner}
+                        </Link>
+                      ) : (
+                        <div className="flex items-center gap-2 py-2 text-sm">
+                          {inner}
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }
