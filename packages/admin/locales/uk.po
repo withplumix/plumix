@@ -968,6 +968,11 @@ msgid "blockActions.copyJson"
 msgstr "Копіювати JSON"
 
 #. js-lingui-explicit-id
+#: src/editor/CopyPreviewLinkButton.tsx
+msgid "editor.previewLink.copy"
+msgstr "Скопіювати посилання для попереднього перегляду"
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.secret.description"
 msgstr "Скопіюйте секрет зараз. Ми не покажемо його знову — втратите доведеться "
@@ -1005,6 +1010,11 @@ msgstr "Не вдалося виконати запит. Спробуйте зн
 #: src/lib/email-change-errors.ts
 msgid "emailChange.error.fallback"
 msgstr "Не вдалося підтвердити зміну email. Спробуйте знову."
+
+#. js-lingui-explicit-id
+#: src/editor/CopyPreviewLinkButton.tsx
+msgid "editor.previewLink.failed"
+msgstr "Не вдалося створити посилання для попереднього перегляду"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/create.tsx
@@ -2644,6 +2654,11 @@ msgstr "Не вдалося відобразити сторінку плагін
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.col.prefix"
 msgstr "Префікс"
+
+#. js-lingui-explicit-id
+#: src/editor/CopyPreviewLinkButton.tsx
+msgid "editor.previewLink.copied"
+msgstr "Посилання для попереднього перегляду скопійовано"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx

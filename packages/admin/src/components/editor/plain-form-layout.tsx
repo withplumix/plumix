@@ -63,6 +63,9 @@ interface PlainFormLayoutProps {
   // `<RevisionsSheet />` with RPC fetchers + onRestore and passes it
   // here when the entry type declares `supports: ['revisions']`.
   readonly revisionsTrigger?: ReactNode;
+  // Optional "Copy preview link" action slot — route layer wires the
+  // entry.createPreviewLink RPC and passes the button here.
+  readonly previewLinkAction?: ReactNode;
   // Debounce window for autosave. When > 0, value edits trigger
   // `onSubmit` after the window elapses with no new edits. 0 (default)
   // disables autosave entirely so the layout keeps its explicit-save
@@ -93,6 +96,7 @@ export function PlainFormLayout({
   serverError,
   onSubmit,
   revisionsTrigger,
+  previewLinkAction,
   autosaveMs = 0,
 }: PlainFormLayoutProps): ReactElement {
   const renderLabel = useLabel();
@@ -160,6 +164,7 @@ export function PlainFormLayout({
           >
             {renderLabel(LABEL[saveStatus])}
           </span>
+          {previewLinkAction}
           {revisionsTrigger}
           <Button
             type="submit"

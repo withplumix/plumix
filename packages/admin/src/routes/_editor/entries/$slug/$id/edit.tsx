@@ -19,6 +19,7 @@ import { buildAdminPatternRegistry } from "@/editor/admin-pattern-registry.js";
 import { AutosaveStatusContext } from "@/editor/AutosaveStatus.js";
 import { blockSpecsToPuckComponents } from "@/editor/block-adapter.js";
 import { CoAuthorIndicator } from "@/editor/CoAuthorIndicator.js";
+import { CopyPreviewLinkButton } from "@/editor/CopyPreviewLinkButton.js";
 import { createDebouncer } from "@/editor/debounce.js";
 import { detectStaleAutosave } from "@/editor/detect-stale-autosave.js";
 import { PlumixEditorLayout } from "@/editor/EditorLayout.js";
@@ -933,6 +934,14 @@ function PuckSpikeRouteInner({
       isPublishing: publish.isPending,
       isPublished,
       revisionsTrigger,
+      // Only public types have a public URL to preview; non-public types
+      // would always 409 on mint, so don't offer the action.
+      previewLinkAction:
+        entryType?.isPublic === false ? undefined : (
+          <CopyPreviewLinkButton
+            mintPreviewLink={() => orpc.entry.createPreviewLink.call({ id })}
+          />
+        ),
       coAuthorIndicator:
         coAuthors.length > 0 ? (
           <CoAuthorIndicator users={coAuthors} relativeTime={formatRelative} />
@@ -941,6 +950,8 @@ function PuckSpikeRouteInner({
       draftMode: draftModeProp,
     }),
     [
+      id,
+      entryType,
       title,
       handleTitleChange,
       backHref,
@@ -1257,6 +1268,13 @@ function PlainFormRouteInner({
       serverError={renderedError}
       autosaveMs={500}
       revisionsTrigger={revisionsTrigger}
+      previewLinkAction={
+        entryType.isPublic === false ? undefined : (
+          <CopyPreviewLinkButton
+            mintPreviewLink={() => orpc.entry.createPreviewLink.call({ id })}
+          />
+        )
+      }
       onSubmit={(values) =>
         updateMutation.mutate({
           title: values.title,

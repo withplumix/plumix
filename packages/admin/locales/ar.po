@@ -965,6 +965,11 @@ msgid "blockActions.copyJson"
 msgstr "نسخ JSON"
 
 #. js-lingui-explicit-id
+#: src/editor/CopyPreviewLinkButton.tsx
+msgid "editor.previewLink.copy"
+msgstr "نسخ رابط المعاينة"
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.secret.description"
 msgstr "انسخ السرّ الآن. لن نعرضه مرة أخرى — فقدانه يعني إلغاءه وإصدار رمز "
@@ -1002,6 +1007,11 @@ msgstr "تعذّر إكمال الطلب. حاول مرة أخرى."
 #: src/lib/email-change-errors.ts
 msgid "emailChange.error.fallback"
 msgstr "تعذّر تأكيد تغيير البريد. حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/editor/CopyPreviewLinkButton.tsx
+msgid "editor.previewLink.failed"
+msgstr "تعذّر إنشاء رابط المعاينة"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/create.tsx
@@ -2630,6 +2640,11 @@ msgstr "فشل عرض صفحة الإضافة"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.col.prefix"
 msgstr "البادئة"
+
+#. js-lingui-explicit-id
+#: src/editor/CopyPreviewLinkButton.tsx
+msgid "editor.previewLink.copied"
+msgstr "تم نسخ رابط المعاينة إلى الحافظة"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx

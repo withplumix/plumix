@@ -962,6 +962,11 @@ msgid "blockActions.copyJson"
 msgstr "JSON kopieren"
 
 #. js-lingui-explicit-id
+#: src/editor/CopyPreviewLinkButton.tsx
+msgid "editor.previewLink.copy"
+msgstr "Vorschaulink kopieren"
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.secret.description"
 msgstr "Kopieren Sie das Geheimnis jetzt. Wir zeigen es nicht erneut an — wenn "
@@ -999,6 +1004,11 @@ msgstr "Anfrage konnte nicht abgeschlossen werden. Bitte erneut versuchen."
 #: src/lib/email-change-errors.ts
 msgid "emailChange.error.fallback"
 msgstr "E-Mail-Änderung konnte nicht bestätigt werden. Bitte erneut versuchen."
+
+#. js-lingui-explicit-id
+#: src/editor/CopyPreviewLinkButton.tsx
+msgid "editor.previewLink.failed"
+msgstr "Vorschaulink konnte nicht erstellt werden"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/create.tsx
@@ -2654,6 +2664,11 @@ msgstr "Plugin-Seite konnte nicht gerendert werden"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.col.prefix"
 msgstr "Präfix"
+
+#. js-lingui-explicit-id
+#: src/editor/CopyPreviewLinkButton.tsx
+msgid "editor.previewLink.copied"
+msgstr "Vorschaulink in die Zwischenablage kopiert"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx

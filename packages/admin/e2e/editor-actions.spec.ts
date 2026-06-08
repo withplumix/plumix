@@ -374,6 +374,28 @@ test.describe("editor actions: pattern authoring", () => {
     expect(clipboard).toContain('text: "Seeded heading"');
     expect(clipboard).toContain('block("core/rich-text"');
   });
+
+  test("copy preview link writes the absolute preview url to the clipboard", async ({
+    page,
+  }) => {
+    await installEditorMocks(page, {
+      handlers: {
+        "/entry/createPreviewLink": {
+          token: "tok123",
+          url: "/post/hello?preview=tok123",
+        },
+      },
+    });
+    await page.goto("entries/posts/1/edit");
+    await dismissStarterModal(page);
+
+    await page.getByTestId("editor-copy-preview-link").click();
+    await expect(page.getByTestId("toast-success")).toBeVisible();
+
+    const clipboard = await page.evaluate(() => navigator.clipboard.readText());
+    expect(clipboard).toContain("/post/hello?preview=tok123");
+    expect(clipboard).toMatch(/^https?:\/\//);
+  });
 });
 
 test.describe("editor actions: draft of a published entry", () => {

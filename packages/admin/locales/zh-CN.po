@@ -938,6 +938,11 @@ msgid "blockActions.copyJson"
 msgstr "复制 JSON"
 
 #. js-lingui-explicit-id
+#: src/editor/CopyPreviewLinkButton.tsx
+msgid "editor.previewLink.copy"
+msgstr "复制预览链接"
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.secret.description"
 msgstr "立即复制密钥。我们不会再次显示 — 如果遗失，您必须撤销并重新创建。"
@@ -972,6 +977,11 @@ msgstr "无法完成请求。请重试。"
 #: src/lib/email-change-errors.ts
 msgid "emailChange.error.fallback"
 msgstr "无法确认电子邮箱更改。请重试。"
+
+#. js-lingui-explicit-id
+#: src/editor/CopyPreviewLinkButton.tsx
+msgid "editor.previewLink.failed"
+msgstr "无法创建预览链接"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/create.tsx
@@ -2587,6 +2597,11 @@ msgstr "插件页面渲染失败"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.col.prefix"
 msgstr "前缀"
+
+#. js-lingui-explicit-id
+#: src/editor/CopyPreviewLinkButton.tsx
+msgid "editor.previewLink.copied"
+msgstr "预览链接已复制到剪贴板"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
