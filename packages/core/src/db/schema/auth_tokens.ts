@@ -11,6 +11,7 @@ export const AUTH_TOKEN_TYPES = [
   "password_reset",
   "invite",
   "oauth_state",
+  "preview_link",
 ] as const;
 
 export type AuthTokenType = (typeof AUTH_TOKEN_TYPES)[number];
