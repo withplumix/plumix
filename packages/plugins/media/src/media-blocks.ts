@@ -1,6 +1,7 @@
 import type { BlockSpec } from "plumix/blocks";
 
 import { audioBlock } from "./blocks/audio/index.js";
+import { embedBlock } from "./blocks/embed/index.js";
 import { fileBlock } from "./blocks/file/index.js";
 import { galleryBlock } from "./blocks/gallery/index.js";
 import { imageBlock } from "./blocks/image/index.js";
@@ -15,4 +16,5 @@ export const mediaBlocks: readonly BlockSpec[] = Object.freeze([
   videoBlock,
   audioBlock,
   fileBlock,
+  embedBlock,
 ]);
