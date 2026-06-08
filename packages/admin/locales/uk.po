@@ -237,7 +237,8 @@ msgstr "{characters, plural, one {# символ} few {# символи} many {#
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.count.draft"
-msgstr "{count, plural, one {# чернетка} few {# чернетки} many {# чернеток} other {# чернетки}}"
+msgstr "{count, plural, one {# чернетка} few {# чернетки} many {# чернеток} "
+"other {# чернетки}}"
 
 #. count: number of selected entries
 #. js-lingui-explicit-id
@@ -257,7 +258,8 @@ msgstr "{count, plural, one {# група} few {# групи} many {# груп} 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.count.published"
-msgstr "{count, plural, one {# опубліковано} few {# опубліковано} many {# опубліковано} other {# опубліковано}}"
+msgstr "{count, plural, one {# опубліковано} few {# опубліковано} many {# "
+"опубліковано} other {# опубліковано}}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
@@ -323,6 +325,12 @@ msgstr "{display} · востаннє {lastSeen}"
 #: src/lib/plugin-error-boundary.tsx
 msgid "plugin.errorBoundary.inlineStub"
 msgstr "{label} {kind}: помилка"
+
+#. label: a plugin-author-provided name (e.g. 'SEO meta')
+#. js-lingui-explicit-id
+#: src/lib/plugin-error-boundary.tsx
+msgid "plugin.errorBoundary.widgetBody"
+msgstr "{label} не вдалося відобразити."
 
 #. label: a plugin-author-provided name (e.g. 'SEO meta', 'Hero block')
 #. js-lingui-explicit-id

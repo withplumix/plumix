@@ -6,7 +6,7 @@ import { i18n } from "@lingui/core";
 import { defineMessage } from "@lingui/core/macro";
 import { AlertTriangle } from "lucide-react";
 
-type Kind = "page" | "icon" | "block" | "field";
+type Kind = "page" | "widget" | "icon" | "block" | "field";
 
 interface Props {
   readonly kind: Kind;
@@ -37,6 +37,13 @@ const M = {
     comment:
       "label: a plugin-author-provided name (e.g. 'SEO meta', 'Hero block')",
   }),
+  // Card-body alert for a dashboard widget — the host already supplies
+  // the card chrome and title, so this fills just the body.
+  widgetBody: defineMessage({
+    id: "plugin.errorBoundary.widgetBody",
+    message: "{label} failed to render.",
+    comment: "label: a plugin-author-provided name (e.g. 'SEO meta')",
+  }),
   // Inline stub for blocks / field renderers — `{kind}` is the
   // protocol discriminator (block / field) verbatim. Localizing it
   // would require a kind→noun map; keep raw for now (same policy
@@ -58,8 +65,8 @@ const M = {
  * Catch render errors in plugin-supplied components so a third-party
  * bug doesn't take down the surrounding admin shell. Each kind picks
  * a fallback shape that fits its host context: pages get a full-card
- * alert, icons get a tiny warning glyph, blocks/fields get inline
- * stubs.
+ * alert, widgets get a card-body alert, icons get a tiny warning glyph,
+ * blocks/fields get inline stubs.
  *
  * Class component because React error boundaries still require it
  * (no hook equivalent for `componentDidCatch` as of React 19). Label
@@ -118,6 +125,21 @@ export class PluginErrorBoundary extends Component<Props, State> {
             </AlertDescription>
           </Alert>
         </div>
+      );
+    }
+
+    if (kind === "widget") {
+      return (
+        <Alert variant="destructive" data-testid="plugin-widget__error">
+          <AlertTriangle className="size-4" />
+          <AlertDescription>
+            {i18n._(
+              M.widgetBody.id,
+              { label },
+              { message: M.widgetBody.message },
+            )}
+          </AlertDescription>
+        </Alert>
       );
     }
 

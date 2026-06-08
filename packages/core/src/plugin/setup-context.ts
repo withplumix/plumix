@@ -23,6 +23,7 @@ import type { TemplateDepRegistry } from "../template.js";
 import type { LookupAdapterOptions } from "./lookup.js";
 import type {
   AdminPageOptions,
+  DashboardWidgetOptions,
   EntryMetaBoxOptions,
   EntryTypeOptions,
   FieldTypeOptions,
@@ -51,6 +52,7 @@ import { CORE_RPC_NAMESPACES } from "./manifest.js";
 import {
   assertComponentRef,
   assertMetaBoxFields,
+  assertNamespacedId,
   assertValidAdminPagePath,
   assertValidFieldTypeName,
   assertValidIdentifier,
@@ -182,6 +184,13 @@ export interface PluginSetupContextBase {
   }): void;
 
   registerAdminPage(options: AdminPageOptions): void;
+  /**
+   * Register a widget rendered on the admin dashboard. The component is
+   * resolved from the plugin's admin chunk at render; gate visibility
+   * with `capability`. Mirrors `registerAdminPage` but targets the
+   * dashboard grid instead of a route.
+   */
+  registerDashboardWidget(options: DashboardWidgetOptions): void;
   registerFieldType(options: FieldTypeOptions): void;
   /**
    * Register a `BlockSpec` produced by `defineBlock` from `plumix/blocks`.
@@ -514,6 +523,25 @@ export function createPluginSetupContext({
         assertValidNavGroupId(pluginId, groupId);
       }
       registry.adminPages.set(options.path, {
+        ...options,
+        registeredBy: pluginId,
+      });
+    },
+
+    registerDashboardWidget: (options) => {
+      assertNamespacedId("dashboard widget id", options.id, pluginId);
+      if (registry.dashboardWidgets.has(options.id)) {
+        throw DuplicateRegistrationError.alreadyRegistered({
+          kind: "dashboard widget",
+          identifier: options.id,
+        });
+      }
+      assertComponentRef(
+        pluginId,
+        `dashboard widget "${options.id}"`,
+        options.component,
+      );
+      registry.dashboardWidgets.set(options.id, {
         ...options,
         registeredBy: pluginId,
       });

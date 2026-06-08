@@ -237,7 +237,8 @@ msgstr "{characters, plural, zero {# حرف} one {حرف واحد} two {حرفا
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.count.draft"
-msgstr "{count, plural, zero {# مسودة} one {# مسودة} two {مسودتان} few {# مسودات} many {# مسودة} other {# مسودة}}"
+msgstr "{count, plural, zero {# مسودة} one {# مسودة} two {مسودتان} few {# "
+"مسودات} many {# مسودة} other {# مسودة}}"
 
 #. count: number of selected entries
 #. js-lingui-explicit-id
@@ -258,7 +259,8 @@ msgstr "{count, plural, zero {لا توجد مجموعات} one {مجموعة و
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.count.published"
-msgstr "{count, plural, zero {# منشور} one {# منشور} two {منشوران} few {# منشورات} many {# منشورًا} other {# منشور}}"
+msgstr "{count, plural, zero {# منشور} one {# منشور} two {منشوران} few {# "
+"منشورات} many {# منشورًا} other {# منشور}}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
@@ -328,6 +330,12 @@ msgstr "{display} · آخر ظهور {lastSeen}"
 #: src/lib/plugin-error-boundary.tsx
 msgid "plugin.errorBoundary.inlineStub"
 msgstr "فشل {label} {kind}"
+
+#. label: a plugin-author-provided name (e.g. 'SEO meta')
+#. js-lingui-explicit-id
+#: src/lib/plugin-error-boundary.tsx
+msgid "plugin.errorBoundary.widgetBody"
+msgstr "فشل عرض {label}."
 
 #. label: a plugin-author-provided name (e.g. 'SEO meta', 'Hero block')
 #. js-lingui-explicit-id

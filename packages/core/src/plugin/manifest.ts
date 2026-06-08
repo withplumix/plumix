@@ -1029,6 +1029,34 @@ export interface RegisteredAdminPage extends AdminPageOptions {
   readonly registeredBy: string | null;
 }
 
+export interface DashboardWidgetOptions {
+  /** Unique widget id, conventionally `<pluginId>:<name>`. */
+  readonly id: string;
+  readonly title: Label;
+  /** Hidden unless the viewer holds this capability (when set). */
+  readonly capability?: string;
+  /** Export name in the plugin's admin chunk, resolved at render. */
+  readonly component: PluginComponentRef;
+  /** Lower sorts first on the dashboard; unset sorts last. */
+  readonly priority?: number;
+}
+
+export interface RegisteredDashboardWidget extends DashboardWidgetOptions {
+  readonly registeredBy: string | null;
+}
+
+// Wire shape intentionally equals DashboardWidgetOptions (minus
+// registeredBy) — unlike e.g. FieldTypeManifestEntry, a widget's options
+// carry nothing server-only to drop, so the manifest entry just mirrors
+// them as the admin-facing boundary.
+export interface DashboardWidgetManifestEntry {
+  readonly id: string;
+  readonly title: Label;
+  readonly capability?: string;
+  readonly component: PluginComponentRef;
+  readonly priority?: number;
+}
+
 /**
  * Built-in nav-icon names that core nav items reference. The admin maps
  * each value to a lucide component at render time — keeps the wire
@@ -1252,6 +1280,7 @@ export interface PluginRegistry {
   readonly rawRoutes: readonly RegisteredRawRoute[];
   readonly loginLinks: readonly RegisteredLoginLink[];
   readonly adminPages: ReadonlyMap<string, RegisteredAdminPage>;
+  readonly dashboardWidgets: ReadonlyMap<string, RegisteredDashboardWidget>;
   readonly fieldTypes: ReadonlyMap<string, RegisteredFieldType>;
   readonly blockSpecs: ReadonlyMap<string, RegisteredBlock>;
   readonly markSpecs: ReadonlyMap<string, RegisteredMark>;
@@ -1275,6 +1304,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly rawRoutes: RegisteredRawRoute[];
   readonly loginLinks: RegisteredLoginLink[];
   readonly adminPages: Map<string, RegisteredAdminPage>;
+  readonly dashboardWidgets: Map<string, RegisteredDashboardWidget>;
   readonly fieldTypes: Map<string, RegisteredFieldType>;
   readonly blockSpecs: Map<string, RegisteredBlock>;
   readonly markSpecs: Map<string, RegisteredMark>;
@@ -1299,6 +1329,7 @@ export function createPluginRegistry(): MutablePluginRegistry {
     rawRoutes: [],
     loginLinks: [],
     adminPages: new Map(),
+    dashboardWidgets: new Map(),
     fieldTypes: new Map(),
     blockSpecs: new Map(),
     markSpecs: new Map(),
@@ -1656,6 +1687,7 @@ export interface PlumixManifest {
   readonly settingsGroups?: readonly SettingsGroupManifestEntry[];
   readonly settingsPages?: readonly SettingsPageManifestEntry[];
   readonly adminNav?: readonly AdminNavGroup[];
+  readonly dashboardWidgets?: readonly DashboardWidgetManifestEntry[];
   readonly fieldTypes?: readonly FieldTypeManifestEntry[];
   readonly blocks?: readonly BlockManifestEntry[];
   readonly marks?: readonly MarkManifestEntry[];
@@ -1741,6 +1773,7 @@ export function emptyManifest(): PlumixManifest {
     settingsGroups: [],
     settingsPages: [],
     adminNav: [],
+    dashboardWidgets: [],
     fieldTypes: [],
     blocks: [],
     marks: [],
@@ -1834,6 +1867,9 @@ export function buildManifest(
     .sort(byPriorityThen((p) => p.name));
   assertSettingsPageGroupsExist(settingsPages, registry.settingsGroups);
   const adminNav = projectAdminNav(registry, entries, termTaxonomies);
+  const dashboardWidgets = Array.from(registry.dashboardWidgets.values())
+    .map(toDashboardWidgetEntry)
+    .sort(byPriorityThen((w) => w.id));
   const fieldTypes = Array.from(registry.fieldTypes.values())
     .map(toFieldTypeEntry)
     .sort((a, b) => a.type.localeCompare(b.type));
@@ -1855,6 +1891,7 @@ export function buildManifest(
     settingsGroups,
     settingsPages,
     adminNav,
+    dashboardWidgets,
     fieldTypes,
     blocks,
     marks,
@@ -2532,6 +2569,13 @@ function toFieldTypeEntry(
 ): FieldTypeManifestEntry {
   const { type, component } = fieldType;
   return { type, component };
+}
+
+function toDashboardWidgetEntry(
+  widget: RegisteredDashboardWidget,
+): DashboardWidgetManifestEntry {
+  const { id, title, capability, component, priority } = widget;
+  return { id, title, capability, component, priority };
 }
 
 function toBlockEntry(block: RegisteredBlock): BlockManifestEntry {

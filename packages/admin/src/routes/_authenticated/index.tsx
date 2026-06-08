@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/empty.js";
 import { toDate } from "@/lib/dates.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
-import { visibleEntryTypes } from "@/lib/manifest.js";
+import { visibleDashboardWidgets, visibleEntryTypes } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useFormatters } from "@/lib/use-formatters.js";
 import { useLabel } from "@/lib/use-label.js";
@@ -27,6 +27,8 @@ import { Trans, useLingui } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, FileText, Puzzle } from "lucide-react";
+
+import { DashboardWidgets } from "./-dashboard-widgets.js";
 
 const M = {
   countPublished: defineMessage({
@@ -207,6 +209,8 @@ function DashboardIndex(): ReactNode {
           </CardContent>
         </Card>
       ) : null}
+
+      <DashboardWidgets widgets={visibleDashboardWidgets(user.capabilities)} />
     </div>
   );
 }

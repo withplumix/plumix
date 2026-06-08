@@ -52,6 +52,8 @@ test.describe("/ (dashboard)", () => {
     await expect(page.getByTestId("dashboard-recent-activity")).toContainText(
       "Latest post",
     );
+    // No plugin dashboard widgets registered → no widget grid.
+    await expect(page.getByTestId("dashboard-widgets")).toHaveCount(0);
     await expectNoAxeViolations(page);
   });
 

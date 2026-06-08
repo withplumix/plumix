@@ -41,6 +41,9 @@ function makeRegistry<TComponent>(
 }
 
 const pages = makeRegistry<ComponentType>("registerPluginPage");
+const dashboardWidgets = makeRegistry<ComponentType>(
+  "registerPluginDashboardWidget",
+);
 const fieldTypes = makeRegistry<PluginFieldComponent>(
   "registerPluginFieldType",
 );
@@ -74,6 +77,19 @@ export function registerPluginPage(
 
 export function getPluginPage(path: string): ComponentType | undefined {
   return pages.map.get(path);
+}
+
+export function registerPluginDashboardWidget(
+  id: string,
+  component: ComponentType,
+): void {
+  register(dashboardWidgets, id, component);
+}
+
+export function getPluginDashboardWidget(
+  id: string,
+): ComponentType | undefined {
+  return dashboardWidgets.map.get(id);
 }
 
 // Built-in `inputType` names handled by the host's meta-box-field
@@ -176,6 +192,7 @@ export function getRegisteredBlocks(): readonly BlockSpec[] {
 /** @internal Test-only. */
 export function _resetPluginRegistry(): void {
   pages.map.clear();
+  dashboardWidgets.map.clear();
   fieldTypes.map.clear();
   blockSchemas.map.clear();
   blockEditors.map.clear();
