@@ -16,6 +16,7 @@ import {
   getPatterns,
   groupsForSettingsPage,
   readManifest,
+  visibleDashboardWidgets,
   visibleEntryTypes,
   visibleSettingsPages,
   visibleTermTaxonomies,
@@ -516,6 +517,32 @@ describe("findSettingsPageByName + visibleSettingsPages + findSettingsGroupByNam
     };
     expect(groupsForSettingsPage(orphan, source).map((g) => g.name)).toEqual([
       "identity",
+    ]);
+  });
+});
+
+describe("visibleDashboardWidgets", () => {
+  const source: PlumixManifest = {
+    dashboardWidgets: [
+      { id: "a:open", title: "Open", component: "Open" },
+      {
+        id: "a:gated",
+        title: "Gated",
+        capability: "secret:read",
+        component: "Gated",
+      },
+    ],
+  };
+
+  test("returns ungated widgets plus gated ones the caller can access", () => {
+    expect(
+      visibleDashboardWidgets(["secret:read"], source).map((w) => w.id),
+    ).toEqual(["a:open", "a:gated"]);
+  });
+
+  test("hides a gated widget when the caller lacks its capability", () => {
+    expect(visibleDashboardWidgets([], source).map((w) => w.id)).toEqual([
+      "a:open",
     ]);
   });
 });

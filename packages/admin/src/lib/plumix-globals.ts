@@ -15,6 +15,7 @@ import {
   registerPluginBlock,
   registerPluginBlockEditor,
   registerPluginBlockSchema,
+  registerPluginDashboardWidget,
   registerPluginFieldType,
   registerPluginMarkSchema,
   registerPluginPage,
@@ -51,6 +52,7 @@ declare global {
   interface Window {
     plumix?: {
       readonly registerPluginPage: typeof registerPluginPage;
+      readonly registerPluginDashboardWidget: typeof registerPluginDashboardWidget;
       readonly registerPluginFieldType: typeof registerPluginFieldType;
       readonly registerPluginBlockSchema: typeof registerPluginBlockSchema;
       readonly registerPluginBlockEditor: typeof registerPluginBlockEditor;
@@ -67,6 +69,7 @@ export function bootPlumixGlobals(): void {
   if (window.plumix) return;
   window.plumix = {
     registerPluginPage,
+    registerPluginDashboardWidget,
     registerPluginFieldType,
     registerPluginBlockSchema,
     registerPluginBlockEditor,

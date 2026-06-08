@@ -27,6 +27,7 @@ type PluginContextErrorCode =
   | "route_path_wildcard_not_after_slash"
   | "identifier_too_long"
   | "identifier_shape_invalid"
+  | "identifier_namespace_mismatch"
   | "meta_box_too_many_fields"
   | "meta_box_field_invalid_key"
   | "meta_box_field_duplicate_key"
@@ -491,6 +492,24 @@ export class PluginContextError extends Error {
         kind: ctx.kind,
         identifierName: ctx.name,
         pattern: ctx.pattern,
+      },
+    );
+  }
+
+  static identifierNamespaceMismatch(ctx: {
+    kind: string;
+    name: string;
+    pluginId: string;
+  }): PluginContextError {
+    return new PluginContextError(
+      "identifier_namespace_mismatch",
+      `Invalid ${ctx.kind} "${ctx.name}" — the namespace before ":" must be ` +
+        `the registering plugin's id ("${ctx.pluginId}") so one plugin can't ` +
+        `squat another's ids.`,
+      {
+        kind: ctx.kind,
+        identifierName: ctx.name,
+        pluginId: ctx.pluginId,
       },
     );
   }

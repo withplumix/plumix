@@ -55,6 +55,39 @@ export function assertValidIdentifier(kind: string, name: string): void {
   }
 }
 
+// Namespaced `<plugin>:<name>` shape. Both segments allow the hyphen
+// plugin ids use. The namespace must be the registering plugin's id so
+// one plugin can't squat another's ids in the shared, id-keyed registry.
+const NAMESPACED_ID_RE = /^[a-z][a-z0-9_-]*:[a-z][a-z0-9_-]*$/;
+
+export function assertNamespacedId(
+  kind: string,
+  id: string,
+  pluginId: string,
+): void {
+  if (id.length > MAX_SETTINGS_IDENTIFIER_LENGTH) {
+    throw PluginContextError.identifierTooLong({
+      kind,
+      name: id,
+      maxLength: MAX_SETTINGS_IDENTIFIER_LENGTH,
+    });
+  }
+  if (!NAMESPACED_ID_RE.test(id)) {
+    throw PluginContextError.identifierShapeInvalid({
+      kind,
+      name: id,
+      pattern: NAMESPACED_ID_RE.source,
+    });
+  }
+  if (id.slice(0, id.indexOf(":")) !== pluginId) {
+    throw PluginContextError.identifierNamespaceMismatch({
+      kind,
+      name: id,
+      pluginId,
+    });
+  }
+}
+
 export function assertValidNavGroupId(pluginId: string, id: string): void {
   if (id.length === 0 || id.length > MAX_PLUGIN_ID_LENGTH) {
     throw PluginContextError.invalidNavGroupIdLength({

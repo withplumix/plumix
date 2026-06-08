@@ -316,6 +316,12 @@ msgstr "{display} · last seen {lastSeen}"
 msgid "plugin.errorBoundary.inlineStub"
 msgstr "{label} {kind} failed"
 
+#. label: a plugin-author-provided name (e.g. 'SEO meta')
+#. js-lingui-explicit-id
+#: src/lib/plugin-error-boundary.tsx
+msgid "plugin.errorBoundary.widgetBody"
+msgstr "{label} failed to render."
+
 #. label: a plugin-author-provided name (e.g. 'SEO meta', 'Hero block')
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx

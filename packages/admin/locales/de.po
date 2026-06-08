@@ -318,6 +318,12 @@ msgstr "{display} · zuletzt gesehen {lastSeen}"
 msgid "plugin.errorBoundary.inlineStub"
 msgstr "{label} {kind} fehlgeschlagen"
 
+#. label: a plugin-author-provided name (e.g. 'SEO meta')
+#. js-lingui-explicit-id
+#: src/lib/plugin-error-boundary.tsx
+msgid "plugin.errorBoundary.widgetBody"
+msgstr "{label} konnte nicht gerendert werden."
+
 #. label: a plugin-author-provided name (e.g. 'SEO meta', 'Hero block')
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx

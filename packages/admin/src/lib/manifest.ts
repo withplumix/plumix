@@ -2,6 +2,7 @@ import type { ThemeTokens } from "@plumix/blocks";
 import type {
   AdminNavGroup,
   AdminNavItem,
+  DashboardWidgetManifestEntry,
   EntryMetaBoxManifestEntry,
   EntryTypeManifestEntry,
   PatternManifestEntry,
@@ -143,6 +144,16 @@ export function visibleSettingsPages(
 ): readonly SettingsPageManifestEntry[] {
   if (!capabilities.includes("settings:manage")) return [];
   return source.settingsPages ?? [];
+}
+
+export function visibleDashboardWidgets(
+  capabilities: readonly string[],
+  source: PlumixManifest = manifest,
+): readonly DashboardWidgetManifestEntry[] {
+  const caps = new Set(capabilities);
+  return (source.dashboardWidgets ?? []).filter(
+    (w) => !w.capability || caps.has(w.capability),
+  );
 }
 
 // Three meta-box visibility filters (entry/term/user) share the same
