@@ -3,6 +3,7 @@ import type { EntryTypeLabels, PluginDescriptor } from "plumix/plugin";
 import { definePlugin } from "plumix/plugin";
 
 import { audioBlock } from "./blocks/audio/index.js";
+import { embedBlock } from "./blocks/embed/index.js";
 import { fileBlock } from "./blocks/file/index.js";
 import { galleryBlock } from "./blocks/gallery/index.js";
 import { imageBlock } from "./blocks/image/index.js";
@@ -157,13 +158,14 @@ export function media(
   return definePlugin(
     "media",
     (ctx) => {
-      // Six media blocks contributed under the `media/` namespace.
-      // Order is just for readability; the registry is keyed by name.
+      // Media blocks contributed under the `media/` namespace. Order is
+      // just for readability; the registry is keyed by name.
       ctx.registerBlock(imageBlock);
       ctx.registerBlock(galleryBlock);
       ctx.registerBlock(videoBlock);
       ctx.registerBlock(audioBlock);
       ctx.registerBlock(fileBlock);
+      ctx.registerBlock(embedBlock);
 
       ctx.registerEntryType("media", {
         label: MEDIA_LABELS.plural,
