@@ -952,6 +952,11 @@ msgid "blockActions.copyJson"
 msgstr "Copy JSON"
 
 #. js-lingui-explicit-id
+#: src/editor/CopyPreviewLinkButton.tsx
+msgid "editor.previewLink.copy"
+msgstr "Copy preview link"
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.secret.description"
 msgstr "Copy the secret now. We won't show it again — losing it means revoking "
@@ -989,6 +994,11 @@ msgstr "Couldn't complete the request. Try again."
 #: src/lib/email-change-errors.ts
 msgid "emailChange.error.fallback"
 msgstr "Couldn't confirm the email change. Try again."
+
+#. js-lingui-explicit-id
+#: src/editor/CopyPreviewLinkButton.tsx
+msgid "editor.previewLink.failed"
+msgstr "Couldn't create a preview link"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/create.tsx
@@ -2620,6 +2630,11 @@ msgstr "Plugin page failed to render"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.col.prefix"
 msgstr "Prefix"
+
+#. js-lingui-explicit-id
+#: src/editor/CopyPreviewLinkButton.tsx
+msgid "editor.previewLink.copied"
+msgstr "Preview link copied to clipboard"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx

@@ -101,6 +101,10 @@ export interface PlumixEditorLayoutProps {
   // Route layer owns RPC wiring and feeds a fully-wired <RevisionsSheet />
   // here; the layout only allocates space and doesn't know the contract.
   readonly revisionsTrigger?: ReactNode;
+  // Optional "Copy preview link" action rendered in the header. Route layer
+  // owns the entry.createPreviewLink RPC + clipboard write; the layout only
+  // allocates space.
+  readonly previewLinkAction?: ReactNode;
   // Optional co-author indicator (avatar group + last-seen labels)
   // surfaced next to the autosave pill. Route layer owns the
   // `entry.activity.list` polling; the layout just allocates space.
@@ -521,6 +525,7 @@ export function PlumixEditorLayout({
   isPublishing = false,
   isPublished = false,
   revisionsTrigger,
+  previewLinkAction,
   coAuthorIndicator,
   documentPanel,
   previewBanner,
@@ -602,6 +607,7 @@ export function PlumixEditorLayout({
           {isPreview ? null : <AutosaveStatusPill />}
           {isPreview ? null : coAuthorIndicator}
           {revisionsTrigger}
+          {isPreview ? null : previewLinkAction}
           {isPreview ? null : isDraftMode ? (
             <DraftActions draftMode={draftMode} />
           ) : (
