@@ -22,6 +22,7 @@ import { and, eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { terms } from "../db/schema/terms.js";
 import { loadAncestorSlugs, loadTermAncestorSlugs } from "./permalink.js";
+import { previewTokenGrantsEntry } from "./preview.js";
 
 export async function findEntryByPath(
   ctx: AppContext,
@@ -38,13 +39,17 @@ export async function findEntryByPath(
   if (leafSlug === undefined) return null;
 
   const leaf = await ctx.db.query.entries.findFirst({
-    where: and(
-      eq(entries.type, entryType),
-      eq(entries.slug, leafSlug),
-      eq(entries.status, "published"),
-    ),
+    where: and(eq(entries.type, entryType), eq(entries.slug, leafSlug)),
   });
   if (!leaf) return null;
+  // Visible if published, or if a `?preview=` token grants this draft.
+  // Checked before the ancestor walk so an ordinary draft 404s without the
+  // extra CTE query.
+  if (
+    leaf.status !== "published" &&
+    !(await previewTokenGrantsEntry(ctx, leaf))
+  )
+    return null;
 
   const expected = segments.slice(0, -1);
   const actual =

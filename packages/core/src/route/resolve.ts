@@ -29,6 +29,7 @@ import { notFound } from "../runtime/http.js";
 import { paginate } from "./paginate.js";
 import { findEntryByPath, findTermByPath } from "./path-chain.js";
 import { buildEntryPermalinkSync } from "./permalink.js";
+import { previewTokenGrantsEntry, readPreviewToken } from "./preview.js";
 import { renderThroughTheme } from "./render/render-template.js";
 
 declare module "../hooks/types.js" {
@@ -509,15 +510,22 @@ async function findEntryForSingle(
   }
   const slug = params.slug;
   if (typeof slug !== "string" || slug === "") return null;
-  return (
-    (await ctx.db.query.entries.findFirst({
-      where: and(
-        eq(entries.type, entryType),
-        eq(entries.slug, slug),
-        eq(entries.status, "published"),
-      ),
-    })) ?? null
-  );
+  const published = await ctx.db.query.entries.findFirst({
+    where: and(
+      eq(entries.type, entryType),
+      eq(entries.slug, slug),
+      eq(entries.status, "published"),
+    ),
+  });
+  if (published) return published;
+  // A valid `?preview=` token can reveal the matching draft. Skip the extra
+  // query entirely on the common no-token 404.
+  if (readPreviewToken(ctx) === null) return null;
+  const candidate = await ctx.db.query.entries.findFirst({
+    where: and(eq(entries.type, entryType), eq(entries.slug, slug)),
+  });
+  if (!candidate) return null;
+  return (await previewTokenGrantsEntry(ctx, candidate)) ? candidate : null;
 }
 
 async function findTermForTaxonomy(

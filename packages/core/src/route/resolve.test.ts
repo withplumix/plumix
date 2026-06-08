@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../context/app.js";
+import { createPreviewToken } from "../auth/preview-token.js";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { buildEntryPermalink, buildTermArchiveUrl } from "./permalink.js";
@@ -258,6 +259,140 @@ describe("resolvePublicRoute — single", () => {
       new Request("https://cms.example/post/gone"),
     );
     expect(response.status).toBe(404);
+  });
+
+  test("a valid preview token reveals a draft at its URL", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const author = await h.seedUser("admin");
+    const draft = await h.factory.entry.create({
+      type: "post",
+      slug: "secret",
+      title: "Secret Draft",
+      content: TIPTAP_BODY,
+      status: "draft",
+      authorId: author.id,
+    });
+    const token = await createPreviewToken(h.db, {
+      entryId: draft.id,
+      userId: author.id,
+    });
+
+    const response = await h.dispatch(
+      new Request(`https://cms.example/post/secret?preview=${token}`),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("<h1>Secret Draft</h1>");
+  });
+
+  test("an invalid preview token still 404s the draft", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "secret",
+      title: "Secret",
+      content: null,
+      status: "draft",
+      authorId: author.id,
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/secret?preview=bogus-token"),
+    );
+    expect(response.status).toBe(404);
+  });
+
+  test("a preview token does not reveal a different draft's URL", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const author = await h.seedUser("admin");
+    const a = await h.factory.entry.create({
+      type: "post",
+      slug: "draft-a",
+      title: "Draft A",
+      content: null,
+      status: "draft",
+      authorId: author.id,
+    });
+    await h.factory.entry.create({
+      type: "post",
+      slug: "draft-b",
+      title: "Draft B",
+      content: null,
+      status: "draft",
+      authorId: author.id,
+    });
+    const tokenForA = await createPreviewToken(h.db, {
+      entryId: a.id,
+      userId: author.id,
+    });
+
+    // A's token on B's URL must not reveal B.
+    const response = await h.dispatch(
+      new Request(`https://cms.example/post/draft-b?preview=${tokenForA}`),
+    );
+    expect(response.status).toBe(404);
+  });
+
+  test("a preview token never reveals a trashed entry", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const author = await h.seedUser("admin");
+    const gone = await h.factory.entry.create({
+      type: "post",
+      slug: "binned",
+      title: "Binned",
+      content: null,
+      status: "trash",
+      authorId: author.id,
+    });
+    const token = await createPreviewToken(h.db, {
+      entryId: gone.id,
+      userId: author.id,
+    });
+
+    const response = await h.dispatch(
+      new Request(`https://cms.example/post/binned?preview=${token}`),
+    );
+    expect(response.status).toBe(404);
+  });
+
+  test("a preview token reveals a nested draft page under a published parent", async () => {
+    const h = await createDispatcherHarness({
+      plugins: [hierarchicalPagesPlugin],
+    });
+    const author = await h.seedUser("admin");
+    const parent = await h.factory.entry.create({
+      type: "page",
+      slug: "docs",
+      title: "Docs",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      parentId: null,
+    });
+    const child = await h.factory.entry.create({
+      type: "page",
+      slug: "unreleased",
+      title: "Unreleased Page",
+      content: TIPTAP_BODY,
+      status: "draft",
+      authorId: author.id,
+      parentId: parent.id,
+    });
+    const token = await createPreviewToken(h.db, {
+      entryId: child.id,
+      userId: author.id,
+    });
+
+    const without = await h.dispatch(
+      new Request("https://cms.example/page/docs/unreleased"),
+    );
+    expect(without.status).toBe(404);
+
+    const withToken = await h.dispatch(
+      new Request(`https://cms.example/page/docs/unreleased?preview=${token}`),
+    );
+    expect(withToken.status).toBe(200);
+    expect(await withToken.text()).toContain("<h1>Unreleased Page</h1>");
   });
 });
 

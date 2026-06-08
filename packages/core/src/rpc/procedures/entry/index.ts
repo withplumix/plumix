@@ -1,5 +1,6 @@
 import { list as activityList } from "./activity.js";
 import { deletePermanentMany, restoreMany, trashMany } from "./bulk.js";
+import { createPreviewLink } from "./create-preview-link.js";
 import { create } from "./create.js";
 import { recentActivity, stats } from "./dashboard.js";
 import { deletePermanent } from "./delete-permanent.js";
@@ -25,6 +26,7 @@ export const entryRouter = {
   restoreMany,
   deletePermanentMany,
   duplicate,
+  createPreviewLink,
   publish,
   discardDraft,
   stats,
