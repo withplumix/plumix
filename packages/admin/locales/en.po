@@ -867,6 +867,11 @@ msgid "auth.device.lookup.error.notFound"
 msgstr "Code not found. Check it matches what your CLI printed."
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.title"
+msgstr "Command palette"
+
+#. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.compare"
 msgstr "Compare"
@@ -2251,6 +2256,11 @@ msgid "apiTokens.create.nameTooLong"
 msgstr "Name must be ≤ 64 characters."
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.group.navigation"
+msgstr "Navigation"
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.networkError"
 msgstr "Network error. Check your connection and try again."
@@ -2383,6 +2393,11 @@ msgstr "No passkeys registered. Add one to enable sign-in."
 msgid "profile.sessions.empty"
 msgstr "No plumix-managed sessions. Your sign-in is handled by an external "
 "identity provider."
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.empty"
+msgstr "No results found."
 
 #. js-lingui-explicit-id
 #: src/components/data-table/data-table.tsx
@@ -2999,6 +3014,16 @@ msgstr "Search blocks and patterns by title or keyword and press Enter to "
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.searchPlaceholder"
 msgstr "Search by email…"
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.description"
+msgstr "Search to navigate the admin."
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.placeholder"
+msgstr "Search…"
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts

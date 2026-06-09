@@ -1,4 +1,3 @@
-import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import {
   Sidebar,
@@ -14,41 +13,10 @@ import {
 import { visibleAdminNav } from "@/lib/manifest.js";
 import { useLabel } from "@/lib/use-label.js";
 import { Link } from "@tanstack/react-router";
-import {
-  Calendar,
-  FileText,
-  Folder,
-  Image,
-  Key,
-  Layout,
-  LayoutDashboard,
-  Mail,
-  Puzzle,
-  Settings,
-  Tag,
-  Users,
-} from "lucide-react";
-
-import type { CoreIconName } from "@plumix/core/manifest";
 
 import type { UserIdentity } from "./user-menu.js";
+import { CoreIcon } from "./core-icon.js";
 import { UserMenu } from "./user-menu.js";
-
-const CORE_ICON: Record<CoreIconName, LucideIcon> = {
-  dashboard: LayoutDashboard,
-  content: FileText,
-  "file-text": FileText,
-  layout: Layout,
-  image: Image,
-  calendar: Calendar,
-  tag: Tag,
-  folder: Folder,
-  users: Users,
-  settings: Settings,
-  puzzle: Puzzle,
-  mail: Mail,
-  key: Key,
-};
 
 export function AppSidebar({
   user,
@@ -67,28 +35,23 @@ export function AppSidebar({
             <SidebarGroupLabel>{renderLabel(group.label)}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {group.items.map((item) => {
-                  const Icon = item.coreIcon
-                    ? CORE_ICON[item.coreIcon]
-                    : Puzzle;
-                  return (
-                    <SidebarMenuItem key={item.to}>
-                      <SidebarMenuButton
-                        asChild
-                        tooltip={renderLabel(item.label)}
+                {group.items.map((item) => (
+                  <SidebarMenuItem key={item.to}>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={renderLabel(item.label)}
+                    >
+                      <Link
+                        to={item.to}
+                        activeProps={{ "data-active": "true" }}
+                        activeOptions={{ exact: item.exact ?? false }}
                       >
-                        <Link
-                          to={item.to}
-                          activeProps={{ "data-active": "true" }}
-                          activeOptions={{ exact: item.exact ?? false }}
-                        >
-                          <Icon />
-                          <span>{renderLabel(item.label)}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
+                        <CoreIcon name={item.coreIcon} />
+                        <span>{renderLabel(item.label)}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

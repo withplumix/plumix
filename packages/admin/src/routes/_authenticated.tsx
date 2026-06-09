@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { AppSidebar } from "@/components/shell/app-sidebar.js";
+import { CommandPalette } from "@/components/shell/command-palette.js";
 import { ShellHeader } from "@/components/shell/shell-header.js";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar.js";
 import { TooltipProvider } from "@/components/ui/tooltip.js";
@@ -17,6 +18,7 @@ function AppShell(): ReactNode {
   return (
     <TooltipProvider delayDuration={100}>
       <SidebarProvider>
+        <CommandPalette capabilities={user.capabilities} />
         <AppSidebar user={user} capabilities={user.capabilities} />
         <SidebarInset>
           <ShellHeader />
