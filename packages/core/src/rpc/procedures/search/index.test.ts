@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { deriveTermTaxonomyCapabilities } from "../../../auth/rbac.js";
 import { entries } from "../../../db/schema/entries.js";
 import { terms } from "../../../db/schema/terms.js";
+import { users } from "../../../db/schema/users.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { registerCoreSearchHandlers } from "../../../search/register-core-handlers.js";
 import { createRpcHarness } from "../../../test/rpc.js";
@@ -36,6 +37,14 @@ async function searchHarness(authAs: "editor" | "author"): Promise<Harness> {
 
 async function seedTerm(h: Harness, name: string, slug: string): Promise<void> {
   await h.context.db.insert(terms).values({ taxonomy: "category", name, slug });
+}
+
+async function seedUser(
+  h: Harness,
+  name: string,
+  email: string,
+): Promise<void> {
+  await h.context.db.insert(users).values({ name, email, role: "subscriber" });
 }
 
 async function seed(
@@ -118,5 +127,27 @@ describe("search.query", () => {
         items: [expect.objectContaining({ title: "News" })],
       }),
     ]);
+  });
+
+  test("returns a users group for a caller who can list users", async () => {
+    const h = await searchHarness("editor");
+    await seedUser(h, "Alice Smith", "alice@example.com");
+    await seedUser(h, "Bob Jones", "bob@example.com");
+
+    const groups = await h.client.search.query({ query: "alice" });
+
+    expect(groups).toEqual([
+      expect.objectContaining({
+        key: "users",
+        items: [expect.objectContaining({ title: "Alice Smith" })],
+      }),
+    ]);
+  });
+
+  test("omits the users group when the caller cannot list users", async () => {
+    const h = await searchHarness("author");
+    await seedUser(h, "Alice Smith", "alice@example.com");
+
+    expect(await h.client.search.query({ query: "alice" })).toEqual([]);
   });
 });

@@ -117,7 +117,7 @@ export function CommandPalette({
   function openResult(groupKey: string, id: string): void {
     dismiss();
     const sep = groupKey.indexOf(":");
-    const domain = groupKey.slice(0, sep);
+    const domain = sep === -1 ? groupKey : groupKey.slice(0, sep);
     const name = groupKey.slice(sep + 1);
     switch (domain) {
       case "entry": {
@@ -133,6 +133,9 @@ export function CommandPalette({
           to: "/terms/$name/$id/edit",
           params: { name, id: Number(id) },
         });
+        return;
+      case "users":
+        void navigate({ to: "/users/$id/edit", params: { id: Number(id) } });
         return;
     }
   }

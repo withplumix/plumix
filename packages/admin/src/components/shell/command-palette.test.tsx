@@ -48,6 +48,14 @@ vi.mock("@/lib/orpc.js", () => ({
               priority: 100,
               items: [{ id: "7", title: "News" }],
             },
+            {
+              key: "users",
+              label: { id: "g.users", message: "Users" },
+              priority: 200,
+              items: [
+                { id: "9", title: "Alice", subtitle: "alice@example.com" },
+              ],
+            },
           ],
           enabled: opts.enabled,
         }),
@@ -152,6 +160,23 @@ describe("CommandPalette", () => {
     expect(navigate).toHaveBeenCalledWith({
       to: "/terms/$name/$id/edit",
       params: { name: "category", id: 7 },
+    });
+  });
+
+  test("opens the user editor when a user result is selected", async () => {
+    renderPalette(<CommandPalette capabilities={[]} />);
+    pressCmdK();
+    fireEvent.change(await screen.findByTestId("command-palette-input"), {
+      target: { value: "alice" },
+    });
+
+    fireEvent.click(
+      await screen.findByTestId("command-palette-result-users:9"),
+    );
+
+    expect(navigate).toHaveBeenCalledWith({
+      to: "/users/$id/edit",
+      params: { id: 9 },
     });
   });
 
