@@ -1,8 +1,14 @@
 import { existsSync, statSync } from "node:fs";
-import { cp, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { cp, mkdir, readdir, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import type { CatalogContext } from "./catalog.js";
+import {
+  EMPTY_CATALOG_CONTEXT,
+  loadCatalogContext,
+  rewritePackageJsonFile,
+} from "./catalog.js";
 import { ScaffoldError } from "./errors.js";
 
 const EXCLUDED_SEGMENTS: ReadonlySet<string> = new Set([
@@ -48,42 +54,32 @@ const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 // never drift from the canonical example. Published builds carry a
 // snapshot under `templates/starter/` (written at `prepack` time)
 // that's used when the workspace example isn't reachable.
-const WORKSPACE_TEMPLATE = join(
-  PACKAGE_ROOT,
-  "..",
-  "..",
-  "examples",
-  "minimal",
-);
+const REPO_ROOT = join(PACKAGE_ROOT, "..", "..");
+const WORKSPACE_TEMPLATE = join(REPO_ROOT, "examples", "minimal");
 const PUBLISHED_TEMPLATE = join(PACKAGE_ROOT, "templates", "starter");
 
+// Use the workspace example only when we're actually inside the plumix
+// monorepo — both the example and the catalog it resolves against must
+// be present. Keying off the example alone would misfire if a published
+// install happened to sit next to an unrelated `examples/minimal`.
 export function resolveTemplateRoot(): string {
-  return existsSync(WORKSPACE_TEMPLATE)
+  return existsSync(WORKSPACE_TEMPLATE) &&
+    existsSync(join(REPO_ROOT, "pnpm-workspace.yaml"))
     ? WORKSPACE_TEMPLATE
     : PUBLISHED_TEMPLATE;
 }
 
-// The example's `package.json` uses pnpm's `workspace:*` and `catalog:`
-// protocols, which only resolve inside the plumix monorepo. End-user
-// projects need concrete SemVer ranges, so we rewrite at copy time.
-// Bump these together with the corresponding workspace catalog
-// (`pnpm-workspace.yaml`) and the next plumix release.
-const PLUMIX_PACKAGE_VERSION = "^0.1.0";
-// Mirrors `pnpm-workspace.yaml`'s `catalog:` for every package that
-// `examples/minimal/package.json` references via `catalog:`. The
-// drift-gate test in `scaffold.test.ts` keeps these locked in step.
-// Bump together with the workspace catalog and the next plumix release.
-export const CATALOG_RESOLUTIONS: Record<string, string> = {
-  "@cloudflare/workers-types": "^4.20260526.1",
-  "@types/node": "^24.13.1",
-  typescript: "^6.0.3",
-  wrangler: "^4.98.0",
-};
-
-// `@plumix/typescript-config` is a private dev-only workspace package,
-// not published to npm. The example's tsconfig `extends` it; the
-// scaffolded project gets a self-contained equivalent instead.
-const TYPESCRIPT_CONFIG_PKG = "@plumix/typescript-config";
+// The workspace example's `package.json` uses pnpm's `workspace:*` and
+// `catalog:` protocols, which only resolve inside the plumix monorepo —
+// so we resolve them against the live catalog and sibling package
+// versions at copy time. The published snapshot under `templates/starter`
+// is already resolved at `prepack`, so it needs no catalog (empty
+// context, no protocols left to rewrite).
+function catalogContextFor(templateRoot: string): Promise<CatalogContext> {
+  return templateRoot === WORKSPACE_TEMPLATE
+    ? loadCatalogContext(REPO_ROOT)
+    : Promise.resolve(EMPTY_CATALOG_CONTEXT);
+}
 
 const SCAFFOLDED_TSCONFIG = {
   $schema: "https://json.schemastore.org/tsconfig",
@@ -137,57 +133,16 @@ export async function scaffold(
   });
 
   const name = basename(targetDir);
-  await rewritePackageJson(targetDir, name);
+  await rewritePackageJsonFile(
+    join(targetDir, "package.json"),
+    await catalogContextFor(source),
+    (pkg) => {
+      pkg.name = name;
+    },
+  );
   await writeScaffoldedTsconfig(targetDir);
 
   return { targetDir, name };
-}
-
-interface PackageJsonShape {
-  name: string;
-  dependencies?: Record<string, string>;
-  devDependencies?: Record<string, string>;
-  [key: string]: unknown;
-}
-
-export function rewriteDeps(
-  deps: Record<string, string> | undefined,
-): Record<string, string> | undefined {
-  if (!deps) return deps;
-  const out: Record<string, string> = {};
-  for (const [name, range] of Object.entries(deps)) {
-    if (name === TYPESCRIPT_CONFIG_PKG) continue;
-    if (range.startsWith("workspace:")) {
-      out[name] = PLUMIX_PACKAGE_VERSION;
-      continue;
-    }
-    if (range.startsWith("catalog:")) {
-      const resolved = CATALOG_RESOLUTIONS[name];
-      if (!resolved) {
-        throw ScaffoldError.catalogResolutionMissing({ catalogName: name });
-      }
-      out[name] = resolved;
-      continue;
-    }
-    out[name] = range;
-  }
-  return out;
-}
-
-async function rewritePackageJson(dir: string, name: string): Promise<void> {
-  const pkgPath = join(dir, "package.json");
-  const raw = await readFile(pkgPath, "utf-8");
-  const pkg = JSON.parse(raw) as PackageJsonShape;
-  pkg.name = name;
-  const deps = rewriteDeps(pkg.dependencies);
-  const devDeps = rewriteDeps(pkg.devDependencies);
-  if (deps) pkg.dependencies = deps;
-  if (devDeps) pkg.devDependencies = devDeps;
-  // 2-space indent + trailing newline matches the rest of the
-  // template's JSON files. JSON.stringify rewrites the whole file —
-  // fine because the template's package.json is plain JSON we control,
-  // no comments or custom key ordering to lose.
-  await writeFile(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`, "utf-8");
 }
 
 async function writeScaffoldedTsconfig(dir: string): Promise<void> {

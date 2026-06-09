@@ -2,12 +2,14 @@ type ScaffoldErrorCode =
   | "target_parent_missing"
   | "target_not_directory"
   | "target_directory_not_empty"
-  | "catalog_resolution_missing";
+  | "catalog_resolution_missing"
+  | "workspace_version_missing";
 
 interface ScaffoldErrorFields {
   parent?: string;
   targetDir?: string;
   catalogName?: string;
+  packageName?: string;
 }
 
 export class ScaffoldError extends Error {
@@ -19,6 +21,7 @@ export class ScaffoldError extends Error {
   readonly parent: string | undefined;
   readonly targetDir: string | undefined;
   readonly catalogName: string | undefined;
+  readonly packageName: string | undefined;
 
   private constructor(
     code: ScaffoldErrorCode,
@@ -30,6 +33,7 @@ export class ScaffoldError extends Error {
     this.parent = fields.parent;
     this.targetDir = fields.targetDir;
     this.catalogName = fields.catalogName;
+    this.packageName = fields.packageName;
   }
 
   static targetParentMissing(ctx: { parent: string }): ScaffoldError {
@@ -59,7 +63,15 @@ export class ScaffoldError extends Error {
   static catalogResolutionMissing(ctx: { catalogName: string }): ScaffoldError {
     return new ScaffoldError(
       "catalog_resolution_missing",
-      `No catalog resolution for "${ctx.catalogName}" — add it to CATALOG_RESOLUTIONS in scaffold.ts.`,
+      `No catalog entry for "${ctx.catalogName}" in pnpm-workspace.yaml — the template references it via \`catalog:\` but the workspace catalog has no such key.`,
+      ctx,
+    );
+  }
+
+  static workspaceVersionMissing(ctx: { packageName: string }): ScaffoldError {
+    return new ScaffoldError(
+      "workspace_version_missing",
+      `No workspace version for "${ctx.packageName}" — the template references it via \`workspace:\` but no workspace package publishes that name.`,
       ctx,
     );
   }
