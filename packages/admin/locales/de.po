@@ -882,6 +882,11 @@ msgid "palette.title"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.group.commands"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.compare"
 msgstr "Vergleichen"
@@ -1575,6 +1580,11 @@ msgstr "Bearbeiten"
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.title.other"
 msgstr "{email} bearbeiten"
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.command.profile"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
@@ -3055,14 +3065,14 @@ msgid "palette.description"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/shell/command-palette.tsx
-msgid "palette.placeholder"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.searchItems"
 msgstr "Suchen…"
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.placeholder"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/form/multi-select.tsx
@@ -3180,6 +3190,11 @@ msgstr "Richten Sie Ihre Website ein — diese E-Mail wird das "
 #: src/routes/_auth/accept-invite/$token.tsx
 msgid "auth.acceptInvite.submit.pending"
 msgstr "Wird eingerichtet…"
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.command.settings"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.tsx

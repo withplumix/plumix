@@ -1,4 +1,8 @@
 import type { ReactNode } from "react";
+import {
+  _resetPaletteCommands,
+  registerPaletteCommand,
+} from "@/lib/palette-commands.js";
 import { createQueryClient } from "@/providers/query-client.js";
 import { DirectionProvider } from "@radix-ui/react-direction";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -75,6 +79,7 @@ function renderPalette(node: ReactNode): void {
 afterEach(() => {
   cleanup();
   navigate.mockClear();
+  _resetPaletteCommands();
 });
 
 function pressCmdK(): void {
@@ -178,6 +183,42 @@ describe("CommandPalette", () => {
       to: "/users/$id/edit",
       params: { id: 9 },
     });
+  });
+
+  test("runs a registered command and closes the palette", async () => {
+    const run = vi.fn();
+    registerPaletteCommand({
+      id: "plugin:do-x",
+      title: { id: "cmd.x", message: "Do X" },
+      run,
+    });
+    renderPalette(<CommandPalette capabilities={[]} />);
+    pressCmdK();
+
+    fireEvent.click(
+      await screen.findByTestId("command-palette-command-plugin:do-x"),
+    );
+
+    expect(run).toHaveBeenCalledOnce();
+    await waitFor(() =>
+      expect(screen.queryByTestId("command-palette-input")).toBeNull(),
+    );
+  });
+
+  test("hides a command whose capability the user lacks", async () => {
+    registerPaletteCommand({
+      id: "plugin:secret",
+      title: { id: "cmd.secret", message: "Secret" },
+      capability: "secret:do",
+      run: vi.fn(),
+    });
+    renderPalette(<CommandPalette capabilities={[]} />);
+    pressCmdK();
+    await screen.findByTestId("command-palette-input");
+
+    expect(
+      screen.queryByTestId("command-palette-command-plugin:secret"),
+    ).toBeNull();
   });
 
   test("Escape closes the palette", async () => {
