@@ -880,6 +880,11 @@ msgid "auth.device.lookup.error.notFound"
 msgstr "الرمز غير موجود. تحقق من تطابقه مع ما طبعه CLI."
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.compare"
 msgstr "مقارنة"
@@ -2264,6 +2269,11 @@ msgid "apiTokens.create.nameTooLong"
 msgstr "يجب أن يكون الاسم ≤ 64 حرفاً."
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.group.navigation"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.networkError"
 msgstr "خطأ شبكة. تحقق من اتصالك وحاول مرة أخرى."
@@ -2394,6 +2404,11 @@ msgstr "لا توجد passkeys مسجَّلة. أضف واحدة لتفعيل ت
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.empty"
 msgstr "لا توجد جلسات يديرها plumix. تسجيل دخولك يتم بواسطة مزود هوية خارجي."
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.empty"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/data-table/data-table.tsx
@@ -3008,6 +3023,16 @@ msgstr "ابحث عن الكتل والأنماط بالعنوان أو الكل
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.searchPlaceholder"
 msgstr "البحث بالبريد…"
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.placeholder"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts

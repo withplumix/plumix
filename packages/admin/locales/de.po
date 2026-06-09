@@ -877,6 +877,11 @@ msgstr "Code nicht gefunden. Prüfen Sie, ob er mit dem von Ihrer CLI "
 "ausgegebenen übereinstimmt."
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.compare"
 msgstr "Vergleichen"
@@ -2278,6 +2283,11 @@ msgid "apiTokens.create.nameTooLong"
 msgstr "Name muss ≤ 64 Zeichen lang sein."
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.group.navigation"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.networkError"
 msgstr "Netzwerkfehler. Verbindung prüfen und erneut versuchen."
@@ -2412,6 +2422,11 @@ msgstr "Keine Passkeys registriert. Fügen Sie einen hinzu, um die Anmeldung zu 
 msgid "profile.sessions.empty"
 msgstr "Keine von plumix verwalteten Sitzungen. Ihre Anmeldung wird von einem "
 "externen Identitätsanbieter verarbeitet."
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.empty"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/data-table/data-table.tsx
@@ -3033,6 +3048,16 @@ msgstr "Suchen Sie Blöcke und Muster nach Titel oder Stichwort und drücken Sie
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.searchPlaceholder"
 msgstr "Nach E-Mail suchen…"
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.placeholder"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
