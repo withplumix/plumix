@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
@@ -75,6 +75,55 @@ describe("runCli", () => {
     expect(out).toContain("my-app");
     expect(out).toContain("pnpm install");
     expect(out).toContain("pnpm dev");
+  });
+
+  test("--template selects a named template", async () => {
+    const { io, stderr } = captureIO();
+    const target = join(tmp, "my-blog");
+
+    const code = await runCli([target, "--template", "blog"], io);
+
+    expect(code).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(existsSync(join(target, "package.json"))).toBe(true);
+    const pkg = JSON.parse(
+      readFileSync(join(target, "package.json"), "utf8"),
+    ) as { dependencies?: Record<string, string> };
+    expect(pkg.dependencies?.["@plumix/plugin-blog"]).toBeDefined();
+  });
+
+  test("--template=name form is accepted", async () => {
+    const { io } = captureIO();
+    const target = join(tmp, "eq-form");
+
+    const code = await runCli([target, "--template=blog"], io);
+
+    expect(code).toBe(0);
+    const pkg = JSON.parse(
+      readFileSync(join(target, "package.json"), "utf8"),
+    ) as { dependencies?: Record<string, string> };
+    expect(pkg.dependencies?.["@plumix/plugin-blog"]).toBeDefined();
+  });
+
+  test("exits 1 when --template is given with no value", async () => {
+    const { io, stderr } = captureIO();
+    const target = join(tmp, "no-tpl-value");
+
+    const code = await runCli([target, "--template"], io);
+
+    expect(code).toBe(1);
+    expect(stderr.join("\n")).toMatch(/unknown template/i);
+    expect(existsSync(target)).toBe(false);
+  });
+
+  test("exits 1 with a listing error for an unknown --template", async () => {
+    const { io, stderr } = captureIO();
+    const target = join(tmp, "bad-tpl");
+
+    const code = await runCli([target, "--template", "nope"], io);
+
+    expect(code).toBe(1);
+    expect(stderr.join("\n")).toMatch(/unknown template "nope".*minimal/is);
   });
 
   test("exits 1 and writes the error to stderr when scaffold rejects", async () => {

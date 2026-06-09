@@ -1,4 +1,4 @@
-import { cp, mkdir, rm } from "node:fs/promises";
+import { cp, mkdir, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 
 import { loadCatalogContext, rewritePackageJsonFile } from "./catalog.js";
@@ -34,4 +34,37 @@ export async function syncTemplate({
 
   const ctx = await loadCatalogContext(repoRoot);
   await rewritePackageJsonFile(join(dest, "package.json"), ctx);
+}
+
+interface SyncAllOptions {
+  /** Directory holding the `examples/*` to snapshot. */
+  readonly examplesDir: string;
+  /** Directory where each `<name>` snapshot is written. */
+  readonly templatesDir: string;
+  /** Monorepo root, used to resolve the catalog and package versions. */
+  readonly repoRoot: string;
+}
+
+/**
+ * Snapshot every example into a like-named template directory, so the
+ * scaffolder can offer each by its example name. Returns the names.
+ */
+export async function syncAllTemplates({
+  examplesDir,
+  templatesDir,
+  repoRoot,
+}: SyncAllOptions): Promise<string[]> {
+  const entries = await readdir(examplesDir, { withFileTypes: true });
+  const names = entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
+  for (const name of names) {
+    await syncTemplate({
+      source: join(examplesDir, name),
+      dest: join(templatesDir, name),
+      repoRoot,
+    });
+  }
+  return names;
 }

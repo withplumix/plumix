@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import {
+  availableTemplates,
   resolveTemplateRoot,
   scaffold,
   shouldCopyTemplateEntry,
@@ -27,8 +28,8 @@ describe("scaffold", () => {
     rmSync(tmp, { recursive: true, force: true });
   });
 
-  test("creates target dir and copies the starter template files into it", async () => {
-    const target = join(tmp, "my-blog");
+  test("creates target dir and copies the default template files into it", async () => {
+    const target = join(tmp, "my-app");
 
     await scaffold({ targetDir: target });
 
@@ -44,6 +45,30 @@ describe("scaffold", () => {
     expect(readFileSync(join(target, "README.md"), "utf-8")).toContain(
       "Plumix",
     );
+  });
+
+  test("scaffolds a named template (blog), resolving its workspace plugins", async () => {
+    const target = join(tmp, "my-blog");
+
+    await scaffold({ targetDir: target, template: "blog" });
+
+    const pkg = JSON.parse(
+      readFileSync(join(target, "package.json"), "utf-8"),
+    ) as { dependencies?: Record<string, string> };
+    expect(pkg.dependencies?.["@plumix/plugin-blog"]).toBe(
+      `^${packageVersion("packages/plugins/blog")}`,
+    );
+  });
+
+  test("defaults to the minimal template, which has no blog plugin", async () => {
+    const target = join(tmp, "default-tpl");
+
+    await scaffold({ targetDir: target });
+
+    const pkg = JSON.parse(
+      readFileSync(join(target, "package.json"), "utf-8"),
+    ) as { dependencies?: Record<string, string> };
+    expect(pkg.dependencies?.["@plumix/plugin-blog"]).toBeUndefined();
   });
 
   test("writes a self-contained tsconfig that does not depend on workspace packages", async () => {
@@ -164,11 +189,25 @@ describe("scaffold", () => {
 });
 
 describe("resolveTemplateRoot", () => {
-  test("returns the workspace example path during dev/test", () => {
-    // Inside the plumix workspace `examples/minimal` exists, so the
-    // resolver should pick it — keeps the scaffolder output a perfect
-    // mirror of the canonical example with no manual sync step.
-    expect(resolveTemplateRoot()).toMatch(/examples\/minimal$/);
+  test("resolves a named template to its workspace example during dev/test", () => {
+    // Inside the plumix workspace `examples/<name>` exists, so the
+    // resolver picks it — keeps scaffolder output a perfect mirror of
+    // the canonical example with no manual sync step.
+    const resolved = resolveTemplateRoot("blog");
+    expect(resolved.root).toMatch(/examples\/blog$/);
+    expect(resolved.fromWorkspace).toBe(true);
+  });
+
+  test("lists available templates from the examples directory", () => {
+    expect(availableTemplates()).toEqual(
+      expect.arrayContaining(["blog", "minimal"]),
+    );
+  });
+
+  test("throws a listing error for an unknown template", () => {
+    expect(() => resolveTemplateRoot("nope")).toThrow(
+      /Unknown template "nope".*minimal/s,
+    );
   });
 });
 

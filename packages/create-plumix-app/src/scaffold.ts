@@ -1,4 +1,4 @@
-import { existsSync, statSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { cp, mkdir, readdir, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -40,6 +40,7 @@ export function shouldCopyTemplateEntry(
 
 interface ScaffoldOptions {
   readonly targetDir: string;
+  readonly template?: string;
 }
 
 interface ScaffoldResult {
@@ -47,36 +48,65 @@ interface ScaffoldResult {
   readonly name: string;
 }
 
+export const DEFAULT_TEMPLATE = "minimal";
+
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-
-// Single source of truth: inside the plumix workspace we copy directly
-// from the `examples/minimal` package so the scaffolder output can
-// never drift from the canonical example. Published builds carry a
-// snapshot under `templates/starter/` (written at `prepack` time)
-// that's used when the workspace example isn't reachable.
 const REPO_ROOT = join(PACKAGE_ROOT, "..", "..");
-const WORKSPACE_TEMPLATE = join(REPO_ROOT, "examples", "minimal");
-const PUBLISHED_TEMPLATE = join(PACKAGE_ROOT, "templates", "starter");
+// Templates are named after the `examples/*` they mirror. Inside the
+// monorepo we copy the example directly so scaffolder output can never
+// drift from it; published builds carry a resolved snapshot per example
+// under `templates/<name>` (written at `prepack`).
+const WORKSPACE_TEMPLATES = join(REPO_ROOT, "examples");
+const PUBLISHED_TEMPLATES = join(PACKAGE_ROOT, "templates");
 
-// Use the workspace example only when we're actually inside the plumix
-// monorepo — both the example and the catalog it resolves against must
-// be present. Keying off the example alone would misfire if a published
-// install happened to sit next to an unrelated `examples/minimal`.
-export function resolveTemplateRoot(): string {
-  return existsSync(WORKSPACE_TEMPLATE) &&
+// We're in the monorepo when both the examples and the catalog they
+// resolve against are present. Keying off the examples alone would
+// misfire if a published install sat next to an unrelated `examples/`.
+function inWorkspace(): boolean {
+  return (
+    existsSync(WORKSPACE_TEMPLATES) &&
     existsSync(join(REPO_ROOT, "pnpm-workspace.yaml"))
-    ? WORKSPACE_TEMPLATE
-    : PUBLISHED_TEMPLATE;
+  );
 }
 
-// The workspace example's `package.json` uses pnpm's `workspace:*` and
-// `catalog:` protocols, which only resolve inside the plumix monorepo —
-// so we resolve them against the live catalog and sibling package
-// versions at copy time. The published snapshot under `templates/starter`
-// is already resolved at `prepack`, so it needs no catalog (empty
-// context, no protocols left to rewrite).
-function catalogContextFor(templateRoot: string): Promise<CatalogContext> {
-  return templateRoot === WORKSPACE_TEMPLATE
+function templatesRoot(): string {
+  return inWorkspace() ? WORKSPACE_TEMPLATES : PUBLISHED_TEMPLATES;
+}
+
+/** Template names available to scaffold, in the current environment. */
+export function availableTemplates(): string[] {
+  return readdirSync(templatesRoot(), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
+}
+
+interface TemplateRoot {
+  readonly root: string;
+  readonly fromWorkspace: boolean;
+}
+
+export function resolveTemplateRoot(template: string): TemplateRoot {
+  const available = availableTemplates();
+  // Membership check rather than `existsSync(join(root, template))`: it
+  // rejects an empty name (which would resolve to the templates dir
+  // itself) and any `../` traversal out of it.
+  if (!available.includes(template)) {
+    throw ScaffoldError.unknownTemplate({ template, available });
+  }
+  return {
+    root: join(templatesRoot(), template),
+    fromWorkspace: inWorkspace(),
+  };
+}
+
+// A workspace example's `package.json` uses pnpm's `workspace:*` and
+// `catalog:` protocols, which only resolve inside the monorepo — so we
+// resolve them against the live catalog at copy time. A published
+// snapshot is already resolved at `prepack`, so it needs no catalog
+// (empty context, no protocols left to rewrite).
+function catalogContextFor(fromWorkspace: boolean): Promise<CatalogContext> {
+  return fromWorkspace
     ? loadCatalogContext(REPO_ROOT)
     : Promise.resolve(EMPTY_CATALOG_CONTEXT);
 }
@@ -108,7 +138,11 @@ const SCAFFOLDED_TSCONFIG = {
 export async function scaffold(
   options: ScaffoldOptions,
 ): Promise<ScaffoldResult> {
-  const { targetDir } = options;
+  const { targetDir, template = DEFAULT_TEMPLATE } = options;
+  // Resolve + validate first, so an unknown template fails before we
+  // create the target directory.
+  const { root, fromWorkspace } = resolveTemplateRoot(template);
+
   const parent = dirname(targetDir);
   if (!existsSync(parent)) {
     throw ScaffoldError.targetParentMissing({ parent });
@@ -126,16 +160,15 @@ export async function scaffold(
     await mkdir(targetDir);
   }
 
-  const source = resolveTemplateRoot();
-  await cp(source, targetDir, {
+  await cp(root, targetDir, {
     recursive: true,
-    filter: (srcPath) => shouldCopyTemplateEntry(srcPath, source),
+    filter: (srcPath) => shouldCopyTemplateEntry(srcPath, root),
   });
 
   const name = basename(targetDir);
   await rewritePackageJsonFile(
     join(targetDir, "package.json"),
-    await catalogContextFor(source),
+    await catalogContextFor(fromWorkspace),
     (pkg) => {
       pkg.name = name;
     },
