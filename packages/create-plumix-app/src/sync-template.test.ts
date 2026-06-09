@@ -1,9 +1,9 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { syncTemplate } from "./sync-template.js";
+import { syncAllTemplates, syncTemplate } from "./sync-template.js";
 import { packageVersion, REPO_ROOT } from "./test-support.js";
 
 const SOURCE = join(REPO_ROOT, "examples", "minimal");
@@ -37,5 +37,24 @@ describe("syncTemplate", () => {
       `^${packageVersion("packages/plumix")}`,
     );
     expect(pkg.devDependencies?.["@plumix/typescript-config"]).toBeUndefined();
+  });
+
+  test("snapshots every example into a like-named template directory", async () => {
+    const names = await syncAllTemplates({
+      examplesDir: join(REPO_ROOT, "examples"),
+      templatesDir: dest,
+      repoRoot: REPO_ROOT,
+    });
+
+    expect(names).toEqual(expect.arrayContaining(["blog", "minimal"]));
+    for (const name of names) {
+      expect(existsSync(join(dest, name, "package.json"))).toBe(true);
+    }
+    const blogPkg = JSON.parse(
+      readFileSync(join(dest, "blog", "package.json"), "utf8"),
+    ) as { dependencies?: Record<string, string> };
+    expect(blogPkg.dependencies?.["@plumix/plugin-blog"]).toBe(
+      `^${packageVersion("packages/plugins/blog")}`,
+    );
   });
 });

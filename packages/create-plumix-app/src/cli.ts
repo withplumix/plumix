@@ -1,39 +1,70 @@
-import { scaffold } from "./scaffold.js";
+import { availableTemplates, DEFAULT_TEMPLATE, scaffold } from "./scaffold.js";
 
 export interface CliIO {
   stdout(line: string): void;
   stderr(line: string): void;
 }
 
-const USAGE = `Usage: create-plumix-app <target-directory>
+// Built lazily so reading the available templates from disk happens
+// when usage is shown, not as an import-time side effect.
+function usage(): string {
+  return `Usage: create-plumix-app <target-directory> [--template <name>]
 
 Scaffold a new Plumix project into <target-directory>. The directory
 must not exist (or must be empty); its parent must exist.
 
+Options:
+  --template <name>  Template to scaffold (default: ${DEFAULT_TEMPLATE}).
+                     Available: ${availableTemplates().join(", ")}.
+
 Example:
-  pnpm create plumix-app my-blog
+  pnpm create plumix-app my-blog --template blog
   cd my-blog
   pnpm install
   pnpm dev`;
+}
+
+// Pulls the target dir and `--template <name>` / `--template=<name>`
+// out of argv, defaulting to the minimal template. Consuming the flag's
+// value keeps it out of the positional args.
+function parseArgs(argv: readonly string[]): {
+  target: string | undefined;
+  template: string;
+} {
+  let template = DEFAULT_TEMPLATE;
+  const positional: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === undefined) continue;
+    if (arg === "--template") {
+      template = argv[i + 1] ?? "";
+      i++;
+    } else if (arg.startsWith("--template=")) {
+      template = arg.slice("--template=".length);
+    } else if (!arg.startsWith("-")) {
+      positional.push(arg);
+    }
+  }
+  return { target: positional[0], template };
+}
 
 export async function runCli(
   argv: readonly string[],
   io: CliIO,
 ): Promise<number> {
   if (argv.includes("--help") || argv.includes("-h")) {
-    io.stdout(USAGE);
+    io.stdout(usage());
     return 0;
   }
 
-  const positional = argv.filter((arg) => !arg.startsWith("-"));
-  const target = positional[0];
+  const { target, template } = parseArgs(argv);
   if (target === undefined) {
-    io.stderr(USAGE);
+    io.stderr(usage());
     return 1;
   }
 
   try {
-    const result = await scaffold({ targetDir: target });
+    const result = await scaffold({ targetDir: target, template });
     io.stdout(`Created ${result.name} at ${result.targetDir}.`);
     io.stdout("");
     io.stdout("Next steps:");
