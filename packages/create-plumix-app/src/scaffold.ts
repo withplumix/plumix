@@ -75,9 +75,9 @@ const PLUMIX_PACKAGE_VERSION = "^0.1.0";
 // Bump together with the workspace catalog and the next plumix release.
 export const CATALOG_RESOLUTIONS: Record<string, string> = {
   "@cloudflare/workers-types": "^4.20260526.1",
-  "@types/node": "^24.12.2",
+  "@types/node": "^24.13.1",
   typescript: "^6.0.3",
-  wrangler: "^4.94.0",
+  wrangler: "^4.98.0",
 };
 
 // `@plumix/typescript-config` is a private dev-only workspace package,
