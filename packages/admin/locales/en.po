@@ -872,6 +872,11 @@ msgid "palette.title"
 msgstr "Command palette"
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.group.commands"
+msgstr "Commands"
+
+#. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.compare"
 msgstr "Compare"
@@ -1554,6 +1559,11 @@ msgstr "Edit"
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.title.other"
 msgstr "Edit {email}"
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.command.profile"
+msgstr "Edit profile"
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
@@ -3021,13 +3031,13 @@ msgid "palette.description"
 msgstr "Search to navigate the admin."
 
 #. js-lingui-explicit-id
-#: src/components/shell/command-palette.tsx
-msgid "palette.placeholder"
+#: src/lib/core-type-labels-i18n.ts
+msgid "type.generic.searchItems"
 msgstr "Search…"
 
 #. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.searchItems"
+#: src/components/shell/command-palette.tsx
+msgid "palette.placeholder"
 msgstr "Search…"
 
 #. js-lingui-explicit-id
@@ -3143,6 +3153,11 @@ msgstr "Set up your site — this email becomes the admin account."
 #: src/routes/_auth/accept-invite/$token.tsx
 msgid "auth.acceptInvite.submit.pending"
 msgstr "Setting up…"
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.command.settings"
+msgstr "Settings"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.tsx

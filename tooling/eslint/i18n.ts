@@ -261,6 +261,9 @@ export const i18nStrictOverrides: Linter.Config = {
           // StyleTab section dispatcher — `property="background"`
           // selects which CSS prop the section edits.
           "property",
+          // `coreIcon` selects a built-in admin glyph (`CoreIconName`
+          // discriminator on nav items / palette commands), never copy.
+          "coreIcon",
           "fill",
           "stroke",
           "viewBox",

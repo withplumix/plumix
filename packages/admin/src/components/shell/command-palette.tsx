@@ -1,3 +1,4 @@
+import type { PaletteCommand } from "@/lib/palette-commands.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
@@ -18,6 +19,10 @@ import {
 } from "@/components/ui/dialog.js";
 import { findEntryTypeByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
+import {
+  getRegisteredPaletteCommands,
+  selectCommands,
+} from "@/lib/palette-commands.js";
 import { paletteNavItems } from "@/lib/palette-nav.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
@@ -41,7 +46,36 @@ const M = {
     id: "palette.group.navigation",
     message: "Navigation",
   }),
+  commands: defineMessage({
+    id: "palette.group.commands",
+    message: "Commands",
+  }),
 } satisfies Record<string, MessageDescriptor>;
+
+// Built-in commands. Distinct from the Navigation group: these are
+// actions/destinations the sidebar doesn't surface (e.g. the current
+// user's own profile, reached via the user menu).
+const CORE_COMMANDS: readonly PaletteCommand[] = [
+  {
+    id: "core:profile",
+    title: defineMessage({
+      id: "palette.command.profile",
+      message: "Edit profile",
+    }),
+    coreIcon: "users",
+    run: ({ navigate }) => void navigate({ to: "/profile" }),
+  },
+  {
+    id: "core:settings",
+    title: defineMessage({
+      id: "palette.command.settings",
+      message: "Settings",
+    }),
+    coreIcon: "settings",
+    capability: "settings:manage",
+    run: ({ navigate }) => void navigate({ to: "/settings" }),
+  },
+];
 
 function useDebounced(value: string, ms: number): string {
   const [debounced, setDebounced] = useState(value);
@@ -100,6 +134,12 @@ export function CommandPalette({
   );
 
   const lower = trimmed.toLowerCase();
+  const commands = selectCommands(
+    [...CORE_COMMANDS, ...getRegisteredPaletteCommands()],
+    capabilities,
+    trimmed,
+    renderLabel,
+  );
   const navItems = paletteNavItems(capabilities).filter(
     (item) =>
       lower.length === 0 ||
@@ -162,6 +202,26 @@ export function CommandPalette({
           />
           <CommandList>
             <CommandEmpty>{renderLabel(M.empty)}</CommandEmpty>
+            {commands.length > 0 ? (
+              <CommandGroup heading={renderLabel(M.commands)}>
+                {commands.map((command) => (
+                  <CommandItem
+                    key={command.id}
+                    value={command.id}
+                    data-testid={`command-palette-command-${command.id}`}
+                    onSelect={() => {
+                      dismiss();
+                      command.run({ navigate });
+                    }}
+                  >
+                    {command.coreIcon ? (
+                      <CoreIcon name={command.coreIcon} />
+                    ) : null}
+                    <span>{renderLabel(command.title)}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ) : null}
             {navItems.length > 0 ? (
               <CommandGroup heading={renderLabel(M.navigation)}>
                 {navItems.map((item) => (

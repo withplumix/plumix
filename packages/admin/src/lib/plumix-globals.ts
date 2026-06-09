@@ -11,6 +11,7 @@ import * as ReactDomNs from "react-dom";
 import * as ReactDomClientNs from "react-dom/client";
 
 import { pluginCatalogLoaderRef } from "./i18n-boot.js";
+import { registerPaletteCommand } from "./palette-commands.js";
 import {
   registerPluginBlock,
   registerPluginBlockEditor,
@@ -58,6 +59,7 @@ declare global {
       readonly registerPluginBlockEditor: typeof registerPluginBlockEditor;
       readonly registerPluginBlock: typeof registerPluginBlock;
       readonly registerPluginMarkSchema: typeof registerPluginMarkSchema;
+      readonly registerPaletteCommand: typeof registerPaletteCommand;
       readonly runtime: typeof runtime;
       readonly i18n: PlumixI18nGlobal;
     };
@@ -75,6 +77,7 @@ export function bootPlumixGlobals(): void {
     registerPluginBlockEditor,
     registerPluginBlock,
     registerPluginMarkSchema,
+    registerPaletteCommand,
     runtime,
     // Indirection through the ref so the manifest-bound loader
     // installed by `bootI18n` is reachable from plugin chunks that
