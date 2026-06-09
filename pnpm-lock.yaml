@@ -863,18 +863,30 @@ importers:
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.101.0(react@19.2.7)
+      '@testing-library/jest-dom':
+        specifier: 'catalog:'
+        version: 6.9.1
+      '@testing-library/react':
+        specifier: 'catalog:'
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.16))(@types/react@19.2.16)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.1
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.16
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.2.3(@types/react@19.2.16)
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.8(vitest@4.1.8)
       eslint:
         specifier: 'catalog:'
         version: 10.4.1(jiti@2.7.0)
+      jsdom:
+        specifier: 'catalog:'
+        version: 29.1.1
       plumix:
         specifier: workspace:*
         version: link:../../plumix
@@ -887,6 +899,9 @@ importers:
       react:
         specifier: 'catalog:'
         version: 19.2.7
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.7(react@19.2.7)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3

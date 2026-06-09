@@ -312,10 +312,13 @@ function walkSymlinkedDeps(
     return;
   }
   for (const entry of entries) {
-    if (!entry.isDirectory) continue;
     if (entry.name.startsWith(".")) continue;
     const full = join(nodeModulesPath, entry.name);
-    if (entry.name.startsWith("@")) {
+    // A real `@scope` folder is a directory holding symlinked packages —
+    // recurse into it. A package symlink itself reports `isDirectory:
+    // false` (the link, not its target), so it must NOT be filtered out
+    // by a directory check before reaching the symlink branch below.
+    if (entry.isDirectory && entry.name.startsWith("@")) {
       walkSymlinkedDeps(full, fs, visit);
       continue;
     }
