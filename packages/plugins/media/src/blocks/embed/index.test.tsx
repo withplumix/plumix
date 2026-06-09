@@ -4,35 +4,20 @@ import { describe, expect, test } from "vitest";
 import { embedBlock } from "./index.js";
 
 describe("media/embed", () => {
-  test("renders a lazy iframe for a safelisted provider", () => {
+  test("renders a click-to-load facade, not a live iframe, on the server", () => {
     const html = renderBlockSpecToHtml(embedBlock, {
       url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      title: "My clip",
     });
     expect(html).toContain('data-plumix-block="media/embed"');
-    expect(html).toContain(
-      'src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"',
-    );
-    expect(html).toContain('loading="lazy"');
     expect(html).toContain('data-provider="youtube"');
-  });
-
-  test("strict-sandboxes a non-safelist URL without same-origin", () => {
-    const html = renderBlockSpecToHtml(embedBlock, {
-      url: "https://example.com/widget",
-    });
-    expect(html).toContain('data-provider="generic"');
-    expect(html).toContain('sandbox="allow-scripts"');
-    expect(html).not.toContain("allow-same-origin");
-    // Untrusted host must not learn our origin.
-    expect(html).toMatch(/referrerpolicy="no-referrer"/i);
-  });
-
-  test("does not sandbox a safelisted provider", () => {
-    const html = renderBlockSpecToHtml(embedBlock, {
-      url: "https://vimeo.com/123456789",
-    });
-    expect(html).not.toContain("sandbox=");
-    expect(html).toMatch(/referrerpolicy="strict-origin-when-cross-origin"/i);
+    expect(html).toContain("plumix-embed-facade");
+    // The whole point: no third-party connection until the visitor opts in.
+    expect(html).not.toContain("<iframe");
+    // The facade is an accessible, labelled control.
+    expect(html).toMatch(/aria-label="[^"]*My clip/);
+    // It reserves the video aspect box so the load doesn't shift layout.
+    expect(html).toContain("aspect-ratio:16 / 9");
   });
 
   test("renders nothing for an empty or unframeable URL", () => {
