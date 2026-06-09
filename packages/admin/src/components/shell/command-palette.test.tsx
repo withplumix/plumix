@@ -42,6 +42,12 @@ vi.mock("@/lib/orpc.js", () => ({
               priority: 10,
               items: [{ id: "1", title: "Hello World" }],
             },
+            {
+              key: "term:category",
+              label: { id: "g.category", message: "Categories" },
+              priority: 100,
+              items: [{ id: "7", title: "News" }],
+            },
           ],
           enabled: opts.enabled,
         }),
@@ -129,6 +135,23 @@ describe("CommandPalette", () => {
     expect(navigate).toHaveBeenCalledWith({
       to: "/entries/$slug/$id/edit",
       params: { slug: "posts", id: 1 },
+    });
+  });
+
+  test("opens the term editor when a term result is selected", async () => {
+    renderPalette(<CommandPalette capabilities={[]} />);
+    pressCmdK();
+    fireEvent.change(await screen.findByTestId("command-palette-input"), {
+      target: { value: "news" },
+    });
+
+    fireEvent.click(
+      await screen.findByTestId("command-palette-result-term:category:7"),
+    );
+
+    expect(navigate).toHaveBeenCalledWith({
+      to: "/terms/$name/$id/edit",
+      params: { name: "category", id: 7 },
     });
   });
 

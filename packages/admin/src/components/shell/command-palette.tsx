@@ -112,14 +112,29 @@ export function CommandPalette({
     setQuery("");
   }
 
-  function openEntry(groupKey: string, id: string): void {
-    const type = groupKey.slice("entry:".length);
-    const slug = findEntryTypeByName(type)?.adminSlug ?? type;
+  // Routes a result to its editor from the group key + id. Each domain
+  // owns its route (the server stays admin-route-agnostic).
+  function openResult(groupKey: string, id: string): void {
     dismiss();
-    void navigate({
-      to: "/entries/$slug/$id/edit",
-      params: { slug, id: Number(id) },
-    });
+    const sep = groupKey.indexOf(":");
+    const domain = groupKey.slice(0, sep);
+    const name = groupKey.slice(sep + 1);
+    switch (domain) {
+      case "entry": {
+        const slug = findEntryTypeByName(name)?.adminSlug ?? name;
+        void navigate({
+          to: "/entries/$slug/$id/edit",
+          params: { slug, id: Number(id) },
+        });
+        return;
+      }
+      case "term":
+        void navigate({
+          to: "/terms/$name/$id/edit",
+          params: { name, id: Number(id) },
+        });
+        return;
+    }
   }
 
   return (
@@ -170,7 +185,7 @@ export function CommandPalette({
                     value={`${group.key}:${item.id}`}
                     data-testid={`command-palette-result-${group.key}:${item.id}`}
                     onSelect={() => {
-                      openEntry(group.key, item.id);
+                      openResult(group.key, item.id);
                     }}
                   >
                     <span>{item.title}</span>
