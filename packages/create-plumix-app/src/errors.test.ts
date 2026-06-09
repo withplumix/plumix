@@ -48,7 +48,19 @@ describe("ScaffoldError.catalogResolutionMissing", () => {
     });
     expect(err.code).toBe("catalog_resolution_missing");
     expect(err.catalogName).toBe("react-dom");
-    expect(err.message).toContain('No catalog resolution for "react-dom"');
-    expect(err.message).toContain("CATALOG_RESOLUTIONS in scaffold.ts");
+    expect(err.message).toContain('No catalog entry for "react-dom"');
+    expect(err.message).toContain("pnpm-workspace.yaml");
+  });
+});
+
+describe("ScaffoldError.workspaceVersionMissing", () => {
+  test("class identity, code, exposed packageName, and message", () => {
+    const err = ScaffoldError.workspaceVersionMissing({
+      packageName: "@plumix/ghost",
+    });
+    expect(err.code).toBe("workspace_version_missing");
+    expect(err.packageName).toBe("@plumix/ghost");
+    expect(err.message).toContain('No workspace version for "@plumix/ghost"');
+    expect(err.message).toContain("workspace:");
   });
 });

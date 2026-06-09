@@ -38,7 +38,7 @@
     "clean": "git clean -xdf .cache .turbo dist node_modules templates",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
-    "prepack": "node scripts/sync-template.mjs",
+    "prepack": "tsc && node scripts/sync-template.mjs",
     "publint": "publint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
