@@ -1,5 +1,6 @@
 import type { HookRegistry } from "../hooks/registry.js";
 import { entriesSearchHandler } from "./entries-handler.js";
+import { termsSearchHandler } from "./terms-handler.js";
 
 /**
  * Register core's built-in `admin:search:results` domains. Called at app
@@ -9,5 +10,8 @@ import { entriesSearchHandler } from "./entries-handler.js";
 export function registerCoreSearchHandlers(hooks: HookRegistry): void {
   hooks.addFilter("admin:search:results", entriesSearchHandler, {
     priority: 10,
+  });
+  hooks.addFilter("admin:search:results", termsSearchHandler, {
+    priority: 20,
   });
 }

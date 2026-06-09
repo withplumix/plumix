@@ -18,6 +18,8 @@ import {
 // no relevance ranking, so we take the most recently updated matches and
 // bucket them; a search plugin replaces this handler with real ranking.
 const SCAN_LIMIT = 50;
+// Group priority base; terms (100..) and later domains sort after Content.
+const PRIORITY_BASE = 10;
 
 /**
  * `admin:search:results` handler for the `entries` domain. Matches
@@ -74,7 +76,7 @@ export async function entriesSearchHandler(
   }
 
   const groups: SearchGroup[] = [];
-  let priority = 10;
+  let priority = PRIORITY_BASE;
   for (const [type, spec] of readable) {
     const items = byType.get(type);
     if (!items || items.length === 0) continue;
