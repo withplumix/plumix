@@ -60,7 +60,15 @@ function fixtureFs(
       const next = rest.split("/")[0];
       if (!next || seen.has(next)) continue;
       seen.add(next);
-      out.push({ name: next, isDirectory: true });
+      const fullChild = `${prefix}${next}`;
+      // A symlink entry reports `isDirectory: false` even when it targets
+      // a directory — `lstat`/`Dirent` describe the link itself. Only an
+      // intermediate real dir (e.g. the `@scope` folder above a link) is
+      // a directory. Modelling this is what surfaces the symlink walk bug.
+      out.push({
+        name: next,
+        isDirectory: !Object.prototype.hasOwnProperty.call(links, fullChild),
+      });
     }
     return out;
   };
