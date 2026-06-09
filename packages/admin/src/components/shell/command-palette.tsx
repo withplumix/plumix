@@ -2,19 +2,32 @@ import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import {
-  CommandDialog,
+  Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command.js";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog.js";
+import { findEntryTypeByName } from "@/lib/manifest.js";
+import { orpc } from "@/lib/orpc.js";
 import { paletteNavItems } from "@/lib/palette-nav.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
 import { CoreIcon } from "./core-icon.js";
+
+const MIN_QUERY_LENGTH = 2;
+const DEBOUNCE_MS = 250;
 
 const M = {
   title: defineMessage({ id: "palette.title", message: "Command palette" }),
@@ -30,11 +43,27 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
+function useDebounced(value: string, ms: number): string {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebounced(value);
+    }, ms);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [value, ms]);
+  return debounced;
+}
+
 /**
  * Global command palette. Opened with Cmd/Ctrl+K from anywhere in the
- * authenticated admin; lists capability-filtered navigation destinations
- * (the same source the sidebar renders) and navigates on select. RTL is
- * inherited from the app-root `DirectionProvider`.
+ * authenticated admin: filters the sidebar's navigation destinations
+ * client-side and shows debounced cross-domain content results from the
+ * server, grouped by type. `shouldFilter` is off because content results
+ * are already query-matched server-side (they may match on excerpt, not
+ * title); navigation is filtered explicitly. RTL is inherited from the
+ * app-root `DirectionProvider`.
  */
 export function CommandPalette({
   capabilities,
@@ -42,6 +71,7 @@ export function CommandPalette({
   readonly capabilities: readonly string[];
 }): ReactNode {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const navigate = useNavigate();
   const renderLabel = useLabel();
 
@@ -60,38 +90,97 @@ export function CommandPalette({
     };
   }, []);
 
-  const items = paletteNavItems(capabilities);
+  const trimmed = query.trim();
+  const debounced = useDebounced(trimmed, DEBOUNCE_MS);
+  const search = useQuery(
+    orpc.search.query.queryOptions({
+      input: { query: debounced },
+      enabled: open && debounced.length >= MIN_QUERY_LENGTH,
+    }),
+  );
+
+  const lower = trimmed.toLowerCase();
+  const navItems = paletteNavItems(capabilities).filter(
+    (item) =>
+      lower.length === 0 ||
+      renderLabel(item.label).toLowerCase().includes(lower),
+  );
+  const groups = trimmed.length >= MIN_QUERY_LENGTH ? (search.data ?? []) : [];
+
+  function dismiss(): void {
+    setOpen(false);
+    setQuery("");
+  }
+
+  function openEntry(groupKey: string, id: string): void {
+    const type = groupKey.slice("entry:".length);
+    const slug = findEntryTypeByName(type)?.adminSlug ?? type;
+    dismiss();
+    void navigate({
+      to: "/entries/$slug/$id/edit",
+      params: { slug, id: Number(id) },
+    });
+  }
 
   return (
-    <CommandDialog
+    <Dialog
       open={open}
-      onOpenChange={setOpen}
-      title={renderLabel(M.title)}
-      description={renderLabel(M.description)}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setQuery("");
+      }}
     >
-      <CommandInput
-        data-testid="command-palette-input"
-        placeholder={renderLabel(M.placeholder)}
-      />
-      <CommandList>
-        <CommandEmpty>{renderLabel(M.empty)}</CommandEmpty>
-        <CommandGroup heading={renderLabel(M.navigation)}>
-          {items.map((item) => (
-            <CommandItem
-              key={item.to}
-              value={renderLabel(item.label)}
-              data-testid={`command-palette-nav-${item.to}`}
-              onSelect={() => {
-                setOpen(false);
-                void navigate({ to: item.to });
-              }}
-            >
-              <CoreIcon name={item.coreIcon} />
-              <span>{renderLabel(item.label)}</span>
-            </CommandItem>
-          ))}
-        </CommandGroup>
-      </CommandList>
-    </CommandDialog>
+      <DialogHeader className="sr-only">
+        <DialogTitle>{renderLabel(M.title)}</DialogTitle>
+        <DialogDescription>{renderLabel(M.description)}</DialogDescription>
+      </DialogHeader>
+      <DialogContent className="overflow-hidden p-0">
+        <Command shouldFilter={false}>
+          <CommandInput
+            value={query}
+            onValueChange={setQuery}
+            data-testid="command-palette-input"
+            placeholder={renderLabel(M.placeholder)}
+          />
+          <CommandList>
+            <CommandEmpty>{renderLabel(M.empty)}</CommandEmpty>
+            {navItems.length > 0 ? (
+              <CommandGroup heading={renderLabel(M.navigation)}>
+                {navItems.map((item) => (
+                  <CommandItem
+                    key={item.to}
+                    value={item.to}
+                    data-testid={`command-palette-nav-${item.to}`}
+                    onSelect={() => {
+                      dismiss();
+                      void navigate({ to: item.to });
+                    }}
+                  >
+                    <CoreIcon name={item.coreIcon} />
+                    <span>{renderLabel(item.label)}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ) : null}
+            {groups.map((group) => (
+              <CommandGroup key={group.key} heading={renderLabel(group.label)}>
+                {group.items.map((item) => (
+                  <CommandItem
+                    key={`${group.key}:${item.id}`}
+                    value={`${group.key}:${item.id}`}
+                    data-testid={`command-palette-result-${group.key}:${item.id}`}
+                    onSelect={() => {
+                      openEntry(group.key, item.id);
+                    }}
+                  >
+                    <span>{item.title}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ))}
+          </CommandList>
+        </Command>
+      </DialogContent>
+    </Dialog>
   );
 }
