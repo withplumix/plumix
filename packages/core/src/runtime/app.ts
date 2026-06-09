@@ -41,6 +41,7 @@ import { installPlugins } from "../plugin/register.js";
 import { compileRouteMap } from "../route/compile.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
 import { appRouter } from "../rpc/router.js";
+import { registerCoreSearchHandlers } from "../search/register-core-handlers.js";
 import { registerCoreSettings } from "../settings-core.js";
 import { registerCoreTemplateDeps } from "../template-deps-core.js";
 import { isTemplate } from "../template.js";
@@ -181,6 +182,7 @@ export async function buildApp(
 ): Promise<PlumixApp> {
   const hooks = new HookRegistry();
   registerCoreAdminBarContributors(hooks);
+  registerCoreSearchHandlers(hooks);
   const seededRegistry = createPluginRegistry();
   registerCoreLookupAdapters(seededRegistry);
   registerCoreTemplateDeps(seededRegistry);
