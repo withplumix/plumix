@@ -875,6 +875,11 @@ msgid "editor.layout.draftBanner.body"
 msgstr "اضغط «نشر» لإطلاقها، أو «تجاهل» للتراجع."
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.hint.close"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.error.notFound"
 msgstr "الرمز غير موجود. تحقق من تطابقه مع ما طبعه CLI."
@@ -2280,6 +2285,11 @@ msgstr "يجب أن يكون الاسم ≤ 64 حرفاً."
 
 #. js-lingui-explicit-id
 #: src/components/shell/command-palette.tsx
+msgid "palette.hint.navigate"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
 msgid "palette.group.navigation"
 msgstr ""
 
@@ -3060,9 +3070,19 @@ msgid "form.multiSelect.search"
 msgstr "بحث…"
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.loading"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.transport.securityKey"
 msgstr "مفتاح أمان"
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.hint.select"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx

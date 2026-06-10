@@ -1,7 +1,7 @@
 import type { PaletteCommand } from "@/lib/palette-commands.js";
 import type { MessageDescriptor } from "@lingui/core";
-import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Command,
   CommandEmpty,
@@ -24,6 +24,11 @@ import {
   selectCommands,
 } from "@/lib/palette-commands.js";
 import { paletteNavItems, selectNavItems } from "@/lib/palette-nav.js";
+import {
+  parseGroupKey,
+  resultHref,
+  shouldOpenInNewTab,
+} from "@/lib/palette-result.js";
 import {
   readRecentNav,
   recordRecentNav,
@@ -57,6 +62,13 @@ const M = {
     id: "palette.group.commands",
     message: "Commands",
   }),
+  loading: defineMessage({ id: "palette.loading", message: "Searching…" }),
+  hintNavigate: defineMessage({
+    id: "palette.hint.navigate",
+    message: "Navigate",
+  }),
+  hintSelect: defineMessage({ id: "palette.hint.select", message: "Select" }),
+  hintClose: defineMessage({ id: "palette.hint.close", message: "Close" }),
 } satisfies Record<string, MessageDescriptor>;
 
 // Built-in commands. Distinct from the Navigation group: these are
@@ -115,6 +127,8 @@ export function CommandPalette({
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
   const renderLabel = useLabel();
+  // cmdk's onSelect carries no event; capture the modifier separately.
+  const newTabRef = useRef(false);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {
@@ -158,6 +172,11 @@ export function CommandPalette({
       ? selectRecentNavItems(navItems, readRecentNav(), RECENT_LIMIT)
       : [];
   const groups = trimmed.length >= MIN_QUERY_LENGTH ? (search.data ?? []) : [];
+  // Suppress the empty state while debouncing/in flight so "no results"
+  // doesn't flash before the first response lands.
+  const searching =
+    trimmed.length >= MIN_QUERY_LENGTH &&
+    (trimmed !== debounced || search.isFetching);
 
   function dismiss(): void {
     setOpen(false);
@@ -173,10 +192,21 @@ export function CommandPalette({
   // Routes a result to its editor from the group key + id. Each domain
   // owns its route (the server stays admin-route-agnostic).
   function openResult(groupKey: string, id: string): void {
+    // Every select pathway (click capture, Enter keydown) writes the ref
+    // first, so it's never stale here.
+    const newTab = newTabRef.current;
+    newTabRef.current = false;
     dismiss();
-    const sep = groupKey.indexOf(":");
-    const domain = sep === -1 ? groupKey : groupKey.slice(0, sep);
-    const name = groupKey.slice(sep + 1);
+    if (newTab) {
+      const url = resultHref(
+        groupKey,
+        id,
+        (name) => findEntryTypeByName(name)?.adminSlug ?? name,
+      );
+      if (url) window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
+    const { domain, name } = parseGroupKey(groupKey);
     switch (domain) {
       case "entry": {
         const slug = findEntryTypeByName(name)?.adminSlug ?? name;
@@ -198,6 +228,12 @@ export function CommandPalette({
     }
   }
 
+  function captureNewTab(
+    event: ReactKeyboardEvent | { metaKey: boolean; ctrlKey: boolean },
+  ): void {
+    newTabRef.current = shouldOpenInNewTab(event);
+  }
+
   return (
     <Dialog
       open={open}
@@ -211,7 +247,13 @@ export function CommandPalette({
         <DialogDescription>{renderLabel(M.description)}</DialogDescription>
       </DialogHeader>
       <DialogContent className="overflow-hidden p-0">
-        <Command shouldFilter={false}>
+        <Command
+          shouldFilter={false}
+          onClickCapture={captureNewTab}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") captureNewTab(event);
+          }}
+        >
           <CommandInput
             value={query}
             onValueChange={setQuery}
@@ -219,7 +261,16 @@ export function CommandPalette({
             placeholder={renderLabel(M.placeholder)}
           />
           <CommandList>
-            <CommandEmpty>{renderLabel(M.empty)}</CommandEmpty>
+            {searching ? (
+              <div
+                data-testid="command-palette-loading"
+                className="text-muted-foreground px-3 py-2 text-sm"
+              >
+                {renderLabel(M.loading)}
+              </div>
+            ) : (
+              <CommandEmpty>{renderLabel(M.empty)}</CommandEmpty>
+            )}
             {recent.length > 0 ? (
               <CommandGroup heading={renderLabel(M.recent)}>
                 {recent.map((item) => (
@@ -291,6 +342,23 @@ export function CommandPalette({
               </CommandGroup>
             ))}
           </CommandList>
+          <div
+            data-testid="command-palette-footer"
+            className="text-muted-foreground flex items-center gap-4 border-t px-3 py-2 text-xs"
+          >
+            <span className="flex items-center gap-1">
+              <kbd>↑↓</kbd>
+              {renderLabel(M.hintNavigate)}
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd>↵</kbd>
+              {renderLabel(M.hintSelect)}
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd>⎋</kbd>
+              {renderLabel(M.hintClose)}
+            </span>
+          </div>
         </Command>
       </DialogContent>
     </Dialog>

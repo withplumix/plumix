@@ -357,6 +357,9 @@ export const i18nStrictOverrides: Linter.Config = {
           "URLSearchParams",
           "Symbol",
           "fetch",
+          // `window.open(url, target, features)` — all args are protocol
+          // values (URL, "_blank", "noopener"), never UI copy.
+          "window.open",
           // DOM queries — id / selector args, never user copy.
           "document.getElementById",
           "document.querySelectorAll",

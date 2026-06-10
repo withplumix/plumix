@@ -196,6 +196,17 @@ describe("CommandPalette", () => {
     });
   });
 
+  test("shows a loading indicator while the search query is in flight", async () => {
+    renderPalette(<CommandPalette capabilities={[]} />);
+    pressCmdK();
+    fireEvent.change(await screen.findByTestId("command-palette-input"), {
+      target: { value: "hello" },
+    });
+
+    // Debounce hasn't elapsed yet — query !== debounced, so it's loading.
+    expect(screen.getByTestId("command-palette-loading")).not.toBeNull();
+  });
+
   test("opens the term editor when a term result is selected", async () => {
     renderPalette(<CommandPalette capabilities={[]} />);
     pressCmdK();
@@ -211,6 +222,28 @@ describe("CommandPalette", () => {
       to: "/terms/$name/$id/edit",
       params: { name: "category", id: 7 },
     });
+  });
+
+  test("opens a content result in a new tab on Cmd/Ctrl+click", async () => {
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+    renderPalette(<CommandPalette capabilities={[]} />);
+    pressCmdK();
+    fireEvent.change(await screen.findByTestId("command-palette-input"), {
+      target: { value: "hello" },
+    });
+
+    fireEvent.click(
+      await screen.findByTestId("command-palette-result-entry:post:1"),
+      { metaKey: true },
+    );
+
+    expect(openSpy).toHaveBeenCalledWith(
+      "/_plumix/admin/entries/posts/1/edit",
+      "_blank",
+      "noopener,noreferrer",
+    );
+    expect(navigate).not.toHaveBeenCalled();
+    openSpy.mockRestore();
   });
 
   test("opens the user editor when a user result is selected", async () => {
@@ -264,6 +297,13 @@ describe("CommandPalette", () => {
     expect(
       screen.queryByTestId("command-palette-command-plugin:secret"),
     ).toBeNull();
+  });
+
+  test("renders a footer with keyboard hints", async () => {
+    renderPalette(<CommandPalette capabilities={[]} />);
+    pressCmdK();
+
+    await screen.findByTestId("command-palette-footer");
   });
 
   test("Escape closes the palette", async () => {
