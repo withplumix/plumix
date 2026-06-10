@@ -28,6 +28,8 @@ export type { Factories } from "./factories.js";
 
 export { createTestDb } from "./harness.js";
 
+export { createApiToken } from "../auth/api-tokens.js";
+
 export { createDispatcherHarness, plumixRequest } from "./dispatcher.js";
 export type {
   DispatcherHarness,
