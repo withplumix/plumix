@@ -1,23 +1,18 @@
-import type { AppContext, AuthenticatedAppContext, SQL } from "plumix/plugin";
-import {
-  and,
-  authenticated,
-  base,
-  desc,
-  entries,
-  eq,
-  escapeLikePattern,
-  inArray,
-  like,
-  sql,
-} from "plumix/plugin";
+import type { AuthenticatedAppContext } from "plumix/plugin";
+import { and, authenticated, base, entries, eq } from "plumix/plugin";
 import * as v from "valibot";
 
 import { looksLikeMime, MAGIC_BYTE_SAMPLE_SIZE } from "./magic-bytes.js";
 import { parseMediaMeta } from "./meta.js";
 import { extensionForMime } from "./mime.js";
-
-const MEDIA_ENTRY_TYPE = "media";
+import {
+  listMedia,
+  MEDIA_ENTRY_TYPE,
+  mediaListInputSchema,
+  MediaReadError,
+  resolveMediaUrl,
+  thumbnailFor,
+} from "./read-service.js";
 
 interface MediaRpcOptions {
   readonly acceptedTypes: readonly string[];
@@ -42,28 +37,6 @@ interface ConfirmResponse {
   readonly size: number;
 }
 
-interface MediaListItem {
-  readonly id: number;
-  readonly title: string;
-  readonly mime: string;
-  readonly size: number;
-  readonly storageKey: string;
-  readonly alt: string | null;
-  readonly url: string;
-  readonly thumbnailUrl: string;
-  // ISO-8601 timestamp — surfaces in the drawer's "Uploaded" line.
-  readonly uploadedAt: string;
-  // Author display info for the "Uploaded by" line. Populated when the
-  // join lands; left undefined when the row's authorId no longer
-  // resolves (deleted user).
-  readonly uploadedById: number;
-}
-
-interface MediaListResponse {
-  readonly items: readonly MediaListItem[];
-  readonly hasMore: boolean;
-}
-
 interface DeleteResponse {
   readonly id: number;
 }
@@ -78,18 +51,6 @@ interface UpdateResponse {
 // `Content-Type: image/png` (no space, no parameters) when uploading
 // a File via XHR; anything else here is a sign of a malformed client.
 const CONTENT_TYPE_RE = /^[\x21-\x7E]+$/;
-
-const DEFAULT_PAGE_SIZE = 24;
-const MAX_PAGE_SIZE = 100;
-
-// Default thumbnail variant the admin grid renders. 320px-wide AVIF/WebP
-// is enough for the 160px card under 2× DPI; format=auto lets Cloudflare
-// negotiate via `Accept`.
-const THUMBNAIL_OPTS = {
-  width: 320,
-  format: "auto",
-  fit: "cover",
-} as const;
 
 interface MediaRowGuards {
   readonly NOT_FOUND: (opts: {
@@ -342,95 +303,13 @@ export function createMediaRouter(
 
   const list = base
     .use(authenticated)
-    .input(
-      v.object({
-        limit: v.optional(
-          v.pipe(
-            v.number(),
-            v.integer(),
-            v.minValue(1),
-            v.maxValue(MAX_PAGE_SIZE),
-          ),
-          DEFAULT_PAGE_SIZE,
-        ),
-        offset: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0)), 0),
-        // MIME filter for picker mode. String form (`"image/"`) does
-        // a `LIKE 'image/%'` prefix match; array form does an exact
-        // match against the supplied MIMEs. Pushed into SQL so the
-        // `limit` clause counts only matching rows — JS post-filter
-        // would silently under-fill the picker grid for a field whose
-        // accept rejects a chunk of recent uploads.
-        accept: v.optional(
-          v.union([
-            v.pipe(v.string(), v.maxLength(64)),
-            v.pipe(
-              v.array(v.pipe(v.string(), v.maxLength(64))),
-              v.maxLength(32),
-            ),
-          ]),
-        ),
-        // Filename substring match. Empty string coerces to "no filter"
-        // client-side; cap mirrors the entries-list search bound.
-        search: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(200))),
-      }),
-    )
-    .handler(async ({ input, context, errors }): Promise<MediaListResponse> => {
-      if (!context.auth.can("entry:media:read")) {
-        throw errors.FORBIDDEN({ data: { capability: "entry:media:read" } });
+    .input(mediaListInputSchema)
+    .handler(async ({ input, context, errors }) => {
+      try {
+        return await listMedia(context, input);
+      } catch (error) {
+        throw mapMediaReadError(error, errors);
       }
-      const conditions: SQL[] = [
-        eq(entries.type, MEDIA_ENTRY_TYPE),
-        eq(entries.status, "published"),
-      ];
-      const acceptCondition = buildAcceptCondition(input.accept);
-      if (acceptCondition) conditions.push(acceptCondition);
-      if (input.search) {
-        const pattern = `%${escapeLikePattern(input.search)}%`;
-        // Alt lives inside the meta JSON; COALESCE because rows without
-        // an alt yield NULL from json_extract, and `LIKE` on NULL is
-        // NULL — which would poison the OR for title-only matches.
-        conditions.push(sql`(
-          ${entries.title} LIKE ${pattern} ESCAPE '\\'
-          OR COALESCE(json_extract(${entries.meta}, '$.alt'), '') LIKE ${pattern} ESCAPE '\\'
-        )`);
-      }
-      // Fetch one extra row so we can report `hasMore` without a
-      // separate COUNT(*) query.
-      const rows = await context.db
-        .select()
-        .from(entries)
-        .where(and(...conditions))
-        .orderBy(desc(entries.updatedAt), desc(entries.id))
-        .limit(input.limit + 1)
-        .offset(input.offset);
-      const hasMore = rows.length > input.limit;
-      const visibleRows = hasMore ? rows.slice(0, input.limit) : rows;
-
-      const items: MediaListItem[] = [];
-      for (const row of visibleRows) {
-        const meta = parseMediaMeta(row.meta);
-        if (!meta) continue;
-        const url = context.storage
-          ? await resolveMediaUrl(context.storage, meta.storageKey, row.id)
-          : meta.storageKey;
-        // `publishedAt` is the source of truth for "uploaded on"
-        // (set by `confirm`'s CAS); fall back to createdAt for the
-        // edge case where publishedAt is somehow null.
-        const uploadedAt = (row.publishedAt ?? row.createdAt).toISOString();
-        items.push({
-          id: row.id,
-          title: row.title,
-          mime: meta.mime,
-          size: meta.size,
-          storageKey: meta.storageKey,
-          alt: meta.alt,
-          url,
-          thumbnailUrl: thumbnailFor(context, url, meta.mime),
-          uploadedAt,
-          uploadedById: row.authorId,
-        });
-      }
-      return { items, hasMore };
     });
 
   const update = base
@@ -520,40 +399,16 @@ export function createMediaRouter(
   return { createUploadUrl, confirm, list, update, delete: remove };
 }
 
-function thumbnailFor(
-  context: AppContext | AuthenticatedAppContext,
-  url: string,
-  mime: string,
-): string {
-  // imageDelivery transforms (e.g. Cloudflare Image Transformations)
-  // need an absolute, publicly-reachable source URL — the transform
-  // CDN fetches the source itself. When `storage.url()` falls back to
-  // the worker-proxied `/_plumix/media/serve/<id>` (binding-only mode,
-  // no publicUrlBase), the transform CDN can't fetch it: relative URL,
-  // no public origin to dereference. Apply transforms only to absolute
-  // URLs.
-  if (!mime.startsWith("image/") || !context.imageDelivery) return url;
-  if (!url.startsWith("http://") && !url.startsWith("https://")) return url;
-  return context.imageDelivery.url(url, THUMBNAIL_OPTS);
-}
-
-/**
- * Resolve a publicly-fetchable URL for a media row. Prefers the
- * storage adapter's native URL (presigned R2 / public bucket via
- * `publicUrlBase`); falls back to the worker-proxied serve route
- * keyed on the entry id when the bucket isn't publicly addressable.
- *
- * The id-based fallback is critical: keying on storageKey would
- * mean anyone with a key could fetch bytes (incl. drafts). Keying
- * on id lets the serve route enforce `status='published'`.
- */
-async function resolveMediaUrl(
-  storage: NonNullable<AppContext["storage"]>,
-  storageKey: string,
-  entryId: number,
-): Promise<string> {
-  const direct = await storage.url(storageKey);
-  return direct ?? `/_plumix/media/serve/${String(entryId)}`;
+// Map a media-read domain error to the oRPC typed error to throw; non-domain
+// errors pass through for the caller to rethrow.
+function mapMediaReadError(error: unknown, errors: MediaRowGuards): unknown {
+  if (!(error instanceof MediaReadError)) return error;
+  switch (error.data.code) {
+    case "forbidden":
+      return errors.FORBIDDEN({ data: { capability: error.data.capability } });
+    case "not_found":
+      return errors.NOT_FOUND({ data: { kind: "media", id: error.data.id } });
+  }
 }
 
 function normalizeMime(raw: string): string {
@@ -573,23 +428,4 @@ function sanitizeExtension(filename: string): string | undefined {
   if (ext.length > MAX_EXT_LEN) return undefined;
   if (!SAFE_EXT_RE.test(ext)) return undefined;
   return ext;
-}
-
-// Translate the `accept` input into a SQL predicate against the
-// extracted JSON `mime` field. Mirrors the `mediaLookupAdapter`'s
-// approach (see lookup.ts) so the picker grid and the lookup adapter
-// apply identical filtering. Real MIME strings don't contain `%`/`_`
-// and the accept input is plugin-supplied (or omitted), so no LIKE
-// escaping is needed.
-function buildAcceptCondition(
-  accept: string | readonly string[] | undefined,
-): SQL | undefined {
-  if (accept === undefined) return undefined;
-  const mimeExpr = sql<string>`json_extract(${entries.meta}, '$.mime')`;
-  if (typeof accept === "string") {
-    if (accept === "") return undefined;
-    return like(mimeExpr, `${accept}%`);
-  }
-  if (accept.length === 0) return undefined;
-  return inArray(mimeExpr, accept as string[]);
 }

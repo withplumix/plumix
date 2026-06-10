@@ -9,6 +9,7 @@ import { galleryBlock } from "./blocks/gallery/index.js";
 import { imageBlock } from "./blocks/image/index.js";
 import { videoBlock } from "./blocks/video/index.js";
 import { mediaLookupAdapter } from "./lookup.js";
+import { mediaGetTool, mediaListTool } from "./mcp-tools.js";
 import { DEFAULT_ACCEPTED_TYPES } from "./mime.js";
 import { createMediaRouter } from "./rpc.js";
 import { handleMediaServe } from "./serve-route.js";
@@ -186,6 +187,11 @@ export function media(
       ctx.registerRpcRouter(
         createMediaRouter({ acceptedTypes, maxUploadSize }),
       );
+
+      // Media's own MCP read tools, contributed through the plugin seam —
+      // they ship from the plugin that owns media, not core.
+      ctx.registerMcpTool(mediaListTool);
+      ctx.registerMcpTool(mediaGetTool);
 
       // Reference-field surface: any `media({ ... })` field calls
       // through `lookup.list({ kind: "media", ids })` for write
