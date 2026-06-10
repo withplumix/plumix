@@ -18,6 +18,7 @@ import type { AppContext } from "../context/app.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { Label } from "../i18n/label.js";
 import type { ResolvedI18n, ResolvedLocale } from "../i18n/locale-registry.js";
+import type { McpTool } from "../mcp/tool.js";
 import type { RouteIntent } from "../route/intent.js";
 import type { RegisteredTemplateDep } from "../template-deps.js";
 import type { PluginI18nSlot } from "./define.js";
@@ -1248,6 +1249,11 @@ export interface RegisteredScheduledTask extends ScheduledTask {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type PluginRpcRouter = Record<string, any>;
 
+export interface RegisteredMcpTool {
+  readonly tool: McpTool;
+  readonly registeredBy: string;
+}
+
 export const CORE_RPC_NAMESPACES: ReadonlySet<string> = new Set([
   "auth",
   "entry",
@@ -1283,6 +1289,7 @@ export interface PluginRegistry {
   readonly settingsPages: ReadonlyMap<string, RegisteredSettingsPage>;
   readonly rewriteRules: readonly RegisteredRewriteRule[];
   readonly rpcRouters: ReadonlyMap<string, PluginRpcRouter>;
+  readonly mcpTools: ReadonlyMap<string, RegisteredMcpTool>;
   readonly rawRoutes: readonly RegisteredRawRoute[];
   readonly loginLinks: readonly RegisteredLoginLink[];
   readonly adminPages: ReadonlyMap<string, RegisteredAdminPage>;
@@ -1307,6 +1314,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly settingsPages: Map<string, RegisteredSettingsPage>;
   readonly rewriteRules: RegisteredRewriteRule[];
   readonly rpcRouters: Map<string, PluginRpcRouter>;
+  readonly mcpTools: Map<string, RegisteredMcpTool>;
   readonly rawRoutes: RegisteredRawRoute[];
   readonly loginLinks: RegisteredLoginLink[];
   readonly adminPages: Map<string, RegisteredAdminPage>;
@@ -1332,6 +1340,7 @@ export function createPluginRegistry(): MutablePluginRegistry {
     settingsPages: new Map(),
     rewriteRules: [],
     rpcRouters: new Map(),
+    mcpTools: new Map(),
     rawRoutes: [],
     loginLinks: [],
     adminPages: new Map(),

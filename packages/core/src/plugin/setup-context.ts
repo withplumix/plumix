@@ -14,6 +14,7 @@ import type {
   FilterRest,
   HookOptions,
 } from "../hooks/types.js";
+import type { McpTool } from "../mcp/tool.js";
 import type { RouteIntent } from "../route/intent.js";
 import type {
   RegisteredTemplateDep,
@@ -45,6 +46,7 @@ import {
   deriveEntryTypeCapabilities,
   deriveTermTaxonomyCapabilities,
 } from "../auth/rbac.js";
+import { CORE_MCP_TOOL_NAMES } from "../mcp/registry.js";
 import { DEFAULT_REWRITE_RULE_PRIORITY } from "../route/compile.js";
 import { RESERVED_DEP_KIND_NAMES } from "../template-deps.js";
 import { DuplicateRegistrationError, PluginContextError } from "./errors.js";
@@ -167,6 +169,14 @@ export interface PluginSetupContextBase {
 
   /** Mounted at `/_plumix/rpc/<pluginId>/*`. */
   registerRpcRouter(router: PluginRpcRouter): void;
+
+  /**
+   * Contribute a read tool to the MCP endpoint (`/_plumix/mcp`). Tool names
+   * are global and snake_case (e.g. `media_list`); collisions with core tools
+   * or another plugin's tool throw at registration. The tool's `run` delegates
+   * to a service — MCP never calls oRPC.
+   */
+  registerMcpTool(tool: McpTool): void;
 
   /** Mounted at `/_plumix/<pluginId><path>`. CSRF is enforced by the
    *  dispatcher. `ctx.locale` reflects the visitor's pick (cookie +
@@ -480,6 +490,19 @@ export function createPluginSetupContext({
         });
       }
       registry.rpcRouters.set(pluginId, router);
+    },
+
+    registerMcpTool: (tool) => {
+      if (
+        CORE_MCP_TOOL_NAMES.has(tool.name) ||
+        registry.mcpTools.has(tool.name)
+      ) {
+        throw DuplicateRegistrationError.alreadyRegistered({
+          kind: "MCP tool",
+          identifier: tool.name,
+        });
+      }
+      registry.mcpTools.set(tool.name, { tool, registeredBy: pluginId });
     },
 
     registerRoute: ({ method, path, auth, handler }) => {

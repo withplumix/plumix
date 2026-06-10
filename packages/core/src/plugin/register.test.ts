@@ -1,3 +1,4 @@
+import { object } from "valibot";
 import { describe, expect, test } from "vitest";
 
 import { HookRegistry } from "../hooks/registry.js";
@@ -461,6 +462,43 @@ describe("registerRpcRouter", () => {
       ).rejects.toThrow(/collides with core RPC namespace/);
     },
   );
+});
+
+describe("registerMcpTool", () => {
+  const tool = (name: string) => ({
+    name,
+    description: "d",
+    inputSchema: object({}),
+    run: () => null,
+  });
+
+  test("stores the tool under its name with plugin attribution", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("media", (ctx) => {
+      ctx.registerMcpTool(tool("media_list"));
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    expect(registry.mcpTools.get("media_list")?.registeredBy).toBe("media");
+  });
+
+  test("rejects two plugins registering the same tool name", async () => {
+    const hooks = new HookRegistry();
+    const a = definePlugin("a", (ctx) => ctx.registerMcpTool(tool("thing")));
+    const b = definePlugin("b", (ctx) => ctx.registerMcpTool(tool("thing")));
+    await expect(installPlugins({ hooks, plugins: [a, b] })).rejects.toThrow(
+      /MCP tool "thing" is already registered/,
+    );
+  });
+
+  test("rejects a tool name that collides with a core tool", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("rogue", (ctx) => {
+      ctx.registerMcpTool(tool("schema_describe"));
+    });
+    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
+      /MCP tool "schema_describe" is already registered/,
+    );
+  });
 });
 
 describe("registerAdminPage nav.group validation", () => {
