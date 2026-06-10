@@ -143,6 +143,7 @@ export const blog = definePlugin("blog", {
       rewrite: { slug: "posts" },
       capabilityType: "post",
       menuIcon: "file-text",
+      keywords: ["articles", "blog", "writing", "news"],
     });
 
     ctx.registerTermTaxonomy("category", {
@@ -153,6 +154,7 @@ export const blog = definePlugin("blog", {
       isPublic: true,
       hasAdminColumn: true,
       rewrite: { slug: "category", isHierarchical: true },
+      keywords: ["taxonomy", "categories"],
     });
 
     ctx.registerTermTaxonomy("tag", {
@@ -163,6 +165,7 @@ export const blog = definePlugin("blog", {
       isPublic: true,
       hasAdminColumn: true,
       rewrite: { slug: "tag" },
+      keywords: ["taxonomy", "tags"],
     });
   },
 });

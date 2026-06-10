@@ -23,7 +23,7 @@ import {
   getRegisteredPaletteCommands,
   selectCommands,
 } from "@/lib/palette-commands.js";
-import { paletteNavItems } from "@/lib/palette-nav.js";
+import { paletteNavItems, selectNavItems } from "@/lib/palette-nav.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { useQuery } from "@tanstack/react-query";
@@ -133,17 +133,16 @@ export function CommandPalette({
     }),
   );
 
-  const lower = trimmed.toLowerCase();
   const commands = selectCommands(
     [...CORE_COMMANDS, ...getRegisteredPaletteCommands()],
     capabilities,
     trimmed,
     renderLabel,
   );
-  const navItems = paletteNavItems(capabilities).filter(
-    (item) =>
-      lower.length === 0 ||
-      renderLabel(item.label).toLowerCase().includes(lower),
+  const navItems = selectNavItems(
+    paletteNavItems(capabilities),
+    trimmed,
+    renderLabel,
   );
   const groups = trimmed.length >= MIN_QUERY_LENGTH ? (search.data ?? []) : [];
 

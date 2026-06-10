@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, test } from "vitest";
 
-import type { Label } from "@plumix/core/i18n";
-
 import type { PaletteCommand } from "./palette-commands.js";
+import { labelText as text } from "../../test/label-text.js";
 import {
   _resetPaletteCommands,
   getRegisteredPaletteCommands,
@@ -11,8 +10,6 @@ import {
 } from "./palette-commands.js";
 
 const noop = (): void => undefined;
-const text = (label: Label): string =>
-  typeof label === "string" ? label : (label.message ?? label.id);
 
 function cmd(
   id: string,

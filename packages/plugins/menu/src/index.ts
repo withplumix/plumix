@@ -242,6 +242,7 @@ export function menu(
           group: { id: "appearance", label: APPEARANCE_LABEL, priority: 175 },
           label: MENU_LABELS.plural,
           order: 10,
+          keywords: ["navigation", "nav", "appearance", "header", "footer"],
         },
         component: "MenusShell",
       });

@@ -237,6 +237,7 @@ export function media(
           },
           label: MEDIA_LIBRARY_LABEL,
           order: 50,
+          keywords: ["images", "files", "uploads", "photos", "assets"],
         },
         component: "MediaLibrary",
       });
