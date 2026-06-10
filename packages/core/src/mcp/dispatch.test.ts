@@ -340,3 +340,79 @@ describe("MCP endpoint — content_get", () => {
     expect(json.result.content[0]?.text).toContain("not_found");
   });
 });
+
+describe("MCP endpoint — term tools", () => {
+  test("term_list returns terms in a taxonomy", async () => {
+    const h = await createDispatcherHarness({ plugins: [blog] });
+    await h.factory.category.create({ name: "News", slug: "news" });
+    const secret = await mintPat(h, { role: "editor" });
+
+    const { json } = await callTool(h, secret, 1, "term_list", {
+      taxonomy: "category",
+    });
+
+    const rows = parseToolResult<{ slug: string }[]>(json);
+    expect(rows.map((r) => r.slug)).toEqual(["news"]);
+  });
+
+  test("term_list maps a forbidden read to an envelope", async () => {
+    const h = await createDispatcherHarness({ plugins: [blog] });
+    const secret = await mintPat(h, {
+      role: "editor",
+      scopes: ["entry:post:read"],
+    });
+
+    const { json } = await callTool(h, secret, 1, "term_list", {
+      taxonomy: "category",
+    });
+
+    expect(json.result.isError).toBe(true);
+    expect(json.result.content[0]?.text).toContain("forbidden");
+  });
+
+  test("term_get returns a term by taxonomy + id", async () => {
+    const h = await createDispatcherHarness({ plugins: [blog] });
+    const term = await h.factory.category.create({
+      name: "News",
+      slug: "news",
+    });
+    const secret = await mintPat(h, { role: "editor" });
+
+    const { json } = await callTool(h, secret, 1, "term_get", {
+      taxonomy: "category",
+      id: term.id,
+    });
+
+    expect(parseToolResult<{ slug: string }>(json).slug).toBe("news");
+  });
+
+  test("term_get hides a taxonomy mismatch as not_found", async () => {
+    const h = await createDispatcherHarness({ plugins: [blog] });
+    const term = await h.factory.category.create({
+      name: "News",
+      slug: "news",
+    });
+    const secret = await mintPat(h, { role: "editor" });
+
+    const { json } = await callTool(h, secret, 1, "term_get", {
+      taxonomy: "post_tag",
+      id: term.id,
+    });
+
+    expect(json.result.isError).toBe(true);
+    expect(json.result.content[0]?.text).toContain("not_found");
+  });
+
+  test("taxonomy_list enumerates registered taxonomies", async () => {
+    const h = await createDispatcherHarness({ plugins: [blog] });
+    const secret = await mintPat(h, { role: "editor" });
+
+    const { json } = await callTool(h, secret, 1, "taxonomy_list", {});
+
+    const rows =
+      parseToolResult<{ name: string; isHierarchical: boolean }[]>(json);
+    expect(rows).toContainEqual(
+      expect.objectContaining({ name: "category", isHierarchical: true }),
+    );
+  });
+});
