@@ -878,6 +878,11 @@ msgstr "Натисніть «Опублікувати», щоб запустит
 "щоб скасувати."
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.hint.close"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.error.notFound"
 msgstr "Код не знайдено. Перевірте, що він збігається з виведеним у CLI."
@@ -2286,6 +2291,11 @@ msgstr "Назва має бути ≤ 64 символів."
 
 #. js-lingui-explicit-id
 #: src/components/shell/command-palette.tsx
+msgid "palette.hint.navigate"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
 msgid "palette.group.navigation"
 msgstr ""
 
@@ -3075,9 +3085,19 @@ msgid "form.multiSelect.search"
 msgstr "Пошук…"
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.loading"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.transport.securityKey"
 msgstr "Ключ безпеки"
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.hint.select"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx

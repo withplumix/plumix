@@ -871,6 +871,11 @@ msgstr "Klicken Sie auf «Veröffentlichen», um sie live zu schalten, oder auf 
 "«Verwerfen», um zurückzusetzen."
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.hint.close"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.error.notFound"
 msgstr "Code nicht gefunden. Prüfen Sie, ob er mit dem von Ihrer CLI "
@@ -2294,6 +2299,11 @@ msgstr "Name muss ≤ 64 Zeichen lang sein."
 
 #. js-lingui-explicit-id
 #: src/components/shell/command-palette.tsx
+msgid "palette.hint.navigate"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
 msgid "palette.group.navigation"
 msgstr ""
 
@@ -3085,9 +3095,19 @@ msgid "form.multiSelect.search"
 msgstr "Suchen…"
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.loading"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.transport.securityKey"
 msgstr "Sicherheitsschlüssel"
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.hint.select"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx

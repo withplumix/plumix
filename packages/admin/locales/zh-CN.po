@@ -849,6 +849,11 @@ msgid "editor.layout.draftBanner.body"
 msgstr "点击「发布」使其上线，或点击「丢弃」恢复。"
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.hint.close"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.error.notFound"
 msgstr "未找到代码。请检查它是否与您的 CLI 打印的相符。"
@@ -2240,6 +2245,11 @@ msgstr "名称不能超过 64 个字符。"
 
 #. js-lingui-explicit-id
 #: src/components/shell/command-palette.tsx
+msgid "palette.hint.navigate"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
 msgid "palette.group.navigation"
 msgstr ""
 
@@ -3015,9 +3025,19 @@ msgid "form.multiSelect.search"
 msgstr "搜索…"
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.loading"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.transport.securityKey"
 msgstr "安全密钥"
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.hint.select"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx

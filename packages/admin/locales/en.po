@@ -862,6 +862,11 @@ msgid "editor.layout.draftBanner.body"
 msgstr "Click Publish to push them live, or Discard to revert."
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.hint.close"
+msgstr "Close"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.error.notFound"
 msgstr "Code not found. Check it matches what your CLI printed."
@@ -2267,6 +2272,11 @@ msgstr "Name must be ≤ 64 characters."
 
 #. js-lingui-explicit-id
 #: src/components/shell/command-palette.tsx
+msgid "palette.hint.navigate"
+msgstr "Navigate"
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
 msgid "palette.group.navigation"
 msgstr "Navigation"
 
@@ -3051,9 +3061,19 @@ msgid "form.multiSelect.search"
 msgstr "Search…"
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.loading"
+msgstr "Searching…"
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.transport.securityKey"
 msgstr "Security key"
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.hint.select"
+msgstr "Select"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
