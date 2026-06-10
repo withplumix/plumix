@@ -2747,6 +2747,11 @@ msgid "userEdit.delete.reassign.label"
 msgstr "Reassign entries to"
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.group.recent"
+msgstr "Recent"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.recent.title"
 msgstr "Recent activity"
@@ -3155,11 +3160,6 @@ msgid "auth.acceptInvite.submit.pending"
 msgstr "Setting up…"
 
 #. js-lingui-explicit-id
-#: src/components/shell/command-palette.tsx
-msgid "palette.command.settings"
-msgstr "Settings"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.title"
 msgstr "Settings"
@@ -3172,6 +3172,11 @@ msgstr "Settings"
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.item.settings"
+msgstr "Settings"
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.command.settings"
 msgstr "Settings"
 
 #. js-lingui-explicit-id

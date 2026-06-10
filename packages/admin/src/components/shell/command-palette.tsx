@@ -24,6 +24,11 @@ import {
   selectCommands,
 } from "@/lib/palette-commands.js";
 import { paletteNavItems, selectNavItems } from "@/lib/palette-nav.js";
+import {
+  readRecentNav,
+  recordRecentNav,
+  selectRecentNavItems,
+} from "@/lib/recent-nav.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { useQuery } from "@tanstack/react-query";
@@ -33,6 +38,7 @@ import { CoreIcon } from "./core-icon.js";
 
 const MIN_QUERY_LENGTH = 2;
 const DEBOUNCE_MS = 250;
+const RECENT_LIMIT = 5;
 
 const M = {
   title: defineMessage({ id: "palette.title", message: "Command palette" }),
@@ -46,6 +52,7 @@ const M = {
     id: "palette.group.navigation",
     message: "Navigation",
   }),
+  recent: defineMessage({ id: "palette.group.recent", message: "Recent" }),
   commands: defineMessage({
     id: "palette.group.commands",
     message: "Commands",
@@ -144,11 +151,23 @@ export function CommandPalette({
     trimmed,
     renderLabel,
   );
+  // Drop Recent once typing — the filtered nav group then covers the
+  // same destinations.
+  const recent =
+    open && trimmed.length === 0
+      ? selectRecentNavItems(navItems, readRecentNav(), RECENT_LIMIT)
+      : [];
   const groups = trimmed.length >= MIN_QUERY_LENGTH ? (search.data ?? []) : [];
 
   function dismiss(): void {
     setOpen(false);
     setQuery("");
+  }
+
+  function goToNav(to: string): void {
+    recordRecentNav(to);
+    dismiss();
+    void navigate({ to });
   }
 
   // Routes a result to its editor from the group key + id. Each domain
@@ -201,6 +220,23 @@ export function CommandPalette({
           />
           <CommandList>
             <CommandEmpty>{renderLabel(M.empty)}</CommandEmpty>
+            {recent.length > 0 ? (
+              <CommandGroup heading={renderLabel(M.recent)}>
+                {recent.map((item) => (
+                  <CommandItem
+                    key={`recent:${item.to}`}
+                    value={`recent:${item.to}`}
+                    data-testid={`command-palette-recent-${item.to}`}
+                    onSelect={() => {
+                      goToNav(item.to);
+                    }}
+                  >
+                    <CoreIcon name={item.coreIcon} />
+                    <span>{renderLabel(item.label)}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ) : null}
             {commands.length > 0 ? (
               <CommandGroup heading={renderLabel(M.commands)}>
                 {commands.map((command) => (
@@ -229,8 +265,7 @@ export function CommandPalette({
                     value={item.to}
                     data-testid={`command-palette-nav-${item.to}`}
                     onSelect={() => {
-                      dismiss();
-                      void navigate({ to: item.to });
+                      goToNav(item.to);
                     }}
                   >
                     <CoreIcon name={item.coreIcon} />
