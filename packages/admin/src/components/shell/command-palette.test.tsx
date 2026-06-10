@@ -3,6 +3,7 @@ import {
   _resetPaletteCommands,
   registerPaletteCommand,
 } from "@/lib/palette-commands.js";
+import { recordRecentNav } from "@/lib/recent-nav.js";
 import { createQueryClient } from "@/providers/query-client.js";
 import { DirectionProvider } from "@radix-ui/react-direction";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -85,6 +86,7 @@ afterEach(() => {
   cleanup();
   navigate.mockClear();
   _resetPaletteCommands();
+  localStorage.clear();
 });
 
 function pressCmdK(): void {
@@ -147,6 +149,33 @@ describe("CommandPalette", () => {
 
     await screen.findByTestId("command-palette-nav-/entries/posts");
     expect(screen.queryByTestId("command-palette-nav-/users")).toBeNull();
+  });
+
+  test("shows a Recent group of previously visited destinations on empty query", async () => {
+    recordRecentNav("/users");
+    renderPalette(<CommandPalette capabilities={[]} />);
+    pressCmdK();
+
+    await screen.findByTestId("command-palette-recent-/users");
+  });
+
+  test("renders a recent destination and its nav entry side by side", async () => {
+    recordRecentNav("/users");
+    renderPalette(<CommandPalette capabilities={[]} />);
+    pressCmdK();
+
+    await screen.findByTestId("command-palette-recent-/users");
+    screen.getByTestId("command-palette-nav-/users");
+  });
+
+  test("records a visited destination so it surfaces under Recent next time", async () => {
+    renderPalette(<CommandPalette capabilities={[]} />);
+    pressCmdK();
+    fireEvent.click(await screen.findByTestId("command-palette-nav-/users"));
+
+    pressCmdK();
+
+    await screen.findByTestId("command-palette-recent-/users");
   });
 
   test("shows server content results and opens the editor on select", async () => {

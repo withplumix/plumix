@@ -2714,6 +2714,11 @@ msgid "userEdit.delete.reassign.label"
 msgstr "将文章重新分配给"
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.group.recent"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.recent.title"
 msgstr "最近活动"
@@ -3116,11 +3121,6 @@ msgid "auth.acceptInvite.submit.pending"
 msgstr "设置中…"
 
 #. js-lingui-explicit-id
-#: src/components/shell/command-palette.tsx
-msgid "palette.command.settings"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.title"
 msgstr "设置"
@@ -3134,6 +3134,11 @@ msgstr "设置"
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.item.settings"
 msgstr "设置"
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.command.settings"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/shell/user-menu.tsx

@@ -2757,6 +2757,11 @@ msgid "userEdit.delete.reassign.label"
 msgstr "إعادة تعيين المنشورات إلى"
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.group.recent"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.recent.title"
 msgstr "النشاط الأخير"
@@ -3162,11 +3167,6 @@ msgid "auth.acceptInvite.submit.pending"
 msgstr "جارٍ الإعداد…"
 
 #. js-lingui-explicit-id
-#: src/components/shell/command-palette.tsx
-msgid "palette.command.settings"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.title"
 msgstr "الإعدادات"
@@ -3180,6 +3180,11 @@ msgstr "الإعدادات"
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.item.settings"
 msgstr "الإعدادات"
+
+#. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+msgid "palette.command.settings"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/shell/user-menu.tsx
