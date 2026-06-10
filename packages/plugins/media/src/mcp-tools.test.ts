@@ -1,5 +1,5 @@
 import { memoryStorage } from "plumix/plugin";
-import { createApiToken, createDispatcherHarness } from "plumix/test";
+import { createDispatcherHarness } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
 import { media } from "./index.js";
@@ -39,10 +39,8 @@ async function mintPat(
   scopes: string[] | null = null,
 ): Promise<{ secret: string; userId: number }> {
   const user = await h.seedUser("editor");
-  const { secret } = await createApiToken(h.db, {
+  const { secret } = await h.factory.apiToken.create({
     userId: user.id,
-    name: "mcp",
-    expiresAt: null,
     scopes,
   });
   return { secret, userId: user.id };

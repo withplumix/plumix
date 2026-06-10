@@ -1,5 +1,9 @@
 import { Factory } from "fishery";
 
+import type {
+  CreateApiTokenInput,
+  MintedApiToken,
+} from "../auth/api-tokens.js";
 import type { Db } from "../context/app.js";
 import type {
   AllowedDomain,
@@ -17,6 +21,7 @@ import type { NewSession, Session } from "../db/schema/sessions.js";
 import type { NewSetting, Setting } from "../db/schema/settings.js";
 import type { NewTerm, Term } from "../db/schema/terms.js";
 import type { NewUser, User } from "../db/schema/users.js";
+import { createApiToken } from "../auth/api-tokens.js";
 import { allowedDomains } from "../db/schema/allowed_domains.js";
 import { authTokens } from "../db/schema/auth_tokens.js";
 import { credentials } from "../db/schema/credentials.js";
@@ -275,6 +280,29 @@ export const credentialFactory = Factory.define<
   };
 });
 
+// Mints a real PAT through createApiToken (hashes the secret, inserts the row).
+// `.create()` returns the minted token — `.secret` is the one-time plaintext.
+export const apiTokenFactory = Factory.define<
+  CreateApiTokenInput,
+  DbTransient,
+  MintedApiToken
+>(({ sequence, transientParams, onCreate, params }) => {
+  onCreate((attrs) => createApiToken(requireDb(transientParams), attrs));
+
+  const userId = params.userId;
+  if (userId === undefined) {
+    throw new Error("apiTokenFactory: userId is required");
+  }
+  return {
+    userId,
+    name: params.name ?? `token-${sequence}`,
+    expiresAt: params.expiresAt ?? null,
+    // fishery's DeepPartial widens array elements to `T | undefined`; the
+    // caller passes a real scope list (or null), so narrow it back.
+    scopes: (params.scopes ?? null) as readonly string[] | null,
+  };
+});
+
 export interface Factories {
   readonly user: typeof userFactory;
   readonly admin: typeof adminUser;
@@ -295,6 +323,7 @@ export interface Factories {
   readonly setting: typeof settingFactory;
   readonly entryTerm: typeof entryTermFactory;
   readonly allowedDomain: typeof allowedDomainFactory;
+  readonly apiToken: typeof apiTokenFactory;
 }
 
 export function factoriesFor(db: Db): Factories {
@@ -318,5 +347,6 @@ export function factoriesFor(db: Db): Factories {
     setting: settingFactory.transient({ db }),
     entryTerm: entryTermFactory.transient({ db }),
     allowedDomain: allowedDomainFactory.transient({ db }),
+    apiToken: apiTokenFactory.transient({ db }),
   };
 }

@@ -21,14 +21,14 @@ const API_TOKEN_BODY_BYTES = 32;
 // enough to disambiguate users' own tokens at a glance.
 const PREFIX_DISPLAY_BODY_CHARS = 4;
 
-interface MintedApiToken {
+export interface MintedApiToken {
   /** Raw token to ship to the client exactly once. Never persisted. */
   readonly secret: string;
   /** The persisted row, sans the secret (already in DB at return time). */
   readonly row: ApiToken;
 }
 
-interface CreateApiTokenInput {
+export interface CreateApiTokenInput {
   readonly userId: number;
   readonly name: string;
   /**

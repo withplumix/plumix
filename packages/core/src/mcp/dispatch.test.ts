@@ -2,7 +2,6 @@ import { describe, expect, test } from "vitest";
 
 import type { UserRole } from "../db/schema/users.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
-import { createApiToken } from "../auth/api-tokens.js";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 
@@ -52,10 +51,8 @@ async function mintPat(
   }: { role?: UserRole; scopes?: string[] | null } = {},
 ): Promise<string> {
   const user = await h.factory.user.create({ role });
-  const { secret } = await createApiToken(h.db, {
+  const { secret } = await h.factory.apiToken.create({
     userId: user.id,
-    name: "mcp-test",
-    expiresAt: null,
     scopes,
   });
   return secret;
