@@ -1,8 +1,7 @@
-import { and, asc, eq, isNull, like } from "../../../db/index.js";
-import { terms } from "../../../db/schema/terms.js";
+import { listTerms } from "../../../terms/read-service.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { taxonomyCapability } from "./helpers.js";
+import { toRpcTermReadError } from "./read-errors.js";
 import { termListInputSchema } from "./schemas.js";
 
 export const list = base
@@ -13,35 +12,10 @@ export const list = base
       "rpc:term.list:input",
       input,
     );
-
-    if (!context.plugins.termTaxonomies.has(filtered.taxonomy)) {
-      throw errors.NOT_FOUND({
-        data: { kind: "taxonomy", id: filtered.taxonomy },
-      });
+    try {
+      const rows = await listTerms(context, filtered);
+      return await context.hooks.applyFilter("rpc:term.list:output", rows);
+    } catch (error) {
+      throw toRpcTermReadError(error, errors);
     }
-
-    const readCap = taxonomyCapability(filtered.taxonomy, "read");
-    if (!context.auth.can(readCap)) {
-      throw errors.FORBIDDEN({ data: { capability: readCap } });
-    }
-
-    const conditions = [eq(terms.taxonomy, filtered.taxonomy)];
-    if (filtered.parentId === null) {
-      conditions.push(isNull(terms.parentId));
-    } else if (filtered.parentId !== undefined) {
-      conditions.push(eq(terms.parentId, filtered.parentId));
-    }
-    if (filtered.search && filtered.search.length > 0) {
-      conditions.push(like(terms.name, `%${filtered.search}%`));
-    }
-
-    const rows = await context.db
-      .select()
-      .from(terms)
-      .where(and(...conditions))
-      .orderBy(asc(terms.name), asc(terms.id))
-      .limit(filtered.limit)
-      .offset(filtered.offset);
-
-    return context.hooks.applyFilter("rpc:term.list:output", rows);
   });

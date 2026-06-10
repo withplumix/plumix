@@ -2,6 +2,7 @@ import type { PluginRegistry } from "../plugin/manifest.js";
 import type { McpTool } from "./tool.js";
 import { contentGetTool, contentListTool } from "./content-tools.js";
 import { schemaDescribeTool } from "./schema-describe.js";
+import { taxonomyListTool, termGetTool, termListTool } from "./term-tools.js";
 
 /**
  * Tools core contributes unconditionally — the MCP analogue of `appRouter`.
@@ -12,6 +13,9 @@ export const coreMcpTools: readonly McpTool[] = [
   schemaDescribeTool,
   contentListTool,
   contentGetTool,
+  termListTool,
+  termGetTool,
+  taxonomyListTool,
 ];
 
 export const CORE_MCP_TOOL_NAMES: ReadonlySet<string> = new Set(
