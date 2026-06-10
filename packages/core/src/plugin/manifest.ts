@@ -144,6 +144,8 @@ export interface EntryTypeOptions {
   readonly capabilities?: EntryTypeCapabilityOverrides;
   readonly priority?: number;
   readonly menuIcon?: string;
+  /** Synonyms the command palette matches in addition to the sidebar label. */
+  readonly keywords?: readonly Label[];
   /**
    * Per-type versioning policy. Only honored when `supports` includes
    * `"revisions"`. `maxRevisions` caps how many revision rows are
@@ -231,6 +233,8 @@ export interface TermTaxonomyOptions {
   };
   readonly capabilities?: TermTaxonomyCapabilityOverrides;
   readonly menuIcon?: string;
+  /** Synonyms the command palette matches in addition to the sidebar label. */
+  readonly keywords?: readonly Label[];
   /** Page size for this taxonomy's term archives. Default 20. */
   readonly archivePerPage?: number;
 }
@@ -1020,6 +1024,8 @@ export interface AdminPageOptions {
     readonly label: Label;
     readonly icon?: PluginComponentRef;
     readonly order?: number;
+    /** Synonyms the command palette matches in addition to `label`. */
+    readonly keywords?: readonly Label[];
   };
   readonly capability?: string;
   readonly component: PluginComponentRef;
@@ -1432,6 +1438,8 @@ export interface EntryTypeManifestEntry {
   readonly capabilityType?: string;
   readonly priority?: number;
   readonly menuIcon?: string;
+  /** Synonyms the command palette matches in addition to the sidebar label. */
+  readonly keywords?: readonly Label[];
   /**
    * Per-type versioning policy. Populated when the entry type opts
    * into `supports: ['revisions']`. `maxRevisions` caps how many
@@ -1568,6 +1576,8 @@ export interface TermTaxonomyManifestEntry {
   readonly showUI?: boolean;
   readonly showInSidebar?: boolean;
   readonly menuIcon?: string;
+  /** Synonyms the command palette matches in addition to the sidebar label. */
+  readonly keywords?: readonly Label[];
 }
 
 /**
@@ -1618,6 +1628,8 @@ export interface AdminNavItem {
   readonly coreIcon?: CoreIconName;
   readonly component?: PluginComponentRef;
   readonly exact?: boolean;
+  /** Synonyms the command palette matches in addition to `label`. */
+  readonly keywords?: readonly Label[];
 }
 
 export interface AdminNavGroup {
@@ -1969,6 +1981,7 @@ const CORE_NAV_ITEMS: readonly { groupId: string; item: AdminNavItem }[] = [
       coreIcon: "dashboard",
       order: 0,
       exact: true,
+      keywords: ["home", "overview"],
     },
   },
   {
@@ -1979,6 +1992,7 @@ const CORE_NAV_ITEMS: readonly { groupId: string; item: AdminNavItem }[] = [
       coreIcon: "users",
       order: 100,
       capability: "user:list",
+      keywords: ["accounts", "team", "people"],
     },
   },
   {
@@ -1992,6 +2006,7 @@ const CORE_NAV_ITEMS: readonly { groupId: string; item: AdminNavItem }[] = [
       coreIcon: "users",
       order: 150,
       capability: "settings:manage",
+      keywords: ["domains", "email", "signups"],
     },
   },
   {
@@ -2002,6 +2017,7 @@ const CORE_NAV_ITEMS: readonly { groupId: string; item: AdminNavItem }[] = [
       coreIcon: "mail",
       order: 175,
       capability: "settings:manage",
+      keywords: ["email", "smtp"],
     },
   },
   {
@@ -2012,6 +2028,7 @@ const CORE_NAV_ITEMS: readonly { groupId: string; item: AdminNavItem }[] = [
       coreIcon: "settings",
       order: 200,
       capability: "settings:manage",
+      keywords: ["configuration", "preferences", "options"],
     },
   },
 ];
@@ -2059,6 +2076,7 @@ function addEntryNavItems(
       order: entry.priority,
       coreIcon: resolveEntryMenuIcon(entry.menuIcon),
       capability: `entry:${entry.capabilityType ?? entry.name}:edit_own`,
+      ...(entry.keywords ? { keywords: entry.keywords } : {}),
     });
   }
 }
@@ -2074,6 +2092,7 @@ function addTaxonomyNavItems(
       label: tax.label,
       coreIcon: resolveTaxonomyMenuIcon(tax.menuIcon, tax.isHierarchical),
       capability: `term:${tax.name}:read`,
+      ...(tax.keywords ? { keywords: tax.keywords } : {}),
     });
   }
 }
@@ -2112,6 +2131,7 @@ function addAdminPageNavItems(
       coreIcon: page.nav.icon ? undefined : "puzzle",
       component: page.component,
       capability: page.capability,
+      ...(page.nav.keywords ? { keywords: page.nav.keywords } : {}),
     });
   }
 }
@@ -2371,6 +2391,7 @@ function toEntryTypeManifest(pt: RegisteredEntryType): EntryTypeManifestEntry {
     capabilityType,
     priority,
     menuIcon,
+    keywords,
     versioning,
   } = pt as RegisteredEntryType & {
     readonly versioning?: EntryTypeManifestEntry["versioning"];
@@ -2395,6 +2416,7 @@ function toEntryTypeManifest(pt: RegisteredEntryType): EntryTypeManifestEntry {
     capabilityType,
     priority,
     menuIcon,
+    keywords,
     versioning: deriveVersioning(supports, versioning),
   };
 }
@@ -2429,6 +2451,7 @@ function toTermTaxonomyEntry(
     isHierarchical,
     entryTypes,
     menuIcon,
+    keywords,
   } = tax;
   const visibility = resolveTermTaxonomyVisibility(tax);
   return {
@@ -2442,6 +2465,7 @@ function toTermTaxonomyEntry(
     showUI: visibility.showUI,
     showInSidebar: visibility.showInSidebar,
     menuIcon,
+    keywords,
   };
 }
 

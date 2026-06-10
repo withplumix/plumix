@@ -19,9 +19,14 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
   useNavigate: () => navigate,
 }));
 
-vi.mock("@/lib/palette-nav.js", () => ({
+vi.mock("@/lib/palette-nav.js", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   paletteNavItems: () => [
-    { to: "/entries/posts", label: { id: "i.posts", message: "Posts" } },
+    {
+      to: "/entries/posts",
+      label: { id: "i.posts", message: "Posts" },
+      keywords: [{ id: "k.articles", message: "articles" }],
+    },
     { to: "/users", label: { id: "i.users", message: "Users" } },
   ],
 }));
@@ -131,6 +136,17 @@ describe("CommandPalette", () => {
       ).toBeNull(),
     );
     screen.getByTestId("command-palette-nav-/users");
+  });
+
+  test("surfaces a navigation item by a keyword synonym, not just its label", async () => {
+    renderPalette(<CommandPalette capabilities={[]} />);
+    pressCmdK();
+    const input = await screen.findByTestId("command-palette-input");
+
+    fireEvent.change(input, { target: { value: "articles" } });
+
+    await screen.findByTestId("command-palette-nav-/entries/posts");
+    expect(screen.queryByTestId("command-palette-nav-/users")).toBeNull();
   });
 
   test("shows server content results and opens the editor on select", async () => {

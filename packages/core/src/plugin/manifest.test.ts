@@ -173,6 +173,69 @@ describe("buildManifest", () => {
     ]);
   });
 
+  test("entry-type keywords flow onto its admin-nav item", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("blog", (ctx) => {
+      ctx.registerEntryType("post", {
+        label: "Posts",
+        showInSidebar: true,
+        keywords: [{ id: "k.articles", message: "articles" }, "blog"],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    const content = manifest.adminNav.find((g) => g.id === "content");
+    const post = content?.items.find((i) => i.to === "/entries/posts");
+    expect(post?.keywords).toEqual([
+      { id: "k.articles", message: "articles" },
+      "blog",
+    ]);
+  });
+
+  test("admin-page nav keywords flow onto its admin-nav item", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("media", (ctx) => {
+      ctx.registerAdminPage({
+        path: "/media",
+        title: "Media Library",
+        nav: {
+          group: { id: "library", label: "Library" },
+          label: "Media Library",
+          keywords: [{ id: "k.uploads", message: "uploads" }, "images"],
+        },
+        component: "MediaLibrary",
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    const library = manifest.adminNav.find((g) => g.id === "library");
+    const media = library?.items.find((i) => i.to === "/pages/media");
+    expect(media?.keywords).toEqual([
+      { id: "k.uploads", message: "uploads" },
+      "images",
+    ]);
+  });
+
+  test("taxonomy keywords flow onto its admin-nav item", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("blog", (ctx) => {
+      ctx.registerTermTaxonomy("category", {
+        label: "Categories",
+        showInSidebar: true,
+        keywords: [{ id: "k.taxonomy", message: "taxonomy" }],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    const taxonomies = manifest.adminNav.find(
+      (g) => g.id === "term-taxonomies",
+    );
+    const category = taxonomies?.items.find((i) => i.to === "/terms/category");
+    expect(category?.keywords).toEqual([
+      { id: "k.taxonomy", message: "taxonomy" },
+    ]);
+  });
+
   test("projects registered settings groups, fields use the shared MetaBoxField shape", async () => {
     const hooks = new HookRegistry();
     const corePlugin = definePlugin("core", (ctx) => {
