@@ -237,3 +237,106 @@ describe("MCP endpoint — transport guards", () => {
     expect(res.status).toBe(401);
   });
 });
+
+interface ContentRow {
+  readonly slug: string;
+  readonly status: string;
+}
+
+describe("MCP endpoint — content_list", () => {
+  test("returns the entries the caller may see", async () => {
+    const h = await createDispatcherHarness({ plugins: [blog] });
+    const author = await h.factory.user.create({ role: "editor" });
+    await h.factory.published.create({ authorId: author.id, slug: "pub" });
+    await h.factory.draft.create({ authorId: author.id, slug: "draft" });
+    const secret = await mintPat(h, { role: "editor" });
+
+    const { json } = await callTool(h, secret, 1, "content_list", {
+      type: "post",
+    });
+
+    const rows = parseToolResult<ContentRow[]>(json);
+    expect(rows.map((r) => r.slug).sort()).toEqual(["draft", "pub"]);
+  });
+
+  test("a read-scoped token cannot see drafts (capability clamp)", async () => {
+    const h = await createDispatcherHarness({ plugins: [blog] });
+    const author = await h.factory.user.create({ role: "editor" });
+    await h.factory.published.create({ authorId: author.id, slug: "pub" });
+    await h.factory.draft.create({ authorId: author.id, slug: "secret" });
+    const secret = await mintPat(h, {
+      role: "editor",
+      scopes: ["entry:post:read"],
+    });
+
+    const { json } = await callTool(h, secret, 1, "content_list", {
+      type: "post",
+    });
+
+    const rows = parseToolResult<ContentRow[]>(json);
+    expect(rows.map((r) => r.slug)).toEqual(["pub"]);
+  });
+
+  test("content_list appears in tools/list with a projected JSON Schema", async () => {
+    const h = await createDispatcherHarness({ plugins: [blog] });
+    const secret = await mintPat(h);
+
+    const { json } = await callMcp<{
+      tools: { name: string; inputSchema: { properties?: object } }[];
+    }>(h, secret, { jsonrpc: "2.0", id: 1, method: "tools/list" });
+
+    const tool = json.result.tools.find((t) => t.name === "content_list");
+    expect(tool).toBeDefined();
+    expect(tool?.inputSchema.properties).toHaveProperty("status");
+  });
+});
+
+describe("MCP endpoint — content_get", () => {
+  test("returns a single entry by type + id", async () => {
+    const h = await createDispatcherHarness({ plugins: [blog] });
+    const author = await h.factory.user.create({ role: "editor" });
+    const entry = await h.factory.published.create({
+      authorId: author.id,
+      slug: "pub",
+    });
+    const secret = await mintPat(h, { role: "editor" });
+
+    const { json } = await callTool(h, secret, 1, "content_get", {
+      type: "post",
+      id: entry.id,
+    });
+
+    expect(parseToolResult<ContentRow>(json).slug).toBe("pub");
+  });
+
+  test("a missing entry comes back as a not_found envelope", async () => {
+    const h = await createDispatcherHarness({ plugins: [blog] });
+    const secret = await mintPat(h, { role: "editor" });
+
+    const { json } = await callTool(h, secret, 1, "content_get", {
+      type: "post",
+      id: 9999,
+    });
+
+    expect(json.result.isError).toBe(true);
+    expect(json.result.content[0]?.text).toContain("not_found");
+  });
+
+  test("a type that doesn't match the entry is hidden as not_found", async () => {
+    const h = await createDispatcherHarness({ plugins: [blog] });
+    const author = await h.factory.user.create({ role: "editor" });
+    const entry = await h.factory.published.create({
+      authorId: author.id,
+      slug: "pub",
+    });
+    const secret = await mintPat(h, { role: "editor" });
+
+    const { json } = await callTool(h, secret, 1, "content_get", {
+      type: "page",
+      id: entry.id,
+    });
+
+    expect(json.result.isError).toBe(true);
+    expect(json.result.content[0]?.text).toContain("not_found");
+  });
+});

@@ -1,5 +1,6 @@
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { McpTool } from "./tool.js";
+import { contentGetTool, contentListTool } from "./content-tools.js";
 import { schemaDescribeTool } from "./schema-describe.js";
 
 /**
@@ -7,7 +8,11 @@ import { schemaDescribeTool } from "./schema-describe.js";
  * Plugins add their own through `registerMcpTool`; the two merge in
  * {@link buildMcpToolRegistry}.
  */
-export const coreMcpTools: readonly McpTool[] = [schemaDescribeTool];
+export const coreMcpTools: readonly McpTool[] = [
+  schemaDescribeTool,
+  contentListTool,
+  contentGetTool,
+];
 
 export const CORE_MCP_TOOL_NAMES: ReadonlySet<string> = new Set(
   coreMcpTools.map((tool) => tool.name),
