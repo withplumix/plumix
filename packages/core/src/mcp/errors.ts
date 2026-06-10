@@ -1,6 +1,4 @@
-// The service-layer slices (#932/#933) extend this taxonomy as tools start
-// throwing the other conditions; #931 only needs not_found for schema_describe.
-type McpToolErrorCode = "not_found";
+type McpToolErrorCode = "not_found" | "forbidden" | "bad_input";
 
 /**
  * Domain error a tool's `run` throws to signal a caller-facing condition. The
@@ -21,6 +19,14 @@ export class McpToolError extends Error {
 
   static notFound(message: string): McpToolError {
     return new McpToolError("not_found", message);
+  }
+
+  static forbidden(message: string): McpToolError {
+    return new McpToolError("forbidden", message);
+  }
+
+  static badInput(message: string): McpToolError {
+    return new McpToolError("bad_input", message);
   }
 }
 
