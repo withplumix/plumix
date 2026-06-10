@@ -39,19 +39,6 @@ function taxonomyRegistry(
   return registry;
 }
 
-async function seedTerm(
-  h: Awaited<ReturnType<typeof createRpcHarness>>,
-  termTaxonomy: string,
-  slug: string,
-): Promise<number> {
-  const [row] = await h.context.db
-    .insert(terms)
-    .values({ taxonomy: termTaxonomy, name: slug, slug })
-    .returning();
-  if (!row) throw new Error("seedTerm: insert returned no row");
-  return row.id;
-}
-
 // Both replacement-semantics and sortOrder tests need the same shape:
 // an editor-authed harness, an empty post, and three pre-seeded
 // "category" terms. Centralized so a future tweak to the scaffold
@@ -70,9 +57,15 @@ async function setupEditorWithThreeCategoryTerms(): Promise<{
   const plugins = taxonomyRegistry();
   const h = await createRpcHarness({ authAs: "editor", plugins });
   const post = await h.factory.draft.create({ authorId: h.user.id });
-  const a = await seedTerm(h, "category", "a");
-  const b = await seedTerm(h, "category", "b");
-  const c = await seedTerm(h, "category", "c");
+  const a = (
+    await h.factory.term.create({ taxonomy: "category", name: "a", slug: "a" })
+  ).id;
+  const b = (
+    await h.factory.term.create({ taxonomy: "category", name: "b", slug: "b" })
+  ).id;
+  const c = (
+    await h.factory.term.create({ taxonomy: "category", name: "c", slug: "c" })
+  ).id;
   return { h, post, a, b, c };
 }
 
@@ -97,8 +90,20 @@ describe("entry.update — terms", () => {
     const plugins = taxonomyRegistry();
     const h = await createRpcHarness({ authAs: "author", plugins });
     const post = await h.factory.draft.create({ authorId: h.user.id });
-    const catA = await seedTerm(h, "category", "news");
-    const catB = await seedTerm(h, "category", "reviews");
+    const catA = (
+      await h.factory.term.create({
+        taxonomy: "category",
+        name: "news",
+        slug: "news",
+      })
+    ).id;
+    const catB = (
+      await h.factory.term.create({
+        taxonomy: "category",
+        name: "reviews",
+        slug: "reviews",
+      })
+    ).id;
 
     await h.client.entry.update({
       id: post.id,
@@ -121,7 +126,13 @@ describe("entry.update — terms", () => {
     const plugins = taxonomyRegistry();
     const h = await createRpcHarness({ authAs: "editor", plugins });
     const post = await h.factory.draft.create({ authorId: h.user.id });
-    const a = await seedTerm(h, "category", "a");
+    const a = (
+      await h.factory.term.create({
+        taxonomy: "category",
+        name: "a",
+        slug: "a",
+      })
+    ).id;
 
     await h.client.entry.update({ id: post.id, terms: { category: [a] } });
     await h.client.entry.update({ id: post.id, terms: { category: [] } });
@@ -133,8 +144,20 @@ describe("entry.update — terms", () => {
     const plugins = taxonomyRegistry();
     const h = await createRpcHarness({ authAs: "editor", plugins });
     const post = await h.factory.draft.create({ authorId: h.user.id });
-    const cat = await seedTerm(h, "category", "cat-1");
-    const tag = await seedTerm(h, "post_tag", "tag-1");
+    const cat = (
+      await h.factory.term.create({
+        taxonomy: "category",
+        name: "cat-1",
+        slug: "cat-1",
+      })
+    ).id;
+    const tag = (
+      await h.factory.term.create({
+        taxonomy: "post_tag",
+        name: "tag-1",
+        slug: "tag-1",
+      })
+    ).id;
 
     await h.client.entry.update({
       id: post.id,
@@ -154,7 +177,13 @@ describe("entry.update — terms", () => {
     const plugins = taxonomyRegistry();
     const h = await createRpcHarness({ authAs: "editor", plugins });
     const post = await h.factory.draft.create({ authorId: h.user.id });
-    const a = await seedTerm(h, "category", "a");
+    const a = (
+      await h.factory.term.create({
+        taxonomy: "category",
+        name: "a",
+        slug: "a",
+      })
+    ).id;
 
     await h.client.entry.update({
       id: post.id,
@@ -167,7 +196,13 @@ describe("entry.update — terms", () => {
     const plugins = taxonomyRegistry();
     const h = await createRpcHarness({ authAs: "editor", plugins });
     const post = await h.factory.draft.create({ authorId: h.user.id });
-    const cat = await seedTerm(h, "category", "cat");
+    const cat = (
+      await h.factory.term.create({
+        taxonomy: "category",
+        name: "cat",
+        slug: "cat",
+      })
+    ).id;
 
     await expect(
       h.client.entry.update({
@@ -187,7 +222,13 @@ describe("entry.update — terms", () => {
     const plugins = taxonomyRegistry({ assignRole: "admin" });
     const h = await createRpcHarness({ authAs: "editor", plugins });
     const post = await h.factory.draft.create({ authorId: h.user.id });
-    const cat = await seedTerm(h, "category", "cat");
+    const cat = (
+      await h.factory.term.create({
+        taxonomy: "category",
+        name: "cat",
+        slug: "cat",
+      })
+    ).id;
 
     await expect(
       h.client.entry.update({ id: post.id, terms: { category: [cat] } }),
@@ -201,7 +242,13 @@ describe("entry.update — terms", () => {
     const plugins = taxonomyRegistry();
     const h = await createRpcHarness({ authAs: "editor", plugins });
     const post = await h.factory.draft.create({ authorId: h.user.id });
-    const tag = await seedTerm(h, "post_tag", "misplaced");
+    const tag = (
+      await h.factory.term.create({
+        taxonomy: "post_tag",
+        name: "misplaced",
+        slug: "misplaced",
+      })
+    ).id;
 
     await expect(
       h.client.entry.update({
@@ -235,7 +282,13 @@ describe("entry.update — terms", () => {
     const h = await createRpcHarness({ authAs: "editor", plugins });
     const post = await h.factory.draft.create({ authorId: h.user.id });
     const originalTitle = post.title;
-    const cat = await seedTerm(h, "category", "only-terms");
+    const cat = (
+      await h.factory.term.create({
+        taxonomy: "category",
+        name: "only-terms",
+        slug: "only-terms",
+      })
+    ).id;
 
     const updated = await h.client.entry.update({
       id: post.id,
@@ -272,7 +325,13 @@ describe("entry.update — terms", () => {
     const plugins = taxonomyRegistry();
     const h = await createRpcHarness({ authAs: "editor", plugins });
     const post = await h.factory.draft.create({ authorId: h.user.id });
-    const cat = await seedTerm(h, "category", "stable");
+    const cat = (
+      await h.factory.term.create({
+        taxonomy: "category",
+        name: "stable",
+        slug: "stable",
+      })
+    ).id;
 
     await h.client.entry.update({ id: post.id, terms: { category: [cat] } });
     // Second call with the same set — without onConflictDoNothing the

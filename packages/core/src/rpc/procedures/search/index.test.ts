@@ -1,20 +1,18 @@
 import { describe, expect, test } from "vitest";
 
+import type { AuthenticatedRpcHarness } from "../../../test/rpc.js";
 import { deriveTermTaxonomyCapabilities } from "../../../auth/rbac.js";
-import { entries } from "../../../db/schema/entries.js";
-import { terms } from "../../../db/schema/terms.js";
-import { users } from "../../../db/schema/users.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { registerCoreSearchHandlers } from "../../../search/register-core-handlers.js";
 import { createRpcHarness } from "../../../test/rpc.js";
-
-type Harness = Awaited<ReturnType<typeof createRpcHarness>>;
 
 // Spin up a harness with a `post` entry type + a `category` taxonomy +
 // the core search handlers wired on (the harness boots none). `post` caps
 // are core; the taxonomy's are derived at registration, so we populate
 // them the way `registerTermTaxonomy` would. Mirrors `createPlumixApp`.
-async function searchHarness(authAs: "editor" | "author"): Promise<Harness> {
+async function searchHarness(
+  authAs: "editor" | "author",
+): Promise<AuthenticatedRpcHarness> {
   const plugins = createPluginRegistry();
   plugins.entryTypes.set("post", {
     label: { id: "et.post", message: "Posts" },
@@ -35,38 +33,21 @@ async function searchHarness(authAs: "editor" | "author"): Promise<Harness> {
   return h;
 }
 
-async function seedTerm(h: Harness, name: string, slug: string): Promise<void> {
-  await h.context.db.insert(terms).values({ taxonomy: "category", name, slug });
-}
-
-async function seedUser(
-  h: Harness,
-  name: string,
-  email: string,
-): Promise<void> {
-  await h.context.db.insert(users).values({ name, email, role: "subscriber" });
-}
-
-async function seed(
-  h: Harness,
-  values: {
-    title: string;
-    slug: string;
-    status: "published" | "draft" | "trash";
-  },
-): Promise<void> {
-  const author = h.user;
-  if (!author) throw new Error("harness has no authenticated user");
-  await h.context.db
-    .insert(entries)
-    .values({ type: "post", authorId: author.id, ...values });
-}
-
 describe("search.query", () => {
   test("groups matching entries by type and matches title", async () => {
     const h = await searchHarness("editor");
-    await seed(h, { title: "Hello World", slug: "hello", status: "published" });
-    await seed(h, { title: "Unrelated", slug: "other", status: "published" });
+    await h.factory.entry.create({
+      authorId: h.user.id,
+      title: "Hello World",
+      slug: "hello",
+      status: "published",
+    });
+    await h.factory.entry.create({
+      authorId: h.user.id,
+      title: "Unrelated",
+      slug: "other",
+      status: "published",
+    });
 
     const groups = await h.client.search.query({ query: "hello" });
 
@@ -80,7 +61,12 @@ describe("search.query", () => {
 
   test("editor sees draft matches", async () => {
     const h = await searchHarness("editor");
-    await seed(h, { title: "Hidden Draft", slug: "d1", status: "draft" });
+    await h.factory.entry.create({
+      authorId: h.user.id,
+      title: "Hidden Draft",
+      slug: "d1",
+      status: "draft",
+    });
 
     const groups = await h.client.search.query({ query: "hidden" });
 
@@ -91,7 +77,12 @@ describe("search.query", () => {
 
   test("an author sees their own draft (mirrors entry read rules)", async () => {
     const h = await searchHarness("author");
-    await seed(h, { title: "My Own Draft", slug: "d2", status: "draft" });
+    await h.factory.entry.create({
+      authorId: h.user.id,
+      title: "My Own Draft",
+      slug: "d2",
+      status: "draft",
+    });
 
     const groups = await h.client.search.query({ query: "own" });
 
@@ -102,22 +93,40 @@ describe("search.query", () => {
 
   test("trash entries are excluded even for editors", async () => {
     const h = await searchHarness("editor");
-    await seed(h, { title: "Trashed Item", slug: "t1", status: "trash" });
+    await h.factory.entry.create({
+      authorId: h.user.id,
+      title: "Trashed Item",
+      slug: "t1",
+      status: "trash",
+    });
 
     expect(await h.client.search.query({ query: "trashed" })).toEqual([]);
   });
 
   test("returns nothing for an empty query", async () => {
     const h = await searchHarness("editor");
-    await seed(h, { title: "Hello", slug: "h", status: "published" });
+    await h.factory.entry.create({
+      authorId: h.user.id,
+      title: "Hello",
+      slug: "h",
+      status: "published",
+    });
 
     expect(await h.client.search.query({ query: "  " })).toEqual([]);
   });
 
   test("groups matching terms by taxonomy", async () => {
     const h = await searchHarness("editor");
-    await seedTerm(h, "News", "news");
-    await seedTerm(h, "Unrelated", "unrelated");
+    await h.factory.term.create({
+      taxonomy: "category",
+      name: "News",
+      slug: "news",
+    });
+    await h.factory.term.create({
+      taxonomy: "category",
+      name: "Unrelated",
+      slug: "unrelated",
+    });
 
     const groups = await h.client.search.query({ query: "news" });
 
@@ -131,8 +140,14 @@ describe("search.query", () => {
 
   test("returns a users group for a caller who can list users", async () => {
     const h = await searchHarness("editor");
-    await seedUser(h, "Alice Smith", "alice@example.com");
-    await seedUser(h, "Bob Jones", "bob@example.com");
+    await h.factory.user.create({
+      name: "Alice Smith",
+      email: "alice@example.com",
+    });
+    await h.factory.user.create({
+      name: "Bob Jones",
+      email: "bob@example.com",
+    });
 
     const groups = await h.client.search.query({ query: "alice" });
 
@@ -146,7 +161,10 @@ describe("search.query", () => {
 
   test("omits the users group when the caller cannot list users", async () => {
     const h = await searchHarness("author");
-    await seedUser(h, "Alice Smith", "alice@example.com");
+    await h.factory.user.create({
+      name: "Alice Smith",
+      email: "alice@example.com",
+    });
 
     expect(await h.client.search.query({ query: "alice" })).toEqual([]);
   });
