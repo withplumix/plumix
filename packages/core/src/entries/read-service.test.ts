@@ -4,8 +4,6 @@ import { describe, expect, test } from "vitest";
 import type { AppContext } from "../context/app.js";
 import type { AuthenticatedRpcHarness } from "../test/rpc.js";
 import { withUser } from "../context/app.js";
-import { entryTerm } from "../db/schema/entry_term.js";
-import { terms } from "../db/schema/terms.js";
 import {
   entryGetInputSchema,
   entryListInputSchema,
@@ -142,14 +140,11 @@ describe("getEntry", () => {
       authorId: h.user.id,
       slug: "pub",
     });
-    const [term] = await h.context.db
-      .insert(terms)
-      .values({ taxonomy: "category", name: "News", slug: "news" })
-      .returning();
-    if (!term) throw new Error("seed: term insert returned no row");
-    await h.context.db
-      .insert(entryTerm)
-      .values({ entryId: entry.id, termId: term.id });
+    const term = await h.factory.category.create({
+      name: "News",
+      slug: "news",
+    });
+    await h.factory.entryTerm.create({ entryId: entry.id, termId: term.id });
 
     const result = await getEntry(authedCtx(h), getInput({ id: entry.id }));
 
