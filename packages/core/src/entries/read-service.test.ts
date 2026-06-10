@@ -140,7 +140,7 @@ describe("getEntry", () => {
       authorId: h.user.id,
       slug: "pub",
     });
-    const term = await h.factory.category.create({
+    const term = await h.factory.term.create({
       name: "News",
       slug: "news",
     });

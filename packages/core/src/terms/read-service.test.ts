@@ -44,8 +44,8 @@ const getInput = (partial: Record<string, unknown>) =>
 describe("listTerms", () => {
   test("returns terms in the taxonomy ordered by name", async () => {
     const h = await harness("editor");
-    await h.factory.category.create({ name: "News", slug: "news" });
-    await h.factory.category.create({ name: "Apples", slug: "apples" });
+    await h.factory.term.create({ name: "News", slug: "news" });
+    await h.factory.term.create({ name: "Apples", slug: "apples" });
 
     const rows = await listTerms(
       authedCtx(h),
@@ -57,8 +57,8 @@ describe("listTerms", () => {
 
   test("filters by name search", async () => {
     const h = await harness("editor");
-    await h.factory.category.create({ name: "News", slug: "news" });
-    await h.factory.category.create({ name: "Sports", slug: "sports" });
+    await h.factory.term.create({ name: "News", slug: "news" });
+    await h.factory.term.create({ name: "Sports", slug: "sports" });
 
     const rows = await listTerms(
       authedCtx(h),
@@ -100,7 +100,7 @@ describe("listTerms", () => {
 describe("getTerm", () => {
   test("returns a term hydrated with decoded meta", async () => {
     const h = await harness("editor");
-    const seeded = await h.factory.category.create({
+    const seeded = await h.factory.term.create({
       name: "News",
       slug: "news",
     });
@@ -125,7 +125,7 @@ describe("getTerm", () => {
 
   test("hides a term in an unreadable taxonomy as term_not_found", async () => {
     const h = await harness("editor");
-    const seeded = await h.factory.category.create({
+    const seeded = await h.factory.term.create({
       name: "News",
       slug: "news",
     });
