@@ -28,6 +28,7 @@ import {
 } from "../auth/passkey/routes.js";
 import { withUser } from "../context/app.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
+import { handleMcpRequest, MCP_PATH } from "../mcp/dispatch.js";
 import { matchRoute } from "../route/match.js";
 import { renderErrorThroughTheme } from "../route/render/render-template.js";
 import { resolvePublicRoute } from "../route/resolve.js";
@@ -122,6 +123,14 @@ function hasLocalhostOrigin(request: Request): boolean {
 async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   const url = new URL(ctx.request.url);
   const { pathname } = url;
+
+  // MCP is mounted ahead of the CSRF gate: it authenticates by bearer PAT,
+  // which is inherently CSRF-immune (a browser can't attach an Authorization
+  // header cross-site without a CORS grant Plumix never gives). The gate keeps
+  // protecting the cookie-authed RPC/auth endpoints below it unchanged.
+  if (pathname === MCP_PATH) {
+    return handleMcpRequest(ctx);
+  }
 
   if (pathname.startsWith(PLUMIX_PREFIX)) {
     const csrfFailure = enforcePlumixCsrf(app, ctx);
