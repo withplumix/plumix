@@ -2,31 +2,8 @@ import { describe, expect, test } from "vitest";
 
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
-import { entryTerm } from "../../../db/schema/entry_term.js";
-import { terms } from "../../../db/schema/terms.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { createRpcHarness } from "../../../test/rpc.js";
-
-async function seedTerm(
-  h: Awaited<ReturnType<typeof createRpcHarness>>,
-  termTaxonomy: string,
-  slug: string,
-): Promise<number> {
-  const [row] = await h.context.db
-    .insert(terms)
-    .values({ taxonomy: termTaxonomy, name: slug, slug })
-    .returning();
-  if (!row) throw new Error("seedTerm: insert returned no row");
-  return row.id;
-}
-
-async function attachTerm(
-  h: Awaited<ReturnType<typeof createRpcHarness>>,
-  entryId: number,
-  termId: number,
-): Promise<void> {
-  await h.context.db.insert(entryTerm).values({ entryId, termId });
-}
 
 describe("entry.list", () => {
   test("returns published entries by default for subscriber", async () => {
@@ -264,8 +241,16 @@ describe("entry.list", () => {
 
   test("termTaxonomy filter: single termTaxonomy, IN across term slugs", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
-    const news = await seedTerm(h, "category", "news");
-    const tutorials = await seedTerm(h, "category", "tutorials");
+    const news = await h.factory.term.create({
+      taxonomy: "category",
+      name: "news",
+      slug: "news",
+    });
+    const tutorials = await h.factory.term.create({
+      taxonomy: "category",
+      name: "tutorials",
+      slug: "tutorials",
+    });
     const p1 = await h.factory.published.create({
       authorId: h.user.id,
       slug: "news-post",
@@ -278,8 +263,8 @@ describe("entry.list", () => {
       authorId: h.user.id,
       slug: "untagged",
     });
-    await attachTerm(h, p1.id, news);
-    await attachTerm(h, p2.id, tutorials);
+    await h.factory.entryTerm.create({ entryId: p1.id, termId: news.id });
+    await h.factory.entryTerm.create({ entryId: p2.id, termId: tutorials.id });
 
     const rows = await h.client.entry.list({
       termTaxonomies: { category: ["news", "tutorials"] },
@@ -289,8 +274,16 @@ describe("entry.list", () => {
 
   test("termTaxonomy filter: AND across termTaxonomies (post must match each)", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
-    const news = await seedTerm(h, "category", "news");
-    const urgent = await seedTerm(h, "tag", "urgent");
+    const news = await h.factory.term.create({
+      taxonomy: "category",
+      name: "news",
+      slug: "news",
+    });
+    const urgent = await h.factory.term.create({
+      taxonomy: "tag",
+      name: "urgent",
+      slug: "urgent",
+    });
     const both = await h.factory.published.create({
       authorId: h.user.id,
       slug: "both",
@@ -303,10 +296,13 @@ describe("entry.list", () => {
       authorId: h.user.id,
       slug: "urgent-only",
     });
-    await attachTerm(h, both.id, news);
-    await attachTerm(h, both.id, urgent);
-    await attachTerm(h, newsOnly.id, news);
-    await attachTerm(h, urgentOnly.id, urgent);
+    await h.factory.entryTerm.create({ entryId: both.id, termId: news.id });
+    await h.factory.entryTerm.create({ entryId: both.id, termId: urgent.id });
+    await h.factory.entryTerm.create({ entryId: newsOnly.id, termId: news.id });
+    await h.factory.entryTerm.create({
+      entryId: urgentOnly.id,
+      termId: urgent.id,
+    });
 
     const rows = await h.client.entry.list({
       termTaxonomies: { category: ["news"], tag: ["urgent"] },
@@ -330,8 +326,16 @@ describe("entry.list", () => {
     // Same slug in two termTaxonomies — filter must only match within the
     // specified termTaxonomy. `{ category: ["news"] }` should NOT match a
     // post tagged `tag:news`.
-    const catNews = await seedTerm(h, "category", "news");
-    const tagNews = await seedTerm(h, "tag", "news");
+    const catNews = await h.factory.term.create({
+      taxonomy: "category",
+      name: "news",
+      slug: "news",
+    });
+    const tagNews = await h.factory.term.create({
+      taxonomy: "tag",
+      name: "news",
+      slug: "news",
+    });
     const catPost = await h.factory.published.create({
       authorId: h.user.id,
       slug: "in-category",
@@ -340,8 +344,14 @@ describe("entry.list", () => {
       authorId: h.user.id,
       slug: "in-tag",
     });
-    await attachTerm(h, catPost.id, catNews);
-    await attachTerm(h, tagPost.id, tagNews);
+    await h.factory.entryTerm.create({
+      entryId: catPost.id,
+      termId: catNews.id,
+    });
+    await h.factory.entryTerm.create({
+      entryId: tagPost.id,
+      termId: tagNews.id,
+    });
 
     const rows = await h.client.entry.list({
       termTaxonomies: { category: ["news"] },
@@ -351,7 +361,11 @@ describe("entry.list", () => {
 
   test("termTaxonomy filter composes with search", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
-    const news = await seedTerm(h, "category", "news");
+    const news = await h.factory.term.create({
+      taxonomy: "category",
+      name: "news",
+      slug: "news",
+    });
     const matches = await h.factory.published.create({
       authorId: h.user.id,
       title: "Quantum breakthrough",
@@ -362,7 +376,7 @@ describe("entry.list", () => {
       title: "Quantum breakthrough elsewhere",
       slug: "qbn-2",
     });
-    await attachTerm(h, matches.id, news);
+    await h.factory.entryTerm.create({ entryId: matches.id, termId: news.id });
     // `notTagged` has the same title but no term — termTaxonomy filter excludes it
 
     const rows = await h.client.entry.list({
