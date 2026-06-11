@@ -4,8 +4,6 @@ import { withUser } from "../context/app.js";
 import { jsonResponse, methodNotAllowed } from "../runtime/http.js";
 import { buildMcpToolRegistry } from "./registry.js";
 
-export const MCP_PATH = "/_plumix/mcp";
-
 // Bearer PAT only — NOT the request's configured authenticator (which defaults
 // to a cookie+bearer chain, or an operator's custom guard). Cookie/session auth
 // must not reach this endpoint: it's mounted ahead of the CSRF gate, and only

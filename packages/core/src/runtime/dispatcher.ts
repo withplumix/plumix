@@ -1,4 +1,5 @@
 import type { AppContext } from "../context/app.js";
+import type * as McpDispatch from "../mcp/dispatch.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { PlumixApp } from "./app.js";
 import { readSessionCookie } from "../auth/cookies.js";
@@ -28,7 +29,6 @@ import {
 } from "../auth/passkey/routes.js";
 import { withUser } from "../context/app.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
-import { handleMcpRequest, MCP_PATH } from "../mcp/dispatch.js";
 import { matchRoute } from "../route/match.js";
 import { renderErrorThroughTheme } from "../route/render/render-template.js";
 import { resolvePublicRoute } from "../route/resolve.js";
@@ -40,6 +40,13 @@ const RPC_PREFIX = "/_plumix/rpc";
 const ADMIN_PREFIX = "/_plumix/admin";
 const AUTH_PREFIX = "/_plumix/auth/";
 const PLUMIX_PREFIX = "/_plumix/";
+const MCP_PATH = "/_plumix/mcp";
+
+// MCP is cold-path-exclusive (an agent endpoint, never the public render path).
+// Dynamic-import its handler so the tool registry and the MCP SDK it pulls in
+// stay off the public render and cold-start paths, evaluating only on the first
+// MCP request per isolate.
+let mcpModule: Promise<typeof McpDispatch> | undefined;
 
 // Filenames look like `index.html`, `chunk-abc.js`, `fonts/g.woff2` — paths
 // with a dot-suffix after the last slash. Deep-link SPA routes never match.
@@ -129,6 +136,8 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   // header cross-site without a CORS grant Plumix never gives). The gate keeps
   // protecting the cookie-authed RPC/auth endpoints below it unchanged.
   if (pathname === MCP_PATH) {
+    const { handleMcpRequest } = await (mcpModule ??=
+      import("../mcp/dispatch.js"));
     return handleMcpRequest(ctx);
   }
 
