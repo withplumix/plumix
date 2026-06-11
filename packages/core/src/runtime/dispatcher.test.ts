@@ -92,13 +92,10 @@ describe("dispatcher — routing", () => {
       assets,
       i18n: { defaultLocale: "en", locales: ["en", "ar"] },
     });
-    const admin = await h.seedUser("admin");
-    const { users } = await import("../db/schema/users.js");
-    const { eq } = await import("drizzle-orm");
-    await h.db
-      .update(users)
-      .set({ meta: { locale: "ar" } })
-      .where(eq(users.id, admin.id));
+    const admin = await h.factory.user.create({
+      role: "admin",
+      meta: { locale: "ar" },
+    });
 
     const request = await h.authenticateRequest(
       plumixRequest("/_plumix/admin/", { method: "GET" }),

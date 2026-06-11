@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vitest";
 
-import { entries } from "../../../db/schema/entries.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
@@ -203,32 +202,20 @@ describe("entry.update", () => {
 
   test("rejects reparenting under a post the caller cannot read", async () => {
     const h = await createRpcHarness({ authAs: "contributor" });
-    const [own] = await h.db
-      .insert(entries)
-      .values({
-        type: "post",
-        title: "mine",
-        slug: "mine",
-        status: "draft",
-        authorId: h.user.id,
-      })
-      .returning();
-    if (!own) throw new Error("seed");
+    const own = await h.factory.draft.create({
+      title: "mine",
+      slug: "mine",
+      authorId: h.user.id,
+    });
 
     const other = await h.factory.admin.create({
       email: "hidden@example.test",
     });
-    const [secret] = await h.db
-      .insert(entries)
-      .values({
-        type: "post",
-        title: "secret",
-        slug: "secret",
-        status: "draft",
-        authorId: other.id,
-      })
-      .returning();
-    if (!secret) throw new Error("seed");
+    const secret = await h.factory.draft.create({
+      title: "secret",
+      slug: "secret",
+      authorId: other.id,
+    });
 
     await expect(
       h.client.entry.update({ id: own.id, parentId: secret.id }),

@@ -3,8 +3,7 @@ import { describe, expect, test } from "vitest";
 
 import type { PasskeyKeyPair } from "../../test/fixtures/webauthn.js";
 import { credentials } from "../../db/schema/credentials.js";
-import { users } from "../../db/schema/users.js";
-import { credentialFactory } from "../../test/factories.js";
+import { credentialFactory, userFactory } from "../../test/factories.js";
 import {
   buildAssertion,
   buildAttestation,
@@ -33,11 +32,9 @@ interface RegisteredFixture {
 
 async function registerFixtureCredential(): Promise<RegisteredFixture> {
   const db = await createTestDb();
-  const [user] = await db
-    .insert(users)
-    .values({ email: "u@example.com", role: "admin" })
-    .returning({ id: users.id });
-  if (!user) throw new Error("seed");
+  const user = await userFactory
+    .transient({ db })
+    .create({ email: "u@example.com", role: "admin" });
 
   const { challenge } = await issueChallenge(db, 60_000, user.id);
   const keyPair = generatePasskeyKeyPair();

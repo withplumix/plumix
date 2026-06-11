@@ -100,11 +100,8 @@ describe("requestEmailChange", () => {
     const db = await createTestDb();
     const user = await userFactory.transient({ db }).create({
       email: "alice@example.test",
+      disabledAt: new Date(),
     });
-    await db
-      .update(users)
-      .set({ disabledAt: new Date() })
-      .where(eq(users.id, user.id));
     const mailer = makeMailer();
 
     await expect(
@@ -174,15 +171,12 @@ describe("requestEmailChange", () => {
 describe("verifyEmailChange", () => {
   test("commits the new email + resets emailVerifiedAt + invalidates sessions", async () => {
     const db = await createTestDb();
-    const user = await userFactory.transient({ db }).create({
-      email: "alice@old.example",
-    });
     // Pre-existing verified state + a session — both should be reset
     // by the email change to require re-auth + re-verification.
-    await db
-      .update(users)
-      .set({ emailVerifiedAt: new Date("2026-01-01") })
-      .where(eq(users.id, user.id));
+    const user = await userFactory.transient({ db }).create({
+      email: "alice@old.example",
+      emailVerifiedAt: new Date("2026-01-01"),
+    });
     const { createSession } = await import("../sessions.js");
     await createSession(db, { userId: user.id });
     await createSession(db, { userId: user.id });

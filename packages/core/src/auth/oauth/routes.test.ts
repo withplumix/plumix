@@ -296,12 +296,11 @@ describe("oauth callback route", () => {
 
   test("happy path — links to existing user, mints session, sets cookie, redirects to admin", async () => {
     const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
-    const seeded = await h.seedUser("editor");
-    // Force the email so the verified-email link path is exercised.
-    await h.db
-      .update(users)
-      .set({ email: "alice@example.com" })
-      .where(eq(users.id, seeded.id));
+    // Email forced so the verified-email link path is exercised.
+    const seeded = await h.factory.user.create({
+      role: "editor",
+      email: "alice@example.com",
+    });
 
     const state = await seedState(h, "github", "v-1");
 

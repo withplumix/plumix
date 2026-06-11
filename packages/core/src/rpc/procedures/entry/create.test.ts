@@ -198,17 +198,11 @@ describe("entry.create", () => {
     const h = await createRpcHarness({ authAs: "contributor" });
     // Another author's draft — contributor lacks post:edit_any, doesn't own it.
     const other = await h.factory.admin.create({ email: "a@example.test" });
-    const [secret] = await h.db
-      .insert(entries)
-      .values({
-        type: "post",
-        title: "hidden",
-        slug: "hidden",
-        status: "draft",
-        authorId: other.id,
-      })
-      .returning();
-    if (!secret) throw new Error("seed");
+    const secret = await h.factory.draft.create({
+      title: "hidden",
+      slug: "hidden",
+      authorId: other.id,
+    });
 
     await expect(
       h.client.entry.create({
@@ -224,18 +218,12 @@ describe("entry.create", () => {
 
   test("rejects a parentId of a different post type", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    const [page] = await h.db
-      .insert(entries)
-      .values({
-        type: "page",
-        title: "p",
-        slug: "p",
-        status: "published",
-        authorId: h.user.id,
-        publishedAt: new Date(),
-      })
-      .returning();
-    if (!page) throw new Error("seed");
+    const page = await h.factory.published.create({
+      type: "page",
+      title: "p",
+      slug: "p",
+      authorId: h.user.id,
+    });
 
     await expect(
       h.client.entry.create({
