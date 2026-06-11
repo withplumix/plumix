@@ -1,13 +1,10 @@
 import { describe, expect, test } from "vitest";
 
 import { eq } from "../db/index.js";
-import { allowedDomains } from "../db/schema/allowed_domains.js";
-import { authTokens } from "../db/schema/auth_tokens.js";
 import { credentials } from "../db/schema/credentials.js";
 import { createDispatcherHarness, plumixRequest } from "../test/dispatcher.js";
 import { makeMailer } from "../test/mailer.js";
 import { createRpcHarness } from "../test/rpc.js";
-import { generateToken, hashToken } from "./tokens.js";
 
 // Pins hook emissions across the auth surface so an audit-log plugin
 // can subscribe and capture every state-change without us touching
@@ -261,14 +258,10 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
     const spy = h.spyAction("user:signed_in");
 
     // Seed a magic-link token bound to the existing user.
-    const token = generateToken();
-    const hash = await hashToken(token);
-    await h.db.insert(authTokens).values({
-      hash,
+    const { token } = await h.factory.authToken.create({
+      type: "magic_link",
       userId: seeded.id,
       email: seeded.email,
-      type: "magic_link",
-      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
     });
 
     const response = await h.dispatch(
@@ -295,20 +288,17 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
       mailer,
     });
     await h.factory.user.create({ email: "existing@allowed.test" });
-    await h.db
-      .insert(allowedDomains)
-      .values({ domain: "allowed.test", defaultRole: "subscriber" });
+    await h.factory.allowedDomain.create({
+      domain: "allowed.test",
+      defaultRole: "subscriber",
+    });
 
     const spy = h.spyAction("user:signed_in");
-    const token = generateToken();
-    const hash = await hashToken(token);
-    await h.db.insert(authTokens).values({
-      hash,
+    const { token } = await h.factory.authToken.create({
+      type: "magic_link",
       // Signup row: userId is null until verify provisions one.
       userId: null,
       email: "newcomer@allowed.test",
-      type: "magic_link",
-      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
     });
 
     const response = await h.dispatch(

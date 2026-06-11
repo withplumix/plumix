@@ -1,7 +1,6 @@
 import { describe, expect, test } from "vitest";
 
 import { eq, sql } from "../../db/index.js";
-import { allowedDomains } from "../../db/schema/allowed_domains.js";
 import { oauthAccounts } from "../../db/schema/oauth_accounts.js";
 import { users } from "../../db/schema/users.js";
 import {
@@ -166,7 +165,7 @@ describe("resolveOAuthUser — domain-gated signup", () => {
   test("disabled domain row rejects with domain_not_allowed", async () => {
     const db = await createTestDb();
     await userFactory.transient({ db }).create({ role: "admin" });
-    await db.insert(allowedDomains).values({
+    await allowedDomainFactory.transient({ db }).create({
       domain: "example.com",
       defaultRole: "contributor",
       isEnabled: false,

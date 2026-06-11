@@ -13,20 +13,32 @@ describe("settings.get", () => {
 
   test("admin reads saved keys back", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    await h.context.db.insert(settings).values([
-      { group: "general", key: "site_title", value: "Example" },
-      { group: "general", key: "tagline", value: "A site" },
-    ]);
+    await h.factory.setting.create({
+      group: "general",
+      key: "site_title",
+      value: "Example",
+    });
+    await h.factory.setting.create({
+      group: "general",
+      key: "tagline",
+      value: "A site",
+    });
     const bag = await h.client.settings.get({ group: "general" });
     expect(bag).toEqual({ site_title: "Example", tagline: "A site" });
   });
 
   test("group scoping: only the requested group is returned", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    await h.context.db.insert(settings).values([
-      { group: "general", key: "site_title", value: "G" },
-      { group: "reading", key: "per_page", value: "10" },
-    ]);
+    await h.factory.setting.create({
+      group: "general",
+      key: "site_title",
+      value: "G",
+    });
+    await h.factory.setting.create({
+      group: "reading",
+      key: "per_page",
+      value: "10",
+    });
     expect(await h.client.settings.get({ group: "general" })).toEqual({
       site_title: "G",
     });
@@ -184,9 +196,11 @@ describe("settings.upsert", () => {
 
   test("empty values bag is a silent no-op and round-trips the stored bag", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    await h.context.db
-      .insert(settings)
-      .values([{ group: "general", key: "site_title", value: "Example" }]);
+    await h.factory.setting.create({
+      group: "general",
+      key: "site_title",
+      value: "Example",
+    });
     const spy = h.spyAction("settings:group_changed");
     const bag = await h.client.settings.upsert({
       group: "general",
