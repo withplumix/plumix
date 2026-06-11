@@ -3,7 +3,6 @@ import { describe, expect, test } from "vitest";
 import type { UserRole } from "../../../db/schema/users.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
-import { terms } from "../../../db/schema/terms.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
@@ -81,11 +80,11 @@ describe("entry.duplicate", () => {
       authAs: "editor",
       plugins: categoryRegistry(),
     });
-    const [category] = await h.context.db
-      .insert(terms)
-      .values({ taxonomy: "category", name: "news", slug: "news" })
-      .returning();
-    if (!category) throw new Error("seed: term insert returned no row");
+    const category = await h.factory.term.create({
+      taxonomy: "category",
+      name: "news",
+      slug: "news",
+    });
     const source = await h.factory.published.create({
       authorId: h.user.id,
       title: "Tagged",

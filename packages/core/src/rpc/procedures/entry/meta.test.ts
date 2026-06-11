@@ -281,11 +281,8 @@ describe("applyMetaPatch + loadEntryMeta", () => {
     const post = await h.factory.draft.create({
       authorId: h.user.id,
       slug: "target",
+      meta: { untouched: "keep" },
     });
-    await h.context.db
-      .update(entries)
-      .set({ meta: { untouched: "keep" } })
-      .where(eq(entries.id, post.id));
 
     const patch = sanitizeMetaInput(findField(plugins, post.type), {
       title: "Written",
