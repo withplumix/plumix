@@ -1,7 +1,6 @@
 type AppBootErrorCode =
   | "schema_export_conflict"
-  | "plugin_id_collides_with_core_rpc_namespace"
-  | "plugin_id_collides_with_core_rpc_router";
+  | "plugin_id_collides_with_core_rpc_namespace";
 
 export class AppBootError extends Error {
   static {
@@ -47,17 +46,6 @@ export class AppBootError extends Error {
     return new AppBootError(
       "plugin_id_collides_with_core_rpc_namespace",
       `Plugin id "${ctx.pluginId}" collides with a core RPC namespace ` +
-        `at buildApp; rename the plugin.`,
-      ctx,
-    );
-  }
-
-  static pluginIdCollidesWithCoreRpcRouter(ctx: {
-    pluginId: string;
-  }): AppBootError {
-    return new AppBootError(
-      "plugin_id_collides_with_core_rpc_router",
-      `Plugin id "${ctx.pluginId}" collides with the core RPC router key ` +
         `at buildApp; rename the plugin.`,
       ctx,
     );

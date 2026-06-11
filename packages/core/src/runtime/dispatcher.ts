@@ -151,7 +151,8 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   }
 
   if (pathname === RPC_PREFIX || pathname.startsWith(`${RPC_PREFIX}/`)) {
-    const result = await app.rpcHandler.handle(ctx.request, {
+    const rpcHandler = await app.loadRpcHandler();
+    const result = await rpcHandler.handle(ctx.request, {
       prefix: RPC_PREFIX,
       context: ctx,
     });

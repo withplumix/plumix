@@ -1254,15 +1254,6 @@ export interface RegisteredMcpTool {
   readonly registeredBy: string;
 }
 
-export const CORE_RPC_NAMESPACES: ReadonlySet<string> = new Set([
-  "auth",
-  "entry",
-  "term",
-  "user",
-  "lookup",
-  "settings",
-]);
-
 export interface RegisteredBlock {
   readonly spec: BlockSpec;
   readonly registeredBy: string;
