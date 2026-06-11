@@ -1,13 +1,12 @@
-import { entries, HookRegistry, installPlugins } from "plumix/plugin";
+import { HookRegistry, installPlugins } from "plumix/plugin";
 import { createRpcHarness } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
 import { media } from "./index.js";
 import { mediaLookupAdapter } from "./lookup.js";
 
-// Seed a published `media` entry directly through the entries table —
-// keeps the test independent of `media.createUploadUrl` / `confirm` so
-// the adapter's contract is exercised in isolation.
+// Seed a published `media` entry directly (not via media.createUploadUrl /
+// confirm) so the adapter's contract is exercised in isolation.
 interface SeedOptions {
   readonly title: string;
   readonly mime: string;
@@ -19,27 +18,21 @@ async function seedMedia(
   h: Awaited<ReturnType<typeof createRpcHarness>>,
   opts: SeedOptions,
 ): Promise<{ id: number }> {
-  const status = opts.status ?? "published";
-  const [row] = await h.context.db
-    .insert(entries)
-    .values({
-      type: "media",
-      slug: `media-${opts.title.replace(/\s+/g, "-")}-${Math.random()}`,
-      title: opts.title,
-      status,
-      authorId: opts.authorId,
-      meta: {
-        mime: opts.mime,
-        size: 1024,
-        storageKey: `media/${opts.title}`,
-        originalName: opts.title,
-        alt: null,
-      },
-      publishedAt: status === "published" ? new Date() : null,
-    })
-    .returning();
-  if (!row) throw new Error("seedMedia: insert returned no row");
-  return { id: row.id };
+  const entry = await h.factory.entry.create({
+    type: "media",
+    slug: `media-${opts.title.replace(/\s+/g, "-")}-${Math.random()}`,
+    title: opts.title,
+    status: opts.status ?? "published",
+    authorId: opts.authorId,
+    meta: {
+      mime: opts.mime,
+      size: 1024,
+      storageKey: `media/${opts.title}`,
+      originalName: opts.title,
+      alt: null,
+    },
+  });
+  return { id: entry.id };
 }
 
 async function harnessWithMediaPlugin() {
