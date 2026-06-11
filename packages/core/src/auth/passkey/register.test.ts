@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { users } from "../../db/schema/users.js";
+import { userFactory } from "../../test/factories.js";
 import {
   buildAttestation,
   generatePasskeyKeyPair,
@@ -19,21 +19,12 @@ const config = resolvePasskeyConfig({
   origin: "https://cms.example.com",
 });
 
-async function seedUserId(
-  db: Awaited<ReturnType<typeof createTestDb>>,
-): Promise<number> {
-  const [user] = await db
-    .insert(users)
-    .values({ email: "u@example.com", role: "admin" })
-    .returning({ id: users.id });
-  if (!user) throw new Error("seed");
-  return user.id;
-}
-
 describe("finishRegistration (positive ceremony with ES256)", () => {
   test("verifies origin, RP-ID, attestation=none, and extracts the SEC1 public key", async () => {
     const db = await createTestDb();
-    const userId = await seedUserId(db);
+    const userId = (
+      await userFactory.transient({ db }).create({ role: "admin" })
+    ).id;
     const { challenge } = await issueChallenge(db, 60_000, userId);
     const keyPair = generatePasskeyKeyPair();
     const credentialId = randomCredentialId();
@@ -65,7 +56,9 @@ describe("finishRegistration (positive ceremony with ES256)", () => {
     // a fixed-offset encoder then left-shifts Y, silently storing a
     // corrupted key that bricks the credential at every future login.
     const db = await createTestDb();
-    const userId = await seedUserId(db);
+    const userId = (
+      await userFactory.transient({ db }).create({ role: "admin" })
+    ).id;
     const { challenge } = await issueChallenge(db, 60_000, userId);
     const keyPair = leadingZeroYKeyPair();
     const credentialId = randomCredentialId();
@@ -96,7 +89,9 @@ describe("finishRegistration (positive ceremony with ES256)", () => {
 describe("finishRegistration (security checks)", () => {
   test("rejects a response whose origin does not match the configured origin", async () => {
     const db = await createTestDb();
-    const userId = await seedUserId(db);
+    const userId = (
+      await userFactory.transient({ db }).create({ role: "admin" })
+    ).id;
     const { challenge } = await issueChallenge(db, 60_000, userId);
     const keyPair = generatePasskeyKeyPair();
     const credentialId = randomCredentialId();
@@ -155,7 +150,9 @@ describe("finishRegistration (security checks)", () => {
 describe("persistCredential", () => {
   test("rejects a duplicate credential id (would silently re-bind otherwise)", async () => {
     const db = await createTestDb();
-    const userId = await seedUserId(db);
+    const userId = (
+      await userFactory.transient({ db }).create({ role: "admin" })
+    ).id;
     const verified = {
       credentialId: "dup",
       publicKey: new Uint8Array([0x04, ...new Uint8Array(64)]),
@@ -179,7 +176,9 @@ describe("persistCredential", () => {
 
   test("enforces the per-user credential limit", async () => {
     const db = await createTestDb();
-    const userId = await seedUserId(db);
+    const userId = (
+      await userFactory.transient({ db }).create({ role: "admin" })
+    ).id;
     await persistCredential(db, {
       userId,
       verified: {
