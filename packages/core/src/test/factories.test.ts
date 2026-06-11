@@ -5,6 +5,7 @@ import { hashToken } from "../auth/tokens.js";
 import {
   apiTokenFactory,
   authTokenFactory,
+  deviceCodeFactory,
   oauthAccountFactory,
   userFactory,
 } from "./factories.js";
@@ -24,6 +25,18 @@ describe("oauthAccountFactory", () => {
     expect(row.userId).toBe(user.id);
     expect(row.provider).toBe("github");
     expect(row.providerAccountId).toBe("gh-1");
+  });
+});
+
+describe("deviceCodeFactory", () => {
+  test("mints a device code whose secret hashes to the stored row id", async () => {
+    const db = await createTestDb();
+
+    const minted = await deviceCodeFactory.transient({ db }).create({});
+
+    expect(minted.row.id).toBe(await hashToken(minted.deviceCode));
+    expect(minted.row.status).toBe("pending");
+    expect(minted.row.userCode).toBe(minted.userCode);
   });
 });
 

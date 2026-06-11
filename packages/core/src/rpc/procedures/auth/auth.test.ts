@@ -1226,11 +1226,9 @@ describe("auth.deviceFlow", () => {
 
   test("approve on an expired row → CONFLICT/expired", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
-    const { userCode } = await requestDeviceCode(h.db);
-    const { deviceCodes } = await import("../../../db/schema/device_codes.js");
-    await h.db
-      .update(deviceCodes)
-      .set({ expiresAt: new Date(Date.now() - 1000) });
+    const { userCode } = await h.factory.deviceCode.create({
+      expiresAt: new Date(Date.now() - 1000),
+    });
 
     await expect(
       h.client.auth.deviceFlow.approve({ userCode, tokenName: "x" }),
@@ -1242,11 +1240,9 @@ describe("auth.deviceFlow", () => {
 
   test("deny on an expired row → CONFLICT/expired", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
-    const { userCode } = await requestDeviceCode(h.db);
-    const { deviceCodes } = await import("../../../db/schema/device_codes.js");
-    await h.db
-      .update(deviceCodes)
-      .set({ expiresAt: new Date(Date.now() - 1000) });
+    const { userCode } = await h.factory.deviceCode.create({
+      expiresAt: new Date(Date.now() - 1000),
+    });
 
     await expect(
       h.client.auth.deviceFlow.deny({ userCode }),

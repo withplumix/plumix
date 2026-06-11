@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import { eq } from "../db/index.js";
 import { apiTokens } from "../db/schema/api_tokens.js";
 import { deviceCodes } from "../db/schema/device_codes.js";
-import { userFactory } from "../test/factories.js";
+import { deviceCodeFactory, userFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import { API_TOKEN_PREFIX } from "./api-tokens.js";
 import {
@@ -65,10 +65,9 @@ describe("lookupDeviceCodeByUserCode", () => {
 
   test("returns expired for a row whose TTL has passed", async () => {
     const db = await createTestDb();
-    const { userCode } = await requestDeviceCode(db);
-    await db
-      .update(deviceCodes)
-      .set({ expiresAt: new Date(Date.now() - 1000) });
+    const { userCode } = await deviceCodeFactory.transient({ db }).create({
+      expiresAt: new Date(Date.now() - 1000),
+    });
 
     const result = await lookupDeviceCodeByUserCode(db, userCode);
     expect(result.outcome).toBe("expired");
@@ -179,10 +178,9 @@ describe("exchangeDeviceCode", () => {
 
   test("returns expired and reaps the row when the TTL has passed", async () => {
     const db = await createTestDb();
-    const { deviceCode } = await requestDeviceCode(db);
-    await db
-      .update(deviceCodes)
-      .set({ expiresAt: new Date(Date.now() - 1000) });
+    const { deviceCode } = await deviceCodeFactory.transient({ db }).create({
+      expiresAt: new Date(Date.now() - 1000),
+    });
 
     const result = await exchangeDeviceCode(db, deviceCode, "cli");
     expect(result.outcome).toBe("expired");

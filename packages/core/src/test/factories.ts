@@ -15,6 +15,7 @@ import type {
   CredentialTransport,
   NewCredential,
 } from "../db/schema/credentials.js";
+import type { DeviceCode, NewDeviceCode } from "../db/schema/device_codes.js";
 import type { Entry, NewEntry } from "../db/schema/entries.js";
 import type { EntryTerm, NewEntryTerm } from "../db/schema/entry_term.js";
 import type {
@@ -30,6 +31,7 @@ import { generateToken, hashToken } from "../auth/tokens.js";
 import { allowedDomains } from "../db/schema/allowed_domains.js";
 import { authTokens } from "../db/schema/auth_tokens.js";
 import { credentials } from "../db/schema/credentials.js";
+import { deviceCodes } from "../db/schema/device_codes.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { oauthAccounts } from "../db/schema/oauth_accounts.js";
@@ -371,6 +373,49 @@ export const oauthAccountFactory = Factory.define<
   };
 });
 
+interface MintedDeviceCode {
+  /** Plaintext device_code the polling client exchanges with; never stored. */
+  readonly deviceCode: string;
+  /** Human-typed approval code; stored plaintext under a unique constraint. */
+  readonly userCode: string;
+  readonly row: DeviceCode;
+}
+
+// Mints a device-flow row (RFC 8628): generates the device_code, stores only
+// its SHA-256 under the PK, and returns the plaintext so a test can drive the
+// poll/exchange path. Pass `status` / `userId` to seed an approved or denied
+// terminal state directly. `id` is always derived, never passed.
+export const deviceCodeFactory = Factory.define<
+  Omit<NewDeviceCode, "id">,
+  DbTransient,
+  MintedDeviceCode
+>(({ sequence, transientParams, onCreate, params }) => {
+  onCreate(async (attrs) => {
+    const db = requireDb(transientParams);
+    const deviceCode = generateToken();
+    const id = await hashToken(deviceCode);
+    const [row] = await db
+      .insert(deviceCodes)
+      .values({ ...attrs, id })
+      .returning();
+    if (!row) throw new Error("deviceCodeFactory: insert returned no row");
+    return { deviceCode, userCode: row.userCode, row };
+  });
+
+  return {
+    // RFC 8628 "ABCD-EFGH" shape — the deviceFlow RPC validates this format.
+    userCode:
+      params.userCode ?? `TEST-${String(sequence).padStart(4, "0").slice(-4)}`,
+    userId: params.userId ?? null,
+    status: params.status ?? "pending",
+    tokenName: params.tokenName ?? null,
+    // fishery's DeepPartial widens array elements to `T | undefined`; the
+    // caller passes a real scope list (or null), so narrow it back.
+    scopes: (params.scopes ?? null) as readonly string[] | null,
+    expiresAt: params.expiresAt ?? new Date(Date.now() + 10 * 60 * 1000),
+  };
+});
+
 export interface Factories {
   readonly user: typeof userFactory;
   readonly admin: typeof adminUser;
@@ -394,6 +439,7 @@ export interface Factories {
   readonly apiToken: typeof apiTokenFactory;
   readonly authToken: typeof authTokenFactory;
   readonly oauthAccount: typeof oauthAccountFactory;
+  readonly deviceCode: typeof deviceCodeFactory;
 }
 
 export function factoriesFor(db: Db): Factories {
@@ -420,5 +466,6 @@ export function factoriesFor(db: Db): Factories {
     apiToken: apiTokenFactory.transient({ db }),
     authToken: authTokenFactory.transient({ db }),
     oauthAccount: oauthAccountFactory.transient({ db }),
+    deviceCode: deviceCodeFactory.transient({ db }),
   };
 }
