@@ -48,9 +48,9 @@ import {
 } from "../auth/rbac.js";
 import { CORE_MCP_TOOL_NAMES } from "../mcp/registry.js";
 import { DEFAULT_REWRITE_RULE_PRIORITY } from "../route/compile.js";
+import { CORE_RPC_NAMESPACES } from "../rpc/namespaces.js";
 import { RESERVED_DEP_KIND_NAMES } from "../template-deps.js";
 import { DuplicateRegistrationError, PluginContextError } from "./errors.js";
-import { CORE_RPC_NAMESPACES } from "./manifest.js";
 import {
   assertComponentRef,
   assertMetaBoxFields,

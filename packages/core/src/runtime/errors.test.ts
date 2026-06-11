@@ -51,25 +51,3 @@ describe("AppBootError.pluginIdCollidesWithCoreRpcNamespace", () => {
     expect(err.message).toContain("rename the plugin");
   });
 });
-
-describe("AppBootError.pluginIdCollidesWithCoreRpcRouter", () => {
-  test("class identity, code, and exposed pluginId", () => {
-    const err = AppBootError.pluginIdCollidesWithCoreRpcRouter({
-      pluginId: "posts",
-    });
-    expect(err).toBeInstanceOf(AppBootError);
-    expect(err.name).toBe("AppBootError");
-    expect(err.code).toBe("plugin_id_collides_with_core_rpc_router");
-    expect(err.pluginId).toBe("posts");
-  });
-
-  test("message names the plugin id and the core RPC router key", () => {
-    const err = AppBootError.pluginIdCollidesWithCoreRpcRouter({
-      pluginId: "posts",
-    });
-    expect(err.message).toContain(
-      'Plugin id "posts" collides with the core RPC router key',
-    );
-    expect(err.message).toContain("rename the plugin");
-  });
-});

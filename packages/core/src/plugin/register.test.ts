@@ -450,7 +450,7 @@ describe("registerRpcRouter", () => {
     );
   });
 
-  test.each(["auth", "entry", "term", "user", "settings"])(
+  test.each(["auth", "entry", "term", "user", "lookup", "search", "settings"])(
     "rejects plugin id `%s` that collides with a core RPC namespace",
     async (pluginId) => {
       const hooks = new HookRegistry();

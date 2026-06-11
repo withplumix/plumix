@@ -1,5 +1,4 @@
-import { RPCHandler } from "@orpc/server/fetch";
-import { ResponseHeadersPlugin } from "@orpc/server/plugins";
+import type { RPCHandler } from "@orpc/server/fetch";
 
 import type { BlockRegistry, HtmlAllowlist, MarkSpec } from "@plumix/blocks";
 import {
@@ -33,14 +32,11 @@ import { DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
 import * as coreSchema from "../db/schema/index.js";
 import { mergeDocumentManifest } from "../document-merge.js";
 import { HookRegistry } from "../hooks/registry.js";
-import {
-  CORE_RPC_NAMESPACES,
-  createPluginRegistry,
-} from "../plugin/manifest.js";
+import { createPluginRegistry } from "../plugin/manifest.js";
 import { installPlugins } from "../plugin/register.js";
 import { compileRouteMap } from "../route/compile.js";
+import { CORE_RPC_NAMESPACES } from "../rpc/namespaces.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
-import { appRouter } from "../rpc/router.js";
 import { registerCoreSearchHandlers } from "../search/register-core-handlers.js";
 import { registerCoreSettings } from "../settings-core.js";
 import { registerCoreTemplateDeps } from "../template-deps-core.js";
@@ -60,7 +56,13 @@ export interface PlumixApp {
   readonly config: PlumixConfig;
   readonly hooks: HookRegistry;
   readonly plugins: PluginRegistry;
-  readonly rpcHandler: RPCHandler<AppContext>;
+  /**
+   * Lazily builds (and memoizes) the merged oRPC handler on first call. Cold-
+   * path-only — deferred so the heavy procedure graph + oRPC runtime never
+   * evaluate on the public render cold-start path. The dispatcher awaits this
+   * on an RPC request; nothing on the public path touches it.
+   */
+  readonly loadRpcHandler: () => Promise<RPCHandler<AppContext>>;
   /**
    * Canonical site origin (e.g. `https://cms.example.com`). Sourced from
    * the passkey config for now since that's the only place it lives in
@@ -223,17 +225,18 @@ export async function buildApp(
     }
   }
 
-  // The cast matches oRPC's runtime dispatch model: routers are opaque
-  // property-key lookups, so plugin sub-routers don't need static typing.
-  const mergedRouter = { ...appRouter } as Record<string, unknown>;
-  for (const [pluginId, pluginRouter] of registry.rpcRouters) {
-    if (CORE_RPC_NAMESPACES.has(pluginId)) {
+  // Reject plugin ids that collide with a core RPC namespace at boot, against
+  // the light name set — so validation stays eager while the merge + heavy
+  // router graph defer to `loadRpcHandler`. The `Object.hasOwn` arm also rejects
+  // "constructor" (the one Object.prototype key matching the plugin-id pattern),
+  // which would otherwise shadow a member of the merged router object.
+  for (const pluginId of registry.rpcRouters.keys()) {
+    if (
+      CORE_RPC_NAMESPACES.has(pluginId) ||
+      Object.hasOwn(Object.prototype, pluginId)
+    ) {
       throw AppBootError.pluginIdCollidesWithCoreRpcNamespace({ pluginId });
     }
-    if (pluginId in appRouter) {
-      throw AppBootError.pluginIdCollidesWithCoreRpcRouter({ pluginId });
-    }
-    mergedRouter[pluginId] = pluginRouter;
   }
 
   const passkey = resolvePasskeyConfig(config.auth.passkey);
@@ -275,13 +278,19 @@ export async function buildApp(
     document,
   );
 
+  // Memoized so the heavy router module + handler construction happen once per
+  // isolate, on the first RPC request — never on the public render cold path.
+  let rpcHandler: Promise<RPCHandler<AppContext>> | undefined;
+  const loadRpcHandler = (): Promise<RPCHandler<AppContext>> =>
+    (rpcHandler ??= import("../rpc/build-handler.js").then((m) =>
+      m.buildRpcHandler(registry.rpcRouters),
+    ));
+
   return {
     config,
     hooks,
     plugins: registry,
-    rpcHandler: new RPCHandler(mergedRouter as unknown as typeof appRouter, {
-      plugins: [new ResponseHeadersPlugin()],
-    }),
+    loadRpcHandler,
     origin: passkey.origin,
     devCsrfLocalhost: runtime.devCsrfLocalhost ?? false,
     passkey,
