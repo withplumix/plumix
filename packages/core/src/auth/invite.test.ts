@@ -2,37 +2,14 @@ import { describe, expect, test } from "vitest";
 
 import { eq } from "../db/index.js";
 import { authTokens } from "../db/schema/auth_tokens.js";
-import { userFactory } from "../test/factories.js";
+import { authTokenFactory, userFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import {
   consumeInviteToken,
   InviteError,
   validateInviteToken,
 } from "./invite.js";
-import { generateToken, hashToken } from "./tokens.js";
-
-async function seedInvite(
-  db: Awaited<ReturnType<typeof createTestDb>>,
-  overrides: {
-    readonly userId?: number | null;
-    readonly email?: string | null;
-    readonly role?: "admin" | "editor" | "author" | null;
-    readonly expiresInMs?: number;
-    readonly type?: "invite" | "magic_link";
-  } = {},
-): Promise<{ token: string; tokenHash: string }> {
-  const token = generateToken();
-  const tokenHash = await hashToken(token);
-  await db.insert(authTokens).values({
-    hash: tokenHash,
-    userId: overrides.userId ?? null,
-    email: overrides.email ?? null,
-    role: overrides.role ?? null,
-    type: overrides.type ?? "invite",
-    expiresAt: new Date(Date.now() + (overrides.expiresInMs ?? 60_000)),
-  });
-  return { token, tokenHash };
-}
+import { generateToken } from "./tokens.js";
 
 describe("validateInviteToken", () => {
   test("returns the invite when the token is valid and fields are present", async () => {
@@ -40,14 +17,15 @@ describe("validateInviteToken", () => {
     const user = await userFactory
       .transient({ db })
       .create({ email: "invitee@example.test", role: "author" });
-    const { token, tokenHash } = await seedInvite(db, {
+    const { token, row } = await authTokenFactory.transient({ db }).create({
+      type: "invite",
       userId: user.id,
       email: user.email,
       role: "author",
     });
 
     const invite = await validateInviteToken(db, token);
-    expect(invite.tokenHash).toBe(tokenHash);
+    expect(invite.tokenHash).toBe(row.hash);
     expect(invite.userId).toBe(user.id);
     expect(invite.email).toBe("invitee@example.test");
     expect(invite.role).toBe("author");
@@ -63,11 +41,11 @@ describe("validateInviteToken", () => {
   test("throws invalid_token for a non-invite token type", async () => {
     const db = await createTestDb();
     const user = await userFactory.transient({ db }).create();
-    const { token } = await seedInvite(db, {
+    const { token } = await authTokenFactory.transient({ db }).create({
+      type: "magic_link",
       userId: user.id,
       email: user.email,
       role: "author",
-      type: "magic_link",
     });
     await expect(validateInviteToken(db, token)).rejects.toMatchObject({
       code: "invalid_token",
@@ -76,7 +54,8 @@ describe("validateInviteToken", () => {
 
   test("throws invalid_token when required fields are null", async () => {
     const db = await createTestDb();
-    const { token } = await seedInvite(db, {
+    const { token } = await authTokenFactory.transient({ db }).create({
+      type: "invite",
       userId: null,
       email: "x@example.test",
       role: "author",
@@ -89,11 +68,12 @@ describe("validateInviteToken", () => {
   test("throws token_expired when expiresAt is in the past", async () => {
     const db = await createTestDb();
     const user = await userFactory.transient({ db }).create();
-    const { token } = await seedInvite(db, {
+    const { token } = await authTokenFactory.transient({ db }).create({
+      type: "invite",
       userId: user.id,
       email: user.email,
       role: "author",
-      expiresInMs: -60_000,
+      expiresAt: new Date(Date.now() - 60_000),
     });
     await expect(validateInviteToken(db, token)).rejects.toMatchObject({
       code: "token_expired",
@@ -103,7 +83,8 @@ describe("validateInviteToken", () => {
   test("is idempotent — does not consume the token on success", async () => {
     const db = await createTestDb();
     const user = await userFactory.transient({ db }).create();
-    const { token, tokenHash } = await seedInvite(db, {
+    const { token, row } = await authTokenFactory.transient({ db }).create({
+      type: "invite",
       userId: user.id,
       email: user.email,
       role: "author",
@@ -112,10 +93,10 @@ describe("validateInviteToken", () => {
     await validateInviteToken(db, token);
     await validateInviteToken(db, token);
 
-    const row = await db.query.authTokens.findFirst({
-      where: eq(authTokens.hash, tokenHash),
+    const stored = await db.query.authTokens.findFirst({
+      where: eq(authTokens.hash, row.hash),
     });
-    expect(row).toBeDefined();
+    expect(stored).toBeDefined();
   });
 });
 
@@ -123,18 +104,19 @@ describe("consumeInviteToken", () => {
   test("deletes the token row", async () => {
     const db = await createTestDb();
     const user = await userFactory.transient({ db }).create();
-    const { token, tokenHash } = await seedInvite(db, {
+    const { token, row } = await authTokenFactory.transient({ db }).create({
+      type: "invite",
       userId: user.id,
       email: user.email,
       role: "author",
     });
 
-    await consumeInviteToken(db, tokenHash);
+    await consumeInviteToken(db, row.hash);
 
-    const row = await db.query.authTokens.findFirst({
-      where: eq(authTokens.hash, tokenHash),
+    const found = await db.query.authTokens.findFirst({
+      where: eq(authTokens.hash, row.hash),
     });
-    expect(row).toBeUndefined();
+    expect(found).toBeUndefined();
     await expect(validateInviteToken(db, token)).rejects.toMatchObject({
       code: "invalid_token",
     });

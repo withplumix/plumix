@@ -23,6 +23,7 @@ export {
   entryTermFactory,
   allowedDomainFactory,
   apiTokenFactory,
+  authTokenFactory,
   factoriesFor,
 } from "./factories.js";
 export type { Factories } from "./factories.js";
