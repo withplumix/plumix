@@ -75,7 +75,7 @@
     "drizzle-kit": "catalog:",
     "drizzle-orm": "catalog:",
     "drizzle-valibot": "catalog:",
-    "fishery": "^2.4.0",
+    "fishery": "catalog:",
     "valibot": "catalog:"
   },
   "peerDependencies": {

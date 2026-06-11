@@ -89,6 +89,7 @@
     "@vitest/coverage-v8": "catalog:",
     "drizzle-kit": "catalog:",
     "eslint": "catalog:",
+    "fishery": "catalog:",
     "jsdom": "catalog:",
     "plumix": "workspace:*",
     "prettier": "catalog:",
