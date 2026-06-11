@@ -1,32 +1,11 @@
+import type * as AuthFlowRoutes from "../auth/flow-routes.js";
 import type { AppContext } from "../context/app.js";
 import type * as McpDispatch from "../mcp/dispatch.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { PlumixApp } from "./app.js";
 import { readSessionCookie } from "../auth/cookies.js";
 import { hasCsrfHeader, hasMatchingOrigin } from "../auth/csrf.js";
-import {
-  handleDeviceCodeRequest,
-  handleDeviceTokenExchange,
-} from "../auth/device-flow-routes.js";
-import { handleEmailChangeVerify } from "../auth/email-change/routes.js";
-import {
-  handleMagicLinkRequest,
-  handleMagicLinkVerify,
-} from "../auth/magic-link/routes.js";
-import {
-  handleOAuthCallback,
-  handleOAuthStart,
-  parseOAuthPath,
-} from "../auth/oauth/routes.js";
-import {
-  handleInviteRegisterOptions,
-  handleInviteRegisterVerify,
-  handlePasskeyLoginOptions,
-  handlePasskeyLoginVerify,
-  handlePasskeyRegisterOptions,
-  handlePasskeyRegisterVerify,
-  handleSignout,
-} from "../auth/passkey/routes.js";
+import { parseOAuthPath } from "../auth/oauth/match.js";
 import { withUser } from "../context/app.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { matchRoute } from "../route/match.js";
@@ -48,23 +27,48 @@ const MCP_PATH = "/_plumix/mcp";
 // MCP request per isolate.
 let mcpModule: Promise<typeof McpDispatch> | undefined;
 
+// Auth-flow handlers (passkey/oauth/magic-link/device/email-change) are
+// admin-login cold paths — never the public render path. Load them via one
+// memoized dynamic import on the first auth-flow request per isolate so their
+// heavy graph (webauthn/oslo, arctic) stays off the public render cold-start
+// path; the lightweight path matchers below stay eager.
+let authFlowRoutes: Promise<typeof AuthFlowRoutes> | undefined;
+function loadAuthFlowRoutes(): Promise<typeof AuthFlowRoutes> {
+  return (authFlowRoutes ??= import("../auth/flow-routes.js"));
+}
+
 // Filenames look like `index.html`, `chunk-abc.js`, `fonts/g.woff2` — paths
 // with a dot-suffix after the last slash. Deep-link SPA routes never match.
 const ASSET_LIKE = /\.[^/]+$/;
 
 type RouteHandler = (ctx: AppContext, app: PlumixApp) => Promise<Response>;
+// Maps a path to its handler accessor on the lazily-loaded module, so the map
+// itself pulls no handler code into the eager graph — only the matching paths.
+type AuthFlowRoute = (handlers: typeof AuthFlowRoutes) => RouteHandler;
 
-const POST_AUTH_ROUTES = new Map<string, RouteHandler>([
-  ["/_plumix/auth/passkey/register/options", handlePasskeyRegisterOptions],
-  ["/_plumix/auth/passkey/register/verify", handlePasskeyRegisterVerify],
-  ["/_plumix/auth/passkey/login/options", handlePasskeyLoginOptions],
-  ["/_plumix/auth/passkey/login/verify", handlePasskeyLoginVerify],
-  ["/_plumix/auth/invite/register/options", handleInviteRegisterOptions],
-  ["/_plumix/auth/invite/register/verify", handleInviteRegisterVerify],
-  ["/_plumix/auth/magic-link/request", handleMagicLinkRequest],
-  ["/_plumix/auth/device/code", handleDeviceCodeRequest],
-  ["/_plumix/auth/device/token", (ctx) => handleDeviceTokenExchange(ctx)],
-  ["/_plumix/auth/signout", (ctx) => handleSignout(ctx)],
+const POST_AUTH_ROUTES = new Map<string, AuthFlowRoute>([
+  [
+    "/_plumix/auth/passkey/register/options",
+    (h) => h.handlePasskeyRegisterOptions,
+  ],
+  [
+    "/_plumix/auth/passkey/register/verify",
+    (h) => h.handlePasskeyRegisterVerify,
+  ],
+  ["/_plumix/auth/passkey/login/options", (h) => h.handlePasskeyLoginOptions],
+  ["/_plumix/auth/passkey/login/verify", (h) => h.handlePasskeyLoginVerify],
+  [
+    "/_plumix/auth/invite/register/options",
+    (h) => h.handleInviteRegisterOptions,
+  ],
+  ["/_plumix/auth/invite/register/verify", (h) => h.handleInviteRegisterVerify],
+  ["/_plumix/auth/magic-link/request", (h) => h.handleMagicLinkRequest],
+  ["/_plumix/auth/device/code", (h) => h.handleDeviceCodeRequest],
+  [
+    "/_plumix/auth/device/token",
+    (h) => (ctx) => h.handleDeviceTokenExchange(ctx),
+  ],
+  ["/_plumix/auth/signout", (h) => (ctx) => h.handleSignout(ctx)],
 ]);
 
 const MAGIC_LINK_VERIFY_PATH = "/_plumix/auth/magic-link/verify";
@@ -156,10 +160,11 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
       : notFound("rpc-procedure-not-found");
   }
 
-  const authHandler = POST_AUTH_ROUTES.get(pathname);
-  if (authHandler) {
+  const authRoute = POST_AUTH_ROUTES.get(pathname);
+  if (authRoute) {
     if (ctx.request.method !== "POST") return methodNotAllowed(["POST"]);
-    return authHandler(ctx, app);
+    const handlers = await loadAuthFlowRoutes();
+    return authRoute(handlers)(ctx, app);
   }
 
   // OAuth endpoints are top-level GET navigations from the browser, so they
@@ -169,9 +174,10 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   const oauth = parseOAuthPath(pathname);
   if (oauth) {
     if (ctx.request.method !== "GET") return methodNotAllowed(["GET"]);
+    const handlers = await loadAuthFlowRoutes();
     return oauth.tail === "start"
-      ? handleOAuthStart(ctx, app, oauth.params.providerKey)
-      : handleOAuthCallback(ctx, app, oauth.params.providerKey);
+      ? handlers.handleOAuthStart(ctx, app, oauth.params.providerKey)
+      : handlers.handleOAuthCallback(ctx, app, oauth.params.providerKey);
   }
 
   // Magic-link verify is the same shape — top-level GET from the user's
@@ -179,7 +185,7 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   // per-request CSRF anchor.
   if (pathname === MAGIC_LINK_VERIFY_PATH) {
     if (ctx.request.method !== "GET") return methodNotAllowed(["GET"]);
-    return handleMagicLinkVerify(ctx, app);
+    return (await loadAuthFlowRoutes()).handleMagicLinkVerify(ctx, app);
   }
 
   // Email-change verify — same anchor model. The link goes to the
@@ -187,7 +193,7 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   // change atomically + invalidates every session for that user.
   if (pathname === EMAIL_CHANGE_VERIFY_PATH) {
     if (ctx.request.method !== "GET") return methodNotAllowed(["GET"]);
-    return handleEmailChangeVerify(ctx, app);
+    return (await loadAuthFlowRoutes()).handleEmailChangeVerify(ctx, app);
   }
 
   if (pathname === ADMIN_PREFIX || pathname.startsWith(`${ADMIN_PREFIX}/`)) {
