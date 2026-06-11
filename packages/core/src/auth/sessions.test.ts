@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 
 import type { SessionPolicy } from "./sessions.js";
 import { users } from "../db/schema/users.js";
+import { userFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import {
   createSession,
@@ -12,19 +13,10 @@ import {
 } from "./sessions.js";
 import { hashToken } from "./tokens.js";
 
-async function seedUser(db: Awaited<ReturnType<typeof createTestDb>>) {
-  const [user] = await db
-    .insert(users)
-    .values({ email: "alice@example.com", role: "admin" })
-    .returning();
-  if (!user) throw new Error("seed failed");
-  return user;
-}
-
 describe("session lifecycle", () => {
   test("round-trips a token while storing only its SHA-256 hash in the DB", async () => {
     const db = await createTestDb();
-    const user = await seedUser(db);
+    const user = await userFactory.transient({ db }).create({ role: "admin" });
     const { token, session } = await createSession(db, { userId: user.id });
 
     expect(session.id).not.toBe(token);
@@ -36,7 +28,7 @@ describe("session lifecycle", () => {
 
   test("rejects a tampered token (hash miss → no row found)", async () => {
     const db = await createTestDb();
-    const user = await seedUser(db);
+    const user = await userFactory.transient({ db }).create({ role: "admin" });
     const { token } = await createSession(db, { userId: user.id });
     const tampered = token.slice(0, -1) + (token.endsWith("a") ? "b" : "a");
     expect(await validateSession(db, tampered)).toBeNull();
@@ -44,7 +36,7 @@ describe("session lifecycle", () => {
 
   test("expired session is rejected and the row is purged", async () => {
     const db = await createTestDb();
-    const user = await seedUser(db);
+    const user = await userFactory.transient({ db }).create({ role: "admin" });
     const policy: SessionPolicy = {
       ...DEFAULT_SESSION_POLICY,
       maxAgeSeconds: -10,
@@ -56,7 +48,7 @@ describe("session lifecycle", () => {
 
   test("sliding window extends expiresAt past the threshold", async () => {
     const db = await createTestDb();
-    const user = await seedUser(db);
+    const user = await userFactory.transient({ db }).create({ role: "admin" });
     const policy: SessionPolicy = {
       maxAgeSeconds: 60,
       absoluteMaxAgeSeconds: 3600,
@@ -79,7 +71,7 @@ describe("session lifecycle", () => {
 
   test("absolute cap forbids extending past createdAt + absoluteMaxAge", async () => {
     const db = await createTestDb();
-    const user = await seedUser(db);
+    const user = await userFactory.transient({ db }).create({ role: "admin" });
     const policy: SessionPolicy = {
       maxAgeSeconds: 60,
       absoluteMaxAgeSeconds: 1,
@@ -92,7 +84,7 @@ describe("session lifecycle", () => {
 
   test("disabled user can no longer validate — session is purged", async () => {
     const db = await createTestDb();
-    const user = await seedUser(db);
+    const user = await userFactory.transient({ db }).create({ role: "admin" });
     const { token } = await createSession(db, { userId: user.id });
     await db
       .update(users)
@@ -103,7 +95,7 @@ describe("session lifecycle", () => {
 
   test("invalidateSession deletes by hash so the token stops working", async () => {
     const db = await createTestDb();
-    const user = await seedUser(db);
+    const user = await userFactory.transient({ db }).create({ role: "admin" });
     const { token } = await createSession(db, { userId: user.id });
     await invalidateSession(db, token);
     expect(await validateSession(db, token)).toBeNull();
