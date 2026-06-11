@@ -515,7 +515,7 @@ describe("menu RPC", () => {
     test("sweeps any settings binding pointing at the deleted menu", async () => {
       const h = await buildHarness();
       const m = await seedMenu(h.db, h.factories, "ghost");
-      await h.db.insert(settings).values({
+      await h.factories.setting.create({
         group: "menu_locations",
         key: "primary",
         value: m.slug,
@@ -682,7 +682,7 @@ describe("menu RPC", () => {
       const h = await buildHarness();
       recordLocation("primary", { label: "Primary" });
       await seedMenu(h.db, h.factories, "main");
-      await h.db.insert(settings).values({
+      await h.factories.setting.create({
         group: "menu_locations",
         key: "ghost",
         value: "main",
