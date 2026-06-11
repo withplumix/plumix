@@ -84,6 +84,9 @@ catalogs:
     eslint:
       specifier: ^10.4.1
       version: 10.4.1
+    fishery:
+      specifier: ^2.4.0
+      version: 2.4.0
     jsdom:
       specifier: ^29.1.1
       version: 29.1.1
@@ -532,7 +535,7 @@ importers:
         specifier: 'catalog:'
         version: 0.4.2(drizzle-orm@0.45.2(@cloudflare/workers-types@4.20260526.1)(@libsql/client@0.17.3))(valibot@1.4.1(typescript@6.0.3))
       fishery:
-        specifier: ^2.4.0
+        specifier: 'catalog:'
         version: 2.4.0
       valibot:
         specifier: 'catalog:'
@@ -698,6 +701,9 @@ importers:
       eslint:
         specifier: 'catalog:'
         version: 10.4.1(jiti@2.7.0)
+      fishery:
+        specifier: 'catalog:'
+        version: 2.4.0
       jsdom:
         specifier: 'catalog:'
         version: 29.1.1
@@ -10484,7 +10490,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.1.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.8(@types/node@24.13.1)(@vitest/coverage-v8@4.1.8)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.0.9(@types/node@24.13.1)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
+      vitest: 4.1.8(@types/node@25.9.2)(@vitest/coverage-v8@4.1.8)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.0.9(@types/node@25.9.2)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
 
   '@vitest/expect@4.1.8':
     dependencies:

@@ -37,6 +37,7 @@ catalog:
   drizzle-valibot: ^0.4.2
   esbuild: ^0.27.7
   eslint: ^10.4.1
+  fishery: ^2.4.0
   jsdom: ^29.1.1
   prettier: ^3.8.3
   publint: ^0.3.21
