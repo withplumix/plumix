@@ -4,7 +4,7 @@ import { and, eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { sessions } from "../../db/schema/sessions.js";
 import { users } from "../../db/schema/users.js";
-import { userFactory } from "../../test/factories.js";
+import { authTokenFactory, userFactory } from "../../test/factories.js";
 import { createTestDb } from "../../test/harness.js";
 import { makeMailer } from "../../test/mailer.js";
 import { hashToken } from "../tokens.js";
@@ -231,14 +231,13 @@ describe("verifyEmailChange", () => {
   test("returns token_expired past the TTL", async () => {
     const db = await createTestDb();
     const user = await userFactory.transient({ db }).create({});
-    const { token } = await requestEmailChange(db, {
+    // request always mints a live token; seed the expired state directly.
+    const { token } = await authTokenFactory.transient({ db }).create({
+      type: "email_verification",
       userId: user.id,
-      newEmail: "alice@new.example",
-      origin: ORIGIN,
-      mailer: makeMailer(),
-      siteName: SITE_NAME,
+      email: "alice@new.example",
+      expiresAt: new Date(Date.now() - 1000),
     });
-    await db.update(authTokens).set({ expiresAt: new Date(Date.now() - 1000) });
 
     await expect(verifyEmailChange(db, token)).rejects.toMatchObject({
       code: "token_expired",
