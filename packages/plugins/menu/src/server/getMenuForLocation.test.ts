@@ -91,7 +91,7 @@ describe("getMenuForLocation", () => {
   }
 
   async function bind(location: string, termSlug: string): Promise<void> {
-    await db.insert(settings).values({
+    await factories.setting.create({
       group: "menu_locations",
       key: location,
       value: termSlug,
@@ -126,6 +126,8 @@ describe("getMenuForLocation", () => {
     "returns null when the binding value shape is invalid: %s",
     async (name, value) => {
       void name;
+      // Raw insert: settingFactory's `value ?? ""` default would coerce the
+      // deliberately-malformed shapes here (notably null) into "".
       await db.insert(settings).values({
         group: "menu_locations",
         key: "primary",

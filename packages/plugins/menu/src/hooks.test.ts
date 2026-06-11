@@ -11,7 +11,6 @@ import {
   HookRegistry,
   installPlugins,
   registerCoreLookupAdapters,
-  settings,
 } from "plumix/plugin";
 import {
   adminUser,
@@ -243,7 +242,7 @@ describe("menu hook surface", () => {
       recordLocation("primary", { label: "Primary" });
       const termId = await seedMenuTerm(b, "primary");
       await seedItem(b, termId, "Home", "/");
-      await b.db.insert(settings).values({
+      await b.factories.setting.create({
         group: "menu_locations",
         key: "primary",
         value: "primary",
