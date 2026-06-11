@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
 
 import { entries } from "../db/schema/entries.js";
-import { userFactory } from "../test/factories.js";
+import { entryFactory, userFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import {
   deleteAutosave,
@@ -18,19 +18,15 @@ import { decodeSnapshotEnvelope } from "./snapshot-envelope.js";
 
 async function seedLiveEntry(db: Awaited<ReturnType<typeof createTestDb>>) {
   const author = await userFactory.transient({ db }).create({ role: "author" });
-  const [entry] = await db
-    .insert(entries)
-    .values({
-      type: "post",
-      title: "Hello",
-      slug: "hello",
-      content: { type: "doc", content: [] },
-      authorId: author.id,
-      status: "draft",
-      meta: { custom: "field" },
-    })
-    .returning();
-  if (!entry) throw new Error("seed entry");
+  const entry = await entryFactory.transient({ db }).create({
+    type: "post",
+    title: "Hello",
+    slug: "hello",
+    content: { type: "doc", content: [] },
+    authorId: author.id,
+    status: "draft",
+    meta: { custom: "field" },
+  });
   return { author, entry };
 }
 
@@ -108,19 +104,15 @@ describe("listRevisions cross-entry isolation", () => {
   test("returns only the requested entry's revisions when other entries have more", async () => {
     const db = await createTestDb();
     const { author, entry: a } = await seedLiveEntry(db);
-    const [b] = await db
-      .insert(entries)
-      .values({
-        type: "post",
-        title: "Other",
-        slug: "other",
-        content: { type: "doc", content: [] },
-        authorId: author.id,
-        status: "draft",
-        meta: {},
-      })
-      .returning();
-    if (!b) throw new Error("seed entry b");
+    const b = await entryFactory.transient({ db }).create({
+      type: "post",
+      title: "Other",
+      slug: "other",
+      content: { type: "doc", content: [] },
+      authorId: author.id,
+      status: "draft",
+      meta: {},
+    });
     // 30 revisions of b would saturate any naive limit window first.
     for (let i = 0; i < 30; i += 1) {
       await snapshotAsRevision(db, { entry: b, authorId: author.id });
@@ -138,19 +130,15 @@ describe("pruneOldRevisions cross-entry isolation", () => {
   test("does not delete other entries' revisions when pruning past the cap", async () => {
     const db = await createTestDb();
     const { author, entry: a } = await seedLiveEntry(db);
-    const [b] = await db
-      .insert(entries)
-      .values({
-        type: "post",
-        title: "Other",
-        slug: "other",
-        content: { type: "doc", content: [] },
-        authorId: author.id,
-        status: "draft",
-        meta: {},
-      })
-      .returning();
-    if (!b) throw new Error("seed entry b");
+    const b = await entryFactory.transient({ db }).create({
+      type: "post",
+      title: "Other",
+      slug: "other",
+      content: { type: "doc", content: [] },
+      authorId: author.id,
+      status: "draft",
+      meta: {},
+    });
     for (let i = 0; i < 4; i += 1) {
       await snapshotAsRevision(db, { entry: a, authorId: author.id });
     }
