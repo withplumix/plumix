@@ -129,17 +129,11 @@ describe("POST /_plumix/auth/device/token", () => {
     const h = await createDispatcherHarness();
     const seeded = await h.factory.user.create({});
 
-    // Start a device-flow session, then directly approve the row in
-    // the DB to skip the browser-side approve UI.
-    const startResponse = await h.dispatch(
-      plumixRequest(DEVICE_CODE_PATH, { method: "POST" }),
-    );
-    const { device_code } = (await startResponse.json()) as {
-      device_code: string;
-    };
-    await h.db
-      .update(deviceCodes)
-      .set({ status: "approved", userId: seeded.id, tokenName: "ci" });
+    const { deviceCode: device_code } = await h.factory.deviceCode.create({
+      status: "approved",
+      userId: seeded.id,
+      tokenName: "ci",
+    });
 
     const response = await h.dispatch(
       plumixRequest(DEVICE_TOKEN_PATH, {
@@ -174,13 +168,9 @@ describe("POST /_plumix/auth/device/token", () => {
   test("returns access_denied + consumes the row for a denied session", async () => {
     const h = await createDispatcherHarness();
 
-    const startResponse = await h.dispatch(
-      plumixRequest(DEVICE_CODE_PATH, { method: "POST" }),
-    );
-    const { device_code } = (await startResponse.json()) as {
-      device_code: string;
-    };
-    await h.db.update(deviceCodes).set({ status: "denied" });
+    const { deviceCode: device_code } = await h.factory.deviceCode.create({
+      status: "denied",
+    });
 
     const response = await h.dispatch(
       plumixRequest(DEVICE_TOKEN_PATH, {
@@ -211,15 +201,9 @@ describe("POST /_plumix/auth/device/token", () => {
   test("returns expired_token + reaps the row past TTL", async () => {
     const h = await createDispatcherHarness();
 
-    const startResponse = await h.dispatch(
-      plumixRequest(DEVICE_CODE_PATH, { method: "POST" }),
-    );
-    const { device_code } = (await startResponse.json()) as {
-      device_code: string;
-    };
-    await h.db
-      .update(deviceCodes)
-      .set({ expiresAt: new Date(Date.now() - 1000) });
+    const { deviceCode: device_code } = await h.factory.deviceCode.create({
+      expiresAt: new Date(Date.now() - 1000),
+    });
 
     const response = await h.dispatch(
       plumixRequest(DEVICE_TOKEN_PATH, {

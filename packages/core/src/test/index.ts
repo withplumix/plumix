@@ -25,6 +25,7 @@ export {
   apiTokenFactory,
   authTokenFactory,
   oauthAccountFactory,
+  deviceCodeFactory,
   factoriesFor,
 } from "./factories.js";
 export type { Factories } from "./factories.js";
