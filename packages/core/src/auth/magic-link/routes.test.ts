@@ -7,7 +7,6 @@ import { authTokens } from "../../db/schema/auth_tokens.js";
 import { sessions } from "../../db/schema/sessions.js";
 import { users } from "../../db/schema/users.js";
 import { createDispatcherHarness } from "../../test/dispatcher.js";
-import { generateToken, hashToken } from "../tokens.js";
 
 interface CapturedSend {
   readonly to: string;
@@ -132,24 +131,6 @@ describe("magic-link request route", () => {
 });
 
 describe("magic-link verify route", () => {
-  async function seedToken(
-    h: Awaited<ReturnType<typeof createDispatcherHarness>>,
-    userId: number,
-    email: string,
-    ttlSeconds: number = 15 * 60,
-  ): Promise<string> {
-    const token = generateToken();
-    const hash = await hashToken(token);
-    await h.db.insert(authTokens).values({
-      hash,
-      userId,
-      email,
-      type: "magic_link",
-      expiresAt: new Date(Date.now() + ttlSeconds * 1000),
-    });
-    return token;
-  }
-
   test("missing token redirects with magic_link_error=missing_token", async () => {
     const { mailer } = captureMailer();
     const h = await createDispatcherHarness({
@@ -175,7 +156,12 @@ describe("magic-link verify route", () => {
       email: "alice@example.com",
       role: "editor",
     });
-    const token = await seedToken(h, user.id, "alice@example.com");
+    const token = (
+      await h.factory.authToken.create({
+        userId: user.id,
+        email: "alice@example.com",
+      })
+    ).token;
 
     const response = await h.dispatch(
       getRequest(`/_plumix/auth/magic-link/verify?token=${token}`),
@@ -212,7 +198,13 @@ describe("magic-link verify route", () => {
       mailer,
     });
     const user = await h.factory.user.create({ role: "editor" });
-    const token = await seedToken(h, user.id, user.email, -1);
+    const token = (
+      await h.factory.authToken.create({
+        userId: user.id,
+        email: user.email,
+        expiresAt: new Date(Date.now() - 1000),
+      })
+    ).token;
 
     const response = await h.dispatch(
       getRequest(`/_plumix/auth/magic-link/verify?token=${token}`),
@@ -232,7 +224,9 @@ describe("magic-link verify route", () => {
       role: "editor",
       disabledAt: new Date(),
     });
-    const token = await seedToken(h, user.id, user.email);
+    const token = (
+      await h.factory.authToken.create({ userId: user.id, email: user.email })
+    ).token;
 
     const response = await h.dispatch(
       getRequest(`/_plumix/auth/magic-link/verify?token=${token}`),
@@ -268,7 +262,12 @@ describe("magic-link verify route", () => {
       email: "alice@example.com",
       role: "editor",
     });
-    const token = await seedToken(h, user.id, "alice@example.com");
+    const token = (
+      await h.factory.authToken.create({
+        userId: user.id,
+        email: "alice@example.com",
+      })
+    ).token;
 
     const first = await h.dispatch(
       getRequest(`/_plumix/auth/magic-link/verify?token=${token}`),
@@ -305,7 +304,12 @@ describe("magic-link verify route", () => {
     const beforeCount = (await h.db.select().from(sessions)).length;
     expect(beforeCount).toBe(1);
 
-    const token = await seedToken(h, user.id, "alice@example.com");
+    const token = (
+      await h.factory.authToken.create({
+        userId: user.id,
+        email: "alice@example.com",
+      })
+    ).token;
     const cookie = existingSessioned.headers.get("cookie");
     const response = await h.dispatch(
       new Request(

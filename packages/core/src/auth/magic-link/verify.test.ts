@@ -3,29 +3,14 @@ import { describe, expect, test } from "vitest";
 import { eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { users } from "../../db/schema/users.js";
-import { allowedDomainFactory, userFactory } from "../../test/factories.js";
+import {
+  allowedDomainFactory,
+  authTokenFactory,
+  userFactory,
+} from "../../test/factories.js";
 import { createTestDb } from "../../test/harness.js";
-import { generateToken, hashToken } from "../tokens.js";
 import { MagicLinkError } from "./errors.js";
 import { verifyMagicLink } from "./verify.js";
-
-async function seedToken(
-  db: Awaited<ReturnType<typeof createTestDb>>,
-  userId: number | null,
-  email: string,
-  ttlSeconds: number = 15 * 60,
-): Promise<string> {
-  const token = generateToken();
-  const hash = await hashToken(token);
-  await db.insert(authTokens).values({
-    hash,
-    userId,
-    email,
-    type: "magic_link",
-    expiresAt: new Date(Date.now() + ttlSeconds * 1000),
-  });
-  return token;
-}
 
 describe("verifyMagicLink", () => {
   test("returns the user and deletes the row on success", async () => {
@@ -34,7 +19,11 @@ describe("verifyMagicLink", () => {
       email: "alice@example.com",
       role: "editor",
     });
-    const token = await seedToken(db, user.id, "alice@example.com");
+    const token = (
+      await authTokenFactory
+        .transient({ db })
+        .create({ userId: user.id, email: "alice@example.com" })
+    ).token;
 
     const result = await verifyMagicLink(db, token);
     expect(result.user.id).toBe(user.id);
@@ -58,7 +47,13 @@ describe("verifyMagicLink", () => {
       role: "editor",
       email: "x@y.z",
     });
-    const token = await seedToken(db, user.id, "x@y.z", -1);
+    const token = (
+      await authTokenFactory.transient({ db }).create({
+        userId: user.id,
+        email: "x@y.z",
+        expiresAt: new Date(Date.now() - 1000),
+      })
+    ).token;
 
     await expect(verifyMagicLink(db, token)).rejects.toMatchObject({
       code: "token_expired",
@@ -75,7 +70,11 @@ describe("verifyMagicLink", () => {
       email: "x@y.z",
       disabledAt: new Date(),
     });
-    const token = await seedToken(db, user.id, "x@y.z");
+    const token = (
+      await authTokenFactory
+        .transient({ db })
+        .create({ userId: user.id, email: "x@y.z" })
+    ).token;
 
     await expect(verifyMagicLink(db, token)).rejects.toMatchObject({
       code: "account_disabled",
@@ -85,29 +84,26 @@ describe("verifyMagicLink", () => {
   test("ignores tokens of a different type stored under the same hash", async () => {
     const db = await createTestDb();
     const user = await userFactory.transient({ db }).create({ role: "admin" });
-    // Insert an invite-typed row whose hash matches what verifyMagicLink
-    // would compute for a chosen raw token. Verify that we don't accept
-    // it as a magic-link.
-    const raw = generateToken();
-    const hash = await hashToken(raw);
-    await db.insert(authTokens).values({
-      hash,
-      userId: user.id,
-      email: user.email,
-      type: "invite",
-      role: "subscriber",
-      expiresAt: new Date(Date.now() + 60_000),
-    });
+    // An invite-typed token must not be accepted as a magic-link, even though
+    // both live in auth_tokens under the same hash scheme.
+    const { token: raw, row } = await authTokenFactory
+      .transient({ db })
+      .create({
+        type: "invite",
+        userId: user.id,
+        email: user.email,
+        role: "subscriber",
+      });
 
     await expect(verifyMagicLink(db, raw)).rejects.toMatchObject({
       code: "token_invalid",
     });
 
     // The invite row is untouched.
-    const row = await db.query.authTokens.findFirst({
-      where: eq(authTokens.hash, hash),
+    const found = await db.query.authTokens.findFirst({
+      where: eq(authTokens.hash, row.hash),
     });
-    expect(row?.type).toBe("invite");
+    expect(found?.type).toBe("invite");
   });
 
   test("throws MagicLinkError instances for all reject paths", async () => {
@@ -127,7 +123,11 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
       defaultRole: "author",
       isEnabled: true,
     });
-    const token = await seedToken(db, null, "newcomer@example.com");
+    const token = (
+      await authTokenFactory
+        .transient({ db })
+        .create({ userId: null, email: "newcomer@example.com" })
+    ).token;
 
     const result = await verifyMagicLink(db, token);
     expect(result.user.email).toBe("newcomer@example.com");
@@ -151,7 +151,11 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
       defaultRole: "author",
       isEnabled: false,
     });
-    const token = await seedToken(db, null, "newcomer@example.com");
+    const token = (
+      await authTokenFactory
+        .transient({ db })
+        .create({ userId: null, email: "newcomer@example.com" })
+    ).token;
 
     await expect(verifyMagicLink(db, token)).rejects.toMatchObject({
       code: "domain_not_allowed",
@@ -166,7 +170,11 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
   test("rejects with domain_not_allowed when the allowed-domains row was removed mid-flight", async () => {
     const db = await createTestDb();
     await userFactory.transient({ db }).create({ role: "admin" });
-    const token = await seedToken(db, null, "newcomer@example.com");
+    const token = (
+      await authTokenFactory
+        .transient({ db })
+        .create({ userId: null, email: "newcomer@example.com" })
+    ).token;
     // No allowed_domains row at all — domain was deleted between request
     // and verify, or the row never existed (defensive: token was hand-
     // rolled).
@@ -186,7 +194,11 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
     // Hand-rolled signup token — the request path would refuse to
     // issue this when zero users exist, but a hand-rolled DB state or
     // a now-deleted-admin race could surface it.
-    const token = await seedToken(db, null, "newcomer@example.com");
+    const token = (
+      await authTokenFactory
+        .transient({ db })
+        .create({ userId: null, email: "newcomer@example.com" })
+    ).token;
 
     await expect(verifyMagicLink(db, token)).rejects.toMatchObject({
       code: "registration_closed",
@@ -200,7 +212,11 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
       defaultRole: "subscriber",
       isEnabled: true,
     });
-    const token = await seedToken(db, null, "first@example.com");
+    const token = (
+      await authTokenFactory
+        .transient({ db })
+        .create({ userId: null, email: "first@example.com" })
+    ).token;
 
     const result = await verifyMagicLink(db, token, {
       bootstrapAllowed: true,
@@ -222,7 +238,11 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
       email: "newcomer@example.com",
       role: "subscriber",
     });
-    const token = await seedToken(db, null, "newcomer@example.com");
+    const token = (
+      await authTokenFactory
+        .transient({ db })
+        .create({ userId: null, email: "newcomer@example.com" })
+    ).token;
 
     const result = await verifyMagicLink(db, token);
     expect(result.user.id).toBe(raced.id);
@@ -239,7 +259,11 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
       role: "subscriber",
       disabledAt: new Date(),
     });
-    const token = await seedToken(db, null, "newcomer@example.com");
+    const token = (
+      await authTokenFactory
+        .transient({ db })
+        .create({ userId: null, email: "newcomer@example.com" })
+    ).token;
 
     await expect(verifyMagicLink(db, token)).rejects.toMatchObject({
       code: "account_disabled",

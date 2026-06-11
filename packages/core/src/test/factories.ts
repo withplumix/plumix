@@ -22,6 +22,7 @@ import type { NewSetting, Setting } from "../db/schema/settings.js";
 import type { NewTerm, Term } from "../db/schema/terms.js";
 import type { NewUser, User } from "../db/schema/users.js";
 import { createApiToken } from "../auth/api-tokens.js";
+import { generateToken, hashToken } from "../auth/tokens.js";
 import { allowedDomains } from "../db/schema/allowed_domains.js";
 import { authTokens } from "../db/schema/auth_tokens.js";
 import { credentials } from "../db/schema/credentials.js";
@@ -303,6 +304,43 @@ export const apiTokenFactory = Factory.define<
   };
 });
 
+interface MintedAuthToken {
+  /** Plaintext token to hand to the client once; never persisted. */
+  readonly token: string;
+  readonly row: AuthToken;
+}
+
+// Mints a real auth-token (magic-link / invite / email-verification / …):
+// generates the token, stores only its hash, and returns the plaintext so a
+// test can drive the verify path. `hash` is always derived, never passed.
+export const authTokenFactory = Factory.define<
+  Omit<NewAuthToken, "hash">,
+  DbTransient,
+  MintedAuthToken
+>(({ transientParams, onCreate, params }) => {
+  onCreate(async (attrs) => {
+    const db = requireDb(transientParams);
+    const token = generateToken();
+    const hash = await hashToken(token);
+    const [row] = await db
+      .insert(authTokens)
+      .values({ ...attrs, hash })
+      .returning();
+    if (!row) throw new Error("authTokenFactory: insert returned no row");
+    return { token, row };
+  });
+
+  return {
+    type: params.type ?? "magic_link",
+    userId: params.userId ?? null,
+    email: params.email ?? null,
+    role: params.role ?? null,
+    invitedBy: params.invitedBy ?? null,
+    payload: params.payload ?? null,
+    expiresAt: params.expiresAt ?? new Date(Date.now() + 15 * 60 * 1000),
+  };
+});
+
 export interface Factories {
   readonly user: typeof userFactory;
   readonly admin: typeof adminUser;
@@ -324,6 +362,7 @@ export interface Factories {
   readonly entryTerm: typeof entryTermFactory;
   readonly allowedDomain: typeof allowedDomainFactory;
   readonly apiToken: typeof apiTokenFactory;
+  readonly authToken: typeof authTokenFactory;
 }
 
 export function factoriesFor(db: Db): Factories {
@@ -348,5 +387,6 @@ export function factoriesFor(db: Db): Factories {
     entryTerm: entryTermFactory.transient({ db }),
     allowedDomain: allowedDomainFactory.transient({ db }),
     apiToken: apiTokenFactory.transient({ db }),
+    authToken: authTokenFactory.transient({ db }),
   };
 }
