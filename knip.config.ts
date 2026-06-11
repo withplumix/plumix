@@ -32,6 +32,9 @@ const config: KnipConfig = {
     "packages/plugins/audit-log/playground": {
       entry: ["plumix.config.ts"],
     },
+    "packages/plugins/comments/playground": {
+      entry: ["plumix.config.ts"],
+    },
     "packages/plugins/blog/playground": {
       entry: ["plumix.config.ts"],
     },
@@ -222,6 +225,15 @@ const config: KnipConfig = {
       ignoreDependencies: ["@plumix/runtime-cloudflare"],
       // See packages/admin above for why the playwright plugin is off.
       playwright: false,
+    },
+    // The read-path slice (#960) ships the plugin entry + the server
+    // subpath; the read path is verified in-process via the dispatcher
+    // harness (public content can't render under `plumix dev`, which
+    // serves the admin SPA). The admin chunk + playwright e2e arrive
+    // with the moderation queue (#963).
+    "packages/plugins/comments": {
+      entry: ["src/index.ts", "src/server/index.ts"],
+      ignoreDependencies: ["@plumix/runtime-cloudflare"],
     },
   },
 };

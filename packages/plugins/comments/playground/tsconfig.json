@@ -1,0 +1,20 @@
+{
+  "extends": "@plumix/typescript-config/base.json",
+  "compilerOptions": {
+    "types": ["node", "@cloudflare/workers-types"],
+    "jsx": "react-jsx",
+    // Resolve workspace packages from `src/` (not `dist/`) so the
+    // playground typechecks against live source. See the comment in
+    // packages/plugins/media/playground/tsconfig.json for the rationale.
+    "paths": {
+      "plumix": ["../../../plumix/src/index.ts"],
+      "@plumix/plugin-comments": ["../src/index.ts"],
+      "@plumix/plugin-comments/server": ["../src/server/index.ts"],
+      "@plumix/plugin-blog": ["../../blog/src/index.ts"],
+      "@plumix/runtime-cloudflare": [
+        "../../../runtimes/cloudflare/src/index.ts"
+      ]
+    }
+  },
+  "include": ["plumix.config.ts", "theme.ts", ".plumix"]
+}
