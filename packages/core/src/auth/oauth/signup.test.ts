@@ -4,7 +4,11 @@ import { eq, sql } from "../../db/index.js";
 import { allowedDomains } from "../../db/schema/allowed_domains.js";
 import { oauthAccounts } from "../../db/schema/oauth_accounts.js";
 import { users } from "../../db/schema/users.js";
-import { allowedDomainFactory, userFactory } from "../../test/factories.js";
+import {
+  allowedDomainFactory,
+  oauthAccountFactory,
+  userFactory,
+} from "../../test/factories.js";
 import { createTestDb } from "../../test/harness.js";
 import { OAuthError } from "./errors.js";
 import { resolveOAuthUser } from "./signup.js";
@@ -25,7 +29,7 @@ describe("resolveOAuthUser — dangling oauth_accounts row", () => {
     // to a userId that doesn't exist. Mirrors the production-data shape we
     // care about: a row that the cascade should have deleted but didn't.
     await db.run(sql`PRAGMA foreign_keys = OFF`);
-    await db.insert(oauthAccounts).values({
+    await oauthAccountFactory.transient({ db }).create({
       provider: "github",
       providerAccountId: "ghost-1",
       userId: 9999,
@@ -48,7 +52,7 @@ describe("resolveOAuthUser — link existing oauth account", () => {
       email: PROFILE.email,
       role: "editor",
     });
-    await db.insert(oauthAccounts).values({
+    await oauthAccountFactory.transient({ db }).create({
       provider: "github",
       providerAccountId: PROFILE.providerAccountId,
       userId: seeded.id,
@@ -70,7 +74,7 @@ describe("resolveOAuthUser — link existing oauth account", () => {
       role: "editor",
       disabledAt: new Date(),
     });
-    await db.insert(oauthAccounts).values({
+    await oauthAccountFactory.transient({ db }).create({
       provider: "github",
       providerAccountId: PROFILE.providerAccountId,
       userId: seeded.id,

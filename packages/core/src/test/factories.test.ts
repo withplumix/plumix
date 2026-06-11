@@ -2,8 +2,30 @@ import { describe, expect, test } from "vitest";
 
 import { validateApiToken } from "../auth/api-tokens.js";
 import { hashToken } from "../auth/tokens.js";
-import { apiTokenFactory, authTokenFactory, userFactory } from "./factories.js";
+import {
+  apiTokenFactory,
+  authTokenFactory,
+  oauthAccountFactory,
+  userFactory,
+} from "./factories.js";
 import { createTestDb } from "./harness.js";
+
+describe("oauthAccountFactory", () => {
+  test("links an oauth account to a user", async () => {
+    const db = await createTestDb();
+    const user = await userFactory.transient({ db }).create({});
+
+    const row = await oauthAccountFactory.transient({ db }).create({
+      userId: user.id,
+      provider: "github",
+      providerAccountId: "gh-1",
+    });
+
+    expect(row.userId).toBe(user.id);
+    expect(row.provider).toBe("github");
+    expect(row.providerAccountId).toBe("gh-1");
+  });
+});
 
 describe("apiTokenFactory", () => {
   test("mints a PAT whose secret validates against the stored hash", async () => {
