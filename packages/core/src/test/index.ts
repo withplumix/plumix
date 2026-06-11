@@ -24,6 +24,7 @@ export {
   allowedDomainFactory,
   apiTokenFactory,
   authTokenFactory,
+  oauthAccountFactory,
   factoriesFor,
 } from "./factories.js";
 export type { Factories } from "./factories.js";

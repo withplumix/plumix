@@ -17,6 +17,10 @@ import type {
 } from "../db/schema/credentials.js";
 import type { Entry, NewEntry } from "../db/schema/entries.js";
 import type { EntryTerm, NewEntryTerm } from "../db/schema/entry_term.js";
+import type {
+  NewOAuthAccount,
+  OAuthAccount,
+} from "../db/schema/oauth_accounts.js";
 import type { NewSession, Session } from "../db/schema/sessions.js";
 import type { NewSetting, Setting } from "../db/schema/settings.js";
 import type { NewTerm, Term } from "../db/schema/terms.js";
@@ -28,6 +32,7 @@ import { authTokens } from "../db/schema/auth_tokens.js";
 import { credentials } from "../db/schema/credentials.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
+import { oauthAccounts } from "../db/schema/oauth_accounts.js";
 import { sessions } from "../db/schema/sessions.js";
 import { settings } from "../db/schema/settings.js";
 import { terms } from "../db/schema/terms.js";
@@ -341,6 +346,31 @@ export const authTokenFactory = Factory.define<
   };
 });
 
+// Links a user to an external provider. Caller supplies `userId`; provider +
+// account id default to a github account.
+export const oauthAccountFactory = Factory.define<
+  NewOAuthAccount,
+  DbTransient,
+  OAuthAccount
+>(({ sequence, transientParams, onCreate, params }) => {
+  onCreate(async (attrs) => {
+    const db = requireDb(transientParams);
+    const [row] = await db.insert(oauthAccounts).values(attrs).returning();
+    if (!row) throw new Error("oauthAccountFactory: insert returned no row");
+    return row;
+  });
+
+  const userId = params.userId;
+  if (userId === undefined) {
+    throw new Error("oauthAccountFactory: userId is required");
+  }
+  return {
+    provider: params.provider ?? "github",
+    providerAccountId: params.providerAccountId ?? `account-${sequence}`,
+    userId,
+  };
+});
+
 export interface Factories {
   readonly user: typeof userFactory;
   readonly admin: typeof adminUser;
@@ -363,6 +393,7 @@ export interface Factories {
   readonly allowedDomain: typeof allowedDomainFactory;
   readonly apiToken: typeof apiTokenFactory;
   readonly authToken: typeof authTokenFactory;
+  readonly oauthAccount: typeof oauthAccountFactory;
 }
 
 export function factoriesFor(db: Db): Factories {
@@ -388,5 +419,6 @@ export function factoriesFor(db: Db): Factories {
     allowedDomain: allowedDomainFactory.transient({ db }),
     apiToken: apiTokenFactory.transient({ db }),
     authToken: authTokenFactory.transient({ db }),
+    oauthAccount: oauthAccountFactory.transient({ db }),
   };
 }
