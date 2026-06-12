@@ -2,6 +2,7 @@ import type { AppContext } from "plumix/plugin";
 import { describe, expect, test } from "vitest";
 
 import type { CommentsTestDb } from "./test/db.js";
+import { resolveConfig } from "./config.js";
 import { comments } from "./index.js";
 import { createCommentsThreadLoader } from "./server/template-dep.js";
 import { createCommentsTestDb, seedPublishedPost } from "./test/db.js";
@@ -51,7 +52,9 @@ describe("createCommentsThreadLoader", () => {
   test("loads the current entry's approved thread when enabled", async () => {
     const db = await createCommentsTestDb();
     const entry = await seedApprovedPost(db);
-    const load = createCommentsThreadLoader({ entryTypes: ["post"] });
+    const load = createCommentsThreadLoader(
+      resolveConfig({ entryTypes: ["post"] }),
+    );
 
     const result = await load(
       ["current"],
@@ -65,7 +68,7 @@ describe("createCommentsThreadLoader", () => {
   test("yields nothing for a comment-disabled entry type", async () => {
     const db = await createCommentsTestDb();
     const entry = await seedApprovedPost(db);
-    const load = createCommentsThreadLoader({});
+    const load = createCommentsThreadLoader(resolveConfig({}));
 
     const result = await load(
       ["current"],
@@ -78,7 +81,9 @@ describe("createCommentsThreadLoader", () => {
   test("yields nothing when there is no resolved entry", async () => {
     const db = await createCommentsTestDb();
     await seedApprovedPost(db);
-    const load = createCommentsThreadLoader({ entryTypes: ["post"] });
+    const load = createCommentsThreadLoader(
+      resolveConfig({ entryTypes: ["post"] }),
+    );
 
     const result = await load(["current"], ctxWith(db, null));
 

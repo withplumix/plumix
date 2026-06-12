@@ -172,4 +172,38 @@ describe("POST /_plumix/comments/submit", () => {
     expect(stored[0]?.ipHash).toMatch(/^[0-9a-f]{64}$/);
     expect(stored[0]?.ipHash).not.toContain("203.0.113.7");
   });
+
+  test("stores a reply under its parent", async () => {
+    const harness = await harnessWith({ entryTypes: ["post"], mode: "none" });
+    const entry = await seedPost(harness);
+    await submit(harness, entry.id, { body: "root" });
+    const root = (await rows(harness)).find((c) => c.bodyMd === "root");
+
+    const res = await submit(harness, entry.id, {
+      body: "reply",
+      parentId: root?.id,
+    });
+
+    res.assertStatus(200);
+    const reply = (await rows(harness)).find((c) => c.bodyMd === "reply");
+    expect(reply?.parentId).toBe(root?.id);
+  });
+
+  test("clamps a reply that would exceed maxDepth", async () => {
+    const harness = await harnessWith({
+      entryTypes: ["post"],
+      mode: "none",
+      maxDepth: 1,
+    });
+    const entry = await seedPost(harness);
+    await submit(harness, entry.id, { body: "root" });
+    const root = (await rows(harness)).find((c) => c.bodyMd === "root");
+    await submit(harness, entry.id, { body: "d1", parentId: root?.id });
+    const d1 = (await rows(harness)).find((c) => c.bodyMd === "d1");
+
+    // depth-1 cap: a reply to the depth-1 comment clamps back to the root.
+    await submit(harness, entry.id, { body: "d2", parentId: d1?.id });
+    const d2 = (await rows(harness)).find((c) => c.bodyMd === "d2");
+    expect(d2?.parentId).toBe(root?.id);
+  });
 });

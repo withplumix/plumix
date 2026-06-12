@@ -37,6 +37,8 @@ export interface CommentsConfig {
   readonly entryTypes?: readonly string[];
   /** Trust policy. Defaults to `"first_time"`. */
   readonly mode?: ModerationMode;
+  /** Maximum reply nesting depth (root = 0). Defaults to `3`. */
+  readonly maxDepth?: number;
   /** Require a non-empty author email. Defaults to `true`. */
   readonly requireEmail?: boolean;
   /** Reject comments on posts older than this many days. `null` = never. */
