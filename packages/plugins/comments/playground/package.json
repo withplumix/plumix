@@ -1,0 +1,29 @@
+{
+  "name": "@plumix/plugin-comments-playground",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Plumix consumer that wires @plumix/plugin-comments (+ blog) — for worker-driven e2e + manual dogfooding",
+  "license": "MIT",
+  "scripts": {
+    "build": "plumix build",
+    "clean": "git clean -xdf .plumix .wrangler dist node_modules",
+    "dev": "plumix dev",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@plumix/plugin-blog": "workspace:*",
+    "@plumix/plugin-comments": "workspace:*",
+    "@plumix/runtime-cloudflare": "workspace:*",
+    "plumix": "workspace:*",
+    "react": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:",
+    "@plumix/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "typescript": "catalog:",
+    "wrangler": "catalog:"
+  }
+}

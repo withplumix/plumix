@@ -1,0 +1,24 @@
+{
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  "name": "plumix-comments-playground",
+  "main": ".plumix/worker.ts",
+  "compatibility_date": "2026-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "plumix_comments_playground",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "drizzle",
+    },
+  ],
+  // `none` (not the admin-only playgrounds' `single-page-application`) so
+  // the worker runs for every non-asset path and resolves public content
+  // routes itself — SPA mode would serve the admin index.html before the
+  // worker ever sees `/posts/:slug`. Matches examples/blog + minimal.
+  "assets": {
+    "directory": ".plumix/public",
+    "binding": "ASSETS",
+    "not_found_handling": "none",
+  },
+}
