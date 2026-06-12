@@ -162,6 +162,19 @@ export {
 export { coreMarks, coreMarkExtensions } from "./marks/core/index.js";
 export type { MarkSpec } from "./marks/types.js";
 
+// ─── Shortcodes ─────────────────────────────────────────────────────────────
+// `expandShortcodes` is the single integration point a future
+// `@plumix/plugin-seo` reuses to expand macros in meta descriptions.
+export { coreShortcodes } from "./shortcodes/core/index.js";
+export { expandShortcodes } from "./shortcodes/expand.js";
+export { defineShortcode } from "./shortcodes/types.js";
+export type {
+  ShortcodeContext,
+  ShortcodeRegistry,
+  ShortcodeRenderProps,
+  ShortcodeSpec,
+} from "./shortcodes/types.js";
+
 // ─── Islands authoring ──────────────────────────────────────────────────────
 export type {
   IslandProps,

@@ -17,6 +17,8 @@ const EMPTY_CONTEXT: BlockContext = {
   theme: null,
   parent: null,
   depth: 0,
+  locale: "en",
+  shortcodes: null,
 };
 
 export { EMPTY_CONTEXT };

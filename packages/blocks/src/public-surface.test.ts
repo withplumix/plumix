@@ -16,4 +16,12 @@ describe("@plumix/blocks public API — post-CSS-cleanup", () => {
     );
     expect(cssEmitterNames).toEqual([]);
   });
+
+  // The future `@plumix/plugin-seo` reuses this import to expand macros in
+  // meta descriptions; locking it keeps that integration point published.
+  test("publishes the shortcode primitive", () => {
+    expect(typeof blocksApi.expandShortcodes).toBe("function");
+    expect(typeof blocksApi.defineShortcode).toBe("function");
+    expect(Array.isArray(blocksApi.coreShortcodes)).toBe(true);
+  });
 });
