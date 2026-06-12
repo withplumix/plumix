@@ -236,6 +236,8 @@ const config: KnipConfig = {
         "src/server/index.ts",
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
+        "lingui.config.ts",
+        "locales/*.mjs",
       ],
       ignoreDependencies: ["@plumix/runtime-cloudflare"],
       playwright: false,

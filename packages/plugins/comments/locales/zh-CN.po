@@ -1,0 +1,110 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-12\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: zh-CN\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.comments.adminPage.title"
+msgstr "评论"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.status.pending"
+msgstr "待审核"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.status.approved"
+msgstr "已批准"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.status.spam"
+msgstr "垃圾评论"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.status.trash"
+msgstr "回收站"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.action.approve"
+msgstr "批准"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.action.spam"
+msgstr "标记为垃圾"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.action.trash"
+msgstr "移至回收站"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.action.restore"
+msgstr "恢复"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.action.purge"
+msgstr "永久删除"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.filter.searchLabel"
+msgstr "搜索评论"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.filter.entryLabel"
+msgstr "按内容 ID 筛选"
+
+#. js-lingui-explicit-id
+#. id: the numeric id of the comment row
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.row.selectLabel"
+msgstr "选择评论 {id}"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.error"
+msgstr "加载评论失败"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.empty"
+msgstr "暂无评论"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.detail.author"
+msgstr "作者"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.detail.email"
+msgstr "电子邮件"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.detail.entry"
+msgstr "内容"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.detail.ipHash"
+msgstr "IP 哈希"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.detail.submitted"
+msgstr "提交时间"

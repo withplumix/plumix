@@ -1,4 +1,6 @@
+import type { MessageDescriptor } from "plumix/i18n";
 import { useState } from "react";
+import { Trans, useLingui } from "plumix/i18n";
 
 import type {
   BulkAction,
@@ -25,7 +27,48 @@ const ACTIONS: Record<CommentStatus, readonly ModerationAction[]> = {
   trash: ["restore", "purge"],
 };
 
+// Status/action labels are looked up dynamically (tab + button maps), so
+// they can't be authored as inline `<Trans>` JSX; they live here as
+// explicit-id descriptors and render through `i18n._`. `status.spam` and
+// `action.spam` are deliberately distinct ids — one names a queue, the
+// other an operation, and a locale may translate them differently.
+const STATUS_LABELS = {
+  pending: { id: "plugin.comments.status.pending", message: "Pending" },
+  approved: { id: "plugin.comments.status.approved", message: "Approved" },
+  spam: { id: "plugin.comments.status.spam", message: "Spam" },
+  trash: { id: "plugin.comments.status.trash", message: "Trash" },
+} satisfies Record<CommentStatus, MessageDescriptor>;
+
+const ACTION_LABELS = {
+  approve: { id: "plugin.comments.action.approve", message: "Approve" },
+  spam: { id: "plugin.comments.action.spam", message: "Spam" },
+  trash: { id: "plugin.comments.action.trash", message: "Trash" },
+  restore: { id: "plugin.comments.action.restore", message: "Restore" },
+  purge: {
+    id: "plugin.comments.action.purge",
+    message: "Delete permanently",
+  },
+} satisfies Record<ModerationAction, MessageDescriptor>;
+
+// Descriptors used outside JSX (input attributes, interpolated aria-label).
+const M = {
+  searchLabel: {
+    id: "plugin.comments.filter.searchLabel",
+    message: "Search comments",
+  },
+  entryLabel: {
+    id: "plugin.comments.filter.entryLabel",
+    message: "Filter by entry id",
+  },
+  selectLabel: {
+    id: "plugin.comments.row.selectLabel",
+    message: "Select comment {id}",
+    comment: "id: the numeric id of the comment row",
+  },
+} satisfies Record<string, MessageDescriptor>;
+
 export function CommentsShell(): React.ReactElement {
+  const { i18n } = useLingui();
   const [tab, setTab] = useState<CommentStatus>("pending");
   const [selected, setSelected] = useState<ModerationCommentDTO | null>(null);
   const [search, setSearch] = useState("");
@@ -75,7 +118,7 @@ export function CommentsShell(): React.ReactElement {
               reset(status);
             }}
           >
-            {status}{" "}
+            {i18n._(STATUS_LABELS[status])}{" "}
             <span data-testid={`comments-count-${status}`}>
               {counts.data?.[status] ?? 0}
             </span>
@@ -87,14 +130,14 @@ export function CommentsShell(): React.ReactElement {
         <input
           type="search"
           data-testid="comments-search"
-          aria-label="Search comments"
+          aria-label={i18n._(M.searchLabel)}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
         <input
           type="number"
           data-testid="comments-entry-filter"
-          aria-label="Filter by entry id"
+          aria-label={i18n._(M.entryLabel)}
           value={entryFilter}
           onChange={(event) => setEntryFilter(event.target.value)}
         />
@@ -111,7 +154,7 @@ export function CommentsShell(): React.ReactElement {
               disabled={bulk.isPending}
               onClick={() => runBulk(action)}
             >
-              {action}
+              {i18n._(ACTION_LABELS[action])}
             </button>
           ))}
         </div>
@@ -120,9 +163,16 @@ export function CommentsShell(): React.ReactElement {
       {list.isLoading ? (
         <div data-testid="comments-loading" />
       ) : list.isError ? (
-        <div data-testid="comments-error">Failed to load comments</div>
+        <div data-testid="comments-error">
+          <Trans id="plugin.comments.error" message="Failed to load comments" />
+        </div>
       ) : (list.data ?? []).length === 0 ? (
-        <p data-testid="comments-empty">No {tab} comments</p>
+        // Tab-agnostic copy on purpose: interpolating the (translated)
+        // status word mid-sentence breaks grammatical agreement in
+        // several launch locales, so the queue name stays in the tab.
+        <p data-testid="comments-empty">
+          <Trans id="plugin.comments.empty" message="No comments to show" />
+        </p>
       ) : (
         <table data-testid="comments-table">
           <tbody>
@@ -132,7 +182,11 @@ export function CommentsShell(): React.ReactElement {
                   <input
                     type="checkbox"
                     data-testid={`comment-select-${comment.id}`}
-                    aria-label={`Select comment ${String(comment.id)}`}
+                    aria-label={i18n._(
+                      M.selectLabel.id,
+                      { id: comment.id },
+                      { message: M.selectLabel.message },
+                    )}
                     checked={picked.has(comment.id)}
                     onChange={() => togglePicked(comment.id)}
                   />
@@ -160,7 +214,7 @@ export function CommentsShell(): React.ReactElement {
                         moderation.mutate({ action, id: comment.id })
                       }
                     >
-                      {action}
+                      {i18n._(ACTION_LABELS[action])}
                     </button>
                   ))}
                 </td>
@@ -175,15 +229,28 @@ export function CommentsShell(): React.ReactElement {
           {/* Moderator sees the raw markdown source as text, not rendered HTML. */}
           <div data-testid="comment-detail-body">{selected.bodyMd}</div>
           <dl>
-            <dt>Author</dt>
+            <dt>
+              <Trans id="plugin.comments.detail.author" message="Author" />
+            </dt>
             <dd data-testid="comment-detail-author">{selected.authorName}</dd>
-            <dt>Email</dt>
+            <dt>
+              <Trans id="plugin.comments.detail.email" message="Email" />
+            </dt>
             <dd data-testid="comment-detail-email">{selected.authorEmail}</dd>
-            <dt>Entry</dt>
+            <dt>
+              <Trans id="plugin.comments.detail.entry" message="Entry" />
+            </dt>
             <dd data-testid="comment-detail-entry">{selected.entryId}</dd>
-            <dt>IP hash</dt>
+            <dt>
+              <Trans id="plugin.comments.detail.ipHash" message="IP hash" />
+            </dt>
             <dd data-testid="comment-detail-ip">{selected.ipHash ?? "—"}</dd>
-            <dt>Submitted</dt>
+            <dt>
+              <Trans
+                id="plugin.comments.detail.submitted"
+                message="Submitted"
+              />
+            </dt>
             <dd data-testid="comment-detail-date">{selected.createdAt}</dd>
           </dl>
         </aside>

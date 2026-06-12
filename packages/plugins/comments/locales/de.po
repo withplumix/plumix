@@ -1,0 +1,110 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-12\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.comments.adminPage.title"
+msgstr "Kommentare"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.status.pending"
+msgstr "Ausstehend"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.status.approved"
+msgstr "Genehmigt"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.status.spam"
+msgstr "Spam"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.status.trash"
+msgstr "Papierkorb"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.action.approve"
+msgstr "Genehmigen"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.action.spam"
+msgstr "Spam"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.action.trash"
+msgstr "In den Papierkorb"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.action.restore"
+msgstr "Wiederherstellen"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.action.purge"
+msgstr "Endgültig löschen"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.filter.searchLabel"
+msgstr "Kommentare suchen"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.filter.entryLabel"
+msgstr "Nach Beitrags-ID filtern"
+
+#. js-lingui-explicit-id
+#. id: the numeric id of the comment row
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.row.selectLabel"
+msgstr "Kommentar {id} auswählen"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.error"
+msgstr "Kommentare konnten nicht geladen werden"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.empty"
+msgstr "Keine Kommentare vorhanden"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.detail.author"
+msgstr "Autor"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.detail.email"
+msgstr "E-Mail"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.detail.entry"
+msgstr "Beitrag"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.detail.ipHash"
+msgstr "IP-Hash"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.detail.submitted"
+msgstr "Eingereicht"
