@@ -4,8 +4,12 @@ import { createCommentsTestDb, ctxFor, seedPublishedPost } from "../test/db.js";
 import { commentFactory } from "../test/factories.js";
 import {
   clampParent,
+  countByStatus,
   countPriorApproved,
   insertComment,
+  listForModeration,
+  purgeComment,
+  setStatus,
 } from "./repository.js";
 
 describe("countPriorApproved", () => {
@@ -115,5 +119,117 @@ describe("clampParent", () => {
     const db = await createCommentsTestDb();
     const { entry } = await seedChain(db);
     expect(await clampParent(ctxFor(db), 999_999, entry.id, 3)).toBeNull();
+  });
+});
+
+describe("moderation repository ops", () => {
+  test("listForModeration returns one status newest-first, paginated", async () => {
+    const db = await createCommentsTestDb();
+    const entry = await seedPublishedPost(db);
+    const seed = commentFactory.transient({ db });
+    await seed.create({
+      entryId: entry.id,
+      status: "pending",
+      bodyMd: "older",
+      createdAt: new Date("2026-06-01T00:00:00Z"),
+    });
+    await seed.create({
+      entryId: entry.id,
+      status: "pending",
+      bodyMd: "newer",
+      createdAt: new Date("2026-06-02T00:00:00Z"),
+    });
+    await seed.create({
+      entryId: entry.id,
+      status: "approved",
+      bodyMd: "appr",
+    });
+
+    const page = await listForModeration(ctxFor(db), {
+      status: "pending",
+      limit: 10,
+      offset: 0,
+    });
+    expect(page.map((c) => c.bodyMd)).toEqual(["newer", "older"]);
+    expect(page[0]?.authorEmail).toContain("@"); // admin payload keeps email
+  });
+
+  test("countByStatus tallies every status", async () => {
+    const db = await createCommentsTestDb();
+    const entry = await seedPublishedPost(db);
+    const seed = commentFactory.transient({ db });
+    await seed.create({ entryId: entry.id, status: "pending" });
+    await seed.create({ entryId: entry.id, status: "pending" });
+    await seed.create({ entryId: entry.id, status: "approved" });
+    await seed.create({ entryId: entry.id, status: "spam" });
+
+    const counts = await countByStatus(ctxFor(db));
+    expect(counts).toEqual({ pending: 2, approved: 1, spam: 1, trash: 0 });
+  });
+
+  test("setStatus transitions a comment", async () => {
+    const db = await createCommentsTestDb();
+    const entry = await seedPublishedPost(db);
+    const c = await commentFactory
+      .transient({ db })
+      .create({ entryId: entry.id, status: "pending" });
+
+    const updated = await setStatus(ctxFor(db), c.id, "approved");
+    expect(updated?.status).toBe("approved");
+  });
+
+  test("purgeComment deletes a leaf", async () => {
+    const db = await createCommentsTestDb();
+    const entry = await seedPublishedPost(db);
+    const c = await commentFactory
+      .transient({ db })
+      .create({ entryId: entry.id, status: "spam" });
+
+    expect(await purgeComment(ctxFor(db), c.id)).toBe("deleted");
+    expect(
+      (
+        await listForModeration(ctxFor(db), {
+          status: "spam",
+          limit: 10,
+          offset: 0,
+        })
+      ).length,
+    ).toBe(0);
+  });
+
+  test("purgeComment tombstones a comment that has replies", async () => {
+    const db = await createCommentsTestDb();
+    const entry = await seedPublishedPost(db);
+    const seed = commentFactory.transient({ db });
+    const parent = await seed.create({
+      entryId: entry.id,
+      status: "approved",
+      authorName: "Real Name",
+      authorEmail: "real@example.test",
+      bodyMd: "to remove",
+    });
+    await seed.create({
+      entryId: entry.id,
+      status: "approved",
+      parentId: parent.id,
+    });
+
+    expect(await purgeComment(ctxFor(db), parent.id)).toBe("tombstoned");
+    const [kept] = await listForModeration(ctxFor(db), {
+      status: "approved",
+      limit: 10,
+      offset: 0,
+    });
+    // The reply (newest) is first; the tombstoned parent is blanked.
+    const tombstone = (
+      await listForModeration(ctxFor(db), {
+        status: "approved",
+        limit: 10,
+        offset: 0,
+      })
+    ).find((c) => c.id === parent.id);
+    expect(tombstone?.bodyMd).toBe("");
+    expect(tombstone?.authorEmail).toBe("");
+    expect(kept).toBeDefined();
   });
 });

@@ -25,5 +25,8 @@ declare module "plumix/plugin" {
   }
   interface ActionRegistry {
     "comment:created": (comment: Comment) => void | Promise<void>;
+    "comment:approved": (comment: Comment) => void | Promise<void>;
+    "comment:spam": (comment: Comment) => void | Promise<void>;
+    "comment:trashed": (comment: Comment) => void | Promise<void>;
   }
 }
