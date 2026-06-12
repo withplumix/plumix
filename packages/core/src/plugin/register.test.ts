@@ -981,3 +981,36 @@ describe("registerPattern", () => {
     );
   });
 });
+
+describe("registerShortcode", () => {
+  test("stores the registered shortcode keyed by tag, tagged with the plugin id", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("seo", (ctx) => {
+      ctx.registerShortcode({
+        name: "reading-time",
+        render: () => "3 min",
+      });
+    });
+
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+
+    expect(registry.shortcodeSpecs.has("reading-time")).toBe(true);
+    expect(registry.shortcodeSpecs.get("reading-time")?.registeredBy).toBe(
+      "seo",
+    );
+  });
+
+  test("throws when two plugins register the same shortcode tag", async () => {
+    const hooks = new HookRegistry();
+    const a = definePlugin("a", (ctx) => {
+      ctx.registerShortcode({ name: "cite", render: () => "[1]" });
+    });
+    const b = definePlugin("b", (ctx) => {
+      ctx.registerShortcode({ name: "cite", render: () => "[2]" });
+    });
+
+    await expect(installPlugins({ hooks, plugins: [a, b] })).rejects.toThrow(
+      DuplicateRegistrationError,
+    );
+  });
+});

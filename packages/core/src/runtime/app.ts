@@ -1,11 +1,17 @@
 import type { RPCHandler } from "@orpc/server/fetch";
 
-import type { BlockRegistry, HtmlAllowlist, MarkSpec } from "@plumix/blocks";
+import type {
+  BlockRegistry,
+  HtmlAllowlist,
+  MarkSpec,
+  ShortcodeRegistry,
+} from "@plumix/blocks";
 import {
   buildHtmlAllowlist,
   commitBlockVariations,
   coreBlocks,
   coreMarks,
+  coreShortcodes,
   createBlockRegistry,
 } from "@plumix/blocks";
 
@@ -44,6 +50,7 @@ import { isTemplate } from "../template.js";
 import { ThemeRegistrationError } from "../theme-errors.js";
 import { validateDocumentManifest } from "../theme.js";
 import { AppBootError } from "./errors.js";
+import { assembleShortcodeRegistry } from "./shortcode-registry.js";
 
 export interface OAuthProviderSummary {
   /** Map key in `auth.oauth.providers`; the URL path segment. */
@@ -129,6 +136,13 @@ export interface PlumixApp {
    * `renderInline` walker, not a per-spec component dispatch.
    */
   readonly marks: readonly MarkSpec[];
+  /**
+   * Merged shortcode registry the public render path threads into the
+   * block walker (rich-text body expansion) and the resolve step (entry
+   * title expansion): `coreShortcodes` < plugin `registerShortcode` <
+   * `theme.shortcodes`, last-wins, built once at boot.
+   */
+  readonly shortcodes: ShortcodeRegistry;
   /**
    * Sanitizer allowlist `core/html` reads at render time. Built once
    * from the intrinsic baseline + `config.blocks.htmlAllowlist`.
@@ -267,6 +281,15 @@ export async function buildApp(
   );
   const marks: readonly MarkSpec[] = [...coreMarks, ...pluginMarkSpecs];
 
+  const pluginShortcodeSpecs = Array.from(registry.shortcodeSpecs.values()).map(
+    ({ spec }) => spec,
+  );
+  const shortcodes = assembleShortcodeRegistry(
+    coreShortcodes,
+    pluginShortcodeSpecs,
+    config.theme.shortcodes ?? [],
+  );
+
   const htmlAllowlist = buildHtmlAllowlist(
     blocks,
     config.blocks?.htmlAllowlist,
@@ -306,6 +329,7 @@ export async function buildApp(
     scheduledTasks: registry.scheduledTasks,
     blocks,
     marks,
+    shortcodes,
     htmlAllowlist,
     document,
     assetManifest: runtime.assetManifest ?? {},

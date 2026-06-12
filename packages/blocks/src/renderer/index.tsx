@@ -4,6 +4,7 @@ import { createContext, useContext } from "react";
 import type { BlockRegistry } from "../block-registry.js";
 import type { EntryContent } from "../entry-content.js";
 import type { ResolvedBlockLoaders } from "../loaders.js";
+import type { ShortcodeRegistry } from "../shortcodes/types.js";
 import type { ThemeTokens } from "../styles/types.js";
 import { renderBlockTree } from "../render-block-tree.js";
 import { RendererError } from "./errors.js";
@@ -28,6 +29,10 @@ export interface PlumixContextValue {
   readonly loaderData?: ResolvedBlockLoaders;
   readonly user?: RendererUser | null;
   readonly queriedEntry?: RendererQueriedEntry | null;
+  /** Render locale, threaded to the walker for shortcode/`Intl` output. */
+  readonly locale?: string;
+  /** Registered shortcodes for rich-text body expansion. */
+  readonly shortcodes?: ShortcodeRegistry;
 }
 
 const PlumixContext = createContext<PlumixContextValue | null>(null);
@@ -61,6 +66,8 @@ export function BlockRenderer({
   return renderBlockTree(content.blocks, ctx.registry, {
     tokens: ctx.tokens,
     loaderData: ctx.loaderData,
+    locale: ctx.locale,
+    shortcodes: ctx.shortcodes,
   });
 }
 

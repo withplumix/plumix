@@ -1,6 +1,6 @@
 import type { ComponentType, JSX } from "react";
 
-import type { ThemeTokens } from "@plumix/blocks";
+import type { ShortcodeSpec, ThemeTokens } from "@plumix/blocks";
 
 import type {
   ArchiveData,
@@ -134,6 +134,12 @@ export interface ThemeDescriptor extends TemplateDepDeclarations {
   readonly templates: TemplateRegistry;
   readonly document?: DocumentManifest;
   readonly tokens?: ThemeTokens;
+  /**
+   * Shortcodes the theme declares without a setup hook (like `tokens`).
+   * These take precedence over plugin and core shortcodes of the same tag
+   * — the most site-specific layer wins.
+   */
+  readonly shortcodes?: readonly ShortcodeSpec[];
   /**
    * Paths (relative to the project root or aliased) to CSS / asset files
    * that should ship as client bundles. Mirror of Nuxt's `css: []` — the
