@@ -43,6 +43,12 @@ export interface CommentsConfig {
   readonly requireEmail?: boolean;
   /** Reject comments on posts older than this many days. `null` = never. */
   readonly closeAfterDays?: number | null;
+  /**
+   * Email a moderator when a comment is held for review. Requires a
+   * configured `ctx.mailer`; with no address, no email is sent (the
+   * in-app queue is the always-on surface).
+   */
+  readonly notifyEmail?: string;
   /** Sliding-window rate limit. Defaults to `{ max: 5, windowMin: 10 }`. */
   readonly rateLimit?: RateLimitConfig;
 }

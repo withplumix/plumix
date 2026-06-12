@@ -12,6 +12,7 @@ export interface ResolvedCommentsConfig {
   readonly requireEmail: boolean;
   readonly closeAfterDays: number | null;
   readonly rateLimit: RateLimitConfig;
+  readonly notifyEmail: string | null;
 }
 
 export function resolveConfig(options: CommentsConfig): ResolvedCommentsConfig {
@@ -22,5 +23,6 @@ export function resolveConfig(options: CommentsConfig): ResolvedCommentsConfig {
     requireEmail: options.requireEmail ?? true,
     closeAfterDays: options.closeAfterDays ?? null,
     rateLimit: options.rateLimit ?? { max: 5, windowMin: 10 },
+    notifyEmail: options.notifyEmail ?? null,
   };
 }
