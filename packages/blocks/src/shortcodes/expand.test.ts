@@ -40,6 +40,13 @@ describe("expandShortcodes", () => {
     expect(expandShortcodes("[[notreg]]", reg, ctx)).toBe("[notreg]");
   });
 
+  test("escapes an attributed tag literally rather than expanding it", () => {
+    const reg = registry({ name: "month", render: () => "June" });
+    expect(expandShortcodes('[[month format="short"]]', reg, ctx)).toBe(
+      '[month format="short"]',
+    );
+  });
+
   test("is single-pass: output containing a tag is not re-scanned", () => {
     const reg = registry({ name: "echo", render: () => "[year]" });
     expect(expandShortcodes("[echo]", reg, ctx)).toBe("[year]");
@@ -92,5 +99,54 @@ describe("expandShortcodes", () => {
       expect.anything(),
     );
     warn.mockRestore();
+  });
+
+  describe("named attributes", () => {
+    const echoAtt = (key: string): ShortcodeSpec => ({
+      name: "echo",
+      render: ({ atts }) => atts[key] ?? "none",
+    });
+
+    test("parses a double-quoted attribute value into the atts map", () => {
+      const reg = registry(echoAtt("sku"));
+      expect(expandShortcodes('[echo sku="abc"]', reg, ctx)).toBe("abc");
+    });
+
+    test("parses a single-quoted attribute value", () => {
+      const reg = registry(echoAtt("sku"));
+      expect(expandShortcodes("[echo sku='abc']", reg, ctx)).toBe("abc");
+    });
+
+    test("parses a bare attribute value with no spaces", () => {
+      const reg = registry(echoAtt("sku"));
+      expect(expandShortcodes("[echo sku=abc]", reg, ctx)).toBe("abc");
+    });
+
+    test("a bare value with an embedded space is rejected (verbatim)", () => {
+      const reg = registry(echoAtt("sku"));
+      expect(expandShortcodes("[echo sku=a b]", reg, ctx)).toBe(
+        "[echo sku=a b]",
+      );
+    });
+
+    test("parses multiple mixed-quoting attributes", () => {
+      const reg = registry({
+        name: "echo",
+        render: ({ atts }) => `${atts.a}-${atts.b}-${atts.c}`,
+      });
+      expect(expandShortcodes(`[echo a="one" b='two' c=three]`, reg, ctx)).toBe(
+        "one-two-three",
+      );
+    });
+
+    test("a valueless attribute is not accepted (verbatim)", () => {
+      const reg = registry(echoAtt("sku"));
+      expect(expandShortcodes("[echo sku]", reg, ctx)).toBe("[echo sku]");
+    });
+
+    test("a quoted value preserves spaces", () => {
+      const reg = registry(echoAtt("label"));
+      expect(expandShortcodes('[echo label="a b c"]', reg, ctx)).toBe("a b c");
+    });
   });
 });
