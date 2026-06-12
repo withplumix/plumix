@@ -1,9 +1,10 @@
-import { definePlugin } from "plumix/plugin";
+import { definePlugin, tryGetContext } from "plumix/plugin";
 
 import type { CommentsConfig } from "./types.js";
 import { resolveConfig } from "./config.js";
 import * as schema from "./db/schema.js";
 import { COMMENT_MODERATE_CAPABILITY, createCommentsRouter } from "./rpc.js";
+import { notifyModeratorOfPending } from "./server/notify.js";
 import { createSubmitHandler } from "./server/submit.js";
 import { createCommentsThreadLoader } from "./server/template-dep.js";
 
@@ -66,6 +67,18 @@ export function comments(options: CommentsConfig = {}) {
         auth: "public",
         handler: createSubmitHandler(config),
       });
+
+      if (config.notifyEmail) {
+        const recipient = config.notifyEmail;
+        // The action carries only the comment, so the mailer-bearing
+        // AppContext comes from the request store; skip if it's absent
+        // (the action fired outside a request).
+        ctx.addAction("comment:created", async (comment) => {
+          const appCtx = tryGetContext();
+          if (appCtx)
+            await notifyModeratorOfPending(appCtx, comment, recipient);
+        });
+      }
     },
   });
 }

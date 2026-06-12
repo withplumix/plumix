@@ -2,6 +2,7 @@ import type { AppContext } from "plumix/plugin";
 import { describe, expect, test } from "vitest";
 
 import type { CommentsTestDb } from "./test/db.js";
+import type { CommentsConfig } from "./types.js";
 import { resolveConfig } from "./config.js";
 import { comments } from "./index.js";
 import { createCommentsThreadLoader } from "./server/template-dep.js";
@@ -35,27 +36,54 @@ describe("comments() plugin", () => {
     expect(plugin.schema).toBeDefined();
   });
 
-  test("setup registers the moderation surface", () => {
-    const kinds: string[] = [];
-    const routes: string[] = [];
-    const capabilities: string[] = [];
-    const adminPaths: string[] = [];
-    let rpcRouter = false;
+  interface CapturedSetup {
+    readonly kinds: string[];
+    readonly routes: string[];
+    readonly capabilities: string[];
+    readonly adminPaths: string[];
+    readonly actions: string[];
+    rpcRouter: boolean;
+  }
+
+  function captureSetup(config: CommentsConfig): CapturedSetup {
+    const captured: CapturedSetup = {
+      kinds: [],
+      routes: [],
+      capabilities: [],
+      adminPaths: [],
+      actions: [],
+      rpcRouter: false,
+    };
     const ctx = {
-      registerTemplateDep: (kind: string) => kinds.push(kind),
-      registerRoute: (opts: { path: string }) => routes.push(opts.path),
-      registerCapability: (name: string) => capabilities.push(name),
+      registerTemplateDep: (kind: string) => captured.kinds.push(kind),
+      registerRoute: (opts: { path: string }) =>
+        captured.routes.push(opts.path),
+      registerCapability: (name: string) => captured.capabilities.push(name),
       registerRpcRouter: () => {
-        rpcRouter = true;
+        captured.rpcRouter = true;
       },
-      registerAdminPage: (opts: { path: string }) => adminPaths.push(opts.path),
+      registerAdminPage: (opts: { path: string }) =>
+        captured.adminPaths.push(opts.path),
+      addAction: (name: string) => captured.actions.push(name),
     } as unknown as Parameters<ReturnType<typeof comments>["setup"]>[0];
-    void comments().setup(ctx, undefined);
-    expect(kinds).toContain("comments");
-    expect(routes).toContain("/submit");
-    expect(capabilities).toContain("comment:moderate");
-    expect(adminPaths).toContain("/comments");
-    expect(rpcRouter).toBe(true);
+    void comments(config).setup(ctx, undefined);
+    return captured;
+  }
+
+  test("setup registers the moderation surface", () => {
+    const s = captureSetup({});
+    expect(s.kinds).toContain("comments");
+    expect(s.routes).toContain("/submit");
+    expect(s.capabilities).toContain("comment:moderate");
+    expect(s.adminPaths).toContain("/comments");
+    expect(s.rpcRouter).toBe(true);
+  });
+
+  test("registers a comment:created listener only when notifyEmail is set", () => {
+    expect(captureSetup({}).actions).not.toContain("comment:created");
+    expect(captureSetup({ notifyEmail: "mod@example.test" }).actions).toContain(
+      "comment:created",
+    );
   });
 });
 
