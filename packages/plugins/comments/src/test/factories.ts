@@ -49,6 +49,9 @@ export const commentFactory = Factory.define<NewComment, DbTransient, Comment>(
       bodyMd: params.bodyMd ?? `Comment body ${String(sequence)}`,
       ipHash: params.ipHash ?? null,
       userAgent: params.userAgent ?? null,
+      // Passed through (undefined → DB `unixepoch()` default) so tests can
+      // backdate a row to exercise the rate-limit window.
+      createdAt: params.createdAt,
     };
   },
 );

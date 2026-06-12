@@ -34,13 +34,16 @@ describe("comments() plugin", () => {
     expect(plugin.schema).toBeDefined();
   });
 
-  test("setup registers a 'comments' template dep", () => {
+  test("setup registers a 'comments' template dep and a submit route", () => {
     const kinds: string[] = [];
+    const routes: string[] = [];
     const ctx = {
       registerTemplateDep: (kind: string) => kinds.push(kind),
+      registerRoute: (opts: { path: string }) => routes.push(opts.path),
     } as unknown as Parameters<ReturnType<typeof comments>["setup"]>[0];
     void comments().setup(ctx, undefined);
     expect(kinds).toContain("comments");
+    expect(routes).toContain("/submit");
   });
 });
 

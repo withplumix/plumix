@@ -847,6 +847,9 @@ importers:
       markdown-it:
         specifier: ^14.1.0
         version: 14.2.0
+      valibot:
+        specifier: 'catalog:'
+        version: 1.4.1(typescript@6.0.3)
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
