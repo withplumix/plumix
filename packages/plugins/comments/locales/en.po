@@ -1,0 +1,110 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-12\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.comments.adminPage.title"
+msgstr "Comments"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.status.pending"
+msgstr "Pending"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.status.approved"
+msgstr "Approved"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.status.spam"
+msgstr "Spam"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.status.trash"
+msgstr "Trash"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.action.approve"
+msgstr "Approve"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.action.spam"
+msgstr "Spam"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.action.trash"
+msgstr "Trash"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.action.restore"
+msgstr "Restore"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.action.purge"
+msgstr "Delete permanently"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.filter.searchLabel"
+msgstr "Search comments"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.filter.entryLabel"
+msgstr "Filter by entry id"
+
+#. js-lingui-explicit-id
+#. id: the numeric id of the comment row
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.row.selectLabel"
+msgstr "Select comment {id}"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.error"
+msgstr "Failed to load comments"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.empty"
+msgstr "No comments to show"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.detail.author"
+msgstr "Author"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.detail.email"
+msgstr "Email"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.detail.entry"
+msgstr "Entry"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.detail.ipHash"
+msgstr "IP hash"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.detail.submitted"
+msgstr "Submitted"

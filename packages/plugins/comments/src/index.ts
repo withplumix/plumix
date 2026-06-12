@@ -1,3 +1,4 @@
+import type { Label } from "plumix/i18n";
 import { definePlugin, tryGetContext } from "plumix/plugin";
 
 import type { CommentsConfig } from "./types.js";
@@ -13,6 +14,12 @@ export { COMMENT_STATUSES } from "./types.js";
 
 const ADMIN_ENTRY_PATH =
   "node_modules/@plumix/plugin-comments/dist/admin/index.js";
+
+// Plain descriptor literal — plugin source runs server-side without the
+// Babel macro pipeline, so the manifest payload is authored by hand.
+const COMMENT_LABELS = {
+  comments: { id: "plugin.comments.adminPage.title", message: "Comments" },
+} satisfies Record<string, Label>;
 
 /**
  * `@plumix/plugin-comments` — threaded, moderated discussion on entries.
@@ -43,16 +50,24 @@ export function comments(options: CommentsConfig = {}) {
     // plugin's table into the host's drizzle-kit codegen.
     schemaModule: "@plumix/plugin-comments/schema",
     adminEntry: ADMIN_ENTRY_PATH,
+    i18n: {
+      sourceLocale: "en",
+      locales: ["en", "uk", "ar", "de", "zh-CN"],
+      catalogPath: "./locales",
+    },
     setup: (ctx) => {
       ctx.registerCapability(COMMENT_MODERATE_CAPABILITY, "editor");
       ctx.registerRpcRouter(createCommentsRouter());
       ctx.registerAdminPage({
         path: "/comments",
-        title: "Comments",
+        title: COMMENT_LABELS.comments,
         capability: COMMENT_MODERATE_CAPABILITY,
         nav: {
-          group: { id: "content", label: "Content", priority: 200 },
-          label: "Comments",
+          // Bare-string ref attaches to core's reserved "content" group
+          // (rendered as the already-translated "Entries" group); core
+          // ignores inline label/priority for its own group ids.
+          group: "content",
+          label: COMMENT_LABELS.comments,
           order: 30,
           keywords: ["moderation", "discussion", "replies", "spam"],
         },

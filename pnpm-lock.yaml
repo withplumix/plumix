@@ -857,6 +857,9 @@ importers:
       '@libsql/client':
         specifier: 'catalog:'
         version: 0.17.3
+      '@lingui/cli':
+        specifier: catalog:lingui
+        version: 6.2.0
       '@orpc/server':
         specifier: 'catalog:'
         version: 1.14.5(ws@8.20.1)
@@ -866,6 +869,9 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
+      '@plumix/lingui-config':
+        specifier: workspace:*
+        version: link:../../../tooling/lingui
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../../../tooling/prettier

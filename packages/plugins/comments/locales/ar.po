@@ -1,0 +1,110 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-12\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: ar\n"
+"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.comments.adminPage.title"
+msgstr "التعليقات"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.status.pending"
+msgstr "قيد الانتظار"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.status.approved"
+msgstr "مُعتمَدة"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.status.spam"
+msgstr "بريد مزعج"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.status.trash"
+msgstr "المهملات"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.action.approve"
+msgstr "اعتماد"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.action.spam"
+msgstr "بريد مزعج"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.action.trash"
+msgstr "نقل إلى المهملات"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.action.restore"
+msgstr "استعادة"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.action.purge"
+msgstr "حذف نهائي"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.filter.searchLabel"
+msgstr "البحث في التعليقات"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.filter.entryLabel"
+msgstr "التصفية حسب معرّف المنشور"
+
+#. js-lingui-explicit-id
+#. id: the numeric id of the comment row
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.row.selectLabel"
+msgstr "تحديد التعليق {id}"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.error"
+msgstr "تعذّر تحميل التعليقات"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.empty"
+msgstr "لا توجد تعليقات"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.detail.author"
+msgstr "الكاتب"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.detail.email"
+msgstr "البريد الإلكتروني"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.detail.entry"
+msgstr "المنشور"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.detail.ipHash"
+msgstr "بصمة IP"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.detail.submitted"
+msgstr "تاريخ الإرسال"

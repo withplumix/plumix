@@ -7,9 +7,13 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { i18n, I18nProvider } from "plumix/i18n";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { CommentsShell } from "./CommentsShell.js";
+
+i18n.load({ en: {} });
+i18n.activate("en");
 
 interface CapturedCall {
   readonly proc: string;
@@ -51,9 +55,11 @@ function renderShell(): ReactElement {
     defaultOptions: { queries: { retry: false } },
   });
   return render(
-    <QueryClientProvider client={client}>
-      <CommentsShell />
-    </QueryClientProvider>,
+    <I18nProvider i18n={i18n}>
+      <QueryClientProvider client={client}>
+        <CommentsShell />
+      </QueryClientProvider>
+    </I18nProvider>,
   ).container as unknown as ReactElement;
 }
 
