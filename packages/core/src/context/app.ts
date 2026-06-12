@@ -1,6 +1,10 @@
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 
-import type { BlockRegistry, MarkSpec } from "@plumix/blocks";
+import type {
+  BlockRegistry,
+  MarkSpec,
+  ShortcodeRegistry,
+} from "@plumix/blocks";
 import { createBlockRegistry } from "@plumix/blocks";
 
 import type { RequestAuthenticator } from "../auth/authenticator.js";
@@ -26,6 +30,7 @@ import { resolveLocale } from "../i18n/resolve-locale.js";
 
 const EMPTY_BLOCK_REGISTRY: BlockRegistry = createBlockRegistry([]);
 const EMPTY_MARK_LIST: readonly MarkSpec[] = Object.freeze([]);
+const EMPTY_SHORTCODE_REGISTRY: ShortcodeRegistry = new Map();
 const DEFAULT_I18N: ResolvedI18n = resolveLocales({
   defaultLocale: "en",
   locales: ["en"],
@@ -116,6 +121,12 @@ export interface AppContextBase<
    */
   readonly blocks: BlockRegistry;
   readonly marks: readonly MarkSpec[];
+  /**
+   * Merged shortcode registry (same instance `buildApp` built). The
+   * public render path reads it for entry-title and rich-text body
+   * expansion.
+   */
+  readonly shortcodes: ShortcodeRegistry;
   readonly logger: Logger;
   readonly auth: AuthNamespace;
   /**
@@ -235,6 +246,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
    */
   readonly blocks?: BlockRegistry;
   readonly marks?: readonly MarkSpec[];
+  readonly shortcodes?: ShortcodeRegistry;
   readonly user?: AuthenticatedUser | null;
   readonly tokenScopes?: readonly string[] | null;
   readonly origin?: string;
@@ -337,6 +349,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     plugins: args.plugins,
     blocks: args.blocks ?? EMPTY_BLOCK_REGISTRY,
     marks: args.marks ?? EMPTY_MARK_LIST,
+    shortcodes: args.shortcodes ?? EMPTY_SHORTCODE_REGISTRY,
     logger: args.logger ?? consoleLogger,
     auth: {
       can: makeAuthCan(resolver, user, tokenScopes),

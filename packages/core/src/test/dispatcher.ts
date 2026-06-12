@@ -186,6 +186,7 @@ function withRequest(
     plugins: app.plugins,
     blocks: app.blocks,
     marks: app.marks,
+    shortcodes: app.shortcodes,
     logger: silentLogger,
     user: user
       ? { id: user.id, email: user.email, role: user.role, meta: user.meta }

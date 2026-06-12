@@ -224,6 +224,29 @@ describe("resolvePublicRoute — single", () => {
     expect(body).toContain("<p>Body.</p>");
   });
 
+  test("expands a [year] shortcode in the entry title", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "shoes",
+      title: "Best Shoes for [year]",
+      content: TIPTAP_BODY,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/shoes"),
+    );
+    const body = await response.text();
+    const year = new Intl.DateTimeFormat("en", { year: "numeric" }).format(
+      new Date(),
+    );
+    expect(body).toContain(`<h1>Best Shoes for ${year}</h1>`);
+  });
+
   test("draft with a matching slug returns 404 (status gate)", async () => {
     const h = await createDispatcherHarness({ plugins: [blogPlugin] });
     const author = await h.seedUser("admin");

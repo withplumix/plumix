@@ -1,7 +1,7 @@
 import type { SQL } from "drizzle-orm";
 import { count } from "drizzle-orm";
 
-import { isEntryContent } from "@plumix/blocks";
+import { expandShortcodes, isEntryContent } from "@plumix/blocks";
 
 import type { AppContext } from "../context/app.js";
 import type { Entry } from "../db/schema/entries.js";
@@ -350,6 +350,20 @@ async function resolveSingle(
   }
   const initial: SingleData = { entry };
   const data = await ctx.hooks.applyFilter("resolve:single:data", initial);
+  // Expand shortcodes in the author-written entry title so both the
+  // document `<title>` and the theme-rendered heading resolve `[year]` &c.
+  const entryContext = data.entry as unknown as Readonly<
+    Record<string, unknown>
+  >;
+  const title = expandShortcodes(data.entry.title, ctx.shortcodes, {
+    siteSettings: {},
+    locale: ctx.locale.code,
+    entry: entryContext,
+  });
+  const expanded: SingleData = {
+    ...data,
+    entry: { ...data.entry, title },
+  };
   const html = await renderThroughTheme({
     ctx,
     theme,
@@ -364,8 +378,8 @@ async function resolveSingle(
       slug: row.slug,
       databaseId: row.id,
     },
-    data,
-    title: data.entry.title,
+    data: expanded,
+    title,
   });
   return new Response(html, {
     headers: { "content-type": "text/html; charset=utf-8" },

@@ -7,6 +7,7 @@ import type {
   PatternInsertMode,
   PatternPreview,
   PatternTarget,
+  ShortcodeSpec,
   ThemeTokens,
 } from "@plumix/blocks";
 
@@ -1269,6 +1270,11 @@ export interface RegisteredPattern {
   readonly registeredBy: string;
 }
 
+export interface RegisteredShortcode {
+  readonly spec: ShortcodeSpec;
+  readonly registeredBy: string;
+}
+
 export interface PluginRegistry {
   readonly entryTypes: ReadonlyMap<string, RegisteredEntryType>;
   readonly termTaxonomies: ReadonlyMap<string, RegisteredTermTaxonomy>;
@@ -1289,6 +1295,7 @@ export interface PluginRegistry {
   readonly blockSpecs: ReadonlyMap<string, RegisteredBlock>;
   readonly markSpecs: ReadonlyMap<string, RegisteredMark>;
   readonly patternSpecs: ReadonlyMap<string, RegisteredPattern>;
+  readonly shortcodeSpecs: ReadonlyMap<string, RegisteredShortcode>;
   readonly lookupAdapters: ReadonlyMap<string, RegisteredLookupAdapter>;
   readonly scheduledTasks: readonly RegisteredScheduledTask[];
   readonly templateDeps: ReadonlyMap<string, RegisteredTemplateDep>;
@@ -1314,6 +1321,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly blockSpecs: Map<string, RegisteredBlock>;
   readonly markSpecs: Map<string, RegisteredMark>;
   readonly patternSpecs: Map<string, RegisteredPattern>;
+  readonly shortcodeSpecs: Map<string, RegisteredShortcode>;
   readonly lookupAdapters: Map<string, RegisteredLookupAdapter>;
   readonly scheduledTasks: RegisteredScheduledTask[];
   readonly templateDeps: Map<string, RegisteredTemplateDep>;
@@ -1340,6 +1348,7 @@ export function createPluginRegistry(): MutablePluginRegistry {
     blockSpecs: new Map(),
     markSpecs: new Map(),
     patternSpecs: new Map(),
+    shortcodeSpecs: new Map(),
     lookupAdapters: new Map(),
     scheduledTasks: [],
     templateDeps: new Map(),

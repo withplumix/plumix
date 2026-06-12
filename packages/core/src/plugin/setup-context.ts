@@ -1,4 +1,9 @@
-import type { BlockPattern, BlockSpec, MarkSpec } from "@plumix/blocks";
+import type {
+  BlockPattern,
+  BlockSpec,
+  MarkSpec,
+  ShortcodeSpec,
+} from "@plumix/blocks";
 
 import type { DerivedCapability } from "../auth/rbac.js";
 import type { AppContext } from "../context/app.js";
@@ -218,6 +223,14 @@ export interface PluginSetupContextBase {
    * rejected; the convention for plugin marks is `pluginId/markName`.
    */
   registerMark(spec: MarkSpec): void;
+  /**
+   * Register a `ShortcodeSpec` produced by `defineShortcode` from
+   * `plumix/blocks`. Plugin- and theme-contributed shortcodes merge into
+   * the per-app shortcode registry at `buildApp` time with last-wins
+   * precedence (core < plugin < theme). Duplicate tags across plugins
+   * throw — tags are flat and unprefixed, so a collision is a real bug.
+   */
+  registerShortcode(spec: ShortcodeSpec): void;
   /**
    * Register a `BlockPattern` produced by `definePattern` from
    * `plumix/blocks`. Plugin- and theme-contributed patterns merge into
@@ -607,6 +620,16 @@ export function createPluginSetupContext({
         });
       }
       registry.markSpecs.set(spec.name, { spec, registeredBy: pluginId });
+    },
+
+    registerShortcode: (spec) => {
+      if (registry.shortcodeSpecs.has(spec.name)) {
+        throw DuplicateRegistrationError.alreadyRegistered({
+          kind: "shortcode",
+          identifier: spec.name,
+        });
+      }
+      registry.shortcodeSpecs.set(spec.name, { spec, registeredBy: pluginId });
     },
 
     registerPattern: (spec) => {

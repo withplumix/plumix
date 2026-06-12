@@ -1,7 +1,9 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
+import type { ShortcodeSpec } from "../shortcodes/types.js";
 import { createBlockRegistry } from "../block-registry.js";
+import { richTextBlock } from "../rich-text/index.js";
 import {
   BlockRenderer,
   PlumixProvider,
@@ -34,6 +36,34 @@ describe("BlockRenderer", () => {
     );
 
     expect(html).toContain("Hello");
+  });
+
+  test("threads shortcodes + locale from the provider into rich-text body expansion", () => {
+    const yearShortcode: ShortcodeSpec = {
+      name: "year",
+      render: ({ context }) => `Y-${context.locale}`,
+    };
+    const registry = createBlockRegistry([richTextBlock]);
+    const content = {
+      version: "plumix.v2" as const,
+      blocks: [
+        { id: "r", name: "core/rich-text", attrs: { body: "<p>[year]</p>" } },
+      ],
+    };
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider
+        value={{
+          registry,
+          locale: "fr",
+          shortcodes: new Map([[yearShortcode.name, yearShortcode]]),
+        }}
+      >
+        <BlockRenderer content={content} />
+      </PlumixProvider>,
+    );
+
+    expect(html).toContain("Y-fr");
   });
 
   test("throws when used outside a PlumixProvider", () => {

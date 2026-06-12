@@ -292,6 +292,8 @@ function renderTree({
         loaderData,
         user: ctx.user,
         queriedEntry: ctx.resolvedEntity,
+        locale: ctx.locale.code,
+        shortcodes: ctx.shortcodes,
       },
     },
     createElement(PlumixAdminBar, {
