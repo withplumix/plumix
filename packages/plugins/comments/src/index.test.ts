@@ -35,16 +35,27 @@ describe("comments() plugin", () => {
     expect(plugin.schema).toBeDefined();
   });
 
-  test("setup registers a 'comments' template dep and a submit route", () => {
+  test("setup registers the moderation surface", () => {
     const kinds: string[] = [];
     const routes: string[] = [];
+    const capabilities: string[] = [];
+    const adminPaths: string[] = [];
+    let rpcRouter = false;
     const ctx = {
       registerTemplateDep: (kind: string) => kinds.push(kind),
       registerRoute: (opts: { path: string }) => routes.push(opts.path),
+      registerCapability: (name: string) => capabilities.push(name),
+      registerRpcRouter: () => {
+        rpcRouter = true;
+      },
+      registerAdminPage: (opts: { path: string }) => adminPaths.push(opts.path),
     } as unknown as Parameters<ReturnType<typeof comments>["setup"]>[0];
     void comments().setup(ctx, undefined);
     expect(kinds).toContain("comments");
     expect(routes).toContain("/submit");
+    expect(capabilities).toContain("comment:moderate");
+    expect(adminPaths).toContain("/comments");
+    expect(rpcRouter).toBe(true);
   });
 });
 
