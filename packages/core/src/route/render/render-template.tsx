@@ -283,6 +283,12 @@ function renderTree({
     "entry" in data
       ? { type: data.entry.type, authorId: data.entry.authorId }
       : undefined;
+  // Body shortcodes get the post-expansion entry — its `title` is already
+  // rendered, not the raw `[year]` source the title pass itself expands.
+  const entry =
+    "entry" in data
+      ? (data.entry as unknown as Readonly<Record<string, unknown>>)
+      : null;
   const templateTree: ReactNode = createElement(
     PlumixProvider,
     {
@@ -294,6 +300,7 @@ function renderTree({
         queriedEntry: ctx.resolvedEntity,
         locale: ctx.locale.code,
         shortcodes: ctx.shortcodes,
+        entry,
       },
     },
     createElement(PlumixAdminBar, {

@@ -68,6 +68,8 @@ export interface RenderBlockTreeOptions {
   readonly locale?: string;
   /** Registered shortcodes for authored-content body expansion. */
   readonly shortcodes?: ShortcodeRegistry;
+  /** Queried entry, exposed to shortcodes via `BlockContext.entry`. */
+  readonly entry?: Readonly<Record<string, unknown>> | null;
 }
 
 export interface BlockNodeRenderProps<
@@ -290,6 +292,7 @@ export function renderBlockTree(
   };
   const rootContext: BlockContext = {
     ...DEFAULT_BLOCK_CONTEXT,
+    entry: options?.entry ?? DEFAULT_BLOCK_CONTEXT.entry,
     locale: options?.locale ?? DEFAULT_BLOCK_CONTEXT.locale,
     shortcodes: options?.shortcodes ?? null,
   };
