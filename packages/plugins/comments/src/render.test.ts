@@ -52,6 +52,16 @@ const single = defineTemplate<SingleData>({
       el("h1", { "data-testid": "post-title" }, data.entry.title),
       el("p", { "data-testid": "comments-count" }, String(thread?.count ?? 0)),
       el("ul", null, ...(thread?.comments ?? []).map(renderComment)),
+      thread?.hasMore
+        ? el(
+            "button",
+            {
+              "data-testid": "load-more",
+              "data-cursor": thread.nextCursor ?? "",
+            },
+            "Load more",
+          )
+        : null,
     );
   },
 });
@@ -151,5 +161,50 @@ describe("comments read path through the dispatcher", () => {
     const repliesIdx = html.indexOf('data-testid="replies"');
     expect(repliesIdx).toBeGreaterThan(-1);
     expect(html.indexOf("the reply")).toBeGreaterThan(repliesIdx);
+  });
+
+  // Public content can't render under `plumix dev` (it serves the admin
+  // SPA), so the load-more flow is exercised here through the in-process
+  // dispatcher: the SSR page shows only the first root page plus the
+  // affordance, and the public list route reveals the next page.
+  test("shows a load-more affordance and reveals the next root page", async () => {
+    const harness = await createDispatcherHarness({
+      plugins: [testBlog, comments({ entryTypes: ["post"], rootsPerPage: 2 })],
+      theme,
+    });
+    await applyCommentsSchema(harness.db);
+    const entry = await seedPost(harness, "busy");
+    const seed = commentFactory.transient({ db: harness.db });
+    for (let i = 1; i <= 3; i++) {
+      await seed.create({
+        entryId: entry.id,
+        status: "approved",
+        authorName: `Root ${String(i)}`,
+        bodyMd: `root ${String(i)}`,
+        createdAt: new Date(`2026-06-0${String(i)}T00:00:00Z`),
+      });
+    }
+
+    const html = await (await harness.fetch("/posts/busy")).text();
+    // First page: the two newest roots and the load-more button; the
+    // oldest root is held back. Total count still reflects all three.
+    expect(html).toContain('data-testid="comments-count">3<');
+    expect(html).toContain("root 3");
+    expect(html).toContain("root 2");
+    expect(html).not.toContain("root 1");
+    expect(html).toContain('data-testid="load-more"');
+
+    const cursor = /data-cursor="([^"]+)"/.exec(html)?.[1];
+    expect(cursor).toBeTruthy();
+    const next = await (
+      await harness.fetch(
+        `/_plumix/comments/list?entryId=${String(entry.id)}&cursor=${String(
+          cursor,
+        )}`,
+      )
+    ).json<{ comments: { bodyHtml: string }[]; hasMore: boolean }>();
+    expect(next.comments).toHaveLength(1);
+    expect(next.comments[0]?.bodyHtml).toContain("root 1");
+    expect(next.hasMore).toBe(false);
   });
 });

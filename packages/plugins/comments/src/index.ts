@@ -5,6 +5,7 @@ import type { CommentsConfig } from "./types.js";
 import { resolveConfig } from "./config.js";
 import * as schema from "./db/schema.js";
 import { COMMENT_MODERATE_CAPABILITY, createCommentsRouter } from "./rpc.js";
+import { createListHandler } from "./server/list.js";
 import { notifyModeratorOfPending } from "./server/notify.js";
 import { createSubmitHandler } from "./server/submit.js";
 import { createCommentsThreadLoader } from "./server/template-dep.js";
@@ -81,6 +82,12 @@ export function comments(options: CommentsConfig = {}) {
         path: "/submit",
         auth: "public",
         handler: createSubmitHandler(config),
+      });
+      ctx.registerRoute({
+        method: "GET",
+        path: "/list",
+        auth: "public",
+        handler: createListHandler(config),
       });
 
       if (config.notifyEmail) {
