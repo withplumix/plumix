@@ -57,12 +57,34 @@ export function useCommentCounts(): UseQueryResult<StatusCounts> {
   });
 }
 
+interface QueueFilters {
+  readonly search?: string;
+  readonly entryId?: number;
+}
+
 export function useCommentList(
   status: CommentStatus,
+  filters: QueueFilters = {},
 ): UseQueryResult<ModerationCommentDTO[]> {
   return useQuery({
-    queryKey: [...COMMENTS_KEY, "list", status],
-    queryFn: () => rpcCall<ModerationCommentDTO[]>("comments/list", { status }),
+    queryKey: [...COMMENTS_KEY, "list", status, filters],
+    queryFn: () =>
+      rpcCall<ModerationCommentDTO[]>("comments/list", { status, ...filters }),
+  });
+}
+
+export const BULK_ACTIONS = ["approve", "spam", "trash"] as const;
+export type BulkAction = (typeof BULK_ACTIONS)[number];
+
+export function useBulkModeration(): UseMutationResult<
+  unknown,
+  Error,
+  { action: BulkAction; ids: number[] }
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ action, ids }) => rpcCall("comments/bulk", { action, ids }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: COMMENTS_KEY }),
   });
 }
 

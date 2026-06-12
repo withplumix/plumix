@@ -10,6 +10,7 @@ import {
   listForModeration,
   purgeComment,
   setStatus,
+  setStatusMany,
 } from "./repository.js";
 
 describe("countPriorApproved", () => {
@@ -231,5 +232,106 @@ describe("moderation repository ops", () => {
     expect(tombstone?.bodyMd).toBe("");
     expect(tombstone?.authorEmail).toBe("");
     expect(kept).toBeDefined();
+  });
+});
+
+describe("moderation list filters + bulk", () => {
+  test("search matches author name, email, or body (escaped)", async () => {
+    const db = await createCommentsTestDb();
+    const entry = await seedPublishedPost(db);
+    const seed = commentFactory.transient({ db });
+    await seed.create({
+      entryId: entry.id,
+      status: "pending",
+      authorName: "Ada Lovelace",
+      bodyMd: "nothing",
+    });
+    await seed.create({
+      entryId: entry.id,
+      status: "pending",
+      authorName: "Bob",
+      authorEmail: "ada@example.test",
+      bodyMd: "nothing",
+    });
+    await seed.create({
+      entryId: entry.id,
+      status: "pending",
+      authorName: "Carol",
+      bodyMd: "mentions ada in the body",
+    });
+    await seed.create({
+      entryId: entry.id,
+      status: "pending",
+      authorName: "Dave",
+      bodyMd: "unrelated",
+    });
+
+    const hits = await listForModeration(ctxFor(db), {
+      status: "pending",
+      limit: 50,
+      offset: 0,
+      search: "ada",
+    });
+    expect(hits).toHaveLength(3);
+  });
+
+  test("a literal % in the search is not a wildcard", async () => {
+    const db = await createCommentsTestDb();
+    const entry = await seedPublishedPost(db);
+    const seed = commentFactory.transient({ db });
+    await seed.create({
+      entryId: entry.id,
+      status: "pending",
+      bodyMd: "100% sure",
+    });
+    await seed.create({
+      entryId: entry.id,
+      status: "pending",
+      bodyMd: "anything",
+    });
+
+    const hits = await listForModeration(ctxFor(db), {
+      status: "pending",
+      limit: 50,
+      offset: 0,
+      search: "100%",
+    });
+    expect(hits).toHaveLength(1);
+  });
+
+  test("entryId narrows the queue to one entry", async () => {
+    const db = await createCommentsTestDb();
+    const a = await seedPublishedPost(db);
+    const b = await seedPublishedPost(db);
+    const seed = commentFactory.transient({ db });
+    await seed.create({ entryId: a.id, status: "pending" });
+    await seed.create({ entryId: b.id, status: "pending" });
+    await seed.create({ entryId: b.id, status: "pending" });
+
+    const hits = await listForModeration(ctxFor(db), {
+      status: "pending",
+      limit: 50,
+      offset: 0,
+      entryId: b.id,
+    });
+    expect(hits).toHaveLength(2);
+  });
+
+  test("setStatusMany transitions many comments and returns the count", async () => {
+    const db = await createCommentsTestDb();
+    const entry = await seedPublishedPost(db);
+    const seed = commentFactory.transient({ db });
+    const a = await seed.create({ entryId: entry.id, status: "pending" });
+    const b = await seed.create({ entryId: entry.id, status: "pending" });
+    await seed.create({ entryId: entry.id, status: "pending" });
+
+    const changed = await setStatusMany(ctxFor(db), [a.id, b.id], "approved");
+    expect(changed).toHaveLength(2);
+    expect((await countByStatus(ctxFor(db))).approved).toBe(2);
+  });
+
+  test("setStatusMany with no ids is a no-op", async () => {
+    const db = await createCommentsTestDb();
+    expect(await setStatusMany(ctxFor(db), [], "approved")).toHaveLength(0);
   });
 });

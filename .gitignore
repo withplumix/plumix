@@ -43,10 +43,11 @@ yarn-error.log*
 # fresh on every e2e run, never committed.
 drizzle/
 
-# worker-driven plugin e2e: storageState.json is written by globalSetup
-# at the package root; playwright traces / reports land in test-results/
-# + playwright-report/ (already covered above).
+# worker-driven plugin e2e: storageState.json + e2e-fixtures.json are
+# written by globalSetup at the package root; playwright traces / reports
+# land in test-results/ + playwright-report/ (already covered above).
 storageState.json
+e2e-fixtures.json
 
 # plumix generated
 .plumix/

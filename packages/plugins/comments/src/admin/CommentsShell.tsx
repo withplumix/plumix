@@ -1,11 +1,18 @@
 import { useState } from "react";
 
 import type {
+  BulkAction,
   CommentStatus,
   ModerationAction,
   ModerationCommentDTO,
 } from "./rpc.js";
-import { useCommentCounts, useCommentList, useModeration } from "./rpc.js";
+import {
+  BULK_ACTIONS,
+  useBulkModeration,
+  useCommentCounts,
+  useCommentList,
+  useModeration,
+} from "./rpc.js";
 
 const TABS: readonly CommentStatus[] = ["pending", "approved", "spam", "trash"];
 
@@ -21,9 +28,39 @@ const ACTIONS: Record<CommentStatus, readonly ModerationAction[]> = {
 export function CommentsShell(): React.ReactElement {
   const [tab, setTab] = useState<CommentStatus>("pending");
   const [selected, setSelected] = useState<ModerationCommentDTO | null>(null);
+  const [search, setSearch] = useState("");
+  const [entryFilter, setEntryFilter] = useState("");
+  const [picked, setPicked] = useState<ReadonlySet<number>>(new Set());
   const counts = useCommentCounts();
-  const list = useCommentList(tab);
+  const entryId = Number.parseInt(entryFilter, 10);
+  const list = useCommentList(tab, {
+    search: search.trim() || undefined,
+    entryId: Number.isFinite(entryId) ? entryId : undefined,
+  });
   const moderation = useModeration();
+  const bulk = useBulkModeration();
+
+  function reset(next: CommentStatus): void {
+    setTab(next);
+    setSelected(null);
+    setPicked(new Set());
+  }
+
+  function togglePicked(id: number): void {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function runBulk(action: BulkAction): void {
+    bulk.mutate(
+      { action, ids: [...picked] },
+      { onSuccess: () => setPicked(new Set()) },
+    );
+  }
 
   return (
     <div data-testid="comments-shell">
@@ -35,8 +72,7 @@ export function CommentsShell(): React.ReactElement {
             data-testid={`comments-tab-${status}`}
             aria-pressed={tab === status}
             onClick={() => {
-              setTab(status);
-              setSelected(null);
+              reset(status);
             }}
           >
             {status}{" "}
@@ -46,6 +82,40 @@ export function CommentsShell(): React.ReactElement {
           </button>
         ))}
       </div>
+
+      <div data-testid="comments-filters">
+        <input
+          type="search"
+          data-testid="comments-search"
+          aria-label="Search comments"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+        <input
+          type="number"
+          data-testid="comments-entry-filter"
+          aria-label="Filter by entry id"
+          value={entryFilter}
+          onChange={(event) => setEntryFilter(event.target.value)}
+        />
+      </div>
+
+      {picked.size > 0 ? (
+        <div data-testid="comments-bulk-bar">
+          <span data-testid="comments-bulk-count">{picked.size}</span>
+          {BULK_ACTIONS.map((action) => (
+            <button
+              key={action}
+              type="button"
+              data-testid={`comments-bulk-${action}`}
+              disabled={bulk.isPending}
+              onClick={() => runBulk(action)}
+            >
+              {action}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {list.isLoading ? (
         <div data-testid="comments-loading" />
@@ -58,6 +128,15 @@ export function CommentsShell(): React.ReactElement {
           <tbody>
             {(list.data ?? []).map((comment) => (
               <tr key={comment.id} data-testid={`comment-row-${comment.id}`}>
+                <td>
+                  <input
+                    type="checkbox"
+                    data-testid={`comment-select-${comment.id}`}
+                    aria-label={`Select comment ${String(comment.id)}`}
+                    checked={picked.has(comment.id)}
+                    onChange={() => togglePicked(comment.id)}
+                  />
+                </td>
                 <td>
                   <button
                     type="button"
