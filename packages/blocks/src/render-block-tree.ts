@@ -8,6 +8,7 @@ import type {
   ResolvedLoaders,
 } from "./loaders.js";
 import type { PatternRegistry } from "./pattern-registry.js";
+import type { ShortcodeRegistry } from "./shortcodes/types.js";
 import type { ResponsiveStyleSlot } from "./styles/style-emitter.js";
 import type { ThemeTokens } from "./styles/types.js";
 import { emitBlockStyleCss } from "./styles/style-emitter.js";
@@ -27,6 +28,13 @@ export interface BlockContext {
   readonly parent: string | null;
   /** 0 at root, incremented for each container traversal. */
   readonly depth: number;
+  /** Active render locale, threaded for shortcode/`Intl` localization. */
+  readonly locale: string;
+  /**
+   * Registry of registered shortcodes for authored-content expansion, or
+   * `null` when the host wired none (the body then renders verbatim).
+   */
+  readonly shortcodes: ShortcodeRegistry | null;
 }
 
 export interface BlockNode {
@@ -56,6 +64,10 @@ export interface RenderBlockTreeOptions {
   readonly hooks?: BlockRenderHooks;
   readonly loaderData?: ResolvedBlockLoaders;
   readonly patterns?: PatternRegistry;
+  /** Render locale for shortcode/`Intl` localization. Defaults to `"en"`. */
+  readonly locale?: string;
+  /** Registered shortcodes for authored-content body expansion. */
+  readonly shortcodes?: ShortcodeRegistry;
 }
 
 export interface BlockNodeRenderProps<
@@ -78,6 +90,8 @@ export const DEFAULT_BLOCK_CONTEXT: BlockContext = Object.freeze({
   theme: null,
   parent: null,
   depth: 0,
+  locale: "en",
+  shortcodes: null,
 });
 
 interface DevWarnState {
@@ -274,5 +288,10 @@ export function renderBlockTree(
     loaderData: options?.loaderData,
     patterns: options?.patterns,
   };
-  return renderNodes(nodes, env, DEFAULT_BLOCK_CONTEXT);
+  const rootContext: BlockContext = {
+    ...DEFAULT_BLOCK_CONTEXT,
+    locale: options?.locale ?? DEFAULT_BLOCK_CONTEXT.locale,
+    shortcodes: options?.shortcodes ?? null,
+  };
+  return renderNodes(nodes, env, rootContext);
 }

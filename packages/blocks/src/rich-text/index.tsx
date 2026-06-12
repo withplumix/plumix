@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { isValidElement } from "react";
 
 import { defineBlock } from "../block-registry.js";
+import { expandShortcodes } from "../shortcodes/expand.js";
 
 export const richTextBlock = defineBlock({
   name: "core/rich-text",
@@ -20,10 +21,20 @@ export const richTextBlock = defineBlock({
   // the raw HTML string. TODO(#XXX): sanitize the HTML at the
   // entry.update ingest — the trust boundary is the stored bytes, not
   // the editor.
-  render: ({ attrs }): ReactNode => {
+  render: ({ attrs, context }): ReactNode => {
     if (isValidElement(attrs.body)) return attrs.body;
     if (typeof attrs.body === "string") {
-      return <div dangerouslySetInnerHTML={{ __html: attrs.body }} />;
+      // Expand `[year]`-style macros over the already-sanitized HTML string
+      // before output. Only registered tags expand; shortcode output is
+      // escaped, so no new sanitiser surface is introduced.
+      const body = context.shortcodes
+        ? expandShortcodes(attrs.body, context.shortcodes, {
+            siteSettings: context.siteSettings,
+            locale: context.locale,
+            entry: context.entry,
+          })
+        : attrs.body;
+      return <div dangerouslySetInnerHTML={{ __html: body }} />;
     }
     return <div />;
   },

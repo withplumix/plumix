@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { BlockNode } from "../render-block-tree.js";
+import type { ShortcodeSpec } from "../shortcodes/types.js";
 import { createBlockRegistry } from "../block-registry.js";
 import { renderBlockTree } from "../render-block-tree.js";
 import { richTextBlock } from "./index.js";
@@ -57,5 +58,59 @@ describe("core/rich-text walker render", () => {
     expect(html).toBe(
       `<div data-plumix-block="core/rich-text"><div>${body}</div></div>`,
     );
+  });
+
+  describe("shortcode body expansion", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-06-12T00:00:00Z"));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    const yearShortcode: ShortcodeSpec = {
+      name: "year",
+      render: ({ context }) =>
+        new Intl.DateTimeFormat(context.locale, { year: "numeric" }).format(
+          new Date(),
+        ),
+    };
+
+    test("expands a registered shortcode in the stored HTML body", () => {
+      const registry = createBlockRegistry([richTextBlock]);
+      const tree: readonly BlockNode[] = [
+        {
+          id: "r1",
+          name: "core/rich-text",
+          attrs: { body: "<p>Best Shoes for [year]</p>" },
+        },
+      ];
+
+      const html = renderToStaticMarkup(
+        renderBlockTree(tree, registry, {
+          shortcodes: new Map([[yearShortcode.name, yearShortcode]]),
+          locale: "en",
+        }),
+      );
+
+      expect(html).toContain("Best Shoes for 2026");
+    });
+
+    test("leaves the body untouched when no registry is threaded", () => {
+      const registry = createBlockRegistry([richTextBlock]);
+      const tree: readonly BlockNode[] = [
+        {
+          id: "r1",
+          name: "core/rich-text",
+          attrs: { body: "<p>Best Shoes for [year]</p>" },
+        },
+      ];
+
+      const html = renderToStaticMarkup(renderBlockTree(tree, registry));
+
+      expect(html).toContain("Best Shoes for [year]");
+    });
   });
 });
