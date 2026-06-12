@@ -1,11 +1,4 @@
-const ENCODER = new TextEncoder();
-
-async function sha256Hex(input: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", ENCODER.encode(input));
-  return [...new Uint8Array(digest)]
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
+import { sha256Hex } from "./hash.js";
 
 interface GravatarOptions {
   /** Pixel size of the requested avatar. Defaults to 80. */

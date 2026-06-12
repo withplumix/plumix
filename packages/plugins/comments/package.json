@@ -58,7 +58,8 @@
   },
   "dependencies": {
     "drizzle-orm": "catalog:",
-    "markdown-it": "^14.1.0"
+    "markdown-it": "^14.1.0",
+    "valibot": "catalog:"
   },
   "peerDependencies": {
     "plumix": "workspace:*"
