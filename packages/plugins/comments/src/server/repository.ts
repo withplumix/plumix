@@ -1,5 +1,8 @@
+import type { SQL } from "drizzle-orm";
+import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import type { AppContext } from "plumix/plugin";
-import { and, count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { escapeLikePattern } from "plumix/plugin";
 
 import type { Comment, NewComment } from "../db/schema.js";
 import type { CommentStatus } from "../types.js";
@@ -121,19 +124,64 @@ function toModeration(row: Comment): ModerationComment {
   };
 }
 
-/** One status tab of the moderation queue, newest-first, paginated. */
+// LIKE pattern matching `term` anywhere, with the SQL wildcards escaped so
+// a literal `%` or `_` in the search box isn't treated as a wildcard.
+function likeContains(column: AnySQLiteColumn, term: string): SQL {
+  return sql`${column} LIKE ${`%${escapeLikePattern(term)}%`} ESCAPE '\\'`;
+}
+
+/**
+ * One status tab of the moderation queue, newest-first, paginated.
+ * Optionally narrowed to one entry and/or a free-text search over the
+ * author name, email, and body.
+ */
 export async function listForModeration(
   ctx: AppContext,
-  opts: { status: CommentStatus; limit: number; offset: number },
+  opts: {
+    status: CommentStatus;
+    limit: number;
+    offset: number;
+    entryId?: number;
+    search?: string;
+  },
 ): Promise<ModerationComment[]> {
+  const conditions: SQL[] = [eq(comments.status, opts.status)];
+  if (opts.entryId !== undefined) {
+    conditions.push(eq(comments.entryId, opts.entryId));
+  }
+  const term = opts.search?.trim();
+  if (term) {
+    const match = or(
+      likeContains(comments.authorName, term),
+      likeContains(comments.authorEmail, term),
+      likeContains(comments.bodyMd, term),
+    );
+    if (match) conditions.push(match);
+  }
+
   const rows = await ctx.db
     .select()
     .from(comments)
-    .where(eq(comments.status, opts.status))
+    .where(and(...conditions))
     .orderBy(desc(comments.createdAt), desc(comments.id))
     .limit(opts.limit)
     .offset(opts.offset);
   return rows.map(toModeration);
+}
+
+/** Apply a status to many comments at once (bulk moderation). Returns the
+ * updated rows so the caller can fire per-comment lifecycle actions. */
+export async function setStatusMany(
+  ctx: AppContext,
+  ids: readonly number[],
+  status: CommentStatus,
+): Promise<Comment[]> {
+  if (ids.length === 0) return [];
+  return ctx.db
+    .update(comments)
+    .set({ status })
+    .where(inArray(comments.id, [...ids]))
+    .returning();
 }
 
 /** Comment counts per status, for the queue's tab badges. */

@@ -13,7 +13,16 @@ import { CommentsShell } from "./CommentsShell.js";
 
 interface CapturedCall {
   readonly proc: string;
-  readonly body: { json?: { id?: number } } | undefined;
+  readonly body:
+    | {
+        json?: {
+          id?: number;
+          ids?: number[];
+          action?: string;
+          search?: string;
+        };
+      }
+    | undefined;
 }
 
 let calls: CapturedCall[];
@@ -141,6 +150,49 @@ describe("CommentsShell", () => {
     renderShell();
     await waitFor(() => {
       expect(screen.getByTestId("comments-empty")).toBeInTheDocument();
+    });
+  });
+
+  test("selecting rows reveals the bulk bar and bulk-approves", async () => {
+    const row2 = { ...ROW, id: 2, authorName: "Bob" };
+    mockRpc({
+      counts: { pending: 2, approved: 0, spam: 0, trash: 0 },
+      list: [ROW, row2],
+      bulk: { changed: 2 },
+    });
+    renderShell();
+    await waitFor(() => {
+      expect(screen.getByTestId("comment-select-1")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByTestId("comment-select-1"));
+    fireEvent.click(screen.getByTestId("comment-select-2"));
+    expect(screen.getByTestId("comments-bulk-count")).toHaveTextContent("2");
+
+    fireEvent.click(screen.getByTestId("comments-bulk-approve"));
+    await waitFor(() => {
+      expect(calls.some((c) => c.proc === "bulk")).toBe(true);
+    });
+    const bulkCall = calls.find((c) => c.proc === "bulk");
+    expect(bulkCall?.body?.json?.ids).toEqual([1, 2]);
+    expect(bulkCall?.body?.json?.action).toBe("approve");
+  });
+
+  test("typing in the search box refetches with the term", async () => {
+    mockRpc({
+      counts: { pending: 0, approved: 0, spam: 0, trash: 0 },
+      list: [],
+    });
+    renderShell();
+    await waitFor(() => {
+      expect(screen.getByTestId("comments-search")).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByTestId("comments-search"), {
+      target: { value: "ada" },
+    });
+    await waitFor(() => {
+      expect(
+        calls.some((c) => c.proc === "list" && c.body?.json?.search === "ada"),
+      ).toBe(true);
     });
   });
 });

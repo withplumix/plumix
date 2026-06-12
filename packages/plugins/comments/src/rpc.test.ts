@@ -21,6 +21,8 @@ interface Client {
       status: CommentStatus;
       limit?: number;
       offset?: number;
+      entryId?: number;
+      search?: string;
     }) => Promise<ModerationCommentDTO[]>;
     readonly counts: () => Promise<Record<CommentStatus, number>>;
     readonly approve: (input: { id: number }) => Promise<{ status: string }>;
@@ -28,6 +30,10 @@ interface Client {
     readonly trash: (input: { id: number }) => Promise<{ status: string }>;
     readonly restore: (input: { id: number }) => Promise<{ status: string }>;
     readonly purge: (input: { id: number }) => Promise<{ result: string }>;
+    readonly bulk: (input: {
+      ids: number[];
+      action: "approve" | "spam" | "trash";
+    }) => Promise<{ changed: number }>;
   };
 }
 
@@ -149,6 +155,50 @@ describe("comments moderation RPC", () => {
     );
   });
 
+  test("list supports search and per-entry filtering", async () => {
+    const h = await buildHarness();
+    const a = await seedPublishedPost(h.db);
+    const b = await seedPublishedPost(h.db);
+    const seed = commentFactory.transient({ db: h.db });
+    await seed.create({
+      entryId: a.id,
+      status: "pending",
+      authorName: "Ada",
+    });
+    await seed.create({
+      entryId: b.id,
+      status: "pending",
+      authorName: "Bob",
+    });
+
+    expect(
+      await h.client.comments.list({ status: "pending", search: "ada" }),
+    ).toHaveLength(1);
+    expect(
+      await h.client.comments.list({ status: "pending", entryId: b.id }),
+    ).toHaveLength(1);
+  });
+
+  test("bulk approves many comments and fires the action per row", async () => {
+    const h = await buildHarness();
+    const entry = await seedPublishedPost(h.db);
+    const seed = commentFactory.transient({ db: h.db });
+    const a = await seed.create({ entryId: entry.id, status: "pending" });
+    const b = await seed.create({ entryId: entry.id, status: "pending" });
+    let fired = 0;
+    h.hooks.addAction("comment:approved", () => {
+      fired += 1;
+    });
+
+    const res = await h.client.comments.bulk({
+      ids: [a.id, b.id],
+      action: "approve",
+    });
+    expect(res.changed).toBe(2);
+    expect(fired).toBe(2);
+    expect((await h.client.comments.counts()).approved).toBe(2);
+  });
+
   test("a non-moderator is forbidden from every procedure", async () => {
     const h = await buildHarness("subscriber");
     // list/counts return the PII-bearing payload; the capability gate is
@@ -158,5 +208,8 @@ describe("comments moderation RPC", () => {
       h.client.comments.list({ status: "pending" }),
     ).rejects.toThrow();
     await expect(h.client.comments.purge({ id: 1 })).rejects.toThrow();
+    await expect(
+      h.client.comments.bulk({ ids: [1], action: "approve" }),
+    ).rejects.toThrow();
   });
 });
