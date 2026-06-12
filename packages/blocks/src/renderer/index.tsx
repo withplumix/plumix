@@ -33,6 +33,8 @@ export interface PlumixContextValue {
   readonly locale?: string;
   /** Registered shortcodes for rich-text body expansion. */
   readonly shortcodes?: ShortcodeRegistry;
+  /** Queried entry, exposed to body shortcodes via `BlockContext.entry`. */
+  readonly entry?: Readonly<Record<string, unknown>> | null;
 }
 
 const PlumixContext = createContext<PlumixContextValue | null>(null);
@@ -68,6 +70,7 @@ export function BlockRenderer({
     loaderData: ctx.loaderData,
     locale: ctx.locale,
     shortcodes: ctx.shortcodes,
+    entry: ctx.entry,
   });
 }
 

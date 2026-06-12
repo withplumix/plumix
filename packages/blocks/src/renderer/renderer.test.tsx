@@ -38,6 +38,37 @@ describe("BlockRenderer", () => {
     expect(html).toContain("Hello");
   });
 
+  test("threads the queried entry from the provider into body shortcode context", () => {
+    const authorShortcode: ShortcodeSpec = {
+      name: "author",
+      render: ({ context }) => {
+        const author = context.entry?.author;
+        return typeof author === "string" ? author : "anon";
+      },
+    };
+    const registry = createBlockRegistry([richTextBlock]);
+    const content = {
+      version: "plumix.v2" as const,
+      blocks: [
+        { id: "r", name: "core/rich-text", attrs: { body: "<p>[author]</p>" } },
+      ],
+    };
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider
+        value={{
+          registry,
+          entry: { author: "Ada" },
+          shortcodes: new Map([[authorShortcode.name, authorShortcode]]),
+        }}
+      >
+        <BlockRenderer content={content} />
+      </PlumixProvider>,
+    );
+
+    expect(html).toContain("Ada");
+  });
+
   test("threads shortcodes + locale from the provider into rich-text body expansion", () => {
     const yearShortcode: ShortcodeSpec = {
       name: "year",
