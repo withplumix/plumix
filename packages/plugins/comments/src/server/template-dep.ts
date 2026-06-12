@@ -32,7 +32,11 @@ export function createCommentsThreadLoader(config: ResolvedCommentsConfig) {
     const supports = ctx.plugins.entryTypes.get(row.type)?.supports;
     if (!isCommentingEnabled(row.type, supports, config)) return {};
 
-    const thread = await loadThread(ctx, resolved.id, config.maxDepth);
+    // First (newest) page; older roots load via GET /_plumix/comments/list.
+    const thread = await loadThread(ctx, resolved.id, {
+      maxDepth: config.maxDepth,
+      rootsPerPage: config.rootsPerPage,
+    });
     return Object.fromEntries(slugs.map((slug) => [slug, thread]));
   };
 }

@@ -39,6 +39,11 @@ export interface CommentsConfig {
   readonly mode?: ModerationMode;
   /** Maximum reply nesting depth (root = 0). Defaults to `3`. */
   readonly maxDepth?: number;
+  /**
+   * Root comments rendered per page (newest-first); older roots load
+   * on demand via `GET /_plumix/comments/list`. Defaults to `20`.
+   */
+  readonly rootsPerPage?: number;
   /** Require a non-empty author email. Defaults to `true`. */
   readonly requireEmail?: boolean;
   /** Reject comments on posts older than this many days. `null` = never. */
