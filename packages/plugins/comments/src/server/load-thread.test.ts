@@ -20,7 +20,7 @@ describe("loadThread", () => {
     await f.create({ entryId: entry.id, status: "spam" });
     await f.create({ entryId: entry.id, status: "trash" });
 
-    const thread = await loadThread(ctxFor(db), entry.id);
+    const thread = await loadThread(ctxFor(db), entry.id, 3);
 
     expect(thread.count).toBe(1);
     expect(thread.comments).toHaveLength(1);
@@ -51,7 +51,7 @@ describe("loadThread", () => {
       authorUserId: null,
     });
 
-    const thread = await loadThread(ctxFor(db), entry.id);
+    const thread = await loadThread(ctxFor(db), entry.id, 3);
     expect(thread.comments.map((c) => c.isRegistered).sort()).toEqual([
       false,
       true,
@@ -67,8 +67,8 @@ describe("loadThread", () => {
     await f.create({ entryId: b.id, status: "approved" });
     await f.create({ entryId: b.id, status: "approved" });
 
-    expect((await loadThread(ctxFor(db), a.id)).count).toBe(1);
-    expect((await loadThread(ctxFor(db), b.id)).count).toBe(2);
+    expect((await loadThread(ctxFor(db), a.id, 3)).count).toBe(1);
+    expect((await loadThread(ctxFor(db), b.id, 3)).count).toBe(2);
   });
 
   test("returns an empty thread when nothing is approved", async () => {
@@ -78,8 +78,84 @@ describe("loadThread", () => {
       .transient({ db })
       .create({ entryId: entry.id, status: "pending" });
 
-    const thread = await loadThread(ctxFor(db), entry.id);
+    const thread = await loadThread(ctxFor(db), entry.id, 3);
     expect(thread.count).toBe(0);
     expect(thread.comments).toEqual([]);
+  });
+});
+
+describe("loadThread — nesting", () => {
+  test("nests an approved reply under its parent, replies chronological", async () => {
+    const db = await createCommentsTestDb();
+    const entry = await seedPublishedPost(db);
+    const seed = commentFactory.transient({ db });
+    const root = await seed.create({
+      entryId: entry.id,
+      status: "approved",
+      bodyMd: "root",
+      createdAt: new Date("2026-06-01T00:00:00Z"),
+    });
+    await seed.create({
+      entryId: entry.id,
+      status: "approved",
+      parentId: root.id,
+      bodyMd: "second",
+      createdAt: new Date("2026-06-03T00:00:00Z"),
+    });
+    await seed.create({
+      entryId: entry.id,
+      status: "approved",
+      parentId: root.id,
+      bodyMd: "first",
+      createdAt: new Date("2026-06-02T00:00:00Z"),
+    });
+
+    const thread = await loadThread(ctxFor(db), entry.id, 3);
+    expect(thread.count).toBe(3);
+    expect(thread.comments).toHaveLength(1);
+    const replies = thread.comments[0]?.replies ?? [];
+    expect(replies.map((r) => r.bodyHtml.includes("first"))).toEqual([
+      true,
+      false,
+    ]);
+  });
+
+  test("excludes a reply whose parent isn't approved", async () => {
+    const db = await createCommentsTestDb();
+    const entry = await seedPublishedPost(db);
+    const seed = commentFactory.transient({ db });
+    const hiddenParent = await seed.create({
+      entryId: entry.id,
+      status: "pending",
+    });
+    await seed.create({
+      entryId: entry.id,
+      status: "approved",
+      parentId: hiddenParent.id,
+    });
+
+    const thread = await loadThread(ctxFor(db), entry.id, 3);
+    expect(thread.count).toBe(0);
+  });
+
+  test("the maxDepth bound stops the recursion", async () => {
+    const db = await createCommentsTestDb();
+    const entry = await seedPublishedPost(db);
+    const seed = commentFactory.transient({ db });
+    const root = await seed.create({ entryId: entry.id, status: "approved" });
+    const reply = await seed.create({
+      entryId: entry.id,
+      status: "approved",
+      parentId: root.id,
+    });
+    await seed.create({
+      entryId: entry.id,
+      status: "approved",
+      parentId: reply.id,
+    });
+
+    // maxDepth 1 → root (0) + its direct reply (1); the depth-2 reply is cut.
+    const thread = await loadThread(ctxFor(db), entry.id, 1);
+    expect(thread.count).toBe(2);
   });
 });

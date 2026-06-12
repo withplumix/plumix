@@ -2,7 +2,7 @@ import type { AppContext } from "plumix/plugin";
 import { eq } from "drizzle-orm";
 import { entries } from "plumix/schema";
 
-import type { CommentsConfig } from "../types.js";
+import type { ResolvedCommentsConfig } from "../config.js";
 import type { ResolvedThread } from "./load-thread.js";
 import { isCommentingEnabled } from "./enablement.js";
 import { loadThread } from "./load-thread.js";
@@ -15,7 +15,7 @@ import { loadThread } from "./load-thread.js";
  * thread keyed by each declared slug. Returns `{}` (→ `null` per slug)
  * for non-entry routes or comment-disabled types.
  */
-export function createCommentsThreadLoader(config: CommentsConfig) {
+export function createCommentsThreadLoader(config: ResolvedCommentsConfig) {
   return async (
     slugs: readonly string[],
     ctx: AppContext,
@@ -32,7 +32,7 @@ export function createCommentsThreadLoader(config: CommentsConfig) {
     const supports = ctx.plugins.entryTypes.get(row.type)?.supports;
     if (!isCommentingEnabled(row.type, supports, config)) return {};
 
-    const thread = await loadThread(ctx, resolved.id);
+    const thread = await loadThread(ctx, resolved.id, config.maxDepth);
     return Object.fromEntries(slugs.map((slug) => [slug, thread]));
   };
 }

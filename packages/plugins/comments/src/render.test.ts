@@ -22,7 +22,26 @@ const testBlog = definePlugin("test_blog", {
   },
 });
 
-// Theme that renders the approved thread the `comments` dep resolves.
+// Theme that renders the approved thread the `comments` dep resolves,
+// recursing into nested replies.
+function renderComment(
+  comment: ResolvedThread["comments"][number],
+): ReturnType<typeof el> {
+  return el(
+    "li",
+    { key: comment.id, "data-testid": "comment" },
+    el("span", { "data-testid": "comment-author" }, comment.authorName),
+    el("div", { dangerouslySetInnerHTML: { __html: comment.bodyHtml } }),
+    comment.replies.length > 0
+      ? el(
+          "ul",
+          { "data-testid": "replies" },
+          ...comment.replies.map(renderComment),
+        )
+      : null,
+  );
+}
+
 const single = defineTemplate<SingleData>({
   comments: ["current"],
   render: ({ data, comments: threadDep }) => {
@@ -32,14 +51,7 @@ const single = defineTemplate<SingleData>({
       null,
       el("h1", { "data-testid": "post-title" }, data.entry.title),
       el("p", { "data-testid": "comments-count" }, String(thread?.count ?? 0)),
-      ...(thread?.comments ?? []).map((comment) =>
-        el(
-          "article",
-          { key: comment.id, "data-testid": "comment" },
-          el("span", { "data-testid": "comment-author" }, comment.authorName),
-          el("div", { dangerouslySetInnerHTML: { __html: comment.bodyHtml } }),
-        ),
-      ),
+      el("ul", null, ...(thread?.comments ?? []).map(renderComment)),
     );
   },
 });
@@ -110,5 +122,34 @@ describe("comments read path through the dispatcher", () => {
     expect(html).toContain("Hello World");
     expect(html).toContain('data-testid="comments-count">0<');
     expect(html).not.toContain("Unheard");
+  });
+
+  test("renders a reply nested under its parent", async () => {
+    const harness = await createDispatcherHarness({
+      plugins: [testBlog, comments({ entryTypes: ["post"] })],
+      theme,
+    });
+    await applyCommentsSchema(harness.db);
+    const entry = await seedPost(harness, "threaded");
+    const seed = commentFactory.transient({ db: harness.db });
+    const root = await seed.create({
+      entryId: entry.id,
+      status: "approved",
+      bodyMd: "the root",
+    });
+    await seed.create({
+      entryId: entry.id,
+      status: "approved",
+      parentId: root.id,
+      bodyMd: "the reply",
+    });
+
+    const html = await (await harness.fetch("/posts/threaded")).text();
+
+    expect(html).toContain('data-testid="comments-count">2<');
+    // The reply renders inside the parent's nested replies list.
+    const repliesIdx = html.indexOf('data-testid="replies"');
+    expect(repliesIdx).toBeGreaterThan(-1);
+    expect(html.indexOf("the reply")).toBeGreaterThan(repliesIdx);
   });
 });

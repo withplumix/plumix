@@ -8,7 +8,11 @@ import type { CommentModerationCandidate } from "./hooks.js";
 import { isCommentingEnabled } from "./enablement.js";
 import { hashIp } from "./ip-hash.js";
 import { applyModerationVerdict, decideBaselineStatus } from "./moderation.js";
-import { countPriorApproved, insertComment } from "./repository.js";
+import {
+  clampParent,
+  countPriorApproved,
+  insertComment,
+} from "./repository.js";
 import { getOrCreateIpSalt } from "./salt.js";
 import { checkRateLimit, isHoneypotTripped } from "./spam.js";
 
@@ -16,6 +20,10 @@ const MAX_UA_LENGTH = 1024;
 
 const submitInputSchema = v.object({
   entryId: v.pipe(v.number(), v.integer(), v.minValue(1)),
+  parentId: v.optional(
+    v.nullable(v.pipe(v.number(), v.integer(), v.minValue(1))),
+    null,
+  ),
   name: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120)),
   email: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(254)), ""),
   body: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(10_000)),
@@ -135,8 +143,16 @@ export function createSubmitHandler(config: ResolvedCommentsConfig) {
     );
     const status = applyModerationVerdict(baseline, verdict);
 
+    const parentId = await clampParent(
+      ctx,
+      input.parentId,
+      entry.id,
+      config.maxDepth,
+    );
+
     const row = await insertComment(ctx, {
       entryId: entry.id,
+      parentId,
       status,
       authorUserId: authUser?.id ?? null,
       // Display name is commenter-supplied even when logged in; the real
