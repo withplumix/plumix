@@ -5,6 +5,14 @@ import type { DispatcherHarness } from "../test/dispatcher.js";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 
+// MCP is default-off; every test in this suite exercises the live endpoint,
+// so opt it in here rather than repeating `mcp: { enabled: true }` per call.
+function mcpHarness(
+  options: Parameters<typeof createDispatcherHarness>[0] = {},
+): Promise<DispatcherHarness> {
+  return createDispatcherHarness({ mcp: { enabled: true }, ...options });
+}
+
 const blog = definePlugin("test-blog", (ctx) => {
   ctx.registerEntryType("post", {
     label: "Posts",
@@ -106,7 +114,7 @@ function parseToolResult<T>(json: JsonRpcEnvelope<ToolCallResult>): T {
 
 describe("MCP endpoint — tools/list", () => {
   test("a PAT-authenticated client sees schema_describe with JSON Schema + readOnlyHint", async () => {
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await mcpHarness({ plugins: [blog] });
     const secret = await mintPat(h);
 
     const { res, json } = await callMcp<{ tools: ToolDescriptor[] }>(
@@ -129,7 +137,7 @@ describe("MCP endpoint — tools/list", () => {
 
 describe("MCP endpoint — schema_describe", () => {
   test("with no argument it lists entry types and taxonomies", async () => {
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await mcpHarness({ plugins: [blog] });
     const secret = await mintPat(h);
 
     const { res, json } = await callTool(h, secret, 2, "schema_describe", {});
@@ -151,7 +159,7 @@ describe("MCP endpoint — schema_describe", () => {
   });
 
   test("with a type it returns that type's statuses, supports, and taxonomies", async () => {
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await mcpHarness({ plugins: [blog] });
     const secret = await mintPat(h);
 
     const { res, json } = await callTool(h, secret, 3, "schema_describe", {
@@ -170,7 +178,7 @@ describe("MCP endpoint — schema_describe", () => {
   });
 
   test("an unknown type comes back as an MCP error envelope, not a crash", async () => {
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await mcpHarness({ plugins: [blog] });
     const secret = await mintPat(h);
 
     const { res, json } = await callTool(h, secret, 4, "schema_describe", {
@@ -188,7 +196,7 @@ describe("MCP endpoint — transport guards", () => {
   test.each(["GET", "DELETE"])(
     "%s is rejected with 405 (the endpoint is POST-only)",
     async (method) => {
-      const h = await createDispatcherHarness({ plugins: [blog] });
+      const h = await mcpHarness({ plugins: [blog] });
       const secret = await mintPat(h);
 
       const res = await h.dispatch(mcpRequest({}, { secret, method }));
@@ -199,7 +207,7 @@ describe("MCP endpoint — transport guards", () => {
   );
 
   test("a request without a bearer token is rejected with 401", async () => {
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await mcpHarness({ plugins: [blog] });
 
     const res = await h.dispatch(
       mcpRequest({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
@@ -209,7 +217,7 @@ describe("MCP endpoint — transport guards", () => {
   });
 
   test("an invalid bearer token is rejected with 401", async () => {
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await mcpHarness({ plugins: [blog] });
 
     const res = await h.dispatch(
       mcpRequest(
@@ -222,7 +230,7 @@ describe("MCP endpoint — transport guards", () => {
   });
 
   test("a session-cookie request is rejected — MCP authenticates by bearer PAT only", async () => {
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await mcpHarness({ plugins: [blog] });
     const user = await h.factory.user.create({ role: "editor" });
     const cookieReq = await h.authenticateRequest(
       mcpRequest({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
@@ -242,7 +250,7 @@ interface ContentRow {
 
 describe("MCP endpoint — content_list", () => {
   test("returns the entries the caller may see", async () => {
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await mcpHarness({ plugins: [blog] });
     const author = await h.factory.user.create({ role: "editor" });
     await h.factory.published.create({ authorId: author.id, slug: "pub" });
     await h.factory.draft.create({ authorId: author.id, slug: "draft" });
@@ -257,7 +265,7 @@ describe("MCP endpoint — content_list", () => {
   });
 
   test("a read-scoped token cannot see drafts (capability clamp)", async () => {
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await mcpHarness({ plugins: [blog] });
     const author = await h.factory.user.create({ role: "editor" });
     await h.factory.published.create({ authorId: author.id, slug: "pub" });
     await h.factory.draft.create({ authorId: author.id, slug: "secret" });
@@ -275,7 +283,7 @@ describe("MCP endpoint — content_list", () => {
   });
 
   test("content_list appears in tools/list with a projected JSON Schema", async () => {
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await mcpHarness({ plugins: [blog] });
     const secret = await mintPat(h);
 
     const { json } = await callMcp<{
@@ -290,7 +298,7 @@ describe("MCP endpoint — content_list", () => {
 
 describe("MCP endpoint — content_get", () => {
   test("returns a single entry by type + id", async () => {
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await mcpHarness({ plugins: [blog] });
     const author = await h.factory.user.create({ role: "editor" });
     const entry = await h.factory.published.create({
       authorId: author.id,
@@ -307,7 +315,7 @@ describe("MCP endpoint — content_get", () => {
   });
 
   test("a missing entry comes back as a not_found envelope", async () => {
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await mcpHarness({ plugins: [blog] });
     const secret = await mintPat(h, { role: "editor" });
 
     const { json } = await callTool(h, secret, 1, "content_get", {
@@ -320,7 +328,7 @@ describe("MCP endpoint — content_get", () => {
   });
 
   test("a type that doesn't match the entry is hidden as not_found", async () => {
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await mcpHarness({ plugins: [blog] });
     const author = await h.factory.user.create({ role: "editor" });
     const entry = await h.factory.published.create({
       authorId: author.id,
@@ -340,7 +348,7 @@ describe("MCP endpoint — content_get", () => {
 
 describe("MCP endpoint — term tools", () => {
   test("term_list returns terms in a taxonomy", async () => {
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await mcpHarness({ plugins: [blog] });
     await h.factory.category.create({ name: "News", slug: "news" });
     const secret = await mintPat(h, { role: "editor" });
 
@@ -353,7 +361,7 @@ describe("MCP endpoint — term tools", () => {
   });
 
   test("term_list maps a forbidden read to an envelope", async () => {
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await mcpHarness({ plugins: [blog] });
     const secret = await mintPat(h, {
       role: "editor",
       scopes: ["entry:post:read"],
@@ -368,7 +376,7 @@ describe("MCP endpoint — term tools", () => {
   });
 
   test("term_get returns a term by taxonomy + id", async () => {
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await mcpHarness({ plugins: [blog] });
     const term = await h.factory.category.create({
       name: "News",
       slug: "news",
@@ -384,7 +392,7 @@ describe("MCP endpoint — term tools", () => {
   });
 
   test("term_get hides a taxonomy mismatch as not_found", async () => {
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await mcpHarness({ plugins: [blog] });
     const term = await h.factory.category.create({
       name: "News",
       slug: "news",
@@ -401,7 +409,7 @@ describe("MCP endpoint — term tools", () => {
   });
 
   test("taxonomy_list enumerates registered taxonomies", async () => {
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await mcpHarness({ plugins: [blog] });
     const secret = await mintPat(h, { role: "editor" });
 
     const { json } = await callTool(h, secret, 1, "taxonomy_list", {});

@@ -2,7 +2,7 @@ import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { BootstrapVia, PlumixMagicLinkConfig } from "../auth/config.js";
 import type { Mailer } from "../auth/mailer/types.js";
 import type { OAuthProviderClient } from "../auth/oauth/types.js";
-import type { AnyPluginDescriptor } from "../config.js";
+import type { AnyPluginDescriptor, InterfaceToggle } from "../config.js";
 import type { AppContext } from "../context/app.js";
 import type { User, UserRole } from "../db/schema/users.js";
 import type {
@@ -111,6 +111,8 @@ export interface CreateDispatcherHarnessOptions {
   readonly bootstrapVia?: BootstrapVia;
   readonly theme?: ThemeDescriptor;
   readonly i18n?: I18nInput;
+  /** Mount the MCP endpoint. Default-off mirrors production. */
+  readonly mcp?: InterfaceToggle;
   /**
    * Vite-emitted asset manifest. Tests that exercise the renderer's
    * `<link rel="stylesheet">` auto-injection pass a stub manifest here;
@@ -227,6 +229,7 @@ export async function createDispatcherHarness(
     imageDelivery: options.imageDelivery,
     mailer: options.mailer,
     i18n: options.i18n,
+    mcp: options.mcp,
     theme: options.theme ?? defaultTestTheme,
   });
   const app = await buildApp(config, {

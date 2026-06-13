@@ -1,9 +1,54 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness, plumixRequest } from "../test/dispatcher.js";
 import { matchPluginRawRoute } from "./dispatcher.js";
+
+// Track when the dispatcher dynamic-imports the MCP module: the factory runs
+// once on first import, so `loadCount` is the no-load assertion for the
+// disabled path. Nothing else in this file imports the module — so the
+// disabled test must run before the enabled one for `loadCount === 0` to hold.
+const mcpMock = vi.hoisted(() => ({
+  loadCount: 0,
+  handleMcpRequest: vi.fn(() => new Response("mcp-ok", { status: 200 })),
+}));
+vi.mock("../mcp/dispatch.js", () => {
+  mcpMock.loadCount += 1;
+  return { handleMcpRequest: mcpMock.handleMcpRequest };
+});
+
+function mcpRequest(): Request {
+  return new Request("https://cms.example/_plumix/mcp", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: "{}",
+  });
+}
+
+describe("dispatcher — MCP enablement gate", () => {
+  test("MCP is disabled by default: POST /_plumix/mcp returns 404 without loading the MCP module", async () => {
+    const h = await createDispatcherHarness();
+
+    const response = await h.dispatch(mcpRequest());
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-plumix-hint")).toBe("mcp-disabled");
+    expect(mcpMock.loadCount).toBe(0);
+    expect(mcpMock.handleMcpRequest).not.toHaveBeenCalled();
+  });
+
+  test("mcp.enabled imports the MCP module once and delegates to its handler", async () => {
+    const h = await createDispatcherHarness({ mcp: { enabled: true } });
+
+    const response = await h.dispatch(mcpRequest());
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("mcp-ok");
+    expect(mcpMock.loadCount).toBe(1);
+    expect(mcpMock.handleMcpRequest).toHaveBeenCalledOnce();
+  });
+});
 
 describe("dispatcher — routing", () => {
   test("/_plumix/admin returns 404 with admin-not-available when no assets binding is configured", async () => {

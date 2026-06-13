@@ -28,6 +28,20 @@ export type AnyPluginDescriptor = PluginDescriptor<any>;
 export type AnyDatabaseAdapter = DatabaseAdapter<any>;
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
+/**
+ * Shared on/off switch for an external interface surface (MCP today, the
+ * REST API next). Default-off: a surface is mounted only when its config
+ * sets `enabled: true`, so the dispatcher can 404 before importing the
+ * surface's handler graph at all.
+ */
+export interface InterfaceToggle {
+  readonly enabled?: boolean;
+}
+
+export function interfaceEnabled(toggle: InterfaceToggle | undefined): boolean {
+  return toggle?.enabled === true;
+}
+
 export interface PlumixConfigInput {
   readonly runtime: RuntimeAdapter;
   readonly database: AnyDatabaseAdapter;
@@ -48,6 +62,11 @@ export interface PlumixConfigInput {
   readonly theme: ThemeDescriptor;
   readonly plugins?: readonly AnyPluginDescriptor[];
   readonly i18n?: I18nInput;
+  /**
+   * Model Context Protocol endpoint at `/_plumix/mcp`. Default-off; set
+   * `{ enabled: true }` to mount it.
+   */
+  readonly mcp?: InterfaceToggle;
   /**
    * Block-system configuration. Today only exposes the operator-
    * configurable `core/html` allowlist override; future block-level
@@ -74,6 +93,7 @@ export interface PlumixConfig {
   readonly theme: ThemeDescriptor;
   readonly plugins: readonly AnyPluginDescriptor[];
   readonly i18n: ResolvedI18n;
+  readonly mcp?: InterfaceToggle;
   readonly blocks?: {
     readonly htmlAllowlist?: HtmlAllowlistOverride;
   };
@@ -104,6 +124,7 @@ export function plumix(config: PlumixConfigInput): PlumixConfig {
     i18n: resolveLocales(
       config.i18n ?? { defaultLocale: "en", locales: ["en"] },
     ),
+    mcp: config.mcp,
     blocks: config.blocks,
     vite: config.vite,
   };

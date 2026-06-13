@@ -6,6 +6,7 @@ import type { PlumixApp } from "./app.js";
 import { readSessionCookie } from "../auth/cookies.js";
 import { hasCsrfHeader, hasMatchingOrigin } from "../auth/csrf.js";
 import { parseOAuthPath } from "../auth/oauth/match.js";
+import { interfaceEnabled } from "../config.js";
 import { withUser } from "../context/app.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { matchRoute } from "../route/match.js";
@@ -140,6 +141,9 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   // header cross-site without a CORS grant Plumix never gives). The gate keeps
   // protecting the cookie-authed RPC/auth endpoints below it unchanged.
   if (pathname === MCP_PATH) {
+    // Default-off: 404 before the dynamic import so a disabled deployment
+    // never pulls the MCP SDK + tool registry onto the cold-start path.
+    if (!interfaceEnabled(app.config.mcp)) return notFound("mcp-disabled");
     const { handleMcpRequest } = await (mcpModule ??=
       import("../mcp/dispatch.js"));
     return handleMcpRequest(ctx);
