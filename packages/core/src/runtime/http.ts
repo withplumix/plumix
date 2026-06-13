@@ -22,6 +22,10 @@ export function methodNotAllowed(allowed: readonly string[]): Response {
   });
 }
 
+export function unauthorized(): Response {
+  return jsonResponse({ error: "unauthorized" }, { status: 401 });
+}
+
 export function forbidden(reason: string): Response {
   return jsonResponse({ error: "forbidden", reason }, { status: 403 });
 }

@@ -62,6 +62,43 @@ function apiGet(path: string): Request {
   return new Request(`https://cms.example${path}`);
 }
 
+function bearerGet(path: string, secret: string): Request {
+  return new Request(`https://cms.example${path}`, {
+    headers: { authorization: `Bearer ${secret}` },
+  });
+}
+
+async function mintPat(
+  h: DispatcherHarness,
+  {
+    role = "editor",
+    scopes = null,
+    expiresAt,
+  }: {
+    role?: "subscriber" | "editor" | "admin";
+    scopes?: string[] | null;
+    expiresAt?: Date;
+  } = {},
+): Promise<{ userId: number; secret: string }> {
+  const user = await h.factory.user.create({ role });
+  const { secret } = await h.factory.apiToken.create({
+    userId: user.id,
+    scopes,
+    expiresAt: expiresAt ?? null,
+  });
+  return { userId: user.id, secret };
+}
+
+async function seedDraft(h: DispatcherHarness): Promise<number> {
+  const author = await h.factory.user.create({ role: "author" });
+  const entry = await h.factory.entry.create({
+    type: "post",
+    status: "draft",
+    authorId: author.id,
+  });
+  return entry.id;
+}
+
 interface ListEnvelope {
   readonly data: readonly Record<string, unknown>[];
   readonly meta: Record<string, unknown>;
@@ -275,5 +312,73 @@ describe("REST API — OpenAPI spec", () => {
     expect(doc.openapi).toMatch(/^3\.1/);
     expect(doc.paths).toHaveProperty("/{type}");
     expect(doc.paths).toHaveProperty("/{type}/{id}");
+  });
+});
+
+describe("REST API — bearer PAT auth", () => {
+  test("a valid PAT reads non-published content its user may see", async () => {
+    const h = await restHarness();
+    const draftId = await seedDraft(h);
+    const { secret } = await mintPat(h, { role: "editor" });
+
+    // Anonymous can't see the draft...
+    const anon = await h.dispatch(apiGet(`/_plumix/api/v1/posts/${draftId}`));
+    expect(anon.status).toBe(404);
+
+    // ...but an editor's PAT can.
+    const authed = await h.dispatch(
+      bearerGet(`/_plumix/api/v1/posts/${draftId}`, secret),
+    );
+    expect(authed.status).toBe(200);
+    const body = (await authed.json()) as Record<string, unknown>;
+    expect(body.id).toBe(draftId);
+    expect(body.status).toBe("draft");
+  });
+
+  test("a scoped token is gated by scope ∩ role", async () => {
+    const h = await restHarness();
+    const draftId = await seedDraft(h);
+    // Editor role could see drafts, but the token's scopes exclude edit_any.
+    const { secret } = await mintPat(h, {
+      role: "editor",
+      scopes: ["entry:post:read"],
+    });
+
+    const res = await h.dispatch(
+      bearerGet(`/_plumix/api/v1/posts/${draftId}`, secret),
+    );
+
+    expect(res.status).toBe(404);
+  });
+
+  test("an expired token is rejected with 401", async () => {
+    const h = await restHarness();
+    const { secret } = await mintPat(h, {
+      expiresAt: new Date(Date.now() - 1000),
+    });
+
+    const res = await h.dispatch(bearerGet("/_plumix/api/v1/posts", secret));
+
+    expect(res.status).toBe(401);
+  });
+
+  test("a malformed bearer token is rejected with 401", async () => {
+    const h = await restHarness();
+
+    const res = await h.dispatch(
+      bearerGet("/_plumix/api/v1/posts", "pl_pat_not-a-real-token"),
+    );
+
+    expect(res.status).toBe(401);
+  });
+
+  test("a PAT-authed response is non-cacheable", async () => {
+    const h = await restHarness();
+    const { secret } = await mintPat(h, { role: "editor" });
+
+    const res = await h.dispatch(bearerGet("/_plumix/api/v1/posts", secret));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toContain("no-store");
   });
 });

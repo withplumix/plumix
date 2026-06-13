@@ -2,9 +2,10 @@ import type { OpenAPI } from "@orpc/openapi";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 
 import type { AppContext } from "../context/app.js";
-import { jsonResponse, notFound } from "../runtime/http.js";
+import type { RestPrincipal } from "./principal.js";
+import { jsonResponse, notFound, unauthorized } from "../runtime/http.js";
 import { generateOpenApiDocument } from "./openapi.js";
-import { withPublicPrincipal } from "./principal.js";
+import { resolveRestPrincipal } from "./principal.js";
 import { restRouter } from "./router.js";
 
 /**
@@ -26,14 +27,29 @@ export function buildRestDispatcher(): RestDispatch {
     if (url.pathname === SPEC_PATH) {
       return jsonResponse(await (spec ??= generateOpenApiDocument()));
     }
-    // Anonymous reads resolve to a read-only public principal; the entry
-    // services then clamp to published + hide-existence with no REST-specific
-    // status logic.
-    const publicCtx = withPublicPrincipal(ctx);
+
+    const principal: RestPrincipal = await resolveRestPrincipal(ctx);
+    if (principal.kind === "unauthorized") return unauthorized();
+
     const result = await handler.handle(ctx.request, {
       prefix: API_V1_PREFIX,
-      context: publicCtx,
+      context: principal.ctx,
     });
-    return result.matched ? result.response : notFound("rest-route-not-found");
+    const response = result.matched
+      ? result.response
+      : notFound("rest-route-not-found");
+
+    // PAT-authed reads may include non-public content: never cache them.
+    return principal.kind === "authed" ? markNonCacheable(response) : response;
   };
+}
+
+function markNonCacheable(response: Response): Response {
+  const headers = new Headers(response.headers);
+  headers.set("cache-control", "private, no-store");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }
