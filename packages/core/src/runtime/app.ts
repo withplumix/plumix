@@ -27,6 +27,7 @@ import type {
   RegisteredScheduledTask,
 } from "../plugin/manifest.js";
 import type { ContextExtensionEntry } from "../plugin/provides-context.js";
+import type { RestDispatch } from "../rest/build-handler.js";
 import type { RouteRule } from "../route/intent.js";
 import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type { DocumentManifest } from "../theme.js";
@@ -70,6 +71,13 @@ export interface PlumixApp {
    * on an RPC request; nothing on the public path touches it.
    */
   readonly loadRpcHandler: () => Promise<RPCHandler<AppContext>>;
+  /**
+   * Lazily builds (and memoizes) the REST dispatcher on first call. Cold-path-
+   * only and gated by `config.api` — deferred so the `@orpc/openapi` handler,
+   * its router, and the spec generator never evaluate on the public render
+   * cold-start path. Mirrors `loadRpcHandler`.
+   */
+  readonly loadRestHandler: () => Promise<RestDispatch>;
   /**
    * Canonical site origin (e.g. `https://cms.example.com`). Sourced from
    * the passkey config for now since that's the only place it lives in
@@ -309,11 +317,18 @@ export async function buildApp(
       m.buildRpcHandler(registry.rpcRouters),
     ));
 
+  let restHandler: Promise<RestDispatch> | undefined;
+  const loadRestHandler = (): Promise<RestDispatch> =>
+    (restHandler ??= import("../rest/build-handler.js").then((m) =>
+      m.buildRestDispatcher(),
+    ));
+
   return {
     config,
     hooks,
     plugins: registry,
     loadRpcHandler,
+    loadRestHandler,
     origin: passkey.origin,
     devCsrfLocalhost: runtime.devCsrfLocalhost ?? false,
     passkey,

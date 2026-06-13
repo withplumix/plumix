@@ -68,6 +68,11 @@ export interface PlumixConfigInput {
    */
   readonly mcp?: InterfaceToggle;
   /**
+   * Public REST API + OpenAPI spec at `/_plumix/api/v1/`. Default-off; set
+   * `{ enabled: true }` to mount it.
+   */
+  readonly api?: InterfaceToggle;
+  /**
    * Block-system configuration. Today only exposes the operator-
    * configurable `core/html` allowlist override; future block-level
    * settings (per-block disable, etc.) slot in here too.
@@ -94,6 +99,7 @@ export interface PlumixConfig {
   readonly plugins: readonly AnyPluginDescriptor[];
   readonly i18n: ResolvedI18n;
   readonly mcp?: InterfaceToggle;
+  readonly api?: InterfaceToggle;
   readonly blocks?: {
     readonly htmlAllowlist?: HtmlAllowlistOverride;
   };
@@ -125,6 +131,7 @@ export function plumix(config: PlumixConfigInput): PlumixConfig {
       config.i18n ?? { defaultLocale: "en", locales: ["en"] },
     ),
     mcp: config.mcp,
+    api: config.api,
     blocks: config.blocks,
     vite: config.vite,
   };
