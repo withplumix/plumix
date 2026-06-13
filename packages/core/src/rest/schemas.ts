@@ -3,11 +3,13 @@ import * as v from "valibot";
 const MAX_PER_PAGE = 100;
 const DEFAULT_PER_PAGE = 20;
 
-// Path param only. Pagination is read from the query string directly (see
-// `readPagination`) so the surface doesn't depend on per-adapter query coercion.
-export const entryCollectionParamsSchema = v.object({ type: v.string() });
-export const entryItemParamsSchema = v.object({
-  type: v.string(),
+// Path params only. Entry types and taxonomies share the top-level
+// `{collection}` rest_base namespace. Pagination is read from the query string
+// directly (see `readPagination`) so the surface doesn't depend on per-adapter
+// query coercion.
+export const collectionParamsSchema = v.object({ collection: v.string() });
+export const collectionItemParamsSchema = v.object({
+  collection: v.string(),
   id: v.string(),
 });
 
@@ -18,6 +20,13 @@ export const publicAuthorSchema = v.object({
   id: v.number(),
   name: v.nullable(v.string()),
   avatarUrl: v.nullable(v.string()),
+});
+
+// Compact term shape, used both as a top-level resource and embedded on entries.
+export const publicTermSchema = v.object({
+  id: v.number(),
+  name: v.string(),
+  slug: v.string(),
 });
 
 export const publicEntrySchema = v.object({
@@ -32,20 +41,28 @@ export const publicEntrySchema = v.object({
   createdAt: v.date(),
   updatedAt: v.date(),
   author: v.nullable(publicAuthorSchema),
+  // Associations are embedded, never nested as their own sub-resource.
+  terms: v.record(v.string(), v.array(publicTermSchema)),
 });
 
-export const entriesListEnvelopeSchema = v.object({
-  data: v.array(publicEntrySchema),
-  meta: v.object({ page: v.number(), per_page: v.number() }),
-  links: v.object({
-    self: v.string(),
-    next: v.optional(v.string()),
-    prev: v.optional(v.string()),
-  }),
-});
+function listEnvelopeSchema<TItem extends v.GenericSchema>(item: TItem) {
+  return v.object({
+    data: v.array(item),
+    meta: v.object({ page: v.number(), per_page: v.number() }),
+    links: v.object({
+      self: v.string(),
+      next: v.optional(v.string()),
+      prev: v.optional(v.string()),
+    }),
+  });
+}
+
+export const entriesListEnvelopeSchema = listEnvelopeSchema(publicEntrySchema);
+export const termsListEnvelopeSchema = listEnvelopeSchema(publicTermSchema);
 
 export type PublicAuthor = v.InferOutput<typeof publicAuthorSchema>;
 export type PublicEntry = v.InferOutput<typeof publicEntrySchema>;
+export type PublicTerm = v.InferOutput<typeof publicTermSchema>;
 
 interface Pagination {
   readonly page: number;
