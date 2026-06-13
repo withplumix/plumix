@@ -13,6 +13,23 @@ const blog = definePlugin("test-blog", (ctx) => {
     isPublic: true,
     isHierarchical: false,
     supports: ["title", "editor", "excerpt"],
+    termTaxonomies: ["category", "tag"],
+  });
+  ctx.registerTermTaxonomy("category", {
+    label: "Categories",
+    isHierarchical: true,
+    entryTypes: ["post"],
+  });
+  ctx.registerTermTaxonomy("tag", {
+    label: "Tags",
+    isHierarchical: false,
+    entryTypes: ["post"],
+  });
+  ctx.registerTermTaxonomy("secret_tax", {
+    label: "Secret",
+    isPublic: false,
+    isHierarchical: false,
+    entryTypes: ["post"],
   });
 });
 
@@ -310,8 +327,180 @@ describe("REST API — OpenAPI spec", () => {
       paths: Record<string, unknown>;
     };
     expect(doc.openapi).toMatch(/^3\.1/);
-    expect(doc.paths).toHaveProperty("/{type}");
-    expect(doc.paths).toHaveProperty("/{type}/{id}");
+    expect(doc.paths).toHaveProperty("/{collection}");
+    expect(doc.paths).toHaveProperty("/{collection}/{id}");
+  });
+
+  test("the spec documents term resources and the entry term-embed", async () => {
+    const h = await restHarness();
+
+    const res = await h.dispatch(apiGet("/_plumix/api/v1/openapi.json"));
+    const doc = (await res.json()) as Record<string, unknown>;
+    const json = JSON.stringify(doc);
+
+    // The entry schema's grouped term-embed field is documented...
+    expect(json).toContain('"terms"');
+    // ...and the collection responses are a union of the entry and term shapes.
+    expect(json).toMatch(/"(anyOf|oneOf)"/);
+  });
+});
+
+describe("REST API — term resources", () => {
+  test("GET /{taxonomy} returns a paginated envelope of terms", async () => {
+    const h = await restHarness();
+    await h.factory.term.create({
+      taxonomy: "category",
+      name: "News",
+      slug: "news",
+    });
+
+    const res = await h.dispatch(apiGet("/_plumix/api/v1/categories"));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as ListEnvelope;
+    expect(body.data).toHaveLength(1);
+    const term = body.data[0] as { id: number; name: string; slug: string };
+    expect(typeof term.id).toBe("number");
+    expect(term).toMatchObject({ name: "News", slug: "news" });
+    expect(body.meta).toMatchObject({ page: 1 });
+  });
+
+  test("a non-public taxonomy is not exposed (404)", async () => {
+    const h = await restHarness();
+
+    const res = await h.dispatch(apiGet("/_plumix/api/v1/secret_taxes"));
+
+    expect(res.status).toBe(404);
+  });
+
+  test("GET /{taxonomy}/{id} returns one term", async () => {
+    const h = await restHarness();
+    const term = await h.factory.term.create({
+      taxonomy: "category",
+      name: "News",
+      slug: "news",
+    });
+
+    const res = await h.dispatch(
+      apiGet(`/_plumix/api/v1/categories/${term.id}`),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body).toEqual({ id: term.id, name: "News", slug: "news" });
+  });
+
+  test("a term requested under the wrong taxonomy is 404", async () => {
+    const h = await restHarness();
+    const term = await h.factory.term.create({
+      taxonomy: "category",
+      name: "News",
+      slug: "news",
+    });
+
+    // The term exists, but under `category` — requesting it under `tags`
+    // (also public) must hide it rather than reveal a cross-taxonomy item.
+    const res = await h.dispatch(apiGet(`/_plumix/api/v1/tags/${term.id}`));
+
+    expect(res.status).toBe(404);
+  });
+
+  test("a missing term id is 404", async () => {
+    const h = await restHarness();
+
+    const res = await h.dispatch(apiGet("/_plumix/api/v1/categories/999999"));
+
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("REST API — entry term embed", () => {
+  test("an entry embeds its terms grouped by taxonomy", async () => {
+    const h = await restHarness();
+    const author = await h.factory.user.create({ role: "author" });
+    const entry = await h.factory.entry.create({
+      type: "post",
+      status: "published",
+      authorId: author.id,
+    });
+    const term = await h.factory.term.create({
+      taxonomy: "category",
+      name: "News",
+      slug: "news",
+    });
+    await h.factory.entryTerm.create({ entryId: entry.id, termId: term.id });
+
+    const res = await h.dispatch(apiGet(`/_plumix/api/v1/posts/${entry.id}`));
+
+    const body = (await res.json()) as { terms: Record<string, unknown> };
+    expect(body.terms).toEqual({
+      category: [{ id: term.id, name: "News", slug: "news" }],
+    });
+  });
+
+  test("the list embeds terms and excludes non-public taxonomies", async () => {
+    const h = await restHarness();
+    const author = await h.factory.user.create({ role: "author" });
+    const entry = await h.factory.entry.create({
+      type: "post",
+      status: "published",
+      authorId: author.id,
+    });
+    const cat = await h.factory.term.create({
+      taxonomy: "category",
+      name: "News",
+      slug: "news",
+    });
+    const secret = await h.factory.term.create({
+      taxonomy: "secret_tax",
+      name: "Hush",
+      slug: "hush",
+    });
+    await h.factory.entryTerm.create({ entryId: entry.id, termId: cat.id });
+    await h.factory.entryTerm.create({ entryId: entry.id, termId: secret.id });
+
+    const res = await h.dispatch(apiGet("/_plumix/api/v1/posts"));
+
+    const body = (await res.json()) as {
+      data: { terms: Record<string, unknown> }[];
+    };
+    expect(body.data[0]?.terms).toEqual({
+      category: [{ id: cat.id, name: "News", slug: "news" }],
+    });
+  });
+});
+
+describe("REST API — entry term filter", () => {
+  test("filters entries by a taxonomy query param", async () => {
+    const h = await restHarness();
+    const author = await h.factory.user.create({ role: "author" });
+    const matched = await h.factory.entry.create({
+      type: "post",
+      status: "published",
+      authorId: author.id,
+      title: "Matched",
+    });
+    await h.factory.entry.create({
+      type: "post",
+      status: "published",
+      authorId: author.id,
+      title: "Other",
+    });
+    const news = await h.factory.term.create({
+      taxonomy: "category",
+      name: "News",
+      slug: "news",
+    });
+    await h.factory.entryTerm.create({
+      entryId: matched.id,
+      termId: news.id,
+    });
+
+    const res = await h.dispatch(apiGet("/_plumix/api/v1/posts?category=news"));
+
+    const body = (await res.json()) as { data: { title: string }[] };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.title).toBe("Matched");
   });
 });
 

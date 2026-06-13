@@ -1,6 +1,7 @@
 import type {
   PluginRegistry,
   RegisteredEntryType,
+  RegisteredTermTaxonomy,
 } from "../plugin/manifest.js";
 
 // Naive pluralization; an explicit per-type rest_base override is a later concern.
@@ -10,10 +11,6 @@ function pluralize(name: string): string {
   }
   if (/(?:s|x|z|ch|sh)$/.test(name)) return `${name}es`;
   return `${name}s`;
-}
-
-function restBaseForEntryType(type: RegisteredEntryType): string {
-  return pluralize(type.name);
 }
 
 /**
@@ -26,8 +23,25 @@ export function resolvePublicEntryType(
   restBase: string,
 ): RegisteredEntryType | null {
   for (const type of registry.entryTypes.values()) {
-    if (type.isPublic !== false && restBaseForEntryType(type) === restBase) {
+    if (type.isPublic !== false && pluralize(type.name) === restBase) {
       return type;
+    }
+  }
+  return null;
+}
+
+/**
+ * Resolve a collection rest_base (e.g. `categories`) to its registered public
+ * taxonomy. Entry types and taxonomies share the top-level rest_base namespace
+ * (siblings, as in WordPress), so the dispatcher tries this after entry types.
+ */
+export function resolvePublicTaxonomy(
+  registry: PluginRegistry,
+  restBase: string,
+): RegisteredTermTaxonomy | null {
+  for (const taxonomy of registry.termTaxonomies.values()) {
+    if (taxonomy.isPublic !== false && pluralize(taxonomy.name) === restBase) {
+      return taxonomy;
     }
   }
   return null;
