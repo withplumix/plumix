@@ -21,6 +21,7 @@ const ADMIN_PREFIX = "/_plumix/admin";
 const AUTH_PREFIX = "/_plumix/auth/";
 const PLUMIX_PREFIX = "/_plumix/";
 const MCP_PATH = "/_plumix/mcp";
+const API_PREFIX = "/_plumix/api";
 
 // MCP is cold-path-exclusive (an agent endpoint, never the public render path).
 // Dynamic-import its handler so the tool registry and the MCP SDK it pulls in
@@ -147,6 +148,17 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
     const { handleMcpRequest } = await (mcpModule ??=
       import("../mcp/dispatch.js"));
     return handleMcpRequest(ctx);
+  }
+
+  // REST sits ahead of the CSRF gate for the same reason MCP does: anonymous
+  // (and future bearer) reads are CSRF-immune, and a cross-origin browser GET
+  // can't carry the X-Plumix-Request header the gate demands. Default-off:
+  // 404 before the dynamic import so the @orpc/openapi graph stays off the
+  // cold-start path of a disabled deployment.
+  if (pathname === API_PREFIX || pathname.startsWith(`${API_PREFIX}/`)) {
+    if (!interfaceEnabled(app.config.api)) return notFound("api-disabled");
+    const dispatchRest = await app.loadRestHandler();
+    return dispatchRest(ctx);
   }
 
   if (pathname.startsWith(PLUMIX_PREFIX)) {

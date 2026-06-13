@@ -113,6 +113,8 @@ export interface CreateDispatcherHarnessOptions {
   readonly i18n?: I18nInput;
   /** Mount the MCP endpoint. Default-off mirrors production. */
   readonly mcp?: InterfaceToggle;
+  /** Mount the REST API. Default-off mirrors production. */
+  readonly api?: InterfaceToggle;
   /**
    * Vite-emitted asset manifest. Tests that exercise the renderer's
    * `<link rel="stylesheet">` auto-injection pass a stub manifest here;
@@ -230,6 +232,7 @@ export async function createDispatcherHarness(
     mailer: options.mailer,
     i18n: options.i18n,
     mcp: options.mcp,
+    api: options.api,
     theme: options.theme ?? defaultTestTheme,
   });
   const app = await buildApp(config, {

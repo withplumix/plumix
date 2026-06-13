@@ -26,6 +26,45 @@ function mcpRequest(): Request {
   });
 }
 
+// Same no-load assertion for the REST surface: the factory runs once on first
+// import, so the disabled test (which must precede the enabled one) sees zero.
+const restMock = vi.hoisted(() => ({
+  loadCount: 0,
+  dispatch: vi.fn(() => new Response("rest-ok", { status: 200 })),
+}));
+vi.mock("../rest/build-handler.js", () => {
+  restMock.loadCount += 1;
+  return { buildRestDispatcher: () => restMock.dispatch };
+});
+
+describe("dispatcher — REST API enablement gate", () => {
+  test("the REST API is disabled by default: GET /_plumix/api/v1/posts returns 404 without loading the REST module", async () => {
+    const h = await createDispatcherHarness();
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/_plumix/api/v1/posts"),
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-plumix-hint")).toBe("api-disabled");
+    expect(restMock.loadCount).toBe(0);
+    expect(restMock.dispatch).not.toHaveBeenCalled();
+  });
+
+  test("api.enabled imports the REST module once and delegates to its dispatcher", async () => {
+    const h = await createDispatcherHarness({ api: { enabled: true } });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/_plumix/api/v1/posts"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("rest-ok");
+    expect(restMock.loadCount).toBe(1);
+    expect(restMock.dispatch).toHaveBeenCalledOnce();
+  });
+});
+
 describe("dispatcher — MCP enablement gate", () => {
   test("MCP is disabled by default: POST /_plumix/mcp returns 404 without loading the MCP module", async () => {
     const h = await createDispatcherHarness();
