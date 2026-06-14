@@ -42,6 +42,21 @@ export function interfaceEnabled(toggle: InterfaceToggle | undefined): boolean {
   return toggle?.enabled === true;
 }
 
+/**
+ * Cross-origin policy for the REST API's anonymous reads. Default-closed: with
+ * no `cors`, no `Access-Control-Allow-Origin` is ever emitted. `origins: "*"`
+ * opens anonymous reads to any origin; an array allows only those. PAT-authed
+ * responses are never CORS-exposed regardless, so a token can't be abused from
+ * browser JS cross-origin.
+ */
+export interface ApiCorsConfig {
+  readonly origins?: readonly string[] | "*";
+}
+
+export interface ApiConfig extends InterfaceToggle {
+  readonly cors?: ApiCorsConfig;
+}
+
 export interface PlumixConfigInput {
   readonly runtime: RuntimeAdapter;
   readonly database: AnyDatabaseAdapter;
@@ -71,7 +86,7 @@ export interface PlumixConfigInput {
    * Public REST API + OpenAPI spec at `/_plumix/api/v1/`. Default-off; set
    * `{ enabled: true }` to mount it.
    */
-  readonly api?: InterfaceToggle;
+  readonly api?: ApiConfig;
   /**
    * Block-system configuration. Today only exposes the operator-
    * configurable `core/html` allowlist override; future block-level
@@ -99,7 +114,7 @@ export interface PlumixConfig {
   readonly plugins: readonly AnyPluginDescriptor[];
   readonly i18n: ResolvedI18n;
   readonly mcp?: InterfaceToggle;
-  readonly api?: InterfaceToggle;
+  readonly api?: ApiConfig;
   readonly blocks?: {
     readonly htmlAllowlist?: HtmlAllowlistOverride;
   };

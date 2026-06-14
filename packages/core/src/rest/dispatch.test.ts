@@ -438,6 +438,104 @@ describe("REST API — plugin resource collisions", () => {
   });
 });
 
+function originGet(path: string, origin: string): Request {
+  return new Request(`https://cms.example${path}`, { headers: { origin } });
+}
+
+describe("REST API — CORS by auth mode", () => {
+  test("CORS is closed by default even when the API is enabled", async () => {
+    const h = await restHarness();
+    await seedPublished(h, 1);
+
+    const res = await h.dispatch(
+      originGet("/_plumix/api/v1/posts", "https://app.example"),
+    );
+
+    expect(res.headers.get("access-control-allow-origin")).toBeNull();
+  });
+
+  test("a configured origin is echoed on anonymous reads; others are not", async () => {
+    const h = await restHarness({
+      api: { enabled: true, cors: { origins: ["https://app.example"] } },
+    });
+    await seedPublished(h, 1);
+
+    const allowed = await h.dispatch(
+      originGet("/_plumix/api/v1/posts", "https://app.example"),
+    );
+    expect(allowed.headers.get("access-control-allow-origin")).toBe(
+      "https://app.example",
+    );
+    expect(allowed.headers.get("vary")?.toLowerCase()).toContain("origin");
+
+    const denied = await h.dispatch(
+      originGet("/_plumix/api/v1/posts", "https://evil.example"),
+    );
+    expect(denied.headers.get("access-control-allow-origin")).toBeNull();
+    // Still varies by Origin so a shared cache can't serve this no-CORS entry
+    // to an allowed origin.
+    expect(denied.headers.get("vary")?.toLowerCase()).toContain("origin");
+  });
+
+  test("`*` opens anonymous reads to any origin", async () => {
+    const h = await restHarness({
+      api: { enabled: true, cors: { origins: "*" } },
+    });
+    await seedPublished(h, 1);
+
+    const res = await h.dispatch(
+      originGet("/_plumix/api/v1/posts", "https://anything.example"),
+    );
+
+    expect(res.headers.get("access-control-allow-origin")).toBe("*");
+  });
+
+  test("PAT-authed responses are never CORS-exposed", async () => {
+    const h = await restHarness({
+      api: { enabled: true, cors: { origins: "*" } },
+    });
+    const { secret } = await mintPat(h, { role: "editor" });
+
+    const res = await h.dispatch(
+      new Request("https://cms.example/_plumix/api/v1/posts", {
+        headers: {
+          origin: "https://app.example",
+          authorization: `Bearer ${secret}`,
+        },
+      }),
+    );
+
+    expect(res.headers.get("access-control-allow-origin")).toBeNull();
+    expect(res.headers.get("access-control-allow-credentials")).toBeNull();
+  });
+
+  test("preflight is answered for allowed origins and refused otherwise", async () => {
+    const h = await restHarness({
+      api: { enabled: true, cors: { origins: ["https://app.example"] } },
+    });
+
+    const ok = await h.dispatch(
+      new Request("https://cms.example/_plumix/api/v1/posts", {
+        method: "OPTIONS",
+        headers: { origin: "https://app.example" },
+      }),
+    );
+    expect(ok.status).toBe(204);
+    expect(ok.headers.get("access-control-allow-origin")).toBe(
+      "https://app.example",
+    );
+    expect(ok.headers.get("access-control-allow-methods")).toContain("GET");
+
+    const refused = await h.dispatch(
+      new Request("https://cms.example/_plumix/api/v1/posts", {
+        method: "OPTIONS",
+        headers: { origin: "https://evil.example" },
+      }),
+    );
+    expect(refused.status).toBe(403);
+  });
+});
+
 describe("REST API — OpenAPI spec", () => {
   test("GET /openapi.json returns an OpenAPI 3.1 doc with the entries resources", async () => {
     const h = await restHarness();
@@ -466,6 +564,19 @@ describe("REST API — OpenAPI spec", () => {
     expect(json).toContain('"terms"');
     // ...and the collection responses are a union of the entry and term shapes.
     expect(json).toMatch(/"(anyOf|oneOf)"/);
+  });
+
+  test("typed errors are documented with their status codes", async () => {
+    const h = await restHarness();
+
+    const res = await h.dispatch(apiGet("/_plumix/api/v1/openapi.json"));
+    const doc = (await res.json()) as {
+      paths: Record<string, { get?: { responses?: Record<string, unknown> } }>;
+    };
+
+    // The hide-existence 404 on the item route is part of the contract.
+    const itemResponses = doc.paths["/{collection}/{id}"]?.get?.responses ?? {};
+    expect(itemResponses).toHaveProperty("404");
   });
 });
 

@@ -1,11 +1,23 @@
 import type { OpenAPI } from "@orpc/openapi";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 
+import type { ApiCorsConfig } from "../config.js";
 import type { AppContext } from "../context/app.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { RestContext } from "./base.js";
 import type { RestPrincipal } from "./principal.js";
-import { jsonResponse, notFound, unauthorized } from "../runtime/http.js";
+import {
+  jsonResponse,
+  notFound,
+  unauthorized,
+  withHeaders,
+} from "../runtime/http.js";
+import {
+  isOriginDependent,
+  preflightResponse,
+  resolveAllowedOrigin,
+  withCors,
+} from "./cors.js";
 import { generateOpenApiDocument } from "./openapi.js";
 import { buildPluginRestRouter } from "./plugin-resources.js";
 import { resolveRestPrincipal } from "./principal.js";
@@ -21,7 +33,10 @@ export type RestDispatch = (ctx: AppContext) => Promise<Response>;
 const API_V1_PREFIX = "/_plumix/api/v1";
 const SPEC_PATH = `${API_V1_PREFIX}/openapi.json`;
 
-export function buildRestDispatcher(registry: PluginRegistry): RestDispatch {
+export function buildRestDispatcher(
+  registry: PluginRegistry,
+  cors?: ApiCorsConfig,
+): RestDispatch {
   // Core resources + plugin-contributed resources share one router, so plugin
   // endpoints route and appear in the spec automatically.
   const router = {
@@ -29,12 +44,24 @@ export function buildRestDispatcher(registry: PluginRegistry): RestDispatch {
     ...buildPluginRestRouter(registry.restResources),
   };
   const handler = new OpenAPIHandler(router);
+  const varyByOrigin = isOriginDependent(cors);
   // Generated once per isolate, on first request for the spec.
   let spec: Promise<OpenAPI.Document> | undefined;
   return async (ctx) => {
     const url = new URL(ctx.request.url);
+    const allowOrigin = resolveAllowedOrigin(
+      cors,
+      ctx.request.headers.get("origin"),
+    );
+    if (ctx.request.method === "OPTIONS") {
+      return preflightResponse(ctx.request, allowOrigin);
+    }
+
     if (url.pathname === SPEC_PATH) {
-      return jsonResponse(await (spec ??= generateOpenApiDocument(router)));
+      const doc = jsonResponse(
+        await (spec ??= generateOpenApiDocument(router)),
+      );
+      return withCors(doc, allowOrigin, varyByOrigin);
     }
 
     const principal: RestPrincipal = await resolveRestPrincipal(ctx);
@@ -52,17 +79,13 @@ export function buildRestDispatcher(registry: PluginRegistry): RestDispatch {
       ? result.response
       : notFound("rest-route-not-found");
 
-    // PAT-authed reads may include non-public content: never cache them.
-    return principal.kind === "authed" ? markNonCacheable(response) : response;
+    // PAT-authed reads may include non-public content: never cache them, and
+    // never CORS-expose them — a token in browser JS can't be used cross-origin.
+    if (principal.kind === "authed") {
+      return withHeaders(response, (h) =>
+        h.set("cache-control", "private, no-store"),
+      );
+    }
+    return withCors(response, allowOrigin, varyByOrigin);
   };
-}
-
-function markNonCacheable(response: Response): Response {
-  const headers = new Headers(response.headers);
-  headers.set("cache-control", "private, no-store");
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
 }
