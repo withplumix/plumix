@@ -206,6 +206,130 @@ describe("SEO — default head meta", () => {
   });
 });
 
+const taxonomyPlugin = definePlugin("taxo", (ctx) => {
+  ctx.registerEntryType("post", {
+    label: "Posts",
+    isPublic: true,
+    hasArchive: true,
+  });
+  ctx.registerTermTaxonomy("category", {
+    label: "Categories",
+    isHierarchical: false,
+    entryTypes: ["post"],
+  });
+});
+
+describe("SEO — sitemap", () => {
+  async function sitemapText(
+    h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+    path: string,
+  ): Promise<{ res: Response; body: string }> {
+    const res = await h.dispatch(new Request(`https://cms.example${path}`));
+    return { res, body: await res.text() };
+  }
+
+  test("the index lists a sub-sitemap for a type with published content", async () => {
+    const theme = defineTheme({ templates: { index: () => null } });
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    await seedPost(h);
+
+    const { res, body } = await sitemapText(h, "/sitemap.xml");
+
+    expect(res.headers.get("content-type")).toContain("application/xml");
+    expect(body).toContain("<sitemapindex");
+    expect(body).toContain("<loc>https://cms.example/sitemap-post-1.xml</loc>");
+  });
+
+  test("a sub-sitemap lists published entry URLs with lastmod, excluding drafts", async () => {
+    const theme = defineTheme({ templates: { index: () => null } });
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "live",
+      title: "Live",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.factory.entry.create({
+      type: "post",
+      slug: "draft",
+      title: "Draft",
+      content: null,
+      status: "draft",
+      authorId: author.id,
+    });
+
+    const { body } = await sitemapText(h, "/sitemap-post-1.xml");
+
+    expect(body).toContain("<loc>https://cms.example/post/live</loc>");
+    expect(body).toContain("<lastmod>");
+    expect(body).not.toContain("/post/draft");
+  });
+
+  test("a page past the end is an empty url-set", async () => {
+    const theme = defineTheme({ templates: { index: () => null } });
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    await seedPost(h);
+
+    const { body } = await sitemapText(h, "/sitemap-post-2.xml");
+
+    expect(body).toContain("<urlset");
+    expect(body).not.toContain("<url>");
+  });
+
+  test("the seo:sitemap:urls filter can drop URLs", async () => {
+    const dropAll = definePlugin("sitemap-test", (ctx) => {
+      ctx.addFilter("seo:sitemap:urls", () => []);
+    });
+    const theme = defineTheme({ templates: { index: () => null } });
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin, dropAll],
+      theme,
+    });
+    await seedPost(h);
+
+    const { body } = await sitemapText(h, "/sitemap-post-1.xml");
+
+    expect(body).not.toContain("<url>");
+  });
+
+  test("a taxonomy sub-sitemap lists term URLs", async () => {
+    const theme = defineTheme({ templates: { index: () => null } });
+    const h = await createDispatcherHarness({
+      plugins: [taxonomyPlugin],
+      theme,
+    });
+    await h.factory.term.create({
+      taxonomy: "category",
+      name: "News",
+      slug: "news",
+    });
+
+    const { body } = await sitemapText(h, "/sitemap-category-1.xml");
+
+    expect(body).toContain("<loc>https://cms.example/category/news</loc>");
+  });
+
+  test("a private site suppresses the sitemap", async () => {
+    const theme = defineTheme({ templates: { index: () => null } });
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    await h.factory.setting.create({
+      group: "site",
+      key: "public",
+      value: false,
+    });
+    await seedPost(h);
+
+    const { body } = await sitemapText(h, "/sitemap.xml");
+
+    expect(body).toContain("<sitemapindex");
+    expect(body).not.toContain("<sitemap>");
+  });
+});
+
 describe("SEO — robots.txt + public gate", () => {
   test("GET /robots.txt is text/plain and allows crawling by default", async () => {
     const theme = defineTheme({ templates: { index: () => null } });

@@ -13,6 +13,7 @@ import { matchRoute } from "../route/match.js";
 import { renderErrorThroughTheme } from "../route/render/render-template.js";
 import { resolvePublicRoute } from "../route/resolve.js";
 import { handleRobotsTxt } from "../seo/robots.js";
+import { handleSitemapIndex, handleSubSitemap } from "../seo/sitemap.js";
 import { rewriteAdminShellLangDir } from "./admin-shell.js";
 import { forbidden, jsonResponse, methodNotAllowed, notFound } from "./http.js";
 import { loadUserForPublicRequest } from "./load-user-for-public-request.js";
@@ -24,6 +25,10 @@ const PLUMIX_PREFIX = "/_plumix/";
 const MCP_PATH = "/_plumix/mcp";
 const API_PREFIX = "/_plumix/api";
 const ROBOTS_PATH = "/robots.txt";
+const SITEMAP_INDEX_PATH = "/sitemap.xml";
+// `/sitemap-<scope>-<page>.xml` — greedy scope so a hyphenated name keeps its
+// hyphens and only the trailing `-<digits>` is the page.
+const SUB_SITEMAP_PATTERN = /^\/sitemap-(.+)-(\d+)\.xml$/;
 
 // MCP is cold-path-exclusive (an agent endpoint, never the public render path).
 // Dynamic-import its handler so the tool registry and the MCP SDK it pulls in
@@ -245,6 +250,13 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   // rewrite rule can't shadow them.
   if (pathname === ROBOTS_PATH) {
     return handleRobotsTxt(ctx);
+  }
+  if (pathname === SITEMAP_INDEX_PATH) {
+    return handleSitemapIndex(ctx);
+  }
+  const subSitemap = SUB_SITEMAP_PATTERN.exec(pathname);
+  if (subSitemap) {
+    return handleSubSitemap(ctx, subSitemap[1] ?? "", Number(subSitemap[2]));
   }
 
   return dispatchPublicRoute(app, ctx, url);
