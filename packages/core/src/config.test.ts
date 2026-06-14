@@ -118,6 +118,22 @@ test("plumix() preserves top-level vite passthrough for the Vite layer to consum
   expect(config.vite?.optimizeDeps).toEqual({ exclude: ["x"] });
 });
 
+test("plumix() defaults basePath to the empty string (root deployment)", () => {
+  const config = plumix({ runtime, database, auth: authConfig, theme });
+  expect(config.basePath).toBe("");
+});
+
+test("plumix() normalizes a configured basePath to its canonical form", () => {
+  const config = plumix({
+    runtime,
+    database,
+    auth: authConfig,
+    theme,
+    basePath: "custom-directory/",
+  });
+  expect(config.basePath).toBe("/custom-directory");
+});
+
 test("plumix() accepts auth.magicLink when paired with a top-level mailer", () => {
   const authWithMagicLink = auth({
     passkey: {

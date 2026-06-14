@@ -1,3 +1,4 @@
+import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -21,3 +22,18 @@ await buildAdminPluginChunkForE2E({
   scriptMarker: "data-plumix-e2e",
   logTag: "[e2e/runtime-proof] fixture plugin",
 });
+
+// The admin builds with a relative base (`./`) so the precompiled bundle is
+// relocatable under a runtime basePath; production's `serveAdmin` injects a
+// `<base href>` to anchor the relative asset URLs. `vite preview` doesn't, so
+// SPA deep-link reloads (`/_plumix/admin/entries/posts/1/edit`) would resolve
+// `./assets/*` against the wrong path and 404. Inject the same `<base href>`
+// here so the preview mirrors the worker.
+const indexHtmlPath = resolve(ADMIN_ROOT, "dist/index.html");
+const indexHtml = readFileSync(indexHtmlPath, "utf8");
+if (!indexHtml.includes("<base ")) {
+  writeFileSync(
+    indexHtmlPath,
+    indexHtml.replace(/<head>/i, '<head><base href="/_plumix/admin/">'),
+  );
+}

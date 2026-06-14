@@ -3,6 +3,7 @@ import * as v from "valibot";
 import type { AppContext } from "../../context/app.js";
 import type { PlumixApp } from "../../runtime/app.js";
 import type { MagicLinkErrorCode } from "./errors.js";
+import { withBasePath } from "../../base-path.js";
 import {
   jsonResponse,
   loginErrorRedirect,
@@ -69,6 +70,7 @@ export async function handleMagicLinkRequest(
     await requestMagicLink(ctx.db, {
       email: parsed.output.email,
       origin: app.origin,
+      basePath: app.basePath,
       mailer: ctx.mailer,
       siteName: app.config.auth.magicLink.siteName,
       ttlSeconds: app.config.auth.magicLink.ttlSeconds,
@@ -108,13 +110,14 @@ export async function handleMagicLinkVerify(
   app: PlumixApp,
 ): Promise<Response> {
   if (!app.config.auth.magicLink) {
-    return loginError("token_invalid");
+    return loginError(app.basePath, "token_invalid");
   }
 
   const url = new URL(ctx.request.url);
   const token = url.searchParams.get("token");
-  if (!token) return loginError("missing_token");
-  if (token.length > MAX_TOKEN_LENGTH) return loginError("token_invalid");
+  if (!token) return loginError(app.basePath, "missing_token");
+  if (token.length > MAX_TOKEN_LENGTH)
+    return loginError(app.basePath, "token_invalid");
 
   try {
     const { user, created } = await verifyMagicLink(ctx.db, token, {
@@ -125,14 +128,16 @@ export async function handleMagicLinkVerify(
       method: "magic_link",
       firstSignIn: created,
     });
-    return redirectTo(ADMIN_PATH, { "set-cookie": cookieHeader });
+    return redirectTo(withBasePath(ADMIN_PATH, app.basePath), {
+      "set-cookie": cookieHeader,
+    });
   } catch (error) {
     if (error instanceof MagicLinkError) {
       ctx.logger.warn("magic_link_verify_rejected", { code: error.code });
-      return loginError(error.code);
+      return loginError(app.basePath, error.code);
     }
     ctx.logger.error("magic_link_verify_failed", { error });
-    return loginError("token_invalid");
+    return loginError(app.basePath, "token_invalid");
   }
 }
 
@@ -140,6 +145,10 @@ function invalidInput(): Response {
   return jsonResponse({ error: "invalid_input" }, { status: 400 });
 }
 
-function loginError(code: MagicLinkErrorCode): Response {
-  return loginErrorRedirect(LOGIN_PATH, "magic_link_error", code);
+function loginError(basePath: string, code: MagicLinkErrorCode): Response {
+  return loginErrorRedirect(
+    withBasePath(LOGIN_PATH, basePath),
+    "magic_link_error",
+    code,
+  );
 }

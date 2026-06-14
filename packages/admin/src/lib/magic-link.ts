@@ -1,6 +1,7 @@
 import type { MessageDescriptor } from "@lingui/core";
 import { defineMessage } from "@lingui/core/macro";
 
+import { adminBasePath } from "./admin-base.js";
 import { createStrictErrorDescriptorRegistry } from "./error-descriptor-registry.js";
 
 // Client wrapper for the magic-link request endpoint. Not an oRPC
@@ -16,15 +17,18 @@ interface MagicLinkRequestResponse {
 export async function requestMagicLink(
   email: string,
 ): Promise<MagicLinkRequestResponse> {
-  const response = await fetch("/_plumix/auth/magic-link/request", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-plumix-request": "1",
+  const response = await fetch(
+    `${adminBasePath()}/_plumix/auth/magic-link/request`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-plumix-request": "1",
+      },
+      body: JSON.stringify({ email }),
+      credentials: "same-origin",
     },
-    body: JSON.stringify({ email }),
-    credentials: "same-origin",
-  });
+  );
 
   if (response.status === 503) {
     throw MagicLinkRequestError.notConfigured();

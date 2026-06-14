@@ -5,6 +5,7 @@ import type {
   RegisteredEntryType,
   RegisteredTermTaxonomy,
 } from "../plugin/manifest.js";
+import { withBasePath } from "../base-path.js";
 
 /**
  * Reverse of `compileRouteMap` — given an entry, produce its public URL.
@@ -40,7 +41,10 @@ export async function buildEntryPermalink(
   if (!shouldNestUnderEntryParent(entryType, parentId)) return null;
   const ancestors =
     options?.ancestorSlugs ?? (await loadAncestorSlugs(ctx, parentId));
-  return joinSegments([entryTypeBaseSlug(entryType), ...ancestors, entry.slug]);
+  return withBasePath(
+    joinSegments([entryTypeBaseSlug(entryType), ...ancestors, entry.slug]),
+    ctx.basePath,
+  );
 }
 
 /**
@@ -64,12 +68,15 @@ export async function buildTermArchiveUrl(
   const parentId = term.parentId ?? null;
 
   if (!shouldNestUnderTermParent(taxonomy, parentId)) {
-    return joinSegments([baseSlug, term.slug]);
+    return withBasePath(joinSegments([baseSlug, term.slug]), ctx.basePath);
   }
 
   const ancestors =
     options?.ancestorSlugs ?? (await loadTermAncestorSlugs(ctx, parentId));
-  return joinSegments([baseSlug, ...ancestors, term.slug]);
+  return withBasePath(
+    joinSegments([baseSlug, ...ancestors, term.slug]),
+    ctx.basePath,
+  );
 }
 
 /**
@@ -89,7 +96,10 @@ export function buildEntryPermalinkSync(
   if (!entryType || entryType.isPublic === false) return null;
   if (shouldNestUnderEntryParent(entryType, entry.parentId ?? null))
     return null;
-  return joinSegments([entryTypeBaseSlug(entryType), entry.slug]);
+  return withBasePath(
+    joinSegments([entryTypeBaseSlug(entryType), entry.slug]),
+    ctx.basePath,
+  );
 }
 
 function entryTypeBaseSlug(entryType: RegisteredEntryType): string {

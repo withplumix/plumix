@@ -12,6 +12,7 @@ import type {
   ObjectStorage,
 } from "./runtime/slots.js";
 import type { ThemeDescriptor } from "./theme.js";
+import { normalizeBasePath } from "./base-path.js";
 import { resolveLocales } from "./i18n/locale-registry.js";
 
 /**
@@ -78,6 +79,15 @@ export interface PlumixConfigInput {
   readonly plugins?: readonly AnyPluginDescriptor[];
   readonly i18n?: I18nInput;
   /**
+   * Serve the whole site under a subdirectory (`example.com/custom-directory/*`)
+   * — set this when a reverse proxy mounts plumix below the domain root.
+   * Mirrors Next's `basePath` / Nuxt's `app.baseURL`: a leading-slash prefix
+   * with no trailing slash. Normalized leniently (`docs`, `/docs/` both work);
+   * the default `""` is a root deployment. Path-only — it never touches
+   * `auth.passkey.origin`, which stays scheme+host for WebAuthn.
+   */
+  readonly basePath?: string;
+  /**
    * Model Context Protocol endpoint at `/_plumix/mcp`. Default-off; set
    * `{ enabled: true }` to mount it.
    */
@@ -113,6 +123,8 @@ export interface PlumixConfig {
   readonly theme: ThemeDescriptor;
   readonly plugins: readonly AnyPluginDescriptor[];
   readonly i18n: ResolvedI18n;
+  /** Normalized subdirectory prefix (`""` for a root deployment). */
+  readonly basePath: string;
   readonly mcp?: InterfaceToggle;
   readonly api?: ApiConfig;
   readonly blocks?: {
@@ -145,6 +157,7 @@ export function plumix(config: PlumixConfigInput): PlumixConfig {
     i18n: resolveLocales(
       config.i18n ?? { defaultLocale: "en", locales: ["en"] },
     ),
+    basePath: normalizeBasePath(config.basePath),
     mcp: config.mcp,
     api: config.api,
     blocks: config.blocks,

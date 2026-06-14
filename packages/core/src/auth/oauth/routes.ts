@@ -2,6 +2,7 @@ import type { AppContext } from "../../context/app.js";
 import type { PlumixApp } from "../../runtime/app.js";
 import type { OAuthErrorCode } from "./errors.js";
 import type { OAuthProviderClient } from "./types.js";
+import { withBasePath } from "../../base-path.js";
 import { users } from "../../db/schema/users.js";
 import { loginErrorRedirect, redirectTo } from "../../runtime/http.js";
 import { mintSessionAndCookie } from "../sign-in.js";
@@ -26,7 +27,7 @@ export async function handleOAuthStart(
   providerKey: string,
 ): Promise<Response> {
   const provider = pickProvider(app, providerKey);
-  if (!provider) return loginError("provider_not_configured");
+  if (!provider) return loginError(app.basePath, "provider_not_configured");
 
   // Block OAuth on a fresh deploy when the operator left bootstrap on
   // the passkey rail. An OAuth signup before any user exists would
@@ -37,7 +38,7 @@ export async function handleOAuthStart(
   if (!ctx.bootstrapAllowed) {
     const userCount = await ctx.db.$count(users);
     if (userCount === 0) {
-      return redirectTo(BOOTSTRAP_PATH);
+      return redirectTo(withBasePath(BOOTSTRAP_PATH, app.basePath));
     }
   }
 
@@ -53,7 +54,7 @@ export async function handleOAuthStart(
     return redirectTo(url);
   } catch (error) {
     ctx.logger.error("oauth_start_failed", { error, provider: providerKey });
-    return loginError("code_exchange_failed");
+    return loginError(app.basePath, "code_exchange_failed");
   }
 }
 
@@ -63,7 +64,7 @@ export async function handleOAuthCallback(
   providerKey: string,
 ): Promise<Response> {
   const provider = pickProvider(app, providerKey);
-  if (!provider) return loginError("provider_not_configured");
+  if (!provider) return loginError(app.basePath, "provider_not_configured");
 
   const url = new URL(ctx.request.url);
   const state = url.searchParams.get("state");
@@ -73,16 +74,18 @@ export async function handleOAuthCallback(
   // TTL; consume it here so the slot is freed immediately.
   if (url.searchParams.has("error")) {
     if (state) await consumeOAuthState(ctx.db, state);
-    return loginError("state_invalid");
+    return loginError(app.basePath, "state_invalid");
   }
 
   const code = url.searchParams.get("code");
-  if (!code || !state) return loginError("state_invalid");
-  if (code.length > MAX_CODE_LENGTH) return loginError("state_invalid");
+  if (!code || !state) return loginError(app.basePath, "state_invalid");
+  if (code.length > MAX_CODE_LENGTH)
+    return loginError(app.basePath, "state_invalid");
 
   const stored = await consumeOAuthState(ctx.db, state);
-  if (!stored) return loginError("state_expired");
-  if (stored.provider !== providerKey) return loginError("state_invalid");
+  if (!stored) return loginError(app.basePath, "state_expired");
+  if (stored.provider !== providerKey)
+    return loginError(app.basePath, "state_invalid");
 
   const redirectUri = oauthCallbackUrl(app, providerKey);
 
@@ -108,17 +111,19 @@ export async function handleOAuthCallback(
       firstSignIn: created,
     });
 
-    return redirectTo(ADMIN_PATH, { "set-cookie": cookieHeader });
+    return redirectTo(withBasePath(ADMIN_PATH, app.basePath), {
+      "set-cookie": cookieHeader,
+    });
   } catch (error) {
     if (error instanceof OAuthError) {
       ctx.logger.warn("oauth_callback_rejected", {
         provider: providerKey,
         code: error.code,
       });
-      return loginError(error.code);
+      return loginError(app.basePath, error.code);
     }
     ctx.logger.error("oauth_callback_failed", { error, provider: providerKey });
-    return loginError("code_exchange_failed");
+    return loginError(app.basePath, "code_exchange_failed");
   }
 }
 
@@ -139,11 +144,16 @@ function pickProvider(app: PlumixApp, key: string): OAuthProviderClient | null {
 // custom adapter rewrites Host on the way in. (Cloudflare Workers binds
 // `request.url` to the connection hostname, but other adapters may not.)
 function oauthCallbackUrl(app: PlumixApp, providerKey: string): string {
-  return `${app.origin}/_plumix/auth/oauth/${providerKey}/callback`;
+  const path = `/_plumix/auth/oauth/${providerKey}/callback`;
+  return `${app.origin}${withBasePath(path, app.basePath)}`;
 }
 
-function loginError(code: OAuthErrorCode): Response {
+function loginError(basePath: string, code: OAuthErrorCode): Response {
   // Relative location — keeps the same scheme/host/port the browser
   // already used to reach us, no need to know the canonical origin.
-  return loginErrorRedirect(LOGIN_PATH, "oauth_error", code);
+  return loginErrorRedirect(
+    withBasePath(LOGIN_PATH, basePath),
+    "oauth_error",
+    code,
+  );
 }

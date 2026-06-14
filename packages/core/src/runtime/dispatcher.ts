@@ -6,6 +6,7 @@ import type { PlumixApp } from "./app.js";
 import { readSessionCookie } from "../auth/cookies.js";
 import { hasCsrfHeader, hasMatchingOrigin } from "../auth/csrf.js";
 import { parseOAuthPath } from "../auth/oauth/match.js";
+import { stripBasePath, withBasePath } from "../base-path.js";
 import { interfaceEnabled } from "../config.js";
 import { withUser } from "../context/app.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
@@ -20,7 +21,10 @@ import {
 } from "../seo/feed.js";
 import { handleRobotsTxt } from "../seo/robots.js";
 import { handleSitemapIndex, handleSubSitemap } from "../seo/sitemap.js";
-import { rewriteAdminShellLangDir } from "./admin-shell.js";
+import {
+  injectAdminBaseHref,
+  rewriteAdminShellLangDir,
+} from "./admin-shell.js";
 import {
   forbidden,
   jsonResponse,
@@ -159,6 +163,22 @@ function hasLocalhostOrigin(request: Request): boolean {
 }
 
 async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
+  // Strip the configured subdirectory prefix once, at the edge, by rewriting
+  // the request URL to its root-relative form. Every downstream branch and
+  // sub-handler (RPC, MCP, REST, auth flows, plugin routes, the public router,
+  // the admin shell) then matches root-relative paths with no base awareness
+  // of its own; outbound URL builders re-add the prefix via `withBasePath`. A
+  // request that isn't under the base (e.g. the bare domain root when mounted
+  // at `/custom-directory`) isn't part of the mounted site — 404 it. A root
+  // deployment (`basePath === ""`) leaves the request untouched.
+  if (app.basePath !== "") {
+    const rawUrl = new URL(ctx.request.url);
+    const stripped = stripBasePath(rawUrl.pathname, app.basePath);
+    if (stripped === null) return notFound("outside-base-path");
+    rawUrl.pathname = stripped;
+    ctx = { ...ctx, request: new Request(rawUrl, ctx.request) };
+  }
+
   const url = new URL(ctx.request.url);
   const { pathname } = url;
 
@@ -494,6 +514,15 @@ async function serveAdmin(ctx: AppContext): Promise<Response> {
   // asset layer before the worker or represent a real 404. Don't mask a
   // missing asset by returning HTML — the browser loader would choke.
   if (ASSET_LIKE.test(pathname)) {
+    // Under a subdirectory mount the platform asset layer never matched this
+    // request — its bucket paths omit the prefix, so the (already base-stripped)
+    // request fell through to the worker. Serve it from the binding here. At
+    // the root the platform had its chance, so a miss is a genuine 404.
+    if (ctx.basePath !== "") {
+      return ctx.assets.fetch(
+        new Request(new URL(ctx.request.url), ctx.request),
+      );
+    }
     return notFound("admin-asset-not-found");
   }
   // SPA deep link: admin's client router owns routing past /_plumix/admin/.
@@ -533,8 +562,17 @@ async function serveAdmin(ctx: AppContext): Promise<Response> {
   headers.set("cache-control", "private, no-cache");
   headers.append("vary", "cookie, accept-language");
 
+  // `<base href>` anchors the relative-based client bundle (assets, the client
+  // router's basepath, and the RPC URL) to wherever the admin is mounted, so
+  // the same precompiled admin serves correctly at the root or under any
+  // subdirectory without a rebuild.
+  const baseHref = withBasePath(`${ADMIN_PREFIX}/`, ctx.basePath);
   const html = await upstream.text();
-  return new Response(rewriteAdminShellLangDir(html, locale), {
+  const shell = injectAdminBaseHref(
+    rewriteAdminShellLangDir(html, locale),
+    baseHref,
+  );
+  return new Response(shell, {
     status: upstream.status,
     statusText: upstream.statusText,
     headers,

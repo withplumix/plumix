@@ -1,5 +1,6 @@
 import type { AppContext } from "../context/app.js";
 import type { PlumixApp } from "../runtime/app.js";
+import { withBasePath } from "../base-path.js";
 import { buildSessionCookie, isSecureRequest } from "./cookies.js";
 import { createSession, readRequestMeta } from "./sessions.js";
 
@@ -34,6 +35,9 @@ export async function mintSessionAndCookie(
     maxAgeSeconds: app.sessionPolicy.maxAgeSeconds,
     secure: isSecureRequest(ctx.request),
     sameSite: "Lax",
+    // Scope the session to the subdirectory so it isn't sent to a sibling
+    // app on the same host (`""` → `/`, the host-wide default).
+    path: withBasePath("/", app.basePath),
   });
   return { token, cookieHeader };
 }

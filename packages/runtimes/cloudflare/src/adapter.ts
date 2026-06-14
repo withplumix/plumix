@@ -206,6 +206,7 @@ function buildFetch(app: PlumixApp): FetchHandler {
         authenticator: app.authenticator,
         bootstrapAllowed: app.bootstrapAllowed,
         origin: app.origin,
+        basePath: app.basePath,
         siteName: app.config.auth.magicLink?.siteName,
         appContextExtensions: app.appContextExtensions,
       });
@@ -281,6 +282,7 @@ function buildScheduled(app: PlumixApp): ScheduledHandler {
       authenticator: app.authenticator,
       bootstrapAllowed: app.bootstrapAllowed,
       origin: app.origin,
+      basePath: app.basePath,
       siteName: app.config.auth.magicLink?.siteName,
       appContextExtensions: app.appContextExtensions,
     });

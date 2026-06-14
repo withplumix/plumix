@@ -5,6 +5,7 @@ import type { User } from "../../db/schema/users.js";
 import type { PlumixApp } from "../../runtime/app.js";
 import type { ValidInvite } from "../invite.js";
 import type { AuthenticationResponse } from "./types.js";
+import { withBasePath } from "../../base-path.js";
 import { eq, isUniqueConstraintError } from "../../db/index.js";
 import { credentials } from "../../db/schema/credentials.js";
 import { users } from "../../db/schema/users.js";
@@ -383,6 +384,9 @@ export async function handleSignout(ctx: AppContext): Promise<Response> {
   const cookie = buildSessionDeletionCookie({
     secure: isSecureRequest(ctx.request),
     sameSite: "Lax",
+    // Must match the Path the session was minted with (see mintSessionAndCookie)
+    // or the browser won't clear it.
+    path: withBasePath("/", ctx.basePath),
   });
   // If the configured authenticator runs an external session (CF
   // Access, SAML), surface the IdP logout URL so the admin client can

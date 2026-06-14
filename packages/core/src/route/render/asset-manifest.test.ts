@@ -17,6 +17,19 @@ describe("bundledCssTags", () => {
     );
   });
 
+  test("prefixes the configured basePath so theme CSS loads under a subdirectory", () => {
+    const manifest: AssetManifest = {
+      "src/theme/index.ts": {
+        file: "assets/theme-abc123.js",
+        isEntry: true,
+        css: ["assets/theme-def456.css"],
+      },
+    };
+    expect(bundledCssTags(manifest, "/custom-directory")).toBe(
+      '<link rel="stylesheet" href="/custom-directory/assets/theme-def456.css" />',
+    );
+  });
+
   test("emits nothing when no entry chunk references CSS", () => {
     const manifest: AssetManifest = {
       "src/theme/index.ts": {

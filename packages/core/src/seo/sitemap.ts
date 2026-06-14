@@ -1,4 +1,5 @@
 import type { AppContext } from "../context/app.js";
+import { withBasePath } from "../base-path.js";
 import { and, eq, sql } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { terms } from "../db/schema/terms.js";
@@ -143,7 +144,8 @@ async function sitemapIndexLocs(ctx: AppContext): Promise<string[]> {
   const pushScope = (name: string, total: number): void => {
     const pages = Math.max(1, Math.ceil(total / SITEMAP_PAGE_SIZE));
     for (let page = 1; total > 0 && page <= pages; page++) {
-      locs.push(`${ctx.origin}/sitemap-${name}-${String(page)}.xml`);
+      const path = `/sitemap-${name}-${String(page)}.xml`;
+      locs.push(`${ctx.origin}${withBasePath(path, ctx.basePath)}`);
     }
   };
 

@@ -8,6 +8,7 @@ import {
   inArray,
   like,
   sql,
+  withBasePath,
 } from "plumix/plugin";
 import * as v from "valibot";
 
@@ -167,7 +168,7 @@ async function buildMediaItem(
   meta: NonNullable<ReturnType<typeof parseMediaMeta>>,
 ): Promise<MediaItem> {
   const url = ctx.storage
-    ? await resolveMediaUrl(ctx.storage, meta.storageKey, row.id)
+    ? await resolveMediaUrl(ctx.storage, meta.storageKey, row.id, ctx.basePath)
     : meta.storageKey;
   // `publishedAt` is the "uploaded on" source of truth; fall back to createdAt.
   const uploadedAt = (row.publishedAt ?? row.createdAt).toISOString();
@@ -207,9 +208,12 @@ export async function resolveMediaUrl(
   storage: NonNullable<AppContext["storage"]>,
   storageKey: string,
   entryId: number,
+  basePath = "",
 ): Promise<string> {
   const direct = await storage.url(storageKey);
-  return direct ?? `/_plumix/media/serve/${String(entryId)}`;
+  return (
+    direct ?? withBasePath(`/_plumix/media/serve/${String(entryId)}`, basePath)
+  );
 }
 
 // Translate `accept` into a SQL predicate against the JSON `mime` field. Real

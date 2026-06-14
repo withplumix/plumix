@@ -88,6 +88,13 @@ export interface PlumixApp {
    * features don't have to reach into `passkey.*` to learn it.
    */
   readonly origin: string;
+  /**
+   * Normalized subdirectory prefix from `config.basePath` (`""` for a root
+   * deployment). Hoisted alongside `origin` so the dispatcher and runtime
+   * adapters thread it onto each per-request `AppContext` without reaching
+   * into `config`.
+   */
+  readonly basePath: string;
   /** See RuntimeContext.devCsrfLocalhost — false in production builds. */
   readonly devCsrfLocalhost: boolean;
   readonly passkey: ResolvedPasskeyConfig;
@@ -362,6 +369,7 @@ export async function buildApp(
     loadRpcHandler,
     loadRestHandler,
     origin: passkey.origin,
+    basePath: config.basePath,
     devCsrfLocalhost: runtime.devCsrfLocalhost ?? false,
     passkey,
     sessionPolicy: config.auth.sessions ?? DEFAULT_SESSION_POLICY,

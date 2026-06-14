@@ -1,3 +1,5 @@
+import { withBasePath } from "../../base-path.js";
+
 /**
  * The Vite-emitted manifest shape (subset). Vite writes this to
  * `<outDir>/.vite/manifest.json` when `build.manifest: true`; plumix's
@@ -27,7 +29,7 @@ export type AssetManifest = Readonly<Record<string, AssetManifestEntry>>;
 // controllable. Themes that need a specific cascade should declare
 // CSS via `document.link[]` (emits before bundled CSS) and rely on
 // CSS specificity for the rest.
-export function bundledCssTags(manifest: AssetManifest): string {
+export function bundledCssTags(manifest: AssetManifest, basePath = ""): string {
   const css = new Set<string>();
   const visited = new Set<string>();
   for (const [key, entry] of Object.entries(manifest)) {
@@ -35,7 +37,10 @@ export function bundledCssTags(manifest: AssetManifest): string {
   }
   if (css.size === 0) return "";
   return Array.from(css)
-    .map((href) => `<link rel="stylesheet" href="/${href}" />`)
+    .map(
+      (href) =>
+        `<link rel="stylesheet" href="${withBasePath(`/${href}`, basePath)}" />`,
+    )
     .join("");
 }
 

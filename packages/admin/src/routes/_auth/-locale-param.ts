@@ -3,6 +3,8 @@
 // pick are byte-identical and the unified `resolveLocale` reads either.
 import { buildLocaleCookie } from "@plumix/core/i18n";
 
+import { adminBasePath } from "../../lib/admin-base.js";
+
 /** Builds the next search-param object when the login locale dropdown
  *  changes. Always sets `?lang=`, even when the chosen code matches
  *  the site default, because the admin shell's Accept-Language fallback
@@ -41,5 +43,5 @@ export function writeLocaleCookie(
   const secure =
     options.secure ??
     (typeof location !== "undefined" && location.protocol === "https:");
-  document.cookie = buildLocaleCookie(code, secure);
+  document.cookie = buildLocaleCookie(code, secure, adminBasePath());
 }

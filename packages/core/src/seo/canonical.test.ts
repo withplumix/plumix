@@ -3,10 +3,11 @@ import { describe, expect, test } from "vitest";
 import type { AppContext } from "../context/app.js";
 import { canonicalRedirectTarget, canonicalUrl } from "./canonical.js";
 
-function ctxFor(url: string): AppContext {
+function ctxFor(url: string, basePath = ""): AppContext {
   return {
     request: new Request(url),
     origin: "https://cms.example",
+    basePath,
   } as unknown as AppContext;
 }
 

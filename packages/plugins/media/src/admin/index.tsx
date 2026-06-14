@@ -35,31 +35,40 @@ declare const window:
     }
   | undefined;
 
-if (typeof window !== "undefined") {
-  if (window.plumix) {
-    window.plumix.registerPluginFieldType(
+// Exported so the behaviour is testable without re-evaluating the module's
+// load-time side effect (which `vi.resetModules()` + dynamic import can run
+// more than once under load — the source of a prior flaky test).
+export function registerMediaAdmin(
+  plumix: PlumixWindowGlobal | undefined,
+): void {
+  if (plumix) {
+    plumix.registerPluginFieldType(
       "media",
       MediaPickerField as ComponentType<never>,
     );
-    window.plumix.registerPluginFieldType(
+    plumix.registerPluginFieldType(
       "mediaList",
       MediaListPickerField as ComponentType<never>,
     );
     for (const spec of mediaBlocks) {
-      window.plumix.registerPluginBlock(spec);
+      plumix.registerPluginBlock(spec);
     }
-  } else {
-    // Silent no-op would leave the `media`/`mediaList` field renderers
-    // unregistered for the whole session — every media field would fall
-    // through to the legacy text-input fallback with no error visible.
-    // Surface the misconfiguration so a deployment with a broken
-    // load-order is diagnosable instead of silently degraded.
-    console.warn(
-      "[plumix-plugin-media] window.plumix not initialized — media " +
-        "field renderers and blocks not registered. Verify the host admin " +
-        "has booted plumix-globals before the plugin chunk loads.",
-    );
+    return;
   }
+  // Silent no-op would leave the `media`/`mediaList` field renderers
+  // unregistered for the whole session — every media field would fall
+  // through to the legacy text-input fallback with no error visible.
+  // Surface the misconfiguration so a deployment with a broken
+  // load-order is diagnosable instead of silently degraded.
+  console.warn(
+    "[plumix-plugin-media] window.plumix not initialized — media " +
+      "field renderers and blocks not registered. Verify the host admin " +
+      "has booted plumix-globals before the plugin chunk loads.",
+  );
+}
+
+if (typeof window !== "undefined") {
+  registerMediaAdmin(window.plumix);
 }
 
 export { MediaLibrary } from "./MediaLibrary.js";

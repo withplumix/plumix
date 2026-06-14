@@ -1,5 +1,12 @@
 import type { AuthenticatedAppContext } from "plumix/plugin";
-import { and, authenticated, base, entries, eq } from "plumix/plugin";
+import {
+  and,
+  authenticated,
+  base,
+  entries,
+  eq,
+  withBasePath,
+} from "plumix/plugin";
 import * as v from "valibot";
 
 import { looksLikeMime, MAGIC_BYTE_SAMPLE_SIZE } from "./magic-bytes.js";
@@ -203,7 +210,10 @@ export function createMediaRouter(
         // and the upload-route enforces the size cap on the actual
         // stream, not just the Content-Length header.
         return {
-          uploadUrl: `/_plumix/media/upload/${String(created.id)}`,
+          uploadUrl: withBasePath(
+            `/_plumix/media/upload/${String(created.id)}`,
+            context.basePath,
+          ),
           method: "PUT",
           headers: { "content-type": normalizedMime },
           mediaId: created.id,
@@ -290,7 +300,12 @@ export function createMediaRouter(
         throw errors.CONFLICT({ data: { reason: "already_confirmed" } });
       }
 
-      const url = await resolveMediaUrl(storage, meta.storageKey, published.id);
+      const url = await resolveMediaUrl(
+        storage,
+        meta.storageKey,
+        published.id,
+        context.basePath,
+      );
       return {
         id: published.id,
         url,

@@ -49,6 +49,32 @@ describe("injectIslandsBootstrap", () => {
     );
   });
 
+  test("build mode prefixes the basePath so islands hydrate under a subdirectory", () => {
+    const body = '<plumix-island chunk-url="/x"></plumix-island>';
+    const manifest = {
+      ".plumix/islands-entry.ts": {
+        file: "assets/plumix-islands-runtime-abc123.js",
+        isEntry: true,
+      },
+      ".plumix/islands-renderer-entry.ts": {
+        file: "assets/plumix-islands-renderer-def456.js",
+        isEntry: true,
+      },
+    };
+    const out = injectIslandsBootstrap(
+      body,
+      manifest,
+      "build",
+      "/custom-directory",
+    );
+    expect(out).toContain(
+      'src="/custom-directory/assets/plumix-islands-runtime-abc123.js"',
+    );
+    expect(out).toContain(
+      'data-plumix-renderer-url="/custom-directory/assets/plumix-islands-renderer-def456.js"',
+    );
+  });
+
   test("build mode falls back to the dev paths when manifest entries are missing", () => {
     // First-build edge: manifest exists but doesn't have the entries yet
     // (the cold-build ordering @cloudflare/vite-plugin produces). Don't

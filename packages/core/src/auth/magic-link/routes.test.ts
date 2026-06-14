@@ -78,6 +78,29 @@ describe("magic-link request route", () => {
     );
   });
 
+  test("the verify link in the email carries the configured basePath", async () => {
+    const { mailer, sent } = captureMailer();
+    const h = await createDispatcherHarness({
+      basePath: "/custom-directory",
+      magicLink: { siteName: "Plumix Test" },
+      mailer,
+    });
+    await h.factory.user.create({
+      email: "alice@example.com",
+      role: "editor",
+    });
+
+    const response = await h.dispatch(
+      postRequest("/custom-directory/_plumix/auth/magic-link/request", {
+        email: "alice@example.com",
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(sent[0]?.text).toContain(
+      "https://cms.example/custom-directory/_plumix/auth/magic-link/verify?token=",
+    );
+  });
+
   test("returns the same shape when user does not exist (no enumeration)", async () => {
     const { mailer, sent } = captureMailer();
     const h = await createDispatcherHarness({
@@ -173,6 +196,38 @@ describe("magic-link verify route", () => {
     const sessionRows = await h.db.select().from(sessions);
     expect(sessionRows).toHaveLength(1);
     expect(sessionRows[0]?.userId).toBe(user.id);
+  });
+
+  test("under a basePath the post-verify redirect and cookie are base-scoped", async () => {
+    const { mailer } = captureMailer();
+    const h = await createDispatcherHarness({
+      basePath: "/custom-directory",
+      magicLink: { siteName: "Plumix Test" },
+      mailer,
+    });
+    const user = await h.factory.user.create({
+      email: "alice@example.com",
+      role: "editor",
+    });
+    const token = (
+      await h.factory.authToken.create({
+        userId: user.id,
+        email: "alice@example.com",
+      })
+    ).token;
+
+    const response = await h.dispatch(
+      getRequest(
+        `/custom-directory/_plumix/auth/magic-link/verify?token=${token}`,
+      ),
+    );
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe(
+      "/custom-directory/_plumix/admin",
+    );
+    expect(response.headers.get("set-cookie")).toContain(
+      "Path=/custom-directory",
+    );
   });
 
   test("rejects an unknown token with token_invalid", async () => {

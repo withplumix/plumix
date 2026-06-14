@@ -15,6 +15,7 @@
 // `rollupOptions.input`). Read from Vite's `.vite/manifest.json`.
 
 import type { AssetManifest } from "./asset-manifest.js";
+import { withBasePath } from "../../base-path.js";
 
 const DEV_ENTRY_PATH = "/.plumix/islands-entry.ts";
 const RUNTIME_MANIFEST_KEY = ".plumix/islands-entry.ts";
@@ -30,6 +31,7 @@ export function injectIslandsBootstrap(
   body: string,
   manifest: AssetManifest,
   command: "serve" | "build",
+  basePath = "",
 ): string {
   if (!body.includes("<plumix-island")) return body;
   const src = resolveEntryUrl(
@@ -37,12 +39,14 @@ export function injectIslandsBootstrap(
     command,
     RUNTIME_MANIFEST_KEY,
     DEV_ENTRY_PATH,
+    basePath,
   );
   const rendererUrl = resolveEntryUrl(
     manifest,
     command,
     RENDERER_MANIFEST_KEY,
     DEV_RENDERER_PATH,
+    basePath,
   );
   return (
     body +
@@ -58,10 +62,11 @@ function resolveEntryUrl(
   command: "serve" | "build",
   key: string,
   devPath: string,
+  basePath: string,
 ): string {
   if (command === "build") {
     const entry = manifest[key];
-    if (entry?.file) return "/" + entry.file;
+    if (entry?.file) return withBasePath("/" + entry.file, basePath);
   }
   return devPath;
 }

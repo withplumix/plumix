@@ -1,4 +1,5 @@
 import type { PasskeyErrorCode } from "./passkey-errors.js";
+import { adminBasePath } from "./admin-base.js";
 import { base64urlToBuffer, bufferToBase64url } from "./base64url.js";
 import { PasskeyError } from "./passkey-errors.js";
 
@@ -47,7 +48,7 @@ interface VerifySuccess {
 async function postJson<T>(path: string, body: unknown): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(path, {
+    response = await fetch(`${adminBasePath()}${path}`, {
       method: "POST",
       credentials: "same-origin",
       headers: { "content-type": "application/json", ...PLUMIX_CSRF_HEADER },
@@ -74,7 +75,7 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
 async function postJsonNoBody<T>(path: string): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(path, {
+    response = await fetch(`${adminBasePath()}${path}`, {
       method: "POST",
       credentials: "same-origin",
       headers: PLUMIX_CSRF_HEADER,

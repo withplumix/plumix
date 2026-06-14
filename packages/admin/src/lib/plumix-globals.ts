@@ -10,6 +10,7 @@ import * as ReactRouterNs from "@tanstack/react-router";
 import * as ReactDomNs from "react-dom";
 import * as ReactDomClientNs from "react-dom/client";
 
+import { adminBasePath } from "./admin-base.js";
 import { pluginCatalogLoaderRef } from "./i18n-boot.js";
 import { registerPaletteCommand } from "./palette-commands.js";
 import {
@@ -62,6 +63,9 @@ declare global {
       readonly registerPaletteCommand: typeof registerPaletteCommand;
       readonly runtime: typeof runtime;
       readonly i18n: PlumixI18nGlobal;
+      /** Subdirectory mount for plugin chunks to prefix their `/_plumix/...`
+       *  fetches with; derived from the `<base href>` (see {@link adminBasePath}). */
+      readonly basePath: string;
     };
   }
 }
@@ -79,6 +83,7 @@ export function bootPlumixGlobals(): void {
     registerPluginMarkSchema,
     registerPaletteCommand,
     runtime,
+    basePath: adminBasePath(),
     // Indirection through the ref so the manifest-bound loader
     // installed by `bootI18n` is reachable from plugin chunks that
     // load post-boot. Pre-boot callers hit the no-op default; the

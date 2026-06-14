@@ -36,6 +36,10 @@ export const setLocale = base
     );
     context.resHeaders?.append(
       "set-cookie",
-      buildLocaleCookie(match.code, isSecureRequest(context.request)),
+      buildLocaleCookie(
+        match.code,
+        isSecureRequest(context.request),
+        context.basePath,
+      ),
     );
   });

@@ -40,6 +40,7 @@ describe("requestMagicLink", () => {
     await requestMagicLink(db, {
       email: "alice@example.com",
       origin: "https://cms.example",
+      basePath: "",
       mailer,
       siteName: "Test Site",
     });
@@ -76,6 +77,7 @@ describe("requestMagicLink", () => {
     await requestMagicLink(db, {
       email: "stranger@example.com",
       origin: "https://cms.example",
+      basePath: "",
       mailer,
       siteName: "Test",
     });
@@ -97,6 +99,7 @@ describe("requestMagicLink", () => {
     await requestMagicLink(db, {
       email: "blocked@example.com",
       origin: "https://cms.example",
+      basePath: "",
       mailer,
       siteName: "Test",
     });
@@ -115,6 +118,7 @@ describe("requestMagicLink", () => {
     await requestMagicLink(db, {
       email: "  Alice@Example.com  ",
       origin: "https://cms.example",
+      basePath: "",
       mailer,
       siteName: "Test",
     });
@@ -136,6 +140,7 @@ describe("requestMagicLink", () => {
     await requestMagicLink(db, {
       email: "newcomer@example.com",
       origin: "https://cms.example",
+      basePath: "",
       mailer,
       siteName: "Test",
     });
@@ -166,6 +171,7 @@ describe("requestMagicLink", () => {
     await requestMagicLink(db, {
       email: "newcomer@example.com",
       origin: "https://cms.example",
+      basePath: "",
       mailer,
       siteName: "Test",
     });
@@ -183,6 +189,7 @@ describe("requestMagicLink", () => {
     await requestMagicLink(db, {
       email: "stranger@unknown.com",
       origin: "https://cms.example",
+      basePath: "",
       mailer,
       siteName: "Test",
     });
@@ -202,6 +209,7 @@ describe("requestMagicLink", () => {
     await requestMagicLink(db, {
       email: "first@example.com",
       origin: "https://cms.example",
+      basePath: "",
       mailer,
       siteName: "Test",
     });
@@ -223,6 +231,7 @@ describe("requestMagicLink", () => {
     await requestMagicLink(db, {
       email: "first@example.com",
       origin: "https://cms.example",
+      basePath: "",
       mailer,
       siteName: "Test",
       bootstrapAllowed: true,
@@ -249,6 +258,7 @@ describe("requestMagicLink", () => {
       requestMagicLink(db, {
         email: "alice@example.com",
         origin: "https://cms.example",
+        basePath: "",
         mailer,
         siteName: "Test",
       }),
@@ -268,6 +278,7 @@ describe("requestMagicLink", () => {
     await requestMagicLink(db, {
       email: "klaus@example.com",
       origin: "https://cms.example",
+      basePath: "",
       mailer,
       siteName: "Test Site",
       locale: "de",
@@ -289,6 +300,7 @@ describe("requestMagicLink", () => {
     await requestMagicLink(db, {
       email: "fallback@example.com",
       origin: "https://cms.example",
+      basePath: "",
       mailer,
       siteName: "Test Site",
       locale: "xx-INVALID",

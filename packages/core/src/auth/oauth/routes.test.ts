@@ -74,6 +74,28 @@ describe("oauth start route", () => {
     expect(response.headers.get("location")).toBe("/_plumix/admin/bootstrap");
   });
 
+  test("under a basePath the redirect_uri and post-auth redirects carry the prefix", async () => {
+    const h = await createDispatcherHarness({
+      basePath: "/custom-directory",
+      oauth: TEST_OAUTH,
+    });
+    await h.seedUser("admin");
+
+    const response = await h.dispatch(
+      new Request(
+        "https://cms.example/custom-directory/_plumix/auth/oauth/github/start",
+      ),
+    );
+    expect(response.status).toBe(302);
+    const location = response.headers.get("location");
+    if (!location) throw new Error("missing location header");
+    // The redirect_uri the IdP will bounce back to must include the base, or
+    // the callback 404s as outside-the-base.
+    expect(new URL(location).searchParams.get("redirect_uri")).toBe(
+      "https://cms.example/custom-directory/_plumix/auth/oauth/github/callback",
+    );
+  });
+
   test("bootstrapVia=first-method-wins lets the OAuth flow start with zero users", async () => {
     const h = await createDispatcherHarness({
       oauth: TEST_OAUTH,
