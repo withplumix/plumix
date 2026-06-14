@@ -12,6 +12,7 @@ import { resolveLocale } from "../i18n/resolve-locale.js";
 import { matchRoute } from "../route/match.js";
 import { renderErrorThroughTheme } from "../route/render/render-template.js";
 import { resolvePublicRoute } from "../route/resolve.js";
+import { canonicalRedirectTarget } from "../seo/canonical.js";
 import {
   handleFeed,
   isPublicEntryType,
@@ -20,7 +21,13 @@ import {
 import { handleRobotsTxt } from "../seo/robots.js";
 import { handleSitemapIndex, handleSubSitemap } from "../seo/sitemap.js";
 import { rewriteAdminShellLangDir } from "./admin-shell.js";
-import { forbidden, jsonResponse, methodNotAllowed, notFound } from "./http.js";
+import {
+  forbidden,
+  jsonResponse,
+  methodNotAllowed,
+  notFound,
+  permanentRedirect,
+} from "./http.js";
 import { loadUserForPublicRequest } from "./load-user-for-public-request.js";
 
 const RPC_PREFIX = "/_plumix/rpc";
@@ -294,6 +301,11 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
       );
     }
   }
+
+  // Normalize a public page URL to its canonical (slash-less) shape before
+  // routing — the 301 target shares `canonicalUrl` with the rel=canonical tag.
+  const canonical = canonicalRedirectTarget(ctx);
+  if (canonical !== null) return permanentRedirect(canonical);
 
   return dispatchPublicRoute(app, ctx, url);
 }

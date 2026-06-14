@@ -2,19 +2,56 @@ import type { AppContext } from "../context/app.js";
 import type { DocumentManifest } from "../theme.js";
 
 /**
+ * Normalize a pathname to its canonical, slash-less shape. `/page/1` is the
+ * same content as the bare listing, so it collapses — `/shop/page/1` → `/shop`,
+ * `/page/1` → `/`. Shared by {@link canonicalUrl} and
+ * {@link canonicalRedirectTarget} so the tag and the 301 can never disagree.
+ */
+function canonicalPath(pathname: string): string {
+  const slashless = pathname === "/" ? "/" : pathname.replace(/\/+$/, "");
+  return slashless.replace(/\/page\/1$/, "") || "/";
+}
+
+/**
  * The single source of truth for a request's canonical URL: the configured
  * site origin + the request path normalized to the fixed slash-less shape
  * (query and fragment dropped so URL variants consolidate). Drives the
- * `<link rel="canonical">` tag now and the 301 normalizer + sitemap/og:url
- * in later slices, so they can never disagree.
+ * `<link rel="canonical">` tag and the 301 normalizer + sitemap/og:url, so
+ * they can never disagree.
  */
 export function canonicalUrl(ctx: AppContext): string {
-  const { pathname } = new URL(ctx.request.url);
-  const slashless = pathname === "/" ? "/" : pathname.replace(/\/+$/, "");
-  // `/page/1` is the same content as the bare listing, so it canonicalizes to
-  // the listing — `/shop/page/1` → `/shop`, `/page/1` → `/`.
-  const normalized = slashless.replace(/\/page\/1$/, "");
-  return `${ctx.origin}${normalized || "/"}`;
+  return `${ctx.origin}${canonicalPath(new URL(ctx.request.url).pathname)}`;
+}
+
+/**
+ * Paths the 301 normalizer must never touch: the root, the plumix surface, the
+ * SEO machine endpoints (robots, feeds), and asset/extension-like paths (a dot
+ * in the last segment — covers `sitemap*.xml`, `favicon.ico`, etc.). Everything
+ * else is a public page route whose shape we normalize.
+ */
+export function isCanonicalExempt(pathname: string): boolean {
+  if (pathname === "/") return true;
+  if (pathname === "/robots.txt") return true;
+  if (pathname.startsWith("/_plumix/")) return true;
+  // Feed endpoints own their exact routing; `/feedback` only shares a prefix.
+  if (pathname === "/feed" || pathname.startsWith("/feed/")) return true;
+  const trimmed = pathname.replace(/\/+$/, "");
+  const lastSegment = trimmed.slice(trimmed.lastIndexOf("/") + 1);
+  return lastSegment.includes(".");
+}
+
+/**
+ * The canonical URL to 301-redirect this request to, or null when it's already
+ * canonical or exempt. Shares {@link canonicalUrl} with the `<link rel=canonical>`
+ * tag so the redirect target and the tag can never disagree; the query string
+ * is preserved, and an already-canonical path returns null (loop-safe).
+ */
+export function canonicalRedirectTarget(ctx: AppContext): string | null {
+  const url = new URL(ctx.request.url);
+  if (isCanonicalExempt(url.pathname)) return null;
+  const target = canonicalPath(url.pathname);
+  if (url.pathname === target) return null;
+  return `${ctx.origin}${target}${url.search}`;
 }
 
 function hasCanonical(manifest: DocumentManifest): boolean {

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../context/app.js";
-import { canonicalUrl } from "./canonical.js";
+import { canonicalRedirectTarget, canonicalUrl } from "./canonical.js";
 
 function ctxFor(url: string): AppContext {
   return {
@@ -54,5 +54,50 @@ describe("canonicalUrl", () => {
     expect(canonicalUrl(ctxFor("https://edge.internal/post/hello"))).toBe(
       "https://cms.example/post/hello",
     );
+  });
+});
+
+describe("canonicalRedirectTarget", () => {
+  test("trailing slash redirects to the slash-less canonical", () => {
+    expect(canonicalRedirectTarget(ctxFor("https://cms.example/about/"))).toBe(
+      "https://cms.example/about",
+    );
+  });
+
+  test("/page/1 redirects to the bare listing", () => {
+    expect(
+      canonicalRedirectTarget(ctxFor("https://cms.example/shop/page/1")),
+    ).toBe("https://cms.example/shop");
+  });
+
+  test("an already-canonical URL is not redirected (no loop)", () => {
+    expect(
+      canonicalRedirectTarget(ctxFor("https://cms.example/about")),
+    ).toBeNull();
+  });
+
+  test("the query string is preserved on the redirect", () => {
+    expect(
+      canonicalRedirectTarget(ctxFor("https://cms.example/about/?utm=x&p=2")),
+    ).toBe("https://cms.example/about?utm=x&p=2");
+  });
+
+  test.each([
+    ["root", "https://cms.example/"],
+    ["plumix surface", "https://cms.example/_plumix/admin/"],
+    ["robots", "https://cms.example/robots.txt"],
+    ["feed", "https://cms.example/feed/"],
+    ["sub-feed", "https://cms.example/feed/atom/"],
+    ["dotted asset", "https://cms.example/favicon.ico/"],
+    ["sitemap xml", "https://cms.example/sitemap.xml/"],
+  ])("exempt: %s is never redirected", (_label, url) => {
+    expect(canonicalRedirectTarget(ctxFor(url))).toBeNull();
+  });
+
+  test("a feed-prefixed real page is still canonicalized", () => {
+    // `/feedback` only shares a prefix with `/feed`; it's a normal page.
+    expect(
+      canonicalRedirectTarget(ctxFor("https://cms.example/feedback/")),
+    ).toBe("https://cms.example/feedback");
   });
 });
