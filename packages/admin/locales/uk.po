@@ -566,6 +566,11 @@ msgid "users.list.roleFilter.all"
 msgstr "Усі ролі"
 
 #. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.public"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.title"
 msgstr "Дозволені домени"

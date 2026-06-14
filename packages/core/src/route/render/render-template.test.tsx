@@ -206,6 +206,68 @@ describe("SEO — default head meta", () => {
   });
 });
 
+describe("SEO — robots.txt + public gate", () => {
+  test("GET /robots.txt is text/plain and allows crawling by default", async () => {
+    const theme = defineTheme({ templates: { index: () => null } });
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+
+    const res = await h.dispatch(new Request("https://cms.example/robots.txt"));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/plain");
+    expect(await res.text()).toBe("User-agent: *\nDisallow:\n");
+  });
+
+  test("a private site disallows all crawling", async () => {
+    const theme = defineTheme({ templates: { index: () => null } });
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    await h.factory.setting.create({
+      group: "site",
+      key: "public",
+      value: false,
+    });
+
+    const res = await h.dispatch(new Request("https://cms.example/robots.txt"));
+
+    expect(await res.text()).toBe("User-agent: *\nDisallow: /\n");
+  });
+
+  test("the seo:robots-txt filter can modify the body", async () => {
+    const seoPlugin = definePlugin("robots-test", (ctx) => {
+      ctx.addFilter(
+        "seo:robots-txt",
+        (body) => `${body}Sitemap: https://cms.example/sitemap.xml\n`,
+      );
+    });
+    const theme = defineTheme({ templates: { index: () => null } });
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin, seoPlugin],
+      theme,
+    });
+
+    const body = await (
+      await h.dispatch(new Request("https://cms.example/robots.txt"))
+    ).text();
+
+    expect(body).toContain("Sitemap: https://cms.example/sitemap.xml");
+  });
+
+  test("a private site cascades to noindex,nofollow on rendered pages", async () => {
+    const theme = defineTheme({ templates: { index: () => null } });
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    await h.factory.setting.create({
+      group: "site",
+      key: "public",
+      value: false,
+    });
+    await seedPost(h);
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head).toContain('<meta name="robots" content="noindex,nofollow"/>');
+  });
+});
+
 describe("resolvePublicRoute — single entry through theme", () => {
   test("renders the entry title via the matched `single` template", async () => {
     const theme = defineTheme({

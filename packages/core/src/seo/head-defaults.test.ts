@@ -12,6 +12,7 @@ const baseInputs = {
   siteName: "Demo",
   ogLocale: "en",
   noindex: false,
+  siteIsPrivate: false,
 };
 
 const meta = (m: DocumentManifest): readonly DocumentMeta[] => m.meta ?? [];
@@ -51,7 +52,7 @@ describe("seoHeadDefaults", () => {
     expect(byProperty(out, "og:url")?.content).toBe(baseInputs.canonical);
   });
 
-  test("indexable robots by default; noindex when flagged", () => {
+  test("robots reflects index / search / private", () => {
     expect(byName(seoHeadDefaults({}, baseInputs), "robots")?.content).toBe(
       "index,follow,max-image-preview:large",
     );
@@ -59,6 +60,12 @@ describe("seoHeadDefaults", () => {
       byName(seoHeadDefaults({}, { ...baseInputs, noindex: true }), "robots")
         ?.content,
     ).toBe("noindex,follow");
+    expect(
+      byName(
+        seoHeadDefaults({}, { ...baseInputs, siteIsPrivate: true }),
+        "robots",
+      )?.content,
+    ).toBe("noindex,nofollow");
   });
 
   test("og:image omitted when none; summary card downgrades", () => {

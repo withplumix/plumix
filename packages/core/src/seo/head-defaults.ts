@@ -1,10 +1,21 @@
 import type { AppContext } from "../context/app.js";
 import type { DocumentManifest, DocumentMeta, TemplateData } from "../theme.js";
-import { settingsLoader } from "../template-deps-core.js";
 import { canonicalUrl } from "./canonical.js";
+import { loadSiteSettings } from "./site-settings.js";
 
 const ROBOTS_INDEX = "index,follow,max-image-preview:large";
-const ROBOTS_NOINDEX = "noindex,follow";
+const ROBOTS_SEARCH = "noindex,follow";
+const ROBOTS_PRIVATE = "noindex,nofollow";
+
+// A private site is held out entirely; a thin search-results page is kept out
+// of the index but its links are still followed.
+function robotsDirective(input: {
+  readonly siteIsPrivate: boolean;
+  readonly noindex: boolean;
+}): string {
+  if (input.siteIsPrivate) return ROBOTS_PRIVATE;
+  return input.noindex ? ROBOTS_SEARCH : ROBOTS_INDEX;
+}
 
 interface SeoInputs {
   readonly canonical: string;
@@ -15,6 +26,7 @@ interface SeoInputs {
   readonly siteName: string | null;
   readonly ogLocale: string;
   readonly noindex: boolean;
+  readonly siteIsPrivate: boolean;
 }
 
 function hasName(
@@ -52,7 +64,13 @@ export function seoHeadDefaults(
   };
 
   addName("description", inputs.description);
-  addName("robots", inputs.noindex ? ROBOTS_NOINDEX : ROBOTS_INDEX);
+  addName(
+    "robots",
+    robotsDirective({
+      siteIsPrivate: inputs.siteIsPrivate,
+      noindex: inputs.noindex,
+    }),
+  );
   addName("twitter:card", inputs.ogImage ? "summary_large_image" : "summary");
   addProperty("og:title", inputs.title ?? null);
   addProperty("og:type", inputs.ogType);
@@ -68,13 +86,6 @@ export function seoHeadDefaults(
 
 function nonEmpty(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
-}
-
-async function loadSiteSettings(
-  ctx: AppContext,
-): Promise<Record<string, unknown>> {
-  const groups = await settingsLoader(["site"], ctx);
-  return groups.site ?? {};
 }
 
 // `og:locale` wants `lang_TERRITORY`; the active locale code is `lang-TERRITORY`.
@@ -106,5 +117,6 @@ export async function applyHeadMeta(
     ogLocale: toOgLocale(ctx.locale.code),
     // Search-results pages are thin; keep them out of the index.
     noindex: "query" in data,
+    siteIsPrivate: site.public === false,
   });
 }
