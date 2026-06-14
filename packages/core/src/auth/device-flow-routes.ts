@@ -2,6 +2,7 @@ import * as v from "valibot";
 
 import type { AppContext } from "../context/app.js";
 import type { PlumixApp } from "../runtime/app.js";
+import { withBasePath } from "../base-path.js";
 import { jsonResponse } from "../runtime/http.js";
 import { exchangeDeviceCode, requestDeviceCode } from "./device-flow.js";
 
@@ -47,7 +48,10 @@ export async function handleDeviceCodeRequest(
     ctx.db,
   );
 
-  const verificationUri = new URL(VERIFICATION_PATH, app.origin).toString();
+  const verificationUri = new URL(
+    withBasePath(VERIFICATION_PATH, app.basePath),
+    app.origin,
+  ).toString();
   const verificationUriComplete = `${verificationUri}?user_code=${encodeURIComponent(userCode)}`;
 
   return jsonResponse({

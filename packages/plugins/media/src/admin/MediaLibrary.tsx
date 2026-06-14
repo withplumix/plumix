@@ -160,11 +160,19 @@ interface ConfirmResponse {
 // Hand-rolled oRPC POST. Plugin `media/*` procedures don't surface in the
 // admin's typed client (`AppRouterClient` covers core only), so we speak
 // the StandardRPC envelope `{ json, meta: [] }` directly.
+// The subdirectory mount the host exposes (see plumix-globals), used to prefix
+// the worker-routed `/_plumix/...` URLs this file builds in two scopes.
+function pluginBasePath(): string {
+  return (
+    (globalThis as { plumix?: { basePath?: string } }).plumix?.basePath ?? ""
+  );
+}
+
 async function rpcCall<TOutput>(
   procedure: string,
   input: Record<string, unknown>,
 ): Promise<TOutput> {
-  const res = await fetch(`/_plumix/rpc/${procedure}`, {
+  const res = await fetch(`${pluginBasePath()}/_plumix/rpc/${procedure}`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -1240,7 +1248,7 @@ function MediaDetailDrawer({
             // but the route always sends `Content-Disposition:
             // attachment` for this query param, so downloads work
             // regardless of which mode `item.url` is in.
-            href={`/_plumix/media/serve/${String(item.id)}?attachment=1`}
+            href={`${pluginBasePath()}/_plumix/media/serve/${String(item.id)}?attachment=1`}
             download={item.title}
             data-testid="media-detail-download"
             className="bg-card hover:bg-muted flex-1 rounded border px-3 py-2 text-center text-xs no-underline"

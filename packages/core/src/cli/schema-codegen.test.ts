@@ -16,6 +16,7 @@ const baseConfig: PlumixConfig = {
   theme: defineTheme({ templates: { index: () => null } }),
   plugins: [],
   i18n: resolveLocales({ defaultLocale: "en", locales: ["en"] }),
+  basePath: "",
 };
 
 function pluginWithSchemaModule(

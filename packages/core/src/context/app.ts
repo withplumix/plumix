@@ -196,6 +196,14 @@ export interface AppContextBase<
    */
   readonly origin: string;
   /**
+   * Normalized subdirectory prefix the site is served under (`""` for a root
+   * deployment, `/custom-directory` otherwise). Sourced from `config.basePath`.
+   * The dispatcher strips it from the inbound path before routing; outbound URL
+   * builders (canonical, sitemap, feeds, permalinks, cookie `Path`) prepend it
+   * via `withBasePath` so links resolve under the subdirectory.
+   */
+  readonly basePath: string;
+  /**
    * Operator-set site name from `auth.magicLink.siteName`, used as
    * the human-friendly label in mailer subjects ("Confirm your email
    * for {siteName}"). Undefined when magic-link isn't configured —
@@ -250,6 +258,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly user?: AuthenticatedUser | null;
   readonly tokenScopes?: readonly string[] | null;
   readonly origin?: string;
+  readonly basePath?: string;
   readonly siteName?: string;
   readonly logger?: Logger;
   readonly defer?: DeferFn;
@@ -370,6 +379,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     // always passes the canonical operator-set origin so URLs in
     // outgoing email are stable across worker geos.
     origin: args.origin ?? new URL(args.request.url).origin,
+    basePath: args.basePath ?? "",
     siteName: args.siteName,
   };
   // Spread plugin-contributed entries onto the base. The cast is the

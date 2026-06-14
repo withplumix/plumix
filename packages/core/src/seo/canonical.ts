@@ -1,5 +1,6 @@
 import type { AppContext } from "../context/app.js";
 import type { DocumentManifest } from "../theme.js";
+import { withBasePath } from "../base-path.js";
 
 /**
  * Normalize a pathname to its canonical, slash-less shape. `/page/1` is the
@@ -20,7 +21,10 @@ function canonicalPath(pathname: string): string {
  * they can never disagree.
  */
 export function canonicalUrl(ctx: AppContext): string {
-  return `${ctx.origin}${canonicalPath(new URL(ctx.request.url).pathname)}`;
+  // The dispatcher already stripped any base prefix from the request, so the
+  // pathname is root-relative; re-add the prefix on the way out.
+  const canonical = canonicalPath(new URL(ctx.request.url).pathname);
+  return `${ctx.origin}${withBasePath(canonical, ctx.basePath)}`;
 }
 
 /**
@@ -47,11 +51,13 @@ export function isCanonicalExempt(pathname: string): boolean {
  * is preserved, and an already-canonical path returns null (loop-safe).
  */
 export function canonicalRedirectTarget(ctx: AppContext): string | null {
+  // Request path is already root-relative (base stripped at the dispatcher
+  // edge), so `/` — the base prefix's own front page — is exempt as usual.
   const url = new URL(ctx.request.url);
   if (isCanonicalExempt(url.pathname)) return null;
   const target = canonicalPath(url.pathname);
   if (url.pathname === target) return null;
-  return `${ctx.origin}${target}${url.search}`;
+  return `${ctx.origin}${withBasePath(target, ctx.basePath)}${url.search}`;
 }
 
 function hasCanonical(manifest: DocumentManifest): boolean {

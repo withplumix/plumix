@@ -20,8 +20,12 @@ const BACKEND_URL = process.env.PLUMIX_BACKEND_URL ?? "http://localhost:5173";
 // (knip) still find `packages/admin/lingui.config.ts`.
 const PACKAGE_DIR = fileURLToPath(new URL(".", import.meta.url));
 
-export default defineConfig({
-  base: `${ADMIN_BASE_PATH}/`,
+export default defineConfig(({ command }) => ({
+  // A relative base makes the built bundle relocatable: the worker injects a
+  // `<base href>` into the shell, so the same precompiled admin resolves its
+  // assets at the root or under any subdirectory proxy without a rebuild. Dev
+  // is served standalone, so it keeps the absolute mount path.
+  base: command === "build" ? "./" : `${ADMIN_BASE_PATH}/`,
   // tanstackRouter must run before @vitejs/plugin-react. quoteStyle +
   // semicolons keep routeTree.gen.ts prettier-clean across builds.
   plugins: [
@@ -51,4 +55,4 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
-});
+}));

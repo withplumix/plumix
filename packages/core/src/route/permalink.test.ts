@@ -25,8 +25,9 @@ async function buildRegistry(
 function ctxFor(
   db: Awaited<ReturnType<typeof createTestDb>>,
   registry: PluginRegistry,
+  basePath = "",
 ): AppContext {
-  return { db, plugins: registry } as unknown as AppContext;
+  return { db, plugins: registry, basePath } as unknown as AppContext;
 }
 
 describe("buildEntryPermalink", () => {
@@ -44,6 +45,20 @@ describe("buildEntryPermalink", () => {
       slug: "hello-world",
     });
     expect(url).toBe("/post/hello-world");
+  });
+
+  test("prepends the configured basePath so links resolve under the subdirectory", async () => {
+    const registry = await buildRegistry([
+      definePlugin("blog", (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      }),
+    ]);
+    const db = await createTestDb();
+    const ctx = ctxFor(db, registry, "/custom-directory");
+
+    expect(
+      await buildEntryPermalink(ctx, { type: "post", slug: "hello-world" }),
+    ).toBe("/custom-directory/post/hello-world");
   });
 
   test("honors rewrite.slug as the base segment", async () => {

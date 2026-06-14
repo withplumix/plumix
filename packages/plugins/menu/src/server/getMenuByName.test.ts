@@ -47,6 +47,7 @@ function ctxFor(
     hooks: bundle.hooks,
     request: new Request("https://test.example/"),
     resolvedEntity: null,
+    basePath: "",
   } as unknown as AppContext;
 }
 
@@ -402,6 +403,7 @@ describe("getMenuByName", () => {
         hooks: ctx.hooks,
         request: new Request(url),
         resolvedEntity: resolved,
+        basePath: "",
       } as unknown as AppContext;
     }
 

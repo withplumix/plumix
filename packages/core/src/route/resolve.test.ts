@@ -163,7 +163,11 @@ describe("resolvePublicRoute — hierarchical single", () => {
       parentId: team.id,
     });
 
-    const ctx = { db: h.db, plugins: h.app.plugins } as unknown as AppContext;
+    const ctx = {
+      db: h.db,
+      plugins: h.app.plugins,
+      basePath: "",
+    } as unknown as AppContext;
     const url = await buildEntryPermalink(ctx, {
       type: "page",
       slug: leadership.slug,
@@ -826,7 +830,11 @@ describe("resolvePublicRoute — taxonomy", () => {
       parentId: europe.id,
     });
 
-    const ctx = { db: h.db, plugins: h.app.plugins } as unknown as AppContext;
+    const ctx = {
+      db: h.db,
+      plugins: h.app.plugins,
+      basePath: "",
+    } as unknown as AppContext;
     const url = await buildTermArchiveUrl(ctx, {
       taxonomy: "region",
       slug: france.slug,

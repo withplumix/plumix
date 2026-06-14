@@ -38,7 +38,9 @@ async function rpcCall<TOutput>(
   procedure: string,
   input: unknown = {},
 ): Promise<TOutput> {
-  const res = await fetch(`/_plumix/rpc/${procedure}`, {
+  const base =
+    (globalThis as { plumix?: { basePath?: string } }).plumix?.basePath ?? "";
+  const res = await fetch(`${base}/_plumix/rpc/${procedure}`, {
     method: "POST",
     headers: {
       "content-type": "application/json",

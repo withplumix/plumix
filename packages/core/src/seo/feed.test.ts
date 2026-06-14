@@ -90,6 +90,7 @@ describe("renderAtom", () => {
 describe("applyFeedDiscovery", () => {
   const ctx = {
     origin: "https://cms.example",
+    basePath: "",
     plugins: {
       entryTypes: new Map([["post", { name: "post", isPublic: true }]]),
       termTaxonomies: new Map([
@@ -115,6 +116,22 @@ describe("applyFeedDiscovery", () => {
     ).toEqual([
       "application/rss+xml https://cms.example/feed",
       "application/atom+xml https://cms.example/feed/atom",
+    ]);
+  });
+
+  test("discovery links carry the configured basePath", () => {
+    const basedCtx = { ...ctx, basePath: "/custom-directory" } as AppContext;
+    const data = {
+      entries: [],
+      pagination: { page: 1, perPage: 10, total: 0, pageCount: 0 },
+    } as unknown as TemplateData;
+    expect(
+      alternates(
+        applyFeedDiscovery(empty, data, basedCtx, { siteIsPrivate: false }),
+      ),
+    ).toEqual([
+      "application/rss+xml https://cms.example/custom-directory/feed",
+      "application/atom+xml https://cms.example/custom-directory/feed/atom",
     ]);
   });
 

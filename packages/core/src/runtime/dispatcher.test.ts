@@ -838,6 +838,174 @@ describe("dispatcher — plugin raw routes", () => {
   });
 });
 
+describe("dispatcher — basePath (served under a subdirectory)", () => {
+  const blog = definePlugin("test-blog", (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+  });
+
+  test("a public route under the base path renders; the bare path 404s", async () => {
+    const h = await createDispatcherHarness({
+      basePath: "/custom-directory",
+      plugins: [blog],
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "hello-world",
+      title: "Hello World",
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const underBase = await h.dispatch(
+      new Request("https://cms.example/custom-directory/post/hello-world"),
+    );
+    expect(underBase.status).toBe(200);
+    expect(await underBase.text()).toContain("<h1>Hello World</h1>");
+
+    // The same path WITHOUT the prefix isn't part of the mounted site.
+    const bare = await h.dispatch(
+      new Request("https://cms.example/post/hello-world"),
+    );
+    expect(bare.status).toBe(404);
+  });
+
+  test("the front page is served at the bare base prefix", async () => {
+    const h = await createDispatcherHarness({ basePath: "/custom-directory" });
+    const response = await h.dispatch(
+      new Request("https://cms.example/custom-directory/"),
+    );
+    expect(response.status).toBe(200);
+  });
+
+  test("the sitemap index lists base-prefixed sub-sitemap URLs", async () => {
+    const h = await createDispatcherHarness({
+      basePath: "/custom-directory",
+      plugins: [blog],
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "hello-world",
+      title: "Hello World",
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/custom-directory/sitemap.xml"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain(
+      "https://cms.example/custom-directory/sitemap-post-1.xml",
+    );
+  });
+
+  test("the feed advertises base-prefixed entry links and a base-prefixed self URL", async () => {
+    const h = await createDispatcherHarness({
+      basePath: "/custom-directory",
+      plugins: [blog],
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "hello-world",
+      title: "Hello World",
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/custom-directory/feed"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain(
+      "https://cms.example/custom-directory/post/hello-world",
+    );
+    expect(body).toContain("https://cms.example/custom-directory/feed");
+  });
+
+  test("admin/RPC surfaces stay reachable under the base prefix", async () => {
+    const h = await createDispatcherHarness({ basePath: "/custom-directory" });
+    const response = await h.dispatch(
+      plumixRequest("/custom-directory/_plumix/rpc/entry/list", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ json: {} }),
+      }),
+    );
+    // 401 (not 404): the strip exposed the RPC route, then auth rejected it.
+    expect(response.status).toBe(401);
+  });
+
+  test("the admin shell injects a base-prefixed <base href> so the SPA resolves assets under the mount", async () => {
+    const assets = htmlAssets(
+      '<!doctype html><html lang="en"><head></head><body></body></html>',
+    );
+    const h = await createDispatcherHarness({
+      basePath: "/custom-directory",
+      assets,
+    });
+
+    const response = await h.dispatch(
+      plumixRequest("/custom-directory/_plumix/admin/", { method: "GET" }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain(
+      '<base href="/custom-directory/_plumix/admin/">',
+    );
+  });
+
+  test("admin asset requests under the base are served from the binding at the stripped path", async () => {
+    const calls: string[] = [];
+    const assets = {
+      fetch(request: Request): Promise<Response> {
+        calls.push(new URL(request.url).pathname);
+        return Promise.resolve(
+          new Response("console.log(1)", {
+            status: 200,
+            headers: { "content-type": "text/javascript" },
+          }),
+        );
+      },
+    };
+    const h = await createDispatcherHarness({
+      basePath: "/custom-directory",
+      assets,
+    });
+
+    const response = await h.dispatch(
+      plumixRequest("/custom-directory/_plumix/admin/assets/index-abc.js", {
+        method: "GET",
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("console.log(1)");
+    // The binding is hit at the root-relative asset path, not the prefixed one.
+    expect(calls).toContain("/_plumix/admin/assets/index-abc.js");
+  });
+
+  test("the session cookie is scoped to the base so it isn't sent to sibling apps", async () => {
+    const h = await createDispatcherHarness({ basePath: "/custom-directory" });
+    const response = await h.dispatch(
+      plumixRequest("/custom-directory/_plumix/auth/signout", {
+        method: "POST",
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toContain(
+      "Path=/custom-directory",
+    );
+  });
+});
+
 describe("dispatcher — imageDelivery slot wiring", () => {
   test("ctx.imageDelivery is exposed to plugin route handlers when configured", async () => {
     const plugin = definePlugin("media", (ctx) => {

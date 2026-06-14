@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { createRouter as createTanstackRouter } from "@tanstack/react-router";
 
 import { ErrorBoundaryFallback } from "../components/error-boundary-fallback.js";
+import { adminBasePath } from "../lib/admin-base.js";
 import { ADMIN_BASE_PATH } from "../lib/constants.js";
 import { routeTree } from "../routeTree.gen.js";
 
@@ -10,7 +11,9 @@ import { routeTree } from "../routeTree.gen.js";
 export function createRouter(queryClient: QueryClient) {
   return createTanstackRouter({
     routeTree,
-    basepath: ADMIN_BASE_PATH,
+    // Prefix the admin mount with the deployment's subdirectory (if any) so
+    // deep links and navigation resolve under a subdirectory proxy.
+    basepath: `${adminBasePath()}${ADMIN_BASE_PATH}`,
     defaultPreload: "intent",
     // Defer freshness to Query's own cache — avoids two competing
     // SWR policies fighting over the same data.

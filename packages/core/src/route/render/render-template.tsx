@@ -374,7 +374,7 @@ function renderTree({
     hoisted +
     titleFallback +
     voidTagsToHtml("link", document.link) +
-    bundledCssTags(assetManifest) +
+    bundledCssTags(assetManifest, ctx.basePath) +
     voidTagsToHtml("meta", document.meta) +
     scripts.headEnd.map(scriptToHtml).join("");
 
@@ -387,6 +387,7 @@ function renderTree({
       // — non-empty in `plumix dev`, empty in `plumix build`. The
       // plumix Vite plugin's `define` populates the literal.
       process.env.PLUMIX_DEV ? "serve" : "build",
+      ctx.basePath,
     ) +
     scripts.bodyEnd.map(scriptToHtml).join("") +
     HYDRATION_SLOT;

@@ -1,6 +1,7 @@
 import type { AppContext } from "../../context/app.js";
 import type { PlumixApp } from "../../runtime/app.js";
 import type { EmailChangeErrorCode } from "./errors.js";
+import { withBasePath } from "../../base-path.js";
 import { loginErrorRedirect, redirectTo } from "../../runtime/http.js";
 import { EmailChangeError } from "./errors.js";
 import { verifyEmailChange } from "./verify.js";
@@ -31,8 +32,9 @@ export async function handleEmailChangeVerify(
 ): Promise<Response> {
   const url = new URL(ctx.request.url);
   const token = url.searchParams.get("token");
-  if (!token) return loginError("missing_token");
-  if (token.length > MAX_TOKEN_LENGTH) return loginError("token_invalid");
+  if (!token) return loginError(ctx.basePath, "missing_token");
+  if (token.length > MAX_TOKEN_LENGTH)
+    return loginError(ctx.basePath, "token_invalid");
 
   let result: Awaited<ReturnType<typeof verifyEmailChange>>;
   try {
@@ -40,10 +42,10 @@ export async function handleEmailChangeVerify(
   } catch (error) {
     if (error instanceof EmailChangeError) {
       ctx.logger.warn("email_change_verify_rejected", { code: error.code });
-      return loginError(error.code);
+      return loginError(ctx.basePath, error.code);
     }
     ctx.logger.error("email_change_verify_failed", { error });
-    return loginError("token_invalid");
+    return loginError(ctx.basePath, "token_invalid");
   }
 
   // The change is COMMITTED at this point — email + emailVerifiedAt
@@ -61,9 +63,15 @@ export async function handleEmailChangeVerify(
   } catch (error) {
     ctx.logger.error("email_change_hook_failed", { error });
   }
-  return redirectTo(`${LOGIN_PATH}?email_change_success=1`);
+  return redirectTo(
+    `${withBasePath(LOGIN_PATH, ctx.basePath)}?email_change_success=1`,
+  );
 }
 
-function loginError(code: EmailChangeErrorCode): Response {
-  return loginErrorRedirect(LOGIN_PATH, "email_change_error", code);
+function loginError(basePath: string, code: EmailChangeErrorCode): Response {
+  return loginErrorRedirect(
+    withBasePath(LOGIN_PATH, basePath),
+    "email_change_error",
+    code,
+  );
 }

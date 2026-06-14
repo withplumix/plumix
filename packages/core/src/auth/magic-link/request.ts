@@ -1,5 +1,6 @@
 import type { Db, Logger } from "../../context/app.js";
 import type { Mailer } from "../mailer/types.js";
+import { withBasePath } from "../../base-path.js";
 import { eq } from "../../db/index.js";
 import { allowedDomains } from "../../db/schema/allowed_domains.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
@@ -25,6 +26,8 @@ interface RequestMagicLinkInput {
   readonly email: string;
   /** `${origin}/_plumix/admin/magic-link?token=…` will be sent to the user. */
   readonly origin: string;
+  /** Subdirectory prefix the verify link must carry (`""` at the root). */
+  readonly basePath: string;
   readonly mailer: Mailer;
   readonly siteName: string;
   readonly ttlSeconds?: number;
@@ -146,7 +149,10 @@ async function issueAndSend(
     expiresAt,
   });
 
-  const verifyUrl = new URL("/_plumix/auth/magic-link/verify", input.origin);
+  const verifyUrl = new URL(
+    withBasePath("/_plumix/auth/magic-link/verify", input.basePath),
+    input.origin,
+  );
   verifyUrl.searchParams.set("token", token);
 
   try {

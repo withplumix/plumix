@@ -115,6 +115,12 @@ export interface CreateDispatcherHarnessOptions {
   readonly bootstrapVia?: BootstrapVia;
   readonly theme?: ThemeDescriptor;
   readonly i18n?: I18nInput;
+  /**
+   * Serve the harness app under a subdirectory. Tests that exercise the
+   * inbound strip / outbound prefixing pass e.g. `"/custom-directory"`; the
+   * default `""` mirrors a root deployment.
+   */
+  readonly basePath?: string;
   /** Mount the MCP endpoint. Default-off mirrors production. */
   readonly mcp?: InterfaceToggle;
   /** Mount the REST API. Default-off mirrors production. */
@@ -208,6 +214,7 @@ function withRequest(
     authenticator: app.authenticator,
     bootstrapAllowed: app.bootstrapAllowed,
     origin: app.origin,
+    basePath: app.basePath,
     siteName: app.config.auth.magicLink?.siteName,
   });
 }
@@ -235,6 +242,7 @@ export async function createDispatcherHarness(
     imageDelivery: options.imageDelivery,
     mailer: options.mailer,
     i18n: options.i18n,
+    basePath: options.basePath,
     mcp: options.mcp,
     api: options.api,
     theme: options.theme ?? defaultTestTheme,

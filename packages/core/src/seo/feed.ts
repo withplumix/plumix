@@ -3,6 +3,7 @@ import type { SQL } from "drizzle-orm";
 import type { AppContext } from "../context/app.js";
 import type { RegisteredTermTaxonomy } from "../plugin/manifest.js";
 import type { DocumentLink, DocumentManifest, TemplateData } from "../theme.js";
+import { withBasePath } from "../base-path.js";
 import { and, desc, eq, inArray } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
@@ -281,9 +282,10 @@ export async function handleFeed(
 
   const channel: FeedChannel = {
     title: nonEmpty(site.title) ?? ctx.origin,
-    link: ctx.origin,
-    // The feed's self URL is just this request's path.
-    feedUrl: `${ctx.origin}${new URL(ctx.request.url).pathname}`,
+    link: `${ctx.origin}${withBasePath("/", ctx.basePath)}`,
+    // The feed's self URL is this request's path. The dispatcher already
+    // stripped the base prefix, so re-add it for the externally-visible URL.
+    feedUrl: `${ctx.origin}${withBasePath(new URL(ctx.request.url).pathname, ctx.basePath)}`,
     description: nonEmpty(site.tagline) ?? "",
     updated: items[0]?.updated ?? new Date().toISOString(),
   };
@@ -348,8 +350,14 @@ export function applyFeedDiscovery(
       additions.push({ rel: "alternate", type, href });
     }
   };
-  add("application/rss+xml", `${ctx.origin}${base}`);
-  add("application/atom+xml", `${ctx.origin}${base}/atom`);
+  add(
+    "application/rss+xml",
+    `${ctx.origin}${withBasePath(base, ctx.basePath)}`,
+  );
+  add(
+    "application/atom+xml",
+    `${ctx.origin}${withBasePath(`${base}/atom`, ctx.basePath)}`,
+  );
 
   if (additions.length === 0) return manifest;
   return { ...manifest, link: [...(existing ?? []), ...additions] };

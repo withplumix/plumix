@@ -1,40 +1,36 @@
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
-afterEach(() => {
-  vi.resetModules();
-  vi.restoreAllMocks();
-  delete (globalThis as { window?: unknown }).window;
-});
+import { mediaBlocks } from "../media-blocks.js";
+import { registerMediaAdmin } from "./index.js";
 
-describe("media admin entry side effects", () => {
-  test("registers every mediaBlocks spec via window.plumix.registerPluginBlock on load", async () => {
+describe("registerMediaAdmin", () => {
+  test("registers every mediaBlocks spec and both field types with the host", () => {
     const registerPluginBlock = vi.fn();
     const registerPluginFieldType = vi.fn();
-    (globalThis as { window?: unknown }).window = {
-      plumix: { registerPluginBlock, registerPluginFieldType },
-    };
 
-    vi.resetModules();
-    // Import after resetModules so admin entry + mediaBlocks share the
-    // same fresh module instance (object identity matters for the
-    // toHaveBeenNthCalledWith spec assertions).
-    await import("./index.js");
-    const { mediaBlocks } = await import("../media-blocks.js");
+    registerMediaAdmin({ registerPluginBlock, registerPluginFieldType });
 
     expect(registerPluginBlock).toHaveBeenCalledTimes(mediaBlocks.length);
     mediaBlocks.forEach((spec, i) => {
       expect(registerPluginBlock).toHaveBeenNthCalledWith(i + 1, spec);
     });
+    expect(registerPluginFieldType).toHaveBeenCalledWith(
+      "media",
+      expect.anything(),
+    );
+    expect(registerPluginFieldType).toHaveBeenCalledWith(
+      "mediaList",
+      expect.anything(),
+    );
   });
 
-  test("warns and does not throw when window.plumix is missing", async () => {
-    (globalThis as { window?: unknown }).window = {};
+  test("warns and does not throw when the host global is missing", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-    vi.resetModules();
-    await expect(import("./index.js")).resolves.toBeDefined();
+    expect(() => registerMediaAdmin(undefined)).not.toThrow();
 
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn.mock.calls[0]?.[0]).toMatch(/window\.plumix not initialized/);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("window.plumix not initialized"),
+    );
   });
 });
