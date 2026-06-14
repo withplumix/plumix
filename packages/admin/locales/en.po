@@ -1296,6 +1296,11 @@ msgid "allowedDomains.add.defaultRole.label"
 msgstr "Default role"
 
 #. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.default_og_image"
+msgstr "Default social image URL"
+
+#. js-lingui-explicit-id
 #: src/editor/BlockActionsPanel.tsx
 msgid "blockActions.delete"
 msgstr "Delete"

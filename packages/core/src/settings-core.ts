@@ -20,6 +20,10 @@ export const SITE_SETTINGS_DESCRIPTORS = {
   twitter: { id: "core.settings.site.twitter", message: "X (Twitter) URL" },
   github: { id: "core.settings.site.github", message: "GitHub URL" },
   mastodon: { id: "core.settings.site.mastodon", message: "Mastodon URL" },
+  ogImage: {
+    id: "core.settings.site.default_og_image",
+    message: "Default social image URL",
+  },
   pageLabel: { id: "core.settings.general.label", message: "General" },
   pageDescription: {
     id: "core.settings.general.description",
@@ -78,6 +82,15 @@ export function registerCoreSettings(registry: MutablePluginRegistry): void {
         inputType: "url",
         label: D.mastodon,
         maxLength: 300,
+      },
+      // Fallback Open Graph image for pages without their own; SEO defaults
+      // read it for `og:image`.
+      {
+        key: "default_og_image",
+        type: "string",
+        inputType: "url",
+        label: D.ogImage,
+        maxLength: 500,
       },
     ],
   });

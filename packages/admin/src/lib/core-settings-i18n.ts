@@ -36,6 +36,10 @@ export const CORE_SETTINGS_DESCRIPTORS = {
     id: "core.settings.site.mastodon",
     message: "Mastodon URL",
   }),
+  ogImage: defineMessage({
+    id: "core.settings.site.default_og_image",
+    message: "Default social image URL",
+  }),
   pageLabel: defineMessage({
     id: "core.settings.general.label",
     message: "General",
