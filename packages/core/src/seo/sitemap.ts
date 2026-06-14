@@ -8,6 +8,7 @@ import {
 } from "../route/permalink.js";
 import { loadSiteSettings } from "./site-settings.js";
 import { cachedSubSitemap } from "./sitemap-cache.js";
+import { xmlEscape } from "./xml.js";
 
 // Well under the sitemaps.org 50k cap, and small enough to build + hold in
 // Worker memory per request.
@@ -29,18 +30,6 @@ declare module "../hooks/types.js" {
       scope: string,
     ) => readonly SitemapUrl[] | Promise<readonly SitemapUrl[]>;
   }
-}
-
-const XML_ESCAPES: Record<string, string> = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-  "'": "&apos;",
-};
-
-function xmlEscape(value: string): string {
-  return value.replace(/[&<>"']/g, (char) => XML_ESCAPES[char] ?? char);
 }
 
 export function renderSitemapIndex(locs: readonly string[]): string {

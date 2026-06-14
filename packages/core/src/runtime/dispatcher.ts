@@ -12,6 +12,7 @@ import { resolveLocale } from "../i18n/resolve-locale.js";
 import { matchRoute } from "../route/match.js";
 import { renderErrorThroughTheme } from "../route/render/render-template.js";
 import { resolvePublicRoute } from "../route/resolve.js";
+import { handleFeed, isPublicEntryType } from "../seo/feed.js";
 import { handleRobotsTxt } from "../seo/robots.js";
 import { handleSitemapIndex, handleSubSitemap } from "../seo/sitemap.js";
 import { rewriteAdminShellLangDir } from "./admin-shell.js";
@@ -29,6 +30,10 @@ const SITEMAP_INDEX_PATH = "/sitemap.xml";
 // `/sitemap-<scope>-<page>.xml` — greedy scope so a hyphenated name keeps its
 // hyphens and only the trailing `-<digits>` is the page.
 const SUB_SITEMAP_PATTERN = /^\/sitemap-(.+)-(\d+)\.xml$/;
+// `/feed`, `/feed/atom`, `/<type>/feed`, `/<type>/feed/atom`. The optional
+// leading segment is the entry-type scope; `/feed*` reserves these paths the
+// way WordPress does, so a page slugged "feed" can't shadow them.
+const FEED_PATTERN = /^\/(?:([^/]+)\/)?feed(\/atom)?$/;
 
 // MCP is cold-path-exclusive (an agent endpoint, never the public render path).
 // Dynamic-import its handler so the tool registry and the MCP SDK it pulls in
@@ -257,6 +262,15 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   const subSitemap = SUB_SITEMAP_PATTERN.exec(pathname);
   if (subSitemap) {
     return handleSubSitemap(ctx, subSitemap[1] ?? "", Number(subSitemap[2]));
+  }
+  const feed = FEED_PATTERN.exec(pathname);
+  if (feed) {
+    // A scoped `/<x>/feed` is a feed only when `<x>` is a public entry type;
+    // otherwise it's a real path (e.g. a page slugged "feed") — fall through.
+    const scope = feed[1] ?? null;
+    if (scope === null || isPublicEntryType(ctx, scope)) {
+      return handleFeed(ctx, scope, feed[2] ? "atom" : "rss2");
+    }
   }
 
   return dispatchPublicRoute(app, ctx, url);

@@ -1,7 +1,8 @@
 import type { AppContext } from "../context/app.js";
 import type { DocumentManifest, DocumentMeta, TemplateData } from "../theme.js";
 import { canonicalUrl } from "./canonical.js";
-import { loadSiteSettings } from "./site-settings.js";
+import { applyFeedDiscovery } from "./feed.js";
+import { loadSiteSettings, nonEmpty } from "./site-settings.js";
 
 const ROBOTS_INDEX = "index,follow,max-image-preview:large";
 const ROBOTS_SEARCH = "noindex,follow";
@@ -84,10 +85,6 @@ export function seoHeadDefaults(
   return { ...manifest, meta: [...(existing ?? []), ...additions] };
 }
 
-function nonEmpty(value: unknown): string | null {
-  return typeof value === "string" && value.length > 0 ? value : null;
-}
-
 // `og:locale` wants `lang_TERRITORY`; the active locale code is `lang-TERRITORY`.
 function toOgLocale(localeCode: string): string {
   return localeCode.replace("-", "_");
@@ -105,9 +102,10 @@ export async function applyHeadMeta(
   title: string | undefined,
 ): Promise<DocumentManifest> {
   const site = await loadSiteSettings(ctx);
+  const siteIsPrivate = site.public === false;
   const excerpt = "entry" in data ? nonEmpty(data.entry.excerpt) : null;
   const description = excerpt ?? nonEmpty(site.tagline);
-  return seoHeadDefaults(manifest, {
+  const withMeta = seoHeadDefaults(manifest, {
     canonical: canonicalUrl(ctx),
     title,
     description,
@@ -117,6 +115,7 @@ export async function applyHeadMeta(
     ogLocale: toOgLocale(ctx.locale.code),
     // Search-results pages are thin; keep them out of the index.
     noindex: "query" in data,
-    siteIsPrivate: site.public === false,
+    siteIsPrivate,
   });
+  return applyFeedDiscovery(withMeta, data, ctx, { siteIsPrivate });
 }
