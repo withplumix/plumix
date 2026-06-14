@@ -113,6 +113,10 @@
       "types": "./dist/schema/index.d.ts",
       "default": "./dist/schema/index.js"
     },
+    "./db/libsql": {
+      "types": "./dist/db/libsql.d.ts",
+      "default": "./dist/db/libsql.js"
+    },
     "./fields": {
       "types": "./dist/fields/index.d.ts",
       "default": "./dist/fields/index.js"

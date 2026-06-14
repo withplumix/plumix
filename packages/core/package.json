@@ -17,6 +17,10 @@
       "types": "./dist/db/schema/index.d.ts",
       "default": "./dist/db/schema/index.js"
     },
+    "./db/libsql": {
+      "types": "./dist/db/libsql.d.ts",
+      "default": "./dist/db/libsql.js"
+    },
     "./test": {
       "types": "./dist/test/index.d.ts",
       "default": "./dist/test/index.js"

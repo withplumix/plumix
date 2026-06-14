@@ -76,6 +76,10 @@ const config: KnipConfig = {
         "src/blocks/island-runtime.ts",
         "src/blocks/island-renderer.ts",
         "src/cli/index.ts",
+        // `plumix/db/libsql` re-exports the core libSQL adapter on its own
+        // subpath; not reachable from `src/index.ts` (kept off the root
+        // barrel so the driver stays out of unrelated bundles).
+        "src/db/libsql.ts",
         "src/fields/index.ts",
         "src/i18n/index.ts",
         "src/schema/index.ts",
