@@ -28,6 +28,7 @@ import type { ErrorData } from "./resolved-entry.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
 import { PlumixAdminBar } from "../../admin-bar/component.js";
 import { mergeDocumentManifest } from "../../document-merge.js";
+import { applyCanonical } from "../../seo/canonical.js";
 import {
   loadTemplateDeps,
   mergeTemplateDepDeclarations,
@@ -37,6 +38,24 @@ import { validateDocumentManifest } from "../../theme.js";
 import { bundledCssTags } from "./asset-manifest.js";
 import { injectIslandsBootstrap } from "./inject-islands-bootstrap.js";
 import { resolveTemplateCandidates } from "./template-hierarchy.js";
+
+declare module "../../hooks/types.js" {
+  interface FilterRegistry {
+    /**
+     * Per-request head transform — the entry point for `@plumix/plugin-seo` and
+     * any plugin to inject, override, or remove document head fields with the
+     * resolved `{data, ctx}` in hand. Fires on the assembled (theme + template)
+     * document and before core's SEO gap-fillers, so a subscriber can override
+     * any already-set field while core only backfills keys no one set. Real
+     * renders only — error pages don't fire it.
+     */
+    "render:document": (
+      manifest: DocumentManifest,
+      data: TemplateData,
+      ctx: AppContext,
+    ) => DocumentManifest | Promise<DocumentManifest>;
+  }
+}
 
 interface RenderArgs {
   readonly ctx: AppContext;
@@ -71,7 +90,7 @@ export async function renderThroughTheme({
     templateDeps,
     ctx,
   );
-  const renderDocument = resolveRenderDocument({
+  const merged = resolveRenderDocument({
     template,
     slot,
     document,
@@ -80,6 +99,13 @@ export async function renderThroughTheme({
     ctx,
     deps,
   });
+  const filtered = await ctx.hooks.applyFilter(
+    "render:document",
+    merged,
+    data,
+    ctx,
+  );
+  const renderDocument = applyCanonical(filtered, ctx);
   const loaderData = await prefetchEntryLoaders(ctx, data, template);
   return renderTree({
     ctx,
