@@ -1,9 +1,17 @@
+import type { SQL } from "drizzle-orm";
+
 import type { AppContext } from "../context/app.js";
+import type { RegisteredTermTaxonomy } from "../plugin/manifest.js";
 import type { DocumentLink, DocumentManifest, TemplateData } from "../theme.js";
 import { and, desc, eq, inArray } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
+import { entryTerm } from "../db/schema/entry_term.js";
+import { terms } from "../db/schema/terms.js";
 import { users } from "../db/schema/users.js";
-import { buildEntryPermalink } from "../route/permalink.js";
+import {
+  buildEntryPermalink,
+  termTaxonomyBaseSlug,
+} from "../route/permalink.js";
 import { loadSiteSettings, nonEmpty } from "./site-settings.js";
 import { xmlEscape } from "./xml.js";
 
@@ -13,15 +21,24 @@ export const FEED_LIMIT = 20;
 
 type FeedFormat = "rss2" | "atom";
 
+/**
+ * What a feed covers: the whole site, one entry type, or one taxonomy term.
+ * `taxonomy`/`term` are the registered taxonomy name + term slug.
+ */
+type FeedScope =
+  | { readonly kind: "site" }
+  | { readonly kind: "type"; readonly type: string }
+  | { readonly kind: "term"; readonly taxonomy: string; readonly term: string };
+
 declare module "../hooks/types.js" {
   interface FilterRegistry {
     /**
      * Adjust a feed's item list before serialization — add, drop, or re-order.
-     * Receives the scope: `null` for the site feed, or the entry-type name.
+     * Receives the {@link FeedScope} the items were collected for.
      */
     "seo:feed:items": (
       items: readonly FeedItem[],
-      scope: string | null,
+      scope: FeedScope,
     ) => readonly FeedItem[] | Promise<readonly FeedItem[]>;
   }
 }
@@ -134,15 +151,26 @@ export function renderAtom(
   );
 }
 
-/** The path of a feed scope's RSS2 feed (`null` = the site feed). */
-export function feedBasePath(scope: string | null): string {
-  return scope === null ? "/feed" : `/${scope}/feed`;
+/** Whether a scope names a registered, public entry type. */
+export function isPublicEntryType(ctx: AppContext, type: string): boolean {
+  const entryType = ctx.plugins.entryTypes.get(type);
+  return entryType !== undefined && entryType.isPublic !== false;
 }
 
-/** Whether a scope names a registered, public entry type. */
-export function isPublicEntryType(ctx: AppContext, scope: string): boolean {
-  const type = ctx.plugins.entryTypes.get(scope);
-  return type !== undefined && type.isPublic !== false;
+/** The public taxonomy whose archive base slug matches `slug`, if any. */
+export function publicTaxonomyByBaseSlug(
+  ctx: AppContext,
+  slug: string,
+): RegisteredTermTaxonomy | undefined {
+  for (const taxonomy of ctx.plugins.termTaxonomies.values()) {
+    if (
+      taxonomy.isPublic !== false &&
+      termTaxonomyBaseSlug(taxonomy) === slug
+    ) {
+      return taxonomy;
+    }
+  }
+  return undefined;
 }
 
 function publicEntryTypeNames(ctx: AppContext): string[] {
@@ -151,47 +179,68 @@ function publicEntryTypeNames(ctx: AppContext): string[] {
     .map((type) => type.name);
 }
 
+// SQL row filter for a scope; `null` means the scope can't yield a feed
+// (unknown type/term, nested term, or no public types) so the caller 404s.
+async function feedFilter(
+  ctx: AppContext,
+  scope: FeedScope,
+): Promise<SQL | undefined | null> {
+  const published = eq(entries.status, "published");
+  if (scope.kind === "type") {
+    if (!isPublicEntryType(ctx, scope.type)) return null;
+    return and(eq(entries.type, scope.type), published);
+  }
+
+  const typeNames = publicEntryTypeNames(ctx);
+  const publicTypes = inArray(entries.type, typeNames);
+  if (scope.kind === "site") {
+    return typeNames.length === 0 ? null : and(publicTypes, published);
+  }
+
+  // term: only entries attached to the term, and still of a public type. Only
+  // top-level terms have the flat `/base/slug/feed` URL the route addresses —
+  // nested terms have no feed route yet, so they 404.
+  const [term] = await ctx.db
+    .select({ id: terms.id, parentId: terms.parentId })
+    .from(terms)
+    .where(and(eq(terms.taxonomy, scope.taxonomy), eq(terms.slug, scope.term)));
+  if (!term) return null;
+  if (term.parentId !== null || typeNames.length === 0) return null;
+  const attached = ctx.db
+    .select({ id: entryTerm.entryId })
+    .from(entryTerm)
+    .where(eq(entryTerm.termId, term.id));
+  return and(publicTypes, published, inArray(entries.id, attached));
+}
+
 /**
- * Recent published entries for a feed scope (`null` = every public entry type,
- * else a single type), newest first, run through `seo:feed:items`. Returns null
- * for an unknown / non-public type so the route can 404.
+ * Recent published, public-type entries for a feed scope, newest first, run
+ * through `seo:feed:items`. Returns null for an unknown scope (non-public type,
+ * missing term) so the route can 404.
  */
 export async function collectFeedItems(
   ctx: AppContext,
-  scope: string | null,
+  scope: FeedScope,
 ): Promise<readonly FeedItem[] | null> {
-  let typeNames: string[];
-  if (scope === null) {
-    typeNames = publicEntryTypeNames(ctx);
-  } else {
-    if (!isPublicEntryType(ctx, scope)) return null;
-    typeNames = [scope];
-  }
+  const where = await feedFilter(ctx, scope);
+  if (where === null) return null;
 
-  const rows =
-    typeNames.length === 0
-      ? []
-      : await ctx.db
-          .select({
-            title: entries.title,
-            slug: entries.slug,
-            type: entries.type,
-            parentId: entries.parentId,
-            excerpt: entries.excerpt,
-            updatedAt: entries.updatedAt,
-            publishedAt: entries.publishedAt,
-            authorName: users.name,
-          })
-          .from(entries)
-          .leftJoin(users, eq(entries.authorId, users.id))
-          .where(
-            and(
-              inArray(entries.type, typeNames),
-              eq(entries.status, "published"),
-            ),
-          )
-          .orderBy(desc(entries.publishedAt))
-          .limit(FEED_LIMIT);
+  const rows = await ctx.db
+    .select({
+      title: entries.title,
+      slug: entries.slug,
+      type: entries.type,
+      parentId: entries.parentId,
+      excerpt: entries.excerpt,
+      updatedAt: entries.updatedAt,
+      publishedAt: entries.publishedAt,
+      authorName: users.name,
+    })
+    .from(entries)
+    .leftJoin(users, eq(entries.authorId, users.id))
+    .where(where)
+    .orderBy(desc(entries.publishedAt))
+    .limit(FEED_LIMIT);
 
   const items: FeedItem[] = [];
   for (const row of rows) {
@@ -218,7 +267,7 @@ const CONTENT_TYPE: Record<FeedFormat, string> = {
 
 export async function handleFeed(
   ctx: AppContext,
-  scope: string | null,
+  scope: FeedScope,
   format: FeedFormat,
 ): Promise<Response> {
   const site = await loadSiteSettings(ctx);
@@ -230,11 +279,11 @@ export async function handleFeed(
   const items = await collectFeedItems(ctx, scope);
   if (items === null) return new Response(null, { status: 404 });
 
-  const base = feedBasePath(scope);
   const channel: FeedChannel = {
     title: nonEmpty(site.title) ?? ctx.origin,
     link: ctx.origin,
-    feedUrl: `${ctx.origin}${base}${format === "atom" ? "/atom" : ""}`,
+    // The feed's self URL is just this request's path.
+    feedUrl: `${ctx.origin}${new URL(ctx.request.url).pathname}`,
     description: nonEmpty(site.tagline) ?? "",
     updated: items[0]?.updated ?? new Date().toISOString(),
   };
@@ -245,16 +294,29 @@ export async function handleFeed(
   });
 }
 
-// The feed scope a page should advertise: the entry-type for a type archive,
-// `null` (the site feed) for a single entry / front page / taxonomy, or `false`
-// for pages with no feed (search, error). A single entry advertises the site
-// feed, not its type feed — a reader subscribing from a post wants "everything
-// new", which is the convention (WordPress et al.).
-function feedScope(data: TemplateData): string | null | false {
-  if ("contentType" in data) return data.contentType;
+// The feed base path a page should advertise, or `false` when it has none
+// (search, error, or a non-public type/taxonomy). A single entry advertises the
+// site feed, not its type feed — a reader subscribing from a post wants
+// "everything new", which is the convention (WordPress et al.).
+function discoveryFeedBase(
+  data: TemplateData,
+  ctx: AppContext,
+): string | false {
+  if ("contentType" in data) {
+    return isPublicEntryType(ctx, data.contentType)
+      ? `/${data.contentType}/feed`
+      : false;
+  }
+  if ("taxonomy" in data) {
+    const taxonomy = ctx.plugins.termTaxonomies.get(data.taxonomy);
+    if (!taxonomy || taxonomy.isPublic === false) return false;
+    // Only top-level terms have the flat URL the feed route can address.
+    if (data.term.parentId !== null) return false;
+    return `/${termTaxonomyBaseSlug(taxonomy)}/${data.term.slug}/feed`;
+  }
   if ("query" in data) return false;
   if ("request" in data) return false;
-  return null;
+  return "/feed";
 }
 
 function hasAlternate(
@@ -276,11 +338,9 @@ export function applyFeedDiscovery(
   opts: { readonly siteIsPrivate: boolean },
 ): DocumentManifest {
   if (opts.siteIsPrivate) return manifest;
-  const scope = feedScope(data);
-  if (scope === false) return manifest;
-  if (scope !== null && !isPublicEntryType(ctx, scope)) return manifest;
+  const base = discoveryFeedBase(data, ctx);
+  if (base === false) return manifest;
 
-  const base = feedBasePath(scope);
   const existing = manifest.link;
   const additions: DocumentLink[] = [];
   const add = (type: string, href: string): void => {

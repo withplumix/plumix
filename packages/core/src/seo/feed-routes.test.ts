@@ -11,6 +11,18 @@ const blogPlugin = definePlugin("blog", (ctx) => {
   });
 });
 
+const blogWithTaxonomyPlugin = definePlugin("blog-tax", (ctx) => {
+  ctx.registerEntryType("post", {
+    label: "Posts",
+    isPublic: true,
+    hasArchive: true,
+  });
+  ctx.registerTermTaxonomy("category", {
+    label: "Categories",
+    entryTypes: ["post"],
+  });
+});
+
 async function seedPost(
   h: Awaited<ReturnType<typeof createDispatcherHarness>>,
   slug: string,
@@ -107,6 +119,110 @@ describe("feed routes", () => {
     );
     expect(body).toContain(
       '<link rel="alternate" type="application/atom+xml" href="https://cms.example/feed/atom"',
+    );
+  });
+});
+
+describe("term feed routes", () => {
+  async function seedTermFeed(): Promise<
+    Awaited<ReturnType<typeof createDispatcherHarness>>
+  > {
+    const h = await createDispatcherHarness({
+      plugins: [blogWithTaxonomyPlugin],
+    });
+    const author = await h.seedUser("admin");
+    const term = await h.factory.category.create({
+      slug: "news",
+      name: "News",
+    });
+    const tagged = await h.factory.entry.create({
+      type: "post",
+      slug: "tagged",
+      title: "Tagged Post",
+      content: null,
+      status: "published",
+      authorId: author.id,
+    });
+    await h.factory.entry.create({
+      type: "post",
+      slug: "untagged",
+      title: "Untagged Post",
+      content: null,
+      status: "published",
+      authorId: author.id,
+    });
+    await h.factory.entryTerm.create({ entryId: tagged.id, termId: term.id });
+    return h;
+  }
+
+  test("GET /<taxonomy>/<term>/feed returns only entries tagged with the term", async () => {
+    const h = await seedTermFeed();
+    const res = await h.fetch("/category/news/feed");
+    res.assertStatus(200);
+    expect(res.headers.get("content-type")).toContain("application/rss+xml");
+    const body = await res.text();
+    expect(body).toContain("Tagged Post");
+    expect(body).not.toContain("Untagged Post");
+    expect(body).toContain(
+      '<atom:link href="https://cms.example/category/news/feed" rel="self"',
+    );
+  });
+
+  test("GET /<taxonomy>/<term>/feed/atom returns the Atom variant", async () => {
+    const h = await seedTermFeed();
+    const res = await h.fetch("/category/news/feed/atom");
+    res.assertStatus(200);
+    expect(res.headers.get("content-type")).toContain("application/atom+xml");
+    expect(await res.text()).toContain(
+      "<id>https://cms.example/category/news/feed/atom</id>",
+    );
+  });
+
+  test("a missing term 404s", async () => {
+    const h = await seedTermFeed();
+    const res = await h.fetch("/category/ghost/feed");
+    res.assertStatus(404);
+  });
+
+  test("a nested (child) term has no feed — top-level terms only", async () => {
+    const h = await createDispatcherHarness({
+      plugins: [blogWithTaxonomyPlugin],
+    });
+    const parent = await h.factory.category.create({
+      slug: "news",
+      name: "News",
+    });
+    await h.factory.category.create({
+      slug: "local",
+      name: "Local",
+      parentId: parent.id,
+    });
+    const res = await h.fetch("/category/local/feed");
+    res.assertStatus(404);
+  });
+
+  test("a non-taxonomy /<x>/<y>/feed path falls through to public routing", async () => {
+    const h = await seedTermFeed();
+    // "post" is an entry type, not a taxonomy base slug → not a term feed.
+    const res = await h.fetch("/post/tagged/feed");
+    res.assertStatus(404);
+  });
+
+  test("the seo:feed:items filter applies to the term-scoped list", async () => {
+    const h = await seedTermFeed();
+    h.spyFilter("seo:feed:items").override(() => []);
+    const body = await (await h.fetch("/category/news/feed")).text();
+    expect(body).not.toContain("<item>");
+  });
+
+  test("term-archive pages emit the matching feed-discovery tags", async () => {
+    const h = await seedTermFeed();
+    const body = await (await h.fetch("/category/news")).text();
+    expect(body).toContain(
+      '<link rel="alternate" type="application/rss+xml" href="https://cms.example/category/news/feed"',
+    );
+    expect(body).toContain(
+      '<link rel="alternate" type="application/atom+xml" href="https://cms.example/category/news/feed/atom"',
     );
   });
 });
