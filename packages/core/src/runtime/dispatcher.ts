@@ -12,7 +12,11 @@ import { resolveLocale } from "../i18n/resolve-locale.js";
 import { matchRoute } from "../route/match.js";
 import { renderErrorThroughTheme } from "../route/render/render-template.js";
 import { resolvePublicRoute } from "../route/resolve.js";
-import { handleFeed, isPublicEntryType } from "../seo/feed.js";
+import {
+  handleFeed,
+  isPublicEntryType,
+  publicTaxonomyByBaseSlug,
+} from "../seo/feed.js";
 import { handleRobotsTxt } from "../seo/robots.js";
 import { handleSitemapIndex, handleSubSitemap } from "../seo/sitemap.js";
 import { rewriteAdminShellLangDir } from "./admin-shell.js";
@@ -34,6 +38,8 @@ const SUB_SITEMAP_PATTERN = /^\/sitemap-(.+)-(\d+)\.xml$/;
 // leading segment is the entry-type scope; `/feed*` reserves these paths the
 // way WordPress does, so a page slugged "feed" can't shadow them.
 const FEED_PATTERN = /^\/(?:([^/]+)\/)?feed(\/atom)?$/;
+// `/<taxonomy>/<term>/feed` (+ `/atom`) — the term-scoped feed.
+const TERM_FEED_PATTERN = /^\/([^/]+)\/([^/]+)\/feed(\/atom)?$/;
 
 // MCP is cold-path-exclusive (an agent endpoint, never the public render path).
 // Dynamic-import its handler so the tool registry and the MCP SDK it pulls in
@@ -267,9 +273,25 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   if (feed) {
     // A scoped `/<x>/feed` is a feed only when `<x>` is a public entry type;
     // otherwise it's a real path (e.g. a page slugged "feed") — fall through.
-    const scope = feed[1] ?? null;
-    if (scope === null || isPublicEntryType(ctx, scope)) {
-      return handleFeed(ctx, scope, feed[2] ? "atom" : "rss2");
+    const type = feed[1];
+    if (type === undefined) {
+      return handleFeed(ctx, { kind: "site" }, feed[2] ? "atom" : "rss2");
+    }
+    if (isPublicEntryType(ctx, type)) {
+      return handleFeed(ctx, { kind: "type", type }, feed[2] ? "atom" : "rss2");
+    }
+  }
+  const termFeed = TERM_FEED_PATTERN.exec(pathname);
+  if (termFeed) {
+    // Only a public taxonomy's archive space owns `/<taxonomy>/<term>/feed`;
+    // anything else (e.g. a nested page) falls through to the public router.
+    const taxonomy = publicTaxonomyByBaseSlug(ctx, termFeed[1] ?? "");
+    if (taxonomy) {
+      return handleFeed(
+        ctx,
+        { kind: "term", taxonomy: taxonomy.name, term: termFeed[2] ?? "" },
+        termFeed[3] ? "atom" : "rss2",
+      );
     }
   }
 

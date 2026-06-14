@@ -96,7 +96,7 @@ function entryTypeBaseSlug(entryType: RegisteredEntryType): string {
   return entryType.rewrite?.slug ?? entryType.name;
 }
 
-function termTaxonomyBaseSlug(taxonomy: RegisteredTermTaxonomy): string {
+export function termTaxonomyBaseSlug(taxonomy: RegisteredTermTaxonomy): string {
   return taxonomy.rewrite?.slug ?? taxonomy.name;
 }
 

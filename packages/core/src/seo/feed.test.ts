@@ -92,6 +92,9 @@ describe("applyFeedDiscovery", () => {
     origin: "https://cms.example",
     plugins: {
       entryTypes: new Map([["post", { name: "post", isPublic: true }]]),
+      termTaxonomies: new Map([
+        ["category", { name: "category", isPublic: true }],
+      ]),
     },
   } as unknown as AppContext;
   const empty: DocumentManifest = {};
@@ -141,6 +144,35 @@ describe("applyFeedDiscovery", () => {
       "application/rss+xml https://cms.example/feed",
       "application/atom+xml https://cms.example/feed/atom",
     ]);
+  });
+
+  test("top-level taxonomy-term data advertises the term feed", () => {
+    const data = {
+      taxonomy: "category",
+      term: { slug: "news", parentId: null },
+      entries: [],
+      pagination: {},
+    } as unknown as TemplateData;
+    expect(
+      alternates(
+        applyFeedDiscovery(empty, data, ctx, { siteIsPrivate: false }),
+      ),
+    ).toEqual([
+      "application/rss+xml https://cms.example/category/news/feed",
+      "application/atom+xml https://cms.example/category/news/feed/atom",
+    ]);
+  });
+
+  test("a nested term advertises no feed (top-level only)", () => {
+    const data = {
+      taxonomy: "category",
+      term: { slug: "local", parentId: 1 },
+      entries: [],
+      pagination: {},
+    } as unknown as TemplateData;
+    expect(
+      applyFeedDiscovery(empty, data, ctx, { siteIsPrivate: false }).link,
+    ).toBeUndefined();
   });
 
   test("search and private pages advertise nothing", () => {
