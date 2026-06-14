@@ -7,6 +7,7 @@ import {
   buildTermArchiveUrl,
 } from "../route/permalink.js";
 import { loadSiteSettings } from "./site-settings.js";
+import { cachedSubSitemap } from "./sitemap-cache.js";
 
 // Well under the sitemaps.org 50k cap, and small enough to build + hold in
 // Worker memory per request.
@@ -127,7 +128,7 @@ async function termUrls(
 /**
  * The published, public-type URLs for one sub-sitemap scope + page, passed
  * through the `seo:sitemap:urls` filter. Returns null for an unknown / non-public
- * scope so the caller can 404.
+ * scope, which the caller renders as an empty `<urlset>`.
  */
 export async function collectSitemapUrls(
   ctx: AppContext,
@@ -192,13 +193,17 @@ export async function handleSitemapIndex(ctx: AppContext): Promise<Response> {
   return xmlResponse(renderSitemapIndex(locs));
 }
 
-export async function handleSubSitemap(
+export function handleSubSitemap(
   ctx: AppContext,
   scope: string,
   page: number,
 ): Promise<Response> {
-  if (await isPrivate(ctx)) return xmlResponse(renderSubSitemap([]));
-  const urls = await collectSitemapUrls(ctx, scope, page);
-  if (urls === null) return xmlResponse(renderSubSitemap([]));
-  return xmlResponse(renderSubSitemap(urls));
+  // The privacy gate and the URL scan both live inside the generator so a
+  // cache hit touches D1 zero times. A `settings:group_changed` bump retires
+  // the cache when the site flips private, keeping the gate honest.
+  return cachedSubSitemap(ctx, scope, page, async () => {
+    if (await isPrivate(ctx)) return xmlResponse(renderSubSitemap([]));
+    const urls = await collectSitemapUrls(ctx, scope, page);
+    return xmlResponse(renderSubSitemap(urls ?? []));
+  });
 }

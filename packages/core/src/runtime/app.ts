@@ -47,6 +47,7 @@ import { compileRouteMap } from "../route/compile.js";
 import { CORE_RPC_NAMESPACES } from "../rpc/namespaces.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
 import { registerCoreSearchHandlers } from "../search/register-core-handlers.js";
+import { registerCoreSitemapInvalidator } from "../seo/register-sitemap-invalidator.js";
 import { registerCoreSettings } from "../settings-core.js";
 import { registerCoreTemplateDeps } from "../template-deps-core.js";
 import { isTemplate } from "../template.js";
@@ -209,6 +210,7 @@ export async function buildApp(
   const hooks = new HookRegistry();
   registerCoreAdminBarContributors(hooks);
   registerCoreSearchHandlers(hooks);
+  registerCoreSitemapInvalidator(hooks);
   const seededRegistry = createPluginRegistry();
   registerCoreLookupAdapters(seededRegistry);
   registerCoreTemplateDeps(seededRegistry);
