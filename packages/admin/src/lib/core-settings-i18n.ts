@@ -40,6 +40,10 @@ export const CORE_SETTINGS_DESCRIPTORS = {
     id: "core.settings.site.default_og_image",
     message: "Default social image URL",
   }),
+  publicSite: defineMessage({
+    id: "core.settings.site.public",
+    message: "Allow search engines to index this site",
+  }),
   pageLabel: defineMessage({
     id: "core.settings.general.label",
     message: "General",

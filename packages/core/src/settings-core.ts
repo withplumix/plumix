@@ -24,6 +24,10 @@ export const SITE_SETTINGS_DESCRIPTORS = {
     id: "core.settings.site.default_og_image",
     message: "Default social image URL",
   },
+  publicSite: {
+    id: "core.settings.site.public",
+    message: "Allow search engines to index this site",
+  },
   pageLabel: { id: "core.settings.general.label", message: "General" },
   pageDescription: {
     id: "core.settings.general.description",
@@ -91,6 +95,15 @@ export function registerCoreSettings(registry: MutablePluginRegistry): void {
         inputType: "url",
         label: D.ogImage,
         maxLength: 500,
+      },
+      // Site-wide indexing gate. Default-true; when off, SEO emits
+      // `noindex,nofollow` and `robots.txt` disallows all crawling.
+      {
+        key: "public",
+        type: "boolean",
+        inputType: "checkbox",
+        label: D.publicSite,
+        default: true,
       },
     ],
   });

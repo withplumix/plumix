@@ -12,6 +12,7 @@ import { resolveLocale } from "../i18n/resolve-locale.js";
 import { matchRoute } from "../route/match.js";
 import { renderErrorThroughTheme } from "../route/render/render-template.js";
 import { resolvePublicRoute } from "../route/resolve.js";
+import { handleRobotsTxt } from "../seo/robots.js";
 import { rewriteAdminShellLangDir } from "./admin-shell.js";
 import { forbidden, jsonResponse, methodNotAllowed, notFound } from "./http.js";
 import { loadUserForPublicRequest } from "./load-user-for-public-request.js";
@@ -22,6 +23,7 @@ const AUTH_PREFIX = "/_plumix/auth/";
 const PLUMIX_PREFIX = "/_plumix/";
 const MCP_PATH = "/_plumix/mcp";
 const API_PREFIX = "/_plumix/api";
+const ROBOTS_PATH = "/robots.txt";
 
 // MCP is cold-path-exclusive (an agent endpoint, never the public render path).
 // Dynamic-import its handler so the tool registry and the MCP SDK it pulls in
@@ -237,6 +239,12 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
 
   if (ctx.request.method !== "GET" && ctx.request.method !== "HEAD") {
     return methodNotAllowed(["GET", "HEAD"]);
+  }
+
+  // Core SEO asset routes resolve ahead of the public route map so a plugin
+  // rewrite rule can't shadow them.
+  if (pathname === ROBOTS_PATH) {
+    return handleRobotsTxt(ctx);
   }
 
   return dispatchPublicRoute(app, ctx, url);

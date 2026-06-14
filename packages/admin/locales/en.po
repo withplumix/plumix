@@ -554,6 +554,11 @@ msgid "users.list.roleFilter.all"
 msgstr "All roles"
 
 #. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.public"
+msgstr "Allow search engines to index this site"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.title"
 msgstr "Allowed domains"
