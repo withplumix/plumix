@@ -101,6 +101,111 @@ describe("SEO — canonical + render:document seam", () => {
   });
 });
 
+async function seedSiteSettings(
+  h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+  values: Record<string, string>,
+): Promise<void> {
+  for (const [key, value] of Object.entries(values)) {
+    await h.factory.setting.create({ group: "site", key, value });
+  }
+}
+
+describe("SEO — default head meta", () => {
+  test("an entry page emits the singular default meta set", async () => {
+    const theme = defineTheme({ templates: { index: () => null } });
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    await seedSiteSettings(h, {
+      title: "Demo",
+      tagline: "A tagline",
+      default_og_image: "https://cms.example/og.png",
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "hello",
+      title: "Hello",
+      excerpt: "My excerpt",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head.match(/name="description"/g)).toHaveLength(1);
+    expect(head).toContain('<meta name="description" content="My excerpt"/>');
+    expect(head).toContain(
+      '<meta name="robots" content="index,follow,max-image-preview:large"/>',
+    );
+    expect(head).toContain('<meta property="og:title" content="Hello"/>');
+    expect(head).toContain('<meta property="og:type" content="article"/>');
+    expect(head).toContain(
+      '<meta property="og:url" content="https://cms.example/post/hello"/>',
+    );
+    expect(head).toContain('<meta property="og:site_name" content="Demo"/>');
+    expect(head).toContain('<meta property="og:locale" content="en"/>');
+    expect(head).toContain(
+      '<meta property="og:image" content="https://cms.example/og.png"/>',
+    );
+    expect(head).toContain(
+      '<meta name="twitter:card" content="summary_large_image"/>',
+    );
+  });
+
+  test("description falls back to the site tagline when the entry has no excerpt", async () => {
+    const theme = defineTheme({ templates: { index: () => null } });
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    await seedSiteSettings(h, { tagline: "Fallback tagline" });
+    await seedPost(h);
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head).toContain(
+      '<meta name="description" content="Fallback tagline"/>',
+    );
+  });
+
+  test("og:image is absent and the card downgrades when no default image is set", async () => {
+    const theme = defineTheme({ templates: { index: () => null } });
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    await seedPost(h);
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head).not.toContain('property="og:image"');
+    expect(head).toContain('<meta name="twitter:card" content="summary"/>');
+  });
+
+  test("a search-results route emits noindex", async () => {
+    const theme = defineTheme({ templates: { index: () => null } });
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+
+    const head = await dispatchHead(h, "https://cms.example/search/anything");
+
+    expect(head).toContain('<meta name="robots" content="noindex,follow"/>');
+  });
+
+  test("a template-set head field is not duplicated by the defaults", async () => {
+    const theme = defineTheme({
+      templates: { index: () => null },
+      document: {
+        meta: [{ property: "og:site_name", content: "From Theme" }],
+      },
+    });
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    await seedSiteSettings(h, { title: "Demo" });
+    await seedPost(h);
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head.match(/property="og:site_name"/g)).toHaveLength(1);
+    expect(head).toContain(
+      '<meta property="og:site_name" content="From Theme"/>',
+    );
+  });
+});
+
 describe("resolvePublicRoute — single entry through theme", () => {
   test("renders the entry title via the matched `single` template", async () => {
     const theme = defineTheme({

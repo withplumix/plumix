@@ -29,6 +29,7 @@ import type { ResolvedNode } from "./template-hierarchy.js";
 import { PlumixAdminBar } from "../../admin-bar/component.js";
 import { mergeDocumentManifest } from "../../document-merge.js";
 import { applyCanonical } from "../../seo/canonical.js";
+import { applyHeadMeta } from "../../seo/head-defaults.js";
 import {
   loadTemplateDeps,
   mergeTemplateDepDeclarations,
@@ -105,7 +106,12 @@ export async function renderThroughTheme({
     data,
     ctx,
   );
-  const renderDocument = applyCanonical(filtered, ctx);
+  const renderDocument = await applyHeadMeta(
+    applyCanonical(filtered, ctx),
+    data,
+    ctx,
+    title,
+  );
   const loaderData = await prefetchEntryLoaders(ctx, data, template);
   return renderTree({
     ctx,

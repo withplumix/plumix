@@ -1313,6 +1313,11 @@ msgid "allowedDomains.add.defaultRole.label"
 msgstr "Роль за замовчуванням"
 
 #. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+msgid "core.settings.site.default_og_image"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/BlockActionsPanel.tsx
 msgid "blockActions.delete"
 msgstr "Видалити"

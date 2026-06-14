@@ -29,7 +29,7 @@ export function registerCoreTemplateDeps(
   });
 }
 
-async function settingsLoader(
+export async function settingsLoader(
   groups: readonly string[],
   ctx: AppContext,
 ): Promise<Record<string, Record<string, unknown>>> {
