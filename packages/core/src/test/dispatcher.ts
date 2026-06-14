@@ -2,7 +2,11 @@ import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { BootstrapVia, PlumixMagicLinkConfig } from "../auth/config.js";
 import type { Mailer } from "../auth/mailer/types.js";
 import type { OAuthProviderClient } from "../auth/oauth/types.js";
-import type { AnyPluginDescriptor, InterfaceToggle } from "../config.js";
+import type {
+  AnyPluginDescriptor,
+  ApiConfig,
+  InterfaceToggle,
+} from "../config.js";
 import type { AppContext } from "../context/app.js";
 import type { User, UserRole } from "../db/schema/users.js";
 import type {
@@ -114,7 +118,7 @@ export interface CreateDispatcherHarnessOptions {
   /** Mount the MCP endpoint. Default-off mirrors production. */
   readonly mcp?: InterfaceToggle;
   /** Mount the REST API. Default-off mirrors production. */
-  readonly api?: InterfaceToggle;
+  readonly api?: ApiConfig;
   /**
    * Vite-emitted asset manifest. Tests that exercise the renderer's
    * `<link rel="stylesheet">` auto-injection pass a stub manifest here;

@@ -350,7 +350,7 @@ export async function buildApp(
   let restHandler: Promise<RestDispatch> | undefined;
   const loadRestHandler = (): Promise<RestDispatch> =>
     (restHandler ??= import("../rest/build-handler.js").then((m) =>
-      m.buildRestDispatcher(registry),
+      m.buildRestDispatcher(registry, config.api?.cors),
     ));
 
   return {
