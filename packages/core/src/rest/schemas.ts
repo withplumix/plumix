@@ -43,6 +43,8 @@ export const publicEntrySchema = v.object({
   author: v.nullable(publicAuthorSchema),
   // Associations are embedded, never nested as their own sub-resource.
   terms: v.record(v.string(), v.array(publicTermSchema)),
+  // Only meta fields whitelisted with `showInApi` reach this map (default-deny).
+  meta: v.record(v.string(), v.unknown()),
 });
 
 function listEnvelopeSchema<TItem extends v.GenericSchema>(item: TItem) {

@@ -1,6 +1,7 @@
 import type { AppContext } from "../context/app.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { Term } from "../db/schema/terms.js";
+import type { PluginRegistry } from "../plugin/manifest.js";
 import type { PublicAuthor, PublicEntry, PublicTerm } from "./schemas.js";
 import { eq, inArray } from "../db/index.js";
 import { entryTerm } from "../db/schema/entry_term.js";
@@ -13,6 +14,34 @@ export function projectTerm(
   return { id: term.id, name: term.name, slug: term.slug };
 }
 
+// The meta keys an entry type opts into exposing (`showInApi`). Default-deny:
+// a key absent from any registered field, or registered without the flag, is
+// never returned — adding a field can't leak it.
+export function apiVisibleMetaKeys(
+  registry: PluginRegistry,
+  entryType: string,
+): Set<string> {
+  const keys = new Set<string>();
+  for (const box of registry.entryMetaBoxes.values()) {
+    if (!box.entryTypes.includes(entryType)) continue;
+    for (const field of box.fields) {
+      if (field.showInApi === true) keys.add(field.key);
+    }
+  }
+  return keys;
+}
+
+function projectMeta(
+  bag: Record<string, unknown>,
+  visibleKeys: Set<string>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of visibleKeys) {
+    if (key in bag) out[key] = bag[key];
+  }
+  return out;
+}
+
 /**
  * Explicit allowlist — default-deny. Privileged columns (authorId, sortOrder,
  * parentId, meta) and the author's email/role never appear because they are
@@ -23,6 +52,7 @@ export function projectEntry(
   entry: Entry,
   author: PublicAuthor | null,
   termsByTaxonomy: Record<string, PublicTerm[]>,
+  visibleMetaKeys: Set<string>,
 ): PublicEntry {
   return {
     id: entry.id,
@@ -37,6 +67,7 @@ export function projectEntry(
     updatedAt: entry.updatedAt,
     author,
     terms: termsByTaxonomy,
+    meta: projectMeta(entry.meta, visibleMetaKeys),
   };
 }
 

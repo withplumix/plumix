@@ -6,6 +6,7 @@ import { EntryReadError } from "../entries/errors.js";
 import { getEntry, listEntries } from "../entries/read-service.js";
 import { listEnvelope } from "./envelope.js";
 import {
+  apiVisibleMetaKeys,
   loadEntriesTerms,
   loadPublicAuthors,
   projectEntry,
@@ -74,11 +75,13 @@ export async function listEntriesEnvelope(
     rows.map((row) => row.authorId),
   );
   const termsByEntry = await loadEntriesTerms(context, ids);
+  const visibleMeta = apiVisibleMetaKeys(context.plugins, entryType.name);
   const data = rows.map((row) =>
     projectEntry(
       row,
       authors.get(row.authorId) ?? null,
       termsByEntry.get(row.id) ?? {},
+      visibleMeta,
     ),
   );
 
@@ -106,9 +109,11 @@ export async function getEntryItem(
   }
   const authors = await loadPublicAuthors(context, [entry.authorId]);
   const termsByEntry = await loadEntriesTerms(context, [entry.id]);
+  const visibleMeta = apiVisibleMetaKeys(context.plugins, entryType.name);
   return projectEntry(
     entry,
     authors.get(entry.authorId) ?? null,
     termsByEntry.get(entry.id) ?? {},
+    visibleMeta,
   );
 }

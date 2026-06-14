@@ -360,6 +360,12 @@ export interface MetaBoxFieldBase {
    * repeater field's gate). Defaults to no gating.
    */
   readonly capability?: string;
+  /**
+   * Expose this field's value on the public REST API. Default-deny: meta is
+   * hidden from REST responses unless a field opts in with `showInApi: true`,
+   * so internal fields never leak by default. Has no effect on the admin RPC.
+   */
+  readonly showInApi?: boolean;
 }
 
 /**
