@@ -19,6 +19,88 @@ const blogPlugin = definePlugin("blog", (ctx) => {
   });
 });
 
+function headOf(body: string): string {
+  return body.slice(body.indexOf("<head>"), body.indexOf("</head>"));
+}
+
+async function dispatchHead(
+  h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+  url: string,
+): Promise<string> {
+  const res = await h.dispatch(new Request(url));
+  return headOf(await res.text());
+}
+
+async function seedPost(
+  h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+  slug = "hello",
+): Promise<void> {
+  const author = await h.seedUser("admin");
+  await h.factory.entry.create({
+    type: "post",
+    slug,
+    title: "Hello",
+    content: null,
+    status: "published",
+    authorId: author.id,
+    publishedAt: new Date(),
+  });
+}
+
+describe("SEO — canonical + render:document seam", () => {
+  test("a public page renders exactly one canonical with the slash-less absolute URL", async () => {
+    const theme = defineTheme({ templates: { index: () => null } });
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    await seedPost(h);
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head.match(/rel="canonical"/g)).toHaveLength(1);
+    expect(head).toContain(
+      '<link rel="canonical" href="https://cms.example/post/hello"/>',
+    );
+  });
+
+  test("a render:document subscriber can override the canonical (gap-filler skips)", async () => {
+    const seoPlugin = definePlugin("seo-test", (ctx) => {
+      ctx.addFilter("render:document", (manifest) => ({
+        ...manifest,
+        link: [
+          ...(manifest.link ?? []),
+          { rel: "canonical", href: "https://cms.example/override" },
+        ],
+      }));
+    });
+    const theme = defineTheme({ templates: { index: () => null } });
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin, seoPlugin],
+      theme,
+    });
+    await seedPost(h);
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head.match(/rel="canonical"/g)).toHaveLength(1);
+    expect(head).toContain('href="https://cms.example/override"');
+  });
+
+  test("a template-set canonical is not duplicated by the gap-filler", async () => {
+    const theme = defineTheme({
+      templates: { index: () => null },
+      document: {
+        link: [{ rel: "canonical", href: "https://cms.example/from-theme" }],
+      },
+    });
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    await seedPost(h);
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head.match(/rel="canonical"/g)).toHaveLength(1);
+    expect(head).toContain('href="https://cms.example/from-theme"');
+  });
+});
+
 describe("resolvePublicRoute — single entry through theme", () => {
   test("renders the entry title via the matched `single` template", async () => {
     const theme = defineTheme({
