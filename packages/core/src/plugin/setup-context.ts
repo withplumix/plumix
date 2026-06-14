@@ -39,6 +39,7 @@ import type {
   PluginRouteAuth,
   PluginRouteMethod,
   PluginRpcRouter,
+  RestResourceOptions,
   ScheduledTask,
   SettingsGroupOptions,
   SettingsPageOptions,
@@ -67,6 +68,7 @@ import {
   assertValidLookupAdapterKind,
   assertValidNavGroupId,
   assertValidPluginRoutePath,
+  assertValidRestResourcePath,
   assertValidScheduledTask,
 } from "./validation/index.js";
 
@@ -197,6 +199,16 @@ export interface PluginSetupContextBase {
       ctx: AppContext,
     ) => Response | Promise<Response>;
   }): void;
+
+  /**
+   * Contribute a REST resource into the shared `/_plumix/api/v1/` namespace.
+   * Unlike `registerRoute` (a raw Request handler under the plugin's own
+   * prefix), this is an oRPC resource that merges into the public REST router
+   * and appears automatically in `openapi.json`. `path` is relative to the API
+   * prefix; core enforces `auth` before the handler runs. Path collisions
+   * (plugin↔plugin or plugin↔core) are rejected at boot.
+   */
+  registerRestResource(options: RestResourceOptions): void;
 
   registerAdminPage(options: AdminPageOptions): void;
   /**
@@ -535,6 +547,17 @@ export function createPluginSetupContext({
         path,
         auth,
         handler,
+      });
+    },
+
+    registerRestResource: (options) => {
+      assertValidRestResourcePath(pluginId, options.path);
+      // Cross-resource path collisions are validated at boot (buildApp), where
+      // the full set across all plugins + core reserved paths is known.
+      registry.restResources.push({
+        ...options,
+        pluginId,
+        method: options.method ?? "GET",
       });
     },
 

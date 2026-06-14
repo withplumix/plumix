@@ -31,6 +31,15 @@ export function assertValidAdminPagePath(pluginId: string, path: string): void {
   }
 }
 
+export function assertValidRestResourcePath(
+  pluginId: string,
+  path: string,
+): void {
+  // REST resources use oRPC `{param}` segments (no `*` wildcards); the prefix
+  // rules (leading slash, no traversal/query) are the same.
+  assertValidPathPrefix(pluginId, path, "REST resource");
+}
+
 export function assertValidPluginRoutePath(
   pluginId: string,
   path: string,

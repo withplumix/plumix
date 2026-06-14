@@ -28,6 +28,7 @@ import type {
 } from "../plugin/manifest.js";
 import type { ContextExtensionEntry } from "../plugin/provides-context.js";
 import type { RestDispatch } from "../rest/build-handler.js";
+import type { RestRoute } from "../rest/rest-routes.js";
 import type { RouteRule } from "../route/intent.js";
 import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type { DocumentManifest } from "../theme.js";
@@ -41,6 +42,7 @@ import { mergeDocumentManifest } from "../document-merge.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { installPlugins } from "../plugin/register.js";
+import { CORE_REST_ROUTES, routesOverlap } from "../rest/rest-routes.js";
 import { compileRouteMap } from "../route/compile.js";
 import { CORE_RPC_NAMESPACES } from "../rpc/namespaces.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
@@ -261,6 +263,34 @@ export async function buildApp(
     }
   }
 
+  // Plugin REST resources share the flat `/_plumix/api/v1/` namespace. Reject,
+  // at boot, any resource that overlaps a reserved core route or another
+  // plugin's resource (overlap, not string equality — the matcher prefers
+  // static segments, so a literal path could otherwise shadow a param route).
+  const seenRestRoutes: { pluginId: string; route: RestRoute }[] = [];
+  for (const resource of registry.restResources) {
+    const route = { method: resource.method, path: resource.path };
+    if (CORE_REST_ROUTES.some((core) => routesOverlap(route, core))) {
+      throw AppBootError.restResourceShadowsCore({
+        pluginId: resource.pluginId,
+        method: resource.method,
+        path: resource.path,
+      });
+    }
+    const clash = seenRestRoutes.find((seen) =>
+      routesOverlap(route, seen.route),
+    );
+    if (clash) {
+      throw AppBootError.restResourcePathConflict({
+        pluginId: resource.pluginId,
+        otherPluginId: clash.pluginId,
+        method: resource.method,
+        path: resource.path,
+      });
+    }
+    seenRestRoutes.push({ pluginId: resource.pluginId, route });
+  }
+
   const passkey = resolvePasskeyConfig(config.auth.passkey);
   const oauth = config.auth.oauth;
   const oauthProviders: OAuthProviderSummary[] = oauth
@@ -320,7 +350,7 @@ export async function buildApp(
   let restHandler: Promise<RestDispatch> | undefined;
   const loadRestHandler = (): Promise<RestDispatch> =>
     (restHandler ??= import("../rest/build-handler.js").then((m) =>
-      m.buildRestDispatcher(),
+      m.buildRestDispatcher(registry),
     ));
 
   return {

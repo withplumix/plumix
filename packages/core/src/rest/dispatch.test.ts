@@ -1,3 +1,4 @@
+import * as v from "valibot";
 import { describe, expect, test } from "vitest";
 
 import type {
@@ -331,6 +332,109 @@ describe("REST API — type exposure", () => {
     const res = await h.dispatch(apiGet("/_plumix/api/v1/ledgers"));
 
     expect(res.status).toBe(404);
+  });
+});
+
+const OK_OUTPUT = v.object({ ok: v.boolean() });
+
+// Plugin that contributes resources at every auth level. Core owns the 1- and
+// 2-segment collection space, so plugin resources nest deeper.
+const apiPlugin = definePlugin("test-api-plugin", (ctx) => {
+  ctx.registerRestResource({
+    path: "/system/diag/ping",
+    auth: "public",
+    output: v.object({ pong: v.boolean() }),
+    handler: () => ({ pong: true }),
+  });
+  ctx.registerRestResource({
+    path: "/system/diag/whoami",
+    auth: "authenticated",
+    output: v.object({ id: v.number() }),
+    handler: ({ context }) => ({ id: context.user?.id ?? -1 }),
+  });
+  ctx.registerRestResource({
+    path: "/system/diag/privileged",
+    auth: { capability: "entry:post:edit_any" },
+    output: OK_OUTPUT,
+    handler: () => ({ ok: true }),
+  });
+});
+
+describe("REST API — plugin resource seam", () => {
+  test("a public plugin resource is reachable and in the spec", async () => {
+    const h = await restHarness({ plugins: [apiPlugin] });
+
+    const res = await h.dispatch(apiGet("/_plumix/api/v1/system/diag/ping"));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ pong: true });
+
+    const spec = (await (
+      await h.dispatch(apiGet("/_plumix/api/v1/openapi.json"))
+    ).json()) as { paths: Record<string, unknown> };
+    expect(spec.paths).toHaveProperty("/system/diag/ping");
+  });
+
+  test("an `authenticated` resource is 401 anonymously, 200 with a PAT", async () => {
+    const h = await restHarness({ plugins: [apiPlugin] });
+    const { userId, secret } = await mintPat(h, { role: "editor" });
+
+    const anon = await h.dispatch(apiGet("/_plumix/api/v1/system/diag/whoami"));
+    expect(anon.status).toBe(401);
+
+    const authed = await h.dispatch(
+      bearerGet("/_plumix/api/v1/system/diag/whoami", secret),
+    );
+    expect(authed.status).toBe(200);
+    expect(await authed.json()).toEqual({ id: userId });
+  });
+
+  test("a capability resource is 403 without the grant, 200 with it", async () => {
+    const h = await restHarness({ plugins: [apiPlugin] });
+    const { secret } = await mintPat(h, { role: "admin" });
+
+    const forbidden = await h.dispatch(
+      apiGet("/_plumix/api/v1/system/diag/privileged"),
+    );
+    expect(forbidden.status).toBe(403);
+
+    const ok = await h.dispatch(
+      bearerGet("/_plumix/api/v1/system/diag/privileged", secret),
+    );
+    expect(ok.status).toBe(200);
+  });
+});
+
+describe("REST API — plugin resource collisions", () => {
+  function resourcePlugin(id: string, path: string) {
+    return definePlugin(id, (ctx) => {
+      ctx.registerRestResource({
+        path,
+        auth: "public",
+        output: OK_OUTPUT,
+        handler: () => ({ ok: true }),
+      });
+    });
+  }
+
+  test("two plugins claiming overlapping paths are rejected at boot", async () => {
+    await expect(
+      createDispatcherHarness({
+        api: { enabled: true },
+        plugins: [
+          resourcePlugin("dup-a", "/feed/{id}/dup"),
+          resourcePlugin("dup-b", "/feed/{slug}/dup"),
+        ],
+      }),
+    ).rejects.toThrow(/dup/i);
+  });
+
+  test("a plugin path that shadows a core route is rejected at boot", async () => {
+    await expect(
+      createDispatcherHarness({
+        api: { enabled: true },
+        plugins: [resourcePlugin("shadow", "/{anything}")],
+      }),
+    ).rejects.toThrow(/shadow|reserved|core/i);
   });
 });
 
