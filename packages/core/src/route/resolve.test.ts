@@ -534,37 +534,24 @@ describe("resolvePublicRoute — archive", () => {
     expect(response.status).toBe(404);
   });
 
-  test("explicit /page/1 resolves the same content as the bare archive", async () => {
+  test("explicit /page/1 canonical-redirects (301) to the bare archive", async () => {
     const h = await createDispatcherHarness({ plugins: [shopPlugin] });
-    const author = await h.seedUser("admin");
-    await h.factory.entry.create({
-      type: "product",
-      slug: "thing",
-      title: "Thing",
-      content: null,
-      status: "published",
-      authorId: author.id,
-      publishedAt: new Date(),
-    });
     const bare = await h.dispatch(new Request("https://cms.example/shop"));
     const paginated = await h.dispatch(
       new Request("https://cms.example/shop/page/1"),
     );
     expect(bare.status).toBe(200);
-    expect(paginated.status).toBe(200);
-    const bareBody = await bare.text();
-    const paginatedBody = await paginated.text();
-    expect(paginatedBody).toBe(bareBody);
+    expect(paginated.status).toBe(301);
+    expect(paginated.headers.get("location")).toBe("https://cms.example/shop");
   });
 
-  test("empty archive on page=1 still returns 200 (regression from #224)", async () => {
+  test("empty archive on /page/1 redirects, not 404s (regression from #224)", async () => {
     const h = await createDispatcherHarness({ plugins: [blogPlugin] });
     const response = await h.dispatch(
       new Request("https://cms.example/post/page/1"),
     );
-    expect(response.status).toBe(200);
-    const body = await response.text();
-    expect(body).toContain("No entries yet.");
+    expect(response.status).toBe(301);
+    expect(response.headers.get("location")).toBe("https://cms.example/post");
   });
 
   test("archive title falls back label → entryType when labels.plural is absent", async () => {
@@ -755,15 +742,16 @@ describe("resolvePublicRoute — taxonomy", () => {
     expect(response.status).toBe(404);
   });
 
-  test("empty term on page=1 still returns 200 (regression from #224)", async () => {
+  test("empty term on /page/1 redirects, not 404s (regression from #224)", async () => {
     const h = await createDispatcherHarness({ plugins: [taxonomyPlugin] });
     await h.factory.category.create({ slug: "empty", name: "Empty" });
     const response = await h.dispatch(
       new Request("https://cms.example/category/empty/page/1"),
     );
-    expect(response.status).toBe(200);
-    const body = await response.text();
-    expect(body).toContain("No entries yet.");
+    expect(response.status).toBe(301);
+    expect(response.headers.get("location")).toBe(
+      "https://cms.example/category/empty",
+    );
   });
 
   test("hierarchical taxonomy /<base>/parent/leaf resolves the nested term", async () => {

@@ -3103,7 +3103,7 @@ describe("resolvePublicRoute — front-page through theme", () => {
     expect(body).not.toContain('data-testid="row-no-date"');
   });
 
-  test("/page/N renders the front-page on page N", async () => {
+  test("/page/1 canonical-redirects to the front page, which renders page 1", async () => {
     const theme = defineTheme({
       templates: {
         index: () => null,
@@ -3125,11 +3125,15 @@ describe("resolvePublicRoute — front-page through theme", () => {
       publishedAt: new Date(),
     });
 
-    const response = await h.dispatch(
+    const redirect = await h.dispatch(
       new Request("https://cms.example/page/1"),
     );
-    expect(response.status).toBe(200);
-    expect(await response.text()).toContain("page:1");
+    expect(redirect.status).toBe(301);
+    expect(redirect.headers.get("location")).toBe("https://cms.example/");
+
+    const home = await h.dispatch(new Request("https://cms.example/"));
+    expect(home.status).toBe(200);
+    expect(await home.text()).toContain("page:1");
   });
 
   test("/page/0 on the front-page is out-of-range 404", async () => {
@@ -3144,9 +3148,11 @@ describe("resolvePublicRoute — front-page through theme", () => {
     expect(response.status).toBe(404);
   });
 
-  test("/page/N is not shadowed by a plugin that grabs the `/page/:slug` auto-route", async () => {
+  test("/page/1 is canonical-redirected before the `/page/:slug` auto-route can shadow it", async () => {
     // The `page` entry type auto-generates `/page/:slug`, which would
-    // otherwise swallow `/page/1`.
+    // otherwise swallow `/page/1`. The canonical 301 fires ahead of routing,
+    // so `/page/1` redirects to the front page rather than resolving the
+    // page-entry single "1".
     const pagesPlugin = definePlugin("pages", (ctx) => {
       ctx.registerEntryType("page", { label: "Pages", isPublic: true });
     });
@@ -3174,11 +3180,14 @@ describe("resolvePublicRoute — front-page through theme", () => {
       publishedAt: new Date(),
     });
 
-    const response = await h.dispatch(
+    const redirect = await h.dispatch(
       new Request("https://cms.example/page/1"),
     );
-    expect(response.status).toBe(200);
-    expect(await response.text()).toContain("page:1");
+    expect(redirect.status).toBe(301);
+    expect(redirect.headers.get("location")).toBe("https://cms.example/");
+
+    const home = await h.dispatch(new Request("https://cms.example/"));
+    expect(await home.text()).toContain("page:1");
   });
 
   test("blog archive at /posts resolves even when a pages plugin's empty-slug catch-all registers first", async () => {

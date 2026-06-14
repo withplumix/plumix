@@ -53,6 +53,10 @@ export function redirectTo(
   return new Response(null, { status: 302, headers });
 }
 
+export function permanentRedirect(location: string): Response {
+  return new Response(null, { status: 301, headers: { Location: location } });
+}
+
 export function loginErrorRedirect(
   loginPath: string,
   paramName: string,
