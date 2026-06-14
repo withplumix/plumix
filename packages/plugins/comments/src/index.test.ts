@@ -39,6 +39,7 @@ describe("comments() plugin", () => {
   interface CapturedSetup {
     readonly kinds: string[];
     readonly routes: string[];
+    readonly restResources: string[];
     readonly capabilities: string[];
     readonly adminPaths: string[];
     readonly actions: string[];
@@ -49,6 +50,7 @@ describe("comments() plugin", () => {
     const captured: CapturedSetup = {
       kinds: [],
       routes: [],
+      restResources: [],
       capabilities: [],
       adminPaths: [],
       actions: [],
@@ -58,6 +60,8 @@ describe("comments() plugin", () => {
       registerTemplateDep: (kind: string) => captured.kinds.push(kind),
       registerRoute: (opts: { path: string }) =>
         captured.routes.push(opts.path),
+      registerRestResource: (opts: { path: string }) =>
+        captured.restResources.push(opts.path),
       registerCapability: (name: string) => captured.capabilities.push(name),
       registerRpcRouter: () => {
         captured.rpcRouter = true;
@@ -74,6 +78,7 @@ describe("comments() plugin", () => {
     const s = captureSetup({});
     expect(s.kinds).toContain("comments");
     expect(s.routes).toContain("/submit");
+    expect(s.restResources).toContain("/{type}/{id}/comments");
     expect(s.capabilities).toContain("comment:moderate");
     expect(s.adminPaths).toContain("/comments");
     expect(s.rpcRouter).toBe(true);

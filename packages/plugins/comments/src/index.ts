@@ -7,6 +7,11 @@ import * as schema from "./db/schema.js";
 import { COMMENT_MODERATE_CAPABILITY, createCommentsRouter } from "./rpc.js";
 import { createListHandler } from "./server/list.js";
 import { notifyModeratorOfPending } from "./server/notify.js";
+import {
+  commentCollectionParamsSchema,
+  commentsEnvelopeSchema,
+  createCommentsRestHandler,
+} from "./server/rest.js";
 import { createSubmitHandler } from "./server/submit.js";
 import { createCommentsThreadLoader } from "./server/template-dep.js";
 
@@ -88,6 +93,13 @@ export function comments(options: CommentsConfig = {}) {
         path: "/list",
         auth: "public",
         handler: createListHandler(config),
+      });
+      ctx.registerRestResource({
+        path: "/{type}/{id}/comments",
+        auth: "public",
+        input: commentCollectionParamsSchema,
+        output: commentsEnvelopeSchema,
+        handler: createCommentsRestHandler(config),
       });
 
       if (config.notifyEmail) {
