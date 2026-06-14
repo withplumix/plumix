@@ -9,6 +9,11 @@ export const REST_ERRORS = {
     message: "Resource not found",
     data: v.object({ kind: v.string() }),
   },
+  UNAUTHORIZED: { message: "Authentication required" },
+  FORBIDDEN: {
+    message: "Permission denied",
+    data: v.object({ capability: v.string() }),
+  },
 } as const;
 
 export type RestErrors = ORPCErrorConstructorMap<typeof REST_ERRORS>;

@@ -1194,6 +1194,31 @@ export interface RegisteredRawRoute {
   ) => Response | Promise<Response>;
 }
 
+export type RestResourceMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+
+/**
+ * A REST resource a plugin contributes into the shared `/_plumix/api/v1/`
+ * namespace. `path` is relative to that prefix (e.g. `/{type}/{id}/comments`)
+ * and uses `{param}` segments. `auth` reuses the declarative route model; core
+ * enforces it before the handler runs. `input`/`output` are valibot schemas —
+ * the `output` schema is the public allowlist and feeds the generated spec.
+ */
+export interface RestResourceOptions {
+  readonly method?: RestResourceMethod;
+  readonly path: string;
+  readonly auth: PluginRouteAuth;
+  /* eslint-disable @typescript-eslint/no-explicit-any -- one registry slot holds every plugin's heterogeneous valibot schemas */
+  readonly input?: any;
+  readonly output: any;
+  readonly handler: (args: { input: any; context: AppContext }) => any;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+}
+
+export interface RegisteredRestResource extends RestResourceOptions {
+  readonly pluginId: string;
+  readonly method: RestResourceMethod;
+}
+
 /**
  * Tiny `{ key, label, href }` blob a plugin attaches so the standard
  * login screen can render a button for the sign-in flow it ships. The
@@ -1294,6 +1319,7 @@ export interface PluginRegistry {
   readonly rpcRouters: ReadonlyMap<string, PluginRpcRouter>;
   readonly mcpTools: ReadonlyMap<string, RegisteredMcpTool>;
   readonly rawRoutes: readonly RegisteredRawRoute[];
+  readonly restResources: readonly RegisteredRestResource[];
   readonly loginLinks: readonly RegisteredLoginLink[];
   readonly adminPages: ReadonlyMap<string, RegisteredAdminPage>;
   readonly dashboardWidgets: ReadonlyMap<string, RegisteredDashboardWidget>;
@@ -1320,6 +1346,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly rpcRouters: Map<string, PluginRpcRouter>;
   readonly mcpTools: Map<string, RegisteredMcpTool>;
   readonly rawRoutes: RegisteredRawRoute[];
+  readonly restResources: RegisteredRestResource[];
   readonly loginLinks: RegisteredLoginLink[];
   readonly adminPages: Map<string, RegisteredAdminPage>;
   readonly dashboardWidgets: Map<string, RegisteredDashboardWidget>;
@@ -1347,6 +1374,7 @@ export function createPluginRegistry(): MutablePluginRegistry {
     rpcRouters: new Map(),
     mcpTools: new Map(),
     rawRoutes: [],
+    restResources: [],
     loginLinks: [],
     adminPages: new Map(),
     dashboardWidgets: new Map(),

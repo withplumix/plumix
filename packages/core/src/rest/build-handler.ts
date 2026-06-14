@@ -2,9 +2,12 @@ import type { OpenAPI } from "@orpc/openapi";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 
 import type { AppContext } from "../context/app.js";
+import type { PluginRegistry } from "../plugin/manifest.js";
+import type { RestContext } from "./base.js";
 import type { RestPrincipal } from "./principal.js";
 import { jsonResponse, notFound, unauthorized } from "../runtime/http.js";
 import { generateOpenApiDocument } from "./openapi.js";
+import { buildPluginRestRouter } from "./plugin-resources.js";
 import { resolveRestPrincipal } from "./principal.js";
 import { restRouter } from "./router.js";
 
@@ -18,22 +21,32 @@ export type RestDispatch = (ctx: AppContext) => Promise<Response>;
 const API_V1_PREFIX = "/_plumix/api/v1";
 const SPEC_PATH = `${API_V1_PREFIX}/openapi.json`;
 
-export function buildRestDispatcher(): RestDispatch {
-  const handler = new OpenAPIHandler(restRouter);
+export function buildRestDispatcher(registry: PluginRegistry): RestDispatch {
+  // Core resources + plugin-contributed resources share one router, so plugin
+  // endpoints route and appear in the spec automatically.
+  const router = {
+    ...restRouter,
+    ...buildPluginRestRouter(registry.restResources),
+  };
+  const handler = new OpenAPIHandler(router);
   // Generated once per isolate, on first request for the spec.
   let spec: Promise<OpenAPI.Document> | undefined;
   return async (ctx) => {
     const url = new URL(ctx.request.url);
     if (url.pathname === SPEC_PATH) {
-      return jsonResponse(await (spec ??= generateOpenApiDocument()));
+      return jsonResponse(await (spec ??= generateOpenApiDocument(router)));
     }
 
     const principal: RestPrincipal = await resolveRestPrincipal(ctx);
     if (principal.kind === "unauthorized") return unauthorized();
 
+    const context: RestContext = {
+      ...principal.ctx,
+      restAuthenticated: principal.kind === "authed",
+    };
     const result = await handler.handle(ctx.request, {
       prefix: API_V1_PREFIX,
-      context: principal.ctx,
+      context,
     });
     const response = result.matched
       ? result.response
