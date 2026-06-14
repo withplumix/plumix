@@ -31,6 +31,25 @@ const blog = definePlugin("test-blog", (ctx) => {
     isHierarchical: false,
     entryTypes: ["post"],
   });
+  ctx.registerEntryMetaBox("seo", {
+    label: "SEO",
+    entryTypes: ["post"],
+    fields: [
+      {
+        key: "featured",
+        label: "Featured",
+        inputType: "checkbox",
+        type: "boolean",
+        showInApi: true,
+      },
+      {
+        key: "internal_note",
+        label: "Internal",
+        inputType: "text",
+        type: "string",
+      },
+    ],
+  });
 });
 
 // A custom public type plus a non-public one, to prove custom types light up
@@ -239,12 +258,13 @@ describe("REST API — public projection (default-deny)", () => {
     const res = await h.dispatch(apiGet(`/_plumix/api/v1/posts/${entry.id}`));
 
     const body = (await res.json()) as Record<string, unknown>;
-    // The allowlist omits raw authorId, sortOrder, parentId, and meta — adding
-    // a column to the entries table cannot leak it through this surface.
+    // The allowlist omits raw authorId, sortOrder, and parentId — adding a
+    // column to the entries table cannot leak it through this surface. Meta is
+    // present but default-deny (empty until a field opts in via showInApi).
     expect(body).not.toHaveProperty("authorId");
     expect(body).not.toHaveProperty("sortOrder");
     expect(body).not.toHaveProperty("parentId");
-    expect(body).not.toHaveProperty("meta");
+    expect(body.meta).toEqual({});
   });
 });
 
@@ -411,6 +431,62 @@ describe("REST API — term resources", () => {
     const res = await h.dispatch(apiGet("/_plumix/api/v1/categories/999999"));
 
     expect(res.status).toBe(404);
+  });
+});
+
+describe("REST API — meta visibility (default-deny)", () => {
+  async function seedWithMeta(
+    h: DispatcherHarness,
+    meta: Record<string, unknown>,
+  ): Promise<number> {
+    const author = await h.factory.user.create({ role: "author" });
+    const entry = await h.factory.entry.create({
+      type: "post",
+      status: "published",
+      authorId: author.id,
+      meta,
+    });
+    return entry.id;
+  }
+
+  test("a whitelisted meta field appears; a non-whitelisted one does not", async () => {
+    const h = await restHarness();
+    const id = await seedWithMeta(h, {
+      featured: true,
+      internal_note: "secret",
+    });
+
+    const res = await h.dispatch(apiGet(`/_plumix/api/v1/posts/${id}`));
+
+    const body = (await res.json()) as { meta: Record<string, unknown> };
+    expect(body.meta).toEqual({ featured: true });
+    expect(body.meta).not.toHaveProperty("internal_note");
+  });
+
+  test("an unregistered meta key is never exposed (default-deny)", async () => {
+    const h = await restHarness();
+    const id = await seedWithMeta(h, { rogue: "leak" });
+
+    const res = await h.dispatch(apiGet(`/_plumix/api/v1/posts/${id}`));
+
+    const body = (await res.json()) as { meta: Record<string, unknown> };
+    expect(body.meta).toEqual({});
+  });
+
+  test("a PAT-authed read applies the same meta whitelist", async () => {
+    const h = await restHarness();
+    const id = await seedWithMeta(h, {
+      featured: true,
+      internal_note: "secret",
+    });
+    const { secret } = await mintPat(h, { role: "admin" });
+
+    const res = await h.dispatch(
+      bearerGet(`/_plumix/api/v1/posts/${id}`, secret),
+    );
+
+    const body = (await res.json()) as { meta: Record<string, unknown> };
+    expect(body.meta).toEqual({ featured: true });
   });
 });
 
