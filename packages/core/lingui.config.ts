@@ -1,9 +1,17 @@
 import { defineLinguiConfig } from "@plumix/lingui-config";
 
-// Per-surface catalog naming: core hosts the admin bar today and a
-// debug bar later. `admin-bar-{locale}.po` keeps each surface's
-// catalog distinct in one flat locales/ dir.
+// Per-surface catalog naming keeps each translatable surface's catalog
+// distinct in one flat locales/ dir: the SSR admin bar and the zero-theme
+// welcome screen each own a `<surface>-{locale}.po` set.
 export default defineLinguiConfig({
-  catalogPath: "<rootDir>/locales/admin-bar-{locale}",
-  include: ["src/admin-bar"],
+  surfaces: [
+    {
+      catalogPath: "<rootDir>/locales/admin-bar-{locale}",
+      include: ["src/admin-bar"],
+    },
+    {
+      catalogPath: "<rootDir>/locales/welcome-{locale}",
+      include: ["src/welcome"],
+    },
+  ],
 });
