@@ -1,4 +1,4 @@
-import { auth, defineTheme, plumix } from "plumix";
+import { auth, plumix } from "plumix";
 import {
   cloudflare,
   cloudflareDeployOrigin,
@@ -31,7 +31,6 @@ export default plumix({
       origin,
     },
   }),
-  // Noop placeholder — every Plumix app needs a theme. Replace with a
-  // real theme once you start rendering public routes.
-  theme: defineTheme({ templates: { index: () => null } }),
+  // No theme registered: the public site serves plumix's built-in welcome
+  // screen. Add a `theme` once you start rendering your own public routes.
 });
