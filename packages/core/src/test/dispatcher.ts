@@ -1,3 +1,5 @@
+import type { RemotePattern } from "@plumix/blocks/renderer";
+
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { BootstrapVia, PlumixMagicLinkConfig } from "../auth/config.js";
 import type { Mailer } from "../auth/mailer/types.js";
@@ -125,6 +127,8 @@ export interface CreateDispatcherHarnessOptions {
   readonly mcp?: InterfaceToggle;
   /** Mount the REST API. Default-off mirrors production. */
   readonly api?: ApiConfig;
+  /** `<Image>` remote-host allowlist; tests exercising remote optimization set it. */
+  readonly images?: { readonly remotePatterns?: readonly RemotePattern[] };
   /**
    * Vite-emitted asset manifest. Tests that exercise the renderer's
    * `<link rel="stylesheet">` auto-injection pass a stub manifest here;
@@ -208,6 +212,7 @@ function withRequest(
     assets,
     storage,
     imageDelivery: app.config.imageDelivery,
+    imageRemotePatterns: app.config.images?.remotePatterns,
     mailer: app.config.mailer,
     i18n: app.config.i18n,
     oauthProviders: app.oauthProviders,
@@ -245,6 +250,7 @@ export async function createDispatcherHarness(
     basePath: options.basePath,
     mcp: options.mcp,
     api: options.api,
+    images: options.images,
     theme: options.theme ?? defaultTestTheme,
   });
   const app = await buildApp(config, {
