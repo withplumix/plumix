@@ -33,7 +33,7 @@
     "@commitlint/config-pnpm-scopes": "^21.0.2",
     "@commitlint/types": "^21.0.1",
     "knip": "^6.6.0",
-    "turbo": "^2.9.16"
+    "turbo": "^2.9.18"
   },
   "pnpm": {
     "overrides": {
