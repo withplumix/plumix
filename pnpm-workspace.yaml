@@ -56,10 +56,10 @@ catalogs:
     "@lingui/format-po": ^6.2.0
     "@lingui/react": ^6.2.0
   tailwind:
-    "@tailwindcss/node": ^4.3.0
-    "@tailwindcss/oxide": ^4.3.0
-    "@tailwindcss/vite": ^4.3.0
-    tailwindcss: ^4.3.0
+    "@tailwindcss/node": ^4.3.1
+    "@tailwindcss/oxide": ^4.3.1
+    "@tailwindcss/vite": ^4.3.1
+    tailwindcss: ^4.3.1
 
 publicHoistPattern:
   - "@ianvs/prettier-plugin-sort-imports"
