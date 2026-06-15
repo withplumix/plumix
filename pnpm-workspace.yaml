@@ -51,7 +51,7 @@ catalog:
 
 catalogs:
   lingui:
-    "@lingui/cli": ^6.2.0
+    "@lingui/cli": ^6.3.0
     "@lingui/core": ^6.2.0
     "@lingui/format-po": ^6.2.0
     "@lingui/react": ^6.2.0
