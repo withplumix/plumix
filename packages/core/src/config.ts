@@ -1,4 +1,5 @@
 import type { HtmlAllowlistOverride } from "@plumix/blocks";
+import type { RemotePattern } from "@plumix/blocks/renderer";
 
 import type { PlumixAuthConfig } from "./auth/config.js";
 import type { Mailer } from "./auth/mailer/types.js";
@@ -112,6 +113,14 @@ export interface PlumixConfigInput {
     readonly htmlAllowlist?: HtmlAllowlistOverride;
   };
   /**
+   * Image handling for the `<Image>` theme component. `remotePatterns` is the
+   * allowlist of remote hosts `<Image>` may optimize; same-origin sources are
+   * always allowed, and unlisted remote sources render unoptimized.
+   */
+  readonly images?: {
+    readonly remotePatterns?: readonly RemotePattern[];
+  };
+  /**
    * Passthrough merged with plumix's own Vite config via `mergeConfig`.
    * Structural so core stays Vite-dep-free.
    */
@@ -135,6 +144,9 @@ export interface PlumixConfig {
   readonly api?: ApiConfig;
   readonly blocks?: {
     readonly htmlAllowlist?: HtmlAllowlistOverride;
+  };
+  readonly images?: {
+    readonly remotePatterns?: readonly RemotePattern[];
   };
   readonly vite?: Readonly<Record<string, unknown>>;
 }
@@ -167,6 +179,7 @@ export function plumix(config: PlumixConfigInput): PlumixConfig {
     mcp: config.mcp,
     api: config.api,
     blocks: config.blocks,
+    images: config.images,
     vite: config.vite,
   };
 }

@@ -12,6 +12,7 @@ import { resolveBlockLoaders } from "@plumix/blocks";
 import { PlumixProvider } from "@plumix/blocks/renderer";
 
 import type { AppContext } from "../../context/app.js";
+import type { TransformOpts } from "../../runtime/slots.js";
 import type { RegisteredTemplateDep } from "../../template-deps.js";
 import type { Template } from "../../template.js";
 import type {
@@ -321,6 +322,8 @@ function renderTree({
     "entry" in data
       ? (data.entry as unknown as Readonly<Record<string, unknown>>)
       : null;
+  // Bind once so the resolver closure keeps the non-null narrowing.
+  const imageDelivery = ctx.imageDelivery;
   const templateTree: ReactNode = createElement(
     PlumixProvider,
     {
@@ -334,6 +337,16 @@ function renderTree({
         shortcodes: ctx.shortcodes,
         entry,
         basePath: ctx.basePath,
+        imageResolver: imageDelivery
+          ? (src, opts) =>
+              imageDelivery.url(src, {
+                width: opts?.width,
+                quality: opts?.quality,
+                // blocks' resolver types `format` loosely as string.
+                format: opts?.format as TransformOpts["format"],
+              })
+          : undefined,
+        imageRemotePatterns: ctx.imageRemotePatterns,
       },
     },
     createElement(PlumixAdminBar, {

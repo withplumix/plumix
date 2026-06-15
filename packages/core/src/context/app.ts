@@ -5,6 +5,7 @@ import type {
   MarkSpec,
   ShortcodeRegistry,
 } from "@plumix/blocks";
+import type { RemotePattern } from "@plumix/blocks/renderer";
 import { createBlockRegistry } from "@plumix/blocks";
 
 import type { RequestAuthenticator } from "../auth/authenticator.js";
@@ -178,6 +179,8 @@ export interface AppContextBase<
    * procedures don't use it today.
    */
   readonly imageDelivery?: ImageDelivery;
+  /** Remote-host allowlist for `<Image>` optimization (from `config.images.remotePatterns`). */
+  readonly imageRemotePatterns?: readonly RemotePattern[];
   /**
    * Configured outbound email transport. Present when the operator
    * passed `mailer:` at the top of `plumix({...})`. Magic-link reads
@@ -265,6 +268,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly assets?: AssetsBinding;
   readonly storage?: ConnectedObjectStorage;
   readonly imageDelivery?: ImageDelivery;
+  readonly imageRemotePatterns?: readonly RemotePattern[];
   readonly mailer?: Mailer;
   readonly i18n?: ResolvedI18n;
   readonly oauthProviders?: readonly OAuthProviderSummary[];
@@ -367,6 +371,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     assets: args.assets,
     storage: args.storage,
     imageDelivery: args.imageDelivery,
+    imageRemotePatterns: args.imageRemotePatterns,
     mailer: args.mailer,
     i18n,
     locale,

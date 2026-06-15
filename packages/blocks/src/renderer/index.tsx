@@ -6,6 +6,7 @@ import type { EntryContent } from "../entry-content.js";
 import type { ResolvedBlockLoaders } from "../loaders.js";
 import type { ShortcodeRegistry } from "../shortcodes/types.js";
 import type { ThemeTokens } from "../styles/types.js";
+import type { ImageResolver, RemotePattern } from "./image-attrs.js";
 import { renderBlockTree } from "../render-block-tree.js";
 import { RendererError } from "./errors.js";
 
@@ -37,6 +38,10 @@ export interface PlumixContextValue {
   readonly entry?: Readonly<Record<string, unknown>> | null;
   /** Subdirectory prefix for internal links; `""` for a root deployment. */
   readonly basePath?: string;
+  /** Builds optimized image URLs (the `imageDelivery` transform); absent = no optimization. */
+  readonly imageResolver?: ImageResolver;
+  /** Remote hosts `<Image>` is allowed to optimize; same-origin is always allowed. */
+  readonly imageRemotePatterns?: readonly RemotePattern[];
 }
 
 const PlumixContext = createContext<PlumixContextValue | null>(null);
@@ -92,5 +97,23 @@ export function useBasePath(): string {
   return usePlumixContext("useBasePath").basePath ?? "";
 }
 
+export function useImageConfig(): {
+  readonly imageResolver?: ImageResolver;
+  readonly imageRemotePatterns?: readonly RemotePattern[];
+} {
+  const { imageResolver, imageRemotePatterns } =
+    usePlumixContext("useImageConfig");
+  return { imageResolver, imageRemotePatterns };
+}
+
 export { Link } from "./link.js";
 export type { LinkProps, LinkTarget } from "./link.js";
+export { Image } from "./image.js";
+export type { ImageProps } from "./image.js";
+export type {
+  ImageResolver,
+  RemotePattern,
+  BuildImageAttrsInput,
+  ImageAttrs,
+} from "./image-attrs.js";
+export { buildImageAttrs, matchesRemotePattern } from "./image-attrs.js";
