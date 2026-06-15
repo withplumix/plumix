@@ -333,6 +333,7 @@ function renderTree({
         locale: ctx.locale.code,
         shortcodes: ctx.shortcodes,
         entry,
+        basePath: ctx.basePath,
       },
     },
     createElement(PlumixAdminBar, {

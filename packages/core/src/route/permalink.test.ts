@@ -11,6 +11,7 @@ import {
   buildEntryPermalink,
   buildEntryPermalinkSync,
   buildTermArchiveUrl,
+  buildTermArchiveUrlSync,
 } from "./permalink.js";
 
 async function buildRegistry(
@@ -483,5 +484,68 @@ describe("buildTermArchiveUrl", () => {
     expect(
       await buildTermArchiveUrl(ctx, { taxonomy: "category", slug: "news" }),
     ).toBe("/topic/news");
+  });
+});
+
+describe("buildTermArchiveUrlSync", () => {
+  test("flat taxonomy: basePath-correct url without a DB hit", async () => {
+    const registry = await buildRegistry([
+      definePlugin("blog", (ctx) => {
+        ctx.registerTermTaxonomy("category", { label: "Categories" });
+      }),
+    ]);
+    const db = await createTestDb();
+    const ctx = ctxFor(db, registry, "/blog");
+    expect(
+      buildTermArchiveUrlSync(ctx, {
+        taxonomy: "category",
+        slug: "news",
+        parentId: null,
+      }),
+    ).toBe("/blog/category/news");
+  });
+
+  test("returns null for a nested term that needs an ancestor walk", async () => {
+    const registry = await buildRegistry([
+      definePlugin("blog", (ctx) => {
+        ctx.registerTermTaxonomy("category", {
+          label: "Categories",
+          isHierarchical: true,
+        });
+      }),
+    ]);
+    const db = await createTestDb();
+    const ctx = ctxFor(db, registry);
+    expect(
+      buildTermArchiveUrlSync(ctx, {
+        taxonomy: "category",
+        slug: "child",
+        parentId: 5,
+      }),
+    ).toBeNull();
+  });
+
+  test("returns null for a private or unknown taxonomy", async () => {
+    const registry = await buildRegistry([
+      definePlugin("blog", (ctx) => {
+        ctx.registerTermTaxonomy("menu", { label: "Menus", isPublic: false });
+      }),
+    ]);
+    const db = await createTestDb();
+    const ctx = ctxFor(db, registry);
+    expect(
+      buildTermArchiveUrlSync(ctx, {
+        taxonomy: "menu",
+        slug: "main",
+        parentId: null,
+      }),
+    ).toBeNull();
+    expect(
+      buildTermArchiveUrlSync(ctx, {
+        taxonomy: "nope",
+        slug: "x",
+        parentId: null,
+      }),
+    ).toBeNull();
   });
 });

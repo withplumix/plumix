@@ -102,6 +102,28 @@ export function buildEntryPermalinkSync(
   );
 }
 
+/**
+ * Sync subset of `buildTermArchiveUrl` — mirror of `buildEntryPermalinkSync`.
+ * Returns `null` when a nested term needs an ancestor-chain DB walk, so
+ * callers (e.g. `buildResolvedEntries`) attach a `url` without a per-term CTE.
+ */
+export function buildTermArchiveUrlSync(
+  ctx: AppContext,
+  term: {
+    readonly taxonomy: string;
+    readonly slug: string;
+    readonly parentId?: number | null;
+  },
+): string | null {
+  const taxonomy = ctx.plugins.termTaxonomies.get(term.taxonomy);
+  if (!taxonomy || taxonomy.isPublic === false) return null;
+  if (shouldNestUnderTermParent(taxonomy, term.parentId ?? null)) return null;
+  return withBasePath(
+    joinSegments([termTaxonomyBaseSlug(taxonomy), term.slug]),
+    ctx.basePath,
+  );
+}
+
 function entryTypeBaseSlug(entryType: RegisteredEntryType): string {
   return entryType.rewrite?.slug ?? entryType.name;
 }

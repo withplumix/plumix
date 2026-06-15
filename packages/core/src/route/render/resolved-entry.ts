@@ -10,6 +10,13 @@ export interface ResolvedAuthor {
   readonly avatarUrl: string | null;
 }
 
+// A term plus its pre-resolved archive `url` (basePath-correct). `url` is null
+// for a private taxonomy or a nested term needing an ancestor-chain walk —
+// `<Link term>` then degrades to its children. Mirrors `ResolvedEntry.url`.
+export interface ResolvedTerm extends Term {
+  readonly url: string | null;
+}
+
 // `content` stays loose so non-blocks serializers (TipTap, etc.) keep
 // working; `contentBlocks` is the narrowed `EntryContent` (null when
 // the stored JSON fails the shape check).
@@ -18,7 +25,7 @@ export interface ResolvedAuthor {
 // types with a non-null parentId await a follow-up batched resolver.
 export interface ResolvedEntry extends Entry {
   readonly contentBlocks: EntryContent | null;
-  readonly terms: readonly Term[];
+  readonly terms: readonly ResolvedTerm[];
   readonly author: ResolvedAuthor;
   readonly url: string | null;
 }
@@ -46,7 +53,7 @@ export interface ArchiveData<TEntry extends ResolvedEntry = ResolvedEntry> {
 
 export interface TaxonomyData<TEntry extends ResolvedEntry = ResolvedEntry> {
   readonly taxonomy: string;
-  readonly term: Term;
+  readonly term: ResolvedTerm;
   readonly entries: readonly TEntry[];
   readonly pagination: Pagination;
 }
