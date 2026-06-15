@@ -16,14 +16,19 @@ body {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.25rem;
   padding: 2rem;
   text-align: center;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: #0f172a;
   background: #f8fafc;
+}
+.plumix-welcome__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
 }
 .plumix-welcome__status {
   display: flex;
@@ -74,11 +79,29 @@ body {
   color: #475569;
   line-height: 1.6;
 }
-.plumix-welcome__actions {
+.plumix-welcome__chip {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9375rem;
+  background: #e2e8f0;
+  color: #0f172a;
+  padding: 0.625rem 1rem;
+  border-radius: 0.5rem;
+}
+.plumix-welcome__or {
   display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  justify-content: center;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  max-width: 13rem;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+.plumix-welcome__or::before,
+.plumix-welcome__or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
 }
 .plumix-welcome__cta {
   display: inline-flex;
@@ -87,25 +110,11 @@ body {
   border-radius: 0.5rem;
   font-weight: 600;
   text-decoration: none;
-  border: 1px solid ${BRAND};
-}
-.plumix-welcome__cta--primary {
   background: ${BRAND};
   color: #fff;
 }
-.plumix-welcome__cta--secondary {
-  color: ${BRAND};
-  background: transparent;
-}
-.plumix-welcome__chip {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.8125rem;
-  background: #e2e8f0;
-  color: #0f172a;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.375rem;
-}
 .plumix-welcome__footer {
+  padding-top: 1.5rem;
   font-size: 0.8125rem;
   color: #94a3b8;
 }
@@ -124,6 +133,10 @@ body {
     background: #1e293b;
     color: #f1f5f9;
   }
+  .plumix-welcome__or::before,
+  .plumix-welcome__or::after {
+    background: #1e293b;
+  }
 }
 `;
 
@@ -131,32 +144,24 @@ function WelcomeScreen({ basePath }: { readonly basePath: string }) {
   return (
     <main className="plumix-welcome" data-testid="plumix-welcome">
       <style dangerouslySetInnerHTML={{ __html: styles }} />
-      <div className="plumix-welcome__status">
-        <span className="plumix-welcome__dot" />
-        plumix is running
-      </div>
-      <h1>Your site is ready.</h1>
-      <p>
-        No theme is registered yet — open the admin to manage content, or add a
-        theme to design your public site.
-      </p>
-      <div className="plumix-welcome__actions">
+      <div className="plumix-welcome__main">
+        <div className="plumix-welcome__status">
+          <span className="plumix-welcome__dot" />
+          plumix is running
+        </div>
+        <h1>Your site is ready.</h1>
+        <p>Add a theme in plumix.config.ts to design your public site.</p>
+        <code className="plumix-welcome__chip">
+          {"theme: defineTheme({ … })"}
+        </code>
+        <div className="plumix-welcome__or">or</div>
         <a
-          className="plumix-welcome__cta plumix-welcome__cta--primary"
+          className="plumix-welcome__cta"
           href={withBasePath("/_plumix/admin", basePath)}
         >
           Open admin →
         </a>
-        <a
-          className="plumix-welcome__cta plumix-welcome__cta--secondary"
-          href="https://plumix.dev/docs"
-        >
-          Add a theme
-        </a>
       </div>
-      <code className="plumix-welcome__chip">
-        {"theme: defineTheme({ … })"}
-      </code>
       <div className="plumix-welcome__footer">
         <a href="https://plumix.dev/docs">Docs</a> ·{" "}
         <a href="https://github.com/withplumix/plumix">GitHub</a>
