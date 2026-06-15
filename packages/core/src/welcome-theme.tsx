@@ -1,6 +1,8 @@
+import type { WelcomeStrings } from "./welcome/i18n.js";
 import { withBasePath } from "./base-path.js";
 import { defineTemplate } from "./template.js";
 import { defineTheme } from "./theme.js";
+import { welcomeMessages } from "./welcome/i18n.js";
 
 const BRAND = "#0ea5e9";
 
@@ -140,26 +142,32 @@ body {
 }
 `;
 
-function WelcomeScreen({ basePath }: { readonly basePath: string }) {
+function WelcomeScreen({
+  basePath,
+  strings,
+}: {
+  readonly basePath: string;
+  readonly strings: WelcomeStrings;
+}) {
   return (
     <main className="plumix-welcome" data-testid="plumix-welcome">
       <style dangerouslySetInnerHTML={{ __html: styles }} />
       <div className="plumix-welcome__main">
         <div className="plumix-welcome__status">
           <span className="plumix-welcome__dot" />
-          plumix is running
+          {strings.running}
         </div>
-        <h1>Your site is ready.</h1>
-        <p>Add a theme in plumix.config.ts to design your public site.</p>
+        <h1>{strings.heading}</h1>
+        <p>{strings.body}</p>
         <code className="plumix-welcome__chip">
           {"theme: defineTheme({ … })"}
         </code>
-        <div className="plumix-welcome__or">or</div>
+        <div className="plumix-welcome__or">{strings.or}</div>
         <a
           className="plumix-welcome__cta"
           href={withBasePath("/_plumix/admin", basePath)}
         >
-          Open admin →
+          {strings.openAdmin} →
         </a>
       </div>
       <div className="plumix-welcome__footer">
@@ -181,7 +189,12 @@ function WelcomeScreen({ basePath }: { readonly basePath: string }) {
 export const welcomeTheme = defineTheme({
   templates: {
     index: defineTemplate({
-      render: ({ ctx }) => <WelcomeScreen basePath={ctx.basePath} />,
+      render: ({ ctx }) => (
+        <WelcomeScreen
+          basePath={ctx.basePath}
+          strings={welcomeMessages(ctx.locale.code)}
+        />
+      ),
     }),
   },
   // Never index a placeholder — it's a misconfiguration if it reaches prod.

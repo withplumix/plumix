@@ -1,0 +1,33 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (welcome screen renders server-side, no Babel pass)\n"
+"Language: zh-CN\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#. js-lingui-explicit-id
+#: src/welcome/i18n.ts
+msgid "core.welcome.running"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/welcome/i18n.ts
+msgid "core.welcome.heading"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/welcome/i18n.ts
+msgid "core.welcome.body"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/welcome/i18n.ts
+msgid "core.welcome.or"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/welcome/i18n.ts
+msgid "core.welcome.openAdmin"
+msgstr ""

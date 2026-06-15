@@ -59,7 +59,7 @@
     "clean": "git clean -xdf .cache .drizzle .turbo dist node_modules",
     "db:generate": "drizzle-kit generate",
     "format": "prettier --check . --ignore-path ../../.gitignore",
-    "i18n:check": "node ../plumix/bin/plumix.mjs i18n verify --src src/admin-bar",
+    "i18n:check": "node ../plumix/bin/plumix.mjs i18n verify --src src/admin-bar --src src/welcome",
     "i18n:compile": "plumix-compile-catalogs --dts",
     "lint": "eslint",
     "test": "vitest run",
