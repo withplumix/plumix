@@ -35,6 +35,8 @@ export interface PlumixContextValue {
   readonly shortcodes?: ShortcodeRegistry;
   /** Queried entry, exposed to body shortcodes via `BlockContext.entry`. */
   readonly entry?: Readonly<Record<string, unknown>> | null;
+  /** Subdirectory prefix for internal links; `""` for a root deployment. */
+  readonly basePath?: string;
 }
 
 const PlumixContext = createContext<PlumixContextValue | null>(null);
@@ -85,3 +87,10 @@ export function useUser(): RendererUser | null {
 export function useQueriedEntry(): RendererQueriedEntry | null {
   return usePlumixContext("useQueriedEntry").queriedEntry ?? null;
 }
+
+export function useBasePath(): string {
+  return usePlumixContext("useBasePath").basePath ?? "";
+}
+
+export { Link } from "./link.js";
+export type { LinkProps, LinkTarget } from "./link.js";

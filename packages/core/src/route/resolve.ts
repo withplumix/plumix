@@ -28,7 +28,11 @@ import { labelSourceText } from "../i18n/label.js";
 import { notFound } from "../runtime/http.js";
 import { paginate } from "./paginate.js";
 import { findEntryByPath, findTermByPath } from "./path-chain.js";
-import { buildEntryPermalinkSync } from "./permalink.js";
+import {
+  buildEntryPermalinkSync,
+  buildTermArchiveUrl,
+  buildTermArchiveUrlSync,
+} from "./permalink.js";
 import { previewTokenGrantsEntry, readPreviewToken } from "./preview.js";
 import { renderThroughTheme } from "./render/render-template.js";
 
@@ -294,7 +298,9 @@ async function resolveTaxonomy(
 
   const initial: TaxonomyData = {
     taxonomy: intent.taxonomy,
-    term,
+    // Single archive term: the async builder walks ancestors for the full
+    // nested URL (one call — no N+1).
+    term: { ...term, url: await buildTermArchiveUrl(ctx, term) },
     entries: await buildResolvedEntries(ctx, result.rows),
     pagination: {
       page,
@@ -498,7 +504,11 @@ async function buildResolvedEntries(
     return {
       ...row,
       contentBlocks: isEntryContent(row.content) ? row.content : null,
-      terms: termsByEntryId.get(row.id) ?? [],
+      // Sync term URLs — no per-term CTE (nested terms get null, like entries).
+      terms: (termsByEntryId.get(row.id) ?? []).map((term) => ({
+        ...term,
+        url: buildTermArchiveUrlSync(ctx, term),
+      })),
       author,
       url: buildEntryPermalinkSync(ctx, row),
     };
