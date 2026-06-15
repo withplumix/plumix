@@ -31,7 +31,7 @@ catalog:
   "@types/react": ^19.2.16
   "@types/react-dom": ^19.2.3
   "@vitejs/plugin-react": ^6.0.2
-  "@vitest/coverage-v8": ^4.1.8
+  "@vitest/coverage-v8": ^4.1.9
   drizzle-kit: ^0.31.10
   drizzle-orm: ^0.45.2
   drizzle-valibot: ^0.4.2
@@ -46,7 +46,7 @@ catalog:
   typescript: ^6.0.3
   valibot: ^1.4.1
   vite: ^8.0.9
-  vitest: ^4.1.8
+  vitest: ^4.1.9
   wrangler: ^4.98.0
 
 catalogs:
