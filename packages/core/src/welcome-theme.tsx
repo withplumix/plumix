@@ -8,8 +8,12 @@ const BRAND = "#0ea5e9";
 // `dangerouslySetInnerHTML`, not a JSX child: React would HTML-escape the
 // `>`/`&` in the CSS.
 const styles = `
+body {
+  margin: 0;
+}
 .plumix-welcome {
-  min-height: 100vh;
+  min-height: 100dvh;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -21,25 +25,44 @@ const styles = `
   color: #0f172a;
   background: #f8fafc;
 }
-.plumix-welcome__brand {
+.plumix-welcome__status {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-weight: 700;
-  font-size: 1.25rem;
-}
-.plumix-welcome__status {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
   font-size: 0.875rem;
+  line-height: 1;
   color: #64748b;
 }
 .plumix-welcome__dot {
+  position: relative;
+  flex: none;
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 9999px;
   background: #22c55e;
+}
+.plumix-welcome__dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: #22c55e;
+  animation: plumix-pulse 2s ease-out infinite;
+}
+@keyframes plumix-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .plumix-welcome__dot::after {
+    animation: none;
+  }
 }
 .plumix-welcome h1 {
   margin: 0;
@@ -104,42 +127,18 @@ const styles = `
 }
 `;
 
-function Logo() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
-      <rect width="32" height="32" rx="6" fill={BRAND} />
-      <text
-        x="16"
-        y="22"
-        fontFamily="ui-sans-serif, system-ui"
-        fontSize="18"
-        fontWeight="700"
-        textAnchor="middle"
-        fill="#fff"
-      >
-        P
-      </text>
-    </svg>
-  );
-}
-
 function WelcomeScreen({ basePath }: { readonly basePath: string }) {
   return (
     <main className="plumix-welcome" data-testid="plumix-welcome">
       <style dangerouslySetInnerHTML={{ __html: styles }} />
-      <div className="plumix-welcome__brand">
-        <Logo />
-        <span>plumix</span>
-      </div>
-      <span className="plumix-welcome__status">
+      <div className="plumix-welcome__status">
         <span className="plumix-welcome__dot" />
         plumix is running
-      </span>
+      </div>
       <h1>Your site is ready.</h1>
       <p>
-        No theme is registered yet — that&apos;s why you&apos;re seeing this.
-        Open the admin to start creating content, or add a theme to design your
-        public site.
+        No theme is registered yet — open the admin to manage content, or add a
+        theme to design your public site.
       </p>
       <div className="plumix-welcome__actions">
         <a
