@@ -37,6 +37,55 @@ describe("Image", () => {
     expect(html).toContain('height="300"');
     expect(html).toContain('alt="A cat"');
   });
+
+  test("priority makes the image eager + high-priority and emits a preload link", () => {
+    const html = render(
+      <Image src="/a.jpg" alt="Hero" width={400} height={300} priority />,
+      { imageResolver: resolver },
+    );
+    expect(html).toContain('loading="eager"');
+    expect(html).toContain('fetchPriority="high"');
+    expect(html).toContain('decoding="sync"');
+    expect(html).toContain('rel="preload"');
+    expect(html).toContain('as="image"');
+    expect(html).toContain('imageSrcSet="/a.jpg?w=400 1x, /a.jpg?w=800 2x"');
+  });
+
+  test("non-priority images stay lazy with no preload link", () => {
+    const html = render(
+      <Image src="/a.jpg" alt="A" width={400} height={300} />,
+      {
+        imageResolver: resolver,
+      },
+    );
+    expect(html).not.toContain('rel="preload"');
+    expect(html).toContain('loading="lazy"');
+  });
+
+  test("a caller's loading overrides the priority default", () => {
+    const html = render(
+      <Image
+        src="/a.jpg"
+        alt="A"
+        width={400}
+        height={300}
+        priority
+        loading="lazy"
+      />,
+      { imageResolver: resolver },
+    );
+    expect(html).toContain('loading="lazy"');
+  });
+
+  test("priority on an unoptimizable source preloads by href, no imageSrcSet", () => {
+    const html = render(
+      <Image src="/logo.svg" alt="Logo" width={64} height={64} priority />,
+      { imageResolver: resolver },
+    );
+    expect(html).toContain('rel="preload"');
+    expect(html).toContain('href="/logo.svg"');
+    expect(html).not.toContain("imageSrcSet");
+  });
 });
 
 describe("Image — passthrough + unoptimizable", () => {

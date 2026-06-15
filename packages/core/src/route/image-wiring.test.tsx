@@ -74,3 +74,34 @@ test("<Image> optimizes allowlisted remote hosts and passes through the rest", a
   expect(body).toContain('src="https://evil.com/no.jpg"');
   expect(body).not.toContain("evil.com/no.jpg?w=");
 });
+
+const priorityTheme = defineTheme({
+  templates: {
+    index: defineTemplate({
+      render: () => (
+        <main>
+          <Image src="/hero.jpg" alt="hero" width={400} height={300} priority />
+        </main>
+      ),
+    }),
+  },
+});
+
+test("priority <Image> hoists a single preload link into <head>", async () => {
+  const h = await createDispatcherHarness({
+    theme: priorityTheme,
+    imageDelivery,
+  });
+  const body = await (
+    await h.dispatch(new Request("https://cms.example/"))
+  ).text();
+  const head = body.slice(body.indexOf("<head>"), body.indexOf("</head>"));
+
+  // Exactly one preload, in <head>, for the responsive image set.
+  expect(body.match(/rel="preload"/g)).toHaveLength(1);
+  expect(head).toContain('rel="preload"');
+  expect(head).toContain('as="image"');
+  expect(head).toContain("/hero.jpg?w=400 1x, /hero.jpg?w=800 2x");
+  // The image itself is eager.
+  expect(body).toContain('loading="eager"');
+});
