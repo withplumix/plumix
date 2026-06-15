@@ -5,6 +5,7 @@ import type { DatabaseAdapter, ImageDelivery } from "./runtime/slots.js";
 import { auth } from "./auth/config.js";
 import { plumix } from "./config.js";
 import { defineTheme } from "./theme.js";
+import { welcomeTheme } from "./welcome-theme.js";
 
 const runtime: RuntimeAdapter = {
   name: "mock",
@@ -25,6 +26,16 @@ const authConfig = auth({
 });
 
 const theme = defineTheme({ templates: { index: () => null } });
+
+test("plumix() defaults a missing theme to the built-in welcome theme", () => {
+  const config = plumix({ runtime, database, auth: authConfig });
+  expect(config.theme).toBe(welcomeTheme);
+});
+
+test("plumix() preserves an explicitly provided theme", () => {
+  const config = plumix({ runtime, database, auth: authConfig, theme });
+  expect(config.theme).toBe(theme);
+});
 
 test("plumix() defaults missing plugins to an empty array", () => {
   const config = plumix({ runtime, database, auth: authConfig, theme });
