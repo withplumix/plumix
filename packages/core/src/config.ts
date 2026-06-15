@@ -14,6 +14,7 @@ import type {
 import type { ThemeDescriptor } from "./theme.js";
 import { normalizeBasePath } from "./base-path.js";
 import { resolveLocales } from "./i18n/locale-registry.js";
+import { welcomeTheme } from "./welcome-theme.js";
 
 /**
  * Re-exported from `./theme.js` so existing `import { Theme } from
@@ -75,7 +76,12 @@ export interface PlumixConfigInput {
    * is the dev default.
    */
   readonly mailer?: Mailer;
-  readonly theme: ThemeDescriptor;
+  /**
+   * The site's theme. Optional: a site that registers none falls back to
+   * the built-in {@link welcomeTheme}, which renders a self-contained
+   * welcome screen on the public site until a real theme is added.
+   */
+  readonly theme?: ThemeDescriptor;
   readonly plugins?: readonly AnyPluginDescriptor[];
   readonly i18n?: I18nInput;
   /**
@@ -152,7 +158,7 @@ export function plumix(config: PlumixConfigInput): PlumixConfig {
     imageDelivery: config.imageDelivery,
     kv: config.kv,
     mailer: config.mailer,
-    theme: config.theme,
+    theme: config.theme ?? welcomeTheme,
     plugins: config.plugins ?? [],
     i18n: resolveLocales(
       config.i18n ?? { defaultLocale: "en", locales: ["en"] },

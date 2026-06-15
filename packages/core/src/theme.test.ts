@@ -338,17 +338,4 @@ describe("buildApp", () => {
       ),
     ).rejects.toThrow(ThemeRegistrationError);
   });
-
-  test("throws ThemeRegistrationError when config has no theme", async () => {
-    await expect(
-      buildApp(
-        // @ts-expect-error -- exercising the JS-caller runtime guard
-        plumix({
-          runtime: stubAdapter,
-          database: stubDatabase,
-          auth: stubAuth,
-        }),
-      ),
-    ).rejects.toThrow(ThemeRegistrationError);
-  });
 });
