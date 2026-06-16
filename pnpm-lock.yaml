@@ -182,6 +182,9 @@ importers:
       '@plumix/plugin-blog':
         specifier: workspace:*
         version: link:../../packages/plugins/blog
+      '@plumix/plugin-comments':
+        specifier: workspace:*
+        version: link:../../packages/plugins/comments
       '@plumix/plugin-media':
         specifier: workspace:*
         version: link:../../packages/plugins/media

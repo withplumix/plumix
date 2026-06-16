@@ -1,4 +1,5 @@
 import { blog } from "@plumix/plugin-blog";
+import { comments } from "@plumix/plugin-comments";
 import { media } from "@plumix/plugin-media";
 import { menu } from "@plumix/plugin-menu";
 import { pages } from "@plumix/plugin-pages";
@@ -84,6 +85,7 @@ export default plumix({
   }),
   plugins: [
     blog,
+    comments({ entryTypes: ["post"] }),
     pages,
     media(),
     menu({

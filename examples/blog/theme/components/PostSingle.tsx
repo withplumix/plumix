@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { ReactNode } from "react";
 import type { ResolvedEntry } from "plumix";
-import { BlockRenderer } from "@plumix/blocks/renderer";
+import { BlockRenderer, Link } from "@plumix/blocks/renderer";
 
 import { FeaturedImage } from "./FeaturedImage";
 import { PostMeta } from "./PostMeta";
@@ -15,9 +15,12 @@ export function PostSingle({
   entry,
   showMeta = true,
 }: PostSingleProps): ReactNode {
+  const tags = entry.terms.filter((term) => term.taxonomy === "tag");
+
   return (
     <article data-testid="post-single">
       <FeaturedImage entry={entry} priority className="mb-8" />
+
       <header className="mb-8">
         <h1
           className="font-serif text-3xl leading-tight"
@@ -38,6 +41,20 @@ export function PostSingle({
           <BlockRenderer content={entry.contentBlocks} />
         ) : null}
       </div>
+
+      {showMeta && tags.length > 0 ? (
+        <div className="mt-10 flex flex-wrap gap-2" data-testid="post-tags">
+          {tags.map((tag) => (
+            <Link
+              key={tag.id}
+              term={tag}
+              className="rounded border border-line px-2.5 py-0.5 text-sm text-muted hover:text-ink"
+            >
+              {tag.name}
+            </Link>
+          ))}
+        </div>
+      ) : null}
     </article>
   );
 }
