@@ -952,3 +952,22 @@ describe("resolvePublicRoute — taxonomy", () => {
     expect(body).not.toContain("Draft");
   });
 });
+
+describe("resolvePublicRoute — search query redirect", () => {
+  test("bare /search?q= 301s to the canonical /search/<q> path", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const response = await h.dispatch(
+      new Request("https://cms.example/search?q=hello%20world"),
+    );
+    expect(response.status).toBe(301);
+    expect(response.headers.get("Location")).toBe("/search/hello%20world");
+  });
+
+  test("bare /search with no query renders the search page (no redirect)", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const response = await h.dispatch(
+      new Request("https://cms.example/search"),
+    );
+    expect(response.status).toBe(200);
+  });
+});

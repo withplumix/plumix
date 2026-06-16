@@ -19,13 +19,14 @@ import type {
   SingleData,
   TaxonomyData,
 } from "./render/resolved-entry.js";
+import { withBasePath } from "../base-path.js";
 import { and, desc, eq, inArray, isNotNull, sql } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
 import { users } from "../db/schema/users.js";
 import { labelSourceText } from "../i18n/label.js";
-import { notFound } from "../runtime/http.js";
+import { notFound, permanentRedirect } from "../runtime/http.js";
 import { paginate } from "./paginate.js";
 import { findEntryByPath, findTermByPath } from "./path-chain.js";
 import {
@@ -202,6 +203,17 @@ async function resolveSearch(
   templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
   assetManifest: AssetManifest,
 ): Promise<Response> {
+  // Plain HTML search forms submit `GET /search?q=…`; 301 to the canonical
+  // path form (`/search/<q>`) so the query renders and the URL is shareable.
+  if (params.query === undefined) {
+    const q = new URL(ctx.request.url).searchParams.get("q")?.trim();
+    if (q) {
+      return permanentRedirect(
+        withBasePath(`/search/${encodeURIComponent(q)}`, ctx.basePath),
+      );
+    }
+  }
+
   const query = decodeSearchQuery(params.query);
   const page = parsePageParam(params.page);
   const searchableTypes = Array.from(ctx.plugins.entryTypes.entries())
