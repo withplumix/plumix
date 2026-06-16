@@ -2,6 +2,10 @@ import type { EntryTypeLabels, TermTaxonomyLabels } from "plumix/plugin";
 import { withContext } from "plumix/i18n";
 import { definePlugin } from "plumix/plugin";
 
+import { relatedPostsLoader } from "./related.js";
+
+export type { RelatedPosts } from "./related.js";
+
 // Plain descriptor literals — server-side plugin code can't run the
 // Babel macro pipeline, so we author the `{ id, message }` shape
 // directly. The manifest payload is identical to a `defineMessage(...)`
@@ -169,5 +173,10 @@ export const blog = definePlugin("blog", {
       rewrite: { slug: "tag" },
       keywords: ["taxonomy", "tags"],
     });
+
+    // Related-by-term posts for the single-post view. A blog concern (it
+    // reads the category/tag taxonomy registered above), so it ships as a
+    // template dep here rather than in core.
+    ctx.registerTemplateDep("relatedPosts", { load: relatedPostsLoader });
   },
 });

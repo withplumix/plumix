@@ -42,6 +42,7 @@ export type { MemoryStorageConfig } from "./runtime/memory-storage.js";
 export { runScheduledTasks } from "./runtime/scheduled.js";
 export type * from "./runtime/slots.js";
 export { slugify } from "./slugify.js";
+export { buildResolvedEntries } from "./route/render/build-resolved-entries.js";
 export type {
   ArchiveData,
   ErrorData,

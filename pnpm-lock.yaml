@@ -785,6 +785,10 @@ importers:
         version: 4.100.0(@cloudflare/workers-types@4.20260526.1)
 
   packages/plugins/blog:
+    dependencies:
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.2(@cloudflare/workers-types@4.20260526.1)(@libsql/client@0.17.3)
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
