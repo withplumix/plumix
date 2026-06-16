@@ -971,3 +971,35 @@ describe("resolvePublicRoute — search query redirect", () => {
     expect(response.status).toBe(200);
   });
 });
+
+describe("resolvePublicRoute — front page", () => {
+  test("lists posts but excludes hierarchical pages", async () => {
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin, hierarchicalPagesPlugin],
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "a-post",
+      title: "A Post",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.factory.entry.create({
+      type: "page",
+      slug: "a-page",
+      title: "A Page",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      parentId: null,
+    });
+    const response = await h.dispatch(new Request("https://cms.example/"));
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("A Post");
+    expect(body).not.toContain("A Page");
+  });
+});
