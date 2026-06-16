@@ -18,7 +18,9 @@ describe("@plumix/plugin-blog", () => {
       context: "post type general name",
     });
     expect(post?.isPublic).toBe(true);
-    expect(post?.hasArchive).toBe(true);
+    // No type archive: the front page is the post listing (avoids a
+    // duplicate /posts route).
+    expect(post?.hasArchive).toBe(false);
     expect(post?.termTaxonomies).toEqual(["category", "tag"]);
     expect(post?.registeredBy).toBe("blog");
   });
