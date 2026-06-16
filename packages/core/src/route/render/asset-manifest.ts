@@ -19,6 +19,10 @@ export interface AssetManifestEntry {
 
 export type AssetManifest = Readonly<Record<string, AssetManifestEntry>>;
 
+// The Vite lifecycle command the SSR render path branches on: `serve` (dev)
+// vs `build` (production).
+export type ViteCommand = "serve" | "build";
+
 // Walks the import graph starting from every `isEntry: true` chunk and
 // collects CSS from every reachable chunk (including code-split nodes
 // under `imports[]` / `dynamicImports[]`). Dedupes across entries that
@@ -42,6 +46,17 @@ export function bundledCssTags(manifest: AssetManifest, basePath = ""): string {
         `<link rel="stylesheet" href="${withBasePath(`/${href}`, basePath)}" />`,
     )
     .join("");
+}
+
+// CSS counterpart to `injectIslandsBootstrap`: dev has no asset manifest, so
+// load the client entry (which side-effect-imports the theme `css`) and let
+// Vite inject the stylesheets. No-op in build, where `bundledCssTags` links.
+const DEV_CLIENT_ENTRY_PATH = "/.plumix/client-entry.ts";
+
+export function devThemeStylesTag(command: ViteCommand, basePath = ""): string {
+  if (command !== "serve") return "";
+  const src = withBasePath(DEV_CLIENT_ENTRY_PATH, basePath);
+  return `<script type="module" src="${src}"></script>`;
 }
 
 function collectReachableCss(

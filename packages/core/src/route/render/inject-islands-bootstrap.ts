@@ -14,7 +14,7 @@
 // `.plumix/islands-entry.ts` in the Vite plugin's
 // `rollupOptions.input`). Read from Vite's `.vite/manifest.json`.
 
-import type { AssetManifest } from "./asset-manifest.js";
+import type { AssetManifest, ViteCommand } from "./asset-manifest.js";
 import { withBasePath } from "../../base-path.js";
 
 const DEV_ENTRY_PATH = "/.plumix/islands-entry.ts";
@@ -30,7 +30,7 @@ const RENDERER_MANIFEST_KEY = ".plumix/islands-renderer-entry.ts";
 export function injectIslandsBootstrap(
   body: string,
   manifest: AssetManifest,
-  command: "serve" | "build",
+  command: ViteCommand,
   basePath = "",
 ): string {
   if (!body.includes("<plumix-island")) return body;
@@ -59,7 +59,7 @@ export function injectIslandsBootstrap(
 // fall back to the source path Vite's dev server serves directly.
 function resolveEntryUrl(
   manifest: AssetManifest,
-  command: "serve" | "build",
+  command: ViteCommand,
   key: string,
   devPath: string,
   basePath: string,

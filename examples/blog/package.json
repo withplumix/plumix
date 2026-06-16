@@ -12,16 +12,22 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@plumix/blocks": "workspace:*",
     "@plumix/plugin-blog": "workspace:*",
     "@plumix/plugin-media": "workspace:*",
+    "@plumix/plugin-menu": "workspace:*",
     "@plumix/plugin-pages": "workspace:*",
     "@plumix/runtime-cloudflare": "workspace:*",
-    "plumix": "workspace:*"
+    "plumix": "workspace:*",
+    "react": "catalog:"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",
     "@plumix/typescript-config": "workspace:*",
+    "@tailwindcss/postcss": "^4.3.1",
     "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "tailwindcss": "^4.3.1",
     "typescript": "catalog:",
     "wrangler": "catalog:"
   }

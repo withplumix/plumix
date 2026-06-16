@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+/* The token CSS variables are the single source the chrome (Tailwind
+   utilities below) and rendered block content both read. */
+:root {
+  --plumix-colors-paper: #fbfaf8;
+  --plumix-colors-ink: #1b1a17;
+  --plumix-colors-muted: #6f6b63;
+  --plumix-colors-accent: #b5472d;
+  --plumix-colors-line: #e7e3dc;
+  --plumix-typography-serif:
+    "Iowan Old Style", Georgia, Cambria, "Times New Roman", serif;
+  --plumix-typography-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Map the tokens onto Tailwind's theme so `bg-paper`, `text-ink`,
+   `font-serif`, etc. resolve to the CSS variables above. */
+@theme inline {
+  --color-paper: var(--plumix-colors-paper);
+  --color-ink: var(--plumix-colors-ink);
+  --color-muted: var(--plumix-colors-muted);
+  --color-accent: var(--plumix-colors-accent);
+  --color-line: var(--plumix-colors-line);
+  --font-serif: var(--plumix-typography-serif);
+  --font-sans: var(--plumix-typography-sans);
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
