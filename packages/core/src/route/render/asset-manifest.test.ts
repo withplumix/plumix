@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { AssetManifest } from "./asset-manifest.js";
-import { bundledCssTags } from "./asset-manifest.js";
+import { bundledCssTags, devThemeStylesTag } from "./asset-manifest.js";
 
 describe("bundledCssTags", () => {
   test("emits a stylesheet <link> for every CSS file linked from an entry chunk", () => {
@@ -148,6 +148,26 @@ describe("bundledCssTags", () => {
     };
     expect(bundledCssTags(manifest)).toBe(
       '<link rel="stylesheet" href="/_plumix/assets/theme.css" />',
+    );
+  });
+});
+
+describe("devThemeStylesTag", () => {
+  test("serve mode loads the client entry so Vite injects the theme CSS", () => {
+    // Dev has no asset manifest, so `bundledCssTags` is empty; the
+    // stylesheets ride in on the Vite-served client entry instead.
+    expect(devThemeStylesTag("serve")).toBe(
+      '<script type="module" src="/.plumix/client-entry.ts"></script>',
+    );
+  });
+
+  test("build mode emits nothing — bundledCssTags links the hashed CSS", () => {
+    expect(devThemeStylesTag("build")).toBe("");
+  });
+
+  test("serve mode prefixes the basePath for a subdirectory install", () => {
+    expect(devThemeStylesTag("serve", "/custom-directory")).toBe(
+      '<script type="module" src="/custom-directory/.plumix/client-entry.ts"></script>',
     );
   });
 });

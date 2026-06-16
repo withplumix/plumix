@@ -24,7 +24,7 @@ import type {
   TemplateRegistry,
   ThemeDescriptor,
 } from "../../theme.js";
-import type { AssetManifest } from "./asset-manifest.js";
+import type { AssetManifest, ViteCommand } from "./asset-manifest.js";
 import type { ErrorData } from "./resolved-entry.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
 import { PlumixAdminBar } from "../../admin-bar/component.js";
@@ -37,7 +37,7 @@ import {
 } from "../../template-deps.js";
 import { normalizeTemplate } from "../../template.js";
 import { validateDocumentManifest } from "../../theme.js";
-import { bundledCssTags } from "./asset-manifest.js";
+import { bundledCssTags, devThemeStylesTag } from "./asset-manifest.js";
 import { injectIslandsBootstrap } from "./inject-islands-bootstrap.js";
 import { resolveTemplateCandidates } from "./template-hierarchy.js";
 
@@ -381,6 +381,11 @@ function renderTree({
 
   // Bundled CSS lands AFTER theme `link[]` so theme-local stylesheets
   // override CDN imports declared in `link[]` (last-wins cascade).
+  // `process.env.PLUMIX_DEV` is Vite-substituted at SSR-bundle time —
+  // non-empty in `plumix dev`, empty in `plumix build`. The plumix Vite
+  // plugin's `define` populates the literal.
+  const command: ViteCommand = process.env.PLUMIX_DEV ? "serve" : "build";
+
   const headContent =
     scripts.headStart.map(scriptToHtml).join("") +
     '<meta charSet="utf-8"/>' +
@@ -389,20 +394,13 @@ function renderTree({
     titleFallback +
     voidTagsToHtml("link", document.link) +
     bundledCssTags(assetManifest, ctx.basePath) +
+    devThemeStylesTag(command, ctx.basePath) +
     voidTagsToHtml("meta", document.meta) +
     scripts.headEnd.map(scriptToHtml).join("");
 
   const bodyContent =
     scripts.bodyStart.map(scriptToHtml).join("") +
-    injectIslandsBootstrap(
-      body,
-      assetManifest,
-      // `process.env.PLUMIX_DEV` is Vite-substituted at SSR-bundle time
-      // — non-empty in `plumix dev`, empty in `plumix build`. The
-      // plumix Vite plugin's `define` populates the literal.
-      process.env.PLUMIX_DEV ? "serve" : "build",
-      ctx.basePath,
-    ) +
+    injectIslandsBootstrap(body, assetManifest, command, ctx.basePath) +
     scripts.bodyEnd.map(scriptToHtml).join("") +
     HYDRATION_SLOT;
 
