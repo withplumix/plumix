@@ -35,5 +35,15 @@ msgstr "Account"
 
 #. js-lingui-explicit-id
 #: src/admin-bar/i18n.ts
+msgid "core.adminBar.profile"
+msgstr "Profile"
+
+#. js-lingui-explicit-id
+#: src/admin-bar/i18n.ts
+msgid "core.adminBar.signOut"
+msgstr "Sign out"
+
+#. js-lingui-explicit-id
+#: src/admin-bar/i18n.ts
 msgid "core.adminBar.navAria"
 msgstr "Admin"

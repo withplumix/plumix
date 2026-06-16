@@ -1,11 +1,15 @@
 import type { HookRegistry } from "../hooks/registry.js";
 import type { AdminBarNode, BarRenderContext } from "./types.js";
+import { labelSourceText } from "../i18n/label.js";
+import { resolveEntryTypeVisibility } from "../plugin/manifest.js";
 import { barMessages } from "./i18n.js";
 
 const SITE_POSITION = 10;
 const EDIT_THIS_POSITION = 20;
 const NEW_GROUP_POSITION = 15;
-const ACCOUNT_POSITION = 10;
+// Sorts last so `margin-inline-start: auto` parks the account at the far
+// right with nothing trailing it — site / +New / Edit cluster on the left.
+const ACCOUNT_POSITION = 100;
 
 /**
  * Registers the four core contributors (`site`, `edit-this`, `+new`,
@@ -88,10 +92,17 @@ function newGroupContributor(
     },
   ];
   let childPosition = 10;
-  for (const [slug] of ctx.entryTypes) {
+  for (const [slug, type] of ctx.entryTypes) {
+    // Private types (e.g. `menu_item`) are managed through their own admin
+    // surface, never quick-created from the bar — mirror their `showUI`
+    // visibility so they don't leak into the +New menu.
+    if (!resolveEntryTypeVisibility(type).showUI) continue;
     additions.push({
       id: `+new:${slug}`,
-      title: slug,
+      // The type's human singular label, not the raw slug. Source-locale
+      // text only (like other SSR label sites — see `route/resolve.ts`):
+      // the bar has no per-plugin i18n catalog to resolve descriptors.
+      title: labelSourceText(type.labels?.singular ?? type.label),
       href: `/_plumix/admin/entries/${slug}/create`,
       group: "+new",
       parent: "+new",
@@ -106,14 +117,30 @@ function accountContributor(
   nodes: readonly AdminBarNode[],
   ctx: BarRenderContext,
 ): readonly AdminBarNode[] {
+  const strings = barMessages(ctx.locale);
   return [
     ...nodes,
     {
       id: "account",
       title: ctx.user.email,
-      href: "/_plumix/admin/profile",
       group: "account",
       position: ACCOUNT_POSITION,
+    },
+    {
+      id: "account:profile",
+      title: strings.profile,
+      href: "/_plumix/admin/profile",
+      group: "account",
+      parent: "account",
+      position: 10,
+    },
+    {
+      id: "account:signout",
+      title: strings.signOut,
+      action: "signout",
+      group: "account",
+      parent: "account",
+      position: 20,
     },
   ];
 }

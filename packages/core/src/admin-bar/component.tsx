@@ -9,7 +9,12 @@ import type { AdminBarTreeNode, BarRenderContext } from "./types.js";
 import { buildAdminBarTree } from "./build-tree.js";
 import { collectAdminBarNodes } from "./collect.js";
 import { barDirection, barMessages, resolveBarLocale } from "./i18n.js";
-import { ADMIN_BAR_BODY_OFFSET_CSS, ADMIN_BAR_CSS } from "./styles.js";
+import {
+  ADMIN_BAR_BODY_OFFSET_CSS,
+  ADMIN_BAR_CSS,
+  ADMIN_BAR_NOSCRIPT_CSS,
+  ADMIN_BAR_SIGNOUT_SCRIPT,
+} from "./styles.js";
 
 interface PlumixAdminBarProps {
   readonly hooks: HookExecutor;
@@ -54,6 +59,15 @@ export function PlumixAdminBar({
       <style data-testid="plumix-admin-bar-body-offset">
         {ADMIN_BAR_BODY_OFFSET_CSS}
       </style>
+      <script
+        data-testid="plumix-admin-bar-signout-script"
+        dangerouslySetInnerHTML={{ __html: ADMIN_BAR_SIGNOUT_SCRIPT }}
+      />
+      <noscript>
+        <style data-testid="plumix-admin-bar-noscript">
+          {ADMIN_BAR_NOSCRIPT_CSS}
+        </style>
+      </noscript>
       <header
         className="plumix-admin-bar"
         data-testid="plumix-admin-bar"
@@ -89,7 +103,14 @@ function BarItem({
         className={node.id === "account" ? "plumix-admin-bar__end" : undefined}
       >
         <details>
-          <summary aria-label={summaryAria}>{node.title}</summary>
+          <summary aria-label={summaryAria}>
+            {node.id === "account" ? (
+              <span className="plumix-admin-bar__avatar" aria-hidden>
+                {accountInitial(node.title)}
+              </span>
+            ) : null}
+            <BarLabel node={node} />
+          </summary>
           <ul>
             {node.children.map((child) => (
               <BarItem key={child.id} node={child} strings={strings} />
@@ -104,16 +125,40 @@ function BarItem({
       data-testid={`plumix-admin-bar-node-${node.id}`}
       className={node.id === "account" ? "plumix-admin-bar__end" : undefined}
     >
-      {node.href ? (
-        <a href={node.href}>
-          <BarLabel node={node} />
-        </a>
-      ) : (
-        <span>
-          <BarLabel node={node} />
-        </span>
-      )}
+      {renderLeaf(node)}
     </li>
+  );
+}
+
+// Avatar glyph shown in place of the email on mobile (WP collapses the
+// "Howdy, name" item to just the avatar). First code point of the email,
+// uppercased; `Array.from` keeps astral characters intact.
+function accountInitial(email: string): string {
+  return (Array.from(email)[0] ?? "?").toUpperCase();
+}
+
+// `signout` is the bar's only client action — a `<button>` the inline
+// island wires up (the endpoint needs the `X-Plumix-Request` header a
+// plain link can't send). Everything else stays a zero-JS link/span.
+function renderLeaf(node: AdminBarTreeNode): ReactNode {
+  if (node.action === "signout") {
+    return (
+      <button type="button" data-plumix-signout>
+        <BarLabel node={node} />
+      </button>
+    );
+  }
+  if (node.href) {
+    return (
+      <a href={node.href}>
+        <BarLabel node={node} />
+      </a>
+    );
+  }
+  return (
+    <span>
+      <BarLabel node={node} />
+    </span>
   );
 }
 
