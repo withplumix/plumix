@@ -1,11 +1,11 @@
 import * as React from "react";
 import type { ReactNode } from "react";
 import type { ResolvedEntry } from "plumix";
-import { Link } from "@plumix/blocks/renderer";
 
-// Slice 1 renders a bare list of linked titles. The card grid + meta
-// (PostCard) lands in a later slice; everything that lists posts —
-// front page, archive, taxonomy, search — funnels through here.
+import { PostCard } from "./PostCard";
+
+// Backs the front page, archive, taxonomy and search; the heading varies
+// per slot.
 interface PostListProps {
   readonly entries: readonly ResolvedEntry[];
   readonly heading?: string;
@@ -20,19 +20,11 @@ export function PostList({ entries, heading }: PostListProps): ReactNode {
           No posts yet.
         </p>
       ) : (
-        <ul className="space-y-4">
+        <div className="grid gap-10 sm:grid-cols-2">
           {entries.map((entry) => (
-            <li key={entry.id}>
-              <Link
-                entry={entry}
-                className="font-serif text-lg hover:text-accent"
-                data-testid="post-list-item"
-              >
-                {entry.title}
-              </Link>
-            </li>
+            <PostCard key={entry.id} entry={entry} />
           ))}
-        </ul>
+        </div>
       )}
     </section>
   );
