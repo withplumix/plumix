@@ -8,9 +8,13 @@ import { PostMeta } from "./PostMeta";
 
 interface PostSingleProps {
   readonly entry: ResolvedEntry;
+  readonly showMeta?: boolean;
 }
 
-export function PostSingle({ entry }: PostSingleProps): ReactNode {
+export function PostSingle({
+  entry,
+  showMeta = true,
+}: PostSingleProps): ReactNode {
   return (
     <article data-testid="post-single">
       <FeaturedImage entry={entry} priority className="mb-8" />
@@ -21,7 +25,9 @@ export function PostSingle({ entry }: PostSingleProps): ReactNode {
         >
           {entry.title}
         </h1>
-        <PostMeta entry={entry} className="mt-3 text-sm text-muted" />
+        {showMeta ? (
+          <PostMeta entry={entry} className="mt-3 text-sm text-muted" />
+        ) : null}
         {entry.excerpt ? (
           <p className="mt-4 text-lg text-muted">{entry.excerpt}</p>
         ) : null}
