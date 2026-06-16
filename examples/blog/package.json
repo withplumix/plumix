@@ -26,6 +26,7 @@
     "@cloudflare/workers-types": "catalog:",
     "@plumix/typescript-config": "workspace:*",
     "@tailwindcss/postcss": "^4.3.1",
+    "@tailwindcss/typography": "^0.5.16",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "tailwindcss": "^4.3.1",
