@@ -1,7 +1,8 @@
 {
   "extends": "@plumix/typescript-config/base.json",
   "compilerOptions": {
-    "types": ["node", "@cloudflare/workers-types"]
+    "jsx": "react",
+    "types": ["node", "@cloudflare/workers-types", "react"]
   },
-  "include": ["plumix.config.ts", ".plumix"]
+  "include": ["plumix.config.ts", "theme", ".plumix"]
 }

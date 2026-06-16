@@ -16,6 +16,12 @@ const config: KnipConfig = {
     // from package.json's exports because examples don't publish.
     "examples/blog": {
       entry: ["plumix.config.ts"],
+      // theme/styles.css is referenced via the theme's `css: []` string array
+      // and postcss.config.mjs is auto-loaded by Vite — neither is a static
+      // import knip can follow. tailwindcss / @tailwindcss/postcss are consumed
+      // through the `@import "tailwindcss"` in that stylesheet, not a TS import.
+      ignore: ["postcss.config.mjs", "theme/styles.css"],
+      ignoreDependencies: ["@tailwindcss/postcss", "tailwindcss"],
     },
     "examples/minimal": {
       entry: ["plumix.config.ts"],

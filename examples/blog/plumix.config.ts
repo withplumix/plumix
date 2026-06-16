@@ -1,5 +1,6 @@
 import { blog } from "@plumix/plugin-blog";
 import { media } from "@plumix/plugin-media";
+import { menu } from "@plumix/plugin-menu";
 import { pages } from "@plumix/plugin-pages";
 import {
   cloudflare,
@@ -8,7 +9,9 @@ import {
   images,
   r2,
 } from "@plumix/runtime-cloudflare";
-import { auth, consoleMailer, defineTheme, plumix } from "plumix";
+import { auth, consoleMailer, plumix } from "plumix";
+
+import { blogTheme } from "./theme";
 
 // Derives `rpId` + `origin` from the Workers Builds env (`WORKERS_CI`,
 // `WORKERS_CI_BRANCH`): production deploys → `<worker>.<account>.workers.dev`,
@@ -79,10 +82,18 @@ export default plumix({
     // string in the email subject + body.
     magicLink: { siteName: "Plumix — Blog" },
   }),
-  plugins: [blog, pages, media()],
-  // Noop placeholder — every Plumix app needs a theme. Replace with a
-  // real theme once you start rendering public routes.
-  theme: defineTheme({ templates: { index: () => null } }),
+  plugins: [
+    blog,
+    pages,
+    media(),
+    menu({
+      locations: {
+        primary: { label: "Primary" },
+        footer: { label: "Footer" },
+      },
+    }),
+  ],
+  theme: blogTheme,
 });
 
 function resolveR2S3Credentials():
