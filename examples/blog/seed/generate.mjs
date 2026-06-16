@@ -133,6 +133,27 @@ const image = (src, alt, caption) => ({
   attrs: { src, alt, caption: caption ?? "", sizing: "full" },
 });
 
+// Structured table block (rows/cells are real child blocks, editable in the
+// admin) rather than a raw <table> stuffed into rich-text.
+const tableCell = (text, header = false) => ({
+  id: bid(),
+  name: header ? "core/table-header-cell" : "core/table-cell",
+  attrs: { text },
+});
+const tableRow = (cells, header = false) => ({
+  id: bid(),
+  name: header ? "core/table-header-row" : "core/table-body-row",
+  attrs: { cells: cells.map((c) => tableCell(c, header)) },
+});
+const table = (headers, rows) => ({
+  id: bid(),
+  name: "core/table",
+  attrs: {
+    bordered: true,
+    rows: [tableRow(headers, true), ...rows.map((r) => tableRow(r))],
+  },
+});
+
 const pic = (seed, w = 1200, h = 800) =>
   `https://picsum.photos/seed/plumix-${seed}/${w}/${h}`;
 
@@ -163,8 +184,13 @@ function showcaseContent() {
     ),
     separator(),
     heading(3, "A table"),
-    richText(
-      "<table><thead><tr><th>City</th><th>Country</th><th>Known for</th></tr></thead><tbody><tr><td>Lisbon</td><td>Portugal</td><td>Light, tiles, trams</td></tr><tr><td>Tokyo</td><td>Japan</td><td>Density, detail</td></tr><tr><td>Oaxaca</td><td>Mexico</td><td>Mole, mezcal</td></tr></tbody></table>",
+    table(
+      ["City", "Country", "Known for"],
+      [
+        ["Lisbon", "Portugal", "Light, tiles, trams"],
+        ["Tokyo", "Japan", "Density, detail"],
+        ["Oaxaca", "Mexico", "Mole, mezcal"],
+      ],
     ),
     heading(3, "An image"),
     image(
