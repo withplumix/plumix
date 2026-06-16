@@ -139,7 +139,9 @@ export const blog = definePlugin("blog", {
       termTaxonomies: ["category", "tag"],
       isHierarchical: false,
       isPublic: true,
-      hasArchive: true,
+      // No type archive: the front page is the post listing (WordPress's
+      // default `post` behavior), which avoids a duplicate /posts route.
+      hasArchive: false,
       rewrite: { slug: "posts" },
       capabilityType: "post",
       menuIcon: "file-text",

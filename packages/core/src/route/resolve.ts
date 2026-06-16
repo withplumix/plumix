@@ -135,8 +135,13 @@ async function resolveFrontPage(
   assetManifest: AssetManifest,
 ): Promise<Response> {
   const page = parsePageParam(params.page);
+  // The latest-posts front feed excludes hierarchical types (pages) — they
+  // are standalone content, not blog entries. (A configurable front-page /
+  // posts-page model is the larger follow-up.)
   const publicTypes = Array.from(ctx.plugins.entryTypes.entries())
-    .filter(([, spec]) => spec.isPublic !== false)
+    .filter(
+      ([, spec]) => spec.isPublic !== false && spec.isHierarchical !== true,
+    )
     .map(([key]) => key);
   const where =
     publicTypes.length === 0
