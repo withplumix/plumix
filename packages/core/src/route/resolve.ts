@@ -1,7 +1,7 @@
 import type { SQL } from "drizzle-orm";
 import { count } from "drizzle-orm";
 
-import { expandShortcodes, isEntryContent } from "@plumix/blocks";
+import { expandShortcodes } from "@plumix/blocks";
 
 import type { AppContext } from "../context/app.js";
 import type { Entry } from "../db/schema/entries.js";
@@ -14,7 +14,6 @@ import type { AssetManifest } from "./render/asset-manifest.js";
 import type {
   ArchiveData,
   FrontPageData,
-  ResolvedEntry,
   SearchData,
   SingleData,
   TaxonomyData,
@@ -24,17 +23,13 @@ import { and, desc, eq, inArray, isNotNull, sql } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
-import { users } from "../db/schema/users.js";
 import { labelSourceText } from "../i18n/label.js";
 import { notFound, permanentRedirect } from "../runtime/http.js";
 import { paginate } from "./paginate.js";
 import { findEntryByPath, findTermByPath } from "./path-chain.js";
-import {
-  buildEntryPermalinkSync,
-  buildTermArchiveUrl,
-  buildTermArchiveUrlSync,
-} from "./permalink.js";
+import { buildTermArchiveUrl } from "./permalink.js";
 import { previewTokenGrantsEntry, readPreviewToken } from "./preview.js";
+import { buildResolvedEntries } from "./render/build-resolved-entries.js";
 import { renderThroughTheme } from "./render/render-template.js";
 
 declare module "../hooks/types.js" {
@@ -468,67 +463,6 @@ async function resolveArchive(
   });
   return new Response(html, {
     headers: { "content-type": "text/html; charset=utf-8" },
-  });
-}
-
-// Batched eager-load mirroring WordPress's `update_post_caches` semantics:
-// one query for authors (IN (...)), one query for the entry_term×terms
-// join (IN (...)). Templates read entry.author + entry.terms without N+1.
-async function buildResolvedEntries(
-  ctx: AppContext,
-  rows: readonly Entry[],
-): Promise<readonly ResolvedEntry[]> {
-  if (rows.length === 0) return [];
-  const entryIds = rows.map((r) => r.id);
-  const authorIds = Array.from(new Set(rows.map((r) => r.authorId)));
-  const [authorRows, joinRows] = await Promise.all([
-    ctx.db
-      .select({ id: users.id, name: users.name, avatarUrl: users.avatarUrl })
-      .from(users)
-      .where(inArray(users.id, authorIds)),
-    ctx.db
-      .select({
-        entryId: entryTerm.entryId,
-        id: terms.id,
-        taxonomy: terms.taxonomy,
-        name: terms.name,
-        slug: terms.slug,
-        description: terms.description,
-        meta: terms.meta,
-        parentId: terms.parentId,
-        version: terms.version,
-      })
-      .from(entryTerm)
-      .innerJoin(terms, eq(entryTerm.termId, terms.id))
-      .where(inArray(entryTerm.entryId, entryIds)),
-  ]);
-  const authorById = new Map(authorRows.map((a) => [a.id, a]));
-  const termsByEntryId = new Map<number, Term[]>();
-  for (const row of joinRows) {
-    const { entryId, ...term } = row;
-    const bucket = termsByEntryId.get(entryId) ?? [];
-    bucket.push(term);
-    termsByEntryId.set(entryId, bucket);
-  }
-  return rows.map((row) => {
-    const author = authorById.get(row.authorId);
-    if (!author) {
-      // eslint-disable-next-line no-restricted-syntax -- diagnostic throw
-      throw new Error(
-        `buildResolvedEntries: entry ${String(row.id)} references missing author ${String(row.authorId)}`,
-      );
-    }
-    return {
-      ...row,
-      contentBlocks: isEntryContent(row.content) ? row.content : null,
-      // Sync term URLs — no per-term CTE (nested terms get null, like entries).
-      terms: (termsByEntryId.get(row.id) ?? []).map((term) => ({
-        ...term,
-        url: buildTermArchiveUrlSync(ctx, term),
-      })),
-      author,
-      url: buildEntryPermalinkSync(ctx, row),
-    };
   });
 }
 
