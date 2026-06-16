@@ -118,11 +118,15 @@ function accountContributor(
   ctx: BarRenderContext,
 ): readonly AdminBarNode[] {
   const strings = barMessages(ctx.locale);
+  // WP-style "Howdy, {display name}" — fall back to the email when the user
+  // never set a name. Also seeds the mobile avatar initial. Mirrors the
+  // display-name derivation in `rpc/procedures/user/lookup.ts`.
+  const name = ctx.user.name?.trim();
   return [
     ...nodes,
     {
       id: "account",
-      title: ctx.user.email,
+      title: name !== undefined && name !== "" ? name : ctx.user.email,
       group: "account",
       position: ACCOUNT_POSITION,
     },

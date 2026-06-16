@@ -45,6 +45,8 @@ export type Db<TSchema extends Record<string, unknown> = CoreSchema> =
 export interface AuthenticatedUser {
   readonly id: number;
   readonly email: string;
+  /** Display name from `users.name`; null when the user never set one. */
+  readonly name?: string | null;
   readonly role: UserRole;
   readonly meta: Record<string, unknown>;
 }

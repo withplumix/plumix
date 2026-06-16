@@ -355,6 +355,29 @@ describe("PlumixAdminBar", () => {
     );
   });
 
+  test("shows the display name and derives the avatar initial from it", () => {
+    const named = { ...user, name: "Alex Rivera" };
+    const hooks = new HookRegistry();
+    registerCoreAdminBarContributors(hooks);
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: emptyRegistry, user: named }}>
+        <PlumixAdminBar
+          hooks={hooks}
+          request={request}
+          siteName="My Site"
+          auth={auth}
+          entryTypes={entryTypes}
+        />
+      </PlumixProvider>,
+    );
+
+    expect(html).toContain("<bdi>Alex Rivera</bdi>");
+    expect(html).toMatch(
+      /class="plumix-admin-bar__avatar"[^>]*aria-hidden[^>]*>A</,
+    );
+  });
+
   test("keeps the bar visible on small screens (never sets the bar to display:none)", () => {
     const hooks = new HookRegistry();
     registerCoreAdminBarContributors(hooks);

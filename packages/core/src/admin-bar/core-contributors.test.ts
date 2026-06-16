@@ -160,6 +160,42 @@ describe("registerCoreAdminBarContributors — account dropdown", () => {
     expect(account?.parent).toBeUndefined();
   });
 
+  test("titles the account with the display name when the user has one", () => {
+    const nodes = collectAdminBarNodes(
+      withCore(),
+      ctx({
+        user: {
+          id: 1,
+          email: "editor@cms.example",
+          name: "Alex Rivera",
+          role: "editor",
+          meta: {},
+        },
+      }),
+    );
+
+    expect(nodes.find((n) => n.id === "account")?.title).toBe("Alex Rivera");
+  });
+
+  test("falls back to the email when the name is empty or null", () => {
+    const nodes = collectAdminBarNodes(
+      withCore(),
+      ctx({
+        user: {
+          id: 1,
+          email: "editor@cms.example",
+          name: null,
+          role: "editor",
+          meta: {},
+        },
+      }),
+    );
+
+    expect(nodes.find((n) => n.id === "account")?.title).toBe(
+      "editor@cms.example",
+    );
+  });
+
   test("adds a Profile child linking to the admin profile route", () => {
     const nodes = collectAdminBarNodes(withCore(), ctx());
 
