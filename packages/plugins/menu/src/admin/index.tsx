@@ -2,24 +2,10 @@
 // module and emits a `window.plumix.registerPluginPage("/menus",
 // MenusShell)` call into the synthesised admin chunk based on the
 // `component: "MenusShell"` ref we passed to `ctx.registerAdminPage`.
-// All this entry has to do is expose the export by name.
+// All this entry has to do is expose the export by name — registering
+// the page imperatively here as well would double-register it (the
+// synthesised chunk runs this module body *and* its generated call),
+// throwing AdminPluginRegistryError at admin boot. See the media
+// plugin's admin entry for the canonical shape.
 
-import type { ComponentType } from "react";
-
-import { MenusShell } from "./MenusShell.js";
-
-interface PlumixWindowGlobal {
-  readonly registerPluginPage: (path: string, component: ComponentType) => void;
-}
-
-declare const window:
-  | {
-      readonly plumix?: PlumixWindowGlobal;
-    }
-  | undefined;
-
-if (typeof window !== "undefined") {
-  window.plumix?.registerPluginPage("/menus", MenusShell);
-}
-
-export { MenusShell };
+export { MenusShell } from "./MenusShell.js";
