@@ -125,11 +125,14 @@
   }
 }
 
-/* Editor canvas typography. Tailwind's `prose` plugin isn't installed
-   in this admin, so we ship a scoped baseline so authors can tell
-   blocks apart while typing. Frontend themes own production styling;
-   these only apply inside `.ProseMirror` (the editor view). */
-.ProseMirror {
+/* Editor block typography. Tailwind's `prose` plugin isn't installed in
+   this admin, so we ship a scoped baseline so authors can tell blocks
+   apart. Frontend themes own production styling. Applies in two places:
+   `.ProseMirror` (the Tiptap rich-text view while typing) and
+   `.plumix-canvas-content` (the Puck preview, where rendered blocks would
+   otherwise inherit Tailwind preflight's reset and look flat). */
+.ProseMirror,
+.plumix-canvas-content {
   /* Headings — clear size hierarchy without going as large as
      a theme would. Keeps the editor compact at prose-sm scale. */
   h1 {
@@ -154,21 +157,21 @@
     @apply my-2 leading-relaxed;
   }
 
-  /* Lists rendered inside the rich-text block — Tailwind preflight
-     zeroes list-style and padding, so opt our editor lists back in
-     for the bullet/number toolbar toggles inside `core/rich-text`. */
-  [data-plumix-block="core/rich-text"] ul {
+  /* Lists — Tailwind preflight zeroes list-style and padding. The editor
+     renders blocks without `data-plumix-block` wrappers, so style the bare
+     elements; these contexts only ever contain rendered content. */
+  ul {
     @apply my-2 list-disc pl-6;
   }
-  [data-plumix-block="core/rich-text"] ol {
+  ol {
     @apply my-2 list-decimal pl-6;
   }
-  [data-plumix-block="core/rich-text"] li {
+  li {
     @apply my-1;
   }
 
   /* Quote */
-  blockquote[data-plumix-block="core/quote"] {
+  blockquote {
     @apply border-muted-foreground/30 text-muted-foreground my-3 border-l-4 pl-4 italic;
   }
 
@@ -179,12 +182,12 @@
   }
 
   /* Code block */
-  pre[data-plumix-block="core/code"] {
+  pre {
     @apply bg-muted my-3 overflow-x-auto rounded-md p-3 font-mono text-sm;
   }
 
   /* Separator */
-  hr[data-plumix-block="core/separator"] {
+  hr {
     @apply border-border my-6 border-t;
   }
 
@@ -252,14 +255,21 @@
   }
 
   /* Table */
-  [data-plumix-block="core/table"] > table {
+  table {
     @apply border-border my-3 w-full border-collapse border;
   }
-  [data-plumix-block="core/table"] > table th,
-  [data-plumix-block="core/table"] > table td {
+  th,
+  td {
     @apply border-border border px-2 py-1;
   }
-  [data-plumix-block="core/table"] > table th {
+  th {
     @apply bg-muted/50 text-left font-semibold;
+  }
+  /* The row/cell blocks render inline (no Puck wrapper), but Puck's slot
+     DropZone is still a `<div>` that sits between `<table>`/`<tr>`. Collapse
+     just that box so the native table structure renders; the inline cells
+     keep their own boxes (and dragRef) so they stay selectable. */
+  table [data-puck-dropzone] {
+    display: contents;
   }
 }

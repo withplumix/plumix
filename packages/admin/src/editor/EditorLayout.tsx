@@ -1161,7 +1161,7 @@ function PlumixCanvasWithSlashMenu({
         onKeyDown={handleCanvasKeyDown}
       >
         <div
-          className="bg-background mx-auto rounded-md border p-8 shadow-sm transition-[width]"
+          className="plumix-canvas-content bg-background mx-auto rounded-md border p-8 shadow-sm transition-[width]"
           style={{ width: viewportPx, zoom }}
           data-testid="plumix-editor-canvas-frame"
         >

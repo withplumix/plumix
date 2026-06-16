@@ -1,6 +1,6 @@
 import type { Config } from "@puckeditor/core";
 import type { Extensions } from "@tiptap/core";
-import { createElement, Fragment } from "react";
+import { cloneElement, createElement, Fragment, isValidElement } from "react";
 import { i18n } from "@lingui/core";
 
 import type { BlockSpec } from "@plumix/blocks";
@@ -35,22 +35,31 @@ export function blockSpecsToPuckComponents(
       };
       continue;
     }
+    // Inline blocks (table rows/cells) must not get Puck's wrapper `<div>` —
+    // it would sit illegally between `<table>`/`<tr>` and collapse the grid.
+    // Puck's `inline` mode drops the wrapper; in return the block's own root
+    // element must carry `puck.dragRef` so it stays draggable/selectable.
+    const inline = spec.inline === true;
     out[spec.name] = {
       label: spec.title ? resolveLabel(spec.title, i18n) : spec.name,
       fields: spec.inputs ? translateFields(spec.inputs, options) : {},
       defaultProps: spec.defaults,
-      render: (props) =>
-        createElement(
-          Fragment,
-          null,
-          spec.render({
-            attrs: props,
-            context: DEFAULT_BLOCK_CONTEXT,
-            // Admin preview has no SSR pass; loader data only flows
-            // through `renderBlockTree({ loaderData })` at the server.
-            loaders: {},
-          }),
-        ),
+      inline,
+      render: (props) => {
+        const rendered = spec.render({
+          attrs: props,
+          context: DEFAULT_BLOCK_CONTEXT,
+          // Admin preview has no SSR pass; loader data only flows
+          // through `renderBlockTree({ loaderData })` at the server.
+          loaders: {},
+        });
+        if (inline && isValidElement(rendered)) {
+          const dragRef = (props as { puck?: { dragRef?: unknown } }).puck
+            ?.dragRef;
+          return cloneElement(rendered, { ref: dragRef } as never);
+        }
+        return createElement(Fragment, null, rendered);
+      },
     };
   }
   return out;
