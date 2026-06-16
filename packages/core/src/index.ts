@@ -49,6 +49,7 @@ export type {
   Pagination,
   ResolvedAuthor,
   ResolvedEntry,
+  SearchData,
   SingleData,
   TaxonomyData,
 } from "./route/render/resolved-entry.js";
