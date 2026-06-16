@@ -26,6 +26,11 @@ export async function loadConfig(
   const jiti = createJiti(pathToFileURL(configPath).href, {
     interopDefault: true,
     moduleCache: false,
+    // Themes author templates as JSX, so the config's component graph must
+    // parse at load time. jiti's transform is TS-only by default; enable its
+    // JSX plugin (classic runtime — theme files import React, matching the
+    // worker bundle's esbuild transform).
+    jsx: true,
   });
 
   let imported: unknown;

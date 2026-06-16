@@ -71,4 +71,33 @@ describe("loadConfig", () => {
       code: "config_load_failed",
     });
   });
+
+  test("loads a config whose theme imports a JSX (.tsx) module", async () => {
+    // Guards the loader's `jsx: true`: themes author templates as JSX, so
+    // jiti must parse the config's `.tsx` import graph. The stub `React`
+    // keeps the classic-transform output runnable without node_modules.
+    writeFileSync(
+      join(dir, "view.tsx"),
+      [
+        "const React = { createElement: () => null, Fragment: null };",
+        "export const view = () => <div>hello</div>;",
+      ].join("\n"),
+      "utf8",
+    );
+    writeFileSync(
+      join(dir, "plumix.config.ts"),
+      [
+        'import { view } from "./view.tsx";',
+        "void view;",
+        "export default {",
+        "  runtime: { name: 'x', buildFetchHandler: () => undefined },",
+        "  database: { kind: 'd1' },",
+        "  auth: { passkey: {} },",
+        "};",
+      ].join("\n"),
+      "utf8",
+    );
+    const { config } = await loadConfig(dir);
+    expect(config.runtime.name).toBe("x");
+  });
 });
