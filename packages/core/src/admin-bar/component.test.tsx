@@ -145,7 +145,7 @@ describe("PlumixAdminBar", () => {
     const ukUser = { ...user, meta: { locale: "uk" } };
     const hooks = new HookRegistry();
     registerCoreAdminBarContributors(hooks);
-    const types = new Map([["post", { name: "post" } as never]]);
+    const types = new Map([["post", { name: "post", label: "Post" } as never]]);
 
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry, user: ukUser }}>
@@ -171,7 +171,7 @@ describe("PlumixAdminBar", () => {
     const zhUser = { ...user, meta: { locale: "zh-CN" } };
     const hooks = new HookRegistry();
     registerCoreAdminBarContributors(hooks);
-    const types = new Map([["post", { name: "post" } as never]]);
+    const types = new Map([["post", { name: "post", label: "Post" } as never]]);
 
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry, user: zhUser }}>
@@ -240,7 +240,7 @@ describe("PlumixAdminBar", () => {
   test("emits a localized +New summary aria-label for screen readers", () => {
     const hooks = new HookRegistry();
     registerCoreAdminBarContributors(hooks);
-    const types = new Map([["post", { name: "post" } as never]]);
+    const types = new Map([["post", { name: "post", label: "Post" } as never]]);
 
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry, user }}>
@@ -261,8 +261,8 @@ describe("PlumixAdminBar", () => {
     const hooks = new HookRegistry();
     registerCoreAdminBarContributors(hooks);
     const types = new Map([
-      ["post", { name: "post" } as never],
-      ["page", { name: "page" } as never],
+      ["post", { name: "post", label: "Post" } as never],
+      ["page", { name: "page", label: "Page" } as never],
     ]);
 
     const html = renderToStaticMarkup(
@@ -283,6 +283,121 @@ describe("PlumixAdminBar", () => {
     expect(html).toContain('data-testid="plumix-admin-bar-node-+new:page"');
     expect(html).toContain('href="/_plumix/admin/entries/post/create"');
     expect(html).toContain('href="/_plumix/admin/entries/page/create"');
+  });
+
+  test("renders the account as a dropdown with a Profile link and a Sign out button", () => {
+    const hooks = new HookRegistry();
+    registerCoreAdminBarContributors(hooks);
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: emptyRegistry, user }}>
+        <PlumixAdminBar
+          hooks={hooks}
+          request={request}
+          siteName="My Site"
+          auth={auth}
+          entryTypes={entryTypes}
+        />
+      </PlumixProvider>,
+    );
+
+    expect(html).toContain(
+      'data-testid="plumix-admin-bar-node-account:profile"',
+    );
+    expect(html).toContain('href="/_plumix/admin/profile"');
+    expect(html).toContain(
+      'data-testid="plumix-admin-bar-node-account:signout"',
+    );
+    // Sign out is a button (needs the CSRF header), not a navigation link.
+    expect(html).toMatch(/<button[^>]*data-plumix-signout/);
+  });
+
+  test("emits the inline sign-out island targeting the signout endpoint with the CSRF header", () => {
+    const hooks = new HookRegistry();
+    registerCoreAdminBarContributors(hooks);
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: emptyRegistry, user }}>
+        <PlumixAdminBar
+          hooks={hooks}
+          request={request}
+          siteName="My Site"
+          auth={auth}
+          entryTypes={entryTypes}
+        />
+      </PlumixProvider>,
+    );
+
+    expect(html).toContain('data-testid="plumix-admin-bar-signout-script"');
+    expect(html).toContain("/_plumix/auth/signout");
+    expect(html).toContain("X-Plumix-Request");
+  });
+
+  test("renders an avatar initial for the mobile account collapse", () => {
+    const hooks = new HookRegistry();
+    registerCoreAdminBarContributors(hooks);
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: emptyRegistry, user }}>
+        <PlumixAdminBar
+          hooks={hooks}
+          request={request}
+          siteName="My Site"
+          auth={auth}
+          entryTypes={entryTypes}
+        />
+      </PlumixProvider>,
+    );
+
+    // editor@cms.example → "E"
+    expect(html).toMatch(
+      /class="plumix-admin-bar__avatar"[^>]*aria-hidden[^>]*>E</,
+    );
+  });
+
+  test("shows the display name and derives the avatar initial from it", () => {
+    const named = { ...user, name: "Alex Rivera" };
+    const hooks = new HookRegistry();
+    registerCoreAdminBarContributors(hooks);
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: emptyRegistry, user: named }}>
+        <PlumixAdminBar
+          hooks={hooks}
+          request={request}
+          siteName="My Site"
+          auth={auth}
+          entryTypes={entryTypes}
+        />
+      </PlumixProvider>,
+    );
+
+    expect(html).toContain("<bdi>Alex Rivera</bdi>");
+    expect(html).toMatch(
+      /class="plumix-admin-bar__avatar"[^>]*aria-hidden[^>]*>A</,
+    );
+  });
+
+  test("keeps the bar visible on small screens (never sets the bar to display:none)", () => {
+    const hooks = new HookRegistry();
+    registerCoreAdminBarContributors(hooks);
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: emptyRegistry, user }}>
+        <PlumixAdminBar
+          hooks={hooks}
+          request={request}
+          siteName="My Site"
+          auth={auth}
+          entryTypes={entryTypes}
+        />
+      </PlumixProvider>,
+    );
+
+    expect(html).not.toMatch(/\.plumix-admin-bar\s*\{[^}]*display:\s*none/);
+    // It grows for touch instead of disappearing.
+    expect(html).toMatch(/@media\s*\(max-width:\s*639px\)/);
+    expect(html).toContain("height: 46px");
   });
 
   test("renders core contributor nodes as anchors with stable testids", () => {

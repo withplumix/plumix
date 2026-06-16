@@ -28,7 +28,9 @@ function ctx(overrides: Partial<BarRenderContext> = {}): BarRenderContext {
 }
 
 function typesMap(...slugs: readonly string[]): BarRenderContext["entryTypes"] {
-  return new Map(slugs.map((slug) => [slug, { name: slug } as never]));
+  return new Map(
+    slugs.map((slug) => [slug, { name: slug, label: slug } as never]),
+  );
 }
 
 function withCore(): HookRegistry {
@@ -80,6 +82,51 @@ describe("registerCoreAdminBarContributors — +New group", () => {
     ]);
   });
 
+  test("titles each child with the type's human singular label, not the raw slug", () => {
+    const types = new Map([
+      ["post", { name: "post", labels: { singular: "Post" } } as never],
+      ["page", { name: "page", label: "Page" } as never],
+    ]);
+
+    const nodes = collectAdminBarNodes(withCore(), ctx({ entryTypes: types }));
+
+    const titles = nodes.filter((n) => n.parent === "+new").map((n) => n.title);
+    expect(titles).toEqual(["Post", "Page"]);
+  });
+
+  test("omits non-public types (showUI false) such as menu_item", () => {
+    const types = new Map([
+      ["post", { name: "post", label: "Post" } as never],
+      [
+        "menu_item",
+        { name: "menu_item", label: "Menu item", isPublic: false } as never,
+      ],
+    ]);
+
+    const nodes = collectAdminBarNodes(withCore(), ctx({ entryTypes: types }));
+
+    const childIds = nodes.filter((n) => n.parent === "+new").map((n) => n.id);
+    expect(childIds).toEqual(["+new:post"]);
+  });
+
+  test("keeps a private type that explicitly opts back into the UI", () => {
+    const types = new Map([
+      [
+        "secret",
+        {
+          name: "secret",
+          label: "Secret",
+          isPublic: false,
+          showUI: true,
+        } as never,
+      ],
+    ]);
+
+    const nodes = collectAdminBarNodes(withCore(), ctx({ entryTypes: types }));
+
+    expect(nodes.find((n) => n.id === "+new:secret")).toBeDefined();
+  });
+
   test("plugin can suppress its own entry type from the menu via the filter", () => {
     const hooks = withCore();
     hooks.addFilter(
@@ -98,18 +145,93 @@ describe("registerCoreAdminBarContributors — +New group", () => {
   });
 });
 
-describe("registerCoreAdminBarContributors — account link", () => {
-  test("adds an 'account' node titled with the user's email", () => {
+describe("registerCoreAdminBarContributors — account dropdown", () => {
+  test("renders the account as a parent titled with the user's email (no direct link)", () => {
     const nodes = collectAdminBarNodes(withCore(), ctx());
 
     const account = nodes.find((n) => n.id === "account");
     expect(account).toEqual({
       id: "account",
       title: "editor@cms.example",
+      group: "account",
+      position: 100,
+    });
+    expect(account?.href).toBeUndefined();
+    expect(account?.parent).toBeUndefined();
+  });
+
+  test("titles the account with the display name when the user has one", () => {
+    const nodes = collectAdminBarNodes(
+      withCore(),
+      ctx({
+        user: {
+          id: 1,
+          email: "editor@cms.example",
+          name: "Alex Rivera",
+          role: "editor",
+          meta: {},
+        },
+      }),
+    );
+
+    expect(nodes.find((n) => n.id === "account")?.title).toBe("Alex Rivera");
+  });
+
+  test("falls back to the email when the name is empty or null", () => {
+    const nodes = collectAdminBarNodes(
+      withCore(),
+      ctx({
+        user: {
+          id: 1,
+          email: "editor@cms.example",
+          name: null,
+          role: "editor",
+          meta: {},
+        },
+      }),
+    );
+
+    expect(nodes.find((n) => n.id === "account")?.title).toBe(
+      "editor@cms.example",
+    );
+  });
+
+  test("adds a Profile child linking to the admin profile route", () => {
+    const nodes = collectAdminBarNodes(withCore(), ctx());
+
+    expect(nodes.find((n) => n.id === "account:profile")).toEqual({
+      id: "account:profile",
+      title: "Profile",
       href: "/_plumix/admin/profile",
       group: "account",
+      parent: "account",
       position: 10,
     });
+  });
+
+  test("adds a Sign out child carrying the signout action and no href", () => {
+    const nodes = collectAdminBarNodes(withCore(), ctx());
+
+    expect(nodes.find((n) => n.id === "account:signout")).toEqual({
+      id: "account:signout",
+      title: "Sign out",
+      action: "signout",
+      group: "account",
+      parent: "account",
+      position: 20,
+    });
+  });
+
+  test("translates the dropdown labels via the bar catalog", () => {
+    const nodes = collectAdminBarNodes(
+      withCore(),
+      ctx({ locale: "de", direction: "ltr" }),
+    );
+
+    expect(nodes.find((n) => n.id === "account:profile")?.title).toBe("Profil");
+    expect(nodes.find((n) => n.id === "account:signout")?.title).toBe(
+      "Abmelden",
+    );
   });
 });
 

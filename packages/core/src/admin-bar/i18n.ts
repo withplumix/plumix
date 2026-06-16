@@ -34,6 +34,8 @@ const M = {
   newGroupAria: { id: "core.adminBar.newGroupAria", message: "Create new" },
   edit: { id: "core.adminBar.edit", message: "Edit" },
   account: { id: "core.adminBar.account", message: "Account" },
+  profile: { id: "core.adminBar.profile", message: "Profile" },
+  signOut: { id: "core.adminBar.signOut", message: "Sign out" },
   navAria: { id: "core.adminBar.navAria", message: "Admin" },
 } as const;
 
@@ -43,6 +45,8 @@ export interface BarStrings {
   readonly newGroupAria: string;
   readonly edit: string;
   readonly account: string;
+  readonly profile: string;
+  readonly signOut: string;
   readonly navAria: string;
 }
 
@@ -97,6 +101,8 @@ export function barMessages(locale: BarLocale): BarStrings {
     newGroupAria: resolveMessage(catalog, M.newGroupAria),
     edit: resolveMessage(catalog, M.edit),
     account: resolveMessage(catalog, M.account),
+    profile: resolveMessage(catalog, M.profile),
+    signOut: resolveMessage(catalog, M.signOut),
     navAria: resolveMessage(catalog, M.navAria),
   };
 }

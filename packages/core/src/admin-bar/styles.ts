@@ -78,7 +78,8 @@ export const ADMIN_BAR_CSS = css`
   }
   .plumix-admin-bar a,
   .plumix-admin-bar summary,
-  .plumix-admin-bar span {
+  .plumix-admin-bar span,
+  .plumix-admin-bar button {
     color: #fff;
     text-decoration: none;
     padding: 0 10px;
@@ -90,9 +91,34 @@ export const ADMIN_BAR_CSS = css`
     text-overflow: ellipsis;
     max-width: 100%;
   }
+  .plumix-admin-bar button {
+    appearance: none;
+    background: none;
+    border: 0;
+    font: inherit;
+    width: 100%;
+    text-align: start;
+  }
   .plumix-admin-bar a:hover,
-  .plumix-admin-bar summary:hover {
+  .plumix-admin-bar summary:hover,
+  .plumix-admin-bar button:hover {
     background: #2c3338;
+  }
+  /* Specificity must beat \`.plumix-admin-bar span\` (0,1,1), which would
+     otherwise re-show the disc and restore its text padding. */
+  .plumix-admin-bar span.plumix-admin-bar__avatar {
+    display: none;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border-radius: 50%;
+    background: #2c3338;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
   }
   .plumix-admin-bar details {
     position: relative;
@@ -126,10 +152,17 @@ export const ADMIN_BAR_CSS = css`
   .plumix-admin-bar details > ul > li {
     max-width: 100%;
   }
-  .plumix-admin-bar details > ul a {
+  .plumix-admin-bar details > ul a,
+  .plumix-admin-bar details > ul button {
     display: block;
     padding: 6px 12px;
     line-height: 1.4;
+  }
+  /* The account menu sits at the row's end — open its dropdown toward the
+     inline-start so it can't spill off the viewport edge. */
+  .plumix-admin-bar__end details > ul {
+    left: auto;
+    right: 0;
   }
   .plumix-admin-bar[dir="rtl"] nav {
     flex-direction: row-reverse;
@@ -138,17 +171,89 @@ export const ADMIN_BAR_CSS = css`
     left: auto;
     right: 0;
   }
+  .plumix-admin-bar[dir="rtl"] .plumix-admin-bar__end details > ul {
+    right: auto;
+    left: 0;
+  }
+  /* Mobile: keep the bar visible (WP does too) but grow it for touch — a
+     taller strip, an avatar disc in place of the long email, and roomier
+     dropdown rows. Submenus already tap-to-open via native <details>. */
   @media (max-width: 639px) {
     .plumix-admin-bar {
+      height: 46px;
+      line-height: 46px;
+    }
+    .plumix-admin-bar nav {
+      padding: 0 4px;
+    }
+    .plumix-admin-bar a,
+    .plumix-admin-bar summary,
+    .plumix-admin-bar span,
+    .plumix-admin-bar button {
+      padding: 0 8px;
+    }
+    .plumix-admin-bar li {
+      max-width: 40vw;
+    }
+    .plumix-admin-bar details > ul {
+      top: 46px;
+    }
+    .plumix-admin-bar details > ul a,
+    .plumix-admin-bar details > ul button {
+      padding: 10px 14px;
+    }
+    .plumix-admin-bar span.plumix-admin-bar__avatar {
+      display: inline-flex;
+    }
+    .plumix-admin-bar__end > details > summary > bdi {
       display: none;
+    }
+    .plumix-admin-bar__end > details > summary {
+      padding-inline: 6px;
     }
   }
 `;
 
 export const ADMIN_BAR_BODY_OFFSET_CSS = css`
-  @media (min-width: 640px) {
+  body {
+    padding-top: 36px;
+  }
+  @media (max-width: 639px) {
     body {
-      padding-top: 36px;
+      padding-top: 46px;
     }
   }
 `;
+
+// Inline sign-out island — the bar's one concession to JS. The signout
+// endpoint is CSRF-gated on the custom `X-Plumix-Request` header (a plain
+// link/form can't set it) and answers with JSON, so a button + fetch is
+// the minimal wiring. `redirectTo` is honored for external-IdP logout;
+// otherwise the current page reloads, now unauthenticated (no bar).
+export const ADMIN_BAR_SIGNOUT_SCRIPT = `
+(function () {
+  var sel = "[data-plumix-signout]";
+  document.addEventListener("click", function (event) {
+    var node = event.target;
+    var trigger = node && node.closest ? node.closest(sel) : null;
+    if (!trigger) return;
+    event.preventDefault();
+    trigger.disabled = true;
+    fetch("/_plumix/auth/signout", {
+      method: "POST",
+      headers: { "X-Plumix-Request": "1" },
+      credentials: "same-origin",
+    })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (data) {
+        var to = data && data.redirectTo ? data.redirectTo : location.pathname;
+        location.assign(to);
+      })
+      .catch(function () { location.reload(); });
+  });
+})();
+`;
+
+// With JS off the sign-out button can't do anything (the endpoint needs a
+// fetch with the CSRF header) — hide it rather than show a dead control.
+export const ADMIN_BAR_NOSCRIPT_CSS = "[data-plumix-signout]{display:none}";

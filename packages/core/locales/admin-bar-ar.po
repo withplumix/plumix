@@ -35,5 +35,15 @@ msgstr "الحساب"
 
 #. js-lingui-explicit-id
 #: src/admin-bar/i18n.ts
+msgid "core.adminBar.profile"
+msgstr "الملف الشخصي"
+
+#. js-lingui-explicit-id
+#: src/admin-bar/i18n.ts
+msgid "core.adminBar.signOut"
+msgstr "تسجيل الخروج"
+
+#. js-lingui-explicit-id
+#: src/admin-bar/i18n.ts
 msgid "core.adminBar.navAria"
 msgstr "الإدارة"

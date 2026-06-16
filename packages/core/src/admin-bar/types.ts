@@ -20,6 +20,13 @@ export interface AdminBarNode {
   readonly group: AdminBarGroup;
   readonly parent?: string;
   readonly position?: number;
+  /**
+   * Marks a node as a client action rather than a navigation link. The
+   * bar is otherwise zero-JS server chrome; `"signout"` is the single
+   * exception, rendered as a `<button>` wired to the inline sign-out
+   * island instead of an `<a>`/`<span>`.
+   */
+  readonly action?: "signout";
 }
 
 export interface AdminBarTreeNode extends AdminBarNode {

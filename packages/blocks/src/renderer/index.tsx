@@ -15,6 +15,7 @@ import { RendererError } from "./errors.js";
 export interface RendererUser {
   readonly id: number;
   readonly email: string;
+  readonly name?: string | null;
   readonly role: string;
   readonly meta: Record<string, unknown>;
 }

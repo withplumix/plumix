@@ -35,5 +35,15 @@ msgstr "账户"
 
 #. js-lingui-explicit-id
 #: src/admin-bar/i18n.ts
+msgid "core.adminBar.profile"
+msgstr "个人资料"
+
+#. js-lingui-explicit-id
+#: src/admin-bar/i18n.ts
+msgid "core.adminBar.signOut"
+msgstr "退出登录"
+
+#. js-lingui-explicit-id
+#: src/admin-bar/i18n.ts
 msgid "core.adminBar.navAria"
 msgstr "管理"

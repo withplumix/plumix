@@ -35,5 +35,15 @@ msgstr "Обліковий запис"
 
 #. js-lingui-explicit-id
 #: src/admin-bar/i18n.ts
+msgid "core.adminBar.profile"
+msgstr "Профіль"
+
+#. js-lingui-explicit-id
+#: src/admin-bar/i18n.ts
+msgid "core.adminBar.signOut"
+msgstr "Вийти"
+
+#. js-lingui-explicit-id
+#: src/admin-bar/i18n.ts
 msgid "core.adminBar.navAria"
 msgstr "Адміністрування"
