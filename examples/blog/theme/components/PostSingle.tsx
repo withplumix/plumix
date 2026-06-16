@@ -36,7 +36,10 @@ export function PostSingle({
         ) : null}
       </header>
 
-      <div className="space-y-4 leading-relaxed" data-testid="post-body">
+      <div
+        className="prose prose-stone max-w-none prose-headings:font-serif"
+        data-testid="post-body"
+      >
         {entry.contentBlocks ? (
           <BlockRenderer content={entry.contentBlocks} />
         ) : null}
