@@ -108,6 +108,79 @@ describe("entry.update", () => {
     onTransition.assertCalledOnce();
   });
 
+  test("scheduling a draft stores the future publishedAt and keeps status scheduled", async () => {
+    const h = await createRpcHarness({ authAs: "author" });
+    const own = await h.factory.draft.create({
+      authorId: h.user.id,
+      slug: "to-schedule",
+    });
+    const when = new Date(Math.floor((Date.now() + 3_600_000) / 1000) * 1000);
+
+    const updated = await h.client.entry.update({
+      id: own.id,
+      status: "scheduled",
+      publishedAt: when,
+    });
+
+    expect(updated.status).toBe("scheduled");
+    expect(updated.publishedAt).toEqual(when);
+  });
+
+  test("scheduling a draft without a publishedAt is rejected", async () => {
+    const h = await createRpcHarness({ authAs: "author" });
+    const own = await h.factory.draft.create({
+      authorId: h.user.id,
+      slug: "no-date",
+    });
+
+    await expect(
+      h.client.entry.update({ id: own.id, status: "scheduled" }),
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      data: { reason: "scheduled_requires_future_date" },
+    });
+  });
+
+  test("editing a past-due scheduled entry (awaiting the cron) is not rejected", async () => {
+    const h = await createRpcHarness({ authAs: "author" });
+    // Seed directly: a row scheduled for a moment that's already passed,
+    // still `scheduled` because the cron hasn't fired yet.
+    const due = await h.factory.entry.create({
+      authorId: h.user.id,
+      slug: "due",
+      status: "scheduled",
+      publishedAt: new Date(Date.now() - 1000),
+    });
+
+    const updated = await h.client.entry.update({
+      id: due.id,
+      title: "fixed a typo",
+    });
+
+    expect(updated.title).toBe("fixed a typo");
+    expect(updated.status).toBe("scheduled");
+  });
+
+  test("manually publishing a future-scheduled entry resets publishedAt to now", async () => {
+    const h = await createRpcHarness({ authAs: "author" });
+    const tomorrow = new Date(Date.now() + 86_400_000);
+    const scheduled = await h.factory.entry.create({
+      authorId: h.user.id,
+      slug: "early",
+      status: "scheduled",
+      publishedAt: tomorrow,
+    });
+
+    const updated = await h.client.entry.update({
+      id: scheduled.id,
+      status: "published",
+    });
+
+    expect(updated.status).toBe("published");
+    // Stamped ~now, not the original future date.
+    expect(updated.publishedAt?.getTime()).toBeLessThan(tomorrow.getTime());
+  });
+
   test("contributor cannot promote their own draft to published", async () => {
     const h = await createRpcHarness({ authAs: "contributor" });
     const own = await h.factory.draft.create({

@@ -18,6 +18,45 @@ describe("entry.create", () => {
     expect(created.publishedAt).toBeNull();
   });
 
+  test("author can schedule a future publish (status scheduled + publishedAt)", async () => {
+    const h = await createRpcHarness({ authAs: "author" });
+    // Whole-second date — SQLite stores timestamps at second precision.
+    const when = new Date(Math.floor((Date.now() + 3_600_000) / 1000) * 1000);
+    const created = await h.client.entry.create({
+      title: "Later",
+      slug: "later",
+      status: "scheduled",
+      publishedAt: when,
+    });
+    expect(created.status).toBe("scheduled");
+    expect(created.publishedAt).toEqual(when);
+  });
+
+  test("scheduled status without a publishedAt is rejected", async () => {
+    const h = await createRpcHarness({ authAs: "author" });
+    await expect(
+      h.client.entry.create({ title: "x", slug: "x", status: "scheduled" }),
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      data: { reason: "scheduled_requires_future_date" },
+    });
+  });
+
+  test("scheduled status with a past publishedAt is rejected", async () => {
+    const h = await createRpcHarness({ authAs: "author" });
+    await expect(
+      h.client.entry.create({
+        title: "x",
+        slug: "x",
+        status: "scheduled",
+        publishedAt: new Date(Date.now() - 1000),
+      }),
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      data: { reason: "scheduled_requires_future_date" },
+    });
+  });
+
   test("INVALID_BLOCK_CONTENT when v2 content carries an unknown block type", async () => {
     const h = await createRpcHarness({ authAs: "contributor" });
     const error = await h.client.entry

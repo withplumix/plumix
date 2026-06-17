@@ -24,8 +24,9 @@
     "not_found_handling": "none",
   },
   // Fires plumix's scheduled tasks. `0 3 * * *` matches the core
-  // session-cleanup task (daily reap of expired sessions).
+  // session-cleanup task (daily); `*/5 * * * *` matches publish-scheduled
+  // (publishes due future-dated entries within 5 minutes).
   "triggers": {
-    "crons": ["0 3 * * *"],
+    "crons": ["0 3 * * *", "*/5 * * * *"],
   },
 }

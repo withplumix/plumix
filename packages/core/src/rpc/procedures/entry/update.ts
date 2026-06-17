@@ -32,6 +32,7 @@ import {
   validateEntryMetaReferences,
   writeEntryMeta,
 } from "./meta.js";
+import { scheduledDateInvalid } from "./publish-scheduled.js";
 import { entryUpdateInputSchema } from "./schemas.js";
 import {
   applyTermPatch,
@@ -269,6 +270,7 @@ export const update = base
       meta: metaInput,
       expectedLiveUpdatedAt: _expectedLiveUpdatedAt,
       saveAs: _saveAs,
+      publishedAt: publishedAtInput,
       ...changes
     } = filtered;
     const metaPatch = sanitizeMetaForRpc(
@@ -301,8 +303,34 @@ export const update = base
     }
 
     const patch: Partial<NewEntry> = stripUndefined(changes);
-    if (isPublishTransition && !existing.publishedAt) {
+    // On a publish transition, stamp `now` when there's no publish time yet —
+    // or when promoting a scheduled entry early (its `publishedAt` is still in
+    // the future); otherwise a future date would sort it to the top of feeds.
+    if (
+      isPublishTransition &&
+      (!existing.publishedAt || existing.publishedAt.getTime() > Date.now())
+    ) {
       patch.publishedAt = new Date();
+    }
+
+    // Scheduling: validate the target time only when actually (re)scheduling —
+    // moving status to `scheduled` or supplying a new date. An incidental edit
+    // to an already-scheduled entry (e.g. fixing a typo while it waits for the
+    // cron, its date now in the past) must not be rejected. The supplied date
+    // is written only while scheduling, so it can't backdate a published entry.
+    if (
+      (filtered.status === "scheduled" || publishedAtInput !== undefined) &&
+      (filtered.status ?? existing.status) === "scheduled"
+    ) {
+      const effective = publishedAtInput ?? existing.publishedAt ?? undefined;
+      if (scheduledDateInvalid("scheduled", effective)) {
+        throw errors.BAD_REQUEST({
+          data: { reason: "scheduled_requires_future_date" },
+        });
+      }
+      if (publishedAtInput !== undefined) {
+        patch.publishedAt = publishedAtInput;
+      }
     }
 
     // Nothing to write anywhere? Short-circuit without firing hooks, but

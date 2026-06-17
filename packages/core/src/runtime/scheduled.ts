@@ -1,5 +1,6 @@
 import type { AppContext } from "../context/app.js";
 import type { PlumixApp } from "./app.js";
+import { flushPurgeTags } from "../cache/purge.js";
 
 /**
  * Run the registered scheduled tasks against the given `AppContext`. Each task
@@ -38,4 +39,7 @@ export async function runScheduledTasks(
       );
     }
   }
+  // A scheduled publish fires `entry:published`; flush the batched edge-cache
+  // purge it accumulated, the same request-end seam the dispatcher uses.
+  flushPurgeTags(ctx);
 }

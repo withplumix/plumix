@@ -42,4 +42,16 @@ describe("registerCoreScheduledTasks", () => {
     const rows = await db.select({ id: sessions.id }).from(sessions);
     expect(rows).toEqual([{ id: "live" }]);
   });
+
+  it("registers a publish-scheduled task on a 5-minute cron", () => {
+    const registry = createPluginRegistry();
+    registerCoreScheduledTasks(registry);
+
+    const task = registry.scheduledTasks.find(
+      (t) => t.id === "publish-scheduled",
+    );
+    expect(task).toBeDefined();
+    expect(task?.cron).toBe("*/5 * * * *");
+    expect(task?.registeredBy).toBe("core");
+  });
 });
