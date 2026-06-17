@@ -9,6 +9,16 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.heading"
+msgstr "Menus"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.sourceUnavailable"
+msgstr "This source isn't available yet — add the link via Custom URL."
+
+#. js-lingui-explicit-id
 #: src/index.ts
 msgid "plugin.menu.menuItem.singular"
 msgstr "Menu item"

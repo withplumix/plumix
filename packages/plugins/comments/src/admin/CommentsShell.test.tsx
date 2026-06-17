@@ -183,6 +183,35 @@ describe("CommentsShell", () => {
     expect(bulkCall?.body?.json?.action).toBe("approve");
   });
 
+  test("renders a page-level heading", async () => {
+    mockRpc({
+      counts: { pending: 0, approved: 0, spam: 0, trash: 0 },
+      list: [],
+    });
+    renderShell();
+    await waitFor(() => {
+      expect(screen.getByTestId("comments-heading")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("comments-heading").tagName).toBe("H1");
+  });
+
+  test("filter inputs carry visible placeholders", async () => {
+    mockRpc({
+      counts: { pending: 0, approved: 0, spam: 0, trash: 0 },
+      list: [],
+    });
+    renderShell();
+    await waitFor(() => {
+      expect(screen.getByTestId("comments-search")).toBeInTheDocument();
+    });
+    expect(
+      screen.getByTestId("comments-search").getAttribute("placeholder"),
+    ).toBeTruthy();
+    expect(
+      screen.getByTestId("comments-entry-filter").getAttribute("placeholder"),
+    ).toBeTruthy();
+  });
+
   test("typing in the search box refetches with the term", async () => {
     mockRpc({
       counts: { pending: 0, approved: 0, spam: 0, trash: 0 },

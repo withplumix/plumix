@@ -105,6 +105,21 @@ describe("MenusShell", () => {
     vi.unstubAllGlobals();
   });
 
+  describe("page heading", () => {
+    test("renders a page-level Menus heading", async () => {
+      mockRpc({
+        "/menu/list": [
+          { id: 1, slug: "main", name: "Main", version: 1, itemCount: 0 },
+        ],
+        "/menu/locations/list": [],
+      });
+      renderShell();
+
+      const heading = await screen.findByTestId("menus-heading");
+      expect(heading).toHaveTextContent("Menus");
+    });
+  });
+
   describe("empty state", () => {
     test("renders the create-first-menu CTA when no menus exist", async () => {
       mockRpc({
@@ -249,6 +264,46 @@ describe("MenusShell", () => {
         "menus-location-select-footer",
       );
       expect(footerSelect.value).toBe("");
+    });
+
+    test("each select reflects its own persisted binding when every location is assigned", async () => {
+      // Regression for the blog example: both Primary and Footer were
+      // bound (and rendered on the frontend) yet both selects showed
+      // "— Unassigned —". The fix persists the binding in settings so
+      // `boundTermId` arrives; the select must pre-select per row, not
+      // collapse to the first / to empty.
+      window.history.replaceState(
+        {},
+        "",
+        "/_plumix/admin/pages/menus?tab=locations",
+      );
+      mockRpc({
+        "/menu/list": [
+          {
+            id: 30,
+            slug: "primary",
+            name: "Primary",
+            version: 1,
+            itemCount: 3,
+          },
+          { id: 31, slug: "footer", name: "Footer", version: 1, itemCount: 3 },
+        ],
+        "/menu/locations/list": [
+          { id: "footer", label: "Footer", boundTermId: 31 },
+          { id: "primary", label: "Primary", boundTermId: 30 },
+        ],
+      });
+
+      renderShell();
+
+      const primarySelect = await screen.findByTestId<HTMLSelectElement>(
+        "menus-location-select-primary",
+      );
+      expect(primarySelect.value).toBe("primary");
+      const footerSelect = await screen.findByTestId<HTMLSelectElement>(
+        "menus-location-select-footer",
+      );
+      expect(footerSelect.value).toBe("footer");
     });
 
     test("changing a select calls menu.assignLocation with the new termSlug", async () => {
@@ -560,6 +615,95 @@ describe("MenusShell", () => {
       });
       const input = parseRpcInput<{ termId: number }>(call);
       expect(input.termId).toBe(7);
+    });
+
+    test("delete-menu button matches the save button's padding and is destructive-styled", async () => {
+      // Regression: Delete rendered smaller (py-1) than Save (py-1.5) and
+      // without a destructive border. Both must share the size classes;
+      // Delete carries the destructive text/border.
+      window.history.replaceState(
+        {},
+        "",
+        "/_plumix/admin/pages/menus?menu=main",
+      );
+      mockRpc({
+        "/menu/list": [
+          { id: 7, slug: "main", name: "Main", version: 1, itemCount: 0 },
+        ],
+        "/menu/locations/list": [],
+        "/menu/pickerTabs": [{ kind: "custom", tabLabel: "Custom URL" }],
+        "/menu/get": {
+          id: 7,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [],
+        },
+      });
+
+      renderShell();
+
+      const save = await screen.findByTestId("menu-save-button");
+      const del = await screen.findByTestId("menu-delete-button");
+      for (const cls of ["px-3", "py-1.5", "text-sm", "rounded"]) {
+        expect(save.classList.contains(cls)).toBe(true);
+        expect(del.classList.contains(cls)).toBe(true);
+      }
+      expect(del.classList.contains("text-destructive")).toBe(true);
+      expect(del.classList.contains("border-destructive")).toBe(true);
+    });
+
+    test("a non-custom source tab is independently selectable and shows its panel", async () => {
+      // Regression: source tabs other than Custom URL did nothing when
+      // clicked — the active tab keyed on `kind` so per-target entry
+      // tabs collapsed, and only the custom panel ever rendered. Now each
+      // tab selects on its own key and surfaces a panel.
+      window.history.replaceState(
+        {},
+        "",
+        "/_plumix/admin/pages/menus?menu=main",
+      );
+      mockRpc({
+        "/menu/list": [
+          { id: 7, slug: "main", name: "Main", version: 1, itemCount: 0 },
+        ],
+        "/menu/locations/list": [],
+        "/menu/pickerTabs": [
+          { kind: "entry", tabLabel: "Pages", target: "page" },
+          { kind: "entry", tabLabel: "Posts", target: "post" },
+          { kind: "custom", tabLabel: "Custom URL" },
+        ],
+        "/menu/get": {
+          id: 7,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [],
+        },
+      });
+
+      renderShell();
+      const user = userEvent.setup();
+
+      // Two entry tabs share kind="entry"; they must have distinct,
+      // independently-selectable testids (kind-target).
+      const pages = await screen.findByTestId("menu-picker-tab-entry-page");
+      const posts = await screen.findByTestId("menu-picker-tab-entry-post");
+      await user.click(pages);
+      expect(pages.getAttribute("aria-selected")).toBe("true");
+      expect(posts.getAttribute("aria-selected")).toBe("false");
+      expect(
+        await screen.findByTestId("menu-picker-unsupported-panel"),
+      ).toBeInTheDocument();
+
+      // Switching to Custom URL swaps to the working add-item panel.
+      await user.click(await screen.findByTestId("menu-picker-tab-custom"));
+      expect(
+        await screen.findByTestId("menu-picker-custom-url"),
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId("menu-picker-unsupported-panel")).toBeNull();
     });
 
     test("settings panel location checkboxes reflect bindings and toggle via menu.assignLocation", async () => {

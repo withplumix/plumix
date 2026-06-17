@@ -327,7 +327,7 @@ function DeleteMenuButton({ termId }: { readonly termId: number }): ReactNode {
       type="button"
       data-testid="menu-delete-button"
       disabled={remove.isPending}
-      className="text-destructive border-border hover:bg-muted rounded border bg-transparent px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+      className="text-destructive border-destructive hover:bg-destructive/10 rounded border bg-transparent px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
       onClick={() => {
         if (
           typeof window !== "undefined" &&
@@ -353,7 +353,16 @@ function ItemsPicker({
   readonly dispatch: Dispatch<EditorAction>;
 }): ReactNode {
   const { i18n } = useLingui();
+  // Tab identity is `kind + target`: entry/term contribute one tab per
+  // type/taxonomy (all sharing `kind`), so keying the active tab on
+  // `kind` alone collapses every entry tab into one and makes them all
+  // read as selected. The composite keeps each tab independently
+  // selectable.
   const [activeTab, setActiveTab] = useState<string | null>(null);
+  const activeKind =
+    activeTab === null
+      ? null
+      : (tabs.find((tab) => tabKey(tab) === activeTab)?.kind ?? null);
   const relinkTarget =
     state.relinkTargetKey === null
       ? null
@@ -389,31 +398,54 @@ function ItemsPicker({
         data-testid="menu-picker-tabs"
         className="border-border flex items-center gap-1 border-b"
       >
-        {tabs.map((tab) => (
-          <button
-            key={tab.kind + (tab.target ?? "")}
-            type="button"
-            data-testid={`menu-picker-tab-${tab.kind}`}
-            aria-selected={activeTab === tab.kind}
-            onClick={() => {
-              setActiveTab(tab.kind);
-            }}
-            className={`hover:bg-muted rounded px-3 py-1.5 text-sm ${
-              activeTab === tab.kind ? "bg-muted font-medium" : ""
-            }`}
-          >
-            {tab.tabLabel}
-          </button>
-        ))}
+        {tabs.map((tab) => {
+          const key = tabKey(tab);
+          return (
+            <button
+              key={key}
+              type="button"
+              data-testid={`menu-picker-tab-${key}`}
+              aria-selected={activeTab === key}
+              onClick={() => {
+                setActiveTab(key);
+              }}
+              className={`hover:bg-muted rounded px-3 py-1.5 text-sm ${
+                activeTab === key ? "bg-muted font-medium" : ""
+              }`}
+            >
+              {tab.tabLabel}
+            </button>
+          );
+        })}
       </div>
-      {activeTab === "custom" ? (
+      {activeKind === "custom" ? (
         <CustomUrlPickerPanel
           relinkTargetKey={state.relinkTargetKey}
           dispatch={dispatch}
         />
+      ) : activeKind !== null ? (
+        // Entry/term/other sources have no in-admin search picker yet —
+        // the lookup-search RPC that would back them isn't built. Show a
+        // panel so the tab visibly responds, and point at Custom URL,
+        // which can link to anything the other sources would.
+        <div
+          data-testid="menu-picker-unsupported-panel"
+          className="border-border bg-card text-muted-foreground rounded-lg border p-4 text-sm"
+        >
+          <Trans
+            id="plugin.menu.itemEditor.sourceUnavailable"
+            message="This source isn't available yet — add the link via Custom URL."
+          />
+        </div>
       ) : null}
     </div>
   );
+}
+
+// Stable per-tab identity. `custom` has no `target`, so its key is just
+// `custom` — keeping the existing `menu-picker-tab-custom` testid.
+function tabKey(tab: PickerTab): string {
+  return tab.target === undefined ? tab.kind : `${tab.kind}-${tab.target}`;
 }
 
 function CustomUrlPickerPanel({

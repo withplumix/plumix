@@ -521,7 +521,7 @@ export function MediaLibrary({
         <header className="flex items-center justify-between">
           <h1
             data-testid="media-library-title"
-            className={`${isPicker ? "text-xl" : "text-3xl"} font-semibold tracking-tight`}
+            className={`${isPicker ? "text-xl" : "text-2xl"} font-semibold`}
           >
             {isPicker ? i18n._(M.titlePicker) : i18n._(M.titleLibrary)}
           </h1>

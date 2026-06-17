@@ -7,7 +7,7 @@ PRAGMA foreign_keys = ON;
 DELETE FROM entry_term;
 DELETE FROM entries;
 DELETE FROM terms;
-DELETE FROM settings WHERE "group" = 'site';
+DELETE FROM settings WHERE "group" IN ('site', 'menu_locations');
 
 -- Author
 INSERT OR IGNORE INTO users (id, email, name, avatar_url, role, meta) VALUES (1, 'editorial@plumix.example', 'The Plumix Editors', 'https://i.pravatar.cc/160?img=15', 'admin', '{}');
@@ -15,6 +15,8 @@ INSERT OR IGNORE INTO users (id, email, name, avatar_url, role, meta) VALUES (1,
 -- Settings
 INSERT INTO settings ("group", "key", "value") VALUES ('site', 'title', '"The Plumix Gazette"');
 INSERT INTO settings ("group", "key", "value") VALUES ('site', 'description', '"Dispatches on design, travel, and the craft of building for the web."');
+INSERT INTO settings ("group", "key", "value") VALUES ('menu_locations', 'primary', '"primary"');
+INSERT INTO settings ("group", "key", "value") VALUES ('menu_locations', 'footer', '"footer"');
 
 -- Categories + tags (+ nested category)
 INSERT INTO terms (id, taxonomy, name, slug, description, meta, parent_id, version) VALUES (1, 'category', 'Travel', 'travel', 'Notes from the road.', '{}', NULL, 0);

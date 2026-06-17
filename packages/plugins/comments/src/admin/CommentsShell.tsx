@@ -52,13 +52,25 @@ const ACTION_LABELS = {
 
 // Descriptors used outside JSX (input attributes, interpolated aria-label).
 const M = {
+  heading: {
+    id: "plugin.comments.heading",
+    message: "Comments",
+  },
   searchLabel: {
     id: "plugin.comments.filter.searchLabel",
     message: "Search comments",
   },
+  searchPlaceholder: {
+    id: "plugin.comments.filter.searchPlaceholder",
+    message: "Search comments…",
+  },
   entryLabel: {
     id: "plugin.comments.filter.entryLabel",
     message: "Filter by entry id",
+  },
+  entryPlaceholder: {
+    id: "plugin.comments.filter.entryPlaceholder",
+    message: "Entry id…",
   },
   selectLabel: {
     id: "plugin.comments.row.selectLabel",
@@ -107,6 +119,9 @@ export function CommentsShell(): React.ReactElement {
 
   return (
     <div data-testid="comments-shell" className="flex flex-col gap-4">
+      <h1 data-testid="comments-heading" className="text-2xl font-semibold">
+        {i18n._(M.heading)}
+      </h1>
       <div
         data-testid="comments-tabs"
         role="tablist"
@@ -141,6 +156,7 @@ export function CommentsShell(): React.ReactElement {
           type="search"
           data-testid="comments-search"
           aria-label={i18n._(M.searchLabel)}
+          placeholder={i18n._(M.searchPlaceholder)}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
@@ -149,6 +165,7 @@ export function CommentsShell(): React.ReactElement {
           type="number"
           data-testid="comments-entry-filter"
           aria-label={i18n._(M.entryLabel)}
+          placeholder={i18n._(M.entryPlaceholder)}
           value={entryFilter}
           onChange={(event) => setEntryFilter(event.target.value)}
           className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
