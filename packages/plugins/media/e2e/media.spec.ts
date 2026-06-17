@@ -126,40 +126,31 @@ test.describe.serial("@plumix/plugin-media — worker-driven happy path", () => 
   });
 });
 
-// Regression for two failures that shipped together: (1) a plugin admin
-// page rendering as bare unstyled HTML (the component had zero `className`),
-// and (2) the plugin CSS sidecar re-emitting base utilities into the shared
-// cascade layer, loaded after the admin stylesheet, collapsing the admin
-// sidebar to `display:none`. Guards: the sidebar stays visible AND the page
-// ships visibly-styled controls. See packages/admin/src/styles/globals.css
-// + packages/plumix/src/vite/admin-plugin-bundle.ts.
-test("admin page renders styled with the sidebar intact", async ({ page }) => {
+// Regression: a plugin admin page once shipped as bare unstyled HTML (the
+// component had zero `className`). Assert this page ships styled controls.
+// (The admin sidebar's CSS-cascade isolation — the other half of the
+// original incident — is guarded admin-side in packages/admin/e2e/
+// app-shell.spec.ts + packages/admin/src/styles/globals.test.ts.)
+test("admin page ships styled controls", async ({ page }) => {
   await page.goto("pages/media");
   await expect(page.getByTestId("media-library")).toBeVisible();
 
-  const ui = await styledChrome(page, "media-library");
-  expect(ui.sidebarVisible).toBe(true);
-  expect(ui.totalControls).toBeGreaterThan(0);
-  expect(ui.styledControls).toBeGreaterThan(0);
+  const ui = await styledControls(page, "media-library");
+  expect(ui.total).toBeGreaterThan(0);
+  expect(ui.styled).toBeGreaterThan(0);
 });
 
-// Returns whether the admin sidebar is displayed, and how many of the
-// plugin shell's own interactive controls carry styling classes. The
-// unstyled-page bug was literally zero `className` in the component, so a
-// styled-control count of 0 is the regression signal; the sidebar-display
-// check guards the CSS-sidecar cascade collapse.
-async function styledChrome(page: Page, shellTestId: string) {
+// Counts the plugin shell's interactive controls and how many carry a
+// styling class — a count of 0 is the unstyled-component regression signal.
+async function styledControls(page: Page, shellTestId: string) {
   return page.evaluate((id) => {
-    const sidebar = document.querySelector('[data-slot="sidebar"]');
     const shell = document.querySelector(`[data-testid="${id}"]`);
     const controls = shell
       ? Array.from(shell.querySelectorAll("button, a, input, select, label"))
       : [];
     return {
-      sidebarVisible:
-        sidebar !== null && getComputedStyle(sidebar).display !== "none",
-      totalControls: controls.length,
-      styledControls: controls.filter(
+      total: controls.length,
+      styled: controls.filter(
         (el) => (el.getAttribute("class") ?? "").trim().length > 0,
       ).length,
     };
