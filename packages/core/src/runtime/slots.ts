@@ -175,12 +175,19 @@ export interface KV {
 
 /**
  * An edge cache bound for the current isolate. Backs the public read-through
- * cache: `match` reads a stored response, `put` writes a fresh one. The
- * canonical implementation (Cloudflare's `edge()`) is the Workers Cache API.
+ * cache: `match` reads a stored response, `put` writes a fresh one tagged with
+ * `tags`, and `purgeTags` invalidates every stored response carrying any of the
+ * given tags. The canonical implementation (Cloudflare's `edge()`) is the
+ * Workers Cache API plus the zone purge-by-tag REST API.
  */
 export interface ConnectedCache {
   match(request: Request): Promise<Response | undefined>;
-  put(request: Request, response: Response): Promise<void>;
+  put(
+    request: Request,
+    response: Response,
+    tags: readonly string[],
+  ): Promise<void>;
+  purgeTags(tags: readonly string[]): Promise<void>;
 }
 
 /**

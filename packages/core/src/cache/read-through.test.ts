@@ -10,12 +10,21 @@ const immediateDefer = (p: Promise<unknown>): void => {
 };
 
 const GET = (url = "https://site.test/hello") => new Request(url);
+const noTags = () => [];
+
+function spies(
+  match: ConnectedCache["match"] = () => Promise.resolve(undefined),
+) {
+  const matchFn = vi.fn(match);
+  const put = vi.fn<ConnectedCache["put"]>(() => Promise.resolve());
+  const purgeTags = vi.fn(() => Promise.resolve());
+  const cache: ConnectedCache = { match: matchFn, put, purgeTags };
+  return { cache, match: matchFn, put };
+}
 
 describe("readThrough", () => {
-  it("renders and stores on a cache miss for a cacheable request", async () => {
-    const match = vi.fn(() => Promise.resolve(undefined));
-    const put = vi.fn(() => Promise.resolve());
-    const cache: ConnectedCache = { match, put };
+  it("renders and stores the tagged response on a cache miss", async () => {
+    const { cache, match, put } = spies();
     const fresh = new Response("body", { status: 200 });
     const render = vi.fn(() => Promise.resolve(fresh));
 
@@ -25,19 +34,19 @@ describe("readThrough", () => {
       cache,
       defer: immediateDefer,
       render,
+      tags: () => ["e:7"],
     });
 
     expect(result).toBe(fresh);
     expect(render).toHaveBeenCalledOnce();
     expect(match).toHaveBeenCalledOnce();
     expect(put).toHaveBeenCalledOnce();
+    expect(put.mock.calls[0]?.[2]).toEqual(["e:7"]);
   });
 
   it("returns the cached response without rendering on a hit", async () => {
     const cached = new Response("cached", { status: 200 });
-    const match = vi.fn(() => Promise.resolve(cached));
-    const put = vi.fn(() => Promise.resolve());
-    const cache: ConnectedCache = { match, put };
+    const { cache, put } = spies(() => Promise.resolve(cached));
     const render = vi.fn(() => Promise.resolve(new Response("fresh")));
 
     const result = await readThrough({
@@ -46,6 +55,7 @@ describe("readThrough", () => {
       cache,
       defer: immediateDefer,
       render,
+      tags: noTags,
     });
 
     expect(result).toBe(cached);
@@ -54,9 +64,7 @@ describe("readThrough", () => {
   });
 
   it("bypasses the cache entirely for a privileged request", async () => {
-    const match = vi.fn(() => Promise.resolve(undefined));
-    const put = vi.fn(() => Promise.resolve());
-    const cache: ConnectedCache = { match, put };
+    const { cache, match, put } = spies();
     const fresh = new Response("live", { status: 200 });
     const render = vi.fn(() => Promise.resolve(fresh));
 
@@ -68,6 +76,7 @@ describe("readThrough", () => {
       cache,
       defer: immediateDefer,
       render,
+      tags: noTags,
     });
 
     expect(result).toBe(fresh);
@@ -76,9 +85,7 @@ describe("readThrough", () => {
   });
 
   it("renders live without touching the cache for an unmatched route", async () => {
-    const match = vi.fn(() => Promise.resolve(undefined));
-    const put = vi.fn(() => Promise.resolve());
-    const cache: ConnectedCache = { match, put };
+    const { cache, match, put } = spies();
     const render = vi.fn(() =>
       Promise.resolve(new Response("404", { status: 404 })),
     );
@@ -89,6 +96,7 @@ describe("readThrough", () => {
       cache,
       defer: immediateDefer,
       render,
+      tags: noTags,
     });
 
     expect(match).not.toHaveBeenCalled();
@@ -96,9 +104,7 @@ describe("readThrough", () => {
   });
 
   it("does not store a non-200 render", async () => {
-    const match = vi.fn(() => Promise.resolve(undefined));
-    const put = vi.fn(() => Promise.resolve());
-    const cache: ConnectedCache = { match, put };
+    const { cache, match, put } = spies();
     const render = vi.fn(() =>
       Promise.resolve(new Response("nope", { status: 404 })),
     );
@@ -109,6 +115,7 @@ describe("readThrough", () => {
       cache,
       defer: immediateDefer,
       render,
+      tags: noTags,
     });
 
     expect(match).toHaveBeenCalledOnce();

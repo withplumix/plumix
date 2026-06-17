@@ -1,5 +1,7 @@
 import type { CacheProvider, ConnectedCache } from "plumix";
 
+import { EdgeCacheError } from "./errors.js";
+
 /**
  * Edge-cache policy for {@link edge}. `ttl` is the edge freshness window in
  * seconds (`s-maxage`); `staleWhileRevalidate` lets a colo serve a stale copy
@@ -45,13 +47,18 @@ function cacheControl(config: EdgeConfig): string {
   return directives.join(", ");
 }
 
-// Clone with the edge cache-control applied and any Set-Cookie stripped — a
-// shared cache entry must never carry a per-request cookie, and the Workers
-// Cache API rejects responses that do.
-function forStorage(response: Response, config: EdgeConfig): Response {
+// Clone with the edge cache-control + cache tags applied and any Set-Cookie
+// stripped — a shared cache entry must never carry a per-request cookie, and
+// the Workers Cache API rejects responses that do.
+function forStorage(
+  response: Response,
+  config: EdgeConfig,
+  tags: readonly string[],
+): Response {
   const headers = new Headers(response.headers);
   headers.delete("set-cookie");
   headers.set("cache-control", cacheControl(config));
+  if (tags.length > 0) headers.set("cache-tag", tags.join(","));
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
@@ -59,21 +66,56 @@ function forStorage(response: Response, config: EdgeConfig): Response {
   });
 }
 
-function connectedCache(store: EdgeStore, config: EdgeConfig): ConnectedCache {
+interface Credentials {
+  readonly zoneId: string;
+  readonly purgeToken: string;
+}
+
+// Purge by cache-tag is available on all Cloudflare plans (since 2025-04-01),
+// not just Enterprise. Failures bubble to the caller, which defers the call so
+// a rejection is logged rather than failing the publish.
+async function purgeByTag(
+  creds: Credentials,
+  tags: readonly string[],
+): Promise<void> {
+  if (tags.length === 0) return;
+  const response = await fetch(
+    `https://api.cloudflare.com/client/v4/zones/${creds.zoneId}/purge_cache`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${creds.purgeToken}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ tags }),
+    },
+  );
+  if (!response.ok) {
+    throw EdgeCacheError.purgeFailed({ status: response.status });
+  }
+}
+
+function connectedCache(
+  store: EdgeStore,
+  config: EdgeConfig,
+  creds: Credentials,
+): ConnectedCache {
   return {
     match: (request) => store.match(request),
-    put: async (request, response) => {
+    put: async (request, response, tags) => {
       // The Workers Cache API persists GET responses only.
       if (request.method !== "GET") return;
-      await store.put(request, forStorage(response, config));
+      await store.put(request, forStorage(response, config, tags));
     },
+    purgeTags: (tags) => purgeByTag(creds, tags),
   };
 }
 
 /**
  * Cloudflare edge-cache provider backed by the Workers Cache API
- * (`caches.default`). Disables itself (returns `null` from `connect`) when the
- * deploy lacks the zone credentials needed to purge — pages then render live.
+ * (`caches.default`) plus the zone purge-by-tag REST API. Disables itself
+ * (returns `null` from `connect`) when the deploy lacks the zone credentials
+ * needed to purge — pages then render live.
  */
 export function edge(config: EdgeConfig): CacheProvider {
   return {
@@ -84,7 +126,7 @@ export function edge(config: EdgeConfig): CacheProvider {
       if (zoneId === null || purgeToken === null) return null;
       const store = defaultStore();
       if (store === null) return null;
-      return connectedCache(store, config);
+      return connectedCache(store, config, { zoneId, purgeToken });
     },
   };
 }

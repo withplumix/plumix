@@ -1065,12 +1065,16 @@ describe("dispatcher — imageDelivery slot wiring", () => {
 });
 
 describe("dispatcher — public read-through edge cache", () => {
-  test("a cacheable public GET is served from the edge cache on a hit", async () => {
-    const match = vi.fn(() =>
-      Promise.resolve(new Response("CACHED", { status: 200 })),
-    );
+  function cacheStub(hit?: Response) {
+    const match = vi.fn(() => Promise.resolve(hit));
     const put = vi.fn(() => Promise.resolve());
-    const h = await createDispatcherHarness({ cache: { match, put } });
+    const purgeTags = vi.fn(() => Promise.resolve());
+    return { cache: { match, put, purgeTags }, match, put };
+  }
+
+  test("a cacheable public GET is served from the edge cache on a hit", async () => {
+    const { cache, match } = cacheStub(new Response("CACHED", { status: 200 }));
+    const h = await createDispatcherHarness({ cache });
 
     const response = await h.dispatch(new Request("https://cms.example/"));
 
@@ -1078,12 +1082,18 @@ describe("dispatcher — public read-through edge cache", () => {
     expect(match).toHaveBeenCalledOnce();
   });
 
+  test("a cacheable public GET stores the rendered response on a miss", async () => {
+    const { cache, put } = cacheStub();
+    const h = await createDispatcherHarness({ cache });
+
+    await h.dispatch(new Request("https://cms.example/"));
+
+    expect(put).toHaveBeenCalledOnce();
+  });
+
   test("a request carrying the session cookie bypasses the cache", async () => {
-    const match = vi.fn(() =>
-      Promise.resolve(new Response("CACHED", { status: 200 })),
-    );
-    const put = vi.fn(() => Promise.resolve());
-    const h = await createDispatcherHarness({ cache: { match, put } });
+    const { cache, match } = cacheStub(new Response("CACHED", { status: 200 }));
+    const h = await createDispatcherHarness({ cache });
 
     const response = await h.dispatch(
       new Request("https://cms.example/", {
@@ -1096,11 +1106,8 @@ describe("dispatcher — public read-through edge cache", () => {
   });
 
   test("a request carrying a ?preview= draft grant bypasses the cache", async () => {
-    const match = vi.fn(() =>
-      Promise.resolve(new Response("CACHED", { status: 200 })),
-    );
-    const put = vi.fn(() => Promise.resolve());
-    const h = await createDispatcherHarness({ cache: { match, put } });
+    const { cache, match } = cacheStub(new Response("CACHED", { status: 200 }));
+    const h = await createDispatcherHarness({ cache });
 
     const response = await h.dispatch(
       new Request("https://cms.example/?preview=some-token"),
