@@ -18,6 +18,9 @@ function fakeCtx(withCache = true) {
     cache: withCache ? { match: vi.fn(), put: vi.fn(), purgeTags } : undefined,
     defer,
     logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+    plugins: {
+      termTaxonomies: new Map([["category", { entryTypes: ["post"] }]]),
+    },
   } as unknown as AppContext;
   return { ctx, purgeTags, defer };
 }
@@ -76,6 +79,33 @@ describe("registerCorePurgeInvalidator", () => {
 
     expect(purgeTags).toHaveBeenCalledWith(["t:post", "e:9"]);
   });
+
+  const TERM_EVENTS = [
+    "term:created",
+    "term:updated",
+    "term:meta_changed",
+    "term:deleted",
+  ] as const;
+
+  it.each(TERM_EVENTS)(
+    "%s enqueues purge tags for the taxonomy's entry types",
+    async (event) => {
+      const hooks = new HookRegistry();
+      registerCorePurgeInvalidator(hooks);
+      const { ctx, purgeTags } = fakeCtx();
+
+      await requestStore.run(ctx, () =>
+        hooks.doAction(
+          event as never,
+          { id: 3, taxonomy: "category" } as never,
+          { id: 3, taxonomy: "category" } as never,
+        ),
+      );
+      flushPurgeTags(ctx);
+
+      expect(purgeTags).toHaveBeenCalledWith(["t:post"]);
+    },
+  );
 
   it("batches a bulk publish into one purge call", async () => {
     const hooks = new HookRegistry();

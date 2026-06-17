@@ -50,3 +50,12 @@ export function pageTags(sources: PageTagSources): string[] {
 export function entryPurgeTags(entryType: string, entryId: number): string[] {
   return [typeTag(entryType), entryTag(entryId)];
 }
+
+/**
+ * Tags to purge when a term changes. A term archive carries the `t:<type>`
+ * tags of the entry types its taxonomy lists, so purging those busts the
+ * archive and the listings that show the term's name.
+ */
+export function termPurgeTags(taxonomyEntryTypes: readonly string[]): string[] {
+  return taxonomyEntryTypes.map(typeTag);
+}
