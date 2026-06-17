@@ -22,6 +22,7 @@ import {
   validateEntryMetaReferences,
   writeEntryMeta,
 } from "./meta.js";
+import { scheduledDateInvalid } from "./publish-scheduled.js";
 import { entryCreateInputSchema } from "./schemas.js";
 import {
   applyTermPatch,
@@ -57,6 +58,12 @@ export const create = base
       if (!context.auth.can(publishCapability)) {
         throw errors.FORBIDDEN({ data: { capability: publishCapability } });
       }
+    }
+
+    if (scheduledDateInvalid(filtered.status, filtered.publishedAt)) {
+      throw errors.BAD_REQUEST({
+        data: { reason: "scheduled_requires_future_date" },
+      });
     }
 
     if (filtered.parentId != null) {
@@ -114,6 +121,15 @@ export const create = base
       );
     }
 
+    // `published` goes live now; `scheduled` carries its future target time;
+    // anything else has no publish time.
+    let publishedAt: Date | null = null;
+    if (filtered.status === "published") {
+      publishedAt = new Date();
+    } else if (filtered.status === "scheduled") {
+      publishedAt = filtered.publishedAt ?? null;
+    }
+
     const candidate: NewEntry = {
       type: filtered.type,
       title: filtered.title,
@@ -124,7 +140,7 @@ export const create = base
       parentId: filtered.parentId ?? null,
       sortOrder: filtered.sortOrder,
       authorId: context.user.id,
-      publishedAt: filtered.status === "published" ? new Date() : null,
+      publishedAt,
     };
 
     const prepared = await applyEntryBeforeSave(

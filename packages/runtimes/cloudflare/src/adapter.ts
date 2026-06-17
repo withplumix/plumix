@@ -268,6 +268,10 @@ function buildScheduled(app: PlumixApp): ScheduledHandler {
       : database.connect(env, syntheticRequest, app.schema).db;
 
     const storage = app.config.storage?.connect(env);
+    // Scheduled publishes fire `entry:published`, which accumulates edge-cache
+    // purge tags; wire the cache so the flush at the end of `runScheduledTasks`
+    // can reach it.
+    const cache = app.config.cache?.connect(env) ?? undefined;
 
     const appCtx = createAppContext({
       db: db as Db,
@@ -281,6 +285,7 @@ function buildScheduled(app: PlumixApp): ScheduledHandler {
       defer,
       assets: readAssetsBinding(env),
       storage,
+      cache,
       imageDelivery: app.config.imageDelivery,
       imageRemotePatterns: app.config.images?.remotePatterns,
       mailer: app.config.mailer,

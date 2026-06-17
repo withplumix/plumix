@@ -81,6 +81,8 @@ export const entryCreateInputSchema = v.object({
   sortOrder: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0)), 0),
   terms: v.optional(postTermsSchema),
   meta: v.optional(entryMetaInputSchema),
+  /** Target publish time; required (and must be future) when `status: "scheduled"`. */
+  publishedAt: v.optional(v.date()),
 });
 
 export const entryUpdateInputSchema = v.object({
@@ -94,6 +96,8 @@ export const entryUpdateInputSchema = v.object({
   sortOrder: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
   terms: v.optional(postTermsSchema),
   meta: v.optional(entryMetaInputSchema),
+  /** Target publish time; required (and must be future) when `status: "scheduled"`. */
+  publishedAt: v.optional(v.date()),
   /**
    * Optimistic-concurrency token: the live entry's `updatedAt` at the
    * moment the caller loaded it. When provided, the server rejects
