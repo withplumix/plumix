@@ -331,6 +331,54 @@ test.describe("editor selection & block actions", () => {
     ).toBeVisible();
   });
 
+  // fixme: Puck double-scales the overlay whenever the canvas is CSS-scaled
+  // below 100% — it writes the already-scaled getBoundingClientRect back as the
+  // overlay's size and renders it inside the same scaled subtree. Both CSS
+  // `zoom` and `transform: scale()` reproduce it; the only correct-overlay path
+  // is Puck iframe mode (a separate re-architecture). The overlay IS correct at
+  // 100% zoom. Un-fixme once the editor adopts iframe mode or drops canvas
+  // scaling. See memory: project_puck_overlay_zoom_limitation.
+  test.fixme("the selection overlay covers the whole block when the canvas is zoomed below 100%", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await mockManifest(page, MANIFEST_WITH_EDITOR_PATTERNS);
+    await installEditorMocks(page, {
+      entry: editorEntry({ content: SEEDED_CONTENT }),
+    });
+    await page.goto("entries/posts/1/edit");
+
+    await expect(page.getByTestId("plumix-editor-zoom-percent")).not.toHaveText(
+      "100%",
+    );
+
+    await canvasBlocks(page, "core/heading").first().click();
+
+    const delta = await page.evaluate(() => {
+      const overlay = [...document.querySelectorAll("*")].find((e) =>
+        /--isSelected/.test((e as HTMLElement).className ?? ""),
+      );
+      const heading = document.querySelector("h1, h2, h3");
+      const wrapper = heading?.closest("div[data-puck-component]");
+      if (!overlay || !wrapper) return null;
+      const o = overlay.getBoundingClientRect();
+      const w = wrapper.getBoundingClientRect();
+      return {
+        dx: Math.abs(o.x - w.x),
+        dy: Math.abs(o.y - w.y),
+        dw: Math.abs(o.width - w.width),
+        dh: Math.abs(o.height - w.height),
+      };
+    });
+
+    expect(delta).not.toBeNull();
+    // The overlay must match the block's box, not collapse to a fraction.
+    expect(delta?.dx ?? 99).toBeLessThan(2);
+    expect(delta?.dy ?? 99).toBeLessThan(2);
+    expect(delta?.dw ?? 99).toBeLessThan(2);
+    expect(delta?.dh ?? 99).toBeLessThan(2);
+  });
+
   test("duplicate and delete via the block actions panel", async ({ page }) => {
     await mockManifest(page, MANIFEST_WITH_EDITOR_PATTERNS);
     const updates = await installEditorMocks(page, {

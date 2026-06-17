@@ -233,14 +233,20 @@
   }
 }
 
-/* Selection/hover overlays in the canvas measure Puck's per-block wrapper
-   (`[data-puck-component]`). That wrapper has no border/padding, so each
-   block's vertical margins (the prose rhythm below) collapse straight through
-   it and the wrapper's box excludes them — Puck then draws the outline offset
-   from what the author sees as the block. `flow-root` gives the wrapper its
-   own block-formatting context so the margins stay inside and the measured
-   box matches the visible block. */
-[data-puck-component] {
+/* Selection/hover overlays in the canvas measure Puck's per-block wrapper.
+   That wrapper has no border/padding, so a block's vertical margins (the prose
+   rhythm below) collapse straight through it and its box excludes them — Puck
+   then draws the outline offset from what the author sees as the block.
+   `flow-root` gives the wrapper its own block-formatting context so the margins
+   stay inside and the measured box matches the visible block.
+
+   Scoped to `div` on purpose: Puck only wraps *block* components in a `<div>`.
+   Inline components (table rows/cells, and any author block with `inline:true`)
+   carry `data-puck-component` on their OWN element — a `<tr>`/`<td>`/etc. —
+   and forcing `flow-root` there would override their `table-row`/`table-cell`
+   display and collapse the layout (and the overlay with it). They keep their
+   native display and don't have the wrapper-margin problem to begin with. */
+div[data-puck-component] {
   display: flow-root;
 }
 
