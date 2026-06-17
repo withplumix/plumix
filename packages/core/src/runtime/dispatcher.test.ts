@@ -1063,3 +1063,50 @@ describe("dispatcher — imageDelivery slot wiring", () => {
     expect(await response.text()).toBe("absent");
   });
 });
+
+describe("dispatcher — public read-through edge cache", () => {
+  test("a cacheable public GET is served from the edge cache on a hit", async () => {
+    const match = vi.fn(() =>
+      Promise.resolve(new Response("CACHED", { status: 200 })),
+    );
+    const put = vi.fn(() => Promise.resolve());
+    const h = await createDispatcherHarness({ cache: { match, put } });
+
+    const response = await h.dispatch(new Request("https://cms.example/"));
+
+    expect(await response.text()).toBe("CACHED");
+    expect(match).toHaveBeenCalledOnce();
+  });
+
+  test("a request carrying the session cookie bypasses the cache", async () => {
+    const match = vi.fn(() =>
+      Promise.resolve(new Response("CACHED", { status: 200 })),
+    );
+    const put = vi.fn(() => Promise.resolve());
+    const h = await createDispatcherHarness({ cache: { match, put } });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/", {
+        headers: { cookie: "plumix_session=anything" },
+      }),
+    );
+
+    expect(await response.text()).not.toBe("CACHED");
+    expect(match).not.toHaveBeenCalled();
+  });
+
+  test("a request carrying a ?preview= draft grant bypasses the cache", async () => {
+    const match = vi.fn(() =>
+      Promise.resolve(new Response("CACHED", { status: 200 })),
+    );
+    const put = vi.fn(() => Promise.resolve());
+    const h = await createDispatcherHarness({ cache: { match, put } });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/?preview=some-token"),
+    );
+
+    expect(await response.text()).not.toBe("CACHED");
+    expect(match).not.toHaveBeenCalled();
+  });
+});

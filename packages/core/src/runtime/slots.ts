@@ -173,6 +173,27 @@ export interface KV {
   readonly kind: string;
 }
 
+/**
+ * An edge cache bound for the current isolate. Backs the public read-through
+ * cache: `match` reads a stored response, `put` writes a fresh one. The
+ * canonical implementation (Cloudflare's `edge()`) is the Workers Cache API.
+ */
+export interface ConnectedCache {
+  match(request: Request): Promise<Response | undefined>;
+  put(request: Request, response: Response): Promise<void>;
+}
+
+/**
+ * Edge-cache slot. `connect(env)` returns a {@link ConnectedCache} when the
+ * runtime has everything it needs to cache safely, or `null` to disable
+ * caching for this deploy (e.g. a Cloudflare deploy with no zone credentials,
+ * where pages must render live). Mirrors the `storage:` slot's connect shape.
+ */
+export interface CacheProvider {
+  readonly kind: string;
+  connect(env: unknown): ConnectedCache | null;
+}
+
 export interface TransformOpts {
   readonly width?: number;
   readonly height?: number;

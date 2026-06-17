@@ -7,6 +7,7 @@ import type { I18nInput, ResolvedI18n } from "./i18n/locale-registry.js";
 import type { PluginDescriptor } from "./plugin/define.js";
 import type { RuntimeAdapter } from "./runtime/adapter.js";
 import type {
+  CacheProvider,
   DatabaseAdapter,
   ImageDelivery,
   KV,
@@ -67,6 +68,14 @@ export interface PlumixConfigInput {
   readonly storage?: ObjectStorage;
   readonly imageDelivery?: ImageDelivery;
   readonly kv?: KV;
+  /**
+   * Public read-through edge cache. Optional and default-off: with no `cache`
+   * slot, every public page renders live. The canonical provider is
+   * `edge({ ttl, staleWhileRevalidate })` from `@plumix/runtime-cloudflare`;
+   * it disables itself when the deploy lacks the zone credentials needed to
+   * cache safely (e.g. on `workers.dev`).
+   */
+  readonly cache?: CacheProvider;
   /**
    * Outbound email transport. Implementations conform to the `Mailer`
    * interface from `@plumix/core` — one method, swap in any provider
@@ -134,6 +143,7 @@ export interface PlumixConfig {
   readonly storage?: ObjectStorage;
   readonly imageDelivery?: ImageDelivery;
   readonly kv?: KV;
+  readonly cache?: CacheProvider;
   readonly mailer?: Mailer;
   readonly theme: ThemeDescriptor;
   readonly plugins: readonly AnyPluginDescriptor[];
@@ -169,6 +179,7 @@ export function plumix(config: PlumixConfigInput): PlumixConfig {
     storage: config.storage,
     imageDelivery: config.imageDelivery,
     kv: config.kv,
+    cache: config.cache,
     mailer: config.mailer,
     theme: config.theme ?? welcomeTheme,
     plugins: config.plugins ?? [],

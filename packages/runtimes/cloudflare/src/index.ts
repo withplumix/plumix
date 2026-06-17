@@ -7,6 +7,8 @@ export { d1 } from "./d1.js";
 export type { D1Config, D1DatabaseAdapter } from "./d1.js";
 export { cloudflareDeployOrigin } from "./deploy-origin.js";
 export type { DeployOrigin, DeployOriginInput } from "./deploy-origin.js";
+export { edge } from "./edge.js";
+export type { EdgeConfig } from "./edge.js";
 export { images } from "./images.js";
 export type { ImagesConfig } from "./images.js";
 export { kv } from "./kv.js";

@@ -2,11 +2,14 @@ import type * as AuthFlowRoutes from "../auth/flow-routes.js";
 import type { AppContext } from "../context/app.js";
 import type * as McpDispatch from "../mcp/dispatch.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
+import type { RouteIntent } from "../route/intent.js";
+import type { RouteMatch } from "../route/match.js";
 import type { PlumixApp } from "./app.js";
 import { readSessionCookie } from "../auth/cookies.js";
 import { hasCsrfHeader, hasMatchingOrigin } from "../auth/csrf.js";
 import { parseOAuthPath } from "../auth/oauth/match.js";
 import { stripBasePath, withBasePath } from "../base-path.js";
+import { readThrough } from "../cache/read-through.js";
 import { interfaceEnabled } from "../config.js";
 import { withUser } from "../context/app.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
@@ -330,10 +333,41 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   return dispatchPublicRoute(app, ctx, url);
 }
 
+// The cache-decision intent kind for a resolved route match: an unmatched root
+// is the front page, any other unmatched URL is a 404 (never cached).
+function intentKindForMatch(
+  match: RouteMatch | null,
+  url: URL,
+): RouteIntent["kind"] | null {
+  if (match !== null) return match.intent.kind;
+  if (url.pathname === "/") return "front-page";
+  return null;
+}
+
 async function dispatchPublicRoute(
   app: PlumixApp,
   ctx: AppContext,
   url: URL,
+): Promise<Response> {
+  // Resolve the route once here and thread it into rendering so a cache miss
+  // doesn't re-run `matchRoute` on the hot public-render path.
+  const match = matchRoute(url, app.routeMap);
+  const cache = ctx.cache;
+  if (cache === undefined) return renderPublicRoute(app, ctx, url, match);
+  return readThrough({
+    request: ctx.request,
+    intentKind: intentKindForMatch(match, url),
+    cache,
+    defer: ctx.defer,
+    render: () => renderPublicRoute(app, ctx, url, match),
+  });
+}
+
+async function renderPublicRoute(
+  app: PlumixApp,
+  ctx: AppContext,
+  url: URL,
+  match: RouteMatch | null,
 ): Promise<Response> {
   const theme = app.config.theme;
   const document = app.document;
@@ -342,7 +376,7 @@ async function dispatchPublicRoute(
   const assetManifest = app.assetManifest;
   try {
     ctx = await loadUserForPublicRequest(ctx);
-    const response = await resolvePublicRouteOrFallback(app, ctx, url);
+    const response = await resolvePublicRouteOrFallback(app, ctx, url, match);
     if (response.status === 404) {
       const html = await renderErrorThroughTheme({
         ctx,
@@ -402,13 +436,13 @@ async function resolvePublicRouteOrFallback(
   app: PlumixApp,
   ctx: AppContext,
   url: URL,
+  match: RouteMatch | null,
 ): Promise<Response> {
   const theme = app.config.theme;
   const document = app.document;
   const templateDocuments = app.templateDocuments;
   const templateDeps = app.plugins.templateDeps;
   const assetManifest = app.assetManifest;
-  const match = matchRoute(url, app.routeMap);
   if (match !== null) {
     return resolvePublicRoute(
       ctx,
