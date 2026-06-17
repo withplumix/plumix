@@ -50,6 +50,20 @@ export async function fireEntryPublished(
   await ctx.hooks.doAction("entry:published", entry);
 }
 
+/**
+ * The `publishedAt` to stamp when an entry transitions to `published`, or
+ * `undefined` to leave the existing one. Stamps `now` when there's no publish
+ * time yet, or when promoting a scheduled entry whose time is still in the
+ * future (a future date would sort it to the top of feeds). Shared by the
+ * editor update and revision-restore publish paths so they can't diverge.
+ */
+export function publishedAtForTransition(
+  existing: Date | null,
+): Date | undefined {
+  if (existing === null || existing.getTime() > Date.now()) return new Date();
+  return undefined;
+}
+
 export async function fireEntryUpdated(
   ctx: AppContext,
   entry: Entry,

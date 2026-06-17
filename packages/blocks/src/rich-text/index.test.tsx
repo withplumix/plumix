@@ -21,6 +21,22 @@ describe("core/rich-text walker render", () => {
     );
   });
 
+  test("strips a <script> from a string body so stored markup can't XSS", () => {
+    const registry = createBlockRegistry([richTextBlock]);
+    const tree: readonly BlockNode[] = [
+      {
+        id: "r1",
+        name: "core/rich-text",
+        attrs: { body: "<p>hi</p><script>alert(1)</script>" },
+      },
+    ];
+
+    const html = renderToStaticMarkup(renderBlockTree(tree, registry));
+
+    expect(html).not.toContain("<script>");
+    expect(html).toContain("<p>hi</p>");
+  });
+
   test("returns the admin's React-element body verbatim so Tiptap mounts inline", () => {
     // The admin Puck preview wraps `attrs.body` as a <RichTextRender>
     // element before calling the block render. Wrapping that element in

@@ -625,6 +625,54 @@ export async function validateMetaReferencesForRpc(
  * `termTaxonomies`, `roles`, …) so out-of-scope ids fall out of the
  * result naturally and read as orphans.
  */
+interface ReferenceOccurrence {
+  /** Top-level meta key — the storage location and error key. */
+  readonly key: string;
+  readonly target: ReferenceTarget;
+  readonly value: unknown;
+  /** Set when the reference is a subField inside a repeater row. */
+  readonly nested?: {
+    readonly rowIdx: number;
+    readonly subKey: string;
+  };
+}
+
+/**
+ * Yield every reference-field occurrence in a decoded meta bag: top-level
+ * reference fields, plus reference subFields inside each repeater row. One
+ * structural walk so the orphan-strip pass doesn't reinline the
+ * top-level/repeater traversal twice.
+ */
+function* referenceOccurrences(
+  entries: Iterable<readonly [string, unknown]>,
+  findField: (key: string) => MetaBoxField | undefined,
+): Generator<ReferenceOccurrence> {
+  for (const [key, value] of entries) {
+    const field = findField(key);
+    const target = referenceTargetOf(field);
+    if (target) {
+      yield { key, target, value };
+      continue;
+    }
+    if (!isRepeaterField(field)) continue;
+    if (!Array.isArray(value)) continue;
+    for (const [rowIdx, row] of value.entries()) {
+      if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+      const rowObj = row as Record<string, unknown>;
+      for (const subField of field.subFields) {
+        const subTarget = referenceTargetOf(subField);
+        if (!subTarget) continue;
+        yield {
+          key,
+          target: subTarget,
+          value: rowObj[subField.key],
+          nested: { rowIdx, subKey: subField.key },
+        };
+      }
+    }
+  }
+}
+
 export async function filterMetaOrphans(
   ctx: AppContext,
   findField: (key: string) => MetaBoxField | undefined,
@@ -655,66 +703,31 @@ export async function filterMetaOrphans(
       readonly ids: Set<string>;
     }
   >();
-  for (const [key, value] of Object.entries(decoded)) {
-    const field = findField(key);
-    const target = referenceTargetOf(field);
-    if (target) {
-      const registered = ctx.plugins.lookupAdapters.get(target.kind);
-      if (!registered) continue;
-      const ids = orphanCandidateIds(target, value);
-      if (ids === null) continue; // non-array multi / non-string single — leave untouched
-      const groupKey = referenceGroupKey(target);
-      candidates.push({
-        key,
-        multiple: target.multiple === true,
-        valueShape: target.valueShape ?? "id",
-        groupKey,
-        ids,
-      });
-      if (ids.length === 0) continue;
-      let group = groups.get(groupKey);
-      if (!group) {
-        group = { registered, scope: target.scope, ids: new Set() };
-        groups.set(groupKey, group);
-      }
-      for (const id of ids) group.ids.add(id);
-      continue;
+  // Top-level refs and repeater-row subField refs get identical orphan-strip
+  // treatment, so the single `referenceOccurrences` walk feeds both. Nested
+  // candidates carry their `rowIdx`/`subKey`; Pass 3 rewrites the row slot in
+  // a per-key clone so the caller's `decoded` bag stays untouched.
+  for (const occ of referenceOccurrences(Object.entries(decoded), findField)) {
+    const registered = ctx.plugins.lookupAdapters.get(occ.target.kind);
+    if (!registered) continue;
+    const ids = orphanCandidateIds(occ.target, occ.value);
+    if (ids === null) continue; // non-array multi / non-string single — leave untouched
+    const groupKey = referenceGroupKey(occ.target);
+    candidates.push({
+      key: occ.key,
+      multiple: occ.target.multiple === true,
+      valueShape: occ.target.valueShape ?? "id",
+      groupKey,
+      ids,
+      nested: occ.nested,
+    });
+    if (ids.length === 0) continue;
+    let group = groups.get(groupKey);
+    if (!group) {
+      group = { registered, scope: occ.target.scope, ids: new Set() };
+      groups.set(groupKey, group);
     }
-    if (!isRepeaterField(field)) continue;
-    if (!Array.isArray(value)) continue;
-    // Repeater rows: each row's reference subField gets the same
-    // orphan-strip treatment top-level refs receive — caller passes
-    // `decoded` as a freshly-decoded bag, so we mutate the row
-    // objects in place inside the eventual shallow-copy below.
-    for (const [rowIdx, row] of value.entries()) {
-      if (!row || typeof row !== "object" || Array.isArray(row)) continue;
-      const rowObj = row as Record<string, unknown>;
-      for (const subField of field.subFields) {
-        const subTarget = referenceTargetOf(subField);
-        if (!subTarget) continue;
-        const registered = ctx.plugins.lookupAdapters.get(subTarget.kind);
-        if (!registered) continue;
-        const subValue = rowObj[subField.key];
-        const ids = orphanCandidateIds(subTarget, subValue);
-        if (ids === null) continue;
-        const groupKey = referenceGroupKey(subTarget);
-        candidates.push({
-          key,
-          multiple: subTarget.multiple === true,
-          valueShape: subTarget.valueShape ?? "id",
-          groupKey,
-          ids,
-          nested: { rowIdx, subKey: subField.key },
-        });
-        if (ids.length === 0) continue;
-        let group = groups.get(groupKey);
-        if (!group) {
-          group = { registered, scope: subTarget.scope, ids: new Set() };
-          groups.set(groupKey, group);
-        }
-        for (const id of ids) group.ids.add(id);
-      }
-    }
+    for (const id of ids) group.ids.add(id);
   }
 
   // Pass 2: one `list({ ids })` per group, keyed for O(1) apply lookup.

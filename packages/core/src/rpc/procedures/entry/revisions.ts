@@ -37,6 +37,7 @@ import {
   fireEntryRevisionRestored,
   fireEntryTransition,
   fireEntryUpdated,
+  publishedAtForTransition,
 } from "./lifecycle.js";
 
 const listInput = v.object({
@@ -262,8 +263,9 @@ export const restore = base
       parentId: decodedEnvelope?.parentId ?? live.parentId,
       meta: snapshotMeta,
     };
-    if (isPublishTransition && !live.publishedAt) {
-      patch.publishedAt = new Date();
+    if (isPublishTransition) {
+      const stamped = publishedAtForTransition(live.publishedAt);
+      if (stamped) patch.publishedAt = stamped;
     }
 
     const prepared = await applyEntryBeforeSave(context, live.type, {

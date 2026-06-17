@@ -22,6 +22,7 @@ import {
   fireEntryTransition,
   fireEntryUpdated,
   loadReadableParent,
+  publishedAtForTransition,
   wouldCreateParentCycle,
 } from "./lifecycle.js";
 import {
@@ -303,14 +304,9 @@ export const update = base
     }
 
     const patch: Partial<NewEntry> = stripUndefined(changes);
-    // On a publish transition, stamp `now` when there's no publish time yet —
-    // or when promoting a scheduled entry early (its `publishedAt` is still in
-    // the future); otherwise a future date would sort it to the top of feeds.
-    if (
-      isPublishTransition &&
-      (!existing.publishedAt || existing.publishedAt.getTime() > Date.now())
-    ) {
-      patch.publishedAt = new Date();
+    if (isPublishTransition) {
+      const stamped = publishedAtForTransition(existing.publishedAt);
+      if (stamped) patch.publishedAt = stamped;
     }
 
     // Scheduling: validate the target time only when actually (re)scheduling —
