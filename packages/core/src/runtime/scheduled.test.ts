@@ -120,4 +120,62 @@ describe("runScheduledTasks", () => {
     expect(ctx.logger.error).toHaveBeenCalledTimes(1);
     expect(String(ctx.logger.error.mock.calls[0]?.[0])).toContain("async-boom");
   });
+
+  test("with a fired cron, runs only matching-cron tasks plus untagged ones", async () => {
+    const calls: string[] = [];
+    const tasks: RegisteredScheduledTask[] = [
+      {
+        id: "daily",
+        registeredBy: "p",
+        cron: "0 3 * * *",
+        handler: () => {
+          calls.push("daily");
+        },
+      },
+      {
+        id: "frequent",
+        registeredBy: "p",
+        cron: "*/5 * * * *",
+        handler: () => {
+          calls.push("frequent");
+        },
+      },
+      {
+        id: "always",
+        registeredBy: "p",
+        handler: () => {
+          calls.push("always");
+        },
+      },
+    ];
+
+    await runScheduledTasks(fakeApp(tasks), fakeCtx(), "0 3 * * *");
+
+    expect(calls).toEqual(["daily", "always"]);
+  });
+
+  test("with no fired cron, runs every task regardless of declared cron", async () => {
+    const calls: string[] = [];
+    const tasks: RegisteredScheduledTask[] = [
+      {
+        id: "daily",
+        registeredBy: "p",
+        cron: "0 3 * * *",
+        handler: () => {
+          calls.push("daily");
+        },
+      },
+      {
+        id: "always",
+        registeredBy: "p",
+        handler: () => {
+          calls.push("always");
+        },
+      },
+    ];
+
+    await runScheduledTasks(fakeApp(tasks), fakeCtx());
+
+    expect(calls).toEqual(["daily", "always"]);
+  });
 });

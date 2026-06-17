@@ -55,6 +55,7 @@ import { isTemplate } from "../template.js";
 import { ThemeRegistrationError } from "../theme-errors.js";
 import { validateDocumentManifest } from "../theme.js";
 import { AppBootError } from "./errors.js";
+import { registerCoreScheduledTasks } from "./register-core-scheduled-tasks.js";
 import { assembleShortcodeRegistry } from "./shortcode-registry.js";
 
 export interface OAuthProviderSummary {
@@ -226,6 +227,7 @@ export async function buildApp(
   registerCoreLookupAdapters(seededRegistry);
   registerCoreTemplateDeps(seededRegistry);
   registerCoreSettings(seededRegistry);
+  registerCoreScheduledTasks(seededRegistry);
   const { registry, appContextExtensions } = await installPlugins({
     hooks,
     plugins: config.plugins,

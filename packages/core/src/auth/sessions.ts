@@ -201,7 +201,15 @@ export async function invalidateAllSessionsForUser(
   await db.delete(sessions).where(eq(sessions.userId, userId));
 }
 
-/** Bulk-delete expired rows. Caller decides cadence (cron / on-demand). */
-export async function pruneExpiredSessions(db: Db): Promise<void> {
-  await db.delete(sessions).where(lt(sessions.expiresAt, new Date()));
+/**
+ * Bulk-delete expired rows, returning how many were reaped. Caller decides
+ * cadence (cron / on-demand). `returning()` gives a driver-portable count
+ * (SQLite `DELETE ... RETURNING` on both libsql and D1).
+ */
+export async function pruneExpiredSessions(db: Db): Promise<number> {
+  const deleted = await db
+    .delete(sessions)
+    .where(lt(sessions.expiresAt, new Date()))
+    .returning({ id: sessions.id });
+  return deleted.length;
 }

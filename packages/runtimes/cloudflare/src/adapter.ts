@@ -295,7 +295,9 @@ function buildScheduled(app: PlumixApp): ScheduledHandler {
     });
 
     try {
-      await requestStore.run(appCtx, () => runScheduledTasks(app, appCtx));
+      await requestStore.run(appCtx, () =>
+        runScheduledTasks(app, appCtx, event.cron),
+      );
       // `commit` finalizes the scoped write (e.g. flushing the D1 batch).
       // Synchronous return — same shape as buildFetch's `finalize`.
       if (scoped) scoped.commit(new Response(null));
