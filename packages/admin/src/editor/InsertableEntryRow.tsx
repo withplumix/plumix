@@ -37,13 +37,19 @@ export function InsertableEntryRow({
 }: InsertableEntryRowProps): ReactElement {
   const renderLabel = useLabel();
   if (!isVariation(entry)) {
+    // Square tile (Builder.io-style): centered icon above a centered label,
+    // sized to fill a 2-column grid cell so the block list matches the
+    // pattern/variation card posture instead of a horizontal pill.
     const className =
-      "hover:bg-muted flex w-full cursor-pointer items-center gap-2 rounded border px-3 py-2 text-start text-sm";
+      "hover:bg-muted hover:border-foreground/20 flex aspect-square w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-md border p-2 text-center text-xs leading-tight focus:outline-none focus-visible:ring";
     const testId = `plumix-blocks-tab-item-${entryKey(entry)}`;
     const content = (
       <>
-        <BlockIcon name={entry.icon} />
-        <span className="truncate">{renderLabel(entry.title)}</span>
+        <BlockIcon
+          name={entry.icon}
+          className="text-muted-foreground h-5 w-5 shrink-0"
+        />
+        <span className="line-clamp-2">{renderLabel(entry.title)}</span>
       </>
     );
     if (!interactive) {

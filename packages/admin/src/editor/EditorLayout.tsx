@@ -856,7 +856,10 @@ function PlumixBlocksTab({
           wrap — a Drawer.Item maps to a component TYPE and can't carry a
           variation's preset attrs, so variations stay click-only. */}
       <Drawer>
-        <ul className="flex flex-col gap-1 p-4" data-testid="plumix-blocks-tab">
+        <ul
+          className="grid grid-cols-2 gap-2 p-4"
+          data-testid="plumix-blocks-tab"
+        >
           {entries.map((entry) => {
             const row = (
               <InsertableEntryRow
