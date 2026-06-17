@@ -8,7 +8,7 @@ afterEach(() => {
 });
 
 describe("copyText", () => {
-  test("writes a ClipboardItem when the API is available (gesture-safe path)", async () => {
+  test("writes a promised value via ClipboardItem when available (gesture-safe path)", async () => {
     const write = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("navigator", { clipboard: { write } });
     vi.stubGlobal(
@@ -18,14 +18,14 @@ describe("copyText", () => {
       },
     );
 
-    await copyText("hello");
+    await copyText(Promise.resolve("hello"));
 
     expect(write).toHaveBeenCalledOnce();
     const items = write.mock.calls[0]?.[0] as unknown[];
     expect(items).toHaveLength(1);
   });
 
-  test("resolves a promised value before writing", async () => {
+  test("falls back to writeText for a promised value when ClipboardItem is unavailable", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("navigator", { clipboard: { writeText } });
     vi.stubGlobal("ClipboardItem", undefined);
@@ -35,13 +35,20 @@ describe("copyText", () => {
     expect(writeText).toHaveBeenCalledWith("https://example.test/x");
   });
 
-  test("falls back to writeText when ClipboardItem is unavailable", async () => {
+  test("writes a plain string directly via writeText (fast path)", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal("navigator", { clipboard: { writeText } });
-    vi.stubGlobal("ClipboardItem", undefined);
+    const write = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText, write } });
+    vi.stubGlobal(
+      "ClipboardItem",
+      class {
+        constructor(public readonly data: Record<string, unknown>) {}
+      },
+    );
 
     await copyText("plain");
 
     expect(writeText).toHaveBeenCalledWith("plain");
+    expect(write).not.toHaveBeenCalled();
   });
 });
