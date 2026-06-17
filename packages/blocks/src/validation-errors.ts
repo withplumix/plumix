@@ -5,7 +5,9 @@ import type { BlockContentValidationResult } from "./validate-content.js";
  * only what's actually produced — so admin clients dispatching on `code`
  * don't get a false sense of coverage.
  */
-export type BlockContentValidationCode = "unknown_block_type";
+export type BlockContentValidationCode =
+  | "unknown_block_type"
+  | "disallowed_child";
 
 export interface BlockContentValidationIssue {
   readonly code: BlockContentValidationCode;
@@ -13,6 +15,8 @@ export interface BlockContentValidationIssue {
   readonly path: string;
   readonly nodeName?: string;
   readonly attributeName?: string;
+  /** For `disallowed_child`: the slot key the offending child landed in. */
+  readonly slotName?: string;
 }
 
 export class BlockContentValidationError extends Error {

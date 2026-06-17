@@ -32,7 +32,12 @@ export const buttonsBlock = defineBlock({
       options: ALIGNS.map((a) => ({ label: a, value: a })),
     },
     { name: "gap", type: "text", label: "Gap" },
-    { name: "items", type: "slot", label: "Buttons" },
+    {
+      name: "items",
+      type: "slot",
+      label: "Buttons",
+      allowedBlocks: ["core/button"],
+    },
   ],
   defaults: { align: "start" },
   render: ({ attrs }): ReactNode => {

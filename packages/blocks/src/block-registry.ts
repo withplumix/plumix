@@ -14,6 +14,13 @@ export interface BlockInput {
   readonly type: string;
   readonly label?: Label;
   readonly options?: readonly BlockInputOption[];
+  /**
+   * Slot inputs only: the block names this slot accepts as children.
+   * Omitted = any block (general content slots). Enforced at write-time
+   * validation and surfaced to the editor so the slot only takes valid
+   * children. Mirrors Gutenberg's `allowedBlocks`.
+   */
+  readonly allowedBlocks?: readonly string[];
 }
 
 export type BlockVariationScope = "inserter" | "block" | "transform";

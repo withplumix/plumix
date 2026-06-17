@@ -19,7 +19,12 @@ export const tableBlock = defineBlock({
   inputs: [
     { name: "striped", type: "checkbox", label: "Striped" },
     { name: "bordered", type: "checkbox", label: "Bordered" },
-    { name: "rows", type: "slot", label: "Rows" },
+    {
+      name: "rows",
+      type: "slot",
+      label: "Rows",
+      allowedBlocks: ["core/table-header-row", "core/table-body-row"],
+    },
   ],
   defaults: {},
   render: ({ attrs }): ReactNode => {
@@ -41,7 +46,14 @@ export const tableHeaderRowBlock = defineBlock({
   category: "text",
   inline: true,
   inserter: false,
-  inputs: [{ name: "cells", type: "slot", label: "Cells" }],
+  inputs: [
+    {
+      name: "cells",
+      type: "slot",
+      label: "Cells",
+      allowedBlocks: ["core/table-header-cell"],
+    },
+  ],
   defaults: {},
   render: ({ attrs }): ReactNode => {
     const Cells = attrs.cells as (() => ReactNode) | undefined;
@@ -56,7 +68,14 @@ export const tableBodyRowBlock = defineBlock({
   category: "text",
   inline: true,
   inserter: false,
-  inputs: [{ name: "cells", type: "slot", label: "Cells" }],
+  inputs: [
+    {
+      name: "cells",
+      type: "slot",
+      label: "Cells",
+      allowedBlocks: ["core/table-cell"],
+    },
+  ],
   defaults: {},
   render: ({ attrs }): ReactNode => {
     const Cells = attrs.cells as (() => ReactNode) | undefined;
