@@ -46,6 +46,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table.js";
+import { copyText } from "@/lib/clipboard.js";
 import { toDate } from "@/lib/dates.js";
 import { orpc } from "@/lib/orpc.js";
 import { parseScopesText } from "@/lib/scopes.js";
@@ -727,7 +728,7 @@ function SecretShownDialog({
   const copy = async (): Promise<void> => {
     if (!secret) return;
     try {
-      await navigator.clipboard.writeText(secret);
+      await copyText(secret);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {

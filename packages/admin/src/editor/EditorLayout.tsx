@@ -27,6 +27,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs.js";
 import { useIsMobile } from "@/hooks/use-mobile.js";
+import { copyText } from "@/lib/clipboard.js";
 import { getPatterns } from "@/lib/manifest.js";
 import { toastError, toastSuccess } from "@/lib/toast.js";
 import { useLabel } from "@/lib/use-label.js";
@@ -280,8 +281,7 @@ function copyToClipboard(
   text: string,
   renderLabel: ReturnType<typeof useLabel>,
 ): void {
-  navigator.clipboard
-    .writeText(text)
+  copyText(text)
     .then(() => {
       toastSuccess(renderLabel(M.copied));
     })

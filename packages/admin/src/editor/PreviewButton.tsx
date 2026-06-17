@@ -13,6 +13,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip.js";
+import { copyText } from "@/lib/clipboard.js";
 import { toastError, toastSuccess } from "@/lib/toast.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
@@ -44,25 +45,6 @@ const M = {
     message: "Couldn't create a preview link",
   }),
 } satisfies Record<string, MessageDescriptor>;
-
-// Safari only honors a clipboard write inside the originating user gesture,
-// and the `await` on minting consumes that activation. Handing `ClipboardItem`
-// a pending Blob registers the write synchronously within the gesture and lets
-// the text resolve afterward. Engines without `ClipboardItem` fall back to the
-// (gesture-sensitive) writeText.
-async function copyText(textPromise: Promise<string>): Promise<void> {
-  if (typeof ClipboardItem === "function") {
-    await navigator.clipboard.write([
-      new ClipboardItem({
-        "text/plain": textPromise.then(
-          (text) => new Blob([text], { type: "text/plain" }),
-        ),
-      }),
-    ]);
-    return;
-  }
-  await navigator.clipboard.writeText(await textPromise);
-}
 
 // Mints a shareable draft preview link (route injects `mintPreviewLink`, wired
 // to entry.createPreviewLink — same DI shape as the revisions trigger, kept

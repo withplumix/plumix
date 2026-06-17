@@ -7,6 +7,7 @@ import {
   useMemo,
   useRef,
 } from "react";
+import { copyText } from "@/lib/clipboard.js";
 import { useLabel } from "@/lib/use-label.js";
 import { Trans } from "@lingui/react";
 import { registerOverlayPortal, useGetPuck } from "@puckeditor/core";
@@ -85,7 +86,7 @@ export function PatternRefPreview(props: PatternRefPreviewProps): ReactElement {
   }, [ctx, getPuck, props.id]);
 
   const handleCopySlug = useCallback(() => {
-    void navigator.clipboard.writeText(slug);
+    void copyText(slug);
   }, [slug]);
 
   if (!pattern) {

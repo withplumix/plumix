@@ -21,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input.js";
 import { Label as UILabel } from "@/components/ui/label.js";
 import { hasCap } from "@/lib/caps.js";
+import { copyText } from "@/lib/clipboard.js";
 import { ADMIN_BASE_PATH } from "@/lib/constants.js";
 import { orpc } from "@/lib/orpc.js";
 import { useLabel } from "@/lib/use-label.js";
@@ -346,7 +347,7 @@ function InviteSuccess({
 
   const copy = async (): Promise<void> => {
     try {
-      await navigator.clipboard.writeText(inviteUrl);
+      await copyText(inviteUrl);
       setCopied(true);
       setTimeout(() => {
         setCopied(false);
