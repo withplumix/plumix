@@ -19,6 +19,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { Badge } from "@/components/ui/badge.js";
 import { Button } from "@/components/ui/button.js";
+import { Checkbox } from "@/components/ui/checkbox.js";
 import {
   Empty,
   EmptyContent,
@@ -363,24 +364,30 @@ function buildColumns({
   const selectColumn: ColumnDef<Entry> = {
     id: "select",
     meta: { className: "w-8" },
-    header: ({ table }) => (
-      <input
-        type="checkbox"
-        checked={table.getIsAllPageRowsSelected()}
-        ref={(el) => {
-          if (el) el.indeterminate = table.getIsSomePageRowsSelected();
-        }}
-        onChange={table.getToggleAllPageRowsSelectedHandler()}
-        aria-label={selectAllLabel}
-        data-testid="content-list-select-all"
-      />
-    ),
+    header: ({ table }) => {
+      const all = table.getIsAllPageRowsSelected();
+      const some = table.getIsSomePageRowsSelected();
+      // "indeterminate" is Radix's CheckedState token, not translatable copy.
+      // eslint-disable-next-line lingui/no-unlocalized-strings
+      const checked = all ? true : some ? "indeterminate" : false;
+      return (
+        <Checkbox
+          checked={checked}
+          onCheckedChange={(value) => {
+            table.toggleAllPageRowsSelected(value === true);
+          }}
+          aria-label={selectAllLabel}
+          data-testid="content-list-select-all"
+        />
+      );
+    },
     cell: ({ row }) => (
-      <input
-        type="checkbox"
+      <Checkbox
         checked={row.getIsSelected()}
         disabled={!row.getCanSelect()}
-        onChange={row.getToggleSelectedHandler()}
+        onCheckedChange={(value) => {
+          row.toggleSelected(value === true);
+        }}
         aria-label={selectRowLabel}
         data-testid={`content-list-select-${String(row.original.id)}`}
       />

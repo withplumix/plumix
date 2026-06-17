@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/tabs.js";
 import { useIsMobile } from "@/hooks/use-mobile.js";
 import { getPatterns } from "@/lib/manifest.js";
+import { toastError, toastSuccess } from "@/lib/toast.js";
 import { useLabel } from "@/lib/use-label.js";
 import { cn } from "@/lib/utils.js";
 import { defineMessage } from "@lingui/core/macro";
@@ -233,6 +234,14 @@ const M = {
     id: "editor.layout.copyAsPattern.untitledFallback",
     message: "Untitled",
   }),
+  copied: defineMessage({
+    id: "editor.layout.copy.copied",
+    message: "Copied to clipboard",
+  }),
+  copyFailed: defineMessage({
+    id: "editor.layout.copy.failed",
+    message: "Couldn't copy to clipboard",
+  }),
   blocksTriggerLabel: defineMessage({
     id: "editor.layout.mobile.blocksTrigger",
     message: "Blocks",
@@ -264,6 +273,22 @@ const M = {
     message: "Entry title",
   }),
 } satisfies Record<string, MessageDescriptor>;
+
+// Shared by the block-action copy paths (Copy JSON, Copy as pattern source):
+// write to the clipboard and toast the shared success/error pair.
+function copyToClipboard(
+  text: string,
+  renderLabel: ReturnType<typeof useLabel>,
+): void {
+  navigator.clipboard
+    .writeText(text)
+    .then(() => {
+      toastSuccess(renderLabel(M.copied));
+    })
+    .catch(() => {
+      toastError(renderLabel(M.copyFailed));
+    });
+}
 
 // Puck hardcodes initial `viewports.current` to its bundled Smartphone
 // (360px) preset, which lands authors in mobile preview — open on
@@ -1136,12 +1161,7 @@ function PlumixCanvasWithSlashMenu({
       selectedItem: puck.selectedItem ?? null,
       untitledTitle: renderLabel(M.copyUntitledFallback),
     });
-    navigator.clipboard.writeText(source).catch((error: unknown) => {
-      console.error(
-        "[plumix:copy-as-pattern-source] clipboard write failed:",
-        error,
-      );
-    });
+    copyToClipboard(source, renderLabel);
   }, [getPuck, entryTitle, renderLabel]);
 
   return (
@@ -1260,6 +1280,7 @@ function PlumixBlockActions({
 }: PlumixBlockActionsProps): ReactElement {
   const getPuck = useGetPuck();
   const selectedItem = usePuckSelector((s) => s.selectedItem);
+  const renderLabel = useLabel();
 
   const handleTransform = useCallback(
     (option: TransformOption): void => {
@@ -1310,15 +1331,8 @@ function PlumixBlockActions({
 
   const handleCopyJson = useCallback((): void => {
     if (!selectedItem) return;
-    navigator.clipboard
-      .writeText(JSON.stringify(selectedItem, null, 2))
-      .catch((error: unknown) => {
-        console.error(
-          "[plumix:block-actions] Copy to clipboard failed:",
-          error,
-        );
-      });
-  }, [selectedItem]);
+    copyToClipboard(JSON.stringify(selectedItem, null, 2), renderLabel);
+  }, [selectedItem, renderLabel]);
 
   const identity = useMemo(() => {
     if (!selectedItem) return undefined;
