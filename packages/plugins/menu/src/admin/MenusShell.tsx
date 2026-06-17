@@ -87,7 +87,7 @@ export function MenusShell(): ReactNode {
   const selectedMenu =
     slug === null ? null : (menuList.find((m) => m.slug === slug) ?? null);
   return (
-    <div data-testid="menus-shell">
+    <div data-testid="menus-shell" className="flex flex-col gap-4">
       <MenuSelector
         menus={menuList}
         onCreate={handleCreate}
@@ -100,7 +100,10 @@ export function MenusShell(): ReactNode {
         <LocationsPanel menus={menuList} />
       )}
       {menuList.length === 0 ? (
-        <div data-testid="menus-empty-cta">
+        <div
+          data-testid="menus-empty-cta"
+          className="text-muted-foreground text-sm"
+        >
           <Trans
             id="plugin.menu.shell.emptyState"
             message="No menus yet. Create your first menu to get started."
@@ -121,7 +124,10 @@ function MenuSelector({
   readonly onSelect: (slug: string) => void;
 }): ReactNode {
   return (
-    <div data-testid="menus-selector">
+    <div
+      data-testid="menus-selector"
+      className="flex flex-wrap items-center gap-2"
+    >
       {menus.map((menu) => (
         <button
           key={menu.id}
@@ -130,6 +136,7 @@ function MenuSelector({
           onClick={() => {
             onSelect(menu.slug);
           }}
+          className="border-border hover:bg-muted rounded border bg-transparent px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
         >
           {menu.name}
         </button>
@@ -138,6 +145,7 @@ function MenuSelector({
         type="button"
         data-testid="menus-selector-create-new"
         onClick={onCreate}
+        className="bg-primary text-primary-foreground hover:bg-primary/90 rounded px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
       >
         <Trans
           id="plugin.menu.shell.createButton"
@@ -157,7 +165,10 @@ function Tabs({
 }): ReactNode {
   const { i18n } = useLingui();
   return (
-    <div data-testid="menus-tabs">
+    <div
+      data-testid="menus-tabs"
+      className="border-border flex items-center gap-1 border-b"
+    >
       {TABS.map((entry) => (
         <button
           key={entry.id}
@@ -167,6 +178,9 @@ function Tabs({
           onClick={() => {
             onChange(entry.id);
           }}
+          className={`hover:bg-muted rounded px-3 py-1.5 text-sm ${
+            activeTab === entry.id ? "bg-muted font-medium" : ""
+          }`}
         >
           {i18n._(entry.label)}
         </button>
@@ -183,7 +197,10 @@ function EditPanel({
   return (
     <div data-testid="menus-tab-edit-panel">
       {selectedMenu === null ? (
-        <p data-testid="menus-edit-no-selection">
+        <p
+          data-testid="menus-edit-no-selection"
+          className="text-muted-foreground text-sm"
+        >
           <Trans
             id="plugin.menu.shell.editEmpty"
             message="Select a menu to start editing."
@@ -206,7 +223,10 @@ function LocationsPanel({
   const slugFromTermId = new Map(menus.map((m) => [m.id, m.slug]));
 
   return (
-    <div data-testid="menus-tab-locations-panel">
+    <div
+      data-testid="menus-tab-locations-panel"
+      className="flex flex-col gap-2"
+    >
       {(locations.data ?? []).map((row) => (
         <LocationRow
           key={row.id}
@@ -239,8 +259,16 @@ function LocationRow({
 }): ReactNode {
   const { i18n } = useLingui();
   return (
-    <div data-testid={`menus-location-row-${row.id}`}>
-      <span data-testid={`menus-location-label-${row.id}`}>{row.label}</span>
+    <div
+      data-testid={`menus-location-row-${row.id}`}
+      className="border-border bg-card flex items-center justify-between gap-2 rounded-md border px-3 py-2"
+    >
+      <span
+        data-testid={`menus-location-label-${row.id}`}
+        className="text-sm font-medium"
+      >
+        {row.label}
+      </span>
       <select
         data-testid={`menus-location-select-${row.id}`}
         value={currentSlug}
@@ -248,6 +276,7 @@ function LocationRow({
           const value = event.target.value;
           onChange(value === "" ? null : value);
         }}
+        className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
       >
         <option value="">{i18n._(M.unassigned)}</option>
         {menus.map((menu) => (

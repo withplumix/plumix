@@ -1,3 +1,15 @@
+/* Order the plugin-sidecar layer (packages/plumix/src/vite/
+   admin-plugin-bundle.ts emits plugin utilities into `layer(plumix-plugins)`)
+   ABOVE base/components but BELOW the admin's own `utilities`. Two failure
+   modes this avoids: put it in the shared `utilities` layer (the default) and
+   a plugin re-emitting `.hidden` loads after the admin CSS and beats the
+   admin's responsive `md:block`, collapsing the sidebar; put it below `base`
+   and Tailwind's preflight strips the plugin pages' own styling (headings,
+   controls). Between `components` and `utilities` satisfies both. Must precede
+   the Tailwind import so this statement establishes the cross-stylesheet
+   layer order. */
+@layer theme, base, components, plumix-plugins, utilities;
+
 @import "tailwindcss";
 @import "tw-animate-css";
 

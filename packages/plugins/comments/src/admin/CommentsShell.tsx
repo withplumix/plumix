@@ -106,8 +106,12 @@ export function CommentsShell(): React.ReactElement {
   }
 
   return (
-    <div data-testid="comments-shell">
-      <div data-testid="comments-tabs" role="tablist">
+    <div data-testid="comments-shell" className="flex flex-col gap-4">
+      <div
+        data-testid="comments-tabs"
+        role="tablist"
+        className="border-border flex items-center gap-1 border-b"
+      >
         {TABS.map((status) => (
           <button
             key={status}
@@ -117,22 +121,29 @@ export function CommentsShell(): React.ReactElement {
             onClick={() => {
               reset(status);
             }}
+            className={`hover:bg-muted rounded px-3 py-1.5 text-sm ${
+              tab === status ? "bg-muted font-medium" : ""
+            }`}
           >
             {i18n._(STATUS_LABELS[status])}{" "}
-            <span data-testid={`comments-count-${status}`}>
+            <span
+              data-testid={`comments-count-${status}`}
+              className="text-muted-foreground"
+            >
               {counts.data?.[status] ?? 0}
             </span>
           </button>
         ))}
       </div>
 
-      <div data-testid="comments-filters">
+      <div data-testid="comments-filters" className="flex items-center gap-2">
         <input
           type="search"
           data-testid="comments-search"
           aria-label={i18n._(M.searchLabel)}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
+          className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
         />
         <input
           type="number"
@@ -140,45 +151,61 @@ export function CommentsShell(): React.ReactElement {
           aria-label={i18n._(M.entryLabel)}
           value={entryFilter}
           onChange={(event) => setEntryFilter(event.target.value)}
+          className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
         />
       </div>
 
       {picked.size > 0 ? (
-        <div data-testid="comments-bulk-bar">
+        <div
+          data-testid="comments-bulk-bar"
+          className="border-border bg-card flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm"
+        >
           <span data-testid="comments-bulk-count">{picked.size}</span>
-          {BULK_ACTIONS.map((action) => (
-            <button
-              key={action}
-              type="button"
-              data-testid={`comments-bulk-${action}`}
-              disabled={bulk.isPending}
-              onClick={() => runBulk(action)}
-            >
-              {i18n._(ACTION_LABELS[action])}
-            </button>
-          ))}
+          <div className="flex items-center gap-1">
+            {BULK_ACTIONS.map((action) => (
+              <button
+                key={action}
+                type="button"
+                data-testid={`comments-bulk-${action}`}
+                disabled={bulk.isPending}
+                onClick={() => runBulk(action)}
+                className={`hover:bg-muted rounded px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50 ${
+                  action === "approve" ? "" : "text-destructive"
+                }`}
+              >
+                {i18n._(ACTION_LABELS[action])}
+              </button>
+            ))}
+          </div>
         </div>
       ) : null}
 
       {list.isLoading ? (
         <div data-testid="comments-loading" />
       ) : list.isError ? (
-        <div data-testid="comments-error">
+        <div data-testid="comments-error" className="text-destructive text-sm">
           <Trans id="plugin.comments.error" message="Failed to load comments" />
         </div>
       ) : (list.data ?? []).length === 0 ? (
         // Tab-agnostic copy on purpose: interpolating the (translated)
         // status word mid-sentence breaks grammatical agreement in
         // several launch locales, so the queue name stays in the tab.
-        <p data-testid="comments-empty">
+        <p
+          data-testid="comments-empty"
+          className="text-muted-foreground text-sm"
+        >
           <Trans id="plugin.comments.empty" message="No comments to show" />
         </p>
       ) : (
-        <table data-testid="comments-table">
-          <tbody>
+        <table data-testid="comments-table" className="w-full">
+          <tbody className="flex flex-col gap-2">
             {(list.data ?? []).map((comment) => (
-              <tr key={comment.id} data-testid={`comment-row-${comment.id}`}>
-                <td>
+              <tr
+                key={comment.id}
+                data-testid={`comment-row-${comment.id}`}
+                className="border-border bg-card flex items-start justify-between gap-3 rounded-lg border p-3"
+              >
+                <td className="flex min-w-0 items-start gap-3">
                   <input
                     type="checkbox"
                     data-testid={`comment-select-${comment.id}`}
@@ -189,21 +216,24 @@ export function CommentsShell(): React.ReactElement {
                     )}
                     checked={picked.has(comment.id)}
                     onChange={() => togglePicked(comment.id)}
+                    className="mt-1"
                   />
-                </td>
-                <td>
                   <button
                     type="button"
                     data-testid={`comment-open-${comment.id}`}
                     onClick={() => setSelected(comment)}
+                    className="hover:bg-muted truncate rounded text-left font-medium"
                   >
                     {comment.authorName}
                   </button>
                 </td>
-                <td data-testid={`comment-excerpt-${comment.id}`}>
+                <td
+                  data-testid={`comment-excerpt-${comment.id}`}
+                  className="text-muted-foreground min-w-0 flex-1 truncate text-xs"
+                >
                   {comment.bodyMd.slice(0, 80)}
                 </td>
-                <td>
+                <td className="flex items-center gap-1">
                   {ACTIONS[tab].map((action) => (
                     <button
                       key={action}
@@ -213,6 +243,11 @@ export function CommentsShell(): React.ReactElement {
                       onClick={() =>
                         moderation.mutate({ action, id: comment.id })
                       }
+                      className={`hover:bg-muted rounded px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50 ${
+                        action === "approve" || action === "restore"
+                          ? ""
+                          : "text-destructive"
+                      }`}
                     >
                       {i18n._(ACTION_LABELS[action])}
                     </button>
@@ -225,27 +260,32 @@ export function CommentsShell(): React.ReactElement {
       )}
 
       {selected ? (
-        <aside data-testid="comment-detail">
+        <aside
+          data-testid="comment-detail"
+          className="border-border bg-card flex flex-col gap-3 rounded-lg border p-3"
+        >
           {/* Moderator sees the raw markdown source as text, not rendered HTML. */}
-          <div data-testid="comment-detail-body">{selected.bodyMd}</div>
-          <dl>
-            <dt>
+          <div data-testid="comment-detail-body" className="text-sm">
+            {selected.bodyMd}
+          </div>
+          <dl className="text-muted-foreground grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+            <dt className="font-medium">
               <Trans id="plugin.comments.detail.author" message="Author" />
             </dt>
             <dd data-testid="comment-detail-author">{selected.authorName}</dd>
-            <dt>
+            <dt className="font-medium">
               <Trans id="plugin.comments.detail.email" message="Email" />
             </dt>
             <dd data-testid="comment-detail-email">{selected.authorEmail}</dd>
-            <dt>
+            <dt className="font-medium">
               <Trans id="plugin.comments.detail.entry" message="Entry" />
             </dt>
             <dd data-testid="comment-detail-entry">{selected.entryId}</dd>
-            <dt>
+            <dt className="font-medium">
               <Trans id="plugin.comments.detail.ipHash" message="IP hash" />
             </dt>
             <dd data-testid="comment-detail-ip">{selected.ipHash ?? "—"}</dd>
-            <dt>
+            <dt className="font-medium">
               <Trans
                 id="plugin.comments.detail.submitted"
                 message="Submitted"

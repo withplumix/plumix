@@ -250,9 +250,15 @@ async function compilePluginCss({
     .map((d) => `@source ${JSON.stringify(d)};`)
     .join("\n");
 
+  // Emit plugin utilities into a dedicated `plumix-plugins` layer, NOT the
+  // shared `utilities` layer. The admin's globals.css declares this layer
+  // first (lowest priority), so a plugin re-emitting a base utility like
+  // `.hidden` can't override the admin's own utilities (e.g. the sidebar's
+  // responsive `md:block`). Plugin-specific utilities still apply — nothing
+  // in the admin competes with them.
   const input = [
     `@import "tailwindcss/theme" layer(theme);`,
-    `@import "tailwindcss/utilities" layer(utilities);`,
+    `@import "tailwindcss/utilities" layer(plumix-plugins);`,
     themeCss,
     sourceLines,
   ].join("\n");
