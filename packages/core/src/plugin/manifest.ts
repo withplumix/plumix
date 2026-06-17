@@ -1263,13 +1263,14 @@ export interface RegisteredLoginLink extends LoginLinkOptions {
  * `defer` as a normal request, but `user` is `null` and `request` is
  * an internal marker.
  *
- * v1 dispatch fires every registered task on every scheduled
- * invocation regardless of `cron`. Operators are responsible for
- * configuring `wrangler.toml [triggers] crons` to match the intended
- * cadence; per-task cron filtering is a follow-up.
+ * A task with a `cron` runs only on the invocation whose fired schedule
+ * (`event.cron`) byte-matches it; a task without one runs on every
+ * invocation. The operator must declare a matching `wrangler` `triggers.crons`
+ * entry for a `cron`-tagged task to ever fire — the strings must be identical.
  */
 export interface ScheduledTask {
   readonly id: string;
+  /** Cron expression; must byte-match a `wrangler` `triggers.crons` entry. */
   readonly cron?: string;
   readonly handler: (ctx: AppContext) => void | Promise<void>;
 }

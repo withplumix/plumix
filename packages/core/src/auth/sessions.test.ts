@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
 
 import type { SessionPolicy } from "./sessions.js";
+import { sessions } from "../db/schema/sessions.js";
 import { users } from "../db/schema/users.js";
 import { userFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
@@ -9,9 +10,42 @@ import {
   createSession,
   DEFAULT_SESSION_POLICY,
   invalidateSession,
+  pruneExpiredSessions,
   validateSession,
 } from "./sessions.js";
 import { hashToken } from "./tokens.js";
+
+describe("pruneExpiredSessions", () => {
+  test("removes only rows whose expiresAt has passed, returning the count", async () => {
+    const db = await createTestDb();
+    const user = await userFactory.transient({ db }).create({ role: "admin" });
+
+    // Two expired rows + one live — seed expiry directly (the point of the test).
+    await db.insert(sessions).values([
+      {
+        id: "expired-1",
+        userId: user.id,
+        expiresAt: new Date(Date.now() - 1000),
+      },
+      {
+        id: "expired-2",
+        userId: user.id,
+        expiresAt: new Date(Date.now() - 60_000),
+      },
+      {
+        id: "live-1",
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 60_000),
+      },
+    ]);
+
+    const deleted = await pruneExpiredSessions(db);
+
+    expect(deleted).toBe(2);
+    const remaining = await db.select({ id: sessions.id }).from(sessions);
+    expect(remaining).toEqual([{ id: "live-1" }]);
+  });
+});
 
 describe("session lifecycle", () => {
   test("round-trips a token while storing only its SHA-256 hash in the DB", async () => {
