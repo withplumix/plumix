@@ -187,6 +187,10 @@ function buildFetch(app: PlumixApp): FetchHandler {
       // apps without `storage` configured never pay the cost.
       const storage = app.config.storage?.connect(env);
 
+      // Edge cache binds per request. `connect` returns null when the deploy
+      // lacks zone credentials (e.g. workers.dev) — caching off, render live.
+      const cache = app.config.cache?.connect(env) ?? undefined;
+
       const appCtx = createAppContext({
         db: db as Db,
         env: env as PlumixEnv,
@@ -199,6 +203,7 @@ function buildFetch(app: PlumixApp): FetchHandler {
         defer,
         assets: readAssetsBinding(env),
         storage,
+        cache,
         imageDelivery: app.config.imageDelivery,
         imageRemotePatterns: app.config.images?.remotePatterns,
         mailer: app.config.mailer,

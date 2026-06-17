@@ -24,6 +24,7 @@ import type { PlumixApp } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
 import type {
   AssetsBinding,
+  ConnectedCache,
   ConnectedObjectStorage,
   ImageDelivery,
 } from "../runtime/slots.js";
@@ -85,6 +86,11 @@ export interface CreateDispatcherHarnessOptions {
    * `memoryStorage().connect({})` for a working in-memory backend.
    */
   readonly storage?: ConnectedObjectStorage;
+  /**
+   * Bound edge cache. Stub it in tests that exercise the public read-through
+   * path (`ctx.cache`); the dispatcher consults it for cacheable public GETs.
+   */
+  readonly cache?: ConnectedCache;
   /**
    * Configured OAuth providers for tests exercising the start/callback
    * routes. Pass `{ github: github({ clientId, clientSecret }), google:
@@ -193,6 +199,7 @@ function withRequest(
   env: PlumixEnv,
   assets: AssetsBinding | undefined,
   storage: ConnectedObjectStorage | undefined,
+  cache: ConnectedCache | undefined,
   request: Request,
   user: User | null,
 ): AppContext {
@@ -211,6 +218,7 @@ function withRequest(
       : undefined,
     assets,
     storage,
+    cache,
     imageDelivery: app.config.imageDelivery,
     imageRemotePatterns: app.config.images?.remotePatterns,
     mailer: app.config.mailer,
@@ -258,14 +266,23 @@ export async function createDispatcherHarness(
     devCsrfLocalhost: options.devCsrfLocalhost,
   });
   const dispatcher = createPlumixDispatcher(app);
-  const { assets, storage } = options;
+  const { assets, storage, cache } = options;
 
   const harness: DispatcherHarness = {
     db,
     app,
     env,
     dispatch: async (request, user = null) => {
-      const ctx = withRequest(app, db, env, assets, storage, request, user);
+      const ctx = withRequest(
+        app,
+        db,
+        env,
+        assets,
+        storage,
+        cache,
+        request,
+        user,
+      );
       return dispatcher(ctx);
     },
     fetch: async (path, fetchOptions = {}) => {
@@ -276,6 +293,7 @@ export async function createDispatcherHarness(
         env,
         assets,
         storage,
+        cache,
         request,
         fetchOptions.as ?? null,
       );

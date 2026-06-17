@@ -21,6 +21,7 @@ import type { OAuthProviderSummary } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
 import type {
   AssetsBinding,
+  ConnectedCache,
   ConnectedObjectStorage,
   ImageDelivery,
 } from "../runtime/slots.js";
@@ -174,6 +175,13 @@ export interface AppContextBase<
    */
   readonly storage?: ConnectedObjectStorage;
   /**
+   * Bound edge cache for this request, when the config declared a `cache:`
+   * slot and the runtime connected it (zone credentials present). The
+   * dispatcher's public-route path reads/writes through this; `undefined`
+   * means caching is off and every public page renders live.
+   */
+  readonly cache?: ConnectedCache;
+  /**
    * On-the-fly image delivery (resize / format / quality URLs). Present
    * when the config declared an `imageDelivery:` slot. Pure URL math —
    * `imageDelivery.url(src, opts)` returns the CDN-transformed URL.
@@ -269,6 +277,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly defer?: DeferFn;
   readonly assets?: AssetsBinding;
   readonly storage?: ConnectedObjectStorage;
+  readonly cache?: ConnectedCache;
   readonly imageDelivery?: ImageDelivery;
   readonly imageRemotePatterns?: readonly RemotePattern[];
   readonly mailer?: Mailer;
@@ -372,6 +381,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     defer: wrapDefer(args.logger ?? consoleLogger, args.defer),
     assets: args.assets,
     storage: args.storage,
+    cache: args.cache,
     imageDelivery: args.imageDelivery,
     imageRemotePatterns: args.imageRemotePatterns,
     mailer: args.mailer,
