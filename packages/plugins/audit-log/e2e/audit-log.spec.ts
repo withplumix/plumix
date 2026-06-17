@@ -5,6 +5,7 @@
 // end-to-end through the actual oRPC + D1 round-trip.
 
 import { resolve } from "node:path";
+import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 import { drizzle } from "drizzle-orm/libsql";
 import { openPlaygroundDb } from "plumix/test/playwright";
@@ -145,3 +146,43 @@ test.describe
     await expect(afterReload).toHaveCount(2);
   });
 });
+
+// Regression for two failures that shipped together: (1) the plugin admin
+// page rendered as bare unstyled HTML (the component had zero `className`),
+// and (2) the plugin CSS sidecar re-emitted base utilities into the shared
+// cascade layer, loaded after the admin stylesheet, and collapsed the
+// admin sidebar to `display:none`. Guards: the sidebar stays visible AND
+// the page ships visibly-styled controls. See packages/admin/src/styles/
+// globals.css + packages/plumix/src/vite/admin-plugin-bundle.ts.
+test("admin page renders styled with the sidebar intact", async ({ page }) => {
+  await page.goto("pages/audit-log");
+  await expect(page.getByTestId("audit-log-shell")).toBeVisible();
+
+  const ui = await styledChrome(page, "audit-log-shell");
+  expect(ui.sidebarVisible).toBe(true);
+  expect(ui.totalControls).toBeGreaterThan(0);
+  expect(ui.styledControls).toBeGreaterThan(0);
+});
+
+// Returns whether the admin sidebar is displayed, and how many of the
+// plugin shell's own interactive controls carry styling classes. The
+// unstyled-page bug was literally zero `className` in the component, so a
+// styled-control count of 0 is the regression signal; the sidebar-display
+// check guards the CSS-sidecar cascade collapse.
+async function styledChrome(page: Page, shellTestId: string) {
+  return page.evaluate((id) => {
+    const sidebar = document.querySelector('[data-slot="sidebar"]');
+    const shell = document.querySelector(`[data-testid="${id}"]`);
+    const controls = shell
+      ? Array.from(shell.querySelectorAll("button, a, input, select, label"))
+      : [];
+    return {
+      sidebarVisible:
+        sidebar !== null && getComputedStyle(sidebar).display !== "none",
+      totalControls: controls.length,
+      styledControls: controls.filter(
+        (el) => (el.getAttribute("class") ?? "").trim().length > 0,
+      ).length,
+    };
+  }, shellTestId);
+}

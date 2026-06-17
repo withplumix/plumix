@@ -206,8 +206,8 @@ export function AuditLogShell(): ReactNode {
   const rows = list.data?.pages.flatMap((p) => p.rows) ?? [];
 
   return (
-    <div data-testid="audit-log-shell">
-      <h1>
+    <div data-testid="audit-log-shell" className="flex flex-col gap-4">
+      <h1 className="text-lg font-semibold">
         <Trans id="plugin.auditLog.shell.title" message="Audit log" />
       </h1>
       <FilterRow
@@ -220,7 +220,7 @@ export function AuditLogShell(): ReactNode {
       {list.isLoading ? (
         <div data-testid="audit-log-loading" />
       ) : list.error instanceof Error ? (
-        <div data-testid="audit-log-error">
+        <div data-testid="audit-log-error" className="text-destructive text-sm">
           {i18n._(
             M.errorTemplate.id,
             { message: list.error.message },
@@ -228,39 +228,53 @@ export function AuditLogShell(): ReactNode {
           )}
         </div>
       ) : rows.length === 0 ? (
-        <p data-testid="audit-log-empty">
+        <p
+          data-testid="audit-log-empty"
+          className="text-muted-foreground text-sm"
+        >
           <Trans
             id="plugin.auditLog.shell.empty"
             message="No audit events match."
           />
         </p>
       ) : (
-        <table data-testid="audit-log-table">
-          <thead>
-            <tr>
-              <th>
-                <Trans id="plugin.auditLog.column.time" message="Time" />
-              </th>
-              <th>
-                <Trans id="plugin.auditLog.column.actor" message="Actor" />
-              </th>
-              <th>
-                <Trans id="plugin.auditLog.column.event" message="Event" />
-              </th>
-              <th>
-                <Trans id="plugin.auditLog.column.subject" message="Subject" />
-              </th>
-              <th>
-                <Trans id="plugin.auditLog.column.changes" message="Changes" />
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <AuditLogRow key={row.id} row={row} />
-            ))}
-          </tbody>
-        </table>
+        <div className="border-border overflow-hidden rounded-lg border">
+          <table
+            data-testid="audit-log-table"
+            className="w-full border-separate border-spacing-0 text-sm"
+          >
+            <thead>
+              <tr>
+                <th className="text-muted-foreground border-border border-b px-3 py-2 text-start text-xs font-medium">
+                  <Trans id="plugin.auditLog.column.time" message="Time" />
+                </th>
+                <th className="text-muted-foreground border-border border-b px-3 py-2 text-start text-xs font-medium">
+                  <Trans id="plugin.auditLog.column.actor" message="Actor" />
+                </th>
+                <th className="text-muted-foreground border-border border-b px-3 py-2 text-start text-xs font-medium">
+                  <Trans id="plugin.auditLog.column.event" message="Event" />
+                </th>
+                <th className="text-muted-foreground border-border border-b px-3 py-2 text-start text-xs font-medium">
+                  <Trans
+                    id="plugin.auditLog.column.subject"
+                    message="Subject"
+                  />
+                </th>
+                <th className="text-muted-foreground border-border border-b px-3 py-2 text-start text-xs font-medium">
+                  <Trans
+                    id="plugin.auditLog.column.changes"
+                    message="Changes"
+                  />
+                </th>
+              </tr>
+            </thead>
+            <tbody className="[&>tr:last-child>td]:border-b-0">
+              {rows.map((row) => (
+                <AuditLogRow key={row.id} row={row} />
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
       {list.hasNextPage ? (
         <button
@@ -270,6 +284,7 @@ export function AuditLogShell(): ReactNode {
           onClick={() => {
             void list.fetchNextPage();
           }}
+          className="border-border hover:bg-muted self-start rounded border bg-transparent px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Trans id="plugin.auditLog.shell.loadMore" message="Load more" />
         </button>
@@ -289,7 +304,10 @@ function FilterRow({
 }): ReactNode {
   const { i18n } = useLingui();
   return (
-    <div data-testid="audit-log-filters">
+    <div
+      data-testid="audit-log-filters"
+      className="flex flex-wrap items-center gap-2"
+    >
       <select
         data-testid="audit-log-filter-date"
         value={filters.preset}
@@ -299,6 +317,7 @@ function FilterRow({
             preset: e.target.value as DateRangePreset | "all",
           });
         }}
+        className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
       >
         <option value="all">{i18n._(M.filterDatePresetAll)}</option>
         <option value="today">{i18n._(M.filterDatePresetToday)}</option>
@@ -313,6 +332,7 @@ function FilterRow({
         onChange={(e) => {
           onChange({ ...filters, actorId: e.target.value });
         }}
+        className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
       />
       <select
         data-testid="audit-log-filter-subject-type"
@@ -320,6 +340,7 @@ function FilterRow({
         onChange={(e) => {
           onChange({ ...filters, subjectType: e.target.value });
         }}
+        className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
       >
         <option value="">{i18n._(M.filterSubjectAny)}</option>
         {/* Subject-type values are protocol identifiers, kept verbatim
@@ -336,6 +357,7 @@ function FilterRow({
         onChange={(e) => {
           onChange({ ...filters, eventPrefix: e.target.value });
         }}
+        className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
       >
         <option value="">{i18n._(M.filterEventAny)}</option>
         {/* Event prefixes are protocol identifiers, kept verbatim across
@@ -350,6 +372,7 @@ function FilterRow({
         type="button"
         data-testid="audit-log-filter-reset"
         onClick={onReset}
+        className="border-border hover:bg-muted rounded border bg-transparent px-3 py-1 text-sm"
       >
         <Trans id="plugin.auditLog.filter.reset" message="Reset" />
       </button>
@@ -360,14 +383,29 @@ function FilterRow({
 function AuditLogRow({ row }: { readonly row: AuditLogRowDTO }): ReactNode {
   const { i18n } = useLingui();
   return (
-    <tr data-testid={`audit-log-row-${String(row.id)}`}>
-      <td>{formatTimestamp(i18n.locale, row.occurredAt)}</td>
-      <td>{row.actorLabel ?? i18n._(M.systemActor)}</td>
-      <td data-testid={`audit-log-event-${String(row.id)}`}>{row.event}</td>
-      <td data-testid={`audit-log-subject-${String(row.id)}`}>
+    <tr
+      data-testid={`audit-log-row-${String(row.id)}`}
+      className="hover:bg-muted/50"
+    >
+      <td className="text-muted-foreground border-border border-b px-3 py-2 align-top whitespace-nowrap">
+        {formatTimestamp(i18n.locale, row.occurredAt)}
+      </td>
+      <td className="border-border border-b px-3 py-2 align-top">
+        {row.actorLabel ?? i18n._(M.systemActor)}
+      </td>
+      <td
+        data-testid={`audit-log-event-${String(row.id)}`}
+        className="border-border border-b px-3 py-2 align-top font-mono text-xs"
+      >
+        {row.event}
+      </td>
+      <td
+        data-testid={`audit-log-subject-${String(row.id)}`}
+        className="border-border border-b px-3 py-2 align-top"
+      >
         {row.subjectLabel}
       </td>
-      <td>
+      <td className="text-muted-foreground border-border border-b px-3 py-2 align-top">
         <DiffPreview properties={row.properties} />
       </td>
     </tr>
