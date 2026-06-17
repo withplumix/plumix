@@ -938,6 +938,11 @@ msgid "userInvite.copy.copied"
 msgstr "已复制"
 
 #. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.copy.copied"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.copy.idle"
 msgstr "复制"
@@ -958,7 +963,7 @@ msgid "blockActions.copyJson"
 msgstr "复制 JSON"
 
 #. js-lingui-explicit-id
-#: src/editor/CopyPreviewLinkButton.tsx
+#: src/editor/PreviewButton.tsx
 msgid "editor.previewLink.copy"
 msgstr "复制预览链接"
 
@@ -975,8 +980,7 @@ msgstr "复制令牌"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.empty.description"
-msgstr "核心刻意不提供设置 — 插件（或您自己的 plumix.config）通过 <0>ctx.registerSettingsPage</0> 和 "
-"<1>ctx.registerSettingsGroup</1> 声明页面和分组。已注册的页面将在此显示，每页一张卡片。"
+msgstr "核心刻意不提供设置 — 插件（或您自己的 plumix.config）通过 <0>ctx.registerSettingsPage</0> 和 <1>ctx.registerSettingsGroup</1> 声明页面和分组。已注册的页面将在此显示，每页一张卡片。"
 
 #. js-lingui-explicit-id
 #: src/lib/core-settings-i18n.ts
@@ -999,7 +1003,12 @@ msgid "emailChange.error.fallback"
 msgstr "无法确认电子邮箱更改。请重试。"
 
 #. js-lingui-explicit-id
-#: src/editor/CopyPreviewLinkButton.tsx
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.copy.failed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/PreviewButton.tsx
 msgid "editor.previewLink.failed"
 msgstr "无法创建预览链接"
 
@@ -1603,8 +1612,7 @@ msgstr "电子邮箱"
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.error.mailerNotConfigured"
-msgstr "电子邮箱更改需要服务器端配置 Magic Link 邮件发送器。请向 `plumix({...})` 传入 `auth.magicLink` "
-"和 `mailer:` 以启用。"
+msgstr "电子邮箱更改需要服务器端配置 Magic Link 邮件发送器。请向 `plumix({...})` 传入 `auth.magicLink` 和 `mailer:` 以启用。"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -2148,6 +2156,11 @@ msgid "editor.device.mobile"
 msgstr "移动设备"
 
 #. js-lingui-explicit-id
+#: src/editor/PreviewButton.tsx
+msgid "editor.preview.more"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
 msgid "entries.list.bulk.trash"
 msgstr "移至回收站"
@@ -2351,8 +2364,7 @@ msgstr "未检测到标题结构问题。"
 #. js-lingui-explicit-id
 #: src/lib/mailer-errors.ts
 msgid "mailer.test.error.notConfigured"
-msgstr "未配置邮件发送器适配器。请向 `plumix({...})` 传入 `mailer:`（例如 consoleMailer() 用于开发，或您的 "
-"Resend/Postmark/SES 封装）。"
+msgstr "未配置邮件发送器适配器。请向 `plumix({...})` 传入 `mailer:`（例如 consoleMailer() 用于开发，或您的 Resend/Postmark/SES 封装）。"
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
@@ -2493,6 +2505,11 @@ msgstr "每行一个权限。令牌的权限永远不能超过您角色的权限
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.role.selfReadonly"
 msgstr "只有其他管理员可以更改您的角色。"
+
+#. js-lingui-explicit-id
+#: src/editor/PreviewButton.tsx
+msgid "editor.preview.tooltip"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/PatternRefPreview.tsx
@@ -2644,7 +2661,12 @@ msgid "apiTokens.col.prefix"
 msgstr "前缀"
 
 #. js-lingui-explicit-id
-#: src/editor/CopyPreviewLinkButton.tsx
+#: src/editor/PreviewButton.tsx
+msgid "editor.preview.open"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/PreviewButton.tsx
 msgid "editor.previewLink.copied"
 msgstr "预览链接已复制到剪贴板"
 
@@ -3127,8 +3149,7 @@ msgstr "发送中…"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.description"
-msgstr "通过 Magic Link 使用的同一传输发送一次性消息。错误将原样显示在此处 — 与 Magic Link "
-"请求流程不同，后者会刻意吞下邮件错误，以免响应形态泄露电子邮箱是否已注册。"
+msgstr "通过 Magic Link 使用的同一传输发送一次性消息。错误将原样显示在此处 — 与 Magic Link 请求流程不同，后者会刻意吞下邮件错误，以免响应形态泄露电子邮箱是否已注册。"
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
