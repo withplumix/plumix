@@ -9,7 +9,9 @@ import { readSessionCookie } from "../auth/cookies.js";
 import { hasCsrfHeader, hasMatchingOrigin } from "../auth/csrf.js";
 import { parseOAuthPath } from "../auth/oauth/match.js";
 import { stripBasePath, withBasePath } from "../base-path.js";
+import { flushPurgeTags } from "../cache/purge.js";
 import { readThrough } from "../cache/read-through.js";
+import { pageTags } from "../cache/tags.js";
 import { interfaceEnabled } from "../config.js";
 import { withUser } from "../context/app.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
@@ -113,7 +115,11 @@ export type PlumixDispatcher = (ctx: AppContext) => Promise<Response>;
 export function createPlumixDispatcher(app: PlumixApp): PlumixDispatcher {
   return async (ctx) => {
     try {
-      return await route(app, ctx);
+      const response = await route(app, ctx);
+      // Request-end seam: fire one batched edge-cache purge for whatever
+      // entry mutations this request accumulated.
+      flushPurgeTags(ctx);
+      return response;
     } catch (error) {
       ctx.logger.error("dispatch_failed", {
         error,
@@ -333,15 +339,22 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   return dispatchPublicRoute(app, ctx, url);
 }
 
-// The cache-decision intent kind for a resolved route match: an unmatched root
-// is the front page, any other unmatched URL is a 404 (never cached).
-function intentKindForMatch(
-  match: RouteMatch | null,
-  url: URL,
-): RouteIntent["kind"] | null {
-  if (match !== null) return match.intent.kind;
-  if (url.pathname === "/") return "front-page";
+// The public route intent for a resolved match: an unmatched root is the front
+// page, any other unmatched URL is a 404 (never cached).
+function publicIntent(match: RouteMatch | null, url: URL): RouteIntent | null {
+  if (match !== null) return match.intent;
+  if (url.pathname === "/") return { kind: "front-page" };
   return null;
+}
+
+// Public, non-hierarchical entry types — the set the front page lists, and so
+// the set of `t:<type>` tags the front page is stored under.
+function frontPageEntryTypes(ctx: AppContext): string[] {
+  return Array.from(ctx.plugins.entryTypes.entries())
+    .filter(
+      ([, spec]) => spec.isPublic !== false && spec.isHierarchical !== true,
+    )
+    .map(([key]) => key);
 }
 
 async function dispatchPublicRoute(
@@ -354,12 +367,25 @@ async function dispatchPublicRoute(
   const match = matchRoute(url, app.routeMap);
   const cache = ctx.cache;
   if (cache === undefined) return renderPublicRoute(app, ctx, url, match);
+  const intent = publicIntent(match, url);
   return readThrough({
     request: ctx.request,
-    intentKind: intentKindForMatch(match, url),
+    intentKind: intent?.kind ?? null,
     cache,
     defer: ctx.defer,
     render: () => renderPublicRoute(app, ctx, url, match),
+    // Evaluated post-render so `ctx.resolvedEntity` (the entry id) is set.
+    // The source thunks run only for the intent kind that needs them.
+    tags: () =>
+      intent === null
+        ? []
+        : pageTags({
+            intent,
+            resolvedEntity: ctx.resolvedEntity,
+            frontPageEntryTypes: () => frontPageEntryTypes(ctx),
+            taxonomyEntryTypes: (taxonomy) =>
+              ctx.plugins.termTaxonomies.get(taxonomy)?.entryTypes ?? [],
+          }),
   });
 }
 

@@ -37,6 +37,7 @@ import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
 import { DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
+import { registerCorePurgeInvalidator } from "../cache/purge.js";
 import * as coreSchema from "../db/schema/index.js";
 import { mergeDocumentManifest } from "../document-merge.js";
 import { HookRegistry } from "../hooks/registry.js";
@@ -218,6 +219,9 @@ export async function buildApp(
   registerCoreAdminBarContributors(hooks);
   registerCoreSearchHandlers(hooks);
   registerCoreSitemapInvalidator(hooks);
+  // Only subscribe the edge-cache purge invalidator when a cache is configured;
+  // without one every entry mutation would accumulate tags no flush consumes.
+  if (config.cache !== undefined) registerCorePurgeInvalidator(hooks);
   const seededRegistry = createPluginRegistry();
   registerCoreLookupAdapters(seededRegistry);
   registerCoreTemplateDeps(seededRegistry);

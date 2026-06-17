@@ -168,6 +168,29 @@ export class PlumixRuntimeConfigError extends Error {
   }
 }
 
+export class EdgeCacheError extends Error {
+  static {
+    EdgeCacheError.prototype.name = "EdgeCacheError";
+  }
+
+  readonly code: "purge_failed";
+  readonly status: number;
+
+  private constructor(code: "purge_failed", message: string, status: number) {
+    super(message);
+    this.code = code;
+    this.status = status;
+  }
+
+  static purgeFailed(ctx: { status: number }): EdgeCacheError {
+    return new EdgeCacheError(
+      "purge_failed",
+      `edge(): cloudflare purge_cache responded ${String(ctx.status)}`,
+      ctx.status,
+    );
+  }
+}
+
 export class WranglerConfigError extends Error {
   static {
     WranglerConfigError.prototype.name = "WranglerConfigError";

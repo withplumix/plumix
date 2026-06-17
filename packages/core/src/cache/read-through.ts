@@ -18,6 +18,11 @@ interface ReadThroughArgs {
   readonly defer: DeferFn;
   /** Renders the page live. Called once on a miss, never on a hit. */
   readonly render: () => Promise<Response>;
+  /**
+   * The cache tags the stored response should carry. Evaluated after `render`
+   * so it can read the route's resolved entity (e.g. the entry id).
+   */
+  readonly tags: () => readonly string[];
 }
 
 /**
@@ -28,7 +33,7 @@ interface ReadThroughArgs {
  * and touch the cache not at all.
  */
 export async function readThrough(args: ReadThroughArgs): Promise<Response> {
-  const { request, intentKind, cache, defer, render } = args;
+  const { request, intentKind, cache, defer, render, tags } = args;
 
   if (
     intentKind === null ||
@@ -46,7 +51,7 @@ export async function readThrough(args: ReadThroughArgs): Promise<Response> {
 
   const fresh = await render();
   if (responseIsStorable(request.method, fresh.status)) {
-    defer(cache.put(request, fresh.clone()));
+    defer(cache.put(request, fresh.clone(), tags()));
   }
   return fresh;
 }
