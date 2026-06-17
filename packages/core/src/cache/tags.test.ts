@@ -1,10 +1,20 @@
 import { describe, expect, it } from "vitest";
 
-import { entryPurgeTags, pageTags } from "./tags.js";
+import { entryPurgeTags, pageTags, termPurgeTags } from "./tags.js";
 
 describe("entryPurgeTags", () => {
   it("purges the type tag and the entry tag", () => {
     expect(entryPurgeTags("post", 42)).toEqual(["t:post", "e:42"]);
+  });
+});
+
+describe("termPurgeTags", () => {
+  it("purges a type tag for each of the taxonomy's entry types", () => {
+    expect(termPurgeTags(["post", "note"])).toEqual(["t:post", "t:note"]);
+  });
+
+  it("purges nothing for a taxonomy with no entry types", () => {
+    expect(termPurgeTags([])).toEqual([]);
   });
 });
 

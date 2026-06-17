@@ -1,7 +1,7 @@
 import type { AppContext } from "../context/app.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import { tryGetContext } from "../context/stores.js";
-import { entryPurgeTags } from "./tags.js";
+import { entryPurgeTags, termPurgeTags } from "./tags.js";
 
 // Per-request purge accumulator. Entry hooks fire one at a time during a
 // request (a bulk publish fires N), each adding tags here; the dispatcher
@@ -49,10 +49,21 @@ const ENTRY_ACTIONS = [
   "entry:deleted",
 ] as const;
 
+// Term lifecycle actions whose payload's leading arg carries `{ taxonomy }`.
+// A term archive is stored under the `t:<type>` tags of its taxonomy's entry
+// types, so creating, renaming, meta-changing, or deleting a term busts those.
+const TERM_ACTIONS = [
+  "term:created",
+  "term:updated",
+  "term:meta_changed",
+  "term:deleted",
+] as const;
+
 /**
  * Register core's edge-cache purge subscribers. Called at app boot when a
- * cache slot is configured; each entry mutation enqueues `t:<type>` + `e:<id>`
- * for the post-request flush.
+ * cache slot is configured; each entry mutation enqueues `t:<type>` + `e:<id>`,
+ * each term mutation enqueues `t:<type>` for the taxonomy's entry types, for
+ * the post-request flush.
  */
 export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
   const onEntry = (entry: { readonly id: number; readonly type: string }) => {
@@ -62,5 +73,16 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
   };
   for (const action of ENTRY_ACTIONS) {
     hooks.addAction(action as never, onEntry);
+  }
+
+  const onTerm = (term: { readonly taxonomy: string }) => {
+    const ctx = tryGetContext();
+    if (ctx === null) return;
+    const entryTypes =
+      ctx.plugins.termTaxonomies.get(term.taxonomy)?.entryTypes ?? [];
+    enqueuePurgeTags(ctx, termPurgeTags(entryTypes));
+  };
+  for (const action of TERM_ACTIONS) {
+    hooks.addAction(action as never, onTerm as never);
   }
 }
