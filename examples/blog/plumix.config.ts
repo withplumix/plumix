@@ -7,6 +7,7 @@ import {
   cloudflare,
   cloudflareDeployOrigin,
   d1,
+  edge,
   images,
   r2,
 } from "@plumix/runtime-cloudflare";
@@ -49,6 +50,13 @@ export default plumix({
   imageDelivery: process.env.MEDIA_PUBLIC_URL_BASE
     ? images({ zone: process.env.MEDIA_PUBLIC_URL_BASE })
     : undefined,
+  // Edge cache for anonymous public pages. Dormant until the deploy has a
+  // custom-domain zone: `edge()` reads `CF_ZONE_ID` + `CF_CACHE_PURGE_TOKEN`
+  // from the worker env and renders live (no caching) when either is absent,
+  // so this is a no-op on `*.workers.dev`. Attach a domain, then
+  // `wrangler secret put CF_ZONE_ID` / `CF_CACHE_PURGE_TOKEN` (an API token
+  // with the Zone · Cache Purge permission) to activate — no code change.
+  cache: edge({ ttl: 3600, staleWhileRevalidate: 86400 }),
   // Outbound email transport. Top-level so every feature that sends
   // mail (magic-link today; future invite-email, notifications, plugin
   // emails) reuses the same instance — operators wire one transport,
