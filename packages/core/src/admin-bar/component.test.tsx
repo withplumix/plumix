@@ -281,8 +281,8 @@ describe("PlumixAdminBar", () => {
     expect(html).toContain("+ New");
     expect(html).toContain('data-testid="plumix-admin-bar-node-+new:post"');
     expect(html).toContain('data-testid="plumix-admin-bar-node-+new:page"');
-    expect(html).toContain('href="/_plumix/admin/entries/post/create"');
-    expect(html).toContain('href="/_plumix/admin/entries/page/create"');
+    expect(html).toContain('href="/_plumix/admin/entries/posts/create"');
+    expect(html).toContain('href="/_plumix/admin/entries/pages/create"');
   });
 
   test("renders the account as a dropdown with a Profile link and a Sign out button", () => {

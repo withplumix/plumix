@@ -64,10 +64,18 @@ describe("registerCoreAdminBarContributors — +New group", () => {
   });
 
   test("adds one child per registered entry type, in registration order", () => {
-    const nodes = collectAdminBarNodes(
-      withCore(),
-      ctx({ entryTypes: typesMap("post", "page", "media") }),
-    );
+    // The map is keyed by type name; the create href must target the derived
+    // `adminSlug` (`posts`) the admin's `/entries/$slug` route resolves, not
+    // the raw name (`post`) — echoing the name 404s the destination.
+    const types = new Map([
+      ["post", { name: "post", label: "Post" } as never],
+      ["page", { name: "page", label: "Page" } as never],
+      [
+        "media",
+        { name: "media", label: "Media", labels: { plural: "Media" } } as never,
+      ],
+    ]);
+    const nodes = collectAdminBarNodes(withCore(), ctx({ entryTypes: types }));
 
     const children = nodes.filter((n) => n.parent === "+new");
     expect(children.map((n) => n.id)).toEqual([
@@ -76,8 +84,8 @@ describe("registerCoreAdminBarContributors — +New group", () => {
       "+new:media",
     ]);
     expect(children.map((n) => n.href)).toEqual([
-      "/_plumix/admin/entries/post/create",
-      "/_plumix/admin/entries/page/create",
+      "/_plumix/admin/entries/posts/create",
+      "/_plumix/admin/entries/pages/create",
       "/_plumix/admin/entries/media/create",
     ]);
   });
@@ -282,7 +290,8 @@ describe("registerCoreAdminBarContributors — edit-this link", () => {
     expect(nodes.find((n) => n.id === "edit-this")).toEqual({
       id: "edit-this",
       title: "Edit",
-      href: "/_plumix/admin/entries/post/42/edit",
+      // adminSlug (`posts`), not the type name (`post`) — see the +New test.
+      href: "/_plumix/admin/entries/posts/42/edit",
       group: "primary",
       position: 20,
     });
