@@ -54,6 +54,38 @@ describe("entry.revisions.restore", () => {
     expect(live?.title).toBe("Second");
   });
 
+  test("restoring a published revision onto a future-scheduled entry resets publishedAt to now", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithRevisions(),
+    });
+    const created = await h.client.entry.create({
+      title: "Post",
+      slug: "post",
+    });
+    // Publish → captures a `published` revision.
+    await h.client.entry.update({ id: created.id, status: "published" });
+    const [revision] = await h.db.query.entries.findMany({
+      where: eq(entries.type, REVISION_TYPE),
+    });
+    if (!revision) throw new Error("expected a captured revision");
+    // Reschedule into the future, then restore the published revision.
+    const future = new Date(Date.now() + 86_400_000);
+    await h.client.entry.update({
+      id: created.id,
+      status: "scheduled",
+      publishedAt: future,
+    });
+
+    const restored = await h.client.entry.revisions.restore({
+      revisionId: revision.id,
+    });
+
+    expect(restored.status).toBe("published");
+    // Not the leftover future date — that would sort it to the top of feeds.
+    expect(restored.publishedAt?.getTime()).toBeLessThan(future.getTime());
+  });
+
   test("does NOT snapshot the post-restore state — restore is invisible to history", async () => {
     const { h, entryId, revisionId } = await seedEntryWithRevision();
     await h.client.entry.update({ id: entryId, title: "Third" });
