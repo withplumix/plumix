@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/form.js";
 import { Input } from "@/components/ui/input.js";
 import { Label as UILabel } from "@/components/ui/label.js";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group.js";
 import {
   Table,
   TableBody,
@@ -45,6 +46,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table.js";
+import { copyText } from "@/lib/clipboard.js";
 import { toDate } from "@/lib/dates.js";
 import { orpc } from "@/lib/orpc.js";
 import { parseScopesText } from "@/lib/scopes.js";
@@ -606,38 +608,46 @@ function CreateTokenForm({
                 />
               </FormLabel>
               <FormControl>
-                <div className="flex flex-col gap-2">
-                  <UILabel className="flex items-center gap-2 font-normal">
-                    <input
-                      type="radio"
-                      name={field.name}
+                <RadioGroup
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  className="gap-2"
+                >
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem
                       value="inherit"
-                      checked={field.value === "inherit"}
-                      onChange={() => field.onChange("inherit")}
+                      id="api-token-scope-inherit"
                       disabled={pending}
                       data-testid="api-tokens-create-scope-inherit-radio"
                     />
-                    <Trans
-                      id="apiTokens.create.scope.inherit"
-                      message="Inherit all your permissions"
-                    />
-                  </UILabel>
-                  <UILabel className="flex items-center gap-2 font-normal">
-                    <input
-                      type="radio"
-                      name={field.name}
+                    <UILabel
+                      htmlFor="api-token-scope-inherit"
+                      className="font-normal"
+                    >
+                      <Trans
+                        id="apiTokens.create.scope.inherit"
+                        message="Inherit all your permissions"
+                      />
+                    </UILabel>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem
                       value="restrict"
-                      checked={field.value === "restrict"}
-                      onChange={() => field.onChange("restrict")}
+                      id="api-token-scope-restrict"
                       disabled={pending}
                       data-testid="api-tokens-create-scope-restrict-radio"
                     />
-                    <Trans
-                      id="apiTokens.create.scope.restrict"
-                      message="Restrict to specific capabilities"
-                    />
-                  </UILabel>
-                </div>
+                    <UILabel
+                      htmlFor="api-token-scope-restrict"
+                      className="font-normal"
+                    >
+                      <Trans
+                        id="apiTokens.create.scope.restrict"
+                        message="Restrict to specific capabilities"
+                      />
+                    </UILabel>
+                  </div>
+                </RadioGroup>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -718,7 +728,7 @@ function SecretShownDialog({
   const copy = async (): Promise<void> => {
     if (!secret) return;
     try {
-      await navigator.clipboard.writeText(secret);
+      await copyText(secret);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {

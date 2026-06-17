@@ -1,7 +1,11 @@
 import type { HookRegistry } from "../hooks/registry.js";
+import type { RegisteredEntryType } from "../plugin/manifest.js";
 import type { AdminBarNode, BarRenderContext } from "./types.js";
 import { labelSourceText } from "../i18n/label.js";
-import { resolveEntryTypeVisibility } from "../plugin/manifest.js";
+import {
+  deriveAdminSlug,
+  resolveEntryTypeVisibility,
+} from "../plugin/manifest.js";
 import { barMessages } from "./i18n.js";
 
 const SITE_POSITION = 10;
@@ -66,12 +70,19 @@ function editThisContributor(
   const ownerScope = details.authorId === ctx.user.id ? "edit_own" : "edit_any";
   const capability = `entry:${details.type}:${ownerScope}`;
   if (!ctx.auth.can(capability)) return nodes;
+  // Admin routes key on the derived `adminSlug` (`posts`), not the type name
+  // (`post`); echoing the name lands on a 404 list route once you leave the
+  // edit screen. `ctx.entryTypes` is keyed by name, so resolve from there.
+  const adminSlug = adminSlugForType(
+    details.type,
+    ctx.entryTypes.get(details.type),
+  );
   return [
     ...nodes,
     {
       id: "edit-this",
       title: barMessages(ctx.locale).edit,
-      href: `/_plumix/admin/entries/${details.type}/${ctx.queriedEntry.id}/edit`,
+      href: `/_plumix/admin/entries/${adminSlug}/${ctx.queriedEntry.id}/edit`,
       group: "primary",
       position: EDIT_THIS_POSITION,
     },
@@ -92,18 +103,19 @@ function newGroupContributor(
     },
   ];
   let childPosition = 10;
-  for (const [slug, type] of ctx.entryTypes) {
+  for (const [name, type] of ctx.entryTypes) {
     // Private types (e.g. `menu_item`) are managed through their own admin
     // surface, never quick-created from the bar — mirror their `showUI`
     // visibility so they don't leak into the +New menu.
     if (!resolveEntryTypeVisibility(type).showUI) continue;
     additions.push({
-      id: `+new:${slug}`,
+      id: `+new:${name}`,
       // The type's human singular label, not the raw slug. Source-locale
       // text only (like other SSR label sites — see `route/resolve.ts`):
       // the bar has no per-plugin i18n catalog to resolve descriptors.
       title: labelSourceText(type.labels?.singular ?? type.label),
-      href: `/_plumix/admin/entries/${slug}/create`,
+      // Route slug is the derived `adminSlug`, never the type name.
+      href: `/_plumix/admin/entries/${adminSlugForType(name, type)}/create`,
       group: "+new",
       parent: "+new",
       position: childPosition,
@@ -111,6 +123,20 @@ function newGroupContributor(
     childPosition += 10;
   }
   return [...nodes, ...additions];
+}
+
+// Resolve a type name (`post`) to the admin route slug (`posts`) used by the
+// admin's `/entries/$slug` routes, preferring the type's plural label. Falls
+// back to pluralizing the name when the type is absent.
+function adminSlugForType(
+  name: string,
+  type: RegisteredEntryType | undefined,
+): string {
+  const plural = type?.labels?.plural;
+  return deriveAdminSlug(
+    name,
+    plural !== undefined ? labelSourceText(plural) : undefined,
+  );
 }
 
 function accountContributor(

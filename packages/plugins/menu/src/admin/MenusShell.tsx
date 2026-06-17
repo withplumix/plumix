@@ -88,6 +88,9 @@ export function MenusShell(): ReactNode {
     slug === null ? null : (menuList.find((m) => m.slug === slug) ?? null);
   return (
     <div data-testid="menus-shell" className="flex flex-col gap-4">
+      <h1 data-testid="menus-heading" className="text-2xl font-semibold">
+        <Trans id="plugin.menu.shell.heading" message="Menus" />
+      </h1>
       <MenuSelector
         menus={menuList}
         onCreate={handleCreate}

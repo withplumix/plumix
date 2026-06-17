@@ -1,5 +1,5 @@
 import { i18n, setupI18n } from "@lingui/core";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { resolveLabel } from "./label.js";
 
@@ -23,5 +23,17 @@ describe("resolveLabel", () => {
     expect(resolveLabel({ id: "page.label", message: "Pages" }, instance)).toBe(
       "Pages",
     );
+  });
+
+  test("skips Lingui resolution for ids absent from the catalog (no uncompiled-message warning)", () => {
+    const instance = setupI18n({ locale: "en", messages: { en: {} } });
+    const spy = vi.spyOn(instance, "_");
+    expect(
+      resolveLabel(
+        { id: "block.core.heading.input.text", message: "Text" },
+        instance,
+      ),
+    ).toBe("Text");
+    expect(spy).not.toHaveBeenCalled();
   });
 });

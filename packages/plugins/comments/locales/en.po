@@ -69,6 +69,21 @@ msgid "plugin.comments.filter.entryLabel"
 msgstr "Filter by entry id"
 
 #. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.filter.searchPlaceholder"
+msgstr "Search comments…"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.filter.entryPlaceholder"
+msgstr "Entry id…"
+
+#. js-lingui-explicit-id
+#: src/admin/CommentsShell.tsx
+msgid "plugin.comments.heading"
+msgstr "Comments"
+
+#. js-lingui-explicit-id
 #. id: the numeric id of the comment row
 #: src/admin/CommentsShell.tsx
 msgid "plugin.comments.row.selectLabel"

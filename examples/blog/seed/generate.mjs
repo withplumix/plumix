@@ -34,6 +34,10 @@ const settings = [
     "description",
     "Dispatches on design, travel, and the craft of building for the web.",
   ],
+  // Bind each theme location to its menu so the admin's Manage Locations
+  // tab reflects the assignment. The value is the menu term's slug.
+  ["menu_locations", "primary", "primary"],
+  ["menu_locations", "footer", "footer"],
 ];
 
 // ---------------------------------------------------------------------------
@@ -400,7 +404,7 @@ emit("-- Reset demo content (leaves users/auth intact).");
 emit("DELETE FROM entry_term;");
 emit("DELETE FROM entries;");
 emit("DELETE FROM terms;");
-emit("DELETE FROM settings WHERE \"group\" = 'site';");
+emit("DELETE FROM settings WHERE \"group\" IN ('site', 'menu_locations');");
 emit("");
 
 emit("-- Author");

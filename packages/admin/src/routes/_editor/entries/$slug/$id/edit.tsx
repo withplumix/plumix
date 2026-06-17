@@ -19,12 +19,12 @@ import { buildAdminPatternRegistry } from "@/editor/admin-pattern-registry.js";
 import { AutosaveStatusContext } from "@/editor/AutosaveStatus.js";
 import { blockSpecsToPuckComponents } from "@/editor/block-adapter.js";
 import { CoAuthorIndicator } from "@/editor/CoAuthorIndicator.js";
-import { CopyPreviewLinkButton } from "@/editor/CopyPreviewLinkButton.js";
 import { createDebouncer } from "@/editor/debounce.js";
 import { detectStaleAutosave } from "@/editor/detect-stale-autosave.js";
 import { PlumixEditorLayout } from "@/editor/EditorLayout.js";
 import { seedPuckData } from "@/editor/entry-content.js";
 import { readDraft, writeDraft } from "@/editor/local-draft.js";
+import { PreviewButton } from "@/editor/PreviewButton.js";
 import { puckDataToBlockTree } from "@/editor/puck-to-block-tree.js";
 import { registerCoreBlocks } from "@/editor/register-core-blocks.js";
 import { resolveEditorMode } from "@/editor/resolve-editor-mode.js";
@@ -938,7 +938,7 @@ function PuckSpikeRouteInner({
       // would always 409 on mint, so don't offer the action.
       previewLinkAction:
         entryType?.isPublic === false ? undefined : (
-          <CopyPreviewLinkButton
+          <PreviewButton
             mintPreviewLink={() => orpc.entry.createPreviewLink.call({ id })}
           />
         ),
@@ -1270,7 +1270,7 @@ function PlainFormRouteInner({
       revisionsTrigger={revisionsTrigger}
       previewLinkAction={
         entryType.isPublic === false ? undefined : (
-          <CopyPreviewLinkButton
+          <PreviewButton
             mintPreviewLink={() => orpc.entry.createPreviewLink.call({ id })}
           />
         )

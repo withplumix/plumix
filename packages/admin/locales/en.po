@@ -259,8 +259,7 @@ msgstr "{count, plural, one {# published} other {# published}}"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
 msgid "entries.list.bulk.deleteTitle"
-msgstr "{count, plural, one {Delete # entry permanently?} other {Delete # "
-"entries permanently?}}"
+msgstr "{count, plural, one {Delete # entry permanently?} other {Delete # entries permanently?}}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -270,14 +269,12 @@ msgstr "{count, plural, one {Deleted # entry.} other {Deleted # entries.}}"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
 msgid "entries.list.bulk.trashTitle"
-msgstr "{count, plural, one {Move # entry to trash?} other {Move # entries to "
-"trash?}}"
+msgstr "{count, plural, one {Move # entry to trash?} other {Move # entries to trash?}}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.bulk.toastTrashed"
-msgstr "{count, plural, one {Moved # entry to trash.} other {Moved # entries to "
-"trash.}}"
+msgstr "{count, plural, one {Moved # entry to trash.} other {Moved # entries to trash.}}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -294,15 +291,13 @@ msgstr "{count} selected"
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.descriptionWithIp"
-msgstr "{device} signed in {when} from {ip}. The device will need to sign in "
-"again next time."
+msgstr "{device} signed in {when} from {ip}. The device will need to sign in again next time."
 
 #. device: 'Safari on macOS' style label; when: relative-time string
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.description"
-msgstr "{device} signed in {when}. The device will need to sign in again next "
-"time."
+msgstr "{device} signed in {when}. The device will need to sign in again next time."
 
 #. display: user's name or email; lastSeen: pre-formatted relative-time string like '2 minutes ago'
 #. js-lingui-explicit-id
@@ -326,15 +321,13 @@ msgstr "{label} failed to render."
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
 msgid "plugin.errorBoundary.pageBody"
-msgstr "{label} threw an error while rendering. The rest of the admin is "
-"unaffected."
+msgstr "{label} threw an error while rendering. The rest of the admin is unaffected."
 
 #. revoked: number of OTHER sessions just signed out (excluding the current device)
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revokeAll.count"
-msgstr "{revoked, plural, =0 {No other sessions to sign out.} one {Signed out # "
-"other session.} other {Signed out # other sessions.}}"
+msgstr "{revoked, plural, =0 {No other sessions to sign out.} one {Signed out # other session.} other {Signed out # other sessions.}}"
 
 #. words: number of words in the entry's prose blocks
 #. js-lingui-explicit-id
@@ -370,15 +363,12 @@ msgstr "90 days"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.description"
-msgstr "A CLI is requesting an API token for your account. Confirm the code "
-"your CLI is showing matches the one below before approving."
+msgstr "A CLI is requesting an API token for your account. Confirm the code your CLI is showing matches the one below before approving."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.description"
-msgstr "A new API token will be minted for your account and handed to the CLI. "
-"Name it so you can find it later under your profile, and optionally "
-"restrict what it can do."
+msgstr "A new API token will be minted for your account and handed to the CLI. Name it so you can find it later under your profile, and optionally restrict what it can do."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/-errors.ts
@@ -454,8 +444,7 @@ msgstr "Add"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.empty.description"
-msgstr "Add a plugin that registers a post type (e.g. "
-"<0>@plumix/plugin-blog</0>) to see it here."
+msgstr "Add a plugin that registers a post type (e.g. <0>@plumix/plugin-blog</0>) to see it here."
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
@@ -586,8 +575,7 @@ msgstr "Approve"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approved"
-msgstr "Approved. Your CLI should pick up the token within a few seconds — you "
-"can close this tab."
+msgstr "Approved. Your CLI should pick up the token within a few seconds — you can close this tab."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
@@ -697,8 +685,7 @@ msgstr "Can't disable the last administrator. Promote someone else first."
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.error.lastAdmin.update"
-msgstr "Can't do that — this is the last administrator. Promote someone else "
-"first."
+msgstr "Can't do that — this is the last administrator. Promote someone else first."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -922,8 +909,7 @@ msgstr "Confirm delete: {email}"
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.confirmationSent"
-msgstr "Confirmation sent to {email}. The change takes effect once they click "
-"the link."
+msgstr "Confirmation sent to {email}. The change takes effect once they click the link."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
@@ -952,6 +938,11 @@ msgid "userInvite.copy.copied"
 msgstr "Copied"
 
 #. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.copy.copied"
+msgstr "Copied to clipboard"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.copy.idle"
 msgstr "Copy"
@@ -972,15 +963,14 @@ msgid "blockActions.copyJson"
 msgstr "Copy JSON"
 
 #. js-lingui-explicit-id
-#: src/editor/CopyPreviewLinkButton.tsx
+#: src/editor/PreviewButton.tsx
 msgid "editor.previewLink.copy"
 msgstr "Copy preview link"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.secret.description"
-msgstr "Copy the secret now. We won't show it again — losing it means revoking "
-"and re-minting."
+msgstr "Copy the secret now. We won't show it again — losing it means revoking and re-minting."
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -990,10 +980,7 @@ msgstr "Copy token"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.empty.description"
-msgstr "Core ships no settings by design — plugins (or your own plumix.config) "
-"declare pages + groups via <0>ctx.registerSettingsPage</0> and "
-"<1>ctx.registerSettingsGroup</1>. Registered pages appear here with one "
-"card per page."
+msgstr "Core ships no settings by design — plugins (or your own plumix.config) declare pages + groups via <0>ctx.registerSettingsPage</0> and <1>ctx.registerSettingsGroup</1>. Registered pages appear here with one card per page."
 
 #. js-lingui-explicit-id
 #: src/lib/core-settings-i18n.ts
@@ -1016,7 +1003,12 @@ msgid "emailChange.error.fallback"
 msgstr "Couldn't confirm the email change. Try again."
 
 #. js-lingui-explicit-id
-#: src/editor/CopyPreviewLinkButton.tsx
+#: src/editor/EditorLayout.tsx
+msgid "editor.layout.copy.failed"
+msgstr "Couldn't copy to clipboard"
+
+#. js-lingui-explicit-id
+#: src/editor/PreviewButton.tsx
 msgid "editor.previewLink.failed"
 msgstr "Couldn't create a preview link"
 
@@ -1451,14 +1443,12 @@ msgstr "Detach"
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.description"
-msgstr "Devices signed in to this account. Revoke any you don't recognise, or "
-"sign out everywhere except this browser if you suspect a leak."
+msgstr "Devices signed in to this account. Revoke any you don't recognise, or sign out everywhere except this browser if you suspect a leak."
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.description"
-msgstr "Devices that can sign in to this account. Add a new one before deleting "
-"an old one — at least one passkey must remain."
+msgstr "Devices that can sign in to this account. Add a new one before deleting an old one — at least one passkey must remain."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -1479,14 +1469,12 @@ msgstr "Disabled"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.status.description.disabled"
-msgstr "Disabled accounts can't sign in. Re-enabling restores access; their "
-"passkey is still registered."
+msgstr "Disabled accounts can't sign in. Re-enabling restores access; their passkey is still registered."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.status.description.active"
-msgstr "Disabling signs the user out immediately and blocks future sign-ins. "
-"Their entries stay published."
+msgstr "Disabling signs the user out immediately and blocks future sign-ins. Their entries stay published."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -1624,8 +1612,7 @@ msgstr "Email"
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.error.mailerNotConfigured"
-msgstr "Email change requires a magic-link mailer to be configured server-side. "
-"Pass `auth.magicLink` and `mailer:` to `plumix({...})` to enable."
+msgstr "Email change requires a magic-link mailer to be configured server-side. Pass `auth.magicLink` and `mailer:` to `plumix({...})` to enable."
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
@@ -1635,9 +1622,7 @@ msgstr "Email confirmed. Sign in with the new address."
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.description"
-msgstr "Email domains permitted to sign up via OAuth. New OAuth accounts are "
-"created with the role set here. Disabled rows reject signup but "
-"preserve their role mapping."
+msgstr "Email domains permitted to sign up via OAuth. New OAuth accounts are created with the role set here. Disabled rows reject signup but preserve their role mapping."
 
 #. js-lingui-explicit-id
 #: src/lib/core-validation-i18n.ts
@@ -1727,8 +1712,7 @@ msgstr "Entries"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.dialogDescription"
-msgstr "Entry assignments to this term are removed. If the term has children, "
-"they become root-level automatically."
+msgstr "Entry assignments to this term are removed. If the term has children, they become root-level automatically."
 
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
@@ -1892,14 +1876,12 @@ msgstr "id must be a positive decimal integer"
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.sent.description"
-msgstr "If an account exists for this email, we sent a sign-in link. The link "
-"expires in 15 minutes."
+msgstr "If an account exists for this email, we sent a sign-in link. The link expires in 15 minutes."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.confirm.description"
-msgstr "If this user authored any entries, the next step reassigns them. Leave "
-"\"Keep entries as-is\" if they have none."
+msgstr "If this user authored any entries, the next step reassigns them. Leave \"Keep entries as-is\" if they have none."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
@@ -2174,6 +2156,11 @@ msgid "editor.device.mobile"
 msgstr "Mobile"
 
 #. js-lingui-explicit-id
+#: src/editor/PreviewButton.tsx
+msgid "editor.preview.more"
+msgstr "More preview options"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
 msgid "entries.list.bulk.trash"
 msgstr "Move to trash"
@@ -2207,8 +2194,7 @@ msgstr "Moving…"
 #. js-lingui-explicit-id
 #: src/editor/HeadingAuditPanel.tsx
 msgid "editor.headingAudit.multipleH1"
-msgstr "Multiple <h1> on the page ({count} found). Keep only one top-level "
-"heading."
+msgstr "Multiple <h1> on the page ({count} found). Keep only one top-level heading."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -2363,8 +2349,7 @@ msgstr "No content types yet"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.list.empty"
-msgstr "No domains configured. OAuth signup is closed until at least one "
-"enabled domain is added."
+msgstr "No domains configured. OAuth signup is closed until at least one enabled domain is added."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
@@ -2379,8 +2364,7 @@ msgstr "No heading-structure issues detected."
 #. js-lingui-explicit-id
 #: src/lib/mailer-errors.ts
 msgid "mailer.test.error.notConfigured"
-msgstr "No mailer adapter is configured. Pass a `mailer:` to `plumix({...})` "
-"(e.g. consoleMailer() for dev, or your Resend/Postmark/SES wrapper)."
+msgstr "No mailer adapter is configured. Pass a `mailer:` to `plumix({...})` (e.g. consoleMailer() for dev, or your Resend/Postmark/SES wrapper)."
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
@@ -2410,8 +2394,7 @@ msgstr "No matches."
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.noAuthenticator"
-msgstr "No passkey is available on this device. Try signing in on the device "
-"where you registered."
+msgstr "No passkey is available on this device. Try signing in on the device where you registered."
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -2421,8 +2404,7 @@ msgstr "No passkeys registered. Add one to enable sign-in."
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.empty"
-msgstr "No plumix-managed sessions. Your sign-in is handled by an external "
-"identity provider."
+msgstr "No plumix-managed sessions. Your sign-in is handled by an external identity provider."
 
 #. js-lingui-explicit-id
 #: src/components/shell/command-palette.tsx
@@ -2517,13 +2499,17 @@ msgstr "OAuth signup is unavailable until an admin has finished setup."
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.capabilities.help"
-msgstr "One capability per line. The token can never exceed the caps your role "
-"grants — this is an additional narrowing."
+msgstr "One capability per line. The token can never exceed the caps your role grants — this is an additional narrowing."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.role.selfReadonly"
 msgstr "Only another administrator can change your role."
+
+#. js-lingui-explicit-id
+#: src/editor/PreviewButton.tsx
+msgid "editor.preview.tooltip"
+msgstr "Open a preview in a new tab"
 
 #. js-lingui-explicit-id
 #: src/editor/PatternRefPreview.tsx
@@ -2611,8 +2597,7 @@ msgstr "Pending change to <code>{newEmail}</code> — expires {expiresAt}"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.description"
-msgstr "Permanent. Their entries stay, but you'll choose who inherits "
-"authorship."
+msgstr "Permanent. Their entries stay, but you'll choose who inherits authorship."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -2632,8 +2617,7 @@ msgstr "Permissions"
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.description.self"
-msgstr "Personal access tokens for CLIs, MCP servers, CI bots, or any other "
-"non-browser client. The full secret is shown once at mint time."
+msgstr "Personal access tokens for CLIs, MCP servers, CI bots, or any other non-browser client. The full secret is shown once at mint time."
 
 #. blockTitle: the parent block's registered title (e.g. 'Cover', 'Gallery')
 #. js-lingui-explicit-id
@@ -2677,7 +2661,12 @@ msgid "apiTokens.col.prefix"
 msgstr "Prefix"
 
 #. js-lingui-explicit-id
-#: src/editor/CopyPreviewLinkButton.tsx
+#: src/editor/PreviewButton.tsx
+msgid "editor.preview.open"
+msgstr "Preview"
+
+#. js-lingui-explicit-id
+#: src/editor/PreviewButton.tsx
 msgid "editor.previewLink.copied"
 msgstr "Preview link copied to clipboard"
 
@@ -2794,9 +2783,7 @@ msgstr "Reference missing — remove or re-pick"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.cardDescription"
-msgstr "Removes this term and unassigns it from any entries that use it. "
-"Descendants are promoted to root level (their entries keep their other "
-"term assignments)."
+msgstr "Removes this term and unassigns it from any entries that use it. Descendants are promoted to root level (their entries keep their other term assignments)."
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -3042,8 +3029,7 @@ msgstr "Search blocks and patterns"
 #. js-lingui-explicit-id
 #: src/editor/EditorLayout.tsx
 msgid "editor.layout.slashMenu.description"
-msgstr "Search blocks and patterns by title or keyword and press Enter to "
-"insert."
+msgstr "Search blocks and patterns by title or keyword and press Enter to insert."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
@@ -3163,10 +3149,7 @@ msgstr "Sending…"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.description"
-msgstr "Sends a one-off message via the same transport magic-link uses. "
-"Failures surface here verbatim — distinct from the magic-link request "
-"flow, which intentionally swallows mailer errors so the response shape "
-"can't leak whether an email is registered."
+msgstr "Sends a one-off message via the same transport magic-link uses. Failures surface here verbatim — distinct from the magic-link request flow, which intentionally swallows mailer errors so the response shape can't leak whether an email is registered."
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
@@ -3176,8 +3159,7 @@ msgstr "Separate with commas"
 #. js-lingui-explicit-id
 #: src/routes/_auth/accept-invite/$token.tsx
 msgid "auth.acceptInvite.description"
-msgstr "Set up a passkey to finish creating your account. Your browser or "
-"device will guide you through the prompt."
+msgstr "Set up a passkey to finish creating your account. Your browser or device will guide you through the prompt."
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/bootstrap.tsx
@@ -3218,8 +3200,7 @@ msgstr "Settings"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.success.description"
-msgstr "Share the link below with {email}. They'll enrol a passkey the first "
-"time they open it. Link expires in 7 days."
+msgstr "Share the link below with {email}. They'll enrol a passkey the first time they open it. Link expires in 7 days."
 
 #. js-lingui-explicit-id
 #: src/components/error-boundary-fallback.tsx
@@ -3340,14 +3321,12 @@ msgstr "Slug may only contain lowercase letters, digits, and hyphens."
 #. js-lingui-explicit-id
 #: src/lib/email-change-errors.ts
 msgid "emailChange.error.emailTaken"
-msgstr "Someone else claimed that email between the request and your click. "
-"Request a new change to a different address."
+msgstr "Someone else claimed that email between the request and your click. Request a new change to a different address."
 
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.description"
-msgstr "Someone else published changes to this entry while you had pending "
-"edits. Pick which version to keep before continuing."
+msgstr "Someone else published changes to this entry while you had pending edits. Pick which version to keep before continuing."
 
 #. js-lingui-explicit-id
 #: src/components/error-boundary-fallback.tsx
@@ -3449,15 +3428,12 @@ msgstr "Terms"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.feedback.ok"
-msgstr "Test message sent to {to}. If it doesn't arrive within a minute, check "
-"your transport adapter's logs."
+msgstr "Test message sent to {to}. If it doesn't arrive within a minute, check your transport adapter's logs."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.description"
-msgstr "Test that the configured outbound-email transport actually delivers. "
-"Used by magic-link sign-in, invite emails, and any plugin that opts "
-"into the shared mailer."
+msgstr "Test that the configured outbound-email transport actually delivers. Used by magic-link sign-in, invite emails, and any plugin that opts into the shared mailer."
 
 #. js-lingui-explicit-id
 #: src/editor/StyleTab.tsx
@@ -3487,8 +3463,7 @@ msgstr "That confirmation link expired. Request a new email change."
 #. js-lingui-explicit-id
 #: src/lib/email-change-errors.ts
 msgid "emailChange.error.missingToken"
-msgstr "That confirmation link is missing its token. Request a new email "
-"change."
+msgstr "That confirmation link is missing its token. Request a new email change."
 
 #. js-lingui-explicit-id
 #: src/lib/email-change-errors.ts
@@ -3558,14 +3533,12 @@ msgstr "That sign-in link expired. Request a new one."
 #. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.missingToken"
-msgstr "That sign-in link is missing its token. Request a new one and try "
-"again."
+msgstr "That sign-in link is missing its token. Request a new one and try again."
 
 #. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.tokenInvalid"
-msgstr "That sign-in link isn't valid. It may have already been used. Request a "
-"new one."
+msgstr "That sign-in link isn't valid. It may have already been used. Request a new one."
 
 #. js-lingui-explicit-id
 #: src/lib/email-change-errors.ts
@@ -3581,39 +3554,33 @@ msgstr "The account this confirmation belongs to is disabled."
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/pages/$.tsx
 msgid "pluginPage.notLoaded.body"
-msgstr "The admin manifest declares a page at <code>{path}</code> but no React "
-"component has been registered for it."
+msgstr "The admin manifest declares a page at <code>{path}</code> but no React component has been registered for it."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.description"
-msgstr "The CLI shows an 8-character code split with a dash — \"ABCD-EFGH\". "
-"Letters and digits only, no zeros or ones."
+msgstr "The CLI shows an 8-character code split with a dash — \"ABCD-EFGH\". Letters and digits only, no zeros or ones."
 
 #. name: the user-chosen passkey nickname (e.g. 'MacBook', 'iPhone')
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.delete.description"
-msgstr "The device that registered \"{name}\" will no longer be able to sign "
-"in. You can re-enrol it later."
+msgstr "The device that registered \"{name}\" will no longer be able to sign in. You can re-enrol it later."
 
 #. js-lingui-explicit-id
 #: src/lib/mailer-errors.ts
 msgid "mailer.test.error.sendFailed"
-msgstr "The mailer adapter threw an error during send. Check the worker logs "
-"for the underlying error."
+msgstr "The mailer adapter threw an error during send. Check the worker logs for the underlying error."
 
 #. js-lingui-explicit-id
 #: src/routes/__root.tsx
 msgid "notFound.description"
-msgstr "The page you're looking for doesn't exist or the resource isn't "
-"registered. Check the URL and try again."
+msgstr "The page you're looking for doesn't exist or the resource isn't registered. Check the URL and try again."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.challengeMismatch"
-msgstr "The passkey was created for a different invite. Please reload and try "
-"again."
+msgstr "The passkey was created for a different invite. Please reload and try again."
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
@@ -3623,8 +3590,7 @@ msgstr "The provider didn't return an email address."
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.emailUnverified"
-msgstr "The provider hasn't verified your email yet. Verify it there, then try "
-"again."
+msgstr "The provider hasn't verified your email yet. Verify it there, then try again."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/-errors.ts
@@ -3634,14 +3600,12 @@ msgstr "The selected parent belongs to a different taxonomy."
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.revoke.description"
-msgstr "The token stops working immediately. Any client using it will start "
-"getting 401s on the next request."
+msgstr "The token stops working immediately. Any client using it will start getting 401s on the next request."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.description"
-msgstr "They'll enrol a passkey the first time they open the invite link. No "
-"password required."
+msgstr "They'll enrol a passkey the first time they open the invite link. No password required."
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
@@ -3656,8 +3620,7 @@ msgstr "This code expired before you could finish — re-run your CLI."
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.error.alreadyApproved"
-msgstr "This code has already been approved. Re-run your CLI if it didn't pick "
-"the token up."
+msgstr "This code has already been approved. Re-run your CLI if it didn't pick the token up."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
@@ -3727,14 +3690,12 @@ msgstr "This passkey no longer exists. Refresh the list."
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.deleteDialog.description"
-msgstr "This permanently deletes the entry and its revisions. It cannot be "
-"undone."
+msgstr "This permanently deletes the entry and its revisions. It cannot be undone."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
 msgid "entries.list.bulk.deleteBody"
-msgstr "This permanently deletes the selected entries and their revisions. It "
-"cannot be undone."
+msgstr "This permanently deletes the selected entries and their revisions. It cannot be undone."
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
@@ -3754,8 +3715,7 @@ msgstr "This session no longer exists. Refresh the list."
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.empty.description"
-msgstr "This settings page doesn't reference any registered groups yet. Plugins "
-"compose pages with the registerSettingsPage helper:"
+msgstr "This settings page doesn't reference any registered groups yet. Plugins compose pages with the registerSettingsPage helper:"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -3791,8 +3751,7 @@ msgstr "Token name"
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.description.admin"
-msgstr "Tokens minted by this user. You can revoke any of them — minting "
-"requires the owner's authenticated browser session."
+msgstr "Tokens minted by this user. You can revoke any of them — minting requires the owner's authenticated browser session."
 
 #. js-lingui-explicit-id
 #: src/editor/BlockActionsPanel.tsx
@@ -3880,14 +3839,12 @@ msgstr "Update"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.description.other"
-msgstr "Update this account's details. Role changes invalidate existing "
-"sessions immediately."
+msgstr "Update this account's details. Role changes invalidate existing sessions immediately."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.description.self"
-msgstr "Update your display name. Role and account state are managed by "
-"administrators."
+msgstr "Update your display name. Role and account state are managed by administrators."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -3972,9 +3929,7 @@ msgstr "Warning:"
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.dialog.description"
-msgstr "We'll send a confirmation link to the new address. The change takes "
-"effect after the link is clicked. Sessions on this account are signed "
-"out at that point — re-sign-in uses the new email."
+msgstr "We'll send a confirmation link to the new address. The change takes effect after the link is clicked. Sessions on this account are signed out at that point — re-sign-in uses the new email."
 
 #. greeting: the user's display name or email
 #. js-lingui-explicit-id
@@ -4030,8 +3985,7 @@ msgstr "You've reached the limit of passkeys for this account."
 #. js-lingui-explicit-id
 #: src/components/profile/language-card.tsx
 msgid "profile.language.description"
-msgstr "Your admin chrome renders in this language. The page reloads after you "
-"switch so the new translations apply everywhere."
+msgstr "Your admin chrome renders in this language. The page reloads after you switch so the new translations apply everywhere."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
@@ -4076,20 +4030,17 @@ msgstr "Your draft is out of date"
 #. js-lingui-explicit-id
 #: src/lib/magic-link-errors.ts
 msgid "magicLink.error.domainNotAllowed"
-msgstr "Your email domain isn't on the allowlist anymore. Ask an administrator "
-"to add it."
+msgstr "Your email domain isn't on the allowlist anymore. Ask an administrator to add it."
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.domainNotAllowed"
-msgstr "Your email domain isn't on the allowlist. Ask an administrator to add "
-"it."
+msgstr "Your email domain isn't on the allowlist. Ask an administrator to add it."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.counterReplay"
-msgstr "Your passkey appears to have been used on another device. Please "
-"re-register."
+msgstr "Your passkey appears to have been used on another device. Please re-register."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
