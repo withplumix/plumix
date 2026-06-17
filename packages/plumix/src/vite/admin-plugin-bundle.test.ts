@@ -190,6 +190,13 @@ describe("assemblePluginAdminBundle", () => {
     expect(css).toContain("var(--card)");
     expect(css).toContain("var(--destructive)");
     expect(css).toContain(".border-dashed");
+    // Utilities must land in the dedicated `plumix-plugins` cascade layer
+    // (the admin's globals.css orders it lowest), NOT the shared `utilities`
+    // layer. Otherwise a plugin re-emitting a base utility like `.hidden`
+    // loads after the admin CSS and overrides its own responsive utilities —
+    // the cascade collision that collapsed the admin sidebar.
+    expect(css).toMatch(/@layer plumix-plugins\s*\{/);
+    expect(css).not.toMatch(/@layer utilities\s*\{/);
   });
 
   test("auto-emits register* calls for ctx-registered admin pages and field types", async () => {

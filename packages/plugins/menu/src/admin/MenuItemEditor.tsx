@@ -98,14 +98,17 @@ export function MenuItemEditor({
     return <div data-testid="menu-item-editor-loading" />;
   }
   return (
-    <div data-testid="menu-item-editor">
+    <div data-testid="menu-item-editor" className="flex flex-col gap-4">
       <ItemsPicker
         tabs={pickerTabs.data ?? []}
         state={state}
         dispatch={dispatch}
       />
       {state.items.length === 0 ? (
-        <div data-testid="menu-item-list-empty">
+        <div
+          data-testid="menu-item-list-empty"
+          className="text-muted-foreground text-sm"
+        >
           <Trans
             id="plugin.menu.itemEditor.emptyState"
             message="No items yet."
@@ -130,13 +133,14 @@ function LocationsBindings({
   const locations = useLocationsList();
   const assign = useAssignLocation();
   return (
-    <div data-testid="menu-settings-locations">
+    <div data-testid="menu-settings-locations" className="flex flex-col gap-1">
       {(locations.data ?? []).map((row) => {
         const isBound = row.boundTermId === termId;
         return (
           <label
             key={row.id}
             data-testid={`menu-settings-location-row-${row.id}`}
+            className="flex items-center gap-2 text-sm"
           >
             <input
               type="checkbox"
@@ -178,11 +182,18 @@ function MenuSettingsPanel({
     save.error instanceof Error && save.error.message === "version_mismatch";
   const conflict = isVersionMismatch && dismissedAt !== state.version;
   return (
-    <div data-testid="menu-settings-panel">
+    <div
+      data-testid="menu-settings-panel"
+      className="border-border bg-card flex flex-col gap-4 rounded-lg border p-4"
+    >
       <LocationsBindings termId={state.termId} slug={state.slug} />
       <MaxDepthField state={state} dispatch={dispatch} />
       {conflict ? (
-        <div data-testid="menu-conflict-banner" role="alert">
+        <div
+          data-testid="menu-conflict-banner"
+          role="alert"
+          className="text-destructive flex items-center justify-between gap-3 text-sm"
+        >
           <Trans
             id="plugin.menu.itemEditor.conflictBanner"
             message="Another editor saved changes since you loaded this menu."
@@ -190,6 +201,7 @@ function MenuSettingsPanel({
           <button
             type="button"
             data-testid="menu-conflict-reload"
+            className="border-border hover:bg-muted rounded border bg-transparent px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             onClick={() => {
               setDismissedAt(state.version);
               save.reset();
@@ -205,40 +217,43 @@ function MenuSettingsPanel({
           </button>
         </div>
       ) : null}
-      <button
-        type="button"
-        data-testid="menu-save-button"
-        disabled={save.isPending}
-        onClick={() => {
-          // Snapshot the keys at click time so onSuccess can reattach
-          // ids to the right items even if the user mutated state
-          // while the save was in flight.
-          const snapshotKeys = state.items.map((item) => item.key);
-          save.mutate(
-            {
-              termId: state.termId,
-              version: state.version,
-              maxDepth: state.maxDepth,
-              items: buildSavePayload(state),
-            },
-            {
-              onSuccess: (result) => {
-                dispatch({
-                  type: "applySaveResult",
-                  result: {
-                    version: result.version,
-                    itemIds: result.itemIds,
-                    snapshotKeys,
-                  },
-                });
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          data-testid="menu-save-button"
+          disabled={save.isPending}
+          className="bg-primary text-primary-foreground hover:bg-primary/90 rounded px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={() => {
+            // Snapshot the keys at click time so onSuccess can reattach
+            // ids to the right items even if the user mutated state
+            // while the save was in flight.
+            const snapshotKeys = state.items.map((item) => item.key);
+            save.mutate(
+              {
+                termId: state.termId,
+                version: state.version,
+                maxDepth: state.maxDepth,
+                items: buildSavePayload(state),
               },
-            },
-          );
-        }}
-      >
-        <Trans id="plugin.menu.itemEditor.saveButton" message="Save menu" />
-      </button>
-      <DeleteMenuButton termId={state.termId} />
+              {
+                onSuccess: (result) => {
+                  dispatch({
+                    type: "applySaveResult",
+                    result: {
+                      version: result.version,
+                      itemIds: result.itemIds,
+                      snapshotKeys,
+                    },
+                  });
+                },
+              },
+            );
+          }}
+        >
+          <Trans id="plugin.menu.itemEditor.saveButton" message="Save menu" />
+        </button>
+        <DeleteMenuButton termId={state.termId} />
+      </div>
     </div>
   );
 }
@@ -269,7 +284,10 @@ function MaxDepthField({
   const parsed = Number.parseInt(draft, 10);
   const rejected = Number.isFinite(parsed) && parsed !== state.maxDepth;
   return (
-    <label data-testid="menu-settings-max-depth-row">
+    <label
+      data-testid="menu-settings-max-depth-row"
+      className="flex items-center gap-2 text-sm font-medium"
+    >
       <Trans id="plugin.menu.itemEditor.maxDepthLabel" message="Max depth" />
       <input
         type="number"
@@ -284,9 +302,13 @@ function MaxDepthField({
             dispatch({ type: "updateMaxDepth", value: nextParsed });
           }
         }}
+        className="border-input bg-background focus-visible:ring-ring h-9 w-20 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
       />
       {rejected ? (
-        <span data-testid="menu-settings-max-depth-error">
+        <span
+          data-testid="menu-settings-max-depth-error"
+          className="text-destructive text-sm font-normal"
+        >
           <Trans
             id="plugin.menu.itemEditor.maxDepthRejected"
             message="Cannot set below the current deepest item."
@@ -305,6 +327,7 @@ function DeleteMenuButton({ termId }: { readonly termId: number }): ReactNode {
       type="button"
       data-testid="menu-delete-button"
       disabled={remove.isPending}
+      className="text-destructive border-border hover:bg-muted rounded border bg-transparent px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
       onClick={() => {
         if (
           typeof window !== "undefined" &&
@@ -337,9 +360,12 @@ function ItemsPicker({
       : (state.items.find((item) => item.key === state.relinkTargetKey) ??
         null);
   return (
-    <div data-testid="menu-items-picker">
+    <div data-testid="menu-items-picker" className="flex flex-col gap-3">
       {relinkTarget !== null ? (
-        <div data-testid="menu-picker-relink-banner">
+        <div
+          data-testid="menu-picker-relink-banner"
+          className="border-border bg-card flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm"
+        >
           <span>
             {i18n._(
               M.relinkBanner.id,
@@ -350,6 +376,7 @@ function ItemsPicker({
           <button
             type="button"
             data-testid="menu-picker-relink-cancel"
+            className="border-border hover:bg-muted rounded border bg-transparent px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             onClick={() => {
               dispatch({ type: "cancelRelink" });
             }}
@@ -358,7 +385,10 @@ function ItemsPicker({
           </button>
         </div>
       ) : null}
-      <div data-testid="menu-picker-tabs">
+      <div
+        data-testid="menu-picker-tabs"
+        className="border-border flex items-center gap-1 border-b"
+      >
         {tabs.map((tab) => (
           <button
             key={tab.kind + (tab.target ?? "")}
@@ -368,6 +398,9 @@ function ItemsPicker({
             onClick={() => {
               setActiveTab(tab.kind);
             }}
+            className={`hover:bg-muted rounded px-3 py-1.5 text-sm ${
+              activeTab === tab.kind ? "bg-muted font-medium" : ""
+            }`}
           >
             {tab.tabLabel}
           </button>
@@ -394,7 +427,10 @@ function CustomUrlPickerPanel({
   const [label, setLabel] = useState("");
   const isRelink = relinkTargetKey !== null;
   return (
-    <div data-testid="menu-picker-custom-panel">
+    <div
+      data-testid="menu-picker-custom-panel"
+      className="border-border bg-card flex flex-wrap items-center gap-2 rounded-lg border p-4"
+    >
       <input
         type="text"
         data-testid="menu-picker-custom-url"
@@ -402,6 +438,7 @@ function CustomUrlPickerPanel({
         onChange={(event) => {
           setUrl(event.target.value);
         }}
+        className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
       />
       <input
         type="text"
@@ -410,10 +447,12 @@ function CustomUrlPickerPanel({
         onChange={(event) => {
           setLabel(event.target.value);
         }}
+        className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
       />
       <button
         type="button"
         data-testid="menu-picker-custom-add"
+        className="bg-primary text-primary-foreground hover:bg-primary/90 rounded px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
         onClick={() => {
           if (url.trim() === "") return;
           if (relinkTargetKey !== null) {
@@ -527,7 +566,7 @@ function MenuTree({
       onDragCancel={reset}
     >
       <SortableContext items={itemKeys} strategy={verticalListSortingStrategy}>
-        <div data-testid="menu-tree">
+        <div data-testid="menu-tree" className="flex flex-col gap-1">
           {state.items.map((item) => (
             <SortableTreeRow
               key={item.key}
@@ -585,6 +624,9 @@ function SortableTreeRow({
       onClick={() => {
         dispatch({ type: "selectItem", key: item.key });
       }}
+      className={`border-border bg-card flex items-center gap-2 rounded-md border px-3 py-2 ${
+        selected ? "outline-primary outline-2 outline-offset-1" : ""
+      }`}
     >
       <button
         type="button"
@@ -603,6 +645,7 @@ function SortableTreeRow({
         onClick={(event) => {
           event.stopPropagation();
         }}
+        className="text-muted-foreground hover:bg-muted cursor-grab rounded px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
       >
         ⋮⋮
       </button>
@@ -610,16 +653,20 @@ function SortableTreeRow({
         <span
           data-testid={`menu-item-warning-${String(id)}`}
           aria-label={i18n._(M.brokenLinkAria)}
+          className="text-destructive"
         >
           ⚠
         </span>
       ) : null}
-      <span>{displayLabel}</span>
+      <span className="flex-1 truncate text-sm font-medium">
+        {displayLabel}
+      </span>
       {isBroken ? (
         <>
           <button
             type="button"
             data-testid={`menu-item-relink-${String(id)}`}
+            className="hover:bg-muted rounded px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
             onClick={(event) => {
               event.stopPropagation();
               dispatch({ type: "startRelink", key: item.key });
@@ -633,6 +680,7 @@ function SortableTreeRow({
           <button
             type="button"
             data-testid={`menu-item-convert-${String(id)}`}
+            className="hover:bg-muted rounded px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
             onClick={(event) => {
               event.stopPropagation();
               dispatch({ type: "convertToCustom", key: item.key });
@@ -649,6 +697,7 @@ function SortableTreeRow({
         type="button"
         data-testid={`menu-item-remove-${String(id)}`}
         disabled={isUnauthorized}
+        className="text-destructive hover:bg-muted rounded px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
         onClick={(event) => {
           event.stopPropagation();
           dispatch({ type: "removeItem", key: item.key });
@@ -673,11 +722,15 @@ function ItemDetailPanel({
       : (state.items.find((item) => item.key === state.selectedKey) ?? null);
   if (!selected) return <div data-testid="menu-item-detail-empty" />;
   return (
-    <div data-testid="menu-item-detail-panel">
+    <div
+      data-testid="menu-item-detail-panel"
+      className="border-border bg-card flex flex-col gap-1 rounded-lg border p-4"
+    >
       <input
         type="text"
         data-testid="menu-item-detail-title"
         value={selected.title ?? ""}
+        className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
         onChange={(event) => {
           const next = event.target.value;
           dispatch({
