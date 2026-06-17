@@ -1,12 +1,40 @@
 import { describe, expect, test } from "vitest";
 
+import type { BlockSpec } from "./block-registry.js";
+import { createBlockRegistry } from "./block-registry.js";
+import { headingBlock } from "./heading/index.js";
+import {
+  tableBlock,
+  tableBodyRowBlock,
+  tableCellBlock,
+  tableHeaderCellBlock,
+  tableHeaderRowBlock,
+} from "./table/index.js";
 import { validateEntryContent } from "./validate-content.js";
 
+const leaf = (name: string): BlockSpec => ({ name, render: () => null });
 const registry = {
-  has(name: string): boolean {
-    return name === "core/heading" || name === "core/group";
+  get(name: string): BlockSpec | undefined {
+    if (name === "core/heading") return leaf(name);
+    // A content slot with no `allowedBlocks` — unconstrained.
+    if (name === "core/group")
+      return {
+        name,
+        render: () => null,
+        inputs: [{ name: "content", type: "slot" }],
+      };
+    return undefined;
   },
 };
+
+const tableRegistry = createBlockRegistry([
+  tableBlock,
+  tableHeaderRowBlock,
+  tableBodyRowBlock,
+  tableHeaderCellBlock,
+  tableCellBlock,
+  headingBlock,
+]);
 
 describe("validateEntryContent", () => {
   test("accepts a valid leaf-block envelope", () => {
@@ -99,6 +127,73 @@ describe("validateEntryContent", () => {
         ],
       },
       registry,
+    );
+    expect(result).toEqual({ ok: true });
+  });
+
+  test("rejects a child a slot's allowedBlocks doesn't permit", () => {
+    const result = validateEntryContent(
+      {
+        version: "plumix.v2",
+        blocks: [
+          {
+            id: "t1",
+            name: "core/table",
+            attrs: {
+              rows: [
+                {
+                  id: "h1",
+                  name: "core/heading",
+                  attrs: { level: 2, text: "nope" },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      tableRegistry,
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        code: "disallowed_child",
+        nodeName: "core/heading",
+        slotName: "rows",
+        path: "blocks[0].rows[0]",
+      }),
+    );
+  });
+
+  test("accepts a valid table tree", () => {
+    const result = validateEntryContent(
+      {
+        version: "plumix.v2",
+        blocks: [
+          {
+            id: "t1",
+            name: "core/table",
+            attrs: {
+              rows: [
+                {
+                  id: "r1",
+                  name: "core/table-body-row",
+                  attrs: {
+                    cells: [
+                      {
+                        id: "c1",
+                        name: "core/table-cell",
+                        attrs: { text: "x" },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      tableRegistry,
     );
     expect(result).toEqual({ ok: true });
   });

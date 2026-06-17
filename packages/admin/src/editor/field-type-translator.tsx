@@ -76,7 +76,14 @@ export function translateField(
       };
     }
     case "slot":
-      return { type: "slot", label };
+      // `allowedBlocks` (when set) restricts which blocks the editor lets
+      // authors drop into this slot — Puck's component keys are the plumix
+      // block names, so the whitelist passes straight through.
+      return {
+        type: "slot",
+        label,
+        ...(input.allowedBlocks ? { allow: [...input.allowedBlocks] } : {}),
+      };
     case "richtext":
       return {
         type: "richtext",
