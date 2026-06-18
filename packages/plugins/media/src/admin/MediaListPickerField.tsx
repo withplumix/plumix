@@ -1,7 +1,8 @@
 import type { MessageDescriptor } from "plumix/i18n";
 import type { MetaBoxFieldManifestEntry } from "plumix/plugin";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { Button, Dialog, DialogContent, DialogTitle } from "plumix/admin/ui";
 import { useLingui } from "plumix/i18n";
 
 import { MediaLibrary } from "./MediaLibrary.js";
@@ -209,9 +210,10 @@ export function MediaListPickerField({
         </ul>
       )}
       <div className="flex items-center gap-2">
-        <button
+        <Button
           type="button"
-          className="hover:bg-muted rounded border px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+          variant="outline"
+          size="sm"
           disabled={disabled || atMax}
           onClick={() => setOpen(true)}
           data-testid={`${testId}-add`}
@@ -219,7 +221,7 @@ export function MediaListPickerField({
           {value.length === 0
             ? i18n._(M.buttonSelect)
             : i18n._(M.buttonAddMore)}
-        </button>
+        </Button>
         {max !== undefined ? (
           <span
             className="text-muted-foreground text-xs"
@@ -287,9 +289,10 @@ function MediaListItem({
           </p>
         )}
       </div>
-      <button
+      <Button
         type="button"
-        className="hover:bg-muted rounded px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+        variant="ghost"
+        size="icon-xs"
         disabled={disabled || index === 0}
         onClick={() => onMove(index, -1)}
         aria-label={i18n._(M.moveUpAria.id, ariaValues, {
@@ -298,10 +301,11 @@ function MediaListItem({
         data-testid={`${rowTestId}-up`}
       >
         ↑
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
-        className="hover:bg-muted rounded px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+        variant="ghost"
+        size="icon-xs"
         disabled={disabled || index === count - 1}
         onClick={() => onMove(index, 1)}
         aria-label={i18n._(M.moveDownAria.id, ariaValues, {
@@ -310,10 +314,11 @@ function MediaListItem({
         data-testid={`${rowTestId}-down`}
       >
         ↓
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
-        className="hover:bg-muted rounded px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+        variant="ghost"
+        size="icon-xs"
         disabled={disabled}
         onClick={() => onRemove(index)}
         aria-label={i18n._(M.removeAria.id, ariaValues, {
@@ -322,15 +327,16 @@ function MediaListItem({
         data-testid={`${rowTestId}-remove`}
       >
         ✕
-      </button>
+      </Button>
     </li>
   );
 }
 
-// Modal that hosts MediaLibrary in picker mode. Doesn't close on
-// `onSelect` — multi-select stays open until the user clicks Cancel
-// or the parent's effect closes it on `atMax`. Window-level Escape
-// listener mirrors the single-pick modal in MediaPickerField.
+// Modal that hosts MediaLibrary in picker mode, on the shared `Dialog`
+// from `plumix/admin/ui`. Doesn't close on `onSelect` — multi-select
+// stays open until the user clicks Cancel or the parent closes it on
+// reaching `max`. Radix handles the focus trap, Escape, and backdrop
+// dismiss (routed through `onOpenChange` → `onCancel`).
 function MediaListPickerModal({
   accept,
   onSelect,
@@ -343,36 +349,30 @@ function MediaListPickerModal({
   readonly testId: string;
 }): ReactNode {
   const { i18n } = useLingui();
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") onCancel();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onCancel]);
 
   return (
-    <div
-      data-testid={testId}
-      role="dialog"
-      aria-modal="true"
-      aria-label={i18n._(M.modalAria)}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onCancel();
+    <Dialog
+      open
+      onOpenChange={(next) => {
+        if (!next) onCancel();
       }}
     >
-      <div
-        className="bg-background relative flex max-h-[90vh] w-full max-w-5xl flex-col overflow-y-auto rounded-lg p-4 shadow-lg"
-        data-testid={`${testId}-panel`}
+      <DialogContent
+        data-testid={testId}
+        showCloseButton={false}
+        className="flex max-h-[90vh] max-w-5xl flex-col overflow-y-auto"
       >
+        {/* MediaLibrary renders its own visible heading + footer controls;
+            this names the dialog for assistive tech without duplicating it
+            on screen. */}
+        <DialogTitle className="sr-only">{i18n._(M.modalAria)}</DialogTitle>
         <MediaLibrary
           mode="picker"
           accept={accept}
           onSelect={onSelect}
           onCancel={onCancel}
         />
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
