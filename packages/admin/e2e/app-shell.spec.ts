@@ -41,4 +41,49 @@ test.describe("admin shell", () => {
     );
     expect(display).toBe("block");
   });
+
+  // RTL is a shipped launch locale (`ar`), so prove the direction context
+  // reaches radix primitives in a real browser — the unit guard in
+  // App.direction.test.tsx can't, since radix's behaviour depends on its
+  // own resolved package instance at runtime. SSR normally sets
+  // `<html dir>`; the SPA preview has no SSR, so seed it the same way the
+  // locale-switch reload path does, before the bundle boots.
+  //
+  // The assertion reads the `dir` attribute radix writes onto the menu's
+  // `role="menu"` element *from its DirectionProvider context* — not the
+  // CSS `direction`, which the portaled content would inherit from
+  // `<html dir>` regardless of whether the provider chain works. If the
+  // provider ever re-splits from the primitives (the original bug), this
+  // attribute reads "ltr" even under `<html dir="rtl">`.
+  test("radix primitives inherit RTL from the direction provider under ar", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      // At document-start `document.documentElement` isn't parsed yet, so
+      // defer to DOMContentLoaded — still well before the admin's deferred
+      // `createRoot().render()` reads `<html dir>` via `useDir()`.
+      const apply = (): void => {
+        document.documentElement.setAttribute("dir", "rtl");
+        document.documentElement.setAttribute("lang", "ar");
+      };
+      if (document.documentElement) apply();
+      else document.addEventListener("DOMContentLoaded", apply, { once: true });
+    });
+    await mockManifest(page, MANIFEST_WITH_POST);
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/stats": [],
+      "/entry/recentActivity": [],
+    });
+    await page.goto("");
+
+    await page.getByTestId("user-menu-trigger").click();
+
+    const signOut = page.getByTestId("user-menu-sign-out");
+    await expect(signOut).toBeVisible();
+    const menuDir = await signOut.evaluate(
+      (el) => el.closest('[role="menu"]')?.getAttribute("dir") ?? null,
+    );
+    expect(menuDir).toBe("rtl");
+  });
 });
