@@ -18,6 +18,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useQueryClient } from "@tanstack/react-query";
+import { Button, Checkbox, Input } from "plumix/admin/ui";
 import { Trans, useLingui } from "plumix/i18n";
 
 import type {
@@ -142,11 +143,10 @@ function LocationsBindings({
             data-testid={`menu-settings-location-row-${row.id}`}
             className="flex items-center gap-2 text-sm"
           >
-            <input
-              type="checkbox"
+            <Checkbox
               data-testid={`menu-settings-location-${row.id}`}
               checked={isBound}
-              onChange={() => {
+              onCheckedChange={() => {
                 assign.mutate({
                   location: row.id,
                   termSlug: isBound ? null : slug,
@@ -198,10 +198,11 @@ function MenuSettingsPanel({
             id="plugin.menu.itemEditor.conflictBanner"
             message="Another editor saved changes since you loaded this menu."
           />
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             data-testid="menu-conflict-reload"
-            className="border-border hover:bg-muted rounded border bg-transparent px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             onClick={() => {
               setDismissedAt(state.version);
               save.reset();
@@ -214,15 +215,15 @@ function MenuSettingsPanel({
               id="plugin.menu.itemEditor.conflictReload"
               message="Reload to see latest"
             />
-          </button>
+          </Button>
         </div>
       ) : null}
       <div className="flex items-center gap-2">
-        <button
+        <Button
           type="button"
+          size="sm"
           data-testid="menu-save-button"
           disabled={save.isPending}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 rounded px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => {
             // Snapshot the keys at click time so onSuccess can reattach
             // ids to the right items even if the user mutated state
@@ -251,7 +252,7 @@ function MenuSettingsPanel({
           }}
         >
           <Trans id="plugin.menu.itemEditor.saveButton" message="Save menu" />
-        </button>
+        </Button>
         <DeleteMenuButton termId={state.termId} />
       </div>
     </div>
@@ -289,7 +290,7 @@ function MaxDepthField({
       className="flex items-center gap-2 text-sm font-medium"
     >
       <Trans id="plugin.menu.itemEditor.maxDepthLabel" message="Max depth" />
-      <input
+      <Input
         type="number"
         data-testid="menu-settings-max-depth"
         min={0}
@@ -302,7 +303,7 @@ function MaxDepthField({
             dispatch({ type: "updateMaxDepth", value: nextParsed });
           }
         }}
-        className="border-input bg-background focus-visible:ring-ring h-9 w-20 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
+        className="w-20"
       />
       {rejected ? (
         <span
@@ -323,11 +324,13 @@ function DeleteMenuButton({ termId }: { readonly termId: number }): ReactNode {
   const { i18n } = useLingui();
   const remove = useDeleteMenu();
   return (
-    <button
+    <Button
       type="button"
+      variant="outline"
+      size="sm"
       data-testid="menu-delete-button"
       disabled={remove.isPending}
-      className="text-destructive border-destructive hover:bg-destructive/10 rounded border bg-transparent px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+      className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive"
       onClick={() => {
         if (
           typeof window !== "undefined" &&
@@ -339,7 +342,7 @@ function DeleteMenuButton({ termId }: { readonly termId: number }): ReactNode {
       }}
     >
       <Trans id="plugin.menu.itemEditor.deleteButton" message="Delete menu" />
-    </button>
+    </Button>
   );
 }
 
@@ -382,16 +385,17 @@ function ItemsPicker({
               { message: M.relinkBanner.message },
             )}
           </span>
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             data-testid="menu-picker-relink-cancel"
-            className="border-border hover:bg-muted rounded border bg-transparent px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             onClick={() => {
               dispatch({ type: "cancelRelink" });
             }}
           >
             <Trans id="plugin.menu.itemEditor.cancelButton" message="Cancel" />
-          </button>
+          </Button>
         </div>
       ) : null}
       <div
@@ -401,20 +405,19 @@ function ItemsPicker({
         {tabs.map((tab) => {
           const key = tabKey(tab);
           return (
-            <button
+            <Button
               key={key}
               type="button"
+              variant={activeTab === key ? "secondary" : "ghost"}
+              size="sm"
               data-testid={`menu-picker-tab-${key}`}
               aria-selected={activeTab === key}
               onClick={() => {
                 setActiveTab(key);
               }}
-              className={`hover:bg-muted rounded px-3 py-1.5 text-sm ${
-                activeTab === key ? "bg-muted font-medium" : ""
-              }`}
             >
               {tab.tabLabel}
-            </button>
+            </Button>
           );
         })}
       </div>
@@ -463,28 +466,30 @@ function CustomUrlPickerPanel({
       data-testid="menu-picker-custom-panel"
       className="border-border bg-card flex flex-wrap items-center gap-2 rounded-lg border p-4"
     >
-      <input
+      <Input
         type="text"
         data-testid="menu-picker-custom-url"
         value={url}
         onChange={(event) => {
           setUrl(event.target.value);
         }}
-        className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
+        // `flex-1` constrains the shared Input's default `w-full` so the url,
+        // label, and Add button stay on one row instead of each wrapping.
+        className="flex-1"
       />
-      <input
+      <Input
         type="text"
         data-testid="menu-picker-custom-label"
         value={label}
         onChange={(event) => {
           setLabel(event.target.value);
         }}
-        className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
+        className="flex-1"
       />
-      <button
+      <Button
         type="button"
+        size="sm"
         data-testid="menu-picker-custom-add"
-        className="bg-primary text-primary-foreground hover:bg-primary/90 rounded px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
         onClick={() => {
           if (url.trim() === "") return;
           if (relinkTargetKey !== null) {
@@ -515,7 +520,7 @@ function CustomUrlPickerPanel({
             message="Add to menu"
           />
         )}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -695,10 +700,11 @@ function SortableTreeRow({
       </span>
       {isBroken ? (
         <>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             data-testid={`menu-item-relink-${String(id)}`}
-            className="hover:bg-muted rounded px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
             onClick={(event) => {
               event.stopPropagation();
               dispatch({ type: "startRelink", key: item.key });
@@ -708,11 +714,12 @@ function SortableTreeRow({
               id="plugin.menu.itemEditor.relinkButton"
               message="Re-link…"
             />
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             data-testid={`menu-item-convert-${String(id)}`}
-            className="hover:bg-muted rounded px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
             onClick={(event) => {
               event.stopPropagation();
               dispatch({ type: "convertToCustom", key: item.key });
@@ -722,21 +729,23 @@ function SortableTreeRow({
               id="plugin.menu.itemEditor.convertButton"
               message="Convert to Custom URL"
             />
-          </button>
+          </Button>
         </>
       ) : null}
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="xs"
         data-testid={`menu-item-remove-${String(id)}`}
         disabled={isUnauthorized}
-        className="text-destructive hover:bg-muted rounded px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+        className="text-destructive hover:text-destructive"
         onClick={(event) => {
           event.stopPropagation();
           dispatch({ type: "removeItem", key: item.key });
         }}
       >
         <Trans id="plugin.menu.itemEditor.removeButton" message="Remove" />
-      </button>
+      </Button>
     </div>
   );
 }
@@ -758,11 +767,10 @@ function ItemDetailPanel({
       data-testid="menu-item-detail-panel"
       className="border-border bg-card flex flex-col gap-1 rounded-lg border p-4"
     >
-      <input
+      <Input
         type="text"
         data-testid="menu-item-detail-title"
         value={selected.title ?? ""}
-        className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
         onChange={(event) => {
           const next = event.target.value;
           dispatch({

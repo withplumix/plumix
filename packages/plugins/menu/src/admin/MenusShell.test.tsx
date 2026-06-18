@@ -617,10 +617,10 @@ describe("MenusShell", () => {
       expect(input.termId).toBe(7);
     });
 
-    test("delete-menu button matches the save button's padding and is destructive-styled", async () => {
-      // Regression: Delete rendered smaller (py-1) than Save (py-1.5) and
-      // without a destructive border. Both must share the size classes;
-      // Delete carries the destructive text/border.
+    test("delete-menu button matches the save button's size and is destructive-styled", async () => {
+      // Both render the shared `Button size="sm"`, so the size classes match
+      // by construction (the original regression was hand-rolled buttons with
+      // mismatched padding). Delete adds the destructive text/border.
       window.history.replaceState(
         {},
         "",
@@ -646,7 +646,7 @@ describe("MenusShell", () => {
 
       const save = await screen.findByTestId("menu-save-button");
       const del = await screen.findByTestId("menu-delete-button");
-      for (const cls of ["px-3", "py-1.5", "text-sm", "rounded"]) {
+      for (const cls of ["h-8", "px-3", "text-sm", "rounded-md"]) {
         expect(save.classList.contains(cls)).toBe(true);
         expect(del.classList.contains(cls)).toBe(true);
       }
@@ -734,15 +734,15 @@ describe("MenusShell", () => {
 
       renderShell();
 
-      const primary = await screen.findByTestId<HTMLInputElement>(
+      // The shared `Checkbox` renders a radix `<button role="checkbox">`,
+      // so checked-ness is `aria-checked`, not the native `.checked` prop.
+      const primary = await screen.findByTestId(
         "menu-settings-location-primary",
       );
-      expect(primary.checked).toBe(true);
+      expect(primary).toHaveAttribute("aria-checked", "true");
 
-      const footer = await screen.findByTestId<HTMLInputElement>(
-        "menu-settings-location-footer",
-      );
-      expect(footer.checked).toBe(false);
+      const footer = await screen.findByTestId("menu-settings-location-footer");
+      expect(footer).toHaveAttribute("aria-checked", "false");
 
       const user = userEvent.setup();
       await user.click(footer);
