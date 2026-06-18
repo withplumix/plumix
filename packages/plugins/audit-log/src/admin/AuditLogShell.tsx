@@ -1,6 +1,7 @@
 import type { MessageDescriptor } from "plumix/i18n";
 import type { ReactNode } from "react";
 import { useCallback, useSyncExternalStore } from "react";
+import { Button, Input } from "plumix/admin/ui";
 import { formatDate, Trans, useLingui } from "plumix/i18n";
 
 import type { AuditLogFilter, AuditLogRowDTO, DateRangePreset } from "./rpc.js";
@@ -277,17 +278,19 @@ export function AuditLogShell(): ReactNode {
         </div>
       )}
       {list.hasNextPage ? (
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
           data-testid="audit-log-load-more"
           disabled={list.isFetchingNextPage}
           onClick={() => {
             void list.fetchNextPage();
           }}
-          className="border-border hover:bg-muted self-start rounded border bg-transparent px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+          className="self-start"
         >
           <Trans id="plugin.auditLog.shell.loadMore" message="Load more" />
-        </button>
+        </Button>
       ) : null}
     </div>
   );
@@ -324,7 +327,7 @@ function FilterRow({
         <option value="last7">{i18n._(M.filterDatePresetLast7)}</option>
         <option value="last30">{i18n._(M.filterDatePresetLast30)}</option>
       </select>
-      <input
+      <Input
         type="number"
         data-testid="audit-log-filter-actor"
         placeholder={i18n._(M.filterActorPlaceholder)}
@@ -332,7 +335,9 @@ function FilterRow({
         onChange={(e) => {
           onChange({ ...filters, actorId: e.target.value });
         }}
-        className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
+        // Bounded so the shared Input's default `w-full` doesn't push the
+        // sibling filters onto their own rows in this flex-wrap row.
+        className="w-40"
       />
       <select
         data-testid="audit-log-filter-subject-type"
@@ -368,14 +373,15 @@ function FilterRow({
           </option>
         ))}
       </select>
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         data-testid="audit-log-filter-reset"
         onClick={onReset}
-        className="border-border hover:bg-muted rounded border bg-transparent px-3 py-1 text-sm"
       >
         <Trans id="plugin.auditLog.filter.reset" message="Reset" />
-      </button>
+      </Button>
     </div>
   );
 }
