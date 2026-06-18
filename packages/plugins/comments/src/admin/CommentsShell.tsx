@@ -1,5 +1,6 @@
 import type { MessageDescriptor } from "plumix/i18n";
 import { useState } from "react";
+import { Button, Checkbox, Input } from "plumix/admin/ui";
 import { Trans, useLingui } from "plumix/i18n";
 
 import type {
@@ -49,6 +50,16 @@ const ACTION_LABELS = {
     message: "Delete permanently",
   },
 } satisfies Record<ModerationAction, MessageDescriptor>;
+
+// Approve/restore move a comment into a queue; everything else (spam,
+// trash, purge) is destructive and gets a red tint. `hover:text-destructive`
+// is explicit because the ghost Button variant otherwise recolors text on
+// hover. Shared by the bulk bar and the per-row actions so the two can't
+// drift on which actions count as destructive.
+const DESTRUCTIVE_ACTION_CLASS = "text-destructive hover:text-destructive";
+function isDestructiveAction(action: string): boolean {
+  return action !== "approve" && action !== "restore";
+}
 
 // Descriptors used outside JSX (input attributes, interpolated aria-label).
 const M = {
@@ -128,17 +139,16 @@ export function CommentsShell(): React.ReactElement {
         className="border-border flex items-center gap-1 border-b"
       >
         {TABS.map((status) => (
-          <button
+          <Button
             key={status}
             type="button"
+            variant={tab === status ? "secondary" : "ghost"}
+            size="sm"
             data-testid={`comments-tab-${status}`}
             aria-pressed={tab === status}
             onClick={() => {
               reset(status);
             }}
-            className={`hover:bg-muted rounded px-3 py-1.5 text-sm ${
-              tab === status ? "bg-muted font-medium" : ""
-            }`}
           >
             {i18n._(STATUS_LABELS[status])}{" "}
             <span
@@ -147,28 +157,26 @@ export function CommentsShell(): React.ReactElement {
             >
               {counts.data?.[status] ?? 0}
             </span>
-          </button>
+          </Button>
         ))}
       </div>
 
       <div data-testid="comments-filters" className="flex items-center gap-2">
-        <input
+        <Input
           type="search"
           data-testid="comments-search"
           aria-label={i18n._(M.searchLabel)}
           placeholder={i18n._(M.searchPlaceholder)}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
         />
-        <input
+        <Input
           type="number"
           data-testid="comments-entry-filter"
           aria-label={i18n._(M.entryLabel)}
           placeholder={i18n._(M.entryPlaceholder)}
           value={entryFilter}
           onChange={(event) => setEntryFilter(event.target.value)}
-          className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
         />
       </div>
 
@@ -180,18 +188,22 @@ export function CommentsShell(): React.ReactElement {
           <span data-testid="comments-bulk-count">{picked.size}</span>
           <div className="flex items-center gap-1">
             {BULK_ACTIONS.map((action) => (
-              <button
+              <Button
                 key={action}
                 type="button"
+                variant="ghost"
+                size="xs"
                 data-testid={`comments-bulk-${action}`}
                 disabled={bulk.isPending}
                 onClick={() => runBulk(action)}
-                className={`hover:bg-muted rounded px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50 ${
-                  action === "approve" ? "" : "text-destructive"
-                }`}
+                className={
+                  isDestructiveAction(action)
+                    ? DESTRUCTIVE_ACTION_CLASS
+                    : undefined
+                }
               >
                 {i18n._(ACTION_LABELS[action])}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -223,8 +235,7 @@ export function CommentsShell(): React.ReactElement {
                 className="border-border bg-card flex items-start justify-between gap-3 rounded-lg border p-3"
               >
                 <td className="flex min-w-0 items-start gap-3">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     data-testid={`comment-select-${comment.id}`}
                     aria-label={i18n._(
                       M.selectLabel.id,
@@ -232,17 +243,19 @@ export function CommentsShell(): React.ReactElement {
                       { message: M.selectLabel.message },
                     )}
                     checked={picked.has(comment.id)}
-                    onChange={() => togglePicked(comment.id)}
+                    onCheckedChange={() => togglePicked(comment.id)}
                     className="mt-1"
                   />
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
                     data-testid={`comment-open-${comment.id}`}
                     onClick={() => setSelected(comment)}
-                    className="hover:bg-muted truncate rounded text-left font-medium"
+                    className="justify-start truncate"
                   >
                     {comment.authorName}
-                  </button>
+                  </Button>
                 </td>
                 <td
                   data-testid={`comment-excerpt-${comment.id}`}
@@ -252,22 +265,24 @@ export function CommentsShell(): React.ReactElement {
                 </td>
                 <td className="flex items-center gap-1">
                   {ACTIONS[tab].map((action) => (
-                    <button
+                    <Button
                       key={action}
                       type="button"
+                      variant="ghost"
+                      size="xs"
                       data-testid={`comment-${action}-${comment.id}`}
                       disabled={moderation.isPending}
                       onClick={() =>
                         moderation.mutate({ action, id: comment.id })
                       }
-                      className={`hover:bg-muted rounded px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50 ${
-                        action === "approve" || action === "restore"
-                          ? ""
-                          : "text-destructive"
-                      }`}
+                      className={
+                        isDestructiveAction(action)
+                          ? DESTRUCTIVE_ACTION_CLASS
+                          : undefined
+                      }
                     >
                       {i18n._(ACTION_LABELS[action])}
-                    </button>
+                    </Button>
                   ))}
                 </td>
               </tr>
