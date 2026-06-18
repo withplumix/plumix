@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "unused.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "src/",
+    "ui": "src/",
+    "utils": "@plumix/admin-ui",
+    "lib": "src/",
+    "hooks": "src/"
+  },
+  "iconLibrary": "lucide"
+}
