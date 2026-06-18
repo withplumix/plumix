@@ -3,11 +3,11 @@ import { useState } from "react";
 import { useDir } from "@/lib/use-dir.js";
 import { i18n } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
-import { DirectionProvider } from "@radix-ui/react-direction";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { RouterProvider } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import { Direction } from "radix-ui";
 
 import {
   createQueryClient,
@@ -27,9 +27,16 @@ export function App(): ReactNode {
   // behind shadcn (dialog, dropdown, popover, …). Without it they read
   // `dir` from a fallback chain that doesn't include `<html dir>`.
   // Source is `<html dir>` set by SSR + the locale-switch reload path.
+  //
+  // MUST come from the `radix-ui` umbrella, not the standalone
+  // `@radix-ui/react-direction`: the shadcn primitives consume direction
+  // via the umbrella's bundled `useDirection`, and the standalone package
+  // can resolve to a different version (a separate React context) — in
+  // which case the provider is invisible to the primitives and RTL silently
+  // falls back to LTR. See App.direction.test.tsx.
   return (
     <I18nProvider i18n={i18n}>
-      <DirectionProvider dir={useDir()}>
+      <Direction.DirectionProvider dir={useDir()}>
         <ThemeProvider defaultTheme="system">
           <QueryClientProvider client={queryClient}>
             <RouterProvider router={router} />
@@ -41,7 +48,7 @@ export function App(): ReactNode {
             ) : null}
           </QueryClientProvider>
         </ThemeProvider>
-      </DirectionProvider>
+      </Direction.DirectionProvider>
     </I18nProvider>
   );
 }
