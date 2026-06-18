@@ -1,6 +1,7 @@
 import type { MessageDescriptor } from "plumix/i18n";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { Button } from "plumix/admin/ui";
 import { Trans, useLingui } from "plumix/i18n";
 
 import type { MenuListItem, MenuLocationRow } from "./rpc.js";
@@ -132,29 +133,30 @@ function MenuSelector({
       className="flex flex-wrap items-center gap-2"
     >
       {menus.map((menu) => (
-        <button
+        <Button
           key={menu.id}
           type="button"
+          variant="outline"
+          size="sm"
           data-testid={`menus-selector-option-${menu.slug}`}
           onClick={() => {
             onSelect(menu.slug);
           }}
-          className="border-border hover:bg-muted rounded border bg-transparent px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
         >
           {menu.name}
-        </button>
+        </Button>
       ))}
-      <button
+      <Button
         type="button"
+        size="sm"
         data-testid="menus-selector-create-new"
         onClick={onCreate}
-        className="bg-primary text-primary-foreground hover:bg-primary/90 rounded px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
       >
         <Trans
           id="plugin.menu.shell.createButton"
           message="+ Create new menu"
         />
-      </button>
+      </Button>
     </div>
   );
 }
@@ -173,20 +175,19 @@ function Tabs({
       className="border-border flex items-center gap-1 border-b"
     >
       {TABS.map((entry) => (
-        <button
+        <Button
           key={entry.id}
           type="button"
+          variant={activeTab === entry.id ? "secondary" : "ghost"}
+          size="sm"
           data-testid={`menus-tab-${entry.id}`}
           aria-selected={activeTab === entry.id}
           onClick={() => {
             onChange(entry.id);
           }}
-          className={`hover:bg-muted rounded px-3 py-1.5 text-sm ${
-            activeTab === entry.id ? "bg-muted font-medium" : ""
-          }`}
         >
           {i18n._(entry.label)}
-        </button>
+        </Button>
       ))}
     </div>
   );
