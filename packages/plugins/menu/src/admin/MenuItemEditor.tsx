@@ -18,7 +18,12 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Checkbox, Input } from "plumix/admin/ui";
+import {
+  Button,
+  Checkbox,
+  destructiveGhostClassName,
+  Input,
+} from "plumix/admin/ui";
 import { Trans, useLingui } from "plumix/i18n";
 
 import type {
@@ -326,11 +331,10 @@ function DeleteMenuButton({ termId }: { readonly termId: number }): ReactNode {
   return (
     <Button
       type="button"
-      variant="outline"
+      variant="destructive"
       size="sm"
       data-testid="menu-delete-button"
       disabled={remove.isPending}
-      className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive"
       onClick={() => {
         if (
           typeof window !== "undefined" &&
@@ -738,7 +742,7 @@ function SortableTreeRow({
         size="xs"
         data-testid={`menu-item-remove-${String(id)}`}
         disabled={isUnauthorized}
-        className="text-destructive hover:text-destructive"
+        className={destructiveGhostClassName}
         onClick={(event) => {
           event.stopPropagation();
           dispatch({ type: "removeItem", key: item.key });

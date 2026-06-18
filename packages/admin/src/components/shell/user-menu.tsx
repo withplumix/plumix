@@ -58,6 +58,7 @@ export function UserMenu({ user }: { user: UserIdentity }): ReactNode {
       <DropdownMenuTrigger asChild>
         <SidebarMenuButton
           size="lg"
+          data-testid="user-menu-trigger"
           className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
         >
           <Avatar className="size-8">

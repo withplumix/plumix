@@ -12,5 +12,10 @@
  * `radix-ui` / `sonner` / `tailwind-merge` imports are aliased to the shared
  * runtime shims — so the chunk carries only the thin wrappers (~1KB each),
  * not radix.
+ *
+ * Stability: these are vendored shadcn components we own and edit (via
+ * `ui:add`). This surface carries no guarantee beyond plumix's repo-wide
+ * pre-1.0 policy — minor versions may break it; pin `plumix`. See
+ * packages/admin-ui/README.md.
  */
 export * from "@plumix/admin-ui";

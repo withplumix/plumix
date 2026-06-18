@@ -112,6 +112,17 @@ export function MediaLibrary(): ReactNode {
         </TooltipContent>
       </Tooltip>
 
+      {/* A variant the admin shell never renders — proves shell CSS ships
+          every admin-ui cva variant via its `@source admin-ui/src` scan. */}
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        data-testid="runtime-proof-ui-icon-button"
+        aria-label="icon"
+      >
+        +
+      </Button>
+
       <Link
         to="/"
         data-testid="runtime-proof-link"

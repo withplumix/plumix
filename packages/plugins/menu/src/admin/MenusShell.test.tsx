@@ -620,7 +620,7 @@ describe("MenusShell", () => {
     test("delete-menu button matches the save button's size and is destructive-styled", async () => {
       // Both render the shared `Button size="sm"`, so the size classes match
       // by construction (the original regression was hand-rolled buttons with
-      // mismatched padding). Delete adds the destructive text/border.
+      // mismatched padding). Delete uses the destructive variant (solid).
       window.history.replaceState(
         {},
         "",
@@ -650,8 +650,7 @@ describe("MenusShell", () => {
         expect(save.classList.contains(cls)).toBe(true);
         expect(del.classList.contains(cls)).toBe(true);
       }
-      expect(del.classList.contains("text-destructive")).toBe(true);
-      expect(del.classList.contains("border-destructive")).toBe(true);
+      expect(del.classList.contains("bg-destructive")).toBe(true);
     });
 
     test("a non-custom source tab is independently selectable and shows its panel", async () => {

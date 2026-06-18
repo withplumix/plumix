@@ -1,6 +1,11 @@
 import type { MessageDescriptor } from "plumix/i18n";
 import { useState } from "react";
-import { Button, Checkbox, Input } from "plumix/admin/ui";
+import {
+  Button,
+  Checkbox,
+  destructiveGhostClassName,
+  Input,
+} from "plumix/admin/ui";
 import { Trans, useLingui } from "plumix/i18n";
 
 import type {
@@ -52,11 +57,9 @@ const ACTION_LABELS = {
 } satisfies Record<ModerationAction, MessageDescriptor>;
 
 // Approve/restore move a comment into a queue; everything else (spam,
-// trash, purge) is destructive and gets a red tint. `hover:text-destructive`
-// is explicit because the ghost Button variant otherwise recolors text on
-// hover. Shared by the bulk bar and the per-row actions so the two can't
-// drift on which actions count as destructive.
-const DESTRUCTIVE_ACTION_CLASS = "text-destructive hover:text-destructive";
+// trash, purge) is destructive and gets the shared ghost tint. Used by both
+// the bulk bar and the per-row actions so the two can't drift on which
+// actions count as destructive.
 function isDestructiveAction(action: string): boolean {
   return action !== "approve" && action !== "restore";
 }
@@ -198,7 +201,7 @@ export function CommentsShell(): React.ReactElement {
                 onClick={() => runBulk(action)}
                 className={
                   isDestructiveAction(action)
-                    ? DESTRUCTIVE_ACTION_CLASS
+                    ? destructiveGhostClassName
                     : undefined
                 }
               >
@@ -277,7 +280,7 @@ export function CommentsShell(): React.ReactElement {
                       }
                       className={
                         isDestructiveAction(action)
-                          ? DESTRUCTIVE_ACTION_CLASS
+                          ? destructiveGhostClassName
                           : undefined
                       }
                     >

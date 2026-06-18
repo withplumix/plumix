@@ -9,6 +9,7 @@ export * from "./card.js";
 export * from "./checkbox.js";
 export * from "./color-picker.js";
 export * from "./command.js";
+export * from "./destructive.js";
 export * from "./dialog.js";
 export * from "./dropdown-menu.js";
 export * from "./empty.js";
