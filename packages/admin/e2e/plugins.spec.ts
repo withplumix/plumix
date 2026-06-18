@@ -187,6 +187,21 @@ test.describe("plugin runtime alias seam", () => {
     await sharedButton.hover();
     await expect(page.getByTestId("runtime-proof-ui-tooltip")).toBeVisible();
 
+    // (5d) A shared-component *variant the admin shell never renders*
+    // (`size="icon-xs"`) still lands styled. The shell's globals.css
+    // `@source`s `admin-ui/src`, so Tailwind extracts every cva variant
+    // string from `button.tsx` — `icon-xs` → `size-6` ships in shell CSS
+    // even though no shell route uses it. Without that scan a plugin
+    // reaching an unused variant would render unstyled. `size-6` is
+    // 24×24 with no padding/border, so a styled button measures exactly
+    // 24px; an unstyled one sizes to its glyph.
+    const iconButton = page.getByTestId("runtime-proof-ui-icon-button");
+    const iconBox = await iconButton.evaluate((el) => {
+      const s = getComputedStyle(el);
+      return { width: s.width, height: s.height };
+    });
+    expect(iconBox).toEqual({ width: "24px", height: "24px" });
+
     // (6) Router hook navigates inside admin
     await page.getByTestId("runtime-proof-navigate").click();
     await expect(page).toHaveURL(/\/_plumix\/admin\/?$/);
