@@ -6,6 +6,7 @@ import type { LookupAdapter, LookupResult } from "../../../plugin/lookup.js";
 import { and, eq, inArray, like, ne } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { buildEntryPermalink } from "../../../route/permalink.js";
+import { LookupScopeError } from "../lookup.errors.js";
 
 const DEFAULT_LIST_LIMIT = 20;
 const MAX_LIST_LIMIT = 100;
@@ -94,10 +95,7 @@ function scopeConditions(scope: EntryFieldScope | undefined): SQL[] {
   // turn the picker into a "list every entry across every type" channel
   // bypassing per-type read scoping.
   if (!scope?.entryTypes || scope.entryTypes.length === 0) {
-    // eslint-disable-next-line no-restricted-syntax -- TODO migrate to a named factory in a follow-up slice
-    throw new Error(
-      "entry adapter: scope.entryTypes is required and must be non-empty",
-    );
+    throw LookupScopeError.entryTypesRequired();
   }
   const conditions: SQL[] = [
     inArray(entries.type, scope.entryTypes as string[]),

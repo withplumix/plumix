@@ -10,6 +10,7 @@ import type {
   ReferenceTarget,
 } from "../../plugin/manifest.js";
 import { eq } from "../../db/index.js";
+import { MetaReferenceError } from "./errors.js";
 
 // Shared meta plumbing for every entity that stores a `meta` JSON
 // column (entries, terms, and — eventually — users). The storage
@@ -453,11 +454,7 @@ function referenceGroupKey(target: ReferenceTarget): string {
   try {
     return `${target.kind}::${JSON.stringify(target.scope ?? null)}`;
   } catch (cause) {
-    // eslint-disable-next-line no-restricted-syntax -- TODO migrate to a named factory in a follow-up slice
-    throw new Error(
-      `lookup adapter scope for kind "${target.kind}" must be JSON-serializable`,
-      { cause },
-    );
+    throw MetaReferenceError.scopeNotSerializable(target.kind, cause);
   }
 }
 
@@ -479,9 +476,10 @@ async function fetchLiveRows(
   callsite: string,
 ): Promise<readonly LookupResult[]> {
   if (ids.size > MAX_REFERENCE_GROUP_BATCH) {
-    // eslint-disable-next-line no-restricted-syntax -- TODO migrate to a named factory in a follow-up slice
-    throw new Error(
-      `${callsite}: aggregated batch size ${ids.size} exceeds MAX_REFERENCE_GROUP_BATCH (${MAX_REFERENCE_GROUP_BATCH})`,
+    throw MetaReferenceError.batchSizeExceeded(
+      callsite,
+      ids.size,
+      MAX_REFERENCE_GROUP_BATCH,
     );
   }
   const idList = [...ids];
@@ -1077,10 +1075,7 @@ function coerceOnRead(type: MetaScalarType, value: unknown): unknown {
 // via a crafted path.
 function metaJsonPath(key: string): string {
   if (/["\\]/.test(key)) {
-    // eslint-disable-next-line no-restricted-syntax -- TODO migrate to a named factory in a follow-up slice
-    throw new Error(
-      `meta key "${key}" contains characters forbidden in a JSON path`,
-    );
+    throw MetaReferenceError.metaKeyForbiddenChars(key);
   }
   return `$."${key}"`;
 }

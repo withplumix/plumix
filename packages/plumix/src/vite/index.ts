@@ -170,9 +170,11 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       if (userConfig.publicDir === undefined) {
         base.publicDir = ".plumix/public";
       }
-      // TODO: triple loadConfig per cold start (config + buildStart + CLI).
-      // Cache via a closure once moduleCache:false in load-config.ts is
-      // safe to relax.
+      // Loaded fresh (not memoized) on purpose: the dev watcher in
+      // `configureServer` re-runs `regenerate` -> `loadConfig` on every
+      // `plumix.config.ts` edit, so a path-keyed cache here would break
+      // config hot-reload. Deduping the cold-start fan-out needs
+      // watch-aware invalidation — tracked in #1102.
       const { config } = await loadConfig(scanRoot, options.configFile);
       return config.vite
         ? (mergeConfig(
