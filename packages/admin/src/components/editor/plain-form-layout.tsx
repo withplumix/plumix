@@ -2,20 +2,6 @@ import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement, ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { MetaBoxField } from "@/components/meta-box/meta-box-field.js";
-import { Button } from "@/components/ui/button.js";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-} from "@/components/ui/card.js";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-} from "@/components/ui/form.js";
-import { Input } from "@/components/ui/input.js";
 import { useLabel } from "@/lib/use-label.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { defineMessage } from "@lingui/core/macro";
@@ -23,6 +9,15 @@ import { Trans } from "@lingui/react";
 import { useForm, useWatch } from "react-hook-form";
 
 import type { EntryMetaBoxManifestEntry } from "@plumix/core/manifest";
+import { Button } from "@plumix/admin-ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+} from "@plumix/admin-ui/card";
+import { Form, FormControl, FormField, FormItem } from "@plumix/admin-ui/form";
+import { Input } from "@plumix/admin-ui/input";
 
 import type { PostEditorValues } from "./post-editor-form.js";
 import { postEditorSchema } from "./post-editor-form.js";

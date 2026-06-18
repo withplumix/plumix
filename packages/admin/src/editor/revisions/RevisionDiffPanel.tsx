@@ -1,14 +1,15 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
+import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
+
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@/components/ui/tabs.js";
-import { useLabel } from "@/lib/use-label.js";
-import { defineMessage } from "@lingui/core/macro";
-import { Trans } from "@lingui/react";
+} from "@plumix/admin-ui/tabs";
 
 import type { TextDiffSegment } from "./diff.js";
 import { diffJson, diffText, extractPlainText } from "./diff.js";

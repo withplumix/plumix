@@ -1,32 +1,6 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert.js";
-import { Button } from "@/components/ui/button.js";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card.js";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form.js";
-import { Input } from "@/components/ui/input.js";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select.js";
-import { Toggle } from "@/components/ui/toggle.js";
 import { hasCap } from "@/lib/caps.js";
 import { orpc } from "@/lib/orpc.js";
 import { useLabel } from "@/lib/use-label.js";
@@ -42,6 +16,32 @@ import * as v from "valibot";
 
 import type { Label } from "@plumix/core/i18n";
 import type { AllowedDomain, UserRole } from "@plumix/core/schema";
+import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
+import { Button } from "@plumix/admin-ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@plumix/admin-ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@plumix/admin-ui/form";
+import { Input } from "@plumix/admin-ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plumix/admin-ui/select";
+import { Toggle } from "@plumix/admin-ui/toggle";
 import { vMessage } from "@plumix/core/validation";
 
 const USER_ROLES = [

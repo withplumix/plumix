@@ -2,8 +2,9 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { TooltipProvider } from "@plumix/admin-ui/tooltip";
+
 import { renderWithI18n } from "../../test/render-with-i18n.js";
-import { TooltipProvider } from "../components/ui/tooltip.js";
 import { toastError } from "../lib/toast.js";
 import { PreviewButton } from "./PreviewButton.js";
 

@@ -1,12 +1,13 @@
 import type { ReactNode } from "react";
+import { TriangleAlert } from "lucide-react";
+
 import {
   Empty,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-} from "@/components/ui/empty.js";
-import { TriangleAlert } from "lucide-react";
+} from "@plumix/admin-ui/empty";
 
 interface ErrorPlaceholderProps {
   readonly title: ReactNode;

@@ -1,17 +1,17 @@
 import type { ReactNode } from "react";
 import { Suspense } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card.js";
-import { Skeleton } from "@/components/ui/skeleton.js";
 import { PluginErrorBoundary } from "@/lib/plugin-error-boundary.js";
 import { getPluginDashboardWidget } from "@/lib/plugin-registry.js";
 import { useLabel } from "@/lib/use-label.js";
 
 import type { DashboardWidgetManifestEntry } from "@plumix/core/manifest";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@plumix/admin-ui/card";
+import { Skeleton } from "@plumix/admin-ui/skeleton";
 
 // Renders the given (already capability-filtered) dashboard widgets. A
 // widget whose admin chunk hasn't registered a component yet is skipped

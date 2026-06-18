@@ -1,25 +1,6 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert.js";
-import { Button } from "@/components/ui/button.js";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card.js";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form.js";
-import { Input } from "@/components/ui/input.js";
-import { Label as UILabel } from "@/components/ui/label.js";
 import { extractCode, extractReason } from "@/lib/orpc-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { parseScopesText } from "@/lib/scopes.js";
@@ -32,6 +13,25 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useForm, useWatch } from "react-hook-form";
 import * as v from "valibot";
 
+import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
+import { Button } from "@plumix/admin-ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@plumix/admin-ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@plumix/admin-ui/form";
+import { Input } from "@plumix/admin-ui/input";
+import { Label as UILabel } from "@plumix/admin-ui/label";
 import { vMessage } from "@plumix/core/validation";
 
 // Descriptors used outside JSX — error helpers + the textarea

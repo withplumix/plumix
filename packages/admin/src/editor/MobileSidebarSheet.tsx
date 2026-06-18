@@ -1,4 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
+
 import {
   Sheet,
   SheetContent,
@@ -6,7 +7,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet.js";
+} from "@plumix/admin-ui/sheet";
 
 interface MobileSidebarSheetProps {
   readonly triggerLabel: string;

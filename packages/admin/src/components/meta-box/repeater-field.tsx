@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 import { useId } from "react";
-import { Button } from "@/components/ui/button.js";
-import { SortableList } from "@/components/ui/sortable.js";
 import { Trans } from "@lingui/react";
 import { PlusIcon } from "lucide-react";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
+import { Button } from "@plumix/admin-ui/button";
+import { SortableList } from "@plumix/admin-ui/sortable";
 
 import { MetaBoxField } from "./meta-box-field.js";
 

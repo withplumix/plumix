@@ -1,15 +1,16 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button.js";
+import { Trans } from "@lingui/react";
+import { TriangleAlert } from "lucide-react";
+
+import { Button } from "@plumix/admin-ui/button";
 import {
   Empty,
   EmptyContent,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-} from "@/components/ui/empty.js";
-import { Trans } from "@lingui/react";
-import { TriangleAlert } from "lucide-react";
+} from "@plumix/admin-ui/empty";
 
 interface ErrorBoundaryFallbackProps {
   readonly error: Error;

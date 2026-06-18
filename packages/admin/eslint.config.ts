@@ -38,7 +38,6 @@ export default defineConfig(
     // Colocated `*.test.{ts,tsx}` files match `src/**` too; same boundary.
     ignores: [
       "src/components/ui/**",
-      "src/hooks/use-mobile.ts",
       "locales/**",
       "e2e/**",
       "**/*.test.{ts,tsx}",

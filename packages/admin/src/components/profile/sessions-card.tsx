@@ -1,26 +1,6 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog.js";
-import { Alert, AlertDescription } from "@/components/ui/alert.js";
-import { Badge } from "@/components/ui/badge.js";
-import { Button } from "@/components/ui/button.js";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card.js";
 import { toDate } from "@/lib/dates.js";
 import { extractCode, extractReason } from "@/lib/orpc-errors.js";
 import { orpc } from "@/lib/orpc.js";
@@ -32,6 +12,26 @@ import { Trans, useLingui } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { Label } from "@plumix/core/i18n";
+import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@plumix/admin-ui/alert-dialog";
+import { Badge } from "@plumix/admin-ui/badge";
+import { Button } from "@plumix/admin-ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@plumix/admin-ui/card";
 
 const M = {
   unknownDevice: defineMessage({

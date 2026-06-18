@@ -2,21 +2,6 @@ import type { PaletteCommand } from "@/lib/palette-commands.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command.js";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog.js";
 import { findEntryTypeByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import {
@@ -38,6 +23,22 @@ import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@plumix/admin-ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@plumix/admin-ui/dialog";
 
 import { CoreIcon } from "./core-icon.js";
 

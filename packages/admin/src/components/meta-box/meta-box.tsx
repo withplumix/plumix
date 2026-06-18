@@ -1,16 +1,4 @@
 import type { ReactNode } from "react";
-import {
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion.js";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card.js";
 import { useLabel } from "@/lib/use-label.js";
 
 import type {
@@ -18,6 +6,18 @@ import type {
   TermMetaBoxManifestEntry,
   UserMetaBoxManifestEntry,
 } from "@plumix/core/manifest";
+import {
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@plumix/admin-ui/accordion";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@plumix/admin-ui/card";
 
 import { MetaBoxField } from "./meta-box-field.js";
 import { metaBoxFieldColSpanClass } from "./meta-box-grid.js";

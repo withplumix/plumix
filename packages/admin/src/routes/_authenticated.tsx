@@ -2,10 +2,11 @@ import type { ReactNode } from "react";
 import { AppSidebar } from "@/components/shell/app-sidebar.js";
 import { CommandPalette } from "@/components/shell/command-palette.js";
 import { ShellHeader } from "@/components/shell/shell-header.js";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar.js";
-import { TooltipProvider } from "@/components/ui/tooltip.js";
 import { requireAuthenticatedSession } from "@/lib/session.js";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
+
+import { SidebarInset, SidebarProvider } from "@plumix/admin-ui/sidebar";
+import { TooltipProvider } from "@plumix/admin-ui/tooltip";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: ({ context }) => requireAuthenticatedSession(context.queryClient),

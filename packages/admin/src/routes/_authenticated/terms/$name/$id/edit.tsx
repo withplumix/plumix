@@ -8,25 +8,6 @@ import {
   descendantIds,
   parentPickerOptions,
 } from "@/components/taxonomy/tree.js";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog.js";
-import { Alert, AlertDescription } from "@/components/ui/alert.js";
-import { Button } from "@/components/ui/button.js";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card.js";
 import { hasCap } from "@/lib/caps.js";
 import {
   findTermTaxonomyByName,
@@ -53,6 +34,25 @@ import { ArrowLeft } from "lucide-react";
 import * as v from "valibot";
 
 import type { TermTaxonomyManifestEntry } from "@plumix/core/manifest";
+import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@plumix/admin-ui/alert-dialog";
+import { Button } from "@plumix/admin-ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@plumix/admin-ui/card";
 import { seedFromMetaBoxes } from "@plumix/core/manifest";
 import { idPathParam } from "@plumix/core/validation";
 

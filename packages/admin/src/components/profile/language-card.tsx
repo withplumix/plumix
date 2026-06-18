@@ -1,17 +1,18 @@
 import type { ReactNode } from "react";
 import { LocaleSwitcher } from "@/components/locale-switcher.js";
-import { Alert, AlertDescription } from "@/components/ui/alert.js";
+import { readManifest } from "@/lib/manifest.js";
+import { orpc } from "@/lib/orpc.js";
+import { Trans } from "@lingui/react";
+import { useMutation } from "@tanstack/react-query";
+
+import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card.js";
-import { readManifest } from "@/lib/manifest.js";
-import { orpc } from "@/lib/orpc.js";
-import { Trans } from "@lingui/react";
-import { useMutation } from "@tanstack/react-query";
+} from "@plumix/admin-ui/card";
 
 interface LanguageCardProps {
   readonly userLocale: unknown;

@@ -1,8 +1,14 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge.js";
-import { Button } from "@/components/ui/button.js";
+import { useLabel } from "@/lib/use-label.js";
+import { cn } from "@/lib/utils.js";
+import { defineMessage } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
+import { Check, ChevronsUpDown } from "lucide-react";
+
+import { Badge } from "@plumix/admin-ui/badge";
+import { Button } from "@plumix/admin-ui/button";
 import {
   Command,
   CommandEmpty,
@@ -10,17 +16,12 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command.js";
+} from "@plumix/admin-ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover.js";
-import { useLabel } from "@/lib/use-label.js";
-import { cn } from "@/lib/utils.js";
-import { defineMessage } from "@lingui/core/macro";
-import { useLingui } from "@lingui/react";
-import { Check, ChevronsUpDown } from "lucide-react";
+} from "@plumix/admin-ui/popover";
 
 const M = {
   defaultTriggerPlaceholder: defineMessage({

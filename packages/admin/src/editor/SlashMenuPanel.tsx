@@ -1,13 +1,6 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { useMemo } from "react";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
@@ -15,6 +8,13 @@ import { Command as CommandPrimitive } from "cmdk";
 
 import type { BlockRegistry, PatternRegistry } from "@plumix/blocks";
 import type { Label } from "@plumix/core/i18n";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from "@plumix/admin-ui/command";
 
 import type { SlashMenuItem } from "./slash-menu-items.js";
 import { entryKey, isVariation } from "./is-variation.js";

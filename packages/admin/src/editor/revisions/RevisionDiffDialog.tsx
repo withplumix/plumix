@@ -1,18 +1,19 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { useId, useState } from "react";
+import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
+import { useQuery } from "@tanstack/react-query";
+
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog.js";
-import { Skeleton } from "@/components/ui/skeleton.js";
-import { useLabel } from "@/lib/use-label.js";
-import { defineMessage } from "@lingui/core/macro";
-import { Trans } from "@lingui/react";
-import { useQuery } from "@tanstack/react-query";
+} from "@plumix/admin-ui/dialog";
+import { Skeleton } from "@plumix/admin-ui/skeleton";
 
 const M = {
   thisRevision: defineMessage({

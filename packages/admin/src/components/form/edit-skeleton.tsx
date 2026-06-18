@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card.js";
-import { Skeleton } from "@/components/ui/skeleton.js";
+
+import { Card, CardContent, CardHeader } from "@plumix/admin-ui/card";
+import { Skeleton } from "@plumix/admin-ui/skeleton";
 
 /**
  * Shared "form-shaped loading state" for the admin's edit routes

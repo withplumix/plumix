@@ -1,6 +1,9 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { defineMessage } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,10 +13,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog.js";
-import { Button } from "@/components/ui/button.js";
-import { defineMessage } from "@lingui/core/macro";
-import { useLingui } from "@lingui/react";
+} from "@plumix/admin-ui/alert-dialog";
+import { Button } from "@plumix/admin-ui/button";
 
 // View-scoped bulk action bar (WordPress model): the Trash view offers
 // Restore + Delete permanently; every other view offers Trash. Keying off

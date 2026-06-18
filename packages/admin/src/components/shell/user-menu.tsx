@@ -1,15 +1,4 @@
 import type { ReactNode } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar.js";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu.js";
-import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar.js";
 import { signOut } from "@/lib/passkey.js";
 import { SESSION_QUERY_KEY } from "@/lib/session.js";
 import { Trans } from "@lingui/react";
@@ -18,6 +7,17 @@ import { Link, useRouter } from "@tanstack/react-router";
 import { ChevronsUpDown, LogOut, Settings, User } from "lucide-react";
 
 import type { AuthSessionUser } from "@plumix/core";
+import { Avatar, AvatarFallback } from "@plumix/admin-ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@plumix/admin-ui/dropdown-menu";
+import { SidebarMenuButton, useSidebar } from "@plumix/admin-ui/sidebar";
 
 // Only the identity fields are rendered — a narrow slice of the session
 // user so this component stays decoupled from `role` / `avatarUrl` churn,

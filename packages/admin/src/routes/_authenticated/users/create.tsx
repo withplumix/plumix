@@ -1,25 +1,6 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert.js";
-import { Button } from "@/components/ui/button.js";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card.js";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form.js";
-import { Input } from "@/components/ui/input.js";
-import { Label as UILabel } from "@/components/ui/label.js";
 import { hasCap } from "@/lib/caps.js";
 import { copyText } from "@/lib/clipboard.js";
 import { ADMIN_BASE_PATH } from "@/lib/constants.js";
@@ -42,6 +23,25 @@ import * as v from "valibot";
 
 import type { Label } from "@plumix/core/i18n";
 import type { User, UserRole } from "@plumix/core/schema";
+import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
+import { Button } from "@plumix/admin-ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@plumix/admin-ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@plumix/admin-ui/form";
+import { Input } from "@plumix/admin-ui/input";
+import { Label as UILabel } from "@plumix/admin-ui/label";
 import { vMessage } from "@plumix/core/validation";
 
 import {

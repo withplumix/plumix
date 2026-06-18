@@ -1,21 +1,22 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button.js";
-import {
-  CommandDialog,
-  CommandEmpty,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command.js";
-import { Skeleton } from "@/components/ui/skeleton.js";
 import { orpc } from "@/lib/orpc.js";
 import { useLabel } from "@/lib/use-label.js";
 import { useUntitledLabel } from "@/lib/use-untitled-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
+
+import { Button } from "@plumix/admin-ui/button";
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@plumix/admin-ui/command";
+import { Skeleton } from "@plumix/admin-ui/skeleton";
 
 // Generic picker for reference fields (`user`, future `entry` /
 // `term` / `media`). The field's `referenceTarget.kind` selects the

@@ -1,5 +1,6 @@
 packages:
   - "packages/admin"
+  - "packages/admin-ui"
   - "packages/blocks"
   - "packages/core"
   - "packages/create-plumix-app"
@@ -32,6 +33,7 @@ catalog:
   "@types/react-dom": ^19.2.3
   "@vitejs/plugin-react": ^6.0.2
   "@vitest/coverage-v8": ^4.1.9
+  cmdk: ^1.1.1
   drizzle-kit: ^0.31.10
   drizzle-orm: ^0.45.2
   drizzle-valibot: ^0.4.2
@@ -39,10 +41,15 @@ catalog:
   eslint: ^10.5.0
   fishery: ^2.4.0
   jsdom: ^29.1.1
+  lucide-react: ^1.16.0
   prettier: ^3.8.3
   publint: ^0.3.21
+  radix-ui: ^1.5.0
   react: ^19.2.7
   react-dom: ^19.2.7
+  react-hook-form: ^7.75.0
+  sonner: ^2.0.7
+  tailwind-merge: ^3.5.0
   typescript: ^6.0.3
   valibot: ^1.4.1
   vite: ^8.0.16

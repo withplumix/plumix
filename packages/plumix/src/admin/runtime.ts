@@ -10,10 +10,13 @@ import type * as OrpcClientFetchNs from "@orpc/client/fetch";
 import type * as OrpcTanstackQueryNs from "@orpc/tanstack-query";
 import type * as ReactQueryNs from "@tanstack/react-query";
 import type * as ReactRouterNs from "@tanstack/react-router";
+import type * as RadixNs from "radix-ui";
 import type * as ReactNs from "react";
 import type * as ReactDomNs from "react-dom";
 import type * as ReactDomClientNs from "react-dom/client";
 import type * as ReactJsxRuntimeNs from "react/jsx-runtime";
+import type * as SonnerNs from "sonner";
+import type * as TailwindMergeNs from "tailwind-merge";
 
 import { AdminRuntimeError } from "../errors.js";
 
@@ -29,6 +32,9 @@ export interface PlumixAdminRuntime {
   readonly orpcTanstackQuery: typeof OrpcTanstackQueryNs;
   readonly linguiCore: typeof LinguiCoreNs;
   readonly linguiReact: typeof LinguiReactNs;
+  readonly radix: typeof RadixNs;
+  readonly sonner: typeof SonnerNs;
+  readonly tailwindMerge: typeof TailwindMergeNs;
 }
 
 export interface PlumixGlobal {

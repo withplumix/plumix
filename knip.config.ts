@@ -73,6 +73,13 @@ const config: KnipConfig = {
         "src/admin/orpc-client.ts",
         "src/admin/orpc-client-fetch.ts",
         "src/admin/orpc-tanstack-query.ts",
+        "src/admin/radix.ts",
+        "src/admin/sonner.ts",
+        "src/admin/tailwind-merge.ts",
+        // `plumix/admin/ui` re-exports @plumix/admin-ui's shadcn primitives;
+        // the plugin-bundle Vite step bundles them into the plugin chunk at
+        // the consumer's build time — not a static import knip can follow.
+        "src/admin/ui.ts",
         // `theme.css` is read at runtime by `compilePluginCss`
         // (admin-plugin-bundle.ts) via `readFile(ADMIN_THEME_CSS)` and
         // shipped to consumers via `scripts/copy-admin.mjs` — neither

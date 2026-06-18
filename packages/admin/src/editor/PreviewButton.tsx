@@ -1,23 +1,24 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button.js";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu.js";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip.js";
 import { copyText } from "@/lib/clipboard.js";
 import { toastError, toastSuccess } from "@/lib/toast.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { ChevronDownIcon, EyeIcon, Link2Icon } from "lucide-react";
+
+import { Button } from "@plumix/admin-ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@plumix/admin-ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@plumix/admin-ui/tooltip";
 
 const M = {
   preview: defineMessage({

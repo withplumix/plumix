@@ -2,7 +2,6 @@ import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { ErrorPlaceholder } from "@/components/error-placeholder.js";
-import { Button } from "@/components/ui/button.js";
 import { hasCap } from "@/lib/caps.js";
 import { findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
@@ -12,6 +11,7 @@ import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
+import { Button } from "@plumix/admin-ui/button";
 import { slugify } from "@plumix/core/slugify";
 
 const M = {

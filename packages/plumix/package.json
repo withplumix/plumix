@@ -89,6 +89,22 @@
       "types": "./dist/admin/lingui-react.d.ts",
       "default": "./dist/admin/lingui-react.js"
     },
+    "./admin/radix": {
+      "types": "./dist/admin/radix.d.ts",
+      "default": "./dist/admin/radix.js"
+    },
+    "./admin/sonner": {
+      "types": "./dist/admin/sonner.d.ts",
+      "default": "./dist/admin/sonner.js"
+    },
+    "./admin/tailwind-merge": {
+      "types": "./dist/admin/tailwind-merge.d.ts",
+      "default": "./dist/admin/tailwind-merge.js"
+    },
+    "./admin/ui": {
+      "types": "./dist/admin/ui.d.ts",
+      "default": "./dist/admin/ui.js"
+    },
     "./test/playwright": {
       "types": "./dist/test/playwright.d.ts",
       "default": "./dist/test/playwright.js"
@@ -156,6 +172,7 @@
   "dependencies": {
     "@lingui/core": "catalog:lingui",
     "@lingui/react": "catalog:lingui",
+    "@plumix/admin-ui": "workspace:*",
     "@plumix/blocks": "workspace:*",
     "@plumix/core": "workspace:*",
     "@tailwindcss/node": "catalog:tailwind",
@@ -173,12 +190,24 @@
     "@tanstack/react-query": "^5.99.0",
     "@tanstack/react-router": "^1.168.0",
     "drizzle-orm": "catalog:",
+    "radix-ui": "^1.5.0",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^3.5.0",
     "vite": "catalog:"
   },
   "peerDependenciesMeta": {
     "@orpc/client": {
+      "optional": true
+    },
+    "radix-ui": {
+      "optional": true
+    },
+    "sonner": {
+      "optional": true
+    },
+    "tailwind-merge": {
       "optional": true
     },
     "@orpc/tanstack-query": {
@@ -223,8 +252,11 @@
     "eslint": "catalog:",
     "prettier": "catalog:",
     "publint": "catalog:",
+    "radix-ui": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "sonner": "catalog:",
+    "tailwind-merge": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"

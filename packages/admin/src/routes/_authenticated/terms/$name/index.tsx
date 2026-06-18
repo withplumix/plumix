@@ -6,15 +6,6 @@ import { DataTable } from "@/components/data-table/data-table.js";
 import { ListPagination } from "@/components/data-table/list-pagination.js";
 import { DebouncedSearchInput } from "@/components/form/search-input.js";
 import { buildTermTree, flattenTree } from "@/components/taxonomy/tree.js";
-import { Alert, AlertDescription } from "@/components/ui/alert.js";
-import { Button } from "@/components/ui/button.js";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty.js";
 import { hasCap } from "@/lib/caps.js";
 import { findTermTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
@@ -29,6 +20,15 @@ import * as v from "valibot";
 
 import type { TermTaxonomyManifestEntry } from "@plumix/core/manifest";
 import type { Term } from "@plumix/core/schema";
+import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
+import { Button } from "@plumix/admin-ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@plumix/admin-ui/empty";
 
 const M = {
   columnName: defineMessage({

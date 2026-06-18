@@ -6,35 +6,6 @@ import { DataTable } from "@/components/data-table/data-table.js";
 import { ListPagination } from "@/components/data-table/list-pagination.js";
 import { MultiSelect } from "@/components/form/multi-select.js";
 import { DebouncedSearchInput } from "@/components/form/search-input.js";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog.js";
-import { Alert, AlertDescription } from "@/components/ui/alert.js";
-import { Badge } from "@/components/ui/badge.js";
-import { Button } from "@/components/ui/button.js";
-import { Checkbox } from "@/components/ui/checkbox.js";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty.js";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select.js";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group.js";
 import { hasCap } from "@/lib/caps.js";
 import { toDate } from "@/lib/dates.js";
 import { findEntryTypeBySlug, findTermTaxonomyByName } from "@/lib/manifest.js";
@@ -54,6 +25,35 @@ import * as v from "valibot";
 
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import type { Entry, EntryStatus, Term } from "@plumix/core/schema";
+import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@plumix/admin-ui/alert-dialog";
+import { Badge } from "@plumix/admin-ui/badge";
+import { Button } from "@plumix/admin-ui/button";
+import { Checkbox } from "@plumix/admin-ui/checkbox";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@plumix/admin-ui/empty";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plumix/admin-ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 
 import { EntriesBulkBar } from "./entries-bulk-bar.js";
 

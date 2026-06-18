@@ -1,25 +1,6 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { LoginLocaleSwitcher } from "@/components/login-locale-switcher.js";
-import { Alert, AlertDescription } from "@/components/ui/alert.js";
-import { Button } from "@/components/ui/button.js";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card.js";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form.js";
-import { Input } from "@/components/ui/input.js";
-import { Separator } from "@/components/ui/separator.js";
 import { useEmailChangeErrorMessage } from "@/lib/email-change-errors.js";
 import { useMagicLinkErrorMessage } from "@/lib/magic-link-errors.js";
 import {
@@ -38,6 +19,26 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import * as v from "valibot";
+
+import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
+import { Button } from "@plumix/admin-ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@plumix/admin-ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@plumix/admin-ui/form";
+import { Input } from "@plumix/admin-ui/input";
+import { Separator } from "@plumix/admin-ui/separator";
 
 import { buildLocaleSwitchUrl, writeLocaleCookie } from "./-locale-param.js";
 import { loginSchema } from "./-schemas.js";

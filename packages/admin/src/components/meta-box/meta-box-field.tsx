@@ -2,7 +2,13 @@ import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 import { useState } from "react";
-import { ColorPicker } from "@/components/ui/color-picker.js";
+import { getPluginFieldType } from "@/lib/plugin-registry.js";
+import { useLabel } from "@/lib/use-label.js";
+import { cn } from "@/lib/utils";
+import { defineMessage } from "@lingui/core/macro";
+
+import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
+import { ColorPicker } from "@plumix/admin-ui/color-picker";
 import {
   FormControl,
   FormDescription,
@@ -10,16 +16,10 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form.js";
-import { Input } from "@/components/ui/input.js";
-import { Slider } from "@/components/ui/slider.js";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group.js";
-import { getPluginFieldType } from "@/lib/plugin-registry.js";
-import { useLabel } from "@/lib/use-label.js";
-import { cn } from "@/lib/utils";
-import { defineMessage } from "@lingui/core/macro";
-
-import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
+} from "@plumix/admin-ui/form";
+import { Input } from "@plumix/admin-ui/input";
+import { Slider } from "@plumix/admin-ui/slider";
+import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 
 import { MultiReferencePicker } from "./multi-reference-picker.js";
 import { PluginFieldErrorBoundary } from "./plugin-field-error-boundary.js";

@@ -13,6 +13,13 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* The shared shadcn primitives now live in @plumix/admin-ui (a sibling
+   workspace package). Tailwind v4 auto-detection skips node_modules, so
+   point it at the package source explicitly — this makes the shell CSS
+   carry every shared-component class, so plugin chunks rendering those
+   components need emit none of their own. */
+@source "../../../admin-ui/src";
+
 @custom-variant dark (&:is(.dark *));
 
 :root {

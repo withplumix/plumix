@@ -1,18 +1,19 @@
 import type { Crumb } from "@/lib/breadcrumbs.js";
 import type { ReactNode } from "react";
 import { Fragment } from "react";
+import { pathToCrumbs } from "@/lib/breadcrumbs.js";
+import { useLingui } from "@lingui/react";
+import { Link, useRouterState } from "@tanstack/react-router";
+
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb.js";
-import { Separator } from "@/components/ui/separator.js";
-import { SidebarTrigger } from "@/components/ui/sidebar.js";
-import { pathToCrumbs } from "@/lib/breadcrumbs.js";
-import { useLingui } from "@lingui/react";
-import { Link, useRouterState } from "@tanstack/react-router";
+} from "@plumix/admin-ui/breadcrumb";
+import { Separator } from "@plumix/admin-ui/separator";
+import { SidebarTrigger } from "@plumix/admin-ui/sidebar";
 
 function useBreadcrumbs(): readonly Crumb[] {
   const pathname = useRouterState({

@@ -5,22 +5,6 @@ import { ErrorPlaceholder } from "@/components/error-placeholder.js";
 import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
 import { MetaBoxField } from "@/components/meta-box/meta-box-field.js";
 import { metaBoxFieldColSpanClass } from "@/components/meta-box/meta-box-grid.js";
-import { Alert, AlertDescription } from "@/components/ui/alert.js";
-import { Button } from "@/components/ui/button.js";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card.js";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty.js";
-import { Form } from "@/components/ui/form.js";
 import { hasCap } from "@/lib/caps.js";
 import {
   findSettingsPageByName,
@@ -42,6 +26,22 @@ import type {
   SettingsGroupManifestEntry,
   SettingsPageManifestEntry,
 } from "@plumix/core/manifest";
+import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
+import { Button } from "@plumix/admin-ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@plumix/admin-ui/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@plumix/admin-ui/empty";
+import { Form } from "@plumix/admin-ui/form";
 import { seedFromMetaBoxes } from "@plumix/core/manifest";
 
 // Descriptors that need runtime indirection — used outside JSX (aria

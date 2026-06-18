@@ -5,23 +5,6 @@ import { useCallback, useMemo } from "react";
 import { DataTable } from "@/components/data-table/data-table.js";
 import { ListPagination } from "@/components/data-table/list-pagination.js";
 import { DebouncedSearchInput } from "@/components/form/search-input.js";
-import { Alert, AlertDescription } from "@/components/ui/alert.js";
-import { Badge } from "@/components/ui/badge.js";
-import { Button } from "@/components/ui/button.js";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty.js";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select.js";
 import { hasCap } from "@/lib/caps.js";
 import { toDate } from "@/lib/dates.js";
 import { orpc } from "@/lib/orpc.js";
@@ -37,6 +20,23 @@ import * as v from "valibot";
 
 import type { Label } from "@plumix/core/i18n";
 import type { User, UserRole } from "@plumix/core/schema";
+import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
+import { Badge } from "@plumix/admin-ui/badge";
+import { Button } from "@plumix/admin-ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@plumix/admin-ui/empty";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plumix/admin-ui/select";
 
 import { USER_ROLES } from "./-constants.js";
 

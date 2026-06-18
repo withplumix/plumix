@@ -1,22 +1,23 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button.js";
-import {
-  CommandDialog,
-  CommandEmpty,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command.js";
-import { Skeleton } from "@/components/ui/skeleton.js";
-import { SortableList } from "@/components/ui/sortable.js";
 import { orpc } from "@/lib/orpc.js";
 import { useLabel } from "@/lib/use-label.js";
 import { useUntitledLabel } from "@/lib/use-untitled-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
+
+import { Button } from "@plumix/admin-ui/button";
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@plumix/admin-ui/command";
+import { Skeleton } from "@plumix/admin-ui/skeleton";
+import { SortableList } from "@plumix/admin-ui/sortable";
 
 // Multi-value counterpart to `ReferencePicker`. Shares the same
 // `kind` / `scope` dispatch shape — same lookup RPC, same adapter

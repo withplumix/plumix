@@ -1,12 +1,6 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ComponentData } from "@puckeditor/core";
 import type { ReactElement, ReactNode } from "react";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
@@ -16,6 +10,12 @@ import type {
   ThemeTokenGroup,
   ThemeTokens,
 } from "@plumix/blocks";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@plumix/admin-ui/accordion";
 
 import type { StyleBucket } from "./viewport-bucket.js";
 import { DEVICE_LABEL } from "./device-labels.js";
