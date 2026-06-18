@@ -1,7 +1,8 @@
 import type { MessageDescriptor } from "plumix/i18n";
 import type { MetaBoxFieldManifestEntry } from "plumix/plugin";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { Button, Dialog, DialogContent, DialogTitle } from "plumix/admin/ui";
 import { Trans, useLingui } from "plumix/i18n";
 
 import { MediaLibrary } from "./MediaLibrary.js";
@@ -126,25 +127,27 @@ export function MediaPickerField({
           </p>
         )}
       </div>
-      <button
+      <Button
         type="button"
-        className="hover:bg-muted rounded border px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+        variant="outline"
+        size="sm"
         disabled={disabled}
         onClick={() => setOpen(true)}
         data-testid={`${testId}-open`}
       >
         {value ? i18n._(M.buttonChange) : i18n._(M.buttonSelect)}
-      </button>
+      </Button>
       {value && !required ? (
-        <button
+        <Button
           type="button"
-          className="hover:bg-muted rounded px-2 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+          variant="ghost"
+          size="sm"
           disabled={disabled}
           onClick={handleClear}
           data-testid={`${testId}-clear`}
         >
           <Trans id="plugin.media.pickerField.clear" message="Clear" />
-        </button>
+        </Button>
       ) : null}
       {open ? (
         <MediaPickerModal
@@ -193,11 +196,11 @@ function MediaPreview({
   );
 }
 
-// Fixed-position modal hosting the MediaLibrary in picker mode.
-// Mirrors the `ConfirmDialog` pattern in MediaLibrary.tsx (no shadcn
-// `Dialog` shim is exposed to plugin chunks, so the plugin can't
-// import it). Backdrop click + Escape dismiss. Body scroll is locked
-// while open by the surrounding admin route layout.
+// Modal hosting the MediaLibrary in picker mode, built on the shared
+// `Dialog` from `plumix/admin/ui` — radix handles the focus trap, Escape,
+// and backdrop dismiss that this used to wire by hand. Mounted only while
+// open (parent renders conditionally), so closing routes through
+// `onOpenChange` → `onCancel`.
 function MediaPickerModal({
   accept,
   onSelect,
@@ -210,42 +213,30 @@ function MediaPickerModal({
   readonly testId: string;
 }): ReactNode {
   const { i18n } = useLingui();
-  const modalAria = i18n._(M.modalAria);
-  // Window-level Escape listener — React's `onKeyDown` only fires when
-  // focus is inside the modal. If the user clicked the backdrop (focus
-  // goes to body) or focus drifted outside, the React handler misses
-  // the event. Mounted only while the modal is open so it doesn't
-  // intercept keystrokes on the rest of the admin.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") onCancel();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onCancel]);
 
   return (
-    <div
-      data-testid={testId}
-      role="dialog"
-      aria-modal="true"
-      aria-label={modalAria}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onCancel();
+    <Dialog
+      open
+      onOpenChange={(next) => {
+        if (!next) onCancel();
       }}
     >
-      <div
-        className="bg-background relative flex max-h-[90vh] w-full max-w-5xl flex-col overflow-y-auto rounded-lg p-4 shadow-lg"
-        data-testid={`${testId}-panel`}
+      <DialogContent
+        data-testid={testId}
+        showCloseButton={false}
+        className="flex max-h-[90vh] max-w-5xl flex-col overflow-y-auto"
       >
+        {/* MediaLibrary renders its own visible heading + footer controls;
+            this names the dialog for assistive tech without duplicating it
+            on screen. */}
+        <DialogTitle className="sr-only">{i18n._(M.modalAria)}</DialogTitle>
         <MediaLibrary
           mode="picker"
           accept={accept}
           onSelect={onSelect}
           onCancel={onCancel}
         />
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

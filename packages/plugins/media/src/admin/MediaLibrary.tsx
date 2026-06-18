@@ -6,6 +6,19 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  Button,
+  Input,
+  Skeleton,
+} from "plumix/admin/ui";
 import { Trans, useLingui } from "plumix/i18n";
 
 // Descriptors that need runtime indirection — used outside JSX (aria
@@ -526,7 +539,7 @@ export function MediaLibrary({
             {isPicker ? i18n._(M.titlePicker) : i18n._(M.titleLibrary)}
           </h1>
           <div className="flex items-center gap-2">
-            <input
+            <Input
               type="search"
               role="searchbox"
               value={search}
@@ -540,9 +553,7 @@ export function MediaLibrary({
               aria-label={i18n._(M.searchPlaceholder)}
               maxLength={200}
               data-testid="media-library-search"
-              // Classes mirror the admin's vendored Input (components/ui/
-              // input) — unreachable from plugin code behind the @/ alias.
-              className="border-input bg-background focus-visible:ring-ring h-9 w-56 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
+              className="w-56"
             />
             <UploadButton onSelect={(files) => void startUpload(files)} />
           </div>
@@ -656,17 +667,18 @@ export function MediaLibrary({
             data-testid="media-library-picker-footer"
             className="bg-background sticky bottom-0 -mx-2 flex items-center justify-end gap-2 border-t px-2 py-3"
           >
-            <button
+            <Button
               type="button"
-              className="hover:bg-muted rounded px-3 py-1.5 text-sm"
+              variant="ghost"
+              size="sm"
               onClick={() => onCancel?.()}
               data-testid="media-library-picker-cancel"
             >
               <Trans id="plugin.media.library.pickerCancel" message="Cancel" />
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              size="sm"
               disabled={pickerSelectedId === null}
               onClick={() => {
                 if (pickerSelectedId !== null) {
@@ -679,7 +691,7 @@ export function MediaLibrary({
                 id="plugin.media.library.pickerUseSelection"
                 message="Use selection"
               />
-            </button>
+            </Button>
           </footer>
         )}
       </div>
@@ -806,14 +818,16 @@ function ErrorBanner({
       className="text-destructive flex items-center justify-between gap-3 text-sm"
     >
       <span>{message}</span>
-      <button
+      <Button
         type="button"
+        variant="link"
+        size="sm"
         data-testid={`${testIdRoot}-dismiss`}
         onClick={onDismiss}
-        className="text-xs underline"
+        className="text-destructive h-auto p-0 text-xs"
       >
         <Trans id="plugin.media.banner.dismiss" message="Dismiss" />
-      </button>
+      </Button>
     </div>
   );
 }
@@ -1043,9 +1057,9 @@ function MediaSkeletonGrid(): ReactNode {
           aria-hidden="true"
           className="border-border bg-card flex flex-col gap-2 rounded-lg border p-3"
         >
-          <div className="aspect-square w-full animate-pulse rounded-sm bg-white/10" />
-          <div className="h-3.5 w-[70%] rounded-sm bg-white/[0.06]" />
-          <div className="h-[0.7rem] w-[40%] rounded-sm bg-white/[0.04]" />
+          <Skeleton className="aspect-square w-full rounded-sm" />
+          <Skeleton className="h-3.5 w-[70%] rounded-sm" />
+          <Skeleton className="h-[0.7rem] w-[40%] rounded-sm" />
         </div>
       ))}
     </div>
@@ -1143,15 +1157,17 @@ function MediaDetailDrawer({
         <span className="text-xs tracking-wider opacity-70">
           <Trans id="plugin.media.detail.heading" message="ASSET DETAILS" />
         </span>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-sm"
           onClick={onClose}
           aria-label={i18n._(M.closeDetailsAria)}
           data-testid="media-detail-close"
-          className="cursor-pointer rounded px-1.5 py-0.5 text-base leading-none"
+          className="text-base leading-none"
         >
           ×
-        </button>
+        </Button>
       </div>
 
       <div className="bg-muted aspect-square w-full overflow-hidden">
@@ -1225,44 +1241,49 @@ function MediaDetailDrawer({
             >
               {absoluteUrl}
             </code>
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="xs"
               onClick={() => void copy()}
               data-testid="media-detail-copy"
-              className="border-border flex-shrink-0 cursor-pointer rounded border bg-transparent px-2 py-1 text-[0.7rem]"
+              className="flex-shrink-0 text-[0.7rem]"
             >
               {copied ? (
                 <Trans id="plugin.media.detail.copied" message="Copied" />
               ) : (
                 <Trans id="plugin.media.detail.copy" message="Copy" />
               )}
-            </button>
+            </Button>
           </div>
         </div>
 
         <div className="border-border flex gap-2 border-t pt-2">
-          <a
-            // Always go through the worker serve route with
-            // ?attachment=1 — the HTML `download` attribute is ignored
-            // cross-origin (e.g. when `publicUrlBase` is configured),
-            // but the route always sends `Content-Disposition:
-            // attachment` for this query param, so downloads work
-            // regardless of which mode `item.url` is in.
-            href={`${pluginBasePath()}/_plumix/media/serve/${String(item.id)}?attachment=1`}
-            download={item.title}
-            data-testid="media-detail-download"
-            className="bg-card hover:bg-muted flex-1 rounded border px-3 py-2 text-center text-xs no-underline"
-          >
-            <Trans id="plugin.media.detail.download" message="Download" />
-          </a>
-          <button
+          <Button asChild variant="outline" size="sm" className="flex-1">
+            <a
+              // Always go through the worker serve route with
+              // ?attachment=1 — the HTML `download` attribute is ignored
+              // cross-origin (e.g. when `publicUrlBase` is configured),
+              // but the route always sends `Content-Disposition:
+              // attachment` for this query param, so downloads work
+              // regardless of which mode `item.url` is in.
+              href={`${pluginBasePath()}/_plumix/media/serve/${String(item.id)}?attachment=1`}
+              download={item.title}
+              data-testid="media-detail-download"
+            >
+              <Trans id="plugin.media.detail.download" message="Download" />
+            </a>
+          </Button>
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             data-testid="media-detail-delete"
             onClick={() => setConfirmingDelete(true)}
-            className="border-border flex-1 cursor-pointer rounded border bg-transparent px-3 py-2 text-xs"
+            className="flex-1"
           >
             <Trans id="plugin.media.detail.delete" message="Delete" />
-          </button>
+          </Button>
         </div>
       </div>
       {confirmingDelete && (
@@ -1297,7 +1318,6 @@ function ConfirmDialog({
   title,
   description,
   confirmLabel,
-  cancelLabel,
   danger = false,
   onCancel,
   onConfirm,
@@ -1305,71 +1325,46 @@ function ConfirmDialog({
   title: ReactNode;
   description?: string;
   confirmLabel?: ReactNode;
-  cancelLabel?: ReactNode;
   danger?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }): ReactNode {
-  // Close on ESC; trap obvious-bg click as cancel.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") onCancel();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onCancel]);
-
+  // Mounted only while confirming (parent renders conditionally), so the
+  // dialog is always open while present; closing via ESC, the overlay, or
+  // Cancel routes through `onOpenChange` → `onCancel`. Radix handles the
+  // focus trap + ESC that this component used to wire by hand.
   return (
-    <div
-      data-testid="confirm-dialog-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-dialog-title"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onCancel();
+    <AlertDialog
+      open
+      onOpenChange={(next) => {
+        if (!next) onCancel();
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
     >
-      <div className="border-border bg-card flex w-full max-w-md flex-col gap-3 rounded-lg border p-5">
-        <h3
-          id="confirm-dialog-title"
-          data-testid="confirm-dialog-title"
-          className="m-0 text-base font-semibold"
-        >
-          {title}
-        </h3>
-        {description && (
-          <p className="m-0 text-sm leading-snug opacity-75">{description}</p>
-        )}
-        <div className="mt-2 flex justify-end gap-2">
-          <button
-            type="button"
-            data-testid="confirm-dialog-cancel"
-            onClick={onCancel}
-            className="border-border cursor-pointer rounded border bg-transparent px-3.5 py-2 text-[0.8rem]"
-          >
-            {cancelLabel ?? (
-              <Trans id="plugin.media.dialog.cancel" message="Cancel" />
-            )}
-          </button>
-          <button
-            type="button"
+      <AlertDialogContent data-testid="confirm-dialog-overlay">
+        <AlertDialogHeader>
+          <AlertDialogTitle data-testid="confirm-dialog-title">
+            {title}
+          </AlertDialogTitle>
+          {description ? (
+            <AlertDialogDescription>{description}</AlertDialogDescription>
+          ) : null}
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel data-testid="confirm-dialog-cancel">
+            <Trans id="plugin.media.dialog.cancel" message="Cancel" />
+          </AlertDialogCancel>
+          <AlertDialogAction
             data-testid="confirm-dialog-confirm"
+            variant={danger ? "destructive" : "default"}
             onClick={onConfirm}
-            autoFocus
-            className={`cursor-pointer rounded border px-3.5 py-2 text-[0.8rem] font-semibold ${
-              danger
-                ? "border-destructive bg-destructive text-white"
-                : "border-primary bg-primary text-primary-foreground"
-            }`}
           >
             {confirmLabel ?? (
               <Trans id="plugin.media.dialog.confirm" message="Confirm" />
             )}
-          </button>
-        </div>
-      </div>
-    </div>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -1436,7 +1431,7 @@ function AltEditor({
 
   return (
     <div className="relative">
-      <input
+      <Input
         data-testid={`${testIdPrefix}-${String(cardId)}-alt`}
         type="text"
         value={draft}
@@ -1459,7 +1454,6 @@ function AltEditor({
             e.currentTarget.blur();
           }
         }}
-        className="border-border focus:border-primary w-full rounded-md border bg-white/[0.03] px-2.5 py-2 text-[0.8125rem] leading-snug outline-none focus:bg-white/5"
       />
       {savedFlash && (
         <span
