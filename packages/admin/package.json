@@ -27,7 +27,6 @@
     "@orpc/tanstack-query": "catalog:",
     "@plumix/admin-ui": "workspace:*",
     "@puckeditor/core": "0.21.2",
-    "@radix-ui/react-direction": "1.1.1",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "catalog:",
     "@tanstack/react-table": "^8.21.3",

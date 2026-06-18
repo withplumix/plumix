@@ -5,9 +5,9 @@ import {
 } from "@/lib/palette-commands.js";
 import { recordRecentNav } from "@/lib/recent-nav.js";
 import { createQueryClient } from "@/providers/query-client.js";
-import { DirectionProvider } from "@radix-ui/react-direction";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { Direction } from "radix-ui";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { renderWithI18n } from "../../../test/render-with-i18n.js";
@@ -320,9 +320,9 @@ describe("CommandPalette", () => {
 
   test("mounts under an RTL direction provider without crashing", async () => {
     renderPalette(
-      <DirectionProvider dir="rtl">
+      <Direction.DirectionProvider dir="rtl">
         <CommandPalette capabilities={[]} />
-      </DirectionProvider>,
+      </Direction.DirectionProvider>,
     );
     pressCmdK();
 
