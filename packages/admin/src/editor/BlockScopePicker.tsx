@@ -1,12 +1,4 @@
 import type { ReactElement } from "react";
-import { Button } from "@/components/ui/button.js";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog.js";
 import { useLabel } from "@/lib/use-label.js";
 import { Trans } from "@lingui/react";
 
@@ -15,6 +7,14 @@ import type {
   BlockVariation,
   PatternRegistry,
 } from "@plumix/blocks";
+import { Button } from "@plumix/admin-ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@plumix/admin-ui/dialog";
 
 import { LazyMount } from "./LazyMount.js";
 import { THUMBNAIL_MIN_HEIGHT } from "./thumbnail-min-height.js";

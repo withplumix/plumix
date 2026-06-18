@@ -69,6 +69,9 @@ catalogs:
     '@vitest/coverage-v8':
       specifier: ^4.1.9
       version: 4.1.9
+    cmdk:
+      specifier: ^1.1.1
+      version: 1.1.1
     drizzle-kit:
       specifier: ^0.31.10
       version: 0.31.10
@@ -90,18 +93,33 @@ catalogs:
     jsdom:
       specifier: ^29.1.1
       version: 29.1.1
+    lucide-react:
+      specifier: ^1.16.0
+      version: 1.16.0
     prettier:
       specifier: ^3.8.3
       version: 3.8.3
     publint:
       specifier: ^0.3.21
       version: 0.3.21
+    radix-ui:
+      specifier: ^1.5.0
+      version: 1.6.0
     react:
       specifier: ^19.2.7
       version: 19.2.7
     react-dom:
       specifier: ^19.2.7
       version: 19.2.7
+    react-hook-form:
+      specifier: ^7.75.0
+      version: 7.75.0
+    sonner:
+      specifier: ^2.0.7
+      version: 2.0.7
+    tailwind-merge:
+      specifier: ^3.5.0
+      version: 3.5.0
     typescript:
       specifier: ^6.0.3
       version: 6.0.3
@@ -259,18 +277,6 @@ importers:
 
   packages/admin:
     dependencies:
-      '@dnd-kit/core':
-        specifier: 'catalog:'
-        version: 6.3.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@dnd-kit/modifiers':
-        specifier: ^9.0.0
-        version: 9.0.0(@dnd-kit/core@6.3.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
-      '@dnd-kit/sortable':
-        specifier: 'catalog:'
-        version: 10.0.0(@dnd-kit/core@6.3.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
-      '@dnd-kit/utilities':
-        specifier: 'catalog:'
-        version: 3.2.2(react@19.2.7)
       '@fontsource-variable/geist':
         specifier: ^5.2.9
         version: 5.2.9
@@ -292,6 +298,9 @@ importers:
       '@orpc/tanstack-query':
         specifier: 'catalog:'
         version: 1.14.6(@orpc/client@1.14.6)(@tanstack/query-core@5.101.0)
+      '@plumix/admin-ui':
+        specifier: workspace:*
+        version: link:../admin-ui
       '@puckeditor/core':
         specifier: 0.21.2
         version: 0.21.2(@floating-ui/dom@1.7.6)(@types/react-dom@19.2.3(@types/react@19.2.16))(@types/react@19.2.16)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7))
@@ -310,41 +319,32 @@ importers:
       '@tiptap/core':
         specifier: 'catalog:'
         version: 3.26.1(@tiptap/pm@3.23.4)
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
       cmdk:
-        specifier: ^1.1.1
+        specifier: 'catalog:'
         version: 1.1.1(@types/react-dom@19.2.3(@types/react@19.2.16))(@types/react@19.2.16)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       jsondiffpatch:
         specifier: ^0.7.6
         version: 0.7.6
       lucide-react:
-        specifier: ^1.16.0
+        specifier: 'catalog:'
         version: 1.16.0(react@19.2.7)
       radix-ui:
-        specifier: ^1.5.0
+        specifier: 'catalog:'
         version: 1.6.0(@types/react-dom@19.2.3(@types/react@19.2.16))(@types/react@19.2.16)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react:
         specifier: 'catalog:'
         version: 19.2.7
-      react-colorful:
-        specifier: ^5.6.1
-        version: 5.6.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react-dom:
         specifier: 'catalog:'
         version: 19.2.7(react@19.2.7)
       react-hook-form:
-        specifier: ^7.75.0
+        specifier: 'catalog:'
         version: 7.75.0(react@19.2.7)
       sonner:
-        specifier: ^2.0.7
+        specifier: 'catalog:'
         version: 2.0.7(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       tailwind-merge:
-        specifier: ^3.5.0
+        specifier: 'catalog:'
         version: 3.5.0
       ua-parser-js:
         specifier: ^2.0.10
@@ -458,6 +458,76 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.1.9(@types/node@25.9.2)(@vitest/coverage-v8@4.1.9)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.2)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
+
+  packages/admin-ui:
+    dependencies:
+      '@dnd-kit/core':
+        specifier: 'catalog:'
+        version: 6.3.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@dnd-kit/modifiers':
+        specifier: ^9.0.0
+        version: 9.0.0(@dnd-kit/core@6.3.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
+      '@dnd-kit/sortable':
+        specifier: 'catalog:'
+        version: 10.0.0(@dnd-kit/core@6.3.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
+      '@dnd-kit/utilities':
+        specifier: 'catalog:'
+        version: 3.2.2(react@19.2.7)
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      cmdk:
+        specifier: 'catalog:'
+        version: 1.1.1(@types/react-dom@19.2.3(@types/react@19.2.16))(@types/react@19.2.16)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      lucide-react:
+        specifier: 'catalog:'
+        version: 1.16.0(react@19.2.7)
+      radix-ui:
+        specifier: 'catalog:'
+        version: 1.6.0(@types/react-dom@19.2.3(@types/react@19.2.16))(@types/react@19.2.16)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      react-colorful:
+        specifier: ^5.6.1
+        version: 5.6.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      react-hook-form:
+        specifier: 'catalog:'
+        version: 7.75.0(react@19.2.7)
+      tailwind-merge:
+        specifier: 'catalog:'
+        version: 3.5.0
+    devDependencies:
+      '@plumix/eslint-config':
+        specifier: workspace:*
+        version: link:../../tooling/eslint
+      '@plumix/prettier-config':
+        specifier: workspace:*
+        version: link:../../tooling/prettier
+      '@plumix/typescript-config':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.16
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.2.3(@types/react@19.2.16)
+      eslint:
+        specifier: 'catalog:'
+        version: 10.5.0(jiti@2.7.0)
+      prettier:
+        specifier: 'catalog:'
+        version: 3.8.3
+      react:
+        specifier: 'catalog:'
+        version: 19.2.7
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.7(react@19.2.7)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
 
   packages/blocks:
     dependencies:
@@ -1341,6 +1411,9 @@ importers:
       '@lingui/react':
         specifier: catalog:lingui
         version: 6.3.0(react@19.2.7)
+      '@plumix/admin-ui':
+        specifier: workspace:*
+        version: link:../admin-ui
       '@plumix/blocks':
         specifier: workspace:*
         version: link:../blocks
@@ -1426,12 +1499,21 @@ importers:
       publint:
         specifier: 'catalog:'
         version: 0.3.21
+      radix-ui:
+        specifier: 'catalog:'
+        version: 1.6.0(@types/react-dom@19.2.3(@types/react@19.2.16))(@types/react@19.2.16)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react:
         specifier: 'catalog:'
         version: 19.2.7
       react-dom:
         specifier: 'catalog:'
         version: 19.2.7(react@19.2.7)
+      sonner:
+        specifier: 'catalog:'
+        version: 2.0.7(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      tailwind-merge:
+        specifier: 'catalog:'
+        version: 3.5.0
       typescript:
         specifier: 'catalog:'
         version: 6.0.3

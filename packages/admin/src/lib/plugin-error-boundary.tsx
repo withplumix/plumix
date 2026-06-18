@@ -1,10 +1,11 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { Component } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert.js";
 import { i18n } from "@lingui/core";
 import { defineMessage } from "@lingui/core/macro";
 import { AlertTriangle } from "lucide-react";
+
+import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 
 type Kind = "page" | "widget" | "icon" | "block" | "field";
 

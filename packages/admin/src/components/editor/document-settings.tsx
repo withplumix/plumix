@@ -2,14 +2,14 @@ import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { useEffect, useRef } from "react";
 import { MetaBoxField } from "@/components/meta-box/meta-box-field.js";
-import { Form } from "@/components/ui/form.js";
-import { Input } from "@/components/ui/input.js";
-import { Label } from "@/components/ui/label.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { useForm, useWatch } from "react-hook-form";
 
 import type { EntryMetaBoxManifestEntry } from "@plumix/core/manifest";
+import { Form } from "@plumix/admin-ui/form";
+import { Input } from "@plumix/admin-ui/input";
+import { Label } from "@plumix/admin-ui/label";
 
 const M = {
   slug: defineMessage({ id: "editor.document.slug", message: "Slug" }),

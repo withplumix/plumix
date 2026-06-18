@@ -1,14 +1,14 @@
 import type { ReactNode } from "react";
+import { useLingui } from "@lingui/react";
+
+import type { PlumixManifest } from "@plumix/core/manifest";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select.js";
-import { useLingui } from "@lingui/react";
-
-import type { PlumixManifest } from "@plumix/core/manifest";
+} from "@plumix/admin-ui/select";
 
 interface LoginLocaleSwitcherProps {
   readonly currentCode: string;

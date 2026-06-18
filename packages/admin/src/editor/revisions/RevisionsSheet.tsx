@@ -1,8 +1,14 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button.js";
-import { Input } from "@/components/ui/input.js";
+import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { MessageCircle, MessageCircleMore } from "lucide-react";
+
+import { Button } from "@plumix/admin-ui/button";
+import { Input } from "@plumix/admin-ui/input";
 import {
   Sheet,
   SheetContent,
@@ -10,19 +16,14 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet.js";
-import { Skeleton } from "@/components/ui/skeleton.js";
+} from "@plumix/admin-ui/sheet";
+import { Skeleton } from "@plumix/admin-ui/skeleton";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@/components/ui/tabs.js";
-import { useLabel } from "@/lib/use-label.js";
-import { defineMessage } from "@lingui/core/macro";
-import { Trans } from "@lingui/react";
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { MessageCircle, MessageCircleMore } from "lucide-react";
+} from "@plumix/admin-ui/tabs";
 
 import { RevisionDiffDialog } from "./RevisionDiffDialog.js";
 

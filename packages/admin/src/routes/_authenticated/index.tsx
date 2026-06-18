@@ -1,21 +1,6 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
-import { Button } from "@/components/ui/button.js";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card.js";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty.js";
 import { toDate } from "@/lib/dates.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import { visibleDashboardWidgets, visibleEntryTypes } from "@/lib/manifest.js";
@@ -27,6 +12,22 @@ import { Trans, useLingui } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, FileText, Puzzle } from "lucide-react";
+
+import { Button } from "@plumix/admin-ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@plumix/admin-ui/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@plumix/admin-ui/empty";
 
 import { DashboardWidgets } from "./-dashboard-widgets.js";
 

@@ -7,8 +7,11 @@ import * as OrpcClientFetchNs from "@orpc/client/fetch";
 import * as OrpcTanstackQueryNs from "@orpc/tanstack-query";
 import * as ReactQueryNs from "@tanstack/react-query";
 import * as ReactRouterNs from "@tanstack/react-router";
+import * as RadixNs from "radix-ui";
 import * as ReactDomNs from "react-dom";
 import * as ReactDomClientNs from "react-dom/client";
+import * as SonnerNs from "sonner";
+import * as TailwindMergeNs from "tailwind-merge";
 
 import { adminBasePath } from "./admin-base.js";
 import { pluginCatalogLoaderRef } from "./i18n-boot.js";
@@ -37,6 +40,13 @@ const runtime = {
   orpcTanstackQuery: OrpcTanstackQueryNs,
   linguiCore: LinguiCoreNs,
   linguiReact: LinguiReactNs,
+  // Substrates the shared shadcn components (`plumix/admin/ui`) sit on.
+  // Exposing the host's instances lets plugin chunks share radix context
+  // (Tooltip/Dialog providers), sonner's `toast()` singleton, and the
+  // `tailwind-merge` cache rather than bundling their own copies.
+  radix: RadixNs,
+  sonner: SonnerNs,
+  tailwindMerge: TailwindMergeNs,
 } as const;
 
 interface PlumixI18nGlobal {

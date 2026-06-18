@@ -25,6 +25,15 @@ const SHIM_SLUGS = {
   // instance and `useLingui()` returns null inside plugin routes.
   "@lingui/core": "lingui-core",
   "@lingui/react": "lingui-react",
+  // Substrates the shared shadcn components (`plumix/admin/ui`) sit on.
+  // `radix-ui` carries React context (Tooltip/Dialog/Popover providers) —
+  // sharing the host instance lets a plugin's `<Tooltip>` find the shell's
+  // `<TooltipProvider>`. `sonner`'s `toast()` is a module singleton bound
+  // to the shell's mounted `<Toaster>`. `tailwind-merge` backs `cn()`.
+  // One shim each keeps these out of every plugin chunk (~21KB gzip saved).
+  "radix-ui": "radix",
+  sonner: "sonner",
+  "tailwind-merge": "tailwind-merge",
 } as const satisfies Record<string, string>;
 
 export type SharedAdminRuntimeSpecifier = keyof typeof SHIM_SLUGS;

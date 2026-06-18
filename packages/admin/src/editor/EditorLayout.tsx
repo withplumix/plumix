@@ -12,20 +12,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { Button } from "@/components/ui/button.js";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog.js";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs.js";
 import { useIsMobile } from "@/hooks/use-mobile.js";
 import { copyText } from "@/lib/clipboard.js";
 import { getPatterns } from "@/lib/manifest.js";
@@ -48,6 +34,20 @@ import type {
   ThemeTokens,
 } from "@plumix/blocks";
 import type { PatternManifestEntry } from "@plumix/core/manifest";
+import { Button } from "@plumix/admin-ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@plumix/admin-ui/dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@plumix/admin-ui/tabs";
 import {
   createBlockRegistry,
   createPatternRegistry,

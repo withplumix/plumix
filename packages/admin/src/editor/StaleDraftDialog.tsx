@@ -1,7 +1,11 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button.js";
+import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
+import { Trans } from "@lingui/react";
+
+import { Button } from "@plumix/admin-ui/button";
 import {
   Dialog,
   DialogContent,
@@ -9,10 +13,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog.js";
-import { useLabel } from "@/lib/use-label.js";
-import { defineMessage } from "@lingui/core/macro";
-import { Trans } from "@lingui/react";
+} from "@plumix/admin-ui/dialog";
 
 const M = {
   // Compare-pane row labels — passed into the inner `ComparePane`

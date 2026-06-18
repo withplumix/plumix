@@ -1,9 +1,10 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
+
+import { Avatar, AvatarFallback } from "@plumix/admin-ui/avatar";
 
 interface CoAuthor {
   readonly id: number;

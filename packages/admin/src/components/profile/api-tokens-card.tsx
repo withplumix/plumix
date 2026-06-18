@@ -1,51 +1,6 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog.js";
-import { Alert, AlertDescription } from "@/components/ui/alert.js";
-import { Badge } from "@/components/ui/badge.js";
-import { Button } from "@/components/ui/button.js";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card.js";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty.js";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form.js";
-import { Input } from "@/components/ui/input.js";
-import { Label as UILabel } from "@/components/ui/label.js";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group.js";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table.js";
 import { copyText } from "@/lib/clipboard.js";
 import { toDate } from "@/lib/dates.js";
 import { orpc } from "@/lib/orpc.js";
@@ -61,6 +16,51 @@ import { useForm, useWatch } from "react-hook-form";
 import * as v from "valibot";
 
 import type { Label } from "@plumix/core/i18n";
+import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@plumix/admin-ui/alert-dialog";
+import { Badge } from "@plumix/admin-ui/badge";
+import { Button } from "@plumix/admin-ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@plumix/admin-ui/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@plumix/admin-ui/empty";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@plumix/admin-ui/form";
+import { Input } from "@plumix/admin-ui/input";
+import { Label as UILabel } from "@plumix/admin-ui/label";
+import { RadioGroup, RadioGroupItem } from "@plumix/admin-ui/radio-group";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@plumix/admin-ui/table";
 import { vMessage } from "@plumix/core/validation";
 
 // Renders the API-token surface for a target user. Two modes:

@@ -16,10 +16,13 @@ describe("SHARED_ADMIN_RUNTIME_SPECIFIERS", () => {
       "@orpc/tanstack-query",
       "@tanstack/react-query",
       "@tanstack/react-router",
+      "radix-ui",
       "react",
       "react-dom",
       "react-dom/client",
       "react/jsx-runtime",
+      "sonner",
+      "tailwind-merge",
     ]);
   });
 
@@ -51,6 +54,11 @@ describe("adminRuntimeShimSlug", () => {
     );
     expect(adminRuntimeShimSlug("@lingui/core")).toBe("lingui-core");
     expect(adminRuntimeShimSlug("@lingui/react")).toBe("lingui-react");
+    // Singleton substrates the shared shadcn components sit on: one shim
+    // each dedupes radix/sonner/tailwind-merge out of every plugin chunk.
+    expect(adminRuntimeShimSlug("radix-ui")).toBe("radix");
+    expect(adminRuntimeShimSlug("sonner")).toBe("sonner");
+    expect(adminRuntimeShimSlug("tailwind-merge")).toBe("tailwind-merge");
   });
 
   test("slug is a filename-safe segment (used as `<slug>.js`)", () => {

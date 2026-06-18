@@ -166,6 +166,27 @@ test.describe("plugin runtime alias seam", () => {
     expect(buttonBg).not.toBe("rgba(0, 0, 0, 0)");
     expect(buttonBg).not.toBe("rgb(255, 255, 255)");
 
+    // (5b) A shared shadcn component from `plumix/admin/ui` renders inside
+    // the plugin chunk. The Button is bundled, but its `radix-ui` (Tooltip
+    // context) and `tailwind-merge` (`cn`) deps resolve through the host
+    // shims — so it gets the shell's `bg-primary` token without bundling
+    // radix. Visible + non-transparent proves the whole chain.
+    const sharedButton = page.getByTestId("runtime-proof-ui-button");
+    await expect(sharedButton).toBeVisible();
+    const sharedButtonBg = await sharedButton.evaluate(
+      (el) => getComputedStyle(el).backgroundColor,
+    );
+    expect(sharedButtonBg).not.toBe("rgba(0, 0, 0, 0)");
+    expect(sharedButtonBg).not.toBe("rgb(255, 255, 255)");
+
+    // (5c) Hovering opens the radix Tooltip. The plugin's bundled Tooltip
+    // wrapper resolves `radix-ui` to the host shim, so it shares the
+    // shell's radix context + `<TooltipProvider>` — if radix were bundled
+    // per-chunk (separate context), the content would never mount. This is
+    // the assertion that proves context sharing, not just bundling.
+    await sharedButton.hover();
+    await expect(page.getByTestId("runtime-proof-ui-tooltip")).toBeVisible();
+
     // (6) Router hook navigates inside admin
     await page.getByTestId("runtime-proof-navigate").click();
     await expect(page).toHaveURL(/\/_plumix\/admin\/?$/);

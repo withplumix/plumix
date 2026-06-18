@@ -10,6 +10,21 @@ import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 
+// The shared shadcn surface a real plugin consumes. A real plugin imports
+// these from `plumix/admin/ui`, which is just `export * from
+// "@plumix/admin-ui"`; admin's e2e is deliberately plumix-free (it resolves
+// the runtime shims by relative path), so the fixture imports the package
+// directly. Bundled into the chunk, but its `radix-ui` / `tailwind-merge`
+// imports are aliased to the host runtime shims — proving the dedup seam
+// end-to-end: the Tooltip uses the host's radix context and the Button's
+// classes resolve through the shared `cn`/tailwind-merge.
+import {
+  Button,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@plumix/admin-ui";
+
 // The orpc trio is sourced from the host runtime via aliased imports.
 // In a real plugin, the type parameter on `createORPCClient` would
 // match the plugin's own router definition. For the seam proof we
@@ -81,6 +96,21 @@ export function MediaLibrary(): ReactNode {
         data-testid="runtime-proof-shares-orpc"
         data-shared={String(orpcShared && orpcUtilsShared)}
       />
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="default"
+            size="sm"
+            data-testid="runtime-proof-ui-button"
+          >
+            shared button
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent data-testid="runtime-proof-ui-tooltip">
+          shared from plumix/admin/ui
+        </TooltipContent>
+      </Tooltip>
 
       <Link
         to="/"

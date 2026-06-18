@@ -3,13 +3,6 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { TermForm } from "@/components/taxonomy/term-form.js";
 import { parentPickerOptions } from "@/components/taxonomy/tree.js";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card.js";
 import { hasCap } from "@/lib/caps.js";
 import { findTermTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
@@ -27,6 +20,13 @@ import {
 import { ArrowLeft } from "lucide-react";
 
 import type { TermTaxonomyManifestEntry } from "@plumix/core/manifest";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@plumix/admin-ui/card";
 import { slugify } from "@plumix/core/slugify";
 
 import { TAXONOMY_LIST_DEFAULT_SEARCH } from "./-constants.js";

@@ -1,17 +1,6 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { MetaBoxCard } from "@/components/meta-box/meta-box.js";
-import { Alert, AlertDescription } from "@/components/ui/alert.js";
-import { Button } from "@/components/ui/button.js";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form.js";
-import { Input } from "@/components/ui/input.js";
 import { useLabel } from "@/lib/use-label.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { defineMessage } from "@lingui/core/macro";
@@ -21,6 +10,17 @@ import * as v from "valibot";
 
 import type { Label } from "@plumix/core/i18n";
 import type { TermMetaBoxManifestEntry } from "@plumix/core/manifest";
+import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
+import { Button } from "@plumix/admin-ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@plumix/admin-ui/form";
+import { Input } from "@plumix/admin-ui/input";
 import { idParam, vMessage } from "@plumix/core/validation";
 
 /** Normalised input shape consumed by both create + update paths. */

@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { useEffect } from "react";
-import { Form } from "@/components/ui/form.js";
 import {
   _resetPluginRegistry,
   registerPluginFieldType,
@@ -13,6 +12,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
+import { Form } from "@plumix/admin-ui/form";
 
 import { renderWithI18n } from "../../../test/render-with-i18n.js";
 import { MetaBoxField } from "./meta-box-field.js";

@@ -1,9 +1,10 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
-import { Button } from "@/components/ui/button.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
+
+import { Button } from "@plumix/admin-ui/button";
 
 const M = {
   restoring: defineMessage({

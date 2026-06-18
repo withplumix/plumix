@@ -1,24 +1,25 @@
 import type { ReactNode } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card.js";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty.js";
 import { hasCap } from "@/lib/caps.js";
 import { visibleSettingsPages } from "@/lib/manifest.js";
 import { useLabel } from "@/lib/use-label.js";
 import { Trans } from "@lingui/react";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Settings as SettingsIcon } from "lucide-react";
+
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@plumix/admin-ui/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@plumix/admin-ui/empty";
 
 export const Route = createFileRoute("/_authenticated/settings/")({
   // The settings surface is admin-only at the floor — `settings:manage`

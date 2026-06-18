@@ -13,26 +13,6 @@ import { LanguageCard } from "@/components/profile/language-card.js";
 import { PasskeysCard } from "@/components/profile/passkeys-card.js";
 import { SessionsCard } from "@/components/profile/sessions-card.js";
 import { UserEmailField } from "@/components/profile/user-email-field.js";
-import { Alert, AlertDescription } from "@/components/ui/alert.js";
-import { Badge } from "@/components/ui/badge.js";
-import { Button } from "@/components/ui/button.js";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card.js";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form.js";
-import { Input } from "@/components/ui/input.js";
-import { Label as UILabel } from "@/components/ui/label.js";
 import { hasCap } from "@/lib/caps.js";
 import { visibleUserMetaBoxes } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
@@ -60,6 +40,26 @@ import * as v from "valibot";
 
 import type { UserMetaBoxManifestEntry } from "@plumix/core/manifest";
 import type { User, UserRole } from "@plumix/core/schema";
+import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
+import { Badge } from "@plumix/admin-ui/badge";
+import { Button } from "@plumix/admin-ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@plumix/admin-ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@plumix/admin-ui/form";
+import { Input } from "@plumix/admin-ui/input";
+import { Label as UILabel } from "@plumix/admin-ui/label";
 import { seedFromMetaBoxes } from "@plumix/core/manifest";
 import { idPathParam } from "@plumix/core/validation";
 

@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { TooltipProvider } from "@/components/ui/tooltip.js";
 import { requireAuthenticatedSession } from "@/lib/session.js";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
+
+import { TooltipProvider } from "@plumix/admin-ui/tooltip";
 
 /**
  * Full-screen editor layout. Sibling to `_authenticated` — they share

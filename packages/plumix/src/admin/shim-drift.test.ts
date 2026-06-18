@@ -7,8 +7,11 @@ import * as OrpcClientFetchNs from "@orpc/client/fetch";
 import * as OrpcTanstackQueryNs from "@orpc/tanstack-query";
 import * as ReactQueryNs from "@tanstack/react-query";
 import * as ReactRouterNs from "@tanstack/react-router";
+import * as RadixNs from "radix-ui";
 import * as ReactDomNs from "react-dom";
 import * as ReactDomClientNs from "react-dom/client";
+import * as SonnerNs from "sonner";
+import * as TailwindMergeNs from "tailwind-merge";
 import { beforeAll, describe, expect, test } from "vitest";
 
 // Drift detection: when an upstream package adds a new public export,
@@ -30,6 +33,9 @@ beforeAll(() => {
       orpcTanstackQuery: OrpcTanstackQueryNs,
       linguiCore: LinguiCoreNs,
       linguiReact: LinguiReactNs,
+      radix: RadixNs,
+      sonner: SonnerNs,
+      tailwindMerge: TailwindMergeNs,
     },
   };
 });
@@ -246,6 +252,21 @@ const SHIMS: readonly ShimSpec[] = [
     name: "@lingui/react",
     upstream: LinguiReactNs,
     load: () => import("./lingui-react.js"),
+  },
+  {
+    name: "radix-ui",
+    upstream: RadixNs,
+    load: () => import("./radix.js"),
+  },
+  {
+    name: "sonner",
+    upstream: SonnerNs,
+    load: () => import("./sonner.js"),
+  },
+  {
+    name: "tailwind-merge",
+    upstream: TailwindMergeNs,
+    load: () => import("./tailwind-merge.js"),
   },
 ];
 

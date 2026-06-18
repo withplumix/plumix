@@ -12,15 +12,6 @@ import type {
   RowSelectionState,
 } from "@tanstack/react-table";
 import type { ReactNode } from "react";
-import { Skeleton } from "@/components/ui/skeleton.js";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table.js";
 import { useLabel } from "@/lib/use-label.js";
 import { cn } from "@/lib/utils.js";
 import { defineMessage } from "@lingui/core/macro";
@@ -30,6 +21,16 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+
+import { Skeleton } from "@plumix/admin-ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@plumix/admin-ui/table";
 
 const M = {
   loading: defineMessage({

@@ -1,0 +1,186 @@
+{
+  "name": "@plumix/admin-ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./accordion": {
+      "types": "./dist/accordion.d.ts",
+      "default": "./dist/accordion.js"
+    },
+    "./alert": {
+      "types": "./dist/alert.d.ts",
+      "default": "./dist/alert.js"
+    },
+    "./alert-dialog": {
+      "types": "./dist/alert-dialog.d.ts",
+      "default": "./dist/alert-dialog.js"
+    },
+    "./avatar": {
+      "types": "./dist/avatar.d.ts",
+      "default": "./dist/avatar.js"
+    },
+    "./badge": {
+      "types": "./dist/badge.d.ts",
+      "default": "./dist/badge.js"
+    },
+    "./breadcrumb": {
+      "types": "./dist/breadcrumb.d.ts",
+      "default": "./dist/breadcrumb.js"
+    },
+    "./button": {
+      "types": "./dist/button.d.ts",
+      "default": "./dist/button.js"
+    },
+    "./card": {
+      "types": "./dist/card.d.ts",
+      "default": "./dist/card.js"
+    },
+    "./checkbox": {
+      "types": "./dist/checkbox.d.ts",
+      "default": "./dist/checkbox.js"
+    },
+    "./color-picker": {
+      "types": "./dist/color-picker.d.ts",
+      "default": "./dist/color-picker.js"
+    },
+    "./command": {
+      "types": "./dist/command.d.ts",
+      "default": "./dist/command.js"
+    },
+    "./dialog": {
+      "types": "./dist/dialog.d.ts",
+      "default": "./dist/dialog.js"
+    },
+    "./dropdown-menu": {
+      "types": "./dist/dropdown-menu.d.ts",
+      "default": "./dist/dropdown-menu.js"
+    },
+    "./empty": {
+      "types": "./dist/empty.d.ts",
+      "default": "./dist/empty.js"
+    },
+    "./form": {
+      "types": "./dist/form.d.ts",
+      "default": "./dist/form.js"
+    },
+    "./input": {
+      "types": "./dist/input.d.ts",
+      "default": "./dist/input.js"
+    },
+    "./label": {
+      "types": "./dist/label.d.ts",
+      "default": "./dist/label.js"
+    },
+    "./pagination": {
+      "types": "./dist/pagination.d.ts",
+      "default": "./dist/pagination.js"
+    },
+    "./popover": {
+      "types": "./dist/popover.d.ts",
+      "default": "./dist/popover.js"
+    },
+    "./radio-group": {
+      "types": "./dist/radio-group.d.ts",
+      "default": "./dist/radio-group.js"
+    },
+    "./select": {
+      "types": "./dist/select.d.ts",
+      "default": "./dist/select.js"
+    },
+    "./separator": {
+      "types": "./dist/separator.d.ts",
+      "default": "./dist/separator.js"
+    },
+    "./sheet": {
+      "types": "./dist/sheet.d.ts",
+      "default": "./dist/sheet.js"
+    },
+    "./sidebar": {
+      "types": "./dist/sidebar.d.ts",
+      "default": "./dist/sidebar.js"
+    },
+    "./skeleton": {
+      "types": "./dist/skeleton.d.ts",
+      "default": "./dist/skeleton.js"
+    },
+    "./slider": {
+      "types": "./dist/slider.d.ts",
+      "default": "./dist/slider.js"
+    },
+    "./sortable": {
+      "types": "./dist/sortable.d.ts",
+      "default": "./dist/sortable.js"
+    },
+    "./table": {
+      "types": "./dist/table.d.ts",
+      "default": "./dist/table.js"
+    },
+    "./tabs": {
+      "types": "./dist/tabs.d.ts",
+      "default": "./dist/tabs.js"
+    },
+    "./toggle": {
+      "types": "./dist/toggle.d.ts",
+      "default": "./dist/toggle.js"
+    },
+    "./toggle-group": {
+      "types": "./dist/toggle-group.d.ts",
+      "default": "./dist/toggle-group.js"
+    },
+    "./tooltip": {
+      "types": "./dist/tooltip.d.ts",
+      "default": "./dist/tooltip.js"
+    },
+    "./utils": {
+      "types": "./dist/utils.d.ts",
+      "default": "./dist/utils.js"
+    },
+    "./use-mobile": {
+      "types": "./dist/use-mobile.d.ts",
+      "default": "./dist/use-mobile.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "format": "prettier --check . --ignore-path ../../.gitignore",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "catalog:",
+    "@dnd-kit/modifiers": "^9.0.0",
+    "@dnd-kit/sortable": "catalog:",
+    "@dnd-kit/utilities": "catalog:",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "catalog:",
+    "lucide-react": "catalog:",
+    "radix-ui": "catalog:",
+    "react-colorful": "^5.6.1",
+    "react-hook-form": "catalog:",
+    "tailwind-merge": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@plumix/eslint-config": "workspace:*",
+    "@plumix/prettier-config": "workspace:*",
+    "@plumix/typescript-config": "workspace:*",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "typescript": "catalog:"
+  },
+  "prettier": "@plumix/prettier-config"
+}

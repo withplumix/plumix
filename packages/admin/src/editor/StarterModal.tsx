@@ -1,17 +1,17 @@
 import type { ReactElement } from "react";
-import { Button } from "@/components/ui/button.js";
+import { useLabel } from "@/lib/use-label.js";
+import { Trans } from "@lingui/react";
+
+import type { BlockRegistry, PatternRegistry } from "@plumix/blocks";
+import type { PatternManifestEntry } from "@plumix/core/manifest";
+import { Button } from "@plumix/admin-ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog.js";
-import { useLabel } from "@/lib/use-label.js";
-import { Trans } from "@lingui/react";
-
-import type { BlockRegistry, PatternRegistry } from "@plumix/blocks";
-import type { PatternManifestEntry } from "@plumix/core/manifest";
+} from "@plumix/admin-ui/dialog";
 
 import { PatternThumbnail } from "./PatternThumbnail.js";
 

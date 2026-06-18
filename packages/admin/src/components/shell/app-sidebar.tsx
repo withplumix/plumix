@@ -1,4 +1,8 @@
 import type { ReactNode } from "react";
+import { visibleAdminNav } from "@/lib/manifest.js";
+import { useLabel } from "@/lib/use-label.js";
+import { Link } from "@tanstack/react-router";
+
 import {
   Sidebar,
   SidebarContent,
@@ -9,10 +13,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar.js";
-import { visibleAdminNav } from "@/lib/manifest.js";
-import { useLabel } from "@/lib/use-label.js";
-import { Link } from "@tanstack/react-router";
+} from "@plumix/admin-ui/sidebar";
 
 import type { UserIdentity } from "./user-menu.js";
 import { CoreIcon } from "./core-icon.js";

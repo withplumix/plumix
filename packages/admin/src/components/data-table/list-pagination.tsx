@@ -1,15 +1,16 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
-import { Button } from "@/components/ui/button.js";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-} from "@/components/ui/pagination.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+
+import { Button } from "@plumix/admin-ui/button";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+} from "@plumix/admin-ui/pagination";
 
 const M = {
   prevAria: defineMessage({
