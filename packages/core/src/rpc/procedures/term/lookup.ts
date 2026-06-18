@@ -6,6 +6,7 @@ import type { LookupAdapter, LookupResult } from "../../../plugin/lookup.js";
 import { and, eq, inArray, like, or } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 import { buildTermArchiveUrl } from "../../../route/permalink.js";
+import { LookupScopeError } from "../lookup.errors.js";
 
 const DEFAULT_LIST_LIMIT = 20;
 const MAX_LIST_LIMIT = 100;
@@ -93,10 +94,7 @@ function scopeConditions(scope: TermFieldScope | undefined): SQL[] {
   // omit it and would otherwise enumerate every term across every
   // taxonomy.
   if (!scope?.termTaxonomies || scope.termTaxonomies.length === 0) {
-    // eslint-disable-next-line no-restricted-syntax -- TODO migrate to a named factory in a follow-up slice
-    throw new Error(
-      "term adapter: scope.termTaxonomies is required and must be non-empty",
-    );
+    throw LookupScopeError.termTaxonomiesRequired();
   }
   return [inArray(terms.taxonomy, scope.termTaxonomies as string[])];
 }

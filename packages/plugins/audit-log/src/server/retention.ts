@@ -1,6 +1,7 @@
 import type { AppContext } from "plumix/plugin";
 
 import type { AuditLogStorage } from "../types.js";
+import { AuditLogConfigError } from "./errors.js";
 
 export interface AuditLogRetentionPolicy {
   readonly maxAgeDays: number;
@@ -35,10 +36,7 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 export function assertValidRetention(retention: AuditLogRetentionConfig): void {
   if (retention === false) return;
   if (!Number.isFinite(retention.maxAgeDays) || retention.maxAgeDays < 0) {
-    // eslint-disable-next-line no-restricted-syntax -- TODO migrate to a named factory in a follow-up slice
-    throw new Error(
-      `[plumix/plugin-audit-log] retention.maxAgeDays must be a non-negative finite number (got ${retention.maxAgeDays})`,
-    );
+    throw AuditLogConfigError.invalidRetentionMaxAge(retention.maxAgeDays);
   }
 }
 

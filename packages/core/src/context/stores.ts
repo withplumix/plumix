@@ -4,6 +4,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import type { AppContext } from "./app.js";
+import { ContextError } from "./errors.js";
 
 export const requestStore = new AsyncLocalStorage<AppContext>();
 
@@ -27,11 +28,7 @@ export const txStore = new AsyncLocalStorage<unknown>();
 
 export function getContext(): AppContext {
   const ctx = requestStore.getStore();
-  if (!ctx)
-    // eslint-disable-next-line no-restricted-syntax -- TODO migrate to a named factory in a follow-up slice
-    throw new Error(
-      "No request context — getContext() called outside requestStore.run()",
-    );
+  if (!ctx) throw ContextError.noRequestContext();
   return ctx;
 }
 

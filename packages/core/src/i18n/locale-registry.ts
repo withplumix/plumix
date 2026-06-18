@@ -1,4 +1,5 @@
 import type { AuthenticatedUser } from "../context/app.js";
+import { I18nConfigError } from "./errors.js";
 
 export type LocaleDirection = "ltr" | "rtl";
 
@@ -48,16 +49,10 @@ export function resolveLocales(input: I18nInput): ResolvedI18n {
   const defaultCode = canonicalizeLocaleCode(input.defaultLocale);
   const defaultLocale = locales.find((l) => l.code === defaultCode);
   if (!defaultLocale) {
-    // eslint-disable-next-line no-restricted-syntax -- TODO migrate to a named factory in a follow-up slice
-    throw new Error(
-      `plumix(): i18n.defaultLocale ${JSON.stringify(input.defaultLocale)} is not present in i18n.locales.`,
-    );
+    throw I18nConfigError.defaultLocaleNotListed(input.defaultLocale);
   }
   if (!defaultLocale.enabled) {
-    // eslint-disable-next-line no-restricted-syntax -- TODO migrate to a named factory in a follow-up slice
-    throw new Error(
-      `plumix(): i18n.defaultLocale ${JSON.stringify(input.defaultLocale)} cannot be marked enabled:false.`,
-    );
+    throw I18nConfigError.defaultLocaleDisabled(input.defaultLocale);
   }
   return { defaultLocale, locales, resolveLocale: input.resolveLocale };
 }
@@ -83,20 +78,14 @@ function normalizeEntry(entry: string | LocaleInput): ResolvedLocale {
 // union via `as any` can't punch out of the attribute.
 function validateDirection(raw: unknown, code: string): LocaleDirection {
   if (raw === "ltr" || raw === "rtl") return raw;
-  // eslint-disable-next-line no-restricted-syntax -- TODO migrate to a named factory in a follow-up slice
-  throw new Error(
-    `plumix(): i18n locale ${JSON.stringify(code)} direction must be "ltr" or "rtl", got ${JSON.stringify(raw)}.`,
-  );
+  throw I18nConfigError.invalidDirection(code, raw);
 }
 
 function canonicalize(raw: string): Intl.Locale {
   try {
     return new Intl.Locale(raw.replace(/_/g, "-"));
   } catch {
-    // eslint-disable-next-line no-restricted-syntax -- TODO migrate to a named factory in a follow-up slice
-    throw new Error(
-      `plumix(): i18n locale code ${JSON.stringify(raw)} is not a valid BCP 47 tag.`,
-    );
+    throw I18nConfigError.invalidLocaleTag(raw);
   }
 }
 

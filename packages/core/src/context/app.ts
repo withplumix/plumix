@@ -29,6 +29,7 @@ import { defaultAuthenticator } from "../auth/authenticator.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
 import { resolveLocales } from "../i18n/locale-registry.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
+import { ContextError } from "./errors.js";
 
 const EMPTY_BLOCK_REGISTRY: BlockRegistry = createBlockRegistry([]);
 const EMPTY_MARK_LIST: readonly MarkSpec[] = Object.freeze([]);
@@ -412,12 +413,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
       // fails fast on the first request rather than silently
       // corrupting `db` / `auth` / etc. for the rest of the process.
       if (key in target) {
-        // eslint-disable-next-line no-restricted-syntax -- TODO migrate to a named factory in a follow-up slice
-        throw new Error(
-          `appContextExtensions entry "${key}" shadows a built-in ` +
-            `AppContext field. Reserve plugin-scoped names; built-in ` +
-            `members like \`db\` and \`auth\` aren't extendable.`,
-        );
+        throw ContextError.appContextExtensionShadowsBuiltin(key);
       }
       target[key] = entry.value;
     }
