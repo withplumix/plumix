@@ -1,6 +1,7 @@
 import { createStore } from "zustand/vanilla";
 
 import type { BlockNode } from "@plumix/blocks";
+import { isBlockNodeArray } from "@plumix/blocks";
 
 export type EditorDevice = "desktop" | "tablet" | "mobile";
 
@@ -28,11 +29,67 @@ export interface EditorState {
 
 export interface EditorActions {
   setTree: (tree: readonly BlockNode[]) => void;
+  /** Merge a partial attrs patch into one block, anywhere in the tree. */
+  updateBlockAttrs: (
+    id: string,
+    patch: Readonly<Record<string, unknown>>,
+  ) => void;
   select: (id: string, options?: { readonly additive?: boolean }) => void;
   clearSelection: () => void;
   setHover: (id: string | null) => void;
   setDevice: (device: EditorDevice) => void;
   setZoom: (zoom: number) => void;
+}
+
+/** Find a block by id anywhere in the tree, descending into slot attrs. */
+export function findBlock(
+  nodes: readonly BlockNode[],
+  id: string,
+): BlockNode | undefined {
+  for (const node of nodes) {
+    if (node.id === id) return node;
+    for (const value of Object.values(node.attrs ?? {})) {
+      if (!isBlockNodeArray(value)) continue;
+      const found = findBlock(value, id);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
+// Merge `patch` into one node, returning the same reference when nothing
+// changed. Descends into slot attrs (any attr whose value is a BlockNode[]),
+// so a nested target is reachable and untouched branches stay stable.
+function patchNode(
+  node: BlockNode,
+  id: string,
+  patch: Readonly<Record<string, unknown>>,
+): BlockNode {
+  if (node.id === id) {
+    return { ...node, attrs: { ...node.attrs, ...patch } };
+  }
+  const attrs = node.attrs;
+  if (!attrs) return node;
+  let nextAttrs: Record<string, unknown> | undefined;
+  for (const [key, value] of Object.entries(attrs)) {
+    if (!isBlockNodeArray(value)) continue;
+    const patched = patchAttrs(value, id, patch);
+    if (patched !== value) {
+      (nextAttrs ??= { ...attrs })[key] = patched;
+    }
+  }
+  return nextAttrs ? { ...node, attrs: nextAttrs } : node;
+}
+
+// Rebuild the tree with `patch` applied to the node with `id`. Returns the
+// same array reference when nothing changed so React skips untouched branches.
+function patchAttrs(
+  nodes: readonly BlockNode[],
+  id: string,
+  patch: Readonly<Record<string, unknown>>,
+): readonly BlockNode[] {
+  const next = nodes.map((node) => patchNode(node, id, patch));
+  return next.some((node, i) => node !== nodes[i]) ? next : nodes;
 }
 
 export type EditorStore = EditorState & EditorActions;
@@ -51,6 +108,8 @@ export function createEditorStore(
     zoom: initial?.zoom ?? 1,
 
     setTree: (tree) => set({ tree }),
+    updateBlockAttrs: (id, patch) =>
+      set((state) => ({ tree: patchAttrs(state.tree, id, patch) })),
     select: (id, options) =>
       set((state) => ({
         selectedIds: options?.additive

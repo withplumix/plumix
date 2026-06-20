@@ -461,16 +461,34 @@ importers:
 
   packages/admin-editor:
     dependencies:
+      '@plumix/admin-ui':
+        specifier: workspace:*
+        version: link:../admin-ui
       '@plumix/blocks':
         specifier: workspace:*
         version: link:../blocks
+      '@plumix/core':
+        specifier: workspace:*
+        version: link:../core
       zustand:
         specifier: ^5.0.14
         version: 5.0.14(@types/react@19.2.16)(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7))
     devDependencies:
+      '@lingui/cli':
+        specifier: catalog:lingui
+        version: 6.3.0
+      '@lingui/core':
+        specifier: catalog:lingui
+        version: 6.3.0
+      '@lingui/react':
+        specifier: catalog:lingui
+        version: 6.3.0(react@19.2.7)
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
+      '@plumix/lingui-config':
+        specifier: workspace:*
+        version: link:../../tooling/lingui
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../../tooling/prettier
@@ -11002,7 +11020,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.1.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.9(@types/node@24.13.2)(@vitest/coverage-v8@4.1.9)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.0.16(@types/node@24.13.2)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
+      vitest: 4.1.9(@types/node@25.9.2)(@vitest/coverage-v8@4.1.9)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.2)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
 
   '@vitest/expect@4.1.9':
     dependencies:

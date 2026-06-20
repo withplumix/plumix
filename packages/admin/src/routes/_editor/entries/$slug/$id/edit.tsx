@@ -16,6 +16,10 @@ import { DocumentSettingsPanel } from "@/components/editor/document-settings.js"
 import { PlainFormLayout } from "@/components/editor/plain-form-layout.js";
 import { ErrorPlaceholder } from "@/components/error-placeholder.js";
 import { buildAdminPatternRegistry } from "@/editor/admin-pattern-registry.js";
+import {
+  AUTOSAVE_DEBOUNCE_MS,
+  isStaleConflictError,
+} from "@/editor/autosave.js";
 import { AutosaveStatusContext } from "@/editor/AutosaveStatus.js";
 import { blockSpecsToPuckComponents } from "@/editor/block-adapter.js";
 import { CoAuthorIndicator } from "@/editor/CoAuthorIndicator.js";
@@ -106,20 +110,6 @@ const EMPTY_COAUTHORS: readonly {
   email: string;
   lastSeenAt: Date;
 }[] = [];
-
-// 1 s batches typing bursts; the dedup snapshot in the autosave closure
-// is what actually prevents identical revisions. WordPress's 60 s
-// equivalent is overkill here because we round-trip a workers DB on
-// every save and revisions are cheap.
-const AUTOSAVE_DEBOUNCE_MS = 1000;
-
-// Keep in sync with the identical helper in _editor/entries/$slug/$id/edit.tsx.
-function isStaleConflictError(err: unknown): boolean {
-  if (!(err instanceof ORPCError)) return false;
-  if (err.code !== "CONFLICT") return false;
-  const data = err.data as { reason?: unknown };
-  return data.reason === "stale_expected_updated_at";
-}
 
 const themeTokens = getThemeTokens();
 

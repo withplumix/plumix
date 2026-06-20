@@ -1,9 +1,12 @@
 import type { ReactElement } from "react";
+import { useEffect, useRef } from "react";
 
-import type { EntryContent } from "@plumix/blocks";
+import type { BlockRegistry, EntryContent } from "@plumix/blocks";
+import { defineEntryContent } from "@plumix/blocks";
 
+import { BlockInspector } from "./block-inspector.js";
 import { CanvasFrame } from "./canvas-frame.js";
-import { EditorProvider } from "./provider.js";
+import { EditorProvider, useEditorStoreApi } from "./provider.js";
 
 interface PlumixEditorProps {
   /** Seed content; the editor owns state thereafter (uncontrolled). */
@@ -12,20 +15,65 @@ interface PlumixEditorProps {
   readonly previewUrl: string;
   /** Origin of that route, for bridge message pinning. */
   readonly origin: string;
+  /** Core + plugin block registry, supplying the inspector's input schemas. */
+  readonly registry: BlockRegistry;
+  /** Fires with the full content envelope whenever the tree changes. The host
+   *  debounces + persists (orpc lives in the app, never in this package). */
+  readonly onChange?: (content: EntryContent) => void;
 }
 
 /**
- * The bespoke editor's host shell. Owns the editor store and the canvas;
- * persistence is the host app's job, wired via callbacks in later slices.
+ * The bespoke editor's host shell: the canvas iframe plus the right-rail
+ * attribute inspector. Owns the editor store; persistence is the host app's
+ * job, wired via `onChange`.
  */
 export function PlumixEditor({
   defaultValue,
   previewUrl,
   origin,
+  registry,
+  onChange,
 }: PlumixEditorProps): ReactElement {
   return (
     <EditorProvider initialTree={defaultValue?.blocks}>
-      <CanvasFrame previewUrl={previewUrl} origin={origin} />
+      <div className="flex h-full" data-testid="plumix-editor-layout">
+        <CanvasFrame previewUrl={previewUrl} origin={origin} />
+        <aside
+          className="bg-background w-80 shrink-0 overflow-auto border-s"
+          data-testid="plumix-editor-right"
+        >
+          <BlockInspector registry={registry} />
+        </aside>
+      </div>
+      {onChange ? <TreeChangeEmitter onChange={onChange} /> : null}
     </EditorProvider>
   );
+}
+
+/**
+ * Subscribes to canonical-tree changes and emits the content envelope. Kept a
+ * child of EditorProvider so it can reach the store; the latest `onChange` is
+ * held in a ref so re-subscribing isn't needed when the callback identity
+ * changes between renders.
+ */
+export function TreeChangeEmitter({
+  onChange,
+}: {
+  readonly onChange: (content: EntryContent) => void;
+}): null {
+  const store = useEditorStoreApi();
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  });
+  useEffect(
+    () =>
+      store.subscribe((state, prev) => {
+        if (state.tree !== prev.tree) {
+          onChangeRef.current(defineEntryContent(state.tree));
+        }
+      }),
+    [store],
+  );
+  return null;
 }

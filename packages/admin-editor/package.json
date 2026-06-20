@@ -13,20 +13,31 @@
     "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "format": "prettier --check . --ignore-path ../../.gitignore",
+    "i18n:check": "node ../plumix/bin/plumix.mjs i18n extract --check",
+    "i18n:compile": "plumix-compile-catalogs",
+    "i18n:extract": "lingui extract",
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
+    "@plumix/admin-ui": "workspace:*",
     "@plumix/blocks": "workspace:*",
+    "@plumix/core": "workspace:*",
     "zustand": "^5.0.14"
   },
   "peerDependencies": {
+    "@lingui/core": "catalog:lingui",
+    "@lingui/react": "catalog:lingui",
     "react": "catalog:",
     "react-dom": "catalog:"
   },
   "devDependencies": {
+    "@lingui/cli": "catalog:lingui",
+    "@lingui/core": "catalog:lingui",
+    "@lingui/react": "catalog:lingui",
     "@plumix/eslint-config": "workspace:*",
+    "@plumix/lingui-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
     "@plumix/vitest-config": "workspace:*",

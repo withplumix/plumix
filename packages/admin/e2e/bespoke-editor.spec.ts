@@ -47,6 +47,29 @@ test.describe("bespoke editor route", () => {
     expect(src).toMatch(/[?&]plumix\.edit(=|&|$)/);
   });
 
+  test("mounts the right-rail attribute inspector alongside the canvas", async ({
+    page,
+  }) => {
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/get": editorEntry(),
+      "/entry/createPreviewLink": {
+        token: "tok123",
+        url: "/post/hello?preview=tok123",
+      },
+    });
+
+    await page.goto("entries/posts/1/editor");
+
+    // The mock harness can't serve the public route the canvas iframe loads,
+    // so block selection (which arrives from inside the iframe) can't fire
+    // here — the host-side edit→autosave loop is covered by the package unit
+    // tests. This asserts the inspector rail mounts with the registry wired,
+    // showing its empty state until a block is selected.
+    await expect(page.getByTestId("plumix-editor-right")).toBeVisible();
+    await expect(page.getByTestId("block-inspector-empty")).toBeVisible();
+  });
+
   test("a failed preview mint surfaces the error placeholder, not a dead canvas", async ({
     page,
   }) => {
