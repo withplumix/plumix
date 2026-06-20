@@ -144,6 +144,10 @@
     "./test": {
       "types": "./dist/test/index.d.ts",
       "default": "./dist/test/index.js"
+    },
+    "./editor-runtime": {
+      "types": "./dist/editor-runtime.d.ts",
+      "default": "./dist/editor-runtime.js"
     }
   },
   "bin": {
@@ -172,6 +176,7 @@
   "dependencies": {
     "@lingui/core": "catalog:lingui",
     "@lingui/react": "catalog:lingui",
+    "@plumix/admin-editor": "workspace:*",
     "@plumix/admin-ui": "workspace:*",
     "@plumix/blocks": "workspace:*",
     "@plumix/core": "workspace:*",

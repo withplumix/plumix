@@ -5,6 +5,7 @@ export type { RuntimeConnection } from "./connect-runtime.js";
 export { EditorCanvas } from "./editor-canvas.js";
 export { CanvasFrame } from "./canvas-frame.js";
 export { PlumixEditor } from "./plumix-editor.js";
+export { bootEditor } from "./runtime.js";
 export { EditorProvider, useEditorStore } from "./provider.js";
 export { createEditorStore, MAX_ZOOM, MIN_ZOOM } from "./store.js";
 export type {

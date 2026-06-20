@@ -9,7 +9,8 @@ import {
 
 import type { BlockNode, BlockRegistry } from "@plumix/blocks";
 import type { BlockRect } from "@plumix/blocks/renderer";
-import { BlockRenderer, PlumixProvider } from "@plumix/blocks/renderer";
+import { renderBlockTree } from "@plumix/blocks";
+import { PlumixProvider } from "@plumix/blocks/renderer";
 
 import type { RuntimeConnection } from "./connect-runtime.js";
 import { connectRuntime } from "./connect-runtime.js";
@@ -19,6 +20,8 @@ interface EditorCanvasProps {
   readonly registry: BlockRegistry;
   /** Expected origin of the host (admin shell). */
   readonly origin: string;
+  /** Seed tree for first paint, before the host pushes (from the SSR embed). */
+  readonly initialTree?: readonly BlockNode[];
 }
 
 /**
@@ -30,8 +33,9 @@ interface EditorCanvasProps {
 export function EditorCanvas({
   registry,
   origin,
+  initialTree = [],
 }: EditorCanvasProps): ReactElement {
-  const [tree, setTree] = useState<readonly BlockNode[]>([]);
+  const [tree, setTree] = useState<readonly BlockNode[]>(initialTree);
   const connectionRef = useRef<RuntimeConnection | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -93,7 +97,10 @@ export function EditorCanvas({
         onMouseOver={handleMouseOver}
         onMouseOut={handleMouseOut}
       >
-        <BlockRenderer content={{ version: "plumix.v2", blocks: tree }} />
+        {/* renderBlockTree (not BlockRenderer) so the canvas doesn't re-emit
+            the SSR content-root boundary it was mounted into — just the
+            per-block data-plumix-id seam for selection. */}
+        {renderBlockTree(tree, registry, { editing: true })}
       </div>
     </PlumixProvider>
   );

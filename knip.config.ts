@@ -94,6 +94,10 @@ const config: KnipConfig = {
         // can't see.
         "src/blocks/island-runtime.ts",
         "src/blocks/island-renderer.ts",
+        // The editor runtime entry is loaded by the consumer's generated
+        // `.plumix/editor-entry.ts` (`import { bootEditor } from
+        // "plumix/editor-runtime"`) — a runtime import knip can't see.
+        "src/editor-runtime.ts",
         "src/cli/index.ts",
         // `plumix/db/libsql` re-exports the core libSQL adapter on its own
         // subpath; not reachable from `src/index.ts` (kept off the root

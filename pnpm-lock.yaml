@@ -298,6 +298,9 @@ importers:
       '@orpc/tanstack-query':
         specifier: 'catalog:'
         version: 1.14.6(@orpc/client@1.14.6)(@tanstack/query-core@5.101.0)
+      '@plumix/admin-editor':
+        specifier: workspace:*
+        version: link:../admin-editor
       '@plumix/admin-ui':
         specifier: workspace:*
         version: link:../admin-ui
@@ -1463,6 +1466,9 @@ importers:
       '@lingui/react':
         specifier: catalog:lingui
         version: 6.3.0(react@19.2.7)
+      '@plumix/admin-editor':
+        specifier: workspace:*
+        version: link:../admin-editor
       '@plumix/admin-ui':
         specifier: workspace:*
         version: link:../admin-ui
@@ -10996,7 +11002,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.1.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.9(@types/node@25.9.2)(@vitest/coverage-v8@4.1.9)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.2)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
+      vitest: 4.1.9(@types/node@24.13.2)(@vitest/coverage-v8@4.1.9)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.0.16(@types/node@24.13.2)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
 
   '@vitest/expect@4.1.9':
     dependencies:

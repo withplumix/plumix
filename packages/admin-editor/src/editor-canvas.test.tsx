@@ -59,6 +59,25 @@ describe("EditorCanvas", () => {
     spy.mockRestore();
   });
 
+  test("renders an initial tree immediately, before any host push", () => {
+    const { container } = render(
+      <EditorCanvas
+        registry={registry}
+        origin={ORIGIN}
+        initialTree={[
+          {
+            id: "seed",
+            name: "core/heading",
+            attrs: { text: "Seeded", level: 2 },
+          },
+        ]}
+      />,
+    );
+
+    expect(container.querySelector('[data-plumix-id="seed"]')).not.toBeNull();
+    expect(container.textContent).toContain("Seeded");
+  });
+
   test("hovering a block reports canvas:hover to the host", () => {
     const posted: unknown[] = [];
     const spy = vi

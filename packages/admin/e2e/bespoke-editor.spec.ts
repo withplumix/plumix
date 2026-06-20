@@ -1,0 +1,94 @@
+// The bespoke visual editor is opt-in: its own `/editor` route (the Puck
+// `/edit` route stays the default). The mock harness can't run the real
+// public route the canvas iframe loads, so these specs assert the client
+// contracts the route owns: the canvas shell mounts pointed at the minted
+// preview URL with `plumix.edit` flipped on, and either load failure (entry
+// or mint) surfaces the error placeholder instead of a dead canvas.
+
+import { expect, test } from "@playwright/test";
+
+import { editorEntry } from "./support/editor.js";
+import {
+  AUTHED_ADMIN,
+  MANIFEST_WITH_POST,
+  mockManifest,
+  mockRpc,
+} from "./support/rpc-mock.js";
+
+test.use({ viewport: { width: 1280, height: 800 } });
+
+test.beforeEach(async ({ page }) => {
+  await mockManifest(page, MANIFEST_WITH_POST);
+});
+
+test.describe("bespoke editor route", () => {
+  test("mounts the canvas iframe pointed at the minted preview url with plumix.edit", async ({
+    page,
+  }) => {
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/get": editorEntry(),
+      "/entry/createPreviewLink": {
+        token: "tok123",
+        url: "/post/hello?preview=tok123",
+      },
+    });
+
+    await page.goto("entries/posts/1/editor");
+
+    await expect(page.getByTestId("plumix-canvas-frame")).toBeVisible();
+    const iframe = page.getByTestId("plumix-canvas-frame").locator("iframe");
+    // The relative mint resolves to the admin's own origin; the gate boots
+    // the editor runtime on `plumix.edit`, and `preview` carries draft
+    // visibility through to the public render.
+    const src = await iframe.getAttribute("src");
+    expect(src).toContain("/post/hello");
+    expect(src).toContain("preview=tok123");
+    expect(src).toMatch(/[?&]plumix\.edit(=|&|$)/);
+  });
+
+  test("a failed preview mint surfaces the error placeholder, not a dead canvas", async ({
+    page,
+  }) => {
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/get": editorEntry(),
+    });
+    await page.route("**/_plumix/rpc/entry/createPreviewLink", (route) =>
+      route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: JSON.stringify({
+          json: { code: "CONFLICT", message: "no_public_url" },
+          meta: [],
+        }),
+      }),
+    );
+
+    await page.goto("entries/posts/1/editor");
+
+    await expect(page.getByTestId("plumix-editor-error")).toBeVisible();
+    await expect(page.getByTestId("plumix-canvas-frame")).toHaveCount(0);
+  });
+
+  test("an unreadable entry surfaces the error placeholder, not a dead canvas", async ({
+    page,
+  }) => {
+    await mockRpc(page, { "/auth/session": AUTHED_ADMIN });
+    await page.route("**/_plumix/rpc/entry/get", (route) =>
+      route.fulfill({
+        status: 404,
+        contentType: "application/json",
+        body: JSON.stringify({
+          json: { code: "NOT_FOUND", message: "entry" },
+          meta: [],
+        }),
+      }),
+    );
+
+    await page.goto("entries/posts/1/editor");
+
+    await expect(page.getByTestId("plumix-editor-error")).toBeVisible();
+    await expect(page.getByTestId("plumix-canvas-frame")).toHaveCount(0);
+  });
+});

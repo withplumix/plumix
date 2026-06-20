@@ -1118,6 +1118,16 @@ msgid "apiTokens.mint.fallback"
 msgstr "Couldn't mint token. Try again."
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.previewFailedTitle"
+msgstr "Couldn't open the editor"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.previewFailed"
+msgstr "Couldn't open this entry in the editor."
+
+#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.entry.edit.toast.publishFailed"
 msgstr "Couldn't publish — try again."
@@ -2515,6 +2525,11 @@ msgstr "Open a preview in a new tab"
 #: src/editor/PatternRefPreview.tsx
 msgid "editor.patternRef.openSource"
 msgstr "Open source"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.loading"
+msgstr "Opening the editor…"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx

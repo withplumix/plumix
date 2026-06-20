@@ -1118,6 +1118,16 @@ msgid "apiTokens.mint.fallback"
 msgstr "تعذّر إنشاء الرمز. حاول مرة أخرى."
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.previewFailedTitle"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.previewFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.entry.edit.toast.publishFailed"
 msgstr "تعذّر النشر — حاول مرة أخرى."
@@ -2515,6 +2525,11 @@ msgstr ""
 #: src/editor/PatternRefPreview.tsx
 msgid "editor.patternRef.openSource"
 msgstr "فتح المصدر"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.loading"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
