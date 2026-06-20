@@ -70,6 +70,30 @@ test.describe("bespoke editor route", () => {
     await expect(page.getByTestId("block-inspector-empty")).toBeVisible();
   });
 
+  test("mounts the left-rail block catalog and the empty-state affordance", async ({
+    page,
+  }) => {
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/get": editorEntry(),
+      "/entry/createPreviewLink": {
+        token: "tok123",
+        url: "/post/hello?preview=tok123",
+      },
+    });
+
+    await page.goto("entries/posts/1/editor");
+
+    // The catalog lists the core blocks the registry ships, searchable.
+    await expect(page.getByTestId("plumix-editor-left")).toBeVisible();
+    await expect(page.getByTestId("block-catalog-search")).toBeVisible();
+    await expect(
+      page.getByTestId("block-catalog-item-core/heading"),
+    ).toBeVisible();
+    // A fresh (content-less) entry offers the "Add a block" affordance.
+    await expect(page.getByTestId("plumix-empty-add")).toBeVisible();
+  });
+
   test("a failed preview mint surfaces the error placeholder, not a dead canvas", async ({
     page,
   }) => {

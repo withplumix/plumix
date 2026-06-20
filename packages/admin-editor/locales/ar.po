@@ -6,6 +6,27 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: @lingui/cli\n"
 "Language: ar\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Plural-Forms: \n"
+
+#. js-lingui-explicit-id
+#: src/canvas-frame.tsx
+msgid "editor.canvas.addBlock"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/block-catalog-tab.tsx
+msgid "editor.catalog.noResults"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/block-catalog-tab.tsx
+msgid "editor.catalog.searchLabel"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/block-inspector.tsx

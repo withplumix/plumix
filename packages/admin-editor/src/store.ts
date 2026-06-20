@@ -1,6 +1,6 @@
 import { createStore } from "zustand/vanilla";
 
-import type { BlockNode } from "@plumix/blocks";
+import type { BlockNode, BlockSpec } from "@plumix/blocks";
 import { isBlockNodeArray } from "@plumix/blocks";
 
 export type EditorDevice = "desktop" | "tablet" | "mobile";
@@ -25,10 +25,14 @@ export interface EditorState {
   readonly hoverId: string | null;
   readonly device: EditorDevice;
   readonly zoom: number;
+  /** The catalog block currently being dragged toward the canvas, if any. */
+  readonly dragSpec: BlockSpec | null;
 }
 
 export interface EditorActions {
   setTree: (tree: readonly BlockNode[]) => void;
+  /** Insert a block at a top-level index (clamped) and select it. */
+  insertBlock: (node: BlockNode, index: number) => void;
   /** Merge a partial attrs patch into one block, anywhere in the tree. */
   updateBlockAttrs: (
     id: string,
@@ -39,6 +43,8 @@ export interface EditorActions {
   setHover: (id: string | null) => void;
   setDevice: (device: EditorDevice) => void;
   setZoom: (zoom: number) => void;
+  startBlockDrag: (spec: BlockSpec) => void;
+  endBlockDrag: () => void;
 }
 
 /** Find a block by id anywhere in the tree, descending into slot attrs. */
@@ -106,8 +112,19 @@ export function createEditorStore(
     hoverId: null,
     device: initial?.device ?? "desktop",
     zoom: initial?.zoom ?? 1,
+    dragSpec: null,
 
     setTree: (tree) => set({ tree }),
+    insertBlock: (node, index) =>
+      set((state) => {
+        const at = Math.max(0, Math.min(index, state.tree.length));
+        const tree = [
+          ...state.tree.slice(0, at),
+          node,
+          ...state.tree.slice(at),
+        ];
+        return { tree, activeId: node.id, selectedIds: new Set([node.id]) };
+      }),
     updateBlockAttrs: (id, patch) =>
       set((state) => ({ tree: patchAttrs(state.tree, id, patch) })),
     select: (id, options) =>
@@ -122,5 +139,7 @@ export function createEditorStore(
     setDevice: (device) => set({ device }),
     setZoom: (zoom) =>
       set({ zoom: Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom)) }),
+    startBlockDrag: (dragSpec) => set({ dragSpec }),
+    endBlockDrag: () => set({ dragSpec: null }),
   }));
 }

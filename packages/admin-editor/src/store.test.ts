@@ -116,6 +116,45 @@ describe("editor store", () => {
   });
 });
 
+describe("insertBlock", () => {
+  test("inserts a block at the given top-level index and selects it", () => {
+    const store = createEditorStore({
+      tree: [
+        { id: "a", name: "core/heading" },
+        { id: "b", name: "core/spacer" },
+      ],
+    });
+
+    store.getState().insertBlock({ id: "new", name: "core/rich-text" }, 1);
+
+    expect(store.getState().tree.map((n) => n.id)).toEqual(["a", "new", "b"]);
+    // The freshly inserted block becomes the active selection.
+    expect(store.getState().activeId).toBe("new");
+    expect([...store.getState().selectedIds]).toEqual(["new"]);
+  });
+
+  test("clamps an out-of-range index to the ends", () => {
+    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+
+    store.getState().insertBlock({ id: "head", name: "core/y" }, -5);
+    store.getState().insertBlock({ id: "tail", name: "core/z" }, 99);
+
+    expect(store.getState().tree.map((n) => n.id)).toEqual([
+      "head",
+      "a",
+      "tail",
+    ]);
+  });
+
+  test("inserts into an empty tree", () => {
+    const store = createEditorStore();
+
+    store.getState().insertBlock({ id: "first", name: "core/heading" }, 0);
+
+    expect(store.getState().tree.map((n) => n.id)).toEqual(["first"]);
+  });
+});
+
 describe("findBlock", () => {
   test("finds a top-level block by id", () => {
     const tree: readonly BlockNode[] = [
