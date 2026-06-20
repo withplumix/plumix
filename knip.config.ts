@@ -195,6 +195,12 @@ const config: KnipConfig = {
     "packages/core": {
       entry: ["lingui.config.ts", "locales/*.mjs"],
     },
+    // The editor's lingui config + compiled catalogs are loaded by the CLI
+    // and merged into admin's i18n at runtime (i18n-boot glob) — knip can't
+    // see either consumer.
+    "packages/admin-editor": {
+      entry: ["lingui.config.ts", "locales/*.mjs"],
+    },
     "packages/plugins/menu": {
       entry: [
         "src/index.ts",

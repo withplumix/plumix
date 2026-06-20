@@ -20,6 +20,13 @@ const PLUGIN_CATALOGS = import.meta.glob<{ messages: Messages }>(
   "../../../plugins/*/locales/*.mjs",
 );
 
+// The bespoke editor package ships its own chrome catalog (inspector,
+// etc.); it's bundled into admin like a workspace plugin, so merge it
+// the same zero-runtime-cost way.
+const EDITOR_CATALOGS = import.meta.glob<{ messages: Messages }>(
+  "../../../admin-editor/locales/*.mjs",
+);
+
 // Source locale: the language `descriptor.message` strings are authored
 // in. When a user's locale isn't compiled (yet, or at all), we fall
 // back here. Mirrors `lingui.config.ts:sourceLocale`.
@@ -57,13 +64,18 @@ export async function bootI18n(): Promise<void> {
 
   const adminMessages = (await adminLoader()).messages;
   const workspaceMessages = await loadWorkspacePluginCatalogs(locale);
-  // Workspace plugins merged first, admin chrome second so admin
+  const editorMessages = await loadEditorCatalog(locale);
+  // Editor + workspace plugins merged first, admin chrome last so admin
   // wins on collision. Slice 5's note had the opposite order; chrome
   // stability matters more than letting a plugin override
   // `breadcrumb.dashboard`. Workspace-plugin collisions on
   // admin-namespaced keys are a build-time concern (future linter,
   // not enforced here yet).
-  i18n.load(locale, { ...workspaceMessages, ...adminMessages });
+  i18n.load(locale, {
+    ...editorMessages,
+    ...workspaceMessages,
+    ...adminMessages,
+  });
   i18n.activate(locale);
 
   // valibot validator messages registered via `vMessage(descriptor)`
@@ -85,6 +97,17 @@ export async function bootI18n(): Promise<void> {
       pluginCatalogLoaderRef.current(id, locale),
     ),
   );
+}
+
+// The editor catalog falls back to the source locale (unlike plugins) so its
+// chrome is never blank — admin always ships the editor, so an uncompiled
+// locale should still read English rather than the raw descriptor ids.
+async function loadEditorCatalog(locale: string): Promise<Messages> {
+  const loader =
+    EDITOR_CATALOGS[`../../../admin-editor/locales/${locale}.mjs`] ??
+    EDITOR_CATALOGS[`../../../admin-editor/locales/${SOURCE_LOCALE}.mjs`];
+  if (!loader) return {};
+  return (await loader()).messages;
 }
 
 async function loadWorkspacePluginCatalogs(locale: string): Promise<Messages> {
