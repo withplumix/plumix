@@ -100,6 +100,11 @@ function BespokeEditorRoute(): ReactNode {
     orpc.entry.get.queryOptions({ input: { id, preview: true } }),
   );
   const { data: previewLink } = useSuspenseQuery(previewLinkQuery(id));
+  const { user } = Route.useRouteContext();
+  const capabilities = useMemo(
+    () => new Set(user.capabilities),
+    [user.capabilities],
+  );
   const handleChange = useContentAutosave(id, entry);
 
   // `createPreviewLink` returns a site-relative url (`/blog/hello?preview=…`);
@@ -114,6 +119,7 @@ function BespokeEditorRoute(): ReactNode {
       origin={target.origin}
       defaultValue={isEntryContent(entry.content) ? entry.content : undefined}
       registry={registry}
+      capabilities={capabilities}
       onChange={handleChange}
     />
   );

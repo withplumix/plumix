@@ -4,9 +4,12 @@ import { useEffect, useRef } from "react";
 import type { BlockRegistry, EntryContent } from "@plumix/blocks";
 import { defineEntryContent } from "@plumix/blocks";
 
+import { BlockCatalog } from "./block-catalog-tab.js";
 import { BlockInspector } from "./block-inspector.js";
 import { CanvasFrame } from "./canvas-frame.js";
 import { EditorProvider, useEditorStoreApi } from "./provider.js";
+
+const NO_CAPABILITIES: ReadonlySet<string> = new Set();
 
 interface PlumixEditorProps {
   /** Seed content; the editor owns state thereafter (uncontrolled). */
@@ -15,8 +18,10 @@ interface PlumixEditorProps {
   readonly previewUrl: string;
   /** Origin of that route, for bridge message pinning. */
   readonly origin: string;
-  /** Core + plugin block registry, supplying the inspector's input schemas. */
+  /** Core + plugin block registry, supplying the inspector + catalog schemas. */
   readonly registry: BlockRegistry;
+  /** Viewer capabilities, gating which blocks the catalog offers. */
+  readonly capabilities?: ReadonlySet<string>;
   /** Fires with the full content envelope whenever the tree changes. The host
    *  debounces + persists (orpc lives in the app, never in this package). */
   readonly onChange?: (content: EntryContent) => void;
@@ -32,12 +37,24 @@ export function PlumixEditor({
   previewUrl,
   origin,
   registry,
+  capabilities = NO_CAPABILITIES,
   onChange,
 }: PlumixEditorProps): ReactElement {
   return (
     <EditorProvider initialTree={defaultValue?.blocks}>
       <div className="flex h-full" data-testid="plumix-editor-layout">
-        <CanvasFrame previewUrl={previewUrl} origin={origin} />
+        <aside
+          className="bg-background w-72 shrink-0 overflow-auto border-e"
+          data-testid="plumix-editor-left"
+        >
+          <BlockCatalog registry={registry} capabilities={capabilities} />
+        </aside>
+        <CanvasFrame
+          previewUrl={previewUrl}
+          origin={origin}
+          registry={registry}
+          capabilities={capabilities}
+        />
         <aside
           className="bg-background w-80 shrink-0 overflow-auto border-s"
           data-testid="plumix-editor-right"
