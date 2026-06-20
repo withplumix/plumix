@@ -155,6 +155,46 @@ describe("insertBlock", () => {
   });
 });
 
+describe("undo / redo", () => {
+  test("undo reverts an insert; redo replays it", () => {
+    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+
+    store.getState().insertBlock({ id: "b", name: "core/y" }, 1);
+    expect(store.getState().tree.map((n) => n.id)).toEqual(["a", "b"]);
+
+    store.getState().undo();
+    expect(store.getState().tree.map((n) => n.id)).toEqual(["a"]);
+
+    store.getState().redo();
+    expect(store.getState().tree.map((n) => n.id)).toEqual(["a", "b"]);
+  });
+
+  test("a typing burst on one field collapses into one undo step", () => {
+    const store = createEditorStore({
+      tree: [{ id: "h", name: "core/heading", attrs: { text: "" } }],
+    });
+
+    store.getState().updateBlockAttrs("h", { text: "H" });
+    store.getState().updateBlockAttrs("h", { text: "He" });
+    store.getState().updateBlockAttrs("h", { text: "Hey" });
+
+    // One undo jumps back past the whole burst to the original.
+    store.getState().undo();
+    expect(store.getState().tree[0]?.attrs?.text).toBe("");
+  });
+
+  test("a new edit after undo drops the redo", () => {
+    const store = createEditorStore({ tree: [] });
+    store.getState().insertBlock({ id: "a", name: "core/x" }, 0);
+    store.getState().undo();
+    store.getState().insertBlock({ id: "b", name: "core/y" }, 0);
+
+    store.getState().redo();
+    // Redo was cleared by the post-undo edit; the tree stays at [b].
+    expect(store.getState().tree.map((n) => n.id)).toEqual(["b"]);
+  });
+});
+
 describe("moveBlock action", () => {
   test("reorders the tree through the store", () => {
     const store = createEditorStore({

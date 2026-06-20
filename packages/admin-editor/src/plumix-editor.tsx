@@ -14,6 +14,7 @@ import { defineEntryContent } from "@plumix/blocks";
 import { BlockCatalog } from "./block-catalog-tab.js";
 import { BlockInspector } from "./block-inspector.js";
 import { CanvasFrame } from "./canvas-frame.js";
+import { EditorShortcuts, EditorToolbar } from "./editor-toolbar.js";
 import { LayersTab } from "./layers-tab.js";
 import { EditorProvider, useEditorStoreApi } from "./provider.js";
 
@@ -50,41 +51,45 @@ export function PlumixEditor({
 }: PlumixEditorProps): ReactElement {
   return (
     <EditorProvider initialTree={defaultValue?.blocks}>
-      <div className="flex h-full" data-testid="plumix-editor-layout">
-        <aside
-          className="bg-background w-72 shrink-0 overflow-auto border-e"
-          data-testid="plumix-editor-left"
-        >
-          <Tabs defaultValue="blocks">
-            <TabsList className="m-2">
-              <TabsTrigger value="blocks" data-testid="plumix-tab-blocks">
-                <Trans id="editor.tab.blocks" message="Blocks" />
-              </TabsTrigger>
-              <TabsTrigger value="layers" data-testid="plumix-tab-layers">
-                <Trans id="editor.tab.layers" message="Layers" />
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="blocks">
-              <BlockCatalog registry={registry} capabilities={capabilities} />
-            </TabsContent>
-            <TabsContent value="layers">
-              <LayersTab registry={registry} />
-            </TabsContent>
-          </Tabs>
-        </aside>
-        <CanvasFrame
-          previewUrl={previewUrl}
-          origin={origin}
-          registry={registry}
-          capabilities={capabilities}
-        />
-        <aside
-          className="bg-background w-80 shrink-0 overflow-auto border-s"
-          data-testid="plumix-editor-right"
-        >
-          <BlockInspector registry={registry} />
-        </aside>
+      <div className="flex h-full flex-col" data-testid="plumix-editor-layout">
+        <EditorToolbar />
+        <div className="flex min-h-0 flex-1">
+          <aside
+            className="bg-background w-72 shrink-0 overflow-auto border-e"
+            data-testid="plumix-editor-left"
+          >
+            <Tabs defaultValue="blocks">
+              <TabsList className="m-2">
+                <TabsTrigger value="blocks" data-testid="plumix-tab-blocks">
+                  <Trans id="editor.tab.blocks" message="Blocks" />
+                </TabsTrigger>
+                <TabsTrigger value="layers" data-testid="plumix-tab-layers">
+                  <Trans id="editor.tab.layers" message="Layers" />
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="blocks">
+                <BlockCatalog registry={registry} capabilities={capabilities} />
+              </TabsContent>
+              <TabsContent value="layers">
+                <LayersTab registry={registry} />
+              </TabsContent>
+            </Tabs>
+          </aside>
+          <CanvasFrame
+            previewUrl={previewUrl}
+            origin={origin}
+            registry={registry}
+            capabilities={capabilities}
+          />
+          <aside
+            className="bg-background w-80 shrink-0 overflow-auto border-s"
+            data-testid="plumix-editor-right"
+          >
+            <BlockInspector registry={registry} />
+          </aside>
+        </div>
       </div>
+      <EditorShortcuts />
       {onChange ? <TreeChangeEmitter onChange={onChange} /> : null}
     </EditorProvider>
   );
