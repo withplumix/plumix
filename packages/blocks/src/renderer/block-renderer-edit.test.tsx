@@ -12,7 +12,7 @@ const content: EntryContent = {
   blocks: [{ id: "h1", name: "core/heading", attrs: { text: "Hi", level: 2 } }],
 };
 
-describe("BlockRenderer edit-mode hydration boundary", () => {
+describe("BlockRenderer edit-mode mount boundary", () => {
   test("wraps content in a mount root and embeds the initial tree", () => {
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry, mode: "edit" }}>

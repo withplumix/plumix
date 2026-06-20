@@ -1463,6 +1463,9 @@ importers:
       '@lingui/react':
         specifier: catalog:lingui
         version: 6.3.0(react@19.2.7)
+      '@plumix/admin-editor':
+        specifier: workspace:*
+        version: link:../admin-editor
       '@plumix/admin-ui':
         specifier: workspace:*
         version: link:../admin-ui
