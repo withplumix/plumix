@@ -39,6 +39,11 @@ msgid "editor.layers.empty"
 msgstr "No blocks yet."
 
 #. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.redo"
+msgstr "Redo"
+
+#. js-lingui-explicit-id
 #: src/block-catalog-tab.tsx
 msgid "editor.catalog.searchLabel"
 msgstr "Search blocks"
@@ -47,3 +52,8 @@ msgstr "Search blocks"
 #: src/block-inspector.tsx
 msgid "editor.inspector.empty"
 msgstr "Select a block to edit its attributes."
+
+#. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.undo"
+msgstr "Undo"

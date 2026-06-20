@@ -127,6 +127,47 @@ test.describe("bespoke editor route", () => {
     await expect(page.getByTestId("layer-p1")).toBeVisible();
   });
 
+  test("undo reverts an inspector edit and re-enables redo", async ({
+    page,
+  }) => {
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/get": editorEntry({
+        content: {
+          version: "plumix.v2",
+          blocks: [
+            {
+              id: "h1",
+              name: "core/heading",
+              attrs: { level: 2, text: "Welcome" },
+            },
+          ],
+        },
+      }),
+      "/entry/createPreviewLink": {
+        token: "tok123",
+        url: "/post/hello?preview=tok123",
+      },
+    });
+
+    await page.goto("entries/posts/1/editor");
+
+    // Nothing edited yet — undo is disabled.
+    await expect(page.getByTestId("plumix-undo")).toBeDisabled();
+
+    // Select the heading via the Layers tab and edit its Text in the inspector.
+    await page.getByTestId("plumix-tab-layers").click();
+    await page.getByTestId("layer-h1").click();
+    const textField = page.getByTestId("block-input-text");
+    await textField.fill("Changed");
+    await expect(textField).toHaveValue("Changed");
+
+    // Undo restores the original text; redo becomes available.
+    await page.getByTestId("plumix-undo").click();
+    await expect(page.getByTestId("block-input-text")).toHaveValue("Welcome");
+    await expect(page.getByTestId("plumix-redo")).toBeEnabled();
+  });
+
   test("a failed preview mint surfaces the error placeholder, not a dead canvas", async ({
     page,
   }) => {

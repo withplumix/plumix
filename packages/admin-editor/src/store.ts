@@ -4,7 +4,11 @@ import type { BlockNode, BlockSpec } from "@plumix/blocks";
 import { isBlockNodeArray } from "@plumix/blocks";
 
 import type { MoveTarget } from "./block-tree-ops.js";
+import type { History } from "./history.js";
 import { moveBlock as moveBlockOp } from "./block-tree-ops.js";
+import { initHistory, recordHistory, redo, undo } from "./history.js";
+
+type TreeHistory = History<readonly BlockNode[]>;
 
 export type EditorDevice = "desktop" | "tablet" | "mobile";
 
@@ -30,6 +34,8 @@ export interface EditorState {
   readonly zoom: number;
   /** The catalog block currently being dragged toward the canvas, if any. */
   readonly dragSpec: BlockSpec | null;
+  /** Snapshot history of the tree, driving undo/redo. */
+  readonly history: TreeHistory;
 }
 
 export interface EditorActions {
@@ -50,6 +56,9 @@ export interface EditorActions {
   setZoom: (zoom: number) => void;
   startBlockDrag: (spec: BlockSpec) => void;
   endBlockDrag: () => void;
+  /** Restore the previous / next tree snapshot. */
+  undo: () => void;
+  redo: () => void;
 }
 
 // Merge `patch` into one node, returning the same reference when nothing
@@ -102,7 +111,10 @@ export function createEditorStore(
     device: initial?.device ?? "desktop",
     zoom: initial?.zoom ?? 1,
     dragSpec: null,
+    history: initHistory(initial?.tree ?? []),
 
+    // Raw seed/programmatic setter — intentionally does not record history
+    // (user edits go through insert/move/updateBlockAttrs).
     setTree: (tree) => set({ tree }),
     insertBlock: (node, index) =>
       set((state) => {
@@ -112,12 +124,27 @@ export function createEditorStore(
           node,
           ...state.tree.slice(at),
         ];
-        return { tree, activeId: node.id, selectedIds: new Set([node.id]) };
+        return {
+          tree,
+          activeId: node.id,
+          selectedIds: new Set([node.id]),
+          history: recordHistory(state.history, tree, null),
+        };
       }),
     moveBlock: (sourceId, target) =>
-      set((state) => ({ tree: moveBlockOp(state.tree, sourceId, target) })),
+      set((state) => {
+        const tree = moveBlockOp(state.tree, sourceId, target);
+        if (tree === state.tree) return {};
+        return { tree, history: recordHistory(state.history, tree, null) };
+      }),
     updateBlockAttrs: (id, patch) =>
-      set((state) => ({ tree: patchAttrs(state.tree, id, patch) })),
+      set((state) => {
+        const tree = patchAttrs(state.tree, id, patch);
+        if (tree === state.tree) return {};
+        // Coalesce a typing burst on one field into a single undo step.
+        const key = `attr:${id}:${Object.keys(patch).sort().join(",")}`;
+        return { tree, history: recordHistory(state.history, tree, key) };
+      }),
     select: (id, options) =>
       set((state) => ({
         selectedIds: options?.additive
@@ -132,5 +159,15 @@ export function createEditorStore(
       set({ zoom: Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom)) }),
     startBlockDrag: (dragSpec) => set({ dragSpec }),
     endBlockDrag: () => set({ dragSpec: null }),
+    undo: () =>
+      set((state) => {
+        const history = undo(state.history);
+        return { history, tree: history.present };
+      }),
+    redo: () =>
+      set((state) => {
+        const history = redo(state.history);
+        return { history, tree: history.present };
+      }),
   }));
 }

@@ -39,6 +39,11 @@ msgid "editor.layers.empty"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.redo"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/block-catalog-tab.tsx
 msgid "editor.catalog.searchLabel"
 msgstr ""
@@ -46,4 +51,9 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/block-inspector.tsx
 msgid "editor.inspector.empty"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.undo"
 msgstr ""
