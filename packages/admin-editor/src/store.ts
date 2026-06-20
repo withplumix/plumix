@@ -3,6 +3,9 @@ import { createStore } from "zustand/vanilla";
 import type { BlockNode, BlockSpec } from "@plumix/blocks";
 import { isBlockNodeArray } from "@plumix/blocks";
 
+import type { MoveTarget } from "./block-tree-ops.js";
+import { moveBlock as moveBlockOp } from "./block-tree-ops.js";
+
 export type EditorDevice = "desktop" | "tablet" | "mobile";
 
 // Default canvas widths per device. The theme can override these via the
@@ -33,6 +36,8 @@ export interface EditorActions {
   setTree: (tree: readonly BlockNode[]) => void;
   /** Insert a block at a top-level index (clamped) and select it. */
   insertBlock: (node: BlockNode, index: number) => void;
+  /** Move a block to a new parent + index (reorder / nest / un-nest). */
+  moveBlock: (sourceId: string, target: MoveTarget) => void;
   /** Merge a partial attrs patch into one block, anywhere in the tree. */
   updateBlockAttrs: (
     id: string,
@@ -45,22 +50,6 @@ export interface EditorActions {
   setZoom: (zoom: number) => void;
   startBlockDrag: (spec: BlockSpec) => void;
   endBlockDrag: () => void;
-}
-
-/** Find a block by id anywhere in the tree, descending into slot attrs. */
-export function findBlock(
-  nodes: readonly BlockNode[],
-  id: string,
-): BlockNode | undefined {
-  for (const node of nodes) {
-    if (node.id === id) return node;
-    for (const value of Object.values(node.attrs ?? {})) {
-      if (!isBlockNodeArray(value)) continue;
-      const found = findBlock(value, id);
-      if (found) return found;
-    }
-  }
-  return undefined;
 }
 
 // Merge `patch` into one node, returning the same reference when nothing
@@ -125,6 +114,8 @@ export function createEditorStore(
         ];
         return { tree, activeId: node.id, selectedIds: new Set([node.id]) };
       }),
+    moveBlock: (sourceId, target) =>
+      set((state) => ({ tree: moveBlockOp(state.tree, sourceId, target) })),
     updateBlockAttrs: (id, patch) =>
       set((state) => ({ tree: patchAttrs(state.tree, id, patch) })),
     select: (id, options) =>

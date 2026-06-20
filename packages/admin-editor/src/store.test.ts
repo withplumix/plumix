@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import type { BlockNode } from "@plumix/blocks";
 
-import { createEditorStore, findBlock, MAX_ZOOM, MIN_ZOOM } from "./store.js";
+import { createEditorStore, MAX_ZOOM, MIN_ZOOM } from "./store.js";
 
 describe("editor store", () => {
   test("select replaces the selection and marks the block active", () => {
@@ -155,27 +155,17 @@ describe("insertBlock", () => {
   });
 });
 
-describe("findBlock", () => {
-  test("finds a top-level block by id", () => {
-    const tree: readonly BlockNode[] = [
-      { id: "a", name: "core/heading" },
-      { id: "b", name: "core/spacer" },
-    ];
-    expect(findBlock(tree, "b")?.name).toBe("core/spacer");
-  });
+describe("moveBlock action", () => {
+  test("reorders the tree through the store", () => {
+    const store = createEditorStore({
+      tree: [
+        { id: "a", name: "core/x" },
+        { id: "b", name: "core/x" },
+      ],
+    });
 
-  test("finds a block nested inside a slot", () => {
-    const tree: readonly BlockNode[] = [
-      {
-        id: "g",
-        name: "core/group",
-        attrs: { content: [{ id: "deep", name: "core/heading" }] },
-      },
-    ];
-    expect(findBlock(tree, "deep")?.id).toBe("deep");
-  });
+    store.getState().moveBlock("a", { parentId: null, index: 1 });
 
-  test("returns undefined when absent", () => {
-    expect(findBlock([{ id: "a", name: "core/heading" }], "z")).toBeUndefined();
+    expect(store.getState().tree.map((n) => n.id)).toEqual(["b", "a"]);
   });
 });

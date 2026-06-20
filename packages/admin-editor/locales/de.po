@@ -19,8 +19,23 @@ msgid "editor.canvas.addBlock"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/plumix-editor.tsx
+msgid "editor.tab.blocks"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/plumix-editor.tsx
+msgid "editor.tab.layers"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/block-catalog-tab.tsx
 msgid "editor.catalog.noResults"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/layers-tab.tsx
+msgid "editor.layers.empty"
 msgstr ""
 
 #. js-lingui-explicit-id

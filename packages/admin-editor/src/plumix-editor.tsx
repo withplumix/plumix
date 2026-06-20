@@ -1,12 +1,20 @@
 import type { ReactElement } from "react";
 import { useEffect, useRef } from "react";
+import { Trans } from "@lingui/react";
 
 import type { BlockRegistry, EntryContent } from "@plumix/blocks";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@plumix/admin-ui/tabs";
 import { defineEntryContent } from "@plumix/blocks";
 
 import { BlockCatalog } from "./block-catalog-tab.js";
 import { BlockInspector } from "./block-inspector.js";
 import { CanvasFrame } from "./canvas-frame.js";
+import { LayersTab } from "./layers-tab.js";
 import { EditorProvider, useEditorStoreApi } from "./provider.js";
 
 const NO_CAPABILITIES: ReadonlySet<string> = new Set();
@@ -47,7 +55,22 @@ export function PlumixEditor({
           className="bg-background w-72 shrink-0 overflow-auto border-e"
           data-testid="plumix-editor-left"
         >
-          <BlockCatalog registry={registry} capabilities={capabilities} />
+          <Tabs defaultValue="blocks">
+            <TabsList className="m-2">
+              <TabsTrigger value="blocks" data-testid="plumix-tab-blocks">
+                <Trans id="editor.tab.blocks" message="Blocks" />
+              </TabsTrigger>
+              <TabsTrigger value="layers" data-testid="plumix-tab-layers">
+                <Trans id="editor.tab.layers" message="Layers" />
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="blocks">
+              <BlockCatalog registry={registry} capabilities={capabilities} />
+            </TabsContent>
+            <TabsContent value="layers">
+              <LayersTab registry={registry} />
+            </TabsContent>
+          </Tabs>
         </aside>
         <CanvasFrame
           previewUrl={previewUrl}
