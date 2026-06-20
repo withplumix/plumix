@@ -4,6 +4,14 @@ import type { BlockNode } from "@plumix/blocks";
 
 export type EditorDevice = "desktop" | "tablet" | "mobile";
 
+// Default canvas widths per device. The theme can override these via the
+// manifest (theme-defined breakpoints); these are the fallbacks.
+export const DEVICE_WIDTH: Record<EditorDevice, number> = {
+  desktop: 1280,
+  tablet: 768,
+  mobile: 375,
+};
+
 export const MIN_ZOOM = 0.25;
 export const MAX_ZOOM = 2;
 

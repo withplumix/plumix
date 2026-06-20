@@ -17,10 +17,10 @@ export interface BlockRect {
 }
 
 /** Parent (admin shell) → canvas (iframe). */
-export type HostMessage =
-  | { readonly type: "host:tree"; readonly tree: readonly BlockNode[] }
-  | { readonly type: "host:select"; readonly id: string | null }
-  | { readonly type: "host:hover"; readonly id: string | null };
+export interface HostMessage {
+  readonly type: "host:tree";
+  readonly tree: readonly BlockNode[];
+}
 
 /** Canvas (iframe) → parent (admin shell). */
 export type CanvasMessage =
