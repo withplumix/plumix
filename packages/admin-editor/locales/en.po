@@ -19,9 +19,24 @@ msgid "editor.canvas.addBlock"
 msgstr "Add a block"
 
 #. js-lingui-explicit-id
+#: src/json-inspector.tsx
+msgid "editor.json.block"
+msgstr "Block"
+
+#. js-lingui-explicit-id
+#: src/plumix-editor.tsx
+msgid "editor.tab.block"
+msgstr "Block"
+
+#. js-lingui-explicit-id
 #: src/plumix-editor.tsx
 msgid "editor.tab.blocks"
 msgstr "Blocks"
+
+#. js-lingui-explicit-id
+#: src/plumix-editor.tsx
+msgid "editor.tab.json"
+msgstr "JSON"
 
 #. js-lingui-explicit-id
 #: src/plumix-editor.tsx
@@ -39,6 +54,21 @@ msgid "editor.layers.empty"
 msgstr "No blocks yet."
 
 #. js-lingui-explicit-id
+#: src/plumix-editor.tsx
+msgid "editor.page.empty"
+msgstr "No document settings."
+
+#. js-lingui-explicit-id
+#: src/json-inspector.tsx
+msgid "editor.json.page"
+msgstr "Page"
+
+#. js-lingui-explicit-id
+#: src/plumix-editor.tsx
+msgid "editor.tab.page"
+msgstr "Page"
+
+#. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
 msgid "editor.toolbar.redo"
 msgstr "Redo"
@@ -52,6 +82,11 @@ msgstr "Search blocks"
 #: src/block-inspector.tsx
 msgid "editor.inspector.empty"
 msgstr "Select a block to edit its attributes."
+
+#. js-lingui-explicit-id
+#: src/json-inspector.tsx
+msgid "editor.json.empty"
+msgstr "Select a block to inspect."
 
 #. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
