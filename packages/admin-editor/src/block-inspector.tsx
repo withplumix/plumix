@@ -5,8 +5,8 @@ import { Trans } from "@lingui/react";
 import type { BlockRegistry } from "@plumix/blocks";
 
 import { BlockInputControl } from "./block-input-control.js";
+import { findBlock } from "./block-tree-ops.js";
 import { useEditorStore } from "./provider.js";
-import { findBlock } from "./store.js";
 
 interface BlockInspectorProps {
   /** Core + plugin block registry; supplies each block's input schema. */

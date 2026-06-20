@@ -94,6 +94,39 @@ test.describe("bespoke editor route", () => {
     await expect(page.getByTestId("plumix-empty-add")).toBeVisible();
   });
 
+  test("the Layers tab outlines the entry's nested block structure", async ({
+    page,
+  }) => {
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/get": editorEntry({
+        content: {
+          version: "plumix.v2",
+          blocks: [
+            { id: "h1", name: "core/heading", attrs: { text: "Hello" } },
+            {
+              id: "g1",
+              name: "core/group",
+              attrs: { content: [{ id: "p1", name: "core/rich-text" }] },
+            },
+          ],
+        },
+      }),
+      "/entry/createPreviewLink": {
+        token: "tok123",
+        url: "/post/hello?preview=tok123",
+      },
+    });
+
+    await page.goto("entries/posts/1/editor");
+
+    await page.getByTestId("plumix-tab-layers").click();
+    await expect(page.getByTestId("layer-h1")).toBeVisible();
+    await expect(page.getByTestId("layer-g1")).toBeVisible();
+    // The nested child appears in the outline too.
+    await expect(page.getByTestId("layer-p1")).toBeVisible();
+  });
+
   test("a failed preview mint surfaces the error placeholder, not a dead canvas", async ({
     page,
   }) => {

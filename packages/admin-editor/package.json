@@ -21,6 +21,9 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
+    "@dnd-kit/core": "catalog:",
+    "@dnd-kit/sortable": "catalog:",
+    "@dnd-kit/utilities": "catalog:",
     "@plumix/admin-ui": "workspace:*",
     "@plumix/blocks": "workspace:*",
     "@plumix/core": "workspace:*",
