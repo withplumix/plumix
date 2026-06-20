@@ -1,5 +1,6 @@
 packages:
   - "packages/admin"
+  - "packages/admin-editor"
   - "packages/admin-ui"
   - "packages/blocks"
   - "packages/core"

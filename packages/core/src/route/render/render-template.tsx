@@ -24,6 +24,7 @@ import type {
   TemplateRegistry,
   ThemeDescriptor,
 } from "../../theme.js";
+import type { EditModeDecision } from "../edit-mode.js";
 import type { AssetManifest, ViteCommand } from "./asset-manifest.js";
 import type { ErrorData } from "./resolved-entry.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
@@ -37,7 +38,9 @@ import {
 } from "../../template-deps.js";
 import { normalizeTemplate } from "../../template.js";
 import { validateDocumentManifest } from "../../theme.js";
+import { LIVE_EDIT_MODE } from "../edit-mode.js";
 import { bundledCssTags, devThemeStylesTag } from "./asset-manifest.js";
+import { injectEditorBootstrap } from "./inject-editor-bootstrap.js";
 import { injectIslandsBootstrap } from "./inject-islands-bootstrap.js";
 import { resolveTemplateCandidates } from "./template-hierarchy.js";
 
@@ -69,6 +72,8 @@ interface RenderArgs {
   readonly node: ResolvedNode;
   readonly data: TemplateData;
   readonly title: string;
+  /** Visual-editor decision; defaults to a plain live render. */
+  readonly editMode?: EditModeDecision;
 }
 
 export async function renderThroughTheme({
@@ -81,6 +86,7 @@ export async function renderThroughTheme({
   node,
   data,
   title,
+  editMode = LIVE_EDIT_MODE,
 }: RenderArgs): Promise<string> {
   const candidates = await resolveTemplateCandidates(node, ctx.hooks);
   const { template, slot } = pickTemplate(theme.templates, candidates);
@@ -124,6 +130,7 @@ export async function renderThroughTheme({
     deps,
     loaderData,
     tokens: theme.tokens,
+    editMode,
   });
 }
 
@@ -203,6 +210,7 @@ export async function renderErrorThroughTheme({
     deps,
     loaderData: undefined,
     tokens: theme.tokens,
+    editMode: LIVE_EDIT_MODE,
   });
 }
 
@@ -283,6 +291,7 @@ interface RenderTreeArgs {
   readonly deps: Record<string, Record<string, unknown>>;
   readonly loaderData: ResolvedBlockLoaders | undefined;
   readonly tokens: ThemeTokens | undefined;
+  readonly editMode: EditModeDecision;
 }
 
 // React 19 reorders every child of `<head>` (metadata first, scripts /
@@ -301,6 +310,7 @@ function renderTree({
   deps,
   tokens,
   loaderData,
+  editMode,
 }: RenderTreeArgs): string {
   // Adapter FC wraps `template.render({ data, ctx, ...deps })` so it
   // executes inside React's render pass — hooks (useState, useId,
@@ -329,6 +339,7 @@ function renderTree({
     {
       value: {
         registry: ctx.blocks,
+        mode: editMode.mode,
         tokens,
         loaderData,
         user: ctx.user,
@@ -398,9 +409,22 @@ function renderTree({
     voidTagsToHtml("meta", document.meta) +
     scripts.headEnd.map(scriptToHtml).join("");
 
+  const withIslands = injectIslandsBootstrap(
+    body,
+    assetManifest,
+    command,
+    ctx.basePath,
+  );
+  const withRuntimes = injectEditorBootstrap(
+    withIslands,
+    editMode.injectRuntime,
+    assetManifest,
+    command,
+    ctx.basePath,
+  );
   const bodyContent =
     scripts.bodyStart.map(scriptToHtml).join("") +
-    injectIslandsBootstrap(body, assetManifest, command, ctx.basePath) +
+    withRuntimes +
     scripts.bodyEnd.map(scriptToHtml).join("") +
     HYDRATION_SLOT;
 

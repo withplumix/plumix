@@ -15,7 +15,7 @@
 // `rollupOptions.input`). Read from Vite's `.vite/manifest.json`.
 
 import type { AssetManifest, ViteCommand } from "./asset-manifest.js";
-import { withBasePath } from "../../base-path.js";
+import { resolveEntryUrl } from "./asset-manifest.js";
 
 const DEV_ENTRY_PATH = "/.plumix/islands-entry.ts";
 const RUNTIME_MANIFEST_KEY = ".plumix/islands-entry.ts";
@@ -52,21 +52,4 @@ export function injectIslandsBootstrap(
     body +
     `<script type="module" src="${src}" data-plumix-renderer-url="${rendererUrl}"></script>`
   );
-}
-
-// In build, resolve the hashed asset path from Vite's manifest; in dev
-// (or on the cold-build edge where the entry isn't in the manifest yet)
-// fall back to the source path Vite's dev server serves directly.
-function resolveEntryUrl(
-  manifest: AssetManifest,
-  command: ViteCommand,
-  key: string,
-  devPath: string,
-  basePath: string,
-): string {
-  if (command === "build") {
-    const entry = manifest[key];
-    if (entry?.file) return withBasePath("/" + entry.file, basePath);
-  }
-  return devPath;
 }

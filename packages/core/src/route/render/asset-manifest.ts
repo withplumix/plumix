@@ -59,6 +59,23 @@ export function devThemeStylesTag(command: ViteCommand, basePath = ""): string {
   return `<script type="module" src="${src}"></script>`;
 }
 
+// In build, resolve the hashed asset path from Vite's manifest; in dev (or
+// the cold-build edge where the entry isn't in the manifest yet) fall back
+// to the source path Vite's dev server serves directly.
+export function resolveEntryUrl(
+  manifest: AssetManifest,
+  command: ViteCommand,
+  key: string,
+  devPath: string,
+  basePath = "",
+): string {
+  if (command === "build") {
+    const entry = manifest[key];
+    if (entry?.file) return withBasePath("/" + entry.file, basePath);
+  }
+  return devPath;
+}
+
 function collectReachableCss(
   key: string,
   manifest: AssetManifest,
