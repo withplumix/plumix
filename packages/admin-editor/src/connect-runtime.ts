@@ -1,0 +1,82 @@
+import type { BlockNode } from "@plumix/blocks";
+import type {
+  BlockRect,
+  CanvasMessage,
+  HostMessage,
+} from "@plumix/blocks/renderer";
+import {
+  createHandshake,
+  EDITOR_BRIDGE_CHANNEL,
+  encode,
+  isHandshakeFrame,
+  parseEnvelope,
+} from "@plumix/blocks/renderer";
+
+export interface RuntimeConnection {
+  readonly reportSelect: (id: string) => void;
+  readonly reportHover: (id: string | null) => void;
+  readonly reportGeometry: (rects: readonly BlockRect[]) => void;
+  readonly dispose: () => void;
+}
+
+interface ConnectRuntimeOptions {
+  /** The host (admin shell) window — usually `window.parent`. */
+  readonly parentWindow: Window;
+  /** Expected origin of the host; messages from elsewhere are dropped. */
+  readonly origin: string;
+  /** Called with each tree the host pushes. */
+  readonly onTree: (tree: readonly BlockNode[]) => void;
+}
+
+/**
+ * Canvas (iframe) half of the editor bridge. Acks the host's handshake,
+ * applies the trees it pushes, and exposes report* helpers the canvas calls
+ * when the author interacts. It never owns the tree — it only renders what
+ * the host sends and reports intent back.
+ */
+export function connectRuntime({
+  parentWindow,
+  origin,
+  onTree,
+}: ConnectRuntimeOptions): RuntimeConnection {
+  const post = (message: object): void => {
+    parentWindow.postMessage(encode(EDITOR_BRIDGE_CHANNEL, message), origin);
+  };
+  const handshake = createHandshake({ role: "responder", post });
+
+  const announce = (): void => {
+    post({ type: "canvas:ready" } satisfies CanvasMessage);
+  };
+
+  const onMessage = (event: MessageEvent): void => {
+    const message = parseEnvelope<object>(
+      EDITOR_BRIDGE_CHANNEL,
+      event.data,
+      event.origin,
+      origin,
+    );
+    if (!message) return;
+    if (isHandshakeFrame(message)) {
+      handshake.onMessage(message);
+      // A hello means the host (re)connected and is listening — re-announce
+      // so it pushes the tree even if it missed our first announce.
+      if (message.kind === "hello") announce();
+      return;
+    }
+    const host = message as Partial<HostMessage>;
+    if (host.type === "host:tree" && host.tree) onTree(host.tree);
+  };
+
+  window.addEventListener("message", onMessage);
+  announce();
+
+  return {
+    reportSelect: (id) =>
+      post({ type: "canvas:select", id } satisfies CanvasMessage),
+    reportHover: (id) =>
+      post({ type: "canvas:hover", id } satisfies CanvasMessage),
+    reportGeometry: (rects) =>
+      post({ type: "canvas:geometry", rects } satisfies CanvasMessage),
+    dispose: () => window.removeEventListener("message", onMessage),
+  };
+}

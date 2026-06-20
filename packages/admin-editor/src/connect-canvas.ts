@@ -7,6 +7,7 @@ import {
   createHandshake,
   EDITOR_BRIDGE_CHANNEL,
   encode,
+  isHandshakeFrame,
   parseEnvelope,
 } from "@plumix/blocks/renderer";
 
@@ -31,15 +32,6 @@ interface ConnectCanvasOptions {
 // The iframe runtime usually boots after the parent mounts, so a single hello
 // would race; re-announce on this interval until the canvas acks.
 const HANDSHAKE_RETRY_MS = 250;
-
-function isHandshakeFrame(
-  message: object,
-): message is { readonly kind: string } {
-  return (
-    "kind" in message &&
-    typeof (message as { kind?: unknown }).kind === "string"
-  );
-}
 
 /**
  * Parent half of the editor bridge. The canvas never mutates the tree — it

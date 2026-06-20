@@ -68,6 +68,16 @@ export function createHandshake({
   };
 }
 
+/** Distinguishes a handshake frame (hello/ack) from a typed editor message. */
+export function isHandshakeFrame(
+  message: object,
+): message is { readonly kind: string } {
+  return (
+    "kind" in message &&
+    typeof (message as { kind?: unknown }).kind === "string"
+  );
+}
+
 export function parseEnvelope<M>(
   channel: string,
   raw: unknown,

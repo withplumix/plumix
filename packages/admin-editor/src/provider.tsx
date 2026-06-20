@@ -42,3 +42,10 @@ export function useEditorStore<T>(selector: (state: EditorStore) => T): T {
   if (!store) throw EditorError.missingProvider();
   return useStore(store, selector);
 }
+
+/** The raw store handle, for non-React consumers like the canvas bridge. */
+export function useEditorStoreApi(): EditorStoreApi {
+  const store = useContext(EditorStoreContext);
+  if (!store) throw EditorError.missingProvider();
+  return store;
+}

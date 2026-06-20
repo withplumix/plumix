@@ -142,7 +142,12 @@ export { buildImageAttrs, matchesRemotePattern } from "./image-attrs.js";
 
 // Editor bridge: transport primitives + typed message contract, shared by
 // the admin shell (parent) and the SSR-injected canvas runtime (iframe).
-export { createHandshake, encode, parseEnvelope } from "./bridge.js";
+export {
+  createHandshake,
+  encode,
+  isHandshakeFrame,
+  parseEnvelope,
+} from "./bridge.js";
 export type { Envelope, Handshake, HandshakeRole } from "./bridge.js";
 export { EDITOR_BRIDGE_CHANNEL } from "./editor-protocol.js";
 export type {
