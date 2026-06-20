@@ -77,7 +77,7 @@ export function BlockRenderer({
   readonly content: EntryContent;
 }): ReactNode {
   const ctx = usePlumixContext("BlockRenderer");
-  return renderBlockTree(content.blocks, ctx.registry, {
+  const tree = renderBlockTree(content.blocks, ctx.registry, {
     tokens: ctx.tokens,
     loaderData: ctx.loaderData,
     locale: ctx.locale,
@@ -85,6 +85,22 @@ export function BlockRenderer({
     entry: ctx.entry,
     editing: ctx.mode === "edit",
   });
+  if (ctx.mode !== "edit") return tree;
+  // Edit mode: wrap the content in a mount root the injected runtime hydrates,
+  // and embed the tree so it can seed without a round-trip. `<` is escaped so
+  // authored content can't break out of the JSON <script>.
+  return (
+    <div data-plumix-content-root="">
+      <script
+        type="application/json"
+        data-plumix-initial-tree=""
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(content).replace(/</g, "\\u003c"),
+        }}
+      />
+      {tree}
+    </div>
+  );
 }
 
 /** Current render mode; `"live"` unless the editor set it. */
