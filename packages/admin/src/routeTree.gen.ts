@@ -30,6 +30,7 @@ import { Route as AuthenticatedEntriesSlugIndexRouteImport } from "./routes/_aut
 import { Route as EditorEntriesSlugCreateRouteImport } from "./routes/_editor/entries/$slug/create";
 import { Route as AuthenticatedUsersIdEditRouteImport } from "./routes/_authenticated/users/$id/edit";
 import { Route as AuthenticatedTermsNameCreateRouteImport } from "./routes/_authenticated/terms/$name/create";
+import { Route as EditorEntriesSlugIdEditorRouteImport } from "./routes/_editor/entries/$slug/$id/editor";
 import { Route as EditorEntriesSlugIdEditRouteImport } from "./routes/_editor/entries/$slug/$id/edit";
 import { Route as AuthenticatedTermsNameIdEditRouteImport } from "./routes/_authenticated/terms/$name/$id/edit";
 
@@ -144,6 +145,12 @@ const AuthenticatedTermsNameCreateRoute =
     path: "/terms/$name/create",
     getParentRoute: () => AuthenticatedRoute,
   } as any);
+const EditorEntriesSlugIdEditorRoute =
+  EditorEntriesSlugIdEditorRouteImport.update({
+    id: "/entries/$slug/$id/editor",
+    path: "/entries/$slug/$id/editor",
+    getParentRoute: () => EditorRoute,
+  } as any);
 const EditorEntriesSlugIdEditRoute = EditorEntriesSlugIdEditRouteImport.update({
   id: "/entries/$slug/$id/edit",
   path: "/entries/$slug/$id/edit",
@@ -177,6 +184,7 @@ export interface FileRoutesByFullPath {
   "/terms/$name/": typeof AuthenticatedTermsNameIndexRoute;
   "/terms/$name/$id/edit": typeof AuthenticatedTermsNameIdEditRoute;
   "/entries/$slug/$id/edit": typeof EditorEntriesSlugIdEditRoute;
+  "/entries/$slug/$id/editor": typeof EditorEntriesSlugIdEditorRoute;
 }
 export interface FileRoutesByTo {
   "/": typeof AuthenticatedIndexRoute;
@@ -199,6 +207,7 @@ export interface FileRoutesByTo {
   "/terms/$name": typeof AuthenticatedTermsNameIndexRoute;
   "/terms/$name/$id/edit": typeof AuthenticatedTermsNameIdEditRoute;
   "/entries/$slug/$id/edit": typeof EditorEntriesSlugIdEditRoute;
+  "/entries/$slug/$id/editor": typeof EditorEntriesSlugIdEditorRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
@@ -225,6 +234,7 @@ export interface FileRoutesById {
   "/_authenticated/terms/$name/": typeof AuthenticatedTermsNameIndexRoute;
   "/_authenticated/terms/$name/$id/edit": typeof AuthenticatedTermsNameIdEditRoute;
   "/_editor/entries/$slug/$id/edit": typeof EditorEntriesSlugIdEditRoute;
+  "/_editor/entries/$slug/$id/editor": typeof EditorEntriesSlugIdEditorRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
@@ -248,7 +258,8 @@ export interface FileRouteTypes {
     | "/entries/$slug/"
     | "/terms/$name/"
     | "/terms/$name/$id/edit"
-    | "/entries/$slug/$id/edit";
+    | "/entries/$slug/$id/edit"
+    | "/entries/$slug/$id/editor";
   fileRoutesByTo: FileRoutesByTo;
   to:
     | "/"
@@ -270,7 +281,8 @@ export interface FileRouteTypes {
     | "/entries/$slug"
     | "/terms/$name"
     | "/terms/$name/$id/edit"
-    | "/entries/$slug/$id/edit";
+    | "/entries/$slug/$id/edit"
+    | "/entries/$slug/$id/editor";
   id:
     | "__root__"
     | "/_auth"
@@ -295,7 +307,8 @@ export interface FileRouteTypes {
     | "/_authenticated/entries/$slug/"
     | "/_authenticated/terms/$name/"
     | "/_authenticated/terms/$name/$id/edit"
-    | "/_editor/entries/$slug/$id/edit";
+    | "/_editor/entries/$slug/$id/edit"
+    | "/_editor/entries/$slug/$id/editor";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
@@ -453,6 +466,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedTermsNameCreateRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
+    "/_editor/entries/$slug/$id/editor": {
+      id: "/_editor/entries/$slug/$id/editor";
+      path: "/entries/$slug/$id/editor";
+      fullPath: "/entries/$slug/$id/editor";
+      preLoaderRoute: typeof EditorEntriesSlugIdEditorRouteImport;
+      parentRoute: typeof EditorRoute;
+    };
     "/_editor/entries/$slug/$id/edit": {
       id: "/_editor/entries/$slug/$id/edit";
       path: "/entries/$slug/$id/edit";
@@ -527,11 +547,13 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 interface EditorRouteChildren {
   EditorEntriesSlugCreateRoute: typeof EditorEntriesSlugCreateRoute;
   EditorEntriesSlugIdEditRoute: typeof EditorEntriesSlugIdEditRoute;
+  EditorEntriesSlugIdEditorRoute: typeof EditorEntriesSlugIdEditorRoute;
 }
 
 const EditorRouteChildren: EditorRouteChildren = {
   EditorEntriesSlugCreateRoute: EditorEntriesSlugCreateRoute,
   EditorEntriesSlugIdEditRoute: EditorEntriesSlugIdEditRoute,
+  EditorEntriesSlugIdEditorRoute: EditorEntriesSlugIdEditorRoute,
 };
 
 const EditorRouteWithChildren =

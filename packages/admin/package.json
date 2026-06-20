@@ -25,6 +25,7 @@
     "@lingui/react": "catalog:lingui",
     "@orpc/client": "catalog:",
     "@orpc/tanstack-query": "catalog:",
+    "@plumix/admin-editor": "workspace:*",
     "@plumix/admin-ui": "workspace:*",
     "@puckeditor/core": "0.21.2",
     "@tanstack/react-query": "catalog:",
