@@ -24,7 +24,9 @@ import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
 import { labelSourceText } from "../i18n/label.js";
+import { entryCapability } from "../rpc/procedures/entry/lifecycle.js";
 import { notFound, permanentRedirect } from "../runtime/http.js";
+import { resolveEditMode } from "./edit-mode.js";
 import { paginate } from "./paginate.js";
 import { findEntryByPath, findTermByPath } from "./path-chain.js";
 import { buildTermArchiveUrl } from "./permalink.js";
@@ -361,6 +363,15 @@ async function resolveSingle(
 
   ctx.resolvedEntity = { kind: "entry", id: row.id };
 
+  const editMode = resolveEditMode({
+    editParam: new URL(ctx.request.url).searchParams.has("plumix.edit"),
+    canEdit:
+      ctx.auth.can(entryCapability(row.type, "edit_any")) ||
+      (ctx.user?.id === row.authorId &&
+        ctx.auth.can(entryCapability(row.type, "edit_own"))),
+    previewGrant: await previewTokenGrantsEntry(ctx, row),
+  });
+
   const [entry] = await buildResolvedEntries(ctx, [row]);
   if (!entry) {
     // eslint-disable-next-line no-restricted-syntax -- diagnostic throw
@@ -398,6 +409,7 @@ async function resolveSingle(
     },
     data: expanded,
     title,
+    editMode,
   });
   return new Response(html, {
     headers: { "content-type": "text/html; charset=utf-8" },

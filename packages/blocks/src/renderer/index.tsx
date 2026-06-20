@@ -25,8 +25,12 @@ export type RendererQueriedEntry =
   | { readonly kind: "term"; readonly id: number }
   | { readonly kind: "archive"; readonly entryType: string };
 
+export type PlumixRenderMode = "live" | "preview" | "edit";
+
 export interface PlumixContextValue {
   readonly registry: BlockRegistry;
+  /** Render mode; defaults to `"live"`. `edit`/`preview` drive the editor hooks. */
+  readonly mode?: PlumixRenderMode;
   readonly tokens?: ThemeTokens;
   readonly loaderData?: ResolvedBlockLoaders;
   readonly user?: RendererUser | null;
@@ -79,7 +83,24 @@ export function BlockRenderer({
     locale: ctx.locale,
     shortcodes: ctx.shortcodes,
     entry: ctx.entry,
+    editing: ctx.mode === "edit",
   });
+}
+
+/** Current render mode; `"live"` unless the editor set it. */
+export function usePlumixMode(): PlumixRenderMode {
+  return usePlumixContext("usePlumixMode").mode ?? "live";
+}
+
+/** True only in the visual editor (drag/drop, live patches). */
+export function useIsEditing(): boolean {
+  return usePlumixMode() === "edit";
+}
+
+/** True when editing OR previewing a draft. */
+export function useIsPreview(): boolean {
+  const mode = usePlumixMode();
+  return mode === "edit" || mode === "preview";
 }
 
 export function useTokens(): ThemeTokens | undefined {
@@ -118,3 +139,15 @@ export type {
   ImageAttrs,
 } from "./image-attrs.js";
 export { buildImageAttrs, matchesRemotePattern } from "./image-attrs.js";
+
+// Editor bridge: transport primitives + typed message contract, shared by
+// the admin shell (parent) and the SSR-injected canvas runtime (iframe).
+export { createHandshake, encode, parseEnvelope } from "./bridge.js";
+export type { Envelope, Handshake, HandshakeRole } from "./bridge.js";
+export { EDITOR_BRIDGE_CHANNEL } from "./editor-protocol.js";
+export type {
+  BlockRect,
+  CanvasMessage,
+  EditorBridgeMessage,
+  HostMessage,
+} from "./editor-protocol.js";

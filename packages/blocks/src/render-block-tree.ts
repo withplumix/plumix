@@ -70,6 +70,8 @@ export interface RenderBlockTreeOptions {
   readonly shortcodes?: ShortcodeRegistry;
   /** Queried entry, exposed to shortcodes via `BlockContext.entry`. */
   readonly entry?: Readonly<Record<string, unknown>> | null;
+  /** Edit mode: tag each block wrapper with `data-plumix-id` for canvas selection. */
+  readonly editing?: boolean;
 }
 
 export interface BlockNodeRenderProps<
@@ -164,6 +166,7 @@ interface WalkerEnv {
   readonly hooks: BlockRenderHooks | undefined;
   readonly loaderData: ResolvedBlockLoaders | undefined;
   readonly patterns: PatternRegistry | undefined;
+  readonly editing: boolean;
 }
 
 function renderNodes(
@@ -232,6 +235,7 @@ function renderNode(
     {
       key: node.id,
       "data-plumix-block": node.name,
+      "data-plumix-id": env.editing && safeId ? safeId : undefined,
       className,
     },
     styleTag,
@@ -289,6 +293,7 @@ export function renderBlockTree(
     hooks: options?.hooks,
     loaderData: options?.loaderData,
     patterns: options?.patterns,
+    editing: options?.editing ?? false,
   };
   const rootContext: BlockContext = {
     ...DEFAULT_BLOCK_CONTEXT,
