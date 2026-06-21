@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { Trans } from "@lingui/react";
 
@@ -15,6 +15,7 @@ import { BlockCatalog } from "./block-catalog-tab.js";
 import { BlockInspector } from "./block-inspector.js";
 import { CanvasFrame } from "./canvas-frame.js";
 import { EditorShortcuts, EditorToolbar } from "./editor-toolbar.js";
+import { JsonInspector } from "./json-inspector.js";
 import { LayersTab } from "./layers-tab.js";
 import { EditorProvider, useEditorStoreApi } from "./provider.js";
 
@@ -34,6 +35,9 @@ interface PlumixEditorProps {
   /** Fires with the full content envelope whenever the tree changes. The host
    *  debounces + persists (orpc lives in the app, never in this package). */
   readonly onChange?: (content: EntryContent) => void;
+  /** Admin-provided document settings (slug/excerpt/parent/metaboxes) rendered
+   *  in the Page tab; the host owns its persistence. */
+  readonly documentPanel?: ReactNode;
 }
 
 /**
@@ -48,6 +52,7 @@ export function PlumixEditor({
   registry,
   capabilities = NO_CAPABILITIES,
   onChange,
+  documentPanel,
 }: PlumixEditorProps): ReactElement {
   return (
     <EditorProvider initialTree={defaultValue?.blocks}>
@@ -85,7 +90,35 @@ export function PlumixEditor({
             className="bg-background w-80 shrink-0 overflow-auto border-s"
             data-testid="plumix-editor-right"
           >
-            <BlockInspector registry={registry} />
+            <Tabs defaultValue="block">
+              <TabsList className="m-2">
+                <TabsTrigger value="block" data-testid="plumix-tab-block">
+                  <Trans id="editor.tab.block" message="Block" />
+                </TabsTrigger>
+                <TabsTrigger value="page" data-testid="plumix-tab-page">
+                  <Trans id="editor.tab.page" message="Page" />
+                </TabsTrigger>
+                <TabsTrigger value="json" data-testid="plumix-tab-json">
+                  <Trans id="editor.tab.json" message="JSON" />
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="block">
+                <BlockInspector registry={registry} />
+              </TabsContent>
+              <TabsContent value="page" data-testid="plumix-page-panel">
+                {documentPanel ?? (
+                  <p className="text-muted-foreground p-4 text-sm">
+                    <Trans
+                      id="editor.page.empty"
+                      message="No document settings."
+                    />
+                  </p>
+                )}
+              </TabsContent>
+              <TabsContent value="json">
+                <JsonInspector />
+              </TabsContent>
+            </Tabs>
           </aside>
         </div>
       </div>

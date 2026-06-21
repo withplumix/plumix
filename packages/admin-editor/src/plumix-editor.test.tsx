@@ -29,6 +29,7 @@ function renderEditor(): ReturnType<typeof render> {
         origin="http://localhost:3000"
         defaultValue={{ version: "plumix.v2", blocks: [] }}
         registry={registry}
+        documentPanel={<div data-testid="doc-panel">document settings</div>}
       />
     </I18nProvider>,
   );
@@ -43,10 +44,13 @@ describe("PlumixEditor", () => {
     );
   });
 
-  test("mounts the right-rail inspector", () => {
+  test("mounts the right-rail inspector with Block/Page/JSON tabs", () => {
     const { getByTestId } = renderEditor();
     expect(getByTestId("plumix-editor-right")).toBeDefined();
-    // Nothing selected yet → inspector shows its empty state.
+    expect(getByTestId("plumix-tab-block")).toBeDefined();
+    expect(getByTestId("plumix-tab-page")).toBeDefined();
+    expect(getByTestId("plumix-tab-json")).toBeDefined();
+    // Block tab is active by default → inspector empty state shows.
     expect(getByTestId("block-inspector-empty")).toBeDefined();
   });
 });

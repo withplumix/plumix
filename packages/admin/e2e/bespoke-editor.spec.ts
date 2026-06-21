@@ -168,6 +168,37 @@ test.describe("bespoke editor route", () => {
     await expect(page.getByTestId("plumix-redo")).toBeEnabled();
   });
 
+  test("the Page tab shows document settings and the JSON tab shows the tree", async ({
+    page,
+  }) => {
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/get": editorEntry({
+        content: {
+          version: "plumix.v2",
+          blocks: [{ id: "h1", name: "core/heading", attrs: { text: "Hi" } }],
+        },
+      }),
+      "/entry/list": [],
+      "/entry/createPreviewLink": {
+        token: "tok123",
+        url: "/post/hello?preview=tok123",
+      },
+    });
+
+    await page.goto("entries/posts/1/editor");
+
+    // Page tab hosts the admin-provided document settings (slug at minimum).
+    await page.getByTestId("plumix-tab-page").click();
+    await expect(page.getByTestId("entry-slug-input")).toHaveValue("entry-1");
+
+    // JSON tab renders the whole-page tree.
+    await page.getByTestId("plumix-tab-json").click();
+    await expect(page.getByTestId("json-inspector-output")).toContainText(
+      '"h1"',
+    );
+  });
+
   test("a failed preview mint surfaces the error placeholder, not a dead canvas", async ({
     page,
   }) => {

@@ -19,8 +19,23 @@ msgid "editor.canvas.addBlock"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/json-inspector.tsx
+msgid "editor.json.block"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/plumix-editor.tsx
+msgid "editor.tab.block"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/plumix-editor.tsx
 msgid "editor.tab.blocks"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/plumix-editor.tsx
+msgid "editor.tab.json"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -39,6 +54,21 @@ msgid "editor.layers.empty"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/plumix-editor.tsx
+msgid "editor.page.empty"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/json-inspector.tsx
+msgid "editor.json.page"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/plumix-editor.tsx
+msgid "editor.tab.page"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
 msgid "editor.toolbar.redo"
 msgstr ""
@@ -51,6 +81,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/block-inspector.tsx
 msgid "editor.inspector.empty"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/json-inspector.tsx
+msgid "editor.json.empty"
 msgstr ""
 
 #. js-lingui-explicit-id
