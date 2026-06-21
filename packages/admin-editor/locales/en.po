@@ -49,6 +49,11 @@ msgid "editor.toolbar.copyPreviewLink"
 msgstr "Copy preview link"
 
 #. js-lingui-explicit-id
+#: src/style-control.tsx
+msgid "editor.styles.mode.custom"
+msgstr "Custom"
+
+#. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.delete"
 msgstr "Delete"
@@ -62,6 +67,11 @@ msgstr "Discard"
 #: src/selection-toolbar.tsx
 msgid "editor.selection.duplicate"
 msgstr "Duplicate"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.scope"
+msgstr "Editing"
 
 #. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
@@ -82,6 +92,11 @@ msgstr "JSON"
 #: src/plumix-editor.tsx
 msgid "editor.tab.layers"
 msgstr "Layers"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.margin"
+msgstr "Margin"
 
 #. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
@@ -107,6 +122,11 @@ msgstr "No blocks yet."
 #: src/plumix-editor.tsx
 msgid "editor.page.empty"
 msgstr "No document settings."
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.padding"
+msgstr "Padding"
 
 #. js-lingui-explicit-id
 #: src/json-inspector.tsx
@@ -154,9 +174,29 @@ msgid "editor.json.empty"
 msgstr "Select a block to inspect."
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.empty"
+msgstr "Select a block to style it."
+
+#. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.selectParent"
 msgstr "Select parent"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.spacing"
+msgstr "Spacing"
+
+#. js-lingui-explicit-id
+#: src/plumix-editor.tsx
+msgid "editor.tab.styles"
+msgstr "Styles"
+
+#. js-lingui-explicit-id
+#: src/style-control.tsx
+msgid "editor.styles.mode.token"
+msgstr "Token"
 
 #. js-lingui-explicit-id
 #: src/editor-toolbar.tsx

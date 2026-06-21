@@ -6,6 +6,7 @@ import type {
   BlockRegistry,
   EntryContent,
   ThemeBreakpoints,
+  ThemeTokens,
 } from "@plumix/blocks";
 import {
   Sidebar,
@@ -32,6 +33,7 @@ import { EditorShortcuts, EditorToolbar } from "./editor-toolbar.js";
 import { JsonInspector } from "./json-inspector.js";
 import { LayersTab } from "./layers-tab.js";
 import { EditorProvider, useEditorStoreApi } from "./provider.js";
+import { StylesTab } from "./styles-tab.js";
 
 const NO_CAPABILITIES: ReadonlySet<string> = new Set();
 
@@ -50,6 +52,8 @@ interface PlumixEditorProps {
   readonly patterns?: readonly InserterPattern[];
   /** Theme breakpoints sizing the device-switch canvas widths. */
   readonly breakpoints?: ThemeBreakpoints;
+  /** Theme tokens offered in the Styles tab's token-or-custom controls. */
+  readonly tokens?: ThemeTokens;
   /** Preview mode: render the canvas read-only with the editing chrome hidden
    *  (used to view a past revision or a shared draft). */
   readonly readOnly?: boolean;
@@ -82,6 +86,7 @@ export function PlumixEditor({
   capabilities = NO_CAPABILITIES,
   patterns,
   breakpoints,
+  tokens,
   readOnly = false,
   previewBanner,
   previewLink,
@@ -183,6 +188,9 @@ export function PlumixEditor({
                 <TabsTrigger value="block" data-testid="plumix-tab-block">
                   <Trans id="editor.tab.block" message="Block" />
                 </TabsTrigger>
+                <TabsTrigger value="styles" data-testid="plumix-tab-styles">
+                  <Trans id="editor.tab.styles" message="Styles" />
+                </TabsTrigger>
                 <TabsTrigger value="page" data-testid="plumix-tab-page">
                   <Trans id="editor.tab.page" message="Page" />
                 </TabsTrigger>
@@ -194,6 +202,9 @@ export function PlumixEditor({
             <SidebarContent>
               <TabsContent value="block">
                 <BlockInspector registry={registry} />
+              </TabsContent>
+              <TabsContent value="styles">
+                <StylesTab tokens={tokens ?? {}} />
               </TabsContent>
               <TabsContent value="page" data-testid="plumix-page-panel">
                 {documentPanel ?? (

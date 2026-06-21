@@ -1,4 +1,4 @@
-import type { ResponsiveStyleSlot } from "@plumix/blocks";
+import type { ResponsiveStyleSlot, StyleValue } from "@plumix/blocks";
 
 import type { StyleBucket } from "./viewport-bucket.js";
 
@@ -8,7 +8,9 @@ export function setStyleProperty(
   property: string,
   tokenId: string | undefined,
 ): ResponsiveStyleSlot | undefined {
-  const nextBucket: Record<string, string> = { ...(style?.[bucket] ?? {}) };
+  const nextBucket: Record<string, StyleValue | string> = {
+    ...(style?.[bucket] ?? {}),
+  };
   if (tokenId === undefined) {
     delete nextBucket[property];
   } else {

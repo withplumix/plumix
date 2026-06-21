@@ -20,4 +20,6 @@ export interface ThemeTokens {
   readonly spacing?: ThemeTokenGroup;
   readonly typography?: ThemeTokenGroup;
   readonly border?: ThemeTokenGroup;
+  readonly radius?: ThemeTokenGroup;
+  readonly shadow?: ThemeTokenGroup;
 }

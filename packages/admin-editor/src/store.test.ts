@@ -5,10 +5,19 @@ import type { BlockNode } from "@plumix/blocks";
 import {
   createEditorStore,
   DESKTOP_CANVAS_WIDTH,
+  deviceBucket,
   deviceWidth,
   MAX_ZOOM,
   MIN_ZOOM,
 } from "./store.js";
+
+describe("deviceBucket", () => {
+  test("maps each device to its responsive style bucket", () => {
+    expect(deviceBucket("desktop")).toBe("large");
+    expect(deviceBucket("tablet")).toBe("medium");
+    expect(deviceBucket("mobile")).toBe("small");
+  });
+});
 
 describe("editor store", () => {
   test("select replaces the selection and marks the block active", () => {
@@ -532,5 +541,65 @@ describe("move drag", () => {
 
     store.getState().endMove();
     expect(store.getState().movingId).toBeNull();
+  });
+});
+
+describe("updateBlockStyle", () => {
+  test("sets a token style value in the given bucket", () => {
+    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+
+    store.getState().updateBlockStyle("a", "large", "padding", { token: "lg" });
+
+    expect(store.getState().tree[0]?.style).toEqual({
+      large: { padding: { token: "lg" } },
+    });
+  });
+
+  test("clears a property when the value is null, dropping empty buckets", () => {
+    const store = createEditorStore({
+      tree: [
+        {
+          id: "a",
+          name: "core/x",
+          style: { large: { padding: { token: "lg" } } },
+        },
+      ],
+    });
+
+    store.getState().updateBlockStyle("a", "large", "padding", null);
+
+    expect(store.getState().tree[0]?.style).toBeUndefined();
+  });
+
+  test("updates a nested block's style", () => {
+    const store = createEditorStore({
+      tree: [
+        {
+          id: "g",
+          name: "core/group",
+          attrs: { content: [{ id: "c", name: "core/x" }] },
+        },
+      ],
+    });
+
+    store
+      .getState()
+      .updateBlockStyle("c", "medium", "fontSize", { raw: "20px" });
+
+    const content = store.getState().tree[0]?.attrs?.content as BlockNode[];
+    expect(content[0]?.style).toEqual({
+      medium: { fontSize: { raw: "20px" } },
+    });
+  });
+
+  test("is a no-op (stable tree) for an unknown block", () => {
+    const tree: readonly BlockNode[] = [{ id: "a", name: "core/x" }];
+    const store = createEditorStore({ tree });
+
+    store.getState().updateBlockStyle("nope", "large", "padding", {
+      token: "lg",
+    });
+
+    expect(store.getState().tree).toBe(tree);
   });
 });

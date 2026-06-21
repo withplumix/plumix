@@ -15,6 +15,7 @@ import {
   findEntryTypeBySlug,
   getPatterns,
   getThemeBreakpoints,
+  getThemeTokens,
 } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { getRegisteredBlocks } from "@/lib/plugin-registry.js";
@@ -81,6 +82,9 @@ const patterns = getPatterns();
 
 // Theme breakpoints sizing the editor's device-switch canvas widths.
 const breakpoints = getThemeBreakpoints();
+
+// Theme tokens offered in the Styles tab's token-or-custom controls.
+const themeTokens = getThemeTokens();
 
 // Mint once and cache forever — each call writes a fresh preview token, and
 // the URL it returns is the canvas iframe's target for the editor's lifetime.
@@ -646,6 +650,7 @@ function BespokeEditor({
       capabilities={capabilitySet}
       patterns={patterns}
       breakpoints={breakpoints}
+      tokens={themeTokens}
       previewLink={shareUrl}
       onChange={handleChange}
       documentPanel={documentPanel}
