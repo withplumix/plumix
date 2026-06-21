@@ -29,9 +29,9 @@ export function serializePatternSource(
 function renderNode(node: BlockNode, depth: number): string {
   const pad = INDENT.repeat(depth);
   const inner = INDENT.repeat(depth + 1);
-  // Drop the `id` key — Puck's flattening puts the node ID into attrs,
-  // but no block declares `id` as an input so `commitPatterns` rejects
-  // pasted snippets that carry it. `block()` writes the ID itself.
+  // Drop the `id` key — the editor's flattening puts the node ID into
+  // attrs, but no block declares `id` as an input so `commitPatterns`
+  // rejects pasted snippets that carry it. `block()` writes the ID itself.
   const attrEntries = Object.entries(node.attrs ?? {}).filter(
     ([key]) => key !== "id",
   );

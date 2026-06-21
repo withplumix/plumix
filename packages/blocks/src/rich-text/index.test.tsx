@@ -38,15 +38,15 @@ describe("core/rich-text walker render", () => {
   });
 
   test("returns the admin's React-element body verbatim so Tiptap mounts inline", () => {
-    // The admin Puck preview wraps `attrs.body` as a <RichTextRender>
-    // element before calling the block render. Wrapping that element in
-    // another <div dangerouslySetInnerHTML> would mount the editor on a
-    // stale snapshot and lose focus after the first keystroke (the bug
-    // #471 fixed for the paragraph block). The block must surface the
-    // element directly.
+    // The admin preview wraps `attrs.body` as a <RichTextRender> element
+    // before calling the block render. Wrapping that element in another
+    // <div dangerouslySetInnerHTML> would mount the editor on a stale
+    // snapshot and lose focus after the first keystroke (the bug #471
+    // fixed for the paragraph block). The block must surface the element
+    // directly.
     const registry = createBlockRegistry([richTextBlock]);
     const adminElement = (
-      <div data-puck-overlay-portal="true">
+      <div data-editor-portal="true">
         <span>inline editor mock</span>
       </div>
     );
@@ -57,7 +57,7 @@ describe("core/rich-text walker render", () => {
     const html = renderToStaticMarkup(renderBlockTree(tree, registry));
 
     expect(html).toBe(
-      '<div data-plumix-block="core/rich-text"><div data-puck-overlay-portal="true"><span>inline editor mock</span></div></div>',
+      '<div data-plumix-block="core/rich-text"><div data-editor-portal="true"><span>inline editor mock</span></div></div>',
     );
   });
 

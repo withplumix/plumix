@@ -33,6 +33,8 @@ test.describe.serial("@plumix/plugin-pages — worker-driven happy path", () => 
     await page.getByTestId("content-list-new-button").click();
     await navigated;
 
+    // Title lives in the editor's Page (document) tab.
+    await page.getByTestId("plumix-tab-page").click();
     await expect(page.getByTestId("plumix-editor-title-input")).toBeVisible();
     const updated = page.waitForResponse(
       (r) => r.url().endsWith("/entry/update") && r.status() === 200,
@@ -59,6 +61,8 @@ test.describe.serial("@plumix/plugin-pages — worker-driven happy path", () => 
     // page (minus self) as an option in the Document tab.
     await page.goto("entries/pages/create");
     await page.waitForURL(/\/entries\/pages\/\d+\/edit/);
+    // Title + parent both live in the editor's Page (document) tab.
+    await page.getByTestId("plumix-tab-page").click();
     await expect(page.getByTestId("plumix-editor-title-input")).toBeVisible();
     const titleSaved = page.waitForResponse(
       (r) => r.url().endsWith("/entry/update") && r.status() === 200,
@@ -66,7 +70,6 @@ test.describe.serial("@plumix/plugin-pages — worker-driven happy path", () => 
     await page.getByTestId("plumix-editor-title-input").fill("Team");
     await titleSaved;
 
-    await page.getByTestId("plumix-editor-tab-document").click();
     const parentSaved = page.waitForResponse(
       (r) => r.url().endsWith("/entry/update") && r.status() === 200,
     );
@@ -76,7 +79,7 @@ test.describe.serial("@plumix/plugin-pages — worker-driven happy path", () => 
     await parentSaved;
 
     await page.reload();
-    await page.getByTestId("plumix-editor-tab-document").click();
+    await page.getByTestId("plumix-tab-page").click();
     // `option:checked` reads the currently-selected option's text
     // — avoids pulling DOM lib into the plugin's typecheck for one
     // line of `HTMLSelectElement`.

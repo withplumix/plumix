@@ -235,6 +235,10 @@ test.describe("plugin block registered via window.plumix bridge", () => {
     await mockRpc(page, {
       "/auth/session": AUTHED_ADMIN,
       "/entry/get": editorEntry(),
+      "/entry/createPreviewLink": {
+        token: "tok123",
+        url: "/post/hello?preview=tok123",
+      },
     });
 
     // Trap the first `window.plumix = ...` assignment (done by
@@ -268,21 +272,19 @@ test.describe("plugin block registered via window.plumix bridge", () => {
 
     await page.goto("entries/posts/1/edit");
 
-    // The block is wired in two places — the inserter sidebar list and
-    // the slash menu. Asserting both proves the runtime registry feeds
-    // every consumer that the hardcoded `coreBlocks` import used to.
-    // The Drawer renders a drag-preview twin of each row — scope
-    // through Puck's item wrapper.
+    // The runtime registry feeds the editor's block catalog (the inserter):
+    // a block registered at chunk-eval time surfaces there and is searchable,
+    // proving the bridge reaches the same registry the hardcoded `coreBlocks`
+    // import used to. The slash menu lives inside the canvas iframe (which the
+    // mock harness can't serve), so the catalog is the host-side assertion;
+    // slash-menu surfacing is covered by the @plumix/admin-editor package.
     await expect(
-      page
-        .getByTestId("drawer-item:test/fake")
-        .getByTestId("plumix-blocks-tab-item-test/fake"),
+      page.getByTestId("block-catalog-item-test/fake"),
     ).toBeVisible();
 
-    const canvas = page.getByTestId("plumix-editor-canvas");
-    await canvas.focus();
-    await page.keyboard.press("/");
-    await page.keyboard.type("fake");
-    await expect(page.getByTestId("slash-menu-item-test/fake")).toBeVisible();
+    await page.getByTestId("block-catalog-search").fill("fake");
+    await expect(
+      page.getByTestId("block-catalog-item-test/fake"),
+    ).toBeVisible();
   });
 });

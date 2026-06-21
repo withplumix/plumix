@@ -1,5 +1,21 @@
 type EditorMode = "create" | "edit-live" | "edit-with-draft";
 
+interface SupportsInput {
+  readonly supports?: readonly string[];
+}
+
+// Whether the type opts into the visual canvas. Missing manifest entry →
+// default true (legacy types predate the `supports` list).
+export function supportsEditor(entryType: SupportsInput | undefined): boolean {
+  return entryType?.supports ? entryType.supports.includes("editor") : true;
+}
+
+export function supportsRevisions(
+  entryType: SupportsInput | undefined,
+): boolean {
+  return entryType?.supports?.includes("revisions") ?? false;
+}
+
 interface ResolveEditorModeInput {
   // The entry type from the manifest, or `undefined` if the slug
   // doesn't resolve (stale URL / manifest race). Missing → safe
@@ -26,7 +42,7 @@ interface ResolveEditorModeInput {
 // server's `entry.update` saveAs defaulting (a published row of an
 // autosave-supporting type whose viewer can edit gets draft routing);
 // the dispatcher logic lives here so unit tests can run the truth
-// table without booting Puck.
+// table without booting the editor.
 export function resolveEditorMode({
   entryType,
   currentStatus,

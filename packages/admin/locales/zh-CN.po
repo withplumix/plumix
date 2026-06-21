@@ -168,6 +168,475 @@ msgstr ""
 #~ msgid "dashboard.tile.description.generic"
 #~ msgstr "写作、编辑和发布。"
 
+#. characters: number of characters in the entry's prose blocks
+#. js-lingui-explicit-id
+#: src/editor/WordCount.tsx
+#~ msgid "editor.layout.characterCount"
+#~ msgstr "{characters, plural, other {# 个字符}}"
+
+#. display: user's name or email; lastSeen: pre-formatted relative-time string like '2 minutes ago'
+#. js-lingui-explicit-id
+#: src/editor/CoAuthorIndicator.tsx
+#~ msgid "editor.coAuthorIndicator.presenceAriaLabel"
+#~ msgstr "{display} · 最近活跃 {lastSeen}"
+
+#. words: number of words in the entry's prose blocks
+#. js-lingui-explicit-id
+#: src/editor/WordCount.tsx
+#~ msgid "editor.layout.wordCount"
+#~ msgstr "{words, plural, other {# 个词}}"
+
+#. js-lingui-explicit-id
+#: src/editor/CoAuthorIndicator.tsx
+#~ msgid "editor.coAuthorIndicator.activeAriaLabel"
+#~ msgstr "活跃的协作者"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.restore.conflict"
+#~ msgstr "其他编辑者已修改此条目。请重新加载并重试。"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.tab.audit"
+#~ msgstr "审计"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.header.backToList"
+#~ msgstr "返回列表"
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+#~ msgid "editor.styleTab.section.background"
+#~ msgstr "背景"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.tab.block"
+#~ msgstr "区块"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.mobile.inspectorSheetDescription"
+#~ msgstr "所选区块的操作、字段和样式控件。"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.mobile.blocksTrigger"
+#~ msgstr "区块"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.mobile.blocksSheetTitle"
+#~ msgstr "区块"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.tab.blocks"
+#~ msgstr "区块"
+
+#. js-lingui-explicit-id
+#: src/editor/BlockScopePicker.tsx
+#~ msgid "blockScopePicker.cancel"
+#~ msgstr "取消"
+
+#. blockTitle: the parent block's registered title (e.g. 'Cover', 'Gallery')
+#. js-lingui-explicit-id
+#: src/editor/BlockScopePicker.tsx
+#~ msgid "blockScopePicker.title"
+#~ msgstr "为 {blockTitle} 选择布局"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.draftBanner.body"
+#~ msgstr "点击「发布」使其上线，或点击「丢弃」恢复。"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.copy.copied"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.canvas.copyAsPatternSource"
+#~ msgstr "复制为图案源"
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+#~ msgid "blockActions.copyJson"
+#~ msgstr "复制 JSON"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.copy.failed"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.toast.discardFailed"
+#~ msgstr "无法放弃草稿，请重试。"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.loadFailedTitle"
+#~ msgstr "无法加载此条目"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.loadFailed"
+#~ msgstr "无法加载此条目。"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.toast.publishFailed"
+#~ msgstr "无法发布，请重试。"
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+#~ msgid "blockActions.delete"
+#~ msgstr "删除"
+
+#. js-lingui-explicit-id
+#: src/editor/device-labels.ts
+#~ msgid "editor.device.desktop"
+#~ msgstr "桌面"
+
+#. js-lingui-explicit-id
+#: src/editor/PatternRefPreview.tsx
+#~ msgid "editor.patternRef.detach"
+#~ msgstr "分离"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.draft.discard"
+#~ msgstr "丢弃"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.draft.discarding"
+#~ msgstr "丢弃中…"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.tab.document"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.toast.draftDiscarded"
+#~ msgstr "已放弃草稿。"
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+#~ msgid "blockActions.duplicate"
+#~ msgstr "复制"
+
+#. device: pre-resolved viewport label like 'Desktop', 'Tablet', 'Mobile'
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+#~ msgid "editor.styleTab.activeBucket"
+#~ msgstr "正在编辑：{device}"
+
+#. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+#~ msgid "editor.headingAudit.emptyHeading"
+#~ msgstr "空标题。添加文本或移除该区块。"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.titleAriaLabel"
+#~ msgstr "文章标题"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+#~ msgid "editor.revisions.diff.field.excerpt"
+#~ msgstr "摘要"
+
+#. js-lingui-explicit-id
+#: src/editor/AutosaveStatus.tsx
+#~ msgid "editor.autosave.error"
+#~ msgstr "保存失败"
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+#~ msgid "editor.styleTab.section.fontSize"
+#~ msgstr "字号"
+
+#. from, to, between: integer heading levels 1-6; e.g. from=2, to=4, between=3
+#. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+#~ msgid "editor.headingAudit.skippedLevel"
+#~ msgstr "标题从 h{from} 跳到 h{to}。请在中间插入 h{between}。"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.slashMenu.title"
+#~ msgstr "插入区块或图案"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.mobile.blocksSheetDescription"
+#~ msgstr "此文章的可插入区块、大纲和标题审计。"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.mobile.inspectorTrigger"
+#~ msgstr "检查器"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.mobile.inspectorSheetTitle"
+#~ msgstr "检查器"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.loading"
+#~ msgstr "正在加载文章…"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.stale.loading"
+#~ msgstr "加载中…"
+
+#. js-lingui-explicit-id
+#: src/editor/device-labels.ts
+#~ msgid "editor.device.mobile"
+#~ msgstr "移动设备"
+
+#. count: number of h1 elements detected in the editor tree
+#. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+#~ msgid "editor.headingAudit.multipleH1"
+#~ msgstr "页面上有多个 <h1>（发现 {count} 个）。只保留一个顶级标题。"
+
+#. js-lingui-explicit-id
+#: src/editor/field-type-translator.tsx
+#~ msgid "fieldTypes.boolean.no"
+#~ msgstr "否"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+#~ msgid "editor.revisions.diff.empty"
+#~ msgstr "无变更。"
+
+#. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+#~ msgid "editor.headingAudit.empty"
+#~ msgstr "未检测到标题结构问题。"
+
+#. js-lingui-explicit-id
+#: src/editor/SlashMenuPanel.tsx
+#~ msgid "slashMenu.empty"
+#~ msgstr "无匹配项"
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+#~ msgid "editor.styleTab.select.none"
+#~ msgstr "无"
+
+#. js-lingui-explicit-id
+#: src/editor/TokenSwatchList.tsx
+#~ msgid "tokenSwatch.none"
+#~ msgstr "无"
+
+#. js-lingui-explicit-id
+#: src/editor/PatternRefPreview.tsx
+#~ msgid "editor.patternRef.openSource"
+#~ msgstr "打开源"
+
+#. js-lingui-explicit-id
+#: src/editor/SlashMenuPanel.tsx
+#~ msgid "slashMenu.uncategorized"
+#~ msgstr "其他"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.tab.outline"
+#~ msgstr "大纲"
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+#~ msgid "editor.styleTab.section.padding"
+#~ msgstr "内边距"
+
+#. slug: the pattern's registered slug (e.g. 'core/three-columns'); pass through verbatim
+#. js-lingui-explicit-id
+#: src/editor/PatternRefPreview.tsx
+#~ msgid "editor.patternRef.unresolved"
+#~ msgstr "图案未注册：<code>{slug}</code>"
+
+#. js-lingui-explicit-id
+#: src/editor/PatternsSection.tsx
+#~ msgid "patternsSection.heading"
+#~ msgstr "图案"
+
+#. blockTitle: the parent block's registered title (e.g. 'Cover', 'Gallery')
+#. js-lingui-explicit-id
+#: src/editor/BlockScopePicker.tsx
+#~ msgid "blockScopePicker.description"
+#~ msgstr "选择要插入的布局，或取消以从空白 {blockTitle} 开始。"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.canvas.pickStarter"
+#~ msgstr "选择模板…"
+
+#. js-lingui-explicit-id
+#: src/editor/StarterModal.tsx
+#~ msgid "starterModal.description"
+#~ msgstr "选择一个起始布局或从空白画布开始。"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.draft.publish"
+#~ msgstr "发布"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.publish"
+#~ msgstr "发布"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.toast.published"
+#~ msgstr "已发布。"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.draft.publishing"
+#~ msgstr "发布中…"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+#~ msgid "editor.revisions.diff.tab.json"
+#~ msgstr "原始 JSON"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.draft.save"
+#~ msgstr "保存草稿"
+
+#. js-lingui-explicit-id
+#: src/editor/AutosaveStatus.tsx
+#~ msgid "editor.autosave.saved"
+#~ msgstr "已保存"
+
+#. js-lingui-explicit-id
+#: src/editor/AutosaveStatus.tsx
+#~ msgid "editor.autosave.saving"
+#~ msgstr "保存中..."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.draft.saving"
+#~ msgstr "保存中…"
+
+#. js-lingui-explicit-id
+#: src/editor/SlashMenuPanel.tsx
+#~ msgid "slashMenu.searchAria"
+#~ msgstr "搜索区块和图案"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.slashMenu.description"
+#~ msgstr "按标题或关键字搜索区块和图案，然后按 Enter 键插入。"
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+#~ msgid "blockActions.empty"
+#~ msgstr "选择一个区块以查看操作。"
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+#~ msgid "editor.styleTab.empty"
+#~ msgstr "选择一个区块以应用样式。"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+#~ msgid "editor.revisions.diff.field.slug"
+#~ msgstr "别名"
+
+#. js-lingui-explicit-id
+#: src/editor/StarterModal.tsx
+#~ msgid "starterModal.title"
+#~ msgstr "从图案开始"
+
+#. js-lingui-explicit-id
+#: src/editor/StarterModal.tsx
+#~ msgid "starterModal.startBlank"
+#~ msgstr "从空白开始"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.tab.style"
+#~ msgstr "样式"
+
+#. js-lingui-explicit-id
+#: src/editor/device-labels.ts
+#~ msgid "editor.device.tablet"
+#~ msgstr "平板"
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+#~ msgid "editor.styleTab.section.textColor"
+#~ msgstr "文本颜色"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+#~ msgid "editor.revisions.diff.field.title"
+#~ msgstr "标题"
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+#~ msgid "blockActions.transformTo"
+#~ msgstr "转换为"
+
+#. js-lingui-explicit-id
+#: src/editor/PatternsSection.tsx
+#~ msgid "patternsSection.uncategorized"
+#~ msgstr "未分类"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.header.titlePlaceholder"
+#~ msgstr "无标题"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.copyAsPattern.untitledFallback"
+#~ msgstr "无标题"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+#~ msgid "editor.revisions.diff.tab.visual"
+#~ msgstr "可视化"
+
+#. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+#~ msgid "editor.headingAudit.warningPrefix"
+#~ msgstr "警告："
+
+#. js-lingui-explicit-id
+#: src/editor/field-type-translator.tsx
+#~ msgid "fieldTypes.boolean.yes"
+#~ msgstr "是"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.draftBanner.title"
+#~ msgstr "您有未发布的草稿更改。"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.canvas.zoomIn"
+#~ msgstr "放大"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.canvas.zoomOut"
+#~ msgstr "缩小"
+
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
@@ -226,12 +695,6 @@ msgstr "（无标题）"
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.device.browserOnOs"
 msgstr "{browser}（{os}）"
-
-#. characters: number of characters in the entry's prose blocks
-#. js-lingui-explicit-id
-#: src/editor/WordCount.tsx
-msgid "editor.layout.characterCount"
-msgstr "{characters, plural, other {# 个字符}}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
@@ -299,12 +762,6 @@ msgstr "{device} 于 {when} 从 {ip} 登录。该设备下次需要重新登录�
 msgid "profile.sessions.revoke.description"
 msgstr "{device} 于 {when} 登录。该设备下次需要重新登录。"
 
-#. display: user's name or email; lastSeen: pre-formatted relative-time string like '2 minutes ago'
-#. js-lingui-explicit-id
-#: src/editor/CoAuthorIndicator.tsx
-msgid "editor.coAuthorIndicator.presenceAriaLabel"
-msgstr "{display} · 最近活跃 {lastSeen}"
-
 #. label: a plugin-author-provided name (e.g. 'SEO meta', 'Hero block'); kind: the extension type ('field', 'block', 'mark') left as the raw protocol identifier
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
@@ -328,12 +785,6 @@ msgstr "{label} 在渲染时抛出错误。管理后台的其余部分不受影�
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revokeAll.count"
 msgstr "{revoked, plural, =0 {没有其他会话需要登出。} other {已登出 # 个其他会话。}}"
-
-#. words: number of words in the entry's prose blocks
-#. js-lingui-explicit-id
-#: src/editor/WordCount.tsx
-msgid "editor.layout.wordCount"
-msgstr "{words, plural, other {# 个词}}"
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
@@ -415,11 +866,6 @@ msgstr "操作"
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.active"
 msgstr "活跃"
-
-#. js-lingui-explicit-id
-#: src/editor/CoAuthorIndicator.tsx
-msgid "editor.coAuthorIndicator.activeAriaLabel"
-msgstr "活跃的协作者"
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
@@ -558,11 +1004,6 @@ msgid "core.adminNav.item.allowedDomains"
 msgstr "允许的域名"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.restore.conflict"
-msgstr "其他编辑者已修改此条目。请重新加载并重试。"
-
-#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.title"
 msgstr "API 令牌"
@@ -581,11 +1022,6 @@ msgstr "已批准。您的 CLI 将在数秒内收到令牌 — 您可以关闭�
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.pending"
 msgstr "批准中…"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.tab.audit"
-msgstr "审计"
 
 #. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
@@ -618,11 +1054,6 @@ msgid "login.magicLink.back"
 msgstr "返回"
 
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.header.backToList"
-msgstr "返回列表"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.backToList"
 msgstr "返回用户"
@@ -636,36 +1067,6 @@ msgstr "返回用户"
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.backToList"
 msgstr "返回用户"
-
-#. js-lingui-explicit-id
-#: src/editor/StyleTab.tsx
-msgid "editor.styleTab.section.background"
-msgstr "背景"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.tab.block"
-msgstr "区块"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.mobile.inspectorSheetDescription"
-msgstr "所选区块的操作、字段和样式控件。"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.mobile.blocksTrigger"
-msgstr "区块"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.mobile.blocksSheetTitle"
-msgstr "区块"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.tab.blocks"
-msgstr "区块"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
@@ -730,11 +1131,6 @@ msgstr "取消"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.deleteCancel"
-msgstr "取消"
-
-#. js-lingui-explicit-id
-#: src/editor/BlockScopePicker.tsx
-msgid "blockScopePicker.cancel"
 msgstr "取消"
 
 #. js-lingui-explicit-id
@@ -822,12 +1218,6 @@ msgstr "请查收邮件"
 msgid "auth.device.lookup.submit.pending"
 msgstr "检查中…"
 
-#. blockTitle: the parent block's registered title (e.g. 'Cover', 'Gallery')
-#. js-lingui-explicit-id
-#: src/editor/BlockScopePicker.tsx
-msgid "blockScopePicker.title"
-msgstr "为 {blockTitle} 选择布局"
-
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.placeholder"
@@ -847,11 +1237,6 @@ msgstr "清除筛选条件或邀请新成员。"
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.default"
 msgstr "CLI"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.draftBanner.body"
-msgstr "点击「发布」使其上线，或点击「丢弃」恢复。"
 
 #. js-lingui-explicit-id
 #: src/components/shell/command-palette.tsx
@@ -938,29 +1323,14 @@ msgid "userInvite.copy.copied"
 msgstr "已复制"
 
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.copy.copied"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.copy.idle"
 msgstr "复制"
 
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.canvas.copyAsPatternSource"
-msgstr "复制为图案源"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.copy.aria"
 msgstr "复制邀请链接"
-
-#. js-lingui-explicit-id
-#: src/editor/BlockActionsPanel.tsx
-msgid "blockActions.copyJson"
-msgstr "复制 JSON"
 
 #. js-lingui-explicit-id
 #: src/editor/PreviewButton.tsx
@@ -1003,11 +1373,6 @@ msgid "emailChange.error.fallback"
 msgstr "无法确认电子邮箱更改。请重试。"
 
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.copy.failed"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/editor/PreviewButton.tsx
 msgid "editor.previewLink.failed"
 msgstr "无法创建预览链接"
@@ -1043,11 +1408,6 @@ msgid "terms.create.error.emptySlug"
 msgstr "无法从此名称生成别名 — 请手动输入。"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.toast.discardFailed"
-msgstr "无法放弃草稿，请重试。"
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/editor.tsx
 msgid "editor.bespoke.toast.discardFailed"
 msgstr ""
@@ -1081,16 +1441,6 @@ msgstr "无法加载此用户。可能已被删除。"
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.loadFailed"
 msgstr "无法加载此设置。请重试。"
-
-#. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.loadFailedTitle"
-msgstr "无法加载此条目"
-
-#. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.loadFailed"
-msgstr "无法加载此条目。"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
@@ -1131,11 +1481,6 @@ msgstr ""
 #: src/routes/_editor/entries/$slug/$id/editor.tsx
 msgid "editor.bespoke.previewFailed"
 msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.toast.publishFailed"
-msgstr "无法发布，请重试。"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/editor.tsx
@@ -1203,7 +1548,7 @@ msgid "allowedDomains.error.fallback"
 msgstr "无法保存域名。请重试。"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#: src/routes/_editor/entries/$slug/$id/plain-form-route.tsx
 msgid "editor.entry.edit.saveFailed"
 msgstr "保存失败。"
 
@@ -1316,11 +1661,6 @@ msgstr "默认角色"
 #: src/lib/core-settings-i18n.ts
 msgid "core.settings.site.default_og_image"
 msgstr ""
-
-#. js-lingui-explicit-id
-#: src/editor/BlockActionsPanel.tsx
-msgid "blockActions.delete"
-msgstr "删除"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -1451,16 +1791,6 @@ msgid "termForm.description"
 msgstr "描述"
 
 #. js-lingui-explicit-id
-#: src/editor/device-labels.ts
-msgid "editor.device.desktop"
-msgstr "桌面"
-
-#. js-lingui-explicit-id
-#: src/editor/PatternRefPreview.tsx
-msgid "editor.patternRef.detach"
-msgstr "分离"
-
-#. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.description"
 msgstr "已登录此账户的设备。撤销您不认识的会话，或在怀疑泄露时登出除当前浏览器以外的所有会话。"
@@ -1502,24 +1832,9 @@ msgid "userEdit.status.toggle.disabling"
 msgstr "停用中…"
 
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.draft.discard"
-msgstr "丢弃"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.draft.discarding"
-msgstr "丢弃中…"
-
-#. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.discarding"
 msgstr "丢弃中…"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.tab.document"
-msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
@@ -1538,11 +1853,6 @@ msgid "entries.list.statusFilter.draft"
 msgstr "草稿"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.toast.draftDiscarded"
-msgstr "已放弃草稿。"
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/editor.tsx
 msgid "editor.bespoke.toast.discarded"
 msgstr ""
@@ -1550,11 +1860,6 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.row.duplicate"
-msgstr "复制"
-
-#. js-lingui-explicit-id
-#: src/editor/BlockActionsPanel.tsx
-msgid "blockActions.duplicate"
 msgstr "复制"
 
 #. js-lingui-explicit-id
@@ -1597,12 +1902,6 @@ msgstr ""
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.editUser"
 msgstr "编辑用户"
-
-#. device: pre-resolved viewport label like 'Desktop', 'Tablet', 'Mobile'
-#. js-lingui-explicit-id
-#: src/editor/StyleTab.tsx
-msgid "editor.styleTab.activeBucket"
-msgstr "正在编辑：{device}"
 
 #. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
@@ -1658,11 +1957,6 @@ msgstr "电子邮箱过长。"
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.submit"
 msgstr "通过电子邮件发送链接"
-
-#. js-lingui-explicit-id
-#: src/editor/HeadingAuditPanel.tsx
-msgid "editor.headingAudit.emptyHeading"
-msgstr "空标题。添加文本或移除该区块。"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
@@ -1740,11 +2034,6 @@ msgid "terms.edit.delete.dialogDescription"
 msgstr "将移除文章对此术语的分配。如果此术语有子项，它们将自动提升为根级别。"
 
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.titleAriaLabel"
-msgstr "文章标题"
-
-#. js-lingui-explicit-id
 #: src/components/editor/plain-form-layout.tsx
 msgid "editor.plainForm.titleAriaLabel"
 msgstr "文章标题"
@@ -1772,11 +2061,6 @@ msgid "allowedDomains.add.placeholder"
 msgstr "example.com"
 
 #. js-lingui-explicit-id
-#: src/editor/revisions/RevisionDiffPanel.tsx
-msgid "editor.revisions.diff.field.excerpt"
-msgstr "摘要"
-
-#. js-lingui-explicit-id
 #: src/components/editor/document-settings.tsx
 msgid "editor.document.excerpt"
 msgstr ""
@@ -1800,11 +2084,6 @@ msgstr "无法加载修订版本。"
 #: src/editor/revisions/RevisionDiffDialog.tsx
 msgid "editor.revisions.diffDialog.pane.error"
 msgstr "无法加载快照。"
-
-#. js-lingui-explicit-id
-#: src/editor/AutosaveStatus.tsx
-msgid "editor.autosave.error"
-msgstr "保存失败"
 
 #. js-lingui-explicit-id
 #: src/components/editor/plain-form-layout.tsx
@@ -1835,11 +2114,6 @@ msgstr "按状态筛选"
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.filterItemsList"
 msgstr "筛选列表"
-
-#. js-lingui-explicit-id
-#: src/editor/StyleTab.tsx
-msgid "editor.styleTab.section.fontSize"
-msgstr "字号"
 
 #. when: pre-formatted relative-time like '2 hours ago'; author: the user's display name or email
 #. js-lingui-explicit-id
@@ -1876,12 +2150,6 @@ msgstr "上一页"
 #: src/routes/_authenticated/terms/$name/create.tsx
 msgid "terms.create.description.flat"
 msgstr "通过添加新术语来对内容进行分组。"
-
-#. from, to, between: integer heading levels 1-6; e.g. from=2, to=4, between=3
-#. js-lingui-explicit-id
-#: src/editor/HeadingAuditPanel.tsx
-msgid "editor.headingAudit.skippedLevel"
-msgstr "标题从 h{from} 跳到 h{to}。请在中间插入 h{between}。"
 
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
@@ -1922,26 +2190,6 @@ msgstr "继承您的所有权限"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.scope.inheritRole"
 msgstr "继承角色"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.slashMenu.title"
-msgstr "插入区块或图案"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.mobile.blocksSheetDescription"
-msgstr "此文章的可插入区块、大纲和标题审计。"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.mobile.inspectorTrigger"
-msgstr "检查器"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.mobile.inspectorSheetTitle"
-msgstr "检查器"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/meta-box-field.tsx
@@ -2056,11 +2304,6 @@ msgid "pluginPage.loading.aria"
 msgstr "正在加载 {label}"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.loading"
-msgstr "正在加载文章…"
-
-#. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.loadingAria"
 msgstr "正在加载修订版本"
@@ -2089,11 +2332,6 @@ msgstr "正在加载用户"
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.loading"
 msgstr "正在加载用户"
-
-#. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.stale.loading"
-msgstr "加载中…"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/editor.tsx
@@ -2181,11 +2419,6 @@ msgid "apiTokens.create.submit.pending"
 msgstr "创建中…"
 
 #. js-lingui-explicit-id
-#: src/editor/device-labels.ts
-msgid "editor.device.mobile"
-msgstr "移动设备"
-
-#. js-lingui-explicit-id
 #: src/editor/PreviewButton.tsx
 msgid "editor.preview.more"
 msgstr ""
@@ -2219,12 +2452,6 @@ msgstr "已移至回收站。"
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.moving"
 msgstr "移动中…"
-
-#. count: number of h1 elements detected in the editor tree
-#. js-lingui-explicit-id
-#: src/editor/HeadingAuditPanel.tsx
-msgid "editor.headingAudit.multipleH1"
-msgstr "页面上有多个 <h1>（发现 {count} 个）。只保留一个顶级标题。"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -2352,11 +2579,6 @@ msgid "listPagination.next.label"
 msgstr "下一页"
 
 #. js-lingui-explicit-id
-#: src/editor/field-type-translator.tsx
-msgid "fieldTypes.boolean.no"
-msgstr "否"
-
-#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.userNotFound"
 msgstr "未找到此电子邮箱对应的账户。"
@@ -2365,11 +2587,6 @@ msgstr "未找到此电子邮箱对应的账户。"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.scope.empty"
 msgstr "无权限"
-
-#. js-lingui-explicit-id
-#: src/editor/revisions/RevisionDiffPanel.tsx
-msgid "editor.revisions.diff.empty"
-msgstr "无变更。"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
@@ -2387,11 +2604,6 @@ msgid "settings.page.empty.title"
 msgstr "此页面没有分组"
 
 #. js-lingui-explicit-id
-#: src/editor/HeadingAuditPanel.tsx
-msgid "editor.headingAudit.empty"
-msgstr "未检测到标题结构问题。"
-
-#. js-lingui-explicit-id
 #: src/lib/mailer-errors.ts
 msgid "mailer.test.error.notConfigured"
 msgstr "未配置邮件发送器适配器。请向 `plumix({...})` 传入 `mailer:`（例如 consoleMailer() 用于开发，或您的 Resend/Postmark/SES 封装）。"
@@ -2399,11 +2611,6 @@ msgstr "未配置邮件发送器适配器。请向 `plumix({...})` 传入 `maile
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.noMatch"
-msgstr "无匹配项"
-
-#. js-lingui-explicit-id
-#: src/editor/SlashMenuPanel.tsx
-msgid "slashMenu.empty"
 msgstr "无匹配项"
 
 #. js-lingui-explicit-id
@@ -2472,16 +2679,6 @@ msgid "users.list.empty.title"
 msgstr "没有匹配您筛选条件的用户"
 
 #. js-lingui-explicit-id
-#: src/editor/StyleTab.tsx
-msgid "editor.styleTab.select.none"
-msgstr "无"
-
-#. js-lingui-explicit-id
-#: src/editor/TokenSwatchList.tsx
-msgid "tokenSwatch.none"
-msgstr "无"
-
-#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.emptyValue"
 msgstr "未选择任何项"
@@ -2542,11 +2739,6 @@ msgid "editor.preview.tooltip"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/editor/PatternRefPreview.tsx
-msgid "editor.patternRef.openSource"
-msgstr "打开源"
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/editor.tsx
 msgid "editor.bespoke.loading"
 msgstr ""
@@ -2562,24 +2754,9 @@ msgid "login.oauth.separator"
 msgstr "或"
 
 #. js-lingui-explicit-id
-#: src/editor/SlashMenuPanel.tsx
-msgid "slashMenu.uncategorized"
-msgstr "其他"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.tab.outline"
-msgstr "大纲"
-
-#. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.overview"
 msgstr "概览"
-
-#. js-lingui-explicit-id
-#: src/editor/StyleTab.tsx
-msgid "editor.styleTab.section.padding"
-msgstr "内边距"
 
 #. page: 1-based current page number in the list
 #. js-lingui-explicit-id
@@ -2612,17 +2789,6 @@ msgstr "父项："
 msgid "profile.passkeys.title"
 msgstr "Passkey"
 
-#. slug: the pattern's registered slug (e.g. 'core/three-columns'); pass through verbatim
-#. js-lingui-explicit-id
-#: src/editor/PatternRefPreview.tsx
-msgid "editor.patternRef.unresolved"
-msgstr "图案未注册：<code>{slug}</code>"
-
-#. js-lingui-explicit-id
-#: src/editor/PatternsSection.tsx
-msgid "patternsSection.heading"
-msgstr "图案"
-
 #. newEmail: the new address awaiting confirmation; expiresAt: pre-formatted relative-time like 'in 2 hours'
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
@@ -2654,26 +2820,10 @@ msgstr "权限"
 msgid "apiTokens.description.self"
 msgstr "为 CLI、MCP 服务器、CI 机器人或其他非浏览器客户端提供的个人访问令牌。完整密钥仅在创建时显示一次。"
 
-#. blockTitle: the parent block's registered title (e.g. 'Cover', 'Gallery')
-#. js-lingui-explicit-id
-#: src/editor/BlockScopePicker.tsx
-msgid "blockScopePicker.description"
-msgstr "选择要插入的布局，或取消以从空白 {blockTitle} 开始。"
-
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/create.tsx
 msgid "terms.create.description.hierarchical"
 msgstr "选择父术语将此术语嵌套其下，或留空以创建根级别术语。"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.canvas.pickStarter"
-msgstr "选择模板…"
-
-#. js-lingui-explicit-id
-#: src/editor/StarterModal.tsx
-msgid "starterModal.description"
-msgstr "选择一个起始布局或从空白画布开始。"
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
@@ -2731,16 +2881,6 @@ msgid "core.settings.site.description"
 msgstr "对外展示的名称、标语和社交链接。"
 
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.draft.publish"
-msgstr "发布"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.publish"
-msgstr "发布"
-
-#. js-lingui-explicit-id
 #: src/components/editor/plain-form-layout.tsx
 msgid "editor.plainForm.publish"
 msgstr "发布"
@@ -2761,11 +2901,6 @@ msgid "type.generic.itemPublishedPrivately"
 msgstr "已私密发布"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.toast.published"
-msgstr "已发布。"
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/editor.tsx
 msgid "editor.bespoke.toast.published"
 msgstr ""
@@ -2774,16 +2909,6 @@ msgstr ""
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.tab.publishes"
 msgstr "发布"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.draft.publishing"
-msgstr "发布中…"
-
-#. js-lingui-explicit-id
-#: src/editor/revisions/RevisionDiffPanel.tsx
-msgid "editor.revisions.diff.tab.json"
-msgstr "原始 JSON"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -2968,16 +3093,6 @@ msgid "settings.page.submit.idle"
 msgstr "保存更改"
 
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.draft.save"
-msgstr "保存草稿"
-
-#. js-lingui-explicit-id
-#: src/editor/AutosaveStatus.tsx
-msgid "editor.autosave.saved"
-msgstr "已保存"
-
-#. js-lingui-explicit-id
 #: src/components/editor/plain-form-layout.tsx
 msgid "editor.plainForm.status.saved"
 msgstr "已保存"
@@ -2986,11 +3101,6 @@ msgstr "已保存"
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.saved"
 msgstr "已保存。"
-
-#. js-lingui-explicit-id
-#: src/editor/AutosaveStatus.tsx
-msgid "editor.autosave.saving"
-msgstr "保存中..."
 
 #. js-lingui-explicit-id
 #: src/components/editor/plain-form-layout.tsx
@@ -3005,11 +3115,6 @@ msgstr "保存中…"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.submit.pending"
-msgstr "保存中…"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.draft.saving"
 msgstr "保存中…"
 
 #. js-lingui-explicit-id
@@ -3062,16 +3167,6 @@ msgid "metaBox.reference.dialogDescription"
 msgstr "搜索并选择 {kind}"
 
 #. js-lingui-explicit-id
-#: src/editor/SlashMenuPanel.tsx
-msgid "slashMenu.searchAria"
-msgstr "搜索区块和图案"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.slashMenu.description"
-msgstr "按标题或关键字搜索区块和图案，然后按 Enter 键插入。"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.searchPlaceholder"
 msgstr "按电子邮箱搜索…"
@@ -3120,16 +3215,6 @@ msgstr "选择"
 #: src/components/meta-box/reference-picker.tsx
 msgid "metaBox.reference.selectIdle"
 msgstr "选择"
-
-#. js-lingui-explicit-id
-#: src/editor/BlockActionsPanel.tsx
-msgid "blockActions.empty"
-msgstr "选择一个区块以查看操作。"
-
-#. js-lingui-explicit-id
-#: src/editor/StyleTab.tsx
-msgid "editor.styleTab.empty"
-msgstr "选择一个区块以应用样式。"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -3339,11 +3424,6 @@ msgid "core.settings.site.title"
 msgstr "站点标题"
 
 #. js-lingui-explicit-id
-#: src/editor/revisions/RevisionDiffPanel.tsx
-msgid "editor.revisions.diff.field.slug"
-msgstr "别名"
-
-#. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.slug"
 msgstr "别名"
@@ -3395,16 +3475,6 @@ msgid "entries.list.sortAria"
 msgstr "按 {label} 排序（{direction}）"
 
 #. js-lingui-explicit-id
-#: src/editor/StarterModal.tsx
-msgid "starterModal.title"
-msgstr "从图案开始"
-
-#. js-lingui-explicit-id
-#: src/editor/StarterModal.tsx
-msgid "starterModal.startBlank"
-msgstr "从空白开始"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.column.status"
 msgstr "状态"
@@ -3413,11 +3483,6 @@ msgstr "状态"
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.column.status"
 msgstr "状态"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.tab.style"
-msgstr "样式"
 
 #. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
@@ -3433,11 +3498,6 @@ msgstr "订阅者 — 仅可读"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.synced"
 msgstr "已同步"
-
-#. js-lingui-explicit-id
-#: src/editor/device-labels.ts
-msgid "editor.device.tablet"
-msgstr "平板"
 
 #. js-lingui-explicit-id
 #: src/lib/core-settings-i18n.ts
@@ -3474,11 +3534,6 @@ msgstr "测试消息已发送至 {to}。如果一分钟内未送达,请检查您
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.description"
 msgstr "测试已配置的出站电子邮件传输是否真正送达。由 Magic Link 登录、邀请邮件以及任何使用共享邮件发送器的插件使用。"
-
-#. js-lingui-explicit-id
-#: src/editor/StyleTab.tsx
-msgid "editor.styleTab.section.textColor"
-msgstr "文本颜色"
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
@@ -3773,13 +3828,13 @@ msgid "apiTokens.empty.description.admin"
 msgstr "此用户未创建任何 API 令牌。"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.column.title"
-msgstr "标题"
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.title"
+msgstr ""
 
 #. js-lingui-explicit-id
-#: src/editor/revisions/RevisionDiffPanel.tsx
-msgid "editor.revisions.diff.field.title"
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.column.title"
 msgstr "标题"
 
 #. name: the user-chosen token nickname (e.g. 'CI deploy key')
@@ -3797,11 +3852,6 @@ msgstr "令牌名称"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.description.admin"
 msgstr "此用户创建的令牌。您可以撤销其中任何一个 — 创建需要所有者经过身份验证的浏览器会话。"
-
-#. js-lingui-explicit-id
-#: src/editor/BlockActionsPanel.tsx
-msgid "blockActions.transformTo"
-msgstr "转换为"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -3832,11 +3882,6 @@ msgid "editor.entry.create.retry"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/editor/PatternsSection.tsx
-msgid "patternsSection.uncategorized"
-msgstr "未分类"
-
-#. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.unknownAuthor"
 msgstr "未知"
@@ -3859,16 +3904,6 @@ msgstr "无标题"
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.untitledItem"
-msgstr "无标题"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.header.titlePlaceholder"
-msgstr "无标题"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.copyAsPattern.untitledFallback"
 msgstr "无标题"
 
 #. js-lingui-explicit-id
@@ -3962,16 +3997,6 @@ msgid "editor.revisions.sheet.diffAriaLabel"
 msgstr "查看 JSON 差异"
 
 #. js-lingui-explicit-id
-#: src/editor/revisions/RevisionDiffPanel.tsx
-msgid "editor.revisions.diff.tab.visual"
-msgstr "可视化"
-
-#. js-lingui-explicit-id
-#: src/editor/HeadingAuditPanel.tsx
-msgid "editor.headingAudit.warningPrefix"
-msgstr "警告："
-
-#. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.dialog.description"
 msgstr "我们将向新地址发送确认链接。点击链接后更改生效。此账户的会话将在此时被登出 — 重新登录使用新电子邮箱。"
@@ -3993,11 +4018,6 @@ msgid "core.settings.site.twitter"
 msgstr "X（Twitter）链接"
 
 #. js-lingui-explicit-id
-#: src/editor/field-type-translator.tsx
-msgid "fieldTypes.boolean.yes"
-msgstr "是"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.you"
 msgstr "您"
@@ -4016,11 +4036,6 @@ msgstr "您不能删除最后一个 Passkey。请先添加另一个。"
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.current"
 msgstr "您不能登出当前正在使用的会话。"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.draftBanner.title"
-msgstr "您有未发布的草稿更改。"
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
@@ -4096,13 +4111,3 @@ msgstr "您的个人资料"
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.credentialStorageCorrupt"
 msgstr "您存储的 Passkey 数据已损坏。请注册新的 Passkey。"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.canvas.zoomIn"
-msgstr "放大"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.canvas.zoomOut"
-msgstr "缩小"

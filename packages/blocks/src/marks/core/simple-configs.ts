@@ -4,7 +4,7 @@ import type { SimpleMarkExtensionOptions } from "./simple.js";
 
 // Canonical config for marks that map a name to a single HTML tag.
 // Drives `coreMarks` (full MarkSpec registry entries), the synchronous
-// `coreMarkExtensions` array consumed by Puck's richtext field, and
+// `coreMarkExtensions` array consumed by the editor's richtext field, and
 // the walker's `mark.type → tag` lookup. Keeping all three in lock-
 // step from one source is what stops the lists from drifting.
 export const SIMPLE_MARK_CONFIGS: readonly SimpleMarkExtensionOptions[] = [

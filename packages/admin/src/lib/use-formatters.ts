@@ -20,7 +20,7 @@ interface Formatters {
  *  `locale` so consumers can safely include the returned functions in
  *  `useMemo` / `useCallback` dep arrays without invalidating on every
  *  render (which would cascade into re-mount loops on tree-stable
- *  components like Puck's `Layout`). */
+ *  editor components). */
 export function useFormatters(): Formatters {
   const { i18n } = useLingui();
   const locale = i18n.locale;
