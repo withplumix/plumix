@@ -12,7 +12,17 @@ import {
   projectMove,
   removeBlocks,
   selectionRoots,
+  slotKeys,
 } from "./block-tree-ops.js";
+
+const columns = (
+  left: readonly BlockNode[],
+  right: readonly BlockNode[],
+): BlockNode => ({
+  id: "cols",
+  name: "core/columns",
+  attrs: { left, right },
+});
 
 const ids = (tree: readonly BlockNode[]): string[] =>
   flattenTree(tree).map((n) => `${n.parentId ?? "-"}/${n.id}`);
@@ -306,6 +316,77 @@ describe("moveBlockBy", () => {
 
   test("is a no-op when the block is absent", () => {
     expect(moveBlockBy(tree, "zzz", 1)).toBe(tree);
+  });
+});
+
+describe("slotKeys", () => {
+  test("lists every slot key in declaration order", () => {
+    expect(slotKeys(columns([{ id: "l", name: "x" }], [{ id: "r", name: "x" }]))).toEqual(
+      ["left", "right"],
+    );
+  });
+
+  test("returns an empty list for a slotless block", () => {
+    expect(slotKeys({ id: "h", name: "core/heading", attrs: { text: "hi" } })).toEqual(
+      [],
+    );
+  });
+});
+
+describe("moveBlock into a named slot", () => {
+  const tree: readonly BlockNode[] = [
+    { id: "a", name: "core/heading" },
+    columns([{ id: "l", name: "x" }], [{ id: "r", name: "x" }]),
+  ];
+  const slot = (t: readonly BlockNode[], key: string): readonly BlockNode[] =>
+    findBlock(t, "cols")?.attrs?.[key] as readonly BlockNode[];
+
+  test("nests into the named (non-first) slot, leaving the others untouched", () => {
+    const moved = moveBlock(tree, "a", {
+      parentId: "cols",
+      slotKey: "right",
+      index: 0,
+    });
+    expect(slot(moved, "right").map((n) => n.id)).toEqual(["a", "r"]);
+    expect(slot(moved, "left").map((n) => n.id)).toEqual(["l"]);
+  });
+
+  test("defaults to the first slot when slotKey is omitted", () => {
+    const moved = moveBlock(tree, "a", { parentId: "cols", index: 0 });
+    expect(slot(moved, "left").map((n) => n.id)).toEqual(["a", "l"]);
+  });
+
+  test("is a no-op for a slot the parent does not have", () => {
+    expect(
+      moveBlock(tree, "a", { parentId: "cols", slotKey: "missing", index: 0 }),
+    ).toBe(tree);
+  });
+});
+
+describe("moveBlock allowedBlocks enforcement", () => {
+  const tree: readonly BlockNode[] = [
+    { id: "btn", name: "core/button" },
+    { id: "g", name: "core/group", attrs: { content: [] } },
+  ];
+  const content = (t: readonly BlockNode[]): readonly BlockNode[] =>
+    findBlock(t, "g")?.attrs?.content as readonly BlockNode[];
+
+  test("refuses a block whose name is not in the slot's allowed list", () => {
+    expect(
+      moveBlock(tree, "btn", { parentId: "g", index: 0 }, ["core/heading"]),
+    ).toBe(tree);
+  });
+
+  test("permits a block whose name is in the allowed list", () => {
+    const moved = moveBlock(tree, "btn", { parentId: "g", index: 0 }, [
+      "core/button",
+    ]);
+    expect(content(moved).map((n) => n.id)).toEqual(["btn"]);
+  });
+
+  test("an undefined allowed list permits any block", () => {
+    const moved = moveBlock(tree, "btn", { parentId: "g", index: 0 });
+    expect(content(moved).map((n) => n.id)).toEqual(["btn"]);
   });
 });
 
