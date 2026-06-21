@@ -1,7 +1,11 @@
 import { createStore } from "zustand/vanilla";
 
-import type { BlockNode, InsertableBlockEntry } from "@plumix/blocks";
-import { isBlockNodeArray } from "@plumix/blocks";
+import type {
+  BlockNode,
+  InsertableBlockEntry,
+  ThemeBreakpoints,
+} from "@plumix/blocks";
+import { DEFAULT_BREAKPOINTS, isBlockNodeArray } from "@plumix/blocks";
 
 import type { MoveTarget } from "./block-tree-ops.js";
 import type { History } from "./history.js";
@@ -20,16 +24,28 @@ type TreeHistory = History<readonly BlockNode[]>;
 
 export type EditorDevice = "desktop" | "tablet" | "mobile";
 
-// Default canvas widths per device. The theme can override these via the
-// manifest (theme-defined breakpoints); these are the fallbacks.
-export const DEVICE_WIDTH: Record<EditorDevice, number> = {
-  desktop: 1280,
-  tablet: 768,
-  mobile: 375,
-};
+// Desktop has no breakpoint (the large bucket has no @media), so its canvas
+// width is a fixed comfortable default; tablet/mobile track the theme
+// breakpoints so the canvas width equals the viewport where that bucket applies
+// (preview equals shipped).
+export const DESKTOP_CANVAS_WIDTH = 1280;
+
+/** The canvas width for a device: desktop is fixed; tablet/mobile use the
+ *  theme's breakpoint thresholds. */
+export function deviceWidth(
+  device: EditorDevice,
+  breakpoints: ThemeBreakpoints,
+): number {
+  if (device === "tablet") return breakpoints.tablet;
+  if (device === "mobile") return breakpoints.mobile;
+  return DESKTOP_CANVAS_WIDTH;
+}
 
 export const MIN_ZOOM = 0.25;
 export const MAX_ZOOM = 2;
+
+const clampZoom = (zoom: number): number =>
+  Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
 
 export interface EditorState {
   /** Canonical block tree — the single source of truth pushed to the canvas. */
@@ -40,6 +56,11 @@ export interface EditorState {
   readonly hoverId: string | null;
   readonly device: EditorDevice;
   readonly zoom: number;
+  /** Theme breakpoints driving the device canvas widths. */
+  readonly breakpoints: ThemeBreakpoints;
+  /** When true, zoom auto-fits the canvas to the viewport width; a manual zoom
+   *  clears it until the device changes or fit is re-enabled. */
+  readonly zoomFit: boolean;
   /** The catalog entry (block or variation) being dragged toward the canvas. */
   readonly dragSpec: InsertableBlockEntry | null;
   /** The existing block being dragged to a new position on the canvas, if any. */
@@ -85,8 +106,14 @@ export interface EditorActions {
   /** Move the active block by `delta` positions among its siblings. */
   moveSelectedBy: (delta: number) => void;
   setHover: (id: string | null) => void;
+  /** Switch device; re-enables fit-to-width so the new width fits the viewport. */
   setDevice: (device: EditorDevice) => void;
+  /** Manual zoom — pins the level and turns off fit-to-width. */
   setZoom: (zoom: number) => void;
+  /** Apply a computed fit-to-width zoom without leaving fit mode (canvas-driven). */
+  applyFitZoom: (zoom: number) => void;
+  /** Re-enable fit-to-width (the toolbar's "Fit" action). */
+  enableZoomFit: () => void;
   startBlockDrag: (entry: InsertableBlockEntry) => void;
   endBlockDrag: () => void;
   /** Begin / end dragging an existing block to a new canvas position. */
@@ -137,7 +164,9 @@ export type EditorStore = EditorState & EditorActions;
 export type EditorStoreApi = ReturnType<typeof createEditorStore>;
 
 export function createEditorStore(
-  initial?: Partial<Pick<EditorState, "tree" | "device" | "zoom">>,
+  initial?: Partial<
+    Pick<EditorState, "tree" | "device" | "zoom" | "breakpoints">
+  >,
 ) {
   return createStore<EditorStore>((set) => ({
     tree: initial?.tree ?? [],
@@ -146,6 +175,8 @@ export function createEditorStore(
     hoverId: null,
     device: initial?.device ?? "desktop",
     zoom: initial?.zoom ?? 1,
+    breakpoints: initial?.breakpoints ?? DEFAULT_BREAKPOINTS,
+    zoomFit: true,
     dragSpec: null,
     movingId: null,
     history: initHistory(initial?.tree ?? []),
@@ -274,9 +305,10 @@ export function createEditorStore(
         return { tree, history: recordHistory(state.history, tree, null) };
       }),
     setHover: (hoverId) => set({ hoverId }),
-    setDevice: (device) => set({ device }),
-    setZoom: (zoom) =>
-      set({ zoom: Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom)) }),
+    setDevice: (device) => set({ device, zoomFit: true }),
+    setZoom: (zoom) => set({ zoom: clampZoom(zoom), zoomFit: false }),
+    applyFitZoom: (zoom) => set({ zoom: clampZoom(zoom) }),
+    enableZoomFit: () => set({ zoomFit: true }),
     startBlockDrag: (dragSpec) => set({ dragSpec }),
     endBlockDrag: () => set({ dragSpec: null }),
     startMove: (movingId) => set({ movingId }),

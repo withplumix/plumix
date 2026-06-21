@@ -125,6 +125,24 @@ describe("EditorToolbar", () => {
     expect(queryByTestId("unpublished-changes-banner")).toBeNull();
   });
 
+  test("device switch + zoom controls drive the store", () => {
+    const { getByTestId } = renderToolbar();
+
+    // Device switch.
+    fireEvent.click(getByTestId("plumix-device-tablet"));
+    expect(storeApi?.getState().device).toBe("tablet");
+
+    // Zoom in steps up and turns off fit; the percent reflects it.
+    fireEvent.click(getByTestId("plumix-zoom-in"));
+    expect(storeApi?.getState().zoomFit).toBe(false);
+    expect(Number(storeApi?.getState().zoom)).toBeGreaterThan(1);
+    expect(getByTestId("plumix-zoom-percent").textContent).toContain("%");
+
+    // The percent readout re-enables fit-to-width.
+    fireEvent.click(getByTestId("plumix-zoom-percent"));
+    expect(storeApi?.getState().zoomFit).toBe(true);
+  });
+
   test("a preview link surfaces a copy-to-clipboard action", () => {
     const writeText = vi.fn();
     vi.stubGlobal("navigator", { clipboard: { writeText } });

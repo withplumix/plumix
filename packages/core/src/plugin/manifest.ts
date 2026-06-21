@@ -8,8 +8,10 @@ import type {
   PatternPreview,
   PatternTarget,
   ShortcodeSpec,
+  ThemeBreakpoints,
   ThemeTokens,
 } from "@plumix/blocks";
+import { DEFAULT_BREAKPOINTS } from "@plumix/blocks";
 
 import type {
   EntryTypeCapabilityOverrides,
@@ -1755,6 +1757,12 @@ export interface PlumixManifest {
    */
   readonly tokens?: ThemeTokens;
   /**
+   * Theme responsive breakpoints from `defineTheme({ breakpoints })`. Same
+   * manifest-channel reason as `tokens`: the precompiled admin shell can't
+   * import the user's config, but the editor needs them for device widths.
+   */
+  readonly breakpoints?: ThemeBreakpoints;
+  /**
    * Site i18n config — populates the locale-switcher dropdown and gives
    * admin components access to the active default. Same channel reason as
    * `tokens`: the precompiled admin shell can't import the user's config.
@@ -1856,6 +1864,7 @@ export function buildManifest(
   registry: PluginRegistry,
   options?: {
     readonly tokens?: ThemeTokens;
+    readonly breakpoints?: ThemeBreakpoints;
     readonly i18n?: ResolvedI18n;
     readonly plugins?: readonly {
       readonly id: string;
@@ -1953,6 +1962,7 @@ export function buildManifest(
     marks,
     patterns,
     tokens: options?.tokens ?? {},
+    breakpoints: options?.breakpoints ?? DEFAULT_BREAKPOINTS,
     i18n: {
       defaultLocale: options?.i18n?.defaultLocale.code ?? "en",
       // Wire-filtered to enabled entries — the admin dropdown ships exactly

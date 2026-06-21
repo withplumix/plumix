@@ -6,6 +6,7 @@ import type {
   BlockNode,
   LoaderErrorEvent,
   ResolvedBlockLoaders,
+  ThemeBreakpoints,
   ThemeTokens,
 } from "@plumix/blocks";
 import { resolveBlockLoaders } from "@plumix/blocks";
@@ -130,6 +131,7 @@ export async function renderThroughTheme({
     deps,
     loaderData,
     tokens: theme.tokens,
+    breakpoints: theme.breakpoints,
     editMode,
   });
 }
@@ -210,6 +212,7 @@ export async function renderErrorThroughTheme({
     deps,
     loaderData: undefined,
     tokens: theme.tokens,
+    breakpoints: theme.breakpoints,
     editMode: LIVE_EDIT_MODE,
   });
 }
@@ -291,6 +294,7 @@ interface RenderTreeArgs {
   readonly deps: Record<string, Record<string, unknown>>;
   readonly loaderData: ResolvedBlockLoaders | undefined;
   readonly tokens: ThemeTokens | undefined;
+  readonly breakpoints: ThemeBreakpoints | undefined;
   readonly editMode: EditModeDecision;
 }
 
@@ -309,6 +313,7 @@ function renderTree({
   template,
   deps,
   tokens,
+  breakpoints,
   loaderData,
   editMode,
 }: RenderTreeArgs): string {
@@ -341,6 +346,7 @@ function renderTree({
         registry: ctx.blocks,
         mode: editMode.mode,
         tokens,
+        breakpoints,
         loaderData,
         user: ctx.user,
         queriedEntry: ctx.resolvedEntity,

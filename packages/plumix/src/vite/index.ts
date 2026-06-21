@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 import type { Plugin, UserConfig } from "vite";
 import { mergeConfig } from "vite";
 
-import type { ThemeTokens } from "@plumix/blocks";
+import type { ThemeBreakpoints, ThemeTokens } from "@plumix/blocks";
 import type {
   AnyPluginDescriptor,
   PluginRegistry,
@@ -363,7 +363,11 @@ async function regenerate(
 
   const { manifest, registry } = await computeManifestAndRegistry(
     config.plugins,
-    { tokens: config.theme.tokens, i18n: config.i18n },
+    {
+      tokens: config.theme.tokens,
+      breakpoints: config.theme.breakpoints,
+      i18n: config.i18n,
+    },
     cwd,
   );
 
@@ -382,7 +386,11 @@ type PluginDescriptors = Parameters<typeof installPlugins>[0]["plugins"];
 // so plugins should keep setup free of IO.
 async function computeManifestAndRegistry(
   plugins: PluginDescriptors,
-  options: { readonly tokens?: ThemeTokens; readonly i18n?: ResolvedI18n },
+  options: {
+    readonly tokens?: ThemeTokens;
+    readonly breakpoints?: ThemeBreakpoints;
+    readonly i18n?: ResolvedI18n;
+  },
   projectRoot: string,
 ): Promise<{ manifest: PlumixManifest; registry: PluginRegistry }> {
   const { registry } = await installPlugins({

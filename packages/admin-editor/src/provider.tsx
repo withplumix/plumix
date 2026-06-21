@@ -2,7 +2,7 @@ import type { ReactElement, ReactNode } from "react";
 import { createContext, useContext, useState } from "react";
 import { useStore } from "zustand";
 
-import type { BlockNode } from "@plumix/blocks";
+import type { BlockNode, ThemeBreakpoints } from "@plumix/blocks";
 
 import type { EditorDevice, EditorStore, EditorStoreApi } from "./store.js";
 import { EditorError } from "./errors.js";
@@ -19,15 +19,17 @@ export function EditorProvider({
   initialTree,
   device,
   zoom,
+  breakpoints,
   children,
 }: {
   readonly initialTree?: readonly BlockNode[];
   readonly device?: EditorDevice;
   readonly zoom?: number;
+  readonly breakpoints?: ThemeBreakpoints;
   readonly children: ReactNode;
 }): ReactElement {
   const [store] = useState<EditorStoreApi>(() =>
-    createEditorStore({ tree: initialTree, device, zoom }),
+    createEditorStore({ tree: initialTree, device, zoom, breakpoints }),
   );
 
   return (

@@ -1,4 +1,4 @@
-import type { ThemeTokens } from "@plumix/blocks";
+import type { ThemeBreakpoints, ThemeTokens } from "@plumix/blocks";
 import type {
   AdminNavGroup,
   AdminNavItem,
@@ -13,6 +13,7 @@ import type {
   TermTaxonomyManifestEntry,
   UserMetaBoxManifestEntry,
 } from "@plumix/core/manifest";
+import { DEFAULT_BREAKPOINTS } from "@plumix/blocks";
 import { byPriorityThen, MANIFEST_SCRIPT_ID } from "@plumix/core/manifest";
 
 export function readManifest(doc: Document = document): PlumixManifest {
@@ -76,6 +77,12 @@ const manifest: PlumixManifest = readManifest();
 
 export function getThemeTokens(source: PlumixManifest = manifest): ThemeTokens {
   return source.tokens ?? {};
+}
+
+export function getThemeBreakpoints(
+  source: PlumixManifest = manifest,
+): ThemeBreakpoints {
+  return source.breakpoints ?? DEFAULT_BREAKPOINTS;
 }
 
 export function getPatterns(

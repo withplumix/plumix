@@ -85,6 +85,16 @@ export function EditorCanvas({
     reportGeometry();
   }, [tree, reportGeometry]);
 
+  // Re-report after async layout shifts that aren't tree changes — late image
+  // loads, web-font swap, island hydration — so the host's content-height sizing
+  // and overlay rects track the settled document, not just the initial paint.
+  useEffect(() => {
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => reportGeometry());
+    observer.observe(document.documentElement);
+    return () => observer.disconnect();
+  }, [reportGeometry]);
+
   const blockIdAt = (event: MouseEvent<HTMLDivElement>): string | null => {
     const block = (event.target as HTMLElement).closest("[data-plumix-id]");
     return block?.getAttribute("data-plumix-id") ?? null;

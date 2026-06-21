@@ -9,7 +9,10 @@ import type {
 } from "./loaders.js";
 import type { PatternRegistry } from "./pattern-registry.js";
 import type { ShortcodeRegistry } from "./shortcodes/types.js";
-import type { ResponsiveStyleSlot } from "./styles/style-emitter.js";
+import type {
+  ResponsiveStyleSlot,
+  ThemeBreakpoints,
+} from "./styles/style-emitter.js";
 import type { ThemeTokens } from "./styles/types.js";
 import { emitBlockStyleCss } from "./styles/style-emitter.js";
 
@@ -61,6 +64,8 @@ export interface BlockRenderHooks {
 
 export interface RenderBlockTreeOptions {
   readonly tokens?: ThemeTokens;
+  /** Theme breakpoints driving the emitter's @media maxima (default 991/640). */
+  readonly breakpoints?: ThemeBreakpoints;
   readonly hooks?: BlockRenderHooks;
   readonly loaderData?: ResolvedBlockLoaders;
   readonly patterns?: PatternRegistry;
@@ -185,6 +190,7 @@ interface WalkerEnv {
   readonly registry: BlockRegistry;
   readonly devState: DevWarnState;
   readonly tokens: ThemeTokens | undefined;
+  readonly breakpoints: ThemeBreakpoints | undefined;
   readonly hooks: BlockRenderHooks | undefined;
   readonly loaderData: ResolvedBlockLoaders | undefined;
   readonly patterns: PatternRegistry | undefined;
@@ -245,7 +251,12 @@ function renderNode(
   const safeId = SAFE_ID_RE.test(node.id) ? node.id : null;
   const styleCss =
     safeId && node.style && tokens
-      ? emitBlockStyleCss(`plumix-block-${safeId}`, node.style, tokens)
+      ? emitBlockStyleCss(
+          `plumix-block-${safeId}`,
+          node.style,
+          tokens,
+          env.breakpoints,
+        )
       : "";
   const className = safeId && styleCss ? `plumix-block-${safeId}` : undefined;
   const styleTag = styleCss
@@ -312,6 +323,7 @@ export function renderBlockTree(
     registry,
     devState: devWarnState(registry),
     tokens: options?.tokens,
+    breakpoints: options?.breakpoints,
     hooks: options?.hooks,
     loaderData: options?.loaderData,
     patterns: options?.patterns,

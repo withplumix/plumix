@@ -2,7 +2,13 @@ import { describe, expect, test } from "vitest";
 
 import type { BlockNode } from "@plumix/blocks";
 
-import { createEditorStore, MAX_ZOOM, MIN_ZOOM } from "./store.js";
+import {
+  createEditorStore,
+  DESKTOP_CANVAS_WIDTH,
+  deviceWidth,
+  MAX_ZOOM,
+  MIN_ZOOM,
+} from "./store.js";
 
 describe("editor store", () => {
   test("select replaces the selection and marks the block active", () => {
@@ -57,6 +63,46 @@ describe("editor store", () => {
 
     store.getState().setZoom(0);
     expect(store.getState().zoom).toBe(MIN_ZOOM);
+  });
+
+  test("deviceWidth: desktop is fixed; tablet/mobile track the breakpoints", () => {
+    const breakpoints = { tablet: 900, mobile: 500 };
+    expect(deviceWidth("desktop", breakpoints)).toBe(DESKTOP_CANVAS_WIDTH);
+    expect(deviceWidth("tablet", breakpoints)).toBe(900);
+    expect(deviceWidth("mobile", breakpoints)).toBe(500);
+  });
+
+  test("manual zoom turns off fit; device switch + applyFitZoom keep/restore it", () => {
+    const store = createEditorStore();
+    expect(store.getState().zoomFit).toBe(true);
+
+    store.getState().setZoom(1.5);
+    expect(store.getState().zoomFit).toBe(false);
+
+    // The canvas applies a computed fit without leaving fit mode...
+    store.getState().enableZoomFit();
+    store.getState().applyFitZoom(0.8);
+    expect(store.getState().zoom).toBe(0.8);
+    expect(store.getState().zoomFit).toBe(true);
+
+    // ...and a manual zoom leaves it, while switching device restores it.
+    store.getState().setZoom(2);
+    expect(store.getState().zoomFit).toBe(false);
+    store.getState().setDevice("mobile");
+    expect(store.getState().device).toBe("mobile");
+    expect(store.getState().zoomFit).toBe(true);
+  });
+
+  test("breakpoints default and seed from the initializer", () => {
+    expect(createEditorStore().getState().breakpoints).toEqual({
+      tablet: 991,
+      mobile: 640,
+    });
+    expect(
+      createEditorStore({
+        breakpoints: { tablet: 800, mobile: 400 },
+      }).getState().breakpoints,
+    ).toEqual({ tablet: 800, mobile: 400 });
   });
 
   test("setTree replaces the canonical tree", () => {

@@ -27,6 +27,23 @@ export const VIEWPORT_MAX_PX: Readonly<Record<"medium" | "small", number>> = {
   small: 640,
 };
 
+/**
+ * Theme-supplied responsive breakpoints (max-width, px): `tablet` gates the
+ * medium bucket, `mobile` the small bucket. A theme overrides these; both the
+ * SSR emitter and the editor canvas read the same values so preview equals
+ * shipped. Defaults match the historical viewport maxima, so an unspecified
+ * theme emits identical CSS.
+ */
+export interface ThemeBreakpoints {
+  readonly tablet: number;
+  readonly mobile: number;
+}
+
+export const DEFAULT_BREAKPOINTS: ThemeBreakpoints = {
+  tablet: VIEWPORT_MAX_PX.medium,
+  mobile: VIEWPORT_MAX_PX.small,
+};
+
 export function tokenIdToCssVar(
   id: string,
   category: TokenCategory,
@@ -44,8 +61,13 @@ export function emitBlockStyleCss(
   className: string,
   style: ResponsiveStyleSlot | undefined,
   tokens: ThemeTokens,
+  breakpoints: ThemeBreakpoints = DEFAULT_BREAKPOINTS,
 ): string {
   if (!style) return "";
+  const maxWidth: Readonly<Record<"medium" | "small", number>> = {
+    medium: breakpoints.tablet,
+    small: breakpoints.mobile,
+  };
   const parts: string[] = [];
   if (style.large) {
     const decls = bucketToDeclarations(style.large, tokens);
@@ -57,7 +79,7 @@ export function emitBlockStyleCss(
     const decls = bucketToDeclarations(bucket, tokens);
     if (decls)
       parts.push(
-        `@media (max-width: ${VIEWPORT_MAX_PX[viewport]}px) { .${className} { ${decls} } }`,
+        `@media (max-width: ${String(maxWidth[viewport])}px) { .${className} { ${decls} } }`,
       );
   }
   return parts.join(" ");

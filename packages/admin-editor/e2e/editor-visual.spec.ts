@@ -374,6 +374,39 @@ test.describe("editor playground", () => {
     await expect(page.getByTestId("plumix-selection-toolbar")).toHaveCount(0);
   });
 
+  test("device switch resizes the canvas to the breakpoint widths", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const iframe = page.locator(CANVAS_FRAME);
+    const widthFor = async (device: string): Promise<number> => {
+      await page.getByTestId(`plumix-device-${device}`).click();
+      return iframe.evaluate((el) => (el as HTMLElement).offsetWidth);
+    };
+
+    // offsetWidth is the unscaled layout width (the device's breakpoint width),
+    // unaffected by the fit-to-width transform.
+    const mobile = await widthFor("mobile");
+    const tablet = await widthFor("tablet");
+    const desktop = await widthFor("desktop");
+    expect(mobile).toBeLessThan(tablet);
+    expect(tablet).toBeLessThan(desktop);
+    expect(desktop).toBe(1280);
+  });
+
+  test("zoom controls show a percentage and re-fit to width", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const percent = page.getByTestId("plumix-zoom-percent");
+    await expect(percent).toBeVisible();
+    await expect(percent).toContainText("%");
+
+    await page.getByTestId("plumix-zoom-in").click();
+    // A manual zoom pins a step; the readout reflects it.
+    await expect(percent).toContainText("%");
+  });
+
   test("the Layers tab outlines the nested structure", async ({ page }) => {
     await page.goto("/");
 

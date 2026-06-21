@@ -14,6 +14,7 @@ import {
   entryMetaBoxesForType,
   findEntryTypeBySlug,
   getPatterns,
+  getThemeBreakpoints,
 } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { getRegisteredBlocks } from "@/lib/plugin-registry.js";
@@ -77,6 +78,9 @@ const registry = createBlockRegistry(getRegisteredBlocks());
 
 // Theme + plugin patterns, surfaced in the inserter alongside the blocks.
 const patterns = getPatterns();
+
+// Theme breakpoints sizing the editor's device-switch canvas widths.
+const breakpoints = getThemeBreakpoints();
 
 // Mint once and cache forever — each call writes a fresh preview token, and
 // the URL it returns is the canvas iframe's target for the editor's lifetime.
@@ -641,6 +645,7 @@ function BespokeEditor({
       registry={registry}
       capabilities={capabilitySet}
       patterns={patterns}
+      breakpoints={breakpoints}
       previewLink={shareUrl}
       onChange={handleChange}
       documentPanel={documentPanel}
@@ -733,6 +738,7 @@ function RevisionPreview({
       }
       registry={registry}
       capabilities={capabilitySet}
+      breakpoints={breakpoints}
       readOnly
       previewBanner={
         <PreviewBanner
