@@ -15,7 +15,6 @@ import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { Plus, UserPlus } from "lucide-react";
 import * as v from "valibot";
 
 import type { Label } from "@plumix/core/i18n";
@@ -30,6 +29,7 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@plumix/admin-ui/empty";
+import { Plus, UserPlus } from "@plumix/admin-ui/icons";
 import {
   Select,
   SelectContent,

@@ -1,5 +1,7 @@
-import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+
+import type { LucideIcon } from "@plumix/admin-ui/icons";
+import type { CoreIconName } from "@plumix/core/manifest";
 import {
   Calendar,
   FileText,
@@ -13,9 +15,7 @@ import {
   Settings,
   Tag,
   Users,
-} from "lucide-react";
-
-import type { CoreIconName } from "@plumix/core/manifest";
+} from "@plumix/admin-ui/icons";
 
 const CORE_ICON: Record<CoreIconName, LucideIcon> = {
   dashboard: LayoutDashboard,

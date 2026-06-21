@@ -5,9 +5,9 @@ import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { MessageCircle, MessageCircleMore } from "lucide-react";
 
 import { Button } from "@plumix/admin-ui/button";
+import { MessageCircle, MessageCircleMore } from "@plumix/admin-ui/icons";
 import { Input } from "@plumix/admin-ui/input";
 import {
   Sheet,

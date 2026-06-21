@@ -1,4 +1,5 @@
 import type { ComponentType, SVGProps } from "react";
+
 import {
   AlignLeft,
   ChevronDown,
@@ -17,7 +18,7 @@ import {
   Square,
   Table,
   Type,
-} from "lucide-react";
+} from "@plumix/admin-ui/icons";
 
 type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 

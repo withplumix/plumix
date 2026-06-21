@@ -5,7 +5,6 @@ import { useLabel } from "@/lib/use-label.js";
 import { cn } from "@/lib/utils.js";
 import { defineMessage } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
-import { Check, ChevronsUpDown } from "lucide-react";
 
 import { Badge } from "@plumix/admin-ui/badge";
 import { Button } from "@plumix/admin-ui/button";
@@ -17,6 +16,7 @@ import {
   CommandItem,
   CommandList,
 } from "@plumix/admin-ui/command";
+import { Check, ChevronsUpDown } from "@plumix/admin-ui/icons";
 import {
   Popover,
   PopoverContent,

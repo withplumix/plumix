@@ -11,7 +11,6 @@ import { valibotResolver } from "@hookform/resolvers/valibot";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Copy, Plus } from "lucide-react";
 import { useForm, useWatch } from "react-hook-form";
 import * as v from "valibot";
 
@@ -50,6 +49,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@plumix/admin-ui/form";
+import { Check, Copy, Plus } from "@plumix/admin-ui/icons";
 import { Input } from "@plumix/admin-ui/input";
 import { Label as UILabel } from "@plumix/admin-ui/label";
 import { RadioGroup, RadioGroupItem } from "@plumix/admin-ui/radio-group";

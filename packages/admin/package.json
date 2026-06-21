@@ -34,7 +34,6 @@
     "@tiptap/core": "catalog:",
     "cmdk": "catalog:",
     "jsondiffpatch": "^0.7.6",
-    "lucide-react": "catalog:",
     "radix-ui": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",

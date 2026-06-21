@@ -22,7 +22,6 @@ import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
 import { Drawer, Puck, useGetPuck } from "@puckeditor/core";
 import { Link } from "@tanstack/react-router";
-import { Minus, Monitor, Plus, Smartphone, Tablet } from "lucide-react";
 
 import type {
   BlockRegistry,
@@ -42,6 +41,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@plumix/admin-ui/dialog";
+import {
+  Minus,
+  Monitor,
+  Plus,
+  Smartphone,
+  Tablet,
+} from "@plumix/admin-ui/icons";
 import {
   Tabs,
   TabsContent,

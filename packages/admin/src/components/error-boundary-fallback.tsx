@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Trans } from "@lingui/react";
-import { TriangleAlert } from "lucide-react";
 
 import { Button } from "@plumix/admin-ui/button";
 import {
@@ -11,6 +10,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@plumix/admin-ui/empty";
+import { TriangleAlert } from "@plumix/admin-ui/icons";
 
 interface ErrorBoundaryFallbackProps {
   readonly error: Error;

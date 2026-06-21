@@ -3,9 +3,9 @@ import type { ReactNode } from "react";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@plumix/admin-ui/button";
+import { ChevronLeft, ChevronRight } from "@plumix/admin-ui/icons";
 import {
   Pagination,
   PaginationContent,

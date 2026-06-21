@@ -11,9 +11,9 @@ import { copyText } from "@/lib/clipboard.js";
 import { useLabel } from "@/lib/use-label.js";
 import { Trans } from "@lingui/react";
 import { registerOverlayPortal, useGetPuck } from "@puckeditor/core";
-import { Link, Unlink } from "lucide-react";
 
 import type { BlockRegistry, PatternRegistry } from "@plumix/blocks";
+import { Link, Unlink } from "@plumix/admin-ui/icons";
 import { renderBlockTree } from "@plumix/blocks";
 
 import { detachPatternRef } from "./detach-pattern-ref.js";

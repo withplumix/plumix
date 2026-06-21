@@ -15,7 +15,6 @@ import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
 import * as v from "valibot";
 
 import type { TermTaxonomyManifestEntry } from "@plumix/core/manifest";
@@ -29,6 +28,7 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@plumix/admin-ui/empty";
+import { Plus } from "@plumix/admin-ui/icons";
 
 const M = {
   columnName: defineMessage({
