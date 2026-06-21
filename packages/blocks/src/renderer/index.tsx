@@ -8,6 +8,7 @@ import type { ShortcodeRegistry } from "../shortcodes/types.js";
 import type { ThemeBreakpoints } from "../styles/style-emitter.js";
 import type { ThemeTokens } from "../styles/types.js";
 import type { ImageResolver, RemotePattern } from "./image-attrs.js";
+import { serializeLoaderData } from "../loader-data.js";
 import { renderBlockTree } from "../render-block-tree.js";
 import { RendererError } from "./errors.js";
 
@@ -91,8 +92,10 @@ export function BlockRenderer({
   });
   if (ctx.mode !== "edit") return tree;
   // Edit mode: wrap the content in a mount root the injected runtime renders
-  // into, and embed the tree so it can seed without a round-trip. `<` is
-  // escaped so authored content can't break out of the JSON <script>.
+  // into, and embed the tree + the SSR-resolved loader data so the edit runtime
+  // seeds both without a round-trip — blocks open with real data and keep it
+  // across edits (loaders re-run only via a scoped refresh). `<` is escaped so
+  // authored content can't break out of the JSON <script>.
   return (
     <div data-plumix-content-root="">
       <script
@@ -100,6 +103,16 @@ export function BlockRenderer({
         data-plumix-initial-tree=""
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(content).replace(/</g, "\\u003c"),
+        }}
+      />
+      <script
+        type="application/json"
+        data-plumix-loader-data=""
+        dangerouslySetInnerHTML={{
+          __html: serializeLoaderData(ctx.loaderData ?? new Map()).replace(
+            /</g,
+            "\\u003c",
+          ),
         }}
       />
       {tree}
@@ -175,5 +188,6 @@ export type {
   CanvasMessage,
   EditorBridgeMessage,
   HostMessage,
+  SerializedLoaderData,
   SlotRect,
 } from "./editor-protocol.js";

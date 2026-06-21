@@ -15,7 +15,11 @@ import { findBlock } from "./block-tree-ops.js";
 import { connectCanvas } from "./connect-canvas.js";
 import { dropPlacement } from "./drop-index.js";
 import { overlayBox } from "./overlay.js";
-import { useEditorStore, useEditorStoreApi } from "./provider.js";
+import {
+  useEditorStore,
+  useEditorStoreApi,
+  useLoaderPushRef,
+} from "./provider.js";
 import { SelectionToolbar } from "./selection-toolbar.js";
 import { deviceWidth } from "./store.js";
 
@@ -70,6 +74,7 @@ export function CanvasFrame({
   readOnly = false,
 }: CanvasFrameProps): ReactElement {
   const store = useEditorStoreApi();
+  const loaderPushRef = useLoaderPushRef();
   const device = useEditorStore((s) => s.device);
   const zoom = useEditorStore((s) => s.zoom);
   const breakpoints = useEditorStore((s) => s.breakpoints);
@@ -137,8 +142,13 @@ export function CanvasFrame({
         measureContent();
       },
     });
-    return () => connection.dispose();
-  }, [store, origin, measureHost, measureContent]);
+    // Expose the loader-data push to the inspector's refresh control.
+    if (loaderPushRef) loaderPushRef.current = connection.pushLoaderData;
+    return () => {
+      if (loaderPushRef) loaderPushRef.current = null;
+      connection.dispose();
+    };
+  }, [store, origin, measureHost, measureContent, loaderPushRef]);
 
   // Keep frame/container fresh when the canvas moves without a block report:
   // column scroll, window resize, and rail collapse (which resizes the inset).

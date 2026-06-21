@@ -7,13 +7,18 @@ import {
   useState,
 } from "react";
 
-import type { BlockNode, BlockRegistry } from "@plumix/blocks";
+import type {
+  BlockNode,
+  BlockRegistry,
+  ResolvedBlockLoaders,
+} from "@plumix/blocks";
 import type { BlockRect, SlotRect } from "@plumix/blocks/renderer";
-import { renderBlockTree } from "@plumix/blocks";
+import { parseLoaderData, renderBlockTree } from "@plumix/blocks";
 import { PlumixProvider } from "@plumix/blocks/renderer";
 
 import type { RuntimeConnection } from "./connect-runtime.js";
 import { connectRuntime } from "./connect-runtime.js";
+import { mergeLoaderData } from "./merge-loader-data.js";
 
 interface EditorCanvasProps {
   /** Block registry for the site (core + plugin blocks). */
@@ -36,6 +41,14 @@ export function EditorCanvas({
   initialTree = [],
 }: EditorCanvasProps): ReactElement {
   const [tree, setTree] = useState<readonly BlockNode[]>(initialTree);
+  // Seed loader data from the SSR embed once (before React replaces the mount
+  // root's children). Kept stable across tree edits so loaders never re-run on
+  // a keystroke; a scoped refresh replaces a single block's entry.
+  const [loaderData, setLoaderData] = useState<ResolvedBlockLoaders>(() =>
+    parseLoaderData(
+      document.querySelector("[data-plumix-loader-data]")?.textContent ?? "",
+    ),
+  );
   const connectionRef = useRef<RuntimeConnection | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -44,6 +57,8 @@ export function EditorCanvas({
       parentWindow: window.parent,
       origin,
       onTree: setTree,
+      onLoaderData: (data) =>
+        setLoaderData((prior) => mergeLoaderData(prior, data)),
     });
     connectionRef.current = connection;
     return () => {
@@ -128,7 +143,7 @@ export function EditorCanvas({
         {/* renderBlockTree (not BlockRenderer) so the canvas doesn't re-emit
             the SSR content-root boundary it was mounted into — just the
             per-block data-plumix-id seam for selection. */}
-        {renderBlockTree(tree, registry, { editing: true })}
+        {renderBlockTree(tree, registry, { editing: true, loaderData })}
       </div>
     </PlumixProvider>
   );

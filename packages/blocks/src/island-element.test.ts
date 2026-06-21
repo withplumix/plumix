@@ -602,3 +602,59 @@ describe("PlumixIslandElement prefetch/hydrate split", () => {
     expect(teardown).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("PlumixIslandElement edit-mode gate", () => {
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    delete (window as { Plumix?: unknown }).Plumix;
+  });
+
+  afterEach(() => {
+    delete document.documentElement.dataset.plumixMode;
+  });
+
+  test("does not hydrate while the page is in edit mode", async () => {
+    document.documentElement.dataset.plumixMode = "edit";
+    const strategy = vi.fn<IslandStrategy>((loadFn) => loadFn());
+    stubStrategies(strategy);
+    const el = makeIsland({
+      client: "load",
+      "chunk-url": "/chunk.js",
+      "component-export": "Search",
+      opts: "{}",
+      ssr: "",
+    });
+    document.body.appendChild(el);
+    await Promise.resolve();
+    expect(strategy).not.toHaveBeenCalled();
+  });
+
+  test("still hydrates in preview mode", async () => {
+    document.documentElement.dataset.plumixMode = "preview";
+    const strategy = vi.fn<IslandStrategy>();
+    stubStrategies(strategy);
+    const el = makeIsland({
+      client: "load",
+      "chunk-url": "/chunk.js",
+      "component-export": "Search",
+      opts: "{}",
+    });
+    document.body.appendChild(el);
+    await Promise.resolve();
+    expect(strategy).toHaveBeenCalledTimes(1);
+  });
+
+  test("renders a labeled placeholder for a client-only island while editing", async () => {
+    document.documentElement.dataset.plumixMode = "edit";
+    stubStrategies();
+    const el = makeIsland({
+      client: "only",
+      "chunk-url": "/chunk.js",
+      "component-export": "Counter",
+      opts: "{}",
+    });
+    document.body.appendChild(el);
+    await Promise.resolve();
+    expect(el.textContent).toContain("Client-only: Counter");
+  });
+});

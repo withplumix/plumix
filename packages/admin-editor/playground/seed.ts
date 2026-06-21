@@ -1,6 +1,7 @@
 import type { BlockNode } from "@plumix/blocks";
 
 import type { InserterPattern } from "../src/block-catalog.js";
+import { FEED_SEED } from "./feed-block.js";
 
 /**
  * A representative tree for the playground: top-level blocks plus nested and
@@ -73,6 +74,7 @@ export const SEED_BLOCKS: readonly BlockNode[] = [
       ],
     },
   },
+  FEED_SEED,
 ];
 
 /**

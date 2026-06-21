@@ -8,6 +8,7 @@ import type {
   ThemeBreakpoints,
   ThemeTokens,
 } from "@plumix/blocks";
+import type { SerializedLoaderData } from "@plumix/blocks/renderer";
 import {
   Sidebar,
   SidebarContent,
@@ -71,6 +72,12 @@ interface PlumixEditorProps {
   readonly publish?: PublishActions;
   /** Host-rendered overlay (e.g. the stale-draft resolution dialog). */
   readonly overlay?: ReactNode;
+  /** Re-run the active block's loader(s) server-side (host orpc call). When set,
+   *  a loader-backed block gets a "Refresh data" control; the returned data is
+   *  pushed to the canvas. orpc lives in the app, never in this package. */
+  readonly onRefreshBlockLoader?: (
+    blockId: string,
+  ) => Promise<SerializedLoaderData>;
 }
 
 /**
@@ -94,6 +101,7 @@ export function PlumixEditor({
   documentPanel,
   publish,
   overlay,
+  onRefreshBlockLoader,
 }: PlumixEditorProps): ReactElement {
   if (readOnly) {
     return (
@@ -201,7 +209,10 @@ export function PlumixEditor({
             </SidebarHeader>
             <SidebarContent>
               <TabsContent value="block">
-                <BlockInspector registry={registry} />
+                <BlockInspector
+                  registry={registry}
+                  onRefreshBlockLoader={onRefreshBlockLoader}
+                />
               </TabsContent>
               <TabsContent value="styles">
                 <StylesTab tokens={tokens ?? {}} />

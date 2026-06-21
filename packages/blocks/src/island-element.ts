@@ -15,7 +15,9 @@
 
 import type { ComponentType } from "react";
 
+import type { IslandPageMode } from "./island-mode.js";
 import type { IslandRoot } from "./island-renderer.js";
+import { clientOnlyPlaceholderLabel, shouldHydrate } from "./island-mode.js";
 import { deserializeProps } from "./serialize.js";
 
 // The renderer module (`island-renderer.ts`) carries all the React +
@@ -152,6 +154,14 @@ export class PlumixIslandElement extends HTMLElement {
 
   private async start(): Promise<void> {
     if (this.hydrated) return;
+    // In edit mode the island stays as its static SSR output — selectable in
+    // the canvas, never interactive. A client-only island has no SSR output,
+    // so it shows a labeled placeholder of what it would have mounted.
+    const mode = readPageMode();
+    if (!shouldHydrate(mode)) {
+      if (this.getAttribute("client") === "only") this.renderEditPlaceholder();
+      return;
+    }
     // Top-down hydration: a nested island must NOT hydrate until its
     // closest `<plumix-island>` ancestor has cleared its `ssr` marker.
     // Without this, a parent React render that swaps the child's
@@ -304,6 +314,16 @@ export class PlumixIslandElement extends HTMLElement {
     }
   }
 
+  // A client-only island ships an empty shell (no SSR output). In edit mode it
+  // would otherwise be an invisible, unselectable box, so label it with the
+  // component it stands in for. Plain text content — no React, no hydration.
+  private renderEditPlaceholder(): void {
+    if (this.childElementCount > 0 || this.textContent.trim()) return;
+    this.textContent = clientOnlyPlaceholderLabel(
+      this.getAttribute("component-export"),
+    );
+  }
+
   private dispatchHydrationError(err: unknown): void {
     window.dispatchEvent(
       new CustomEvent("plumix:hydration-error", {
@@ -382,6 +402,14 @@ export function setRendererImport(
     loadRenderer = prev;
     rendererPromise = null;
   };
+}
+
+// The edit/preview render stamps `data-plumix-mode` on <html> (see
+// render-template). Read it here without importing the editor or renderer.
+function readPageMode(): IslandPageMode {
+  const raw = document.documentElement.dataset.plumixMode;
+  if (raw === "edit" || raw === "preview" || raw === "live") return raw;
+  return null;
 }
 
 function appendCacheBust(url: string): string {

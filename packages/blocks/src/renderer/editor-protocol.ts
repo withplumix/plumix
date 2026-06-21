@@ -7,6 +7,10 @@ import type { BlockNode } from "../render-block-tree.js";
 
 export const EDITOR_BRIDGE_CHANNEL = "plumix.editor";
 
+/** Node-keyed loader records, as serialized over the bridge — the wire form of
+ *  ResolvedBlockLoaders (a ReadonlyMap doesn't survive postMessage). */
+export type SerializedLoaderData = Record<string, Record<string, unknown>>;
+
 /** Geometry of one block, in the iframe's unscaled coordinate space. */
 export interface BlockRect {
   readonly id: string;
@@ -28,10 +32,14 @@ export interface SlotRect {
 }
 
 /** Parent (admin shell) → canvas (iframe). */
-export interface HostMessage {
-  readonly type: "host:tree";
-  readonly tree: readonly BlockNode[];
-}
+export type HostMessage =
+  | { readonly type: "host:tree"; readonly tree: readonly BlockNode[] }
+  | {
+      // A scoped refresh's re-resolved loader data, node-keyed (same shape
+      // `serializeLoaderData` emits). The canvas merges it into its loader map.
+      readonly type: "host:loader-data";
+      readonly data: SerializedLoaderData;
+    };
 
 /** Canvas (iframe) → parent (admin shell). */
 export type CanvasMessage =

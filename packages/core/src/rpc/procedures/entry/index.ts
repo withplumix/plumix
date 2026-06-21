@@ -9,6 +9,7 @@ import { duplicate } from "./duplicate.js";
 import { get } from "./get.js";
 import { list } from "./list.js";
 import { publish } from "./publish.js";
+import { refreshBlockLoader } from "./refresh-block-loader.js";
 import { restore } from "./restore.js";
 import { revisionsRouter } from "./revisions.js";
 import { trash } from "./trash.js";
@@ -27,6 +28,7 @@ export const entryRouter = {
   deletePermanentMany,
   duplicate,
   createPreviewLink,
+  refreshBlockLoader,
   publish,
   discardDraft,
   stats,

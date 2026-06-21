@@ -386,6 +386,10 @@ function renderTree({
     lang: code,
     dir: direction,
     ...document.html,
+    // The island runtime reads this off <html> to decide whether to hydrate:
+    // in edit mode islands stay static + selectable. Only stamped for the
+    // editor render so ordinary pages keep clean markup (absent ⇒ hydrate).
+    ...(editMode.mode === "edit" ? { "data-plumix-mode": editMode.mode } : {}),
   });
   const bodyAttrs = renderAttrs(document.body);
 
