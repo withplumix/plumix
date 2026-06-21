@@ -3,6 +3,7 @@ import type {
   BlockRect,
   CanvasMessage,
   HostMessage,
+  SlotRect,
 } from "@plumix/blocks/renderer";
 import {
   createHandshake,
@@ -15,7 +16,10 @@ import {
 export interface RuntimeConnection {
   readonly reportSelect: (id: string, additive?: boolean) => void;
   readonly reportHover: (id: string | null) => void;
-  readonly reportGeometry: (rects: readonly BlockRect[]) => void;
+  readonly reportGeometry: (
+    rects: readonly BlockRect[],
+    slots?: readonly SlotRect[],
+  ) => void;
   readonly dispose: () => void;
 }
 
@@ -79,8 +83,8 @@ export function connectRuntime({
       } satisfies CanvasMessage),
     reportHover: (id) =>
       post({ type: "canvas:hover", id } satisfies CanvasMessage),
-    reportGeometry: (rects) =>
-      post({ type: "canvas:geometry", rects } satisfies CanvasMessage),
+    reportGeometry: (rects, slots) =>
+      post({ type: "canvas:geometry", rects, slots } satisfies CanvasMessage),
     dispose: () => window.removeEventListener("message", onMessage),
   };
 }

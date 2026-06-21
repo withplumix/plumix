@@ -1,14 +1,20 @@
 import type { ReactElement, ReactNode } from "react";
+import { useEffect } from "react";
 import { i18n } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
+import type { BlockNode, BlockSpec } from "@plumix/blocks";
 import { createBlockRegistry } from "@plumix/blocks";
 import { EDITOR_BRIDGE_CHANNEL, encode } from "@plumix/blocks/renderer";
 
 import { CanvasFrame } from "./canvas-frame.js";
-import { EditorProvider, useEditorStore } from "./provider.js";
+import {
+  EditorProvider,
+  useEditorStore,
+  useEditorStoreApi,
+} from "./provider.js";
 
 const ORIGIN = "http://localhost:3000";
 
@@ -161,5 +167,101 @@ describe("CanvasFrame", () => {
     expect(getByTestId("tree-probe").textContent).toBe("core/heading");
     // Affordance disappears once the canvas is no longer empty.
     expect(queryByTestId("plumix-empty-add")).toBeNull();
+  });
+});
+
+describe("CanvasFrame nested drop", () => {
+  const headingSpec: BlockSpec = {
+    name: "core/heading",
+    render: () => null,
+    title: "Heading",
+    category: "text",
+  };
+  const nestRegistry = createBlockRegistry([
+    headingSpec,
+    {
+      name: "core/group",
+      render: () => null,
+      inputs: [{ name: "content", type: "slot", label: "Content" }],
+    },
+    {
+      name: "core/buttons",
+      render: () => null,
+      inputs: [
+        {
+          name: "items",
+          type: "slot",
+          label: "Buttons",
+          allowedBlocks: ["core/button"],
+        },
+      ],
+    },
+  ]);
+
+  let storeApi: ReturnType<typeof useEditorStoreApi> | undefined;
+  function Capture(): null {
+    const api = useEditorStoreApi();
+    useEffect(() => {
+      storeApi = api;
+    }, [api]);
+    return null;
+  }
+
+  function renderWith(tree: readonly BlockNode[]): void {
+    render(
+      <I18nProvider i18n={i18n}>
+        <EditorProvider initialTree={tree}>
+          <CanvasFrame
+            previewUrl="about:blank"
+            origin={ORIGIN}
+            registry={nestRegistry}
+            capabilities={NO_CAPS}
+          />
+          <Capture />
+        </EditorProvider>
+      </I18nProvider>,
+    );
+  }
+
+  // Drives the catalog-drag pointer sequence over a reported slot region. jsdom
+  // gives the iframe a zero origin, so a slot rect at (0,0,500,500) maps 1:1 to
+  // screen and a pointer at (50,50) lands inside it.
+  const dragInto = (parentId: string, slotKey: string): void => {
+    fromCanvas({
+      type: "canvas:geometry",
+      rects: [{ id: parentId, x: 0, y: 0, width: 500, height: 500 }],
+      slots: [{ parentId, slotKey, x: 0, y: 0, width: 500, height: 500 }],
+    });
+    act(() => storeApi?.getState().startBlockDrag(headingSpec));
+    act(() => {
+      window.dispatchEvent(
+        new MouseEvent("pointermove", { clientX: 50, clientY: 50 }),
+      );
+      window.dispatchEvent(
+        new MouseEvent("pointerup", { clientX: 50, clientY: 50 }),
+      );
+    });
+  };
+
+  test("dropping a dragged block into a slot region nests it there", () => {
+    renderWith([{ id: "g1", name: "core/group", attrs: { content: [] } }]);
+
+    dragInto("g1", "content");
+
+    const content = storeApi?.getState().tree[0]?.attrs?.content as
+      | readonly BlockNode[]
+      | undefined;
+    expect(content?.map((n) => n.name)).toEqual(["core/heading"]);
+  });
+
+  test("a slot rejects a block its allowedBlocks does not permit", () => {
+    renderWith([{ id: "b1", name: "core/buttons", attrs: { items: [] } }]);
+
+    dragInto("b1", "items");
+
+    const items = storeApi?.getState().tree[0]?.attrs?.items as
+      | readonly BlockNode[]
+      | undefined;
+    expect(items).toEqual([]);
   });
 });

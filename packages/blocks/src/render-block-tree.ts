@@ -158,18 +158,20 @@ function materializeSlots(
         if (!env.editing) return rendered;
         // Tag the slot so the canvas can resolve a nested drop to it. The
         // wrapper is display:contents — zero layout impact, the children flow
-        // as if it weren't there. An empty slot gets a min-height placeholder
-        // so it stays a measurable drop target.
+        // as if it weren't there. Parent id + slot key are separate attrs (not
+        // one delimited string) so an id never needs charset-escaping. An empty
+        // slot gets a min-height placeholder so it stays a measurable target.
         return createElement(
           "div",
           {
-            "data-plumix-slot": `${node.id}:${key}`,
+            "data-plumix-slot-parent": node.id,
+            "data-plumix-slot-key": key,
             style: { display: "contents" },
           },
           children.length > 0
             ? rendered
             : createElement("div", {
-                "data-plumix-slot-empty": `${node.id}:${key}`,
+                "data-plumix-slot-empty": "",
                 style: { minHeight: "2rem" },
               }),
         );

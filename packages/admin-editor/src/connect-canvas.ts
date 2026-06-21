@@ -2,6 +2,7 @@ import type {
   BlockRect,
   CanvasMessage,
   HostMessage,
+  SlotRect,
 } from "@plumix/blocks/renderer";
 import {
   createHandshake,
@@ -25,8 +26,11 @@ interface ConnectCanvasOptions {
   readonly frameWindow: Window;
   /** Expected origin of the canvas iframe; messages from elsewhere are dropped. */
   readonly origin: string;
-  /** Latest block geometry, for the shell to draw selection/hover overlays. */
-  readonly onGeometry?: (rects: readonly BlockRect[]) => void;
+  /** Latest block + slot geometry, for overlays and nested drop targeting. */
+  readonly onGeometry?: (
+    rects: readonly BlockRect[],
+    slots: readonly SlotRect[],
+  ) => void;
 }
 
 // The iframe runtime usually boots after the parent mounts, so a single hello
@@ -79,7 +83,7 @@ export function connectCanvas({
         store.getState().setHover(canvas.id);
         break;
       case "canvas:geometry":
-        onGeometry?.(canvas.rects);
+        onGeometry?.(canvas.rects, canvas.slots ?? []);
         break;
     }
   };

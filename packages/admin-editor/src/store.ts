@@ -8,6 +8,7 @@ import type { History } from "./history.js";
 import {
   duplicateBlock,
   findParentId,
+  insertBlockAt,
   moveBlockBy,
   moveBlock as moveBlockOp,
   removeBlocks,
@@ -49,6 +50,13 @@ export interface EditorActions {
   setTree: (tree: readonly BlockNode[]) => void;
   /** Insert a block at a top-level index (clamped) and select it. */
   insertBlock: (node: BlockNode, index: number) => void;
+  /** Insert a block into a parent's slot (nested), gated by `allowed`, and
+   *  select it. A no-op when the slot is absent or the block isn't allowed. */
+  insertBlockInto: (
+    node: BlockNode,
+    target: MoveTarget,
+    allowed?: readonly string[],
+  ) => void;
   /** Move a block to a new parent + index (reorder / nest / un-nest). */
   moveBlock: (sourceId: string, target: MoveTarget) => void;
   /** Merge a partial attrs patch into one block, anywhere in the tree. */
@@ -139,6 +147,17 @@ export function createEditorStore(
           node,
           ...state.tree.slice(at),
         ];
+        return {
+          tree,
+          activeId: node.id,
+          selectedIds: new Set([node.id]),
+          history: recordHistory(state.history, tree, null),
+        };
+      }),
+    insertBlockInto: (node, target, allowed) =>
+      set((state) => {
+        const tree = insertBlockAt(state.tree, node, target, allowed);
+        if (tree === state.tree) return {};
         return {
           tree,
           activeId: node.id,

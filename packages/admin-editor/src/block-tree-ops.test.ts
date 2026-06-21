@@ -7,6 +7,7 @@ import {
   findBlock,
   findParentId,
   flattenTree,
+  insertBlockAt,
   moveBlock,
   moveBlockBy,
   projectMove,
@@ -321,15 +322,15 @@ describe("moveBlockBy", () => {
 
 describe("slotKeys", () => {
   test("lists every slot key in declaration order", () => {
-    expect(slotKeys(columns([{ id: "l", name: "x" }], [{ id: "r", name: "x" }]))).toEqual(
-      ["left", "right"],
-    );
+    expect(
+      slotKeys(columns([{ id: "l", name: "x" }], [{ id: "r", name: "x" }])),
+    ).toEqual(["left", "right"]);
   });
 
   test("returns an empty list for a slotless block", () => {
-    expect(slotKeys({ id: "h", name: "core/heading", attrs: { text: "hi" } })).toEqual(
-      [],
-    );
+    expect(
+      slotKeys({ id: "h", name: "core/heading", attrs: { text: "hi" } }),
+    ).toEqual([]);
   });
 });
 
@@ -387,6 +388,55 @@ describe("moveBlock allowedBlocks enforcement", () => {
   test("an undefined allowed list permits any block", () => {
     const moved = moveBlock(tree, "btn", { parentId: "g", index: 0 });
     expect(content(moved).map((n) => n.id)).toEqual(["btn"]);
+  });
+});
+
+describe("insertBlockAt", () => {
+  const tree: readonly BlockNode[] = [
+    columns([{ id: "l", name: "x" }], [{ id: "r", name: "x" }]),
+  ];
+
+  test("inserts a new block into a named slot at an index", () => {
+    const next = insertBlockAt(
+      tree,
+      { id: "n", name: "core/heading" },
+      { parentId: "cols", slotKey: "right", index: 0 },
+    );
+    expect(
+      (findBlock(next, "cols")?.attrs?.right as readonly BlockNode[]).map(
+        (n) => n.id,
+      ),
+    ).toEqual(["n", "r"]);
+  });
+
+  test("inserts at the top level when parentId is null", () => {
+    const next = insertBlockAt(
+      [{ id: "a", name: "x" }],
+      { id: "n", name: "y" },
+      { parentId: null, index: 0 },
+    );
+    expect(next.map((node) => node.id)).toEqual(["n", "a"]);
+  });
+
+  test("refuses a block not in the slot's allowed list", () => {
+    expect(
+      insertBlockAt(
+        tree,
+        { id: "n", name: "core/button" },
+        { parentId: "cols", slotKey: "right", index: 0 },
+        ["core/heading"],
+      ),
+    ).toBe(tree);
+  });
+
+  test("is a no-op when the target slot is absent", () => {
+    expect(
+      insertBlockAt(
+        tree,
+        { id: "n", name: "x" },
+        { parentId: "cols", slotKey: "missing", index: 0 },
+      ),
+    ).toBe(tree);
   });
 });
 

@@ -42,7 +42,8 @@ describe("renderBlockTree edit-aware seam", () => {
       renderBlockTree(nested, registry, { editing: true }),
     );
 
-    expect(html).toContain('data-plumix-slot="g1:content"');
+    expect(html).toContain('data-plumix-slot-parent="g1"');
+    expect(html).toContain('data-plumix-slot-key="content"');
     // The marker is layout-neutral (display:contents) — the child still renders.
     expect(html).toContain('data-plumix-id="h1"');
   });
@@ -55,8 +56,8 @@ describe("renderBlockTree edit-aware seam", () => {
       renderBlockTree(empty, registry, { editing: true }),
     );
 
-    expect(html).toContain('data-plumix-slot="g2:content"');
-    expect(html).toContain('data-plumix-slot-empty="g2:content"');
+    expect(html).toContain('data-plumix-slot-parent="g2"');
+    expect(html).toContain("data-plumix-slot-empty");
   });
 
   test("the normal render carries no slot markers", () => {

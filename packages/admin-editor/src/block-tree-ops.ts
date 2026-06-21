@@ -174,14 +174,41 @@ export function moveBlock(
   const source = findBlock(tree, sourceId);
   if (!source) return tree;
   if (allowed && !allowed.includes(source.name)) return tree;
-  if (target.parentId !== null) {
-    const parent = findBlock(tree, target.parentId);
-    if (!parent) return tree;
-    const key = target.slotKey ?? slotKey(parent);
-    if (key === null || !isBlockNodeArray(parent.attrs?.[key])) return tree;
-    if (containsBlock(source, target.parentId)) return tree;
+  if (!slotTargetExists(tree, target)) return tree;
+  if (target.parentId !== null && containsBlock(source, target.parentId)) {
+    return tree;
   }
   return insertNode(removeNode(tree, sourceId), source, target);
+}
+
+// Whether `target` names a real slot on a real parent. The top level always
+// exists; a nested target needs the parent present with that slot as an array.
+function slotTargetExists(
+  tree: readonly BlockNode[],
+  target: MoveTarget,
+): boolean {
+  if (target.parentId === null) return true;
+  const parent = findBlock(tree, target.parentId);
+  if (!parent) return false;
+  const key = target.slotKey ?? slotKey(parent);
+  return key !== null && isBlockNodeArray(parent.attrs?.[key]);
+}
+
+/**
+ * Insert a (new) block at a parent + slot + index, immutably. Mirrors
+ * moveBlock's validation for an insert rather than a relocation: a no-op (same
+ * tree) when the target slot is absent, or `allowed` is given and the block's
+ * name isn't in it. `parentId: null` inserts at the top level.
+ */
+export function insertBlockAt(
+  tree: readonly BlockNode[],
+  node: BlockNode,
+  target: MoveTarget,
+  allowed?: readonly string[],
+): readonly BlockNode[] {
+  if (allowed && !allowed.includes(node.name)) return tree;
+  if (!slotTargetExists(tree, target)) return tree;
+  return insertNode(tree, node, target);
 }
 
 /**

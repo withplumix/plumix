@@ -3,7 +3,11 @@ import { describe, expect, test } from "vitest";
 import type { BlockSpec } from "@plumix/blocks";
 import { createBlockRegistry } from "@plumix/blocks";
 
-import { createBlockFromSpec, groupBlocksByCategory } from "./block-catalog.js";
+import {
+  createBlockFromSpec,
+  groupBlocksByCategory,
+  slotAllowedBlocks,
+} from "./block-catalog.js";
 
 const spec = (over: Partial<BlockSpec> & { name: string }): BlockSpec => ({
   render: () => null,
@@ -11,6 +15,43 @@ const spec = (over: Partial<BlockSpec> & { name: string }): BlockSpec => ({
 });
 
 const NO_CAPS: ReadonlySet<string> = new Set();
+
+describe("slotAllowedBlocks", () => {
+  const registry = createBlockRegistry([
+    spec({
+      name: "core/buttons",
+      inputs: [
+        {
+          name: "items",
+          type: "slot",
+          label: "Buttons",
+          allowedBlocks: ["core/button"],
+        },
+      ],
+    }),
+    spec({
+      name: "core/group",
+      inputs: [{ name: "content", type: "slot", label: "Content" }],
+    }),
+  ]);
+
+  test("returns a slot's allowedBlocks list", () => {
+    expect(slotAllowedBlocks(registry, "core/buttons", "items")).toEqual([
+      "core/button",
+    ]);
+  });
+
+  test("returns undefined for an unrestricted slot", () => {
+    expect(
+      slotAllowedBlocks(registry, "core/group", "content"),
+    ).toBeUndefined();
+  });
+
+  test("returns undefined for an unknown parent or slot", () => {
+    expect(slotAllowedBlocks(registry, "core/nope", "items")).toBeUndefined();
+    expect(slotAllowedBlocks(registry, "core/buttons", "nope")).toBeUndefined();
+  });
+});
 
 describe("groupBlocksByCategory", () => {
   test("groups eligible blocks by category in first-seen order", () => {
