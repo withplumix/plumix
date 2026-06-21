@@ -199,7 +199,23 @@ const config: KnipConfig = {
     // and merged into admin's i18n at runtime (i18n-boot glob) — knip can't
     // see either consumer.
     "packages/admin-editor": {
-      entry: ["lingui.config.ts", "locales/*.mjs"],
+      entry: [
+        // The library API entry. Listed explicitly because adding vite.config.ts
+        // makes knip's vite plugin reframe the package around the playground
+        // build inputs, which otherwise drops the package.json `exports` entry.
+        "src/index.ts",
+        "lingui.config.ts",
+        "locales/*.mjs",
+        // Visual e2e for the standalone editor playground. With the playwright
+        // plugin off (below), list the config + specs so they aren't flagged;
+        // the Vite playground entries (vite.config.ts, the HTML script modules)
+        // are auto-detected by knip's vite plugin.
+        "playwright.config.ts",
+        "playground/canvas.tsx",
+        "e2e/*.spec.ts",
+      ],
+      // See packages/admin above for why the playwright plugin is off.
+      playwright: false,
     },
     "packages/plugins/menu": {
       entry: [
