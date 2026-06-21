@@ -207,6 +207,54 @@ describe("undo / redo", () => {
   });
 });
 
+describe("insertBlockInto", () => {
+  const withColumns = (): ReturnType<typeof createEditorStore> =>
+    createEditorStore({
+      tree: [
+        {
+          id: "cols",
+          name: "core/columns",
+          attrs: { left: [{ id: "l", name: "core/x" }], right: [] },
+        },
+      ],
+    });
+
+  test("inserts a new block into a named slot and selects it", () => {
+    const store = withColumns();
+    store.getState().insertBlockInto(
+      { id: "n", name: "core/heading" },
+      {
+        parentId: "cols",
+        slotKey: "right",
+        index: 0,
+      },
+    );
+
+    const right = (store.getState().tree[0]?.attrs?.right as BlockNode[]).map(
+      (n) => n.id,
+    );
+    expect(right).toEqual(["n"]);
+    expect(store.getState().activeId).toBe("n");
+  });
+
+  test("rejects a block the slot does not allow (no-op)", () => {
+    const store = withColumns();
+    const before = store.getState().tree;
+
+    store.getState().insertBlockInto(
+      { id: "n", name: "core/button" },
+      {
+        parentId: "cols",
+        slotKey: "right",
+        index: 0,
+      },
+      ["core/heading"],
+    );
+
+    expect(store.getState().tree).toBe(before);
+  });
+});
+
 describe("removeSelected", () => {
   test("removes every selected block and clears the selection", () => {
     const store = createEditorStore({

@@ -171,4 +171,5 @@ export type {
   CanvasMessage,
   EditorBridgeMessage,
   HostMessage,
+  SlotRect,
 } from "./editor-protocol.js";

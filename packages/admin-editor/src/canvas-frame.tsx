@@ -3,10 +3,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Trans } from "@lingui/react";
 
 import type { BlockRegistry } from "@plumix/blocks";
-import type { BlockRect } from "@plumix/blocks/renderer";
+import type { BlockRect, SlotRect } from "@plumix/blocks/renderer";
 
 import type { FrameOffset, OverlayBox } from "./overlay.js";
-import { createBlockFromSpec, groupBlocksByCategory } from "./block-catalog.js";
+import {
+  createBlockFromSpec,
+  groupBlocksByCategory,
+  slotAllowedBlocks,
+} from "./block-catalog.js";
+import { findBlock } from "./block-tree-ops.js";
 import { connectCanvas } from "./connect-canvas.js";
 import { dropPlacement } from "./drop-index.js";
 import { overlayBox } from "./overlay.js";
@@ -32,11 +37,20 @@ const CANVAS_HEIGHT = 800;
 
 interface Geometry {
   readonly rects: ReadonlyMap<string, BlockRect>;
+  /** Container slot regions (iframe coords), for resolving nested drops. */
+  readonly slots: readonly SlotRect[];
   /** The iframe's on-screen offset, for mapping block rects to overlay boxes. */
   readonly frame: FrameOffset | null;
   /** The canvas viewport's on-screen box — overlays clip to this so they never
    *  spill over the side rails (the iframe renders wider than the column). */
   readonly container: OverlayBox | null;
+}
+
+/** A resolved nested-drop target: which slot, and its on-screen box. */
+interface SlotDrop {
+  readonly parentId: string;
+  readonly slotKey: string;
+  readonly box: OverlayBox;
 }
 
 /**
@@ -63,6 +77,7 @@ export function CanvasFrame({
   const containerRef = useRef<HTMLDivElement>(null);
   const [geometry, setGeometry] = useState<Geometry>({
     rects: new Map(),
+    slots: [],
     frame: null,
     container: null,
   });
@@ -70,6 +85,7 @@ export function CanvasFrame({
   // re-subscribing the window listeners on every geometry report.
   const geometryRef = useRef<Geometry>(geometry);
   const [dropY, setDropY] = useState<number | null>(null);
+  const [dropSlot, setDropSlot] = useState<SlotDrop | null>(null);
 
   // The iframe's on-screen offset and the canvas viewport box, read live from
   // the DOM. These move on scroll, window resize, and rail collapse — none of
@@ -93,9 +109,10 @@ export function CanvasFrame({
       store,
       frameWindow,
       origin,
-      onGeometry: (reported) => {
+      onGeometry: (reported, slots) => {
         const next: Geometry = {
           rects: new Map(reported.map((r) => [r.id, r])),
+          slots,
           ...measureHost(),
         };
         geometryRef.current = next;
@@ -156,15 +173,71 @@ export function CanvasFrame({
       return dropPlacement(spans, clientY);
     };
 
+    // The innermost slot under the pointer that accepts the dragged block — a
+    // nested drop target. Innermost (smallest box) wins so a slot inside a slot
+    // is reachable; allowedBlocks gates which slots even light up.
+    const slotTargetAt = (
+      clientX: number,
+      clientY: number,
+    ): SlotDrop | null => {
+      const rect = iframe.getBoundingClientRect();
+      const frame: FrameOffset = { left: rect.left, top: rect.top };
+      const { tree, zoom: z } = store.getState();
+      let best: SlotDrop | null = null;
+      let bestArea = Infinity;
+      for (const slot of geometryRef.current.slots) {
+        const box = overlayBox(slot, frame, z);
+        if (
+          clientX < box.left ||
+          clientX > box.left + box.width ||
+          clientY < box.top ||
+          clientY > box.top + box.height
+        ) {
+          continue;
+        }
+        const parent = findBlock(tree, slot.parentId);
+        if (!parent) continue;
+        const allowed = slotAllowedBlocks(registry, parent.name, slot.slotKey);
+        if (allowed && !allowed.includes(dragSpec.name)) continue;
+        const area = box.width * box.height;
+        if (area < bestArea) {
+          bestArea = area;
+          best = { parentId: slot.parentId, slotKey: slot.slotKey, box };
+        }
+      }
+      return best;
+    };
+
     const onMove = (e: PointerEvent): void => {
-      setDropY(placementAt(e.clientX, e.clientY)?.indicatorY ?? null);
+      const slot = slotTargetAt(e.clientX, e.clientY);
+      setDropSlot(slot);
+      // A nested slot target supersedes the top-level line indicator.
+      setDropY(
+        slot ? null : (placementAt(e.clientX, e.clientY)?.indicatorY ?? null),
+      );
     };
     const onUp = (e: PointerEvent): void => {
-      const placement = placementAt(e.clientX, e.clientY);
-      if (placement) {
-        store
-          .getState()
-          .insertBlock(createBlockFromSpec(dragSpec), placement.index);
+      const node = createBlockFromSpec(dragSpec);
+      const slot = slotTargetAt(e.clientX, e.clientY);
+      if (slot) {
+        const parent = findBlock(store.getState().tree, slot.parentId);
+        const allowed = parent
+          ? slotAllowedBlocks(registry, parent.name, slot.slotKey)
+          : undefined;
+        // Nested drops append to the slot; insertNode clamps the index to the
+        // slot length, so a sentinel lands it at the end without a re-lookup.
+        store.getState().insertBlockInto(
+          node,
+          {
+            parentId: slot.parentId,
+            slotKey: slot.slotKey,
+            index: Number.MAX_SAFE_INTEGER,
+          },
+          allowed,
+        );
+      } else {
+        const placement = placementAt(e.clientX, e.clientY);
+        if (placement) store.getState().insertBlock(node, placement.index);
       }
       store.getState().endBlockDrag();
     };
@@ -186,8 +259,9 @@ export function CanvasFrame({
       window.removeEventListener("keydown", onKey);
       iframe.style.pointerEvents = "";
       setDropY(null);
+      setDropSlot(null);
     };
-  }, [dragSpec, store]);
+  }, [dragSpec, store, registry]);
 
   const addFirstBlock = useCallback((): void => {
     const [group] = groupBlocksByCategory(registry, { capabilities });
@@ -275,6 +349,22 @@ export function CanvasFrame({
             )}
           {overlay(activeId, SELECTED_OUTLINE, "plumix-overlay-selected")}
           {activeBox && <SelectionToolbar box={activeBox} />}
+          {dropSlot && (
+            <div
+              data-testid="plumix-slot-drop-indicator"
+              style={{
+                position: "absolute",
+                left: dropSlot.box.left - container.left,
+                top: dropSlot.box.top - container.top,
+                width: dropSlot.box.width,
+                height: dropSlot.box.height,
+                outline: `2px dashed ${SELECTED_OUTLINE}`,
+                background: "rgba(37,99,235,0.08)",
+                pointerEvents: "none",
+                zIndex: 20,
+              }}
+            />
+          )}
           {dropY !== null && geometry.frame && (
             <div
               data-testid="plumix-drop-indicator"

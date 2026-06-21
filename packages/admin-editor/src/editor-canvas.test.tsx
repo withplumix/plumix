@@ -85,6 +85,36 @@ describe("EditorCanvas", () => {
     spy.mockRestore();
   });
 
+  test("reports container slot regions for nested drop targeting", () => {
+    const posted: unknown[] = [];
+    const spy = vi
+      .spyOn(window.parent, "postMessage")
+      .mockImplementation((data) => posted.push(data));
+
+    render(<EditorCanvas registry={registry} origin={ORIGIN} />);
+    pushTree([
+      {
+        id: "g1",
+        name: "core/group",
+        attrs: {
+          content: [{ id: "h1", name: "core/heading", attrs: { text: "Hi" } }],
+        },
+      },
+    ]);
+
+    const geometry = posted
+      .map((p) => (p as { message?: { type?: string } }).message)
+      .find((m) => m?.type === "canvas:geometry") as
+      | { slots?: { parentId: string; slotKey: string }[] }
+      | undefined;
+    expect(
+      geometry?.slots?.some(
+        (s) => s.parentId === "g1" && s.slotKey === "content",
+      ),
+    ).toBe(true);
+    spy.mockRestore();
+  });
+
   test("renders an initial tree immediately, before any host push", () => {
     const { container } = render(
       <EditorCanvas

@@ -8,7 +8,7 @@ import {
 } from "react";
 
 import type { BlockNode, BlockRegistry } from "@plumix/blocks";
-import type { BlockRect } from "@plumix/blocks/renderer";
+import type { BlockRect, SlotRect } from "@plumix/blocks/renderer";
 import { renderBlockTree } from "@plumix/blocks";
 import { PlumixProvider } from "@plumix/blocks/renderer";
 
@@ -63,7 +63,22 @@ export function EditorCanvas({
       const r = el.getBoundingClientRect();
       rects.push({ id, x: r.left, y: r.top, width: r.width, height: r.height });
     });
-    connection.reportGeometry(rects);
+    // Slot markers are display:contents (no box of their own), so a slot's drop
+    // region is the union of its direct children's rects — block rows for a
+    // filled slot, the min-height placeholder for an empty one.
+    const slots: SlotRect[] = [];
+    root
+      .querySelectorAll<HTMLElement>("[data-plumix-slot-parent]")
+      .forEach((el) => {
+        const parentId = el.dataset.plumixSlotParent;
+        const slotKey = el.dataset.plumixSlotKey;
+        if (!parentId || slotKey === undefined) return;
+        const region = unionRect(
+          [...el.children].map((c) => c.getBoundingClientRect()),
+        );
+        if (region) slots.push({ parentId, slotKey, ...region });
+      });
+    connection.reportGeometry(rects, slots);
   }, []);
 
   useLayoutEffect(() => {
@@ -107,4 +122,22 @@ export function EditorCanvas({
       </div>
     </PlumixProvider>
   );
+}
+
+// Bounding box covering all rects, or null when there are none.
+function unionRect(
+  rects: readonly DOMRect[],
+): { x: number; y: number; width: number; height: number } | null {
+  if (rects.length === 0) return null;
+  let left = Infinity;
+  let top = Infinity;
+  let right = -Infinity;
+  let bottom = -Infinity;
+  for (const r of rects) {
+    left = Math.min(left, r.left);
+    top = Math.min(top, r.top);
+    right = Math.max(right, r.right);
+    bottom = Math.max(bottom, r.bottom);
+  }
+  return { x: left, y: top, width: right - left, height: bottom - top };
 }

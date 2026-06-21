@@ -149,31 +149,66 @@ function projectedParentId(
 export interface MoveTarget {
   /** The new parent's id, or null to move to the top level. */
   readonly parentId: string | null;
-  /** Insertion index among the target parent's children. */
+  /** Which of the parent's slots to drop into; defaults to its first slot. */
+  readonly slotKey?: string;
+  /** Insertion index among the target slot's children. */
   readonly index: number;
 }
 
 /**
- * Move a block to a new parent + index, immutably. Handles reorder (same
- * parent), nest (into a parent's slot) and un-nest (to the top level). Returns
- * the same tree reference when the move is invalid — source missing, dropping
- * into itself or its own descendant, or a target parent with no slot to hold
- * children — so a bad drag is a safe no-op rather than a lost subtree.
+ * Move a block to a new parent + slot + index, immutably. Handles reorder (same
+ * parent), nest (into a named slot) and un-nest (to the top level). Returns the
+ * same tree reference when the move is invalid — source missing, dropping into
+ * itself or its own descendant, the target slot absent, or `allowed` given and
+ * the source's name not in it — so a bad drag is a safe no-op, never a lost
+ * subtree. `allowed` is the slot's `allowedBlocks` list (the caller resolves it
+ * from the registry); undefined permits any block.
  */
 export function moveBlock(
   tree: readonly BlockNode[],
   sourceId: string,
   target: MoveTarget,
+  allowed?: readonly string[],
 ): readonly BlockNode[] {
   if (target.parentId === sourceId) return tree;
   const source = findBlock(tree, sourceId);
   if (!source) return tree;
-  if (target.parentId !== null) {
-    const parent = findBlock(tree, target.parentId);
-    if (!parent || slotKey(parent) === null) return tree;
-    if (containsBlock(source, target.parentId)) return tree;
+  if (allowed && !allowed.includes(source.name)) return tree;
+  if (!slotTargetExists(tree, target)) return tree;
+  if (target.parentId !== null && containsBlock(source, target.parentId)) {
+    return tree;
   }
   return insertNode(removeNode(tree, sourceId), source, target);
+}
+
+// Whether `target` names a real slot on a real parent. The top level always
+// exists; a nested target needs the parent present with that slot as an array.
+function slotTargetExists(
+  tree: readonly BlockNode[],
+  target: MoveTarget,
+): boolean {
+  if (target.parentId === null) return true;
+  const parent = findBlock(tree, target.parentId);
+  if (!parent) return false;
+  const key = target.slotKey ?? slotKey(parent);
+  return key !== null && isBlockNodeArray(parent.attrs?.[key]);
+}
+
+/**
+ * Insert a (new) block at a parent + slot + index, immutably. Mirrors
+ * moveBlock's validation for an insert rather than a relocation: a no-op (same
+ * tree) when the target slot is absent, or `allowed` is given and the block's
+ * name isn't in it. `parentId: null` inserts at the top level.
+ */
+export function insertBlockAt(
+  tree: readonly BlockNode[],
+  node: BlockNode,
+  target: MoveTarget,
+  allowed?: readonly string[],
+): readonly BlockNode[] {
+  if (allowed && !allowed.includes(node.name)) return tree;
+  if (!slotTargetExists(tree, target)) return tree;
+  return insertNode(tree, node, target);
 }
 
 /**
@@ -286,6 +321,16 @@ function slotKey(node: BlockNode): string | null {
   return null;
 }
 
+/** Every attr key holding a child-block array, in declaration order — the
+ *  block's slots. Empty for a slotless (leaf) block. */
+export function slotKeys(node: BlockNode): string[] {
+  const keys: string[] = [];
+  for (const [key, value] of Object.entries(node.attrs ?? {})) {
+    if (isBlockNodeArray(value)) keys.push(key);
+  }
+  return keys;
+}
+
 /** Whether `id` is `node` itself or anywhere in its subtree. */
 function containsBlock(node: BlockNode, id: string): boolean {
   if (node.id === id) return true;
@@ -319,10 +364,11 @@ function insertNode(
   }
   return nodes.map((current) => {
     if (current.id === target.parentId) {
-      const key = slotKey(current);
+      const key = target.slotKey ?? slotKey(current);
       if (key === null) return current;
       const slot = current.attrs?.[key];
-      const children = isBlockNodeArray(slot) ? slot : [];
+      if (!isBlockNodeArray(slot)) return current;
+      const children = slot;
       const at = clampIndex(target.index, children.length);
       return {
         ...current,

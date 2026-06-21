@@ -136,6 +136,24 @@ test.describe("editor playground", () => {
       .toBeGreaterThan(before.width);
   });
 
+  test("selects a nested block and exposes slot drop zones", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+
+    // A block nested inside the columns' left slot is selectable at depth.
+    await canvas.locator('[data-plumix-id="col-left"]').click();
+    await expect(page.getByTestId("plumix-overlay-selected")).toBeVisible();
+
+    // The edit seam tags container slots so the canvas can target nested drops.
+    await expect(
+      canvas.locator(
+        '[data-plumix-slot-parent="columns-1"][data-plumix-slot-key="left"]',
+      ),
+    ).toBeAttached();
+  });
+
   test("the Layers tab outlines the nested structure", async ({ page }) => {
     await page.goto("/");
 

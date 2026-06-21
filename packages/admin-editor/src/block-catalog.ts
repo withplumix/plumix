@@ -2,6 +2,23 @@ import type { BlockNode, BlockRegistry, BlockSpec } from "@plumix/blocks";
 import { rewriteBlockNodeIds } from "@plumix/blocks";
 import { labelSourceText } from "@plumix/core/i18n";
 
+/**
+ * A slot's `allowedBlocks` list (the block names it accepts), or undefined when
+ * the slot is unrestricted or the parent/slot is unknown. Resolved from the
+ * parent block's slot input in the registry — the policy the canvas drop and
+ * the inserter enforce.
+ */
+export function slotAllowedBlocks(
+  registry: BlockRegistry,
+  parentName: string,
+  slotKey: string,
+): readonly string[] | undefined {
+  const input = registry
+    .get(parentName)
+    ?.inputs?.find((i) => i.type === "slot" && i.name === slotKey);
+  return input?.allowedBlocks;
+}
+
 interface CatalogGroup {
   readonly category: string;
   readonly blocks: readonly BlockSpec[];

@@ -143,16 +143,38 @@ export function isBlockNodeArray(
 }
 
 function materializeSlots(
-  attrs: Readonly<Record<string, unknown>>,
+  node: BlockNode,
   env: WalkerEnv,
   childContext: BlockContext,
 ): Readonly<Record<string, unknown>> {
+  const attrs = node.attrs ?? {};
   let materialized: Record<string, unknown> | undefined;
   for (const [key, value] of Object.entries(attrs)) {
     if (isBlockNodeArray(value)) {
       materialized ??= { ...attrs };
+      const children = value;
       materialized[key] = function SlotComponent() {
-        return renderNodes(value, env, childContext);
+        const rendered = renderNodes(children, env, childContext);
+        if (!env.editing) return rendered;
+        // Tag the slot so the canvas can resolve a nested drop to it. The
+        // wrapper is display:contents — zero layout impact, the children flow
+        // as if it weren't there. Parent id + slot key are separate attrs (not
+        // one delimited string) so an id never needs charset-escaping. An empty
+        // slot gets a min-height placeholder so it stays a measurable target.
+        return createElement(
+          "div",
+          {
+            "data-plumix-slot-parent": node.id,
+            "data-plumix-slot-key": key,
+            style: { display: "contents" },
+          },
+          children.length > 0
+            ? rendered
+            : createElement("div", {
+                "data-plumix-slot-empty": "",
+                style: { minHeight: "2rem" },
+              }),
+        );
       };
     }
   }
@@ -204,7 +226,7 @@ function renderNode(
     parent: node.name,
     depth: context.depth + 1,
   };
-  const attrs = materializeSlots(node.attrs ?? {}, env, childContext);
+  const attrs = materializeSlots(node, env, childContext);
   const data = loaderData?.get(node.id);
   let rendered: ReactNode;
   if (data && data.error !== null) {
