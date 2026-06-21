@@ -28,6 +28,9 @@ interface CanvasFrameProps {
   readonly registry: BlockRegistry;
   /** Viewer capabilities, gating which block the empty state inserts. */
   readonly capabilities: ReadonlySet<string>;
+  /** Preview mode: still render the pushed tree, but draw no selection /
+   *  hover overlays, toolbar, drop indicators, or empty-state affordance. */
+  readonly readOnly?: boolean;
 }
 
 const SELECTED_OUTLINE = "#2563eb";
@@ -64,6 +67,7 @@ export function CanvasFrame({
   origin,
   registry,
   capabilities,
+  readOnly = false,
 }: CanvasFrameProps): ReactElement {
   const store = useEditorStoreApi();
   const device = useEditorStore((s) => s.device);
@@ -369,7 +373,7 @@ export function CanvasFrame({
       {/* Clip layer pinned over the visible canvas column. Its overflow:hidden
           keeps the absolutely-positioned overlays + toolbar from spilling onto
           the side rails when the iframe renders wider than the column. */}
-      {container && (
+      {!readOnly && container && (
         <div
           data-testid="plumix-overlay-clip"
           style={{
@@ -426,7 +430,7 @@ export function CanvasFrame({
       )}
       {/* Stays visible during a drag so an empty canvas still shows a drop
           target (no block geometry exists to draw an indicator against). */}
-      {isEmpty && (
+      {!readOnly && isEmpty && (
         <button
           type="button"
           data-testid="plumix-empty-add"

@@ -346,6 +346,34 @@ test.describe("editor playground", () => {
     await expect(editor).not.toContainText("standalone harness");
   });
 
+  test("the edit toolbar exposes a copy-preview-link action", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await expect(page.getByTestId("plumix-copy-preview-link")).toBeVisible();
+  });
+
+  test("preview mode hides the editing chrome and renders read-only", async ({
+    page,
+  }) => {
+    await page.goto("/?readonly");
+
+    // The preview shell renders the banner + canvas, no editing rails/toolbar.
+    await expect(page.getByTestId("plumix-editor-preview")).toBeVisible();
+    await expect(page.getByTestId("playground-preview-banner")).toBeVisible();
+    await expect(page.getByTestId("plumix-editor-toolbar")).toHaveCount(0);
+    await expect(page.getByTestId("plumix-editor-left")).toHaveCount(0);
+    await expect(page.getByTestId("plumix-add-block")).toHaveCount(0);
+
+    // The real theme still renders the content; clicking a block draws no
+    // selection overlay (no editing affordances).
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    await expect(canvas.locator('[data-plumix-id="heading-1"]')).toBeVisible();
+    await canvas.locator('[data-plumix-id="heading-1"]').click();
+    await expect(page.getByTestId("plumix-overlay-selected")).toHaveCount(0);
+    await expect(page.getByTestId("plumix-selection-toolbar")).toHaveCount(0);
+  });
+
   test("the Layers tab outlines the nested structure", async ({ page }) => {
     await page.goto("/");
 

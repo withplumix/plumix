@@ -62,10 +62,34 @@ function DocumentPanelStub(): ReactElement {
   );
 }
 
+const params = new URLSearchParams(window.location.search);
 // `?theme=dark` flips the shell into dark mode so the editor (and the Tiptap
 // rail) can be exercised + screenshotted in both themes against one build.
-if (new URLSearchParams(window.location.search).get("theme") === "dark") {
+if (params.get("theme") === "dark") {
   document.documentElement.classList.add("dark");
+}
+// `?readonly` exercises preview mode: read-only canvas, editing chrome hidden,
+// a host-supplied banner standing in for the revision/restore overlay.
+const readOnly = params.has("readonly");
+
+// A stand-in for the admin's revision/share preview banner.
+function PreviewBannerStub(): ReactElement {
+  return (
+    <div
+      className="bg-muted text-muted-foreground flex items-center justify-between border-b px-4 py-2 text-sm"
+      data-testid="playground-preview-banner"
+    >
+      <span>Previewing a past revision (read-only)</span>
+      <button
+        type="button"
+        className="bg-primary text-primary-foreground rounded-md px-3 py-1 text-xs"
+        data-testid="playground-restore"
+        onClick={() => console.info("[playground] restore")}
+      >
+        Restore this revision
+      </button>
+    </div>
+  );
 }
 
 const root = document.getElementById("root");
@@ -80,6 +104,9 @@ if (root) {
           defaultValue={defineEntryContent(SEED_BLOCKS)}
           capabilities={new Set()}
           patterns={SEED_PATTERNS}
+          readOnly={readOnly}
+          previewBanner={readOnly ? <PreviewBannerStub /> : undefined}
+          previewLink="https://example.test/blog/hello?preview=demo-token"
           documentPanel={<DocumentPanelStub />}
           publish={{
             onPublish: () => console.info("[playground] publish"),

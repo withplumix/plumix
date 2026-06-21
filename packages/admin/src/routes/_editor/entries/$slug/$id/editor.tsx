@@ -8,6 +8,7 @@ import { createDebouncer } from "@/editor/debounce.js";
 import { detectStaleAutosave } from "@/editor/detect-stale-autosave.js";
 import { registerCoreBlocks } from "@/editor/register-core-blocks.js";
 import { resolveEditorMode } from "@/editor/resolve-editor-mode.js";
+import { PreviewBanner } from "@/editor/revisions/PreviewBanner.js";
 import { StaleDraftDialog } from "@/editor/StaleDraftDialog.js";
 import {
   entryMetaBoxesForType,
@@ -17,9 +18,11 @@ import {
 import { orpc } from "@/lib/orpc.js";
 import { getRegisteredBlocks } from "@/lib/plugin-registry.js";
 import { toastError, toastSuccess } from "@/lib/toast.js";
+import { useFormatters } from "@/lib/use-formatters.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
+import { ORPCError } from "@orpc/client";
 import {
   useMutation,
   useQuery,
@@ -30,6 +33,7 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 import * as v from "valibot";
 
 import type { EntryContent } from "@plumix/blocks";
+import type { Label } from "@plumix/core/i18n";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { PlumixEditor } from "@plumix/admin-editor";
 import {
@@ -60,6 +64,10 @@ const M = {
     id: "editor.bespoke.stale.loading",
     message: "Loading…",
   }),
+  revisionConflict: defineMessage({
+    id: "editor.bespoke.revision.conflict",
+    message: "This entry changed since the preview loaded — reload and retry.",
+  }),
 } satisfies Record<string, MessageDescriptor>;
 
 // Core + plugin blocks supply the inspector's input schemas. Built once at
@@ -84,6 +92,12 @@ const previewLinkQuery = (
 // stays the default editor). The entry load and the preview mint both run in
 // the loader so a failure (unreadable entry, no public url) surfaces through
 // one ErrorScreen rather than a dead canvas.
+const editorSearch = v.object({
+  // Opening `?revision=<id>` views that past revision read-only with a restore
+  // banner; absent → the normal editing session.
+  revision: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+});
+
 export const Route = createFileRoute("/_editor/entries/$slug/$id/editor")({
   params: {
     parse: (raw) => {
@@ -95,6 +109,7 @@ export const Route = createFileRoute("/_editor/entries/$slug/$id/editor")({
       return { slug: raw.slug, id: result.output };
     },
   },
+  validateSearch: editorSearch,
   loader: ({ context, params }) =>
     Promise.all([
       context.queryClient.ensureQueryData(
@@ -143,6 +158,7 @@ function ErrorScreen(): ReactNode {
 function BespokeEditorRoute(): ReactNode {
   const { slug, id } = Route.useParams();
   const { user } = Route.useRouteContext();
+  const { revision } = Route.useSearch();
   const { data: entry } = useSuspenseQuery(
     orpc.entry.get.queryOptions({ input: { id, preview: true } }),
   );
@@ -152,9 +168,22 @@ function BespokeEditorRoute(): ReactNode {
   // a freshly-made draft leaves the source at "live" (no flip) — the inner
   // bumps it so the canvas drops the discarded edits. (Mirrors the Puck route,
   // which reseeds Puck in place instead.)
-  const previewSource = entry._preview?.source ?? "live";
   const [reseedNonce, setReseedNonce] = useState(0);
   const reseed = useCallback(() => setReseedNonce((n) => n + 1), []);
+
+  // A `?revision=<id>` request opens that revision read-only with a restore
+  // banner — keyed so leaving/entering preview re-seeds the canvas.
+  if (revision !== undefined) {
+    return (
+      <RevisionPreview
+        key={`revision:${String(revision)}`}
+        id={id}
+        revisionId={revision}
+        capabilities={user.capabilities}
+      />
+    );
+  }
+  const previewSource = entry._preview?.source ?? "live";
   // Pass capabilities + entryType + userId across a prop boundary so the React
   // Compiler treats them as stable inputs (member/derived reads inline read as
   // possibly-mutated, which forces the compiler to skip optimizing).
@@ -595,9 +624,13 @@ function BespokeEditor({
   );
 
   // `createPreviewLink` returns a site-relative url (`/blog/hello?preview=…`);
-  // resolve it against the admin's own origin (the public site is same-origin)
-  // and flip on `plumix.edit` so the public render boots the editor runtime.
+  // resolve it against the admin's own origin (the public site is same-origin).
+  // The shareable draft-preview link is that token URL as-is; the canvas reuses
+  // it with `plumix.edit` flipped on so the public render boots the runtime.
   const target = new URL(previewLink.url, window.location.origin);
+  // The shareable draft-preview link is the token URL as-is (captured before
+  // the edit flag is added); the canvas reuses the same URL with `plumix.edit`.
+  const shareUrl = target.toString();
   target.searchParams.set("plumix.edit", "");
 
   return (
@@ -608,10 +641,110 @@ function BespokeEditor({
       registry={registry}
       capabilities={capabilitySet}
       patterns={patterns}
+      previewLink={shareUrl}
       onChange={handleChange}
       documentPanel={documentPanel}
       publish={publishActions}
       overlay={overlay}
+    />
+  );
+}
+
+// Opens a past revision read-only in the same editor, with a banner offering
+// "back to live" and restore. Restore reuses the shared revisions RPC (which
+// lands on the caller's autosave row for autosave types, or the live row with
+// an optimistic-concurrency token for legacy types), then returns to live.
+function RevisionPreview({
+  id,
+  revisionId,
+  capabilities,
+}: {
+  readonly id: number;
+  readonly revisionId: number;
+  readonly capabilities: readonly string[];
+}): ReactNode {
+  const navigate = Route.useNavigate();
+  const queryClient = useQueryClient();
+  const renderLabel = useLabel();
+  const { formatRelative } = useFormatters();
+  const capabilitySet = useMemo(() => new Set(capabilities), [capabilities]);
+  const { data: previewLink } = useSuspenseQuery(previewLinkQuery(id));
+  const revisionQuery = useQuery(
+    orpc.entry.revisions.get.queryOptions({ input: { revisionId } }),
+  );
+  const liveQuery = useQuery(orpc.entry.get.queryOptions({ input: { id } }));
+
+  const handleBackToLive = useCallback(
+    () =>
+      void navigate({ search: (prev) => ({ ...prev, revision: undefined }) }),
+    [navigate],
+  );
+
+  const liveUpdatedAt = liveQuery.data?.updatedAt;
+  const restore = useMutation({
+    mutationFn: () =>
+      orpc.entry.revisions.restore.call({
+        revisionId,
+        // Honored only on the legacy live-write path; the autosave destination
+        // ignores it. Pass the live row's token to keep that contract.
+        expectedLiveUpdatedAt: liveUpdatedAt,
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: orpc.entry.get.queryOptions({
+            input: { id, preview: true },
+          }).queryKey,
+        }),
+      ]);
+      handleBackToLive();
+    },
+  });
+
+  const revision = revisionQuery.data;
+  // Gate on the live entry too: its `updatedAt` is the restore concurrency
+  // token, so Restore must not be clickable until it's loaded (an undefined
+  // token would skip the stale-check on the legacy live-write path).
+  if (!revision || !liveQuery.data) return <PendingScreen />;
+
+  const target = new URL(previewLink.url, window.location.origin);
+  target.searchParams.set("plumix.edit", "");
+
+  const restoreErrorLabel: Label | null =
+    restore.error instanceof ORPCError && restore.error.code === "CONFLICT"
+      ? M.revisionConflict
+      : restore.error instanceof Error
+        ? restore.error.message
+        : null;
+  const restoreError =
+    restoreErrorLabel !== null ? renderLabel(restoreErrorLabel) : null;
+  const revisionAuthor =
+    revision.authorName ?? revision.authorEmail ?? `#${String(revisionId)}`;
+
+  return (
+    <PlumixEditor
+      previewUrl={target.toString()}
+      origin={target.origin}
+      defaultValue={
+        isEntryContent(revision.content) ? revision.content : undefined
+      }
+      registry={registry}
+      capabilities={capabilitySet}
+      readOnly
+      previewBanner={
+        <PreviewBanner
+          revisionUpdatedAt={revision.updatedAt}
+          revisionAuthor={revisionAuthor}
+          relativeTime={formatRelative}
+          onBackToLive={handleBackToLive}
+          onRestore={() => restore.mutate()}
+          isRestoring={restore.isPending}
+          restoreError={restoreError}
+        />
+      }
     />
   );
 }

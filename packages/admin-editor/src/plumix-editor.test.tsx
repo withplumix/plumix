@@ -53,6 +53,29 @@ describe("PlumixEditor", () => {
     // Block tab is active by default → inspector empty state shows.
     expect(getByTestId("block-inspector-empty")).toBeDefined();
   });
+
+  test("read-only mode hides the editing chrome and shows the preview banner", () => {
+    const { getByTestId, queryByTestId } = render(
+      <I18nProvider i18n={i18n}>
+        <PlumixEditor
+          previewUrl="about:blank"
+          origin="http://localhost:3000"
+          defaultValue={{ version: "plumix.v2", blocks: [] }}
+          registry={registry}
+          readOnly
+          previewBanner={<div data-testid="preview-banner">Revision</div>}
+        />
+      </I18nProvider>,
+    );
+
+    // Preview shell: the canvas + banner render, the editing rails/toolbar do not.
+    expect(getByTestId("plumix-editor-preview")).toBeDefined();
+    expect(getByTestId("plumix-canvas-frame")).toBeDefined();
+    expect(getByTestId("preview-banner")).toBeDefined();
+    expect(queryByTestId("plumix-editor-layout")).toBeNull();
+    expect(queryByTestId("plumix-editor-toolbar")).toBeNull();
+    expect(queryByTestId("plumix-editor-left")).toBeNull();
+  });
 });
 
 describe("TreeChangeEmitter", () => {

@@ -1043,13 +1043,13 @@ msgid "terms.create.error.emptySlug"
 msgstr "Couldn't derive a slug from that name — please type one manually."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
-msgid "editor.bespoke.toast.discardFailed"
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.toast.discardFailed"
 msgstr "Couldn't discard the draft — try again."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.toast.discardFailed"
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.discardFailed"
 msgstr "Couldn't discard the draft — try again."
 
 #. js-lingui-explicit-id
@@ -1133,13 +1133,13 @@ msgid "editor.bespoke.previewFailed"
 msgstr "Couldn't open this entry in the editor."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
-msgid "editor.bespoke.toast.publishFailed"
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.toast.publishFailed"
 msgstr "Couldn't publish — try again."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.toast.publishFailed"
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.publishFailed"
 msgstr "Couldn't publish — try again."
 
 #. js-lingui-explicit-id
@@ -1538,13 +1538,13 @@ msgid "entries.list.statusFilter.draft"
 msgstr "Draft"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
-msgid "editor.bespoke.toast.discarded"
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.toast.draftDiscarded"
 msgstr "Draft discarded."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.toast.draftDiscarded"
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.discarded"
 msgstr "Draft discarded."
 
 #. js-lingui-explicit-id
@@ -2091,13 +2091,13 @@ msgid "users.list.loading"
 msgstr "Loading users"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
-msgid "editor.bespoke.stale.loading"
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.stale.loading"
 msgstr "Loading…"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.stale.loading"
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.stale.loading"
 msgstr "Loading…"
 
 #. js-lingui-explicit-id
@@ -2761,13 +2761,13 @@ msgid "type.generic.itemPublishedPrivately"
 msgstr "Published privately"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
-msgid "editor.bespoke.toast.published"
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.entry.edit.toast.published"
 msgstr "Published."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.toast.published"
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.published"
 msgstr "Published."
 
 #. js-lingui-explicit-id
@@ -3696,6 +3696,11 @@ msgstr "This device"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.noAuthenticator"
 msgstr "This device doesn't support passkeys."
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.revision.conflict"
+msgstr "This entry changed since the preview loaded — reload and retry."
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/plugin-field-error-boundary.tsx

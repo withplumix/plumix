@@ -44,6 +44,13 @@ interface PlumixEditorProps {
   readonly capabilities?: ReadonlySet<string>;
   /** Theme + plugin patterns offered in the inserter alongside the blocks. */
   readonly patterns?: readonly InserterPattern[];
+  /** Preview mode: render the canvas read-only with the editing chrome hidden
+   *  (used to view a past revision or a shared draft). */
+  readonly readOnly?: boolean;
+  /** Banner shown above the canvas in preview mode (e.g. revision + restore). */
+  readonly previewBanner?: ReactNode;
+  /** A shareable `?preview=…` URL; surfaces a copy-link action in the toolbar. */
+  readonly previewLink?: string;
   /** Fires with the full content envelope whenever the tree changes. The host
    *  debounces + persists (orpc lives in the app, never in this package). */
   readonly onChange?: (content: EntryContent) => void;
@@ -68,11 +75,34 @@ export function PlumixEditor({
   registry,
   capabilities = NO_CAPABILITIES,
   patterns,
+  readOnly = false,
+  previewBanner,
+  previewLink,
   onChange,
   documentPanel,
   publish,
   overlay,
 }: PlumixEditorProps): ReactElement {
+  if (readOnly) {
+    return (
+      <EditorProvider initialTree={defaultValue?.blocks}>
+        <div
+          className="flex h-full min-h-0 flex-col"
+          data-testid="plumix-editor-preview"
+        >
+          {previewBanner}
+          <CanvasFrame
+            previewUrl={previewUrl}
+            origin={origin}
+            registry={registry}
+            capabilities={capabilities}
+            readOnly
+          />
+        </div>
+        {overlay}
+      </EditorProvider>
+    );
+  }
   return (
     <EditorProvider initialTree={defaultValue?.blocks}>
       <SidebarProvider
@@ -113,6 +143,7 @@ export function PlumixEditor({
         <SidebarInset className="min-w-0">
           <EditorToolbar
             publish={publish}
+            previewLink={previewLink}
             inserter={
               <BlockInserterPopover
                 registry={registry}
