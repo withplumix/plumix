@@ -1043,14 +1043,14 @@ msgid "terms.create.error.emptySlug"
 msgstr "Aus diesem Namen konnte kein Slug abgeleitet werden — bitte manuell eingeben."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
-msgid "editor.bespoke.toast.discardFailed"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.entry.edit.toast.discardFailed"
 msgstr "Entwurf konnte nicht verworfen werden — bitte erneut versuchen."
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.discardFailed"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -1133,14 +1133,14 @@ msgid "editor.bespoke.previewFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
-msgid "editor.bespoke.toast.publishFailed"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.entry.edit.toast.publishFailed"
 msgstr "Veröffentlichen fehlgeschlagen — bitte erneut versuchen."
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.publishFailed"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
@@ -1538,14 +1538,14 @@ msgid "entries.list.statusFilter.draft"
 msgstr "Entwurf"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
-msgid "editor.bespoke.toast.discarded"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.entry.edit.toast.draftDiscarded"
 msgstr "Entwurf verworfen."
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.discarded"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -2091,14 +2091,14 @@ msgid "users.list.loading"
 msgstr "Benutzer werden geladen"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
-msgid "editor.bespoke.stale.loading"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.entry.edit.stale.loading"
 msgstr "Wird geladen…"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.stale.loading"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
@@ -2761,14 +2761,14 @@ msgid "type.generic.itemPublishedPrivately"
 msgstr "Privat veröffentlicht"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
-msgid "editor.bespoke.toast.published"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.entry.edit.toast.published"
 msgstr "Veröffentlicht."
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.published"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
@@ -3696,6 +3696,11 @@ msgstr "Dieses Gerät"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.enroll.noAuthenticator"
 msgstr "Dieses Gerät unterstützt keine Passkeys."
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.revision.conflict"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/plugin-field-error-boundary.tsx

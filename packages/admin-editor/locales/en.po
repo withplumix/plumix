@@ -44,6 +44,11 @@ msgid "editor.tab.blocks"
 msgstr "Blocks"
 
 #. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.copyPreviewLink"
+msgstr "Copy preview link"
+
+#. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.delete"
 msgstr "Delete"

@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Trans } from "@lingui/react";
 
 import { Button } from "@plumix/admin-ui/button";
+import { Share2 } from "@plumix/admin-ui/icons";
 import { SidebarTrigger } from "@plumix/admin-ui/sidebar";
 
 import { canRedo, canUndo } from "./history.js";
@@ -35,9 +36,12 @@ export interface PublishActions {
 export function EditorToolbar({
   publish,
   inserter,
+  previewLink,
 }: {
   readonly publish?: PublishActions;
   readonly inserter?: ReactNode;
+  /** A shareable `?preview=…` URL; when set, a copy-to-clipboard action shows. */
+  readonly previewLink?: string;
 }): ReactElement {
   const undoAvailable = useEditorStore((s) => canUndo(s.history));
   const redoAvailable = useEditorStore((s) => canRedo(s.history));
@@ -72,8 +76,26 @@ export function EditorToolbar({
       >
         <Trans id="editor.toolbar.redo" message="Redo" />
       </Button>
+      {previewLink ? <CopyPreviewLink url={previewLink} /> : null}
       {publish ? <PublishControls publish={publish} /> : null}
     </header>
+  );
+}
+
+/** Copies the shareable preview URL to the clipboard. The host mints the URL
+ *  (a `?preview=<token>` link); this only surfaces the copy action. */
+function CopyPreviewLink({ url }: { readonly url: string }): ReactElement {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      data-testid="plumix-copy-preview-link"
+      onClick={() => void navigator.clipboard.writeText(url)}
+    >
+      <Share2 />
+      <Trans id="editor.toolbar.copyPreviewLink" message="Copy preview link" />
+    </Button>
   );
 }
 

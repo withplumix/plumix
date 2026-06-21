@@ -125,6 +125,37 @@ describe("EditorToolbar", () => {
     expect(queryByTestId("unpublished-changes-banner")).toBeNull();
   });
 
+  test("a preview link surfaces a copy-to-clipboard action", () => {
+    const writeText = vi.fn();
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    const { getByTestId, queryByTestId } = render(
+      <I18nProvider i18n={i18n}>
+        <EditorProvider initialTree={[]}>
+          <SidebarProvider>
+            <EditorToolbar previewLink="https://x.test/blog/hi?preview=tok" />
+          </SidebarProvider>
+        </EditorProvider>
+      </I18nProvider>,
+    );
+    fireEvent.click(getByTestId("plumix-copy-preview-link"));
+    expect(writeText).toHaveBeenCalledWith(
+      "https://x.test/blog/hi?preview=tok",
+    );
+    vi.unstubAllGlobals();
+    // No link → no action.
+    cleanup();
+    render(
+      <I18nProvider i18n={i18n}>
+        <EditorProvider initialTree={[]}>
+          <SidebarProvider>
+            <EditorToolbar />
+          </SidebarProvider>
+        </EditorProvider>
+      </I18nProvider>,
+    );
+    expect(queryByTestId("plumix-copy-preview-link")).toBeNull();
+  });
+
   test("a pending draft enables discard/publish and shows the banner", () => {
     const draftMode = {
       hasPendingDraft: true,
