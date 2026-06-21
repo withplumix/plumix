@@ -1,6 +1,6 @@
 import { createStore } from "zustand/vanilla";
 
-import type { BlockNode, BlockSpec } from "@plumix/blocks";
+import type { BlockNode, InsertableBlockEntry } from "@plumix/blocks";
 import { isBlockNodeArray } from "@plumix/blocks";
 
 import type { MoveTarget } from "./block-tree-ops.js";
@@ -40,8 +40,8 @@ export interface EditorState {
   readonly hoverId: string | null;
   readonly device: EditorDevice;
   readonly zoom: number;
-  /** The catalog block currently being dragged toward the canvas, if any. */
-  readonly dragSpec: BlockSpec | null;
+  /** The catalog entry (block or variation) being dragged toward the canvas. */
+  readonly dragSpec: InsertableBlockEntry | null;
   /** The existing block being dragged to a new position on the canvas, if any. */
   readonly movingId: string | null;
   /** Snapshot history of the tree, driving undo/redo. */
@@ -87,7 +87,7 @@ export interface EditorActions {
   setHover: (id: string | null) => void;
   setDevice: (device: EditorDevice) => void;
   setZoom: (zoom: number) => void;
-  startBlockDrag: (spec: BlockSpec) => void;
+  startBlockDrag: (entry: InsertableBlockEntry) => void;
   endBlockDrag: () => void;
   /** Begin / end dragging an existing block to a new canvas position. */
   startMove: (id: string) => void;

@@ -7,8 +7,8 @@ import type { BlockRect, SlotRect } from "@plumix/blocks/renderer";
 
 import type { FrameOffset, OverlayBox } from "./overlay.js";
 import {
-  createBlockFromSpec,
-  groupBlocksByCategory,
+  createNodeFromEntry,
+  groupInsertables,
   slotAllowedBlocks,
 } from "./block-catalog.js";
 import { findBlock } from "./block-tree-ops.js";
@@ -247,7 +247,11 @@ export function CanvasFrame({
         if (dragSpec) {
           store
             .getState()
-            .insertBlockInto(createBlockFromSpec(dragSpec), target, allowed);
+            .insertBlockInto(
+              createNodeFromEntry(registry, dragSpec),
+              target,
+              allowed,
+            );
         } else if (movingId) {
           store.getState().moveBlock(movingId, target, allowed);
         }
@@ -257,7 +261,10 @@ export function CanvasFrame({
           if (dragSpec) {
             store
               .getState()
-              .insertBlock(createBlockFromSpec(dragSpec), placement.index);
+              .insertBlock(
+                createNodeFromEntry(registry, dragSpec),
+                placement.index,
+              );
           } else if (movingId) {
             // placement.index counts the pre-removal top level; moveBlock
             // removes the source first, so shift down by one when the source
@@ -297,9 +304,11 @@ export function CanvasFrame({
   }, [dragSpec, movingId, store, registry]);
 
   const addFirstBlock = useCallback((): void => {
-    const [group] = groupBlocksByCategory(registry, { capabilities });
-    const spec = group?.blocks[0];
-    if (spec) store.getState().insertBlock(createBlockFromSpec(spec), 0);
+    const [group] = groupInsertables(registry, { capabilities });
+    const entry = group?.entries[0];
+    if (entry) {
+      store.getState().insertBlock(createNodeFromEntry(registry, entry), 0);
+    }
   }, [registry, capabilities, store]);
 
   // Overlays live in a clip layer pinned over the canvas viewport, so their

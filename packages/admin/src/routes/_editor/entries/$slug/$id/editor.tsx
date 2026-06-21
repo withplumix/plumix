@@ -9,7 +9,11 @@ import { detectStaleAutosave } from "@/editor/detect-stale-autosave.js";
 import { registerCoreBlocks } from "@/editor/register-core-blocks.js";
 import { resolveEditorMode } from "@/editor/resolve-editor-mode.js";
 import { StaleDraftDialog } from "@/editor/StaleDraftDialog.js";
-import { entryMetaBoxesForType, findEntryTypeBySlug } from "@/lib/manifest.js";
+import {
+  entryMetaBoxesForType,
+  findEntryTypeBySlug,
+  getPatterns,
+} from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { getRegisteredBlocks } from "@/lib/plugin-registry.js";
 import { toastError, toastSuccess } from "@/lib/toast.js";
@@ -62,6 +66,9 @@ const M = {
 // module load, mirroring the Puck route.
 registerCoreBlocks();
 const registry = createBlockRegistry(getRegisteredBlocks());
+
+// Theme + plugin patterns, surfaced in the inserter alongside the blocks.
+const patterns = getPatterns();
 
 // Mint once and cache forever — each call writes a fresh preview token, and
 // the URL it returns is the canvas iframe's target for the editor's lifetime.
@@ -600,6 +607,7 @@ function BespokeEditor({
       defaultValue={isEntryContent(entry.content) ? entry.content : undefined}
       registry={registry}
       capabilities={capabilitySet}
+      patterns={patterns}
       onChange={handleChange}
       documentPanel={documentPanel}
       publish={publishActions}

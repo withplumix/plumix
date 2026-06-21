@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { useEffect } from "react";
 import { Trans } from "@lingui/react";
 
@@ -30,11 +30,14 @@ export interface PublishActions {
   readonly draftMode?: DraftMode;
 }
 
-/** Top toolbar: undo/redo plus the host-wired publish / draft actions. */
+/** Top toolbar: an inline inserter slot, undo/redo, plus the host-wired
+ *  publish / draft actions. */
 export function EditorToolbar({
   publish,
+  inserter,
 }: {
   readonly publish?: PublishActions;
+  readonly inserter?: ReactNode;
 }): ReactElement {
   const undoAvailable = useEditorStore((s) => canUndo(s.history));
   const redoAvailable = useEditorStore((s) => canRedo(s.history));
@@ -48,6 +51,7 @@ export function EditorToolbar({
     >
       {/* Collapses both rails for a focused canvas (also Cmd/Ctrl+B). */}
       <SidebarTrigger data-testid="plumix-rails-toggle" />
+      {inserter}
       <Button
         type="button"
         variant="ghost"

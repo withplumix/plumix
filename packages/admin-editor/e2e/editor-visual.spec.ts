@@ -257,6 +257,42 @@ test.describe("editor playground", () => {
       .toBe(true);
   });
 
+  test("the Blocks tab lists variations and a patterns section", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    // The augmented core/group surfaces its inserter variation in place of the
+    // bare block; the seeded pattern shows under the patterns group.
+    await expect(
+      page.getByTestId("block-catalog-item-core/group/group/two-column"),
+    ).toBeVisible();
+    await expect(page.getByTestId("block-catalog-patterns")).toBeVisible();
+    await expect(
+      page.getByTestId("block-catalog-pattern-starter/hero"),
+    ).toBeVisible();
+  });
+
+  test("the + Add Block popover opens the same catalog and inserts a pattern", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    const blocks = canvas.locator("[data-plumix-id]");
+    const before = await blocks.count();
+
+    // AC4: the toolbar's inline inserter opens the catalog in a popover.
+    await page.getByTestId("plumix-add-block").click();
+    const popover = page.getByTestId("plumix-add-block-popover");
+    await expect(popover.getByTestId("block-catalog")).toBeVisible();
+
+    // Inserting the hero pattern splices its whole two-block composition in one
+    // step and closes the popover.
+    await popover.getByTestId("block-catalog-pattern-starter/hero").click();
+    await expect(blocks).toHaveCount(before + 2);
+    await expect(popover).toBeHidden();
+  });
+
   test("the Layers tab outlines the nested structure", async ({ page }) => {
     await page.goto("/");
 
