@@ -1,5 +1,5 @@
 import type { BlockNode } from "@plumix/blocks";
-import { isBlockNodeArray } from "@plumix/blocks";
+import { isBlockNodeArray, rewriteBlockNodeIds } from "@plumix/blocks";
 
 /** Find a block by id anywhere in the tree, descending into slot attrs. */
 export function findBlock(
@@ -15,6 +15,28 @@ export function findBlock(
     }
   }
   return undefined;
+}
+
+/**
+ * The id of the block whose slot directly holds `id`, or null when `id` is a
+ * top-level block or absent. Unlike the layers outline, this descends every
+ * slot (not just the first) so select-parent resolves correctly inside
+ * multi-slot blocks.
+ */
+export function findParentId(
+  nodes: readonly BlockNode[],
+  id: string,
+  parent: string | null = null,
+): string | null {
+  for (const node of nodes) {
+    if (node.id === id) return parent;
+    for (const value of Object.values(node.attrs ?? {})) {
+      if (!isBlockNodeArray(value)) continue;
+      const hit = findParentId(value, id, node.id);
+      if (hit !== null) return hit;
+    }
+  }
+  return null;
 }
 
 export interface FlatNode {
@@ -154,6 +176,106 @@ export function moveBlock(
   return insertNode(removeNode(tree, sourceId), source, target);
 }
 
+/**
+ * Remove every block in `ids` from the tree at once, immutably. Descends all
+ * slots and returns the same reference when nothing matched, so untouched
+ * branches stay referentially stable for React.
+ */
+export function removeBlocks(
+  nodes: readonly BlockNode[],
+  ids: ReadonlySet<string>,
+): readonly BlockNode[] {
+  if (ids.size === 0) return nodes;
+  const kept = nodes.filter((node) => !ids.has(node.id));
+  let changed = kept.length !== nodes.length;
+  const mapped = kept.map((node) => {
+    const attrs = node.attrs;
+    if (!attrs) return node;
+    let nextAttrs: Record<string, unknown> | undefined;
+    for (const [key, value] of Object.entries(attrs)) {
+      if (!isBlockNodeArray(value)) continue;
+      const pruned = removeBlocks(value, ids);
+      if (pruned !== value) (nextAttrs ??= { ...attrs })[key] = pruned;
+    }
+    if (!nextAttrs) return node;
+    changed = true;
+    return { ...node, attrs: nextAttrs };
+  });
+  return changed ? mapped : nodes;
+}
+
+/**
+ * Insert a fresh-id clone of `id` immediately after it within its own parent
+ * slot. Ids are rewritten through the whole subtree so the duplicate is fully
+ * independent. Returns the same tree and a null id when the source is absent.
+ */
+export function duplicateBlock(
+  tree: readonly BlockNode[],
+  id: string,
+): { readonly tree: readonly BlockNode[]; readonly newId: string | null } {
+  const source = findBlock(tree, id);
+  if (!source) return { tree, newId: null };
+  const [clone] = rewriteBlockNodeIds([source]);
+  if (!clone) return { tree, newId: null };
+  const parentId = findParentId(tree, id);
+  const index = siblingsOf(tree, parentId).findIndex((n) => n.id === id) + 1;
+  return {
+    tree: insertNode(tree, clone, { parentId, index }),
+    newId: clone.id,
+  };
+}
+
+/**
+ * Reduce a selection to its roots: ids that have no selected ancestor. Used by
+ * bulk duplicate so a block isn't cloned twice when both it and its container
+ * are selected (the container's clone already carries a copy of the child).
+ */
+export function selectionRoots(
+  tree: readonly BlockNode[],
+  ids: ReadonlySet<string>,
+): string[] {
+  return [...ids].filter((id) => {
+    let parent = findParentId(tree, id);
+    while (parent !== null) {
+      if (ids.has(parent)) return false;
+      parent = findParentId(tree, parent);
+    }
+    return true;
+  });
+}
+
+/**
+ * Move `id` by `delta` positions among its siblings (negative = up). A no-op
+ * (same tree reference) at the ends or when the block is absent.
+ */
+export function moveBlockBy(
+  tree: readonly BlockNode[],
+  id: string,
+  delta: number,
+): readonly BlockNode[] {
+  const parentId = findParentId(tree, id);
+  const siblings = siblingsOf(tree, parentId);
+  const from = siblings.findIndex((n) => n.id === id);
+  if (from === -1) return tree;
+  const to = from + delta;
+  if (to < 0 || to >= siblings.length) return tree;
+  return moveBlock(tree, id, { parentId, index: to });
+}
+
+// The blocks sharing `id`'s level: the top level when parentId is null, else
+// the parent's first slot (the one the tree ops address).
+function siblingsOf(
+  tree: readonly BlockNode[],
+  parentId: string | null,
+): readonly BlockNode[] {
+  if (parentId === null) return tree;
+  const parent = findBlock(tree, parentId);
+  if (!parent) return [];
+  const key = slotKey(parent);
+  const slot = key !== null ? parent.attrs?.[key] : undefined;
+  return isBlockNodeArray(slot) ? slot : [];
+}
+
 // The first attr key holding a child-block array, or null if the block has no
 // slot. The layers tree addresses only this first slot — multi-slot blocks
 // aren't fully reachable from the outline yet (tracked as a #1108 follow-up).
@@ -179,22 +301,7 @@ function removeNode(
   nodes: readonly BlockNode[],
   id: string,
 ): readonly BlockNode[] {
-  const next = nodes.filter((node) => node.id !== id);
-  let changed = next.length !== nodes.length;
-  const mapped = next.map((node) => {
-    const attrs = node.attrs;
-    if (!attrs) return node;
-    let nextAttrs: Record<string, unknown> | undefined;
-    for (const [key, value] of Object.entries(attrs)) {
-      if (!isBlockNodeArray(value)) continue;
-      const pruned = removeNode(value, id);
-      if (pruned !== value) (nextAttrs ??= { ...attrs })[key] = pruned;
-    }
-    if (!nextAttrs) return node;
-    changed = true;
-    return { ...node, attrs: nextAttrs };
-  });
-  return changed ? mapped : nodes;
+  return removeBlocks(nodes, new Set([id]));
 }
 
 function clampIndex(index: number, length: number): number {

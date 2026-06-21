@@ -59,6 +59,32 @@ describe("EditorCanvas", () => {
     spy.mockRestore();
   });
 
+  test("shift-clicking a block reports an additive canvas:select", () => {
+    const posted: unknown[] = [];
+    const spy = vi
+      .spyOn(window.parent, "postMessage")
+      .mockImplementation((data) => posted.push(data));
+
+    const { container } = render(
+      <EditorCanvas registry={registry} origin={ORIGIN} />,
+    );
+    pushTree([{ id: "h1", name: "core/heading", attrs: { text: "Hi" } }]);
+
+    const block = container.querySelector('[data-plumix-id="h1"]');
+    expect(block).not.toBeNull();
+    if (block) fireEvent.click(block, { shiftKey: true });
+
+    const select = posted
+      .map((p) => (p as { message?: { type?: string } }).message)
+      .find((m) => m?.type === "canvas:select");
+    expect(select).toEqual({
+      type: "canvas:select",
+      id: "h1",
+      additive: true,
+    });
+    spy.mockRestore();
+  });
+
   test("renders an initial tree immediately, before any host push", () => {
     const { container } = render(
       <EditorCanvas

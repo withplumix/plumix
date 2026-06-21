@@ -73,7 +73,7 @@ export function connectCanvas({
         pushTree();
         break;
       case "canvas:select":
-        store.getState().select(canvas.id);
+        store.getState().select(canvas.id, { additive: canvas.additive });
         break;
       case "canvas:hover":
         store.getState().setHover(canvas.id);

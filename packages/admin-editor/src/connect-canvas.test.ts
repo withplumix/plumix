@@ -56,6 +56,19 @@ describe("connectCanvas", () => {
     conn.dispose();
   });
 
+  test("an additive canvas:select extends the selection set", () => {
+    const store = createEditorStore();
+    const { win } = fakeFrame();
+    const conn = connectCanvas({ store, frameWindow: win, origin: ORIGIN });
+
+    fromCanvas({ type: "canvas:select", id: "x" });
+    fromCanvas({ type: "canvas:select", id: "y", additive: true });
+
+    expect([...store.getState().selectedIds].sort()).toEqual(["x", "y"]);
+    expect(store.getState().activeId).toBe("y");
+    conn.dispose();
+  });
+
   test("re-pushes the tree when the store tree changes after ready", () => {
     const store = createEditorStore();
     const { win, posted } = fakeFrame();

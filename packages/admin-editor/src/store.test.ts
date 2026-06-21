@@ -27,6 +27,18 @@ describe("editor store", () => {
     expect(store.getState().activeId).toBe("b");
   });
 
+  test("additive select toggles a block off and repoints the active block", () => {
+    const store = createEditorStore();
+
+    store.getState().select("a");
+    store.getState().select("b", { additive: true });
+    // Toggle the active block (b) back off — a remains and becomes active.
+    store.getState().select("b", { additive: true });
+
+    expect([...store.getState().selectedIds]).toEqual(["a"]);
+    expect(store.getState().activeId).toBe("a");
+  });
+
   test("clearSelection empties the set and the active block", () => {
     const store = createEditorStore();
     store.getState().select("a");
@@ -192,6 +204,158 @@ describe("undo / redo", () => {
     store.getState().redo();
     // Redo was cleared by the post-undo edit; the tree stays at [b].
     expect(store.getState().tree.map((n) => n.id)).toEqual(["b"]);
+  });
+});
+
+describe("removeSelected", () => {
+  test("removes every selected block and clears the selection", () => {
+    const store = createEditorStore({
+      tree: [
+        { id: "a", name: "core/x" },
+        { id: "b", name: "core/x" },
+        { id: "c", name: "core/x" },
+      ],
+    });
+    store.getState().select("a");
+    store.getState().select("c", { additive: true });
+
+    store.getState().removeSelected();
+
+    expect(store.getState().tree.map((n) => n.id)).toEqual(["b"]);
+    expect(store.getState().selectedIds.size).toBe(0);
+    expect(store.getState().activeId).toBeNull();
+  });
+
+  test("is a no-op when nothing is selected", () => {
+    const tree: readonly BlockNode[] = [{ id: "a", name: "core/x" }];
+    const store = createEditorStore({ tree });
+
+    store.getState().removeSelected();
+
+    expect(store.getState().tree).toBe(tree);
+  });
+
+  test("a removal is undoable", () => {
+    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+    store.getState().select("a");
+
+    store.getState().removeSelected();
+    expect(store.getState().tree).toHaveLength(0);
+
+    store.getState().undo();
+    expect(store.getState().tree.map((n) => n.id)).toEqual(["a"]);
+  });
+});
+
+describe("duplicateSelected", () => {
+  test("clones each selected block and selects the clones", () => {
+    const store = createEditorStore({
+      tree: [
+        { id: "a", name: "core/x" },
+        { id: "b", name: "core/x" },
+      ],
+    });
+    store.getState().select("a");
+
+    store.getState().duplicateSelected();
+
+    const ids = store.getState().tree.map((n) => n.id);
+    expect(ids).toHaveLength(3);
+    expect(ids.slice(0, 2)).toEqual(["a", store.getState().activeId]);
+    // The clone, not the original, is now selected.
+    expect([...store.getState().selectedIds]).toEqual([
+      store.getState().activeId,
+    ]);
+  });
+
+  test("is a no-op when nothing is selected", () => {
+    const tree: readonly BlockNode[] = [{ id: "a", name: "core/x" }];
+    const store = createEditorStore({ tree });
+
+    store.getState().duplicateSelected();
+
+    expect(store.getState().tree).toBe(tree);
+  });
+
+  test("clones a container once when it and its child are both selected", () => {
+    const store = createEditorStore({
+      tree: [
+        {
+          id: "g",
+          name: "core/group",
+          attrs: { content: [{ id: "child", name: "core/x" }] },
+        },
+      ],
+    });
+    store.getState().select("g");
+    store.getState().select("child", { additive: true });
+
+    store.getState().duplicateSelected();
+
+    // Two groups total (original + one clone) — the child isn't cloned again on
+    // its own, so the clone's slot holds exactly one child.
+    expect(store.getState().tree).toHaveLength(2);
+    const cloneId = store.getState().activeId ?? "";
+    const clone = store.getState().tree.find((n) => n.id === cloneId);
+    expect((clone?.attrs?.content as readonly BlockNode[]).length).toBe(1);
+  });
+});
+
+describe("selectParent", () => {
+  test("selects the active block's container", () => {
+    const store = createEditorStore({
+      tree: [
+        {
+          id: "g",
+          name: "core/group",
+          attrs: { content: [{ id: "child", name: "core/x" }] },
+        },
+      ],
+    });
+    store.getState().select("child");
+
+    store.getState().selectParent();
+
+    expect(store.getState().activeId).toBe("g");
+    expect([...store.getState().selectedIds]).toEqual(["g"]);
+  });
+
+  test("is a no-op for a top-level active block", () => {
+    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+    store.getState().select("a");
+
+    store.getState().selectParent();
+
+    expect(store.getState().activeId).toBe("a");
+  });
+});
+
+describe("moveSelectedBy", () => {
+  test("moves the active block down among its siblings", () => {
+    const store = createEditorStore({
+      tree: [
+        { id: "a", name: "core/x" },
+        { id: "b", name: "core/x" },
+      ],
+    });
+    store.getState().select("a");
+
+    store.getState().moveSelectedBy(1);
+
+    expect(store.getState().tree.map((n) => n.id)).toEqual(["b", "a"]);
+  });
+
+  test("is a no-op at the boundary", () => {
+    const tree: readonly BlockNode[] = [
+      { id: "a", name: "core/x" },
+      { id: "b", name: "core/x" },
+    ];
+    const store = createEditorStore({ tree });
+    store.getState().select("a");
+
+    store.getState().moveSelectedBy(-1);
+
+    expect(store.getState().tree).toBe(tree);
   });
 });
 

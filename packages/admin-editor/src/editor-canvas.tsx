@@ -77,7 +77,10 @@ export function EditorCanvas({
 
   const handleClick = (event: MouseEvent<HTMLDivElement>): void => {
     const id = blockIdAt(event);
-    if (id) connectionRef.current?.reportSelect(id);
+    if (!id) return;
+    // Shift / cmd / ctrl extend the selection rather than replacing it.
+    const additive = event.shiftKey || event.metaKey || event.ctrlKey;
+    connectionRef.current?.reportSelect(id, additive);
   };
 
   const handleMouseOver = (event: MouseEvent<HTMLDivElement>): void => {
