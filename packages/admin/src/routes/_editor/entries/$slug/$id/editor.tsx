@@ -275,14 +275,18 @@ function BespokeEditor({
   const lastSavedExcerptRef = useRef<string>(entry.excerpt ?? "");
   const metaRef = useRef<Record<string, unknown>>(entry.meta);
   const lastSavedMetaRef = useRef<string>(JSON.stringify(entry.meta));
+  const [titleValue, setTitleValue] = useState<string>(entry.title);
   const [slugValue, setSlugValue] = useState<string>(entry.slug);
   const [parentValue, setParentValue] = useState<number | null>(entry.parentId);
+  const titleRef = useRef(titleValue);
   const slugRef = useRef(slugValue);
   const parentRef = useRef(parentValue);
+  const lastSavedTitleRef = useRef<string>(entry.title);
   const lastSavedSlugRef = useRef<string>(entry.slug);
   const lastSavedParentRef = useRef<number | null>(entry.parentId);
   useEffect(() => {
     excerptRef.current = excerpt;
+    titleRef.current = titleValue;
     slugRef.current = slugValue;
     parentRef.current = parentValue;
   });
@@ -331,21 +335,26 @@ function BespokeEditor({
   const structuralDebouncer = useMemo(
     () =>
       createDebouncer(async () => {
+        const nextTitle = titleRef.current.trim();
         const nextSlug = slugRef.current.trim();
         const nextParent = parentRef.current;
+        const titleChanged =
+          nextTitle.length > 0 && nextTitle !== lastSavedTitleRef.current;
         const slugChanged =
           nextSlug.length > 0 && nextSlug !== lastSavedSlugRef.current;
         const parentChanged = nextParent !== lastSavedParentRef.current;
-        if (!slugChanged && !parentChanged) return;
+        if (!titleChanged && !slugChanged && !parentChanged) return;
         try {
           const updated = await orpc.entry.update.call({
             id,
+            ...(titleChanged ? { title: nextTitle } : {}),
             ...(slugChanged ? { slug: nextSlug } : {}),
             ...(parentChanged ? { parentId: nextParent } : {}),
             saveAs: "live",
             expectedLiveUpdatedAt: liveUpdatedAtRef.current,
           });
           liveUpdatedAtRef.current = updated.updatedAt;
+          if (titleChanged) lastSavedTitleRef.current = updated.title;
           if (slugChanged) lastSavedSlugRef.current = updated.slug;
           if (parentChanged) lastSavedParentRef.current = updated.parentId;
         } catch (err) {
@@ -370,6 +379,13 @@ function BespokeEditor({
       contentDebouncer.call();
     },
     [contentDebouncer],
+  );
+  const handleTitleChange = useCallback(
+    (next: string): void => {
+      setTitleValue(next);
+      structuralDebouncer.call();
+    },
+    [structuralDebouncer, setTitleValue],
   );
   const handleSlugChange = useCallback(
     (next: string): void => {
@@ -406,6 +422,10 @@ function BespokeEditor({
       entryTypeName ? entryMetaBoxesForType(entryTypeName, capabilities) : [],
     [entryTypeName, capabilities],
   );
+  const supportsTitle =
+    // `supports` list code, not a display label.
+    // eslint-disable-next-line lingui/no-unlocalized-strings
+    entryType?.supports?.includes("title") ?? false;
   const supportsExcerpt =
     // `supports` list code, not a display label.
     // eslint-disable-next-line lingui/no-unlocalized-strings
@@ -434,6 +454,11 @@ function BespokeEditor({
   const documentPanel = useMemo(
     () => (
       <DocumentSettingsPanel
+        title={
+          supportsTitle
+            ? { value: titleValue, onChange: handleTitleChange }
+            : undefined
+        }
         slug={slugValue}
         onSlugChange={handleSlugChange}
         excerpt={
@@ -462,6 +487,9 @@ function BespokeEditor({
       />
     ),
     [
+      supportsTitle,
+      titleValue,
+      handleTitleChange,
       slugValue,
       handleSlugChange,
       supportsExcerpt,

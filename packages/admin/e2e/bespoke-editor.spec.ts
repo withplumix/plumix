@@ -543,6 +543,56 @@ test.describe("editor document tab", () => {
     expect(last.id).toBe(1);
   });
 
+  test("Page tab exposes the title; editing it ships a live entry.update", async ({
+    page,
+  }) => {
+    // Title is gated on the type's supports list — MANIFEST_WITH_POST has none.
+    await mockManifest(page, {
+      ...MANIFEST_WITH_POST,
+      entryTypes: [
+        {
+          name: "post",
+          adminSlug: "posts",
+          label: "Posts",
+          labels: { singular: "Post", plural: "Posts" },
+          supports: ["title", "editor", "slug"],
+        },
+      ],
+    });
+    const captures = await mockRpcWithCapture(page, {
+      captureSuffix: "/entry/update",
+      captureResponse: {
+        ...editorEntry(),
+        title: "Hello world",
+        updatedAt: T0,
+      },
+      handlers: {
+        "/auth/session": AUTHED_ADMIN,
+        "/entry/get": editorEntry({ title: "Untitled" }),
+        "/entry/list": [],
+        "/entry/createPreviewLink": PREVIEW_LINK,
+      },
+    });
+
+    await page.goto("entries/posts/1/editor");
+    await page.getByTestId("plumix-tab-page").click();
+
+    const title = page.getByTestId("plumix-editor-title-input");
+    await expect(title).toHaveValue("Untitled");
+    await title.fill("Hello world");
+
+    await expect
+      .poll(
+        () =>
+          (captures.at(-1) as { title?: string } | undefined)?.title ?? null,
+      )
+      .toBe("Hello world");
+    // Title is a structural field — it must write the live row.
+    const last = captures.at(-1) as { saveAs?: string; id?: number };
+    expect(last.saveAs).toBe("live");
+    expect(last.id).toBe(1);
+  });
+
   test("hierarchical types expose a parent picker; picking ships a live parentId", async ({
     page,
   }) => {

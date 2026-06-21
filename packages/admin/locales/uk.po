@@ -3828,6 +3828,11 @@ msgid "apiTokens.empty.description.admin"
 msgstr "Цей користувач не створював API-токенів."
 
 #. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.column.title"
 msgstr "Назва"

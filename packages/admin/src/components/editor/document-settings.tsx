@@ -12,6 +12,7 @@ import { Input } from "@plumix/admin-ui/input";
 import { Label } from "@plumix/admin-ui/label";
 
 const M = {
+  title: defineMessage({ id: "editor.document.title", message: "Title" }),
   slug: defineMessage({ id: "editor.document.slug", message: "Slug" }),
   excerpt: defineMessage({ id: "editor.document.excerpt", message: "Excerpt" }),
   parent: defineMessage({ id: "editor.document.parent", message: "Parent" }),
@@ -27,6 +28,11 @@ interface DocumentParentOption {
 }
 
 interface DocumentSettingsPanelProps {
+  /** Present only when the entry type's supports list includes "title". */
+  readonly title?: {
+    readonly value: string;
+    readonly onChange: (next: string) => void;
+  };
   readonly slug: string;
   readonly onSlugChange: (next: string) => void;
   /** Present only when the entry type's supports list includes "excerpt". */
@@ -101,6 +107,7 @@ function DocumentMetaBoxes({
  * patch drops them) and feeds values + change handlers in.
  */
 export function DocumentSettingsPanel({
+  title,
   slug,
   onSlugChange,
   excerpt,
@@ -113,6 +120,20 @@ export function DocumentSettingsPanel({
       className="flex flex-col gap-4 px-4 py-4"
       data-testid="entry-document-panel"
     >
+      {title ? (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="entry-title-input">{renderLabel(M.title)}</Label>
+          <Input
+            id="entry-title-input"
+            type="text"
+            value={title.value}
+            onChange={(event) => {
+              title.onChange(event.target.value);
+            }}
+            data-testid="plumix-editor-title-input"
+          />
+        </div>
+      ) : null}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="entry-slug-input">{renderLabel(M.slug)}</Label>
         <Input
