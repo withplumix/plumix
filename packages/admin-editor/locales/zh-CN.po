@@ -34,6 +34,11 @@ msgid "editor.tab.blocks"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.discard"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/plumix-editor.tsx
 msgid "editor.tab.json"
 msgstr ""
@@ -70,7 +75,17 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
+msgid "editor.toolbar.publish"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
 msgid "editor.toolbar.redo"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.saveDraft"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -91,4 +106,9 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
 msgid "editor.toolbar.undo"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.unpublished"
 msgstr ""

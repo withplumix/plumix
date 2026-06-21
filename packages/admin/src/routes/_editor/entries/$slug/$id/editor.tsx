@@ -1,15 +1,23 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DocumentSettingsPanel } from "@/components/editor/document-settings.js";
 import { ErrorPlaceholder } from "@/components/error-placeholder.js";
 import { AUTOSAVE_DEBOUNCE_MS, freshLiveUpdatedAt } from "@/editor/autosave.js";
 import { createDebouncer } from "@/editor/debounce.js";
+import { detectStaleAutosave } from "@/editor/detect-stale-autosave.js";
 import { registerCoreBlocks } from "@/editor/register-core-blocks.js";
+import { resolveEditorMode } from "@/editor/resolve-editor-mode.js";
+import { StaleDraftDialog } from "@/editor/StaleDraftDialog.js";
 import { entryMetaBoxesForType, findEntryTypeBySlug } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { getRegisteredBlocks } from "@/lib/plugin-registry.js";
+import { toastError, toastSuccess } from "@/lib/toast.js";
+import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
 import {
+  useMutation,
   useQuery,
   useQueryClient,
   useSuspenseQuery,
@@ -26,6 +34,29 @@ import {
   isEntryContent,
 } from "@plumix/blocks";
 import { idPathParam } from "@plumix/core/validation";
+
+const M = {
+  published: defineMessage({
+    id: "editor.bespoke.toast.published",
+    message: "Published.",
+  }),
+  publishFailed: defineMessage({
+    id: "editor.bespoke.toast.publishFailed",
+    message: "Couldn't publish — try again.",
+  }),
+  discarded: defineMessage({
+    id: "editor.bespoke.toast.discarded",
+    message: "Draft discarded.",
+  }),
+  discardFailed: defineMessage({
+    id: "editor.bespoke.toast.discardFailed",
+    message: "Couldn't discard the draft — try again.",
+  }),
+  staleLoading: defineMessage({
+    id: "editor.bespoke.stale.loading",
+    message: "Loading…",
+  }),
+} satisfies Record<string, MessageDescriptor>;
 
 // Core + plugin blocks supply the inspector's input schemas. Built once at
 // module load, mirroring the Puck route.
@@ -103,15 +134,30 @@ function ErrorScreen(): ReactNode {
 }
 
 function BespokeEditorRoute(): ReactNode {
-  const { slug } = Route.useParams();
+  const { slug, id } = Route.useParams();
   const { user } = Route.useRouteContext();
-  // Pass capabilities + entryType across a prop boundary so the React Compiler
-  // treats them as stable inputs (member/derived reads inline read as
+  const { data: entry } = useSuspenseQuery(
+    orpc.entry.get.queryOptions({ input: { id, preview: true } }),
+  );
+  // The store seeds once (uncontrolled), so the canvas only re-seeds on a
+  // remount. The preview source flip covers load-time-draft publish/discard
+  // (autosave↔live); `reseedNonce` covers the in-session case where discarding
+  // a freshly-made draft leaves the source at "live" (no flip) — the inner
+  // bumps it so the canvas drops the discarded edits. (Mirrors the Puck route,
+  // which reseeds Puck in place instead.)
+  const previewSource = entry._preview?.source ?? "live";
+  const [reseedNonce, setReseedNonce] = useState(0);
+  const reseed = useCallback(() => setReseedNonce((n) => n + 1), []);
+  // Pass capabilities + entryType + userId across a prop boundary so the React
+  // Compiler treats them as stable inputs (member/derived reads inline read as
   // possibly-mutated, which forces the compiler to skip optimizing).
   return (
     <BespokeEditor
+      key={`${previewSource}:${reseedNonce}`}
       capabilities={user.capabilities}
       entryType={findEntryTypeBySlug(slug)}
+      userId={user.id}
+      onReseed={reseed}
     />
   );
 }
@@ -119,6 +165,8 @@ function BespokeEditorRoute(): ReactNode {
 interface BespokeEditorProps {
   readonly capabilities: readonly string[];
   readonly entryType: EntryTypeManifestEntry | undefined;
+  readonly userId: number;
+  readonly onReseed: () => void;
 }
 
 // Persistence lives inline in the component (not a custom hook) so the React
@@ -129,6 +177,8 @@ interface BespokeEditorProps {
 function BespokeEditor({
   capabilities,
   entryType,
+  userId,
+  onReseed,
 }: BespokeEditorProps): ReactNode {
   const { id } = Route.useParams();
   const { data: entry } = useSuspenseQuery(
@@ -136,8 +186,10 @@ function BespokeEditor({
   );
   const { data: previewLink } = useSuspenseQuery(previewLinkQuery(id));
   const queryClient = useQueryClient();
+  const renderLabel = useLabel();
   const entryTypeName = entryType?.name;
   const capabilitySet = useMemo(() => new Set(capabilities), [capabilities]);
+  const [hasLocalDraft, setHasLocalDraft] = useState(false);
 
   const liveUpdatedAtRef = useRef<Date>(entry.updatedAt);
   const seedContent = isEntryContent(entry.content)
@@ -190,6 +242,10 @@ function BespokeEditor({
           });
           if (updated.type === entry.type) {
             liveUpdatedAtRef.current = updated.updatedAt;
+          } else {
+            // The write landed on the per-user autosave row — a pending draft
+            // now exists. Surface it so the draft actions wake without a reload.
+            setHasLocalDraft(true);
           }
           if (contentChanged) lastSavedContentRef.current = serializedBlocks;
           if (excerptChanged) lastSavedExcerptRef.current = nextExcerpt;
@@ -350,6 +406,187 @@ function BespokeEditor({
     ],
   );
 
+  // Publish / draft / discard. A published entry whose type opts into autosave
+  // edits a per-user draft (edit-with-draft); everything else publishes the
+  // live row directly. The mutations are the existing admin ones.
+  const editorMode = resolveEditorMode({
+    entryType,
+    currentStatus: entry.status,
+    isAuthor: entry.authorId === userId,
+    capabilities: capabilitySet,
+  });
+  const isEditWithDraft = editorMode === "edit-with-draft";
+  const isPublished = entry.status === "published";
+  const hasPendingDraft =
+    entry._preview?.source === "autosave" || hasLocalDraft;
+  const staleState = entry._preview
+    ? detectStaleAutosave(
+        entry._preview.autosaveUpdatedAt,
+        entry._preview.liveUpdatedAt,
+      )
+    : "none";
+  const [staleResolved, setStaleResolved] = useState(false);
+  const showStaleDialog = staleState === "stale" && !staleResolved;
+  const liveAnchorAfterResolve = entry._preview?.liveUpdatedAt;
+
+  const invalidateEntry = useCallback(
+    () =>
+      Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: orpc.entry.get.queryOptions({
+            input: { id, preview: true },
+          }).queryKey,
+        }),
+        // Keep the entries list + revisions sheet in step with the new status.
+        ...(entryTypeName
+          ? [
+              queryClient.invalidateQueries({
+                queryKey: orpc.entry.list.key({
+                  input: { type: entryTypeName },
+                }),
+              }),
+              queryClient.invalidateQueries({
+                queryKey: ["entry.revisions", id],
+              }),
+            ]
+          : []),
+      ]),
+    [id, entryTypeName, queryClient],
+  );
+  const publish = useMutation({
+    mutationFn: async () => {
+      const updated = await orpc.entry.update.call({
+        id,
+        status: "published",
+        expectedLiveUpdatedAt: liveUpdatedAtRef.current,
+      });
+      liveUpdatedAtRef.current = updated.updatedAt;
+      return updated;
+    },
+    onSuccess: () => {
+      toastSuccess(renderLabel(M.published));
+      return invalidateEntry();
+    },
+    onError: () => toastError(renderLabel(M.publishFailed)),
+  });
+  const publishDraft = useMutation({
+    mutationFn: () =>
+      orpc.entry.publish.call({
+        id,
+        expectedLiveUpdatedAt: liveUpdatedAtRef.current,
+      }),
+    onSuccess: async (updated) => {
+      toastSuccess(renderLabel(M.published));
+      liveUpdatedAtRef.current = updated.updatedAt;
+      setHasLocalDraft(false);
+      await invalidateEntry();
+    },
+    onError: () => toastError(renderLabel(M.publishFailed)),
+  });
+  const discardDraft = useMutation({
+    mutationFn: () => orpc.entry.discardDraft.call({ id }),
+    onSuccess: async () => {
+      toastSuccess(renderLabel(M.discarded));
+      setHasLocalDraft(false);
+      await invalidateEntry();
+      // Drop any pending write so the unmount flush can't re-save the
+      // discarded edits, then remount to reseed the canvas from the live row.
+      contentDebouncer.cancel();
+      structuralDebouncer.cancel();
+      onReseed();
+    },
+    onError: () => toastError(renderLabel(M.discardFailed)),
+  });
+
+  const handlePublish = useCallback(() => publish.mutate(), [publish]);
+  const handleSaveDraft = useCallback(
+    () => contentDebouncer.flush(),
+    [contentDebouncer],
+  );
+  const handlePublishDraft = useCallback(
+    () => publishDraft.mutate(),
+    [publishDraft],
+  );
+  const handleDiscardDraft = useCallback(
+    () => discardDraft.mutate(),
+    [discardDraft],
+  );
+  const handleUseMine = useCallback(() => {
+    if (liveAnchorAfterResolve)
+      liveUpdatedAtRef.current = liveAnchorAfterResolve;
+    setStaleResolved(true);
+  }, [liveAnchorAfterResolve]);
+  const handleUseTheirs = useCallback(() => {
+    discardDraft.mutate(undefined, {
+      onSuccess: () => setStaleResolved(true),
+    });
+  }, [discardDraft]);
+
+  const publishActions = useMemo(
+    () =>
+      isEditWithDraft
+        ? {
+            draftMode: {
+              hasPendingDraft,
+              onSaveDraft: handleSaveDraft,
+              onPublishDraft: handlePublishDraft,
+              onDiscardDraft: handleDiscardDraft,
+              isSaving: false,
+              isPublishing: publishDraft.isPending,
+              isDiscarding: discardDraft.isPending,
+            },
+          }
+        : {
+            onPublish: handlePublish,
+            isPublished,
+            isPublishing: publish.isPending,
+          },
+    [
+      isEditWithDraft,
+      hasPendingDraft,
+      handleSaveDraft,
+      handlePublishDraft,
+      handleDiscardDraft,
+      publishDraft.isPending,
+      discardDraft.isPending,
+      handlePublish,
+      isPublished,
+      publish.isPending,
+    ],
+  );
+
+  // Live snapshot for the stale-draft compare pane — only fetched while the
+  // resolver dialog is open.
+  const liveSnapshotQuery = useQuery({
+    ...orpc.entry.get.queryOptions({ input: { id } }),
+    enabled: showStaleDialog,
+  });
+  const overlay = (
+    <StaleDraftDialog
+      open={showStaleDialog}
+      autosaveSnapshot={{
+        title: entry.title,
+        content: entry.content,
+        excerpt: entry.excerpt,
+      }}
+      liveSnapshot={
+        liveSnapshotQuery.data
+          ? {
+              title: liveSnapshotQuery.data.title,
+              content: liveSnapshotQuery.data.content,
+              excerpt: liveSnapshotQuery.data.excerpt,
+            }
+          : { title: renderLabel(M.staleLoading), content: null, excerpt: null }
+      }
+      onUseMine={handleUseMine}
+      onUseTheirs={handleUseTheirs}
+      isResolving={discardDraft.isPending}
+    />
+  );
+
   // `createPreviewLink` returns a site-relative url (`/blog/hello?preview=…`);
   // resolve it against the admin's own origin (the public site is same-origin)
   // and flip on `plumix.edit` so the public render boots the editor runtime.
@@ -365,6 +602,8 @@ function BespokeEditor({
       capabilities={capabilitySet}
       onChange={handleChange}
       documentPanel={documentPanel}
+      publish={publishActions}
+      overlay={overlay}
     />
   );
 }

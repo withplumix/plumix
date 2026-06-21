@@ -1043,6 +1043,11 @@ msgid "terms.create.error.emptySlug"
 msgstr "Couldn't derive a slug from that name — please type one manually."
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.discardFailed"
+msgstr "Couldn't discard the draft — try again."
+
+#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.entry.edit.toast.discardFailed"
 msgstr "Couldn't discard the draft — try again."
@@ -1126,6 +1131,11 @@ msgstr "Couldn't open the editor"
 #: src/routes/_editor/entries/$slug/$id/editor.tsx
 msgid "editor.bespoke.previewFailed"
 msgstr "Couldn't open this entry in the editor."
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.publishFailed"
+msgstr "Couldn't publish — try again."
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
@@ -1526,6 +1536,11 @@ msgstr "Done"
 msgctxt "entry status"
 msgid "entries.list.statusFilter.draft"
 msgstr "Draft"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.discarded"
+msgstr "Draft discarded."
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
@@ -2074,6 +2089,11 @@ msgstr "Loading user"
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.loading"
 msgstr "Loading users"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.stale.loading"
+msgstr "Loading…"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
@@ -2739,6 +2759,11 @@ msgstr "Published"
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.itemPublishedPrivately"
 msgstr "Published privately"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.published"
+msgstr "Published."
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx

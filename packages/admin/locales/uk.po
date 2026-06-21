@@ -1043,6 +1043,11 @@ msgid "terms.create.error.emptySlug"
 msgstr "Не вдалося визначити slug з цієї назви — введіть його вручну."
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.discardFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.entry.edit.toast.discardFailed"
 msgstr "Не вдалося відхилити чернетку — спробуйте ще раз."
@@ -1125,6 +1130,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/editor.tsx
 msgid "editor.bespoke.previewFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.publishFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1526,6 +1536,11 @@ msgstr "Готово"
 msgctxt "entry status"
 msgid "entries.list.statusFilter.draft"
 msgstr "Чернетка"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.discarded"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
@@ -2074,6 +2089,11 @@ msgstr "Завантаження користувача"
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.loading"
 msgstr "Завантаження користувачів"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.stale.loading"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
@@ -2739,6 +2759,11 @@ msgstr "Опубліковано"
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.itemPublishedPrivately"
 msgstr "Опубліковано приватно"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.published"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx

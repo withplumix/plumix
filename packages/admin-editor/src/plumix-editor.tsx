@@ -11,6 +11,7 @@ import {
 } from "@plumix/admin-ui/tabs";
 import { defineEntryContent } from "@plumix/blocks";
 
+import type { PublishActions } from "./editor-toolbar.js";
 import { BlockCatalog } from "./block-catalog-tab.js";
 import { BlockInspector } from "./block-inspector.js";
 import { CanvasFrame } from "./canvas-frame.js";
@@ -38,6 +39,10 @@ interface PlumixEditorProps {
   /** Admin-provided document settings (slug/excerpt/parent/metaboxes) rendered
    *  in the Page tab; the host owns its persistence. */
   readonly documentPanel?: ReactNode;
+  /** Publish / save-draft / discard wiring for the toolbar (host mutations). */
+  readonly publish?: PublishActions;
+  /** Host-rendered overlay (e.g. the stale-draft resolution dialog). */
+  readonly overlay?: ReactNode;
 }
 
 /**
@@ -53,11 +58,13 @@ export function PlumixEditor({
   capabilities = NO_CAPABILITIES,
   onChange,
   documentPanel,
+  publish,
+  overlay,
 }: PlumixEditorProps): ReactElement {
   return (
     <EditorProvider initialTree={defaultValue?.blocks}>
       <div className="flex h-full flex-col" data-testid="plumix-editor-layout">
-        <EditorToolbar />
+        <EditorToolbar publish={publish} />
         <div className="flex min-h-0 flex-1">
           <aside
             className="bg-background w-72 shrink-0 overflow-auto border-e"
@@ -123,6 +130,7 @@ export function PlumixEditor({
         </div>
       </div>
       <EditorShortcuts />
+      {overlay}
       {onChange ? <TreeChangeEmitter onChange={onChange} /> : null}
     </EditorProvider>
   );

@@ -1043,6 +1043,11 @@ msgid "terms.create.error.emptySlug"
 msgstr "تعذّر اشتقاق slug من ذلك الاسم — يرجى كتابة واحد يدوياً."
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.discardFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.entry.edit.toast.discardFailed"
 msgstr "تعذّر تجاهل المسودة — حاول مرة أخرى."
@@ -1125,6 +1130,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/editor.tsx
 msgid "editor.bespoke.previewFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.publishFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1526,6 +1536,11 @@ msgstr "تم"
 msgctxt "entry status"
 msgid "entries.list.statusFilter.draft"
 msgstr "مسودة"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.discarded"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
@@ -2074,6 +2089,11 @@ msgstr "جارٍ تحميل المستخدم"
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.loading"
 msgstr "جارٍ تحميل المستخدمين"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.stale.loading"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
@@ -2739,6 +2759,11 @@ msgstr "منشور"
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.itemPublishedPrivately"
 msgstr "منشور بشكل خاص"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.published"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
