@@ -29,7 +29,7 @@ test.describe.serial("@plumix/plugin-pages — worker-driven happy path", () => 
     // Arm the URL waiter before clicking New — the create route
     // redirects to the edit URL as soon as entry.create resolves.
     await page.goto("entries/pages");
-    const navigated = page.waitForURL(/\/entries\/pages\/\d+\/editor/);
+    const navigated = page.waitForURL(/\/entries\/pages\/\d+\/edit/);
     await page.getByTestId("content-list-new-button").click();
     await navigated;
 
@@ -60,7 +60,7 @@ test.describe.serial("@plumix/plugin-pages — worker-driven happy path", () => 
     // intended parent — the parent picker exposes every existing
     // page (minus self) as an option in the Document tab.
     await page.goto("entries/pages/create");
-    await page.waitForURL(/\/entries\/pages\/\d+\/editor/);
+    await page.waitForURL(/\/entries\/pages\/\d+\/edit/);
     // Title + parent both live in the editor's Page (document) tab.
     await page.getByTestId("plumix-tab-page").click();
     await expect(page.getByTestId("plumix-editor-title-input")).toBeVisible();

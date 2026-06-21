@@ -1,5 +1,5 @@
-// The bespoke visual editor is the default `/editor` route (the old Puck
-// `/edit` route is gone). Editor *behavior* (block insertion, slash menu,
+// The bespoke visual editor now owns the `/edit` route (Puck is gone).
+// Editor *behavior* (block insertion, slash menu,
 // selection/actions, field/rich-text editing, patterns) lives in the
 // @plumix/admin-editor playground e2e + unit tests; this suite is INTEGRATION
 // only — the route wiring and the orpc glue the route owns.
@@ -57,7 +57,7 @@ test.describe("bespoke editor route", () => {
       "/entry/createPreviewLink": PREVIEW_LINK,
     });
 
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
 
     await expect(page.getByTestId("plumix-canvas-frame")).toBeVisible();
     const iframe = page.getByTestId("plumix-canvas-frame").locator("iframe");
@@ -79,7 +79,7 @@ test.describe("bespoke editor route", () => {
       "/entry/createPreviewLink": PREVIEW_LINK,
     });
 
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
 
     // The mock harness can't serve the public route the canvas iframe loads,
     // so block selection (which arrives from inside the iframe) can't fire
@@ -99,7 +99,7 @@ test.describe("bespoke editor route", () => {
       "/entry/createPreviewLink": PREVIEW_LINK,
     });
 
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
 
     // The catalog lists the core blocks the registry ships, searchable.
     await expect(page.getByTestId("plumix-editor-left")).toBeVisible();
@@ -132,7 +132,7 @@ test.describe("bespoke editor route", () => {
       "/entry/createPreviewLink": PREVIEW_LINK,
     });
 
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
 
     await page.getByTestId("plumix-tab-layers").click();
     await expect(page.getByTestId("layer-h1")).toBeVisible();
@@ -161,7 +161,7 @@ test.describe("bespoke editor route", () => {
       "/entry/createPreviewLink": PREVIEW_LINK,
     });
 
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
 
     // Nothing edited yet — undo is disabled.
     await expect(page.getByTestId("plumix-undo")).toBeDisabled();
@@ -194,7 +194,7 @@ test.describe("bespoke editor route", () => {
       "/entry/createPreviewLink": PREVIEW_LINK,
     });
 
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
 
     // Page tab hosts the admin-provided document settings (slug at minimum).
     await page.getByTestId("plumix-tab-page").click();
@@ -237,7 +237,7 @@ test.describe("bespoke editor route", () => {
       }),
     );
 
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
 
     // Draft mode: the live Publish button is replaced by the draft trio, and
     // the pending autosave enables Publish/Discard + shows the banner.
@@ -268,7 +268,7 @@ test.describe("bespoke editor route", () => {
       }),
     );
 
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
 
     await expect(page.getByTestId("plumix-editor-error")).toBeVisible();
     await expect(page.getByTestId("plumix-canvas-frame")).toHaveCount(0);
@@ -289,7 +289,7 @@ test.describe("bespoke editor route", () => {
       }),
     );
 
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
 
     await expect(page.getByTestId("plumix-editor-error")).toBeVisible();
     await expect(page.getByTestId("plumix-canvas-frame")).toHaveCount(0);
@@ -313,7 +313,7 @@ test.describe("editor chrome & layout", () => {
   test("the editor shell mounts the layout, canvas, and toolbar", async ({
     page,
   }) => {
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
 
     await expect(page.getByTestId("plumix-editor-layout")).toBeVisible();
     // `plumix-editor-canvas` renders inside the iframe document (the public
@@ -325,7 +325,7 @@ test.describe("editor chrome & layout", () => {
   test("the canvas toolbar switches device and steps zoom", async ({
     page,
   }) => {
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
 
     // Device switch sizes the canvas to the theme breakpoint widths.
     await page.getByTestId("plumix-device-tablet").click();
@@ -354,7 +354,7 @@ test.describe("editor accessibility", () => {
       "/entry/get": editorEntry(),
       "/entry/createPreviewLink": PREVIEW_LINK,
     });
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
     await expect(page.getByTestId("plumix-editor-layout")).toBeVisible();
     await expectNoAxeViolations(page);
   });
@@ -400,7 +400,7 @@ test.describe("editor server-loaded content", () => {
       "/entry/createPreviewLink": PREVIEW_LINK,
     });
 
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
     await page.getByTestId("plumix-tab-layers").click();
 
     await expect(page.getByTestId("layer-h1")).toBeVisible();
@@ -439,7 +439,7 @@ test.describe("editor document tab", () => {
       },
     });
 
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
     await page.getByTestId("plumix-tab-page").click();
 
     await page.getByTestId("entry-excerpt-input").fill("Hand-written summary");
@@ -465,7 +465,7 @@ test.describe("editor document tab", () => {
       "/entry/get": editorEntry(),
       "/entry/createPreviewLink": PREVIEW_LINK,
     });
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
     await page.getByTestId("plumix-tab-page").click();
     await expect(page.getByTestId("entry-slug-input")).toBeVisible();
     await expect(page.getByTestId("entry-excerpt-input")).toHaveCount(0);
@@ -497,7 +497,7 @@ test.describe("editor document tab", () => {
       },
     });
 
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
     await page.getByTestId("plumix-tab-page").click();
     await page.getByTestId("entry-excerpt-input").clear();
 
@@ -524,7 +524,7 @@ test.describe("editor document tab", () => {
       },
     });
 
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
     await page.getByTestId("plumix-tab-page").click();
 
     const slug = page.getByTestId("entry-slug-input");
@@ -574,7 +574,7 @@ test.describe("editor document tab", () => {
       },
     });
 
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
     await page.getByTestId("plumix-tab-page").click();
 
     const title = page.getByTestId("plumix-editor-title-input");
@@ -620,7 +620,7 @@ test.describe("editor document tab", () => {
       },
     });
 
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
     await page.getByTestId("plumix-tab-page").click();
 
     const select = page.getByTestId("entry-parent-select");
@@ -648,7 +648,7 @@ test.describe("editor document tab", () => {
       "/entry/get": editorEntry(),
       "/entry/createPreviewLink": PREVIEW_LINK,
     });
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
     await page.getByTestId("plumix-tab-page").click();
     await expect(page.getByTestId("entry-slug-input")).toBeVisible();
     await expect(page.getByTestId("entry-parent-select")).toHaveCount(0);
@@ -696,7 +696,7 @@ test.describe("editor document tab", () => {
       },
     });
 
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
     await page.getByTestId("plumix-tab-page").click();
 
     await expect(page.getByTestId("entry-meta-box-seo")).toBeVisible();
@@ -730,7 +730,7 @@ test.describe("editor preview", () => {
       "/entry/get": editorEntry(),
       "/entry/createPreviewLink": PREVIEW_LINK,
     });
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
 
     await page.getByTestId("plumix-copy-preview-link").click();
 
@@ -767,7 +767,7 @@ test.describe("editor publishing & autosave", () => {
         "/entry/createPreviewLink": PREVIEW_LINK,
       },
     });
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
 
     // The toolbar's trailing publish control sits under the expanded right
     // rail at this width; collapse both rails first so the click lands.
@@ -812,7 +812,7 @@ test.describe("editor publishing & autosave", () => {
         }),
       }),
     );
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
 
     // Collapse the rails so the trailing publish control isn't under the right
     // rail (see the published-status spec).
@@ -834,7 +834,7 @@ test.describe("editor publishing & autosave", () => {
       "/entry/get": { ...editorEntry(), status: "published", publishedAt: T0 },
       "/entry/createPreviewLink": PREVIEW_LINK,
     });
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
 
     await expect(
       page.getByTestId("plumix-editor-publish-button"),
@@ -887,7 +887,7 @@ test.describe("editor draft of a published entry", () => {
   }) => {
     await mockPublishedEntry(page, { autosaveUpdatedAt: null });
 
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
     await expect(page.getByTestId("editor-draft-save")).toBeVisible();
     await expect(page.getByTestId("editor-draft-publish")).toBeDisabled();
     await expect(page.getByTestId("editor-draft-discard")).toBeDisabled();
@@ -938,7 +938,7 @@ test.describe("editor draft of a published entry", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
 
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
     // Collapse the rails so the trailing draft controls aren't under the right
     // rail (see the published-status spec).
     await page.getByTestId("plumix-rails-toggle").click();
@@ -999,7 +999,7 @@ test.describe("editor draft of a published entry", () => {
       return route.fulfill({ status: 404, body: "not-mocked" });
     });
 
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
     // Collapse the rails so the trailing draft controls aren't under the right
     // rail (see the published-status spec).
     await page.getByTestId("plumix-rails-toggle").click();
@@ -1062,7 +1062,7 @@ test.describe("editor stale-draft dialog", () => {
     page,
   }) => {
     await installAutosaveMocks(page, { autosaveUpdatedAt: T_STALE });
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
     await expect(page.getByTestId("stale-draft-dialog")).toBeVisible();
     await expect(page.getByTestId("stale-draft-use-mine")).toBeEnabled();
     await expect(page.getByTestId("stale-draft-use-theirs")).toBeEnabled();
@@ -1071,14 +1071,14 @@ test.describe("editor stale-draft dialog", () => {
 
   test("fresh autosave (newer than live): no dialog", async ({ page }) => {
     await installAutosaveMocks(page, { autosaveUpdatedAt: T_FRESH });
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
     await expect(page.getByTestId("plumix-editor-layout")).toBeVisible();
     await expect(page.getByTestId("stale-draft-dialog")).toHaveCount(0);
   });
 
   test("no autosave: no dialog", async ({ page }) => {
     await installAutosaveMocks(page, { autosaveUpdatedAt: null });
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
     await expect(page.getByTestId("plumix-editor-layout")).toBeVisible();
     await expect(page.getByTestId("stale-draft-dialog")).toHaveCount(0);
   });
@@ -1087,7 +1087,7 @@ test.describe("editor stale-draft dialog", () => {
     page,
   }) => {
     await installAutosaveMocks(page, { autosaveUpdatedAt: T_STALE });
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
     await expect(page.getByTestId("stale-draft-dialog")).toBeVisible();
     await page.getByTestId("stale-draft-use-mine").click();
     // Dismissing keeps the editor (with the autosave content already seeded);
@@ -1099,7 +1099,7 @@ test.describe("editor stale-draft dialog", () => {
 
   test("Compare expands an inline side-by-side JSON diff", async ({ page }) => {
     await installAutosaveMocks(page, { autosaveUpdatedAt: T_STALE });
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
     await expect(page.getByTestId("stale-draft-dialog")).toBeVisible();
     await page.getByTestId("stale-draft-compare").click();
     await expect(page.getByTestId("stale-draft-compare-panes")).toBeVisible();
@@ -1203,7 +1203,7 @@ test.describe("editor revision preview", () => {
     page,
   }) => {
     await installPreviewMocks(page);
-    await page.goto("entries/posts/1/editor?revision=42");
+    await page.goto("entries/posts/1/edit?revision=42");
     const banner = page.getByTestId("revision-preview-banner");
     await expect(banner).toBeVisible();
     await expect(banner).toContainText("Ada Lovelace");
@@ -1218,7 +1218,7 @@ test.describe("editor revision preview", () => {
     page,
   }) => {
     await installPreviewMocks(page);
-    await page.goto("entries/posts/1/editor?revision=42");
+    await page.goto("entries/posts/1/edit?revision=42");
     await expect(page.getByTestId("revision-preview-banner")).toBeVisible();
     await page.getByTestId("revision-preview-back-to-live").click();
     await expect.poll(() => page.url()).not.toContain("revision=");
@@ -1234,7 +1234,7 @@ test.describe("editor revision preview", () => {
 // activity polling in the route), so there is nothing to assert here.
 
 // Ported from "editor create failure". The create route (`/entries/$slug/
-// create`) mints a draft then redirects to `/editor`; a 409 surfaces the retry
+// create`) mints a draft then redirects to `/edit`; a 409 surfaces the retry
 // affordance, and the retry redirects into the editor canvas.
 test.describe("editor create failure", () => {
   test("a failed create surfaces an error and retry recovers", async ({
@@ -1273,7 +1273,7 @@ test.describe("editor create failure", () => {
     await expect(page.getByTestId("create-entry-error")).toBeVisible();
 
     await page.getByTestId("create-entry-retry").click();
-    await page.waitForURL(/\/entries\/posts\/\d+\/editor/);
+    await page.waitForURL(/\/entries\/posts\/\d+\/edit/);
     // The editor mounted: its host-side canvas frame is present (the inner
     // `plumix-editor-canvas` lives inside the iframe the mock can't serve).
     await expect(page.getByTestId("plumix-canvas-frame")).toBeVisible();

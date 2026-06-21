@@ -32,7 +32,7 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
     // Arm the URL waiter before clicking New — the create route
     // redirects to the edit URL as soon as entry.create resolves.
     await page.goto("entries/posts");
-    const navigated = page.waitForURL(/\/entries\/posts\/\d+\/editor/);
+    const navigated = page.waitForURL(/\/entries\/posts\/\d+\/edit/);
     await page.getByTestId("content-list-new-button").click();
     await navigated;
 
@@ -76,7 +76,7 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
     if (!rowTestid) throw new Error("expected post row to have a data-testid");
     const id = rowTestid.replace("content-list-row-", "");
 
-    await page.goto(`entries/posts/${id}/editor`);
+    await page.goto(`entries/posts/${id}/edit`);
     await expect(page.getByTestId("plumix-editor-layout")).toBeVisible();
 
     const updated = page.waitForResponse(

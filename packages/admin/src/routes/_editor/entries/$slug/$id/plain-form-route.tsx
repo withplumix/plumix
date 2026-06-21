@@ -76,12 +76,11 @@ export function PlainFormRouteInner({
     },
   });
 
-  // Bound to the bespoke `/editor` route for search-schema inference: this
-  // component is the non-editor branch of that route (and, until it's deleted,
-  // the legacy `/edit` route), and every nav target now points at `/editor`, so
-  // its `revision` search param is the canonical one to merge into.
+  // Bound to the `/edit` route for search-schema inference: this component is
+  // the non-editor branch of that route, so its `revision` search param is the
+  // canonical one to merge into.
   const navigate = useNavigate({
-    from: "/entries/$slug/$id/editor",
+    from: "/entries/$slug/$id/edit",
   });
   const handlePreview = useCallback(
     (revisionId: number): void => {

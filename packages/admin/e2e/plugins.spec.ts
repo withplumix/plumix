@@ -270,7 +270,7 @@ test.describe("plugin block registered via window.plumix bridge", () => {
       });
     });
 
-    await page.goto("entries/posts/1/editor");
+    await page.goto("entries/posts/1/edit");
 
     // The runtime registry feeds the editor's block catalog (the inserter):
     // a block registered at chunk-eval time surfaces there and is searchable,

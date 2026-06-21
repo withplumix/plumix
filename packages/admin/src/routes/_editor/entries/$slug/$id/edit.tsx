@@ -111,7 +111,7 @@ const editorSearch = v.object({
   revision: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 });
 
-export const Route = createFileRoute("/_editor/entries/$slug/$id/editor")({
+export const Route = createFileRoute("/_editor/entries/$slug/$id/edit")({
   params: {
     parse: (raw) => {
       const result = v.safeParse(idPathParam, raw.id);

@@ -59,7 +59,7 @@ test.describe("plain-form route for non-editor entry types", () => {
       "/entry/get": authorEntry(1),
     });
 
-    await page.goto("entries/authors/1/editor");
+    await page.goto("entries/authors/1/edit");
 
     await expect(page.getByTestId("plain-form-layout")).toBeVisible();
     await expect(page.getByTestId("plain-form-header")).toBeVisible();
@@ -107,7 +107,7 @@ test.describe("plain-form route for non-editor entry types", () => {
       },
     });
 
-    await page.goto("entries/authors/1/editor");
+    await page.goto("entries/authors/1/edit");
     await page.getByTestId("plain-form-publish-button").click();
 
     await expect
@@ -130,7 +130,7 @@ test.describe("plain-form route for non-editor entry types", () => {
       },
     });
 
-    await page.goto("entries/authors/1/editor");
+    await page.goto("entries/authors/1/edit");
     await page.getByTestId("plain-form-save-button").click();
 
     await expect.poll(() => captures.length).toBeGreaterThan(0);
@@ -169,7 +169,7 @@ test.describe("capability gating in plain-form route", () => {
       "/entry/get": authorEntry(1),
     });
 
-    await page.goto("entries/authors/1/editor");
+    await page.goto("entries/authors/1/edit");
 
     await expect(
       page.getByTestId("plain-form-meta-box-public-bio"),
@@ -193,7 +193,7 @@ test.describe("capability gating in plain-form route", () => {
       "/entry/get": authorEntry(1),
     });
 
-    await page.goto("entries/authors/1/editor");
+    await page.goto("entries/authors/1/edit");
 
     await expect(
       page.getByTestId("plain-form-meta-box-public-bio"),
