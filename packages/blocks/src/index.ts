@@ -120,6 +120,7 @@ export type {
   TokenCategory,
 } from "./styles/style-emitter.js";
 export { sanitizeCssValue } from "./styles/sanitize-css.js";
+export { parseLoaderData, serializeLoaderData } from "./loader-data.js";
 export type {
   ThemeTokenEntry,
   ThemeTokenGroup,
