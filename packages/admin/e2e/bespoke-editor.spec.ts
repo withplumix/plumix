@@ -7,7 +7,12 @@
 
 import { expect, test } from "@playwright/test";
 
-import { editorEntry } from "./support/editor.js";
+import {
+  editorEntry,
+  publishedEntry,
+  publishedEntryRpcBody,
+  T0,
+} from "./support/editor.js";
 import {
   AUTHED_ADMIN,
   MANIFEST_WITH_POST,
@@ -197,6 +202,72 @@ test.describe("bespoke editor route", () => {
     await expect(page.getByTestId("json-inspector-output")).toContainText(
       '"h1"',
     );
+  });
+
+  test("a draft entry shows a Publish button wired to the host", async ({
+    page,
+  }) => {
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/get": editorEntry(),
+      "/entry/createPreviewLink": {
+        token: "tok123",
+        url: "/post/hello?preview=tok123",
+      },
+    });
+
+    await page.goto("entries/posts/1/editor");
+
+    const publishButton = page.getByTestId("plumix-editor-publish-button");
+    await expect(publishButton).toBeVisible();
+    await expect(publishButton).toBeEnabled();
+    await expect(page.getByTestId("editor-draft-save")).toHaveCount(0);
+  });
+
+  test("a published autosave-type entry shows draft save/publish/discard", async ({
+    page,
+  }) => {
+    await mockManifest(page, {
+      ...MANIFEST_WITH_POST,
+      entryTypes: [
+        {
+          name: "post",
+          adminSlug: "posts",
+          label: "Posts",
+          labels: { singular: "Post", plural: "Posts" },
+          supports: ["editor", "autosave"],
+        },
+      ],
+    });
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/list": [],
+      "/entry/createPreviewLink": {
+        token: "tok123",
+        url: "/post/hello?preview=tok123",
+      },
+    });
+    // A pending autosave (equal timestamps = fresh, not stale). The dedicated
+    // body builder encodes the `_preview` dates so the client revives them.
+    await page.route("**/_plumix/rpc/entry/get", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: publishedEntryRpcBody(publishedEntry({ autosaveUpdatedAt: T0 })),
+      }),
+    );
+
+    await page.goto("entries/posts/1/editor");
+
+    // Draft mode: the live Publish button is replaced by the draft trio, and
+    // the pending autosave enables Publish/Discard + shows the banner.
+    await expect(page.getByTestId("plumix-editor-publish-button")).toHaveCount(
+      0,
+    );
+    await expect(page.getByTestId("editor-draft-save")).toBeVisible();
+    await expect(page.getByTestId("editor-draft-publish")).toBeEnabled();
+    await expect(page.getByTestId("editor-draft-discard")).toBeEnabled();
+    await expect(page.getByTestId("unpublished-changes-banner")).toBeVisible();
   });
 
   test("a failed preview mint surfaces the error placeholder, not a dead canvas", async ({

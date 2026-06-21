@@ -7,8 +7,34 @@ import { Button } from "@plumix/admin-ui/button";
 import { canRedo, canUndo } from "./history.js";
 import { useEditorStore, useEditorStoreApi } from "./provider.js";
 
-/** Top toolbar: undo/redo (more controls land here in later slices). */
-export function EditorToolbar(): ReactElement {
+/** Draft-mode actions for a published entry with a pending autosave. The host
+ *  owns the mutations; the toolbar only renders the buttons and their state. */
+export interface DraftMode {
+  readonly hasPendingDraft: boolean;
+  readonly onSaveDraft: () => void;
+  readonly onPublishDraft: () => void;
+  readonly onDiscardDraft: () => void;
+  readonly isSaving: boolean;
+  readonly isPublishing: boolean;
+  readonly isDiscarding: boolean;
+}
+
+/** Publish wiring injected by the host (no orpc in this package). When
+ *  `draftMode` is set the toolbar shows save/publish/discard; otherwise a plain
+ *  Publish button (disabled once published). */
+export interface PublishActions {
+  readonly onPublish?: () => void;
+  readonly isPublished?: boolean;
+  readonly isPublishing?: boolean;
+  readonly draftMode?: DraftMode;
+}
+
+/** Top toolbar: undo/redo plus the host-wired publish / draft actions. */
+export function EditorToolbar({
+  publish,
+}: {
+  readonly publish?: PublishActions;
+}): ReactElement {
   const undoAvailable = useEditorStore((s) => canUndo(s.history));
   const redoAvailable = useEditorStore((s) => canRedo(s.history));
   const undo = useEditorStore((s) => s.undo);
@@ -39,7 +65,78 @@ export function EditorToolbar(): ReactElement {
       >
         <Trans id="editor.toolbar.redo" message="Redo" />
       </Button>
+      {publish ? <PublishControls publish={publish} /> : null}
     </header>
+  );
+}
+
+function PublishControls({
+  publish,
+}: {
+  readonly publish: PublishActions;
+}): ReactElement {
+  const { draftMode } = publish;
+  if (draftMode) {
+    const busy =
+      draftMode.isSaving || draftMode.isPublishing || draftMode.isDiscarding;
+    return (
+      <div className="ms-auto flex items-center gap-2">
+        {draftMode.hasPendingDraft ? (
+          <span
+            className="text-muted-foreground text-xs"
+            data-testid="unpublished-changes-banner"
+          >
+            <Trans
+              id="editor.toolbar.unpublished"
+              message="Unpublished changes"
+            />
+          </span>
+        ) : null}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          data-testid="editor-draft-discard"
+          disabled={busy || !draftMode.hasPendingDraft}
+          onClick={draftMode.onDiscardDraft}
+        >
+          <Trans id="editor.toolbar.discard" message="Discard" />
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          data-testid="editor-draft-save"
+          disabled={busy}
+          onClick={draftMode.onSaveDraft}
+        >
+          <Trans id="editor.toolbar.saveDraft" message="Save draft" />
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          data-testid="editor-draft-publish"
+          disabled={busy || !draftMode.hasPendingDraft}
+          onClick={draftMode.onPublishDraft}
+        >
+          <Trans id="editor.toolbar.publish" message="Publish" />
+        </Button>
+      </div>
+    );
+  }
+  const { isPublishing = false, isPublished = false } = publish;
+  return (
+    <div className="ms-auto">
+      <Button
+        type="button"
+        size="sm"
+        data-testid="plumix-editor-publish-button"
+        disabled={isPublishing || isPublished}
+        onClick={publish.onPublish}
+      >
+        <Trans id="editor.toolbar.publish" message="Publish" />
+      </Button>
+    </div>
   );
 }
 

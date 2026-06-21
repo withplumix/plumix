@@ -1043,6 +1043,11 @@ msgid "terms.create.error.emptySlug"
 msgstr "无法从此名称生成别名 — 请手动输入。"
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.discardFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.entry.edit.toast.discardFailed"
 msgstr "无法放弃草稿，请重试。"
@@ -1125,6 +1130,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/editor.tsx
 msgid "editor.bespoke.previewFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.publishFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1526,6 +1536,11 @@ msgstr "完成"
 msgctxt "entry status"
 msgid "entries.list.statusFilter.draft"
 msgstr "草稿"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.discarded"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
@@ -2074,6 +2089,11 @@ msgstr "正在加载用户"
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.loading"
 msgstr "正在加载用户"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.stale.loading"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
@@ -2739,6 +2759,11 @@ msgstr "已发布"
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.itemPublishedPrivately"
 msgstr "已私密发布"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/editor.tsx
+msgid "editor.bespoke.toast.published"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
