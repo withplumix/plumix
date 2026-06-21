@@ -1,6 +1,14 @@
-import type { LucideIcon } from "lucide-react";
-import { Globe, Monitor, Smartphone, Tablet, Tv, Watch } from "lucide-react";
 import { UAParser } from "ua-parser-js";
+
+import type { LucideIcon } from "@plumix/admin-ui/icons";
+import {
+  Globe,
+  Monitor,
+  Smartphone,
+  Tablet,
+  Tv,
+  Watch,
+} from "@plumix/admin-ui/icons";
 
 // Pretty-prints a `User-Agent` string into something humans can scan in
 // a session list ("Chrome on macOS", "Safari on iPhone"), and picks an

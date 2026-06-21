@@ -17,7 +17,6 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
-import { ArrowLeft, Check, Copy } from "lucide-react";
 import { useForm } from "react-hook-form";
 import * as v from "valibot";
 
@@ -40,6 +39,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@plumix/admin-ui/form";
+import { ArrowLeft, Check, Copy } from "@plumix/admin-ui/icons";
 import { Input } from "@plumix/admin-ui/input";
 import { Label as UILabel } from "@plumix/admin-ui/label";
 import { vMessage } from "@plumix/core/validation";

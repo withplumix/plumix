@@ -30,7 +30,6 @@ import {
   notFound,
   useNavigate,
 } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
 import * as v from "valibot";
 
 import type { TermTaxonomyManifestEntry } from "@plumix/core/manifest";
@@ -53,6 +52,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@plumix/admin-ui/card";
+import { ArrowLeft } from "@plumix/admin-ui/icons";
 import { seedFromMetaBoxes } from "@plumix/core/manifest";
 import { idPathParam } from "@plumix/core/validation";
 

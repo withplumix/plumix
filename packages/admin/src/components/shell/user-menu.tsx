@@ -4,7 +4,6 @@ import { SESSION_QUERY_KEY } from "@/lib/session.js";
 import { Trans } from "@lingui/react";
 import { useMutation } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
-import { ChevronsUpDown, LogOut, Settings, User } from "lucide-react";
 
 import type { AuthSessionUser } from "@plumix/core";
 import { Avatar, AvatarFallback } from "@plumix/admin-ui/avatar";
@@ -17,6 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@plumix/admin-ui/dropdown-menu";
+import { ChevronsUpDown, LogOut, Settings, User } from "@plumix/admin-ui/icons";
 import { SidebarMenuButton, useSidebar } from "@plumix/admin-ui/sidebar";
 
 // Only the identity fields are rendered — a narrow slice of the session

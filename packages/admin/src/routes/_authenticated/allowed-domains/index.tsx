@@ -10,7 +10,6 @@ import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import * as v from "valibot";
 
@@ -33,6 +32,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@plumix/admin-ui/form";
+import { Trash2 } from "@plumix/admin-ui/icons";
 import { Input } from "@plumix/admin-ui/input";
 import {
   Select,

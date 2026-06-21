@@ -4,7 +4,6 @@ import { visibleSettingsPages } from "@/lib/manifest.js";
 import { useLabel } from "@/lib/use-label.js";
 import { Trans } from "@lingui/react";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { Settings as SettingsIcon } from "lucide-react";
 
 import {
   Card,
@@ -20,6 +19,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@plumix/admin-ui/empty";
+import { Settings as SettingsIcon } from "@plumix/admin-ui/icons";
 
 export const Route = createFileRoute("/_authenticated/settings/")({
   // The settings surface is admin-only at the floor — `settings:manage`

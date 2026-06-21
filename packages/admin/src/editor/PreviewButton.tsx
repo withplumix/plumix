@@ -5,7 +5,6 @@ import { copyText } from "@/lib/clipboard.js";
 import { toastError, toastSuccess } from "@/lib/toast.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
-import { ChevronDownIcon, EyeIcon, Link2Icon } from "lucide-react";
 
 import { Button } from "@plumix/admin-ui/button";
 import {
@@ -14,6 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@plumix/admin-ui/dropdown-menu";
+import { ChevronDownIcon, EyeIcon, Link2Icon } from "@plumix/admin-ui/icons";
 import {
   Tooltip,
   TooltipContent,

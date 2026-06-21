@@ -17,7 +17,6 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
 
 import type { TermTaxonomyManifestEntry } from "@plumix/core/manifest";
 import {
@@ -27,6 +26,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@plumix/admin-ui/card";
+import { ArrowLeft } from "@plumix/admin-ui/icons";
 import { slugify } from "@plumix/core/slugify";
 
 import { TAXONOMY_LIST_DEFAULT_SEARCH } from "./-constants.js";

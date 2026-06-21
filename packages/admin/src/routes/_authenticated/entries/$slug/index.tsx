@@ -20,7 +20,6 @@ import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowDown, ArrowUp, ArrowUpDown, Plus } from "lucide-react";
 import * as v from "valibot";
 
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
@@ -46,6 +45,7 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@plumix/admin-ui/empty";
+import { ArrowDown, ArrowUp, ArrowUpDown, Plus } from "@plumix/admin-ui/icons";
 import {
   Select,
   SelectContent,

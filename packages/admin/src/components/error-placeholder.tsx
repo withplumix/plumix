@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { TriangleAlert } from "lucide-react";
 
 import {
   Empty,
@@ -8,6 +7,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@plumix/admin-ui/empty";
+import { TriangleAlert } from "@plumix/admin-ui/icons";
 
 interface ErrorPlaceholderProps {
   readonly title: ReactNode;

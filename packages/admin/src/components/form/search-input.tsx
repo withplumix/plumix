@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { Search } from "lucide-react";
 
+import { Search } from "@plumix/admin-ui/icons";
 import { Input } from "@plumix/admin-ui/input";
 
 const SEARCH_DEBOUNCE_MS = 250;

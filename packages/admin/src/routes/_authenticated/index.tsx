@@ -11,7 +11,6 @@ import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, FileText, Puzzle } from "lucide-react";
 
 import { Button } from "@plumix/admin-ui/button";
 import {
@@ -28,6 +27,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@plumix/admin-ui/empty";
+import { ArrowRight, FileText, Puzzle } from "@plumix/admin-ui/icons";
 
 import { DashboardWidgets } from "./-dashboard-widgets.js";
 

@@ -3,9 +3,9 @@ import type { ReactNode } from "react";
 import { Component } from "react";
 import { i18n } from "@lingui/core";
 import { defineMessage } from "@lingui/core/macro";
-import { AlertTriangle } from "lucide-react";
 
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
+import { AlertTriangle } from "@plumix/admin-ui/icons";
 
 type Kind = "page" | "widget" | "icon" | "block" | "field";
 

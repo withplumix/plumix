@@ -68,6 +68,10 @@
       "types": "./dist/form.d.ts",
       "default": "./dist/form.js"
     },
+    "./icons": {
+      "types": "./dist/icons.d.ts",
+      "default": "./dist/icons.js"
+    },
     "./input": {
       "types": "./dist/input.d.ts",
       "default": "./dist/input.js"
