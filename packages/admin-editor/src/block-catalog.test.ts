@@ -1,11 +1,15 @@
 import { describe, expect, test } from "vitest";
 
-import type { BlockSpec } from "@plumix/blocks";
+import type { BlockNode, BlockPattern, BlockSpec } from "@plumix/blocks";
 import { createBlockRegistry } from "@plumix/blocks";
 
 import {
   createBlockFromSpec,
+  createNodeFromEntry,
+  expandPattern,
+  filterPatterns,
   groupBlocksByCategory,
+  groupInsertables,
   slotAllowedBlocks,
 } from "./block-catalog.js";
 
@@ -138,6 +142,124 @@ describe("groupBlocksByCategory", () => {
     });
     expect(byKeyword.map((g) => g.category)).toEqual(["text"]);
     expect(byKeyword[0]?.blocks.map((b) => b.name)).toEqual(["core/quote"]);
+  });
+});
+
+describe("groupInsertables", () => {
+  test("includes blocks and their inserter variations, grouped by category", () => {
+    const registry = createBlockRegistry([
+      spec({ name: "core/heading", category: "text", title: "Heading" }),
+      spec({
+        name: "core/group",
+        category: "layout",
+        title: "Group",
+        variations: [
+          { slug: "group/two-col", title: "Two columns", attrs: { cols: 2 } },
+        ],
+      }),
+    ]);
+
+    const groups = groupInsertables(registry, { capabilities: NO_CAPS });
+    const slugs = groups.flatMap((g) => g.entries.map((e) => e.slug));
+
+    // The group block has an inserter variation, so the variation surfaces in
+    // place of the bare parent; the heading (no variations) surfaces itself.
+    expect(slugs).toEqual(["core/heading", "group/two-col"]);
+    expect(groups.map((g) => g.category)).toEqual(["text", "layout"]);
+  });
+
+  test("excludes inserter:false and capability-gated blocks; filters by query", () => {
+    const registry = createBlockRegistry([
+      spec({ name: "core/heading", category: "text", title: "Heading" }),
+      spec({ name: "core/internal", category: "text", inserter: false }),
+      spec({ name: "core/secret", category: "text", capability: "x" }),
+    ]);
+
+    const slugs = groupInsertables(registry, {
+      capabilities: NO_CAPS,
+      query: "head",
+    }).flatMap((g) => g.entries.map((e) => e.slug));
+    expect(slugs).toEqual(["core/heading"]);
+  });
+});
+
+describe("filterPatterns", () => {
+  const patterns: readonly BlockPattern[] = [
+    { name: "hero", title: "Hero banner", content: [] },
+    { name: "cta", title: "Call to action", keywords: ["button"], content: [] },
+  ];
+
+  test("returns all patterns without a query", () => {
+    expect(filterPatterns(patterns).map((p) => p.name)).toEqual([
+      "hero",
+      "cta",
+    ]);
+  });
+
+  test("matches name, title and keywords", () => {
+    expect(filterPatterns(patterns, "hero").map((p) => p.name)).toEqual([
+      "hero",
+    ]);
+    expect(filterPatterns(patterns, "button").map((p) => p.name)).toEqual([
+      "cta",
+    ]);
+  });
+});
+
+describe("createNodeFromEntry", () => {
+  const registry = createBlockRegistry([
+    spec({
+      name: "core/group",
+      category: "layout",
+      defaults: { layout: "flow" },
+    }),
+  ]);
+
+  test("merges spec defaults under the variation attrs and seeds innerBlocks", () => {
+    const node = createNodeFromEntry(registry, {
+      name: "core/group",
+      slug: "group/two-col",
+      title: "Two columns",
+      attrs: { layout: "flex-row" },
+      innerBlocks: [{ id: "seed-child", name: "core/heading" }],
+    });
+
+    // Variation attr wins over the spec default; innerBlocks seed the content
+    // slot with freshly minted ids.
+    expect(node.attrs?.layout).toBe("flex-row");
+    const content = node.attrs?.content as readonly BlockNode[];
+    expect(content.map((n) => n.name)).toEqual(["core/heading"]);
+    expect(content[0]?.id).not.toBe("seed-child");
+  });
+});
+
+describe("expandPattern", () => {
+  test("copy patterns clone the composition with fresh ids", () => {
+    const nodes = expandPattern({
+      name: "hero",
+      title: "Hero",
+      content: [
+        { id: "p1", name: "core/heading", attrs: { text: "Hi" } },
+        { id: "p2", name: "core/rich-text" },
+      ],
+    });
+    expect(nodes.map((n) => n.name)).toEqual([
+      "core/heading",
+      "core/rich-text",
+    ]);
+    expect(nodes.map((n) => n.id)).not.toContain("p1");
+  });
+
+  test("reference patterns insert a single core/pattern-ref node", () => {
+    const nodes = expandPattern({
+      name: "cta",
+      title: "CTA",
+      insert: "reference",
+      content: [{ id: "p1", name: "core/heading" }],
+    });
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0]?.name).toBe("core/pattern-ref");
+    expect(nodes[0]?.attrs?.slug).toBe("cta");
   });
 });
 

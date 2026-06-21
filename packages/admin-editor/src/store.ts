@@ -52,6 +52,9 @@ export interface EditorActions {
   setTree: (tree: readonly BlockNode[]) => void;
   /** Insert a block at a top-level index (clamped) and select it. */
   insertBlock: (node: BlockNode, index: number) => void;
+  /** Insert several blocks at a top-level index as one step (a pattern's
+   *  composition); selects the first. No-op for an empty list. */
+  insertBlocks: (nodes: readonly BlockNode[], index: number) => void;
   /** Insert a block into a parent's slot (nested), gated by `allowed`, and
    *  select it. A no-op when the slot is absent or the block isn't allowed. */
   insertBlockInto: (
@@ -162,6 +165,23 @@ export function createEditorStore(
           tree,
           activeId: node.id,
           selectedIds: new Set([node.id]),
+          history: recordHistory(state.history, tree, null),
+        };
+      }),
+    insertBlocks: (nodes, index) =>
+      set((state) => {
+        const first = nodes[0];
+        if (!first) return {};
+        const at = Math.max(0, Math.min(index, state.tree.length));
+        const tree = [
+          ...state.tree.slice(0, at),
+          ...nodes,
+          ...state.tree.slice(at),
+        ];
+        return {
+          tree,
+          activeId: first.id,
+          selectedIds: new Set([first.id]),
           history: recordHistory(state.history, tree, null),
         };
       }),

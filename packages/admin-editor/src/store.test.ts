@@ -167,6 +167,47 @@ describe("insertBlock", () => {
   });
 });
 
+describe("insertBlocks", () => {
+  test("inserts multiple blocks at a top-level index and selects the first", () => {
+    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+
+    store.getState().insertBlocks(
+      [
+        { id: "p1", name: "core/y" },
+        { id: "p2", name: "core/z" },
+      ],
+      1,
+    );
+
+    expect(store.getState().tree.map((n) => n.id)).toEqual(["a", "p1", "p2"]);
+    expect(store.getState().activeId).toBe("p1");
+    expect([...store.getState().selectedIds]).toEqual(["p1"]);
+  });
+
+  test("is a no-op for an empty list", () => {
+    const tree: readonly BlockNode[] = [{ id: "a", name: "core/x" }];
+    const store = createEditorStore({ tree });
+
+    store.getState().insertBlocks([], 0);
+
+    expect(store.getState().tree).toBe(tree);
+  });
+
+  test("a pattern insert is one undo step", () => {
+    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+    store.getState().insertBlocks(
+      [
+        { id: "p1", name: "core/y" },
+        { id: "p2", name: "core/z" },
+      ],
+      1,
+    );
+
+    store.getState().undo();
+    expect(store.getState().tree.map((n) => n.id)).toEqual(["a"]);
+  });
+});
+
 describe("undo / redo", () => {
   test("undo reverts an insert; redo replays it", () => {
     const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
