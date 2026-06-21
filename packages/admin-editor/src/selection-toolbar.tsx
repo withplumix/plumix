@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { Trans } from "@lingui/react";
 
 import { Button } from "@plumix/admin-ui/button";
+import { GripVertical } from "@plumix/admin-ui/icons";
 
 import type { OverlayBox } from "./overlay.js";
 import { findParentId } from "./block-tree-ops.js";
@@ -51,6 +52,23 @@ export function SelectionToolbar({
         zIndex: 30,
       }}
     >
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        data-testid="selection-toolbar-drag"
+        aria-label="Drag to move"
+        disabled={multi}
+        // Pointerdown (not click) starts the move; preventDefault stops the
+        // browser's text-selection drag from hijacking it.
+        onPointerDown={(e) => {
+          e.preventDefault();
+          state.startMove(activeId);
+        }}
+        className="cursor-grab active:cursor-grabbing"
+      >
+        <GripVertical className="size-4" />
+      </Button>
       {selectedCount > 1 ? (
         <span
           data-testid="selection-toolbar-count"

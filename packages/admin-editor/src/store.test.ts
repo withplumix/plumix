@@ -420,4 +420,30 @@ describe("moveBlock action", () => {
 
     expect(store.getState().tree.map((n) => n.id)).toEqual(["b", "a"]);
   });
+
+  test("honors an allowedBlocks list, rejecting a disallowed nest", () => {
+    const tree: readonly BlockNode[] = [
+      { id: "btn", name: "core/button" },
+      { id: "g", name: "core/group", attrs: { content: [] } },
+    ];
+    const store = createEditorStore({ tree });
+
+    store
+      .getState()
+      .moveBlock("btn", { parentId: "g", index: 0 }, ["core/heading"]);
+
+    expect(store.getState().tree).toBe(tree);
+  });
+});
+
+describe("move drag", () => {
+  test("startMove marks the moving block; endMove clears it", () => {
+    const store = createEditorStore();
+
+    store.getState().startMove("a");
+    expect(store.getState().movingId).toBe("a");
+
+    store.getState().endMove();
+    expect(store.getState().movingId).toBeNull();
+  });
 });

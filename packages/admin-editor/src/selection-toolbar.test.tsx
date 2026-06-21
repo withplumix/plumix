@@ -105,6 +105,23 @@ describe("SelectionToolbar", () => {
     expect(storeApi?.getState().activeId).toBe("g");
   });
 
+  test("the drag handle begins moving the active block", () => {
+    const { getByTestId } = renderToolbar([
+      { id: "a", name: "core/x" },
+      { id: "b", name: "core/x" },
+    ]);
+    act(() => storeApi?.getState().select("a"));
+
+    // jsdom lacks a PointerEvent ctor; dispatch a typed MouseEvent the React
+    // onPointerDown listener still fires on.
+    fireEvent(
+      getByTestId("selection-toolbar-drag"),
+      new MouseEvent("pointerdown", { bubbles: true }),
+    );
+
+    expect(storeApi?.getState().movingId).toBe("a");
+  });
+
   test("shows a count when several blocks are selected", () => {
     const { getByTestId, queryByTestId } = renderToolbar([
       { id: "a", name: "core/x" },
