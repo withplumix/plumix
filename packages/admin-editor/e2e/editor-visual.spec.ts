@@ -77,12 +77,19 @@ test.describe("editor playground", () => {
     const canvas = page.frameLocator(CANVAS_FRAME);
 
     await canvas.locator('[data-plumix-id="heading-1"]').click();
-    await canvas
-      .locator('[data-plumix-id="intro"]')
-      .click({ modifiers: ["Shift"] });
-
-    // intro is now active (strong outline); heading-1 is a non-active member.
+    // Wait for the first selection (and its floating toolbar) to settle before
+    // the additive click.
     await expect(page.getByTestId("plumix-overlay-selected")).toBeVisible();
+
+    // Additive-select a block well clear of heading-1's floating toolbar (which
+    // sits over the top of the canvas) so the shift-click can't land on the
+    // toolbar instead of the block. Hold Shift at the page level for a robust
+    // modifier across the iframe boundary.
+    await page.keyboard.down("Shift");
+    await canvas.locator('[data-plumix-id="col-left"]').click();
+    await page.keyboard.up("Shift");
+
+    // col-left is now active; heading-1 is a non-active member.
     await expect(
       page.getByTestId("plumix-overlay-member-heading-1"),
     ).toBeVisible();
@@ -152,6 +159,102 @@ test.describe("editor playground", () => {
         '[data-plumix-slot-parent="columns-1"][data-plumix-slot-key="left"]',
       ),
     ).toBeAttached();
+  });
+
+  test("dragging the toolbar handle nests a block into a container slot", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+
+    // heading-1 starts at the top level, outside the group.
+    await expect(
+      canvas.locator(
+        '[data-plumix-slot-parent="group-1"] [data-plumix-id="heading-1"]',
+      ),
+    ).toHaveCount(0);
+
+    await canvas.locator('[data-plumix-id="heading-1"]').click();
+    await expect(page.getByTestId("selection-toolbar-drag")).toBeVisible();
+    const handle = await page
+      .getByTestId("selection-toolbar-drag")
+      .boundingBox();
+    const target = await canvas
+      .locator('[data-plumix-id="group-heading"]')
+      .boundingBox();
+    if (!handle || !target) throw new Error("expected handle + target boxes");
+
+    // Drag the handle (host-side) into the group's slot and release.
+    await page.mouse.move(
+      handle.x + handle.width / 2,
+      handle.y + handle.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      target.x + target.width / 2,
+      target.y + target.height / 2,
+      { steps: 10 },
+    );
+    await page.mouse.up();
+
+    // heading-1 now lives inside the group's content slot.
+    await expect(
+      canvas.locator(
+        '[data-plumix-slot-parent="group-1"] [data-plumix-id="heading-1"]',
+      ),
+    ).toBeAttached();
+  });
+
+  test("dragging the toolbar handle reorders a top-level block", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+
+    const headingBefore = await canvas
+      .locator('[data-plumix-id="heading-1"]')
+      .boundingBox();
+    const introBefore = await canvas
+      .locator('[data-plumix-id="intro"]')
+      .boundingBox();
+    if (!headingBefore || !introBefore) throw new Error("expected boxes");
+    // heading-1 starts above intro.
+    expect(headingBefore.y).toBeLessThan(introBefore.y);
+
+    await canvas.locator('[data-plumix-id="heading-1"]').click();
+    await expect(page.getByTestId("selection-toolbar-drag")).toBeVisible();
+    const handle = await page
+      .getByTestId("selection-toolbar-drag")
+      .boundingBox();
+    if (!handle) throw new Error("expected handle box");
+
+    // Drag the handle to intro's lower half — a top-level drop after intro,
+    // clear of any container slot.
+    await page.mouse.move(
+      handle.x + handle.width / 2,
+      handle.y + handle.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      introBefore.x + introBefore.width / 2,
+      introBefore.y + introBefore.height * 0.75,
+      { steps: 10 },
+    );
+    await page.mouse.up();
+
+    // heading-1 now sits below intro — and exactly after it (the off-by-one
+    // would drop it further down the tree).
+    await expect
+      .poll(async () => {
+        const h = await canvas
+          .locator('[data-plumix-id="heading-1"]')
+          .boundingBox();
+        const i = await canvas
+          .locator('[data-plumix-id="intro"]')
+          .boundingBox();
+        return h && i ? h.y > i.y : false;
+      })
+      .toBe(true);
   });
 
   test("the Layers tab outlines the nested structure", async ({ page }) => {

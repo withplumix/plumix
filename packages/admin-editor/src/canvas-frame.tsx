@@ -72,6 +72,7 @@ export function CanvasFrame({
   const selectedIds = useEditorStore((s) => s.selectedIds);
   const hoverId = useEditorStore((s) => s.hoverId);
   const dragSpec = useEditorStore((s) => s.dragSpec);
+  const movingId = useEditorStore((s) => s.movingId);
   const isEmpty = useEditorStore((s) => s.tree.length === 0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -146,13 +147,29 @@ export function CanvasFrame({
     };
   }, [measureHost]);
 
-  // Catalog drag → top-level insert. While dragging, the iframe ignores pointer
-  // events so the host keeps receiving them over the canvas; the placement is
-  // computed from the reported block geometry mapped into screen space.
+  // Canvas drag, shared by two sources: a catalog block being inserted
+  // (dragSpec) and an existing block being moved (movingId). While dragging, the
+  // iframe ignores pointer events so the host keeps receiving them; the target
+  // is computed from the reported block + slot geometry mapped into screen space.
   useEffect(() => {
     const iframe = iframeRef.current;
-    if (!dragSpec || !iframe) return;
+    if (!iframe) return;
+    const draggingName =
+      dragSpec?.name ??
+      (movingId ? findBlock(store.getState().tree, movingId)?.name : undefined);
+    if (!draggingName) return;
     iframe.style.pointerEvents = "none";
+
+    const endDrag = (): void => {
+      if (dragSpec) store.getState().endBlockDrag();
+      else store.getState().endMove();
+    };
+    const allowedForSlot = (slot: SlotDrop): readonly string[] | undefined => {
+      const parent = findBlock(store.getState().tree, slot.parentId);
+      return parent
+        ? slotAllowedBlocks(registry, parent.name, slot.slotKey)
+        : undefined;
+    };
 
     const placementAt = (clientX: number, clientY: number) => {
       const rect = iframe.getBoundingClientRect();
@@ -198,7 +215,7 @@ export function CanvasFrame({
         const parent = findBlock(tree, slot.parentId);
         if (!parent) continue;
         const allowed = slotAllowedBlocks(registry, parent.name, slot.slotKey);
-        if (allowed && !allowed.includes(dragSpec.name)) continue;
+        if (allowed && !allowed.includes(draggingName)) continue;
         const area = box.width * box.height;
         if (area < bestArea) {
           bestArea = area;
@@ -217,36 +234,52 @@ export function CanvasFrame({
       );
     };
     const onUp = (e: PointerEvent): void => {
-      const node = createBlockFromSpec(dragSpec);
       const slot = slotTargetAt(e.clientX, e.clientY);
       if (slot) {
-        const parent = findBlock(store.getState().tree, slot.parentId);
-        const allowed = parent
-          ? slotAllowedBlocks(registry, parent.name, slot.slotKey)
-          : undefined;
-        // Nested drops append to the slot; insertNode clamps the index to the
-        // slot length, so a sentinel lands it at the end without a re-lookup.
-        store.getState().insertBlockInto(
-          node,
-          {
-            parentId: slot.parentId,
-            slotKey: slot.slotKey,
-            index: Number.MAX_SAFE_INTEGER,
-          },
-          allowed,
-        );
+        // Nested drops append (a sentinel index that insertNode/moveBlock clamp
+        // to the slot length).
+        const target = {
+          parentId: slot.parentId,
+          slotKey: slot.slotKey,
+          index: Number.MAX_SAFE_INTEGER,
+        };
+        const allowed = allowedForSlot(slot);
+        if (dragSpec) {
+          store
+            .getState()
+            .insertBlockInto(createBlockFromSpec(dragSpec), target, allowed);
+        } else if (movingId) {
+          store.getState().moveBlock(movingId, target, allowed);
+        }
       } else {
         const placement = placementAt(e.clientX, e.clientY);
-        if (placement) store.getState().insertBlock(node, placement.index);
+        if (placement) {
+          if (dragSpec) {
+            store
+              .getState()
+              .insertBlock(createBlockFromSpec(dragSpec), placement.index);
+          } else if (movingId) {
+            // placement.index counts the pre-removal top level; moveBlock
+            // removes the source first, so shift down by one when the source
+            // currently sits before the drop point (a downward reorder).
+            const top = store.getState().tree;
+            const from = top.findIndex((n) => n.id === movingId);
+            const index =
+              from !== -1 && from < placement.index
+                ? placement.index - 1
+                : placement.index;
+            store.getState().moveBlock(movingId, { parentId: null, index });
+          }
+        }
       }
-      store.getState().endBlockDrag();
+      endDrag();
     };
     // Without this, a pointercancel (touch interruption, context menu, drag
-    // into a native element) or Escape would skip onUp, stranding dragSpec set
+    // into a native element) or Escape would skip onUp, stranding the drag set
     // and the iframe permanently non-interactive (pointerEvents: none).
-    const onCancel = (): void => store.getState().endBlockDrag();
+    const onCancel = (): void => endDrag();
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") store.getState().endBlockDrag();
+      if (e.key === "Escape") endDrag();
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
@@ -261,7 +294,7 @@ export function CanvasFrame({
       setDropY(null);
       setDropSlot(null);
     };
-  }, [dragSpec, store, registry]);
+  }, [dragSpec, movingId, store, registry]);
 
   const addFirstBlock = useCallback((): void => {
     const [group] = groupBlocksByCategory(registry, { capabilities });

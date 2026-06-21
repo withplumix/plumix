@@ -264,4 +264,57 @@ describe("CanvasFrame nested drop", () => {
       | undefined;
     expect(items).toEqual([]);
   });
+
+  // Moving an existing block over a slot, started via the toolbar handle's
+  // startMove (the drag origin is host-side, so jsdom can drive it). Top-level
+  // reorder needs a real iframe rect for the over-gate; that's e2e-covered.
+  const moveInto = (
+    movingId: string,
+    parentId: string,
+    slotKey: string,
+  ): void => {
+    fromCanvas({
+      type: "canvas:geometry",
+      rects: [{ id: parentId, x: 0, y: 0, width: 500, height: 500 }],
+      slots: [{ parentId, slotKey, x: 0, y: 0, width: 500, height: 500 }],
+    });
+    act(() => storeApi?.getState().startMove(movingId));
+    act(() => {
+      window.dispatchEvent(
+        new MouseEvent("pointermove", { clientX: 50, clientY: 50 }),
+      );
+      window.dispatchEvent(
+        new MouseEvent("pointerup", { clientX: 50, clientY: 50 }),
+      );
+    });
+  };
+
+  test("dragging an existing block into a slot nests it there", () => {
+    renderWith([
+      { id: "h", name: "core/heading" },
+      { id: "g", name: "core/group", attrs: { content: [] } },
+    ]);
+
+    moveInto("h", "g", "content");
+
+    const tree = storeApi?.getState().tree ?? [];
+    // h left the top level and now lives in the group's content slot.
+    expect(tree.map((n) => n.id)).toEqual(["g"]);
+    expect(
+      (tree[0]?.attrs?.content as readonly BlockNode[]).map((n) => n.name),
+    ).toEqual(["core/heading"]);
+  });
+
+  test("a move into a disallowed slot is rejected", () => {
+    renderWith([
+      { id: "h", name: "core/heading" },
+      { id: "b1", name: "core/buttons", attrs: { items: [] } },
+    ]);
+
+    moveInto("h", "b1", "items");
+
+    const tree = storeApi?.getState().tree ?? [];
+    expect(tree.map((n) => n.id)).toEqual(["h", "b1"]);
+    expect(tree[1]?.attrs?.items).toEqual([]);
+  });
 });

@@ -42,6 +42,8 @@ export interface EditorState {
   readonly zoom: number;
   /** The catalog block currently being dragged toward the canvas, if any. */
   readonly dragSpec: BlockSpec | null;
+  /** The existing block being dragged to a new position on the canvas, if any. */
+  readonly movingId: string | null;
   /** Snapshot history of the tree, driving undo/redo. */
   readonly history: TreeHistory;
 }
@@ -57,8 +59,13 @@ export interface EditorActions {
     target: MoveTarget,
     allowed?: readonly string[],
   ) => void;
-  /** Move a block to a new parent + index (reorder / nest / un-nest). */
-  moveBlock: (sourceId: string, target: MoveTarget) => void;
+  /** Move a block to a new parent + slot + index (reorder / nest / un-nest),
+   *  gated by an optional `allowed` (the target slot's allowedBlocks). */
+  moveBlock: (
+    sourceId: string,
+    target: MoveTarget,
+    allowed?: readonly string[],
+  ) => void;
   /** Merge a partial attrs patch into one block, anywhere in the tree. */
   updateBlockAttrs: (
     id: string,
@@ -79,6 +86,9 @@ export interface EditorActions {
   setZoom: (zoom: number) => void;
   startBlockDrag: (spec: BlockSpec) => void;
   endBlockDrag: () => void;
+  /** Begin / end dragging an existing block to a new canvas position. */
+  startMove: (id: string) => void;
+  endMove: () => void;
   /** Restore the previous / next tree snapshot. */
   undo: () => void;
   redo: () => void;
@@ -134,6 +144,7 @@ export function createEditorStore(
     device: initial?.device ?? "desktop",
     zoom: initial?.zoom ?? 1,
     dragSpec: null,
+    movingId: null,
     history: initHistory(initial?.tree ?? []),
 
     // Raw seed/programmatic setter — intentionally does not record history
@@ -165,9 +176,9 @@ export function createEditorStore(
           history: recordHistory(state.history, tree, null),
         };
       }),
-    moveBlock: (sourceId, target) =>
+    moveBlock: (sourceId, target, allowed) =>
       set((state) => {
-        const tree = moveBlockOp(state.tree, sourceId, target);
+        const tree = moveBlockOp(state.tree, sourceId, target, allowed);
         if (tree === state.tree) return {};
         return { tree, history: recordHistory(state.history, tree, null) };
       }),
@@ -248,6 +259,8 @@ export function createEditorStore(
       set({ zoom: Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom)) }),
     startBlockDrag: (dragSpec) => set({ dragSpec }),
     endBlockDrag: () => set({ dragSpec: null }),
+    startMove: (movingId) => set({ movingId }),
+    endMove: () => set({ movingId: null }),
     undo: () =>
       set((state) => {
         const history = undo(state.history);
