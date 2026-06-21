@@ -1,8 +1,15 @@
-import type { ReactElement, ReactNode } from "react";
+import type { CSSProperties, ReactElement, ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { Trans } from "@lingui/react";
 
 import type { BlockRegistry, EntryContent } from "@plumix/blocks";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarInset,
+  SidebarProvider,
+} from "@plumix/admin-ui/sidebar";
 import {
   Tabs,
   TabsContent,
@@ -63,15 +70,19 @@ export function PlumixEditor({
 }: PlumixEditorProps): ReactElement {
   return (
     <EditorProvider initialTree={defaultValue?.blocks}>
-      <div className="flex h-full flex-col" data-testid="plumix-editor-layout">
-        <EditorToolbar publish={publish} />
-        <div className="flex min-h-0 flex-1">
-          <aside
-            className="bg-background w-72 shrink-0 overflow-auto border-e"
-            data-testid="plumix-editor-left"
-          >
-            <Tabs defaultValue="blocks">
-              <TabsList className="m-2">
+      <SidebarProvider
+        className="h-full min-h-0"
+        style={{ "--sidebar-width": "18rem" } as CSSProperties}
+        data-testid="plumix-editor-layout"
+      >
+        <Sidebar
+          side="left"
+          collapsible="offcanvas"
+          data-testid="plumix-editor-left"
+        >
+          <Tabs defaultValue="blocks" className="flex h-full min-h-0 flex-col">
+            <SidebarHeader>
+              <TabsList>
                 <TabsTrigger value="blocks" data-testid="plumix-tab-blocks">
                   <Trans id="editor.tab.blocks" message="Blocks" />
                 </TabsTrigger>
@@ -79,26 +90,34 @@ export function PlumixEditor({
                   <Trans id="editor.tab.layers" message="Layers" />
                 </TabsTrigger>
               </TabsList>
+            </SidebarHeader>
+            <SidebarContent>
               <TabsContent value="blocks">
                 <BlockCatalog registry={registry} capabilities={capabilities} />
               </TabsContent>
               <TabsContent value="layers">
                 <LayersTab registry={registry} />
               </TabsContent>
-            </Tabs>
-          </aside>
+            </SidebarContent>
+          </Tabs>
+        </Sidebar>
+        <SidebarInset className="min-w-0">
+          <EditorToolbar publish={publish} />
           <CanvasFrame
             previewUrl={previewUrl}
             origin={origin}
             registry={registry}
             capabilities={capabilities}
           />
-          <aside
-            className="bg-background w-80 shrink-0 overflow-auto border-s"
-            data-testid="plumix-editor-right"
-          >
-            <Tabs defaultValue="block">
-              <TabsList className="m-2">
+        </SidebarInset>
+        <Sidebar
+          side="right"
+          collapsible="offcanvas"
+          data-testid="plumix-editor-right"
+        >
+          <Tabs defaultValue="block" className="flex h-full min-h-0 flex-col">
+            <SidebarHeader>
+              <TabsList>
                 <TabsTrigger value="block" data-testid="plumix-tab-block">
                   <Trans id="editor.tab.block" message="Block" />
                 </TabsTrigger>
@@ -109,6 +128,8 @@ export function PlumixEditor({
                   <Trans id="editor.tab.json" message="JSON" />
                 </TabsTrigger>
               </TabsList>
+            </SidebarHeader>
+            <SidebarContent>
               <TabsContent value="block">
                 <BlockInspector registry={registry} />
               </TabsContent>
@@ -125,10 +146,10 @@ export function PlumixEditor({
               <TabsContent value="json">
                 <JsonInspector />
               </TabsContent>
-            </Tabs>
-          </aside>
-        </div>
-      </div>
+            </SidebarContent>
+          </Tabs>
+        </Sidebar>
+      </SidebarProvider>
       <EditorShortcuts />
       {overlay}
       {onChange ? <TreeChangeEmitter onChange={onChange} /> : null}

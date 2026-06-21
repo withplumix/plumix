@@ -3,16 +3,9 @@ import { Trans } from "@lingui/react";
 
 import { Button } from "@plumix/admin-ui/button";
 
+import type { OverlayBox } from "./overlay.js";
 import { findParentId } from "./block-tree-ops.js";
 import { useEditorStore, useEditorStoreApi } from "./provider.js";
-
-/** Where to float the toolbar — the active block's box in shell coordinates. */
-interface ToolbarBox {
-  readonly left: number;
-  readonly top: number;
-  readonly width: number;
-  readonly height: number;
-}
 
 const TOOLBAR_GAP = 4;
 
@@ -25,7 +18,9 @@ const TOOLBAR_GAP = 4;
 export function SelectionToolbar({
   box,
 }: {
-  readonly box: ToolbarBox;
+  /** The active block's box in the canvas clip layer's local coordinates, so
+   *  the toolbar clips to the canvas with the overlays. */
+  readonly box: OverlayBox;
 }): ReactElement | null {
   const store = useEditorStoreApi();
   const activeId = useEditorStore((s) => s.activeId);
@@ -47,9 +42,12 @@ export function SelectionToolbar({
       data-testid="plumix-selection-toolbar"
       className="bg-background flex items-center gap-0.5 rounded-md border p-0.5 shadow-sm"
       style={{
-        position: "fixed",
-        left: box.left,
+        position: "absolute",
+        left: Math.max(0, box.left),
         top: Math.max(0, box.top - 36 - TOOLBAR_GAP),
+        // The enclosing clip layer is pointer-events:none (so overlays don't
+        // eat canvas clicks); the toolbar opts back in so its buttons work.
+        pointerEvents: "auto",
         zIndex: 30,
       }}
     >

@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Trans } from "@lingui/react";
 
 import { Button } from "@plumix/admin-ui/button";
+import { SidebarTrigger } from "@plumix/admin-ui/sidebar";
 
 import { canRedo, canUndo } from "./history.js";
 import { useEditorStore, useEditorStoreApi } from "./provider.js";
@@ -45,6 +46,8 @@ export function EditorToolbar({
       className="bg-background flex items-center gap-1 border-b p-2"
       data-testid="plumix-editor-toolbar"
     >
+      {/* Collapses both rails for a focused canvas (also Cmd/Ctrl+B). */}
+      <SidebarTrigger data-testid="plumix-rails-toggle" />
       <Button
         type="button"
         variant="ghost"
