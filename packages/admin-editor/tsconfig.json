@@ -3,7 +3,25 @@
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
-    "types": []
+    // vite/client supplies `import.meta.glob` types for the playground. The
+    // published library is built via tsconfig.build.json (src only), so this
+    // wider surface only affects typecheck + eslint's project service.
+    "types": ["vite/client"],
+    // Widen rootDir past `src` so the playground + e2e + tool configs typecheck
+    // and resolve under eslint's project service. tsconfig.build.json pins it
+    // back to `src` for a clean dist.
+    "rootDir": ".",
+    // Never emit from this wide config — only tsconfig.build.json (src-only)
+    // emits. Guards against a bare `tsc -p tsconfig.json` writing playground /
+    // e2e / tool configs into the published dist.
+    "noEmit": true
   },
-  "include": ["src"]
+  "include": [
+    "src",
+    "playground",
+    "e2e",
+    "vite.config.ts",
+    "playwright.config.ts"
+  ],
+  "exclude": ["dist", "playground/dist", "node_modules"]
 }
