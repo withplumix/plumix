@@ -6,6 +6,7 @@ import { cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import type { BlockNode, BlockRegistry } from "@plumix/blocks";
+import type { SerializedLoaderData } from "@plumix/blocks/renderer";
 import { createBlockRegistry } from "@plumix/blocks";
 
 import { BlockInspector } from "./block-inspector.js";
@@ -43,6 +44,11 @@ const registry: BlockRegistry = createBlockRegistry([
       { name: "tag", type: "text", label: "Tag" },
     ],
   },
+  {
+    name: "core/latest-posts",
+    render: () => null,
+    loaders: { posts: () => Promise.resolve([]) },
+  },
 ]);
 
 function Selector({ id }: { readonly id?: string }): ReactElement | null {
@@ -56,12 +62,16 @@ function Selector({ id }: { readonly id?: string }): ReactElement | null {
 function renderInspector(
   tree: readonly BlockNode[],
   selectId?: string,
+  onRefreshBlockLoader?: (blockId: string) => Promise<SerializedLoaderData>,
 ): ReturnType<typeof render> {
   return render(
     <I18nProvider i18n={i18n}>
       <EditorProvider initialTree={tree}>
         <Selector id={selectId} />
-        <BlockInspector registry={registry} />
+        <BlockInspector
+          registry={registry}
+          onRefreshBlockLoader={onRefreshBlockLoader}
+        />
       </EditorProvider>
     </I18nProvider>,
   );
@@ -126,5 +136,31 @@ describe("BlockInspector", () => {
     );
     expect(getByTestId("block-inspector")).toBeDefined();
     expect(queryByTestId("block-inspector-empty")).toBeNull();
+  });
+
+  test("shows the refresh-data control only for a loader-backed block", () => {
+    const { getByTestId } = renderInspector(
+      [{ id: "lp1", name: "core/latest-posts" }],
+      "lp1",
+      () => Promise.resolve({}),
+    );
+    expect(getByTestId("refresh-block-loader")).toBeDefined();
+  });
+
+  test("hides the refresh-data control for a block without loaders", () => {
+    const { queryByTestId } = renderInspector(
+      [{ id: "h1", name: "core/heading" }],
+      "h1",
+      () => Promise.resolve({}),
+    );
+    expect(queryByTestId("refresh-block-loader")).toBeNull();
+  });
+
+  test("hides the refresh-data control when no onRefreshBlockLoader is wired", () => {
+    const { queryByTestId } = renderInspector(
+      [{ id: "lp1", name: "core/latest-posts" }],
+      "lp1",
+    );
+    expect(queryByTestId("refresh-block-loader")).toBeNull();
   });
 });

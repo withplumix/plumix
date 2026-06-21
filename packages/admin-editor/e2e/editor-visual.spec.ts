@@ -430,6 +430,29 @@ test.describe("editor playground", () => {
     await expect(json).toContainText('"12px"');
   });
 
+  test("a loader-backed block offers a scoped refresh that updates the canvas", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+
+    // The feed block opens with no loader data (no SSR in the harness).
+    const feedData = canvas.locator('[data-testid="feed-data"]');
+    await expect(feedData).toContainText("no data yet");
+
+    // Selecting it reveals the refresh control; a plain block does not.
+    await canvas.locator('[data-plumix-id="feed-1"]').click();
+    await expect(page.getByTestId("refresh-block-loader")).toBeVisible();
+
+    // Refresh round-trips through the host stub and pushes data to the canvas.
+    await page.getByTestId("refresh-block-loader").click();
+    await expect(feedData).toContainText("refreshed");
+
+    // A non-loader block hides the control entirely.
+    await canvas.locator('[data-plumix-id="heading-1"]').click();
+    await expect(page.getByTestId("refresh-block-loader")).toHaveCount(0);
+  });
+
   test("the Layers tab outlines the nested structure", async ({ page }) => {
     await page.goto("/");
 

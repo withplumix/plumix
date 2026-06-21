@@ -154,6 +154,11 @@ msgid "editor.toolbar.redo"
 msgstr "Redo"
 
 #. js-lingui-explicit-id
+#: src/block-inspector.tsx
+msgid "editor.inspector.refreshData"
+msgstr "Refresh data"
+
+#. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
 msgid "editor.toolbar.saveDraft"
 msgstr "Save draft"

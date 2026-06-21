@@ -3,6 +3,7 @@ import type {
   BlockRect,
   CanvasMessage,
   HostMessage,
+  SerializedLoaderData,
   SlotRect,
 } from "@plumix/blocks/renderer";
 import {
@@ -30,6 +31,8 @@ interface ConnectRuntimeOptions {
   readonly origin: string;
   /** Called with each tree the host pushes. */
   readonly onTree: (tree: readonly BlockNode[]) => void;
+  /** Called with a scoped refresh's re-resolved loader data (node-keyed). */
+  readonly onLoaderData?: (data: SerializedLoaderData) => void;
 }
 
 /**
@@ -42,6 +45,7 @@ export function connectRuntime({
   parentWindow,
   origin,
   onTree,
+  onLoaderData,
 }: ConnectRuntimeOptions): RuntimeConnection {
   const post = (message: object): void => {
     parentWindow.postMessage(encode(EDITOR_BRIDGE_CHANNEL, message), origin);
@@ -67,8 +71,15 @@ export function connectRuntime({
       if (message.kind === "hello") announce();
       return;
     }
-    const host = message as Partial<HostMessage>;
-    if (host.type === "host:tree" && host.tree) onTree(host.tree);
+    const host = message as HostMessage;
+    switch (host.type) {
+      case "host:tree":
+        onTree(host.tree);
+        break;
+      case "host:loader-data":
+        onLoaderData?.(host.data);
+        break;
+    }
   };
 
   window.addEventListener("message", onMessage);

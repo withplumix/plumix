@@ -13,6 +13,7 @@ import {
 } from "@plumix/blocks";
 
 import { PlumixEditor } from "../src/plumix-editor.js";
+import { feedSpec } from "./feed-block.js";
 import { SEED_BLOCKS, SEED_PATTERNS } from "./seed.js";
 
 import "./playground.css";
@@ -46,7 +47,7 @@ const withVariations = coreBlocks.map(
         }
       : spec,
 );
-const registry = createBlockRegistry(withVariations);
+const registry = createBlockRegistry([...withVariations, feedSpec]);
 
 // Seed theme tokens so the Styles tab's token-or-custom controls have options.
 const SEED_TOKENS = {
@@ -121,6 +122,9 @@ if (root) {
           previewBanner={readOnly ? <PreviewBannerStub /> : undefined}
           previewLink="https://example.test/blog/hello?preview=demo-token"
           documentPanel={<DocumentPanelStub />}
+          onRefreshBlockLoader={(blockId) =>
+            Promise.resolve({ [blockId]: { items: { label: "refreshed" } } })
+          }
           publish={{
             onPublish: () => console.info("[playground] publish"),
             isPublished: false,

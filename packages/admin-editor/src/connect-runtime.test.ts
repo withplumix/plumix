@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { BlockNode } from "@plumix/blocks";
+import type { SerializedLoaderData } from "@plumix/blocks/renderer";
 import { EDITOR_BRIDGE_CHANNEL, encode } from "@plumix/blocks/renderer";
 
 import { connectRuntime } from "./connect-runtime.js";
@@ -57,6 +58,23 @@ describe("connectRuntime (canvas/iframe side)", () => {
     fromHost({ type: "host:tree", tree });
 
     expect(seen.at(-1)).toEqual(tree);
+    conn.dispose();
+  });
+
+  test("delivers a pushed loader-data map to onLoaderData", () => {
+    const seen: SerializedLoaderData[] = [];
+    const { win } = fakeParent();
+    const conn = connectRuntime({
+      parentWindow: win,
+      origin: ORIGIN,
+      onTree: () => undefined,
+      onLoaderData: (data) => seen.push(data),
+    });
+
+    const data = { "blk-1": { posts: ["fresh"] } };
+    fromHost({ type: "host:loader-data", data });
+
+    expect(seen.at(-1)).toEqual(data);
     conn.dispose();
   });
 

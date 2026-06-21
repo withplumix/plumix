@@ -2,6 +2,7 @@ import type {
   BlockRect,
   CanvasMessage,
   HostMessage,
+  SerializedLoaderData,
   SlotRect,
 } from "@plumix/blocks/renderer";
 import {
@@ -17,6 +18,8 @@ import type { EditorStoreApi } from "./store.js";
 export interface CanvasConnection {
   /** Resolves once the canvas has completed the handshake. */
   readonly whenReady: Promise<void>;
+  /** Push a scoped refresh's re-resolved loader data to the canvas. */
+  readonly pushLoaderData: (data: SerializedLoaderData) => void;
   readonly dispose: () => void;
 }
 
@@ -105,6 +108,8 @@ export function connectCanvas({
 
   return {
     whenReady,
+    pushLoaderData: (data) =>
+      post({ type: "host:loader-data", data } satisfies HostMessage),
     dispose: () => {
       clearInterval(retryTimer);
       window.removeEventListener("message", onMessage);

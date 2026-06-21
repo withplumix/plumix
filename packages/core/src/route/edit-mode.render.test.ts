@@ -66,4 +66,24 @@ describe("edit gate through the public render", () => {
 
     expect(await res.text()).not.toContain("data-plumix-editor");
   });
+
+  test("edit render stamps data-plumix-mode=edit on <html> (island hydration gate)", async () => {
+    const { h, editor } = await seed();
+
+    const req = await h.authenticateRequest(
+      new Request(`${URL}?plumix.edit`),
+      editor.id,
+    );
+    const body = await (await h.dispatch(req)).text();
+
+    expect(body).toMatch(/<html[^>]*data-plumix-mode="edit"/);
+  });
+
+  test("a visitor render does not stamp data-plumix-mode", async () => {
+    const { h } = await seed();
+
+    const body = await (await h.dispatch(new Request(URL))).text();
+
+    expect(body).not.toContain("data-plumix-mode");
+  });
 });

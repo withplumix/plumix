@@ -656,6 +656,9 @@ function BespokeEditor({
       documentPanel={documentPanel}
       publish={publishActions}
       overlay={overlay}
+      onRefreshBlockLoader={(blockId) =>
+        orpc.entry.refreshBlockLoader.call({ id, blockId }).then((r) => r.data)
+      }
     />
   );
 }

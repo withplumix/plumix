@@ -188,5 +188,6 @@ export type {
   CanvasMessage,
   EditorBridgeMessage,
   HostMessage,
+  SerializedLoaderData,
   SlotRect,
 } from "./editor-protocol.js";

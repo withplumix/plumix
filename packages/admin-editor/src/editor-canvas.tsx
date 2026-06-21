@@ -18,6 +18,7 @@ import { PlumixProvider } from "@plumix/blocks/renderer";
 
 import type { RuntimeConnection } from "./connect-runtime.js";
 import { connectRuntime } from "./connect-runtime.js";
+import { mergeLoaderData } from "./merge-loader-data.js";
 
 interface EditorCanvasProps {
   /** Block registry for the site (core + plugin blocks). */
@@ -43,7 +44,7 @@ export function EditorCanvas({
   // Seed loader data from the SSR embed once (before React replaces the mount
   // root's children). Kept stable across tree edits so loaders never re-run on
   // a keystroke; a scoped refresh replaces a single block's entry.
-  const [loaderData] = useState<ResolvedBlockLoaders>(() =>
+  const [loaderData, setLoaderData] = useState<ResolvedBlockLoaders>(() =>
     parseLoaderData(
       document.querySelector("[data-plumix-loader-data]")?.textContent ?? "",
     ),
@@ -56,6 +57,8 @@ export function EditorCanvas({
       parentWindow: window.parent,
       origin,
       onTree: setTree,
+      onLoaderData: (data) =>
+        setLoaderData((prior) => mergeLoaderData(prior, data)),
     });
     connectionRef.current = connection;
     return () => {

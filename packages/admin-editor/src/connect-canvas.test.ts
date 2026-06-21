@@ -84,6 +84,22 @@ describe("connectCanvas", () => {
     conn.dispose();
   });
 
+  test("pushLoaderData posts host:loader-data to the canvas", () => {
+    const store = createEditorStore();
+    const { win, posted } = fakeFrame();
+    const conn = connectCanvas({ store, frameWindow: win, origin: ORIGIN });
+
+    conn.pushLoaderData({ "blk-1": { posts: ["fresh"] } });
+
+    const msg = posted
+      .map(
+        (p) => (p as { message?: { type?: string; data?: unknown } }).message,
+      )
+      .find((m) => m?.type === "host:loader-data");
+    expect(msg?.data).toEqual({ "blk-1": { posts: ["fresh"] } });
+    conn.dispose();
+  });
+
   test("re-announces hello until the canvas acks, then stops", () => {
     vi.useFakeTimers();
     try {

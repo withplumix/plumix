@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { coreBlocks, createBlockRegistry } from "@plumix/blocks";
 
 import { EditorCanvas } from "../src/editor-canvas.js";
+import { feedSpec } from "./feed-block.js";
 import { SEED_BLOCKS } from "./seed.js";
 
 import "./playground.css";
@@ -12,7 +13,7 @@ import "./playground.css";
 // (handshake + host:tree / canvas:* reports) works for real — no worker, no
 // public route. Mirrors what the SSR-injected editor runtime does in
 // production, minus the server.
-const registry = createBlockRegistry(coreBlocks);
+const registry = createBlockRegistry([...coreBlocks, feedSpec]);
 
 const root = document.getElementById("root");
 if (root) {
