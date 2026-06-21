@@ -293,6 +293,59 @@ test.describe("editor playground", () => {
     await expect(popover).toBeHidden();
   });
 
+  test("selecting a text block reveals the right-rail Tiptap editor", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+
+    await canvas.locator('[data-plumix-id="intro"]').click();
+
+    // The Block tab now hosts the rich-text rail: a formatting toolbar plus the
+    // contenteditable surface seeded with the block's body.
+    await expect(page.getByTestId("block-input-body-bold")).toBeVisible();
+    await expect(page.getByTestId("block-input-body-h2")).toBeVisible();
+    await expect(page.getByTestId("block-input-body-clear")).toBeVisible();
+    await expect(page.getByTestId("block-input-body-editor")).toBeVisible();
+  });
+
+  test("typing in the rail flows live to the canvas without losing focus", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+
+    await canvas.locator('[data-plumix-id="intro"]').click();
+    const editor = page.getByTestId("block-input-body-editor");
+    await editor.click();
+    await page.keyboard.press("ControlOrMeta+A");
+    // A multi-character burst: if focus were lost across the patch loop's
+    // re-renders, only the first character would survive.
+    await page.keyboard.type("Edited inline");
+
+    await expect(editor).toContainText("Edited inline");
+    await expect(canvas.locator('[data-plumix-id="intro"]')).toContainText(
+      "Edited inline",
+    );
+  });
+
+  test("switching between text blocks re-points the rail at each body", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    const editor = page.getByTestId("block-input-body-editor");
+
+    await canvas.locator('[data-plumix-id="intro"]').click();
+    await expect(editor).toContainText("standalone harness");
+
+    // The same stable editor instance must swap to the next block's body — no
+    // content bleed from the previously selected block.
+    await canvas.locator('[data-plumix-id="col-left"]').click();
+    await expect(editor).toContainText("Left column");
+    await expect(editor).not.toContainText("standalone harness");
+  });
+
   test("the Layers tab outlines the nested structure", async ({ page }) => {
     await page.goto("/");
 

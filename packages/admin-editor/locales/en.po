@@ -59,6 +59,11 @@ msgid "editor.selection.duplicate"
 msgstr "Duplicate"
 
 #. js-lingui-explicit-id
+#: src/rich-text-field.tsx
+msgid "editor.richtext.hint"
+msgstr "Formatting applies to the selected text."
+
+#. js-lingui-explicit-id
 #: src/plumix-editor.tsx
 msgid "editor.tab.json"
 msgstr "JSON"

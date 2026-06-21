@@ -31,6 +31,9 @@
     "@plumix/admin-ui": "workspace:*",
     "@plumix/blocks": "workspace:*",
     "@plumix/core": "workspace:*",
+    "@tiptap/core": "catalog:",
+    "@tiptap/react": "catalog:",
+    "@tiptap/starter-kit": "catalog:",
     "zustand": "^5.0.14"
   },
   "peerDependencies": {

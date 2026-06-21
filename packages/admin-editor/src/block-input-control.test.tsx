@@ -152,6 +152,20 @@ describe("BlockInputControl", () => {
     expect(onChange).toHaveBeenCalledWith("custom");
   });
 
+  test("richtext renders the Tiptap toolbar and editable surface", () => {
+    const { getByTestId } = renderControl(
+      { name: "body", type: "richtext", label: "Body" },
+      "<p>Hello</p>",
+    );
+    // The toolbar's formatting controls and the contenteditable surface mount.
+    expect(getByTestId("block-input-body-bold")).toBeDefined();
+    expect(getByTestId("block-input-body-h2")).toBeDefined();
+    expect(getByTestId("block-input-body-clear")).toBeDefined();
+    const editor = getByTestId("block-input-body-editor");
+    expect(editor.getAttribute("contenteditable")).toBe("true");
+    expect(editor.textContent).toContain("Hello");
+  });
+
   test("falls back to a text input for an unknown kind", () => {
     const { getByTestId } = renderControl(
       { name: "mystery", type: "future-kind" },
