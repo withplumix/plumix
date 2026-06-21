@@ -18,8 +18,10 @@ import {
 } from "@plumix/admin-ui/tabs";
 import { defineEntryContent } from "@plumix/blocks";
 
+import type { InserterPattern } from "./block-catalog.js";
 import type { PublishActions } from "./editor-toolbar.js";
 import { BlockCatalog } from "./block-catalog-tab.js";
+import { BlockInserterPopover } from "./block-inserter.js";
 import { BlockInspector } from "./block-inspector.js";
 import { CanvasFrame } from "./canvas-frame.js";
 import { EditorShortcuts, EditorToolbar } from "./editor-toolbar.js";
@@ -40,6 +42,8 @@ interface PlumixEditorProps {
   readonly registry: BlockRegistry;
   /** Viewer capabilities, gating which blocks the catalog offers. */
   readonly capabilities?: ReadonlySet<string>;
+  /** Theme + plugin patterns offered in the inserter alongside the blocks. */
+  readonly patterns?: readonly InserterPattern[];
   /** Fires with the full content envelope whenever the tree changes. The host
    *  debounces + persists (orpc lives in the app, never in this package). */
   readonly onChange?: (content: EntryContent) => void;
@@ -63,6 +67,7 @@ export function PlumixEditor({
   origin,
   registry,
   capabilities = NO_CAPABILITIES,
+  patterns,
   onChange,
   documentPanel,
   publish,
@@ -93,7 +98,11 @@ export function PlumixEditor({
             </SidebarHeader>
             <SidebarContent>
               <TabsContent value="blocks">
-                <BlockCatalog registry={registry} capabilities={capabilities} />
+                <BlockCatalog
+                  registry={registry}
+                  capabilities={capabilities}
+                  patterns={patterns}
+                />
               </TabsContent>
               <TabsContent value="layers">
                 <LayersTab registry={registry} />
@@ -102,7 +111,16 @@ export function PlumixEditor({
           </Tabs>
         </Sidebar>
         <SidebarInset className="min-w-0">
-          <EditorToolbar publish={publish} />
+          <EditorToolbar
+            publish={publish}
+            inserter={
+              <BlockInserterPopover
+                registry={registry}
+                capabilities={capabilities}
+                patterns={patterns}
+              />
+            }
+          />
           <CanvasFrame
             previewUrl={previewUrl}
             origin={origin}

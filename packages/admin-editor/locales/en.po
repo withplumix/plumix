@@ -24,6 +24,11 @@ msgid "editor.canvas.addBlock"
 msgstr "Add a block"
 
 #. js-lingui-explicit-id
+#: src/block-inserter.tsx
+msgid "editor.toolbar.addBlock"
+msgstr "Add Block"
+
+#. js-lingui-explicit-id
 #: src/json-inspector.tsx
 msgid "editor.json.block"
 msgstr "Block"
@@ -97,6 +102,11 @@ msgstr "Page"
 #: src/plumix-editor.tsx
 msgid "editor.tab.page"
 msgstr "Page"
+
+#. js-lingui-explicit-id
+#: src/block-catalog-tab.tsx
+msgid "editor.catalog.patterns"
+msgstr "Patterns"
 
 #. js-lingui-explicit-id
 #: src/editor-toolbar.tsx

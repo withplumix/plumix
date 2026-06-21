@@ -1,6 +1,6 @@
 import { createStore } from "zustand/vanilla";
 
-import type { BlockNode, BlockSpec } from "@plumix/blocks";
+import type { BlockNode, InsertableBlockEntry } from "@plumix/blocks";
 import { isBlockNodeArray } from "@plumix/blocks";
 
 import type { MoveTarget } from "./block-tree-ops.js";
@@ -40,8 +40,8 @@ export interface EditorState {
   readonly hoverId: string | null;
   readonly device: EditorDevice;
   readonly zoom: number;
-  /** The catalog block currently being dragged toward the canvas, if any. */
-  readonly dragSpec: BlockSpec | null;
+  /** The catalog entry (block or variation) being dragged toward the canvas. */
+  readonly dragSpec: InsertableBlockEntry | null;
   /** The existing block being dragged to a new position on the canvas, if any. */
   readonly movingId: string | null;
   /** Snapshot history of the tree, driving undo/redo. */
@@ -52,6 +52,9 @@ export interface EditorActions {
   setTree: (tree: readonly BlockNode[]) => void;
   /** Insert a block at a top-level index (clamped) and select it. */
   insertBlock: (node: BlockNode, index: number) => void;
+  /** Insert several blocks at a top-level index as one step (a pattern's
+   *  composition); selects the first. No-op for an empty list. */
+  insertBlocks: (nodes: readonly BlockNode[], index: number) => void;
   /** Insert a block into a parent's slot (nested), gated by `allowed`, and
    *  select it. A no-op when the slot is absent or the block isn't allowed. */
   insertBlockInto: (
@@ -84,7 +87,7 @@ export interface EditorActions {
   setHover: (id: string | null) => void;
   setDevice: (device: EditorDevice) => void;
   setZoom: (zoom: number) => void;
-  startBlockDrag: (spec: BlockSpec) => void;
+  startBlockDrag: (entry: InsertableBlockEntry) => void;
   endBlockDrag: () => void;
   /** Begin / end dragging an existing block to a new canvas position. */
   startMove: (id: string) => void;
@@ -162,6 +165,23 @@ export function createEditorStore(
           tree,
           activeId: node.id,
           selectedIds: new Set([node.id]),
+          history: recordHistory(state.history, tree, null),
+        };
+      }),
+    insertBlocks: (nodes, index) =>
+      set((state) => {
+        const first = nodes[0];
+        if (!first) return {};
+        const at = Math.max(0, Math.min(index, state.tree.length));
+        const tree = [
+          ...state.tree.slice(0, at),
+          ...nodes,
+          ...state.tree.slice(at),
+        ];
+        return {
+          tree,
+          activeId: first.id,
+          selectedIds: new Set([first.id]),
           history: recordHistory(state.history, tree, null),
         };
       }),

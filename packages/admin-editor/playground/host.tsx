@@ -5,6 +5,7 @@ import { i18n } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
 import { createRoot } from "react-dom/client";
 
+import type { BlockSpec } from "@plumix/blocks";
 import {
   coreBlocks,
   createBlockRegistry,
@@ -12,7 +13,7 @@ import {
 } from "@plumix/blocks";
 
 import { PlumixEditor } from "../src/plumix-editor.js";
-import { SEED_BLOCKS } from "./seed.js";
+import { SEED_BLOCKS, SEED_PATTERNS } from "./seed.js";
 
 import "./playground.css";
 
@@ -27,7 +28,25 @@ const CATALOGS = import.meta.glob<{ messages: Messages }>("../locales/*.mjs", {
 i18n.load("en", CATALOGS["../locales/en.mjs"]?.messages ?? {});
 i18n.activate("en");
 
-const registry = createBlockRegistry(coreBlocks);
+// Core blocks ship no variations, so augment core/group with an inserter
+// variation here — the harness needs one to exercise the catalog's
+// blocks-plus-variations rendering.
+const withVariations = coreBlocks.map(
+  (spec): BlockSpec =>
+    spec.name === "core/group"
+      ? {
+          ...spec,
+          variations: [
+            {
+              slug: "group/two-column",
+              title: "Two-column group",
+              attrs: { layout: "row" },
+            },
+          ],
+        }
+      : spec,
+);
+const registry = createBlockRegistry(withVariations);
 
 function DocumentPanelStub(): ReactElement {
   return (
@@ -54,6 +73,7 @@ if (root) {
           registry={registry}
           defaultValue={defineEntryContent(SEED_BLOCKS)}
           capabilities={new Set()}
+          patterns={SEED_PATTERNS}
           documentPanel={<DocumentPanelStub />}
           publish={{
             onPublish: () => console.info("[playground] publish"),

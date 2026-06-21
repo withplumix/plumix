@@ -1,5 +1,7 @@
 import type { BlockNode } from "@plumix/blocks";
 
+import type { InserterPattern } from "../src/block-catalog.js";
+
 /**
  * A representative tree for the playground: top-level blocks plus nested and
  * multi-slot containers (group, columns, buttons) so selection, the floating
@@ -70,5 +72,30 @@ export const SEED_BLOCKS: readonly BlockNode[] = [
         },
       ],
     },
+  },
+];
+
+/**
+ * Inserter patterns for the harness — a multi-block "Hero" composition the
+ * catalog can splice in one click, so the patterns section (and its top-level
+ * insert) has something real to exercise without a manifest.
+ */
+export const SEED_PATTERNS: readonly InserterPattern[] = [
+  {
+    name: "starter/hero",
+    title: "Hero section",
+    keywords: ["banner", "intro"],
+    content: [
+      {
+        id: "hero-heading",
+        name: "core/heading",
+        attrs: { level: 1, text: "Build anything" },
+      },
+      {
+        id: "hero-text",
+        name: "core/rich-text",
+        attrs: { body: "<p>A two-block hero, inserted as one pattern.</p>" },
+      },
+    ],
   },
 ];

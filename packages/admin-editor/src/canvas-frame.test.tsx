@@ -232,7 +232,14 @@ describe("CanvasFrame nested drop", () => {
       rects: [{ id: parentId, x: 0, y: 0, width: 500, height: 500 }],
       slots: [{ parentId, slotKey, x: 0, y: 0, width: 500, height: 500 }],
     });
-    act(() => storeApi?.getState().startBlockDrag(headingSpec));
+    act(() =>
+      storeApi?.getState().startBlockDrag({
+        name: "core/heading",
+        slug: "core/heading",
+        title: "Heading",
+        category: "text",
+      }),
+    );
     act(() => {
       window.dispatchEvent(
         new MouseEvent("pointermove", { clientX: 50, clientY: 50 }),
