@@ -407,6 +407,29 @@ test.describe("editor playground", () => {
     await expect(percent).toContainText("%");
   });
 
+  test("the Styles tab edits a block's style per device", async ({ page }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    await canvas.locator('[data-plumix-id="heading-1"]').click();
+
+    await page.getByTestId("plumix-tab-styles").click();
+    await expect(page.getByTestId("styles-tab")).toBeVisible();
+    await expect(page.getByTestId("styles-section-typography")).toBeVisible();
+
+    // Set a typography token; the change lands on the canonical tree (visible
+    // through the JSON inspector).
+    await page.getByTestId("style-control-fontSize-token").selectOption("xl");
+    // Set a per-side custom padding via the box-model.
+    await page.getByTestId("style-control-paddingTop-mode-custom").click();
+    await page.getByTestId("style-control-paddingTop-custom").fill("12px");
+
+    await page.getByTestId("plumix-tab-json").click();
+    const json = page.getByTestId("json-inspector-output");
+    await expect(json).toContainText('"fontSize"');
+    await expect(json).toContainText('"paddingTop"');
+    await expect(json).toContainText('"12px"');
+  });
+
   test("the Layers tab outlines the nested structure", async ({ page }) => {
     await page.goto("/");
 

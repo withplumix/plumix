@@ -108,15 +108,18 @@ export type {
 export {
   DEFAULT_BREAKPOINTS,
   emitBlockStyleCss,
+  normalizeStyleValue,
   tokenIdToCssVar,
   VIEWPORT_MAX_PX,
 } from "./styles/style-emitter.js";
 export type {
   ResponsiveStyleBucket,
   ResponsiveStyleSlot,
+  StyleValue,
   ThemeBreakpoints,
   TokenCategory,
 } from "./styles/style-emitter.js";
+export { sanitizeCssValue } from "./styles/sanitize-css.js";
 export type {
   ThemeTokenEntry,
   ThemeTokenGroup,

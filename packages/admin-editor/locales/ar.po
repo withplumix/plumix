@@ -49,6 +49,11 @@ msgid "editor.toolbar.copyPreviewLink"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/style-control.tsx
+msgid "editor.styles.mode.custom"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.delete"
 msgstr ""
@@ -61,6 +66,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.duplicate"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.scope"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -81,6 +91,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/plumix-editor.tsx
 msgid "editor.tab.layers"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.margin"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -106,6 +121,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/plumix-editor.tsx
 msgid "editor.page.empty"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.padding"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -154,8 +174,28 @@ msgid "editor.json.empty"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.empty"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.selectParent"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.spacing"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/plumix-editor.tsx
+msgid "editor.tab.styles"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/style-control.tsx
+msgid "editor.styles.mode.token"
 msgstr ""
 
 #. js-lingui-explicit-id

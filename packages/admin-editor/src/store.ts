@@ -3,6 +3,9 @@ import { createStore } from "zustand/vanilla";
 import type {
   BlockNode,
   InsertableBlockEntry,
+  ResponsiveStyleBucket,
+  ResponsiveStyleSlot,
+  StyleValue,
   ThemeBreakpoints,
 } from "@plumix/blocks";
 import { DEFAULT_BREAKPOINTS, isBlockNodeArray } from "@plumix/blocks";
@@ -19,6 +22,17 @@ import {
   selectionRoots,
 } from "./block-tree-ops.js";
 import { initHistory, recordHistory, redo, undo } from "./history.js";
+
+/** The responsive bucket a style edit targets (per active device). */
+export type StyleBucket = "large" | "medium" | "small";
+
+/** The style bucket the active device edits: desktop is the base (large),
+ *  tablet/mobile narrow to the medium/small @media buckets. */
+export function deviceBucket(device: EditorDevice): StyleBucket {
+  if (device === "tablet") return "medium";
+  if (device === "mobile") return "small";
+  return "large";
+}
 
 type TreeHistory = History<readonly BlockNode[]>;
 
@@ -95,6 +109,14 @@ export interface EditorActions {
     id: string,
     patch: Readonly<Record<string, unknown>>,
   ) => void;
+  /** Set (or clear, with `null`) one style property in a block's responsive
+   *  bucket, anywhere in the tree. Empty buckets / style are pruned. */
+  updateBlockStyle: (
+    id: string,
+    bucket: StyleBucket,
+    property: string,
+    value: StyleValue | null,
+  ) => void;
   select: (id: string, options?: { readonly additive?: boolean }) => void;
   clearSelection: () => void;
   /** Delete every selected block (bulk) and clear the selection. */
@@ -124,39 +146,63 @@ export interface EditorActions {
   redo: () => void;
 }
 
-// Merge `patch` into one node, returning the same reference when nothing
-// changed. Descends into slot attrs (any attr whose value is a BlockNode[]),
-// so a nested target is reachable and untouched branches stay stable.
-function patchNode(
+// Rebuild the tree with `transform` applied to the node carrying `id`,
+// descending into slot attrs (any attr whose value is a BlockNode[]) so a
+// nested target is reachable. Untouched branches — and the whole tree when
+// nothing changed — keep their reference, so React skips them.
+function mapNodeById(
+  nodes: readonly BlockNode[],
+  id: string,
+  transform: (node: BlockNode) => BlockNode,
+): readonly BlockNode[] {
+  const next = nodes.map((node) => mapNode(node, id, transform));
+  return next.some((node, i) => node !== nodes[i]) ? next : nodes;
+}
+
+function mapNode(
   node: BlockNode,
   id: string,
-  patch: Readonly<Record<string, unknown>>,
+  transform: (node: BlockNode) => BlockNode,
 ): BlockNode {
-  if (node.id === id) {
-    return { ...node, attrs: { ...node.attrs, ...patch } };
-  }
+  if (node.id === id) return transform(node);
   const attrs = node.attrs;
   if (!attrs) return node;
   let nextAttrs: Record<string, unknown> | undefined;
   for (const [key, value] of Object.entries(attrs)) {
     if (!isBlockNodeArray(value)) continue;
-    const patched = patchAttrs(value, id, patch);
-    if (patched !== value) {
-      (nextAttrs ??= { ...attrs })[key] = patched;
-    }
+    const patched = mapNodeById(value, id, transform);
+    if (patched !== value) (nextAttrs ??= { ...attrs })[key] = patched;
   }
   return nextAttrs ? { ...node, attrs: nextAttrs } : node;
 }
 
-// Rebuild the tree with `patch` applied to the node with `id`. Returns the
-// same array reference when nothing changed so React skips untouched branches.
-function patchAttrs(
-  nodes: readonly BlockNode[],
-  id: string,
-  patch: Readonly<Record<string, unknown>>,
-): readonly BlockNode[] {
-  const next = nodes.map((node) => patchNode(node, id, patch));
-  return next.some((node, i) => node !== nodes[i]) ? next : nodes;
+// Set/clear one style property on a single node, pruning an emptied bucket and
+// an emptied style slot. Returns the same reference when nothing changed. Raw
+// values are sanitized at emit time (the SSR emitter), not here.
+function setNodeStyle(
+  node: BlockNode,
+  bucket: StyleBucket,
+  property: string,
+  value: StyleValue | null,
+): BlockNode {
+  const slot: ResponsiveStyleSlot = node.style ?? {};
+  const current: ResponsiveStyleBucket = slot[bucket] ?? {};
+  let nextBucket: Record<string, StyleValue | string>;
+  if (value === null) {
+    if (!(property in current)) return node;
+    const { [property]: _dropped, ...rest } = current;
+    nextBucket = rest;
+  } else {
+    nextBucket = { ...current, [property]: value };
+  }
+  const nextSlot: Record<string, ResponsiveStyleBucket> = { ...slot };
+  if (Object.keys(nextBucket).length === 0) delete nextSlot[bucket];
+  else nextSlot[bucket] = nextBucket;
+  const style =
+    Object.keys(nextSlot).length === 0
+      ? undefined
+      : (nextSlot as ResponsiveStyleSlot);
+  return { ...node, style };
 }
 
 export type EditorStore = EditorState & EditorActions;
@@ -235,10 +281,23 @@ export function createEditorStore(
       }),
     updateBlockAttrs: (id, patch) =>
       set((state) => {
-        const tree = patchAttrs(state.tree, id, patch);
+        const tree = mapNodeById(state.tree, id, (node) => ({
+          ...node,
+          attrs: { ...node.attrs, ...patch },
+        }));
         if (tree === state.tree) return {};
         // Coalesce a typing burst on one field into a single undo step.
         const key = `attr:${id}:${Object.keys(patch).sort().join(",")}`;
+        return { tree, history: recordHistory(state.history, tree, key) };
+      }),
+    updateBlockStyle: (id, bucket, property, value) =>
+      set((state) => {
+        const tree = mapNodeById(state.tree, id, (node) =>
+          setNodeStyle(node, bucket, property, value),
+        );
+        if (tree === state.tree) return {};
+        // Coalesce edits to one property+bucket (e.g. typing a raw value).
+        const key = `style:${id}:${bucket}:${property}`;
         return { tree, history: recordHistory(state.history, tree, key) };
       }),
     select: (id, options) =>

@@ -48,6 +48,18 @@ const withVariations = coreBlocks.map(
 );
 const registry = createBlockRegistry(withVariations);
 
+// Seed theme tokens so the Styles tab's token-or-custom controls have options.
+const SEED_TOKENS = {
+  colors: {
+    primary: { value: "#2563eb", label: "Primary" },
+    ink: { value: "#0c2238", label: "Ink" },
+  },
+  spacing: { sm: { value: "8px" }, lg: { value: "24px" } },
+  typography: { base: { value: "16px" }, xl: { value: "24px" } },
+  radius: { md: { value: "8px" } },
+  shadow: { lg: { value: "0 4px 12px rgba(0,0,0,0.1)" } },
+} as const;
+
 function DocumentPanelStub(): ReactElement {
   return (
     <div
@@ -104,6 +116,7 @@ if (root) {
           defaultValue={defineEntryContent(SEED_BLOCKS)}
           capabilities={new Set()}
           patterns={SEED_PATTERNS}
+          tokens={SEED_TOKENS}
           readOnly={readOnly}
           previewBanner={readOnly ? <PreviewBannerStub /> : undefined}
           previewLink="https://example.test/blog/hello?preview=demo-token"

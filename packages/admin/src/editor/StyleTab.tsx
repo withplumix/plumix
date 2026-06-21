@@ -16,11 +16,20 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@plumix/admin-ui/accordion";
+import { normalizeStyleValue } from "@plumix/blocks";
 
 import type { StyleBucket } from "./viewport-bucket.js";
 import { DEVICE_LABEL } from "./device-labels.js";
 import { setStyleProperty } from "./style-edit.js";
 import { TokenSwatchList } from "./TokenSwatchList.js";
+
+// Puck's style controls are token-only; read just the token id from a stored
+// value (a legacy bare string or a `{ token }` ref), ignoring `{ raw }` custom
+// values authored in the bespoke editor.
+function activeTokenId(value: unknown): string {
+  const normalized = normalizeStyleValue(value);
+  return normalized && "token" in normalized ? normalized.token : "";
+}
 
 type StyleProperty = "background" | "color" | "fontSize" | "padding";
 
@@ -96,28 +105,28 @@ export function StyleTab({
           heading={renderLabel(M.background)}
           property="background"
           tokens={tokens.colors}
-          activeToken={style?.[bucket]?.background ?? ""}
+          activeToken={activeTokenId(style?.[bucket]?.background)}
           onWrite={writeProperty}
         />
         <SwatchSection
           heading={renderLabel(M.textColor)}
           property="color"
           tokens={tokens.colors}
-          activeToken={style?.[bucket]?.color ?? ""}
+          activeToken={activeTokenId(style?.[bucket]?.color)}
           onWrite={writeProperty}
         />
         <SelectSection
           heading={renderLabel(M.fontSize)}
           property="fontSize"
           tokens={tokens.typography}
-          activeToken={style?.[bucket]?.fontSize ?? ""}
+          activeToken={activeTokenId(style?.[bucket]?.fontSize)}
           onWrite={writeProperty}
         />
         <SelectSection
           heading={renderLabel(M.padding)}
           property="padding"
           tokens={tokens.spacing}
-          activeToken={style?.[bucket]?.padding ?? ""}
+          activeToken={activeTokenId(style?.[bucket]?.padding)}
           onWrite={writeProperty}
         />
       </Accordion>
