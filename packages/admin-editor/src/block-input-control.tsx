@@ -8,6 +8,8 @@ import { Input } from "@plumix/admin-ui/input";
 import { Label } from "@plumix/admin-ui/label";
 import { resolveLabel } from "@plumix/core/i18n";
 
+import { RichTextField } from "./rich-text-field.js";
+
 interface BlockInputControlProps {
   readonly input: BlockInput;
   readonly value: unknown;
@@ -107,6 +109,14 @@ export function BlockInputControl({
               </label>
             ))}
           </div>
+        );
+      case "richtext":
+        return (
+          <RichTextField
+            value={asString(value)}
+            onChange={onChange}
+            testId={testId}
+          />
         );
       case "combobox": {
         const listId = `${id}-list`;

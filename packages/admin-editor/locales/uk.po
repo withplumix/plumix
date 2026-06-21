@@ -59,6 +59,11 @@ msgid "editor.selection.duplicate"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/rich-text-field.tsx
+msgid "editor.richtext.hint"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/plumix-editor.tsx
 msgid "editor.tab.json"
 msgstr ""

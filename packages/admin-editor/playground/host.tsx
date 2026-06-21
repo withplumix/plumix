@@ -62,6 +62,12 @@ function DocumentPanelStub(): ReactElement {
   );
 }
 
+// `?theme=dark` flips the shell into dark mode so the editor (and the Tiptap
+// rail) can be exercised + screenshotted in both themes against one build.
+if (new URLSearchParams(window.location.search).get("theme") === "dark") {
+  document.documentElement.classList.add("dark");
+}
+
 const root = document.getElementById("root");
 if (root) {
   createRoot(root).render(
