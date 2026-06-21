@@ -5,6 +5,14 @@ export interface FrameOffset {
   readonly top: number;
 }
 
+/** A positioned box (overlay outline, toolbar anchor, clip region). */
+export interface OverlayBox {
+  readonly left: number;
+  readonly top: number;
+  readonly width: number;
+  readonly height: number;
+}
+
 /**
  * Map a block rect (iframe's unscaled coordinate space) to a screen-space
  * overlay box, accounting for the iframe's on-screen offset and CSS zoom.
@@ -15,7 +23,7 @@ export function overlayBox(
   rect: BlockRect,
   frame: FrameOffset,
   zoom: number,
-): { left: number; top: number; width: number; height: number } {
+): OverlayBox {
   return {
     left: frame.left + rect.x * zoom,
     top: frame.top + rect.y * zoom,

@@ -5,7 +5,7 @@ import { Trans } from "@lingui/react";
 import type { BlockRegistry } from "@plumix/blocks";
 import type { BlockRect } from "@plumix/blocks/renderer";
 
-import type { FrameOffset } from "./overlay.js";
+import type { FrameOffset, OverlayBox } from "./overlay.js";
 import { createBlockFromSpec, groupBlocksByCategory } from "./block-catalog.js";
 import { connectCanvas } from "./connect-canvas.js";
 import { dropPlacement } from "./drop-index.js";
@@ -32,7 +32,11 @@ const CANVAS_HEIGHT = 800;
 
 interface Geometry {
   readonly rects: ReadonlyMap<string, BlockRect>;
+  /** The iframe's on-screen offset, for mapping block rects to overlay boxes. */
   readonly frame: FrameOffset | null;
+  /** The canvas viewport's on-screen box — overlays clip to this so they never
+   *  spill over the side rails (the iframe renders wider than the column). */
+  readonly container: OverlayBox | null;
 }
 
 /**
@@ -56,14 +60,31 @@ export function CanvasFrame({
   const dragSpec = useEditorStore((s) => s.dragSpec);
   const isEmpty = useEditorStore((s) => s.tree.length === 0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [geometry, setGeometry] = useState<Geometry>({
     rects: new Map(),
     frame: null,
+    container: null,
   });
   // Mirror geometry for the drag handler so it reads fresh rects without
   // re-subscribing the window listeners on every geometry report.
   const geometryRef = useRef<Geometry>(geometry);
   const [dropY, setDropY] = useState<number | null>(null);
+
+  // The iframe's on-screen offset and the canvas viewport box, read live from
+  // the DOM. These move on scroll, window resize, and rail collapse — none of
+  // which re-fire the iframe's tree-keyed geometry report — so they're measured
+  // here and refreshed by the observer effect below, not just on block reports.
+  const measureHost = useCallback((): Pick<Geometry, "frame" | "container"> => {
+    const rect = iframeRef.current?.getBoundingClientRect();
+    const box = containerRef.current?.getBoundingClientRect();
+    return {
+      frame: rect ? { left: rect.left, top: rect.top } : null,
+      container: box
+        ? { left: box.left, top: box.top, width: box.width, height: box.height }
+        : null,
+    };
+  }, []);
 
   useEffect(() => {
     const frameWindow = iframeRef.current?.contentWindow;
@@ -73,17 +94,40 @@ export function CanvasFrame({
       frameWindow,
       origin,
       onGeometry: (reported) => {
-        const rect = iframeRef.current?.getBoundingClientRect();
         const next: Geometry = {
           rects: new Map(reported.map((r) => [r.id, r])),
-          frame: rect ? { left: rect.left, top: rect.top } : null,
+          ...measureHost(),
         };
         geometryRef.current = next;
         setGeometry(next);
       },
     });
     return () => connection.dispose();
-  }, [store, origin]);
+  }, [store, origin, measureHost]);
+
+  // Keep frame/container fresh when the canvas moves without a block report:
+  // column scroll, window resize, and rail collapse (which resizes the inset).
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const refresh = (): void => {
+      const next = { ...geometryRef.current, ...measureHost() };
+      geometryRef.current = next;
+      setGeometry(next);
+    };
+    el.addEventListener("scroll", refresh, { passive: true });
+    window.addEventListener("resize", refresh);
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(refresh);
+    observer?.observe(el);
+    return () => {
+      el.removeEventListener("scroll", refresh);
+      window.removeEventListener("resize", refresh);
+      observer?.disconnect();
+    };
+  }, [measureHost]);
 
   // Catalog drag → top-level insert. While dragging, the iframe ignores pointer
   // events so the host keeps receiving them over the canvas; the placement is
@@ -151,10 +195,14 @@ export function CanvasFrame({
     if (spec) store.getState().insertBlock(createBlockFromSpec(spec), 0);
   }, [registry, capabilities, store]);
 
+  // Overlays live in a clip layer pinned over the canvas viewport, so their
+  // boxes are expressed relative to that layer's top-left (the container's
+  // on-screen origin) rather than the whole window.
+  const container = geometry.container;
   const activeRect = activeId ? geometry.rects.get(activeId) : undefined;
   const activeBox =
-    activeRect && geometry.frame
-      ? overlayBox(activeRect, geometry.frame, zoom)
+    activeRect && geometry.frame && container
+      ? clipRelative(overlayBox(activeRect, geometry.frame, zoom), container)
       : null;
 
   const overlay = (
@@ -162,16 +210,16 @@ export function CanvasFrame({
     color: string,
     testId: string,
   ): ReactElement | null => {
-    if (!id || !geometry.frame) return null;
+    if (!id || !geometry.frame || !container) return null;
     const rect = geometry.rects.get(id);
     if (!rect) return null;
-    const box = overlayBox(rect, geometry.frame, zoom);
+    const box = clipRelative(overlayBox(rect, geometry.frame, zoom), container);
     return (
       <div
         key={testId}
         data-testid={testId}
         style={{
-          position: "fixed",
+          position: "absolute",
           left: box.left,
           top: box.top,
           width: box.width,
@@ -186,6 +234,7 @@ export function CanvasFrame({
 
   return (
     <div
+      ref={containerRef}
       data-testid="plumix-canvas-frame"
       style={{ position: "relative", flex: 1, overflow: "auto" }}
     >
@@ -201,28 +250,47 @@ export function CanvasFrame({
           transformOrigin: "top left",
         }}
       />
-      {overlay(hoverId, HOVER_OUTLINE, "plumix-overlay-hover")}
-      {[...selectedIds]
-        .filter((id) => id !== activeId)
-        .map((id) =>
-          overlay(id, MEMBER_OUTLINE, `plumix-overlay-member-${id}`),
-        )}
-      {overlay(activeId, SELECTED_OUTLINE, "plumix-overlay-selected")}
-      {activeBox && <SelectionToolbar box={activeBox} />}
-      {dropY !== null && geometry.frame && (
+      {/* Clip layer pinned over the visible canvas column. Its overflow:hidden
+          keeps the absolutely-positioned overlays + toolbar from spilling onto
+          the side rails when the iframe renders wider than the column. */}
+      {container && (
         <div
-          data-testid="plumix-drop-indicator"
+          data-testid="plumix-overlay-clip"
           style={{
             position: "fixed",
-            left: geometry.frame.left,
-            top: dropY,
-            width: DEVICE_WIDTH[device] * zoom,
-            height: 2,
-            background: SELECTED_OUTLINE,
+            left: container.left,
+            top: container.top,
+            width: container.width,
+            height: container.height,
+            overflow: "hidden",
             pointerEvents: "none",
-            zIndex: 20,
+            zIndex: 10,
           }}
-        />
+        >
+          {overlay(hoverId, HOVER_OUTLINE, "plumix-overlay-hover")}
+          {[...selectedIds]
+            .filter((id) => id !== activeId)
+            .map((id) =>
+              overlay(id, MEMBER_OUTLINE, `plumix-overlay-member-${id}`),
+            )}
+          {overlay(activeId, SELECTED_OUTLINE, "plumix-overlay-selected")}
+          {activeBox && <SelectionToolbar box={activeBox} />}
+          {dropY !== null && geometry.frame && (
+            <div
+              data-testid="plumix-drop-indicator"
+              style={{
+                position: "absolute",
+                left: geometry.frame.left - container.left,
+                top: dropY - container.top,
+                width: DEVICE_WIDTH[device] * zoom,
+                height: 2,
+                background: SELECTED_OUTLINE,
+                pointerEvents: "none",
+                zIndex: 20,
+              }}
+            />
+          )}
+        </div>
       )}
       {/* Stays visible during a drag so an empty canvas still shows a drop
           target (no block geometry exists to draw an indicator against). */}
@@ -238,4 +306,13 @@ export function CanvasFrame({
       )}
     </div>
   );
+}
+
+// Shift a window-space overlay box into the clip layer's local space.
+function clipRelative(box: OverlayBox, container: OverlayBox): OverlayBox {
+  return {
+    ...box,
+    left: box.left - container.left,
+    top: box.top - container.top,
+  };
 }

@@ -4,6 +4,8 @@ import { I18nProvider } from "@lingui/react";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
+import { SidebarProvider } from "@plumix/admin-ui/sidebar";
+
 import { EditorShortcuts, EditorToolbar } from "./editor-toolbar.js";
 import { EditorProvider, useEditorStoreApi } from "./provider.js";
 
@@ -29,7 +31,9 @@ function renderToolbar(
   return render(
     <I18nProvider i18n={i18n}>
       <EditorProvider initialTree={[]}>
-        <EditorToolbar publish={publish} />
+        <SidebarProvider>
+          <EditorToolbar publish={publish} />
+        </SidebarProvider>
         <EditorShortcuts />
         <Capture />
       </EditorProvider>
