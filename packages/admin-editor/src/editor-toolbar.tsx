@@ -73,31 +73,36 @@ export function EditorToolbar({
       className="bg-background flex items-center gap-1 border-b p-2"
       data-testid="plumix-editor-toolbar"
     >
-      {/* Collapses both rails for a focused canvas (also Cmd/Ctrl+B). */}
-      <SidebarTrigger data-testid="plumix-rails-toggle" />
-      {inserter}
-      <DeviceZoomControls />
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        data-testid="plumix-undo"
-        disabled={!undoAvailable}
-        onClick={undo}
-      >
-        <Trans id="editor.toolbar.undo" message="Undo" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        data-testid="plumix-redo"
-        disabled={!redoAvailable}
-        onClick={redo}
-      >
-        <Trans id="editor.toolbar.redo" message="Redo" />
-      </Button>
-      {previewLink ? <CopyPreviewLink url={previewLink} /> : null}
+      {/* Left controls take the flexible, scrollable space; the publish action
+          is pinned outside it so it always sits at the inset's right edge and
+          never overflows under the right rail at narrow widths. */}
+      <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+        {/* Collapses both rails for a focused canvas (also Cmd/Ctrl+B). */}
+        <SidebarTrigger data-testid="plumix-rails-toggle" />
+        {inserter}
+        <DeviceZoomControls />
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          data-testid="plumix-undo"
+          disabled={!undoAvailable}
+          onClick={undo}
+        >
+          <Trans id="editor.toolbar.undo" message="Undo" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          data-testid="plumix-redo"
+          disabled={!redoAvailable}
+          onClick={redo}
+        >
+          <Trans id="editor.toolbar.redo" message="Redo" />
+        </Button>
+        {previewLink ? <CopyPreviewLink url={previewLink} /> : null}
+      </div>
       {publish ? <PublishControls publish={publish} /> : null}
     </header>
   );
@@ -214,7 +219,7 @@ function PublishControls({
     const busy =
       draftMode.isSaving || draftMode.isPublishing || draftMode.isDiscarding;
     return (
-      <div className="ms-auto flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2">
         {draftMode.hasPendingDraft ? (
           <span
             className="text-muted-foreground text-xs"
@@ -260,7 +265,7 @@ function PublishControls({
   }
   const { isPublishing = false, isPublished = false } = publish;
   return (
-    <div className="ms-auto">
+    <div className="shrink-0">
       <Button
         type="button"
         size="sm"

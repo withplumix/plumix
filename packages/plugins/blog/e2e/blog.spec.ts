@@ -62,7 +62,7 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
   // (target resolves at mouse-up), and the publish wiring is covered by the
   // admin mock e2e ("clicking the Publish button POSTs entry.update"). Re-enable
   // once the editor re-render/zoom-fit stability is fixed in the refinement pass.
-  test.fixme("edit the draft → publish → status persists across reload", async ({
+  test("edit the draft → publish → status persists across reload", async ({
     page,
   }) => {
     await page.goto("entries/posts");
