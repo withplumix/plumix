@@ -91,6 +91,58 @@ describe("CanvasFrame", () => {
     expect(queryByTestId("plumix-overlay-selected")).not.toBeNull();
   });
 
+  test("outlines every selected block, marking the active one apart", () => {
+    const { queryByTestId } = render(
+      <Wrapper>
+        <CanvasFrame
+          previewUrl="about:blank"
+          origin={ORIGIN}
+          registry={registry}
+          capabilities={NO_CAPS}
+        />
+      </Wrapper>,
+    );
+
+    fromCanvas({ type: "canvas:select", id: "h1" });
+    fromCanvas({ type: "canvas:select", id: "h2", additive: true });
+    fromCanvas({
+      type: "canvas:geometry",
+      rects: [
+        { id: "h1", x: 10, y: 20, width: 100, height: 40 },
+        { id: "h2", x: 10, y: 80, width: 100, height: 40 },
+      ],
+    });
+
+    // h2 is the active block (strong outline); h1 is a non-active member.
+    expect(queryByTestId("plumix-overlay-selected")).not.toBeNull();
+    expect(queryByTestId("plumix-overlay-member-h1")).not.toBeNull();
+    expect(queryByTestId("plumix-overlay-member-h2")).toBeNull();
+  });
+
+  test("floats the selection toolbar over the active block", () => {
+    const { queryByTestId } = render(
+      <Wrapper>
+        <CanvasFrame
+          previewUrl="about:blank"
+          origin={ORIGIN}
+          registry={registry}
+          capabilities={NO_CAPS}
+        />
+      </Wrapper>,
+    );
+
+    // No active block yet — no toolbar.
+    expect(queryByTestId("plumix-selection-toolbar")).toBeNull();
+
+    fromCanvas({ type: "canvas:select", id: "h1" });
+    fromCanvas({
+      type: "canvas:geometry",
+      rects: [{ id: "h1", x: 10, y: 20, width: 100, height: 40 }],
+    });
+
+    expect(queryByTestId("plumix-selection-toolbar")).not.toBeNull();
+  });
+
   test("empty-state affordance inserts the first catalog block", () => {
     const { getByTestId, queryByTestId } = render(
       <Wrapper>

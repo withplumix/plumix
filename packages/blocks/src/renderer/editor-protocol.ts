@@ -25,7 +25,12 @@ export interface HostMessage {
 /** Canvas (iframe) → parent (admin shell). */
 export type CanvasMessage =
   | { readonly type: "canvas:ready" }
-  | { readonly type: "canvas:select"; readonly id: string }
+  | {
+      readonly type: "canvas:select";
+      readonly id: string;
+      /** Add to the current selection instead of replacing it (shift/cmd-click). */
+      readonly additive?: boolean;
+    }
   | { readonly type: "canvas:hover"; readonly id: string | null }
   | { readonly type: "canvas:geometry"; readonly rects: readonly BlockRect[] };
 

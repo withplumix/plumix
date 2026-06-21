@@ -11,6 +11,7 @@ import { connectCanvas } from "./connect-canvas.js";
 import { dropPlacement } from "./drop-index.js";
 import { overlayBox } from "./overlay.js";
 import { useEditorStore, useEditorStoreApi } from "./provider.js";
+import { SelectionToolbar } from "./selection-toolbar.js";
 import { DEVICE_WIDTH } from "./store.js";
 
 interface CanvasFrameProps {
@@ -25,6 +26,7 @@ interface CanvasFrameProps {
 }
 
 const SELECTED_OUTLINE = "#2563eb";
+const MEMBER_OUTLINE = "rgba(37,99,235,0.5)";
 const HOVER_OUTLINE = "rgba(37,99,235,0.4)";
 const CANVAS_HEIGHT = 800;
 
@@ -49,6 +51,7 @@ export function CanvasFrame({
   const device = useEditorStore((s) => s.device);
   const zoom = useEditorStore((s) => s.zoom);
   const activeId = useEditorStore((s) => s.activeId);
+  const selectedIds = useEditorStore((s) => s.selectedIds);
   const hoverId = useEditorStore((s) => s.hoverId);
   const dragSpec = useEditorStore((s) => s.dragSpec);
   const isEmpty = useEditorStore((s) => s.tree.length === 0);
@@ -148,6 +151,12 @@ export function CanvasFrame({
     if (spec) store.getState().insertBlock(createBlockFromSpec(spec), 0);
   }, [registry, capabilities, store]);
 
+  const activeRect = activeId ? geometry.rects.get(activeId) : undefined;
+  const activeBox =
+    activeRect && geometry.frame
+      ? overlayBox(activeRect, geometry.frame, zoom)
+      : null;
+
   const overlay = (
     id: string | null,
     color: string,
@@ -159,6 +168,7 @@ export function CanvasFrame({
     const box = overlayBox(rect, geometry.frame, zoom);
     return (
       <div
+        key={testId}
         data-testid={testId}
         style={{
           position: "fixed",
@@ -192,7 +202,13 @@ export function CanvasFrame({
         }}
       />
       {overlay(hoverId, HOVER_OUTLINE, "plumix-overlay-hover")}
+      {[...selectedIds]
+        .filter((id) => id !== activeId)
+        .map((id) =>
+          overlay(id, MEMBER_OUTLINE, `plumix-overlay-member-${id}`),
+        )}
       {overlay(activeId, SELECTED_OUTLINE, "plumix-overlay-selected")}
+      {activeBox && <SelectionToolbar box={activeBox} />}
       {dropY !== null && geometry.frame && (
         <div
           data-testid="plumix-drop-indicator"

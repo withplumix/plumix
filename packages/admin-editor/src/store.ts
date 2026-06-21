@@ -5,7 +5,14 @@ import { isBlockNodeArray } from "@plumix/blocks";
 
 import type { MoveTarget } from "./block-tree-ops.js";
 import type { History } from "./history.js";
-import { moveBlock as moveBlockOp } from "./block-tree-ops.js";
+import {
+  duplicateBlock,
+  findParentId,
+  moveBlockBy,
+  moveBlock as moveBlockOp,
+  removeBlocks,
+  selectionRoots,
+} from "./block-tree-ops.js";
 import { initHistory, recordHistory, redo, undo } from "./history.js";
 
 type TreeHistory = History<readonly BlockNode[]>;
@@ -51,6 +58,14 @@ export interface EditorActions {
   ) => void;
   select: (id: string, options?: { readonly additive?: boolean }) => void;
   clearSelection: () => void;
+  /** Delete every selected block (bulk) and clear the selection. */
+  removeSelected: () => void;
+  /** Clone every selected block after itself and select the clones (bulk). */
+  duplicateSelected: () => void;
+  /** Select the active block's container, walking one level up. */
+  selectParent: () => void;
+  /** Move the active block by `delta` positions among its siblings. */
+  moveSelectedBy: (delta: number) => void;
   setHover: (id: string | null) => void;
   setDevice: (device: EditorDevice) => void;
   setZoom: (zoom: number) => void;
@@ -146,13 +161,68 @@ export function createEditorStore(
         return { tree, history: recordHistory(state.history, tree, key) };
       }),
     select: (id, options) =>
-      set((state) => ({
-        selectedIds: options?.additive
-          ? new Set(state.selectedIds).add(id)
-          : new Set([id]),
-        activeId: id,
-      })),
+      set((state) => {
+        if (!options?.additive) {
+          return { selectedIds: new Set([id]), activeId: id };
+        }
+        // Additive: toggle membership. Removing the active block repoints
+        // active to another remaining member (or null when the set empties).
+        const selectedIds = new Set(state.selectedIds);
+        if (selectedIds.delete(id)) {
+          const activeId =
+            state.activeId === id
+              ? ([...selectedIds].at(-1) ?? null)
+              : state.activeId;
+          return { selectedIds, activeId };
+        }
+        selectedIds.add(id);
+        return { selectedIds, activeId: id };
+      }),
     clearSelection: () => set({ selectedIds: new Set(), activeId: null }),
+    removeSelected: () =>
+      set((state) => {
+        const tree = removeBlocks(state.tree, state.selectedIds);
+        if (tree === state.tree) return {};
+        return {
+          tree,
+          selectedIds: new Set(),
+          activeId: null,
+          history: recordHistory(state.history, tree, null),
+        };
+      }),
+    duplicateSelected: () =>
+      set((state) => {
+        let tree = state.tree;
+        const newIds: string[] = [];
+        // Only clone selection roots; a nested block whose container is also
+        // selected is already copied inside that container's clone.
+        for (const id of selectionRoots(tree, state.selectedIds)) {
+          const result = duplicateBlock(tree, id);
+          tree = result.tree;
+          if (result.newId) newIds.push(result.newId);
+        }
+        if (tree === state.tree) return {};
+        return {
+          tree,
+          selectedIds: new Set(newIds),
+          activeId: newIds.at(-1) ?? null,
+          history: recordHistory(state.history, tree, null),
+        };
+      }),
+    selectParent: () =>
+      set((state) => {
+        if (!state.activeId) return {};
+        const parentId = findParentId(state.tree, state.activeId);
+        if (!parentId) return {};
+        return { selectedIds: new Set([parentId]), activeId: parentId };
+      }),
+    moveSelectedBy: (delta) =>
+      set((state) => {
+        if (!state.activeId) return {};
+        const tree = moveBlockBy(state.tree, state.activeId, delta);
+        if (tree === state.tree) return {};
+        return { tree, history: recordHistory(state.history, tree, null) };
+      }),
     setHover: (hoverId) => set({ hoverId }),
     setDevice: (device) => set({ device }),
     setZoom: (zoom) =>

@@ -13,7 +13,7 @@ import {
 } from "@plumix/blocks/renderer";
 
 export interface RuntimeConnection {
-  readonly reportSelect: (id: string) => void;
+  readonly reportSelect: (id: string, additive?: boolean) => void;
   readonly reportHover: (id: string | null) => void;
   readonly reportGeometry: (rects: readonly BlockRect[]) => void;
   readonly dispose: () => void;
@@ -71,8 +71,12 @@ export function connectRuntime({
   announce();
 
   return {
-    reportSelect: (id) =>
-      post({ type: "canvas:select", id } satisfies CanvasMessage),
+    reportSelect: (id, additive) =>
+      post({
+        type: "canvas:select",
+        id,
+        ...(additive ? { additive: true } : {}),
+      } satisfies CanvasMessage),
     reportHover: (id) =>
       post({ type: "canvas:hover", id } satisfies CanvasMessage),
     reportGeometry: (rects) =>

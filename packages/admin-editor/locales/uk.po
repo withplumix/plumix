@@ -14,6 +14,11 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/selection-toolbar.tsx
+msgid "editor.selection.count"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/canvas-frame.tsx
 msgid "editor.canvas.addBlock"
 msgstr ""
@@ -34,8 +39,18 @@ msgid "editor.tab.blocks"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/selection-toolbar.tsx
+msgid "editor.selection.delete"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
 msgid "editor.toolbar.discard"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/selection-toolbar.tsx
+msgid "editor.selection.duplicate"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -46,6 +61,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/plumix-editor.tsx
 msgid "editor.tab.layers"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/selection-toolbar.tsx
+msgid "editor.selection.moveDown"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/selection-toolbar.tsx
+msgid "editor.selection.moveUp"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -101,6 +126,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/json-inspector.tsx
 msgid "editor.json.empty"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/selection-toolbar.tsx
+msgid "editor.selection.selectParent"
 msgstr ""
 
 #. js-lingui-explicit-id

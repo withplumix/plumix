@@ -3,10 +3,15 @@ import { describe, expect, test } from "vitest";
 import type { BlockNode } from "@plumix/blocks";
 
 import {
+  duplicateBlock,
   findBlock,
+  findParentId,
   flattenTree,
   moveBlock,
+  moveBlockBy,
   projectMove,
+  removeBlocks,
+  selectionRoots,
 } from "./block-tree-ops.js";
 
 const ids = (tree: readonly BlockNode[]): string[] =>
@@ -178,6 +183,144 @@ describe("projectMove", () => {
 
   test("returns null when the active block is unknown", () => {
     expect(projectMove(FLAT, "zzz", "b", 0, INDENT)).toBeNull();
+  });
+});
+
+describe("removeBlocks", () => {
+  test("removes top-level and nested blocks in one pass", () => {
+    const moved = removeBlocks(TREE, new Set(["a", "deep"]));
+    expect(ids(moved)).toEqual(["-/g", "g/c1", "g/c2"]);
+  });
+
+  test("returns the same reference when nothing matches", () => {
+    expect(removeBlocks(TREE, new Set(["zzz"]))).toBe(TREE);
+  });
+
+  test("returns the same reference for an empty id set", () => {
+    expect(removeBlocks(TREE, new Set())).toBe(TREE);
+  });
+
+  test("leaves untouched branches referentially stable", () => {
+    const moved = removeBlocks(TREE, new Set(["c1"]));
+    // The heading sibling is in a branch with no removal — its node is reused.
+    expect(moved[0]).toBe(TREE[0]);
+  });
+});
+
+describe("findParentId", () => {
+  test("returns null for a top-level block", () => {
+    expect(findParentId(TREE, "g")).toBeNull();
+  });
+
+  test("returns the immediate slot owner for a nested block", () => {
+    expect(findParentId(TREE, "c1")).toBe("g");
+  });
+
+  test("walks past the first slot to deeper ancestors", () => {
+    expect(findParentId(TREE, "deep")).toBe("c2");
+  });
+
+  test("returns null when the block is absent", () => {
+    expect(findParentId(TREE, "zzz")).toBeNull();
+  });
+
+  test("finds a parent in a non-first slot", () => {
+    const tree: readonly BlockNode[] = [
+      {
+        id: "cols",
+        name: "core/columns",
+        attrs: {
+          left: [{ id: "l", name: "x" }],
+          right: [{ id: "r", name: "x" }],
+        },
+      },
+    ];
+    expect(findParentId(tree, "r")).toBe("cols");
+  });
+});
+
+describe("duplicateBlock", () => {
+  test("clones a top-level block right after it with a fresh id", () => {
+    const tree: readonly BlockNode[] = [
+      { id: "a", name: "core/heading", attrs: { text: "Hi" } },
+      { id: "b", name: "core/spacer" },
+    ];
+    const { tree: next, newId } = duplicateBlock(tree, "a");
+    expect(next.map((n) => n.id)).toEqual(["a", newId, "b"]);
+    expect(newId).not.toBe("a");
+    expect(findBlock(next, newId ?? "")?.attrs?.text).toBe("Hi");
+  });
+
+  test("clones a nested block within its own slot, ids rewritten deeply", () => {
+    const { tree: next, newId } = duplicateBlock(TREE, "c2");
+    const slot = findBlock(next, "g")?.attrs?.content as readonly BlockNode[];
+    expect(slot.map((n) => n.id)).toEqual(["c1", "c2", newId]);
+    // The clone's nested child got a fresh id too (not the original "deep").
+    const clone = findBlock(next, newId ?? "");
+    const childIds = (clone?.attrs?.content as readonly BlockNode[]).map(
+      (n) => n.id,
+    );
+    expect(childIds).not.toContain("deep");
+  });
+
+  test("is a no-op with a null id when the source is absent", () => {
+    expect(duplicateBlock(TREE, "zzz")).toEqual({ tree: TREE, newId: null });
+  });
+});
+
+describe("moveBlockBy", () => {
+  const tree: readonly BlockNode[] = [
+    { id: "a", name: "x" },
+    { id: "b", name: "x" },
+    { id: "c", name: "x" },
+  ];
+
+  test("moves a block down among its siblings", () => {
+    expect(moveBlockBy(tree, "a", 1).map((n) => n.id)).toEqual(["b", "a", "c"]);
+  });
+
+  test("moves a block up among its siblings", () => {
+    expect(moveBlockBy(tree, "c", -1).map((n) => n.id)).toEqual([
+      "a",
+      "c",
+      "b",
+    ]);
+  });
+
+  test("reorders within a nested slot", () => {
+    const nested: readonly BlockNode[] = [
+      group("g", [
+        { id: "c1", name: "x" },
+        { id: "c2", name: "x" },
+      ]),
+    ];
+    const moved = moveBlockBy(nested, "c1", 1);
+    const slot = findBlock(moved, "g")?.attrs?.content as readonly BlockNode[];
+    expect(slot.map((n) => n.id)).toEqual(["c2", "c1"]);
+  });
+
+  test("is a no-op at the ends", () => {
+    expect(moveBlockBy(tree, "a", -1)).toBe(tree);
+    expect(moveBlockBy(tree, "c", 1)).toBe(tree);
+  });
+
+  test("is a no-op when the block is absent", () => {
+    expect(moveBlockBy(tree, "zzz", 1)).toBe(tree);
+  });
+});
+
+describe("selectionRoots", () => {
+  test("drops a selected block that is nested inside another selection", () => {
+    // g and its descendant deep are both selected → only g is a root.
+    expect(selectionRoots(TREE, new Set(["g", "deep"]))).toEqual(["g"]);
+  });
+
+  test("keeps independent selections", () => {
+    expect(selectionRoots(TREE, new Set(["a", "c1"]))).toEqual(["a", "c1"]);
+  });
+
+  test("returns an empty array for an empty set", () => {
+    expect(selectionRoots(TREE, new Set())).toEqual([]);
   });
 });
 
