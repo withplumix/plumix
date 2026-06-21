@@ -106,6 +106,7 @@ export type {
 
 // ─── Style emission + theme tokens ──────────────────────────────────────────
 export {
+  DEFAULT_BREAKPOINTS,
   emitBlockStyleCss,
   tokenIdToCssVar,
   VIEWPORT_MAX_PX,
@@ -113,6 +114,7 @@ export {
 export type {
   ResponsiveStyleBucket,
   ResponsiveStyleSlot,
+  ThemeBreakpoints,
   TokenCategory,
 } from "./styles/style-emitter.js";
 export type {

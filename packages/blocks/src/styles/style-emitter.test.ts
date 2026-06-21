@@ -73,6 +73,23 @@ describe("emitBlockStyleCss", () => {
     );
   });
 
+  test("uses theme-supplied breakpoints for the @media maxima when given", () => {
+    const style: ResponsiveStyleSlot = {
+      medium: { padding: "lg" },
+      small: { padding: "sm" },
+    };
+
+    const css = emitBlockStyleCss("block-1", style, tokens, {
+      tablet: 900,
+      mobile: 500,
+    });
+
+    expect(css).toContain("@media (max-width: 900px)");
+    expect(css).toContain("@media (max-width: 500px)");
+    expect(css).not.toContain("991px");
+    expect(css).not.toContain("640px");
+  });
+
   test("skips unmapped CSS properties without emitting raw token ids as literal CSS values", () => {
     const style: ResponsiveStyleSlot = {
       large: { padding: "lg", width: "lg" },

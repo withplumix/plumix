@@ -17,7 +17,7 @@ import { dropPlacement } from "./drop-index.js";
 import { overlayBox } from "./overlay.js";
 import { useEditorStore, useEditorStoreApi } from "./provider.js";
 import { SelectionToolbar } from "./selection-toolbar.js";
-import { DEVICE_WIDTH } from "./store.js";
+import { deviceWidth } from "./store.js";
 
 interface CanvasFrameProps {
   /** URL the iframe loads — the entry's real route with `?plumix.edit`. */
@@ -72,6 +72,9 @@ export function CanvasFrame({
   const store = useEditorStoreApi();
   const device = useEditorStore((s) => s.device);
   const zoom = useEditorStore((s) => s.zoom);
+  const breakpoints = useEditorStore((s) => s.breakpoints);
+  const zoomFit = useEditorStore((s) => s.zoomFit);
+  const frameWidth = deviceWidth(device, breakpoints);
   const activeId = useEditorStore((s) => s.activeId);
   const selectedIds = useEditorStore((s) => s.selectedIds);
   const hoverId = useEditorStore((s) => s.hoverId);
@@ -91,6 +94,13 @@ export function CanvasFrame({
   const geometryRef = useRef<Geometry>(geometry);
   const [dropY, setDropY] = useState<number | null>(null);
   const [dropSlot, setDropSlot] = useState<SlotDrop | null>(null);
+  // The iframe's own document height (same-origin), so the frame sizes to its
+  // content — footer visible, no fixed gap below it.
+  const [contentHeight, setContentHeight] = useState<number | null>(null);
+  const measureContent = useCallback((): void => {
+    const doc = iframeRef.current?.contentDocument;
+    if (doc) setContentHeight(doc.documentElement.scrollHeight);
+  }, []);
 
   // The iframe's on-screen offset and the canvas viewport box, read live from
   // the DOM. These move on scroll, window resize, and rail collapse — none of
@@ -122,10 +132,13 @@ export function CanvasFrame({
         };
         geometryRef.current = next;
         setGeometry(next);
+        // A fresh geometry report follows a tree change, so the document height
+        // may have shifted too.
+        measureContent();
       },
     });
     return () => connection.dispose();
-  }, [store, origin, measureHost]);
+  }, [store, origin, measureHost, measureContent]);
 
   // Keep frame/container fresh when the canvas moves without a block report:
   // column scroll, window resize, and rail collapse (which resizes the inset).
@@ -150,6 +163,17 @@ export function CanvasFrame({
       observer?.disconnect();
     };
   }, [measureHost]);
+
+  // Fit-to-width: while in fit mode, scale the frame so its full width fits the
+  // canvas column (never upscaling past 100%). A manual zoom turns fit off; a
+  // device switch turns it back on, so the new width refits.
+  useEffect(() => {
+    if (!zoomFit) return;
+    const columnWidth = geometry.container?.width;
+    if (!columnWidth) return;
+    const fit = Math.min(1, columnWidth / frameWidth);
+    if (fit !== store.getState().zoom) store.getState().applyFitZoom(fit);
+  }, [zoomFit, frameWidth, geometry.container?.width, store]);
 
   // Canvas drag, shared by two sources: a catalog block being inserted
   // (dragSpec) and an existing block being moved (movingId). While dragging, the
@@ -362,9 +386,10 @@ export function CanvasFrame({
         ref={iframeRef}
         src={previewUrl}
         title="plumix-editor-canvas"
+        onLoad={measureContent}
         style={{
-          width: DEVICE_WIDTH[device],
-          height: CANVAS_HEIGHT,
+          width: frameWidth,
+          height: contentHeight ?? CANVAS_HEIGHT,
           border: 0,
           transform: `scale(${String(zoom)})`,
           transformOrigin: "top left",
@@ -418,7 +443,7 @@ export function CanvasFrame({
                 position: "absolute",
                 left: geometry.frame.left - container.left,
                 top: dropY - container.top,
-                width: DEVICE_WIDTH[device] * zoom,
+                width: frameWidth * zoom,
                 height: 2,
                 background: SELECTED_OUTLINE,
                 pointerEvents: "none",

@@ -1,6 +1,10 @@
 import type { ComponentType, JSX } from "react";
 
-import type { ShortcodeSpec, ThemeTokens } from "@plumix/blocks";
+import type {
+  ShortcodeSpec,
+  ThemeBreakpoints,
+  ThemeTokens,
+} from "@plumix/blocks";
 
 import type {
   ArchiveData,
@@ -134,6 +138,13 @@ export interface ThemeDescriptor extends TemplateDepDeclarations {
   readonly templates: TemplateRegistry;
   readonly document?: DocumentManifest;
   readonly tokens?: ThemeTokens;
+  /**
+   * Responsive breakpoints (max-width px) for the `tablet`/`mobile` buckets.
+   * Feed both the SSR style emitter's @media maxima and the editor's
+   * device-switch canvas widths, so preview equals shipped. Defaults to
+   * `DEFAULT_BREAKPOINTS` (991/640) when unspecified.
+   */
+  readonly breakpoints?: ThemeBreakpoints;
   /**
    * Shortcodes the theme declares without a setup hook (like `tokens`).
    * These take precedence over plugin and core shortcodes of the same tag

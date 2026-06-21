@@ -5,6 +5,7 @@ import type { BlockRegistry } from "../block-registry.js";
 import type { EntryContent } from "../entry-content.js";
 import type { ResolvedBlockLoaders } from "../loaders.js";
 import type { ShortcodeRegistry } from "../shortcodes/types.js";
+import type { ThemeBreakpoints } from "../styles/style-emitter.js";
 import type { ThemeTokens } from "../styles/types.js";
 import type { ImageResolver, RemotePattern } from "./image-attrs.js";
 import { renderBlockTree } from "../render-block-tree.js";
@@ -32,6 +33,8 @@ export interface PlumixContextValue {
   /** Render mode; defaults to `"live"`. `edit`/`preview` drive the editor hooks. */
   readonly mode?: PlumixRenderMode;
   readonly tokens?: ThemeTokens;
+  /** Theme breakpoints feeding the style emitter's @media maxima. */
+  readonly breakpoints?: ThemeBreakpoints;
   readonly loaderData?: ResolvedBlockLoaders;
   readonly user?: RendererUser | null;
   readonly queriedEntry?: RendererQueriedEntry | null;
@@ -79,6 +82,7 @@ export function BlockRenderer({
   const ctx = usePlumixContext("BlockRenderer");
   const tree = renderBlockTree(content.blocks, ctx.registry, {
     tokens: ctx.tokens,
+    breakpoints: ctx.breakpoints,
     loaderData: ctx.loaderData,
     locale: ctx.locale,
     shortcodes: ctx.shortcodes,

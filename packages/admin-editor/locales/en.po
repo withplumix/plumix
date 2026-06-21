@@ -64,6 +64,11 @@ msgid "editor.selection.duplicate"
 msgstr "Duplicate"
 
 #. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.fitWidth"
+msgstr "Fit to width"
+
+#. js-lingui-explicit-id
 #: src/rich-text-field.tsx
 msgid "editor.richtext.hint"
 msgstr "Formatting applies to the selected text."
@@ -162,3 +167,13 @@ msgstr "Undo"
 #: src/editor-toolbar.tsx
 msgid "editor.toolbar.unpublished"
 msgstr "Unpublished changes"
+
+#. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.zoomIn"
+msgstr "Zoom in"
+
+#. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.zoomOut"
+msgstr "Zoom out"

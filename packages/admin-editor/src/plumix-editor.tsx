@@ -2,7 +2,11 @@ import type { CSSProperties, ReactElement, ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { Trans } from "@lingui/react";
 
-import type { BlockRegistry, EntryContent } from "@plumix/blocks";
+import type {
+  BlockRegistry,
+  EntryContent,
+  ThemeBreakpoints,
+} from "@plumix/blocks";
 import {
   Sidebar,
   SidebarContent,
@@ -44,6 +48,8 @@ interface PlumixEditorProps {
   readonly capabilities?: ReadonlySet<string>;
   /** Theme + plugin patterns offered in the inserter alongside the blocks. */
   readonly patterns?: readonly InserterPattern[];
+  /** Theme breakpoints sizing the device-switch canvas widths. */
+  readonly breakpoints?: ThemeBreakpoints;
   /** Preview mode: render the canvas read-only with the editing chrome hidden
    *  (used to view a past revision or a shared draft). */
   readonly readOnly?: boolean;
@@ -75,6 +81,7 @@ export function PlumixEditor({
   registry,
   capabilities = NO_CAPABILITIES,
   patterns,
+  breakpoints,
   readOnly = false,
   previewBanner,
   previewLink,
@@ -85,7 +92,10 @@ export function PlumixEditor({
 }: PlumixEditorProps): ReactElement {
   if (readOnly) {
     return (
-      <EditorProvider initialTree={defaultValue?.blocks}>
+      <EditorProvider
+        initialTree={defaultValue?.blocks}
+        breakpoints={breakpoints}
+      >
         <div
           className="flex h-full min-h-0 flex-col"
           data-testid="plumix-editor-preview"
@@ -104,7 +114,10 @@ export function PlumixEditor({
     );
   }
   return (
-    <EditorProvider initialTree={defaultValue?.blocks}>
+    <EditorProvider
+      initialTree={defaultValue?.blocks}
+      breakpoints={breakpoints}
+    >
       <SidebarProvider
         className="h-full min-h-0"
         style={{ "--sidebar-width": "18rem" } as CSSProperties}
