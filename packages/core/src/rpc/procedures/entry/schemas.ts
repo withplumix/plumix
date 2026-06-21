@@ -227,6 +227,11 @@ export const entryDeletePermanentInputSchema = v.object({ id: idParam });
 export const entryDuplicateInputSchema = v.object({ id: idParam });
 export const entryCreatePreviewLinkInputSchema = v.object({ id: idParam });
 
+export const entryRefreshBlockLoaderInputSchema = v.object({
+  id: idParam,
+  blockId: v.pipe(v.string(), v.minLength(1)),
+});
+
 // Bulk action input. Capped at 100 ids per call so a single batched
 // `WHERE id IN (…)` stays bounded; the admin selects a page at a time.
 const bulkIdsSchema = v.object({
