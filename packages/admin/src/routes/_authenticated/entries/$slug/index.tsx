@@ -1121,7 +1121,7 @@ function TitleCell({
   return (
     <div className="flex flex-col gap-0.5">
       <Link
-        to="/entries/$slug/$id/edit"
+        to="/entries/$slug/$id/editor"
         params={{ slug: adminSlug, id: entry.id }}
         data-testid={`content-list-row-${String(entry.id)}`}
         className="hover:text-primary font-medium transition-colors"
@@ -1141,7 +1141,7 @@ function TitleCell({
         data-testid={`content-list-row-actions-${String(entry.id)}`}
       >
         <Link
-          to="/entries/$slug/$id/edit"
+          to="/entries/$slug/$id/editor"
           params={{ slug: adminSlug, id: entry.id }}
           className="text-muted-foreground hover:text-foreground"
         >

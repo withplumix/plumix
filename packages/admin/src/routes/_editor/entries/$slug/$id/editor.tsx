@@ -7,7 +7,11 @@ import { AUTOSAVE_DEBOUNCE_MS, freshLiveUpdatedAt } from "@/editor/autosave.js";
 import { createDebouncer } from "@/editor/debounce.js";
 import { detectStaleAutosave } from "@/editor/detect-stale-autosave.js";
 import { registerCoreBlocks } from "@/editor/register-core-blocks.js";
-import { resolveEditorMode } from "@/editor/resolve-editor-mode.js";
+import {
+  resolveEditorMode,
+  supportsEditor,
+  supportsRevisions,
+} from "@/editor/resolve-editor-mode.js";
 import { PreviewBanner } from "@/editor/revisions/PreviewBanner.js";
 import { StaleDraftDialog } from "@/editor/StaleDraftDialog.js";
 import {
@@ -45,6 +49,8 @@ import {
 } from "@plumix/blocks";
 import { idPathParam } from "@plumix/core/validation";
 
+import { PlainFormRouteInner } from "./plain-form-route.js";
+
 const M = {
   published: defineMessage({
     id: "editor.bespoke.toast.published",
@@ -73,7 +79,7 @@ const M = {
 } satisfies Record<string, MessageDescriptor>;
 
 // Core + plugin blocks supply the inspector's input schemas. Built once at
-// module load, mirroring the Puck route.
+// module load.
 registerCoreBlocks();
 const registry = createBlockRegistry(getRegisteredBlocks());
 
@@ -96,8 +102,7 @@ const previewLinkQuery = (
     staleTime: Infinity,
   });
 
-// The bespoke visual editor — opt-in (its own route; the Puck `/edit` route
-// stays the default editor). The entry load and the preview mint both run in
+// The bespoke visual editor. The entry load and the preview mint both run in
 // the loader so a failure (unreadable entry, no public url) surfaces through
 // one ErrorScreen rather than a dead canvas.
 const editorSearch = v.object({
@@ -118,15 +123,24 @@ export const Route = createFileRoute("/_editor/entries/$slug/$id/editor")({
     },
   },
   validateSearch: editorSearch,
-  loader: ({ context, params }) =>
-    Promise.all([
+  loader: async ({ context, params }) => {
+    // Only the visual canvas (and the revision preview) loads the public route
+    // behind a minted preview link; non-editor types render the plain form,
+    // which has no canvas, so skip the mint (a structured-record type may have
+    // no public URL to mint against). The gate decides whether to include the
+    // mint, not when — the entry load and the mint have no data dependency.
+    const entryType = findEntryTypeBySlug(params.slug);
+    await Promise.all([
       context.queryClient.ensureQueryData(
         orpc.entry.get.queryOptions({
           input: { id: params.id, preview: true },
         }),
       ),
-      context.queryClient.ensureQueryData(previewLinkQuery(params.id)),
-    ]),
+      ...(supportsEditor(entryType)
+        ? [context.queryClient.ensureQueryData(previewLinkQuery(params.id))]
+        : []),
+    ]);
+  },
   pendingComponent: PendingScreen,
   errorComponent: ErrorScreen,
   component: BespokeEditorRoute,
@@ -174,8 +188,7 @@ function BespokeEditorRoute(): ReactNode {
   // remount. The preview source flip covers load-time-draft publish/discard
   // (autosave↔live); `reseedNonce` covers the in-session case where discarding
   // a freshly-made draft leaves the source at "live" (no flip) — the inner
-  // bumps it so the canvas drops the discarded edits. (Mirrors the Puck route,
-  // which reseeds Puck in place instead.)
+  // bumps it so the canvas drops the discarded edits.
   const [reseedNonce, setReseedNonce] = useState(0);
   const reseed = useCallback(() => setReseedNonce((n) => n + 1), []);
 
@@ -191,6 +204,20 @@ function BespokeEditorRoute(): ReactNode {
       />
     );
   }
+  const entryType = findEntryTypeBySlug(slug);
+  // Non-editor entry types (structured records like authors, products, events)
+  // get the plain-form Cards layout instead of the visual canvas, driven by the
+  // manifest `supports` decision.
+  if (!supportsEditor(entryType) && entryType) {
+    return (
+      <PlainFormRouteInner
+        entryType={entryType}
+        id={id}
+        supportsRevisions={supportsRevisions(entryType)}
+        capabilities={user.capabilities}
+      />
+    );
+  }
   const previewSource = entry._preview?.source ?? "live";
   // Pass capabilities + entryType + userId across a prop boundary so the React
   // Compiler treats them as stable inputs (member/derived reads inline read as
@@ -199,7 +226,7 @@ function BespokeEditorRoute(): ReactNode {
     <BespokeEditor
       key={`${previewSource}:${reseedNonce}`}
       capabilities={user.capabilities}
-      entryType={findEntryTypeBySlug(slug)}
+      entryType={entryType}
       userId={user.id}
       onReseed={reseed}
     />
@@ -214,7 +241,7 @@ interface BespokeEditorProps {
 }
 
 // Persistence lives inline in the component (not a custom hook) so the React
-// Compiler can optimize it — the same shape that compiles for the Puck route.
+// Compiler can optimize it.
 // Content + excerpt + meta ride one debounced autosave-row write; slug + parent
 // ride a second debouncer that writes the live row (`saveAs: "live"`). Both
 // share one optimistic-concurrency token, refreshed on a stale conflict.

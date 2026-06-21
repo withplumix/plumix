@@ -191,7 +191,7 @@ function DashboardIndex(): ReactNode {
                     <li key={row.id} data-testid={`dashboard-recent-${row.id}`}>
                       {tile ? (
                         <Link
-                          to="/entries/$slug/$id/edit"
+                          to="/entries/$slug/$id/editor"
                           params={{ slug: tile.adminSlug, id: row.id }}
                           className="hover:text-primary flex items-center gap-2 py-2 text-sm"
                         >

@@ -212,7 +212,7 @@ export function CommandPalette({
       case "entry": {
         const slug = findEntryTypeByName(name)?.adminSlug ?? name;
         void navigate({
-          to: "/entries/$slug/$id/edit",
+          to: "/entries/$slug/$id/editor",
           params: { slug, id: Number(id) },
         });
         return;

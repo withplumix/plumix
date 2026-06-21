@@ -82,7 +82,7 @@ function CreateEntryRoute(): ReactNode {
       }),
     onSuccess: (entry) => {
       void navigate({
-        to: "/entries/$slug/$id/edit",
+        to: "/entries/$slug/$id/editor",
         params: { slug: entryType.adminSlug, id: entry.id },
         replace: true,
       });

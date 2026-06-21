@@ -91,64 +91,6 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-/* Puck ships a single dark-first palette on `:root` (grey-01 #181818 is the
-   darkest step, grey-12 #fafafa the lightest) and has no official editor-UI
-   theming API — overriding these vars is the maintainer-endorsed path. The
-   admin renders Puck inside our themed shell, so for dark mode we invert the
-   ramps end-to-end. ThemeProvider always sets `html.light`/`html.dark`, so
-   `:root.light`/`:root.dark` (0,2,0) outrank Puck's own `:root` (0,1,0)
-   regardless of the order puck.css and this sheet load in. */
-:root.light,
-:root.dark {
-  --puck-font-family: inherit;
-}
-
-:root.dark {
-  --puck-color-white: var(--background);
-  --puck-color-black: var(--foreground);
-
-  /* Neutral ramp inverted end-to-end so Puck's light surfaces become dark
-     panels and its dark text reads light, preserving the original contrast
-     steps. */
-  --puck-color-grey-01: #fafafa;
-  --puck-color-grey-02: #f5f5f5;
-  --puck-color-grey-03: #efefef;
-  --puck-color-grey-04: #dcdcdc;
-  --puck-color-grey-05: #c3c3c3;
-  --puck-color-grey-06: #ababab;
-  --puck-color-grey-07: #949494;
-  --puck-color-grey-08: #767676;
-  --puck-color-grey-09: #5a5a5a;
-  --puck-color-grey-10: #404040;
-  --puck-color-grey-11: #292929;
-  --puck-color-grey-12: #181818;
-
-  /* Accent ramp inverted likewise: azure-04 (accent text) lightens for dark
-     readability, and the near-white selection tints (azure-11/12) darken into
-     navy so selected rows stop glowing. */
-  --puck-color-azure-01: #f7faff;
-  --puck-color-azure-02: #f3f6fb;
-  --puck-color-azure-03: #e7eef7;
-  --puck-color-azure-04: #cfdff0;
-  --puck-color-azure-05: #abc7e5;
-  --puck-color-azure-06: #88b0da;
-  --puck-color-azure-07: #6499cf;
-  --puck-color-azure-08: #3479be;
-  --puck-color-azure-09: #0158ad;
-  --puck-color-azure-10: #014292;
-  --puck-color-azure-11: #002c77;
-  --puck-color-azure-12: #00175d;
-}
-
-/* Puck's floating ActionBar (the per-block "label · copy · delete" chip) hard-
-   codes `grey-01` as its background — a dark chip by design even in light mode.
-   The dark-ramp inversion above would flip it to a light chip; keep it a dark
-   popover-style chip so it reads as an overlay on dark canvas. */
-:root.dark [class*="_ActionBar_"] {
-  background: var(--popover);
-  color: var(--popover-foreground);
-}
-
 @theme inline {
   --font-sans:
     "Geist Variable", ui-sans-serif, system-ui, -apple-system,
@@ -202,9 +144,8 @@
   }
 
   /* Thin, theme-aware scrollbars in place of the OS default. Covers our own
-     scroll containers and Puck's internal panels alike (iframe is disabled,
-     so Puck renders in this document). Firefox uses the two-value
-     `scrollbar-*` props; Chromium/WebKit use the pseudo-elements. */
+     scroll containers and the editor's internal panels alike. Firefox uses the
+     two-value `scrollbar-*` props; Chromium/WebKit use the pseudo-elements. */
   * {
     scrollbar-width: thin;
     scrollbar-color: color-mix(
@@ -240,31 +181,12 @@
   }
 }
 
-/* Selection/hover overlays in the canvas measure Puck's per-block wrapper.
-   That wrapper has no border/padding, so a block's vertical margins (the prose
-   rhythm below) collapse straight through it and its box excludes them — Puck
-   then draws the outline offset from what the author sees as the block.
-   `flow-root` gives the wrapper its own block-formatting context so the margins
-   stay inside and the measured box matches the visible block.
-
-   Scoped to `div` on purpose: Puck only wraps *block* components in a `<div>`.
-   Inline components (table rows/cells, and any author block with `inline:true`)
-   carry `data-puck-component` on their OWN element — a `<tr>`/`<td>`/etc. —
-   and forcing `flow-root` there would override their `table-row`/`table-cell`
-   display and collapse the layout (and the overlay with it). They keep their
-   native display and don't have the wrapper-margin problem to begin with. */
-div[data-puck-component] {
-  display: flow-root;
-}
-
 /* Editor block typography. Tailwind's `prose` plugin isn't installed in
    this admin, so we ship a scoped baseline so authors can tell blocks
-   apart. Frontend themes own production styling. Applies in two places:
-   `.ProseMirror` (the Tiptap rich-text view while typing) and
-   `.plumix-canvas-content` (the Puck preview, where rendered blocks would
-   otherwise inherit Tailwind preflight's reset and look flat). */
-.ProseMirror,
-.plumix-canvas-content {
+   apart. Frontend themes own production styling. Scopes to `.ProseMirror`
+   (the Tiptap rich-text view while typing); the canvas preview is an iframe
+   loading the public route, which carries its own theme styles. */
+.ProseMirror {
   /* Headings — clear size hierarchy without going as large as
      a theme would. Keeps the editor compact at prose-sm scale. */
   h1 {
@@ -396,12 +318,5 @@ div[data-puck-component] {
   }
   th {
     @apply bg-muted/50 text-left font-semibold;
-  }
-  /* The row/cell blocks render inline (no Puck wrapper), but Puck's slot
-     DropZone is still a `<div>` that sits between `<table>`/`<tr>`. Collapse
-     just that box so the native table structure renders; the inline cells
-     keep their own boxes (and dragRef) so they stay selectable. */
-  table [data-puck-dropzone] {
-    display: contents;
   }
 }

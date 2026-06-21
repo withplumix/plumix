@@ -10,7 +10,7 @@ import { expandShortcodes } from "../shortcodes/expand.js";
 // The trust boundary is the stored bytes: a string body is authored HTML and
 // is sanitised at render like `core/html`, which also covers content stored
 // before this gate. A React-element body is the editor's own live buffer
-// (admin Puck preview), so it surfaces verbatim.
+// (admin editor preview), so it surfaces verbatim.
 function RichTextBlockRender({
   attrs,
   context,

@@ -98,7 +98,7 @@ export const coreMarks: readonly MarkSpec[] = Object.freeze([
 ]);
 
 // Sync projection of every core mark's Tiptap extension — consumed by
-// Puck's richtext field config without awaiting any LazyRefs.
+// the editor's richtext field config without awaiting any LazyRefs.
 export const coreMarkExtensions: readonly Mark[] = Object.freeze(
   coreMarks.flatMap((m) => (m.schema ? [m.schema] : [])),
 );

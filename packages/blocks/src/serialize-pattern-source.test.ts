@@ -176,9 +176,8 @@ describe("serializePatternSource", () => {
   });
 
   test("the emitted snippet survives commitPatterns against a real block registry", () => {
-    // Tree shape the toolbar produces after `puckDataToBlockTree` —
-    // both `node.id` and `attrs.id` are populated, mirroring Puck's
-    // props flattening.
+    // Tree shape the editor adapter produces — both `node.id` and
+    // `attrs.id` are populated, mirroring the editor's props flattening.
     const tree: readonly BlockNode[] = [
       {
         id: "puck-0",

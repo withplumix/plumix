@@ -191,7 +191,7 @@ describe("CommandPalette", () => {
     fireEvent.click(result);
 
     expect(navigate).toHaveBeenCalledWith({
-      to: "/entries/$slug/$id/edit",
+      to: "/entries/$slug/$id/editor",
       params: { slug: "posts", id: 1 },
     });
   });

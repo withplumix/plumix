@@ -168,6 +168,475 @@ msgstr ""
 #~ msgid "dashboard.tile.description.generic"
 #~ msgstr "Пишіть, редагуйте та публікуйте."
 
+#. characters: number of characters in the entry's prose blocks
+#. js-lingui-explicit-id
+#: src/editor/WordCount.tsx
+#~ msgid "editor.layout.characterCount"
+#~ msgstr "{characters, plural, one {# символ} few {# символи} many {# символів} other {# символа}}"
+
+#. display: user's name or email; lastSeen: pre-formatted relative-time string like '2 minutes ago'
+#. js-lingui-explicit-id
+#: src/editor/CoAuthorIndicator.tsx
+#~ msgid "editor.coAuthorIndicator.presenceAriaLabel"
+#~ msgstr "{display} · востаннє {lastSeen}"
+
+#. words: number of words in the entry's prose blocks
+#. js-lingui-explicit-id
+#: src/editor/WordCount.tsx
+#~ msgid "editor.layout.wordCount"
+#~ msgstr "{words, plural, one {# слово} few {# слова} many {# слів} other {# слова}}"
+
+#. js-lingui-explicit-id
+#: src/editor/CoAuthorIndicator.tsx
+#~ msgid "editor.coAuthorIndicator.activeAriaLabel"
+#~ msgstr "Активні співавтори"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.restore.conflict"
+#~ msgstr "Інший користувач змінив цей запис. Перезавантажте й спробуйте знову."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.tab.audit"
+#~ msgstr "Аудит"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.header.backToList"
+#~ msgstr "До списку"
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+#~ msgid "editor.styleTab.section.background"
+#~ msgstr "Фон"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.tab.block"
+#~ msgstr "Блок"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.mobile.inspectorSheetDescription"
+#~ msgstr "Дії з блоком, поля та елементи стилю для вибраного блока."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.mobile.blocksTrigger"
+#~ msgstr "Блоки"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.mobile.blocksSheetTitle"
+#~ msgstr "Блоки"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.tab.blocks"
+#~ msgstr "Блоки"
+
+#. js-lingui-explicit-id
+#: src/editor/BlockScopePicker.tsx
+#~ msgid "blockScopePicker.cancel"
+#~ msgstr "Скасувати"
+
+#. blockTitle: the parent block's registered title (e.g. 'Cover', 'Gallery')
+#. js-lingui-explicit-id
+#: src/editor/BlockScopePicker.tsx
+#~ msgid "blockScopePicker.title"
+#~ msgstr "Виберіть макет для {blockTitle}"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.draftBanner.body"
+#~ msgstr "Натисніть «Опублікувати», щоб запустити їх у роботу, або «Відкинути», щоб скасувати."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.copy.copied"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.canvas.copyAsPatternSource"
+#~ msgstr "Копіювати як джерело шаблону"
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+#~ msgid "blockActions.copyJson"
+#~ msgstr "Копіювати JSON"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.copy.failed"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.toast.discardFailed"
+#~ msgstr "Не вдалося відхилити чернетку — спробуйте ще раз."
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.loadFailedTitle"
+#~ msgstr "Не вдалося завантажити цей запис"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.loadFailed"
+#~ msgstr "Не вдалося завантажити цей запис."
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.toast.publishFailed"
+#~ msgstr "Не вдалося опублікувати — спробуйте ще раз."
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+#~ msgid "blockActions.delete"
+#~ msgstr "Видалити"
+
+#. js-lingui-explicit-id
+#: src/editor/device-labels.ts
+#~ msgid "editor.device.desktop"
+#~ msgstr "Десктоп"
+
+#. js-lingui-explicit-id
+#: src/editor/PatternRefPreview.tsx
+#~ msgid "editor.patternRef.detach"
+#~ msgstr "Від'єднати"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.draft.discard"
+#~ msgstr "Відкинути"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.draft.discarding"
+#~ msgstr "Скасування…"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.tab.document"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.toast.draftDiscarded"
+#~ msgstr "Чернетку відхилено."
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+#~ msgid "blockActions.duplicate"
+#~ msgstr "Дублювати"
+
+#. device: pre-resolved viewport label like 'Desktop', 'Tablet', 'Mobile'
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+#~ msgid "editor.styleTab.activeBucket"
+#~ msgstr "Редагування для: {device}"
+
+#. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+#~ msgid "editor.headingAudit.emptyHeading"
+#~ msgstr "Порожній заголовок. Додайте текст або видаліть блок."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.titleAriaLabel"
+#~ msgstr "Назва запису"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+#~ msgid "editor.revisions.diff.field.excerpt"
+#~ msgstr "Уривок"
+
+#. js-lingui-explicit-id
+#: src/editor/AutosaveStatus.tsx
+#~ msgid "editor.autosave.error"
+#~ msgstr "Не вдалося зберегти"
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+#~ msgid "editor.styleTab.section.fontSize"
+#~ msgstr "Розмір шрифту"
+
+#. from, to, between: integer heading levels 1-6; e.g. from=2, to=4, between=3
+#. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+#~ msgid "editor.headingAudit.skippedLevel"
+#~ msgstr "Заголовок перестрибує з h{from} на h{to}. Додайте h{between} між ними."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.slashMenu.title"
+#~ msgstr "Вставити блок або шаблон"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.mobile.blocksSheetDescription"
+#~ msgstr "Блоки для вставки, схема та аудит заголовків для цього запису."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.mobile.inspectorTrigger"
+#~ msgstr "Інспектор"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.mobile.inspectorSheetTitle"
+#~ msgstr "Інспектор"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.loading"
+#~ msgstr "Завантаження запису…"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.stale.loading"
+#~ msgstr "Завантаження…"
+
+#. js-lingui-explicit-id
+#: src/editor/device-labels.ts
+#~ msgid "editor.device.mobile"
+#~ msgstr "Мобільний"
+
+#. count: number of h1 elements detected in the editor tree
+#. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+#~ msgid "editor.headingAudit.multipleH1"
+#~ msgstr "На сторінці кілька <h1> (знайдено {count}). Залиште лише один заголовок верхнього рівня."
+
+#. js-lingui-explicit-id
+#: src/editor/field-type-translator.tsx
+#~ msgid "fieldTypes.boolean.no"
+#~ msgstr "Ні"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+#~ msgid "editor.revisions.diff.empty"
+#~ msgstr "Без змін."
+
+#. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+#~ msgid "editor.headingAudit.empty"
+#~ msgstr "Проблем зі структурою заголовків не виявлено."
+
+#. js-lingui-explicit-id
+#: src/editor/SlashMenuPanel.tsx
+#~ msgid "slashMenu.empty"
+#~ msgstr "Збігів немає"
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+#~ msgid "editor.styleTab.select.none"
+#~ msgstr "Жоден"
+
+#. js-lingui-explicit-id
+#: src/editor/TokenSwatchList.tsx
+#~ msgid "tokenSwatch.none"
+#~ msgstr "Жоден"
+
+#. js-lingui-explicit-id
+#: src/editor/PatternRefPreview.tsx
+#~ msgid "editor.patternRef.openSource"
+#~ msgstr "Відкрити джерело"
+
+#. js-lingui-explicit-id
+#: src/editor/SlashMenuPanel.tsx
+#~ msgid "slashMenu.uncategorized"
+#~ msgstr "Інше"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.tab.outline"
+#~ msgstr "Схема"
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+#~ msgid "editor.styleTab.section.padding"
+#~ msgstr "Відступи"
+
+#. slug: the pattern's registered slug (e.g. 'core/three-columns'); pass through verbatim
+#. js-lingui-explicit-id
+#: src/editor/PatternRefPreview.tsx
+#~ msgid "editor.patternRef.unresolved"
+#~ msgstr "Шаблон не зареєстровано: <code>{slug}</code>"
+
+#. js-lingui-explicit-id
+#: src/editor/PatternsSection.tsx
+#~ msgid "patternsSection.heading"
+#~ msgstr "Шаблони"
+
+#. blockTitle: the parent block's registered title (e.g. 'Cover', 'Gallery')
+#. js-lingui-explicit-id
+#: src/editor/BlockScopePicker.tsx
+#~ msgid "blockScopePicker.description"
+#~ msgstr "Виберіть макет для вставлення або скасуйте, щоб почати з порожнього {blockTitle}."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.canvas.pickStarter"
+#~ msgstr "Виберіть стартер…"
+
+#. js-lingui-explicit-id
+#: src/editor/StarterModal.tsx
+#~ msgid "starterModal.description"
+#~ msgstr "Виберіть стартовий макет або почніть із порожнього полотна."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.draft.publish"
+#~ msgstr "Опублікувати"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.publish"
+#~ msgstr "Опублікувати"
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#~ msgid "editor.entry.edit.toast.published"
+#~ msgstr "Опубліковано."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.draft.publishing"
+#~ msgstr "Публікація…"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+#~ msgid "editor.revisions.diff.tab.json"
+#~ msgstr "Сирий JSON"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.draft.save"
+#~ msgstr "Зберегти чернетку"
+
+#. js-lingui-explicit-id
+#: src/editor/AutosaveStatus.tsx
+#~ msgid "editor.autosave.saved"
+#~ msgstr "Збережено"
+
+#. js-lingui-explicit-id
+#: src/editor/AutosaveStatus.tsx
+#~ msgid "editor.autosave.saving"
+#~ msgstr "Збереження..."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.draft.saving"
+#~ msgstr "Збереження…"
+
+#. js-lingui-explicit-id
+#: src/editor/SlashMenuPanel.tsx
+#~ msgid "slashMenu.searchAria"
+#~ msgstr "Пошук блоків і шаблонів"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.slashMenu.description"
+#~ msgstr "Знайдіть блоки та шаблони за заголовком або ключовим словом і натисніть Enter, щоб вставити."
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+#~ msgid "blockActions.empty"
+#~ msgstr "Виберіть блок, щоб побачити дії."
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+#~ msgid "editor.styleTab.empty"
+#~ msgstr "Виберіть блок для стилізації."
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+#~ msgid "editor.revisions.diff.field.slug"
+#~ msgstr "Slug"
+
+#. js-lingui-explicit-id
+#: src/editor/StarterModal.tsx
+#~ msgid "starterModal.title"
+#~ msgstr "Почати з шаблону"
+
+#. js-lingui-explicit-id
+#: src/editor/StarterModal.tsx
+#~ msgid "starterModal.startBlank"
+#~ msgstr "Почати з порожнього"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.tab.style"
+#~ msgstr "Стиль"
+
+#. js-lingui-explicit-id
+#: src/editor/device-labels.ts
+#~ msgid "editor.device.tablet"
+#~ msgstr "Планшет"
+
+#. js-lingui-explicit-id
+#: src/editor/StyleTab.tsx
+#~ msgid "editor.styleTab.section.textColor"
+#~ msgstr "Колір тексту"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+#~ msgid "editor.revisions.diff.field.title"
+#~ msgstr "Назва"
+
+#. js-lingui-explicit-id
+#: src/editor/BlockActionsPanel.tsx
+#~ msgid "blockActions.transformTo"
+#~ msgstr "Перетворити на"
+
+#. js-lingui-explicit-id
+#: src/editor/PatternsSection.tsx
+#~ msgid "patternsSection.uncategorized"
+#~ msgstr "Без категорії"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.header.titlePlaceholder"
+#~ msgstr "Без назви"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.copyAsPattern.untitledFallback"
+#~ msgstr "Без назви"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionDiffPanel.tsx
+#~ msgid "editor.revisions.diff.tab.visual"
+#~ msgstr "Візуально"
+
+#. js-lingui-explicit-id
+#: src/editor/HeadingAuditPanel.tsx
+#~ msgid "editor.headingAudit.warningPrefix"
+#~ msgstr "Попередження:"
+
+#. js-lingui-explicit-id
+#: src/editor/field-type-translator.tsx
+#~ msgid "fieldTypes.boolean.yes"
+#~ msgstr "Так"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.draftBanner.title"
+#~ msgstr "У вас є неопубліковані зміни в чернетці."
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.canvas.zoomIn"
+#~ msgstr "Збільшити"
+
+#. js-lingui-explicit-id
+#: src/editor/EditorLayout.tsx
+#~ msgid "editor.layout.canvas.zoomOut"
+#~ msgstr "Зменшити"
+
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
@@ -226,12 +695,6 @@ msgstr "(без назви)"
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.device.browserOnOs"
 msgstr "{browser} на {os}"
-
-#. characters: number of characters in the entry's prose blocks
-#. js-lingui-explicit-id
-#: src/editor/WordCount.tsx
-msgid "editor.layout.characterCount"
-msgstr "{characters, plural, one {# символ} few {# символи} many {# символів} other {# символа}}"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
@@ -299,12 +762,6 @@ msgstr "{device} увійшов {when} з {ip}. Пристрою потрібн�
 msgid "profile.sessions.revoke.description"
 msgstr "{device} увійшов {when}. Пристрою потрібно буде ввійти знову наступного разу."
 
-#. display: user's name or email; lastSeen: pre-formatted relative-time string like '2 minutes ago'
-#. js-lingui-explicit-id
-#: src/editor/CoAuthorIndicator.tsx
-msgid "editor.coAuthorIndicator.presenceAriaLabel"
-msgstr "{display} · востаннє {lastSeen}"
-
 #. label: a plugin-author-provided name (e.g. 'SEO meta', 'Hero block'); kind: the extension type ('field', 'block', 'mark') left as the raw protocol identifier
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
@@ -328,12 +785,6 @@ msgstr "{label} викинув помилку під час відображен
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revokeAll.count"
 msgstr "{revoked, plural, =0 {Інших сеансів для виходу немає.} one {Завершено # інший сеанс.} few {Завершено # інші сеанси.} many {Завершено # інших сеансів.} other {Завершено # інших сеансів.}}"
-
-#. words: number of words in the entry's prose blocks
-#. js-lingui-explicit-id
-#: src/editor/WordCount.tsx
-msgid "editor.layout.wordCount"
-msgstr "{words, plural, one {# слово} few {# слова} many {# слів} other {# слова}}"
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
@@ -415,11 +866,6 @@ msgstr "Дії"
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.active"
 msgstr "Активний"
-
-#. js-lingui-explicit-id
-#: src/editor/CoAuthorIndicator.tsx
-msgid "editor.coAuthorIndicator.activeAriaLabel"
-msgstr "Активні співавтори"
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
@@ -558,11 +1004,6 @@ msgid "core.adminNav.item.allowedDomains"
 msgstr "Дозволені домени"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.restore.conflict"
-msgstr "Інший користувач змінив цей запис. Перезавантажте й спробуйте знову."
-
-#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.title"
 msgstr "API-токени"
@@ -581,11 +1022,6 @@ msgstr "Схвалено. Ваш CLI отримає токен за кілька
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.pending"
 msgstr "Схвалення…"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.tab.audit"
-msgstr "Аудит"
 
 #. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
@@ -618,11 +1054,6 @@ msgid "login.magicLink.back"
 msgstr "Назад"
 
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.header.backToList"
-msgstr "До списку"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.backToList"
 msgstr "До користувачів"
@@ -636,36 +1067,6 @@ msgstr "До користувачів"
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.backToList"
 msgstr "До користувачів"
-
-#. js-lingui-explicit-id
-#: src/editor/StyleTab.tsx
-msgid "editor.styleTab.section.background"
-msgstr "Фон"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.tab.block"
-msgstr "Блок"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.mobile.inspectorSheetDescription"
-msgstr "Дії з блоком, поля та елементи стилю для вибраного блока."
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.mobile.blocksTrigger"
-msgstr "Блоки"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.mobile.blocksSheetTitle"
-msgstr "Блоки"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.tab.blocks"
-msgstr "Блоки"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
@@ -730,11 +1131,6 @@ msgstr "Скасувати"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.row.deleteCancel"
-msgstr "Скасувати"
-
-#. js-lingui-explicit-id
-#: src/editor/BlockScopePicker.tsx
-msgid "blockScopePicker.cancel"
 msgstr "Скасувати"
 
 #. js-lingui-explicit-id
@@ -822,12 +1218,6 @@ msgstr "Перевірте свою пошту"
 msgid "auth.device.lookup.submit.pending"
 msgstr "Перевірка…"
 
-#. blockTitle: the parent block's registered title (e.g. 'Cover', 'Gallery')
-#. js-lingui-explicit-id
-#: src/editor/BlockScopePicker.tsx
-msgid "blockScopePicker.title"
-msgstr "Виберіть макет для {blockTitle}"
-
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.placeholder"
@@ -847,11 +1237,6 @@ msgstr "Очистіть фільтр або запросіть когось н�
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.default"
 msgstr "CLI"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.draftBanner.body"
-msgstr "Натисніть «Опублікувати», щоб запустити їх у роботу, або «Відкинути», щоб скасувати."
 
 #. js-lingui-explicit-id
 #: src/components/shell/command-palette.tsx
@@ -938,29 +1323,14 @@ msgid "userInvite.copy.copied"
 msgstr "Скопійовано"
 
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.copy.copied"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.copy.idle"
 msgstr "Копіювати"
 
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.canvas.copyAsPatternSource"
-msgstr "Копіювати як джерело шаблону"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.copy.aria"
 msgstr "Копіювати посилання запрошення"
-
-#. js-lingui-explicit-id
-#: src/editor/BlockActionsPanel.tsx
-msgid "blockActions.copyJson"
-msgstr "Копіювати JSON"
 
 #. js-lingui-explicit-id
 #: src/editor/PreviewButton.tsx
@@ -1003,11 +1373,6 @@ msgid "emailChange.error.fallback"
 msgstr "Не вдалося підтвердити зміну email. Спробуйте знову."
 
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.copy.failed"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/editor/PreviewButton.tsx
 msgid "editor.previewLink.failed"
 msgstr "Не вдалося створити посилання для попереднього перегляду"
@@ -1043,11 +1408,6 @@ msgid "terms.create.error.emptySlug"
 msgstr "Не вдалося визначити slug з цієї назви — введіть його вручну."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.toast.discardFailed"
-msgstr "Не вдалося відхилити чернетку — спробуйте ще раз."
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/editor.tsx
 msgid "editor.bespoke.toast.discardFailed"
 msgstr ""
@@ -1081,16 +1441,6 @@ msgstr "Не вдалося завантажити цього користува
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.loadFailed"
 msgstr "Не вдалося завантажити ці налаштування. Спробуйте знову."
-
-#. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.loadFailedTitle"
-msgstr "Не вдалося завантажити цей запис"
-
-#. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.loadFailed"
-msgstr "Не вдалося завантажити цей запис."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
@@ -1131,11 +1481,6 @@ msgstr ""
 #: src/routes/_editor/entries/$slug/$id/editor.tsx
 msgid "editor.bespoke.previewFailed"
 msgstr ""
-
-#. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.toast.publishFailed"
-msgstr "Не вдалося опублікувати — спробуйте ще раз."
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/editor.tsx
@@ -1203,7 +1548,7 @@ msgid "allowedDomains.error.fallback"
 msgstr "Не вдалося зберегти домен. Спробуйте знову."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#: src/routes/_editor/entries/$slug/$id/plain-form-route.tsx
 msgid "editor.entry.edit.saveFailed"
 msgstr "Не вдалося зберегти."
 
@@ -1316,11 +1661,6 @@ msgstr "Роль за замовчуванням"
 #: src/lib/core-settings-i18n.ts
 msgid "core.settings.site.default_og_image"
 msgstr ""
-
-#. js-lingui-explicit-id
-#: src/editor/BlockActionsPanel.tsx
-msgid "blockActions.delete"
-msgstr "Видалити"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -1451,16 +1791,6 @@ msgid "termForm.description"
 msgstr "Опис"
 
 #. js-lingui-explicit-id
-#: src/editor/device-labels.ts
-msgid "editor.device.desktop"
-msgstr "Десктоп"
-
-#. js-lingui-explicit-id
-#: src/editor/PatternRefPreview.tsx
-msgid "editor.patternRef.detach"
-msgstr "Від'єднати"
-
-#. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.description"
 msgstr "Пристрої, що ввійшли в цей обліковий запис. Завершіть сеанси, які не впізнаєте, або вийдіть з усіх пристроїв, крім цього, якщо підозрюєте витік."
@@ -1502,24 +1832,9 @@ msgid "userEdit.status.toggle.disabling"
 msgstr "Вимкнення…"
 
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.draft.discard"
-msgstr "Відкинути"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.draft.discarding"
-msgstr "Скасування…"
-
-#. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.discarding"
 msgstr "Скасування…"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.tab.document"
-msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
@@ -1538,11 +1853,6 @@ msgid "entries.list.statusFilter.draft"
 msgstr "Чернетка"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.toast.draftDiscarded"
-msgstr "Чернетку відхилено."
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/editor.tsx
 msgid "editor.bespoke.toast.discarded"
 msgstr ""
@@ -1550,11 +1860,6 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.row.duplicate"
-msgstr "Дублювати"
-
-#. js-lingui-explicit-id
-#: src/editor/BlockActionsPanel.tsx
-msgid "blockActions.duplicate"
 msgstr "Дублювати"
 
 #. js-lingui-explicit-id
@@ -1597,12 +1902,6 @@ msgstr ""
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.editUser"
 msgstr "Редагувати користувача"
-
-#. device: pre-resolved viewport label like 'Desktop', 'Tablet', 'Mobile'
-#. js-lingui-explicit-id
-#: src/editor/StyleTab.tsx
-msgid "editor.styleTab.activeBucket"
-msgstr "Редагування для: {device}"
 
 #. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
@@ -1658,11 +1957,6 @@ msgstr "Email задовгий."
 #: src/routes/_auth/login.tsx
 msgid "login.magicLink.submit"
 msgstr "Надіслати посилання поштою"
-
-#. js-lingui-explicit-id
-#: src/editor/HeadingAuditPanel.tsx
-msgid "editor.headingAudit.emptyHeading"
-msgstr "Порожній заголовок. Додайте текст або видаліть блок."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
@@ -1740,11 +2034,6 @@ msgid "terms.edit.delete.dialogDescription"
 msgstr "Прив'язки записів до цього терміну буде видалено. Якщо термін має нащадків, вони автоматично стануть кореневими."
 
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.titleAriaLabel"
-msgstr "Назва запису"
-
-#. js-lingui-explicit-id
 #: src/components/editor/plain-form-layout.tsx
 msgid "editor.plainForm.titleAriaLabel"
 msgstr "Назва запису"
@@ -1772,11 +2061,6 @@ msgid "allowedDomains.add.placeholder"
 msgstr "example.com"
 
 #. js-lingui-explicit-id
-#: src/editor/revisions/RevisionDiffPanel.tsx
-msgid "editor.revisions.diff.field.excerpt"
-msgstr "Уривок"
-
-#. js-lingui-explicit-id
 #: src/components/editor/document-settings.tsx
 msgid "editor.document.excerpt"
 msgstr ""
@@ -1800,11 +2084,6 @@ msgstr "Не вдалося завантажити ревізії."
 #: src/editor/revisions/RevisionDiffDialog.tsx
 msgid "editor.revisions.diffDialog.pane.error"
 msgstr "Не вдалося завантажити знімок."
-
-#. js-lingui-explicit-id
-#: src/editor/AutosaveStatus.tsx
-msgid "editor.autosave.error"
-msgstr "Не вдалося зберегти"
 
 #. js-lingui-explicit-id
 #: src/components/editor/plain-form-layout.tsx
@@ -1835,11 +2114,6 @@ msgstr "Фільтр за статусом"
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.filterItemsList"
 msgstr "Фільтрувати список"
-
-#. js-lingui-explicit-id
-#: src/editor/StyleTab.tsx
-msgid "editor.styleTab.section.fontSize"
-msgstr "Розмір шрифту"
 
 #. when: pre-formatted relative-time like '2 hours ago'; author: the user's display name or email
 #. js-lingui-explicit-id
@@ -1876,12 +2150,6 @@ msgstr "Перейти на попередню сторінку"
 #: src/routes/_authenticated/terms/$name/create.tsx
 msgid "terms.create.description.flat"
 msgstr "Згрупуйте вміст, додавши новий термін."
-
-#. from, to, between: integer heading levels 1-6; e.g. from=2, to=4, between=3
-#. js-lingui-explicit-id
-#: src/editor/HeadingAuditPanel.tsx
-msgid "editor.headingAudit.skippedLevel"
-msgstr "Заголовок перестрибує з h{from} на h{to}. Додайте h{between} між ними."
 
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
@@ -1922,26 +2190,6 @@ msgstr "Успадкувати всі ваші дозволи"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.scope.inheritRole"
 msgstr "Успадкувати роль"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.slashMenu.title"
-msgstr "Вставити блок або шаблон"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.mobile.blocksSheetDescription"
-msgstr "Блоки для вставки, схема та аудит заголовків для цього запису."
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.mobile.inspectorTrigger"
-msgstr "Інспектор"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.mobile.inspectorSheetTitle"
-msgstr "Інспектор"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/meta-box-field.tsx
@@ -2056,11 +2304,6 @@ msgid "pluginPage.loading.aria"
 msgstr "Завантаження {label}"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.loading"
-msgstr "Завантаження запису…"
-
-#. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.loadingAria"
 msgstr "Завантаження ревізій"
@@ -2089,11 +2332,6 @@ msgstr "Завантаження користувача"
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.loading"
 msgstr "Завантаження користувачів"
-
-#. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.stale.loading"
-msgstr "Завантаження…"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/editor.tsx
@@ -2181,11 +2419,6 @@ msgid "apiTokens.create.submit.pending"
 msgstr "Створення…"
 
 #. js-lingui-explicit-id
-#: src/editor/device-labels.ts
-msgid "editor.device.mobile"
-msgstr "Мобільний"
-
-#. js-lingui-explicit-id
 #: src/editor/PreviewButton.tsx
 msgid "editor.preview.more"
 msgstr ""
@@ -2219,12 +2452,6 @@ msgstr "Переміщено в кошик."
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.moving"
 msgstr "Переміщення…"
-
-#. count: number of h1 elements detected in the editor tree
-#. js-lingui-explicit-id
-#: src/editor/HeadingAuditPanel.tsx
-msgid "editor.headingAudit.multipleH1"
-msgstr "На сторінці кілька <h1> (знайдено {count}). Залиште лише один заголовок верхнього рівня."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -2352,11 +2579,6 @@ msgid "listPagination.next.label"
 msgstr "Далі"
 
 #. js-lingui-explicit-id
-#: src/editor/field-type-translator.tsx
-msgid "fieldTypes.boolean.no"
-msgstr "Ні"
-
-#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.userNotFound"
 msgstr "Облікового запису для цього email не знайдено."
@@ -2365,11 +2587,6 @@ msgstr "Облікового запису для цього email не знай�
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.scope.empty"
 msgstr "Без дозволів"
-
-#. js-lingui-explicit-id
-#: src/editor/revisions/RevisionDiffPanel.tsx
-msgid "editor.revisions.diff.empty"
-msgstr "Без змін."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
@@ -2387,11 +2604,6 @@ msgid "settings.page.empty.title"
 msgstr "На цій сторінці немає груп"
 
 #. js-lingui-explicit-id
-#: src/editor/HeadingAuditPanel.tsx
-msgid "editor.headingAudit.empty"
-msgstr "Проблем зі структурою заголовків не виявлено."
-
-#. js-lingui-explicit-id
 #: src/lib/mailer-errors.ts
 msgid "mailer.test.error.notConfigured"
 msgstr "Не налаштовано адаптер пошти. Передайте `mailer:` в `plumix({...})` (наприклад consoleMailer() для розробки або вашу обгортку Resend/Postmark/SES)."
@@ -2399,11 +2611,6 @@ msgstr "Не налаштовано адаптер пошти. Передайт�
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.noMatch"
-msgstr "Збігів немає"
-
-#. js-lingui-explicit-id
-#: src/editor/SlashMenuPanel.tsx
-msgid "slashMenu.empty"
 msgstr "Збігів немає"
 
 #. js-lingui-explicit-id
@@ -2472,16 +2679,6 @@ msgid "users.list.empty.title"
 msgstr "За фільтром не знайдено користувачів"
 
 #. js-lingui-explicit-id
-#: src/editor/StyleTab.tsx
-msgid "editor.styleTab.select.none"
-msgstr "Жоден"
-
-#. js-lingui-explicit-id
-#: src/editor/TokenSwatchList.tsx
-msgid "tokenSwatch.none"
-msgstr "Жоден"
-
-#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.emptyValue"
 msgstr "Не вибрано"
@@ -2542,11 +2739,6 @@ msgid "editor.preview.tooltip"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/editor/PatternRefPreview.tsx
-msgid "editor.patternRef.openSource"
-msgstr "Відкрити джерело"
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/editor.tsx
 msgid "editor.bespoke.loading"
 msgstr ""
@@ -2562,24 +2754,9 @@ msgid "login.oauth.separator"
 msgstr "або"
 
 #. js-lingui-explicit-id
-#: src/editor/SlashMenuPanel.tsx
-msgid "slashMenu.uncategorized"
-msgstr "Інше"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.tab.outline"
-msgstr "Схема"
-
-#. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.overview"
 msgstr "Огляд"
-
-#. js-lingui-explicit-id
-#: src/editor/StyleTab.tsx
-msgid "editor.styleTab.section.padding"
-msgstr "Відступи"
 
 #. page: 1-based current page number in the list
 #. js-lingui-explicit-id
@@ -2612,17 +2789,6 @@ msgstr "Батьківський:"
 msgid "profile.passkeys.title"
 msgstr "Passkeys"
 
-#. slug: the pattern's registered slug (e.g. 'core/three-columns'); pass through verbatim
-#. js-lingui-explicit-id
-#: src/editor/PatternRefPreview.tsx
-msgid "editor.patternRef.unresolved"
-msgstr "Шаблон не зареєстровано: <code>{slug}</code>"
-
-#. js-lingui-explicit-id
-#: src/editor/PatternsSection.tsx
-msgid "patternsSection.heading"
-msgstr "Шаблони"
-
 #. newEmail: the new address awaiting confirmation; expiresAt: pre-formatted relative-time like 'in 2 hours'
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
@@ -2654,26 +2820,10 @@ msgstr "Дозволи"
 msgid "apiTokens.description.self"
 msgstr "Особисті токени доступу для CLI, MCP-серверів, CI-ботів та будь-яких інших небраузерних клієнтів. Повний секрет показується лише раз під час створення."
 
-#. blockTitle: the parent block's registered title (e.g. 'Cover', 'Gallery')
-#. js-lingui-explicit-id
-#: src/editor/BlockScopePicker.tsx
-msgid "blockScopePicker.description"
-msgstr "Виберіть макет для вставлення або скасуйте, щоб почати з порожнього {blockTitle}."
-
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/create.tsx
 msgid "terms.create.description.hierarchical"
 msgstr "Виберіть батьківський, щоб укласти цей термін, або залиште порожнім для терміна кореневого рівня."
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.canvas.pickStarter"
-msgstr "Виберіть стартер…"
-
-#. js-lingui-explicit-id
-#: src/editor/StarterModal.tsx
-msgid "starterModal.description"
-msgstr "Виберіть стартовий макет або почніть із порожнього полотна."
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
@@ -2731,16 +2881,6 @@ msgid "core.settings.site.description"
 msgstr "Публічна назва, гасло та посилання на соцмережі."
 
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.draft.publish"
-msgstr "Опублікувати"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.publish"
-msgstr "Опублікувати"
-
-#. js-lingui-explicit-id
 #: src/components/editor/plain-form-layout.tsx
 msgid "editor.plainForm.publish"
 msgstr "Опублікувати"
@@ -2761,11 +2901,6 @@ msgid "type.generic.itemPublishedPrivately"
 msgstr "Опубліковано приватно"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.entry.edit.toast.published"
-msgstr "Опубліковано."
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/editor.tsx
 msgid "editor.bespoke.toast.published"
 msgstr ""
@@ -2774,16 +2909,6 @@ msgstr ""
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.tab.publishes"
 msgstr "Публікації"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.draft.publishing"
-msgstr "Публікація…"
-
-#. js-lingui-explicit-id
-#: src/editor/revisions/RevisionDiffPanel.tsx
-msgid "editor.revisions.diff.tab.json"
-msgstr "Сирий JSON"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -2968,16 +3093,6 @@ msgid "settings.page.submit.idle"
 msgstr "Зберегти зміни"
 
 #. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.draft.save"
-msgstr "Зберегти чернетку"
-
-#. js-lingui-explicit-id
-#: src/editor/AutosaveStatus.tsx
-msgid "editor.autosave.saved"
-msgstr "Збережено"
-
-#. js-lingui-explicit-id
 #: src/components/editor/plain-form-layout.tsx
 msgid "editor.plainForm.status.saved"
 msgstr "Збережено"
@@ -2986,11 +3101,6 @@ msgstr "Збережено"
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.saved"
 msgstr "Збережено."
-
-#. js-lingui-explicit-id
-#: src/editor/AutosaveStatus.tsx
-msgid "editor.autosave.saving"
-msgstr "Збереження..."
 
 #. js-lingui-explicit-id
 #: src/components/editor/plain-form-layout.tsx
@@ -3005,11 +3115,6 @@ msgstr "Збереження…"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.submit.pending"
-msgstr "Збереження…"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.draft.saving"
 msgstr "Збереження…"
 
 #. js-lingui-explicit-id
@@ -3062,16 +3167,6 @@ msgid "metaBox.reference.dialogDescription"
 msgstr "Знайдіть і виберіть {kind}"
 
 #. js-lingui-explicit-id
-#: src/editor/SlashMenuPanel.tsx
-msgid "slashMenu.searchAria"
-msgstr "Пошук блоків і шаблонів"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.slashMenu.description"
-msgstr "Знайдіть блоки та шаблони за заголовком або ключовим словом і натисніть Enter, щоб вставити."
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.searchPlaceholder"
 msgstr "Пошук за email…"
@@ -3120,16 +3215,6 @@ msgstr "Вибрати"
 #: src/components/meta-box/reference-picker.tsx
 msgid "metaBox.reference.selectIdle"
 msgstr "Вибрати"
-
-#. js-lingui-explicit-id
-#: src/editor/BlockActionsPanel.tsx
-msgid "blockActions.empty"
-msgstr "Виберіть блок, щоб побачити дії."
-
-#. js-lingui-explicit-id
-#: src/editor/StyleTab.tsx
-msgid "editor.styleTab.empty"
-msgstr "Виберіть блок для стилізації."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -3339,11 +3424,6 @@ msgid "core.settings.site.title"
 msgstr "Назва сайту"
 
 #. js-lingui-explicit-id
-#: src/editor/revisions/RevisionDiffPanel.tsx
-msgid "editor.revisions.diff.field.slug"
-msgstr "Slug"
-
-#. js-lingui-explicit-id
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.slug"
 msgstr "Slug"
@@ -3395,16 +3475,6 @@ msgid "entries.list.sortAria"
 msgstr "Сортувати за {label} ({direction})"
 
 #. js-lingui-explicit-id
-#: src/editor/StarterModal.tsx
-msgid "starterModal.title"
-msgstr "Почати з шаблону"
-
-#. js-lingui-explicit-id
-#: src/editor/StarterModal.tsx
-msgid "starterModal.startBlank"
-msgstr "Почати з порожнього"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.column.status"
 msgstr "Статус"
@@ -3413,11 +3483,6 @@ msgstr "Статус"
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.column.status"
 msgstr "Статус"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.tab.style"
-msgstr "Стиль"
 
 #. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
@@ -3433,11 +3498,6 @@ msgstr "Передплатник — лише читання"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.synced"
 msgstr "Синхронізовано"
-
-#. js-lingui-explicit-id
-#: src/editor/device-labels.ts
-msgid "editor.device.tablet"
-msgstr "Планшет"
 
 #. js-lingui-explicit-id
 #: src/lib/core-settings-i18n.ts
@@ -3474,11 +3534,6 @@ msgstr "Тестове повідомлення надіслано на {to}. Я
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.description"
 msgstr "Перевірка того, що налаштований транспорт вихідної пошти справді доставляє. Використовується magic-link входом, листами запрошень та будь-яким плагіном, що використовує спільний mailer."
-
-#. js-lingui-explicit-id
-#: src/editor/StyleTab.tsx
-msgid "editor.styleTab.section.textColor"
-msgstr "Колір тексту"
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts
@@ -3777,11 +3832,6 @@ msgstr "Цей користувач не створював API-токенів."
 msgid "entries.list.column.title"
 msgstr "Назва"
 
-#. js-lingui-explicit-id
-#: src/editor/revisions/RevisionDiffPanel.tsx
-msgid "editor.revisions.diff.field.title"
-msgstr "Назва"
-
 #. name: the user-chosen token nickname (e.g. 'CI deploy key')
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -3797,11 +3847,6 @@ msgstr "Назва токена"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.description.admin"
 msgstr "Токени, створені цим користувачем. Ви можете скасувати будь-який — створення потребує автентифікованого браузерного сеансу власника."
-
-#. js-lingui-explicit-id
-#: src/editor/BlockActionsPanel.tsx
-msgid "blockActions.transformTo"
-msgstr "Перетворити на"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -3832,11 +3877,6 @@ msgid "editor.entry.create.retry"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/editor/PatternsSection.tsx
-msgid "patternsSection.uncategorized"
-msgstr "Без категорії"
-
-#. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.unknownAuthor"
 msgstr "Невідомо"
@@ -3859,16 +3899,6 @@ msgstr "Без назви"
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.untitledItem"
-msgstr "Без назви"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.header.titlePlaceholder"
-msgstr "Без назви"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.copyAsPattern.untitledFallback"
 msgstr "Без назви"
 
 #. js-lingui-explicit-id
@@ -3962,16 +3992,6 @@ msgid "editor.revisions.sheet.diffAriaLabel"
 msgstr "Переглянути JSON-різницю"
 
 #. js-lingui-explicit-id
-#: src/editor/revisions/RevisionDiffPanel.tsx
-msgid "editor.revisions.diff.tab.visual"
-msgstr "Візуально"
-
-#. js-lingui-explicit-id
-#: src/editor/HeadingAuditPanel.tsx
-msgid "editor.headingAudit.warningPrefix"
-msgstr "Попередження:"
-
-#. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.dialog.description"
 msgstr "Ми надішлемо посилання підтвердження на нову адресу. Зміна набуде чинності після натискання посилання. Сеанси цього облікового запису на цьому етапі завершуються — повторний вхід використовує новий email."
@@ -3993,11 +4013,6 @@ msgid "core.settings.site.twitter"
 msgstr "Посилання на X (Twitter)"
 
 #. js-lingui-explicit-id
-#: src/editor/field-type-translator.tsx
-msgid "fieldTypes.boolean.yes"
-msgstr "Так"
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.you"
 msgstr "Ви"
@@ -4016,11 +4031,6 @@ msgstr "Не можна видалити останній passkey. Спочат�
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.current"
 msgstr "Не можна завершити сеанс, який ви використовуєте просто зараз."
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.draftBanner.title"
-msgstr "У вас є неопубліковані зміни в чернетці."
 
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
@@ -4096,13 +4106,3 @@ msgstr "Ваш профіль"
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.credentialStorageCorrupt"
 msgstr "Дані вашого збереженого passkey пошкоджені. Зареєструйте новий."
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.canvas.zoomIn"
-msgstr "Збільшити"
-
-#. js-lingui-explicit-id
-#: src/editor/EditorLayout.tsx
-msgid "editor.layout.canvas.zoomOut"
-msgstr "Зменшити"

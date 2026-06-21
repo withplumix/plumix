@@ -397,11 +397,10 @@ function renderNativeInput({
   }
 
   if (field.inputType === "richtext") {
-    // Standalone richtext outside a block input has no host today. The
-    // v2 admin's richtext surface lives only inside Puck's `richtext`
-    // field type (block inputs). Surfacing it inside a metabox needs a
-    // separate Tiptap host slice; until that lands, the field falls
-    // back to a JSON textarea so the value is at least authorable.
+    // Standalone richtext outside a block input has no host today — the
+    // richtext surface lives only inside block inputs. Surfacing it inside
+    // a metabox needs a separate Tiptap host slice; until that lands, the
+    // field falls back to a JSON textarea so the value is at least authorable.
     return (
       <textarea
         className="border-input bg-background w-full rounded-md border p-2 font-mono text-xs"
