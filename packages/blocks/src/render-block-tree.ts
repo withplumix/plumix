@@ -84,7 +84,7 @@ export interface RenderBlockTreeOptions {
 
 /** Editor/style seam attributes a block spreads onto its root element when it
  *  opts into `selfSeam`. `data-plumix-id` is present only in edit mode. */
-export interface BlockProps {
+interface BlockProps {
   readonly "data-plumix-block": string;
   readonly "data-plumix-id"?: string;
   readonly className?: string;

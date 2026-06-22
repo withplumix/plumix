@@ -7,7 +7,7 @@ import { withBasePath } from "../../base-path.js";
  * `virtual:plumix/asset-manifest` module that the generated worker
  * imports.
  */
-export interface AssetManifestEntry {
+interface AssetManifestEntry {
   readonly file: string;
   readonly isEntry?: boolean;
   readonly isDynamicEntry?: boolean;

@@ -6,7 +6,7 @@ import type { CoreIconName } from "@plumix/core/manifest";
 import { hasCap } from "./caps.js";
 import { AdminPluginRegistryError } from "./errors.js";
 
-export interface PaletteCommandContext {
+interface PaletteCommandContext {
   readonly navigate: ReturnType<typeof useNavigate>;
 }
 

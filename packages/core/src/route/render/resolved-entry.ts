@@ -13,7 +13,7 @@ export interface ResolvedAuthor {
 // A term plus its pre-resolved archive `url` (basePath-correct). `url` is null
 // for a private taxonomy or a nested term needing an ancestor-chain walk —
 // `<Link term>` then degrades to its children. Mirrors `ResolvedEntry.url`.
-export interface ResolvedTerm extends Term {
+interface ResolvedTerm extends Term {
   readonly url: string | null;
 }
 
