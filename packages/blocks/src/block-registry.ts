@@ -21,6 +21,14 @@ export interface BlockInput {
    * children. Mirrors Gutenberg's `allowedBlocks`.
    */
   readonly allowedBlocks?: readonly string[];
+  /**
+   * Slot inputs only: render children directly, without the editor's
+   * `display:contents` drop-target wrapper. Required where that wrapper would be
+   * invalid HTML — a `<div>` inside `<table>`/`<tr>` — at the cost of canvas
+   * nested-drop targeting for this slot (its children stay individually
+   * selectable via their own seam).
+   */
+  readonly rawSlot?: boolean;
 }
 
 export type BlockVariationScope = "inserter" | "block" | "transform";

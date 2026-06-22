@@ -1,3 +1,4 @@
+import type { I18n } from "@lingui/core";
 import type { ReactElement } from "react";
 import { Trans, useLingui } from "@lingui/react";
 
@@ -230,10 +231,7 @@ function TextStyleControls({
             variant="outline"
             pressed={rawValue(mark.property) === mark.on}
             data-testid={`style-mark-${mark.id}`}
-            aria-label={i18n._({
-              id: `editor.styles.mark.${mark.id}`,
-              message: mark.label,
-            })}
+            aria-label={markLabel(i18n, mark.id)}
             onPressedChange={(next) =>
               setter(mark.property)(next ? { raw: mark.on } : null)
             }
@@ -251,15 +249,12 @@ function TextStyleControls({
           setter("textAlign")(value ? { raw: value } : null)
         }
       >
-        {TEXT_ALIGNMENTS.map(({ value, Icon, label }) => (
+        {TEXT_ALIGNMENTS.map(({ value, Icon }) => (
           <ToggleGroupItem
             key={value}
             value={value}
             data-testid={`style-align-${value}`}
-            aria-label={i18n._({
-              id: `editor.styles.align.${value}`,
-              message: label,
-            })}
+            aria-label={alignLabel(i18n, value)}
           >
             <Icon />
           </ToggleGroupItem>
@@ -267,6 +262,43 @@ function TextStyleControls({
       </ToggleGroup>
     </div>
   );
+}
+
+// Static ids (a switch, not a template literal) so the extractor catalogs them.
+function markLabel(i18n: I18n, id: string): string {
+  switch (id) {
+    case "italic":
+      return i18n._({ id: "editor.styles.mark.italic", message: "Italic" });
+    case "underline":
+      return i18n._({
+        id: "editor.styles.mark.underline",
+        message: "Underline",
+      });
+    case "strikethrough":
+      return i18n._({
+        id: "editor.styles.mark.strikethrough",
+        message: "Strikethrough",
+      });
+    default:
+      return i18n._({ id: "editor.styles.mark.bold", message: "Bold" });
+  }
+}
+
+function alignLabel(i18n: I18n, value: string): string {
+  switch (value) {
+    case "center":
+      return i18n._({
+        id: "editor.styles.align.center",
+        message: "Align center",
+      });
+    case "right":
+      return i18n._({
+        id: "editor.styles.align.right",
+        message: "Align right",
+      });
+    default:
+      return i18n._({ id: "editor.styles.align.left", message: "Align left" });
+  }
 }
 
 const SIDES = ["Top", "Right", "Bottom", "Left"] as const;

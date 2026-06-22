@@ -1,3 +1,4 @@
+import type { I18n } from "@lingui/core";
 import type { ReactElement } from "react";
 import { useEffect } from "react";
 import { useLingui } from "@lingui/react";
@@ -26,6 +27,21 @@ const DEVICES: readonly {
   { value: "tablet", Icon: Tablet },
   { value: "mobile", Icon: Smartphone },
 ];
+
+// Static ids (a switch, not a template literal) so the extractor catalogs them.
+function deviceLabel(i18n: I18n, value: EditorDevice): string {
+  switch (value) {
+    case "tablet":
+      return i18n._({ id: "editor.toolbar.device.tablet", message: "Tablet" });
+    case "mobile":
+      return i18n._({ id: "editor.toolbar.device.mobile", message: "Mobile" });
+    default:
+      return i18n._({
+        id: "editor.toolbar.device.desktop",
+        message: "Desktop",
+      });
+  }
+}
 
 /** Draft-mode actions for a published entry with a pending autosave. The host
  *  owns the mutations; the toolbar only renders the buttons and their state. */
@@ -103,10 +119,7 @@ function DeviceZoomControls(): ReactElement {
             key={value}
             value={value}
             data-testid={`plumix-device-${value}`}
-            aria-label={i18n._({
-              id: `editor.toolbar.device.${value}`,
-              message: value,
-            })}
+            aria-label={deviceLabel(i18n, value)}
           >
             <Icon />
           </ToggleGroupItem>

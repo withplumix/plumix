@@ -166,14 +166,18 @@ function materializeSlots(
   childContext: BlockContext,
 ): Readonly<Record<string, unknown>> {
   const attrs = node.attrs ?? {};
+  const inputs = env.registry.get(node.name)?.inputs;
   let materialized: Record<string, unknown> | undefined;
   for (const [key, value] of Object.entries(attrs)) {
     if (isBlockNodeArray(value)) {
       materialized ??= { ...attrs };
       const children = value;
+      // A raw slot renders children directly — its drop-target wrapper would be
+      // invalid HTML in the parent (e.g. a `<div>` inside `<table>`/`<tr>`).
+      const rawSlot = inputs?.find((i) => i.name === key)?.rawSlot === true;
       materialized[key] = function SlotComponent() {
         const rendered = renderNodes(children, env, childContext);
-        if (!env.editing) return rendered;
+        if (!env.editing || rawSlot) return rendered;
         // Tag the slot so the canvas can resolve a nested drop to it. The
         // wrapper is display:contents — zero layout impact, the children flow
         // as if it weren't there. Parent id + slot key are separate attrs (not
