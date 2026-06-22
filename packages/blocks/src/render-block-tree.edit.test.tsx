@@ -6,8 +6,18 @@ import { createBlockRegistry } from "./block-registry.js";
 import { groupBlock } from "./group/index.js";
 import { headingBlock } from "./heading/index.js";
 import { renderBlockTree } from "./render-block-tree.js";
+import {
+  tableBlock,
+  tableBodyRowBlock,
+  tableCellBlock,
+} from "./table/index.js";
 
 const registry = createBlockRegistry([headingBlock, groupBlock]);
+const tableRegistry = createBlockRegistry([
+  tableBlock,
+  tableBodyRowBlock,
+  tableCellBlock,
+]);
 const tree: readonly BlockNode[] = [
   { id: "abc", name: "core/heading", attrs: { text: "Hi", level: 2 } },
 ];
@@ -29,6 +39,42 @@ describe("renderBlockTree edit-aware seam", () => {
     );
 
     expect(html).toContain('data-plumix-id="abc"');
+  });
+
+  test("a selfSeam block carries its id on its own element, not a wrapper div", () => {
+    const html = renderToStaticMarkup(
+      renderBlockTree(tree, registry, { editing: true }),
+    );
+
+    // The heading spreads the seam onto its <h2>, so there's no wrapper <div>
+    // — which is what lets table cells (a <td> can't be wrapped) stay selectable.
+    expect(html).toMatch(/<h2[^>]*\bdata-plumix-id="abc"/);
+    expect(html).not.toContain('<div data-plumix-id="abc"');
+  });
+
+  test("table cells are selectable — the seam rides on the <td>", () => {
+    const table: readonly BlockNode[] = [
+      {
+        id: "t1",
+        name: "core/table",
+        attrs: {
+          rows: [
+            {
+              id: "r1",
+              name: "core/table-body-row",
+              attrs: {
+                cells: [{ id: "c1", name: "core/table-cell", attrs: {} }],
+              },
+            },
+          ],
+        },
+      },
+    ];
+    const html = renderToStaticMarkup(
+      renderBlockTree(table, tableRegistry, { editing: true }),
+    );
+
+    expect(html).toMatch(/<td[^>]*\bdata-plumix-id="c1"/);
   });
 
   test("the normal (non-editing) render carries no editor annotations", () => {

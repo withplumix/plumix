@@ -15,6 +15,9 @@ export const headingBlock = defineBlock({
   title: { id: "block.core.heading.title", message: "Heading" },
   icon: "Heading",
   category: "text",
+  // Carry the seam on the <hN> itself so a block style class beats the theme's
+  // explicit heading color (an inherited color from a wrapper div would lose).
+  selfSeam: true,
   inputs: [
     {
       name: "text",
@@ -36,7 +39,7 @@ export const headingBlock = defineBlock({
     },
   ],
   defaults: { level: 2, text: "" },
-  render: ({ attrs }): ReactNode => {
+  render: ({ attrs, blockProps }): ReactNode => {
     const { level: rawLevel, text = "" } = attrs as {
       readonly level?: unknown;
       readonly text?: string;
@@ -49,6 +52,6 @@ export const headingBlock = defineBlock({
         ? rawLevel
         : 2;
     const tag = `h${level}` as keyof JSX.IntrinsicElements;
-    return createElement(tag, null, text);
+    return createElement(tag, blockProps, text);
   },
 });

@@ -79,6 +79,14 @@ export interface RenderBlockTreeOptions {
   readonly editing?: boolean;
 }
 
+/** Editor/style seam attributes a block spreads onto its root element when it
+ *  opts into `selfSeam`. `data-plumix-id` is present only in edit mode. */
+export interface BlockProps {
+  readonly "data-plumix-block": string;
+  readonly "data-plumix-id"?: string;
+  readonly className?: string;
+}
+
 export interface BlockNodeRenderProps<
   Attrs = Readonly<Record<string, unknown>>,
   Loaders extends BlockLoaderRecord = BlockLoaderRecord,
@@ -86,6 +94,8 @@ export interface BlockNodeRenderProps<
   readonly attrs: Attrs;
   readonly context: BlockContext;
   readonly loaders: ResolvedLoaders<Loaders>;
+  /** Seam attributes for `selfSeam` blocks to spread onto their root element. */
+  readonly blockProps: BlockProps;
 }
 
 export type BlockNodeComponent<
@@ -234,20 +244,7 @@ function renderNode(
   };
   const attrs = materializeSlots(node, env, childContext);
   const data = loaderData?.get(node.id);
-  let rendered: ReactNode;
-  if (data && data.error !== null) {
-    // Same shape as the unknown-block path: emit nothing when the block
-    // didn't declare a fallback. Observability flows through the
-    // `blocks:loader:error` hook, not a console warn here.
-    if (!spec.errorFallback) return createElement(Fragment, { key: node.id });
-    rendered = spec.errorFallback({ attrs, error: data.error });
-  } else {
-    const loaders = data?.loaders ?? EMPTY_LOADERS;
-    rendered = createElement(spec.render, { attrs, context, loaders });
-  }
-  if (spec.inline) {
-    return createElement(Fragment, { key: node.id }, rendered);
-  }
+
   const safeId = SAFE_ID_RE.test(node.id) ? node.id : null;
   const styleCss =
     safeId && node.style && tokens
@@ -262,15 +259,43 @@ function renderNode(
   const styleTag = styleCss
     ? createElement("style", { key: "style" }, styleCss)
     : null;
+  const blockProps: BlockProps = {
+    "data-plumix-block": node.name,
+    "data-plumix-id": env.editing && safeId ? safeId : undefined,
+    className,
+  };
 
+  let rendered: ReactNode;
+  if (data && data.error !== null) {
+    // Same shape as the unknown-block path: emit nothing when the block
+    // didn't declare a fallback. Observability flows through the
+    // `blocks:loader:error` hook, not a console warn here.
+    if (!spec.errorFallback) return createElement(Fragment, { key: node.id });
+    rendered = spec.errorFallback({ attrs, error: data.error });
+  } else {
+    const loaders = data?.loaders ?? EMPTY_LOADERS;
+    rendered = createElement(spec.render, {
+      attrs,
+      context,
+      loaders,
+      blockProps,
+    });
+  }
+
+  // selfSeam: the block spread `blockProps` onto its own root element, so the
+  // seam needs no wrapper div (which `<td>`/`<tr>` can't have, and which would
+  // make a style class only inherit rather than win). The `<style>` rides as a
+  // fragment sibling.
+  if (spec.selfSeam) {
+    return createElement(Fragment, { key: node.id }, styleTag, rendered);
+  }
+  // Legacy: superseded by selfSeam.
+  if (spec.inline) {
+    return createElement(Fragment, { key: node.id }, rendered);
+  }
   return createElement(
     "div",
-    {
-      key: node.id,
-      "data-plumix-block": node.name,
-      "data-plumix-id": env.editing && safeId ? safeId : undefined,
-      className,
-    },
+    { key: node.id, ...blockProps },
     styleTag,
     rendered,
   );
