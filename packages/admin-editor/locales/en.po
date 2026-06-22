@@ -39,6 +39,11 @@ msgstr ""
 #~ msgstr "Unpublished changes"
 
 #. js-lingui-explicit-id
+#: src/plumix-editor.tsx
+#~ msgid "editor.tab.json"
+#~ msgstr "JSON"
+
+#. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.count"
 msgstr "{count} selected"
@@ -132,11 +137,6 @@ msgstr "Formatting applies to the selected text."
 #: src/styles-tab.tsx
 msgid "editor.styles.mark.italic"
 msgstr "Italic"
-
-#. js-lingui-explicit-id
-#: src/plumix-editor.tsx
-msgid "editor.tab.json"
-msgstr "JSON"
 
 #. js-lingui-explicit-id
 #: src/plumix-editor.tsx
@@ -242,6 +242,11 @@ msgstr "Select a block to style it."
 #: src/selection-toolbar.tsx
 msgid "editor.selection.selectParent"
 msgstr "Select parent"
+
+#. js-lingui-explicit-id
+#: src/json-inspector.tsx
+msgid "editor.json.title"
+msgstr "Source"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx

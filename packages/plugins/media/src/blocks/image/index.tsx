@@ -6,6 +6,7 @@ import { normalizeFocalPoint, pickSizing } from "./normalize.js";
 export const imageBlock = defineBlock({
   name: "media/image",
   title: "Image",
+  icon: "Image",
   category: "media",
   description: "Image with alt text, caption, and focal-point cropping.",
   keywords: ["picture", "photo", "media"],

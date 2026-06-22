@@ -48,7 +48,7 @@ export function EditorHeader({
   const redoAvailable = useEditorStore((s) => canRedo(s.history));
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
-  const setRightPanel = useEditorStore((s) => s.setRightPanel);
+  const setJsonOpen = useEditorStore((s) => s.setJsonOpen);
 
   return (
     <header
@@ -123,7 +123,7 @@ export function EditorHeader({
           variant="ghost"
           size="icon-sm"
           data-testid="plumix-view-source"
-          onClick={() => setRightPanel("json")}
+          onClick={() => setJsonOpen(true)}
           aria-label={i18n._({
             id: "editor.header.source",
             message: "View source",

@@ -417,13 +417,13 @@ test.describe("editor playground", () => {
     await expect(page.getByTestId("styles-section-typography")).toBeVisible();
 
     // Set a typography token; the change lands on the canonical tree (visible
-    // through the JSON inspector).
+    // through the source dialog).
     await page.getByTestId("style-control-fontSize-token").selectOption("xl");
     // Set a per-side custom padding via the box-model.
     await page.getByTestId("style-control-paddingTop-mode-custom").click();
     await page.getByTestId("style-control-paddingTop-custom").fill("12px");
 
-    await page.getByTestId("plumix-tab-json").click();
+    await page.getByTestId("plumix-view-source").click();
     const json = page.getByTestId("json-inspector-output");
     await expect(json).toContainText('"fontSize"');
     await expect(json).toContainText('"paddingTop"');

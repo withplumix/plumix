@@ -44,12 +44,12 @@ describe("PlumixEditor", () => {
     );
   });
 
-  test("mounts the right-rail inspector with Block/Page/JSON tabs", () => {
+  test("mounts the right-rail inspector with Block/Styles/Page tabs", () => {
     const { getByTestId } = renderEditor();
     expect(getByTestId("plumix-editor-right")).toBeDefined();
     expect(getByTestId("plumix-tab-block")).toBeDefined();
+    expect(getByTestId("plumix-tab-styles")).toBeDefined();
     expect(getByTestId("plumix-tab-page")).toBeDefined();
-    expect(getByTestId("plumix-tab-json")).toBeDefined();
     // Block tab is active by default → inspector empty state shows.
     expect(getByTestId("block-inspector-empty")).toBeDefined();
   });

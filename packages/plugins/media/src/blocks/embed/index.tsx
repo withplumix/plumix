@@ -7,6 +7,7 @@ import { resolveEmbed } from "./resolve.js";
 export const embedBlock = defineBlock({
   name: "media/embed",
   title: "Embed",
+  icon: "Code",
   category: "media",
   description:
     "Embed a YouTube, Vimeo, Loom, Spotify, or CodePen URL — or any other " +

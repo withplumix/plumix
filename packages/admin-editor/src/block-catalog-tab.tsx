@@ -72,7 +72,7 @@ export function BlockCatalog({
   return (
     <div className="flex flex-col gap-3 p-2" data-testid="block-catalog">
       <div className="relative">
-        <Search className="text-muted-foreground absolute top-1/2 start-2.5 size-4 -translate-y-1/2" />
+        <Search className="text-muted-foreground absolute start-2.5 top-1/2 size-4 -translate-y-1/2" />
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
@@ -149,7 +149,7 @@ function CatalogGroup({
 }): ReactElement {
   return (
     <div data-testid={testId}>
-      <p className="text-muted-foreground mb-1.5 px-1 text-xs font-medium">
+      <p className="text-muted-foreground mb-1.5 px-1 text-xs font-medium capitalize">
         {heading}
       </p>
       <div className="grid grid-cols-3 gap-2">{children}</div>

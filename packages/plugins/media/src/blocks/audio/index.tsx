@@ -4,6 +4,7 @@ import { defineBlock } from "plumix/blocks";
 export const audioBlock = defineBlock({
   name: "media/audio",
   title: "Audio",
+  icon: "Music",
   category: "media",
   description: "HTML <audio> with browser controls.",
   keywords: ["sound", "music", "podcast"],

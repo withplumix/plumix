@@ -32,9 +32,13 @@ export const tableBlock = defineBlock({
     const striped = attrs.striped === true || undefined;
     const bordered = attrs.bordered === true || undefined;
     const Rows = attrs.rows as (() => ReactNode) | undefined;
+    // Rows render straight into a <tbody> — browsers inject one anyway, so
+    // emitting it ourselves keeps the DOM React hydrates against valid (no
+    // <tr> directly under <table>). Header rows live here too; `scope="col"`
+    // on their cells is what marks them as headers.
     return (
       <table data-striped={striped} data-bordered={bordered}>
-        {Rows ? <Rows /> : null}
+        <tbody>{Rows ? <Rows /> : null}</tbody>
       </table>
     );
   },

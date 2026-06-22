@@ -87,10 +87,11 @@ describe("EditorHeader", () => {
     expect(getByTestId("plumix-preview-menu")).toBeDefined();
   });
 
-  test("the source-code button flips the right panel to JSON", () => {
+  test("the source-code button opens the JSON source dialog", () => {
     const { getByTestId } = renderHeader();
+    expect(storeApi?.getState().jsonOpen).toBe(false);
     fireEvent.click(getByTestId("plumix-view-source"));
-    expect(storeApi?.getState().rightPanel).toBe("json");
+    expect(storeApi?.getState().jsonOpen).toBe(true);
   });
 
   test("the Publish button calls onPublish", () => {

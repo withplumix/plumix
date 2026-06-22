@@ -21,6 +21,7 @@ const ASPECT_OPTIONS = [
 export const galleryBlock = defineBlock({
   name: "media/gallery",
   title: "Gallery",
+  icon: "Images",
   category: "media",
   description: "Grid of images with explicit column count and aspect ratio.",
   keywords: ["images", "grid", "photos"],

@@ -179,7 +179,7 @@ test.describe("bespoke editor route", () => {
     await expect(page.getByTestId("plumix-redo")).toBeEnabled();
   });
 
-  test("the Page tab shows document settings and the JSON tab shows the tree", async ({
+  test("the Page tab shows document settings and the source dialog shows the tree", async ({
     page,
   }) => {
     await mockRpc(page, {
@@ -200,8 +200,9 @@ test.describe("bespoke editor route", () => {
     await page.getByTestId("plumix-tab-page").click();
     await expect(page.getByTestId("entry-slug-input")).toHaveValue("entry-1");
 
-    // JSON tab renders the whole-page tree.
-    await page.getByTestId("plumix-tab-json").click();
+    // The header's source-code action opens a modal with the whole-page tree.
+    await page.getByTestId("plumix-view-source").click();
+    await expect(page.getByTestId("json-source-dialog")).toBeVisible();
     await expect(page.getByTestId("json-inspector-output")).toContainText(
       '"h1"',
     );

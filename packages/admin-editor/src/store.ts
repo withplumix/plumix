@@ -62,7 +62,7 @@ const clampZoom = (zoom: number): number =>
   Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
 
 /** The active tab in the right inspector rail. */
-export type RightPanel = "block" | "styles" | "page" | "json";
+export type RightPanel = "block" | "styles" | "page";
 
 export interface EditorState {
   /** Canonical block tree — the single source of truth pushed to the canvas. */
@@ -84,9 +84,11 @@ export interface EditorState {
   readonly movingId: string | null;
   /** Snapshot history of the tree, driving undo/redo. */
   readonly history: TreeHistory;
-  /** Active tab in the right inspector rail (header's source-code action
-   *  flips it to JSON). */
+  /** Active tab in the right inspector rail. */
   readonly rightPanel: RightPanel;
+  /** Whether the read-only JSON source dialog is open (header's source-code
+   *  action opens it). */
+  readonly jsonOpen: boolean;
 }
 
 export interface EditorActions {
@@ -137,6 +139,7 @@ export interface EditorActions {
   /** Switch device; re-enables fit-to-width so the new width fits the viewport. */
   setDevice: (device: EditorDevice) => void;
   setRightPanel: (panel: RightPanel) => void;
+  setJsonOpen: (open: boolean) => void;
   /** Set (or clear, with an empty string) a block's Layers-tree instance name. */
   setBlockLabel: (id: string, label: string) => void;
   /** Manual zoom — pins the level and turns off fit-to-width. */
@@ -236,6 +239,7 @@ export function createEditorStore(
     movingId: null,
     history: initHistory(initial?.tree ?? []),
     rightPanel: "block",
+    jsonOpen: false,
 
     // Raw seed/programmatic setter — intentionally does not record history
     // (user edits go through insert/move/updateBlockAttrs).
@@ -390,6 +394,7 @@ export function createEditorStore(
     setHover: (hoverId) => set({ hoverId }),
     setDevice: (device) => set({ device, zoomFit: true }),
     setRightPanel: (rightPanel) => set({ rightPanel }),
+    setJsonOpen: (jsonOpen) => set({ jsonOpen }),
     setZoom: (zoom) => set({ zoom: clampZoom(zoom), zoomFit: false }),
     applyFitZoom: (zoom) => set({ zoom: clampZoom(zoom) }),
     enableZoomFit: () => set({ zoomFit: true }),

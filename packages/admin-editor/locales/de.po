@@ -39,6 +39,11 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
+#: src/plumix-editor.tsx
+#~ msgid "editor.tab.json"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.count"
 msgstr ""
@@ -131,11 +136,6 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.mark.italic"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/plumix-editor.tsx
-msgid "editor.tab.json"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -241,6 +241,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.selectParent"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/json-inspector.tsx
+msgid "editor.json.title"
 msgstr ""
 
 #. js-lingui-explicit-id

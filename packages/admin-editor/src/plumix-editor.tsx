@@ -32,7 +32,7 @@ import { BlockInspector } from "./block-inspector.js";
 import { CanvasFrame } from "./canvas-frame.js";
 import { EditorHeader } from "./editor-header.js";
 import { EditorShortcuts, EditorToolbar } from "./editor-toolbar.js";
-import { JsonInspector } from "./json-inspector.js";
+import { JsonSourceDialog } from "./json-inspector.js";
 import { LayersTab } from "./layers-tab.js";
 import {
   EditorProvider,
@@ -222,6 +222,7 @@ export function PlumixEditor({
         </div>
       </SidebarProvider>
       <EditorShortcuts />
+      <JsonSourceDialog />
       {overlay}
       {onChange ? <TreeChangeEmitter onChange={onChange} /> : null}
     </EditorProvider>
@@ -229,8 +230,8 @@ export function PlumixEditor({
 }
 
 /**
- * The right inspector rail. Its tab is store-controlled so the header's
- * source-code action can flip it to the JSON view.
+ * The right inspector rail (Block / Styles / Page). Its tab is store-controlled
+ * so selections can steer which panel is shown.
  */
 function RightRail({
   registry,
@@ -270,9 +271,6 @@ function RightRail({
             <TabsTrigger value="page" data-testid="plumix-tab-page">
               <Trans id="editor.tab.page" message="Page" />
             </TabsTrigger>
-            <TabsTrigger value="json" data-testid="plumix-tab-json">
-              <Trans id="editor.tab.json" message="JSON" />
-            </TabsTrigger>
           </TabsList>
         </SidebarHeader>
         <SidebarContent>
@@ -291,9 +289,6 @@ function RightRail({
                 <Trans id="editor.page.empty" message="No document settings." />
               </p>
             )}
-          </TabsContent>
-          <TabsContent value="json">
-            <JsonInspector />
           </TabsContent>
         </SidebarContent>
       </Tabs>
