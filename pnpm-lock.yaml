@@ -106,8 +106,8 @@ catalogs:
       specifier: ^1.5.0
       version: 1.6.0
     react-hook-form:
-      specifier: ^7.75.0
-      version: 7.75.0
+      specifier: ^7.80.0
+      version: 7.80.0
     sonner:
       specifier: ^2.0.7
       version: 2.0.7
@@ -303,7 +303,7 @@ importers:
         version: 5.2.8
       '@hookform/resolvers':
         specifier: ^5.2.2
-        version: 5.2.2(react-hook-form@7.75.0(react@19.2.7))
+        version: 5.2.2(react-hook-form@7.80.0(react@19.2.7))
       '@lingui/core':
         specifier: catalog:lingui
         version: 6.4.0
@@ -345,7 +345,7 @@ importers:
         version: 19.2.7(react@19.2.7)
       react-hook-form:
         specifier: 'catalog:'
-        version: 7.75.0(react@19.2.7)
+        version: 7.80.0(react@19.2.7)
       sonner:
         specifier: 'catalog:'
         version: 2.0.7(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -608,7 +608,7 @@ importers:
         version: 5.7.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react-hook-form:
         specifier: 'catalog:'
-        version: 7.75.0(react@19.2.7)
+        version: 7.80.0(react@19.2.7)
       tailwind-merge:
         specifier: 'catalog:'
         version: 3.6.0
@@ -6932,8 +6932,8 @@ packages:
     peerDependencies:
       react: ^19.2.7
 
-  react-hook-form@7.75.0:
-    resolution: {integrity: sha512-Ovv94H+0p3sJ7B9B5QxPuCP1u8V/cHuVGyH55cSwodYDtoJwK+fqk3vjfIgSX59I2U/bU4z0nRJ9HMLpNiWEmw==}
+  react-hook-form@7.80.0:
+    resolution: {integrity: sha512-4P+fk6oXsxY+6xSj7Euhc2sumQD8zQqCuVHoJwoyp9EchP+IUW9OESB7uHFJOKsIBQ4MQqYE84INJFqUCYNoOg==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18 || ^19
@@ -8532,10 +8532,10 @@ snapshots:
     dependencies:
       hono: 4.12.25
 
-  '@hookform/resolvers@5.2.2(react-hook-form@7.75.0(react@19.2.7))':
+  '@hookform/resolvers@5.2.2(react-hook-form@7.80.0(react@19.2.7))':
     dependencies:
       '@standard-schema/utils': 0.3.0
-      react-hook-form: 7.75.0(react@19.2.7)
+      react-hook-form: 7.80.0(react@19.2.7)
 
   '@humanfs/core@0.19.1': {}
 
@@ -12953,7 +12953,7 @@ snapshots:
       react: 19.2.7
       scheduler: 0.27.0
 
-  react-hook-form@7.75.0(react@19.2.7):
+  react-hook-form@7.80.0(react@19.2.7):
     dependencies:
       react: 19.2.7
 
