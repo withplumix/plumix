@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { Trans } from "@lingui/react";
+import { Trans, useLingui } from "@lingui/react";
 
 import type { StyleValue, ThemeTokens, TokenCategory } from "@plumix/blocks";
 import {
@@ -8,6 +8,17 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@plumix/admin-ui/accordion";
+import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  Bold,
+  Italic,
+  Strikethrough,
+  Underline,
+} from "@plumix/admin-ui/icons";
+import { Toggle } from "@plumix/admin-ui/toggle";
+import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 import { normalizeStyleValue } from "@plumix/blocks";
 
 import type { StyleBucket } from "./store.js";
@@ -25,6 +36,11 @@ interface ControlSpec {
   readonly label: string;
   readonly category?: TokenCategory;
 }
+
+/** Reads the active block's value for a style property in the current bucket. */
+type StyleGetter = (property: string) => StyleValue | undefined;
+/** Curried writer: pick a property, then set (or clear with `null`) its value. */
+type StyleSetter = (property: string) => (value: StyleValue | null) => void;
 
 const SECTIONS: readonly {
   readonly id: string;
@@ -125,6 +141,9 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
                   onChange={setter(c.property)}
                 />
               ))}
+              {section.id === "typography" && (
+                <TextStyleControls valueOf={valueOf} setter={setter} />
+              )}
             </AccordionContent>
           </AccordionItem>
         ))}
@@ -133,7 +152,7 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
             <Trans id="editor.styles.spacing" message="Spacing" />
           </AccordionTrigger>
           <AccordionContent>
-            <BoxModelControl
+            <SpacingControls
               tokens={tokens}
               valueOf={valueOf}
               setter={setter}
@@ -145,53 +164,157 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
   );
 }
 
+// Toggle marks write a fixed raw value to one CSS property; underline and
+// strikethrough share `text-decoration`, so they're mutually exclusive. Bold
+// shares `font-weight` with the weight control as a quick shortcut.
+const TEXT_MARKS = [
+  { id: "bold", property: "fontWeight", on: "bold", Icon: Bold, label: "Bold" },
+  {
+    id: "italic",
+    property: "fontStyle",
+    on: "italic",
+    Icon: Italic,
+    label: "Italic",
+  },
+  {
+    id: "underline",
+    property: "textDecoration",
+    on: "underline",
+    Icon: Underline,
+    label: "Underline",
+  },
+  {
+    id: "strikethrough",
+    property: "textDecoration",
+    on: "line-through",
+    Icon: Strikethrough,
+    label: "Strikethrough",
+  },
+] as const;
+
+const TEXT_ALIGNMENTS = [
+  { value: "left", Icon: AlignLeft, label: "Align left" },
+  { value: "center", Icon: AlignCenter, label: "Align center" },
+  { value: "right", Icon: AlignRight, label: "Align right" },
+] as const;
+
+/** Bold/italic/underline/strikethrough marks and a text-align switch. Each
+ *  writes a raw value to its CSS property (no token form). */
+function TextStyleControls({
+  valueOf,
+  setter,
+}: {
+  readonly valueOf: StyleGetter;
+  readonly setter: StyleSetter;
+}): ReactElement {
+  const { i18n } = useLingui();
+  const rawValue = (property: string): string | undefined => {
+    const value = valueOf(property);
+    return value && "raw" in value ? value.raw : undefined;
+  };
+
+  return (
+    <div
+      className="flex items-center justify-between gap-1"
+      data-testid="style-text-controls"
+    >
+      <div className="flex items-center gap-0.5">
+        {TEXT_MARKS.map((mark) => (
+          <Toggle
+            key={mark.id}
+            size="sm"
+            variant="outline"
+            pressed={rawValue(mark.property) === mark.on}
+            data-testid={`style-mark-${mark.id}`}
+            aria-label={i18n._({
+              id: `editor.styles.mark.${mark.id}`,
+              message: mark.label,
+            })}
+            onPressedChange={(next) =>
+              setter(mark.property)(next ? { raw: mark.on } : null)
+            }
+          >
+            <mark.Icon />
+          </Toggle>
+        ))}
+      </div>
+      <ToggleGroup
+        type="single"
+        variant="outline"
+        size="sm"
+        value={rawValue("textAlign") ?? ""}
+        onValueChange={(value) =>
+          setter("textAlign")(value ? { raw: value } : null)
+        }
+      >
+        {TEXT_ALIGNMENTS.map(({ value, Icon, label }) => (
+          <ToggleGroupItem
+            key={value}
+            value={value}
+            data-testid={`style-align-${value}`}
+            aria-label={i18n._({
+              id: `editor.styles.align.${value}`,
+              message: label,
+            })}
+          >
+            <Icon />
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+    </div>
+  );
+}
+
 const SIDES = ["Top", "Right", "Bottom", "Left"] as const;
 
-/** Visual box-model: a margin box wrapping a padding box, each with per-side
- *  token-or-custom controls. */
-function BoxModelControl({
+const SPACING_GROUPS = [
+  {
+    prefix: "margin",
+    testId: "box-model-margin",
+    label: <Trans id="editor.styles.margin" message="Margin" />,
+  },
+  {
+    prefix: "padding",
+    testId: "box-model-padding",
+    label: <Trans id="editor.styles.padding" message="Padding" />,
+  },
+] as const;
+
+/** Margin and padding, each its own card of per-side token-or-custom controls. */
+function SpacingControls({
   tokens,
   valueOf,
   setter,
 }: {
   readonly tokens: ThemeTokens;
-  readonly valueOf: (property: string) => StyleValue | undefined;
-  readonly setter: (property: string) => (value: StyleValue | null) => void;
+  readonly valueOf: StyleGetter;
+  readonly setter: StyleSetter;
 }): ReactElement {
-  const sideControls = (prefix: "margin" | "padding"): ReactElement[] =>
-    SIDES.map((side) => {
-      const property = `${prefix}${side}`;
-      return (
-        <StyleControl
-          key={property}
-          label={side}
-          property={property}
-          category="spacing"
-          value={valueOf(property)}
-          tokens={tokens}
-          onChange={setter(property)}
-        />
-      );
-    });
-
   return (
-    <div
-      className="border-border flex flex-col gap-2 rounded-md border p-2"
-      data-testid="box-model-margin"
-    >
-      <span className="text-muted-foreground text-xs">
-        <Trans id="editor.styles.margin" message="Margin" />
-      </span>
-      {sideControls("margin")}
-      <div
-        className="border-border mt-1 flex flex-col gap-2 rounded-md border p-2"
-        data-testid="box-model-padding"
-      >
-        <span className="text-muted-foreground text-xs">
-          <Trans id="editor.styles.padding" message="Padding" />
-        </span>
-        {sideControls("padding")}
-      </div>
+    <div className="flex flex-col gap-3">
+      {SPACING_GROUPS.map((group) => (
+        <div
+          key={group.prefix}
+          className="border-border flex flex-col gap-2 rounded-md border p-2"
+          data-testid={group.testId}
+        >
+          <span className="text-muted-foreground text-xs">{group.label}</span>
+          {SIDES.map((side) => {
+            const property = `${group.prefix}${side}`;
+            return (
+              <StyleControl
+                key={property}
+                label={side}
+                property={property}
+                category="spacing"
+                value={valueOf(property)}
+                tokens={tokens}
+                onChange={setter(property)}
+              />
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 }

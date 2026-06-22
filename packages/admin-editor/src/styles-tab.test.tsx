@@ -60,6 +60,48 @@ describe("StylesTab", () => {
     );
   });
 
+  test("renders Margin and Padding as sibling cards, not nested", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+    const margin = getByTestId("box-model-margin");
+    const padding = getByTestId("box-model-padding");
+    expect(margin.contains(padding)).toBe(false);
+  });
+
+  test("the italic mark toggles a fontStyle raw value", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+
+    fireEvent.click(getByTestId("style-mark-italic"));
+
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"fontStyle":{"raw":"italic"}',
+    );
+  });
+
+  test("underline and strikethrough share textDecoration (mutually exclusive)", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+
+    fireEvent.click(getByTestId("style-mark-underline"));
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"textDecoration":{"raw":"underline"}',
+    );
+
+    // Strikethrough overwrites the shared property rather than accumulating.
+    fireEvent.click(getByTestId("style-mark-strikethrough"));
+    const probe = getByTestId("style-probe").textContent;
+    expect(probe).toContain('"textDecoration":{"raw":"line-through"}');
+    expect(probe).not.toContain("underline");
+  });
+
+  test("the align control writes a textAlign raw value", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+
+    fireEvent.click(getByTestId("style-align-center"));
+
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"textAlign":{"raw":"center"}',
+    );
+  });
+
   test("box-model writes a per-side custom padding value", () => {
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 
