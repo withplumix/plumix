@@ -153,14 +153,15 @@ describe("BlockInputControl", () => {
   });
 
   test("richtext renders the Tiptap toolbar and editable surface", () => {
-    const { getByTestId } = renderControl(
+    const { getByTestId, queryByTestId } = renderControl(
       { name: "body", type: "richtext", label: "Body" },
       "<p>Hello</p>",
     );
     // The toolbar's formatting controls and the contenteditable surface mount.
     expect(getByTestId("block-input-body-bold")).toBeDefined();
-    expect(getByTestId("block-input-body-h2")).toBeDefined();
     expect(getByTestId("block-input-body-clear")).toBeDefined();
+    // Headings are the dedicated Heading block, so rich text offers no h2–h4.
+    expect(queryByTestId("block-input-body-h2")).toBeNull();
     const editor = getByTestId("block-input-body-editor");
     expect(editor.getAttribute("contenteditable")).toBe("true");
     expect(editor.textContent).toContain("Hello");

@@ -1,7 +1,7 @@
 import { getSchema } from "@tiptap/core";
 import { describe, expect, test } from "vitest";
 
-import { HEADING_LEVELS, richTextExtensions } from "./rich-text-extensions.js";
+import { richTextExtensions } from "./rich-text-extensions.js";
 
 describe("richTextExtensions", () => {
   // getSchema throws on a duplicate extension name, so a clean build proves the
@@ -23,7 +23,6 @@ describe("richTextExtensions", () => {
     expect(Object.keys(schema.nodes)).toEqual(
       expect.arrayContaining([
         "paragraph",
-        "heading",
         "bulletList",
         "orderedList",
         "listItem",
@@ -31,9 +30,11 @@ describe("richTextExtensions", () => {
     );
   });
 
-  test("restricts headings to h2–h4, matching the render sanitizer", () => {
-    // h1/h5/h6 are stripped by the block's sanitizer, so the editor must not
-    // offer them. The constant gates both the schema and the toolbar.
-    expect(HEADING_LEVELS).toEqual([2, 3, 4]);
+  test("registers no heading node — headings live in the Heading block", () => {
+    // Rich text is prose only; structural headings are a separate block, so the
+    // editor must neither offer nor produce heading nodes.
+    const schema = getSchema([...richTextExtensions()]);
+
+    expect(Object.keys(schema.nodes)).not.toContain("heading");
   });
 });
