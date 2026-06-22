@@ -1,7 +1,12 @@
 import { createElement } from "react";
 import { createRoot } from "react-dom/client";
 
-import type { BlockNode, BlockRegistry } from "@plumix/blocks";
+import type {
+  BlockNode,
+  BlockRegistry,
+  ThemeBreakpoints,
+  ThemeTokens,
+} from "@plumix/blocks";
 import { isEntryContent } from "@plumix/blocks";
 
 import { EditorCanvas } from "./editor-canvas.js";
@@ -29,9 +34,16 @@ export function mountEditorRuntime({
   if (!(root instanceof Element)) return null;
 
   const initialTree = readInitialTree(doc);
+  const { tokens, breakpoints } = readStyleEnv(doc);
   const reactRoot = createRoot(root);
   reactRoot.render(
-    createElement(EditorCanvas, { registry, origin, initialTree }),
+    createElement(EditorCanvas, {
+      registry,
+      origin,
+      initialTree,
+      tokens,
+      breakpoints,
+    }),
   );
   return () => reactRoot.unmount();
 }
@@ -44,5 +56,26 @@ function readInitialTree(doc: Document): readonly BlockNode[] {
     return isEntryContent(parsed) ? parsed.blocks : [];
   } catch {
     return [];
+  }
+}
+
+// The SSR embeds the theme's tokens + breakpoints so the canvas — a fresh
+// React tree with no server context — can emit per-block style CSS. Missing or
+// malformed env leaves them undefined; the renderer then skips style emission
+// (the pre-fix behavior) rather than crashing.
+function readStyleEnv(doc: Document): {
+  readonly tokens?: ThemeTokens;
+  readonly breakpoints?: ThemeBreakpoints;
+} {
+  const script = doc.querySelector("[data-plumix-style-env]");
+  if (!script?.textContent) return {};
+  try {
+    const parsed = JSON.parse(script.textContent) as {
+      tokens?: ThemeTokens;
+      breakpoints?: ThemeBreakpoints;
+    };
+    return { tokens: parsed.tokens, breakpoints: parsed.breakpoints };
+  } catch {
+    return {};
   }
 }
