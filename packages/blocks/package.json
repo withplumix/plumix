@@ -38,8 +38,8 @@
     "sanitize-html": "^2.17.4"
   },
   "peerDependencies": {
-    "react": "catalog:",
-    "react-dom": "catalog:"
+    "react": "catalog:react",
+    "react-dom": "catalog:react"
   },
   "devDependencies": {
     "@plumix/eslint-config": "workspace:*",
@@ -47,15 +47,15 @@
     "@plumix/typescript-config": "workspace:*",
     "@plumix/vitest-config": "workspace:*",
     "@types/node": "catalog:",
-    "@types/react": "catalog:",
-    "@types/react-dom": "catalog:",
+    "@types/react": "catalog:react",
+    "@types/react-dom": "catalog:react",
     "@types/sanitize-html": "^2.16.1",
     "@vitest/coverage-v8": "catalog:",
     "eslint": "catalog:",
     "jsdom": "catalog:",
     "prettier": "catalog:",
-    "react": "catalog:",
-    "react-dom": "catalog:",
+    "react": "catalog:react",
+    "react-dom": "catalog:react",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },

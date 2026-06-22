@@ -18,6 +18,8 @@ const PRIVATE_DEV_PACKAGE = "@plumix/typescript-config";
 export interface CatalogContext {
   /** Default `catalog:` table from pnpm-workspace.yaml (name → range). */
   readonly catalog: Record<string, string>;
+  /** Named `catalogs:` tables, keyed by catalog name (e.g. `react`). */
+  readonly catalogs?: Record<string, Record<string, string>>;
   /** Every workspace package's own version (name → version). */
   readonly workspaceVersions: Record<string, string>;
 }
@@ -44,9 +46,14 @@ export function resolveDeps(
       continue;
     }
     if (range.startsWith("catalog:")) {
-      const resolved = ctx.catalog[name];
+      const catalogName = range.slice("catalog:".length);
+      const table = catalogName ? ctx.catalogs?.[catalogName] : ctx.catalog;
+      const resolved = table?.[name];
       if (!resolved) {
-        throw ScaffoldError.catalogResolutionMissing({ catalogName: name });
+        throw ScaffoldError.catalogResolutionMissing({
+          dependency: name,
+          catalog: catalogName || "default",
+        });
       }
       out[name] = resolved;
       continue;
@@ -88,6 +95,7 @@ export async function loadCatalogContext(
   const yaml = await readFile(join(repoRoot, "pnpm-workspace.yaml"), "utf8");
   return {
     catalog: parseWorkspaceCatalog(yaml),
+    catalogs: parseNamedCatalogs(yaml),
     workspaceVersions: await collectWorkspaceVersions(repoRoot, yaml),
   };
 }
@@ -127,6 +135,30 @@ export function parseWorkspaceCatalog(yaml: string): Record<string, string> {
     const match = /^\s+"?([^":\s]+)"?\s*:\s*(\S+)\s*$/.exec(line);
     const [, name, version] = match ?? [];
     if (name && version) out[name] = version;
+  }
+  return out;
+}
+
+/**
+ * Parse the named `catalogs:` block — each second-level key (e.g.
+ * `react:`) opens its own name → range table. A header line has nothing
+ * after its colon; an entry line carries a version, reusing the same
+ * scanner as the default catalog.
+ */
+export function parseNamedCatalogs(
+  yaml: string,
+): Record<string, Record<string, string>> {
+  const out: Record<string, Record<string, string>> = {};
+  let current: Record<string, string> | undefined;
+  for (const line of blockLines(yaml, "catalogs:")) {
+    const catalogName = /^\s+"?([^":\s]+)"?\s*:\s*$/.exec(line)?.[1];
+    if (catalogName) {
+      current = out[catalogName] = {};
+      continue;
+    }
+    const [, name, version] =
+      /^\s+"?([^":\s]+)"?\s*:\s*(\S+)\s*$/.exec(line) ?? [];
+    if (name && version && current) current[name] = version;
   }
   return out;
 }

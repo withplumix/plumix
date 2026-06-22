@@ -16,13 +16,13 @@
     "@plumix/plugin-comments": "workspace:*",
     "@plumix/runtime-cloudflare": "workspace:*",
     "plumix": "workspace:*",
-    "react": "catalog:"
+    "react": "catalog:react"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",
     "@plumix/typescript-config": "workspace:*",
     "@types/node": "catalog:",
-    "@types/react": "catalog:",
+    "@types/react": "catalog:react",
     "typescript": "catalog:",
     "wrangler": "catalog:"
   }
