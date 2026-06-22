@@ -3,7 +3,7 @@
 // Kept separate from the `ctx` wiring in resolve.ts so it stays auditable.
 
 /** Render mode, shared vocabulary with the runtime's `useIsEditing`/`useIsPreview`. */
-export type EditRenderMode = "live" | "preview" | "edit";
+type EditRenderMode = "live" | "preview" | "edit";
 
 export interface EditModeDecision {
   readonly mode: EditRenderMode;

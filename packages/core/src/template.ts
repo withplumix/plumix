@@ -46,7 +46,7 @@ export type TemplateDepDeclarations = {
  * `null` when the loader didn't return a value for that slug (or
  * threw — see `template_dep_load_failed` log).
  */
-export type TemplateDepResults = {
+type TemplateDepResults = {
   readonly [K in keyof TemplateDepRegistry]?: Readonly<
     Record<string, TemplateDepRegistry[K]["result"] | null>
   >;
@@ -67,7 +67,7 @@ export type TemplateRender<TData extends TemplateData> = (
  * Literal manifest is merged at boot; function form is called per
  * request with the same args `render` sees.
  */
-export type TemplateDocument<TData extends TemplateData> =
+type TemplateDocument<TData extends TemplateData> =
   | DocumentManifest
   | ((args: TemplateRenderArgs<TData>) => DocumentManifest);
 

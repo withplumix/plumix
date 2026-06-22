@@ -11,7 +11,7 @@ export const ADMIN_BAR_GROUPS = [
   "root",
 ] as const;
 
-export type AdminBarGroup = (typeof ADMIN_BAR_GROUPS)[number];
+type AdminBarGroup = (typeof ADMIN_BAR_GROUPS)[number];
 
 export interface AdminBarNode {
   readonly id: string;

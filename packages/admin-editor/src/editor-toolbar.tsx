@@ -45,7 +45,7 @@ function deviceLabel(i18n: I18n, value: EditorDevice): string {
 
 /** Draft-mode actions for a published entry with a pending autosave. The host
  *  owns the mutations; the toolbar only renders the buttons and their state. */
-export interface DraftMode {
+interface DraftMode {
   readonly hasPendingDraft: boolean;
   readonly onSaveDraft: () => void;
   readonly onPublishDraft: () => void;
