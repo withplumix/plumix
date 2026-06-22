@@ -144,7 +144,19 @@ export function PlumixEditor({
       initialTree={defaultValue?.blocks}
       breakpoints={breakpoints}
     >
-      <div className="flex h-full min-h-0 flex-col">
+      {/* shadcn sidebar-16 pattern: a flex-col provider with a full-width
+          header, then a flex row whose offcanvas rails (position: fixed) are
+          offset below the header by --header-height. */}
+      <SidebarProvider
+        className="flex h-full min-h-0 flex-col"
+        style={
+          {
+            "--sidebar-width": "18rem",
+            "--header-height": "3.25rem",
+          } as CSSProperties
+        }
+        data-testid="plumix-editor-layout"
+      >
         <EditorHeader
           title={title}
           onTitleChange={onTitleChange}
@@ -153,24 +165,11 @@ export function PlumixEditor({
           previewLink={previewLink}
           liveUrl={liveUrl}
         />
-        {/* The `transform` makes this a containing block for the offcanvas
-            rails' `position: fixed`, so they span the area below the header
-            instead of the whole viewport (which would overlap it). Inline, not
-            a Tailwind class — the admin's content scan misses classes that only
-            appear in the bundled admin-editor. */}
-        <SidebarProvider
-          className="min-h-0 flex-1"
-          style={
-            {
-              "--sidebar-width": "18rem",
-              transform: "translateZ(0)",
-            } as CSSProperties
-          }
-          data-testid="plumix-editor-layout"
-        >
+        <div className="flex min-h-0 flex-1">
           <Sidebar
             side="left"
             collapsible="offcanvas"
+            className="top-(--header-height) !h-[calc(100svh-var(--header-height))]"
             data-testid="plumix-editor-left"
           >
             <Tabs
@@ -221,6 +220,7 @@ export function PlumixEditor({
           <Sidebar
             side="right"
             collapsible="offcanvas"
+            className="top-(--header-height) !h-[calc(100svh-var(--header-height))]"
             data-testid="plumix-editor-right"
           >
             <Tabs defaultValue="block" className="flex h-full min-h-0 flex-col">
@@ -266,8 +266,8 @@ export function PlumixEditor({
               </SidebarContent>
             </Tabs>
           </Sidebar>
-        </SidebarProvider>
-      </div>
+        </div>
+      </SidebarProvider>
       <EditorShortcuts />
       {overlay}
       {onChange ? <TreeChangeEmitter onChange={onChange} /> : null}

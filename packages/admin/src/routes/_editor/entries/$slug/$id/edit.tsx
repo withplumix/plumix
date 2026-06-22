@@ -14,6 +14,7 @@ import {
 } from "@/editor/resolve-editor-mode.js";
 import { PreviewBanner } from "@/editor/revisions/PreviewBanner.js";
 import { StaleDraftDialog } from "@/editor/StaleDraftDialog.js";
+import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import {
   entryMetaBoxesForType,
   findEntryTypeBySlug,
@@ -21,7 +22,6 @@ import {
   getThemeBreakpoints,
   getThemeTokens,
 } from "@/lib/manifest.js";
-import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import { orpc } from "@/lib/orpc.js";
 import { getRegisteredBlocks } from "@/lib/plugin-registry.js";
 import { toastError, toastSuccess } from "@/lib/toast.js";
