@@ -44,7 +44,7 @@ export const tableHeaderRowBlock = defineBlock({
   title: "Header Row",
   icon: "Rows",
   category: "text",
-  inline: true,
+  selfSeam: true,
   inserter: false,
   inputs: [
     {
@@ -55,9 +55,13 @@ export const tableHeaderRowBlock = defineBlock({
     },
   ],
   defaults: {},
-  render: ({ attrs }): ReactNode => {
+  render: ({ attrs, blockProps }): ReactNode => {
     const Cells = attrs.cells as (() => ReactNode) | undefined;
-    return <tr data-header="">{Cells ? <Cells /> : null}</tr>;
+    return (
+      <tr data-header="" {...blockProps}>
+        {Cells ? <Cells /> : null}
+      </tr>
+    );
   },
 });
 
@@ -66,7 +70,7 @@ export const tableBodyRowBlock = defineBlock({
   title: "Body Row",
   icon: "Rows",
   category: "text",
-  inline: true,
+  selfSeam: true,
   inserter: false,
   inputs: [
     {
@@ -77,9 +81,9 @@ export const tableBodyRowBlock = defineBlock({
     },
   ],
   defaults: {},
-  render: ({ attrs }): ReactNode => {
+  render: ({ attrs, blockProps }): ReactNode => {
     const Cells = attrs.cells as (() => ReactNode) | undefined;
-    return <tr>{Cells ? <Cells /> : null}</tr>;
+    return <tr {...blockProps}>{Cells ? <Cells /> : null}</tr>;
   },
 });
 
@@ -88,7 +92,7 @@ export const tableHeaderCellBlock = defineBlock({
   title: "Header Cell",
   icon: "AlignLeft",
   category: "text",
-  inline: true,
+  selfSeam: true,
   inserter: false,
   inputs: [
     { name: "text", type: "text", label: "Text" },
@@ -100,11 +104,11 @@ export const tableHeaderCellBlock = defineBlock({
     },
   ],
   defaults: { text: "" },
-  render: ({ attrs }): ReactNode => {
+  render: ({ attrs, blockProps }): ReactNode => {
     const { text = "" } = attrs as { readonly text?: string };
     const align = pickAlign(attrs.align);
     return (
-      <th scope="col" data-align={align}>
+      <th scope="col" data-align={align} {...blockProps}>
         {text}
       </th>
     );
@@ -116,7 +120,7 @@ export const tableCellBlock = defineBlock({
   title: "Cell",
   icon: "AlignLeft",
   category: "text",
-  inline: true,
+  selfSeam: true,
   inserter: false,
   inputs: [
     { name: "text", type: "text", label: "Text" },
@@ -128,9 +132,13 @@ export const tableCellBlock = defineBlock({
     },
   ],
   defaults: { text: "" },
-  render: ({ attrs }): ReactNode => {
+  render: ({ attrs, blockProps }): ReactNode => {
     const { text = "" } = attrs as { readonly text?: string };
     const align = pickAlign(attrs.align);
-    return <td data-align={align}>{text}</td>;
+    return (
+      <td data-align={align} {...blockProps}>
+        {text}
+      </td>
+    );
   },
 });
