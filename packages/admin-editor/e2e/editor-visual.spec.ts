@@ -273,7 +273,7 @@ test.describe("editor playground", () => {
     ).toBeVisible();
   });
 
-  test("the + Add Block popover opens the same catalog and inserts a pattern", async ({
+  test("inserting a pattern from the left-rail catalog splices its whole composition", async ({
     page,
   }) => {
     await page.goto("/");
@@ -281,16 +281,10 @@ test.describe("editor playground", () => {
     const blocks = canvas.locator("[data-plumix-id]");
     const before = await blocks.count();
 
-    // AC4: the toolbar's inline inserter opens the catalog in a popover.
-    await page.getByTestId("plumix-add-block").click();
-    const popover = page.getByTestId("plumix-add-block-popover");
-    await expect(popover.getByTestId("block-catalog")).toBeVisible();
-
-    // Inserting the hero pattern splices its whole two-block composition in one
-    // step and closes the popover.
-    await popover.getByTestId("block-catalog-pattern-starter/hero").click();
+    // The catalog lives in the left rail (no toolbar "+ Add Block" popover).
+    // Inserting the hero pattern splices its whole two-block composition at once.
+    await page.getByTestId("block-catalog-pattern-starter/hero").click();
     await expect(blocks).toHaveCount(before + 2);
-    await expect(popover).toBeHidden();
   });
 
   test("selecting a text block reveals the right-rail Tiptap editor", async ({
@@ -301,10 +295,11 @@ test.describe("editor playground", () => {
 
     await canvas.locator('[data-plumix-id="intro"]').click();
 
-    // The Block tab now hosts the rich-text rail: a formatting toolbar plus the
-    // contenteditable surface seeded with the block's body.
+    // The Block tab now hosts the rich-text rail: a formatting toolbar (inline
+    // marks only — headings come from the Heading block) plus the contenteditable
+    // surface seeded with the block's body.
     await expect(page.getByTestId("block-input-body-bold")).toBeVisible();
-    await expect(page.getByTestId("block-input-body-h2")).toBeVisible();
+    await expect(page.getByTestId("block-input-body-italic")).toBeVisible();
     await expect(page.getByTestId("block-input-body-clear")).toBeVisible();
     await expect(page.getByTestId("block-input-body-editor")).toBeVisible();
   });
@@ -346,11 +341,9 @@ test.describe("editor playground", () => {
     await expect(editor).not.toContainText("standalone harness");
   });
 
-  test("the edit toolbar exposes a copy-preview-link action", async ({
-    page,
-  }) => {
+  test("the header exposes a preview menu", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByTestId("plumix-copy-preview-link")).toBeVisible();
+    await expect(page.getByTestId("plumix-preview-menu")).toBeVisible();
   });
 
   test("preview mode hides the editing chrome and renders read-only", async ({
@@ -416,10 +409,9 @@ test.describe("editor playground", () => {
     await expect(page.getByTestId("styles-tab")).toBeVisible();
     await expect(page.getByTestId("styles-section-typography")).toBeVisible();
 
-    // Set a typography token; the change lands on the canonical tree (visible
-    // through the source dialog).
-    await page.getByTestId("style-control-fontSize-token").selectOption("xl");
-    // Set a per-side custom padding via the box-model.
+    // Set the font size (custom-only — no token scale) and a per-side custom
+    // padding; both land on the canonical tree (visible through the source dialog).
+    await page.getByTestId("style-control-fontSize-custom").fill("20px");
     await page.getByTestId("style-control-paddingTop-mode-custom").click();
     await page.getByTestId("style-control-paddingTop-custom").fill("12px");
 
