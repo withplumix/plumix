@@ -390,7 +390,15 @@ export function CanvasFrame({
     <div
       ref={containerRef}
       data-testid="plumix-canvas-frame"
-      style={{ position: "relative", flex: 1, overflow: "auto" }}
+      // A neutral surface (not the shell's near-black) shows around the framed
+      // page — the device width is narrower than the column and a short page
+      // ends above the fold. `var(--muted)` reads as canvas, not a void.
+      style={{
+        position: "relative",
+        flex: 1,
+        overflow: "auto",
+        background: "var(--muted)",
+      }}
     >
       <iframe
         ref={iframeRef}
